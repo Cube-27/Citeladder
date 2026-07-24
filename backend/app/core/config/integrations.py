@@ -20,6 +20,7 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
+from urllib.parse import urlencode
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -107,6 +108,26 @@ INTEGRATION_OAUTH_CALLBACK_PATH: Final = (
     "/api/v1/integrations/oauth/{provider}/callback"
 )
 INTEGRATION_OAUTH_LANDING_PATH: Final = "/settings?tab=integrations"
+
+
+def integration_oauth_landing_url(params: dict[str, str]) -> str:
+    """Absolute frontend landing URL the OAuth callback 302s to (contract C2).
+
+    The provider sends the user's browser straight to the backend callback, so
+    the redirect target must be **absolute** and point at the frontend origin:
+    a bare path would resolve against the backend origin, which serves no
+    ``/settings`` route (the browser would land on a 404 even though the
+    connect succeeded). ``frontend_url`` is the same setting that seeds the
+    CORS allow-list, so the landing origin always matches the app the user
+    came from.
+    """
+    # Imported lazily: ``app.core.config`` builds the Settings singleton at
+    # module scope, so a top-level import here would run during that build.
+    from app.core.config import settings
+
+    base = settings.frontend_url.rstrip("/")
+    return f"{base}{INTEGRATION_OAUTH_LANDING_PATH}&{urlencode(params)}"
+
 
 # --- Provider data API endpoints (read-only) ---------------------------------
 GSC_API_BASE_URL: Final = "https://www.googleapis.com"
