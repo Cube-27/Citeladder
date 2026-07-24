@@ -13,7 +13,7 @@ export function RankingsTable({ visibility }: Readonly<{ visibility: Visibility 
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader bordered>
         <CardTitle>Competitors</CardTitle>
         <CardDescription>How your brand compares in the same answers</CardDescription>
       </CardHeader>

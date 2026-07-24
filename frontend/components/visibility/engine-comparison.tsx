@@ -49,7 +49,7 @@ export function EngineComparison({
   return (
     <div className="grid gap-3 xl:grid-cols-[1.55fr_1fr]">
       <Card>
-        <CardHeader>
+        <CardHeader bordered>
           <CardTitle>By model</CardTitle>
           <CardDescription>How each AI model sees your brand in this run</CardDescription>
         </CardHeader>

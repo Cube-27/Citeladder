@@ -66,7 +66,7 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           </DropdownItem>
         </DropdownContent>
       </Dropdown>
-      <ThemeToggle />
+      <ThemeToggle className="size-[26px] shrink-0" />
     </div>
   );
 }

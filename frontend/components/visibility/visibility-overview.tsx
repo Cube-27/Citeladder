@@ -49,9 +49,7 @@ export function VisibilityOverview({
     body = (
       <>
         <OverviewSummary visibility={visibility} brandName={brandName} />
-        <div className="grid gap-3 xl:grid-cols-[1.55fr_1fr]">
-          <RankingsTable visibility={visibility} />
-        </div>
+        <RankingsTable visibility={visibility} />
         <EngineComparison visibility={visibility} filter={engineFilter} />
       </>
     );
