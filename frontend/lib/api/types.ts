@@ -84,6 +84,15 @@ import type {
   productVariantSchema,
   productVisibilityEntrySchema,
   productVisibilitySchema,
+  // Opportunities
+  opportunitiesPageSchema,
+  opportunityDetailSchema,
+  opportunitySchema,
+  opportunitySeveritySchema,
+  opportunityStatusSchema,
+  opportunitySummarySchema,
+  opportunityTypeSchema,
+  recomputeResponseSchema,
 } from './schemas';
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
@@ -170,3 +179,13 @@ export type CompetitorProductVisibilityEntry = z.infer<
 export type ProductVisibility = z.infer<typeof productVisibilitySchema>;
 export type ProductEvidenceItem = z.infer<typeof productEvidenceItemSchema>;
 export type ProductEvidenceResponse = z.infer<typeof productEvidenceResponseSchema>;
+
+// --- Opportunities ---
+export type OpportunityType = z.infer<typeof opportunityTypeSchema>;
+export type OpportunitySeverity = z.infer<typeof opportunitySeveritySchema>;
+export type OpportunityStatus = z.infer<typeof opportunityStatusSchema>;
+export type Opportunity = z.infer<typeof opportunitySchema>;
+export type OpportunityDetail = z.infer<typeof opportunityDetailSchema>;
+export type OpportunitiesPage = z.infer<typeof opportunitiesPageSchema>;
+export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;
+export type RecomputeResponse = z.infer<typeof recomputeResponseSchema>;
