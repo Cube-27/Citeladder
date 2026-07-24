@@ -1,11 +1,14 @@
 /* ============================================================================
-   Searchify marketing surface — "CUBE27 midnight" theme.
+   Searchify marketing surface — flat / hairline theme.
    Scoped to the public landing page via the `.mkt` wrapper (see
    app/(marketing)/layout.tsx). This file is the ONLY place raw hex lives for
    the marketing brand (CSS files are exempt from the no-hex guard; components
-   must stay hex-free). Visual source of truth: the approved mockup
-   (/code/.plans/designs/landing-aurora.html). Dark theme = black/grey scale
-   with subtle blue; light theme = CUBE27 warm paper.
+   must stay hex-free). Palette + geometry mirror the app's flat/hairline
+   language (app/globals.css): opaque surfaces, 1px borders instead of
+   shadows/blur, one sans family, no gradient text or atmosphere.
+
+   NOTE (Phase 1): this is a VALUE-ONLY pass — the page structure is
+   untouched. The marketing rebuild is Phase 2.
    ============================================================================ */
 
 /* Smooth anchor scrolling (globals.css forces `auto` under reduced-motion).
@@ -20,18 +23,12 @@
 
 /* ── TOKENS ─────────────────────────────────────────────────────────────── */
 .mkt {
-  --mkt-font-display:
-    var(--font-bricolage), 'Bricolage Grotesque', 'Public Sans', ui-sans-serif, system-ui,
-    sans-serif;
-  --mkt-font-sans:
-    var(--font-public-sans), 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
-    Roboto, Helvetica, Arial, sans-serif;
-  --mkt-font-mono:
-    var(--font-plex), 'IBM Plex Mono', ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas,
-    'Liberation Mono', monospace;
-  --mkt-r-md: 16px;
-  --mkt-r-card: 20px;
-  --mkt-r-lg: 24px;
+  --mkt-font-display: var(--font-sans), system-ui, sans-serif;
+  --mkt-font-sans: var(--font-sans), system-ui, sans-serif;
+  --mkt-font-mono: var(--font-mono), ui-monospace, 'Cascadia Code', monospace;
+  --mkt-r-md: 10px;
+  --mkt-r-card: 12px;
+  --mkt-r-lg: 14px;
   --mkt-r-pill: 999px;
   --mkt-container: 1120px;
   --mkt-ease: cubic-bezier(0.22, 0.68, 0.28, 1);
@@ -41,19 +38,19 @@
 
   /* Light theme (CUBE27 warm paper) — default. */
   color-scheme: light;
-  --mkt-bg: #fafaf7;
-  --mkt-bg-2: #efefea;
-  --mkt-surface: rgba(255, 255, 255, 0.78);
+  --mkt-bg: #fbfbfa;
+  --mkt-bg-2: #f4f4f2;
+  --mkt-surface: #ffffff;
   --mkt-surface-2: #ffffff;
-  --mkt-raised: #f2f2ec;
-  --mkt-glass: rgba(250, 250, 247, 0.72);
-  --mkt-glass-strong: rgba(250, 250, 247, 0.88);
-  --mkt-drop-bg: rgba(255, 255, 255, 0.94);
-  --mkt-border: #e2e0d8;
-  --mkt-border-strong: rgba(47, 88, 255, 0.38);
-  --mkt-text: #0f1117;
-  --mkt-text-2: #4b4d58;
-  --mkt-text-3: #6d6f7a;
+  --mkt-raised: #f0f0ed;
+  --mkt-glass: #fbfbfa;
+  --mkt-glass-strong: #fbfbfa;
+  --mkt-drop-bg: #ffffff;
+  --mkt-border: #e8e7e3;
+  --mkt-border-strong: #dedcd6;
+  --mkt-text: #17171a;
+  --mkt-text-2: #5c5c66;
+  --mkt-text-3: #71717b;
   --mkt-accent: #2f58ff;
   --mkt-accent-blue: #2f58ff;
   --mkt-accent-2: #1e3fd0;
@@ -63,11 +60,10 @@
   --mkt-icon-bd: #c3d0ff;
   --mkt-btn-bg: #2f58ff;
   --mkt-btn-text: #ffffff;
-  --mkt-grad: linear-gradient(92deg, #1e3fd0 0%, #2f58ff 55%, #6b8aff 100%);
-  --mkt-grad-bar: linear-gradient(90deg, #2f58ff 0%, #6b8aff 100%);
+  --mkt-grad: none;
+  --mkt-grad-bar: none;
   --mkt-glow-1: rgba(47, 88, 255, 0.11);
   --mkt-glow-2: rgba(107, 138, 255, 0.1);
-  --mkt-glow-3: rgba(195, 208, 255, 0.45);
   --mkt-grid-line: rgba(15, 17, 23, 0.05);
   --mkt-hairline: linear-gradient(
     180deg,
@@ -76,12 +72,10 @@
     rgba(15, 17, 23, 0.02) 68%,
     rgba(47, 88, 255, 0.2)
   );
-  --mkt-shadow-lg: 0 30px 80px -26px rgba(15, 23, 64, 0.22);
-  --mkt-card-glow: 0 0 150px rgba(47, 88, 255, 0.12);
-  --mkt-btn-glow: 0 12px 32px -12px rgba(47, 88, 255, 0.45);
-  --mkt-grain-op: 0.03;
-  --mkt-grain-blend: soft-light;
-  --mkt-bar-comp: rgba(15, 17, 23, 0.12);
+  --mkt-shadow-lg: none;
+  --mkt-card-glow: none;
+  --mkt-btn-glow: none;
+  --mkt-bar-comp: #dedcd6;
   --mkt-chip-live: #eef2ff;
   --mkt-live-text: #1e3fd0;
   --mkt-spark-area: rgba(47, 88, 255, 0.1);
@@ -90,8 +84,8 @@
   --mkt-logo-facet: #2f58ff;
   --mkt-logo-ring: transparent;
   --mkt-mark-hl: #eef2ff;
-  --mkt-dash-grad: linear-gradient(180deg, #ffffff, #fbfbfc);
-  --mkt-nav-shadow: 0 12px 40px -20px rgba(15, 23, 64, 0.16);
+  --mkt-dash-grad: #ffffff;
+  --mkt-nav-shadow: none;
 
   /* Root surface (replaces `body` styling from the mockup). The stacking
      context keeps the negative-z atmosphere layers (aurora, glows, grid)
@@ -104,8 +98,8 @@
   background: var(--mkt-bg);
   color: var(--mkt-text);
   font-family: var(--mkt-font-sans);
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition:
@@ -116,19 +110,19 @@
 /* Dark theme (CUBE27 midnight) — black/grey scale, subtle blue. */
 html[data-theme='dark'] .mkt {
   color-scheme: dark;
-  --mkt-bg: #050505;
-  --mkt-bg-2: #0a0a0a;
-  --mkt-surface: #111114;
-  --mkt-surface-2: #16161a;
-  --mkt-raised: #1c1c21;
-  --mkt-glass: rgba(10, 10, 10, 0.6);
-  --mkt-glass-strong: rgba(10, 10, 10, 0.85);
-  --mkt-drop-bg: rgba(22, 22, 26, 0.92);
-  --mkt-border: rgba(255, 255, 255, 0.08);
-  --mkt-border-strong: rgba(255, 255, 255, 0.14);
-  --mkt-text: #fafafa;
-  --mkt-text-2: #a1a1aa;
-  --mkt-text-3: #7c7c86;
+  --mkt-bg: #0a0a0b;
+  --mkt-bg-2: #1b1b21;
+  --mkt-surface: #131316;
+  --mkt-surface-2: #17171c;
+  --mkt-raised: #1e1e24;
+  --mkt-glass: #0a0a0b;
+  --mkt-glass-strong: #0a0a0b;
+  --mkt-drop-bg: #17171c;
+  --mkt-border: #26262d;
+  --mkt-border-strong: #33333c;
+  --mkt-text: #f3f3f5;
+  --mkt-text-2: #a1a1ab;
+  --mkt-text-3: #8a8a94;
   --mkt-accent: #ffffff;
   --mkt-accent-blue: #2f58ff;
   --mkt-accent-2: #6b8aff;
@@ -138,11 +132,10 @@ html[data-theme='dark'] .mkt {
   --mkt-icon-bd: rgba(255, 255, 255, 0.14);
   --mkt-btn-bg: #ffffff;
   --mkt-btn-text: #0a0a0a;
-  --mkt-grad: linear-gradient(92deg, #9db2ff 0%, #6b8aff 100%);
-  --mkt-grad-bar: linear-gradient(90deg, #ffffff 0%, #6b8aff 100%);
+  --mkt-grad: none;
+  --mkt-grad-bar: none;
   --mkt-glow-1: rgba(47, 88, 255, 0.15);
   --mkt-glow-2: rgba(107, 138, 255, 0.09);
-  --mkt-glow-3: rgba(47, 88, 255, 0.07);
   --mkt-grid-line: rgba(255, 255, 255, 0.045);
   --mkt-hairline: linear-gradient(
     180deg,
@@ -151,12 +144,10 @@ html[data-theme='dark'] .mkt {
     rgba(255, 255, 255, 0.02) 68%,
     rgba(107, 138, 255, 0.18)
   );
-  --mkt-shadow-lg: 0 30px 90px -20px rgba(0, 0, 0, 0.85);
-  --mkt-card-glow: 0 0 160px rgba(47, 88, 255, 0.13);
-  --mkt-btn-glow: 0 8px 32px -10px rgba(255, 255, 255, 0.22);
-  --mkt-grain-op: 0.045;
-  --mkt-grain-blend: overlay;
-  --mkt-bar-comp: rgba(255, 255, 255, 0.14);
+  --mkt-shadow-lg: none;
+  --mkt-card-glow: none;
+  --mkt-btn-glow: none;
+  --mkt-bar-comp: #33333c;
   --mkt-chip-live: rgba(107, 138, 255, 0.12);
   --mkt-live-text: #9db2ff;
   --mkt-spark-area: rgba(107, 138, 255, 0.12);
@@ -165,8 +156,8 @@ html[data-theme='dark'] .mkt {
   --mkt-logo-facet: #2f58ff;
   --mkt-logo-ring: rgba(255, 255, 255, 0.16);
   --mkt-mark-hl: rgba(107, 138, 255, 0.16);
-  --mkt-dash-grad: linear-gradient(180deg, #101013, #0b0b0d);
-  --mkt-nav-shadow: 0 12px 40px -18px rgba(0, 0, 0, 0.6);
+  --mkt-dash-grad: #131316;
+  --mkt-nav-shadow: none;
 }
 
 /* ── BASE (scoped) ──────────────────────────────────────────────────────── */
@@ -222,67 +213,11 @@ html[data-theme='dark'] .mkt {
     color 0.35s var(--mkt-ease);
 }
 
-/* ── ATMOSPHERE: blue aurora + grain ────────────────────────────────────── */
-.mkt .aurora {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  overflow: hidden;
-}
-.mkt .aurora i {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  will-change: transform;
-}
-.mkt .aurora .a1 {
-  inset: -25% -15% auto -15%;
-  height: 85vh;
-  background:
-    radial-gradient(52% 60% at 18% 30%, var(--mkt-glow-1), transparent 62%),
-    radial-gradient(44% 55% at 84% 18%, var(--mkt-glow-2), transparent 62%),
-    radial-gradient(36% 42% at 55% 12%, var(--mkt-glow-3), transparent 60%);
-  animation: mkt-drift1 22s var(--mkt-ease) infinite alternate;
-}
-.mkt .aurora .a2 {
-  inset: auto -20% -35% -20%;
-  height: 70vh;
-  opacity: 0.55;
-  background:
-    radial-gradient(40% 55% at 80% 70%, var(--mkt-glow-1), transparent 65%),
-    radial-gradient(36% 50% at 15% 75%, var(--mkt-glow-3), transparent 65%);
-  animation: mkt-drift2 26s var(--mkt-ease) infinite alternate;
-}
-@keyframes mkt-drift1 {
-  from {
-    transform: translate3d(-2.5%, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(2.5%, 3%, 0) scale(1.05);
-  }
-}
-@keyframes mkt-drift2 {
-  from {
-    transform: translate3d(2%, 0, 0) scale(1.04);
-  }
-  to {
-    transform: translate3d(-2%, -3%, 0) scale(1);
-  }
-}
-.mkt .grain {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: var(--mkt-grain-op);
-  mix-blend-mode: var(--mkt-grain-blend);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+/* ── ATMOSPHERE: retired ────────────────────────────────────────────────
+   The flat language has no aurora, glow or grain layer; the markup that
+   emitted them is gone from app/(marketing)/layout.tsx. */
+
 @media (prefers-reduced-motion: reduce) {
-  .mkt .aurora i {
-    animation: none;
-  }
   .mkt .drop,
   .mkt .chev,
   .mkt .acc-body,
@@ -298,32 +233,18 @@ html[data-theme='dark'] .mkt {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  font-family: var(--mkt-font-mono);
-  font-size: 11.5px;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--mkt-eyebrow);
-}
-.mkt .eyebrow::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mkt-eyebrow);
-  box-shadow: 0 0 12px var(--mkt-glow-2);
+  letter-spacing: 0;
+  color: var(--mkt-text-3);
 }
 .mkt .grad-text {
-  background: var(--mkt-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--mkt-text);
 }
 .mkt .card {
   position: relative;
   background: var(--mkt-surface);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
   border: 1px solid var(--mkt-border);
   border-radius: var(--mkt-r-card);
   box-shadow: 0 0 70px -28px var(--mkt-glow-1);
@@ -367,19 +288,15 @@ html[data-theme='dark'] .mkt {
   background: var(--mkt-btn-bg);
   color: var(--mkt-btn-text);
   padding: 14px 27px;
-  box-shadow: var(--mkt-btn-glow);
 }
 .mkt .btn-primary:hover {
-  transform: translateY(-1px);
-  filter: brightness(0.95);
+  background: var(--mkt-accent-2);
 }
 .mkt .btn-ghost {
   background: var(--mkt-surface);
   border: 1px solid var(--mkt-border);
   color: var(--mkt-text);
   padding: 14px 26px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 .mkt .btn-ghost:hover {
   background: var(--mkt-surface-2);
@@ -402,14 +319,14 @@ html[data-theme='dark'] .mkt {
   border-radius: var(--mkt-r-pill);
   border: 1px solid var(--mkt-border);
   background: var(--mkt-surface);
-  font-family: var(--mkt-font-mono);
-  font-size: 11.5px;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
   color: var(--mkt-text-2);
   padding: 5px 12px;
 }
 .mkt .h2 {
-  font-size: clamp(32px, 4vw, 48px);
-  line-height: 1.08;
+  font-size: clamp(28px, 3.2vw, 38px);
+  line-height: 1.1;
   letter-spacing: -0.02em;
   font-weight: 700;
 }
@@ -443,15 +360,11 @@ html[data-theme='dark'] .mkt {
   align-items: center;
   gap: 8px;
   padding: 0 10px 0 16px;
-  background: var(--mkt-glass);
+  background: var(--mkt-surface-2);
   border: 1px solid var(--mkt-border);
-  border-radius: 18px;
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  box-shadow: var(--mkt-nav-shadow);
+  border-radius: 12px;
 }
 .mkt .site-nav.scrolled {
-  background: var(--mkt-glass-strong);
   border-color: var(--mkt-border-strong);
 }
 .mkt .wordmark {
@@ -468,12 +381,10 @@ html[data-theme='dark'] .mkt {
   flex: none;
 }
 .mkt .by-tag {
-  font-family: var(--mkt-font-mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
-  border: 1px solid var(--mkt-border);
   border-radius: var(--mkt-r-pill);
   padding: 3.5px 8px;
   margin-left: 1px;
@@ -520,8 +431,6 @@ html[data-theme='dark'] .mkt {
 .mkt .mobile-menu {
   background: var(--mkt-drop-bg);
   border: 1px solid var(--mkt-border);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
   box-shadow: 0 24px 60px -16px rgba(0, 0, 0, 0.55);
 }
 .mkt .drop {
@@ -563,10 +472,10 @@ html[data-theme='dark'] .mkt {
 .mkt .d-group-label {
   display: block;
   padding: 0 11px 8px;
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
 }
 /* The numbered steps flow in a compact 3-col row under the group label. */
@@ -766,10 +675,10 @@ html[data-theme='dark'] .mkt {
 /* Group label inside a mobile accordion (product: "How it works"). */
 .mkt .m-label {
   padding: 10px 12px 4px;
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
 }
 .mkt .m-plain {
@@ -853,16 +762,16 @@ html[data-theme='dark'] .mkt {
   margin-bottom: 26px;
 }
 .mkt .hero h1 {
-  font-size: clamp(40px, 5.4vw + 8px, 76px);
-  line-height: 1.05;
+  font-size: clamp(38px, 4.6vw + 8px, 62px);
+  line-height: 1.06;
   letter-spacing: -0.02em;
   font-weight: 700;
 }
 .mkt .hero-sub {
   max-width: 620px;
   margin: 26px auto 0;
-  font-size: 18px;
-  line-height: 1.65;
+  font-size: 17px;
+  line-height: 1.6;
   color: var(--mkt-text-2);
 }
 .mkt .hero-ctas {
@@ -932,8 +841,6 @@ html[data-theme='dark'] .mkt {
   border-radius: var(--mkt-r-lg);
   box-shadow: var(--mkt-shadow-lg), var(--mkt-card-glow);
   background: var(--mkt-dash-grad);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
   padding: 20px 22px 22px;
   text-align: left;
 }
@@ -993,10 +900,10 @@ html[data-theme='dark'] .mkt {
   padding: 18px 20px;
 }
 .mkt .panel-label {
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
   margin-bottom: 4px;
 }
@@ -1283,8 +1190,6 @@ html[data-theme='dark'] .mkt {
   font-family: var(--mkt-font-mono);
   font-size: 14px;
   color: var(--mkt-text);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 .mkt .engine-mark {
   width: 22px;
@@ -1494,10 +1399,10 @@ html[data-theme='dark'] .mkt {
   grid-template-columns: 76px 1fr 48px;
 }
 .mkt .drill-label {
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
   margin-bottom: 12px;
 }
@@ -2395,8 +2300,6 @@ html[data-theme='dark'] .mkt {
   font-size: 13.5px;
   font-weight: 550;
   color: var(--mkt-text-2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .mkt .seg-chip:hover {
@@ -2446,10 +2349,10 @@ html[data-theme='dark'] .mkt {
 }
 
 .mkt .col-label {
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
   margin: 28px 0 13px;
 }
@@ -3581,8 +3484,6 @@ html[data-theme='dark'] .mkt {
   border-radius: var(--mkt-r-md);
   margin-bottom: 10px;
   overflow: hidden;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition:
     background-color 0.35s var(--mkt-ease),
     border-color 0.35s var(--mkt-ease),
@@ -3780,10 +3681,10 @@ html[data-theme='dark'] .mkt {
 }
 
 .mkt .f-col-label {
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-text-3);
   margin-bottom: 13px;
   padding-top: 3px;
