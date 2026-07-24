@@ -39,28 +39,23 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <Dropdown>
       <DropdownTrigger
         className={cn(
-          'focus-ring border-border bg-panel hover:bg-background-alt hover:border-border-strong flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
+          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
           className,
         )}
         disabled={isLoading}
       >
         <span
           aria-hidden
-          className="bg-accent-soft text-2xs text-accent-text flex size-7 shrink-0 items-center justify-center rounded-md font-bold uppercase"
+          className="bg-foreground text-background text-2xs flex size-[26px] shrink-0 items-center justify-center rounded-md font-semibold uppercase"
         >
           {avatar}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="text-foreground block truncate text-sm font-semibold">{label}</span>
-          <span className="text-2xs text-muted block truncate">
-            {isLoading
-              ? 'Loading…'
-              : `${projects.length} project${projects.length === 1 ? '' : 's'}`}
-          </span>
+        <span className="text-foreground min-w-0 flex-1 truncate text-base font-medium">
+          {label}
         </span>
-        <ChevronsUpDown className="text-muted size-4 shrink-0" aria-hidden />
+        <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-[calc(240px-2rem)]">
+      <DropdownContent align="start" className="w-[212px]">
         <DropdownLabel>Projects</DropdownLabel>
         <DropdownSeparator className="bg-border-subtle my-1 h-px" />
         {projects.map((project) => {

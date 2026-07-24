@@ -139,7 +139,7 @@ test('shell → open run → open execution evidence', async ({ page }) => {
   await page.goto('/runs');
 
   // Runs list renders and the run links to its detail page.
-  await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Runs' })).toBeVisible();
   await page.getByRole('link', { name: 'View' }).first().click();
 
   // Run detail: progress panel + executions table.

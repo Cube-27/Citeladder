@@ -277,8 +277,8 @@ describe('VisibilityPage — tablist', () => {
     expect(tabs.map((t) => t.textContent)).toEqual([
       'Overview',
       'Trends',
-      'Mentions & Citations',
-      'Query Fanout',
+      'Mentions',
+      'Search queries',
     ]);
     // The forbidden tab labels are absent.
     expect(within(tablist).queryByRole('tab', { name: 'Sources' })).toBeNull();
@@ -298,7 +298,7 @@ describe('VisibilityPage — tablist', () => {
     expect(overviewTab).toHaveAttribute('aria-selected', 'true');
     // Exactly one panel is rendered.
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
-    expect(await screen.findByLabelText('Visibility score: 67%')).toBeInTheDocument();
+    expect(await screen.findByTestId('overview-summary')).toHaveTextContent('67%');
   });
 
   it('falls back to Overview for an invalid ?tab= value', async () => {
@@ -371,7 +371,7 @@ describe('VisibilityPage — tablist', () => {
     expect(screen.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
 
     await user.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Search queries' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -407,8 +407,8 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     ]);
     renderPage();
 
-    expect(await screen.findByLabelText('Visibility score: 67%')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Per-engine comparison' })).toBeInTheDocument();
+    expect(await screen.findByTestId('overview-summary')).toHaveTextContent('67%');
+    expect(screen.getByRole('heading', { name: 'By model' })).toBeInTheDocument();
     expect(screen.getByText('Gemini')).toBeInTheDocument();
     expect(screen.getByText('Claude')).toBeInTheDocument();
   });
@@ -421,7 +421,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     ]);
     renderPage();
 
-    const rankings = (await screen.findByRole('heading', { name: 'Rankings' })).closest('section')!;
+    const rankings = (await screen.findByRole('heading', { name: 'Competitors' })).closest('section')!;
     const bodyRows = within(rankings).getAllByRole('row').slice(1);
     expect(within(bodyRows[0]).getByText('Acme')).toBeInTheDocument();
     expect(within(bodyRows[0]).getByText('You')).toBeInTheDocument();
@@ -458,7 +458,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(await screen.findByLabelText('Visibility score: 67%')).toBeInTheDocument();
+    expect(await screen.findByTestId('overview-summary')).toHaveTextContent('67%');
     expect(seen[0]).toBe(AUDIT_LATEST);
 
     await user.click(screen.getByRole('button', { name: 'Select run' }));
@@ -471,7 +471,9 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     });
     await user.click(await screen.findByRole('menuitem', { name: olderLabel }));
 
-    await waitFor(() => expect(screen.getByLabelText('Visibility score: 42%')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId('overview-summary')).toHaveTextContent('42%'),
+    );
     expect(seen).toContain(AUDIT_OLDER);
   });
 
@@ -484,12 +486,12 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByLabelText('Visibility score: 67%');
+    await screen.findByTestId('overview-summary');
     const comparisonOf = () =>
-      screen.getByRole('heading', { name: 'Per-engine comparison' }).closest('section')!;
+      screen.getByRole('heading', { name: 'By model' }).closest('section')!;
     expect(within(comparisonOf()).getByText('Claude')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Filter by engine' }));
+    await user.click(screen.getByRole('button', { name: 'Filter by model' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Gemini' }));
 
     await waitFor(() =>
@@ -562,7 +564,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     renderPage();
 
     // The completed run's dashboard renders as usual…
-    expect(await screen.findByLabelText('Visibility score: 67%')).toBeInTheDocument();
+    expect(await screen.findByTestId('overview-summary')).toHaveTextContent('67%');
     // …with the active-run banner on top, linking to the running audit.
     expect(screen.getByText(/a run is in progress/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /watch live progress/i })).toHaveAttribute(
@@ -593,7 +595,7 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
     ]);
     renderPage();
 
-    await screen.findByLabelText('Visibility score: 67%');
+    await screen.findByTestId('overview-summary');
     expect(visibilityCalls).toBe(1);
     expect(trendCalls).toBe(0);
     expect(evidenceCalls).toBe(0);
@@ -614,12 +616,12 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
     renderPage();
 
     await screen.findByRole('tab', { name: 'Overview' });
-    await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
+    await user.click(screen.getByRole('tab', { name: 'Mentions' }));
     expect(
       await screen.findByText('Best affordable clothing stores in Australia?'),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'Query Fanout' }));
+    await user.click(screen.getByRole('tab', { name: 'Search queries' }));
     // The Query Fanout panel renders from the same cached response.
     expect(
       await screen.findByText('affordable family clothing Australia 2026'),
@@ -874,13 +876,13 @@ describe('VisibilityPage — shared filter persistence', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByLabelText('Visibility score: 67%');
+    await screen.findByTestId('overview-summary');
     // Pick an engine on Overview.
-    await user.click(screen.getByRole('button', { name: 'Filter by engine' }));
+    await user.click(screen.getByRole('button', { name: 'Filter by model' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Gemini' }));
 
     // Switch to an evidence tab; the engine filter carries over into the query.
-    await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
+    await user.click(screen.getByRole('tab', { name: 'Mentions' }));
     await screen.findByText('Best affordable clothing stores in Australia?');
     await waitFor(() => expect(evidenceEngines).toContain('gemini'));
   });

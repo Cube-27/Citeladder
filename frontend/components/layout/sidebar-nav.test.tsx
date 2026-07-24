@@ -15,7 +15,7 @@ function renderNav() {
 describe('SidebarNav', () => {
   it('renders both groups', () => {
     renderNav();
-    for (const group of ['Analyze', 'Optimize']) {
+    for (const group of ['Analyze', 'Improve']) {
       expect(screen.getByText(group)).toBeInTheDocument();
     }
   });
@@ -55,15 +55,15 @@ describe('SidebarNav', () => {
     const labels = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.label));
     expect(labels).toEqual([
       'Visibility',
-      'LLM Analytics',
+      'Answers',
       'Traffic',
       'Prompts',
       'Products',
       'Runs',
       'Content',
-      'Site Health',
+      'Site health',
       'Issues',
-      'Knowledge Base',
+      'Brand knowledge',
       'Setup',
     ]);
     for (const label of labels) {

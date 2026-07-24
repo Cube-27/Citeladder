@@ -2,6 +2,7 @@
 
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
+import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
 import { cn } from '@/lib/utils';
 import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
 
@@ -77,7 +78,10 @@ export function VisibilityTabs({
         role="tablist"
         aria-label="Visibility views"
         aria-orientation="horizontal"
-        className="border-border flex [scrollbar-width:none] flex-nowrap gap-0 overflow-x-auto border-b-2 [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          segmentedTrackClasses,
+          'flex w-fit max-w-full [scrollbar-width:none] flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden',
+        )}
       >
         {VISIBILITY_TABS.map((tab) => {
           const selected = tab.id === activeTab;
@@ -95,12 +99,7 @@ export function VisibilityTabs({
               tabIndex={selected ? 0 : -1}
               onClick={() => onSelectTab(tab.id)}
               onKeyDown={onKeyDown}
-              className={cn(
-                'focus-ring -mb-0.5 shrink-0 border-b-2 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                selected
-                  ? 'border-accent text-foreground font-semibold'
-                  : 'text-secondary hover:text-foreground border-transparent',
-              )}
+              className={cn(segmentedItemClasses(selected), 'shrink-0')}
             >
               {tab.label}
             </button>

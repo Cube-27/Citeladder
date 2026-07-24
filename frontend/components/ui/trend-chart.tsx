@@ -2,38 +2,13 @@
 
 import { useId, useState } from 'react';
 
+import {
+  SERIES_SLOT_COUNT,
+  seriesBg,
+  seriesFill,
+  seriesStroke,
+} from '@/components/ui/series-palette';
 import { cn } from '@/lib/utils';
-
-/** Fixed categorical series slots — see --series-* in globals.css. */
-const SERIES_STROKE = [
-  'stroke-series-1',
-  'stroke-series-2',
-  'stroke-series-3',
-  'stroke-series-4',
-  'stroke-series-5',
-] as const;
-
-const SERIES_FILL = [
-  'fill-series-1',
-  'fill-series-2',
-  'fill-series-3',
-  'fill-series-4',
-  'fill-series-5',
-] as const;
-
-/** `bg-*` form, for the legend/tooltip swatches that are HTML rather than SVG. */
-const SERIES_BG = [
-  'bg-series-1',
-  'bg-series-2',
-  'bg-series-3',
-  'bg-series-4',
-  'bg-series-5',
-] as const;
-
-/** Slot for series `i`, assigned in fixed order and never cycled past slot 5. */
-export const seriesStroke = (i: number) => SERIES_STROKE[Math.min(i, SERIES_STROKE.length - 1)];
-export const seriesFill = (i: number) => SERIES_FILL[Math.min(i, SERIES_FILL.length - 1)];
-export const seriesBg = (i: number) => SERIES_BG[Math.min(i, SERIES_BG.length - 1)];
 
 export type TrendPoint = {
   /** X-axis label (e.g. a run date). */
@@ -265,7 +240,7 @@ export function MultiTrendChart({
   // Slot assignment: the brand always takes slot 1 (accent); everyone else
   // fills the remaining slots in fixed order, never cycled.
   let next = 1;
-  const slots = series.map((s) => (s.brand ? 0 : Math.min(next++, SERIES_STROKE.length - 1)));
+  const slots = series.map((s) => (s.brand ? 0 : Math.min(next++, SERIES_SLOT_COUNT - 1)));
 
   const pathFor = (s: TrendSeries) => {
     const runs: string[] = [];

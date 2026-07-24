@@ -12,6 +12,7 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from '@/components/ui/dropdown';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { authApi } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
@@ -33,25 +34,18 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
   });
 
   return (
-    <Dropdown>
-      <DropdownTrigger
-        className={cn(
-          'focus-ring hover:bg-background-alt flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors',
-          className,
-        )}
-      >
-        <span
-          aria-hidden
-          className="bg-accent-soft text-2xs text-accent-text flex size-7 shrink-0 items-center justify-center rounded-full font-bold uppercase"
-        >
-          {emailInitials(user.email)}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="text-foreground block truncate text-sm font-medium">{user.email}</span>
-          <span className="text-2xs text-muted block truncate capitalize">{user.role}</span>
-        </span>
-      </DropdownTrigger>
-      <DropdownContent align="start" side="top" className="w-[calc(240px-2rem)]">
+    <div className={cn('flex items-center gap-1', className)}>
+      <Dropdown>
+        <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors">
+          <span
+            aria-hidden
+            className="bg-background-alt text-2xs text-secondary flex size-[26px] shrink-0 items-center justify-center rounded-full font-semibold uppercase"
+          >
+            {emailInitials(user.email)}
+          </span>
+          <span className="text-secondary min-w-0 flex-1 truncate text-xs">{user.email}</span>
+        </DropdownTrigger>
+        <DropdownContent align="start" side="top" className="w-[212px]">
         <DropdownLabel>{user.email}</DropdownLabel>
         <DropdownSeparator className="bg-border-subtle my-1 h-px" />
         <DropdownItem asChild>
@@ -68,9 +62,11 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           disabled={logout.isPending}
         >
           <LogOut className="size-4 shrink-0" aria-hidden />
-          <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
-        </DropdownItem>
-      </DropdownContent>
-    </Dropdown>
+            <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
+      <ThemeToggle />
+    </div>
   );
 }

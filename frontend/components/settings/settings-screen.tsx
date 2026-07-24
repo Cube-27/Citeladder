@@ -274,7 +274,7 @@ export function SettingsScreen() {
                 <div>
                   <div className="text-secondary text-sm font-medium">Theme</div>
                   <p className="text-muted mt-1 text-xs">
-                    Applies to this browser and syncs with the top-bar toggle.
+                    Applies to this browser and syncs with the sidebar toggle.
                   </p>
                 </div>
                 <ThemeToggle />

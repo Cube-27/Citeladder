@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { GettingStartedCard } from '@/components/layout/getting-started-card';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,6 +70,9 @@ export default function EditSetupPage() {
               </Link>
             </Button>
           </div>
+          {/* Onboarding checklist — moved off the sidebar, where it was visual
+              noise, onto the surface it actually describes. */}
+          <GettingStartedCard />
           <SetupForm project={project} brandProfile={profileQuery.data} />
         </>
       ) : null}
