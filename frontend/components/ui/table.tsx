@@ -113,7 +113,7 @@ export function TableCell({
     <td
       {...props}
       className={cn(
-        'text-foreground border-border-subtle text-sm px-3 py-0 text-left align-middle',
+        'text-foreground border-border-subtle px-3 py-0 text-left align-middle text-sm',
         // Row rule, dropped on the last row; column separators as in the head.
         'border-b [tr:last-child>&]:border-b-0',
         'first:border-l-0 [&:not(:first-child)]:border-l',

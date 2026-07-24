@@ -421,7 +421,9 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     ]);
     renderPage();
 
-    const rankings = (await screen.findByRole('heading', { name: 'Competitors' })).closest('section')!;
+    const rankings = (await screen.findByRole('heading', { name: 'Competitors' })).closest(
+      'section',
+    )!;
     const bodyRows = within(rankings).getAllByRole('row').slice(1);
     expect(within(bodyRows[0]).getByText('Acme')).toBeInTheDocument();
     expect(within(bodyRows[0]).getByText('You')).toBeInTheDocument();
@@ -471,9 +473,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     });
     await user.click(await screen.findByRole('menuitem', { name: olderLabel }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('overview-summary')).toHaveTextContent('42%'),
-    );
+    await waitFor(() => expect(screen.getByTestId('overview-summary')).toHaveTextContent('42%'));
     expect(seen).toContain(AUDIT_OLDER);
   });
 

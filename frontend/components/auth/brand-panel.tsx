@@ -102,7 +102,7 @@ export function AuthBrandPanel() {
             fictional Acme dataset; never interactive, always aria-hidden. */}
         <div
           aria-hidden="true"
-          className="bg-elevated border-border shadow-card mt-auto mb-8 w-full max-w-[520px] rounded-2xl border p-4"
+          className="bg-elevated border-border mt-auto mb-8 w-full max-w-[520px] rounded-2xl border p-4"
         >
           <div className="mb-3 flex items-center gap-2.5 px-0.5">
             <span className="bg-accent text-accent-fg text-2xs grid size-[22px] shrink-0 place-items-center rounded-md font-bold">

@@ -54,7 +54,7 @@ export function PromptTable({
   const pagedPrompts = prompts.slice(from - 1, to);
 
   return (
-    <div className="border-border bg-panel shadow-card overflow-hidden rounded-lg border">
+    <div className="border-border bg-panel overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>

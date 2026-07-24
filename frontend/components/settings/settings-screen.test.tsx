@@ -142,10 +142,7 @@ describe('SettingsScreen', () => {
   it('opens the Provider Settings tab from a ?tab=providers deep link', () => {
     search = 'tab=providers';
     renderScreen();
-    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
   });
 
@@ -190,10 +187,7 @@ describe('SettingsScreen', () => {
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'Danger zone' })).toHaveAttribute(
       'aria-selected',

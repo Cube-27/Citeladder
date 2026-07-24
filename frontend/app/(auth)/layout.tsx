@@ -45,7 +45,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
               </span>
             </p>
           </div>
-          <Card className="shadow-card w-full max-w-[400px] p-6">{children}</Card>
+          <Card className="w-full max-w-[400px] p-6">{children}</Card>
           {/* BYOK trust microcopy under the card (mock: auth-trust-microcopy,
               shown on both the desktop and 390px frames). */}
           <div className="text-muted flex items-center justify-center gap-2 font-mono text-[11px]">

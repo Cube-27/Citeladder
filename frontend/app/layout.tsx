@@ -28,11 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <head>
         {/* Pre-hydration theme bootstrap — sets data-theme before first paint
             to avoid a flash (see lib/theme.ts). Must run before hydration. */}

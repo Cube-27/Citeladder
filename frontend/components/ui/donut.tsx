@@ -120,7 +120,14 @@ export function Donut({
                 {/* Drawn as a stroked ring with r = half the stroke width so it
                     reads as a solid dot while still honouring the caller's
                     `stroke-*` token (fill-* would need a second contract). */}
-                <circle cx={4} cy={4} r={2} fill="none" strokeWidth={4} className={segment.colorClass} />
+                <circle
+                  cx={4}
+                  cy={4}
+                  r={2}
+                  fill="none"
+                  strokeWidth={4}
+                  className={segment.colorClass}
+                />
               </svg>
               <span className="text-secondary flex-1 truncate">{segment.label}</span>
               <span className="mono text-foreground font-medium">

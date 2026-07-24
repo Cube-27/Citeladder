@@ -91,8 +91,8 @@ export function OverviewSummary({
           <>Visibility for {brandName} is not available for this run.</>
         ) : (
           <>
-            {brandName} is mentioned in{' '}
-            <b className="text-foreground font-semibold">{score}%</b> of answers
+            {brandName} is mentioned in <b className="text-foreground font-semibold">{score}%</b> of
+            answers
             {visibilityDelta !== null ? (
               <>
                 , {rose ? 'up' : 'down'}{' '}
@@ -114,9 +114,7 @@ export function OverviewSummary({
         {visibility.sentiment ? (
           <InlineMetric label="Sentiment" value={visibility.sentiment} />
         ) : null}
-        {position !== null ? (
-          <InlineMetric label="Position" value={position.toFixed(1)} />
-        ) : null}
+        {position !== null ? <InlineMetric label="Position" value={position.toFixed(1)} /> : null}
         {rank !== null ? <InlineMetric label="Rank" value={`#${rank}`} /> : null}
       </div>
     </div>

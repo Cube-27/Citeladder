@@ -46,22 +46,22 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           <span className="text-secondary min-w-0 flex-1 truncate text-xs">{user.email}</span>
         </DropdownTrigger>
         <DropdownContent align="start" side="top" className="w-[212px]">
-        <DropdownLabel>{user.email}</DropdownLabel>
-        <DropdownSeparator className="bg-border-subtle my-1 h-px" />
-        <DropdownItem asChild>
-          <Link href="/settings">
-            <ICONS.settings className="size-4 shrink-0" aria-hidden />
-            <span>Settings</span>
-          </Link>
-        </DropdownItem>
-        <DropdownItem
-          onSelect={(event) => {
-            event.preventDefault();
-            logout.mutate();
-          }}
-          disabled={logout.isPending}
-        >
-          <LogOut className="size-4 shrink-0" aria-hidden />
+          <DropdownLabel>{user.email}</DropdownLabel>
+          <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+          <DropdownItem asChild>
+            <Link href="/settings">
+              <ICONS.settings className="size-4 shrink-0" aria-hidden />
+              <span>Settings</span>
+            </Link>
+          </DropdownItem>
+          <DropdownItem
+            onSelect={(event) => {
+              event.preventDefault();
+              logout.mutate();
+            }}
+            disabled={logout.isPending}
+          >
+            <LogOut className="size-4 shrink-0" aria-hidden />
             <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
           </DropdownItem>
         </DropdownContent>

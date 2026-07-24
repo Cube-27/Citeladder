@@ -80,7 +80,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
 
   return (
     <section
-      className={cn('border-border bg-panel shadow-card rounded-lg border p-3', className)}
+      className={cn('border-border bg-panel rounded-lg border p-3', className)}
       aria-label="Getting started progress"
     >
       <div className="flex items-center justify-between">

@@ -354,7 +354,7 @@ function IssuesList({ issues }: Readonly<{ issues: SiteIssue[] }>) {
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-foreground text-base font-semibold">All Issues ({issues.length})</h2>
-          <span className="text-2xs text-muted font-mono">Sorted by severity</span>
+          <span className="text-2xs text-muted">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (
           <p className="text-secondary text-sm">No issues detected on this page.</p>

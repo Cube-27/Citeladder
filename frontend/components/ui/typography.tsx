@@ -10,10 +10,8 @@ import { cn } from '@/lib/utils';
  * by size and tracking only. These are class recipes, not components — the
  * call site keeps whichever heading element is semantic.
  */
-export const displayHeadingLgClasses =
-  'text-foreground text-lg font-semibold tracking-[-0.01em]';
-export const displayHeadingXlClasses =
-  'text-foreground text-xl font-semibold tracking-[-0.02em]';
+export const displayHeadingLgClasses = 'text-foreground text-lg font-semibold tracking-[-0.01em]';
+export const displayHeadingXlClasses = 'text-foreground text-xl font-semibold tracking-[-0.02em]';
 
 /** Page heading with an optional sentence-case kicker/eyebrow. */
 export function PageTitle({

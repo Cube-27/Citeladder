@@ -2,8 +2,9 @@
    Searchify — Design System (single token source of truth)
    Values lifted VERBATIM from docs/design.md. Components consume ONLY the
    bridged Tailwind semantic tokens below — never raw hex (no-raw-hex guard).
-   Dense clean B2B analytics · CUBE27 midnight (dark-first) / warm-paper
-   light · blue accent · 4px grid · WCAG 2.1 AA.
+   Dense clean B2B analytics · flat / hairline language (1px borders, not
+   shadows) · one sans family · blue accent reserved for data, links, active
+   states and focus rings · 4px grid · WCAG 2.1 AA.
 ═══════════════════════════════════════════════════════════════════════ */
 
 @import 'tailwindcss';
@@ -219,7 +220,7 @@
   /* Text — body values verified ≥ 4.5:1 on bg-panel (#ffffff) */
   --text-primary: #17171a;   /* 16.6:1 on #ffffff */
   --text-secondary: #5c5c66; /* 6.9:1 on #ffffff  */
-  --text-muted: #71717b;     /* 4.9:1 on #ffffff, 4.8:1 on #fbfbfa */
+  --text-muted: #6c6c76;     /* 5.2:1 on panel, 4.6:1 on the darkest surface (bg-well) */
   --text-subtle: #b4b4bc;    /* decorative only (icons/dividers), not body text */
 
   /* Accent — blue */
