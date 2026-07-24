@@ -41,7 +41,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
                 Answer-engine optimization
               </span>
               <span className="font-display text-foreground mt-2 block text-lg font-bold tracking-tight">
-                See how <span className="text-gradient">AI answers</span> talk about your brand.
+                See how <span className="text-accent-text">AI answers</span> talk about your brand.
               </span>
             </p>
           </div>

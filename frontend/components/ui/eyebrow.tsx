@@ -3,16 +3,16 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Eyebrow (kicker) recipes — the midnight mono micro-label pattern
- * (IBM Plex Mono, 2xs, medium, tracked, uppercase).
+ * Eyebrow (kicker) recipes — sentence-case sans micro-labels (11px, medium,
+ * muted). The flat/hairline language drops the mono-uppercase-tracked eyebrow
+ * entirely: labels are quiet sans text, and mono is reserved for values.
  *
  * `eyebrowClasses` is the muted form, shared by page eyebrows, table
  * headers, panel labels and <CardEyebrow>; apply it to whatever element is
- * semantic at the call site. <AccentEyebrow> is the accent-dot page eyebrow
- * (dot + accent text) used atop setup and status pages.
+ * semantic at the call site. <AccentEyebrow> is the accent-toned variant used
+ * atop setup and status pages.
  */
-export const eyebrowClasses =
-  'text-2xs text-muted font-mono font-medium tracking-[0.08em] uppercase';
+export const eyebrowClasses = 'text-2xs text-muted font-medium';
 
 export function AccentEyebrow({
   children,
@@ -24,7 +24,6 @@ export function AccentEyebrow({
       {...props}
       className={cn(eyebrowClasses, 'text-accent-text inline-flex items-center gap-1.5', className)}
     >
-      <span className="bg-accent size-1.5 rounded-full" aria-hidden />
       {children}
     </span>
   );

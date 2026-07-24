@@ -1,4 +1,39 @@
+'use client';
+
+import { useId, useState } from 'react';
+
 import { cn } from '@/lib/utils';
+
+/** Fixed categorical series slots — see --series-* in globals.css. */
+const SERIES_STROKE = [
+  'stroke-series-1',
+  'stroke-series-2',
+  'stroke-series-3',
+  'stroke-series-4',
+  'stroke-series-5',
+] as const;
+
+const SERIES_FILL = [
+  'fill-series-1',
+  'fill-series-2',
+  'fill-series-3',
+  'fill-series-4',
+  'fill-series-5',
+] as const;
+
+/** `bg-*` form, for the legend/tooltip swatches that are HTML rather than SVG. */
+const SERIES_BG = [
+  'bg-series-1',
+  'bg-series-2',
+  'bg-series-3',
+  'bg-series-4',
+  'bg-series-5',
+] as const;
+
+/** Slot for series `i`, assigned in fixed order and never cycled past slot 5. */
+export const seriesStroke = (i: number) => SERIES_STROKE[Math.min(i, SERIES_STROKE.length - 1)];
+export const seriesFill = (i: number) => SERIES_FILL[Math.min(i, SERIES_FILL.length - 1)];
+export const seriesBg = (i: number) => SERIES_BG[Math.min(i, SERIES_BG.length - 1)];
 
 export type TrendPoint = {
   /** X-axis label (e.g. a run date). */
@@ -103,10 +138,6 @@ export function TrendChart({
   if (current.length) segments.push(current);
 
   const lineSegments = segments.filter((seg) => seg.length > 1);
-  const areaSegments = segments.filter((seg) => seg.length > 1);
-
-  const toAreaPath = (seg: { x: number; y: number }[]) =>
-    `${toLinePath(seg)} L${seg[seg.length - 1].x.toFixed(1)},${(height - padding).toFixed(1)} L${seg[0].x.toFixed(1)},${(height - padding).toFixed(1)} Z`;
 
   const summary = !data.length
     ? 'No trend data'
@@ -127,9 +158,6 @@ export function TrendChart({
       className={cn('overflow-visible', className)}
     >
       <title>{ariaLabel}</title>
-      {areaSegments.map((seg, i) => (
-        <path key={`area-${i}`} d={toAreaPath(seg)} className="fill-accent-soft" />
-      ))}
       {lineSegments.map((seg, i) => (
         <path
           key={`line-${i}`}
@@ -171,5 +199,216 @@ export function TrendChart({
         ),
       )}
     </svg>
+  );
+}
+
+export type TrendSeries = {
+  /** Series name, shown in the legend and the hover tooltip. */
+  name: string;
+  /** Points, one per x tick — same length and order across every series. */
+  values: (number | null)[];
+  /**
+   * Marks the user's own brand: drawn slightly heavier and pinned to series
+   * slot 1 (the accent) regardless of its position in the array.
+   */
+  brand?: boolean;
+};
+
+/**
+ * MultiTrendChart — the Overview trend card: several brands on one axis.
+ *
+ * Flat language: no y-gridlines, no area fills, 2px lines (2.5px for the
+ * brand's own series), month labels only. Hovering reveals a 1px dashed
+ * vertical guide with a dot on each series and a dark tooltip listing every
+ * value at that x.
+ *
+ * Accessibility: identity is never colour-alone — the tooltip and the legend
+ * both name each series, and the whole chart carries a text summary. A `null`
+ * value is a genuine gap (no segment drawn through it), never a zero.
+ */
+export function MultiTrendChart({
+  series,
+  labels,
+  height = 200,
+  domainMax = 100,
+  valueSuffix = '%',
+  className,
+  label,
+}: Readonly<{
+  series: TrendSeries[];
+  /** X tick labels (e.g. months); only these are rendered on the axis. */
+  labels: string[];
+  height?: number;
+  domainMax?: number;
+  valueSuffix?: string;
+  className?: string;
+  label?: string;
+}>) {
+  const [hover, setHover] = useState<number | null>(null);
+  const clipId = useId();
+
+  // A percentage viewBox keeps the chart fluid inside its card while the SVG
+  // geometry stays in simple integer user units.
+  const width = 640;
+  const padX = 4;
+  const padTop = 8;
+  const axisH = 18;
+  const plotH = height - padTop - axisH;
+
+  const effectiveMax = domainMax > 0 ? domainMax : 100;
+  const count = labels.length;
+  const stepX = count > 1 ? (width - padX * 2) / (count - 1) : 0;
+  const xAt = (i: number) => (count > 1 ? padX + i * stepX : width / 2);
+  const yAt = (v: number) =>
+    padTop + plotH * (1 - Math.max(0, Math.min(effectiveMax, v)) / effectiveMax);
+
+  // Slot assignment: the brand always takes slot 1 (accent); everyone else
+  // fills the remaining slots in fixed order, never cycled.
+  let next = 1;
+  const slots = series.map((s) => (s.brand ? 0 : Math.min(next++, SERIES_STROKE.length - 1)));
+
+  const pathFor = (s: TrendSeries) => {
+    const runs: string[] = [];
+    let current: string[] = [];
+    s.values.forEach((v, i) => {
+      if (v === null || v === undefined || !Number.isFinite(v)) {
+        if (current.length > 1) runs.push(current.join(' '));
+        current = [];
+        return;
+      }
+      current.push(`${current.length === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`);
+    });
+    if (current.length > 1) runs.push(current.join(' '));
+    return runs;
+  };
+
+  const summary = series.length
+    ? `${series.length} series across ${count} points: ${series.map((s) => s.name).join(', ')}`
+    : 'No trend data';
+
+  return (
+    <div className={cn('relative', className)}>
+      <svg
+        role="img"
+        aria-label={label ? `${label}: ${summary}` : summary}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="block h-[var(--chart-height)] w-full"
+        style={{ ['--chart-height' as string]: `${height}px` }}
+        onMouseLeave={() => setHover(null)}
+      >
+        <title>{label ? `${label}: ${summary}` : summary}</title>
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={0} y={0} width={width} height={padTop + plotH} />
+          </clipPath>
+        </defs>
+
+        {/* Hover guide — a 1px dashed vertical at the active x. */}
+        {hover !== null ? (
+          <line
+            x1={xAt(hover)}
+            y1={padTop}
+            x2={xAt(hover)}
+            y2={padTop + plotH}
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            className="stroke-border-strong"
+            aria-hidden
+          />
+        ) : null}
+
+        <g clipPath={`url(#${clipId})`}>
+          {series.map((s, si) =>
+            pathFor(s).map((d, ri) => (
+              <path
+                key={`${s.name}-${ri}`}
+                d={d}
+                fill="none"
+                strokeWidth={s.brand ? 2.5 : 2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+                className={seriesStroke(slots[si])}
+              />
+            )),
+          )}
+        </g>
+
+        {/* Dots at the guide — only for series with a value at that x. */}
+        {hover !== null
+          ? series.map((s, si) => {
+              const v = s.values[hover];
+              if (v === null || v === undefined || !Number.isFinite(v)) return null;
+              return (
+                <circle
+                  key={`dot-${s.name}`}
+                  cx={xAt(hover)}
+                  cy={yAt(v)}
+                  r={3.5}
+                  className={seriesFill(slots[si])}
+                  aria-hidden
+                />
+              );
+            })
+          : null}
+
+        {/* Month labels only — no y-gridlines, no y-axis ticks. */}
+        {labels.map((l, i) => (
+          <text
+            key={l}
+            x={xAt(i)}
+            y={height - 4}
+            textAnchor={i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle'}
+            className="fill-muted text-[10px]"
+          >
+            {l}
+          </text>
+        ))}
+
+        {/* Invisible hit bands — a wider target than the line itself. */}
+        {labels.map((l, i) => (
+          <rect
+            key={`hit-${l}`}
+            x={xAt(i) - stepX / 2}
+            y={0}
+            width={stepX || width}
+            height={height}
+            fill="transparent"
+            onMouseEnter={() => setHover(i)}
+          />
+        ))}
+      </svg>
+
+      {/* Tooltip — dark card, muted 11.5px title, one row per series. */}
+      {hover !== null ? (
+        <div
+          className="bg-chart-tooltip pointer-events-none absolute top-2 z-10 min-w-[168px] rounded-md p-2.5"
+          style={{ left: `${(xAt(hover) / width) * 100}%`, transform: 'translateX(-50%)' }}
+          role="status"
+        >
+          <p className="mb-1.5 text-[11.5px] text-white/60">{labels[hover]}</p>
+          <ul className="grid gap-1">
+            {series.map((s, si) => {
+              const v = s.values[hover];
+              return (
+                <li key={s.name} className="flex items-center gap-2 text-[11.5px]">
+                  <span
+                    className={cn('size-2 shrink-0 rounded-[2px]', seriesBg(slots[si]))}
+                    aria-hidden
+                  />
+                  <span className="flex-1 truncate text-white/80">{s.name}</span>
+                  <span className="mono font-medium text-white">
+                    {v === null || v === undefined || !Number.isFinite(v)
+                      ? '—'
+                      : `${v}${valueSuffix}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }

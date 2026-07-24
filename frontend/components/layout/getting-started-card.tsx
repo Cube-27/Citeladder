@@ -99,7 +99,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
         aria-label={`${completed} of ${total} steps complete`}
       >
         <div
-          className="accent-gradient-bar h-full rounded-full transition-[width]"
+          className="bg-accent h-full rounded-full transition-[width]"
           style={{ width: `${pct}%` }}
         />
       </div>

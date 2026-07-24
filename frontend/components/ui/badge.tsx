@@ -6,6 +6,7 @@ import {
   classificationBadge,
   neutralBadge,
   runStatusBadge,
+  runStatusBadgeShape,
   sentimentBadge,
   statusBadge,
   type ClassificationValue,
@@ -40,7 +41,7 @@ function badgeClasses(props: BadgeProps): string {
     case 'classification':
       return classificationBadge[props.value];
     case 'run-status':
-      return runStatusBadge[props.value];
+      return cn(runStatusBadge[props.value], runStatusBadgeShape);
     default:
       return neutralBadge;
   }

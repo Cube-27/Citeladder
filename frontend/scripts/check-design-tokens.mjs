@@ -118,6 +118,14 @@ const requiredVars = [
   'score-good-bg',
   'score-high',
   'score-high-bg',
+  // Chart series (categorical — validated for CVD separation + contrast)
+  'series-1',
+  'series-2',
+  'series-3',
+  'series-4',
+  'series-5',
+  'series-other',
+  'chart-tooltip-bg',
   // Shadows / elevation
   'shadow-xs-value',
   'shadow-sm-value',

@@ -30,7 +30,7 @@ const ENGINE_DOTS = ['bg-accent/60', 'bg-accent', 'bg-accent-hover'] as const;
  * A per-engine grid (one tile per logical engine for the selected run: engine
  * dot + name, the visibility score ring with mono numeral, and the mono stat
  * rows) plus the brand-vs-competitor Share-of-Voice bars — the brand row
- * takes the accent-gradient fill (`.accent-gradient-bar`), competitors a
+ * takes the flat accent fill (`bg-accent`), competitors a
  * muted fill on the well track. Honors the engine filter; hidden entirely
  * when the filtered set is empty.
  */
@@ -170,7 +170,7 @@ function ShareOfVoiceRow({ row }: Readonly<{ row: RankingRow }>) {
         <span
           className={cn(
             'block h-full rounded-full',
-            row.is_brand ? 'accent-gradient-bar' : 'bg-foreground/20',
+            row.is_brand ? 'bg-accent' : 'bg-foreground/20',
           )}
           style={{ width: `${pct}%` }}
         />
