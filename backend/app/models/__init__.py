@@ -49,6 +49,7 @@ from app.models.integrations import (
     IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from app.models.opportunity import Opportunity, OpportunitySnapshot
 from app.models.product import (
     CompetitorProduct,
     Product,
@@ -115,6 +116,8 @@ __all__ = [
     "IntegrationPropertyMapping",
     "IntegrationSyncRun",
     "MetricSnapshot",
+    "Opportunity",
+    "OpportunitySnapshot",
     "OwnedDomain",
     "Product",
     "ProductMention",
