@@ -1,17 +1,19 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Display-heading recipes (Bricolage via `--font-display`) from the midnight
- * redesign: `displayHeadingLgClasses` for panel / empty-state headings,
- * `displayHeadingXlClasses` for page titles. These are class recipes, not
- * components — the call site keeps whichever heading element is semantic.
+ * Heading recipes: `displayHeadingLgClasses` for panel / empty-state headings,
+ * `displayHeadingXlClasses` for page titles. There is no separate display
+ * face — `font-display` resolves to the one sans, so headings differ from body
+ * by size and tracking only. These are class recipes, not components — the
+ * call site keeps whichever heading element is semantic.
  */
-export const displayHeadingLgClasses = 'font-display text-foreground text-lg font-semibold';
-export const displayHeadingXlClasses = 'font-display text-foreground text-xl font-semibold';
+export const displayHeadingLgClasses = 'text-foreground text-lg font-semibold tracking-[-0.01em]';
+export const displayHeadingXlClasses = 'text-foreground text-xl font-semibold tracking-[-0.02em]';
 
-/** Page heading with optional uppercase kicker/eyebrow. */
+/** Page heading with an optional sentence-case kicker/eyebrow. */
 export function PageTitle({
   children,
   kicker,
@@ -19,10 +21,8 @@ export function PageTitle({
 }: Readonly<{ children: ReactNode; kicker?: string; className?: string }>) {
   return (
     <div className={cn('space-y-1', className)}>
-      {kicker ? (
-        <p className="text-2xs text-accent-text font-semibold tracking-wider uppercase">{kicker}</p>
-      ) : null}
-      <h1 className="text-foreground text-xl font-bold">{children}</h1>
+      {kicker ? <p className="text-2xs text-muted font-medium">{kicker}</p> : null}
+      <h1 className={displayHeadingXlClasses}>{children}</h1>
     </div>
   );
 }
@@ -40,17 +40,14 @@ export function SectionTitle({
   );
 }
 
-/** Uppercase micro-label. */
+/** Sentence-case micro-label (the same recipe as `eyebrowClasses`). */
 export function Label({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span
-      {...props}
-      className={cn('text-2xs text-muted font-semibold tracking-wide uppercase', className)}
-    >
+    <span {...props} className={cn(eyebrowClasses, className)}>
       {children}
     </span>
   );

@@ -46,6 +46,16 @@ _GOOGLE_SCOPES = {
 }
 
 
+def _landing(query: str) -> str:
+    """Expected absolute frontend landing URL (contract C2).
+
+    Absolute because the provider navigates the browser to the *backend*
+    callback: a bare path would resolve against the backend origin, which
+    serves no ``/settings`` route.
+    """
+    return f"{settings.frontend_url.rstrip('/')}/settings?tab=integrations&{query}"
+
+
 def _fixture(name: str) -> dict:
     return json.loads((_FIXTURES / name).read_text())
 
@@ -194,7 +204,7 @@ async def test_google_connect_happy_path_shared_grant(
     with caplog.at_level(logging.DEBUG):
         callback = await _callback(client, "gsc", state)
     assert callback.status_code == 302
-    assert callback.headers["location"] == "/settings?tab=integrations&connected=gsc"
+    assert callback.headers["location"] == _landing("connected=gsc")
 
     # One grant carries the Fernet-encrypted tokens (never the plaintext).
     (grant,) = await _grants(db_session)
@@ -247,10 +257,7 @@ async def test_replayed_state_rejected(
 
     replay = await _callback(client, "gsc", state)
     assert replay.status_code == 302
-    assert (
-        replay.headers["location"]
-        == "/settings?tab=integrations&error=oauth_state_invalid"
-    )
+    assert replay.headers["location"] == _landing("error=oauth_state_invalid")
     # The exchange ran exactly once; the grant graph is unchanged.
     assert len(_fake_oauth.token_calls()) == 1
     assert len(await _grants(db_session)) == 1
@@ -272,10 +279,7 @@ async def test_cross_user_state_rejected(
     await _register(client, "int-intruder@example.com")
     callback = await _callback(client, "gsc", state)
     assert callback.status_code == 302
-    assert (
-        callback.headers["location"]
-        == "/settings?tab=integrations&error=oauth_state_invalid"
-    )
+    assert callback.headers["location"] == _landing("error=oauth_state_invalid")
     assert _fake_oauth.token_calls() == []
     assert await _grants(db_session) == []
 
@@ -308,6 +312,44 @@ async def test_workspace_comes_from_verified_state_not_client(
 
 
 @pytest.mark.asyncio
+async def test_callback_landing_is_absolute_frontend_url(
+    client: httpx.AsyncClient,
+    db_session,
+    _oauth_credentials: None,
+    _fake_oauth: _FakeOAuthServer,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The landing target is absolute and points at the frontend origin.
+
+    Regression guard: the provider navigates the browser to the *backend*
+    callback, so a relative ``/settings?...`` target resolved against the
+    backend origin and dead-ended on a 404 even though the connect succeeded.
+    """
+    monkeypatch.setattr(settings, "frontend_url", "http://localhost:3000")
+    await _register(client, "int-absolute-landing@example.com")
+    state = _state_from_start(await _start(client, "gsc"))
+    callback = await _callback(client, "gsc", state)
+
+    location = callback.headers["location"]
+    assert location == (
+        "http://localhost:3000/settings?tab=integrations&connected=gsc"
+    )
+    # An absolute URL on the frontend origin, NOT a backend-relative path.
+    split = urlsplit(location)
+    assert split.scheme == "http"
+    assert split.netloc == "localhost:3000"
+    assert split.path == "/settings"
+
+    # A trailing slash on the configured origin must not double up.
+    monkeypatch.setattr(settings, "frontend_url", "http://localhost:3000/")
+    state2 = _state_from_start(await _start(client, "ga4"))
+    callback2 = await _callback(client, "ga4", state2)
+    assert callback2.headers["location"] == (
+        "http://localhost:3000/settings?tab=integrations&connected=ga4"
+    )
+
+
+@pytest.mark.asyncio
 async def test_exchange_failure_landing_and_state_consumed(
     client: httpx.AsyncClient,
     db_session,
@@ -320,10 +362,7 @@ async def test_exchange_failure_landing_and_state_consumed(
     state = _state_from_start(await _start(client, "gsc"))
     callback = await _callback(client, "gsc", state)
     assert callback.status_code == 302
-    assert (
-        callback.headers["location"]
-        == "/settings?tab=integrations&error=oauth_exchange_failed"
-    )
+    assert callback.headers["location"] == _landing("error=oauth_exchange_failed")
     assert await _grants(db_session) == []
     # The state was consumed before the exchange — a retry is a replay.
     retry = await _callback(client, "gsc", state)
@@ -376,7 +415,7 @@ async def test_microsoft_connect_attaches_bing_connection(
     assert _MS_CLIENT_SECRET not in location
 
     callback = await _callback(client, "bing", _state_from_start(start))
-    assert callback.headers["location"] == "/settings?tab=integrations&connected=bing"
+    assert callback.headers["location"] == _landing("connected=bing")
 
     (grant,) = await _grants(db_session)
     assert grant.transport == "microsoft_oauth"
@@ -430,10 +469,7 @@ async def test_bing_exchange_failure_landing(
     state = _state_from_start(await _start(client, "bing"))
     callback = await _callback(client, "bing", state)
     assert callback.status_code == 302
-    assert (
-        callback.headers["location"]
-        == "/settings?tab=integrations&error=oauth_exchange_failed"
-    )
+    assert callback.headers["location"] == _landing("error=oauth_exchange_failed")
     assert await _grants(db_session) == []
     assert await _connections(db_session) == []
     # The state was consumed before the exchange — a retry is a replay.

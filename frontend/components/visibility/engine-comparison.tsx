@@ -1,12 +1,12 @@
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardEyebrow,
-} from '@/components/ui/card';
-import { ScoreRing } from '@/components/ui/score-ring';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import type { RankingRow, Visibility } from '@/lib/api/types';
 import {
@@ -18,21 +18,21 @@ import {
   type VisibilityFilters,
 } from '@/lib/visibility/dashboard';
 
-// Engine identity dots cycle through the accent (blue) family — decorative
-// only, so bridged-token opacity steps stand in for the mockup's blue-1/2/3
-// ramp (no raw hex, both themes stay in-family).
-const ENGINE_DOTS = ['bg-accent/60', 'bg-accent', 'bg-accent-hover'] as const;
-
 /**
- * Below-the-fold per-engine comparison + Share-of-Voice (design.md §9.6,
- * shell-visibility-midnight mockup).
+ * Per-model comparison + Share-of-answers (design.md §9.6).
  *
- * A per-engine grid (one tile per logical engine for the selected run: engine
- * dot + name, the visibility score ring with mono numeral, and the mono stat
- * rows) plus the brand-vs-competitor Share-of-Voice bars — the brand row
- * takes the accent-gradient fill (`.accent-gradient-bar`), competitors a
- * muted fill on the well track. Honors the engine filter; hidden entirely
- * when the filtered set is empty.
+ * The per-engine breakdown is a dense TABLE (one row per logical engine:
+ * visibility, brand mentions, owned citations, search used, responses) rather
+ * than a grid of score rings — the flat language reserves rings for surfaces
+ * where the ring itself carries the data, and a table compares models far
+ * better. Alongside it are the brand-vs-competitor share bars: the brand row
+ * takes the flat accent fill (`bg-accent`), competitors a muted fill on the
+ * well track.
+ *
+ * Honors the engine filter; the table shows an explicit empty message when the
+ * filtered set is empty.
+ *
+ * This component keeps its original DATA logic — only the rendering changed.
  */
 export function EngineComparison({
   visibility,
@@ -41,72 +41,61 @@ export function EngineComparison({
   const engines = visibleEngines(visibility, filter);
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[2fr_1fr]">
+    <div className="grid gap-3 xl:grid-cols-[1.55fr_1fr]">
       <Card>
-        <CardHeader>
-          <CardTitle>Per-engine comparison</CardTitle>
-          <CardDescription>How each AI engine sees your brand in this run.</CardDescription>
+        <CardHeader bordered>
+          <CardTitle>By model</CardTitle>
+          <CardDescription>How each AI model sees your brand in this run</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {engines.length === 0 ? (
-            <p className="text-secondary text-sm">No engine results match the current filter.</p>
+            <p className="text-secondary p-[var(--card-padding)] text-sm">
+              No model results match the current filter.
+            </p>
           ) : (
-            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {engines.map((engine, index) => (
-                <li
-                  key={engine.logical_engine}
-                  className="border-border-subtle bg-background-alt grid justify-items-center gap-3 rounded-lg border p-4 text-center"
-                >
-                  <p className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'size-1.5 shrink-0 rounded-full',
-                        ENGINE_DOTS[index % ENGINE_DOTS.length],
-                      )}
-                    />
-                    {engineLabel(engine.logical_engine)}
-                  </p>
-                  <ScoreRing
-                    value={engine.visibility_score ?? 0}
-                    size={80}
-                    strokeWidth={8}
-                    showValue={engine.visibility_score !== null}
-                    label={`${engineLabel(engine.logical_engine)} visibility score: ${
-                      engine.visibility_score === null
-                        ? 'not available'
-                        : Math.round(engine.visibility_score)
-                    }%`}
-                  />
-                  <dl className="grid w-full gap-1 text-xs">
-                    <EngineStat
-                      label="Brand mentions"
-                      value={formatRate(engine.brand_mention_rate)}
-                    />
-                    <EngineStat
-                      label="Owned citations"
-                      value={formatRate(engine.owned_citation_rate)}
-                    />
-                    <EngineStat label="Search used" value={formatRate(engine.search_use_rate)} />
-                    <EngineStat label="Responses" value={`${engine.total_completed}`} />
-                  </dl>
-                </li>
-              ))}
-            </ul>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Model</TableHead>
+                  <TableHead numeric>Visibility</TableHead>
+                  <TableHead numeric>Brand mentions</TableHead>
+                  <TableHead numeric>Owned citations</TableHead>
+                  <TableHead numeric>Search used</TableHead>
+                  <TableHead numeric>Responses</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {engines.map((engine) => (
+                  <TableRow key={engine.logical_engine}>
+                    <TableCell className="text-foreground font-medium">
+                      {engineLabel(engine.logical_engine)}
+                    </TableCell>
+                    <TableCell numeric className="mono text-foreground font-semibold">
+                      {engine.visibility_score === null
+                        ? PLACEHOLDER
+                        : `${Math.round(engine.visibility_score)}%`}
+                    </TableCell>
+                    <TableCell numeric className="mono text-secondary">
+                      {formatRate(engine.brand_mention_rate)}
+                    </TableCell>
+                    <TableCell numeric className="mono text-secondary">
+                      {formatRate(engine.owned_citation_rate)}
+                    </TableCell>
+                    <TableCell numeric className="mono text-secondary">
+                      {formatRate(engine.search_use_rate)}
+                    </TableCell>
+                    <TableCell numeric className="mono text-secondary">
+                      {engine.total_completed}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
       <ShareOfVoiceCard visibility={visibility} />
-    </div>
-  );
-}
-
-function EngineStat({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <dt className="text-secondary">{label}</dt>
-      <dd className="mono text-foreground font-semibold">{value}</dd>
     </div>
   );
 }
@@ -125,9 +114,9 @@ function ShareOfVoiceCard({ visibility }: Readonly<{ visibility: Visibility }>) 
 
   return (
     <Card>
-      <CardHeader className="flex-row items-baseline justify-between gap-2">
-        <CardEyebrow>Share of voice</CardEyebrow>
-        <span className="mono text-muted text-xs">mentions across engines</span>
+      <CardHeader>
+        <CardTitle>Share of answers</CardTitle>
+        <CardDescription>Mentions across models</CardDescription>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
@@ -170,7 +159,7 @@ function ShareOfVoiceRow({ row }: Readonly<{ row: RankingRow }>) {
         <span
           className={cn(
             'block h-full rounded-full',
-            row.is_brand ? 'accent-gradient-bar' : 'bg-foreground/20',
+            row.is_brand ? 'bg-accent' : 'bg-foreground/20',
           )}
           style={{ width: `${pct}%` }}
         />

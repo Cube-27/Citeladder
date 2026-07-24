@@ -8,7 +8,7 @@ import { displayHeadingLgClasses } from '@/components/ui/typography';
 
 /**
  * Empty state for `/analytics` with no AI-referral data yet (mockup
- * `analytics-dashboards-llm-empty`): the midnight empty-state pattern (mono
+ * `analytics-dashboards-llm-empty`): the empty-state pattern (mono
  * eyebrow + icon chip + display heading + ghost CTA) in the
  * `VisibilityEmptyState` style. The CTA lands on Settings → Integrations —
  * the GA4 connection whose referral sessions (with completed-audit

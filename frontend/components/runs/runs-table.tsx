@@ -24,7 +24,7 @@ const PAGE_SIZE = 10;
  * One row per audit: a run-status badge, the requested/completed/failed mono
  * counts, and the created timestamp. Each row links to the run detail page.
  * Client-side pagination footer (mono indicator + ghost buttons) per the
- * midnight runs frame.
+ * runs frame.
  */
 export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
   const { page, setPage, pageCount, from, to } = useTablePage(audits.length, PAGE_SIZE);

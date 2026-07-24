@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * IconChip — the midnight empty-state icon well: a 48px accent-subtle disc
+ * IconChip — the empty-state icon well: a 48px accent-subtle disc
  * centered around a lucide icon (icon itself stays `size-6` at the call
  * site). Purely decorative — the surrounding copy carries the meaning.
  */

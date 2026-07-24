@@ -13,6 +13,8 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Optional right-aligned count chip (e.g. open issues). */
+  count?: number;
 };
 
 export type NavGroup = {
@@ -25,7 +27,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Analyze',
     items: [
       { label: 'Visibility', href: '/visibility', icon: ICONS.visibility },
-      { label: 'LLM Analytics', href: '/analytics', icon: ICONS.analytics },
+      { label: 'Answers', href: '/analytics', icon: ICONS.analytics },
       { label: 'Traffic', href: '/traffic', icon: ICONS.traffic },
       // Single prompts surface: read view by default, manage mode in-page.
       { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
@@ -35,12 +37,12 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: 'Optimize',
+    title: 'Improve',
     items: [
       { label: 'Content', href: '/content', icon: ICONS.content },
-      { label: 'Site Health', href: '/site-health', icon: ICONS.siteHealth },
+      { label: 'Site health', href: '/site-health', icon: ICONS.siteHealth },
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
-      { label: 'Knowledge Base', href: '/knowledge-base', icon: ICONS.knowledgeBase },
+      { label: 'Brand knowledge', href: '/knowledge-base', icon: ICONS.knowledgeBase },
       { label: 'Setup', href: '/setup', icon: ICONS.setup },
     ],
   },

@@ -39,9 +39,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             className={cn(
               'focus-ring rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-              selected
-                ? 'bg-elevated text-foreground shadow-card'
-                : 'text-secondary hover:text-foreground',
+              selected ? 'bg-elevated text-foreground' : 'text-secondary hover:text-foreground',
             )}
           >
             {option.label}

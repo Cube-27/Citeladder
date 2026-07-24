@@ -198,7 +198,7 @@ export function YourPrompts() {
         <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
       ) : null}
 
-      <div className="border-border bg-panel shadow-card flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
+      <div className="border-border bg-panel flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
         <p className="text-secondary text-sm">
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
           <span className="text-foreground font-semibold">{activePrompts.length}</span> visibility{' '}
@@ -250,7 +250,7 @@ export function YourPrompts() {
           No prompts match your search.
         </div>
       ) : (
-        <div className="border-border bg-panel shadow-card overflow-hidden rounded-lg border">
+        <div className="border-border bg-panel overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

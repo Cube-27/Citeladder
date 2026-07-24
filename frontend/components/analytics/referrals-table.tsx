@@ -186,7 +186,7 @@ export function ReferralsTable({
       </CardHeader>
       {body}
       <div className="border-border-subtle flex items-center justify-between gap-3 border-t px-3 py-2">
-        <span className="text-2xs text-muted font-mono">{REFERRALS_PAGE_SIZE} rows per page</span>
+        <span className="text-2xs text-muted">{REFERRALS_PAGE_SIZE} rows per page</span>
         <span className="flex gap-2">
           <CursorPager
             canPrev={canPrev}

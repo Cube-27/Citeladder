@@ -21,6 +21,7 @@ import { InventorySelection } from '@/components/site-health/inventory-selection
 import { PagesTable } from '@/components/site-health/pages-table';
 import { siteHealthQueries, type PagesParams } from '@/lib/api/site-health';
 import type { SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
+import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
 import { cn } from '@/lib/utils';
 import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
 import {
@@ -302,19 +303,14 @@ function ScoredInventory({
     <Card>
       <CardContent className="grid gap-4 p-0">
         <div className="border-border-subtle flex flex-wrap items-center gap-2 border-b px-[var(--card-padding)] pt-[var(--card-padding)]">
-          <div className="flex flex-wrap items-center gap-1">
+          <div className={cn(segmentedTrackClasses, 'flex flex-wrap')}>
             {TABS.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
                 aria-current={t.key === tab ? 'true' : undefined}
-                className={cn(
-                  'rounded-t-md border-b-2 px-3 py-2 text-sm font-medium transition-colors',
-                  t.key === tab
-                    ? 'border-accent text-foreground font-semibold'
-                    : 'text-secondary hover:text-foreground hover:bg-accent-soft/40 border-transparent',
-                )}
+                className={segmentedItemClasses(t.key === tab)}
               >
                 {t.label}
               </button>

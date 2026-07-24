@@ -45,18 +45,36 @@ describe('PromptTable pagination', () => {
     // Page 1 shows the first 10 rows with the mono page indicator.
     expect(within(table).getByText('Prompt number 1')).toBeInTheDocument();
     expect(within(table).queryByText('Prompt number 11')).not.toBeInTheDocument();
-    expect(screen.getByText('1–10 of 12 prompts')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' &&
+          el.textContent?.replace(/\s+/g, ' ').trim() === '1–10 of 12 prompts',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     expect(within(table).queryByText('Prompt number 1')).not.toBeInTheDocument();
     expect(within(table).getByText('Prompt number 11')).toBeInTheDocument();
-    expect(screen.getByText('11–12 of 12 prompts')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' &&
+          el.textContent?.replace(/\s+/g, ' ').trim() === '11–12 of 12 prompts',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Previous page' }));
     expect(within(table).getByText('Prompt number 1')).toBeInTheDocument();
-    expect(screen.getByText('1–10 of 12 prompts')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' &&
+          el.textContent?.replace(/\s+/g, ' ').trim() === '1–10 of 12 prompts',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('clamps the current page when the list shrinks instead of resetting', async () => {
@@ -74,7 +92,13 @@ describe('PromptTable pagination', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Next page' }));
-    expect(screen.getByText('11–12 of 12 prompts')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' &&
+          el.textContent?.replace(/\s+/g, ' ').trim() === '11–12 of 12 prompts',
+      ),
+    ).toBeInTheDocument();
 
     // A refetch/filter shrinking the list clamps the page into range.
     rerender(
@@ -87,7 +111,13 @@ describe('PromptTable pagination', () => {
         />
       </TooltipProvider>,
     );
-    expect(screen.getByText('1–5 of 5 prompts')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' &&
+          el.textContent?.replace(/\s+/g, ' ').trim() === '1–5 of 5 prompts',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
   });
 

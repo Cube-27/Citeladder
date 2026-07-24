@@ -52,9 +52,9 @@ test('authenticated shell renders sidebar groups and top bar', async ({ page }) 
   // Project switcher shows the active brand.
   await expect(page.getByText('Acme').first()).toBeVisible();
 
-  // Top-bar page title + theme toggle are present. Scope the heading to the
-  // top bar (the shell's <header> banner) so a same-named heading elsewhere on
-  // the page can't satisfy the assertion.
-  await expect(page.getByRole('banner').getByRole('heading', { name: 'Visibility' })).toBeVisible();
+  // Page title + theme toggle are present. The title is the page's single
+  // <h1> in the content column (the 52px top bar was retired), so scope the
+  // assertion by heading level rather than by a banner landmark.
+  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
   await expect(page.getByRole('button', { name: /toggle color theme/i })).toBeVisible();
 });

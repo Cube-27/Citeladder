@@ -85,10 +85,7 @@ export function DropdownLabel({
 }: Readonly<{ className?: string; children: ReactNode }>) {
   return (
     <DropdownPrimitive.Label
-      className={cn(
-        'text-2xs text-muted px-2.5 py-1.5 font-semibold tracking-wide uppercase',
-        className,
-      )}
+      className={cn('text-2xs text-muted px-2.5 py-1.5 font-medium', className)}
     >
       {children}
     </DropdownPrimitive.Label>

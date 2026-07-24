@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 /**
  * 34px control-height input (§8); focus = blue --focus-ring via `.focus-ring`.
  * Midnight well treatment (Phase D2): bg-well inset surface + hairline border.
- * Native <select> controls consume `inputClasses` too, so the same midnight
+ * Native <select> controls consume `inputClasses` too, so the same
  * well/focus treatment flows to every select.
  */
 export const inputClasses =

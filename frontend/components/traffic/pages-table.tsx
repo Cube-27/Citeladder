@@ -204,7 +204,7 @@ export function PagesTable({
       )}
 
       <div className="border-border-subtle flex items-center justify-between gap-3 border-t px-3 py-2">
-        <span className="text-2xs text-muted font-mono">{describeSort(sort)}</span>
+        <span className="text-2xs text-muted">{describeSort(sort)}</span>
         <div className="flex items-center gap-2">
           <CursorPager
             canPrev={pager.canPrev}

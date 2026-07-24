@@ -237,7 +237,7 @@ function IssueCard({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: str
 
         {issue.remediation ? (
           <div className="border-border-subtle bg-background-alt rounded-lg border p-3">
-            <Label className="mb-1 block font-mono tracking-[0.08em]">Remediation</Label>
+            <Label className="mb-1 block">Remediation</Label>
             <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
           </div>
         ) : null}

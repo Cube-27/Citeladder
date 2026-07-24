@@ -35,10 +35,11 @@ export type VisibilityTab = 'overview' | 'trends' | 'mentions-citations' | 'quer
 
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
+  // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'overview', label: 'Overview' },
   { id: 'trends', label: 'Trends' },
-  { id: 'mentions-citations', label: 'Mentions & Citations' },
-  { id: 'query-fanout', label: 'Query Fanout' },
+  { id: 'mentions-citations', label: 'Mentions' },
+  { id: 'query-fanout', label: 'Search queries' },
 ] as const;
 
 /** The default (and invalid-value fallback) tab. */

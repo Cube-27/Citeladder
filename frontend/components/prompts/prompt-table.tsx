@@ -32,7 +32,7 @@ const PAGE_SIZE = 10;
  * branded / enabled and per-row actions (edit, delete, enable/disable toggle,
  * and — when `onSetStatus` is wired — review transitions: accept a proposed
  * prompt, archive, or restore an archived one). Client-side pagination footer
- * (mono indicator + ghost buttons) per the midnight prompts frame. Purely
+ * (mono indicator + ghost buttons) per the prompts frame. Purely
  * presentational — CRUD is delegated to callbacks owned by the page.
  */
 export function PromptTable({
@@ -54,7 +54,7 @@ export function PromptTable({
   const pagedPrompts = prompts.slice(from - 1, to);
 
   return (
-    <div className="border-border bg-panel shadow-card overflow-hidden rounded-lg border">
+    <div className="border-border bg-panel overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>

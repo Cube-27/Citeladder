@@ -46,10 +46,10 @@ citations keep their green identity in both themes.
   --font-primary-family: var(--font-sans), system-ui, sans-serif;
   --font-mono-family:
     var(--font-mono), ui-monospace, "Cascadia Code", "Fira Code", monospace;
-  /* Display family for wordmarks + page-level headings (Bricolage Grotesque
-     600/700 loaded as --font-brand-display in app/layout.tsx). */
-  --font-display-family:
-    var(--font-brand-display), "Bricolage Grotesque", var(--font-primary-family);
+  /* One sans family: there is no separate display face. Headings differ from
+     body by size/tracking only. Kept as a token so `font-display` still
+     resolves at every existing call site. */
+  --font-display-family: var(--font-sans), system-ui, sans-serif;
 
   /* Surfaces */
   --bg-base: #fafaf7;
@@ -296,13 +296,12 @@ html[data-theme="dark"] {
 
 ## 5. Type scale (px), weights, tracking, line-heights
 
-Sans = **Public Sans** (`--font-sans` → `--font-primary-family`); mono = **IBM Plex Mono**
+Sans = **Geist** (`--font-sans` → `--font-primary-family`); mono = **Geist Mono**
 400/500/600 (`--font-mono` → `--font-mono-family`) with **tabular numerals**
-(`font-variant-numeric: tabular-nums`) — mono is used for **every metric, percentage, count,
-position, and timestamp** so columns align. Display = **Bricolage Grotesque** 600/700, loaded
-in `app/layout.tsx` as the `--font-brand-display` next/font variable and exposed to components
-via `--font-display-family` → the bridged `font-display` utility — for the wordmark, page-level
-headings, and the auth brand headline (the same trio as the marketing landing).
+(`font-variant-numeric: tabular-nums`) — mono is reserved for **metric values, percentages,
+counts, positions, timestamps, code and keyboard hints** so columns align; it is never used
+for labels. There is **no separate display face**: `--font-display-family` resolves to the
+same sans, so headings differ from body by size and tracking (-0.02em) only.
 
 | Token         | Size             | Line-height | Tracking | Weight | Use                                 |
 | ------------- | ---------------- | ----------- | -------- | ------ | ----------------------------------- |
@@ -350,9 +349,7 @@ bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
 @theme inline {
   --font-sans: var(--font-primary-family);
   --font-mono: var(--font-mono-family);
-  --font-display: var(
-    --font-display-family
-  ); /* Bricolage via --font-brand-display */
+  --font-display: var(--font-display-family); /* same sans — no display face */
   --color-background: var(--bg-base);
   --color-panel: var(--bg-panel);
   --color-foreground: var(--text-primary);
@@ -566,7 +563,7 @@ the `—` placeholder.
    (stored choice → dark; the OS preference is not consulted).
 5. Mono font gets `font-variant-numeric: tabular-nums`; all metrics use mono.
 6. Ship `prefers-reduced-motion`, `forced-colors`, and `print` rules.
-7. Load Public Sans / IBM Plex Mono / Bricolage Grotesque via next/font in `app/layout.tsx`
-   (`--font-sans`, `--font-mono`, `--font-brand-display`); expose Bricolage through the
-   `--font-display-family` token → bridged `font-display` utility. Never name a next/font
-   variable `--font-display` — that name is the bridged `@theme` token.
+7. Load Geist / Geist Mono via next/font in `app/layout.tsx` (`--font-sans`, `--font-mono`).
+   `--font-display-family` resolves to the same sans → bridged `font-display` utility; there
+   is no separate display face. Never name a next/font variable `--font-display` — that name
+   is the bridged `@theme` token.

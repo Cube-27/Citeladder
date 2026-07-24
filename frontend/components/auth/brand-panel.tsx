@@ -68,9 +68,6 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
 export function AuthBrandPanel() {
   return (
     <aside className="bg-panel border-border relative flex flex-col overflow-hidden border-r p-12 max-[900px]:hidden">
-      <div className="auth-aurora" aria-hidden="true" />
-      <div className="auth-grain" aria-hidden="true" />
-
       <div className="relative flex flex-1 flex-col">
         <AuthWordmark />
 
@@ -83,7 +80,7 @@ export function AuthBrandPanel() {
             Answer-engine optimization
           </p>
           <p className="font-display text-foreground mt-4 text-2xl font-bold tracking-tight">
-            See how <span className="text-gradient">AI answers</span> talk about your brand.
+            See how <span className="text-accent-text">AI answers</span> talk about your brand.
           </p>
 
           <div className="mt-8 grid gap-4">
@@ -105,7 +102,7 @@ export function AuthBrandPanel() {
             fictional Acme dataset; never interactive, always aria-hidden. */}
         <div
           aria-hidden="true"
-          className="bg-elevated border-border shadow-card mt-auto mb-8 w-full max-w-[520px] rounded-2xl border p-4"
+          className="bg-elevated border-border mt-auto mb-8 w-full max-w-[520px] rounded-2xl border p-4"
         >
           <div className="mb-3 flex items-center gap-2.5 px-0.5">
             <span className="bg-accent text-accent-fg text-2xs grid size-[22px] shrink-0 place-items-center rounded-md font-bold">
@@ -187,7 +184,7 @@ export function AuthBrandPanel() {
                       <span
                         className={cn(
                           'block h-full rounded-full',
-                          row.brand ? 'auth-sov-brand' : 'bg-muted',
+                          row.brand ? 'bg-accent' : 'bg-muted',
                         )}
                         style={{ width: `${row.value}%` }}
                       />

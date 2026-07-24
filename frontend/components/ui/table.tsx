@@ -4,13 +4,14 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Dense analytics table (§8):
- *  - sticky 32px header (--table-header-height); header cells are uppercase
- *    mono eyebrows (font-mono, text-2xs, tracking-[0.08em], muted — §8
- *    panel-label pattern)
- *  - 40px rows (--table-row-height), --text-sm cells
- *  - hover row highlight (accent-soft tint); numeric columns (add `numeric`)
- *    center-align with tabular numerals, text/date columns stay left-aligned
+ * Dense analytics table (§8) — the flat/hairline grid look:
+ *  - sticky 30px header (--table-header-height) on bg-panel, ruled top and
+ *    bottom, cells separated by a left hairline (all but the first)
+ *  - 42px rows (--table-row-height), --text-sm cells, subtle cell hairlines
+ *  - everything left-aligned (including numeric columns — the mock aligns the
+ *    column edge, not the digits); `numeric` still applies tabular numerals
+ *  - hover tints the row with background-alt; `highlight` marks the user's
+ *    own row with the same tint permanently
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
  */
 export function Table({
@@ -62,13 +63,15 @@ export function TableBody({
 export function TableRow({
   children,
   className,
+  highlight,
   ...props
-}: Readonly<HTMLAttributes<HTMLTableRowElement>>) {
+}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
   return (
     <tr
       {...props}
       className={cn(
-        'border-border-subtle bg-panel hover:bg-accent-soft/40 h-[var(--table-row-height)] border-b transition-colors',
+        'hover:bg-background-alt h-[var(--table-row-height)] transition-colors',
+        highlight && 'bg-background-alt',
         className,
       )}
     >
@@ -88,8 +91,10 @@ export function TableHead({
       {...props}
       className={cn(
         eyebrowClasses,
-        'border-border bg-background-alt sticky top-0 z-10 h-[var(--table-header-height)] border-b px-3 align-middle',
-        numeric ? 'text-center tabular-nums' : 'text-left',
+        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-y px-3 text-left align-middle',
+        // Column separators: every cell but the first carries a left hairline.
+        'first:border-l-0 [&:not(:first-child)]:border-l',
+        numeric && 'tabular-nums',
         className,
       )}
     >
@@ -108,8 +113,11 @@ export function TableCell({
     <td
       {...props}
       className={cn(
-        'text-foreground px-3 py-0 align-middle',
-        numeric ? 'text-center tabular-nums' : 'text-left',
+        'text-foreground border-border-subtle px-3 py-0 text-left align-middle text-sm',
+        // Row rule, dropped on the last row; column separators as in the head.
+        'border-b [tr:last-child>&]:border-b-0',
+        'first:border-l-0 [&:not(:first-child)]:border-l',
+        numeric && 'tabular-nums',
         className,
       )}
     >

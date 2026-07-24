@@ -105,7 +105,7 @@ function firstErrorStep(errors: FieldErrors<SetupFormValues>, steps: WizardSteps
  * refresh, every step is immediately reachable, and Save is available on
  * any step.
  *
- * Each step renders as a midnight card (Phase D6) with a mono-eyebrow
+ * Each step renders as a card (Phase D6) with a mono-eyebrow
  * `Step N of M` panel label above its section title.
  */
 export function SetupForm({

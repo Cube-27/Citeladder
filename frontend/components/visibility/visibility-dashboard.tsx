@@ -102,7 +102,13 @@ export function VisibilityDashboard() {
       />
     );
   } else {
-    panel = <VisibilityOverview query={visibilityQuery} engineFilter={filters.engine} />;
+    panel = (
+      <VisibilityOverview
+        query={visibilityQuery}
+        engineFilter={filters.engine}
+        brandName={activeProject?.brand_name || activeProject?.name || 'Your brand'}
+      />
+    );
   }
 
   return (

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import uuid
 from typing import Annotated
-from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
@@ -34,9 +33,9 @@ from app.core.config.integrations import (
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
     ERROR_SYNC_WINDOW_INVALID,
     INTEGRATION_OAUTH_CALLBACK_PATH,
-    INTEGRATION_OAUTH_LANDING_PATH,
     INTEGRATION_PROVIDERS,
     SYNC_KIND_ON_DEMAND,
+    integration_oauth_landing_url,
 )
 from app.core.http_errors import raise_not_found
 from app.domain.integrations.mappings import (
@@ -105,9 +104,15 @@ def _redirect_uri(request: Request, provider: str) -> str:
 
 
 def _landing_redirect(params: dict[str, str]) -> RedirectResponse:
-    """302 back to Settings → Integrations with the result query (contract C2)."""
-    url = f"{INTEGRATION_OAUTH_LANDING_PATH}&{urlencode(params)}"
-    return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+    """302 back to Settings → Integrations with the result query (contract C2).
+
+    The target is absolute (frontend origin): the provider navigates the
+    browser to the backend callback, so a bare path would resolve against the
+    backend origin and 404.
+    """
+    return RedirectResponse(
+        integration_oauth_landing_url(params), status_code=status.HTTP_302_FOUND
+    )
 
 
 @router.get("/oauth/{provider}/start", status_code=status.HTTP_302_FOUND)

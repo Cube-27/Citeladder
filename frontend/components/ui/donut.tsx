@@ -12,8 +12,13 @@ export type DonutSegment = {
 
 /**
  * Donut (§8) — segmented ring for per-engine / citation-share breakdowns.
- * Renders an SVG with one arc per segment plus a legend. The whole figure
- * carries an ARIA label summarising the shares (role="img").
+ * Renders an SVG with one arc per segment plus a legend column. The whole
+ * figure carries an ARIA label summarising the shares (role="img"), and every
+ * legend row states its own percentage, so share is never colour-alone.
+ *
+ * Flat language: a 14px ring on a --bg-well track, the value as a 21px mono
+ * centre with an 11px muted caption beneath, and the legend as a right-hand
+ * column of dot + label + mono value.
  */
 export function Donut({
   segments,
@@ -22,6 +27,7 @@ export function Donut({
   label,
   showLegend = true,
   centerLabel,
+  centerCaption,
   className,
 }: Readonly<{
   segments: DonutSegment[];
@@ -30,6 +36,8 @@ export function Donut({
   label?: string;
   showLegend?: boolean;
   centerLabel?: string;
+  /** Small muted caption under the centre value (e.g. "of answers"). */
+  centerCaption?: string;
   className?: string;
 }>) {
   const total = segments.reduce((sum, s) => sum + Math.max(0, s.value), 0);
@@ -64,7 +72,7 @@ export function Donut({
             r={radius}
             fill="none"
             strokeWidth={strokeWidth}
-            className="stroke-border-subtle"
+            className="stroke-well"
           />
           {total > 0 &&
             segments.map((segment) => {
@@ -91,30 +99,38 @@ export function Donut({
         {centerLabel ? (
           <span
             aria-hidden
-            className="mono text-foreground absolute inset-0 flex items-center justify-center text-sm font-semibold"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           >
-            {centerLabel}
+            <span className="mono text-foreground text-2xl leading-none font-semibold">
+              {centerLabel}
+            </span>
+            {centerCaption ? (
+              <span className="text-muted text-2xs leading-none">{centerCaption}</span>
+            ) : null}
           </span>
         ) : null}
       </div>
       {showLegend ? (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-1 flex-col gap-1.5">
           {segments.map((segment) => (
-            <li key={segment.label} className="text-secondary flex items-center gap-2 text-xs">
-              <svg aria-hidden width={10} height={10} viewBox="0 0 10 10">
+            <li key={segment.label} className="flex items-center gap-2 text-xs">
+              <svg aria-hidden width={8} height={8} viewBox="0 0 8 8" className="shrink-0">
                 {/* Swatch reuses the segment's bridged stroke token (no raw hex,
                     and no runtime class string that Tailwind can't detect). */}
+                {/* Drawn as a stroked ring with r = half the stroke width so it
+                    reads as a solid dot while still honouring the caller's
+                    `stroke-*` token (fill-* would need a second contract). */}
                 <circle
-                  cx={5}
-                  cy={5}
-                  r={4}
+                  cx={4}
+                  cy={4}
+                  r={2}
                   fill="none"
-                  strokeWidth={2}
+                  strokeWidth={4}
                   className={segment.colorClass}
                 />
               </svg>
-              <span className="text-foreground">{segment.label}</span>
-              <span className="mono text-muted">
+              <span className="text-secondary flex-1 truncate">{segment.label}</span>
+              <span className="mono text-foreground font-medium">
                 {total > 0 ? `${Math.round((segment.value / total) * 100)}%` : '—'}
               </span>
             </li>

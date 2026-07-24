@@ -50,7 +50,7 @@ describe('Button', () => {
     expect(link.tagName).toBe('A');
     expect(link).toHaveAttribute('href', '/next');
     // The button surface classes are forwarded onto the anchor.
-    expect(link.className).toContain('bg-elevated');
+    expect(link.className).toContain('bg-panel');
     // asChild must NOT inject a type attribute onto the anchor.
     expect(link).not.toHaveAttribute('type');
   });
@@ -72,10 +72,26 @@ describe('Badge', () => {
     const badge = screen.getByText('Configured');
     expect(badge.className).toContain('bg-success-bg');
     expect(badge.className).toContain('text-success-text');
-    expect(badge.className).toContain('border-success-border');
-    // Pill radius + mono chip type.
-    expect(badge.className).toContain('rounded-full');
-    expect(badge.className).toContain('font-mono');
+    // Flat language: sans rectangles, not mono pills.
+    expect(badge.className).toContain('rounded-sm');
+    expect(badge.className).not.toContain('font-mono');
+  });
+
+  it('keeps the pill shape for run-status badges only', () => {
+    const { unmount } = render(
+      <Badge variant="run-status" value="running">
+        Running
+      </Badge>,
+    );
+    expect(screen.getByText('Running').className).toContain('rounded-full');
+    unmount();
+
+    render(
+      <Badge variant="status" value="info">
+        Info
+      </Badge>,
+    );
+    expect(screen.getByText('Info').className).not.toContain('rounded-full');
   });
 
   it('maps sentiment variant to sentiment tokens', () => {
@@ -128,14 +144,15 @@ describe('Card', () => {
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 
-  it('CardEyebrow renders the mono panel-label pattern (never a heading)', () => {
+  it('CardEyebrow renders the sentence-case micro-label (never a heading)', () => {
     render(<CardEyebrow>Visibility score</CardEyebrow>);
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
-    expect(eyebrow.className).toContain('font-mono');
     expect(eyebrow.className).toContain('text-2xs');
-    expect(eyebrow.className).toContain('uppercase');
-    expect(eyebrow.className).toContain('tracking-[0.08em]');
+    expect(eyebrow.className).toContain('text-muted');
+    // The mono-uppercase-tracked eyebrow is retired.
+    expect(eyebrow.className).not.toContain('font-mono');
+    expect(eyebrow.className).not.toContain('uppercase');
   });
 });
 
@@ -159,12 +176,15 @@ describe('Table (dense)', () => {
     );
     const headers = screen.getAllByRole('columnheader');
     expect(headers).toHaveLength(2);
-    // Sticky 32px header height + uppercase mono eyebrow.
+    // Sticky header at the dense height, sentence-case sans micro-label.
     expect(headers[0].className).toContain('h-[var(--table-header-height)]');
-    expect(headers[0].className).toContain('uppercase');
-    expect(headers[0].className).toContain('font-mono');
     expect(headers[0].className).toContain('sticky');
-    // Numeric header/cell align right + tabular nums.
+    expect(headers[0].className).not.toContain('uppercase');
+    expect(headers[0].className).not.toContain('font-mono');
+    // Flat grid: header sits on the panel and is left-aligned even when numeric.
+    expect(headers[0].className).toContain('bg-panel');
+    expect(headers[1].className).toContain('text-left');
+    // Numeric columns still get tabular numerals.
     expect(headers[1].className).toContain('tabular-nums');
 
     const rows = screen.getAllByRole('row');

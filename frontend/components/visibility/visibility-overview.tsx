@@ -6,30 +6,39 @@ import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { DashboardSkeleton } from '@/components/visibility/dashboard-skeleton';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
+import { OverviewSummary } from '@/components/visibility/overview-summary';
 import { RankingsTable } from '@/components/visibility/rankings-table';
-import { VisibilityScoreCard } from '@/components/visibility/score-card';
 import type { Visibility } from '@/lib/api/types';
 import type { VisibilityFilters } from '@/lib/visibility/dashboard';
 
 /**
  * Overview tab — the selected-run Visibility composition (the default tab).
  *
- * This is the unchanged MVP selected-run view moved out of the old dashboard:
- * the Visibility Score card, the brand-vs-competitor Rankings table (which
- * carries both SOV definitions and the sentiment / avg-position placeholders),
- * and the per-engine / logical-engine comparison + Share-of-Voice donut. It
- * reads the same `GET /projects/{id}/visibility?audit_id=` selected-run
- * projection and preserves the same loading / error / empty behavior.
+ * Reads the same `GET /projects/{id}/visibility?audit_id=` selected-run
+ * projection as before and preserves the same loading / error / empty
+ * behavior; only the composition changed:
+ *
+ *   summary line (headline % + inline metrics)
+ *   row 1: Competitors table                 | Share of answers
+ *   row 2: By model table
+ *
+ * The standalone Visibility Score card and the per-engine ring grid are
+ * retired from Overview — the headline percentage now lives in the summary
+ * line, and the per-model numbers read far better as a table (see
+ * `EngineComparison`, whose data logic is unchanged).
  *
  * It does NOT append trend charts or raw evidence below the fold — those belong
- * to the Trends / Mentions & Citations / Query Fanout tabs.
+ * to the Trends / Mentions / Search-queries tabs.
  */
 export function VisibilityOverview({
   query,
   engineFilter,
+  brandName,
 }: Readonly<{
   query: UseQueryResult<Visibility, unknown>;
   engineFilter: VisibilityFilters['engine'];
+  /** Active project's brand name — used by the summary sentence. */
+  brandName: string;
 }>) {
   const visibility = query.data;
 
@@ -39,10 +48,8 @@ export function VisibilityOverview({
   if (visibility) {
     body = (
       <>
-        <div className="grid gap-5 lg:grid-cols-[minmax(260px,1fr)_2fr]">
-          <VisibilityScoreCard visibility={visibility} />
-          <RankingsTable visibility={visibility} />
-        </div>
+        <OverviewSummary visibility={visibility} brandName={brandName} />
+        <RankingsTable visibility={visibility} />
         <EngineComparison visibility={visibility} filter={engineFilter} />
       </>
     );
@@ -53,7 +60,7 @@ export function VisibilityOverview({
   }
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-3">
       {query.isError ? (
         <Alert tone="danger">
           Could not load visibility metrics for this run. Try another run or refresh.

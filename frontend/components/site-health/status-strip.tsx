@@ -209,7 +209,7 @@ function ProgressRow({
           <dl className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
             {counts.map((count) => (
               <div key={count.label} className="flex items-baseline gap-1.5">
-                <Label className="font-mono tracking-[0.08em]">{count.label}</Label>
+                <Label>{count.label}</Label>
                 <Metric className={cn('text-sm', count.className)}>
                   {count.value ?? PLACEHOLDER}
                 </Metric>

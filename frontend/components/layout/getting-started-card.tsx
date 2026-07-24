@@ -80,7 +80,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
 
   return (
     <section
-      className={cn('border-border bg-panel shadow-card rounded-lg border p-3', className)}
+      className={cn('border-border bg-panel rounded-lg border p-3', className)}
       aria-label="Getting started progress"
     >
       <div className="flex items-center justify-between">
@@ -99,7 +99,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
         aria-label={`${completed} of ${total} steps complete`}
       >
         <div
-          className="accent-gradient-bar h-full rounded-full transition-[width]"
+          className="bg-accent h-full rounded-full transition-[width]"
           style={{ width: `${pct}%` }}
         />
       </div>

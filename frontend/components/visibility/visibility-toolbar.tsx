@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
+import { CalendarRange, ChevronDown, CircleHelp, Download } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@/lib/api/types';
+import { ICONS } from '@/lib/icons';
 import {
   engineLabel,
   isEvidenceTab,
@@ -33,9 +34,14 @@ import {
 /** Engine filter value shared across every tab. */
 export type EngineFilter = LogicalEngine | 'all';
 
-// Midnight filter-chip language (shell-visibility-midnight mockup .pill-btn):
-// pill trigger; a non-default filter value flips the chip to the accent-soft
-// active state (blue reserved for active states, never the default surface).
+/** Docs destination for the metric-definitions help button. */
+const METRICS_HELP_URL = 'https://docs.searchify.example/metrics';
+
+// Flat filter-chip language: a 30px hairline pill showing the VALUE alone (no
+// "Label:" prefix — the value reads as a sentence: "Last 30 days", "All
+// models"). A non-default value flips the chip to the accent-soft active state
+// (blue reserved for active states, never the default surface).
+const CHIP_CLASS = 'h-[30px] rounded-full border-border bg-panel px-3 text-xs';
 const CHIP_ACTIVE_CLASS =
   'border-accent-border bg-accent-soft text-accent-text hover:border-accent-border hover:bg-accent-soft hover:text-accent-text';
 
@@ -53,7 +59,7 @@ const CHIP_ACTIVE_CLASS =
  *   - Prompt:      both evidence tabs (evidence filtering, NOT prompt taxonomy)
  *   - Range:       Trends + both evidence tabs
  *   - Granularity: Trends only
- *   - Prompt-type "coming soon": Overview only (the MVP taxonomy affordance)
+ * Right-aligned: a help link and an Export affordance (disabled until F10).
  */
 export function VisibilityToolbar({
   activeTab,
@@ -89,20 +95,19 @@ export function VisibilityToolbar({
   const showPrompt = evidence;
   const showRange = activeTab === 'trends' || evidence;
   const showGranularity = activeTab === 'trends';
-  const showPromptType = activeTab === 'overview';
 
   const activeRun = runs.find((run) => run.id === activeRunId) ?? null;
-  const engineText = engine === 'all' ? 'All engines' : engineLabel(engine);
+  const engineText = engine === 'all' ? 'All models' : engineLabel(engine);
   const activePrompt = promptOptions.find((option) => option.id === promptId) ?? null;
   const promptText = promptId === null ? 'All prompts' : (activePrompt?.label ?? 'All prompts');
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5" data-testid="visibility-toolbar">
+    <div className="flex flex-wrap items-center gap-2" data-testid="visibility-toolbar">
       {showRun ? (
         <Dropdown>
           <DropdownTrigger asChild>
-            <Button variant="secondary" size="sm" aria-label="Select run">
-              <span className="text-muted">Run:</span>
+            <Button variant="secondary" size="sm" aria-label="Select run" className={CHIP_CLASS}>
+              <ICONS.runs className="text-muted size-[13px]" aria-hidden strokeWidth={1.75} />
               <span className="font-medium">{activeRun?.label ?? 'Latest'}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -127,18 +132,18 @@ export function VisibilityToolbar({
           <Button
             variant="secondary"
             size="sm"
-            aria-label="Filter by engine"
-            className={cn(engine !== 'all' && CHIP_ACTIVE_CLASS)}
+            aria-label="Filter by model"
+            className={cn(CHIP_CLASS, engine !== 'all' && CHIP_ACTIVE_CLASS)}
           >
-            <span className="text-muted">Engine:</span>
+            <ICONS.analytics className="size-[13px]" aria-hidden strokeWidth={1.75} />
             <span className="font-medium">{engineText}</span>
             <ChevronDown className="text-muted size-3" aria-hidden />
           </Button>
         </DropdownTrigger>
         <DropdownContent>
-          <DropdownLabel>Engine</DropdownLabel>
+          <DropdownLabel>Model</DropdownLabel>
           <DropdownItem data-active={engine === 'all'} onSelect={() => onChangeEngine('all')}>
-            All engines
+            All models
           </DropdownItem>
           {TREND_ENGINES.map((option: LogicalEngine) => (
             <DropdownItem
@@ -159,9 +164,9 @@ export function VisibilityToolbar({
               variant="secondary"
               size="sm"
               aria-label="Select date range"
-              className={cn(range !== '90d' && CHIP_ACTIVE_CLASS)}
+              className={cn(CHIP_CLASS, range !== '90d' && CHIP_ACTIVE_CLASS)}
             >
-              <span className="text-muted">Range:</span>
+              <CalendarRange className="size-[13px]" aria-hidden strokeWidth={1.75} />
               <span className="font-medium">{rangeLabel(range)}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -188,9 +193,8 @@ export function VisibilityToolbar({
               variant="secondary"
               size="sm"
               aria-label="Select granularity"
-              className={cn(granularity !== 'run' && CHIP_ACTIVE_CLASS)}
+              className={cn(CHIP_CLASS, granularity !== 'run' && CHIP_ACTIVE_CLASS)}
             >
-              <span className="text-muted">Granularity:</span>
               <span className="font-medium">{granularityLabel(granularity)}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -217,9 +221,9 @@ export function VisibilityToolbar({
               variant="secondary"
               size="sm"
               aria-label="Filter by prompt"
-              className={cn(promptId !== null && CHIP_ACTIVE_CLASS)}
+              className={cn(CHIP_CLASS, promptId !== null && CHIP_ACTIVE_CLASS)}
             >
-              <span className="text-muted">Prompt:</span>
+              <ICONS.prompts className="size-[13px]" aria-hidden strokeWidth={1.75} />
               <span className="max-w-[16ch] truncate font-medium">{promptText}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -242,22 +246,38 @@ export function VisibilityToolbar({
         </Dropdown>
       ) : null}
 
-      {showPromptType ? (
-        <Tooltip content="Prompt-type filtering is coming soon.">
+      {/* Right side of the filter row: help + export. Both are affordances the
+          mock shows; export stays a disabled placeholder until report export
+          lands (F10), rather than shipping a button that does nothing. */}
+      <div className="ms-auto flex items-center gap-2">
+        <Tooltip content="How these metrics are calculated">
           <Button
             variant="secondary"
             size="sm"
-            aria-label="Filter by prompt type"
-            disabled
-            aria-disabled
+            aria-label="About these metrics"
+            className="size-[30px] rounded-full px-0"
+            asChild
           >
-            <span className="text-muted">Prompts:</span>
-            <span className="font-medium">All prompts</span>
-            <span className="text-2xs text-muted ml-1 font-mono">— coming soon</span>
-            <ChevronDown className="text-muted size-3" aria-hidden />
+            <a href={METRICS_HELP_URL} target="_blank" rel="noreferrer noopener">
+              <CircleHelp className="size-[13px]" aria-hidden strokeWidth={1.75} />
+            </a>
           </Button>
         </Tooltip>
-      ) : null}
+        <Tooltip content="Export is available from a run (coming with reports)">
+          <span>
+            <Button
+              variant="secondary"
+              size="sm"
+              className={CHIP_CLASS}
+              disabled
+              aria-disabled="true"
+            >
+              <Download className="size-[13px]" aria-hidden strokeWidth={1.75} />
+              Export
+            </Button>
+          </span>
+        </Tooltip>
+      </div>
     </div>
   );
 }

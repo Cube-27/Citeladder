@@ -1,4 +1,3 @@
-import { Bricolage_Grotesque, IBM_Plex_Mono, Public_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { LandingFooter } from '@/components/marketing/landing-footer';
@@ -7,38 +6,24 @@ import { MarketingThemeReset } from '@/components/marketing/marketing-theme-rese
 
 import './marketing.css';
 
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-bricolage',
-  display: 'swap',
-});
-const sans = Public_Sans({ subsets: ['latin'], variable: '--font-public-sans', display: 'swap' });
-const mono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-plex',
-  display: 'swap',
-});
-
 /**
  * Marketing route-group layout — public surface, deliberately NOT wrapped in
  * SessionGuard (the landing page must be reachable and server-rendered for
- * anonymous visitors). Loads the marketing brand fonts and scopes all
- * marketing styles under the `.mkt` wrapper (see marketing.css).
+ * anonymous visitors). Scopes all marketing styles under the `.mkt` wrapper
+ * (see marketing.css).
+ *
+ * No fonts are loaded here: marketing uses the same Geist / Geist Mono the
+ * root layout puts on <html>, so `--font-sans` / `--font-mono` are already in
+ * scope and the old Bricolage/Public Sans/Plex trio is gone.
  */
 export default function MarketingLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className={`${display.variable} ${sans.variable} ${mono.variable} mkt`}>
+    <div className="mkt">
       {/* Handles theme defaulting on mount and restoration on exit (see MarketingThemeReset). */}
       <MarketingThemeReset />
-      {/* Shared chrome — every route in the (marketing) group inherits the
-          aurora/grain backdrop, the nav, and the footer from this layout. */}
-      <div className="aurora" aria-hidden="true">
-        <i className="a1" />
-        <i className="a2" />
-      </div>
-      <div className="grain" aria-hidden="true" />
+      {/* Shared chrome — every route in the (marketing) group inherits the nav
+          and the footer from this layout. The aurora/grain backdrop is gone:
+          the flat language has no atmosphere layer. */}
       <LandingNav />
       {children}
       <LandingFooter />

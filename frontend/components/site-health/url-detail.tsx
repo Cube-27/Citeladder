@@ -257,7 +257,7 @@ function HeaderCard({
         </div>
         <div className="text-secondary flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
           <span className="flex items-center gap-1.5">
-            <Label className="font-mono tracking-[0.08em]">URL</Label>
+            <Label>URL</Label>
             <a
               href={detail.display_url}
               target="_blank"
@@ -268,11 +268,11 @@ function HeaderCard({
             </a>
           </span>
           <span className="flex items-center gap-1.5">
-            <Label className="font-mono tracking-[0.08em]">Last Audit</Label>
+            <Label>Last Audit</Label>
             <span>{formatAudited(detail.last_audited)}</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <Label className="font-mono tracking-[0.08em]">Status</Label>
+            <Label>Status</Label>
             <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
               {statusLabel(detail.analysis_status)}
             </Badge>
@@ -294,7 +294,7 @@ function ScoreTile({ label, value }: Readonly<{ label: string; value: number | n
         ) : (
           <ScoreRing value={value} size={64} label={`${label}: ${Math.round(value)}`} />
         )}
-        <Label className="font-mono tracking-[0.08em]">{label}</Label>
+        <Label>{label}</Label>
       </CardContent>
     </Card>
   );
@@ -354,7 +354,7 @@ function IssuesList({ issues }: Readonly<{ issues: SiteIssue[] }>) {
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-foreground text-base font-semibold">All Issues ({issues.length})</h2>
-          <span className="text-2xs text-muted font-mono">Sorted by severity</span>
+          <span className="text-2xs text-muted">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (
           <p className="text-secondary text-sm">No issues detected on this page.</p>
