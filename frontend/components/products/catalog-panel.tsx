@@ -27,7 +27,7 @@ function errorMessage(error: unknown): string {
 /**
  * Catalog tab container (agentic commerce). Owns the catalog query and every
  * CRUD + import mutation; renders the toolbar (Add product / Import CSV) above
- * the catalog table, with the midnight empty state when the catalog is empty.
+ * the catalog table, with the empty state when the catalog is empty.
  */
 export function CatalogPanel({ projectId }: Readonly<{ projectId: string }>) {
   const queryClient = useQueryClient();

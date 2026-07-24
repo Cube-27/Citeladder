@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  * typed text that exactly matches an option and otherwise reverts to the
  * selected label; Escape always reverts.
  *
- * Built on the standard Input + midnight dropdown tokens (bg-elevated,
+ * Built on the standard Input + dropdown tokens (bg-elevated,
  * shadow-elevated) rather than the Radix menu so typing focus never leaves
  * the input. Selection is committed via `onChange(value)`; the raw text is
  * component-local, so react-hook-form only ever sees valid option values.

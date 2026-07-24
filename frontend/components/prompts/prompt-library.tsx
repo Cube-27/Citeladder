@@ -19,7 +19,7 @@ import type {
 } from '@/lib/api/types';
 import { emptyFilters, filterPrompts, type PromptFilters } from '@/lib/prompts/filter';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
-import { cn } from '@/lib/utils';
+import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
 
 import { CsvImportDialog } from './csv-import-dialog';
 import { GeneratePromptsDialog } from './generate-prompts-dialog';
@@ -275,8 +275,8 @@ export function PromptLibrary() {
         />
 
         <div className="grid min-w-0 content-start gap-3">
-          <div className="border-border flex flex-wrap items-center justify-between gap-2 border-b-2">
-            <div role="tablist" aria-label="Prompt status" className="flex gap-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div role="tablist" aria-label="Prompt status" className={segmentedTrackClasses}>
               {STATUS_TABS.map((tab) => {
                 const selected = tab.id === statusTab;
                 const count = statusCounts[tab.id];
@@ -287,12 +287,7 @@ export function PromptLibrary() {
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setStatusTab(tab.id)}
-                    className={cn(
-                      'focus-ring -mb-0.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-                      selected
-                        ? 'border-accent text-foreground font-semibold'
-                        : 'text-secondary hover:text-foreground border-transparent',
-                    )}
+                    className={segmentedItemClasses(selected)}
                   >
                     {tab.label}
                     {count > 0 ? (

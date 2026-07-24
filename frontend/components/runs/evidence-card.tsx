@@ -119,7 +119,7 @@ export function EvidenceCard({
             </CardHeader>
             <CardContent className="grid gap-3">
               <div className="grid gap-1.5">
-                <Label className="font-mono">Brand</Label>
+                <Label>Brand</Label>
                 {evidence.brand_mentioned ? (
                   <Badge className="justify-self-start" variant="status" value="success">
                     Mentioned
@@ -129,7 +129,7 @@ export function EvidenceCard({
                 )}
               </div>
               <div className="grid gap-1.5">
-                <Label className="font-mono">Competitors</Label>
+                <Label>Competitors</Label>
                 {evidence.competitors_mentioned.length === 0 ? (
                   <span className="text-muted text-sm">None mentioned</span>
                 ) : (
@@ -143,7 +143,7 @@ export function EvidenceCard({
                 )}
               </div>
               <div className="grid gap-1.5">
-                <Label className="font-mono">Sentiment</Label>
+                <Label>Sentiment</Label>
                 <span className="mono text-muted text-sm">{evidence.sentiment ?? '—'}</span>
               </div>
             </CardContent>

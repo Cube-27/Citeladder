@@ -6,10 +6,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
- * Midnight table pagination (designs/shell-runs-midnight.html +
- * shell-prompts-midnight.html): a mono "from–to of total" page indicator plus
- * ghost Prev/Next buttons, pinned to the table card's bottom border. Shared by
- * the runs and prompts tables (promoted from their per-screen duplicates).
+ * Table pagination: a "from–to of total" page indicator (sans label, mono
+ * numerals) plus ghost Prev/Next buttons, pinned to the table card's bottom
+ * border. Shared by the runs and prompts tables.
  *
  * `useTablePage` owns the page state with clamp-only reconciliation: when the
  * underlying list shrinks (filters, deletes, polling refetches) the rendered
@@ -46,8 +45,11 @@ export function TablePagination({
 }>) {
   return (
     <div className="border-border-subtle flex items-center justify-between gap-3 border-t px-3 py-2">
-      <span className="mono text-muted text-2xs">
-        {from}–{to} of {total} {noun}
+      <span className="text-muted text-2xs">
+        <span className="mono">
+          {from}–{to}
+        </span>{' '}
+        of <span className="mono">{total}</span> {noun}
       </span>
       <div className="flex items-center gap-1">
         <Button

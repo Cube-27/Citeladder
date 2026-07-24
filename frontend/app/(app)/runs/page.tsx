@@ -23,7 +23,7 @@ import { useActiveProject } from '@/lib/project/project-context';
 const POLL_INTERVAL_MS = 3_000;
 
 /**
- * Status filter chips (designs/shell-runs-midnight.html). "Running" buckets
+ * Status filter chips (designs/the approved mock). "Running" buckets
  * every in-flight status (queued/running/analyzing/reporting/…) — the full
  * eight-state badge system stays visible under "All".
  */

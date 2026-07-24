@@ -101,7 +101,9 @@ describe('RunsPage', () => {
       `/runs/${AUDIT_ID}`,
     );
     // Mono page indicator on the pagination footer.
-    expect(screen.getByText('1–1 of 1 runs')).toBeInTheDocument();
+    expect(screen.getByText((_, el) =>
+        el?.tagName === 'SPAN' && el.textContent?.replace(/\s+/g, ' ').trim() === '1–1 of 1 runs',
+      )).toBeInTheDocument();
   });
 
   it('filters the runs list by status chip', async () => {
@@ -134,7 +136,9 @@ describe('RunsPage', () => {
     const links = within(table).getAllByRole('link', { name: 'View' });
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute('href', '/runs/abababab-abab-4bab-8bab-abababababab');
-    expect(screen.getByText('1–1 of 1 runs')).toBeInTheDocument();
+    expect(screen.getByText((_, el) =>
+        el?.tagName === 'SPAN' && el.textContent?.replace(/\s+/g, ' ').trim() === '1–1 of 1 runs',
+      )).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no runs', async () => {

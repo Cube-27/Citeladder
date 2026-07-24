@@ -19,7 +19,7 @@ export type SetupStep = {
  * without losing entered values — react-hook-form keeps state across step
  * unmounts.
  *
- * CUBE27 midnight language (Phase D6): mono tabular numerals, an accent ring
+ * the flat/hairline language (Phase D6): mono tabular numerals, an accent ring
  * halo on the active circle, accent-filled completed circles with a check,
  * and mono uppercase micro-labels under each circle.
  */

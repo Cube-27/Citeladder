@@ -13,6 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
+import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
@@ -59,9 +60,9 @@ function DetailRow({
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
-  { id: 'providers', label: 'Provider Settings' },
+  { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
-  { id: 'danger', label: 'Danger Zone' },
+  { id: 'danger', label: 'Danger zone' },
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
@@ -167,7 +168,10 @@ export function SettingsScreen() {
         role="tablist"
         aria-label="Settings sections"
         aria-orientation="horizontal"
-        className="border-border flex [scrollbar-width:none] flex-nowrap gap-0 overflow-x-auto border-b-2 [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          segmentedTrackClasses,
+          'flex w-fit max-w-full [scrollbar-width:none] flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden',
+        )}
       >
         {SETTINGS_TABS.map((tab) => {
           const selected = tab.id === activeTab;
@@ -185,12 +189,7 @@ export function SettingsScreen() {
               tabIndex={selected ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               onKeyDown={onKeyDown}
-              className={cn(
-                'focus-ring -mb-0.5 shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
-                selected
-                  ? 'border-accent text-foreground font-semibold'
-                  : 'text-secondary hover:text-foreground border-transparent',
-              )}
+              className={cn(segmentedItemClasses(selected), 'shrink-0')}
             >
               {tab.label}
             </button>

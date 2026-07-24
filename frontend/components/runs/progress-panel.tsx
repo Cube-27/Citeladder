@@ -85,19 +85,19 @@ export function ProgressPanel({
 
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="grid gap-1">
-            <Label className="font-mono">Requested</Label>
+            <Label>Requested</Label>
             <Metric className="text-xl">{audit.requested_count}</Metric>
           </div>
           <div className="grid gap-1">
-            <Label className="font-mono">Completed</Label>
+            <Label>Completed</Label>
             <Metric className="text-run-completed text-xl">{audit.completed_count}</Metric>
           </div>
           <div className="grid gap-1">
-            <Label className="font-mono">Failed</Label>
+            <Label>Failed</Label>
             <Metric className="text-run-failed text-xl">{audit.failed_count}</Metric>
           </div>
           <div className="grid gap-1">
-            <Label className="font-mono">Created</Label>
+            <Label>Created</Label>
             <span className="text-secondary text-sm">{formatDateTime(audit.created_at)}</span>
           </div>
         </dl>

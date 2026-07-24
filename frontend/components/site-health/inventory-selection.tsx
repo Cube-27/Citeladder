@@ -136,7 +136,7 @@ export function InventorySelection({
       <CardContent className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-0.5">
-            <Label className="font-mono tracking-[0.08em]">Page Inventory</Label>
+            <Label>Page Inventory</Label>
             <span className="text-secondary text-sm">
               Select pages to include in your health analysis — selections persist across re-crawls.
             </span>

@@ -87,9 +87,9 @@ describe('SettingsScreen', () => {
     const tabs = within(tablist).getAllByRole('tab');
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Account',
-      'Provider Settings',
+      'Providers',
       'Integrations',
-      'Danger Zone',
+      'Danger zone',
     ]);
     expect(within(tablist).getByRole('tab', { name: 'Account' })).toHaveAttribute(
       'aria-selected',
@@ -133,7 +133,7 @@ describe('SettingsScreen', () => {
 
     // Panels stay mounted for stable aria-controls targets; inactive ones are hidden.
     expect(screen.getByTestId('provider-settings-panel')).not.toBeVisible();
-    await ue.click(screen.getByRole('tab', { name: 'Provider Settings' }));
+    await ue.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
     // Account content is hidden while another tab is active.
     expect(screen.getByText('Account role')).not.toBeVisible();
@@ -142,7 +142,7 @@ describe('SettingsScreen', () => {
   it('opens the Provider Settings tab from a ?tab=providers deep link', () => {
     search = 'tab=providers';
     renderScreen();
-    expect(screen.getByRole('tab', { name: 'Provider Settings' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -190,12 +190,12 @@ describe('SettingsScreen', () => {
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Provider Settings' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
     await ue.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Danger Zone' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Danger zone' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -205,8 +205,10 @@ describe('SettingsScreen', () => {
     const ue = userEvent.setup();
     renderScreen();
 
-    await ue.click(screen.getByRole('tab', { name: 'Danger Zone' }));
-    expect(screen.getByText('Danger zone')).toBeInTheDocument();
+    await ue.click(screen.getByRole('tab', { name: 'Danger zone' }));
+    // Scoped to the heading: the tab shares the same label now that both are
+    // sentence case.
+    expect(screen.getByRole('heading', { name: 'Danger zone' })).toBeInTheDocument();
     expect(screen.getByText('Acme Storage')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete project/i })).toBeInTheDocument();
   });
@@ -215,7 +217,7 @@ describe('SettingsScreen', () => {
     const ue = userEvent.setup();
     renderScreen();
 
-    await ue.click(screen.getByRole('tab', { name: 'Danger Zone' }));
+    await ue.click(screen.getByRole('tab', { name: 'Danger zone' }));
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
 
     const dialog = await screen.findByRole('dialog');
@@ -230,7 +232,7 @@ describe('SettingsScreen', () => {
     const ue = userEvent.setup();
     renderScreen();
 
-    await ue.click(screen.getByRole('tab', { name: 'Danger Zone' }));
+    await ue.click(screen.getByRole('tab', { name: 'Danger zone' }));
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
     const dialog = await screen.findByRole('dialog');
     await ue.click(within(dialog).getByRole('button', { name: /cancel/i }));

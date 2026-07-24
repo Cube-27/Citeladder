@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Midnight filter chip (designs/shell-runs-midnight.html `.chipf`): a pill
+ * Filter chip: a pill
  * button with a hairline border; the active chip takes the accent-soft fill +
  * accent text (blue stays reserved for active states). Shared, as class
  * builder + pressed-button, by the runs status filter chips (aria-pressed)

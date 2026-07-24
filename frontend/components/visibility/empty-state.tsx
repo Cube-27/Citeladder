@@ -8,8 +8,8 @@ import { displayHeadingLgClasses } from '@/components/ui/typography';
 
 /**
  * Empty state for a project with no completed runs (design.md §9.6): a
- * "Launch your first audit" card linking to `/runs`, in the midnight
- * empty-state pattern (mono eyebrow + display heading + ghost CTA). The
+ * "Launch your first audit" card linking to `/runs`, in the
+ * empty-state pattern (micro-label + heading + ghost CTA). The
  * dashboard is a projection over completed audits, so there is nothing to
  * render until one finishes. When a run is already in progress
  * (`hasActiveRun`), the copy and CTA switch from "launch one" to "one is on
