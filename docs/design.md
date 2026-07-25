@@ -37,14 +37,16 @@ ThemeToggle) opts into dark.
 **Light surface hierarchy (Figma):** `bg-base #F7F8FA` → panels/elevated `#FFFFFF`
 (differentiated by shadow, not fill) → sunken wells `#EFF1F6`. Sidebar = panel `#FFFFFF`.
 
-**Dark surface hierarchy (authored):** `bg-base #16181E` → `bg-panel #1F222B` →
-`bg-elevated #272B36` (strictly ascending luminance), sunken `bg-well #12141A`. Sidebar =
-panel `#1F222B`.
+**Dark surface hierarchy (authored dusk — shared with marketing):** `bg-base #262522` →
+`bg-panel #2C2B28` → `bg-elevated #353430` (strictly ascending luminance), sunken
+`bg-well #1F1E1B`. Sidebar = panel `#2C2B28`. These are the marketing deck's warm charcoals:
+the app and marketing run **one dark identity** (owner decision).
 
-The accent is **royal blue** — `#2756FF` light (Figma anchor), a brightened royal-blue
-sibling in dark — reserved for links, active states, focus rings, and data visualization.
-Owned citations are **Figma blue** in both themes (the former green identity is dropped —
-confirmed product decision).
+The accent is **hue-split by theme, on purpose**: royal blue `#2756FF` in light (the Figma
+anchor) and dusk violet `#6D5DE8` / `#7B6CF6` in dark (the marketing deck). Light follows
+Figma; dark follows marketing. In both themes the accent is reserved for links, active
+states, focus rings, and data visualization. Owned citations track the accent — Figma blue in
+light, violet in dark (the former green identity is dropped — confirmed product decision).
 
 ## 3. Figma → Searchify token mapping
 
@@ -242,146 +244,204 @@ measures 2.4:1 on its `#F7F8FA` bg, so it moves one ramp step within the same fa
 
 ## 5. Token values — DARK (`html[data-theme='dark']`)
 
-**Authored** soft slate-charcoal (per the approved app mockups) — replaces the Figma
-midnight dark. Only tokens that change are overridden; ramps, chart palette, type, spacing,
-radii, and structural tokens are shared from `:root`. Two documented AA adjustments against
-the mockup values: the solid accent `#3F6AFF` → `#3D64FA` (white accent-fg 4.45 → 4.78:1)
-and the cancelled run text `#71788C` → `#8F96A9` (3.1 → 4.65:1) — both minimal moves within
-the same family.
+**Authored warm-charcoal "dusk" — the same dark system the marketing site uses.** Owner
+decision: the app and marketing share one dark identity, so these values come from the
+approved dusk deck (`docs/redesign/designs/marketing-style-guide-dusk.html`) rather than from
+the app mockups. This replaces both the Figma midnight dark and the earlier cool
+slate-charcoal; neither is ported.
+
+The light theme stays Figma royal blue, so **the accent hue deliberately differs between
+themes** — violet in dark, blue in light. That is the consequence of sharing marketing's dark
+identity, not an oversight, and `globals.test.ts` guards the violet band so a later edit
+cannot quietly drift it back to blue.
+
+Only tokens that change are overridden; ramps, chart palette, type, spacing, radii, and
+structural tokens are shared from `:root`. One documented AA adjustment against the deck: the
+solid accent `#7B6CF6` → `#6D5DE8` (white `accent-fg` 3.95 → 4.79:1). The deck violet survives
+verbatim as `--accent-hover` and inside every wash and border, so the hue is unchanged — only
+the one swatch that has to carry white text is deepened. The deck's dim tones (`#7F7B70`
+3.6:1) stay decorative-only, exactly as the marketing contract already documents them.
 
 ```css
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Surfaces — cool slate-charcoal, strict ascending luminance */
-  --bg-base: #16181e;
-  --bg-alt: #1b1e26; /* between base and panel — hover/inset */
-  --bg-panel: #1f222b;
-  --bg-elevated: #272b36;
-  --bg-well: #12141a; /* sunken — may dip below base */
-  --bg-sidebar: #1f222b;
-  --surface-overlay: rgba(22, 24, 30, 0.92);
+  /* Surfaces — warm charcoal (deck --bg-0/--bg/--bg-2/--bg-3) */
+  --bg-base: #262522;
+  --bg-alt: #2a2926; /* between base and panel (hover/inset) — same family */
+  --bg-panel: #2c2b28;
+  --bg-elevated: #353430;
+  --bg-well: #1f1e1b; /* sunken — may go slightly darker than base */
+  --bg-sidebar: #2c2b28; /* sidebar = panel bg */
+  --surface-overlay: rgba(38, 37, 34, 0.92);
 
-  /* Borders */
-  --border-subtle: #262a35;
-  --border: #303544;
-  --border-strong: #3f4557;
+  /* Borders — solid warm hairlines (deck --line/--line-2/--line-3) */
+  --border-subtle: #3b3a35;
+  --border: #46453e;
+  --border-strong: #5b584d;
 
-  /* Text */
-  --text-primary: #ecedf2; /* 15.2:1 on bg-base */
-  --text-secondary: #a6acbe; /* 7.8:1 on bg-base, 7.0:1 on bg-panel */
-  --text-muted: #71788c; /* captions/decorative only */
-  --text-subtle: #4a4f60; /* decorative only */
-  --text-inverse: #16181e;
-  --text-link: var(--accent-text);
+  /* Text — body pairs verified ≥ 4.5:1 (globals.test.ts) */
+  --text-primary: #f4f2eb; /* deck --ink — 13.7:1 on bg-base */
+  --text-secondary: #b4b0a4; /* deck --ink-2 — 7.1:1 on bg-base, 6.5:1 on panel */
+  --text-muted: #7f7b70; /* deck --ink-3 — captions/decorative only (not body-gated) */
+  --text-subtle: #5b584d; /* decorative only */
+  --text-inverse: #1f1e1b;
+  --text-link: var(--accent-text); /* alias of --accent-text */
 
-  /* Accent — brightened royal blue (family hue ≈ 228°) */
-  --accent: #3d64fa; /* white accent-fg on accent: 4.78:1 */
-  --accent-hover: #6b90ff;
-  --accent-active: #7da0ff;
+  /* Accent — the deck's violet. Its --acc #7B6CF6 measures only 3.95:1
+     against white, so the SOLID is deepened one step within the same
+     family (#7B6CF6 → #6D5DE8, 4.79:1) to clear AA; the deck violet
+     survives verbatim as the hover step and inside every wash/border. */
+  --accent: #6d5de8; /* white accent-fg on accent: 4.79:1 */
+  --accent-hover: #7b6cf6; /* deck --acc */
+  --accent-active: #8f81ff; /* deck --acc-hover */
   --accent-fg: #ffffff;
-  --accent-subtle: rgba(63, 106, 255, 0.14);
-  --accent-border: rgba(63, 106, 255, 0.34);
-  --accent-text: #7da0ff; /* 6.3:1 on bg-panel */
+  --accent-subtle: rgba(123, 108, 246, 0.14); /* deck --acc-soft */
+  --accent-border: rgba(123, 108, 246, 0.34); /* deck --acc-line */
+  --accent-text: #9c92ff; /* deck --acc-text — 5.4:1 on bg-panel */
 
-  /* Status — translucent fills re-based on the authored surfaces */
-  --success: #34d399; --success-bg: rgba(16, 185, 129, 0.12);
-  --success-border: rgba(16, 185, 129, 0.26); --success-text: #6ee7b7;
-  --warning: #fbbf24; --warning-bg: rgba(245, 158, 11, 0.12);
-  --warning-border: rgba(245, 158, 11, 0.26); --warning-text: #fcd34d;
-  --danger: #f87171; --danger-bg: rgba(239, 68, 68, 0.12);
-  --danger-border: rgba(239, 68, 68, 0.26); --danger-text: #fc8181;
-  --info: #7da0ff; --info-bg: rgba(39, 86, 255, 0.14);
-  --info-border: rgba(39, 86, 255, 0.3); --info-text: #7da0ff;
-  --neutral-bg: rgba(255, 255, 255, 0.05);
+  /* Semantic status — deck hues (--ok/--warn/--bad) as translucent fills
+     re-based on the dusk surfaces. */
+  --success: #46d69c;
+  --success-bg: rgba(70, 214, 156, 0.13);
+  --success-border: rgba(70, 214, 156, 0.3);
+  --success-text: #46d69c;
+  --warning: #f2c14e;
+  --warning-bg: rgba(242, 193, 78, 0.13);
+  --warning-border: rgba(242, 193, 78, 0.28);
+  --warning-text: #f2c14e;
+  --danger: #ff8f85;
+  --danger-bg: rgba(255, 143, 133, 0.13);
+  --danger-border: rgba(255, 143, 133, 0.28);
+  --danger-text: #ff8f85;
+  --info: #9c92ff;
+  --info-bg: rgba(123, 108, 246, 0.14);
+  --info-border: rgba(123, 108, 246, 0.3);
+  --info-text: #a79eff;
+  --neutral-bg: rgba(255, 250, 240, 0.05); /* deck --glass-bg */
 
   /* Sentiment */
   --sentiment-positive: var(--success);
   --sentiment-positive-bg: var(--success-bg);
   --sentiment-positive-text: var(--success-text);
-  --sentiment-neutral: #a6acbe;
-  --sentiment-neutral-bg: rgba(255, 255, 255, 0.05);
-  --sentiment-neutral-text: #a6acbe;
+  --sentiment-neutral: #b4b0a4;
+  --sentiment-neutral-bg: rgba(255, 250, 240, 0.05);
+  --sentiment-neutral-text: #b4b0a4;
   --sentiment-negative: var(--danger);
   --sentiment-negative-bg: var(--danger-bg);
   --sentiment-negative-text: var(--danger-text);
   --value-placeholder: var(--text-subtle);
 
-  /* Citations */
-  --citation-owned: #7da0ff; --citation-owned-bg: rgba(39, 86, 255, 0.16);
-  --citation-owned-border: rgba(39, 86, 255, 0.3); --citation-owned-text: #7da0ff;
-  --citation-competitor: #fca87a; --citation-competitor-bg: rgba(249, 115, 22, 0.12);
-  --citation-competitor-border: rgba(249, 115, 22, 0.24); --citation-competitor-text: #fca87a;
-  --citation-third-party: #c4b5fd; --citation-third-party-bg: rgba(139, 92, 246, 0.12);
-  --citation-third-party-border: rgba(139, 92, 246, 0.24);
-  --citation-third-party-text: #c4b5fd;
+  /* Citation classification — owned follows the accent into violet;
+     competitor/third-party are the deck's --comp/--third. */
+  --citation-owned: #a79eff;
+  --citation-owned-bg: rgba(123, 108, 246, 0.16);
+  --citation-owned-border: rgba(123, 108, 246, 0.3);
+  --citation-owned-text: #a79eff;
+  --citation-competitor: #fca87a;
+  --citation-competitor-bg: rgba(249, 115, 22, 0.12);
+  --citation-competitor-border: rgba(249, 115, 22, 0.28);
+  --citation-competitor-text: #fca87a;
+  --citation-third-party: #c9b8fd;
+  --citation-third-party-bg: rgba(139, 92, 246, 0.12);
+  --citation-third-party-border: rgba(139, 92, 246, 0.26);
+  --citation-third-party-text: #c9b8fd;
 
   /* Run status */
-  --run-draft: #a6acbe; --run-draft-bg: rgba(255, 255, 255, 0.05);
-  --run-queued: #a6acbe; --run-queued-bg: rgba(255, 255, 255, 0.05);
-  --run-running: #7da0ff; --run-running-bg: rgba(39, 86, 255, 0.16);
-  --run-analyzing: #c4b5fd; --run-analyzing-bg: rgba(139, 92, 246, 0.13);
-  --run-completed: #6ee7b7; --run-completed-bg: rgba(16, 185, 129, 0.12);
-  --run-partial: #fcd34d; --run-partial-bg: rgba(245, 158, 11, 0.12);
-  --run-failed: #fc8181; --run-failed-bg: rgba(239, 68, 68, 0.12);
-  /* AA adjustment: mockup cancelled text #71788C → #8F96A9 (same slate family). */
-  --run-cancelled: #8f96a9; --run-cancelled-bg: rgba(255, 255, 255, 0.05);
+  --run-draft: #b4b0a4;
+  --run-draft-bg: rgba(255, 250, 240, 0.05);
+  --run-queued: #b4b0a4;
+  --run-queued-bg: rgba(255, 250, 240, 0.05);
+  --run-running: #a79eff;
+  --run-running-bg: rgba(123, 108, 246, 0.16);
+  --run-analyzing: #c9b8fd;
+  --run-analyzing-bg: rgba(139, 92, 246, 0.13);
+  --run-completed: #46d69c;
+  --run-completed-bg: rgba(70, 214, 156, 0.13);
+  --run-partial: #f2c14e;
+  --run-partial-bg: rgba(242, 193, 78, 0.13);
+  --run-failed: #ff8f85;
+  --run-failed-bg: rgba(255, 143, 133, 0.13);
+  --run-cancelled: #b4b0a4;
+  --run-cancelled-bg: rgba(255, 250, 240, 0.05);
 
-  /* Score bands — ring hues identical to light; fills translucent */
-  --score-low: #ef4444; --score-low-bg: rgba(239, 68, 68, 0.13);
-  --score-low-border: rgba(239, 68, 68, 0.26); --score-low-text: #fc8181;
-  --score-low-ring: #ef4444;
-  --score-mid: #f59e0b; --score-mid-bg: rgba(245, 158, 11, 0.13);
-  --score-mid-border: rgba(245, 158, 11, 0.26); --score-mid-text: #fcd34d;
-  --score-mid-ring: #f59e0b;
-  --score-good: #10b981; --score-good-bg: rgba(16, 185, 129, 0.13);
-  --score-good-border: rgba(16, 185, 129, 0.26); --score-good-text: #6ee7b7;
-  --score-good-ring: #10b981;
-  --score-high: #22c55e; --score-high-bg: rgba(34, 197, 94, 0.13);
-  --score-high-border: rgba(34, 197, 94, 0.26); --score-high-text: #86efac;
-  --score-high-ring: #22c55e;
+  /* Score bands — the deck's warm status hues; thresholds stay 25/50/75 */
+  --score-low: #ff8f85;
+  --score-low-bg: rgba(255, 143, 133, 0.13);
+  --score-low-border: rgba(255, 143, 133, 0.28);
+  --score-low-text: #ff8f85;
+  --score-low-ring: #ff8f85;
+  --score-mid: #f2c14e;
+  --score-mid-bg: rgba(242, 193, 78, 0.13);
+  --score-mid-border: rgba(242, 193, 78, 0.28);
+  --score-mid-text: #f2c14e;
+  --score-mid-ring: #f2c14e;
+  --score-good: #46d69c;
+  --score-good-bg: rgba(70, 214, 156, 0.13);
+  --score-good-border: rgba(70, 214, 156, 0.3);
+  --score-good-text: #46d69c;
+  --score-good-ring: #46d69c;
+  --score-high: #7be8be;
+  --score-high-bg: rgba(123, 232, 190, 0.13);
+  --score-high-border: rgba(123, 232, 190, 0.3);
+  --score-high-text: #7be8be;
+  --score-high-ring: #7be8be;
 
-  /* Chart palette NOT overridden (identity survives the theme switch);
-     only the achromatic "Other" bucket adapts. */
-  --series-other: #3f4557;
+  /* Chart palette — --chart-1..8 and --series-1..5 are intentionally NOT
+     overridden: a series keeps its hue across themes so identity survives
+     a theme switch. Only the achromatic "Other" bucket adapts, warmed to
+     sit on the dusk surfaces. */
+  --series-other: #5b584d;
 
-  /* Shadows — authored soft stack (low opacity, larger blur) */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03);
-  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --shadow-4: 0 16px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  /* Shadows — soft stack for the warm surfaces (low opacity, larger blur;
+     no crushed near-black). */
+  --shadow-1:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 250, 240, 0.03);
+  --shadow-2:
+    0 2px 8px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 250, 240, 0.04);
+  --shadow-3:
+    0 8px 24px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 250, 240, 0.05);
+  --shadow-4:
+    0 16px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 250, 240, 0.06);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   --overlay-scrim: rgba(0, 0, 0, 0.55);
 
   /* Skeleton */
-  --skeleton-base: #1f222b;
-  --skeleton-highlight: #272b36;
+  --skeleton-base: #2c2b28;
+  --skeleton-highlight: #353430;
+
+  /* Segmented control */
+  --segmented-bg: var(--bg-alt);
 }
 ```
 
 ## 6. Authored dark-theme spec (hard constraints, machine-enforced)
 
-The Figma midnight dark (`#09090F` / `#0D1228` near-black) is **not ported** — the dark
-theme is authored fresh in the Perplexity/Claude family of lighter, softer darks. Values
-come from the approved app mockups, adjusted only where a documented AA pair fails.
-`globals.test.ts` enforces:
+The Figma midnight dark (`#09090F` / `#0D1228` near-black) is **not ported**, and neither is
+the cool slate-charcoal that preceded this revision. The dark theme is the marketing deck's
+warm-charcoal dusk, adopted wholesale so the product and the marketing site read as one
+brand in dark mode. Values come from
+`docs/redesign/designs/marketing-style-guide-dusk.html`, adjusted only where a documented AA
+pair fails. `globals.test.ts` enforces:
 
 1. **Never near-black** — `--bg-base` relative luminance stays above a floor (0.007) that
-   excludes near-black (the rejected schemes measure ≤ 0.005; the authored `#16181E`
-   measures ≈ 0.0092).
-2. **Clearly lighter elevation** — strict luminance ordering `--bg-base` (0.0092) `<`
-   `--bg-panel` (0.0162) `≤` `--bg-elevated` (0.0258). `--bg-well` may go slightly darker
-   than base for sunken wells.
+   excludes near-black (the rejected schemes measure ≤ 0.005; dusk `#262522` measures
+   ≈ 0.0185, comfortably clear).
+2. **Clearly lighter elevation** — strict luminance ordering `--bg-base` (0.0185) `<`
+   `--bg-panel` (0.0242) `≤` `--bg-elevated` (0.0343). `--bg-well` (0.0130) may go slightly
+   darker than base for sunken wells.
 3. **AA ≥ 4.5:1 for every documented pair** — the same programmatic pair list as light
    (body, accent, and every status/sentiment/citation/run/score `*-text` on its `*-bg`,
-   translucent fills composited over `--bg-panel`). Accent and status hues are brightened
-   variants of the light values — never the Figma dark set; the dark accent hue stays in the
-   royal-blue family (215–240°).
-4. **Soft shadows** — the dark stack casts low-opacity (≤ 0.6 alpha), larger-blur shadows
-   from black with a faint white keyline; no crushed near-black shadow stack.
-5. **Decorative-only tones are never body text** — `--text-muted` / `--text-subtle` are
+   translucent fills composited over `--bg-panel`).
+4. **The dark accent stays in the dusk violet family (240–265°)** — guarding the band both
+   ways, so a later edit can neither drift it back to the light theme's royal blue nor push
+   it off into magenta. The surface ramp is pinned to the deck values by assertion for the
+   same reason: app and marketing must not silently diverge.
+5. **Soft shadows** — the dark stack casts low-opacity (≤ 0.6 alpha), larger-blur shadows
+   from black with a faint warm keyline; no crushed near-black shadow stack.
+6. **Decorative-only tones are never body text** — `--text-muted` / `--text-subtle` are
    asserted present but excluded from ratio gating (captions, icons, dividers, the `—`
-   placeholder).
+   placeholder). The deck's dim tones live here.
 
 ## 7. Type scale — Figma verbatim
 

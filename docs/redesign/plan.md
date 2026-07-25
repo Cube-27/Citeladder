@@ -631,11 +631,30 @@ Tests: full suite.
 4. **Nav**: the grouped Analyze/Improve structure is kept and restyled; the Figma flat nav is
    not adopted.
 5. **Dark theme**: the Figma midnight dark (`#09090F`/`#0D1228`) is rejected; P1 authors a new
-   lighter soft-charcoal dark (Perplexity/Claude-style, never near-black) per §3a. Light theme
-   ports Figma verbatim.
+   lighter dark (never near-black) per §3a. Light theme ports Figma verbatim.
 6. **Marketing**: fully independent creative system with extremely ambitious motion scope; not
    anchored to Figma app tokens. Pricing-facts constraint and the motion-primitives
    architecture stand.
+
+**Resolved by the user (2026-07-25, second pass) — these supersede the above where they
+conflict:**
+
+7. **One dark identity.** The app's dark theme *is* the marketing dusk system, not a separate
+   authored charcoal. Surfaces `#1F1E1B`/`#262522`/`#2C2B28`/`#353430`, ink
+   `#F4F2EB`/`#B4B0A4`/`#7F7B70`, warm lines, and the deck's violet accent. This narrows
+   decision 5 (the "cool slate vs warm charcoal" choice deferred to mockups is now settled:
+   warm charcoal) and partially overrides decision 6 — marketing keeps its own *creative*
+   system, but the app no longer authors a separate dark palette.
+   **Accent is hue-split by theme on purpose**: Figma royal blue in light, dusk violet in
+   dark. The solid dark accent is deepened one step (`#7B6CF6` → `#6D5DE8`) purely to clear
+   AA against white; the deck violet survives as `--accent-hover` and in every wash.
+8. **The deck is reference, not gospel.** Implement the design system it describes; do not
+   reproduce the mockup screens literally.
+9. **Density is a first-class requirement.** Screens are too crowded — limit prose wherever
+   applicable and keep the surfaces feeling premium. Login, onboarding, and the landing
+   snapshot were called out specifically.
+10. **Clean rebuild before new features.** Ship the restyled existing product first; Task 11
+    (onboarding + AI auto-discovery) moves to the end of the queue.
 
 **Deferred to approved mockups (non-blocking):** the dark family's exact ramp (cool
 slate-charcoal ≈ `#1C1E22` vs warm charcoal ≈ `#2A2926` — either satisfies §3a); the marketing

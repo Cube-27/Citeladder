@@ -367,10 +367,10 @@ describe('Figma light palette (verbatim port)', () => {
 /* ═══════════════════════════════════════════════════════════════════════
    3. Authored dark theme — §3a hard constraints
 ═══════════════════════════════════════════════════════════════════════ */
-describe('authored dark theme (soft slate-charcoal, never near-black)', () => {
+describe('authored dark theme (warm-charcoal dusk, never near-black)', () => {
   // Luminance floor excluding near-black: the rejected Figma midnight
   // (#09090F ≈ 0.0029) and the old CUBE27 scale (#050505 ≈ 0.0015) sit far
-  // below it; the authored base (#16181E ≈ 0.0092) clears it.
+  // below it; the dusk base (#262522 ≈ 0.0185) clears it comfortably.
   const LUMINANCE_FLOOR = 0.007;
 
   it('keeps --bg-base above the not-near-black luminance floor', () => {
@@ -391,12 +391,24 @@ describe('authored dark theme (soft slate-charcoal, never near-black)', () => {
     ).toBeGreaterThanOrEqual(panel);
   });
 
-  it('keeps the dark accent in the royal-blue family (brightened, not re-hued)', () => {
+  // The app's dark theme shares marketing's dusk identity (owner decision),
+  // so its accent is the deck violet — deliberately a different hue from the
+  // light theme's Figma royal blue. Guarding the violet band keeps a future
+  // edit from silently drifting back to blue or off into magenta.
+  it('keeps the dark accent in the dusk violet family', () => {
     const hue = hueDegrees(opaqueColor('accent', darkTokens));
-    expect(hue, `dark accent hue ${hue.toFixed(1)}° outside royal-blue family`).toBeGreaterThan(
-      215,
+    expect(hue, `dark accent hue ${hue.toFixed(1)}° outside dusk violet family`).toBeGreaterThan(
+      240,
     );
-    expect(hue).toBeLessThan(240);
+    expect(hue).toBeLessThan(265);
+  });
+
+  it('shares the dusk surface ramp with the marketing deck', () => {
+    // The deck's warm charcoals — app and marketing must not drift apart.
+    expect(opaqueColor('bg-base', darkTokens)).toMatchObject(hexToRgb('#262522'));
+    expect(opaqueColor('bg-panel', darkTokens)).toMatchObject(hexToRgb('#2C2B28'));
+    expect(opaqueColor('bg-elevated', darkTokens)).toMatchObject(hexToRgb('#353430'));
+    expect(opaqueColor('text-primary', darkTokens)).toMatchObject(hexToRgb('#F4F2EB'));
   });
 
   it('uses a soft dark shadow stack (no crushed near-black shadows)', () => {
