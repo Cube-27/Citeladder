@@ -132,6 +132,18 @@ async def test_suggest_prompts_happy_path(
         ),
     ]
     assert body["dropped_duplicates"] == 0
+    # The agent's topic grouping is preserved, not flattened away: onboarding
+    # persists from this to create the same Topic rows /generate creates.
+    assert [(t["name"], [p["text"] for p in t["prompts"]]) for t in body["topics"]] == [
+        (
+            "Everyday basics",
+            [
+                "What are the best affordable basics for kids?",
+                "Acme vs Globex — which is better value?",
+            ],
+        ),
+        ("Homewares", ["Where can I buy cheap homewares in Australia?"]),
+    ]
     # Brand evidence reached the agent's user message (after consent).
     assert len(fake_agent.calls) == 1
     assert "Acme Corp" in fake_agent.calls[0]["user"]
@@ -286,6 +298,30 @@ async def test_suggest_prompts_dedupes_against_existing(
         "Where can I buy cheap homewares in Australia?",
     ]
     assert body["dropped_duplicates"] == 1
+
+
+@pytest.mark.asyncio
+async def test_suggest_prompts_count_cap_applies_to_topics_too(
+    client: httpx.AsyncClient, fake_agent: FakeAgent
+) -> None:
+    """The cap must trim both views identically.
+
+    ``prompts`` is capped to ``count``; if ``topics`` were returned ungrouped
+    from the full set, a caller persisting from the grouped view would create
+    more prompts than the cap allows.
+    """
+    await _register(client, "suggest-prompts9@example.com")
+
+    resp = await client.post(
+        "/api/v1/brand-suggestions/prompts", json=_prompt_payload(count=1)
+    )
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert len(body["prompts"]) == 1
+    assert sum(len(t["prompts"]) for t in body["topics"]) == 1
+    # The topic left with no surviving prompts is omitted, not returned empty.
+    assert [t["name"] for t in body["topics"]] == ["Everyday basics"]
 
 
 # --------------------------------------------------------------------------

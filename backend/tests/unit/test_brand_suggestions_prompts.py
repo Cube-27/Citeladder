@@ -71,7 +71,9 @@ VALID_OUTPUT = json.dumps(
 # --------------------------------------------------------------------------
 class TestParsePromptSuggestionOutput:
     def test_valid_output_flattens_topics_to_themed_rows(self) -> None:
-        rows, dropped = parse_prompt_suggestion_output(VALID_OUTPUT, existing_texts=[])
+        rows, _topics, dropped = parse_prompt_suggestion_output(
+            VALID_OUTPUT, existing_texts=[]
+        )
         assert [(r.text, r.theme, r.intent) for r in rows] == [
             (
                 "What are the best affordable basics for kids?",
@@ -91,6 +93,50 @@ class TestParsePromptSuggestionOutput:
         ]
         assert dropped == 0
 
+    def test_returns_the_agent_topic_grouping_alongside_the_flat_rows(self) -> None:
+        # The grouped view is what a persisting caller (onboarding) uses to
+        # recreate the same Topic rows /generate creates, so it must describe
+        # exactly the same prompts as the flat list.
+        rows, topics, _ = parse_prompt_suggestion_output(
+            VALID_OUTPUT, existing_texts=[]
+        )
+        assert [(t.name, [p.text for p in t.prompts]) for t in topics] == [
+            (
+                "Everyday basics",
+                [
+                    "What are the best affordable basics for kids?",
+                    "Acme vs Globex — which is better value?",
+                ],
+            ),
+            ("Homewares", ["Where can I buy cheap homewares in Australia?"]),
+        ]
+        assert sum(len(t.prompts) for t in topics) == len(rows)
+
+    def test_groups_case_variant_topic_names_together(self) -> None:
+        # The DB's unique index is on lower(name), so "Basics" and "basics" are
+        # one topic on persist — the grouping has to agree or onboarding would
+        # try to create a topic that already exists.
+        raw = json.dumps(
+            {
+                "topics": [
+                    {"name": "Basics", "prompts": [{"text": "First?", "intent": ""}]},
+                    {"name": "basics", "prompts": [{"text": "Second?", "intent": ""}]},
+                ]
+            }
+        )
+        _rows, topics, _ = parse_prompt_suggestion_output(raw, existing_texts=[])
+        assert len(topics) == 1
+        assert topics[0].name == "Basics"
+        assert [p.text for p in topics[0].prompts] == ["First?", "Second?"]
+
+    def test_topic_emptied_by_dedupe_is_omitted_not_returned_empty(self) -> None:
+        _rows, topics, dropped = parse_prompt_suggestion_output(
+            VALID_OUTPUT,
+            existing_texts=["where can i buy cheap homewares in australia"],
+        )
+        assert [t.name for t in topics] == ["Everyday basics"]
+        assert dropped == 1
+
     def test_unknown_intent_is_blanked(self) -> None:
         raw = json.dumps(
             {
@@ -102,7 +148,7 @@ class TestParsePromptSuggestionOutput:
                 ]
             }
         )
-        rows, _ = parse_prompt_suggestion_output(raw, existing_texts=[])
+        rows, _topics, _ = parse_prompt_suggestion_output(raw, existing_texts=[])
         assert rows[0].intent == ""
 
     def test_intra_response_duplicates_collapse_with_normalized_text(self) -> None:
@@ -119,7 +165,7 @@ class TestParsePromptSuggestionOutput:
                 ]
             }
         )
-        rows, dropped = parse_prompt_suggestion_output(raw, existing_texts=[])
+        rows, _topics, dropped = parse_prompt_suggestion_output(raw, existing_texts=[])
         assert [r.text for r in rows] == ["Best basics for kids?"]
         assert dropped == 1
 
@@ -135,13 +181,13 @@ class TestParsePromptSuggestionOutput:
                 ]
             }
         )
-        rows, _ = parse_prompt_suggestion_output(raw, existing_texts=[])
+        rows, _topics, _ = parse_prompt_suggestion_output(raw, existing_texts=[])
         assert [(r.text, r.theme) for r in rows] == [
             ("Best basics for kids?", "Basics")
         ]
 
     def test_dedupes_against_existing_texts(self) -> None:
-        rows, dropped = parse_prompt_suggestion_output(
+        rows, _topics, dropped = parse_prompt_suggestion_output(
             VALID_OUTPUT,
             existing_texts=["what are the best affordable basics for kids"],
         )

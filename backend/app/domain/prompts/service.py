@@ -205,6 +205,18 @@ async def create_prompt(
         enabled=payload.enabled,
         origin=PROMPT_ORIGIN_MANUAL,
     )
+    # Same scope rule as the update path: a topic must belong to the prompt's
+    # own project. Validated before the insert so a cross-scope topic is a 404
+    # rather than an FK violation surfacing as a 500.
+    topic_id = getattr(payload, "topic_id", None)
+    if topic_id is not None:
+        await _validate_topic_scope(
+            session,
+            workspace_id=workspace_id,
+            prompt=prompt,
+            topic_id=topic_id,
+        )
+        prompt.topic_id = topic_id
     session.add(prompt)
     try:
         await session.commit()

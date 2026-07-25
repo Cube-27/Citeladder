@@ -24,6 +24,7 @@ from app.domain.projects.schemas import (
     PromptSuggestionItem,
     PromptSuggestRequest,
     PromptSuggestResponse,
+    SuggestedTopicGroup,
 )
 from app.domain.projects.suggestions import (
     SuggestionOutputError,
@@ -165,11 +166,16 @@ async def suggest_prompts_endpoint(
     """AI prompt suggestions via the app-level default agent.
 
     Stateless sibling of ``POST /prompt-sets/{id}/generate`` for the pre-save
-    setup/onboarding flow: the same agent prompt construction (reused from
+    onboarding flow: the same agent prompt construction (reused from
     ``domain/prompts/generation.py``), but nothing is persisted — the caller
     reviews the rows and saves what it keeps. Same guard order as the other
     suggestion endpoints: confirmation/bounds (422) before agent
     configuration (503), then provider/output failures (502).
+
+    The response carries the prompts twice: ``prompts`` flat, and ``topics``
+    grouped as the agent proposed them. A caller that persists (onboarding)
+    uses the grouped form to create the same ``Topic`` rows ``/generate``
+    creates, so a project set up through onboarding is not left untopiced.
     """
     try:
         # 422 before 503: an invalid payload must be rejected as invalid even
@@ -179,7 +185,9 @@ async def suggest_prompts_endpoint(
         _raise_invalid(exc)
     agent = _resolve_agent()
     try:
-        prompts, dropped = await suggest_prompts(payload=payload, agent=agent)
+        prompts, topics, dropped = await suggest_prompts(
+            payload=payload, agent=agent
+        )
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     except SuggestionOutputError as exc:
@@ -190,6 +198,18 @@ async def suggest_prompts_endpoint(
         prompts=[
             PromptSuggestionItem(text=p.text, theme=p.theme, intent=p.intent)
             for p in prompts
+        ],
+        topics=[
+            SuggestedTopicGroup(
+                name=t.name,
+                prompts=[
+                    PromptSuggestionItem(
+                        text=p.text, theme=p.theme, intent=p.intent
+                    )
+                    for p in t.prompts
+                ],
+            )
+            for t in topics
         ],
         dropped_duplicates=dropped,
     )

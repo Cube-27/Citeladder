@@ -268,8 +268,25 @@ class PromptSuggestionItem(BaseModel):
     intent: str = ""
 
 
-class PromptSuggestResponse(BaseModel):
+class SuggestedTopicGroup(BaseModel):
+    """One agent-proposed topic and the prompts it grouped under it.
+
+    The agent generates prompts grouped by topic and the persisted ``/generate``
+    flow keeps that structure as real ``Topic`` rows. This response preserves it
+    too so a caller that persists suggestions (onboarding) can create the same
+    topics rather than landing an untopiced prompt set — the two entry points
+    must produce the same shape of data.
+    """
+
+    name: str = Field(min_length=1, max_length=255)
     prompts: list[PromptSuggestionItem] = Field(default_factory=list)
+
+
+class PromptSuggestResponse(BaseModel):
+    # Flat list, kept for callers that only want prompt text (and so this stays
+    # backwards compatible). ``topics`` carries the same prompts grouped.
+    prompts: list[PromptSuggestionItem] = Field(default_factory=list)
+    topics: list[SuggestedTopicGroup] = Field(default_factory=list)
     dropped_duplicates: int = 0
 
 

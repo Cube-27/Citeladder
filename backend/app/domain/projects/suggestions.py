@@ -322,6 +322,19 @@ class SuggestedPromptRow(BaseModel):
     intent: str = ""
 
 
+class SuggestedPromptTopic(BaseModel):
+    """The agent's topic grouping, preserved rather than flattened away.
+
+    ``parse_prompt_suggestion_output`` returns both this and the flat rows: the
+    flat form is what a form-filling caller wants, the grouped form is what a
+    caller that persists needs in order to create the same ``Topic`` rows the
+    ``/generate`` flow creates.
+    """
+
+    name: str = Field(min_length=1, max_length=255)
+    prompts: list[SuggestedPromptRow] = Field(default_factory=list)
+
+
 def validate_prompt_suggestion_payload(payload: Any) -> None:
     """Prompt-suggestion consent + bounds (422 at the API layer).
 
@@ -372,16 +385,24 @@ def build_prompt_suggestion_user_message(
 
 def parse_prompt_suggestion_output(
     raw: str, *, existing_texts: list[str]
-) -> tuple[list[SuggestedPromptRow], int]:
-    """Flatten the generation output contract into theme-tagged prompt rows.
+) -> tuple[list[SuggestedPromptRow], list[SuggestedPromptTopic], int]:
+    """Adapt the generation output contract into prompt rows AND their topics.
 
     Structure and intra-response dedupe stay with the owner parser
-    (``parse_generation_output``); this adapter flattens topics to
-    ``{text, theme, intent}`` rows and additionally drops texts equivalent to
-    ``existing_texts`` already in the caller's form (counted as duplicates,
-    same normalized-text hash as the persisted flow).
+    (``parse_generation_output``); this adapter tags each prompt with its topic
+    name and additionally drops texts equivalent to ``existing_texts`` already
+    in the caller's form (counted as duplicates, same normalized-text hash as
+    the persisted flow).
 
-    Returns ``(rows, dropped_duplicate_count)``.
+    Returns ``(rows, topics, dropped_duplicate_count)``. The two lists hold the
+    same prompts: ``rows`` flat for form-filling callers, ``topics`` grouped for
+    callers that persist and need to recreate the agent's topics. A topic whose
+    prompts were all dropped as duplicates is omitted rather than emitted empty.
+
+    Grouping is by the topic's ``lower()`` name — the same canonical form as the
+    DB's unique index on ``lower(name)`` and the in-memory match in
+    ``generation._get_or_create_topic`` — so an agent that emits "Shoes" and
+    "shoes" as separate topics collapses here exactly as it would on persist.
     """
     try:
         topics, dropped = parse_generation_output(raw)
@@ -390,6 +411,7 @@ def parse_prompt_suggestion_output(
 
     seen = {prompt_text_hash(text) for text in existing_texts if text.strip()}
     rows: list[SuggestedPromptRow] = []
+    grouped: dict[str, SuggestedPromptTopic] = {}
     for topic in topics:
         for prompt in topic.prompts:
             text_hash = prompt_text_hash(prompt.text)
@@ -397,20 +419,29 @@ def parse_prompt_suggestion_output(
                 dropped += 1
                 continue
             seen.add(text_hash)
-            rows.append(
-                SuggestedPromptRow(
-                    text=prompt.text, theme=topic.name, intent=prompt.intent
-                )
+            row = SuggestedPromptRow(
+                text=prompt.text, theme=topic.name, intent=prompt.intent
             )
+            rows.append(row)
+            key = topic.name.lower()
+            group = grouped.get(key)
+            if group is None:
+                group = SuggestedPromptTopic(name=topic.name, prompts=[])
+                grouped[key] = group
+            group.prompts.append(row)
     if not rows:
         raise SuggestionOutputError("Agent output contained no usable prompts")
-    return rows, dropped
+    return rows, list(grouped.values()), dropped
 
 
 async def suggest_prompts(
     *, payload: Any, agent: DefaultAgentClient
-) -> tuple[list[SuggestedPromptRow], int]:
-    """Validate consent/bounds, call the agent, and parse prompt suggestions."""
+) -> tuple[list[SuggestedPromptRow], list[SuggestedPromptTopic], int]:
+    """Validate consent/bounds, call the agent, and parse prompt suggestions.
+
+    Returns the capped flat rows, the same prompts grouped by topic, and the
+    dropped-duplicate count.
+    """
     validate_prompt_suggestion_payload(payload)
     existing = [t for t in payload.existing_prompt_texts if t.strip()]
     competitor_names = [n for n in payload.competitor_names if n.strip()]
@@ -423,5 +454,19 @@ async def suggest_prompts(
     raw = await agent.complete_json(
         system=GENERATION_SYSTEM_PROMPT, user=user_message
     )
-    rows, dropped = parse_prompt_suggestion_output(raw, existing_texts=existing)
-    return rows[: payload.count], dropped
+    rows, topics, dropped = parse_prompt_suggestion_output(
+        raw, existing_texts=existing
+    )
+    capped = rows[: payload.count]
+    # Re-derive the groups from the capped rows rather than returning the full
+    # grouping: the two views must describe the same prompts, or a caller that
+    # persists from ``topics`` would create more prompts than ``count`` allows.
+    kept = {id(row) for row in capped}
+    capped_topics = [
+        SuggestedPromptTopic(
+            name=topic.name,
+            prompts=[row for row in topic.prompts if id(row) in kept],
+        )
+        for topic in topics
+    ]
+    return capped, [t for t in capped_topics if t.prompts], dropped
