@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { queryKeys } from './query-keys';
 import {
@@ -13,6 +14,8 @@ import {
   siteIssueSchema,
   strictValidate,
 } from './schemas';
+import { siteHealthApi } from './site-health';
+import { mswServer } from '@/test/msw-server';
 import { z } from 'zod';
 
 const UUID = '11111111-1111-4111-8111-111111111111';
@@ -28,6 +31,26 @@ const entitlement = {
   capability_revision: 3,
   created_at: '2026-07-15T00:00:00Z',
   updated_at: '2026-07-15T00:00:00Z',
+};
+
+// The real bounded site-facts blob the worker persists (`_crawl_setup` in
+// backend/app/workers/site_health_worker.py) — robots AI-crawler stance,
+// llms.txt probe, sitemap file list. No discovered totals inside.
+const siteFacts = {
+  robots: {
+    fetched: true,
+    url: 'https://example.com/robots.txt',
+    status_code: 200,
+    ai_crawlers: {
+      GPTBot: 'block',
+      ClaudeBot: 'allow',
+      PerplexityBot: 'allow',
+      'Google-Extended': 'allow',
+    },
+    sitemaps: ['https://example.com/sitemap.xml'],
+  },
+  llms_txt: { fetched: true, url: 'https://example.com/llms.txt', status_code: 200, present: true },
+  sitemap: { fetched: false, files: [] },
 };
 
 const crawl = {
@@ -47,6 +70,7 @@ const crawl = {
   failed_count: 0,
   total_url_count: null,
   score_summary: null,
+  site_facts: siteFacts,
   extractor_version: 'x1',
   analyzer_version: 'a1',
   rule_version: 'r1',
@@ -119,6 +143,63 @@ describe('siteCrawlSchema (Free redaction / nullable totals)', () => {
   it('rejects an unexpected count-bearing key on a crawl (strict)', () => {
     expect(() =>
       strictValidate(siteCrawlSchema, { ...crawl, hidden_full_total: 9999 }, 'crawl'),
+    ).toThrow();
+  });
+});
+
+describe('siteHealthApi.getCrawl site_facts (v2 P2 contract)', () => {
+  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  afterEach(() => mswServer.resetHandlers());
+  afterAll(() => mswServer.close());
+
+  it('validates a real crawl response carrying a populated site_facts', async () => {
+    // Regression: the backend ALWAYS serializes `site_facts`, so a strict
+    // schema without the field made every crawl read throw
+    // "API validation failure in siteHealth.getCrawl".
+    mswServer.use(http.get(`/api/v1/site-crawls/${UUID}`, () => HttpResponse.json(crawl)));
+    const result = await siteHealthApi.getCrawl(UUID);
+    expect(result.site_facts).toEqual(siteFacts);
+  });
+
+  it('rejects a crawl response missing site_facts (drift fails loud)', async () => {
+    const { site_facts: _omitted, ...withoutSiteFacts } = crawl;
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${UUID}`, () => HttpResponse.json(withoutSiteFacts)),
+    );
+    await expect(siteHealthApi.getCrawl(UUID)).rejects.toThrow(
+      /API validation failure in siteHealth\.getCrawl/,
+    );
+  });
+});
+
+describe('siteCrawlSchema site_facts (v2 P2 contract)', () => {
+  it('accepts a populated site_facts blob as the worker persists it', () => {
+    const parsed = strictValidate(siteCrawlSchema, crawl, 'siteHealth.getCrawl');
+    const robots = parsed.site_facts?.robots as { ai_crawlers: Record<string, string> };
+    expect(robots.ai_crawlers.GPTBot).toBe('block');
+    expect(parsed.site_facts?.llms_txt).toEqual({
+      fetched: true,
+      url: 'https://example.com/llms.txt',
+      status_code: 200,
+      present: true,
+    });
+  });
+
+  it('accepts a null site_facts (crawl setup has not run yet)', () => {
+    const parsed = strictValidate(
+      siteCrawlSchema,
+      { ...crawl, site_facts: null },
+      'siteHealth.getCrawl',
+    );
+    expect(parsed.site_facts).toBeNull();
+  });
+
+  it('rejects a crawl payload that omits site_facts (required, never optional)', () => {
+    // The backend response model always serializes the key, so a missing key
+    // is real drift — keeping it required is what pins that contract.
+    const { site_facts: _omitted, ...withoutSiteFacts } = crawl;
+    expect(() =>
+      strictValidate(siteCrawlSchema, withoutSiteFacts, 'siteHealth.getCrawl'),
     ).toThrow();
   });
 });

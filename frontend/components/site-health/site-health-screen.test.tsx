@@ -49,6 +49,26 @@ const entitlement = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
+// Bounded site-facts blob the worker persists (`_crawl_setup` in
+// backend/app/workers/site_health_worker.py); the backend always emits the key,
+// so every MSW crawl payload must carry it or the strict schema rejects it.
+const siteFacts = {
+  robots: {
+    fetched: true,
+    url: 'https://acme.com/robots.txt',
+    status_code: 200,
+    ai_crawlers: {
+      GPTBot: 'block',
+      ClaudeBot: 'allow',
+      PerplexityBot: 'allow',
+      'Google-Extended': 'allow',
+    },
+    sitemaps: ['https://acme.com/sitemap.xml'],
+  },
+  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 200, present: true },
+  sitemap: { fetched: false, files: [] },
+};
+
 function crawl(overrides: Record<string, unknown> = {}) {
   return {
     id: CRAWL,
@@ -69,6 +89,7 @@ function crawl(overrides: Record<string, unknown> = {}) {
     total_url_count: 3,
     has_more_site_urls: false,
     score_summary: null,
+    site_facts: siteFacts,
     extractor_version: 'e1',
     analyzer_version: 'a1',
     rule_version: 'r1',

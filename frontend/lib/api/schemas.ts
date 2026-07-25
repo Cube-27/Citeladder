@@ -711,6 +711,11 @@ export const siteCrawlSchema = z
     total_url_count: z.number().int().nullable(),
     has_more_site_urls: z.boolean().nullable().optional(),
     score_summary: siteScoreSummarySchema.nullable(),
+    // v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
+    // sitemap files). Mirrors the backend's untyped `dict | None`, and is
+    // REQUIRED because the response model always serializes the key — making
+    // it optional would weaken the drift contract.
+    site_facts: z.record(z.string(), z.unknown()).nullable(),
     extractor_version: z.string(),
     analyzer_version: z.string(),
     rule_version: z.string(),
