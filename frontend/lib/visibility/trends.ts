@@ -305,3 +305,33 @@ export function rankingBookends(points: readonly VisibilityTrendPoint[]): {
     first: points.length > 1 ? points[0] : null,
   };
 }
+
+/**
+ * Per-brand visibility history across the trend points, keyed by brand name.
+ *
+ * This is the series behind the Competitors sparklines. It is a projection of
+ * real persisted snapshots — a brand with no `mention_rate` at a point is
+ * skipped for that point rather than zero-filled, and a brand that never has
+ * two readable points gets no series at all (the caller renders nothing, not a
+ * flat invented line).
+ *
+ * Values are 0–100 percentages to match the column they sit beside.
+ */
+export function brandVisibilityHistory(
+  points: readonly VisibilityTrendPoint[],
+): Map<string, number[]> {
+  const history = new Map<string, number[]>();
+  for (const point of points) {
+    for (const row of point.rankings) {
+      if (row.mention_rate === null || !Number.isFinite(row.mention_rate)) continue;
+      const series = history.get(row.name) ?? [];
+      series.push(Math.round(row.mention_rate * 100));
+      history.set(row.name, series);
+    }
+  }
+  // A single point is not a trend — drop it so no misleading flat line renders.
+  for (const [name, series] of history) {
+    if (series.length < 2) history.delete(name);
+  }
+  return history;
+}

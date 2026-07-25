@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { EngineFilter } from '@/components/visibility/visibility-toolbar';
+import type { VisibilityTrendPoint } from '@/lib/api/types';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -17,7 +18,12 @@ import {
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
 import { shouldPollAudit } from '@/lib/runs/status';
-import { rangeToFrom, type TrendGranularity, type TrendRange } from '@/lib/visibility/trends';
+import {
+  brandVisibilityHistory,
+  rangeToFrom,
+  type TrendGranularity,
+  type TrendRange,
+} from '@/lib/visibility/trends';
 
 /** Newest-window size for the shared execution-evidence request (backend max 500). */
 export const EVIDENCE_LIMIT = 100;
@@ -262,6 +268,24 @@ export function useVisibilityQueries(
     enabled: Boolean(projectId) && hasRuns && activeTab === 'trends',
   });
 
+  // Overview's Competitors sparklines reuse the SAME trend series, but only if
+  // it is already in cache (i.e. the user has visited Trends this session).
+  // Read-only: this deliberately does NOT enable the query on Overview, which
+  // would break the one-request-per-tab contract the dashboard is built on.
+  // No cache entry simply means no sparkline column — never an invented one.
+  const queryClient = useQueryClient();
+  const cachedTrendPoints = queryClient.getQueryData<VisibilityTrendPoint[]>(
+    queryKeys.visibility.trends(projectId ?? '', {
+      engine: engineParam ?? null,
+      from: fromParam ?? null,
+      granularity,
+    }),
+  );
+  const brandHistory = useMemo(
+    () => (cachedTrendPoints?.length ? brandVisibilityHistory(cachedTrendPoints) : undefined),
+    [cachedTrendPoints],
+  );
+
   // Shared execution-evidence + prompt options for the two evidence tabs.
   const { evidenceQuery, promptOptions } = useEvidenceQueries(
     projectId,
@@ -277,6 +301,7 @@ export function useVisibilityQueries(
     hasRuns,
     visibilityQuery,
     trendQuery,
+    brandHistory,
     evidenceQuery,
     promptOptions,
   };

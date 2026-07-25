@@ -8,7 +8,10 @@ import { sortedRankings } from '@/lib/visibility/dashboard';
  * (shared `RankingRowsTable`) under a title + one-line description. Rows
  * arrive SOV-sorted from B6; `sortedRankings` keeps that order stable.
  */
-export function RankingsTable({ visibility }: Readonly<{ visibility: Visibility }>) {
+export function RankingsTable({
+  visibility,
+  history,
+}: Readonly<{ visibility: Visibility; history?: ReadonlyMap<string, number[]> }>) {
   const rows = sortedRankings(visibility.rankings);
 
   return (
@@ -21,7 +24,7 @@ export function RankingsTable({ visibility }: Readonly<{ visibility: Visibility 
         {rows.length === 0 ? (
           <p className="text-secondary p-[var(--card-padding)] text-sm">{NO_RANKINGS_MESSAGE}</p>
         ) : (
-          <RankingRowsTable rows={rows} />
+          <RankingRowsTable rows={rows} history={history} />
         )}
       </CardContent>
     </Card>

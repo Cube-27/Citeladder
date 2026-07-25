@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/table';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { seriesBg } from '@/components/ui/series-palette';
+import { Sparkline } from '@/components/ui/sparkline';
 import { cn } from '@/lib/utils';
 import type { RankingRow } from '@/lib/api/types';
 import { PLACEHOLDER, formatRate } from '@/lib/visibility/dashboard';
@@ -27,11 +28,23 @@ export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorde
  * The colour square reuses the chart series palette so a brand keeps one
  * identity between this table and the trend chart above it. Identity is never
  * colour-alone: the name is always beside the square.
+ *
+ * `history` is optional real per-brand visibility series (see
+ * `brandVisibilityHistory`). When supplied, a brand with at least two readable
+ * points gets a sparkline; brands without one render an empty cell rather than
+ * an invented flat line, and the column disappears entirely when no history is
+ * available at all.
  */
-export function RankingRowsTable({ rows }: Readonly<{ rows: readonly RankingRow[] }>) {
+export function RankingRowsTable({
+  rows,
+  history,
+}: Readonly<{ rows: readonly RankingRow[]; history?: ReadonlyMap<string, number[]> }>) {
   // Slot assignment mirrors MultiTrendChart: the brand takes slot 1, others
   // follow in row order and are never cycled past the last slot.
   let nextSlot = 1;
+  const showTrend = Boolean(
+    history && rows.some((row) => (history.get(row.name)?.length ?? 0) > 1),
+  );
 
   return (
     <Table>
@@ -40,6 +53,7 @@ export function RankingRowsTable({ rows }: Readonly<{ rows: readonly RankingRow[
           <TableHead className="w-10">#</TableHead>
           <TableHead>Brand</TableHead>
           <TableHead numeric>Visibility</TableHead>
+          {showTrend ? <TableHead className="w-[72px]">Trend</TableHead> : null}
           <TableHead numeric>Share</TableHead>
           <TableHead numeric>Sentiment</TableHead>
           <TableHead numeric>Position</TableHead>
@@ -77,6 +91,17 @@ export function RankingRowsTable({ rows }: Readonly<{ rows: readonly RankingRow[
               <TableCell numeric className={cn('mono font-semibold', bandClass)}>
                 {formatRate(row.mention_rate)}
               </TableCell>
+              {showTrend ? (
+                <TableCell>
+                  {(history?.get(row.name)?.length ?? 0) > 1 ? (
+                    <Sparkline
+                      values={history!.get(row.name)!}
+                      tone={row.is_brand ? 'brand' : 'muted'}
+                      label={`${row.name} visibility trend`}
+                    />
+                  ) : null}
+                </TableCell>
+              ) : null}
               <TableCell numeric className="mono text-foreground">
                 {formatRate(row.share_of_voice)}
               </TableCell>

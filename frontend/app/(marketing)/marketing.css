@@ -7,8 +7,9 @@
    language (app/globals.css): opaque surfaces, 1px borders instead of
    shadows/blur, one sans family, no gradient text or atmosphere.
 
-   NOTE (Phase 1): this is a VALUE-ONLY pass — the page structure is
-   untouched. The marketing rebuild is Phase 2.
+   The product figures on this surface are deliberately DATA-FREE: they show
+   the app's structure (panels, columns, placeholder cells), never invented
+   customer results.
    ============================================================================ */
 
 /* Smooth anchor scrolling (globals.css forces `auto` under reduced-motion).
@@ -813,8 +814,8 @@ html[data-theme='dark'] .mkt {
   align-items: center;
   gap: 10px;
   margin-top: 24px;
-  font-family: var(--mkt-font-mono);
-  font-size: 12.5px;
+  font-family: var(--mkt-font-sans);
+  font-size: 13px;
   color: var(--mkt-text-3);
   flex-wrap: wrap;
 }
@@ -832,6 +833,125 @@ html[data-theme='dark'] .mkt {
   opacity: 0.5;
 }
 
+/* ── DATA-FREE PRODUCT FIGURES ──────────────────────────────────────────
+   The marketing visuals show the app's STRUCTURE, never invented customer
+   results. `.ph` is a neutral placeholder standing where a value would be;
+   the frames below give those placeholders the product's layout rhythm. */
+.mkt .ph {
+  display: inline-block;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--mkt-text-3);
+  opacity: 0.22;
+  vertical-align: middle;
+}
+.mkt .ph-strong {
+  opacity: 0.36;
+}
+.mkt .ph-mark {
+  background: var(--mkt-accent-blue);
+  opacity: 0.34;
+}
+
+/* Chart frame — an axis-less column field standing in for the trend chart. */
+.mkt .chart-frame {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 104px;
+  margin-top: 14px;
+  padding-top: 8px;
+  border-bottom: 1px solid var(--mkt-border);
+}
+.mkt .chart-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: var(--mkt-accent-blue);
+  opacity: 0.28;
+}
+.mkt .chart-bar:last-child {
+  opacity: 0.6;
+}
+
+/* Table skeleton — real column headers over placeholder cells. */
+.mkt .tbl {
+  margin-top: 12px;
+}
+.mkt .tbl-head,
+.mkt .tbl-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 84px;
+  align-items: center;
+  gap: 10px;
+}
+.mkt .tbl-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--mkt-border);
+  font-size: 11px;
+  color: var(--mkt-text-3);
+}
+.mkt .tbl-row {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--mkt-border);
+}
+.mkt .tbl-row:last-child {
+  border-bottom: 0;
+}
+.mkt .tbl-rank {
+  font-family: var(--mkt-font-mono);
+  font-size: 11px;
+  color: var(--mkt-text-3);
+}
+.mkt .tbl-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mkt .brand-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--mkt-text-3);
+  opacity: 0.5;
+}
+.mkt .brand-dot-1 {
+  background: var(--mkt-accent-blue);
+  opacity: 1;
+}
+.mkt .share-track {
+  display: block;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--mkt-bar-comp);
+  overflow: hidden;
+}
+.mkt .share-fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--mkt-text-3);
+  opacity: 0.45;
+}
+.mkt .share-fill-you {
+  background: var(--mkt-accent-blue);
+  opacity: 1;
+}
+
+/* Evidence drill — metric row above, response lines below. */
+.mkt .drill-metric-row {
+  display: grid;
+  grid-template-columns: 38% 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.mkt .raw-lines {
+  display: grid;
+  gap: 9px;
+}
+
 /* ── PRODUCT VISUAL ─────────────────────────────────────────────────────── */
 .mkt .viz {
   position: relative;
@@ -841,26 +961,6 @@ html[data-theme='dark'] .mkt {
   position: relative;
   max-width: 1060px;
   margin: 0 auto;
-}
-.mkt .viz-glow {
-  position: absolute;
-  inset: 8% -8% -12% -8%;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(50% 55% at 50% 45%, var(--mkt-glow-1), transparent 68%);
-  filter: blur(60px);
-}
-.mkt .viz-grid {
-  position: absolute;
-  inset: 32% -6% -8% -6%;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--mkt-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--mkt-grid-line) 1px, transparent 1px);
-  background-size: 54px 54px;
-  -webkit-mask-image: radial-gradient(60% 90% at 50% 0%, #000 20%, transparent 78%);
-  mask-image: radial-gradient(60% 90% at 50% 0%, #000 20%, transparent 78%);
 }
 .mkt .dash {
   border-radius: var(--mkt-r-lg);
@@ -883,6 +983,13 @@ html[data-theme='dark'] .mkt {
   font-weight: 600;
   font-size: 13.5px;
 }
+.mkt .dash-topbar .ph {
+  height: 7px;
+  min-width: 40px;
+}
+.mkt .ws-chip .ph {
+  min-width: 56px;
+}
 .mkt .ws-avatar {
   width: 24px;
   height: 24px;
@@ -893,7 +1000,6 @@ html[data-theme='dark'] .mkt {
   place-items: center;
   font-size: 12px;
   font-weight: 700;
-  box-shadow: 0 0 14px var(--mkt-glow-1);
 }
 .mkt .ws-chip .caret {
   color: var(--mkt-text-3);
@@ -999,7 +1105,7 @@ html[data-theme='dark'] .mkt {
 }
 .mkt .sov-row {
   display: grid;
-  grid-template-columns: 92px 1fr 44px;
+  grid-template-columns: 92px 1fr;
   align-items: center;
   gap: 12px;
 }
@@ -1029,8 +1135,7 @@ html[data-theme='dark'] .mkt {
   background: var(--mkt-bar-comp);
 }
 .mkt .sov-row.you .sov-fill {
-  background: var(--mkt-grad-bar);
-  box-shadow: 0 0 14px var(--mkt-glow-2);
+  background: var(--mkt-accent-blue);
 }
 .mkt .sov-val {
   font-family: var(--mkt-font-mono);
@@ -2430,15 +2535,6 @@ html[data-theme='dark'] .mkt {
 
 .mkt .seg-viz {
   position: relative;
-}
-
-.mkt .seg-viz-glow {
-  position: absolute;
-  inset: 6% -10% -10% -10%;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(50% 55% at 50% 45%, var(--mkt-glow-1), transparent 68%);
-  filter: blur(60px);
 }
 
 /* Scoped so the landing's dash-grid panels (also .panel + .panel siblings)

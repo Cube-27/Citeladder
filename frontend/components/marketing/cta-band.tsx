@@ -2,7 +2,6 @@ import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 
 import { ByokTrust } from './byok-trust';
-import { SOV_ROWS, SovRow } from './product-visual';
 
 const AUDIT_POINTS = [
   'Mentions & citations counted from raw text',
@@ -37,24 +36,38 @@ export function EvidenceBand() {
             ))}
           </div>
         </div>
-        <div className="drill">
+        {/* The drill-down is shown as STRUCTURE, not sample output: a metric
+            row, the link between them, and the response it resolves to. No
+            invented brand, score, run number or quoted answer. */}
+        <div className="drill" aria-hidden="true">
           <div className="card drill-metric rim">
-            <div className="drill-label">Share of voice · ChatGPT</div>
-            <SovRow {...SOV_ROWS[0]} />
+            <div className="drill-label">Any metric</div>
+            <div className="drill-metric-row">
+              <span className="ph ph-strong" style={{ width: '38%' }} />
+              <span className="share-track">
+                <span className="share-fill share-fill-you" style={{ width: '62%' }} />
+              </span>
+            </div>
           </div>
           <div className="drill-connector">
             <span className="line" />
-            <span>drills to run #1,247 · ChatGPT</span>
+            <span>drills to its run</span>
             <span className="line" />
           </div>
           <div className="card drill-raw rim">
-            <p className="raw-text">
-              “…For early-stage startups, <mark>Acme</mark> is a strong pick — its usage-based
-              pricing and same-day setup beat legacy CRMs like Northwind on total cost…”
-            </p>
+            <div className="raw-lines">
+              <span className="ph" style={{ width: '96%' }} />
+              <span className="ph" style={{ width: '88%' }} />
+              <span className="ph ph-mark" style={{ width: '34%' }} />
+              <span className="ph" style={{ width: '72%' }} />
+            </div>
             <div className="raw-cites">
-              <span className="chip">[1] acme.com/pricing</span>
-              <span className="chip">[2] acme.com/getting-started</span>
+              <span className="chip">
+                <span className="ph" style={{ width: '54px' }} />
+              </span>
+              <span className="chip">
+                <span className="ph" style={{ width: '66px' }} />
+              </span>
             </div>
           </div>
         </div>

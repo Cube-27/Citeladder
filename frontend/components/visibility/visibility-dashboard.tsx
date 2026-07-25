@@ -44,6 +44,7 @@ export function VisibilityDashboard() {
     hasRuns,
     visibilityQuery,
     trendQuery,
+    brandHistory,
     evidenceQuery,
     promptOptions,
   } = useVisibilityQueries(projectId, filters);
@@ -107,6 +108,7 @@ export function VisibilityDashboard() {
         query={visibilityQuery}
         engineFilter={filters.engine}
         brandName={activeProject?.brand_name || activeProject?.name || 'Your brand'}
+        brandHistory={brandHistory}
       />
     );
   }

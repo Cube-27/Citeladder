@@ -5,17 +5,17 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 import { ByokTrust } from './byok-trust';
-import { SOV_ROWS, SovRow } from './product-visual';
 
 /**
  * SolutionsSections — the full `/solutions` content: shared subpage hero with
  * the segment-chip nav, four audience segment sections (ids `agencies`,
  * `in-house`, `founders`, `pr` — the nav Solutions dropdown targets them), and
- * the closing CTA band. Copy and panel data are verbatim from the approved
- * mockup (/code/.plans/designs/page-solutions.html); the demo brand data
- * ("Acme" et al.) mirrors the landing's fictional dashboard. All visuals are
- * pure CSS/JSX panels — no image assets. SVG paint uses the token classes
- * from marketing.css so this file stays hex-free.
+ * the closing CTA band.
+ *
+ * The segment visuals show the SHAPE of each surface — panels, columns and
+ * placeholder cells — and never invented customer results. Where a prompt
+ * appears it is an example buyer question, with no verdict or score attached.
+ * All visuals are pure CSS/JSX (no image assets) and hex-free.
  */
 
 const SEGMENT_CHIPS = [
@@ -170,29 +170,44 @@ const PR_MAPPINGS = [
 
 /* ── Segment visuals (product panels, pure CSS/JSX) ─────────────────────── */
 
-/** AgenciesVisual — per-client share-of-voice report with evidence exports. */
+/** Placeholder bar widths (%) — layout geometry for the client-report frame. */
+const REPORT_ROWS = [72, 54, 44, 31] as const;
+
+/**
+ * AgenciesVisual — the shape of a per-client report with evidence exports.
+ * Structure only: no client name, no scores, no invented export filenames.
+ */
 function AgenciesVisual() {
   return (
     <div className="seg-viz">
-      <div className="seg-viz-glow" aria-hidden="true" />
-      <div className="panel rim">
+      <div className="panel rim" aria-hidden="true">
         <div className="panel-head">
-          <span className="panel-label">Client report — share of voice</span>
-          <span className="chip">Acme · Q3</span>
+          <span className="panel-label">Client report — share of answers</span>
+          <span className="chip">
+            <span className="ph" style={{ width: '48px' }} />
+          </span>
         </div>
         <div className="sov-rows">
-          {SOV_ROWS.map((row) => (
-            <SovRow key={row.name} {...row} />
+          {REPORT_ROWS.map((w, i) => (
+            <div className="sov-row" key={w}>
+              <span className="ph ph-strong" style={{ width: i === 0 ? '58%' : '44%' }} />
+              <span className="share-track">
+                <span
+                  className={i === 0 ? 'share-fill share-fill-you' : 'share-fill'}
+                  style={{ width: `${w}%` }}
+                />
+              </span>
+            </div>
           ))}
         </div>
         <div className="export-row">
           <span className="export-chip">
             <Download strokeWidth={2} aria-hidden />
-            acme-q3-mentions.csv
+            Mentions (CSV)
           </span>
           <span className="export-chip">
             <Download strokeWidth={2} aria-hidden />
-            acme-q3-evidence.md
+            Evidence (Markdown)
           </span>
         </div>
       </div>
@@ -249,7 +264,6 @@ function IssueLine() {
 function InHouseVisual() {
   return (
     <div className="seg-viz">
-      <div className="seg-viz-glow" aria-hidden="true" />
       <div className="panel rim">
         <div className="panel-head">
           <span className="panel-label">Visibility trend — last 90 days</span>
@@ -311,7 +325,6 @@ function InHouseVisual() {
 function FoundersVisual() {
   return (
     <div className="seg-viz">
-      <div className="seg-viz-glow" aria-hidden="true" />
       <div className="panel rim">
         <div className="panel-head">
           <span className="panel-label">Site Health — sample crawl</span>
@@ -328,52 +341,36 @@ function FoundersVisual() {
   );
 }
 
+/* Example BUYER QUESTIONS — the kind of prompt an audit runs. These are
+   illustrative questions, not results: no verdict, citation count or score is
+   attached to them, because those would be fabricated outcomes. */
 const NARRATIVE_ROWS = [
-  {
-    prompt: '“best payroll tools for remote-first teams”',
-    engine: 'ChatGPT',
-    dot: 'dot-1',
-    mentioned: true,
-    citations: '2 citations',
-  },
-  {
-    prompt: '“most secure payroll platforms ranked”',
-    engine: 'Claude',
-    dot: 'dot-3',
-    mentioned: false,
-    citations: '0 citations',
-  },
+  { prompt: '“best payroll tools for remote-first teams”', engine: 'ChatGPT', dot: 'dot-1' },
+  { prompt: '“most secure payroll platforms ranked”', engine: 'Claude', dot: 'dot-3' },
 ] as const;
 
 /** PrVisual — narrative evidence table with raw citations + query fanout. */
 function PrVisual() {
   return (
     <div className="seg-viz">
-      <div className="seg-viz-glow" aria-hidden="true" />
       <div className="evidence rim">
         <div className="evidence-head">
-          <span className="panel-label">Narrative evidence — latest runs</span>
-          <span className="chip">Acme</span>
+          <span className="panel-label">Narrative evidence — prompts we run</span>
         </div>
-        {NARRATIVE_ROWS.map(({ prompt, engine, dot, mentioned, citations }) => (
+        {NARRATIVE_ROWS.map(({ prompt, engine, dot }) => (
           <div className="evidence-row" key={prompt}>
             <span className="ev-prompt">{prompt}</span>
             <span className="ev-engine">
               <span className={cn('engine-dot', dot)} />
               {engine}
             </span>
-            <span className={cn('badge', mentioned ? 'badge-yes' : 'badge-no')}>
-              {mentioned ? '✓ Mentioned' : 'Not mentioned'}
+            <span className="ev-meta" aria-hidden="true">
+              <span className="ph" style={{ width: '58px' }} />
             </span>
-            <span className="ev-meta">{citations}</span>
           </div>
         ))}
-        <div className="raw-cites">
-          <span className="chip">[1] acme.com/press/series-c</span>
-          <span className="chip">[2] techjournal.com/payroll-review</span>
-        </div>
         <div className="fanout-line">
-          ↳ query fanout: <b>6 related queries</b> captured for this prompt
+          ↳ every prompt also captures the related queries the engine ran
         </div>
       </div>
     </div>

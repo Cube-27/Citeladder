@@ -34,11 +34,17 @@ export function VisibilityOverview({
   query,
   engineFilter,
   brandName,
+  brandHistory,
 }: Readonly<{
   query: UseQueryResult<Visibility, unknown>;
   engineFilter: VisibilityFilters['engine'];
   /** Active project's brand name — used by the summary sentence. */
   brandName: string;
+  /**
+   * Real per-brand visibility history for the Competitors sparklines, when the
+   * cross-run series is already cached. Undefined simply hides the column.
+   */
+  brandHistory?: ReadonlyMap<string, number[]>;
 }>) {
   const visibility = query.data;
 
@@ -49,7 +55,7 @@ export function VisibilityOverview({
     body = (
       <>
         <OverviewSummary visibility={visibility} brandName={brandName} />
-        <RankingsTable visibility={visibility} />
+        <RankingsTable visibility={visibility} history={brandHistory} />
         <EngineComparison visibility={visibility} filter={engineFilter} />
       </>
     );
