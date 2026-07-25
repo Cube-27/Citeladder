@@ -302,7 +302,9 @@ async def test_starter_discover_admits_children_and_completes(
         assert snapshot.overall_score is None
 
         # Root + 2 in-scope children admitted; external.org excluded.
-        urls = (
+        # A set, so the assertions below are unambiguously exact-membership
+        # checks over whole URLs (not substring tests on a joined string).
+        urls = set(
             (
                 await session.execute(
                     select(SiteUrl.normalized_url).where(

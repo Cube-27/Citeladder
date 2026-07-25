@@ -178,6 +178,13 @@ def _first_offset(aliases: tuple[str, ...], normalized_haystack: str) -> int | N
     return min(offsets) if offsets else None
 
 
+# Google grounding-redirect identity. The citation ``url``/``redirect_url`` on a
+# grounded Gemini answer points at Google's redirector, not the publisher, so its
+# hostname must never be taken as the citation domain.
+_GOOGLE_REDIRECT_HOST = "vertexaisearch.cloud.google.com"
+_GROUNDING_REDIRECT_MARKER = "grounding-api-redirect"
+
+
 def _domain_in(domain: str, targets: tuple[str, ...]) -> bool:
     return any(domain_matches(domain, target) for target in targets)
 
@@ -193,8 +200,29 @@ def _url_domain(value: Any) -> str:
 
 
 def _is_google_redirect(value: Any) -> bool:
-    raw = str(value or "").lower()
-    return "grounding-api-redirect" in raw or "vertexaisearch.cloud.google.com" in raw
+    """True when the URL is a Google grounding redirect, not a publisher URL.
+
+    Matched on the PARSED host and path, never as a substring of the whole URL:
+    a genuine publisher URL that merely carries one of these markers in its
+    query string (``https://pub.example/a?ref=grounding-api-redirect``, or a
+    tracking param echoing the redirect host) must keep its own hostname as the
+    citation domain instead of being discarded as a redirect. The real shape is
+    ``https://vertexaisearch.cloud.google.com/grounding-api-redirect/<token>``;
+    some payloads carry the marker as a bare host.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    try:
+        parts = urlparse(raw)
+        host = (parts.hostname or "").lower().rstrip(".")
+    except ValueError:
+        return False
+    if host == _GOOGLE_REDIRECT_HOST or host.endswith(f".{_GOOGLE_REDIRECT_HOST}"):
+        return True
+    if host == _GROUNDING_REDIRECT_MARKER:
+        return True
+    return _GROUNDING_REDIRECT_MARKER in parts.path.lower()
 
 
 def citation_domain(citation: dict[str, Any]) -> str:
