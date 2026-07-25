@@ -36,18 +36,20 @@ export function EvidenceBand() {
             ))}
           </div>
         </div>
-        {/* The drill-down is shown as STRUCTURE, not sample output: a metric
-            row, the link between them, and the response it resolves to. No
-            invented brand, score, run number or quoted answer. */}
-        <div className="drill" aria-hidden="true">
+        {/* The same worked example as the hero: a metric on the left resolves
+            to the exact model response it was computed from. Readings are
+            illustrative (see the hero's "Example data" chip); the mechanic —
+            metric drills to raw response with classified citations — is real. */}
+        <div className="drill">
           <div className="card drill-metric rim">
-            <div className="drill-label">Any metric</div>
+            <div className="drill-label">Visibility · Notion</div>
             <div className="drill-metric-row">
-              <span className="ph ph-strong" style={{ width: '38%' }} />
+              <span className="drill-value">52%</span>
               <span className="share-track">
-                <span className="share-fill share-fill-you" style={{ width: '62%' }} />
+                <span className="share-fill share-fill-you" style={{ width: '52%' }} />
               </span>
             </div>
+            <p className="drill-meta">mentioned in 13 of 25 answers</p>
           </div>
           <div className="drill-connector">
             <span className="line" />
@@ -55,19 +57,14 @@ export function EvidenceBand() {
             <span className="line" />
           </div>
           <div className="card drill-raw rim">
-            <div className="raw-lines">
-              <span className="ph" style={{ width: '96%' }} />
-              <span className="ph" style={{ width: '88%' }} />
-              <span className="ph ph-mark" style={{ width: '34%' }} />
-              <span className="ph" style={{ width: '72%' }} />
-            </div>
+            <p className="drill-prompt">“best project management tool for a small team”</p>
+            <p className="raw-text">
+              “…For a small team, <mark>Notion</mark> works well if you want docs and tasks in one
+              place. <mark>Linear</mark> is leaner if you are shipping software…”
+            </p>
             <div className="raw-cites">
-              <span className="chip">
-                <span className="ph" style={{ width: '54px' }} />
-              </span>
-              <span className="chip">
-                <span className="ph" style={{ width: '66px' }} />
-              </span>
+              <span className="chip">notion.so/product</span>
+              <span className="chip">reddit.com/r/productivity</span>
             </div>
           </div>
         </div>

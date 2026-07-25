@@ -161,7 +161,9 @@
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
-  --font-weight-bold: 700;
+  /* The type scale tops out at semibold: Geist Bold is heavier than this
+     flat language wants, so `bold` resolves to 600 app-wide. */
+  --font-weight-bold: 600;
 
   /* Letter spacing */
   --tracking-tight: -0.02em;
@@ -304,7 +306,7 @@
   --weight-normal: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
-  --weight-bold: 700;
+  --weight-bold: 600;
 
   /* Tracking */
   --tracking-tight: -0.02em;

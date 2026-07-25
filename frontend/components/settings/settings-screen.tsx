@@ -220,7 +220,7 @@ export function SettingsScreen() {
               <div className="flex items-center gap-3.5">
                 <span
                   aria-hidden
-                  className="bg-accent-soft text-accent-text flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase"
+                  className="bg-accent-soft text-accent-text flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase"
                 >
                   {emailInitials(user.email)}
                 </span>

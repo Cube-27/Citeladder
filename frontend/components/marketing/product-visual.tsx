@@ -1,112 +1,208 @@
+import {
+  Gauge,
+  ListChecks,
+  MessagesSquare,
+  Package,
+  Search,
+  ShieldCheck,
+  TrendingUp,
+} from 'lucide-react';
+
 /**
- * ProductVisual — the hero's product frame.
+ * ProductVisual — the hero figure: the real Searchify home screen.
  *
- * Deliberately carries NO data. An earlier version rendered a fictional
- * "Acme Corp" workspace with an invented score, made-up competitors and
- * fabricated prompts; presenting numbers a customer could read as real
- * results misrepresents the product, so the figures are gone rather than
- * restyled.
+ * This mirrors the actual `/visibility` Overview surface — the 236px sidebar
+ * with its real nav groups and labels, the filter chip row, the summary line,
+ * and the Competitors / By-model composition — so what a visitor sees here is
+ * what they get after signing in.
  *
- * What remains is the app's STRUCTURE in the flat/hairline language: the
- * chrome, the panel rhythm, a chart frame and a table skeleton. Column and
- * row labels are real (they name what the product actually reports); every
- * value position is a neutral placeholder bar. The whole figure is
- * `aria-hidden` — it is decorative, and the surrounding copy carries the
- * meaning.
+ * The readings are an ILLUSTRATIVE example and the frame says so with a
+ * visible "Example data" chip. The brands are real and public; the numbers are
+ * a plausible worked example for the project-management category, not a
+ * customer's results. Showing a labelled example is how you explain a metric;
+ * presenting invented numbers as a real outcome would not be.
  */
 
-/** Placeholder bar widths (%), fixed so the figure renders identically every
- *  time — these are layout geometry, not data. */
-const BRAND_ROWS = [
-  { name: 68, share: 74, rank: 1 },
-  { name: 52, share: 58, rank: 2 },
-  { name: 60, share: 44, rank: 3 },
-  { name: 44, share: 30, rank: 4 },
+type Brand = {
+  name: string;
+  visibility: number;
+  share: number;
+  delta: number;
+  you?: boolean;
+};
+
+const BRANDS: readonly Brand[] = [
+  { name: 'Asana', visibility: 64, share: 29, delta: 1.8 },
+  { name: 'Monday.com', visibility: 58, share: 26, delta: -0.4 },
+  { name: 'Notion', visibility: 52, share: 23, delta: 2.6, you: true },
+  { name: 'Linear', visibility: 37, share: 14, delta: 0.9 },
+  { name: 'Trello', visibility: 21, share: 8, delta: -1.2 },
+];
+
+const TREND = [38, 41, 40, 45, 44, 48, 50, 52] as const;
+const TREND_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'] as const;
+
+const MODELS = [
+  { name: 'ChatGPT', score: 57 },
+  { name: 'Gemini', score: 49 },
+  { name: 'Claude', score: 51 },
 ] as const;
 
-/** Column heights (%) for the chart frame's bars. */
-const CHART_BARS = [38, 52, 46, 63, 58, 71, 66, 80] as const;
+/** Mirrors components/layout/nav-items.ts — the real sidebar model. */
+const NAV_GROUPS = [
+  {
+    title: 'Analyze',
+    items: [
+      { label: 'Visibility', Icon: Gauge, active: true },
+      { label: 'Answers', Icon: MessagesSquare },
+      { label: 'Traffic', Icon: TrendingUp },
+      { label: 'Prompts', Icon: MessagesSquare },
+      { label: 'Products', Icon: Package },
+      { label: 'Runs', Icon: ListChecks },
+    ],
+  },
+  {
+    title: 'Improve',
+    items: [{ label: 'Site health', Icon: ShieldCheck }],
+  },
+] as const;
 
-function Ph({ w, strong = false }: Readonly<{ w: number; strong?: boolean }>) {
-  return <span className={strong ? 'ph ph-strong' : 'ph'} style={{ width: `${w}%` }} />;
+function Delta({ value }: Readonly<{ value: number }>) {
+  const up = value > 0;
+  return (
+    <span className={up ? 'dv-delta up' : 'dv-delta down'}>
+      {up ? '↑' : '↓'} {Math.abs(value).toFixed(1)}
+    </span>
+  );
 }
 
 export function ProductVisual() {
+  const max = Math.max(...TREND);
+
   return (
-    <section className="viz" id="product" aria-label="Searchify dashboard layout">
+    <section className="viz" id="product" aria-label="The Searchify dashboard">
       <div className="viz-stage container">
-        <div className="dash rim" aria-hidden="true">
-          {/* Window chrome — page title + filter chips, no values. */}
-          <div className="dash-topbar">
-            <span className="ws-chip">
-              <span className="ws-avatar" />
-              <Ph w={46} strong />
-            </span>
-            <span className="chip">
-              <Ph w={72} />
-            </span>
-            <span className="spacer" />
-            <span className="chip">
-              <Ph w={64} />
-            </span>
-          </div>
-
-          <div className="dash-grid">
-            {/* Trend card — an empty axis frame with placeholder columns. */}
-            <div className="panel">
-              <div className="panel-label">Visibility over time</div>
-              <div className="chart-frame">
-                {CHART_BARS.map((h, i) => (
-                  <span className="chart-bar" key={i} style={{ height: `${h}%` }} />
-                ))}
-              </div>
+        <div className="app-shot rim">
+          {/* ── Sidebar — the real app chrome ─────────────────────────── */}
+          <aside className="as-side">
+            <div className="as-ws">
+              <span className="as-ws-avatar">N</span>
+              <span className="as-ws-name">Notion</span>
             </div>
-
-            {/* Competitors card — real column headers, placeholder cells. */}
-            <div className="panel">
-              <div className="panel-label">Competitors</div>
-              <div className="tbl">
-                <div className="tbl-head">
-                  <span>#</span>
-                  <span>Brand</span>
-                  <span>Share</span>
-                </div>
-                {BRAND_ROWS.map((row) => (
-                  <div className="tbl-row" key={row.rank}>
-                    <span className="tbl-rank">{row.rank}</span>
-                    <span className="tbl-brand">
-                      <span className={`brand-dot brand-dot-${row.rank}`} />
-                      <Ph w={row.name} strong={row.rank === 1} />
-                    </span>
-                    <span className="tbl-share">
-                      <span className="share-track">
-                        <span
-                          className={row.rank === 1 ? 'share-fill share-fill-you' : 'share-fill'}
-                          style={{ width: `${row.share}%` }}
-                        />
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
+            <div className="as-search">
+              <Search aria-hidden />
+              <span>Search or jump to…</span>
+              <kbd>⌘K</kbd>
             </div>
-          </div>
-
-          {/* Per-model strip — the three engines are named (that is a real
-              product fact); the numbers beside them are placeholders. */}
-          <div className="engine-tiles">
-            {['ChatGPT', 'Gemini', 'Claude'].map((name, i) => (
-              <div className="engine-tile" key={name}>
-                <span className="engine-name">
-                  <span className={`engine-dot dot-${i + 1}`} />
-                  {name}
-                </span>
-                <Ph w={34} strong />
-                <div className="engine-bar">
-                  <i style={{ width: `${[72, 58, 64][i]}%` }} />
-                </div>
+            {NAV_GROUPS.map((group) => (
+              <div className="as-group" key={group.title}>
+                <span className="as-group-label">{group.title}</span>
+                {group.items.map(({ label, Icon, ...rest }) => (
+                  <span
+                    className={'active' in rest && rest.active ? 'as-nav is-active' : 'as-nav'}
+                    key={label}
+                  >
+                    <Icon aria-hidden />
+                    {label}
+                  </span>
+                ))}
               </div>
             ))}
+          </aside>
+
+          {/* ── Content column ────────────────────────────────────────── */}
+          <div className="as-main">
+            <div className="as-toolbar">
+              <span className="chip">Last 30 days</span>
+              <span className="chip">All models</span>
+              <span className="spacer" />
+              <span className="chip chip-example">Example data</span>
+            </div>
+
+            <div className="as-head">
+              <h3 className="as-title">Overview</h3>
+              <p className="as-summary">
+                Notion is mentioned in <b>52%</b> of answers, up 2.6 points this month
+              </p>
+              <span className="as-metrics">
+                <span>
+                  Visibility <b>52%</b>
+                </span>
+                <span>
+                  Rank <b>#3</b>
+                </span>
+              </span>
+            </div>
+
+            <div className="as-cards">
+              <div className="panel">
+                <div className="panel-head">
+                  <span className="panel-label">Visibility over time</span>
+                  <span className="dv-headline">
+                    52% <Delta value={2.6} />
+                  </span>
+                </div>
+                <div className="chart-frame">
+                  {TREND.map((v, i) => (
+                    <span className="chart-col" key={TREND_MONTHS[i]}>
+                      <span className="chart-bar" style={{ height: `${(v / max) * 100}%` }} />
+                      <span className="chart-x">{TREND_MONTHS[i]}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="panel-head">
+                  <span className="panel-label">Competitors</span>
+                </div>
+                <div className="tbl">
+                  <div className="tbl-head">
+                    <span>#</span>
+                    <span>Brand</span>
+                    <span>Visibility</span>
+                    <span>Share</span>
+                  </div>
+                  {BRANDS.map((brand, i) => (
+                    <div className={brand.you ? 'tbl-row is-you' : 'tbl-row'} key={brand.name}>
+                      <span className="tbl-rank">{i + 1}</span>
+                      <span className="tbl-brand">
+                        <span className={`brand-dot brand-dot-${i + 1}`} />
+                        {brand.name}
+                        {brand.you ? <span className="you-chip">You</span> : null}
+                      </span>
+                      <span className="tbl-vis">
+                        {brand.visibility}%
+                        <Delta value={brand.delta} />
+                      </span>
+                      <span className="tbl-share">
+                        <span className="share-track">
+                          <span
+                            className={brand.you ? 'share-fill share-fill-you' : 'share-fill'}
+                            style={{ width: `${(brand.share / 29) * 100}%` }}
+                          />
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="engine-tiles">
+              {MODELS.map(({ name, score }, i) => (
+                <div className="engine-tile" key={name}>
+                  <span className="engine-name">
+                    <span className={`engine-dot dot-${i + 1}`} />
+                    {name}
+                  </span>
+                  <span className="engine-score">{score}%</span>
+                  <div className="engine-bar">
+                    <i style={{ width: `${score}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

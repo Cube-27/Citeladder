@@ -68,7 +68,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             >
               <span
                 aria-hidden
-                className="bg-accent-soft text-2xs text-accent-text flex size-6 shrink-0 items-center justify-center rounded font-bold uppercase"
+                className="bg-accent-soft text-2xs text-accent-text flex size-6 shrink-0 items-center justify-center rounded font-semibold uppercase"
               >
                 {initials(project.brand_name || project.name)}
               </span>
