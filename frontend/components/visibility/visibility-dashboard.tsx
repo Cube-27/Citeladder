@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { ProjectsStatCard } from '@/components/projects/projects-stat-card';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { DashboardSkeleton } from '@/components/visibility/dashboard-skeleton';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
@@ -116,6 +117,8 @@ export function VisibilityDashboard() {
   return (
     <div className="grid gap-4">
       {activeRun ? <ActiveRunBanner run={activeRun} /> : null}
+      {/* Renders only for multi-project workspaces — see the component. */}
+      <ProjectsStatCard />
       <VisibilityToolbar
         activeTab={filters.activeTab}
         runs={runOptions}

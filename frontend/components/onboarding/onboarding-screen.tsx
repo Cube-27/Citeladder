@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { Alert } from '@/components/ui/alert';
@@ -70,8 +70,9 @@ export function OnboardingScreen() {
   });
 
   const discovery = useDiscovery(step >= 1 ? brand : null);
-  const website = form.watch('website_url');
-  const derivedDomain = useMemo(() => deriveDomain(website), [website]);
+  // Not memoized: `watch()` is not a stable dependency, and deriveDomain is a
+  // URL parse on one short string — cheaper than the memo bookkeeping.
+  const derivedDomain = deriveDomain(form.watch('website_url'));
 
   // Seed the editable review lists once each section lands. Guarded on length
   // so re-renders never clobber the user's selections mid-review.

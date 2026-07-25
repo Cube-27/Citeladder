@@ -126,10 +126,9 @@ export function useDiscovery(brand: BrandStepValues | null) {
 
   const sections = [state.domains, state.competitors, state.prompts];
   const isRunning = sections.some((s) => s.status === 'loading' || s.status === 'idle');
-  const allFailed = sections.every((s) => s.status === 'error');
   // 503 from every section means the agent simply is not configured — that is a
   // deployment state, not a failure the user can retry their way out of.
   const agentUnconfigured = sections.every((s) => s.unconfigured);
 
-  return { state, isRunning, allFailed, agentUnconfigured, retry };
+  return { state, isRunning, agentUnconfigured, retry };
 }
