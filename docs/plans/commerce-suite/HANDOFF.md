@@ -162,7 +162,15 @@ cd ../frontend && pnpm test && pnpm lint && pnpm check:policy && pnpm build
 
 ## 9. Process notes for the next agent
 
-- Branch `vorflux/commerce-suite` is pushed to origin. Keep committing on it.
+- Branch `vorflux/commerce-suite` is pushed to origin (tracking ref confirmed at
+  `3241e37`). Keep committing on it. A **draft PR #25** tracks this branch.
+- **`origin/main` advanced to `c9da2de`** (a CodeQL-comment doc change, PR #24) after
+  this branch was cut. The two new commits here are disjoint from that change, so a
+  rebase should be clean — but rebase `vorflux/commerce-suite` onto the current
+  `origin/main` before finalizing the PR.
+- A leftover local branch `wsb-workspace` (at the old base `9b34bc7`) may still exist;
+  its work is already cherry-picked onto the feature branch as `83847f4`, so it is safe
+  to delete (or ignore) — it is not on the remote.
 - For parallel backend/frontend work, use a git worktree (a second checkout on a temp
   branch at the same commit, then cherry-pick back) — the two slices here were built that
   way and integrated cleanly.
