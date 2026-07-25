@@ -105,7 +105,12 @@ describe('PageTypeScores', () => {
           summary({
             by_page_type: {
               article: { analyzed_count: 3, technical_score: 80, aeo_score: 62, overall_score: 71 },
-              homepage: { analyzed_count: 1, technical_score: 90.5, aeo_score: 70, overall_score: 80.2 },
+              homepage: {
+                analyzed_count: 1,
+                technical_score: 90.5,
+                aeo_score: 70,
+                overall_score: 80.2,
+              },
             },
           }),
         )}
@@ -135,7 +140,12 @@ describe('PageTypeScores', () => {
         dashboard={dashboard(
           summary({
             by_page_type: {
-              docs: { analyzed_count: 2, technical_score: null, aeo_score: null, overall_score: null },
+              docs: {
+                analyzed_count: 2,
+                technical_score: null,
+                aeo_score: null,
+                overall_score: null,
+              },
             },
           }),
         )}
