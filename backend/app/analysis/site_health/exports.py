@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import csv
 import io
-from typing import Any
 
-from app.analysis.csv_cells import csv_cell, has_formula_trigger, stringify_cell
+from app.analysis.csv_cells import csv_cell, md_cell
 
 _INVENTORY_COLUMNS = [
     "site_url_id",
@@ -88,25 +87,6 @@ def rows_to_csv(view: str, items: list[dict]) -> str:
     return buffer.getvalue()
 
 
-def _md_cell(value: Any) -> str:
-    """Escape a value so it is a single safe Markdown table cell.
-
-    Pipes are escaped and newlines collapsed so a multi-line remediation or a
-    URL containing ``|`` cannot break the table row.
-    """
-    text = stringify_cell(value)
-    if has_formula_trigger(text):
-        # Neutralize a leading formula trigger for the same reason as CSV: the
-        # exported table may be pasted into a spreadsheet.
-        text = "'" + text
-    return (
-        text.replace("\\", "\\\\")
-        .replace("|", "\\|")
-        .replace("\n", " ")
-        .replace("\r", " ")
-    )
-
-
 _VIEW_TITLES: dict[str, str] = {
     "inventory": "Site Health — URL Inventory",
     "pages": "Site Health — Analyzed Pages",
@@ -126,7 +106,7 @@ def rows_to_markdown(view: str, items: list[dict]) -> str:
     lines.append("|" + "|".join(["---"] * len(columns)) + "|")
     for item in items:
         lines.append(
-            "| " + " | ".join(_md_cell(item.get(col)) for col in columns) + " |"
+            "| " + " | ".join(md_cell(item.get(col)) for col in columns) + " |"
         )
     lines.append("")
     return "\n".join(lines)

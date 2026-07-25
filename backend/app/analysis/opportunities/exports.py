@@ -7,18 +7,18 @@
 # leak more than the API. CSV quoting/escaping is delegated to the stdlib
 # ``csv`` writer; cell stringification, spreadsheet-formula neutralization,
 # and Markdown cell escaping are SHARED with Site Health — the single
-# implementation lives in ``analysis/site_health/exports.py`` (a cell
-# beginning with a formula trigger is prefixed with ``'`` so a title
-# containing ``|`` or a newline can never break the table or evaluate as a
-# formula). Empty result sets still render a valid header row.
+# implementation lives in ``analysis/csv_cells.py`` (a cell beginning with a
+# formula trigger is prefixed with ``'`` so a title containing ``|`` or a
+# newline can never break the table or evaluate as a formula). Empty result
+# sets still render a valid header row.
 from __future__ import annotations
 
 import csv
 import io
 
 # Shared cell renderers (RFC-4180 + OWASP formula neutralization + Markdown
-# escaping) — owned by the Site Health exporters, reused here verbatim.
-from app.analysis.site_health.exports import _csv_cell, _md_cell
+# escaping) — single owner, reused here verbatim (invariant 2).
+from app.analysis.csv_cells import csv_cell, md_cell
 
 OPPORTUNITIES_COLUMNS = [
     "id",
@@ -46,7 +46,7 @@ def rows_to_csv(items: list[dict]) -> str:
     )
     writer.writeheader()
     for item in items:
-        row = {col: _csv_cell(item.get(col)) for col in OPPORTUNITIES_COLUMNS}
+        row = {col: csv_cell(item.get(col)) for col in OPPORTUNITIES_COLUMNS}
         writer.writerow(row)
     return buffer.getvalue()
 
@@ -62,7 +62,7 @@ def rows_to_markdown(items: list[dict]) -> str:
     lines.append("| " + " | ".join(columns) + " |")
     lines.append("|" + "|".join(["---"] * len(columns)) + "|")
     for item in items:
-        cells = " | ".join(_md_cell(item.get(col)) for col in columns)
+        cells = " | ".join(md_cell(item.get(col)) for col in columns)
         lines.append("| " + cells + " |")
     lines.append("")
     return "\n".join(lines)
