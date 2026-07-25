@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege for GITHUB_TOKEN across every job below: all three only ever
+# check out the repo and run tests/linters, so read access to contents is the
+# whole requirement. Declared at workflow level so a new job cannot silently
+# inherit the permissive repository default; a job needing more (e.g. posting a
+# comment) must opt in with its own narrower block.
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (ruff, pytest)
