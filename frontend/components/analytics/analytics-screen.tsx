@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 
 import { AnalyticsEmptyState } from '@/components/analytics/empty-state';
 import { ReferralsTable } from '@/components/analytics/referrals-table';
-import { SegmentedControl } from '@/components/setup/segmented-control';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

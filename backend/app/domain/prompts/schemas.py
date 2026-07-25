@@ -26,13 +26,21 @@ assert set(get_args(PromptStatus)) == PROMPT_STATUSES
 # --------------------------------------------------------------------------
 class PromptInput(BaseModel):
     """A single prompt on create/import. ``intent`` is validated + casefolded
-    by the service; an unknown intent normalizes to ``""``."""
+    by the service; an unknown intent normalizes to ``""``.
+
+    ``topic_id`` files the prompt under an existing topic at creation time, so a
+    caller that creates topics first (onboarding, mirroring what ``/generate``
+    does in one transaction) does not have to create-then-PATCH every prompt.
+    The service validates it against the prompt's own project exactly as the
+    update path does; ``None`` leaves the prompt untopiced.
+    """
 
     text: str = Field(min_length=1)
     theme: str = Field(default="", max_length=255)
     intent: str = Field(default="")
     branded: bool = False
     enabled: bool = True
+    topic_id: uuid.UUID | None = None
 
 
 class PromptCreate(PromptInput):

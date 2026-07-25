@@ -121,7 +121,7 @@ export function SettingsScreen() {
         setActiveProjectId(next.id);
         setConfirmOpen(false);
       } else {
-        router.replace('/setup');
+        router.replace('/onboarding');
       }
     },
   });

@@ -4,20 +4,44 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Card (§8) — bg-panel, hairline border, --radius-lg, --card-padding. Flat:
- * separation comes from the 1px border, never a shadow.
+ * Card (§8) — bg-panel, hairline border, --radius-lg, --card-padding.
  * Composed from header / title / description / content slots.
  *
+ * v2 restores elevation. The flat phase separated surfaces with the 1px border
+ * alone; the v2 language pairs the hairline with `shadow-card` (--shadow-2) so
+ * panels lift off the page, which is what makes the light theme read as
+ * layered rather than drawn — its panels and base differ by very little fill.
+ * Pass `elevation="raised"` for surfaces that genuinely float above other
+ * cards (the hero metric card, a popover-like panel); it steps to
+ * `shadow-elevated` (--shadow-3). `elevation="flat"` opts out entirely for
+ * cards nested inside another card, where a second shadow just muddies the
+ * edge.
+ *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the
- * quiet sans micro-label — e.g.
+ * micro-label — e.g.
  *   <CardHeader><CardEyebrow>Visibility score</CardEyebrow><CardTitle>…
- */ export function Card({
+ */
+const cardElevation = {
+  flat: '',
+  default: 'shadow-card',
+  raised: 'shadow-elevated',
+} as const;
+
+export function Card({
   children,
   className,
+  elevation = 'default',
   ...props
-}: Readonly<ComponentPropsWithoutRef<'section'>>) {
+}: Readonly<ComponentPropsWithoutRef<'section'> & { elevation?: keyof typeof cardElevation }>) {
   return (
-    <section {...props} className={cn('border-border bg-panel rounded-lg border', className)}>
+    <section
+      {...props}
+      className={cn(
+        'border-border bg-panel rounded-lg border',
+        cardElevation[elevation],
+        className,
+      )}
+    >
       {children}
     </section>
   );

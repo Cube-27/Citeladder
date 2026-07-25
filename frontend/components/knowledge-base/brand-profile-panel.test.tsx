@@ -122,7 +122,6 @@ describe('BrandProfilePanel', () => {
 
     renderWithProviders(<BrandProfilePanel projectId={projectId} profile={profile} />);
     await user.click(screen.getByRole('button', { name: /draft with ai/i }));
-    await user.click(screen.getByLabelText(/confirm sending brand details/i));
     await user.click(screen.getByRole('button', { name: /^generate$/i }));
 
     const description = await screen.findByLabelText('Description');
@@ -169,7 +168,6 @@ describe('BrandProfilePanel', () => {
 
     renderWithProviders(<BrandProfilePanel projectId={projectId} profile={existingProfile} />);
     await user.click(screen.getByRole('button', { name: /draft with ai/i }));
-    await user.click(screen.getByLabelText(/confirm sending brand details/i));
     await user.click(screen.getByRole('button', { name: /^generate$/i }));
 
     expect(await screen.findByLabelText('Description')).toHaveValue('Existing description.');

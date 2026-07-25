@@ -58,9 +58,9 @@ describe('theme', () => {
   });
 });
 
-describe('THEME_BOOTSTRAP_SCRIPT (pre-hydration, dark-first)', () => {
+describe('THEME_BOOTSTRAP_SCRIPT (pre-hydration, light-first)', () => {
   // jsdom does not implement matchMedia — stub it so the suite pins that the
-  // bootstrap's dark-first fallback ignores the OS preference entirely.
+  // bootstrap's light-first fallback ignores the OS preference entirely.
   const originalMatchMedia = window.matchMedia;
 
   const stubOsColorScheme = (scheme: 'light' | 'dark') => {
@@ -92,27 +92,27 @@ describe('THEME_BOOTSTRAP_SCRIPT (pre-hydration, dark-first)', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('falls back to dark with no stored choice, even on a light OS', () => {
-    stubOsColorScheme('light');
-    runBootstrap();
-    expect(document.documentElement.dataset.theme).toBe('dark');
-  });
-
-  it('falls back to dark with no stored choice on a dark OS', () => {
+  it('falls back to light with no stored choice, even on a dark OS', () => {
     stubOsColorScheme('dark');
-    runBootstrap();
-    expect(document.documentElement.dataset.theme).toBe('dark');
-  });
-
-  it("honors a stored 'light' choice", () => {
-    stubOsColorScheme('dark');
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
     runBootstrap();
     expect(document.documentElement.dataset.theme).toBe('light');
   });
 
-  it('falls back to dark when storage is unavailable', () => {
+  it('falls back to light with no stored choice on a light OS', () => {
     stubOsColorScheme('light');
+    runBootstrap();
+    expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
+  it("honors a stored 'dark' choice", () => {
+    stubOsColorScheme('light');
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    runBootstrap();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('falls back to light when storage is unavailable', () => {
+    stubOsColorScheme('dark');
     const getItem = window.localStorage.getItem;
     Object.defineProperty(window.localStorage, 'getItem', {
       configurable: true,
@@ -122,7 +122,7 @@ describe('THEME_BOOTSTRAP_SCRIPT (pre-hydration, dark-first)', () => {
     });
     try {
       runBootstrap();
-      expect(document.documentElement.dataset.theme).toBe('dark');
+      expect(document.documentElement.dataset.theme).toBe('light');
     } finally {
       Object.defineProperty(window.localStorage, 'getItem', {
         configurable: true,

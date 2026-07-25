@@ -24,16 +24,17 @@ export function PromptEmptyState({
       <div className="grid max-w-sm gap-1">
         <p className={eyebrowClasses}>Prompt library</p>
         <h3 className={displayHeadingXlClasses}>No prompts yet</h3>
+        {/* One line: the "enter them one at a time or import a CSV" half just
+            read the two buttons back to the user. */}
         <p className="text-secondary mt-1 text-sm">
-          Add the questions you want to track across AI engines. Enter them one at a time or import
-          a CSV.
+          Add the questions you want to track across AI engines.
         </p>
       </div>
+      {/* Two equal paths, so the first is primary and the second secondary —
+          both ghost gave the screen no obvious action. */}
       <div className="flex gap-2">
-        <Button variant="ghost" onClick={onAdd}>
-          Add prompt
-        </Button>
-        <Button variant="ghost" onClick={onImport}>
+        <Button onClick={onAdd}>Add prompt</Button>
+        <Button variant="secondary" onClick={onImport}>
           Import CSV
         </Button>
       </div>

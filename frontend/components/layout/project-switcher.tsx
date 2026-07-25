@@ -78,7 +78,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           );
         })}
         <DropdownSeparator className="bg-border-subtle my-1 h-px" />
-        <DropdownItem onSelect={() => router.push('/setup/new')}>
+        <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
           <span
             aria-hidden
             className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded"

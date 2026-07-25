@@ -217,6 +217,10 @@ async def create_prompt_endpoint(
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)
+    except PromptTopicNotFoundError as exc:
+        # Same treatment as the update path: an unknown or cross-project topic
+        # is a 404 with no existence oracle, never a 500 from the FK.
+        raise _not_found(str(exc)) from exc
     except DuplicatePromptError as exc:
         raise _conflict(str(exc)) from exc
     return prompt_to_response(prompt)

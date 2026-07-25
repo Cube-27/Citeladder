@@ -61,7 +61,7 @@ describe('LoginPage', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('logs in and routes to /setup when the workspace has no projects', async () => {
+  it('logs in and routes to /onboarding when the workspace has no projects', async () => {
     const user = userEvent.setup();
     mswServer.use(
       http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })),
@@ -73,7 +73,7 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/password/i), 'sup3rsecret');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/setup'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
   });
 
   it('surfaces the ApiError message inline on a 401', async () => {

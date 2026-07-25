@@ -61,7 +61,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
   );
 
   const steps: Step[] = [
-    { label: 'Set up your project', href: '/setup', done: hasProject },
+    { label: 'Set up your project', href: '/onboarding', done: hasProject },
     { label: 'Add prompts', href: '/prompts', done: hasPrompts },
     {
       label: 'Connect a provider',

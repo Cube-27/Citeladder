@@ -21,5 +21,6 @@ node_modules/
 # OS
 .DS_Store
 
-# Local screenshot/debug scratch scripts
+# Local screenshot/debug scratch scripts and their output
 frontend/.*.mjs
+frontend/.*.png

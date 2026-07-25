@@ -15,7 +15,7 @@ import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 /**
  * Register page (F4). Mirrors the login page: react-hook-form + zod client
  * validation (with a confirm-password match rule), inline `ApiError`, and — on
- * success — priming the `me` cache and routing straight to `/setup` (no
+ * success — priming the `me` cache and routing straight to `/onboarding` (no
  * projects yet) or `/visibility`. Email is the only sign-up path for now; the
  * OAuth buttons stay in `components/auth/oauth-buttons.tsx` until the backend
  * providers are configured.
@@ -38,12 +38,10 @@ export default function RegisterPage() {
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-1">
-        <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">
-          Create your account
-        </h1>
-        <p className="text-secondary text-sm">Start measuring your AI search visibility.</p>
-      </div>
+      {/* No subhead — see the note on the login page. */}
+      <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">
+        Create your account
+      </h1>
 
       {mutation.isError ? <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert> : null}
 

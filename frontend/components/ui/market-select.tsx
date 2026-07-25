@@ -68,11 +68,18 @@ export function MarketSelect({
     setOpen(false);
   };
 
-  const close = ({ commitExact = false }: { commitExact?: boolean } = {}) => {
+  /**
+   * Close the list and settle the text.
+   *
+   * `blurred` marks the real blur path. Escape closes the list but leaves focus
+   * in the input, so it must NOT fire `onBlur` — react-hook-form would mark the
+   * field touched (and validate it) while the user is still typing in it.
+   */
+  const close = ({ blurred = false }: { blurred?: boolean } = {}) => {
     // On blur, a typed text that exactly matches an option (label or code) is
     // a completed selection — commit it rather than silently discarding it.
-    // Escape passes commitExact: false and always reverts.
-    if (commitExact && query !== null) {
+    // Escape never commits; it always reverts.
+    if (blurred && query !== null) {
       const q = query.trim().toLowerCase();
       const exact = options.find(
         (option) => option.label.toLowerCase() === q || option.value.toLowerCase() === q,
@@ -85,7 +92,7 @@ export function MarketSelect({
     }
     setOpen(false);
     setQuery(null);
-    onBlur?.();
+    if (blurred) onBlur?.();
   };
 
   return (
@@ -135,7 +142,7 @@ export function MarketSelect({
           // focus) wins over the close.
           setTimeout(() => {
             if (!containerRef.current?.contains(document.activeElement)) {
-              close({ commitExact: true });
+              close({ blurred: true });
             }
           }, 0);
         }}

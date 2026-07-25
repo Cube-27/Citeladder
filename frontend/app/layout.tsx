@@ -1,15 +1,18 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist_Mono, Inter } from 'next/font/google';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
 
 import './globals.css';
 
-// Flat/hairline language: one sans family everywhere — there is no separate
-// display face. Headings differ from body by size/tracking, not by family.
-const sans = Geist({
+// Figma type system: Inter is the one sans family everywhere — there is no
+// separate display face (`--font-display-family` resolves to Inter), so
+// headings differ from body by size/tracking, not by family. Geist Mono
+// stays for numeric/data contexts.
+const sans = Inter({
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
   variable: '--font-sans',
   display: 'swap',
 });

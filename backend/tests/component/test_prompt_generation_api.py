@@ -1002,6 +1002,65 @@ async def test_generation_unrelated_integrity_error_is_not_remapped(
 # Topics CRUD
 # --------------------------------------------------------------------------
 @pytest.mark.asyncio
+@pytest.mark.asyncio
+async def test_create_prompt_accepts_topic_id(client: httpx.AsyncClient) -> None:
+    """Onboarding creates topics first, then files prompts under them directly.
+
+    Without ``topic_id`` on create it would have to POST every prompt and then
+    PATCH every prompt, doubling the write count on a first-run flow.
+    """
+    project, prompt_set_id = await _make_project_and_set(client, "ptopic1@example.com")
+    topic = (
+        await client.post(
+            f"/api/v1/projects/{project['id']}/topics", json={"name": "Everyday basics"}
+        )
+    ).json()
+
+    created = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+        json={"text": "best basics for kids", "topic_id": topic["id"]},
+    )
+
+    assert created.status_code == 201
+    assert created.json()["topic_id"] == topic["id"]
+    # And it counts toward the topic straight away.
+    listing = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    assert listing[0]["active_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_create_prompt_rejects_foreign_topic_id(
+    client: httpx.AsyncClient,
+) -> None:
+    """A topic from another project is a 404, not a cross-scope FK write."""
+    project_a, set_a = await _make_project_and_set(client, "ptopic2@example.com")
+    other = await client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Other",
+            "brand_name": "Other",
+            "website_url": "https://other.example",
+            "country_code": "US",
+            "language_code": "en",
+        },
+    )
+    assert other.status_code == 201
+    foreign_topic = (
+        await client.post(
+            f"/api/v1/projects/{other.json()['id']}/topics", json={"name": "Foreign"}
+        )
+    ).json()
+
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{set_a}/prompts",
+        json={"text": "scoped prompt", "topic_id": foreign_topic["id"]},
+    )
+
+    assert resp.status_code == 404
+    assert project_a["id"] != other.json()["id"]
+
+
+@pytest.mark.asyncio
 async def test_topics_crud_with_counts(client: httpx.AsyncClient) -> None:
     project, prompt_set_id = await _make_project_and_set(client, "top1@example.com")
     project_id = project["id"]

@@ -46,15 +46,15 @@ test('authenticated shell renders sidebar groups and top bar', async ({ page }) 
   // exact-matched so page copy can't satisfy or trip the assertion.
   const nav = page.getByRole('navigation', { name: 'Primary' });
   await expect(nav.getByText('Analyze', { exact: true })).toBeVisible();
-  await expect(nav.getByText('Optimize', { exact: true })).toBeVisible();
+  await expect(nav.getByText('Improve', { exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: /visibility/i })).toBeVisible();
 
   // Project switcher shows the active brand.
   await expect(page.getByText('Acme').first()).toBeVisible();
 
-  // Page title + theme toggle are present. The title is the page's single
-  // <h1> in the content column (the 52px top bar was retired), so scope the
-  // assertion by heading level rather than by a banner landmark.
+  // Page title + theme toggle are present. The v2 Figma shell restores the
+  // 52px top bar, and the title is the page's single <h1> inside it; scoping
+  // by heading level keeps this independent of the surrounding landmark.
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
   await expect(page.getByRole('button', { name: /toggle color theme/i })).toBeVisible();
 });

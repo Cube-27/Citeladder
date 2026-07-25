@@ -13,8 +13,8 @@ import type { SessionUser } from '@/lib/api/types';
  * marketing-landing bounce. The project list is fetched through the query
  * client (so it lands in the `projects.list` cache for the app shell) and
  * awaited, which keeps the mutation pending — and the submit button spinning —
- * until the redirect fires: no projects yet → `/setup` (onboarding), otherwise
- * `/visibility`. A failed lookup falls back to `/setup` rather than stranding
+ * until the redirect fires: no projects yet → `/onboarding`, otherwise
+ * `/visibility`. A failed lookup falls back to `/onboarding` rather than stranding
  * the user on the auth screen. The submit handler swallows the rejection —
  * the error surfaces via `mutation.isError` in the page's inline alert.
  */
@@ -26,7 +26,7 @@ export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promis
     mutationFn,
     onSuccess: async (user: SessionUser) => {
       queryClient.setQueryData(queryKeys.auth.me(), user);
-      let destination = '/setup';
+      let destination = '/onboarding';
       try {
         const projects = await queryClient.fetchQuery({
           queryKey: queryKeys.projects.list(),
@@ -34,7 +34,7 @@ export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promis
         });
         if (projects.length > 0) destination = '/visibility';
       } catch {
-        // Projects lookup failed — `/setup` is the safe default.
+        // Projects lookup failed — `/onboarding` is the safe default.
       }
       router.replace(destination);
     },

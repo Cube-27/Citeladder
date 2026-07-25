@@ -64,7 +64,7 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('useAuthMutation', () => {
-  it('primes the me cache and routes to /setup when the workspace has no projects', async () => {
+  it('primes the me cache and routes to /onboarding when the workspace has no projects', async () => {
     mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
     const { result, queryClient } = setup();
 
@@ -72,7 +72,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/setup'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
   });
 
@@ -87,7 +87,7 @@ describe('useAuthMutation', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/visibility'));
   });
 
-  it('falls back to /setup when the projects lookup fails', async () => {
+  it('falls back to /onboarding when the projects lookup fails', async () => {
     // 4xx: the shared retry policy never retries it, so the fallback is
     // immediate.
     mswServer.use(
@@ -101,7 +101,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/setup'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
     expect(result.current.mutation.isError).toBe(false);
   });
 
@@ -130,7 +130,7 @@ describe('useAuthMutation', () => {
     await waitFor(() => expect(respond).toBeTypeOf('function'));
     if (!respond) throw new Error('Projects request did not start');
     respond(HttpResponse.json([]));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/setup'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
     await waitFor(() => expect(result.current.mutation.isPending).toBe(false));
   });
 });

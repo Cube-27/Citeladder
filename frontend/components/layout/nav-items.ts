@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ICONS } from '@/lib/icons';
 
 /**
- * Sidebar navigation model (F5, simplified): two groups — Analyze / Optimize —
+ * Sidebar navigation model (F5, simplified): two groups — Analyze / Improve —
  * with twelve live items, all navigable. Icons come from the canonical map
  * (`@/lib/icons`) so nav glyphs stay consistent with the rest of the app.
  * This is data-only so the sidebar component stays presentational and the nav
@@ -44,7 +44,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
       { label: 'Opportunities', href: '/opportunities', icon: ICONS.opportunities },
       { label: 'Brand knowledge', href: '/knowledge-base', icon: ICONS.knowledgeBase },
-      { label: 'Setup', href: '/setup', icon: ICONS.setup },
+      // Replaces the retired "Setup" item: project creation moved to
+      // /onboarding, and this is where multi-brand workspaces manage what they
+      // have (plan.md §10, decisions 11–12).
+      { label: 'Projects', href: '/projects', icon: ICONS.setup },
     ],
   },
 ];

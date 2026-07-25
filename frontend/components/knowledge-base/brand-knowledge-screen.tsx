@@ -55,7 +55,7 @@ export function BrandKnowledgeScreen() {
               </p>
             </div>
             <Button asChild variant="ghost" size="md">
-              <Link href="/setup">Go to Setup</Link>
+              <Link href="/projects">Go to Projects</Link>
             </Button>
           </CardContent>
         </Card>

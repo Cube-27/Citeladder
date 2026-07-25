@@ -25,7 +25,10 @@ from app.core.config.projects import (
     MAX_REPETITIONS,
     MIN_REPETITIONS,
 )
-from app.core.config.suggestions import brand_suggestion_settings
+from app.core.config.suggestions import (
+    brand_suggestion_settings,
+    prompt_suggestion_settings,
+)
 from app.domain.prompts.schemas import PromptSetResponse
 
 BenchmarkMode = Literal["consumer_like", "controlled_localized", "forced_grounded"]
@@ -240,6 +243,50 @@ class CompetitorSuggestResponse(BaseModel):
 
 class OwnedDomainSuggestResponse(BaseModel):
     domains: list[str] = Field(default_factory=list)
+    dropped_duplicates: int = 0
+
+
+class PromptSuggestRequest(BrandContextRequest):
+    # Prompts carry their own count knobs (``PROMPT_SUGGESTION_*``): a starting
+    # prompt set wants a higher default/cap than a competitor or domain list.
+    count: int = Field(
+        default_factory=lambda: prompt_suggestion_settings.default_count, ge=1
+    )
+    # Optional competitor context (the form may already hold manually entered
+    # competitors) — feeds the generation message's competitor line.
+    competitor_names: list[Annotated[str, Field(max_length=255)]] = Field(
+        default_factory=list, max_length=200
+    )
+    existing_prompt_texts: list[Annotated[str, Field(max_length=1024)]] = Field(
+        default_factory=list, max_length=200
+    )
+
+
+class PromptSuggestionItem(BaseModel):
+    text: str = Field(min_length=1)
+    theme: str = Field(default="", max_length=255)
+    intent: str = ""
+
+
+class SuggestedTopicGroup(BaseModel):
+    """One agent-proposed topic and the prompts it grouped under it.
+
+    The agent generates prompts grouped by topic and the persisted ``/generate``
+    flow keeps that structure as real ``Topic`` rows. This response preserves it
+    too so a caller that persists suggestions (onboarding) can create the same
+    topics rather than landing an untopiced prompt set — the two entry points
+    must produce the same shape of data.
+    """
+
+    name: str = Field(min_length=1, max_length=255)
+    prompts: list[PromptSuggestionItem] = Field(default_factory=list)
+
+
+class PromptSuggestResponse(BaseModel):
+    # Flat list, kept for callers that only want prompt text (and so this stays
+    # backwards compatible). ``topics`` carries the same prompts grouped.
+    prompts: list[PromptSuggestionItem] = Field(default_factory=list)
+    topics: list[SuggestedTopicGroup] = Field(default_factory=list)
     dropped_duplicates: int = 0
 
 

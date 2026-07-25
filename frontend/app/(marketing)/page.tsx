@@ -6,7 +6,7 @@ import { FeaturesGrid } from '@/components/marketing/features-grid';
 import { HowItWorks } from '@/components/marketing/how-it-works';
 import { LandingHero } from '@/components/marketing/landing-hero';
 import { LandingSessionRedirect } from '@/components/marketing/landing-session-redirect';
-import { ProductVisual } from '@/components/marketing/product-visual';
+import { EditorialShift } from '@/components/marketing/editorial-shift';
 
 const DESCRIPTION =
   'Searchify audits ChatGPT, Gemini, and Claude with the prompts your buyers actually ask. ' +
@@ -17,17 +17,17 @@ const DESCRIPTION =
 // domain for the app, and OG image URLs must be absolute. Add both once the
 // production domain exists.
 export const metadata: Metadata = {
-  title: 'Searchify — See how AI answers talk about your brand',
+  title: 'Searchify — Know where your brand stands in AI answers',
   description: DESCRIPTION,
   openGraph: {
-    title: 'Searchify — See how AI answers talk about your brand',
+    title: 'Searchify — Know where your brand stands in AI answers',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'Searchify — See how AI answers talk about your brand',
+    title: 'Searchify — Know where your brand stands in AI answers',
     description: DESCRIPTION,
   },
 };
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
  * the initial HTML (SEO + first paint); the only client island the page
  * itself renders is the invisible LandingSessionRedirect, which forwards
  * signed-in visitors on to their dashboard (`/visibility`) or first-run
- * `/setup` — the contract `/` had before this page existed.
+ * `/onboarding` — the contract `/` had before this page existed.
  *
  * The shared chrome (aurora/grain backdrop, LandingNav with its
  * dropdowns/mobile menu/theme toggle, LandingFooter) lives in the
@@ -51,10 +51,10 @@ export default function LandingPage() {
     <LandingSessionRedirect>
       <main>
         <LandingHero />
-        <ProductVisual />
         <EngineStrip />
-        <FeaturesGrid />
+        <EditorialShift />
         <HowItWorks />
+        <FeaturesGrid />
         <EvidenceBand />
         <FinalCta />
       </main>

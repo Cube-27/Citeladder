@@ -1,17 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════
    Searchify — Design System (single token source of truth)
-   Values lifted VERBATIM from docs/design.md. Components consume ONLY the
-   bridged Tailwind semantic tokens below — never raw hex (no-raw-hex guard).
-   Dense clean B2B analytics · flat / hairline language (1px borders, not
-   shadows) · one sans family · blue accent reserved for data, links, active
-   states and focus rings · 4px grid · WCAG 2.1 AA.
+   v2 redesign (Task P1): the Figma design system ported into the app.
+   LIGHT = Figma values VERBATIM (royal blue #2756FF, neutral-50 page).
+   DARK  = the authored warm-charcoal "dusk" deck of §5, shared verbatim with
+   the marketing surface (never near-black; base < panel ≤ elevated by
+   luminance; violet accent and warm status hues). Neither the Figma midnight
+   dark nor the earlier cool slate-charcoal dark is ported.
+   Values mirror docs/design.md. Components consume ONLY the bridged
+   Tailwind semantic tokens below — never raw hex (no-raw-hex guard).
+   Figma type scale verbatim · elevated cards (shadow-1..4) · 4px grid ·
+   WCAG 2.1 AA ≥ 4.5:1 for every documented text/surface pair, both themes
+   (machine-enforced in app/globals.test.ts).
 ═══════════════════════════════════════════════════════════════════════ */
 
 @import 'tailwindcss';
 
 @custom-variant dark (&:where(html[data-theme='dark'] *));
 
-/* ─── TAILWIND v4 TOKEN BRIDGE (§7) ────────────────────────────────────
+/* ─── TAILWIND v4 TOKEN BRIDGE (§9) ────────────────────────────────────
    Bridge raw CSS variables to semantic Tailwind utilities. Components use
    only these bridged names (bg-background, text-foreground, bg-accent,
    text-success, bg-citation-owned, text-run-completed, bg-score-high, …).
@@ -40,10 +46,13 @@
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
   --color-subtle: var(--text-subtle);
+  --color-inverse: var(--text-inverse);
+  --color-link: var(--text-link);
 
-  /* Accent — blue */
+  /* Accent — royal blue */
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
   --color-accent-fg: var(--accent-fg);
   --color-accent-subtle: var(--accent-subtle);
   --color-accent-soft: var(--accent-soft);
@@ -60,6 +69,7 @@
   --color-warning-border: var(--warning-border);
   --color-warning-text: var(--warning-text);
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-danger-bg: var(--danger-bg);
   --color-danger-border: var(--danger-border);
   --color-danger-text: var(--danger-text);
@@ -80,15 +90,18 @@
   --color-sentiment-negative-bg: var(--sentiment-negative-bg);
   --color-sentiment-negative-text: var(--sentiment-negative-text);
 
-  /* Citation classification */
+  /* Citation classification — owned is Figma blue (green identity dropped) */
   --color-citation-owned: var(--citation-owned);
   --color-citation-owned-bg: var(--citation-owned-bg);
+  --color-citation-owned-border: var(--citation-owned-border);
   --color-citation-owned-text: var(--citation-owned-text);
   --color-citation-competitor: var(--citation-competitor);
   --color-citation-competitor-bg: var(--citation-competitor-bg);
+  --color-citation-competitor-border: var(--citation-competitor-border);
   --color-citation-competitor-text: var(--citation-competitor-text);
   --color-citation-third-party: var(--citation-third-party);
   --color-citation-third-party-bg: var(--citation-third-party-bg);
+  --color-citation-third-party-border: var(--citation-third-party-border);
   --color-citation-third-party-text: var(--citation-third-party-text);
 
   /* Run status */
@@ -109,17 +122,38 @@
   --color-run-cancelled: var(--run-cancelled);
   --color-run-cancelled-bg: var(--run-cancelled-bg);
 
-  /* Score bands */
+  /* Score bands — solid = ring hue; bg/border/text/ring per Figma */
   --color-score-low: var(--score-low);
   --color-score-low-bg: var(--score-low-bg);
+  --color-score-low-border: var(--score-low-border);
+  --color-score-low-text: var(--score-low-text);
+  --color-score-low-ring: var(--score-low-ring);
   --color-score-mid: var(--score-mid);
   --color-score-mid-bg: var(--score-mid-bg);
+  --color-score-mid-border: var(--score-mid-border);
+  --color-score-mid-text: var(--score-mid-text);
+  --color-score-mid-ring: var(--score-mid-ring);
   --color-score-good: var(--score-good);
   --color-score-good-bg: var(--score-good-bg);
+  --color-score-good-border: var(--score-good-border);
+  --color-score-good-text: var(--score-good-text);
+  --color-score-good-ring: var(--score-good-ring);
   --color-score-high: var(--score-high);
   --color-score-high-bg: var(--score-high-bg);
+  --color-score-high-border: var(--score-high-border);
+  --color-score-high-text: var(--score-high-text);
+  --color-score-high-ring: var(--score-high-ring);
 
-  /* Chart series (categorical, fixed order, identical in both themes) */
+  /* Chart palette (Figma --chart-1..8, identical in both themes) + the
+     legacy series slots aliased onto it (fixed order, never cycled). */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
   --color-series-1: var(--series-1);
   --color-series-2: var(--series-2);
   --color-series-3: var(--series-3);
@@ -128,7 +162,10 @@
   --color-series-other: var(--series-other);
   --color-chart-tooltip: var(--chart-tooltip-bg);
 
-  /* Shadows / elevation */
+  /* Shadows / elevation — the Figma levels --shadow-1..4 are raw-only
+     (bridging them as `--shadow-1: var(--shadow-1)` would be circular), so
+     components keep the semantic aliases: xs/sm→1, card→2, elevated→3,
+     lg/modal→4. */
   --shadow-xs: var(--shadow-xs-value);
   --shadow-sm: var(--shadow-sm-value);
   --shadow-card: var(--shadow-card-value);
@@ -140,29 +177,32 @@
      var() escapes (no-raw-hex + token-escape guard). */
   --color-overlay-scrim: var(--overlay-scrim);
 
-  /* Type scale (§5) — one step down; sentence-case micro-labels replace the
-     10px mono eyebrows. Size token = Tailwind font-size utility (text-sm, …) */
-  --text-2xs: 0.6875rem; /* 11px — micro labels, table headers */
+  /* Type scale (§7) — Figma scale verbatim (48/26/17/15/14/13/12/11) plus
+     the two data additions. Size token = Tailwind font-size utility. */
+  --text-2xs: 0.6875rem; /* 11px /500 — micro uppercase labels, table headers */
   --text-2xs--line-height: 1.25;
   --text-xs: 0.75rem; /* 12px — captions, timestamps */
   --text-xs--line-height: 1.35;
-  --text-sm: 0.78125rem; /* 12.5px — table cells */
+  --text-sm: 0.8125rem; /* 13px — secondary body, table cells */
   --text-sm--line-height: 1.45;
-  --text-base: 0.8125rem; /* 13px — primary body */
+  --text-base: 0.875rem; /* 14px /400/500 — primary body */
   --text-base--line-height: 1.5;
-  --text-lg: 0.84375rem; /* 13.5px — card titles */
+  --text-lg: 0.9375rem; /* 15px /600 — card titles */
   --text-lg--line-height: 1.35;
-  --text-xl: 1rem; /* 16px — page titles */
+  --text-xl: 1.0625rem; /* 17px /600 — section titles */
   --text-xl--line-height: 1.3;
-  --text-2xl: 1.3125rem; /* 21px — the largest number on screen */
+  --text-2xl: 1.625rem; /* 26px /600 — page titles */
   --text-2xl--line-height: 1.2;
+  --text-hero: 3rem; /* 48px /600 — hero metric numeral */
+  --text-hero--line-height: 1.1;
+  --text-data-lg: 1.375rem; /* 22px /600 — large mono data */
+  --text-data-lg--line-height: 1.25;
 
-  /* Font weights */
+  /* Font weights — the Figma scale tops out at semibold (600), so `bold`
+     resolves to 600 app-wide. */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
-  /* The type scale tops out at semibold: Geist Bold is heavier than this
-     flat language wants, so `bold` resolves to 600 app-wide. */
   --font-weight-bold: 600;
 
   /* Letter spacing */
@@ -177,130 +217,237 @@
   --leading-snug: 1.35;
   --leading-normal: 1.5;
 
-  /* Radii (§6) */
-  --radius-xs: 3px;
+  /* Radii (§8) — Figma --r-xs..xl = 4/6/8/12/16; 2xl aliases xl; buttons
+     are rounded-md (8px), not pills (Figma 1198 Btn). */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 14px;
-  --radius-2xl: 20px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
 
-  /* Motion (§10) */
+  /* Motion (§13) */
   --transition-fast: 100ms;
   --transition-base: 180ms;
   --transition-slow: 280ms;
 }
 
-/* ─── LIGHT THEME (§3) — warm-paper sibling (dark is the default) ───────────────────────────────────────
-   Surface hierarchy (lowest → highest): bg-base → bg-alt → bg-panel →
-   bg-elevated → bg-well. Accent blue #2f58ff. Text ≥ 4.5:1.
+/* ─── LIGHT THEME (§4) — Figma values VERBATIM (default theme) ─────────
+   Primitive ramps are a globals.css-only layer; semantic tokens reference
+   them. Accent anchored on royal blue --blue-500 #2756FF.
 ──────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
 
-  /* Fonts — one sans family; no separate display face. */
+  /* ── Primitive ramps (Figma 1192.css verbatim — not theme-overridden) ── */
+  --blue-50: #ebf0ff;
+  --blue-100: #d5e2ff;
+  --blue-200: #acc4ff;
+  --blue-300: #7a9fff;
+  --blue-400: #4972ff;
+  --blue-500: #2756ff; /* accent anchor */
+  --blue-600: #1a44eb;
+  --blue-700: #1235cc;
+  --blue-800: #0d28a0;
+  --blue-900: #091e78;
+
+  --neutral-0: #ffffff;
+  --neutral-50: #f7f8fa;
+  --neutral-100: #eff1f6;
+  --neutral-200: #e2e5ee;
+  --neutral-300: #c8cede;
+  --neutral-400: #98a2be;
+  --neutral-500: #667092;
+  --neutral-600: #454e6e;
+  --neutral-700: #2c3454;
+  --neutral-800: #1a2040;
+  --neutral-900: #0d1228;
+
+  /* Fonts — Inter (sans) + Geist Mono; no separate display face. */
   --font-primary-family: var(--font-sans), system-ui, sans-serif;
   --font-mono-family: var(--font-mono), ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
   --font-display-family: var(--font-sans), system-ui, sans-serif;
 
-  /* Surfaces */
-  --bg-base: #fbfbfa;
-  --bg-alt: #f4f4f2;
-  --bg-panel: #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-well: #f0f0ed;
-  --bg-sidebar: #f7f7f4;
-  --surface-overlay: rgba(251, 251, 250, 0.88);
+  /* Surfaces (Figma --surface-page/-panel/-elevated/-sunken mapped) */
+  --bg-base: var(--neutral-50); /* --surface-page #F7F8FA */
+  --bg-alt: var(--neutral-100); /* #EFF1F6 */
+  --bg-panel: var(--neutral-0); /* --surface-panel #FFFFFF */
+  --bg-elevated: var(--neutral-0); /* --surface-elevated #FFFFFF + shadow-3 */
+  --bg-well: var(--neutral-100); /* --surface-sunken #EFF1F6 */
+  --bg-sidebar: var(--neutral-0); /* Figma sidebar = panel bg */
+  --surface-overlay: rgba(247, 248, 250, 0.88);
 
-  /* Borders — hairlines carry all separation (shadows are gone) */
-  --border-subtle: #f0f0ed;
-  --border: #e8e7e3;
-  --border-strong: #dedcd6;
+  /* Borders */
+  --border-subtle: var(--neutral-100);
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
   --border-focus: var(--accent);
 
-  /* Text — body values verified ≥ 4.5:1 on bg-panel (#ffffff) */
-  --text-primary: #17171a;   /* 16.6:1 on #ffffff */
-  --text-secondary: #5c5c66; /* 6.9:1 on #ffffff  */
-  --text-muted: #6c6c76;     /* 5.2:1 on panel, 4.6:1 on the darkest surface (bg-well) */
-  --text-subtle: #b4b4bc;    /* decorative only (icons/dividers), not body text */
+  /* Text — body pairs verified ≥ 4.5:1 (globals.test.ts) */
+  --text-primary: var(--neutral-900); /* #0D1228 — 17.4:1 on bg-base */
+  --text-secondary: var(--neutral-600); /* #454E6E — 7.7:1 on bg-base */
+  --text-muted: var(--neutral-400); /* Figma --text-tertiary: captions/decorative only (not body-gated) */
+  --text-subtle: var(--neutral-300); /* Figma --text-disabled: decorative only */
+  --text-inverse: var(--neutral-0); /* on accent/dark fills */
+  --text-link: var(--accent-text); /* alias of --accent-text — no --text-accent token */
 
-  /* Accent — blue */
-  --accent: #2f58ff;
-  --accent-hover: #1e3fd0;
-  --accent-fg: #ffffff;         /* on accent bg: 5.3:1 */
-  --accent-subtle: rgba(47, 88, 255, 0.10);
-  --accent-soft: rgba(47, 88, 255, 0.05);
-  --accent-border: rgba(47, 88, 255, 0.30);
-  --accent-text: #1e3fd0;       /* accent as text on light: 7.8:1 on #ffffff */
+  /* Accent — royal blue, anchored #2756FF */
+  --accent: var(--blue-500);
+  --accent-hover: var(--blue-600);
+  --accent-active: var(--blue-700);
+  --accent-fg: #ffffff; /* Figma --accent-foreground — 5.4:1 on accent */
+  --accent-subtle: var(--blue-50);
+  /* Kept token, derived from --accent-subtle via color-mix (documented in
+     design.md §4) — resolves per theme. */
+  --accent-soft: color-mix(in srgb, var(--accent-subtle) 45%, transparent);
+  --accent-border: var(--blue-200);
+  --accent-text: var(--blue-600); /* accent as text — 6.8:1 on bg-panel */
 
-  /* Semantic status — text values ≥ 4.5:1 on their bg */
-  --success: #059669; --success-bg: #ecfdf5; --success-border: #a7f3d0; --success-text: #065f46;
-  --warning: #d97706; --warning-bg: #fffbeb; --warning-border: #fcd34d; --warning-text: #92400e;
-  --danger:  #dc2626; --danger-bg:  #fef2f2; --danger-border:  #fca5a5; --danger-text:  #991b1b;
-  --info:    #2563eb; --info-bg:    #eff6ff; --info-border:    #bfdbfe; --info-text:    #1d4ed8;
-  --neutral-bg: #f0f0ed;
+  /* Semantic status — Figma verbatim; solids take the Figma mid hues */
+  --success: #10b981;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #15803d;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #92400e;
+  --danger: #ef4444;
+  /* Foreground for the DANGER SOLID (destructive button fill). White on
+     #EF4444 is only 3.76:1, so the destructive label takes the dark ink
+     instead (4.9:1) rather than deepening --danger, which is also the
+     sentiment-negative solid and every danger accent. */
+  --danger-fg: var(--neutral-900);
+  --danger-bg: #fff1f1;
+  --danger-border: #fecaca;
+  --danger-text: #b91c1c;
+  --info: #2756ff;
+  --info-bg: #ebf0ff;
+  --info-border: #adc4ff;
+  --info-text: #1a44eb;
+  --neutral-bg: #f7f8fa; /* Figma --neutral-status-bg */
 
   /* Sentiment (positive / neutral / negative) */
-  --sentiment-positive: #059669; --sentiment-positive-bg: #ecfdf5; --sentiment-positive-text: #065f46;
-  --sentiment-neutral:  #6f756f; --sentiment-neutral-bg:  #f1f2f1; --sentiment-neutral-text:  #4c524f;
-  --sentiment-negative: #dc2626; --sentiment-negative-bg: #fef2f2; --sentiment-negative-text: #991b1b;
+  --sentiment-positive: var(--success);
+  --sentiment-positive-bg: var(--success-bg);
+  --sentiment-positive-text: var(--success-text);
+  --sentiment-neutral: #667092;
+  --sentiment-neutral-bg: #f7f8fa;
+  --sentiment-neutral-text: #454e6e;
+  --sentiment-negative: var(--danger);
+  --sentiment-negative-bg: var(--danger-bg);
+  --sentiment-negative-text: var(--danger-text);
   /* Sentiment is not computed yet — render the neutral "—" placeholder below. */
   --value-placeholder: var(--text-subtle);
 
-  /* Citation classification (owned / competitor / third-party) */
-  --citation-owned: #0f9d76;      --citation-owned-bg: rgba(15, 157, 118, 0.10);  --citation-owned-text: #0b6f52;
-  --citation-competitor: #d97706; --citation-competitor-bg: #fffbeb;              --citation-competitor-text: #92400e;
-  --citation-third-party: #6366f1;--citation-third-party-bg: #eef2ff;             --citation-third-party-text: #4338ca;
+  /* Citation classification — owned becomes Figma blue (confirmed decision;
+     the green identity is dropped) */
+  --citation-owned: #2756ff;
+  --citation-owned-bg: #ebf0ff;
+  --citation-owned-border: #adc4ff;
+  --citation-owned-text: #1235cc;
+  --citation-competitor: #f97316;
+  --citation-competitor-bg: #fff7ed;
+  --citation-competitor-border: #fed7aa;
+  --citation-competitor-text: #9a3412;
+  --citation-third-party: #8b5cf6;
+  --citation-third-party-bg: #f5f3ff;
+  --citation-third-party-border: #ddd6fe;
+  --citation-third-party-text: #5b21b6;
 
-  /* Run status (audit lifecycle) */
-  --run-draft:      #6f756f; --run-draft-bg:      #f1f2f1;
-  --run-queued:     #2563eb; --run-queued-bg:     #eff6ff;
-  --run-running:    #0f9d76; --run-running-bg:    rgba(15, 157, 118, 0.12);
-  --run-analyzing:  #7c3aed; --run-analyzing-bg:  #f5f3ff;
-  --run-completed:  #059669; --run-completed-bg:  #ecfdf5;
-  --run-partial:    #d97706; --run-partial-bg:    #fffbeb;
-  --run-failed:     #dc2626; --run-failed-bg:     #fef2f2;
-  --run-cancelled:  #6f756f; --run-cancelled-bg:  #f1f2f1;
+  /* Run status (audit lifecycle) — solid = Figma text hue */
+  --run-draft: #667092;
+  --run-draft-bg: #f7f8fa;
+  --run-queued: #454e6e;
+  --run-queued-bg: #f7f8fa;
+  --run-running: #1a44eb;
+  --run-running-bg: #ebf0ff;
+  --run-analyzing: #5b21b6;
+  --run-analyzing-bg: #f5f3ff;
+  --run-completed: #15803d;
+  --run-completed-bg: #f0fdf4;
+  --run-partial: #92400e;
+  --run-partial-bg: #fffbeb;
+  --run-failed: #b91c1c;
+  --run-failed-bg: #fff1f1;
+  /* Figma's cancelled text #98A2BE is 2.4:1 on its bg — adjusted within the
+     same family (neutral-400 → neutral-500) to clear AA 4.5:1. */
+  --run-cancelled: #667092;
+  --run-cancelled-bg: #f7f8fa;
 
-  /* ─── Chart series palette (categorical) ───────────────────────────────
-     Fixed order, never cycled; identical in both themes so a series keeps its
-     identity across a theme switch. Slot 1 is the brand's own accent; the rest
-     are validated for CVD separation (protan/deutan/tritan ΔE ≥ 8) and ≥ 3:1
-     contrast against both the light (#ffffff) and dark (#131316) chart
-     surfaces — see scripts/validate_palette.js in the dataviz skill. Do not
-     reorder or substitute without re-running that validator. */
-  --series-1: #2f58ff; /* brand — the user's own data series */
-  --series-2: #c62f34;
-  --series-3: #d97706;
-  --series-4: #8b5cf6;
-  --series-5: #30a46c;
-  --series-other: #d4d4d8; /* the "Other" bucket — deliberately achromatic */
-  --chart-tooltip-bg: #1a1a1f;
+  /* Score bands (visibility %) — band thresholds stay 25/50/75
+     (score-band.ts unchanged); Figma band colors map onto the bands.
+     Solid = ring hue. */
+  --score-low: #ef4444;
+  --score-low-bg: #fff1f1; /* 0–24%   */
+  --score-low-border: #fecaca;
+  --score-low-text: #b91c1c;
+  --score-low-ring: #ef4444;
+  --score-mid: #f59e0b;
+  --score-mid-bg: #fffbeb; /* 25–49%  */
+  --score-mid-border: #fde68a;
+  --score-mid-text: #92400e;
+  --score-mid-ring: #f59e0b;
+  --score-good: #10b981;
+  --score-good-bg: #ecfdf5; /* 50–74%  */
+  --score-good-border: #a7f3d0;
+  --score-good-text: #065f46;
+  --score-good-ring: #10b981;
+  --score-high: #22c55e;
+  --score-high-bg: #f0fdf4; /* 75–100% */
+  --score-high-border: #bbf7d0;
+  --score-high-text: #14532d;
+  --score-high-ring: #22c55e;
 
-  /* Score bands (visibility %) — low→high */
-  --score-low:      #dc2626; --score-low-bg:      #fef2f2;  /* 0–24%   */
-  --score-mid:      #d97706; --score-mid-bg:      #fffbeb;  /* 25–49%  */
-  --score-good:     #2563eb; --score-good-bg:     #eff6ff;  /* 50–74%  */
-  --score-high:     #059669; --score-high-bg:     #ecfdf5;  /* 75–100% */
+  /* ─── Chart palette (Figma --chart-1..8 verbatim) ──────────────────────
+     Categorical, fixed order, never cycled; identical in both themes so a
+     series keeps its identity across a theme switch. The legacy --series-*
+     slots alias onto it (the "fold into Other" rule in series-palette.ts is
+     unchanged). */
+  --chart-1: #2756ff;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
+  --chart-6: #06b6d4;
+  --chart-7: #f97316;
+  --chart-8: #ec4899;
+  --series-1: var(--chart-1); /* brand — the user's own data series */
+  --series-2: var(--chart-2);
+  --series-3: var(--chart-3);
+  --series-4: var(--chart-4);
+  --series-5: var(--chart-5);
+  --series-other: var(--neutral-200); /* the "Other" bucket — deliberately achromatic */
+  --chart-tooltip-bg: var(--neutral-800); /* inverse chip, identical in both themes */
 
-  /* Shadows / elevation — flat language: surfaces are separated by hairline
-     borders, not elevation. Only genuinely floating layers (dropdowns,
-     dialogs) keep a shadow. */
-  --shadow-xs-value: none;
-  --shadow-sm-value: none;
-  --shadow-card-value: none;
-  --shadow-elevated-value: 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-lg-value: 0 12px 32px rgba(0, 0, 0, 0.08);
-  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
-  --focus-ring: 0 0 0 3px rgba(47, 88, 255, 0.22);
+  /* Shadows / elevation — Figma --shadow-1..4 verbatim (light). Semantic
+     aliases keep the existing component names: xs,sm→1; card→2;
+     elevated→3; lg,modal→4. var() aliases resolve per theme. */
+  --shadow-1:
+    0 1px 2px rgba(13, 18, 40, 0.05), 0 0 0 1px rgba(13, 18, 40, 0.05);
+  --shadow-2:
+    0 2px 6px rgba(13, 18, 40, 0.07), 0 0 0 1px rgba(13, 18, 40, 0.06);
+  --shadow-3:
+    0 6px 20px rgba(13, 18, 40, 0.1), 0 1px 4px rgba(13, 18, 40, 0.05),
+    0 0 0 1px rgba(13, 18, 40, 0.07);
+  --shadow-4:
+    0 16px 40px rgba(13, 18, 40, 0.14), 0 4px 10px rgba(13, 18, 40, 0.07),
+    0 0 0 1px rgba(13, 18, 40, 0.09);
+  --shadow-xs-value: var(--shadow-1);
+  --shadow-sm-value: var(--shadow-1);
+  --shadow-card-value: var(--shadow-2);
+  --shadow-elevated-value: var(--shadow-3);
+  --shadow-lg-value: var(--shadow-4);
+  --shadow-modal: var(--shadow-4);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   --overlay-scrim: rgba(0, 0, 0, 0.32);
 
   /* Skeleton */
-  --skeleton-base: #f0f0ed;
-  --skeleton-highlight: #fbfbfa;
+  --skeleton-base: var(--neutral-100);
+  --skeleton-highlight: var(--neutral-50);
 
-  /* ─── Shared structural tokens (§5–§6) — theme-independent ─── */
+  /* ─── Shared structural tokens (§7–§8) — theme-independent ─── */
 
   /* Weights */
   --weight-normal: 400;
@@ -337,13 +484,13 @@
   --card-padding: 14px;
   --content-gutter: 20px;
 
-  /* Radii */
-  --radius-xs: 3px;
+  /* Radii — Figma --r-xs..xl = 4/6/8/12/16; 2xl aliases xl */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 14px;
-  --radius-2xl: 20px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
 
   /* Controls */
@@ -367,97 +514,178 @@
   --transition-slow: 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── DARK THEME (§4) — html[data-theme='dark'] ────────────────────────
-   Only tokens that change are overridden; type scale, spacing, radii, and
-   structural tokens are shared from :root above. CUBE27 midnight near-black
-   scale. Accent blue #6b8aff.
+/* ─── DARK THEME (§5) — html[data-theme='dark'] ────────────────────────
+   AUTHORED warm-charcoal "dusk" — the SAME dark system the marketing site
+   uses (owner decision: the app and marketing share one dark identity).
+   Values come from the approved dusk deck
+   (docs/redesign/designs/marketing-style-guide-dusk.html): surfaces
+   #1F1E1B/#262522/#2C2B28/#353430, ink #F4F2EB/#B4B0A4/#7F7B70, lines
+   #3B3A35/#46453E/#5B584D, violet accent, and the warm status hues.
+   This replaces both the Figma midnight dark and the earlier cool
+   slate-charcoal; neither is ported.
+
+   The light theme stays Figma royal blue, so the accent hue deliberately
+   differs across themes — that is the point of sharing marketing's dark
+   identity, not an oversight.
+
+   Hard constraints, machine-enforced in app/globals.test.ts (§6):
+   · never near-black — --bg-base relative luminance stays above the floor
+     (dusk base #262522 = 0.0185, well clear of it);
+   · strict luminance ordering --bg-base < --bg-panel ≤ --bg-elevated
+     (--bg-well may dip below base for sunken wells);
+   · every documented text/status/accent pair meets AA ≥ 4.5:1;
+   · shadows are soft (low-opacity, larger blur) — no crushed near-black
+     shadow stack.
+   Only tokens that change are overridden; ramps, chart palette, type,
+   spacing, radii, and structural tokens are shared from :root above.
 ──────────────────────────────────────────────────────────────────────── */
 html[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Surfaces */
-  --bg-base: #0a0a0b;
-  --bg-alt: #1b1b21;
-  --bg-panel: #131316;
-  --bg-elevated: #17171c;
-  --bg-well: #1e1e24;
-  --bg-sidebar: #0e0e11;
-  --surface-overlay: rgba(10, 10, 11, 0.92);
+  /* Surfaces — warm charcoal (deck --bg-0/--bg/--bg-2/--bg-3) */
+  --bg-base: #262522;
+  --bg-alt: #2a2926; /* between base and panel (hover/inset) — same family */
+  --bg-panel: #2c2b28;
+  --bg-elevated: #353430;
+  --bg-well: #1f1e1b; /* sunken — may go slightly darker than base */
+  --bg-sidebar: #2c2b28; /* sidebar = panel bg */
+  --surface-overlay: rgba(38, 37, 34, 0.92);
 
-  /* Borders — solid hairlines (not alpha) so they read consistently on every
-     surface now that shadows no longer separate cards. */
-  --border-subtle: #1e1e24;
-  --border: #26262d;
-  --border-strong: #33333c;
+  /* Borders — solid warm hairlines (deck --line/--line-2/--line-3) */
+  --border-subtle: #3b3a35;
+  --border: #46453e;
+  --border-strong: #5b584d;
 
-  /* Text — body values verified ≥ 4.5:1 on bg-panel (#131316) */
-  --text-primary: #f3f3f5;   /* 16.7:1 on #131316 */
-  --text-secondary: #a1a1ab; /* 7.2:1 on #131316  */
-  --text-muted: #8a8a94;     /* 5.4:1 on #131316  */
-  --text-subtle: #5b5b64;    /* decorative only */
+  /* Text — body pairs verified ≥ 4.5:1 (globals.test.ts) */
+  --text-primary: #f4f2eb; /* deck --ink — 13.7:1 on bg-base */
+  --text-secondary: #b4b0a4; /* deck --ink-2 — 7.1:1 on bg-base, 6.5:1 on panel */
+  --text-muted: #7f7b70; /* deck --ink-3 — captions/decorative only (not body-gated) */
+  --text-subtle: #5b584d; /* decorative only */
+  --text-inverse: #1f1e1b;
+  --text-link: var(--accent-text); /* alias of --accent-text */
 
-  /* Accent — blue */
-  --accent: #6b8aff;
-  --accent-hover: #9db2ff;
-  --accent-fg: #0a0a0a;         /* dark text on bright accent: 6.3:1 */
-  --accent-subtle: rgba(107, 138, 255, 0.14);
-  --accent-soft: rgba(107, 138, 255, 0.08);
-  --accent-border: rgba(107, 138, 255, 0.34);
-  --accent-text: #9db2ff;       /* accent as text on dark: 9.9:1 on #050505 */
+  /* Accent — the deck's violet. Its --acc #7B6CF6 measures only 3.95:1
+     against white, so the SOLID is deepened one step within the same
+     family (#7B6CF6 → #6D5DE8, 4.79:1) to clear AA; the deck violet
+     survives verbatim as the hover step and inside every wash/border. */
+  --accent: #6d5de8; /* white accent-fg on accent: 4.79:1 */
+  --accent-hover: #7b6cf6; /* deck --acc */
+  --accent-active: #8f81ff; /* deck --acc-hover */
+  --accent-fg: #ffffff;
+  --accent-subtle: rgba(123, 108, 246, 0.14); /* deck --acc-soft */
+  --accent-border: rgba(123, 108, 246, 0.34); /* deck --acc-line */
+  --accent-text: #9c92ff; /* deck --acc-text — 5.4:1 on bg-panel */
 
-  /* Semantic status */
-  --success: #3ecf8e; --success-bg: rgba(62, 207, 142, 0.12); --success-border: rgba(62, 207, 142, 0.28); --success-text: #5fdaa2;
-  --warning: #f5a623; --warning-bg: rgba(245, 166, 35, 0.12); --warning-border: rgba(245, 166, 35, 0.28); --warning-text: #f7b854;
-  --danger:  #ff6b6b; --danger-bg:  rgba(255, 107, 107, 0.12);--danger-border:  rgba(255, 107, 107, 0.28);--danger-text:  #ff8f8f;
-  --info:    #6ba5ff; --info-bg:    rgba(107, 165, 255, 0.12);--info-border:    rgba(107, 165, 255, 0.28);--info-text:    #8fbcff;
-  --neutral-bg: #1e1e24;
+  /* Semantic status — deck hues (--ok/--warn/--bad) as translucent fills
+     re-based on the dusk surfaces. */
+  --success: #46d69c;
+  --success-bg: rgba(70, 214, 156, 0.13);
+  --success-border: rgba(70, 214, 156, 0.3);
+  --success-text: #46d69c;
+  --warning: #f2c14e;
+  --warning-bg: rgba(242, 193, 78, 0.13);
+  --warning-border: rgba(242, 193, 78, 0.28);
+  --warning-text: #f2c14e;
+  --danger: #ff8f85;
+  --danger-fg: #1f1e1b; /* dark ink on the coral solid — 7.5:1 */
+  --danger-bg: rgba(255, 143, 133, 0.13);
+  --danger-border: rgba(255, 143, 133, 0.28);
+  --danger-text: #ff8f85;
+  --info: #9c92ff;
+  --info-bg: rgba(123, 108, 246, 0.14);
+  --info-border: rgba(123, 108, 246, 0.3);
+  --info-text: #a79eff;
+  --neutral-bg: rgba(255, 250, 240, 0.05); /* deck --glass-bg */
 
   /* Sentiment */
-  --sentiment-positive: #3ecf8e; --sentiment-positive-bg: rgba(62, 207, 142, 0.12); --sentiment-positive-text: #5fdaa2;
-  --sentiment-neutral:  #9ca39c; --sentiment-neutral-bg:  rgba(255, 255, 255, 0.05); --sentiment-neutral-text:  #9ca39c;
-  --sentiment-negative: #ff6b6b; --sentiment-negative-bg: rgba(255, 107, 107, 0.12); --sentiment-negative-text: #ff8f8f;
+  --sentiment-positive: var(--success);
+  --sentiment-positive-bg: var(--success-bg);
+  --sentiment-positive-text: var(--success-text);
+  --sentiment-neutral: #b4b0a4;
+  --sentiment-neutral-bg: rgba(255, 250, 240, 0.05);
+  --sentiment-neutral-text: #b4b0a4;
+  --sentiment-negative: var(--danger);
+  --sentiment-negative-bg: var(--danger-bg);
+  --sentiment-negative-text: var(--danger-text);
   --value-placeholder: var(--text-subtle);
 
-  /* Citation classification */
-  --citation-owned: #2dd4a7;       --citation-owned-bg: rgba(45, 212, 167, 0.12);  --citation-owned-text: #58e0bb;
-  --citation-competitor: #f5a623;  --citation-competitor-bg: rgba(245, 166, 35, 0.12); --citation-competitor-text: #f7b854;
-  --citation-third-party: #8b8fff; --citation-third-party-bg: rgba(139, 143, 255, 0.12); --citation-third-party-text: #a9adff;
+  /* Citation classification — owned follows the accent into violet;
+     competitor/third-party are the deck's --comp/--third. */
+  --citation-owned: #a79eff;
+  --citation-owned-bg: rgba(123, 108, 246, 0.16);
+  --citation-owned-border: rgba(123, 108, 246, 0.3);
+  --citation-owned-text: #a79eff;
+  --citation-competitor: #fca87a;
+  --citation-competitor-bg: rgba(249, 115, 22, 0.12);
+  --citation-competitor-border: rgba(249, 115, 22, 0.28);
+  --citation-competitor-text: #fca87a;
+  --citation-third-party: #c9b8fd;
+  --citation-third-party-bg: rgba(139, 92, 246, 0.12);
+  --citation-third-party-border: rgba(139, 92, 246, 0.26);
+  --citation-third-party-text: #c9b8fd;
 
   /* Run status */
-  --run-draft:      #9ca39c; --run-draft-bg:      rgba(255, 255, 255, 0.05);
-  --run-queued:     #6ba5ff; --run-queued-bg:     rgba(107, 165, 255, 0.12);
-  --run-running:    #2dd4a7; --run-running-bg:    rgba(45, 212, 167, 0.14);
-  --run-analyzing:  #a78bfa; --run-analyzing-bg:  rgba(167, 139, 250, 0.14);
-  --run-completed:  #3ecf8e; --run-completed-bg:  rgba(62, 207, 142, 0.12);
-  --run-partial:    #f5a623; --run-partial-bg:    rgba(245, 166, 35, 0.12);
-  --run-failed:     #ff6b6b; --run-failed-bg:     rgba(255, 107, 107, 0.12);
-  --run-cancelled:  #9ca39c; --run-cancelled-bg:  rgba(255, 255, 255, 0.05);
+  --run-draft: #b4b0a4;
+  --run-draft-bg: rgba(255, 250, 240, 0.05);
+  --run-queued: #b4b0a4;
+  --run-queued-bg: rgba(255, 250, 240, 0.05);
+  --run-running: #a79eff;
+  --run-running-bg: rgba(123, 108, 246, 0.16);
+  --run-analyzing: #c9b8fd;
+  --run-analyzing-bg: rgba(139, 92, 246, 0.13);
+  --run-completed: #46d69c;
+  --run-completed-bg: rgba(70, 214, 156, 0.13);
+  --run-partial: #f2c14e;
+  --run-partial-bg: rgba(242, 193, 78, 0.13);
+  --run-failed: #ff8f85;
+  --run-failed-bg: rgba(255, 143, 133, 0.13);
+  --run-cancelled: #b4b0a4;
+  --run-cancelled-bg: rgba(255, 250, 240, 0.05);
 
-  /* Chart series — slots 1–5 are intentionally NOT overridden: a series keeps
-     the same hue across themes so identity survives a theme switch. Only the
-     achromatic "Other" bucket and the tooltip surface adapt. */
-  --series-other: #3f3f46;
-  --chart-tooltip-bg: #1e1e26;
+  /* Score bands — the deck's warm status hues; thresholds stay 25/50/75 */
+  --score-low: #ff8f85;
+  --score-low-bg: rgba(255, 143, 133, 0.13);
+  --score-low-border: rgba(255, 143, 133, 0.28);
+  --score-low-text: #ff8f85;
+  --score-low-ring: #ff8f85;
+  --score-mid: #f2c14e;
+  --score-mid-bg: rgba(242, 193, 78, 0.13);
+  --score-mid-border: rgba(242, 193, 78, 0.28);
+  --score-mid-text: #f2c14e;
+  --score-mid-ring: #f2c14e;
+  --score-good: #46d69c;
+  --score-good-bg: rgba(70, 214, 156, 0.13);
+  --score-good-border: rgba(70, 214, 156, 0.3);
+  --score-good-text: #46d69c;
+  --score-good-ring: #46d69c;
+  --score-high: #7be8be;
+  --score-high-bg: rgba(123, 232, 190, 0.13);
+  --score-high-border: rgba(123, 232, 190, 0.3);
+  --score-high-text: #7be8be;
+  --score-high-ring: #7be8be;
 
-  /* Score bands */
-  --score-low:  #ff6b6b; --score-low-bg:  rgba(255, 107, 107, 0.12);
-  --score-mid:  #f5a623; --score-mid-bg:  rgba(245, 166, 35, 0.12);
-  --score-good: #6ba5ff; --score-good-bg: rgba(107, 165, 255, 0.12);
-  --score-high: #3ecf8e; --score-high-bg: rgba(62, 207, 142, 0.12);
+  /* Chart palette — --chart-1..8 and --series-1..5 are intentionally NOT
+     overridden: a series keeps its hue across themes so identity survives
+     a theme switch. Only the achromatic "Other" bucket adapts, warmed to
+     sit on the dusk surfaces. */
+  --series-other: #5b584d;
 
-  /* Shadows — flat: hairlines separate surfaces; only floating layers cast. */
-  --shadow-xs-value: none;
-  --shadow-sm-value: none;
-  --shadow-card-value: none;
-  --shadow-elevated-value: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-lg-value: 0 12px 32px rgba(0, 0, 0, 0.6);
-  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.7);
-  --focus-ring: 0 0 0 3px rgba(107, 138, 255, 0.35);
+  /* Shadows — soft stack for the warm surfaces (low opacity, larger blur;
+     no crushed near-black). */
+  --shadow-1:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 250, 240, 0.03);
+  --shadow-2:
+    0 2px 8px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 250, 240, 0.04);
+  --shadow-3:
+    0 8px 24px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 250, 240, 0.05);
+  --shadow-4:
+    0 16px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 250, 240, 0.06);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   --overlay-scrim: rgba(0, 0, 0, 0.55);
 
   /* Skeleton */
-  --skeleton-base: #1b1b21;
-  --skeleton-highlight: #26262d;
+  --skeleton-base: #2c2b28;
+  --skeleton-highlight: #353430;
 
   /* Segmented control */
   --segmented-bg: var(--bg-alt);
@@ -563,9 +791,10 @@ samp {
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
 
-/* ─── Focus rings — keyboard-only (WCAG 2.4.7 + 2.4.11) ─────────────── */
+/* ─── Focus rings — keyboard-only (WCAG 2.4.7 + 2.4.11). Figma spec: 2px
+   accent outline, tokenized via --accent. ────────────────────────────── */
 :focus-visible {
-  outline: 2.5px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   forced-color-adjust: auto;
 }

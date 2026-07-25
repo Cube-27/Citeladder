@@ -12,6 +12,12 @@ import { cn } from '@/lib/utils';
  * decorate a sign-in page would misrepresent the product. The panel states
  * what Searchify does and how it treats your keys, and stops there.
  *
+ * Density (v2): the proof points are labels, not paragraphs. Each used to
+ * carry a two-clause explanation beneath it, which turned a sign-in screen
+ * into a landing page — nobody reads a methodology note while trying to log
+ * in, and the marketing site already makes the argument at length. Three short
+ * lines carry the same reassurance and let the headline breathe.
+ *
  * Hidden below 900px, where the form panel renders <AuthWordmark compact>
  * above the auth card instead.
  *
@@ -20,21 +26,9 @@ import { cn } from '@/lib/utils';
  */
 
 const PROOF_POINTS = [
-  {
-    icon: Target,
-    lead: 'Deterministic scoring',
-    rest: 'The same answers always produce the same score, so a change in the number means a change in the market — not in the method.',
-  },
-  {
-    icon: FileSearch,
-    lead: 'Evidence for every number',
-    rest: 'Each metric links back to the raw model response it came from. Nothing is a black box.',
-  },
-  {
-    icon: Lock,
-    lead: 'Your own API keys',
-    rest: 'Audits run on your provider keys, encrypted at rest and never shared between workspaces.',
-  },
+  { icon: Target, lead: 'Deterministic scoring' },
+  { icon: FileSearch, lead: 'Evidence for every number' },
+  { icon: Lock, lead: 'Your own API keys, encrypted' },
 ] as const;
 
 export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }>) {
@@ -70,17 +64,14 @@ export function AuthBrandPanel() {
           See how AI answers talk about your brand.
         </p>
         <p className="text-secondary mt-3 text-base">
-          Searchify audits ChatGPT, Gemini, and Claude with the prompts your buyers actually ask.
+          Audits ChatGPT, Gemini, and Claude with the prompts your buyers ask.
         </p>
 
-        <ul className="mt-10 grid list-none gap-5 p-0">
+        <ul className="mt-10 grid list-none gap-3 p-0">
           {PROOF_POINTS.map((proof) => (
-            // Grid (not flex) so the icon column is a fixed track and the
-            // title and body share one left edge instead of stepping in.
-            <li key={proof.lead} className="grid grid-cols-[16px_1fr] items-start gap-x-3 gap-y-1">
-              <proof.icon className="text-muted mt-0.5 size-4" strokeWidth={1.75} aria-hidden />
-              <p className="text-foreground text-base font-medium">{proof.lead}</p>
-              <p className="text-muted col-start-2 text-xs">{proof.rest}</p>
+            <li key={proof.lead} className="flex items-center gap-3">
+              <proof.icon className="text-muted size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="text-secondary text-sm">{proof.lead}</span>
             </li>
           ))}
         </ul>

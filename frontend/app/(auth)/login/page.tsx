@@ -14,7 +14,7 @@ import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 /**
  * Login page (F4). react-hook-form + zod client validation; on success the
- * `me` cache is primed and the user is routed directly to `/setup` (no
+ * `me` cache is primed and the user is routed directly to `/onboarding` (no
  * projects yet) or `/visibility` — no marketing-landing bounce. Email is the
  * only sign-in path for now; the OAuth buttons stay in
  * `components/auth/oauth-buttons.tsx` until the backend providers are
@@ -38,10 +38,9 @@ export default function LoginPage() {
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-1">
-        <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">Sign in</h1>
-        <p className="text-secondary text-sm">Welcome back — sign in to your workspace.</p>
-      </div>
+      {/* No subhead: "Welcome back — sign in to your workspace" restated the
+          heading and the button label. The form is self-evident. */}
+      <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">Sign in</h1>
 
       {mutation.isError ? <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert> : null}
 

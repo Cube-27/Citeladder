@@ -17,10 +17,13 @@ const root = process.cwd();
 // Line budgets — split any owner that exceeds its limit.
 const lineBudgets = [
   { file: 'app/layout.tsx', maxLines: 120 },
-  // globals.css is the single token source — the aurora/grain/logo/display
-  // utilities for the auth redesign (Phase C) and the midnight values
-  // (Phase D) all land here, so the budget is raised to 800.
-  { file: 'app/globals.css', maxLines: 800 },
+  // globals.css is the single token source — the v2 redesign (Figma token
+  // port, plan Task P1) adds the primitive --blue-*/--neutral-* ramps, the
+  // Figma --chart-1..8 palette, --score-*-text/-ring/-border, --shadow-1..4,
+  // and the authored soft-charcoal dark set on top of the existing semantic
+  // tokens (marketing tokens stay out — they live in
+  // app/(marketing)/marketing.css), so the budget is raised to 1000.
+  { file: 'app/globals.css', maxLines: 1000 },
   { file: 'components/ui/theme-toggle.tsx', maxLines: 120 },
   { file: 'lib/theme.ts', maxLines: 160 },
   // F5 app shell: composition only — split any sub-piece that outgrows this.

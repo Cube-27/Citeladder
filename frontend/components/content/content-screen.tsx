@@ -81,10 +81,10 @@ export function ContentScreen() {
             Create a project first — content generation needs a project and its website.
           </p>
           <Link
-            href="/setup"
+            href="/projects"
             className="text-accent-text text-sm font-medium underline underline-offset-4"
           >
-            Go to Setup
+            Go to Projects
           </Link>
         </CardContent>
       </Card>
