@@ -2093,6 +2093,9 @@ class SiteHealthWorker:
             scoring_version=crawl.scoring_version or SCORING_VERSION,
             page_type=assessment.page_type,
             classifier_version=assessment.classifier_version,
+            # Persist the bounded classifier evidence with the row (the facts-
+            # dict copy above never survives the artifact flush, by design).
+            page_type_evidence=assessment.to_evidence(),
             source_artifact_ids=[artifact_id],
             finalized_at=_utcnow(),
         )

@@ -783,6 +783,11 @@ class SitePageAnalysis(Base):
     # classifies the page.
     page_type: Mapped[str] = mapped_column(String(24), default=PAGE_TYPE_OTHER)
     classifier_version: Mapped[str] = mapped_column(String(32), default="")
+    # The bounded classifier evidence (ranked signals / confidence / schema
+    # suggestion) behind the classification — the same dict
+    # ``PageTypeAssessment.to_evidence()`` produces, persisted for the per-URL
+    # detail "why this type?" disclosure.
+    page_type_evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Source provenance arrays (evaluation + artifact IDs).
     source_evaluation_ids: Mapped[list | None] = mapped_column(
         ARRAY(PGUUID(as_uuid=True)), nullable=True

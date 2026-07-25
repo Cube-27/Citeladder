@@ -1423,6 +1423,17 @@ async def test_analyze_persists_page_type_classifier_and_v2_versions(
         assert analysis.analyzer_version == "sh-analyzer-2"
         assert analysis.scoring_version == "sh-scoring-2"
 
+        # The bounded classifier evidence persisted WITH the row (it used to
+        # be computed, injected into the facts dict after the artifact flush,
+        # and dropped). Its classifier_version matches the row's stamp.
+        evidence = analysis.page_type_evidence
+        assert evidence is not None
+        assert evidence["classifier_version"] == analysis.classifier_version
+        assert evidence["classified_by"] == "path_pattern"
+        assert evidence["confidence"] >= evidence["confidence_threshold"]
+        assert evidence["signals"][0]["signal"] == "path_pattern"
+        assert evidence["signals"][0]["page_type"] == "article"
+
         # facts["page_type"] reached rule evaluation: the thin-content check
         # read the per-type (article) minimum, not the v1 global.
         thin = (

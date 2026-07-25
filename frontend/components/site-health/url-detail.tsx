@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,12 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
 import type { DeliveryFacts, PageDetail, RerunPageResponse, SiteIssue } from '@/lib/api/types';
 import { PageTypeBadge } from '@/components/site-health/page-type-badge';
+import { ICONS } from '@/lib/icons';
+import {
+  pageTypeLabel,
+  readPageTypeEvidence,
+  type PageTypeEvidenceView,
+} from '@/lib/site-health/page-types';
 import {
   dimensionLabel,
   issueTitle,
@@ -216,6 +223,11 @@ function HeaderCard({
 }>) {
   const queryClient = useQueryClient();
   const [reaudited, setReaudited] = useState(false);
+  // The persisted classifier evidence behind `page_type` ("why this type?"
+  // disclosure); null for pages analyzed before evidence persistence or not
+  // yet analyzed, in which case the toggle is not offered at all.
+  const pageTypeEvidence = readPageTypeEvidence(detail.page_type_evidence, detail.page_type);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   const rerun = useMutation({
     ...siteHealthMutations.rerunPage(),
     onSuccess: async (result) => {
@@ -271,6 +283,33 @@ function HeaderCard({
           <span className="flex items-center gap-1.5">
             <Label>Page Type</Label>
             <PageTypeBadge pageType={detail.page_type} />
+            {pageTypeEvidence ? (
+              <button
+                type="button"
+                aria-expanded={evidenceOpen}
+                aria-controls="page-type-evidence"
+                aria-label={
+                  pageTypeEvidence.schemaConflict
+                    ? 'Why this page type? Schema markup disagrees.'
+                    : 'Why this page type?'
+                }
+                onClick={() => setEvidenceOpen((open) => !open)}
+                className="text-accent-text inline-flex items-center gap-1 text-xs font-medium"
+              >
+                {evidenceOpen ? (
+                  <ChevronDown className="size-3" aria-hidden />
+                ) : (
+                  <ChevronRight className="size-3" aria-hidden />
+                )}
+                Why this type?
+                {pageTypeEvidence.schemaConflict ? (
+                  <span
+                    className="bg-warning ms-0.5 inline-block size-[5px] rounded-full"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            ) : null}
           </span>
           <span className="flex items-center gap-1.5">
             <Label>Last Audit</Label>
@@ -283,8 +322,139 @@ function HeaderCard({
             </Badge>
           </span>
         </div>
+        {pageTypeEvidence && evidenceOpen ? (
+          <PageTypeEvidencePanel evidence={pageTypeEvidence} finalPageType={detail.page_type} />
+        ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The expanded "why this type?" disclosure (approved mockup
+ * why-this-type-expanded): the classifier verdict facts, a highlighted
+ * warning when the schema-suggested type conflicts with the final type, and
+ * the ranked matched signals with their weights. Purely presentational —
+ * all parsing/shaping lives in `readPageTypeEvidence`.
+ */
+function PageTypeEvidencePanel({
+  evidence,
+  finalPageType,
+}: Readonly<{ evidence: PageTypeEvidenceView; finalPageType: string | null }>) {
+  const WarningIcon = ICONS.warning;
+  return (
+    <div id="page-type-evidence">
+      <div className="border-border-subtle bg-background-alt grid gap-3 rounded-lg border p-3">
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+          <span className="grid gap-0.5">
+            <Label>Classified by</Label>
+            <span className="mono text-foreground text-sm font-semibold">
+              {evidence.classifiedBy}
+            </span>
+          </span>
+          <span className="grid gap-0.5">
+            <Label>Confidence</Label>
+            <span className="mono text-foreground text-sm font-semibold">
+              {evidence.confidence.toFixed(2)}{' '}
+              <span className="text-muted font-medium">
+                / {evidence.confidenceThreshold.toFixed(2)} threshold
+              </span>
+            </span>
+          </span>
+          <span className="grid gap-0.5">
+            <Label>Schema suggests</Label>
+            <span
+              className={cn(
+                'mono text-sm font-semibold',
+                evidence.schemaConflict ? 'text-warning-text' : 'text-foreground',
+              )}
+            >
+              {evidence.schemaSuggestedType === null
+                ? PLACEHOLDER
+                : pageTypeLabel(evidence.schemaSuggestedType)}
+            </span>
+          </span>
+          <span className="grid gap-0.5">
+            <Label>Signals matched</Label>
+            <span className="mono text-foreground text-sm font-semibold">
+              {evidence.signals.length}
+            </span>
+          </span>
+        </div>
+
+        {evidence.schemaConflict && evidence.schemaSuggestedType !== null ? (
+          <div
+            role="note"
+            className="border-warning-border bg-warning-bg text-warning-text flex items-start gap-2 rounded-md border px-3 py-2 text-sm"
+          >
+            <WarningIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <div>
+              Schema markup on this page declares{' '}
+              <span className="mono">{pageTypeLabel(evidence.schemaSuggestedType)}</span>, which
+              disagrees with the chosen type. URL and content signals outrank schema, so the page is
+              treated as {finalPageType === null ? PLACEHOLDER : pageTypeLabel(finalPageType)} —
+              check whether the markup belongs here.
+            </div>
+          </div>
+        ) : null}
+
+        {evidence.signals.length > 0 ? (
+          <div className="grid">
+            {evidence.signals.map((signal, index) => {
+              const chosen = signal.signal === evidence.classifiedBy;
+              return (
+                <div
+                  key={signal.signal}
+                  className="border-border-subtle flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-1.5 last:border-b-0"
+                >
+                  <span className="mono text-muted w-[18px] shrink-0 text-xs">{index + 1}</span>
+                  <span
+                    className={cn('mono text-sm', chosen ? 'text-foreground' : 'text-secondary')}
+                  >
+                    {signal.signal}
+                    {chosen ? (
+                      <span className="text-2xs text-accent-text ms-1.5 font-medium">chosen</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0">
+                    <Badge>{pageTypeLabel(signal.pageType)}</Badge>
+                  </span>
+                  <span
+                    className={cn(
+                      'mono text-sm font-semibold tabular-nums',
+                      chosen ? 'text-foreground' : 'text-secondary',
+                    )}
+                  >
+                    {signal.weight.toFixed(2)}
+                  </span>
+                  <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="bg-border h-[3px] w-14 shrink-0 rounded-full">
+                      <span
+                        className="bg-accent block h-[3px] rounded-full opacity-60"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, signal.weight * 100))}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="mono text-muted truncate text-xs" title={signal.detail}>
+                      {signal.detail}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div className="text-2xs text-muted flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span>
+            Signals are evaluated in a fixed priority order; the highest-priority match sets the
+            type.
+          </span>
+          <span className="mono ms-auto">{evidence.classifierVersion}</span>
+        </div>
+      </div>
+    </div>
   );
 }
 

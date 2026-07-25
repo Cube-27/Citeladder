@@ -1291,6 +1291,11 @@ async def get_page_detail(
         "error_code": error_code,
         "field_cwv_available": False,
         "page_type": analysis.page_type if analysis is not None else None,
+        # Per-URL detail ONLY: the bounded classifier evidence powering the
+        # "why this type?" disclosure (never projected onto list rows).
+        "page_type_evidence": (
+            analysis.page_type_evidence if analysis is not None else None
+        ),
         "technical_score": (analysis.technical_score if analysis is not None else None),
         "aeo_score": analysis.aeo_score if analysis is not None else None,
         "overall_score": (analysis.overall_score if analysis is not None else None),

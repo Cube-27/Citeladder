@@ -247,6 +247,23 @@ async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:
             scoring_version="v1",
             page_type=page_type,
             classifier_version="sh-classifier-1",
+            # The bounded classifier evidence the analyze writer persists
+            # alongside the classification (shape = to_evidence()).
+            page_type_evidence={
+                "classifier_version": "sh-classifier-1",
+                "classified_by": "path_pattern",
+                "schema_suggested_type": None,
+                "confidence": 0.8,
+                "confidence_threshold": 0.5,
+                "signals": [
+                    {
+                        "signal": "path_pattern",
+                        "page_type": page_type,
+                        "weight": 0.8,
+                        "detail": "^/(blog|news|guides)(/|$)",
+                    }
+                ],
+            },
         )
         session.add(analysis)
         await session.flush()
@@ -522,13 +539,22 @@ async def test_page_type_projection_filters_and_exports(
     assert [row["site_url_id"] for row in i_items] == [str(scn.issue_url_id)]
     assert i_items[0]["page_type"] == "product"
 
-    # Per-URL detail carries page_type.
+    # Per-URL detail carries page_type AND its persisted classifier evidence
+    # (the "why this type?" disclosure payload); the lightweight list rows
+    # above never project the evidence.
     detail = await client.get(
         f"/api/v1/site-crawls/{scn.crawl_id}/pages/{scn.issue_url_id}",
         headers=headers,
     )
     assert detail.status_code == 200
     assert detail.json()["page_type"] == "product"
+    detail_evidence = detail.json()["page_type_evidence"]
+    assert detail_evidence is not None
+    assert detail_evidence["classifier_version"] == "sh-classifier-1"
+    assert detail_evidence["classified_by"] == "path_pattern"
+    assert detail_evidence["signals"][0]["page_type"] == "product"
+    assert "page_type_evidence" not in pages.json()["items"][0]
+    assert "page_type_evidence" not in i_items[0]
 
     # Issues filter by the affected analysis's page_type.
     product_issues = await client.get(

@@ -329,6 +329,10 @@ class PageDetail(_Model):
     field_cwv_available: Literal[False] = False
     # Classified page type (v2 P1); None until the URL has an analysis.
     page_type: str | None
+    # Bounded classifier evidence behind ``page_type`` (ranked signals,
+    # confidence, schema suggestion) for the "why this type?" disclosure;
+    # None until the URL has an analysis.
+    page_type_evidence: dict | None = None
     technical_score: float | None
     aeo_score: float | None
     overall_score: float | None

@@ -42,6 +42,29 @@ function detail(overrides: Partial<PageDetail> = {}): PageDetail {
     issue_count: 2,
     last_audited: '2026-07-16T00:00:00Z',
     page_type: 'product',
+    // Persisted classifier evidence (v2 P1) — a schema-conflict scenario:
+    // the path pattern chose Product while the markup declares Article.
+    page_type_evidence: {
+      classifier_version: 'sh-classifier-1',
+      classified_by: 'path_pattern',
+      schema_suggested_type: 'article',
+      confidence: 1.3,
+      confidence_threshold: 0.5,
+      signals: [
+        {
+          signal: 'path_pattern',
+          page_type: 'product',
+          weight: 0.8,
+          detail: '^/(products?|p|shop)(/|$)',
+        },
+        {
+          signal: 'structured_data',
+          page_type: 'article',
+          weight: 0.5,
+          detail: 'Article',
+        },
+      ],
+    },
     facts: {
       title: 'Best&Less Online',
       meta_description: null,
@@ -148,6 +171,57 @@ describe('UrlDetail', () => {
     const high = screen.getByText('WebSite schema is missing');
     const low = screen.getByText('FAQ schema not present');
     expect(high.compareDocumentPosition(low) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('discloses the persisted classifier evidence via the "why this type?" toggle', async () => {
+    mswServer.use(...handlers(detail()));
+    const user = userEvent.setup();
+
+    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    // Collapsed by default: the toggle advertises the schema conflict, the
+    // panel is not rendered.
+    const toggle = screen.getByRole('button', {
+      name: 'Why this page type? Schema markup disagrees.',
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Classified by')).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    // Verdict facts: winning signal (shown as the verdict AND as the winning
+    // signal row), confidence vs threshold, signals count.
+    expect(screen.getByText('Classified by')).toBeInTheDocument();
+    expect(screen.getAllByText('path_pattern')).toHaveLength(2);
+    expect(screen.getByText(/1\.30/)).toBeInTheDocument();
+    expect(screen.getByText(/\/ 0\.50 threshold/)).toBeInTheDocument();
+    expect(screen.getByText('Signals matched')).toBeInTheDocument();
+    // The schema conflict is highlighted, naming both types.
+    const note = screen.getByRole('note');
+    expect(note).toHaveTextContent('Schema markup on this page declares Article');
+    expect(note).toHaveTextContent('treated as Product');
+    // Ranked signals with weights; the winner carries the "chosen" tag.
+    expect(screen.getByText('structured_data')).toBeInTheDocument();
+    expect(screen.getByText('0.80')).toBeInTheDocument();
+    expect(screen.getByText('chosen')).toBeInTheDocument();
+    expect(screen.getByText('sh-classifier-1')).toBeInTheDocument();
+
+    // Collapsing hides the panel again.
+    await user.click(toggle);
+    expect(screen.queryByText('Classified by')).not.toBeInTheDocument();
+  });
+
+  it('hides the "why this type?" toggle when no classifier evidence was persisted', async () => {
+    mswServer.use(...handlers(detail({ page_type_evidence: null })));
+
+    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    // The badge still renders; only the disclosure is withheld.
+    expect(screen.getByText('Product')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /why this page type/i })).not.toBeInTheDocument();
   });
 
   it('renders the "—" placeholder for a missing score, never a zero', async () => {

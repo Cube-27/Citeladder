@@ -985,6 +985,9 @@ export const pageDetailSchema = z
     issue_count: z.number().int().nullable(),
     last_audited: z.string().nullable(),
     page_type: pageTypeSchema.nullable(),
+    // Bounded classifier evidence behind page_type ("why this type?"
+    // disclosure); null until the URL has an analysis.
+    page_type_evidence: z.record(z.string(), z.unknown()).nullable(),
     facts: pageFactsSchema,
     delivery: deliveryFactsSchema,
     issues: z.array(siteIssueSchema),
