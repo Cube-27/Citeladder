@@ -55,6 +55,33 @@ class TestNormalization:
     def test_interior_punctuation_is_kept(self) -> None:
         assert normalize_prompt_text("acme vs. globex") == "acme vs. globex"
 
+    def test_strips_unicode_whitespace_before_trailing_punctuation(self) -> None:
+        # The whitespace collapse runs first, so non-ASCII spaces are already
+        # ASCII by the time trailing punctuation is stripped. Guards the rstrip
+        # rewrite (below) against a regression to an ASCII-only strip.
+        assert normalize_prompt_text("best shoes ?") == "best shoes"
+        assert normalize_prompt_text("best shoes　? ") == "best shoes"
+
+    def test_trailing_strip_is_linear_not_quadratic(self) -> None:
+        """Regression: CodeQL py/polynomial-redos on the old `[\\s?.!,;:]+$`.
+
+        That pattern backtracked from every offset of a long whitespace run
+        that never satisfied the anchor — 16k tabs took ~825ms, and prompt text
+        reaches this from CSV import and the AI suggestion path. Timing the
+        work directly is the only way to catch a reintroduction; a correctness
+        assertion would still pass with the vulnerable regex.
+        """
+        import time
+
+        payload = "\t" * 200_000 + "x"
+        start = time.perf_counter()
+        normalize_prompt_text(payload)
+        elapsed = time.perf_counter() - start
+        # Linear is ~0.5ms here; the old quadratic pattern would need minutes.
+        assert elapsed < 1.0, (
+            f"normalization took {elapsed:.2f}s — likely quadratic again"
+        )
+
     def test_equivalent_texts_hash_identically(self) -> None:
         assert prompt_text_hash("Best Shoes?") == prompt_text_hash("best  shoes")
 

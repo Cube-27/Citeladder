@@ -185,9 +185,7 @@ async def suggest_prompts_endpoint(
         _raise_invalid(exc)
     agent = _resolve_agent()
     try:
-        prompts, topics, dropped = await suggest_prompts(
-            payload=payload, agent=agent
-        )
+        prompts, topics, dropped = await suggest_prompts(payload=payload, agent=agent)
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     except SuggestionOutputError as exc:
@@ -203,9 +201,7 @@ async def suggest_prompts_endpoint(
             SuggestedTopicGroup(
                 name=t.name,
                 prompts=[
-                    PromptSuggestionItem(
-                        text=p.text, theme=p.theme, intent=p.intent
-                    )
+                    PromptSuggestionItem(text=p.text, theme=p.theme, intent=p.intent)
                     for p in t.prompts
                 ],
             )

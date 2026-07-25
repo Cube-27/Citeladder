@@ -451,12 +451,8 @@ async def suggest_prompts(
         existing_texts=existing,
         count=payload.count,
     )
-    raw = await agent.complete_json(
-        system=GENERATION_SYSTEM_PROMPT, user=user_message
-    )
-    rows, topics, dropped = parse_prompt_suggestion_output(
-        raw, existing_texts=existing
-    )
+    raw = await agent.complete_json(system=GENERATION_SYSTEM_PROMPT, user=user_message)
+    rows, topics, dropped = parse_prompt_suggestion_output(raw, existing_texts=existing)
     capped = rows[: payload.count]
     # Re-derive the groups from the capped rows rather than returning the full
     # grouping: the two views must describe the same prompts, or a caller that
