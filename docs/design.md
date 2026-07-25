@@ -1,12 +1,13 @@
 # Design System — Searchify
 
-> The **written form** of the Searchify design system. The product app runs on the **Figma
-> design system ported into `frontend/app/globals.css`** — the royal-blue light theme
-> **verbatim**, plus a newly **authored soft slate-charcoal dark theme** (the Figma midnight
-> dark is deliberately not ported). Marketing is a **fully independent creative system**
-> living in `frontend/app/(marketing)/marketing.css`. Machine guards keep this document, the
-> token files, and WCAG AA in sync (`frontend/app/globals.test.ts`,
-> `frontend/scripts/check-design-tokens.mjs`).
+> The **written form** of the Searchify design system, and its authority: the Figma reference
+> files this was ported from have been removed now that the port is complete. The product app
+> runs on **`frontend/app/globals.css`** — the royal-blue light theme **verbatim** from Figma,
+> plus the **warm-charcoal "dusk" dark theme shared with marketing** (neither the Figma
+> midnight dark nor the earlier slate-charcoal is used). Marketing keeps its own creative
+> system in `frontend/app/(marketing)/marketing.css`, whose dusk palette the app's dark theme
+> now shares. Machine guards keep this document, the token files, and WCAG AA in sync
+> (`frontend/app/globals.test.ts`, `frontend/scripts/check-design-tokens.mjs`).
 > Companion docs: [`../Agents.md`](../Agents.md), [`invariants.md`](invariants.md),
 > [`backend-architecture.md`](backend-architecture.md), [`frontend-architecture.md`](frontend-architecture.md).
 
@@ -21,9 +22,9 @@
   a flat/hairline-only language), one **royal-blue accent `#2756FF`** reserved for data,
   links, active states and focus rings, vivid semantic colors, **Inter** for UI text and
   **Geist Mono** tabular numerals for every metric, 4px grid, WCAG 2.1 AA.
-- **Light is the default theme.** The dark theme is a full sibling: an **authored soft
-  slate-charcoal** in the Perplexity/Claude family — never near-black, with clearly lighter
-  elevated surfaces (see §6). Every documented text/surface pair in **both** themes meets
+- **Light is the default theme.** The dark theme is a full sibling: the **warm-charcoal dusk**
+  system shared with marketing — never near-black, with clearly lighter elevated surfaces and
+  a violet accent (see §6). Every documented text/surface pair in **both** themes meets
   **AA ≥ 4.5:1**, computed programmatically in `globals.test.ts`.
 
 ## 2. Theme model
@@ -52,10 +53,11 @@ light, violet in dark (the former green identity is dropped — confirmed produc
 
 Rule: **same name, new Figma value** wherever a semantic equivalent exists; **new token**
 only for new concepts; where our set is finer-grained than Figma's, alias to the nearest
-Figma value and document it. Figma source: `docs/redesign/figma/tokens.css` (tokens) and
-`docs/redesign/figma/DesignSystemSheet.tsx` (type scale, buttons, badges, elevation).
+Figma value and document it. The Figma source files were reference material for the port and
+have been removed now that it is complete — this document is the authority for the resulting
+token set, and `frontend/app/globals.css` for its values.
 
-| Figma (`docs/redesign/figma/tokens.css`) | Searchify token(s) | Notes |
+| Figma token | Searchify token(s) | Notes |
 |---|---|---|
 | `--blue-50..900`, `--neutral-0..900` | NEW primitive ramps, same names | globals.css-only layer; semantic tokens reference these; not theme-overridden |
 | `--surface-page` | `--bg-base` | light `#F7F8FA` verbatim; dark authored (§6) |
@@ -536,7 +538,8 @@ semantic aliases.
 ## 10. Component-primitive inventory
 
 All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Figma specs
-(`docs/redesign/figma/DesignSystemSheet.tsx` buttons/badges/elevation, `docs/redesign/figma/ScoreRing.tsx` score ring, `docs/redesign/figma/Sparkline.tsx` sparkline).
+(buttons/badges/elevation, score ring, sparkline) — see the component source in
+`frontend/components/ui/`, which is now the authority.
 
 | Primitive | Notes |
 |---|---|
@@ -634,7 +637,7 @@ mono score dict; Sentiment `—`.
 
 ### 11.7 Measurement + action surfaces
 
-**Site Health** (`/site-health`) — crawl/page detail per `docs/redesign/figma/SiteHealthDetail.tsx`: score presentation
+**Site Health** (`/site-health`) — crawl/page detail: score presentation
 (score-band tokens), issue grouping layout, page table. **Issues**, **Content**,
 **Knowledge Base** (description/positioning/products/audience editor + consent-gated "Draft
 with AI" review flow), **Products**, **Analytics**, **Traffic**, **Settings** (providers /

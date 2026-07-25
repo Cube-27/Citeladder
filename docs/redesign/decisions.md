@@ -11,16 +11,14 @@ conflicts with a decision below, the decision wins.
 2. **What was rejected about the old design:** too dark/gloomy, bland/generic, too
    dense/cramped, fonts too small. The new app must feel like a clean, modern,
    customer/enterprise-facing SaaS; marketing must be dramatically more ambitious.
-3. **App visual language = the owner's Figma design system** (`docs/redesign/figma/`), light
+3. **App visual language = the owner's Figma design system** (reference files since removed), light
    theme ported **verbatim** (royal blue `#2756FF` anchor, blue-gray neutrals, Inter,
    14px-based type scale).
 4. **Dark theme is AUTHORED, not ported.** The Figma midnight dark (`#09090F`/`#0D1228`
    near-black) was explicitly rejected. The new dark theme is a **Perplexity/Claude-style
    lighter soft charcoal** — never near-black, elevated surfaces clearly lighter than the
    base. Exact ramp lives in the approved mockups
-   (`docs/redesign/designs/app-visibility-overview-dark.html`,
-   `app-prompts-list-dark.html`) and is now implemented in `frontend/app/globals.css`
-   (with two documented AA-driven value nudges). Machine-enforced: `frontend/app/globals.test.ts`
+   was superseded: see decision 12 below. Implemented in `frontend/app/globals.css`. Machine-enforced: `frontend/app/globals.test.ts`
    asserts a not-near-black luminance floor, `base < panel ≤ elevated` ordering, and AA pairs.
 5. **Light is the default theme**; dark remains a full sibling. The theme toggle stays.
    Stored user choice is respected (`frontend/lib/theme.ts`).
@@ -63,7 +61,7 @@ conflicts with a decision below, the decision wins.
     when the AI agent is not configured (503 path).
 14. Onboarding visual language: Figma `OnboardingScreen.tsx` layout (split screen: left
     stepper/form, right live-preview panel), per approved mockups
-    (`docs/redesign/designs/onboarding-*.html`).
+    (mockups since removed; see the implementation in `frontend/components/onboarding/`).
 
 ## Hard rules that outrank aesthetics
 

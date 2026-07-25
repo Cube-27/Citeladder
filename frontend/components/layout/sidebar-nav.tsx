@@ -11,7 +11,7 @@ import { NAV_GROUPS, type NavItem } from './nav-items';
 
 /**
  * SidebarNav — grouped sidebar navigation in the v2 Figma shell language
- * (docs/redesign/figma/AppShell.tsx; docs/design.md §9.2).
+ * (docs/design.md §9.2).
  *
  * Rows are 36px. The active item is an accent statement — `bg-accent-subtle`
  * fill, `text-accent-text` label, a 3px accent bar on the leading edge, and a

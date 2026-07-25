@@ -13,7 +13,7 @@ import { UserMenu } from './user-menu';
 
 /**
  * AppShell — the authed-area chrome in the v2 Figma shell language
- * (docs/redesign/figma/AppShell.tsx; docs/design.md §9.2).
+ * (docs/design.md §9.2).
  *
  * Geometry: a 220px left sidebar (`bg-sidebar`) stacked as logo row → project
  * switcher + command row → grouped nav → user card, each band separated by a
