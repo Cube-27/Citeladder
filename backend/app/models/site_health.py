@@ -50,6 +50,7 @@ from app.core.config.site_health import (
     FREE_SAMPLE_URL_LIMIT,
     INITIAL_TASK_GENERATION,
     PAGE_ANALYSIS_STATUS_PENDING,
+    PAGE_TYPE_OTHER,
     SELECTION_SOURCE_USER,
     TASK_KIND_DISCOVER,
     site_health_settings,
@@ -238,6 +239,12 @@ class SiteCrawl(Base):
     failed_url_count: Mapped[int] = mapped_column(Integer, default=0)
     inventory_complete: Mapped[bool] = mapped_column(Boolean, default=False)
     score_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # v2 P2 (spec §5.5): bounded site-level facts written ONCE by the root
+    # discover task's site setup (robots.txt AI-crawler stance, llms.txt
+    # result, sitemap file list). Both the dashboard display copy and the
+    # injection source for the site_root-scoped rules (facts["site"]); it
+    # carries NO discovered totals, so Free non-disclosure is untouched.
+    site_facts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     extractor_version: Mapped[str] = mapped_column(String(32), default="")
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     rule_catalog_version: Mapped[str] = mapped_column(String(32), default="")
@@ -771,6 +778,11 @@ class SitePageAnalysis(Base):
     overall_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     scoring_version: Mapped[str] = mapped_column(String(32), default="")
+    # v2 P1: the deterministic page-type classification + its version
+    # (invariant 4). ``other`` is the fail-safe default when no signal
+    # classifies the page.
+    page_type: Mapped[str] = mapped_column(String(24), default=PAGE_TYPE_OTHER)
+    classifier_version: Mapped[str] = mapped_column(String(32), default="")
     # Source provenance arrays (evaluation + artifact IDs).
     source_evaluation_ids: Mapped[list | None] = mapped_column(
         ARRAY(PGUUID(as_uuid=True)), nullable=True
