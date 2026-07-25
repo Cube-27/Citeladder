@@ -455,6 +455,51 @@ BOT_BLOCK_TLS_ERROR_MARKERS: Final[tuple[str, ...]] = (
 )
 
 # =========================================================================
+# Fetch engine provenance tokens (v2 P3 — spec §5.5)
+# =========================================================================
+# The transport that produced a ``SiteFetchAttempt`` row / ``SiteFetchArtifact``
+# (the artifact's ``fetch_engine`` column default references ``FETCH_ENGINE_HTTPX``
+# — never hardcode these strings in model or service code, invariant 1).
+# ``browser`` is RESERVED for the P4 headless-browser rung: nothing emits it
+# in v2.
+FETCH_ENGINE_HTTPX: Final = "httpx"
+FETCH_ENGINE_CURL_CFFI: Final = "curl_cffi"
+FETCH_ENGINE_BROWSER: Final = "browser"
+FETCH_ENGINES: Final[frozenset[str]] = frozenset(
+    {FETCH_ENGINE_HTTPX, FETCH_ENGINE_CURL_CFFI, FETCH_ENGINE_BROWSER}
+)
+
+# =========================================================================
+# Fetch-mode vocabulary (v2 P3 — spec §5.4): the crawl's fetch ladder
+# =========================================================================
+# Frozen into ``SiteCrawl.configuration`` at creation (invariant 9) so a live
+# config change never alters an in-flight crawl's ladder.
+#   auto               — rung 1 (httpx), escalating to rung 2 (impersonated
+#                        curl_cffi) on a bot-block signature (the default).
+#   http_only          — rung 1 only; the impersonated escalation never fires.
+#   browser_only / http_then_browser — RESERVED for the P4 headless-browser
+#                        rung. They are part of the vocabulary but NOT active
+#                        in v2: crawl creation REJECTS them with a validation
+#                        error (never silently accepted-and-inert).
+FETCH_MODE_AUTO: Final = "auto"
+FETCH_MODE_HTTP_ONLY: Final = "http_only"
+FETCH_MODE_BROWSER_ONLY: Final = "browser_only"
+FETCH_MODE_HTTP_THEN_BROWSER: Final = "http_then_browser"
+FETCH_MODES: Final[frozenset[str]] = frozenset(
+    {
+        FETCH_MODE_AUTO,
+        FETCH_MODE_HTTP_ONLY,
+        FETCH_MODE_BROWSER_ONLY,
+        FETCH_MODE_HTTP_THEN_BROWSER,
+    }
+)
+# v2 activates exactly these two; anything outside this set is rejected.
+ACTIVE_FETCH_MODES: Final[frozenset[str]] = frozenset(
+    {FETCH_MODE_AUTO, FETCH_MODE_HTTP_ONLY}
+)
+DEFAULT_FETCH_MODE: Final = FETCH_MODE_AUTO
+
+# =========================================================================
 # Safe per-task error tokens (never persist raw bodies/sensitive headers)
 # =========================================================================
 ERROR_ROBOTS_DENIED: Final = "robots_denied"
@@ -472,6 +517,13 @@ ERROR_HTTP_4XX: Final = "http_4xx"
 ERROR_HTTP_5XX: Final = "http_5xx"
 ERROR_CONNECTION_FAILED: Final = "connection_failed"
 ERROR_MALFORMED_RESPONSE: Final = "malformed_response"
+# v2 P3: BOTH fetch-ladder rungs returned signature-detected bot blocks (rung
+# 1 tripped a BOT_BLOCK_* signature AND the impersonated rung-2 response
+# matched one too). Distinct from the generic ``http_4xx`` so an exhausted
+# bot block presents as ``blocked`` — a plain returned 403 must NOT classify
+# here (it stays ``http_4xx``). The terminal rung-2 response is retained in
+# the per-call trace only; it never becomes an analyzable artifact.
+ERROR_BOT_BLOCKED: Final = "bot_blocked"
 SITE_FETCH_ERROR_TOKENS: Final[frozenset[str]] = frozenset(
     {
         ERROR_ROBOTS_DENIED,
@@ -486,6 +538,7 @@ SITE_FETCH_ERROR_TOKENS: Final[frozenset[str]] = frozenset(
         ERROR_HTTP_5XX,
         ERROR_CONNECTION_FAILED,
         ERROR_MALFORMED_RESPONSE,
+        ERROR_BOT_BLOCKED,
     }
 )
 
@@ -497,6 +550,7 @@ POLICY_BLOCKING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         ERROR_ROBOTS_DENIED,
         ERROR_ROBOTS_UNAVAILABLE,
         ERROR_SSRF_BLOCKED,
+        ERROR_BOT_BLOCKED,
     }
 )
 

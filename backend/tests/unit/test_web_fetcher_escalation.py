@@ -736,3 +736,26 @@ async def test_trace_covers_rung1_redirect_hops_before_escalation():
 async def test_fetch_error_attempts_default_empty_for_direct_construction():
     err = FetchError("x", error_code="timeout")
     assert err.attempts == ()
+
+
+# --- fetch-mode knob: allow_escalation=False (http_only, T8) ----------------
+
+
+async def test_allow_escalation_false_never_fires_rung2():
+    """``allow_escalation=False`` (the crawl's frozen ``http_only`` mode): a
+    bot-block signature on rung 1 stands — no curl session is built, the
+    rung-1 result is returned, and the trace holds only the rung-1 call."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _rung1_response(403, body=b"<html><body>Just a moment</body></html>")
+
+    resolver = _FakeResolver()
+    fetcher, factory_calls, _curl_calls = _escalation_fetcher(
+        handler, resolver, [_Script(200)]
+    )
+    async with fetcher:
+        result = await fetcher.fetch(_request(allow_escalation=False))
+    assert result.status_code == 403
+    assert factory_calls == []
+    trace = [(a.rung_number, a.request_ordinal, a.status_code) for a in result.attempts]
+    assert trace == [(1, 0, 403)]

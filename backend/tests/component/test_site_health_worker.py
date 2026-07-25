@@ -46,9 +46,14 @@ from app.core.config.site_health import (
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
     DISCOVERY_STATUS_SAMPLE_COMPLETED,
+    ERROR_BOT_BLOCKED,
+    ERROR_HTTP_4XX,
     ERROR_ROBOTS_DENIED,
     ERROR_ROBOTS_UNAVAILABLE,
     EXTRACTOR_VERSION,
+    FETCH_ENGINE_CURL_CFFI,
+    FETCH_ENGINE_HTTPX,
+    FETCH_MODE_HTTP_ONLY,
     OBSERVATION_SOURCE_SITEMAP,
     PAGE_TYPE_PROFILES,
     RULE_CATALOG_VERSION,
@@ -72,6 +77,7 @@ from app.core.config.task_queue import (
 )
 from app.domain.site_health.entitlements import set_entitlement
 from app.domain.site_health.normalization import canonical_identity
+from app.domain.site_health.service import presentation_status_for
 from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
@@ -85,7 +91,11 @@ from app.models.site_health import (
     SiteUrl,
     SiteUrlObservation,
 )
-from app.workers.site_health_worker import SiteHealthWorker
+from app.workers.site_health_worker import (
+    _OUTCOME_ERROR,
+    _OUTCOME_SUCCESS,
+    SiteHealthWorker,
+)
 from tests.component.site_health_helpers import seed_site_crawl
 
 _PUBLIC_IP = "93.184.216.34"
@@ -119,11 +129,13 @@ class _StubCurlSession:
 
     Replays one scripted status so worker tests that return a bot-block
     signature status (401/403/503) never touch the real network when the
-    curl_cffi escalation rung fires.
+    curl_cffi escalation rung fires. ``body`` is the scripted decoded payload
+    (default a tiny stub) so a winning rung 2 can serve real HTML.
     """
 
-    def __init__(self, status: int) -> None:
+    def __init__(self, status: int, *, body: bytes = b"stub") -> None:
         self._status = status
+        self._body = body
 
     async def __aenter__(self) -> _StubCurlSession:
         return self
@@ -134,7 +146,7 @@ class _StubCurlSession:
     async def request(self, method, url, **kwargs):
         callback = kwargs.get("content_callback")
         if callback is not None:
-            callback(b"stub")
+            callback(self._body)
         return httpx.Response(self._status, headers={"content-type": "text/html"})
 
 
@@ -3396,3 +3408,302 @@ async def test_analyze_injects_site_facts_on_root_analysis_only(
             "inline_script_chars",
         ):
             assert key in facts, key
+
+
+# --- v2 P3: fetch-engine provenance + fetch modes (T8) ---------------------
+
+
+@pytest.mark.asyncio
+async def test_escalated_fetch_persists_one_attempt_row_per_network_call(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A bot-blocked rung 1 escalating to a winning curl_cffi rung 2 persists
+    TWO ``SiteFetchAttempt`` rows for ONE queue attempt (T8): the blocked
+    first call (``httpx``, rung 1, ordinal 0) and the successful escalation
+    (``curl_cffi``, rung 2, ordinal 1), sharing ``attempt_number == 1`` and
+    ordered by ``request_ordinal`` — with ONLY the winning curl row linked to
+    the artifact (a blocked rung is an attempt only, never an artifact
+    generation), and the artifact stamped ``curl_cffi``.
+    """
+    root = "https://example.com/"
+    seed = await _seed_root_discover(session_factory, root=root)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/":
+            return httpx.Response(
+                403,
+                headers={"content-type": "text/html"},
+                stream=_ByteStream(b"<html><body>Just a moment...</body></html>"),
+            )
+        # robots/llms/sitemap probes: absent (404 -> allow-all, no escalation).
+        return httpx.Response(404, stream=_ByteStream(b"not found"))
+
+    worker = SiteHealthWorker(
+        session_factory=session_factory,
+        owner="p3-escalate",
+        resolver=_FakeResolver(),
+        transport=httpx.MockTransport(handler),
+        curl_session_factory=lambda **kwargs: _StubCurlSession(
+            200, body=_html([], title="Home")
+        ),
+    )
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task is not None
+        assert task.status == TASK_STATUS_SUCCEEDED
+
+        artifact = await session.scalar(
+            select(SiteFetchArtifact).where(SiteFetchArtifact.task_id == task.id)
+        )
+        assert artifact is not None
+        assert artifact.status_code == 200
+        assert artifact.fetch_engine == FETCH_ENGINE_CURL_CFFI
+
+        rows = (
+            (
+                await session.execute(
+                    select(SiteFetchAttempt)
+                    .where(SiteFetchAttempt.task_id == task.id)
+                    .order_by(SiteFetchAttempt.request_ordinal)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 2
+        blocked, won = rows
+        # The blocked rung-1 call survives as its own row (never linked).
+        assert blocked.attempt_number == 1
+        assert blocked.request_ordinal == 0
+        assert blocked.rung_number == 1
+        assert blocked.fetch_engine == FETCH_ENGINE_HTTPX
+        assert blocked.status_code == 403
+        assert blocked.outcome == _OUTCOME_ERROR
+        assert blocked.artifact_id is None
+        # The winning escalation row carries the artifact + engine.
+        assert won.attempt_number == 1
+        assert won.request_ordinal == 1
+        assert won.rung_number == 2
+        assert won.fetch_engine == FETCH_ENGINE_CURL_CFFI
+        assert won.status_code == 200
+        assert won.outcome == _OUTCOME_SUCCESS
+        assert won.artifact_id == artifact.id
+
+
+@pytest.mark.asyncio
+async def test_plain_fetch_persists_httpx_engine(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A plain (unblocked) fetch persists ONE attempt row with
+    ``fetch_engine="httpx"`` (rung 1, ordinal 0) linked to the artifact,
+    which is itself stamped ``httpx`` — the default provenance (T8)."""
+    root = "https://example.com/"
+    seed = await _seed_root_discover(session_factory, root=root)
+    pages = {"/": _html([], title="Home")}
+    # No curl factory: a 200 never escalates, so rung 2 stays unreachable.
+    worker = _worker(session_factory, pages, owner="p3-plain")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task is not None
+        assert task.status == TASK_STATUS_SUCCEEDED
+
+        artifact = await session.scalar(
+            select(SiteFetchArtifact).where(SiteFetchArtifact.task_id == task.id)
+        )
+        assert artifact is not None
+        assert artifact.fetch_engine == FETCH_ENGINE_HTTPX
+
+        rows = (
+            (
+                await session.execute(
+                    select(SiteFetchAttempt).where(SiteFetchAttempt.task_id == task.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 1
+        row = rows[0]
+        assert row.attempt_number == 1
+        assert row.request_ordinal == 0
+        assert row.rung_number == 1
+        assert row.fetch_engine == FETCH_ENGINE_HTTPX
+        assert row.status_code == 200
+        assert row.outcome == _OUTCOME_SUCCESS
+        assert row.artifact_id == artifact.id
+
+
+@pytest.mark.asyncio
+async def test_http_only_fetch_mode_never_escalates(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The frozen ``http_only`` fetch mode DISABLES rung 2: a bot-block
+    signature on rung 1 keeps the generic ``http_4xx`` classification, no
+    curl session is ever built, and exactly one (httpx) attempt row persists
+    with no artifact (T8)."""
+    root = "https://example.com/"
+    seed = await _seed_root_discover(session_factory, root=root)
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        config = dict(crawl.configuration or {})
+        config["fetch_mode"] = FETCH_MODE_HTTP_ONLY
+        crawl.configuration = config
+        await session.commit()
+
+    curl_sessions_built = 0
+
+    def curl_factory(**kwargs) -> _StubCurlSession:
+        nonlocal curl_sessions_built
+        curl_sessions_built += 1
+        return _StubCurlSession(200, body=_html([], title="Home"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/":
+            return httpx.Response(
+                403,
+                headers={"content-type": "text/html"},
+                stream=_ByteStream(b"<html><body>Just a moment...</body></html>"),
+            )
+        return httpx.Response(404, stream=_ByteStream(b"not found"))
+
+    worker = SiteHealthWorker(
+        session_factory=session_factory,
+        owner="p3-httponly",
+        resolver=_FakeResolver(),
+        transport=httpx.MockTransport(handler),
+        curl_session_factory=curl_factory,
+    )
+    await worker.run_until_idle()
+
+    # The escalation rung never fired despite the 403 + challenge marker.
+    assert curl_sessions_built == 0
+
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task is not None
+        assert task.status == TASK_STATUS_FAILED
+        assert task.error_code == ERROR_HTTP_4XX
+
+        rows = (
+            (
+                await session.execute(
+                    select(SiteFetchAttempt).where(SiteFetchAttempt.task_id == task.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 1
+        assert rows[0].fetch_engine == FETCH_ENGINE_HTTPX
+        assert rows[0].rung_number == 1
+        assert rows[0].status_code == 403
+        assert rows[0].outcome == _OUTCOME_ERROR
+        assert rows[0].error_code == ERROR_HTTP_4XX
+        assert rows[0].artifact_id is None
+
+        artifact_count = await session.scalar(
+            select(func.count())
+            .select_from(SiteFetchArtifact)
+            .where(SiteFetchArtifact.task_id == task.id)
+        )
+        assert artifact_count == 0
+
+
+@pytest.mark.asyncio
+async def test_exhausted_bot_block_presents_blocked_via_bot_blocked_token(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """BOTH rungs signature-blocked -> terminal ``bot_blocked`` + ``blocked``.
+
+    The analyze fetch's rung 1 returns 403 + a challenge marker and the
+    impersonated rung-2 response is ALSO a signature block, so the task fails
+    non-retryably with ``ERROR_BOT_BLOCKED`` (never the generic ``http_4xx``),
+    persists one attempt row per network call (httpx then curl_cffi, neither
+    linked to an artifact), writes NO analyzable artifact (the terminal curl
+    response lives in the trace only), and presents the URL as ``blocked``
+    via ``POLICY_BLOCKING_ERROR_CODES`` (T8, spec §5.4/§5.5).
+    """
+    seed, _site_url_id, task_id = await _seed_analyze_ready(session_factory)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/rich":
+            return httpx.Response(
+                403,
+                headers={"content-type": "text/html"},
+                stream=_ByteStream(b"<html><body>Just a moment...</body></html>"),
+            )
+        return httpx.Response(404, stream=_ByteStream(b"not found"))
+
+    worker = SiteHealthWorker(
+        session_factory=session_factory,
+        owner="p3-bothblocked",
+        resolver=_FakeResolver(),
+        transport=httpx.MockTransport(handler),
+        curl_session_factory=lambda **kwargs: _StubCurlSession(
+            403,
+            body=b"<html><body>Attention Required! challenge-platform</body></html>",
+        ),
+    )
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        task = await session.get(SiteCrawlTask, task_id)
+        assert task is not None
+        assert task.status == TASK_STATUS_FAILED
+        assert task.error_code == ERROR_BOT_BLOCKED
+
+        # Both network calls persist, in order, with their engines; neither
+        # is linked to an artifact (no artifact generation for a blocked rung).
+        rows = (
+            (
+                await session.execute(
+                    select(SiteFetchAttempt)
+                    .where(SiteFetchAttempt.task_id == task_id)
+                    .order_by(SiteFetchAttempt.request_ordinal)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 2
+        assert [row.fetch_engine for row in rows] == [
+            FETCH_ENGINE_HTTPX,
+            FETCH_ENGINE_CURL_CFFI,
+        ]
+        assert [row.rung_number for row in rows] == [1, 2]
+        assert [row.status_code for row in rows] == [403, 403]
+        assert all(row.artifact_id is None for row in rows)
+        # The terminal call carries the classified token.
+        assert rows[0].outcome == _OUTCOME_ERROR
+        assert rows[1].outcome == _OUTCOME_ERROR
+        assert rows[1].error_code == ERROR_BOT_BLOCKED
+
+        # No analyzable artifact was created from the blocked curl response.
+        artifact_count = await session.scalar(
+            select(func.count())
+            .select_from(SiteFetchArtifact)
+            .where(SiteFetchArtifact.task_id == task_id)
+        )
+        assert artifact_count == 0
+        analysis_count = await session.scalar(
+            select(func.count())
+            .select_from(SitePageAnalysis)
+            .where(SitePageAnalysis.crawl_id == seed.crawl_id)
+        )
+        assert analysis_count == 0
+
+        # Presentation: the terminal ``bot_blocked`` task renders ``blocked``.
+        assert presentation_status_for(
+            analysis=None, monitored=True, latest_analyze_task=task
+        ) == ("blocked", ERROR_BOT_BLOCKED)

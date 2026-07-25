@@ -71,9 +71,9 @@ All status/vocabulary constants are owned by
 - **Per-page presentation status** (`PageSummary.analysis_status`): the derived,
   mockup-facing status. A raw `failed` page-analysis row is **never** surfaced as
   page copy — it maps to `error` (or `blocked` for a policy denial such as
-  robots/SSRF, carrying the error code). Possible values: `completed`,
-  `partially_completed`, `pending`, `running`, `error`, `blocked`, `cancelled`,
-  `not_selected`.
+  robots/SSRF or an exhausted bot block, carrying the error code). Possible
+  values: `completed`, `partially_completed`, `pending`, `running`, `error`,
+  `blocked`, `cancelled`, `not_selected`.
 - **Rule outcome**: `pass`, `fail`, `not_applicable`, `error`.
 - **Severity**: `critical`, `high`, `medium`, `low`, `info`.
 - **Dimension**: `technical`, `aeo`.
@@ -90,6 +90,58 @@ All status/vocabulary constants are owned by
 
 ---
 
+## Fetch ladder, fetch modes & fetch-engine provenance
+
+Page evidence is fetched through a two-rung **ladder** inside one
+`SecureFetcher.fetch()` call (no extra queue attempt, no queue-semantics
+change):
+
+1. **Rung 1 — `httpx`**, identifying as the crawler UA
+   (`SearchifySiteHealthBot/1.0`), with the full SSRF posture: manual redirects
+   revalidated per hop, pinned-IP dial, wire + decoded byte caps, response
+   headers redacted to the config allowlist, per-host politeness, robots
+   compliance.
+2. **Rung 2 — impersonated `curl_cffi`**, fired **only** when rung 1 ends on a
+   config-owned bot-block signature (a status in `BOT_BLOCK_STATUSES` — 401/403/
+   503 — a challenge body marker from `BOT_BLOCK_BODY_MARKERS`, or a TLS-layer
+   block per `BOT_BLOCK_TLS_ERROR_MARKERS`). The same request is retried **once**
+   with a Chrome-impersonating session (UA + TLS fingerprint; the settled D2
+   decision — `SITE_HEALTH_CURL_UA_MODE` / `SITE_HEALTH_CURL_IMPERSONATE_TARGET`).
+   Every rung-1 safety property is preserved (manual per-hop redirect
+   revalidation, pinned-IP dial, live wire+decoded caps, header redaction,
+   politeness, robots). A blocked rung-2 response is **not** retried further.
+
+The ladder is governed per crawl by the config-owned **fetch-mode** vocabulary,
+frozen into `SiteCrawl.configuration.fetch_mode` at creation (invariant 9) and
+settable as `fetch_mode` on `POST /site-crawls`:
+
+| Mode | Behavior in v2 |
+|---|---|
+| `auto` (default) | Rung 1, escalating to rung 2 on a bot-block signature. |
+| `http_only` | Rung 1 only; the impersonated escalation never fires. |
+| `browser_only` | **Reserved for P4** — rejected at creation (`422` `invalid_fetch_mode`). |
+| `http_then_browser` | **Reserved for P4** — rejected at creation (`422` `invalid_fetch_mode`). |
+
+Every real network call (either rung, every redirect hop) appends one immutable
+entry to the fetcher's per-call trace, and the worker persists **one
+`SiteFetchAttempt` row per network call** — a blocked losing rung never
+vanishes. `attempt_number` stays the queue-attempt number; `request_ordinal` is
+the deterministic per-call ordinal (order/uniqueness key
+`(task_id, attempt_number, request_ordinal)`); `rung_number` records the ladder
+rung (1 = httpx, 2 = curl_cffi). The **engine that produced the call** is
+recorded as `fetch_engine` (`httpx` | `curl_cffi`; `browser` reserved for P4)
+on every attempt row and on the `SiteFetchArtifact` — and **only the successful
+terminal call links the artifact** (a blocked rung is an attempt only, never an
+artifact generation; the unique one-artifact-per-task constraint stands).
+
+When **both** rungs return signature-detected blocks, the task fails terminally
+with `ERROR_BOT_BLOCKED` (`bot_blocked`) — distinct from the generic `http_4xx`
+so an exhausted bot block presents the page as **`blocked`** (via
+`POLICY_BLOCKING_ERROR_CODES`) instead of `error`. The terminal curl response is
+retained in the per-call trace only and never becomes an analyzable artifact.
+
+---
+
 ## API surface
 
 All endpoints live under `/api/v1` (no `workspace_id` in the path). The active
@@ -102,7 +154,7 @@ typed `400`, never a `500`.
 | Method & path | Purpose |
 |---|---|
 | `GET /entitlements` | Workspace Site Health entitlement (seeds fail-closed Free on first use). |
-| `POST /site-crawls` | Create + queue a crawl for a project. `seed` must be an integer string. `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
+| `POST /site-crawls` | Create + queue a crawl for a project. `seed` must be an integer string; optional `fetch_mode` selects the fetch ladder (`auto` default / `http_only`; the P4-reserved browser modes are `422` `invalid_fetch_mode`). `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
 | `GET /site-crawls?project_id=&limit=&cursor=` | List crawls (created-at keyset). |
 | `GET /site-crawls/{crawl_id}` | Crawl summary/projection (redacted for Free). |
 | `POST /site-crawls/{crawl_id}/cancel` | Cancel a crawl → `cancelled`. |

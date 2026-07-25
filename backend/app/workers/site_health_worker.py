@@ -54,11 +54,12 @@ from app.analysis.site_health.scoring import (
 )
 from app.connectors.web_evidence.contracts import (
     DnsResolver,
+    FetchCallTrace,
     FetchError,
     FetchRequest,
     FetchResult,
 )
-from app.connectors.web_evidence.fetcher import SecureFetcher
+from app.connectors.web_evidence.fetcher import SecureFetcher, is_bot_block_result
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.connectors.web_evidence.sitemaps import (
     SitemapCollector,
@@ -89,6 +90,7 @@ from app.core.config.site_health import (
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
     DISCOVERY_STATUS_SAMPLE_COMPLETED,
+    ERROR_BOT_BLOCKED,
     ERROR_HTTP_4XX,
     ERROR_HTTP_5XX,
     ERROR_ROBOTS_DENIED,
@@ -97,6 +99,10 @@ from app.core.config.site_health import (
     EVENT_CRAWL_COMPLETED,
     EVENT_DISCOVERY_PROGRESS,
     EXTRACTOR_VERSION,
+    FETCH_ENGINE_CURL_CFFI,
+    FETCH_ENGINE_HTTPX,
+    FETCH_MODE_AUTO,
+    FETCH_MODE_HTTP_ONLY,
     FETCH_PURPOSE_ANALYZE,
     FETCH_PURPOSE_DISCOVER,
     FETCH_PURPOSE_LINK_CHECK,
@@ -203,6 +209,11 @@ class _DiscoverOutcome:
     latency_ms: int | None = None
     status_code: int | None = None
     retry_after_seconds: float | None = None
+    # The fetcher's per-network-call trace (T7/T8): one entry per REAL call
+    # (both rungs, every redirect hop), carried from ``FetchResult.attempts``
+    # or ``FetchError.attempts`` so persistence writes one attempt ROW per
+    # call. Empty when no network call happened (robots short-circuit).
+    attempts: tuple[FetchCallTrace, ...] = ()
     site_facts: dict | None = None
     sitemap_urls: tuple[str, ...] = ()
     sitemap_files: tuple[str, ...] = ()
@@ -225,6 +236,8 @@ class _AnalyzeOutcome:
     latency_ms: int | None = None
     status_code: int | None = None
     retry_after_seconds: float | None = None
+    # The fetcher's per-network-call trace (T7/T8), as on ``_DiscoverOutcome``.
+    attempts: tuple[FetchCallTrace, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -255,6 +268,41 @@ def _classify_http_error(status: int) -> tuple[str, bool] | None:
     if status >= 500:
         return ERROR_HTTP_5XX, True
     return None
+
+
+def _fetch_engine_for_rung(rung_number: int | None) -> str:
+    """Map a trace rung number to its config ``FETCH_ENGINE_*`` token (T8)."""
+    if rung_number == 2:
+        return FETCH_ENGINE_CURL_CFFI
+    return FETCH_ENGINE_HTTPX
+
+
+def _result_fetch_engine(result: FetchResult) -> str:
+    """The engine that PRODUCED ``result``: its last trace entry's rung.
+
+    The trace contract guarantees the entry describing a returned result is
+    always last (an escalation continues the ordinal sequence), so the last
+    entry's rung is the winning call's engine. A trace-less result (built
+    directly by a test/caller) defaults to rung 1's engine.
+    """
+    if result.attempts:
+        return _fetch_engine_for_rung(result.attempts[-1].rung_number)
+    return FETCH_ENGINE_HTTPX
+
+
+def _is_exhausted_bot_block(result: FetchResult) -> bool:
+    """True ONLY when BOTH fetch-ladder rungs returned signature blocks (T8).
+
+    Rung 2 fires exclusively on a rung-1 bot-block signature, so a trace
+    containing a rung-2 entry proves rung 1 was signature-blocked; the
+    returned result (which is then rung 2's terminal response) matching the
+    signature proves rung 2 was too. Anything else — a plain returned 403 on
+    rung 1 with no escalation, or an escalated rung-2 200 — is NOT an
+    exhausted bot block and keeps its normal classification.
+    """
+    return any(entry.rung_number == 2 for entry in result.attempts) and (
+        is_bot_block_result(result)
+    )
 
 
 def _count_disclosure(crawl: SiteCrawl) -> bool:
@@ -677,6 +725,9 @@ class SiteHealthWorker:
             root_registrable_domain = config.get("root_registrable_domain") or ""
             include_globs = config.get("include_globs")
             exclude_globs = config.get("exclude_globs")
+            # The crawl's frozen fetch-ladder mode (v2 P3); absent on crawls
+            # created before the freeze — default to the escalation ladder.
+            fetch_mode = config.get("fetch_mode") or FETCH_MODE_AUTO
 
         if kind != TASK_KIND_DISCOVER:
             # Routing is done in ``_execute_task``; a mis-routed kind here is a
@@ -693,6 +744,7 @@ class SiteHealthWorker:
                 exclude_globs=exclude_globs,
                 depth=depth,
                 sample_mode=sample_mode,
+                fetch_mode=fetch_mode,
             )
         finally:
             heartbeat.cancel()
@@ -716,6 +768,7 @@ class SiteHealthWorker:
         exclude_globs: list[str] | None,
         depth: int,
         sample_mode: bool,
+        fetch_mode: str = FETCH_MODE_AUTO,
     ) -> _DiscoverOutcome:
         """Fetch + parse one target into a bounded ``_DiscoverOutcome``.
 
@@ -730,6 +783,12 @@ class SiteHealthWorker:
         site setup — AI-crawler stance, llms.txt probe, and (Starter only)
         sitemap ingestion — whose bounded results ride the outcome into
         ``_persist_discover``.
+
+        v2 P3: ``fetch_mode`` is the crawl's frozen fetch-ladder mode —
+        ``http_only`` disables the impersonated rung-2 escalation. When BOTH
+        rungs returned signature-detected bot blocks the outcome classifies
+        as ``ERROR_BOT_BLOCKED`` (terminal; presentation maps it to
+        ``blocked``), never the generic ``ERROR_HTTP_4XX``.
         """
         authority = _authority_key(requested_url)
         policy: RobotsPolicy | None = None
@@ -778,6 +837,7 @@ class SiteHealthWorker:
             url=requested_url,
             purpose=FETCH_PURPOSE_DISCOVER,
             allowed_content_types=HTML_CONTENT_TYPES,
+            allow_escalation=fetch_mode != FETCH_MODE_HTTP_ONLY,
         )
         started = time.monotonic()
         try:
@@ -798,12 +858,30 @@ class SiteHealthWorker:
                 latency_ms=latency,
                 status_code=exc.status_code,
                 retry_after_seconds=exc.retry_after_seconds,
+                attempts=exc.attempts,
                 site_facts=site_facts,
                 sitemap_urls=sitemap_urls,
                 sitemap_files=sitemap_files,
             )
 
         status = result.status_code
+        # v2 P3: an escalated fetch whose rung-2 response is ITSELF a
+        # signature-detected block means both rungs were bot-blocked —
+        # terminal ``ERROR_BOT_BLOCKED`` (presentation: ``blocked``), not the
+        # generic 4xx token. Checked BEFORE status classification because a
+        # challenge interstitial can even ride a 200.
+        if _is_exhausted_bot_block(result):
+            return _DiscoverOutcome(
+                result=result,
+                error_code=ERROR_BOT_BLOCKED,
+                retryable=False,
+                latency_ms=result.latency_ms,
+                status_code=status,
+                attempts=result.attempts,
+                site_facts=site_facts,
+                sitemap_urls=sitemap_urls,
+                sitemap_files=sitemap_files,
+            )
         # A 4xx/5xx is returned by the fetcher (not raised); classify it.
         classified = _classify_http_error(status)
         if classified is not None:
@@ -814,6 +892,7 @@ class SiteHealthWorker:
                 retryable=retryable,
                 latency_ms=result.latency_ms,
                 status_code=status,
+                attempts=result.attempts,
                 site_facts=site_facts,
                 sitemap_urls=sitemap_urls,
                 sitemap_files=sitemap_files,
@@ -840,6 +919,7 @@ class SiteHealthWorker:
         return _DiscoverOutcome(
             result=result,
             output=output,
+            attempts=result.attempts,
             site_facts=site_facts,
             sitemap_urls=sitemap_urls,
             sitemap_files=sitemap_files,
@@ -1411,6 +1491,9 @@ class SiteHealthWorker:
         Reused by both discover and analyze; ``fetch_purpose`` records why the
         fetch happened and ``normalized_facts`` carries the bounded parsed page
         facts for an analyze artifact (there is NO raw body column anywhere).
+        ``fetch_engine`` records the engine that produced the winning call
+        (the result's last trace entry), so the artifact's provenance matches
+        the per-call attempt rows (invariant 4).
         """
         content_hash = hashlib.sha256(result.body or b"").hexdigest()
         artifact = SiteFetchArtifact(
@@ -1418,6 +1501,7 @@ class SiteHealthWorker:
             crawl_id=crawl.id,
             workspace_id=crawl.workspace_id,
             fetch_purpose=fetch_purpose,
+            fetch_engine=_result_fetch_engine(result),
             requested_url=result.requested_url,
             final_url=result.final_url,
             redirect_chain=_serialize_redirect_chain(result),
@@ -1555,37 +1639,111 @@ class SiteHealthWorker:
         requested_url: str,
         artifact_id: uuid.UUID | None,
     ) -> None:
-        """Append the append-only diagnostic attempt (host only, no secrets).
+        """Append ONE attempt row per REAL network call (invariant 3, T8).
+
+        The fetcher's per-call trace (``outcome.attempts``) drives the rows:
+        every redirect hop and every ladder rung gets its own row sharing the
+        QUEUE-attempt number (``attempt_number``) and distinguished by the
+        deterministic per-call ``request_ordinal`` — order/uniqueness key
+        ``(task_id, attempt_number, request_ordinal)``. Each row records the
+        engine that made the call (``fetch_engine`` from the entry's rung),
+        the per-call host/status/latency/byte counts, and a per-call outcome:
+        ``error`` when the call itself failed (transport error token), when it
+        received an HTTP error status, or when it is the terminal call of an
+        unsuccessful fetch; otherwise ``success``. ONLY the successful
+        terminal call links the artifact — a blocked rung is an attempt only,
+        never an artifact generation.
+
+        When the trace is empty (no network call happened — a robots/policy
+        short-circuit — or a trace-less result built by a caller), the
+        historical single diagnostic row for the queue attempt is kept, with
+        ``request_ordinal=0`` and ``rung_number=NULL``.
 
         Shared by discover and analyze; ``succeeded`` is decided by the caller
         (a discover success has a parsed ``output``, an analyze success has
         parsed ``facts``) so this stays agnostic to the outcome payload shape.
         """
-        try:
-            host, _port = split_host_port(requested_url)
-        except Exception:
-            host = ""
-        session.add(
-            SiteFetchAttempt(
-                task_id=task.id,
-                crawl_id=crawl.id,
-                workspace_id=crawl.workspace_id,
-                attempt_number=task.attempt_count + 1,
-                method="GET",
-                target_host=host[:255],
-                outcome=_OUTCOME_SUCCESS if succeeded else _OUTCOME_ERROR,
-                error_code=outcome.error_code,
-                status_code=outcome.status_code,
-                latency_ms=outcome.latency_ms,
-                wire_bytes=(
-                    outcome.result.wire_bytes if outcome.result is not None else None
-                ),
-                decoded_bytes=(
-                    outcome.result.decoded_bytes if outcome.result is not None else None
-                ),
-                artifact_id=artifact_id,
+        attempt_number = task.attempt_count + 1
+        trace = outcome.attempts
+        if not trace:
+            try:
+                host, _port = split_host_port(requested_url)
+            except Exception:
+                host = ""
+            session.add(
+                SiteFetchAttempt(
+                    task_id=task.id,
+                    crawl_id=crawl.id,
+                    workspace_id=crawl.workspace_id,
+                    attempt_number=attempt_number,
+                    request_ordinal=0,
+                    rung_number=None,
+                    method="GET",
+                    target_host=host[:255],
+                    outcome=_OUTCOME_SUCCESS if succeeded else _OUTCOME_ERROR,
+                    error_code=outcome.error_code,
+                    status_code=outcome.status_code,
+                    latency_ms=outcome.latency_ms,
+                    wire_bytes=(
+                        outcome.result.wire_bytes
+                        if outcome.result is not None
+                        else None
+                    ),
+                    decoded_bytes=(
+                        outcome.result.decoded_bytes
+                        if outcome.result is not None
+                        else None
+                    ),
+                    artifact_id=artifact_id,
+                )
             )
-        )
+            return
+
+        last_index = len(trace) - 1
+        for index, entry in enumerate(trace):
+            is_final = index == last_index
+            if entry.error_code:
+                # The call itself failed (timeout / cap abort / transport).
+                row_outcome = _OUTCOME_ERROR
+                row_error = entry.error_code
+            elif is_final and not succeeded:
+                # The terminal call of an unsuccessful fetch carries the
+                # classified task-level token (e.g. http_4xx / bot_blocked).
+                row_outcome = _OUTCOME_ERROR
+                row_error = outcome.error_code
+            elif entry.status_code is not None and entry.status_code >= 400:
+                # A non-terminal call that received an HTTP error status
+                # (e.g. the blocked rung-1 response before escalation).
+                row_outcome = _OUTCOME_ERROR
+                row_error = ""
+            else:
+                row_outcome = _OUTCOME_SUCCESS
+                row_error = ""
+            try:
+                host, _port = split_host_port(entry.url)
+            except Exception:
+                host = ""
+            session.add(
+                SiteFetchAttempt(
+                    task_id=task.id,
+                    crawl_id=crawl.id,
+                    workspace_id=crawl.workspace_id,
+                    attempt_number=attempt_number,
+                    request_ordinal=entry.request_ordinal,
+                    rung_number=entry.rung_number,
+                    fetch_engine=_fetch_engine_for_rung(entry.rung_number),
+                    method=(entry.method or "GET")[:8],
+                    target_host=host[:255],
+                    outcome=row_outcome,
+                    error_code=row_error,
+                    status_code=entry.status_code,
+                    latency_ms=entry.latency_ms,
+                    wire_bytes=entry.wire_bytes,
+                    decoded_bytes=entry.decoded_bytes,
+                    # ONLY the successful terminal call links the artifact.
+                    artifact_id=(artifact_id if (is_final and succeeded) else None),
+                )
+            )
 
     async def _record_crash(self, task_id: uuid.UUID, exc: Exception) -> None:
         detail = f"{type(exc).__name__}: {exc}"
@@ -1677,12 +1835,15 @@ class SiteHealthWorker:
             requested_url = task.requested_url
             config = dict(crawl.configuration or {})
             root_registrable_domain = config.get("root_registrable_domain") or ""
+            # The crawl's frozen fetch-ladder mode (v2 P3), as in discover.
+            fetch_mode = config.get("fetch_mode") or FETCH_MODE_AUTO
 
         heartbeat = asyncio.create_task(self._heartbeat_loop(task_id))
         try:
             outcome = await self._fetch_analyze(
                 requested_url=requested_url,
                 root_registrable_domain=root_registrable_domain,
+                fetch_mode=fetch_mode,
             )
         finally:
             heartbeat.cancel()
@@ -1837,6 +1998,7 @@ class SiteHealthWorker:
         *,
         requested_url: str,
         root_registrable_domain: str,
+        fetch_mode: str = FETCH_MODE_AUTO,
     ) -> _AnalyzeOutcome:
         """Fetch + parse one monitored URL into a bounded ``_AnalyzeOutcome``.
 
@@ -1847,6 +2009,11 @@ class SiteHealthWorker:
         v2 P2: enforces the per-authority robots.txt policy before fetching —
         a denied URL short-circuits to ``ERROR_ROBOTS_DENIED`` (non-retryable;
         presentation maps it to ``blocked`` via POLICY_BLOCKING_ERROR_CODES).
+
+        v2 P3: ``fetch_mode`` is the crawl's frozen fetch-ladder mode
+        (``http_only`` disables the impersonated rung-2 escalation); when BOTH
+        rungs returned signature-detected bot blocks the outcome classifies as
+        terminal ``ERROR_BOT_BLOCKED`` (presentation: ``blocked``).
         """
         authority = _authority_key(requested_url)
         if authority:
@@ -1862,6 +2029,7 @@ class SiteHealthWorker:
             url=requested_url,
             purpose=FETCH_PURPOSE_ANALYZE,
             allowed_content_types=HTML_CONTENT_TYPES,
+            allow_escalation=fetch_mode != FETCH_MODE_HTTP_ONLY,
         )
         started = time.monotonic()
         try:
@@ -1880,9 +2048,21 @@ class SiteHealthWorker:
                 latency_ms=latency,
                 status_code=exc.status_code,
                 retry_after_seconds=exc.retry_after_seconds,
+                attempts=exc.attempts,
             )
 
         status = result.status_code
+        # v2 P3: both rungs signature-blocked -> terminal ERROR_BOT_BLOCKED
+        # (see ``_fetch_discover``); checked before status classification.
+        if _is_exhausted_bot_block(result):
+            return _AnalyzeOutcome(
+                result=result,
+                error_code=ERROR_BOT_BLOCKED,
+                retryable=False,
+                latency_ms=result.latency_ms,
+                status_code=status,
+                attempts=result.attempts,
+            )
         classified = _classify_http_error(status)
         if classified is not None:
             error_code, retryable = classified
@@ -1892,6 +2072,7 @@ class SiteHealthWorker:
                 retryable=retryable,
                 latency_ms=result.latency_ms,
                 status_code=status,
+                attempts=result.attempts,
             )
 
         facts = extract_page_facts(
@@ -1912,6 +2093,7 @@ class SiteHealthWorker:
             facts=facts,
             status_code=status,
             latency_ms=result.latency_ms,
+            attempts=result.attempts,
         )
 
     async def _persist_analyze(

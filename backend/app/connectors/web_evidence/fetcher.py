@@ -99,6 +99,24 @@ _BOT_BLOCK_MARKER_BYTES: tuple[bytes, ...] = tuple(
     marker.encode("ascii") for marker in BOT_BLOCK_BODY_MARKERS
 )
 
+
+def is_bot_block_result(result: FetchResult) -> bool:
+    """Config-owned bot-block signature on a fetch RESULT (spec §5.4).
+
+    True when the terminal status is in ``BOT_BLOCK_STATUSES`` or a challenge
+    body marker appears within the first ``BOT_BLOCK_MARKER_SCAN_BYTES`` of
+    the decoded body. Shared by the fetcher (rung-1 escalation trigger) and
+    the worker (T8: detecting an exhausted both-rungs block) so the signature
+    logic lives in exactly one place.
+    """
+    if result.status_code in BOT_BLOCK_STATUSES:
+        return True
+    if not _BOT_BLOCK_MARKER_BYTES:
+        return False
+    prefix = result.body[:BOT_BLOCK_MARKER_SCAN_BYTES].lower()
+    return any(marker in prefix for marker in _BOT_BLOCK_MARKER_BYTES)
+
+
 # CURLINFO_HTTP_VERSION values -> FetchResult.http_version strings.
 _CURL_HTTP_VERSIONS: dict[int, str] = {1: "1.0", 2: "1.1", 3: "2", 30: "3"}
 
@@ -363,6 +381,10 @@ class SecureFetcher:
         the returned ``FetchResult.attempts`` AND on any raised
         ``FetchError.attempts`` (dual-field design), so the trace survives
         failure; the entry describing a returned result is always the last.
+
+        ``request.allow_escalation=False`` (the crawl's frozen ``http_only``
+        fetch mode) disables rung 2 entirely: a bot-block signature never
+        triggers an impersonated retry and the rung-1 outcome stands.
         """
         limits = self._limits(request)
         attempts: list[FetchCallTrace] = []
@@ -379,7 +401,7 @@ class SecureFetcher:
         except FetchError as exc:
             if not exc.attempts:
                 exc.attempts = tuple(attempts)
-            if self._is_tls_block_signature(exc):
+            if request.allow_escalation and self._is_tls_block_signature(exc):
                 return await self._escalate(
                     request,
                     root_registrable_domain=root_registrable_domain,
@@ -390,7 +412,7 @@ class SecureFetcher:
                     attempts=attempts,
                 )
             raise
-        if not self._is_bot_block_result(result):
+        if not request.allow_escalation or not self._is_bot_block_result(result):
             return replace(result, attempts=tuple(attempts))
         return await self._escalate(
             request,
@@ -434,12 +456,7 @@ class SecureFetcher:
 
     def _is_bot_block_result(self, result: FetchResult) -> bool:
         """Config-owned bot-block signature on a rung-1 RESULT (spec §5.4)."""
-        if result.status_code in BOT_BLOCK_STATUSES:
-            return True
-        if not _BOT_BLOCK_MARKER_BYTES:
-            return False
-        prefix = result.body[:BOT_BLOCK_MARKER_SCAN_BYTES].lower()
-        return any(marker in prefix for marker in _BOT_BLOCK_MARKER_BYTES)
+        return is_bot_block_result(result)
 
     def _is_tls_block_signature(self, exc: FetchError) -> bool:
         """TLS-layer bot block: rung 1's SEND-PHASE transport failure only.

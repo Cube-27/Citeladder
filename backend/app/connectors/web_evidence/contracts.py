@@ -56,6 +56,10 @@ class FetchRequest:
     # Content types this request accepts; empty means the fetcher's default
     # allowlist for the purpose.
     allowed_content_types: frozenset[str] = frozenset()
+    # Whether the rung-2 impersonated curl_cffi escalation may fire when a
+    # bot-block signature trips (the crawl's frozen ``auto`` fetch mode).
+    # False = the frozen ``http_only`` mode: rung 1 only, no impersonation.
+    allow_escalation: bool = True
 
 
 @dataclass(frozen=True, slots=True)
