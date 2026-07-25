@@ -219,9 +219,7 @@ describe('OpportunitiesScreen', () => {
     await screen.findByText('Thin content on an owned page');
 
     await user.click(screen.getByRole('button', { name: 'Site' }));
-    await waitFor(() =>
-      expect(seen.some((params) => params.get('type') === 'site')).toBe(true),
-    );
+    await waitFor(() => expect(seen.some((params) => params.get('type') === 'site')).toBe(true));
 
     await user.click(screen.getByRole('button', { name: 'Dismissed' }));
     await waitFor(() =>
@@ -229,9 +227,7 @@ describe('OpportunitiesScreen', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Low' }));
-    await waitFor(() =>
-      expect(seen.some((params) => params.get('severity') === 'low')).toBe(true),
-    );
+    await waitFor(() => expect(seen.some((params) => params.get('severity') === 'low')).toBe(true));
   });
 
   it('recompute posts and invalidates (summary + list refetch)', async () => {
@@ -329,8 +325,6 @@ describe('OpportunitiesScreen', () => {
 
     // Close returns to the catalog.
     await user.click(screen.getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() =>
-      expect(screen.queryByText('Opportunity detail')).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText('Opportunity detail')).not.toBeInTheDocument());
   });
 });

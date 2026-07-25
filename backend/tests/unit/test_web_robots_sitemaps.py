@@ -240,3 +240,46 @@ def test_collector_accumulates_urls():
     )
     assert collector.url_count == 2
     assert "https://example.com/a" in collector.urls
+
+
+def test_robots_per_bot_group_applies_only_to_that_bot():
+    # v2 P2 AI-crawler stance: a bot-specific group governs that bot only;
+    # our crawler falls through to the wildcard group.
+    body = "User-agent: GPTBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n"
+    gpt = RobotsPolicy.parse(body, user_agent="GPTBot")
+    assert gpt.can_fetch("https://example.com/") is False
+    ours = RobotsPolicy.parse(body, user_agent=_UA)
+    assert ours.can_fetch("https://example.com/") is True
+
+
+def test_robots_wildcard_group_applies_when_no_specific_group():
+    policy = RobotsPolicy.parse(
+        "User-agent: *\nDisallow: /private\n", user_agent="ClaudeBot"
+    )
+    assert policy.can_fetch("https://example.com/private/x") is False
+    assert policy.can_fetch("https://example.com/") is True
+
+
+def test_robots_specific_group_outranks_wildcard():
+    body = "User-agent: PerplexityBot\nAllow: /\n\nUser-agent: *\nDisallow: /\n"
+    perp = RobotsPolicy.parse(body, user_agent="PerplexityBot")
+    assert perp.can_fetch("https://example.com/") is True
+    ours = RobotsPolicy.parse(body, user_agent=_UA)
+    assert ours.can_fetch("https://example.com/") is False
+
+
+def test_robots_deny_all_blocks_everything_and_is_marked_unavailable():
+    # RFC 9309: a 5xx robots.txt response is a complete (temporary) disallow,
+    # distinct from a real rule-based disallow.
+    policy = RobotsPolicy.deny_all(user_agent=_UA)
+    assert policy.can_fetch("https://example.com/") is False
+    assert policy.can_fetch("https://example.com/any/path") is False
+    assert policy.unavailable is True
+    # No sitemaps and the default crawl delay leak out of a deny-all stance.
+    assert policy.sitemaps() == []
+
+
+def test_robots_parsed_and_allow_all_policies_are_not_unavailable():
+    parsed = RobotsPolicy.parse("User-agent: *\nDisallow: /\n", user_agent=_UA)
+    assert parsed.unavailable is False
+    assert RobotsPolicy.allow_all(user_agent=_UA).unavailable is False

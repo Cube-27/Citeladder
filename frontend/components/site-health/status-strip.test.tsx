@@ -33,9 +33,30 @@ function page(overrides: Partial<PageSummary> = {}): PageSummary {
     aeo_score: 64,
     overall_score: 55,
     last_audited: '2026-07-16T00:00:00Z',
+    page_type: 'article',
     ...overrides,
   };
 }
+
+// The bounded site-facts blob the worker persists (`_crawl_setup` in
+// backend/app/workers/site_health_worker.py): robots AI-crawler stance,
+// llms.txt probe, sitemap file list. The backend always emits the key.
+const siteFacts = {
+  robots: {
+    fetched: true,
+    url: 'https://acme.com/robots.txt',
+    status_code: 200,
+    ai_crawlers: {
+      GPTBot: 'block',
+      ClaudeBot: 'allow',
+      PerplexityBot: 'allow',
+      'Google-Extended': 'allow',
+    },
+    sitemaps: ['https://acme.com/sitemap.xml'],
+  },
+  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 200, present: true },
+  sitemap: { fetched: false, files: [] },
+};
 
 function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
   return {
@@ -64,7 +85,9 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
       analyzed_count: 1,
       issue_count: 0,
       scoring_version: 's1',
+      by_page_type: {},
     },
+    site_facts: siteFacts,
     extractor_version: 'e1',
     analyzer_version: 'a1',
     rule_version: 'r1',

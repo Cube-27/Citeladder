@@ -184,9 +184,7 @@ class OpportunitySnapshot(Base):
         index=True,
     )
     # Per-recompute run identity.
-    run_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), default=uuid.uuid4
-    )
+    run_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), default=uuid.uuid4)
     audit_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey(FK_AUDITS_ID, ondelete=ON_DELETE_SET_NULL),

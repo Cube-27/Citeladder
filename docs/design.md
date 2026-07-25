@@ -25,11 +25,11 @@ Two explicit surface hierarchies, lowest → highest elevation. `:root` = light,
 dark; the OS preference is not consulted — only an explicit toggle opts into light). Light is a
 full sibling hierarchy, not an afterthought.
 
-**Dark surface hierarchy (CUBE27 midnight):** `bg-base #050505` → `bg-alt #0a0a0a` →
-`bg-panel #111114` → `bg-elevated #16161a` → `bg-well #1c1c21`. Sidebar `#0a0a0a`.
+**Dark surface hierarchy (CUBE27 midnight):** `bg-base #0a0a0b` → `bg-alt #1b1b21` →
+`bg-panel #131316` → `bg-elevated #17171c` → `bg-well #1e1e24`. Sidebar `#0e0e11`.
 
-**Light surface hierarchy (warm paper):** `bg-base #fafaf7` → `bg-alt #efefea` →
-`bg-panel #ffffff` → `bg-elevated #ffffff` → `bg-well #f2f2ec`. Sidebar `#f5f5f0`.
+**Light surface hierarchy (warm paper):** `bg-base #fbfbfa` → `bg-alt #f4f4f2` →
+`bg-panel #ffffff` → `bg-elevated #ffffff` → `bg-well #f0f0ed`. Sidebar `#f7f7f4`.
 
 Accent is a **blue** (`#2f58ff` light / `#6b8aff` dark) — the CUBE27 brand accent, shared with
 the marketing landing — reserved for links, active states, focus rings, and data visualization.
@@ -52,32 +52,32 @@ citations keep their green identity in both themes.
   --font-display-family: var(--font-sans), system-ui, sans-serif;
 
   /* Surfaces */
-  --bg-base: #fafaf7;
-  --bg-alt: #efefea;
+  --bg-base: #fbfbfa;
+  --bg-alt: #f4f4f2;
   --bg-panel: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-well: #f2f2ec;
-  --bg-sidebar: #f5f5f0;
-  --surface-overlay: rgba(250, 250, 247, 0.88);
+  --bg-well: #f0f0ed;
+  --bg-sidebar: #f7f7f4;
+  --surface-overlay: rgba(251, 251, 250, 0.88);
 
-  /* Borders */
-  --border-subtle: #edece5;
-  --border: #e2e0d8;
-  --border-strong: #cfcbc0;
+  /* Borders — hairlines carry all separation (shadows are gone) */
+  --border-subtle: #f0f0ed;
+  --border: #e8e7e3;
+  --border-strong: #dedcd6;
   --border-focus: var(--accent);
 
-  /* Text — all verified ≥ 4.5:1 on bg-base/bg-panel */
-  --text-primary: #0f1117; /* 18.9:1 on #ffffff, 18.0:1 on #fafaf7 */
-  --text-secondary: #4b4d58; /* 8.4:1 on #ffffff, 8.0:1 on #fafaf7  */
-  --text-muted: #6d6f7a; /* 5.0:1 on #ffffff, 4.8:1 on #fafaf7  */
-  --text-subtle: #a6a6ad; /* decorative only (icons/dividers), not body text */
+  /* Text — body values verified ≥ 4.5:1 on bg-panel (#ffffff) */
+  --text-primary: #17171a; /* 16.6:1 on #ffffff */
+  --text-secondary: #5c5c66; /* 6.9:1 on #ffffff */
+  --text-muted: #6c6c76; /* 5.2:1 on panel, 4.6:1 on the darkest surface (bg-well) */
+  --text-subtle: #b4b4bc; /* decorative only (icons/dividers), not body text */
 
   /* Accent — blue */
   --accent: #2f58ff;
   --accent-hover: #1e3fd0;
   --accent-fg: #ffffff; /* on accent bg: 5.3:1 */
   --accent-subtle: rgba(47, 88, 255, 0.1);
-  --accent-soft: rgba(47, 88, 255, 0.06);
+  --accent-soft: rgba(47, 88, 255, 0.05);
   --accent-border: rgba(47, 88, 255, 0.3);
   --accent-text: #1e3fd0; /* accent as text on light: 7.8:1 on #ffffff */
 
@@ -98,7 +98,7 @@ citations keep their green identity in both themes.
   --info-bg: #eff6ff;
   --info-border: #bfdbfe;
   --info-text: #1d4ed8;
-  --neutral-bg: rgba(15, 17, 23, 0.045);
+  --neutral-bg: #f0f0ed;
 
   /* Sentiment (positive / neutral / negative) */
   --sentiment-positive: #059669;
@@ -142,6 +142,15 @@ citations keep their green identity in both themes.
   --run-cancelled: #6f756f;
   --run-cancelled-bg: #f1f2f1;
 
+  /* Chart series (categorical, fixed order, identical in both themes) */
+  --series-1: #2f58ff; /* brand — the user's own data series */
+  --series-2: #c62f34;
+  --series-3: #d97706;
+  --series-4: #8b5cf6;
+  --series-5: #30a46c;
+  --series-other: #d4d4d8; /* the "Other" bucket — deliberately achromatic */
+  --chart-tooltip-bg: #1a1a1f;
+
   /* Score bands (visibility %) — low→high */
   --score-low: #dc2626;
   --score-low-bg: #fef2f2; /* 0–24%   */
@@ -152,23 +161,27 @@ citations keep their green identity in both themes.
   --score-high: #059669;
   --score-high-bg: #ecfdf5; /* 75–100% */
 
-  /* Shadows / elevation */
-  --shadow-xs-value: 0 1px 0 rgba(18, 22, 20, 0.04);
-  --shadow-sm-value: 0 1px 2px rgba(18, 22, 20, 0.05);
-  --shadow-card-value: 0 12px 28px rgba(18, 22, 20, 0.04);
-  --shadow-elevated-value:
-    0 18px 42px rgba(18, 22, 20, 0.08), 0 0 0 1px rgba(18, 22, 20, 0.04);
-  --shadow-lg-value:
-    0 22px 56px rgba(18, 22, 20, 0.1), 0 0 0 1px rgba(18, 22, 20, 0.05);
-  --shadow-modal: 0 24px 60px rgba(18, 22, 20, 0.16);
+  /* Shadows / elevation — flat language: surfaces are separated by hairline
+     borders, not elevation. Only genuinely floating layers (dropdowns,
+     dialogs) keep a shadow. */
+  --shadow-xs-value: none;
+  --shadow-sm-value: none;
+  --shadow-card-value: none;
+  --shadow-elevated-value: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg-value: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
   --focus-ring: 0 0 0 3px rgba(47, 88, 255, 0.22);
   --overlay-scrim: rgba(0, 0, 0, 0.32);
 
   /* Skeleton */
-  --skeleton-base: #edece4;
-  --skeleton-highlight: #fafaf7;
+  --skeleton-base: #f0f0ed;
+  --skeleton-highlight: #fbfbfa;
 }
 ```
+
+The shared structural tokens (weights, tracking, line-heights, spacing, radii, control/table
+heights, motion — §5–§6) also live in `:root`; they are theme-independent, so the dark theme
+(§4) overrides only the color tokens.
 
 ## 4. Token values — DARK (`html[data-theme='dark']`)
 
@@ -180,24 +193,25 @@ html[data-theme="dark"] {
   color-scheme: dark;
 
   /* Surfaces */
-  --bg-base: #050505;
-  --bg-alt: #0a0a0a;
-  --bg-panel: #111114;
-  --bg-elevated: #16161a;
-  --bg-well: #1c1c21;
-  --bg-sidebar: #0a0a0a;
-  --surface-overlay: rgba(5, 5, 5, 0.92);
+  --bg-base: #0a0a0b;
+  --bg-alt: #1b1b21;
+  --bg-panel: #131316;
+  --bg-elevated: #17171c;
+  --bg-well: #1e1e24;
+  --bg-sidebar: #0e0e11;
+  --surface-overlay: rgba(10, 10, 11, 0.92);
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  /* Borders — solid hairlines (not alpha) so they read consistently on every
+     surface now that shadows no longer separate cards. */
+  --border-subtle: #1e1e24;
+  --border: #26262d;
+  --border-strong: #33333c;
 
-  /* Text — verified ≥ 4.5:1 on bg-base/bg-panel */
-  --text-primary: #fafafa; /* 18.1:1 on #111114, 19.5:1 on #050505 */
-  --text-secondary: #a1a1aa; /* 7.4:1 on #111114, 8.0:1 on #050505  */
-  --text-muted: #85858f; /* 5.2:1 on #111114, 5.6:1 on #050505  */
-  --text-subtle: #52525b; /* decorative only */
+  /* Text — body values verified ≥ 4.5:1 on bg-panel (#131316) */
+  --text-primary: #f3f3f5; /* 16.7:1 on #131316 */
+  --text-secondary: #a1a1ab; /* 7.2:1 on #131316 */
+  --text-muted: #8a8a94; /* 5.4:1 on #131316 */
+  --text-subtle: #5b5b64; /* decorative only */
 
   /* Accent — blue */
   --accent: #6b8aff;
@@ -225,7 +239,7 @@ html[data-theme="dark"] {
   --info-bg: rgba(107, 165, 255, 0.12);
   --info-border: rgba(107, 165, 255, 0.28);
   --info-text: #8fbcff;
-  --neutral-bg: rgba(255, 255, 255, 0.04);
+  --neutral-bg: #1e1e24;
 
   /* Sentiment */
   --sentiment-positive: #3ecf8e;
@@ -268,6 +282,12 @@ html[data-theme="dark"] {
   --run-cancelled: #9ca39c;
   --run-cancelled-bg: rgba(255, 255, 255, 0.05);
 
+  /* Chart series — slots 1–5 are intentionally NOT overridden: a series keeps
+     the same hue across themes so identity survives a theme switch. Only the
+     achromatic "Other" bucket and the tooltip surface adapt. */
+  --series-other: #3f3f46;
+  --chart-tooltip-bg: #1e1e26;
+
   /* Score bands */
   --score-low: #ff6b6b;
   --score-low-bg: rgba(255, 107, 107, 0.12);
@@ -278,19 +298,22 @@ html[data-theme="dark"] {
   --score-high: #3ecf8e;
   --score-high-bg: rgba(62, 207, 142, 0.12);
 
-  /* Shadows — deep blacks */
-  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-sm-value: 0 2px 4px rgba(0, 0, 0, 0.6);
-  --shadow-card-value: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-elevated-value: 0 12px 28px rgba(0, 0, 0, 0.7);
-  --shadow-lg-value: 0 20px 40px rgba(0, 0, 0, 0.8);
-  --shadow-modal: 0 32px 64px rgba(0, 0, 0, 0.9);
+  /* Shadows — flat: hairlines separate surfaces; only floating layers cast. */
+  --shadow-xs-value: none;
+  --shadow-sm-value: none;
+  --shadow-card-value: none;
+  --shadow-elevated-value: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg-value: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.7);
   --focus-ring: 0 0 0 3px rgba(107, 138, 255, 0.35);
   --overlay-scrim: rgba(0, 0, 0, 0.55);
 
   /* Skeleton */
-  --skeleton-base: #16161a;
-  --skeleton-highlight: #1c1c21;
+  --skeleton-base: #1b1b21;
+  --skeleton-highlight: #26262d;
+
+  /* Segmented control */
+  --segmented-bg: var(--bg-alt);
 }
 ```
 
@@ -303,18 +326,19 @@ counts, positions, timestamps, code and keyboard hints** so columns align; it is
 for labels. There is **no separate display face**: `--font-display-family` resolves to the
 same sans, so headings differ from body by size and tracking (-0.02em) only.
 
-| Token         | Size             | Line-height | Tracking | Weight | Use                                 |
-| ------------- | ---------------- | ----------- | -------- | ------ | ----------------------------------- |
-| `--text-2xs`  | 10px (0.625rem)  | 1.2         | 0.06em   | 600    | uppercase micro-labels              |
-| `--text-xs`   | 11px (0.6875rem) | 1.35        | 0.025em  | 500    | captions, timestamps, table headers |
-| `--text-sm`   | 13px (0.8125rem) | 1.45        | 0em      | 400    | secondary body, table cells         |
-| `--text-base` | 14px (0.875rem)  | 1.5         | 0em      | 400    | primary body                        |
-| `--text-lg`   | 17px (1.0625rem) | 1.35        | -0.01em  | 600    | section / card headings             |
-| `--text-xl`   | 21px (1.3125rem) | 1.25        | -0.02em  | 600    | page headings                       |
-| `--text-2xl`  | 29px (1.8125rem) | 1.15        | -0.02em  | 700    | display (Visibility Score, hero)    |
+| Token         | Size                | Line-height | Tracking | Weight | Use                                       |
+| ------------- | ------------------- | ----------- | -------- | ------ | ----------------------------------------- |
+| `--text-2xs`  | 11px (0.6875rem)    | 1.25        | 0em      | 500    | sentence-case micro-labels, table headers |
+| `--text-xs`   | 12px (0.75rem)      | 1.35        | 0em      | 400    | captions, timestamps                      |
+| `--text-sm`   | 12.5px (0.78125rem) | 1.45        | 0em      | 400    | secondary body, table cells               |
+| `--text-base` | 13px (0.8125rem)    | 1.5         | 0em      | 400    | primary body                              |
+| `--text-lg`   | 13.5px (0.84375rem) | 1.35        | -0.01em  | 600    | section / card headings                   |
+| `--text-xl`   | 16px (1rem)         | 1.3         | -0.02em  | 600    | page headings                             |
+| `--text-2xl`  | 21px (1.3125rem)    | 1.2         | -0.02em  | 700    | display (largest number on screen)        |
 
 - **display** = `--text-2xl`; **heading** = `--text-xl`/`--text-lg`; **body** =
-  `--text-base`/`--text-sm`; **label** = `--text-xs`/`--text-2xs` (uppercase).
+  `--text-base`/`--text-sm`; **label** = `--text-2xs` (sentence-case — the
+  mono-uppercase-tracked eyebrow is retired; mono is reserved for values).
 - Weights: `--weight-normal:400`, `--weight-medium:500`, `--weight-semibold:600`,
   `--weight-bold:700`.
 - Tracking tokens: `--tracking-tight:-0.02em`, `--tracking-normal:0em`, `--tracking-wide:0.025em`,
@@ -327,15 +351,16 @@ same sans, so headings differ from body by size and tracking (-0.02em) only.
 **Spacing steps** (`--space-N` = 4px × N):
 `--space-1:4px`, `--space-2:8px`, `--space-3:12px`, `--space-4:16px`, `--space-5:20px`,
 `--space-6:24px`, `--space-7:28px`, `--space-8:32px`, `--space-10:40px`, `--space-12:48px`,
-`--space-14:56px`, `--space-16:64px`, `--space-20:80px`. `--card-padding:20px`;
-`--content-gutter:32px`.
+`--space-14:56px`, `--space-16:64px`, `--space-20:80px`. `--card-padding:14px`;
+`--content-gutter:20px`.
 
-**Radii:** `--radius-xs:3px`, `--radius-sm:5px`, `--radius-md:7px`, `--radius-lg:10px`,
-`--radius-xl:14px`, `--radius-2xl:20px`, `--radius-full:9999px` (**pill** — badges, toggles,
-segmented control, avatar).
+**Radii:** `--radius-xs:3px`, `--radius-sm:6px`, `--radius-md:8px`, `--radius-lg:12px`,
+`--radius-xl:14px`, `--radius-2xl:20px`, `--radius-full:9999px` (**pill** — buttons, toggles,
+segmented control, avatar, the run-status badge; all other badges are flat `--radius-sm`
+rectangles).
 
-**Controls:** `--control-height-sm:30px`, `--control-height:34px`, `--control-height-lg:38px`,
-`--interactive-border-width:1px`. Table: `--table-row-height:40px`, `--table-header-height:32px`,
+**Controls:** `--control-height-sm:30px`, `--control-height:32px`, `--control-height-lg:38px`,
+`--interactive-border-width:1px`. Table: `--table-row-height:42px`, `--table-header-height:30px`,
 `--table-font-size: var(--text-sm)`, `--table-header-font-size: var(--text-xs)`.
 
 ## 7. Tailwind v4 bridge (`@theme inline`)
@@ -379,25 +404,25 @@ components use bridged tokens only (no-raw-hex guard); **both themes are always 
 
 All CVA-driven, token-only, Radix where relevant, lucide icons.
 
-| Primitive            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `button`             | every variant is a **pill** (`--radius-full`). Primary = **monochrome pill** — `bg-foreground` (the `--text-primary` token: white on midnight, near-black on warm paper) with `text-background` (`--bg-base`); blue accent stays reserved for links, active states, focus rings, and charts. Secondary = raised `bg-elevated` + hairline border + hover lift; neutral = `bg-background-alt`; ghost = transparent with an accent-soft hover fill; destructive = `--danger` fill. Sizes sm/md/lg/icon; `asChild`; icon slot. |
-| `badge`              | variants map to tokens: `status` (success/warning/danger/info), `sentiment` (positive/neutral/negative), `classification` (owned/competitor/third-party), `run-status` (all 8). Pill radius.                                                                                                                                                                                                                                                                                                                               |
-| `table` (dense)      | sticky 32px header (mono eyebrow: `--text-2xs` uppercase, 0.08em tracking, muted), 40px rows, `--text-sm` cells, mono tabular numerals for numeric columns, accent-soft hover row highlight, sortable header carets.                                                                                                                                                                                                                                                                                                       |
-| `table-pagination`   | client-side page state (`useTablePage`, clamp-only reconciliation so refetches never reset the page) + a mono "from–to of total" indicator with ghost Prev/Next pinned to the table card's bottom border.                                                                                                                                                                                                                                                                                                                  |
-| `card`               | `bg-panel`, hairline `border`, `--radius-lg`, `--card-padding`, `shadow-card`; header/title/description/content slots + optional `CardEyebrow` mono panel label (uppercase `--text-2xs`, never a heading).                                                                                                                                                                                                                                                                                                                 |
-| `score-ring`         | circular progress; color from score-band token; center = mono display number (`numeralSize`: `md` = `--text-lg` default, `lg` = `--text-2xl` display for hero surfaces); ARIA label with %.                                                                                                                                                                                                                                                                                                                                |
-| `donut`              | segmented ring for per-engine / citation-share; legend; ARIA.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `trend-chart`        | line/area chart. **Built but unused in MVP** (roadmap trend view); render + ARIA only.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `tabs` / `segmented` | Radix tabs + a pill segmented control (`--segmented-bg`, active = accent-fg on accent).                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `sidebar`            | grouped nav (Analytics / Prompts / Actions / On Page); active item = accent-subtle bg + accent-text; disabled items = muted + "soon".                                                                                                                                                                                                                                                                                                                                                                                      |
-| `top-bar`            | search placeholder, Export hook, Learn link, project-switcher, theme-toggle, user-menu.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `input` / `field`    | 34px height, `border`, `--radius-md`, focus = `--focus-ring`; `field` wraps label + help + error.                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `dialog`             | Radix modal; `--overlay-scrim`, `bg-elevated`, `shadow-modal`, `--radius-xl`.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `dropdown`           | Radix menu; `bg-elevated`, `border`, `shadow-elevated`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `tooltip`            | Radix; `bg-well`/inverse, `--text-xs`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `skeleton`           | `--skeleton-base` → `--skeleton-highlight` shimmer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `history-drawer`     | right-side Radix drawer for run history / execution list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Primitive            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `button`             | Every variant is a **pill** (`--radius-full`), flat — nothing lifts or glows. Primary = **monochrome pill** — `bg-foreground` (the `--text-primary` token: white on midnight, near-black on warm paper) with `text-background` (`--bg-base`); blue accent stays reserved for links, active states, focus rings, and charts. Secondary = flat `bg-panel` + hairline border (hover: `bg-background-alt` + stronger border); neutral = `bg-background-alt`; ghost = transparent tinting to `bg-background-alt`; destructive = `--danger` fill. Sizes sm/md/lg/icon; `asChild`; icon slot. |
+| `badge`              | Variants map to tokens: `status` (success/warning/danger/info), `sentiment` (positive/neutral/negative), `classification` (owned/competitor/third-party), `run-status` (all 8), plus the neutral default. **Flat `rounded-sm` rectangles** (`px-1.5 py-0.5`, `--text-2xs`, medium weight) with a leading status dot; only `run-status` stays a pill. A text label is always rendered (never color-only meaning — WCAG 1.4.1).                                                                                                                                                          |
+| `table` (dense)      | Sticky 30px header (`--table-header-height`) on `bg-panel`, ruled top and bottom, with column hairlines; sentence-case eyebrow header text (`--text-2xs` muted, medium — the mono-uppercase-tracked eyebrow is retired); 42px rows (`--table-row-height`); `--text-sm` cells; everything left-aligned — `numeric` adds tabular numerals only; row hover and the `highlight` prop tint `bg-background-alt`; the scroll-capable wrapper pins the sticky header.                                                                                                                          |
+| `table-pagination`   | Client-side page state (`useTablePage`, clamp-only reconciliation so refetches never reset the page) + a mono "from–to of total" indicator with ghost Prev/Next pinned to the table card's bottom border.                                                                                                                                                                                                                                                                                                                                                                              |
+| `card`               | `bg-panel`, hairline `border`, `--radius-lg`, `--card-padding` (14px). **Flat — `--shadow-card-value` is `none`**: separation comes from the 1px border, never a shadow. Header/title/description/content slots + optional `CardEyebrow` sentence-case sans micro-label (`--text-2xs` muted, never a heading); `CardHeader bordered` adds the hairline for a header sitting directly atop a full-bleed table; `CardDescription` = muted `--text-xs`.                                                                                                                                   |
+| `score-ring`         | Circular progress; color from score-band token; center = mono display number (`numeralSize`: `md` = `--text-lg` default, `lg` = `--text-2xl` display for hero surfaces); ARIA label with %.                                                                                                                                                                                                                                                                                                                                                                                            |
+| `donut`              | Segmented ring for per-engine / citation-share; legend; ARIA.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `trend-chart`        | Line/area chart. **Built but unused in MVP** (roadmap trend view); render + ARIA only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `tabs` / `segmented` | `segmented` class recipes (`segmentedTrackClasses` / `segmentedItemClasses`): a `bg-background-alt` pill track whose active item is a `bg-panel` pill with foreground text. Exported as class recipes, not a component, so `tablist` / `radiogroup` / plain-button semantics stay at the call site.                                                                                                                                                                                                                                                                                    |
+| `sidebar`            | Grouped nav (Analytics / Prompts / Actions / On Page) under sentence-case eyebrow group labels; active item = flat `bg-panel` row + hairline border + foreground text; disabled items = muted + "soon".                                                                                                                                                                                                                                                                                                                                                                                |
+| `top-bar`            | Search placeholder, Export hook, Learn link, project-switcher, theme-toggle, user-menu.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `input` / `field`    | `--control-height` (32px), `bg-well` inset surface + hairline `border`, `--radius-md`, focus = `--focus-ring` + accent border; native `<select>` consumes the same `inputClasses`. `field` wraps label + help + error.                                                                                                                                                                                                                                                                                                                                                                 |
+| `dialog`             | Radix modal; `--overlay-scrim`, `bg-elevated`, `shadow-modal`, `--radius-xl`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `dropdown`           | Radix menu; `bg-elevated`, `border`, `shadow-elevated`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `tooltip`            | Radix; `bg-well`/inverse, `--text-xs`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `skeleton`           | `--skeleton-base` → `--skeleton-highlight` shimmer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `history-drawer`     | Right-side Radix drawer for run history / execution list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ## 9. Per-screen layout prose (seven application screens)
 
@@ -413,7 +438,7 @@ grain overlay) carries the LogoCube + display-font "Searchify" wordmark with a m
 "By CUBE27" chip, a mono uppercase eyebrow, a `font-display` brand headline with an
 accent-gradient phrase, three proof points, a static decorative mini stat card (visibility
 score sparkline + share-of-voice bars, aria-hidden), and a mono footer strip. The **form
-panel** centers the auth card (max-width 400px, `shadow-card`); below 900px only the form
+panel** centers the auth card (max-width 400px, the flat hairline `card`); below 900px only the form
 panel renders with a compact wordmark row above the card. Three OAuth `button`s (Google,
 GitHub, Apple — coming-soon wired, 503 → accessible inline notice) sit above an email divider;
 fields (`field` primitive): email, password (+ confirm/name on register). Primary full-width
@@ -426,20 +451,20 @@ single h1 — brand-panel wordmarks are spans and the headline is a `<p>`.
 **Left sidebar (240px, `bg-sidebar`)**: top = brand row (LogoCube + display-font "Searchify"
 over a mono uppercase "by CUBE27" sub-tag), then the project-switcher (brand avatar + name,
 dropdown). A "Getting Started N of 6" progress card (accent-gradient completion fill).
-Grouped nav sections with mono-uppercase eyebrow group labels — **Analytics** (Visibility =
+Grouped nav sections with sentence-case eyebrow group labels — **Analytics** (Visibility =
 live; LLM Analytics, Traffic = disabled "soon"), **Prompts** (Your Prompts = live; Prompt
 Research = live), **Actions** (Content, Opportunities = disabled), **On Page** (Site Health,
 Issues, Knowledge Base = live). Bottom = user-menu (avatar + email). **Top bar (52px)**:
 left = the current page's title (`font-display`, the single h1 — pages render no in-page
-header block); right = Export hook, Learn link, theme-toggle. Active nav item is a pill
-(accent-soft bg + accent-text, `--radius-lg`); disabled items are muted with a "soon"
-pill. Content region scrolls independently.
+header block); right = Export hook, Learn link, theme-toggle. Active nav item is a flat `bg-panel` row
+with a hairline border and medium foreground text; disabled items are muted with a "soon"
+chip. Content region scrolls independently.
 
 ### 9.3 Brand/Project setup (`/setup`)
 
 A five-step wizard (Brand → Market → Domains → Competitors → Defaults) on `bg-base`: a
 horizontal stepper (numbered accent active rings + mono numerals, connector progress line)
-above one step `card` at a time — each with a mono-eyebrow `Step N of 5` panel label;
+above one step `card` at a time — each with an eyebrow `Step N of 5` panel label;
 react-hook-form keeps values across steps and Next validates only the current step.
 **Brand**: brand avatar, Brand Name, website URL (with derived domain shown muted),
 Alternative names (alias chips with ✕ + "Add alternative name" input, Enter-to-add), an

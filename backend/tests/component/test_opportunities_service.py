@@ -51,6 +51,8 @@ from tests.component.opportunity_helpers import (
 )
 
 pytestmark = pytest.mark.asyncio
+
+
 # =========================================================================
 # Recompute: write path
 # =========================================================================
@@ -148,9 +150,7 @@ async def test_recompute_persists_rows_and_snapshot_with_provenance(
         )
     )
     assert snapshot is not None
-    assert snapshot.source_analysis_ids == sorted(
-        [str(scn.analysis0_id)]
-    )
+    assert snapshot.source_analysis_ids == sorted([str(scn.analysis0_id)])
     assert snapshot.source_issue_ids == sorted(
         [str(scn.issue_structured_id), str(scn.issue_thin_id)]
     )
@@ -297,9 +297,7 @@ async def test_disabled_rule_persists_nothing(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     scn = await _seed_scenario(db_session)
-    monkeypatch.setattr(
-        OPPORTUNITY_RULES_BY_ID["thin_content"], "enabled", False
-    )
+    monkeypatch.setattr(OPPORTUNITY_RULES_BY_ID["thin_content"], "enabled", False)
 
     result = await service.recompute(
         db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
@@ -620,7 +618,7 @@ async def test_detail_projection_includes_superseded_rows(
     )
     assert detail["id"] == thin.id
     assert detail["remediation"]
-    assert detail["evidence"]["issue_rule_id"] == "aeo.sufficient_text"
+    assert detail["evidence"]["issue_rule_id"] == "technical.thin_content"
     assert detail["source_issue_ids"] == [str(scn.issue_thin_id)]
     assert detail["source_traffic_ids"] == []
     assert detail["analyzer_version"] == ANALYZER_VERSION

@@ -236,8 +236,12 @@ def validate_rule_id(rule_id: str) -> str:
 SITE_STRUCTURED_DATA_RULE_IDS: Final[frozenset[str]] = frozenset(
     {"aeo.structured_data_present"}
 )
+# ``technical.thin_content`` is the v2 (sh-rules-2) id; it was renamed from the
+# v1 ``aeo.sufficient_text`` (see site_health.py — the per-type-minimum
+# word-count check moved dimension). Using the retired id here would make the
+# thin-content opportunity silently never fire on real data.
 SITE_THIN_CONTENT_RULE_IDS: Final[frozenset[str]] = frozenset(
-    {"aeo.sufficient_text"}
+    {"technical.thin_content"}
 )
 
 # =========================================================================

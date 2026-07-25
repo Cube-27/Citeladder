@@ -126,13 +126,39 @@ async def test_fetch_rejects_unsupported_content_type():
 # --- 4xx / 5xx are returned, not raised -----------------------------------
 
 
+class _StubCurlSession:
+    """Offline rung-2 stand-in replaying one status (T7 escalation seam)."""
+
+    def __init__(self, status: int) -> None:
+        self._status = status
+
+    async def __aenter__(self) -> _StubCurlSession:
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        return None
+
+    async def request(self, method, url, **kwargs):
+        callback = kwargs.get("content_callback")
+        if callback is not None:
+            callback(b"x")
+        return httpx.Response(self._status, headers={"content-type": "text/html"})
+
+
 @pytest.mark.parametrize("status", [404, 410, 429, 500, 503])
 async def test_fetch_returns_http_error_statuses(status):
     def handler(request: httpx.Request) -> httpx.Response:
         return _html_response(status, body=b"x")
 
     resolver = _FakeResolver({})
-    async with _fetcher(handler, resolver) as fetcher:
+    # 503 is a bot-block signature (T7): the curl_cffi escalation rung fires
+    # for it — keep that retry offline with a stub replaying the status.
+    fetcher = SecureFetcher(
+        resolver=resolver,
+        transport=httpx.MockTransport(handler),
+        curl_session_factory=lambda **kwargs: _StubCurlSession(status),
+    )
+    async with fetcher:
         result = await fetcher.fetch(
             FetchRequest(
                 url="https://example.com/",
@@ -141,6 +167,8 @@ async def test_fetch_returns_http_error_statuses(status):
             )
         )
     assert result.status_code == status
+    # Escalation ran exactly once for the signature status, never otherwise.
+    assert len(result.attempts) == (2 if status == 503 else 1)
 
 
 # --- redirects ------------------------------------------------------------

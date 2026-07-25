@@ -50,18 +50,12 @@ export type RecomputeScope = { audit_id?: string; site_crawl_id?: string };
 
 export const opportunitiesApi = {
   list: async (projectId: string, params?: OpportunitiesParams, options?: ApiRequestOptions) => {
-    const path = withQuery(
-      `/projects/${projectId}/opportunities`,
-      definedQuery(params),
-    );
+    const path = withQuery(`/projects/${projectId}/opportunities`, definedQuery(params));
     const res = await apiClient.get<OpportunitiesPage>(path, options);
     return strictValidate(opportunitiesPageSchema, res, 'opportunities.list');
   },
   get: async (opportunityId: string, options?: ApiRequestOptions) => {
-    const res = await apiClient.get<OpportunityDetail>(
-      `/opportunities/${opportunityId}`,
-      options,
-    );
+    const res = await apiClient.get<OpportunityDetail>(`/opportunities/${opportunityId}`, options);
     return strictValidate(opportunityDetailSchema, res, 'opportunities.get');
   },
   updateStatus: async (
@@ -76,11 +70,7 @@ export const opportunitiesApi = {
     );
     return strictValidate(opportunitySchema, res, 'opportunities.updateStatus');
   },
-  recompute: async (
-    projectId: string,
-    scope?: RecomputeScope,
-    options?: ApiRequestOptions,
-  ) => {
+  recompute: async (projectId: string, scope?: RecomputeScope, options?: ApiRequestOptions) => {
     const res = await apiClient.post<RecomputeResponse>(
       `/projects/${projectId}/opportunities/recompute`,
       scope ?? {},

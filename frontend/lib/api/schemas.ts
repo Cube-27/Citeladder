@@ -643,7 +643,37 @@ export const pageAnalysisStatusSchema = z.enum([
   'cancelled',
 ]);
 
+// Page-type classification vocabulary (site-health v2 P1). The deterministic
+// backend classifier stamps every page analysis with one of these types; the
+// page/inventory/detail DTOs project it as `page_type`.
+export const pageTypeSchema = z.enum([
+  'homepage',
+  'article',
+  'product',
+  'category',
+  'pricing',
+  'docs',
+  'faq',
+  'about_contact',
+  'other',
+]);
+
+// One `score_summary.by_page_type` bucket (site-health v2 P1): the analyzed
+// count + mean Technical/AEO/overall scores across the analyzed pages of one
+// page type. A mean is null when no analyzed page of the type produced that
+// score — never a fabricated zero.
+export const pageTypeScoreSummarySchema = z
+  .object({
+    analyzed_count: z.number().int(),
+    technical_score: z.number().nullable(),
+    aeo_score: z.number().nullable(),
+    overall_score: z.number().nullable(),
+  })
+  .strict();
+
 // Crawl score/coverage summary (nullable scores until analysis produces them).
+// `by_page_type` breaks the means down per classified page type (empty until
+// at least one analyzed page has been classified).
 export const siteScoreSummarySchema = z
   .object({
     overall_score: z.number().nullable(),
@@ -653,6 +683,7 @@ export const siteScoreSummarySchema = z
     analyzed_count: z.number().int(),
     issue_count: z.number().int(),
     scoring_version: z.string(),
+    by_page_type: z.record(z.string(), pageTypeScoreSummarySchema),
   })
   .strict();
 
@@ -680,6 +711,11 @@ export const siteCrawlSchema = z
     total_url_count: z.number().int().nullable(),
     has_more_site_urls: z.boolean().nullable().optional(),
     score_summary: siteScoreSummarySchema.nullable(),
+    // v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
+    // sitemap files). Mirrors the backend's untyped `dict | None`, and is
+    // REQUIRED because the response model always serializes the key — making
+    // it optional would weaken the drift contract.
+    site_facts: z.record(z.string(), z.unknown()).nullable(),
     extractor_version: z.string(),
     analyzer_version: z.string(),
     rule_version: z.string(),
@@ -704,13 +740,16 @@ export const cursorPageSchema = <T extends z.ZodTypeAny>(item: T) =>
     .strict();
 
 // Nullable analysis-summary fields shared by inventory rows and analyzed-page
-// summary rows (null until analysis completes for that URL).
+// summary rows (null until analysis completes for that URL). `page_type`
+// joins them: it is stamped by the analysis classifier, so an unanalyzed row
+// has no classification yet (null — the UI renders `—`, never a guessed type).
 const analysisSummaryFields = {
   issue_count: z.number().int().nullable(),
   technical_score: z.number().nullable(),
   aeo_score: z.number().nullable(),
   overall_score: z.number().nullable(),
   last_audited: z.string().nullable(),
+  page_type: pageTypeSchema.nullable(),
 };
 
 // One lightweight inventory row. Ordering is URL-only. The analysis summary
@@ -806,13 +845,17 @@ export const pageFactsSchema = z
 export const issueSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
 export const issueDimensionSchema = z.enum(['technical', 'aeo']);
 
-// A single affected-URL summary on an issue projection.
+// A single affected-URL summary on an issue projection. `page_type` is the
+// affected page's classification; it is OPTIONAL — the v1 backend DTO has no
+// such key, so the badge renders only when the projection carries it (same
+// absent-or-null treatment as the Free-redacted count fields).
 export const affectedUrlSchema = z
   .object({
     site_url_id: uuid(),
     normalized_url: z.string(),
     display_url: z.string(),
     title: z.string().nullable(),
+    page_type: pageTypeSchema.nullable().optional(),
   })
   .strict();
 
@@ -941,6 +984,10 @@ export const pageDetailSchema = z
     overall_score: z.number().nullable(),
     issue_count: z.number().int().nullable(),
     last_audited: z.string().nullable(),
+    page_type: pageTypeSchema.nullable(),
+    // Bounded classifier evidence behind page_type ("why this type?"
+    // disclosure); null until the URL has an analysis.
+    page_type_evidence: z.record(z.string(), z.unknown()).nullable(),
     facts: pageFactsSchema,
     delivery: deliveryFactsSchema,
     issues: z.array(siteIssueSchema),
@@ -1724,19 +1771,8 @@ export const productEvidenceResponseSchema = z
 // Opportunity vocabulary (config-owned; per-subsystem severity enum — the
 // site-health `issueSeveritySchema` is NOT reused, they evolve independently).
 export const opportunityTypeSchema = z.enum(['visibility', 'site', 'traffic', 'topic']);
-export const opportunitySeveritySchema = z.enum([
-  'critical',
-  'high',
-  'medium',
-  'low',
-  'info',
-]);
-export const opportunityStatusSchema = z.enum([
-  'open',
-  'in_progress',
-  'dismissed',
-  'resolved',
-]);
+export const opportunitySeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
+export const opportunityStatusSchema = z.enum(['open', 'in_progress', 'dismissed', 'resolved']);
 
 // One live opportunity row in the priority-sorted catalog.
 export const opportunitySchema = z

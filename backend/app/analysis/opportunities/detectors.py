@@ -234,9 +234,7 @@ def detect_brand_absent_high_value_prompt(
         require_competitor=True,
         extras=lambda analyses, competitor_names: {
             "competitor_names": competitor_names,
-            "engines": sorted(
-                {a.logical_engine for a in analyses if a.logical_engine}
-            ),
+            "engines": sorted({a.logical_engine for a in analyses if a.logical_engine}),
         },
     )
 

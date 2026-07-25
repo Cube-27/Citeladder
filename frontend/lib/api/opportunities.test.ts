@@ -120,21 +120,21 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
   });
 
   it('fails loud on drift: extra keys, bad enums, non-uuid ids', () => {
-    expect(() =>
-      strictValidate(opportunitySchema, { ...item, unexpected: true }, 'test'),
-    ).toThrow(/API validation failure/);
+    expect(() => strictValidate(opportunitySchema, { ...item, unexpected: true }, 'test')).toThrow(
+      /API validation failure/,
+    );
     expect(() =>
       strictValidate(opportunitySchema, { ...item, severity: 'urgent' }, 'test'),
     ).toThrow(/API validation failure/);
-    expect(() =>
-      strictValidate(opportunitySchema, { ...item, status: 'triaged' }, 'test'),
-    ).toThrow(/API validation failure/);
+    expect(() => strictValidate(opportunitySchema, { ...item, status: 'triaged' }, 'test')).toThrow(
+      /API validation failure/,
+    );
     expect(() =>
       strictValidate(opportunitySchema, { ...item, opportunity_type: 'brand' }, 'test'),
     ).toThrow(/API validation failure/);
-    expect(() =>
-      strictValidate(opportunitySchema, { ...item, id: 'not-a-uuid' }, 'test'),
-    ).toThrow(/API validation failure/);
+    expect(() => strictValidate(opportunitySchema, { ...item, id: 'not-a-uuid' }, 'test')).toThrow(
+      /API validation failure/,
+    );
     expect(() =>
       strictValidate(opportunitySummarySchema, { ...summary, extra: 1 }, 'test'),
     ).toThrow(/API validation failure/);
@@ -237,9 +237,7 @@ describe('opportunitiesApi transport', () => {
         HttpResponse.json({ ...summary, extra: 'drift' }),
       ),
     );
-    await expect(opportunitiesApi.summary(PROJECT)).rejects.toThrow(
-      /API validation failure/,
-    );
+    await expect(opportunitiesApi.summary(PROJECT)).rejects.toThrow(/API validation failure/);
   });
 
   it('builds same-origin export URLs with optional filters', () => {
@@ -253,9 +251,7 @@ describe('opportunitiesApi transport', () => {
       type: 'site',
       severity: 'low',
     });
-    expect(filtered.startsWith(`/api/v1/projects/${PROJECT}/opportunities/export.csv?`)).toBe(
-      true,
-    );
+    expect(filtered.startsWith(`/api/v1/projects/${PROJECT}/opportunities/export.csv?`)).toBe(true);
     const params = new URLSearchParams(filtered.split('?')[1]);
     expect(params.get('type')).toBe('site');
     expect(params.get('severity')).toBe('low');
@@ -272,10 +268,6 @@ describe('opportunity query keys', () => {
       { severity: 'high' },
     ]);
     expect(queryKeys.opportunities.detail(OPP)).toEqual(['opportunities', 'detail', OPP]);
-    expect(queryKeys.opportunities.summary(PROJECT)).toEqual([
-      'opportunities',
-      'summary',
-      PROJECT,
-    ]);
+    expect(queryKeys.opportunities.summary(PROJECT)).toEqual(['opportunities', 'summary', PROJECT]);
   });
 });
