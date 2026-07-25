@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ICONS } from '@/lib/icons';
 
 /**
- * Sidebar navigation model (F5, simplified): two groups — Analyze / Optimize —
+ * Sidebar navigation model (F5, simplified): two groups — Analyze / Improve —
  * with twelve live items, all navigable. Icons come from the canonical map
  * (`@/lib/icons`) so nav glyphs stay consistent with the rest of the app.
  * This is data-only so the sidebar component stays presentational and the nav
