@@ -15,8 +15,12 @@
 | **P1 — page-type-aware analysis** | **PR #19** (branch `vorflux/site-health-v2-p1-page-type-analysis`) | Deterministic classifier (`analysis/site_health/page_types.py`, 9-type taxonomy, URL/content signals outrank schema), `PAGE_TYPE_PROFILES` (per-type thin-content minimums + weight overrides), `page_type:<type>` applicability tokens, `SitePageAnalysis.page_type` + `classifier_version`, `score_summary.by_page_type`, DTO badges/filters/exports column, frontend badges + filter + dashboard panel. Versions: `sh-classifier-1` (new), `sh-analyzer-2`, `sh-scoring-2` |
 | **P2 — expanded AEO rule catalog + site/fetch foundations** | **PR (branch `vorflux/site-health-v2-p2-aeo-rule-catalog`, stacked on P1)** | Rule catalog 9→33: site_root rules (`ai_crawler_access`, `llms_txt_present`, weight-0), schema rules (expected-for-type/required/recommended/content-match, non-circular), citability, extractability, hygiene, `crawl_finalize` rules (broken links, sitemap orphans, hreflang, weight-0) via a finalize pass in `_reconcile_crawl_status`. Robots.txt fetch + per-host policy caching (24h TTL, RFC 9309 5xx=deny/4xx=allow), `llms.txt` fetch, Starter-only sitemap ingestion, `SiteCrawl.site_facts`. Extractor `sh-extractor-2` (author/dates/outbound_domains/landmarks/h3/first-answer/hreflang…), `sh-rules-2` |
 
-**Merge order matters:** P2 is stacked on P1. Merge P1 first; GitHub will
-auto-retarget the P2 PR to `main`. Do not squash the two branches together.
+**Consolidated onto one branch (supersedes the stacked-PR plan).** P1 was a
+strict ancestor of P2 (`git merge-base --is-ancestor` confirms it), so there was
+never anything to merge between them. Both branches were rebased onto `main`
+after the flat/hairline restyle (PR #21) and squashed into a single commit on
+`vorflux/site-health-v2`, which carries the whole feature. The two original
+branches and their PRs are **superseded — close them, do not merge them.**
 
 ### PENDING before merge — P2 e2e execution
 
@@ -154,10 +158,6 @@ recipes live in the shared memory volume at
   behavior (answer_first container-walk; JSON-LD excluded from inline-script
   chars) — always re-derive e2e expectations from a fresh dry run after
   touching parser/rules.
-- **`main` was red at handoff**: `frontend/components/marketing/landing-footer.tsx`
-  (commit `5d52cd7`) has duplicated JSX closers — every route 500s. A two-line
-  fix (drop the stray `</div>` + duplicate `))}`) was verified locally but NOT
-  committed anywhere; it needs its own hotfix PR to `main`.
 - Robots stance stances (P2): 5xx → `robots_unavailable` (deny-all, maps to
   `blocked`); 4xx/unfetchable → allow-all; cache TTL 24h; `link_check` probes
   honor robots (`policy_skipped` never counts as checked).
