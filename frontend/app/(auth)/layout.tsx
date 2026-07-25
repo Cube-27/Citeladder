@@ -35,13 +35,16 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
             </p>
           </div>
 
-          <Card className="w-full p-6">{children}</Card>
+          <Card className="w-full p-6" elevation="raised">
+            {children}
+          </Card>
 
-          <p className="text-muted flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs">
-            <span className="inline-flex items-center gap-1.5">
-              <Lock className="size-3.5" strokeWidth={1.75} aria-hidden />
-              Your own API keys, encrypted at rest
-            </span>
+          {/* Mobile only: on desktop the brand panel already carries this as a
+              proof point, and repeating it either side of the fold is exactly
+              the kind of duplication that made the screen feel busy. */}
+          <p className="text-muted flex items-center justify-center gap-1.5 text-xs min-[900px]:hidden">
+            <Lock className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
+            Your own API keys, encrypted at rest
           </p>
         </div>
       </main>
