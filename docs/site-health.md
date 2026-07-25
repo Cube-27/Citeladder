@@ -179,6 +179,12 @@ typed `400`, never a `500`.
 `rule_catalog_version → rule_version`. For a **Free** (non-disclosing) crawl,
 `discovered_count`, `total_url_count`, and `has_more_site_urls` are `null`.
 
+`site_facts` (required, nullable — never Free-redacted) is the bounded
+site-level blob `_crawl_setup` builds (robots.txt AI-crawler stance, llms.txt
+result, sitemap files); the dashboard's **AI crawler access** panel
+(`site-facts-panel.tsx`, between the status strip and the per-page-type
+scores) renders it and hides itself while it is `null`.
+
 ---
 
 ## Exports
