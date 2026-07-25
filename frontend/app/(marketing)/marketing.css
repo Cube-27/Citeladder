@@ -263,18 +263,8 @@ html[data-theme='dark'] .mkt {
     transform: none !important;
   }
 
-  /* Dropdowns keep their fades (the fade explains what appeared and what
-     left) but lose the motion components: the height stretch between
-     triggers resolves instantly, and the content's directional drift is
-     swapped for the same fade with no translation. The base .drop and
-     .drop-frame opacity transitions are deliberately left running. */
-  .mkt .drop-frame.open.switching,
-  .mkt .drop.open.switching {
-    transition-duration: 0ms !important;
-  }
-  .mkt .drop.open .drop-content {
-    animation-name: mkt-drop-content-fade !important;
-  }
+  /* The dropdown's motion is owned by Motion, and useReducedMotion() zeroes
+     its durations at the source — nothing to override from here. */
 }
 
 /* ── INTERACTION FEEDBACK ───────────────────────────────────────────────
@@ -966,124 +956,64 @@ html[data-theme='dark'] .mkt {
   opacity: 0.65;
   flex: none;
 }
-.mkt .drop-frame,
 .mkt .mobile-menu {
   background: var(--mkt-drop-bg);
   border: 1px solid var(--mkt-border);
   box-shadow: var(--mkt-drop-shadow);
 }
-/* THE dropdown surface. One element, always mounted, painted once: it owns
-   the background, border and shadow, and it NEVER moves — left and width are
-   fixed constants, centred on the trigger group. The only things that ever
-   change about it are its opacity (open/close) and its height (stretching to
-   fit whichever content is showing). That is what makes moving between
-   triggers read as one box being stretched rather than panels taking turns:
-   there is no cross-fade and no travel, because there is nothing to swap. */
-.mkt .drop-frame {
-  transform-origin: top center;
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  width: 660px;
-  border-radius: var(--mkt-r-lg);
-  z-index: 59;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  /* Closed: zoomed slightly out and tucked up toward the trigger, so opening
-     reads as the panel zooming IN rather than blinking on. Not scale(0) —
-     nothing appears from literally nothing. Exit is faster than enter
-     (140ms vs 220ms): leaving is a decision the user already made. */
-  transform: translateX(-50%) scale(0.96) translateY(-6px);
-  transition:
-    opacity 140ms var(--mkt-ease-out),
-    transform 140ms var(--mkt-ease-out),
-    visibility 0s linear 140ms;
-}
-.mkt .drop-frame.open {
-  opacity: 1;
-  visibility: visible;
-  /* Zoom in to full size. Height is deliberately NOT in this list: a fresh
-     open snaps to the right size and zooms in as one piece. The height
-     stretch is reserved for switches, where it is the whole story. */
-  transform: translateX(-50%) scale(1) translateY(0);
-  transition:
-    opacity 220ms var(--mkt-ease-out),
-    transform 220ms var(--mkt-ease-out),
-    visibility 0s;
-}
-/* Switching triggers: opacity and position are already at rest and stay
-   there — ONLY the height eases to fit the incoming content. */
-.mkt .drop-frame.open.switching {
-  transform: translateX(-50%) scale(1) translateY(0);
-  transition:
-    height 260ms var(--mkt-ease-in-out),
-    visibility 0s;
-}
-/* Per-trigger content layers. Each lives inside its trigger's .nav-item (that
-   nesting keeps the submenu keyboard-reachable) but is pinned to the exact
-   same fixed geometry as .drop-frame, transparent, and clipped to the same
-   inline height — so its overflow edge tracks the frame's bottom border
-   through a stretch and content can never spill past the visible surface. */
+/* THE dropdown surface.
+   Motion owns every transition here (layout/FLIP for the morph, springs for
+   enter and exit), so this file must NOT declare transitions or animations on
+   `.drop` — a CSS transition on the same properties fights the animation and
+   produces exactly the jitter this replaced. Geometry and paint only. */
 .mkt .drop {
   position: absolute;
   top: calc(100% + 10px);
   left: 50%;
-  width: 660px;
-  transform: translateX(-50%);
-  /* 7px = the frame's 1px border + the 6px visual inset, so rows sit exactly
-     where they did when the panel painted its own border. */
   padding: 7px;
-  overflow: hidden;
   border-radius: var(--mkt-r-lg);
   z-index: 60;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  /* Zooms in lockstep with .drop-frame — same origin, same curve, same
-     duration — so the rows and the surface they sit on move as one piece. */
-  transform-origin: top center;
-  transform: translateX(-50%) scale(0.96) translateY(-6px);
-  transition:
-    opacity 110ms var(--mkt-ease-out),
-    transform 140ms var(--mkt-ease-out),
-    visibility 0s linear 140ms;
+  overflow: hidden;
+  background: var(--mkt-drop-bg);
+  border: 1px solid var(--mkt-border);
+  box-shadow: var(--mkt-drop-shadow);
 }
-.mkt .drop.open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateX(-50%) scale(1) translateY(0);
-  transition:
-    opacity 180ms var(--mkt-ease-out),
-    transform 220ms var(--mkt-ease-out),
-    visibility 0s;
+/* Panels are deliberately DIFFERENT widths — the morph between them is the
+   whole point; one fixed width could only ever animate height, which reads as
+   a box being cropped rather than resized.
+
+   Centring uses a negative margin, NOT translateX(-50%): `transform` belongs
+   entirely to Motion here (FLIP writes to it), and a CSS transform on a
+   `layout` element fights the animation. CSS owns the static box, Motion owns
+   every transition of it. */
+.mkt .drop-product {
+  width: 620px;
+  margin-left: -310px;
 }
-/* Incoming panel of a switch: it must be visible for the whole stretch (its
-   content animation handles the fade-in), and its clip edge must move in
-   lockstep with the frame — same property, duration and curve. */
-.mkt .drop.open.switching {
-  transform: translateX(-50%) scale(1) translateY(0);
-  transition:
-    height 260ms var(--mkt-ease-in-out),
-    visibility 0s;
+.mkt .drop-resources {
+  width: 330px;
+  margin-left: -165px;
 }
-/* Product has enough rows to warrant three columns inside the shared frame;
-   the narrower menus use two so their rows do not stretch. */
+.mkt .drop-solutions {
+  width: 440px;
+  margin-left: -220px;
+}
+.mkt .drop-content {
+  width: 100%;
+}
 .mkt .drop-product .drop-content {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px 8px;
 }
-.mkt .drop-resources .drop-content,
 .mkt .drop-solutions .drop-content {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1px 8px;
 }
-/* Labeled sub-group inside a dropdown panel (the product panel's "How it
-   works" steps) — spans the panel's full grid width under the 2-col feature
-   grid, separated by a hairline. */
+/* "How it works" — a labelled sub-group spanning the panel's full grid width
+   under the feature rows, with its steps in their own 3-column row. Restored:
+   without these the steps collapse into one tall column. */
 .mkt .d-group {
   grid-column: 1 / -1;
   margin-top: 5px;
@@ -1099,7 +1029,6 @@ html[data-theme='dark'] .mkt {
   letter-spacing: 0;
   color: var(--mkt-text-3);
 }
-/* The numbered steps flow in a compact 3-col row under the group label. */
 .mkt .d-steps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1107,69 +1036,6 @@ html[data-theme='dark'] .mkt {
 }
 .mkt .d-steps .d-text b {
   white-space: nowrap;
-}
-/* The content of every panel stays mounted (so the next height can be
-   measured before a stretch starts) — `visibility: hidden` on a closed .drop
-   already takes its whole subtree out of the tab order and the accessibility
-   tree, and the panel also carries aria-hidden. */
-/* Fresh open: the frame fades in at full size and the content settles down
-   into it by a few pixels. Quick and solid — the panel is simply THERE, not
-   growing out of nothing. */
-.mkt .drop.open:not(.switching) .drop-content {
-  animation: mkt-drop-content-in 200ms var(--mkt-ease-out) both;
-}
-/* Moving between triggers: the frame holds still (only its height eases) and
-   the incoming content fades in with a few pixels of drift from the direction
-   of travel. The offset is small (6px) and the fade fast (160ms) on purpose —
-   enough to give the swap a direction, too little to read as the box itself
-   moving, and quick enough that the surface never looks empty. The OUTGOING
-   panel simultaneously fades out over 110ms via the base .drop transition, so
-   the brief cross-fade happens on top of a fully opaque, stationary frame. */
-.mkt .drop.open.slide-right .drop-content {
-  animation: mkt-drop-content-right 160ms var(--mkt-ease-out) both;
-}
-.mkt .drop.open.slide-left .drop-content {
-  animation: mkt-drop-content-left 160ms var(--mkt-ease-out) both;
-}
-@keyframes mkt-drop-content-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-/* Reduced-motion stand-in for all three content animations: the same fade,
-   with the translation removed. */
-@keyframes mkt-drop-content-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes mkt-drop-content-right {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-@keyframes mkt-drop-content-left {
-  from {
-    opacity: 0;
-    transform: translateX(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 .mkt .nav-item.open .chev {
   transform: rotate(180deg);

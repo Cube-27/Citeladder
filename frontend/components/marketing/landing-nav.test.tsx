@@ -20,14 +20,27 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 /**
- * The desktop trigger and the mobile accordion head share a name, so pick a
- * button by the panel it controls (`drop-*` desktop, `acc-*` mobile).
+ * The desktop trigger and the mobile accordion head share a name, so pick by
+ * the element itself: the desktop trigger is the `.nav-link` button, the
+ * mobile one is `.acc-head`.
+ *
+ * It can no longer be picked by `aria-controls`, because the panel is mounted
+ * only while open — a closed trigger has nothing to point at, and a dangling
+ * IDREF would be worse than an absent one.
  */
 function control(name: RegExp, controlsId: string): HTMLElement {
+  const wantMobile = controlsId.startsWith('acc-');
   const button = screen
     .getAllByRole('button', { name })
-    .find((candidate) => candidate.getAttribute('aria-controls') === controlsId);
-  expect(button, `expected a button controlling #${controlsId}`).toBeDefined();
+    .find((candidate) =>
+      wantMobile
+        ? candidate.classList.contains('acc-head')
+        : candidate.classList.contains('nav-link'),
+    );
+  expect(
+    button,
+    `expected a ${wantMobile ? 'mobile' : 'desktop'} trigger for ${name}`,
+  ).toBeDefined();
   return button as HTMLElement;
 }
 
@@ -48,24 +61,28 @@ describe('LandingNav', () => {
       [/^resources$/i, 'resources'],
       [/^solutions$/i, 'solutions'],
     ] as const) {
-      // Each trigger controls its own panel, nested in the trigger's .nav-item
-      // so the menu items are reachable by Tab.
+      // Closed: the trigger advertises a menu but owns no panel yet, and
+      // therefore points at nothing — a dangling aria-controls would be worse
+      // than an absent one.
       const trigger = control(name, `desktop-nav-panel-${key}`);
       expect(trigger).toHaveAttribute('aria-haspopup', 'true');
       expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      expect(trigger).not.toHaveAttribute('aria-controls');
+      expect(document.getElementById(`desktop-nav-panel-${key}`)).toBeNull();
+
+      // Open: exactly ONE panel is mounted for the whole nav — it is a
+      // sibling of the triggers inside .nav-links, not a child of one of
+      // them, which is what lets a single element morph between triggers
+      // instead of one panel fading out while another fades in.
+      fireEvent.mouseEnter(trigger.closest('.nav-item') as Element);
       const drop = panel(`desktop-nav-panel-${key}`);
+      expect(document.querySelectorAll('.drop')).toHaveLength(1);
       expect(drop).toHaveAttribute('role', 'menu');
       expect(drop).toHaveClass('drop');
-      expect(trigger.closest('.nav-item')).toContainElement(drop);
+      expect(drop.parentElement).toHaveClass('nav-links');
+      expect(trigger).toHaveAttribute('aria-controls', `desktop-nav-panel-${key}`);
+      fireEvent.mouseLeave(trigger.closest('.nav-item') as Element);
     }
-
-    // The visible surface is ONE shared frame in .nav-links — always mounted,
-    // decorative (aria-hidden), never a menu itself. The panels above are
-    // transparent content layers stacked on top of it.
-    const frames = document.querySelectorAll('.nav-links .drop-frame');
-    expect(frames).toHaveLength(1);
-    expect(frames[0]).toHaveAttribute('aria-hidden', 'true');
-    expect(frames[0]).not.toHaveAttribute('role');
 
     // Enterprise / Pricing are plain links — no dropdown chrome whatsoever.
     for (const [name, href] of [
@@ -87,37 +104,32 @@ describe('LandingNav', () => {
     expect(screen.queryByRole('link', { name: /^evidence$/i })).not.toBeInTheDocument();
   });
 
-  it('travels between triggers only when switching, not on a fresh open', () => {
+  it('keeps exactly one panel mounted and hands it to the newly hovered trigger', () => {
     renderWithProviders(<LandingNav />);
 
     const item = (name: RegExp, id: string) => control(name, id).closest('.nav-item') as Element;
 
-    const frame = document.querySelector('.nav-links .drop-frame') as HTMLElement;
-
-    // A fresh open is a plain appearance: no `switching`, so the frame snaps
-    // to size and fades in rather than stretching from a previous shape.
+    // Switching must never mount a second panel. That single-element
+    // invariant is what makes the box appear to stretch: with two panels
+    // Motion crossfades them, and both dip toward transparent mid-switch —
+    // measured at ~0.1 each, which is the blink this replaced.
     fireEvent.mouseEnter(item(/^product$/i, 'desktop-nav-panel-product'));
-    const product = panel('desktop-nav-panel-product');
-    expect(product).toHaveClass('open');
-    expect(product).not.toHaveClass('switching');
-    expect(product.className).not.toMatch(/slide-(left|right)/);
-    expect(frame).toHaveClass('open');
-    expect(frame).not.toHaveClass('switching');
+    expect(document.querySelectorAll('.drop')).toHaveLength(1);
+    expect(panel('desktop-nav-panel-product')).toHaveClass('drop-product');
+    expect(control(/^product$/i, 'desktop-nav-panel-product')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
 
-    // Product -> Solutions: `switching` puts the frame AND the incoming panel
-    // on the height-only transition, so the one stationary surface stretches
-    // to fit the new content instead of fading out and back in. `slide-right`
-    // drifts the incoming content in from the direction of travel.
     fireEvent.mouseEnter(item(/^solutions$/i, 'desktop-nav-panel-solutions'));
-    const solutions = panel('desktop-nav-panel-solutions');
-    expect(solutions).toHaveClass('open', 'switching', 'slide-right');
-    expect(frame).toHaveClass('open', 'switching');
-    // The outgoing panel hides (its exit fade) but the shared frame does not.
-    expect(product).not.toHaveClass('open');
-
-    // Solutions -> Resources drifts back leftwards.
-    fireEvent.mouseEnter(item(/^resources$/i, 'desktop-nav-panel-resources'));
-    expect(panel('desktop-nav-panel-resources')).toHaveClass('open', 'switching', 'slide-left');
+    expect(document.querySelectorAll('.drop')).toHaveLength(1);
+    expect(panel('desktop-nav-panel-solutions')).toHaveClass('drop-solutions');
+    // The same element now serves the new trigger; the old id is gone.
+    expect(document.getElementById('desktop-nav-panel-product')).toBeNull();
+    expect(control(/^product$/i, 'desktop-nav-panel-product')).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 
   it('gives every dropdown item its own href (9 / 3 / 4 menuitems)', () => {

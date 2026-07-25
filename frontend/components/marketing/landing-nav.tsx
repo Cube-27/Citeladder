@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, ChevronDown, Menu, Moon, Sun, X } from 'lucide-react';
 import Link from 'next/link';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
@@ -13,15 +14,6 @@ import { cn } from '@/lib/utils';
 import { LogoCube } from '@/components/ui/logo-cube';
 
 const ACTIVE_PROJECT_STORAGE_KEY = 'searchify.active-project-id';
-
-/**
- * Vertical chrome around a dropdown panel's content: the 7px top and bottom
- * padding on `.drop` in marketing.css. The frame's height is the content's
- * measured height plus this, so the surface always fits what it is showing.
- * (Width and horizontal position are fixed in CSS — the frame never moves or
- * widens, so height is the only measured dimension.)
- */
-const PANEL_CHROME_Y = 14;
 
 function hasStoredActiveProject(): boolean {
   if (typeof window === 'undefined') return false;
@@ -277,20 +269,10 @@ export function LandingNav() {
   const theme = useSyncExternalStore(subscribeTheme, readTheme, () => 'light');
   const [scrolled, setScrolled] = useState(false);
   const [openDrop, setOpenDrop] = useState<DropKey | null>(null);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   // True only when the panel opened while ANOTHER panel was already open —
   // that is the case that should glide sideways. A first open grows out of
-  // its trigger instead, so the two motions never read as the same gesture.
-  const [isSwitching, setIsSwitching] = useState(false);
   const closeTimer = useRef<number | null>(null);
-  const contentRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  /**
-   * Height of the shared `.drop-frame` surface (and of the open panel, which
-   * clips its content to the same edge). This is the ONE measured dimension:
-   * left and width are fixed in CSS, so moving between triggers can only ever
-   * stretch the box vertically — it never travels, resizes sideways or fades.
-   */
-  const [panelHeight, setPanelHeight] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<DropKey | null>(null);
 
@@ -328,38 +310,16 @@ export function LandingNav() {
     closeTimer.current = null;
   };
 
-  /**
-   * Height the frame must stretch to for `key`'s content.
-   *
-   * Every panel keeps its fixed 660px CSS width whether open or closed
-   * (closed ones are merely visibility:hidden), so the content is always laid
-   * out at its real wrap width and scrollHeight is accurate on the first
-   * synchronous read — no deferred re-measure needed. scrollHeight is the
-   * content's own laid-out height, independent of whatever height the shell
-   * is currently clipped to, so the shell can never feed its stale size back.
-   */
-  const measurePanelHeight = (key: DropKey): number | null => {
-    const content = contentRefs.current[key];
-    if (!content) return null;
-    return content.scrollHeight + PANEL_CHROME_Y;
-  };
-
   const openDesktopDrop = (key: DropKey) => {
     clearDropClose();
-    const order: DropKey[] = ['product', 'resources', 'solutions'];
-    if (openDrop && openDrop !== key) {
-      setSlideDirection(order.indexOf(key) > order.indexOf(openDrop) ? 'right' : 'left');
-      setIsSwitching(true);
-    } else if (!openDrop) {
-      setIsSwitching(false);
-    }
-    setPanelHeight(measurePanelHeight(key));
+    // No switch/open distinction is needed any more: the panel is one element
+    // that stays mounted, so moving between triggers only changes which
+    // content it holds — Motion's `layout` handles the resize either way.
     setOpenDrop(key);
   };
 
   const closeDrop = () => {
     setOpenDrop(null);
-    setIsSwitching(false);
   };
 
   const scheduleDropClose = () => {
@@ -386,14 +346,6 @@ export function LandingNav() {
   const dropProps = (key: DropKey) => ({
     onMouseEnter: () => openDesktopDrop(key),
     onFocusCapture: () => openDesktopDrop(key),
-    onBlurCapture: (event: React.FocusEvent<HTMLDivElement>) => {
-      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-        // Functional update: focus can move between triggers faster than a
-        // render, so only close if THIS panel is still the open one.
-        setOpenDrop((current) => (current === key ? null : current));
-        setIsSwitching(false);
-      }
-    },
     onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'Escape') {
         closeDrop();
@@ -412,8 +364,25 @@ export function LandingNav() {
           <span>Searchify</span>
           <span className="by-tag">by CUBE27</span>
         </Link>
-        <div className="nav-links" onMouseEnter={clearDropClose} onMouseLeave={scheduleDropClose}>
-          {NAV_DROPS.map(({ key, label, groups }) => {
+        <div
+          className="nav-links"
+          onMouseEnter={clearDropClose}
+          onMouseLeave={scheduleDropClose}
+          onBlurCapture={(event) => {
+            // The panel is a sibling of the triggers, so "did focus leave the
+            // menu?" is a question about the whole group, not one item.
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              closeDrop();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              closeDrop();
+              (document.activeElement as HTMLElement | null)?.blur();
+            }
+          }}
+        >
+          {NAV_DROPS.map(({ key, label }) => {
             const isOpen = openDrop === key;
             return (
               <div className={cn('nav-item', isOpen && 'open')} key={key} {...dropProps(key)}>
@@ -422,64 +391,11 @@ export function LandingNav() {
                   type="button"
                   aria-expanded={isOpen}
                   aria-haspopup="true"
-                  aria-controls={`desktop-nav-panel-${key}`}
+                  aria-controls={isOpen ? `desktop-nav-panel-${key}` : undefined}
                   onClick={() => openDesktopDrop(key)}
                 >
                   {label} <ChevronDown className="chev" aria-hidden />
                 </button>
-                {/* Each trigger owns its panel, rendered INSIDE its .nav-item.
-                    That nesting is what makes the submenu keyboard-reachable:
-                    onBlurCapture only closes when focus leaves the .nav-item
-                    subtree, so Tab moves from the trigger into the menu items
-                    instead of closing the panel first. The panel element is
-                    always present (so aria-controls resolves) and hidden via
-                    .open/aria-hidden.
-
-                    Visually the panel is a TRANSPARENT content layer: it has
-                    no background or border of its own (the shared .drop-frame
-                    below paints the surface), sits at the same fixed left and
-                    width as the frame, and carries the same inline height so
-                    its overflow clip tracks the frame's bottom edge exactly
-                    while the height eases. `switching` + `slide-*` drive the
-                    content's directional fade when moving between triggers. */}
-                <div
-                  className={cn(
-                    'drop',
-                    `drop-${key}`,
-                    isOpen && 'open',
-                    isOpen && isSwitching && 'switching',
-                    isOpen && isSwitching && `slide-${slideDirection}`,
-                  )}
-                  id={`desktop-nav-panel-${key}`}
-                  role="menu"
-                  aria-hidden={!isOpen}
-                  onMouseEnter={clearDropClose}
-                  style={panelHeight === null ? undefined : { height: `${panelHeight}px` }}
-                >
-                  <div
-                    className="drop-content"
-                    ref={(node) => {
-                      contentRefs.current[key] = node;
-                    }}
-                  >
-                    {groups.map((group) =>
-                      group.label ? (
-                        <div className="d-group" key={group.label}>
-                          <span className="d-group-label">{group.label}</span>
-                          <div className="d-steps">
-                            {group.items.map((item) => (
-                              <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        group.items.map((item) => (
-                          <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
-                        ))
-                      ),
-                    )}
-                  </div>
-                </div>
               </div>
             );
           })}
@@ -489,19 +405,62 @@ export function LandingNav() {
           <Link className="nav-link" href="/pricing">
             Pricing
           </Link>
-          {/* The one visible dropdown surface. Always mounted, never remounts,
-              purely decorative (the menu semantics live on the panels above),
-              so switching triggers can never flicker: its opacity only changes
-              on open/close, and between triggers only its height eases. */}
-          <div
-            className={cn(
-              'drop-frame',
-              openDrop !== null && 'open',
-              openDrop !== null && isSwitching && 'switching',
-            )}
-            aria-hidden="true"
-            style={panelHeight === null ? undefined : { height: `${panelHeight}px` }}
-          />
+          {/* ONE panel for all three triggers, mounted once and kept mounted
+              while the pointer moves between them.
+
+              This is the whole fix. An earlier version gave each trigger its
+              own panel and shared a `layoutId`; Motion then ran its built-in
+              crossfade between the outgoing and incoming elements, which both
+              dipped to ~0.1 opacity mid-switch — the box visibly blinked and
+              two sets of rows were briefly legible. With a single element
+              there is nothing to crossfade: `layout` simply animates the box
+              from one size to the next (FLIP), and the rows swap inside it.
+
+              AnimatePresence wraps only open/close, never the switch. */}
+          <AnimatePresence>
+            {openDrop !== null ? (
+              <motion.div
+                layout
+                className={cn('drop', `drop-${openDrop}`)}
+                id={`desktop-nav-panel-${openDrop}`}
+                role="menu"
+                onMouseEnter={clearDropClose}
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { type: 'spring', stiffness: 320, damping: 34, mass: 0.7 }
+                }
+              >
+                <motion.div
+                  key={openDrop}
+                  className="drop-content"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: 'easeOut' }}
+                >
+                  {(NAV_DROPS.find((d) => d.key === openDrop)?.groups ?? []).map((group) =>
+                    group.label ? (
+                      <div className="d-group" key={group.label}>
+                        <span className="d-group-label">{group.label}</span>
+                        <div className="d-steps">
+                          {group.items.map((item) => (
+                            <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      group.items.map((item) => (
+                        <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
+                      ))
+                    ),
+                  )}
+                </motion.div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
         <div className="nav-actions">
           <button
