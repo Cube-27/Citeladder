@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { cn } from '@/lib/utils';
 
 export type DonutSegment = {
@@ -16,9 +18,15 @@ export type DonutSegment = {
  * figure carries an ARIA label summarising the shares (role="img"), and every
  * legend row states its own percentage, so share is never colour-alone.
  *
- * Flat language: a 14px ring on a --bg-well track, the value as a 21px mono
- * centre with an 11px muted caption beneath, and the legend as a right-hand
- * column of dot + label + mono value.
+ * A 14px ring on a --bg-well track, the value as a mono centre with a muted
+ * caption beneath, and the legend as a right-hand column of dot + label + mono
+ * value.
+ *
+ * Segments thicken on hover (v2): the arc grows 3px outward from its centre
+ * line, which reads as the slice lifting without shifting the ring's geometry
+ * or reflowing the legend. Purely decorative feedback — the legend already
+ * states every share in text, and the effect is dropped under
+ * `prefers-reduced-motion`.
  */
 export function Donut({
   segments,
@@ -91,7 +99,11 @@ export function Donut({
                   strokeWidth={strokeWidth}
                   strokeDasharray={`${dash} ${gap}`}
                   strokeDashoffset={dashOffset}
-                  className={segment.colorClass}
+                  className={cn(
+                    segment.colorClass,
+                    'origin-center transition-[stroke-width] duration-150 ease-out hover:[stroke-width:calc(var(--donut-stroke)+3px)] motion-reduce:transition-none',
+                  )}
+                  style={{ '--donut-stroke': `${strokeWidth}px` } as CSSProperties}
                 />
               );
             })}

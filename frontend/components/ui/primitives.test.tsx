@@ -145,15 +145,17 @@ describe('Card', () => {
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 
-  it('CardEyebrow renders the sentence-case micro-label (never a heading)', () => {
+  it('CardEyebrow renders the uppercase micro-label (never a heading)', () => {
     render(<CardEyebrow>Visibility score</CardEyebrow>);
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
     expect(eyebrow.className).toContain('text-2xs');
     expect(eyebrow.className).toContain('text-muted');
-    // The mono-uppercase-tracked eyebrow is retired.
+    // v2 reinstates the uppercase tracked eyebrow (design.md §7) — but NOT the
+    // mono face, which stays reserved for values.
+    expect(eyebrow.className).toContain('uppercase');
+    expect(eyebrow.className).toContain('tracking-wider');
     expect(eyebrow.className).not.toContain('font-mono');
-    expect(eyebrow.className).not.toContain('uppercase');
   });
 });
 
@@ -180,7 +182,8 @@ describe('Table (dense)', () => {
     // Sticky header at the dense height, sentence-case sans micro-label.
     expect(headers[0].className).toContain('h-[var(--table-header-height)]');
     expect(headers[0].className).toContain('sticky');
-    expect(headers[0].className).not.toContain('uppercase');
+    // v2 table headers share the uppercase eyebrow recipe; mono stays for values.
+    expect(headers[0].className).toContain('uppercase');
     expect(headers[0].className).not.toContain('font-mono');
     // Flat grid: header sits on the panel and is left-aligned even when numeric.
     expect(headers[0].className).toContain('bg-panel');

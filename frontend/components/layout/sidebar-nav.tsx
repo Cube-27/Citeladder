@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
+import { eyebrowClasses } from '@/components/ui/eyebrow';
+
 import { NAV_GROUPS, type NavItem } from './nav-items';
 
 /**
@@ -16,21 +18,15 @@ import { NAV_GROUPS, type NavItem } from './nav-items';
  * full-opacity icon — replacing the flat phase's panel pill behind a hairline.
  * Idle icons sit at 65% so the active row reads first.
  *
+ * Group labels use the shared `eyebrowClasses` recipe, which v2 returns to
+ * uppercase 11px/500 at 0.06em.
+ *
  * Highlighting matches the current route or any nested route (e.g. `/runs/[id]`
  * highlights Runs).
  */
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
-
-/**
- * Group eyebrow — uppercase micro-label at 11px/500 with 0.06em tracking, per
- * the Figma sheet's section labels. Deliberately local rather than the shared
- * `eyebrowClasses`: that recipe is sentence-case and used by ~40 other surfaces,
- * so the app-wide eyebrow decision belongs to the primitives task, not the
- * shell. Not mono — mono stays reserved for values.
- */
-const groupLabelClasses = 'text-2xs text-muted font-medium uppercase tracking-wider';
 
 function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>) {
   const Icon = item.icon;
@@ -70,7 +66,7 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
     <nav aria-label="Primary" className={cn('flex flex-col gap-4', className)}>
       {NAV_GROUPS.map((group) => (
         <div key={group.title} className="flex flex-col gap-0.5">
-          <p className={cn(groupLabelClasses, 'mb-1 px-2.5')}>{group.title}</p>
+          <p className={cn(eyebrowClasses, 'mb-1 px-2.5')}>{group.title}</p>
           <ul className="flex flex-col gap-0.5">
             {group.items.map((item) => (
               <li key={item.href}>
