@@ -538,7 +538,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
       `/runs/${AUDIT_LATEST}`,
     );
     // The empty state acknowledges the active run instead of urging a launch.
-    expect(screen.getByText(/an audit is running now/i)).toBeInTheDocument();
+    expect(screen.getByText(/an audit is running/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /launch your first audit/i })).toBeNull();
   });
 

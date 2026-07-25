@@ -11,18 +11,27 @@ export function scoreBand(score: number): ScoreBand {
   return 'low';
 }
 
+/**
+ * Ring/arc stroke per band. Points at the dedicated `--score-*-ring` tokens
+ * rather than the solids: rings sit on a surface, not behind text, so the two
+ * are free to diverge (and do, in dark).
+ */
 export const scoreBandStroke: Record<ScoreBand, string> = {
-  low: 'stroke-score-low',
-  mid: 'stroke-score-mid',
-  good: 'stroke-score-good',
-  high: 'stroke-score-high',
+  low: 'stroke-score-low-ring',
+  mid: 'stroke-score-mid-ring',
+  good: 'stroke-score-good-ring',
+  high: 'stroke-score-high-ring',
 };
 
+/**
+ * Band as text. Uses the `--score-*-text` tokens, which are the AA-gated
+ * variants — the solids are not guaranteed readable as type.
+ */
 export const scoreBandText: Record<ScoreBand, string> = {
-  low: 'text-score-low',
-  mid: 'text-score-mid',
-  good: 'text-score-good',
-  high: 'text-score-high',
+  low: 'text-score-low-text',
+  mid: 'text-score-mid-text',
+  good: 'text-score-good-text',
+  high: 'text-score-high-text',
 };
 
 /**

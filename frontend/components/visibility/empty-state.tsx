@@ -2,41 +2,36 @@ import Link from 'next/link';
 import { Rocket } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow } from '@/components/ui/card';
-import { IconChip } from '@/components/ui/icon-chip';
-import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /**
- * Empty state for a project with no completed runs (design.md §9.6): a
- * "Launch your first audit" card linking to `/runs`, in the
- * empty-state pattern (micro-label + heading + ghost CTA). The
+ * Empty state for a project with no completed runs (design.md §9.6). The
  * dashboard is a projection over completed audits, so there is nothing to
  * render until one finishes. When a run is already in progress
  * (`hasActiveRun`), the copy and CTA switch from "launch one" to "one is on
  * its way".
+ *
+ * Copy is one line each: the old version listed what the dashboard would
+ * eventually show (score, per-engine comparison, rankings), which the screen
+ * makes obvious the moment it has data.
  */
 export function VisibilityEmptyState({
   hasActiveRun = false,
 }: Readonly<{ hasActiveRun?: boolean }>) {
   return (
-    <Card>
-      <CardContent className="grid justify-items-center gap-4 py-12 text-center">
-        <CardEyebrow>Visibility</CardEyebrow>
-        <IconChip>
-          <Rocket className="size-6" aria-hidden />
-        </IconChip>
-        <div className="grid gap-1">
-          <h2 className={displayHeadingLgClasses}>No completed runs yet</h2>
-          <p className="text-secondary max-w-md text-sm">
-            {hasActiveRun
-              ? 'An audit is running now. Once it completes, its Visibility Score, per-engine comparison and rankings show up here automatically.'
-              : 'Launch an audit to see how AI answer engines talk about your brand. Once a run completes, its Visibility Score, per-engine comparison and rankings show up here.'}
-          </p>
-        </div>
-        <Button asChild variant="ghost" size="md">
+    <EmptyState
+      icon={Rocket}
+      heading="No completed runs yet"
+      description={
+        hasActiveRun
+          ? 'An audit is running — results appear here when it finishes.'
+          : 'Launch an audit to see how AI answer engines talk about your brand.'
+      }
+      action={
+        <Button asChild variant={hasActiveRun ? 'secondary' : 'primary'} size="md">
           <Link href="/runs">{hasActiveRun ? 'View runs' : 'Launch your first audit'}</Link>
         </Button>
-      </CardContent>
-    </Card>
+      }
+    />
   );
 }

@@ -6,10 +6,13 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
  * shows the mono display number. Carries an ARIA label with the percentage
  * (role="img") so the value is announced to assistive tech.
  *
- * `numeralSize="lg"` renders the center numeral at the display size
- * (`text-2xl`) for hero surfaces like the Visibility score card — pair it with
- * a larger `size`/`strokeWidth`. The numeral stays `aria-hidden`; the ring's
- * svg keeps the accessible label either way.
+ * `numeralSize` sets the center numeral: `md` = `text-lg`, `lg` = `text-2xl`,
+ * `hero` = `text-hero` (48px) for the Visibility hero card — pair the larger
+ * numerals with a larger `size`/`strokeWidth`. The numeral stays `aria-hidden`;
+ * the ring's svg keeps the accessible label either way.
+ *
+ * The arc sweeps to its value over 800ms on mount. `motion-reduce` drops the
+ * transition so the ring simply appears at its final value.
  */
 export function ScoreRing({
   value,
@@ -27,8 +30,8 @@ export function ScoreRing({
   /** Accessible label; defaults to "Visibility score: N%". */
   label?: string;
   showValue?: boolean;
-  /** Center numeral size: `md` = text-lg (default), `lg` = text-2xl display. */
-  numeralSize?: 'md' | 'lg';
+  /** Center numeral: `md` = text-lg (default), `lg` = text-2xl, `hero` = text-hero. */
+  numeralSize?: 'md' | 'lg' | 'hero';
   className?: string;
 }>) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
@@ -68,7 +71,10 @@ export function ScoreRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
-          className={cn('transition-[stroke-dashoffset]', scoreBandStroke[band])}
+          className={cn(
+            'transition-[stroke-dashoffset] duration-[800ms] ease-out motion-reduce:transition-none',
+            scoreBandStroke[band],
+          )}
         />
       </svg>
       {showValue ? (
@@ -76,7 +82,11 @@ export function ScoreRing({
           aria-hidden
           className={cn(
             'mono absolute inset-0 flex items-center justify-center font-semibold',
-            numeralSize === 'lg' ? 'text-2xl' : 'text-lg',
+            numeralSize === 'hero'
+              ? 'text-hero tracking-tight'
+              : numeralSize === 'lg'
+                ? 'text-2xl'
+                : 'text-lg',
             scoreBandText[band],
           )}
         >
