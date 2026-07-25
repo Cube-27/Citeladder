@@ -71,15 +71,74 @@ All status/vocabulary constants are owned by
 - **Per-page presentation status** (`PageSummary.analysis_status`): the derived,
   mockup-facing status. A raw `failed` page-analysis row is **never** surfaced as
   page copy — it maps to `error` (or `blocked` for a policy denial such as
-  robots/SSRF, carrying the error code). Possible values: `completed`,
-  `partially_completed`, `pending`, `running`, `error`, `blocked`, `cancelled`,
-  `not_selected`.
+  robots/SSRF or an exhausted bot block, carrying the error code). Possible
+  values: `completed`, `partially_completed`, `pending`, `running`, `error`,
+  `blocked`, `cancelled`, `not_selected`.
 - **Rule outcome**: `pass`, `fail`, `not_applicable`, `error`.
 - **Severity**: `critical`, `high`, `medium`, `low`, `info`.
 - **Dimension**: `technical`, `aeo`.
+- **Page type** (`PageSummary.page_type`, per-URL detail, exports): the
+  deterministic classifier's page-type taxonomy — `homepage`, `article`,
+  `product`, `category`, `pricing`, `docs`, `faq`, `about_contact`, `other`.
+  Assigned at analysis time (config-owned pattern tables +
+  `PAGE_TYPE_PROFILES`); always present, `other` when no signal clears the
+  confidence threshold. Classifier/classification rationale:
+  [`roadmap/site-health-v2-page-aware.md`](roadmap/site-health-v2-page-aware.md).
 - **Scores.** Technical / AEO / overall scores are `0–100` floats. A missing or
   failed score is **`null`** in the API and renders as an em dash (`—`) in the
   UI — never a fabricated `0`.
+
+---
+
+## Fetch ladder, fetch modes & fetch-engine provenance
+
+Page evidence is fetched through a two-rung **ladder** inside one
+`SecureFetcher.fetch()` call (no extra queue attempt, no queue-semantics
+change):
+
+1. **Rung 1 — `httpx`**, identifying as the crawler UA
+   (`SearchifySiteHealthBot/1.0`), with the full SSRF posture: manual redirects
+   revalidated per hop, pinned-IP dial, wire + decoded byte caps, response
+   headers redacted to the config allowlist, per-host politeness, robots
+   compliance.
+2. **Rung 2 — impersonated `curl_cffi`**, fired **only** when rung 1 ends on a
+   config-owned bot-block signature (a status in `BOT_BLOCK_STATUSES` — 401/403/
+   503 — a challenge body marker from `BOT_BLOCK_BODY_MARKERS`, or a TLS-layer
+   block per `BOT_BLOCK_TLS_ERROR_MARKERS`). The same request is retried **once**
+   with a Chrome-impersonating session (UA + TLS fingerprint; the settled D2
+   decision — `SITE_HEALTH_CURL_UA_MODE` / `SITE_HEALTH_CURL_IMPERSONATE_TARGET`).
+   Every rung-1 safety property is preserved (manual per-hop redirect
+   revalidation, pinned-IP dial, live wire+decoded caps, header redaction,
+   politeness, robots). A blocked rung-2 response is **not** retried further.
+
+The ladder is governed per crawl by the config-owned **fetch-mode** vocabulary,
+frozen into `SiteCrawl.configuration.fetch_mode` at creation (invariant 9) and
+settable as `fetch_mode` on `POST /site-crawls`:
+
+| Mode | Behavior in v2 |
+|---|---|
+| `auto` (default) | Rung 1, escalating to rung 2 on a bot-block signature. |
+| `http_only` | Rung 1 only; the impersonated escalation never fires. |
+| `browser_only` | **Reserved for P4** — rejected at creation (`422` `invalid_fetch_mode`). |
+| `http_then_browser` | **Reserved for P4** — rejected at creation (`422` `invalid_fetch_mode`). |
+
+Every real network call (either rung, every redirect hop) appends one immutable
+entry to the fetcher's per-call trace, and the worker persists **one
+`SiteFetchAttempt` row per network call** — a blocked losing rung never
+vanishes. `attempt_number` stays the queue-attempt number; `request_ordinal` is
+the deterministic per-call ordinal (order/uniqueness key
+`(task_id, attempt_number, request_ordinal)`); `rung_number` records the ladder
+rung (1 = httpx, 2 = curl_cffi). The **engine that produced the call** is
+recorded as `fetch_engine` (`httpx` | `curl_cffi`; `browser` reserved for P4)
+on every attempt row and on the `SiteFetchArtifact` — and **only the successful
+terminal call links the artifact** (a blocked rung is an attempt only, never an
+artifact generation; the unique one-artifact-per-task constraint stands).
+
+When **both** rungs return signature-detected blocks, the task fails terminally
+with `ERROR_BOT_BLOCKED` (`bot_blocked`) — distinct from the generic `http_4xx`
+so an exhausted bot block presents the page as **`blocked`** (via
+`POLICY_BLOCKING_ERROR_CODES`) instead of `error`. The terminal curl response is
+retained in the per-call trace only and never becomes an analyzable artifact.
 
 ---
 
@@ -95,17 +154,17 @@ typed `400`, never a `500`.
 | Method & path | Purpose |
 |---|---|
 | `GET /entitlements` | Workspace Site Health entitlement (seeds fail-closed Free on first use). |
-| `POST /site-crawls` | Create + queue a crawl for a project. `seed` must be an integer string. `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
+| `POST /site-crawls` | Create + queue a crawl for a project. `seed` must be an integer string; optional `fetch_mode` selects the fetch ladder (`auto` default / `http_only`; the P4-reserved browser modes are `422` `invalid_fetch_mode`). `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
 | `GET /site-crawls?project_id=&limit=&cursor=` | List crawls (created-at keyset). |
 | `GET /site-crawls/{crawl_id}` | Crawl summary/projection (redacted for Free). |
 | `POST /site-crawls/{crawl_id}/cancel` | Cancel a crawl → `cancelled`. |
-| `GET /site-crawls/{crawl_id}/inventory?limit=&cursor=&query=&status=&monitored=` | Admitted-URL inventory (selection source of truth). |
+| `GET /site-crawls/{crawl_id}/inventory?limit=&cursor=&query=&status=&monitored=&page_type=` | Admitted-URL inventory (selection source of truth). `page_type` filters by the classifier's page type (unknown values are ignored, matching the other filters). |
 | `GET /projects/{project_id}/monitored-urls` | Current monitored set + quota + `selection_version`. |
 | `PUT /projects/{project_id}/monitored-urls` | Full-set, versioned monitored-set replacement. `403` `starter_required` (Free) / `site_health_quota_exceeded`; `409` `stale_selection_version` (carries `current_selection_version`); `422` for unknown URL ids. |
-| `GET /site-crawls/{crawl_id}/pages?limit=&cursor=&query=&status=&monitored=` | Dashboard page rows (derived `analysis_status` + `error_code`, monitored flag, scores). |
+| `GET /site-crawls/{crawl_id}/pages?limit=&cursor=&query=&status=&monitored=&page_type=` | Dashboard page rows (derived `analysis_status` + `error_code`, monitored flag, `page_type`, scores). |
 | `GET /site-crawls/{crawl_id}/pages/{site_url_id}` | Per-URL detail (facts, delivery, evaluations, issues, link refs). |
 | `GET /site-crawls/{crawl_id}/pages/{site_url_id}/issue-history?limit=&cursor=` | Crawl-bounded issue history for a URL. |
-| `GET /site-crawls/{crawl_id}/issues?limit=&cursor=&query=&severity=&category=&dimension=&rule=&site_url_id=` | Grouped issues catalog + summary tiles. The grouped-issue wire filter is `rule` (not `rule_id`). |
+| `GET /site-crawls/{crawl_id}/issues?limit=&cursor=&query=&severity=&category=&dimension=&rule=&site_url_id=&page_type=` | Grouped issues catalog + summary tiles. The grouped-issue wire filter is `rule` (not `rule_id`). `page_type` filters to issues affecting pages of that type. |
 | `GET /site-crawls/{crawl_id}/issues/{canonical_id}` | Grouped-issue detail (a non-representative member id canonicalizes to the earliest `(created_at, id)`). |
 | `GET /projects/{project_id}/site-health?crawl_id=` | Dashboard projection (defaults to the latest completed crawl). |
 | `GET /site-crawls/{crawl_id}/events?stream=` | Event replay (`stream=false`, default → ordered JSON list) or SSE (`stream=true`). Free payloads are redacted. |
@@ -120,6 +179,12 @@ typed `400`, never a `500`.
 `rule_catalog_version → rule_version`. For a **Free** (non-disclosing) crawl,
 `discovered_count`, `total_url_count`, and `has_more_site_urls` are `null`.
 
+`site_facts` (required, nullable — never Free-redacted) is the bounded
+site-level blob `_crawl_setup` builds (robots.txt AI-crawler stance, llms.txt
+result, sitemap files); the dashboard's **AI crawler access** panel
+(`site-facts-panel.tsx`, between the status strip and the per-page-type
+scores) renders it and hides itself while it is `null`.
+
 ---
 
 ## Exports
@@ -128,9 +193,11 @@ CSV (`export.csv`) and Markdown (`export.md`) render the **same
 workspace-scoped, already-projected rows** the JSON API returns, so an export can
 never leak more than the API. The `view` query parameter selects the projection:
 
-- `inventory` — admitted-URL inventory columns.
-- `pages` — dashboard page columns (status, error code, scores).
-- `issues` — grouped issues columns.
+- `inventory` — admitted-URL inventory columns (including `page_type` when the
+  row has a completed analysis).
+- `pages` — dashboard page columns (status, error code, `page_type`, scores).
+- `issues` — grouped issues columns (`page_type` is the comma-joined distinct
+  set of affected page types).
 
 Exports are **authenticated blob downloads** (`Content-Disposition: attachment`),
 so a selected non-default workspace's `X-Workspace-Id` header is carried (a plain

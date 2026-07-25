@@ -59,6 +59,8 @@ import type {
   pageDetailSchema,
   pageSummarySchema,
   pagesPageSchema,
+  pageTypeSchema,
+  pageTypeScoreSummarySchema,
   rerunPageResponseSchema,
   siteCrawlListPageSchema,
   siteCrawlSchema,
@@ -67,6 +69,7 @@ import type {
   siteIssueDetailSchema,
   siteIssueSchema,
   siteIssuesPageSchema,
+  siteScoreSummarySchema,
   // Content
   contentGenerationDetailSchema,
   contentGenerationListItemSchema,
@@ -84,6 +87,15 @@ import type {
   productVariantSchema,
   productVisibilityEntrySchema,
   productVisibilitySchema,
+  // Opportunities
+  opportunitiesPageSchema,
+  opportunityDetailSchema,
+  opportunitySchema,
+  opportunitySeveritySchema,
+  opportunityStatusSchema,
+  opportunitySummarySchema,
+  opportunityTypeSchema,
+  recomputeResponseSchema,
 } from './schemas';
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
@@ -126,6 +138,9 @@ export type CrawlOverallStatus = z.infer<typeof crawlOverallStatusSchema>;
 export type CrawlDiscoveryStatus = z.infer<typeof crawlDiscoveryStatusSchema>;
 export type CrawlAnalysisStatus = z.infer<typeof crawlAnalysisStatusSchema>;
 export type PageAnalysisStatus = z.infer<typeof pageAnalysisStatusSchema>;
+export type PageType = z.infer<typeof pageTypeSchema>;
+export type PageTypeScoreSummary = z.infer<typeof pageTypeScoreSummarySchema>;
+export type SiteScoreSummary = z.infer<typeof siteScoreSummarySchema>;
 export type SiteCrawl = z.infer<typeof siteCrawlSchema>;
 export type InventoryRow = z.infer<typeof inventoryRowSchema>;
 export type InventoryPage = z.infer<typeof inventoryPageSchema>;
@@ -170,3 +185,13 @@ export type CompetitorProductVisibilityEntry = z.infer<
 export type ProductVisibility = z.infer<typeof productVisibilitySchema>;
 export type ProductEvidenceItem = z.infer<typeof productEvidenceItemSchema>;
 export type ProductEvidenceResponse = z.infer<typeof productEvidenceResponseSchema>;
+
+// --- Opportunities ---
+export type OpportunityType = z.infer<typeof opportunityTypeSchema>;
+export type OpportunitySeverity = z.infer<typeof opportunitySeveritySchema>;
+export type OpportunityStatus = z.infer<typeof opportunityStatusSchema>;
+export type Opportunity = z.infer<typeof opportunitySchema>;
+export type OpportunityDetail = z.infer<typeof opportunityDetailSchema>;
+export type OpportunitiesPage = z.infer<typeof opportunitiesPageSchema>;
+export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;
+export type RecomputeResponse = z.infer<typeof recomputeResponseSchema>;

@@ -4,7 +4,7 @@ import { ICONS } from '@/lib/icons';
 
 /**
  * Sidebar navigation model (F5, simplified): two groups — Analyze / Optimize —
- * with eleven live items, all navigable. Icons come from the canonical map
+ * with twelve live items, all navigable. Icons come from the canonical map
  * (`@/lib/icons`) so nav glyphs stay consistent with the rest of the app.
  * This is data-only so the sidebar component stays presentational and the nav
  * is unit-testable.
@@ -42,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Content', href: '/content', icon: ICONS.content },
       { label: 'Site health', href: '/site-health', icon: ICONS.siteHealth },
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
+      { label: 'Opportunities', href: '/opportunities', icon: ICONS.opportunities },
       { label: 'Brand knowledge', href: '/knowledge-base', icon: ICONS.knowledgeBase },
       { label: 'Setup', href: '/setup', icon: ICONS.setup },
     ],

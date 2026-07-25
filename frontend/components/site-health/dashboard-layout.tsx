@@ -1,7 +1,9 @@
 'use client';
 
 import { InventorySection } from '@/components/site-health/inventory-section';
+import { PageTypeScores } from '@/components/site-health/page-type-scores';
 import { ScoreSection } from '@/components/site-health/score-section';
+import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { StatusStrip } from '@/components/site-health/status-strip';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@/lib/api/types';
@@ -67,6 +69,14 @@ export function SiteHealthDashboardLayout({
         selectedTotal={projectSelectedTotal}
         selectedError={projectSelectedError}
       />
+
+      {/* AI-crawler access + well-known files (v2 P2) — reads the crawl's
+          `site_facts`; self-hides until a crawl persists it. */}
+      <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
+
+      {/* Per-page-type score breakdown (v2 P1) — data-driven like the score
+          cards: renders once a score summary exists, hides itself before. */}
+      <PageTypeScores crawl={crawl} dashboard={dashboardQuery.data} />
 
       <InventorySection
         mode={inventoryMode}

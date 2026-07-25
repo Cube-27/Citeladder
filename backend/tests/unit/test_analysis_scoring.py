@@ -143,6 +143,49 @@ def test_direct_annotation_url_has_domain_authority_over_title() -> None:
     assert classified["is_owned"] is True
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/x",
+        # Subdomain of the redirect host.
+        "https://eu.vertexaisearch.cloud.google.com/grounding-api-redirect/x",
+        # Trailing-dot (fully qualified) form of the same host.
+        "https://vertexaisearch.cloud.google.com./grounding-api-redirect/x",
+        # The marker carried as a bare host.
+        "https://grounding-api-redirect/xyz",
+    ],
+)
+def test_google_redirect_url_never_becomes_the_citation_domain(url: str) -> None:
+    """A redirect URL's own host must not be mistaken for the publisher."""
+    classified = classify_citation(
+        {"url": url, "title": "runnersworld.com", "domain": "runnersworld.com"},
+        _config(),
+    )
+    assert classified["domain"] == "runnersworld.com"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        # Redirect markers in the QUERY of a real publisher URL: the publisher's
+        # own hostname still wins. A substring match over the whole URL would
+        # discard these and fall back to the (weaker) title/domain fields.
+        "https://www.bestandless.com.au/a?ref=grounding-api-redirect",
+        "https://www.bestandless.com.au/a?from=vertexaisearch.cloud.google.com",
+        # The redirect host as a suffix of an unrelated registrable domain.
+        "https://vertexaisearch.cloud.google.com.evil.example/a",
+    ],
+)
+def test_publisher_url_survives_redirect_markers_outside_host_and_path(
+    url: str,
+) -> None:
+    classified = classify_citation(
+        {"url": url, "title": "unrelated.example", "domain": "unrelated.example"},
+        _config(),
+    )
+    assert classified["domain"] != "unrelated.example"
+
+
 def test_owned_domain_and_subdomain_cited() -> None:
     score = score_execution(
         answer_text="Best&Less has uniforms.",

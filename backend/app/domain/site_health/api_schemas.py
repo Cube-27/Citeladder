@@ -48,6 +48,10 @@ class CreateCrawlRequest(_Model):
     include_globs: list[str] | None = None
     exclude_globs: list[str] | None = None
     seed: str | None = None
+    # Optional fetch-ladder mode (config FETCH_MODE_* token; default ``auto``).
+    # The planner validates it — the P4-reserved browser modes are rejected
+    # with a coded 422, so there is exactly one validation behavior.
+    fetch_mode: str | None = None
 
 
 class ReplaceMonitoredRequest(_Model):
@@ -107,6 +111,15 @@ class EntitlementResponse(_Model):
 # =========================================================================
 # Crawl
 # =========================================================================
+class ScoreSummaryByType(_Model):
+    """One page type's rollup inside ``score_summary.by_page_type`` (v2 P1)."""
+
+    analyzed_count: int
+    technical_score: float | None
+    aeo_score: float | None
+    overall_score: float | None
+
+
 class ScoreSummary(_Model):
     overall_score: float | None
     technical_score: float | None
@@ -115,6 +128,8 @@ class ScoreSummary(_Model):
     analyzed_count: int
     issue_count: int
     scoring_version: str
+    # Per-page-type breakdown (only types with >= 1 analyzed URL appear).
+    by_page_type: dict[str, ScoreSummaryByType] = {}
 
 
 class CrawlResponse(_Model):
@@ -137,6 +152,9 @@ class CrawlResponse(_Model):
     total_url_count: int | None = None
     has_more_site_urls: bool | None = None
     score_summary: ScoreSummary | None = None
+    # v2 P2: bounded site-level facts (robots AI stance / llms.txt / sitemap
+    # files); no discovered totals inside, so it is never redacted.
+    site_facts: dict | None = None
     extractor_version: str
     analyzer_version: str
     rule_version: str
@@ -168,6 +186,8 @@ class InventoryRow(_Model):
     first_seen_at: str | None
     last_seen_at: str | None
     issue_count: int | None
+    # Classified page type (v2 P1); None until the URL has an analysis.
+    page_type: str | None
     technical_score: float | None
     aeo_score: float | None
     overall_score: float | None
@@ -218,6 +238,8 @@ class PageSummary(_Model):
     analysis_status: PageAnalysisStatus
     error_code: str
     issue_count: int | None
+    # Classified page type (v2 P1); None until the URL has an analysis.
+    page_type: str | None
     technical_score: float | None
     aeo_score: float | None
     overall_score: float | None
@@ -309,6 +331,12 @@ class PageDetail(_Model):
     analysis_status: PageAnalysisStatus
     error_code: str
     field_cwv_available: Literal[False] = False
+    # Classified page type (v2 P1); None until the URL has an analysis.
+    page_type: str | None
+    # Bounded classifier evidence behind ``page_type`` (ranked signals,
+    # confidence, schema suggestion) for the "why this type?" disclosure;
+    # None until the URL has an analysis.
+    page_type_evidence: dict | None = None
     technical_score: float | None
     aeo_score: float | None
     overall_score: float | None
@@ -334,6 +362,9 @@ class AffectedUrl(_Model):
     normalized_url: str
     display_url: str
     title: str | None
+    # Classified page type of the affected analysis (v2 P1; None when the
+    # URL has no classified analysis).
+    page_type: str | None = None
 
 
 class IssuesSummary(_Model):

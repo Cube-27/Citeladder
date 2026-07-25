@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { queryKeys } from './query-keys';
 import {
@@ -13,6 +14,8 @@ import {
   siteIssueSchema,
   strictValidate,
 } from './schemas';
+import { siteHealthApi } from './site-health';
+import { mswServer } from '@/test/msw-server';
 import { z } from 'zod';
 
 const UUID = '11111111-1111-4111-8111-111111111111';
@@ -28,6 +31,26 @@ const entitlement = {
   capability_revision: 3,
   created_at: '2026-07-15T00:00:00Z',
   updated_at: '2026-07-15T00:00:00Z',
+};
+
+// The real bounded site-facts blob the worker persists (`_crawl_setup` in
+// backend/app/workers/site_health_worker.py) — robots AI-crawler stance,
+// llms.txt probe, sitemap file list. No discovered totals inside.
+const siteFacts = {
+  robots: {
+    fetched: true,
+    url: 'https://example.com/robots.txt',
+    status_code: 200,
+    ai_crawlers: {
+      GPTBot: 'block',
+      ClaudeBot: 'allow',
+      PerplexityBot: 'allow',
+      'Google-Extended': 'allow',
+    },
+    sitemaps: ['https://example.com/sitemap.xml'],
+  },
+  llms_txt: { fetched: true, url: 'https://example.com/llms.txt', status_code: 200, present: true },
+  sitemap: { fetched: false, files: [] },
 };
 
 const crawl = {
@@ -47,6 +70,7 @@ const crawl = {
   failed_count: 0,
   total_url_count: null,
   score_summary: null,
+  site_facts: siteFacts,
   extractor_version: 'x1',
   analyzer_version: 'a1',
   rule_version: 'r1',
@@ -74,6 +98,7 @@ const inventoryRow = {
   aeo_score: null,
   overall_score: null,
   last_audited: null,
+  page_type: null,
 };
 
 describe('siteHealthEntitlementSchema (quota authority)', () => {
@@ -122,11 +147,116 @@ describe('siteCrawlSchema (Free redaction / nullable totals)', () => {
   });
 });
 
+describe('siteHealthApi.getCrawl site_facts (v2 P2 contract)', () => {
+  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  afterEach(() => mswServer.resetHandlers());
+  afterAll(() => mswServer.close());
+
+  it('validates a real crawl response carrying a populated site_facts', async () => {
+    // Regression: the backend ALWAYS serializes `site_facts`, so a strict
+    // schema without the field made every crawl read throw
+    // "API validation failure in siteHealth.getCrawl".
+    mswServer.use(http.get(`/api/v1/site-crawls/${UUID}`, () => HttpResponse.json(crawl)));
+    const result = await siteHealthApi.getCrawl(UUID);
+    expect(result.site_facts).toEqual(siteFacts);
+  });
+
+  it('rejects a crawl response missing site_facts (drift fails loud)', async () => {
+    const { site_facts: _omitted, ...withoutSiteFacts } = crawl;
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${UUID}`, () => HttpResponse.json(withoutSiteFacts)),
+    );
+    await expect(siteHealthApi.getCrawl(UUID)).rejects.toThrow(
+      /API validation failure in siteHealth\.getCrawl/,
+    );
+  });
+});
+
+describe('siteCrawlSchema site_facts (v2 P2 contract)', () => {
+  it('accepts a populated site_facts blob as the worker persists it', () => {
+    const parsed = strictValidate(siteCrawlSchema, crawl, 'siteHealth.getCrawl');
+    const robots = parsed.site_facts?.robots as { ai_crawlers: Record<string, string> };
+    expect(robots.ai_crawlers.GPTBot).toBe('block');
+    expect(parsed.site_facts?.llms_txt).toEqual({
+      fetched: true,
+      url: 'https://example.com/llms.txt',
+      status_code: 200,
+      present: true,
+    });
+  });
+
+  it('accepts a null site_facts (crawl setup has not run yet)', () => {
+    const parsed = strictValidate(
+      siteCrawlSchema,
+      { ...crawl, site_facts: null },
+      'siteHealth.getCrawl',
+    );
+    expect(parsed.site_facts).toBeNull();
+  });
+
+  it('rejects a crawl payload that omits site_facts (required, never optional)', () => {
+    // The backend response model always serializes the key, so a missing key
+    // is real drift — keeping it required is what pins that contract.
+    const { site_facts: _omitted, ...withoutSiteFacts } = crawl;
+    expect(() =>
+      strictValidate(siteCrawlSchema, withoutSiteFacts, 'siteHealth.getCrawl'),
+    ).toThrow();
+  });
+});
+
+describe('siteScoreSummarySchema by_page_type (v2 P1)', () => {
+  const scoreSummary = {
+    overall_score: 71,
+    technical_score: 80,
+    aeo_score: 62,
+    selected_count: 10,
+    analyzed_count: 4,
+    issue_count: 3,
+    scoring_version: 's1',
+    by_page_type: {
+      homepage: { analyzed_count: 1, technical_score: 90.5, aeo_score: 70, overall_score: 80.2 },
+      article: { analyzed_count: 3, technical_score: null, aeo_score: null, overall_score: null },
+    },
+  };
+
+  it('accepts a score summary with a per-page-type breakdown', () => {
+    const parsed = strictValidate(
+      siteCrawlSchema,
+      { ...crawl, score_summary: scoreSummary },
+      'crawl',
+    );
+    expect(parsed.score_summary?.by_page_type.homepage?.analyzed_count).toBe(1);
+    expect(parsed.score_summary?.by_page_type.article?.overall_score).toBeNull();
+  });
+
+  it('accepts an empty by_page_type map (nothing classified yet)', () => {
+    const parsed = strictValidate(
+      siteCrawlSchema,
+      { ...crawl, score_summary: { ...scoreSummary, by_page_type: {} } },
+      'crawl',
+    );
+    expect(parsed.score_summary?.by_page_type).toEqual({});
+  });
+
+  it('rejects an extra key inside a by_page_type bucket (strict)', () => {
+    const bad = {
+      ...scoreSummary,
+      by_page_type: {
+        homepage: { ...scoreSummary.by_page_type.homepage, discovered_total: 9999 },
+      },
+    };
+    expect(() =>
+      strictValidate(siteCrawlSchema, { ...crawl, score_summary: bad }, 'crawl'),
+    ).toThrow();
+  });
+});
+
 describe('inventoryRowSchema (nullable analysis summaries)', () => {
   it('accepts null analysis summaries before analysis completes', () => {
     const parsed = strictValidate(inventoryRowSchema, inventoryRow, 'row');
     expect(parsed.overall_score).toBeNull();
     expect(parsed.issue_count).toBeNull();
+    expect(parsed.page_type).toBeNull();
   });
 
   it('accepts populated analysis summaries after analysis', () => {
@@ -137,8 +267,17 @@ describe('inventoryRowSchema (nullable analysis summaries)', () => {
       aeo_score: 72,
       overall_score: 80.2,
       last_audited: '2026-07-15T00:00:00Z',
+      page_type: 'article',
     };
-    expect(strictValidate(inventoryRowSchema, analysed, 'row').issue_count).toBe(3);
+    const parsed = strictValidate(inventoryRowSchema, analysed, 'row');
+    expect(parsed.issue_count).toBe(3);
+    expect(parsed.page_type).toBe('article');
+  });
+
+  it('rejects an unknown page_type vocabulary value', () => {
+    expect(() =>
+      strictValidate(inventoryRowSchema, { ...inventoryRow, page_type: 'landing_page' }, 'row'),
+    ).toThrow();
   });
 
   it('rejects an extra key on an inventory row', () => {
@@ -217,6 +356,10 @@ describe('pageDetailSchema (field_cwv_available literal false)', () => {
     overall_score: 85,
     issue_count: 2,
     last_audited: '2026-07-15T00:00:00Z',
+    page_type: 'homepage',
+    // T5 contract: the backend page-detail serializer always carries this key
+    // (null until the URL has an analysis) — the fixture must include it.
+    page_type_evidence: null,
     facts: {
       title: 'Home',
       meta_description: null,

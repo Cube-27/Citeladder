@@ -52,3 +52,22 @@ def csv_cell(value: Any) -> str:
     if has_formula_trigger(text):
         return "'" + text
     return text
+
+
+def md_cell(value: Any) -> str:
+    """Escape a value so it is a single safe Markdown table cell.
+
+    Pipes are escaped and newlines collapsed so a multi-line remediation or a
+    URL containing ``|`` cannot break the table row.
+    """
+    text = stringify_cell(value)
+    if has_formula_trigger(text):
+        # Neutralize a leading formula trigger for the same reason as CSV: the
+        # exported table may be pasted into a spreadsheet.
+        text = "'" + text
+    return (
+        text.replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )

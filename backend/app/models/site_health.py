@@ -46,10 +46,12 @@ from app.core.config.site_health import (
     CRAWL_STATUS_DRAFT,
     DISCOVERY_MODE_SAMPLE,
     DISCOVERY_STATUS_PENDING,
+    FETCH_ENGINE_HTTPX,
     FREE_MONITORED_URL_LIMIT,
     FREE_SAMPLE_URL_LIMIT,
     INITIAL_TASK_GENERATION,
     PAGE_ANALYSIS_STATUS_PENDING,
+    PAGE_TYPE_OTHER,
     SELECTION_SOURCE_USER,
     TASK_KIND_DISCOVER,
     site_health_settings,
@@ -238,6 +240,12 @@ class SiteCrawl(Base):
     failed_url_count: Mapped[int] = mapped_column(Integer, default=0)
     inventory_complete: Mapped[bool] = mapped_column(Boolean, default=False)
     score_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # v2 P2 (spec §5.5): bounded site-level facts written ONCE by the root
+    # discover task's site setup (robots.txt AI-crawler stance, llms.txt
+    # result, sitemap file list). Both the dashboard display copy and the
+    # injection source for the site_root-scoped rules (facts["site"]); it
+    # carries NO discovered totals, so Free non-disclosure is untouched.
+    site_facts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     extractor_version: Mapped[str] = mapped_column(String(32), default="")
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     rule_catalog_version: Mapped[str] = mapped_column(String(32), default="")
@@ -617,13 +625,31 @@ class SiteCrawlTask(Base):
 class SiteFetchAttempt(Base):
     """Append-only diagnostic record of one actual HTTP attempt (invariant 3).
 
-    One row per real network call (including retries). Records the target host
-    (never credentials or query secrets), the method, the safe outcome/error
-    token, the status, latency, and byte counts. Never stores a raw body or a
-    sensitive header.
+    One row per REAL network call (v2 P3): the fetch ladder's rung 1 (httpx)
+    and the optional rung-2 curl_cffi escalation each make one network call
+    per redirect hop, and every such call gets its own row — a blocked losing
+    rung never vanishes. ``attempt_number`` stays the QUEUE-attempt number;
+    ``request_ordinal`` is the deterministic per-call ordinal (0-based across
+    the whole ``fetch()`` call) and ``rung_number`` the ladder rung
+    (1 = httpx, 2 = curl_cffi; NULL when no network call happened, e.g. a
+    robots-policy short-circuit). Order/uniqueness key:
+    ``(task_id, attempt_number, request_ordinal)``.
+
+    Records the engine that produced the call (``fetch_engine``, spec §5.5),
+    the target host (never credentials or query secrets), the method, the
+    safe outcome/error token, the status, latency, and byte counts. Never
+    stores a raw body or a sensitive header.
     """
 
     __tablename__ = "site_fetch_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "task_id",
+            "attempt_number",
+            "request_ordinal",
+            name="uq_site_fetch_attempt_call",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -644,6 +670,15 @@ class SiteFetchAttempt(Base):
         index=True,
     )
     attempt_number: Mapped[int] = mapped_column(Integer, default=1)
+    # Deterministic per-network-call ordinal within one fetch() (0-based;
+    # escalation continues the sequence, it does not restart it).
+    request_ordinal: Mapped[int] = mapped_column(Integer, default=0)
+    # Fetch-ladder rung that made the call (1 = httpx, 2 = curl_cffi);
+    # NULL for the no-network-call diagnostic row (policy short-circuit).
+    rung_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # The engine that produced this call — a config FETCH_ENGINE_* token
+    # (``httpx`` | ``curl_cffi``; ``browser`` reserved for P4).
+    fetch_engine: Mapped[str] = mapped_column(String(16), default=FETCH_ENGINE_HTTPX)
     method: Mapped[str] = mapped_column(String(8), default="")
     # Host only — no credentials, no query string secrets.
     target_host: Mapped[str] = mapped_column(String(255), default="")
@@ -697,6 +732,9 @@ class SiteFetchArtifact(Base):
         index=True,
     )
     fetch_purpose: Mapped[str] = mapped_column(String(16), default="")
+    # The engine that produced this artifact — a config FETCH_ENGINE_* token
+    # (``httpx`` | ``curl_cffi``; ``browser`` reserved for P4).
+    fetch_engine: Mapped[str] = mapped_column(String(16), default=FETCH_ENGINE_HTTPX)
     requested_url: Mapped[str] = mapped_column(String(2048), default="")
     final_url: Mapped[str] = mapped_column(String(2048), default="")
     # Ordered redirect hops (safe: URLs only, no credentials).
@@ -771,6 +809,16 @@ class SitePageAnalysis(Base):
     overall_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     scoring_version: Mapped[str] = mapped_column(String(32), default="")
+    # v2 P1: the deterministic page-type classification + its version
+    # (invariant 4). ``other`` is the fail-safe default when no signal
+    # classifies the page.
+    page_type: Mapped[str] = mapped_column(String(24), default=PAGE_TYPE_OTHER)
+    classifier_version: Mapped[str] = mapped_column(String(32), default="")
+    # The bounded classifier evidence (ranked signals / confidence / schema
+    # suggestion) behind the classification — the same dict
+    # ``PageTypeAssessment.to_evidence()`` produces, persisted for the per-URL
+    # detail "why this type?" disclosure.
+    page_type_evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Source provenance arrays (evaluation + artifact IDs).
     source_evaluation_ids: Mapped[list | None] = mapped_column(
         ARRAY(PGUUID(as_uuid=True)), nullable=True
