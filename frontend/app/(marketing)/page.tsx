@@ -37,7 +37,7 @@ export const metadata: Metadata = {
  * the initial HTML (SEO + first paint); the only client island the page
  * itself renders is the invisible LandingSessionRedirect, which forwards
  * signed-in visitors on to their dashboard (`/visibility`) or first-run
- * `/setup` — the contract `/` had before this page existed.
+ * `/onboarding` — the contract `/` had before this page existed.
  *
  * The shared chrome (aurora/grain backdrop, LandingNav with its
  * dropdowns/mobile menu/theme toggle, LandingFooter) lives in the

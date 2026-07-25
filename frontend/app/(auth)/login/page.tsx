@@ -14,7 +14,7 @@ import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 /**
  * Login page (F4). react-hook-form + zod client validation; on success the
- * `me` cache is primed and the user is routed directly to `/setup` (no
+ * `me` cache is primed and the user is routed directly to `/onboarding` (no
  * projects yet) or `/visibility` — no marketing-landing bounce. Email is the
  * only sign-in path for now; the OAuth buttons stay in
  * `components/auth/oauth-buttons.tsx` until the backend providers are

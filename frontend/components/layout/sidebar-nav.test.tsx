@@ -65,7 +65,7 @@ describe('SidebarNav', () => {
       'Issues',
       'Opportunities',
       'Brand knowledge',
-      'Setup',
+      'Projects',
     ]);
     for (const label of labels) {
       expect(screen.getByRole('link', { name: new RegExp(label, 'i') })).toBeInTheDocument();

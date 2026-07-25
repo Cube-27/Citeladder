@@ -120,11 +120,11 @@ describe('ContentScreen — ready state', () => {
     expect(toggle).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('shows the no-project state with a /setup link when there is no project', async () => {
+  it('shows the no-project state with a /projects link when there is no project', async () => {
     mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
     renderScreen();
     const link = await screen.findByRole('link', { name: /go to setup/i });
-    expect(link).toHaveAttribute('href', '/setup');
+    expect(link).toHaveAttribute('href', '/projects');
     expect(screen.queryByRole('button', { name: 'Generate' })).not.toBeInTheDocument();
   });
 });

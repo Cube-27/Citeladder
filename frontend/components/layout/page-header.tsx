@@ -21,7 +21,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [prefix: string, title: string]> = [
   ['/products', 'Products'],
   ['/runs', 'Runs'],
   ['/content', 'Content'],
-  ['/setup', 'Setup'],
+  ['/projects', 'Projects'],
   ['/knowledge-base', 'Brand knowledge'],
   ['/site-health', 'Site health'],
   ['/issues', 'Issues'],

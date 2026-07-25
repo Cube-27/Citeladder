@@ -23,14 +23,15 @@
 
 | Route | Screen | Status |
 |---|---|---|
-| `/` | Public marketing landing page (shared chrome in `app/(marketing)/layout.tsx`; client island forwards authed visitors to `/visibility` or `/setup`) | **MVP** |
+| `/` | Public marketing landing page (shared chrome in `app/(marketing)/layout.tsx`; client island forwards authed visitors to `/visibility` or `/onboarding`) | **MVP** |
 | `/pricing`, `/enterprise`, `/solutions` | Public marketing plans, enterprise, and audience-solution pages | **MVP** |
 | `/blog`, `/blog/[slug]` | Public marketing blog index and statically generated posts (`notFound()` for unknown slugs) | **MVP** |
 | `/compare`, `/compare/[competitor]` | Public marketing comparison index and statically generated comparison pages (`notFound()` for unknown slugs) | **MVP** |
 | `/faq` | Public marketing FAQ (native disclosure controls) | **MVP** |
 | `/login`, `/register` | Auth — split-screen (brand panel ≥900px + form panel) with OAuth buttons (Google/GitHub/Apple) wired to the flagged backend scaffold (503 → inline "coming soon") | **MVP** |
 | `(app)/layout.tsx` | App shell (sidebar + top bar + project switcher) | **MVP** |
-| `/setup` | Brand/Project setup | **MVP** |
+| `/onboarding` | Project creation via AI auto-discovery (brand → discovery → review). Full-screen, no AppShell; replaces the retired `/setup`, `/setup/new` and `/setup/[projectId]` | **MVP** |
+| `/projects` | Workspace project management (multi-brand/agency); entry point for adding another project | **MVP** |
 | `/prompts` | Your Prompts — read-only active prompts grouped by topic with measured visibility; links to Prompt Research | **MVP** |
 | `/prompt-research` | Prompt Research — manage prompts (manual + CSV import + AI generation; Topics rail, Active/Proposed/Archived review tabs) | **MVP** |
 | `/providers` | BYOK Provider Settings | **MVP** |
@@ -72,7 +73,8 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 |---|---|---|
 | Shell + auth | `(auth)/*`, `(app)/layout.tsx`, `session-guard.tsx`, `app-shell`, `sidebar-nav`, `top-bar`, `project-switcher`, `components/auth/oauth-buttons.tsx`, `components/ui/logo-cube.tsx` | Session, guard, nav, project context, OAuth buttons (coming-soon), brand cube |
 | API contract layer | `lib/api/{client,errors,query-client,query-keys,schemas,types,index}.ts` + per-domain modules | Transport, zod contracts, retry policy |
-| Setup | `/setup` + `lib/api/projects.ts` | Brand/project create + edit |
+| Onboarding | `/onboarding` + `lib/api/projects.ts`, `lib/api/prompts.ts` | Project create (brand, discovered domains/competitors/prompts) |
+| Projects | `/projects` + `lib/api/projects.ts` | List/switch projects, add another |
 | Prompts | `/prompts` (Your Prompts) + `/prompt-research` + `lib/api/prompts.ts` + `lib/api/topics.ts` | Your Prompts: topic-grouped read-only view with evidence-derived visibility scores. Prompt Research: prompt CRUD, CSV import, topic rail (create/delete/filter), AI generation dialog (consent-gated), proposed/active/archived status tabs with accept/archive actions |
 | Providers | `/providers` + `lib/api/providers.ts` | BYOK cards, connection test. One **direct** transport per engine (ChatGPT/OpenAI, Gemini/Google, Claude/Anthropic) — the old route toggle and the reserved "Direct OpenAI — coming soon" option are removed. |
 | Visibility | `/visibility` + `lib/api/visibility.ts` | Four-tab workspace with a shared filter bar (§7) |

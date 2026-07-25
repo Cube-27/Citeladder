@@ -111,7 +111,7 @@ describe('GettingStartedCard', () => {
     renderWithProviders(<GettingStartedCard />);
     expect(screen.getByRole('progressbar')).toHaveAccessibleName('0 of 5 steps complete');
     const next = screen.getByRole('link', { name: /next: set up your project/i });
-    expect(next).toHaveAttribute('href', '/setup');
+    expect(next).toHaveAttribute('href', '/onboarding');
   });
 
   it('links the prompts step to the prompts page when no prompts exist', async () => {

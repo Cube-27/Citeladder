@@ -234,6 +234,24 @@ export const ownedDomainSuggestResponseSchema = z
   })
   .strict();
 
+// `POST /brand-suggestions/prompts` result. `theme` and `intent` default to ""
+// server-side (PromptSuggestionItem), so they are always present but may be
+// empty — the UI treats empty as "no theme" rather than hiding the row.
+export const promptSuggestResponseSchema = z
+  .object({
+    prompts: z.array(
+      z
+        .object({
+          text: z.string(),
+          theme: z.string(),
+          intent: z.string(),
+        })
+        .strict(),
+    ),
+    dropped_duplicates: z.number().int(),
+  })
+  .strict();
+
 export const promptSetSchema = z
   .object({
     id: uuid(),

@@ -291,7 +291,7 @@ export function LandingNav() {
 
   const isAuthenticated = me.isSuccess;
   const dashboardHref =
-    (projects && projects.length > 0) || hasStoredActiveProject() ? '/visibility' : '/setup';
+    (projects && projects.length > 0) || hasStoredActiveProject() ? '/visibility' : '/onboarding';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);

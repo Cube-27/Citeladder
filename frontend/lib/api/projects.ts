@@ -12,6 +12,7 @@ import {
   competitorSuggestResponseSchema,
   ownedDomainSuggestResponseSchema,
   projectSchema,
+  promptSuggestResponseSchema,
   strictValidate,
   workspaceSchema,
 } from './schemas';
@@ -53,8 +54,11 @@ type BrandSuggestBase = {
   products_services?: string[];
   target_audience?: string;
   count?: number;
-  // Backend-enforced consent gate: brand evidence is only sent to the default
-  // agent when this is true (422 otherwise).
+  // Backend-enforced gate: brand evidence is only sent to the default agent
+  // when this is true (422 otherwise). The API still requires it, but the UI
+  // no longer asks per action — AI discovery is the product's core flow, so
+  // consent is product-level (sign-up terms) and callers always send true.
+  // See plan.md §10, resolved decision 13.
   confirm_send_evidence: boolean;
 };
 
@@ -66,8 +70,14 @@ export type OwnedDomainSuggestInput = BrandSuggestBase & {
   existing_owned_domains?: string[];
 };
 
+export type PromptSuggestInput = BrandSuggestBase & {
+  competitor_names?: string[];
+  existing_prompt_texts?: string[];
+};
+
 export type CompetitorSuggestResponse = z.infer<typeof competitorSuggestResponseSchema>;
 export type OwnedDomainSuggestResponse = z.infer<typeof ownedDomainSuggestResponseSchema>;
+export type PromptSuggestResponse = z.infer<typeof promptSuggestResponseSchema>;
 export type BrandProfileField = keyof BrandProfileDraft;
 export type BrandProfileUpdateInput = Partial<BrandProfileDraft>;
 export type BrandProfileAcceptInput = {
@@ -166,5 +176,18 @@ export const projectsApi = {
       options,
     );
     return strictValidate(ownedDomainSuggestResponseSchema, res, 'projects.suggestOwnedDomains');
+  },
+  /**
+   * Stateless starting prompt set for onboarding's discovery step. Mirrors the
+   * two siblings above: nothing is persisted, and the prompts come back for
+   * review before `POST /prompt-sets` writes any of them.
+   */
+  suggestPrompts: async (input: PromptSuggestInput, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<PromptSuggestResponse>(
+      '/brand-suggestions/prompts',
+      input,
+      options,
+    );
+    return strictValidate(promptSuggestResponseSchema, res, 'projects.suggestPrompts');
   },
 };

@@ -656,6 +656,34 @@ conflict:**
 10. **Clean rebuild before new features.** Ship the restyled existing product first; Task 11
     (onboarding + AI auto-discovery) moves to the end of the queue.
 
+**Resolved by the user (2026-07-25, third pass) — these restructure Task 11 and supersede the
+"no new routes beyond `/onboarding`" non-goal in §1:**
+
+11. **Onboarding replaces `/setup` completely.** All three setup routes retire — `/setup`,
+    `/setup/new`, `/setup/[projectId]`. Onboarding owns project creation; there is no separate
+    create form and no stepper edit form.
+    Note that `components/setup/` is **not** setup-only and cannot simply be deleted:
+    `segmented-control.tsx` is imported by the analytics and traffic screens,
+    `generate-brand-dialog.tsx` by the knowledge-base brand-profile panel, and
+    `lib/setup/forms.ts#setupErrorMessage` by two knowledge-base components. Those move to
+    their real owners before the routes go.
+12. **New Projects surface.** A place to manage projects for enterprise/agency users, with
+    projects surfaced as a stat card on the dashboard. This takes over the sidebar slot the
+    "Setup" item vacates, and absorbs the "add another project" entry point that
+    `/setup/new` and the project switcher used to own.
+13. **The AI-consent gate comes out of the UI.** Onboarding is built on AI auto-discovery, so
+    a per-action "I understand my brand profile will be sent to the AI provider" checkbox no
+    longer makes sense — the product's core flow *is* the AI call. The consent checkbox in
+    `generate-brand-dialog.tsx` is removed and callers always send
+    `confirm_send_evidence: true`.
+    **The backend gate stays.** `confirm_send_evidence` remains a required field that the API
+    enforces with a 422; only the UI that asked the question goes away. Consent moves from
+    per-action to product-level (sign-up terms) — a deliberate product decision, recorded here
+    so it is traceable rather than looking like the gate was dropped by accident.
+14. **Fewer manual options.** Because onboarding generates competitors, domains and prompts,
+    the manual entry surfaces that existed to collect them by hand shrink accordingly; manual
+    entry survives as the fallback path when the agent is unconfigured, not as the default.
+
 **Deferred to approved mockups (non-blocking):** the dark family's exact ramp (cool
 slate-charcoal ≈ `#1C1E22` vs warm charcoal ≈ `#2A2926` — either satisfies §3a); the marketing
 palette/type/display scale and final copy; the auth brand-panel layout.

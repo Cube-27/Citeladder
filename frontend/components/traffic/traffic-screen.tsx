@@ -4,7 +4,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { ChevronDown, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { SegmentedControl } from '@/components/setup/segmented-control';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { TrafficEmptyState } from '@/components/traffic/empty-state';
 import { PagesTable } from '@/components/traffic/pages-table';
 import { QueriesTable } from '@/components/traffic/queries-table';
