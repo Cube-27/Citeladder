@@ -302,8 +302,11 @@ async def test_starter_discover_admits_children_and_completes(
         assert snapshot.overall_score is None
 
         # Root + 2 in-scope children admitted; external.org excluded.
-        # A set, so the assertions below are unambiguously exact-membership
-        # checks over whole URLs (not substring tests on a joined string).
+        # A set: the assertions below are exact whole-URL membership checks,
+        # never substring matching. CodeQL's py/incomplete-url-substring-
+        # sanitization still flags them because it cannot infer the SQLAlchemy
+        # return type and keys on the URL-shaped literal alone; alert #2 is
+        # dismissed as a false positive rather than contorting these asserts.
         urls = set(
             (
                 await session.execute(
