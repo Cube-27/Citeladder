@@ -338,7 +338,10 @@ async def test_fixture_import_refresh_artifacts_derivation(
         for task in tasks
         if task.task_kind == ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
     ]
-    assert len(ingest_tasks) == len(artifacts) == 3
+    # Bing datasets are NOT referral datasets (no ingests), but they KEEP
+    # their pre-existing traffic-refresh trigger for the window.
+    assert ingest_tasks == []
+    assert len(artifacts) == 3
     assert len(refresh_tasks) == 1
 
 

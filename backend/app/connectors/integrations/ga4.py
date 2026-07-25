@@ -59,9 +59,13 @@ from app.connectors.integrations._http import (
     nested_error_detail,
     parse_retry_after,
 )
+from app.core.config.attribution import ATTRIBUTION_CONSUMED_DATASETS
 from app.core.config.integrations import (
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+    ERROR_GA4_DIMENSION_INCOMPATIBLE,
     ERROR_PROVIDER_API,
     GA4_API_BASE_URL,
+    GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS,
     GA4_RUN_REPORT_PATH,
     INTEGRATION_DATASET_TEMPLATES,
     INTEGRATION_PROVIDER_GA4,
@@ -73,6 +77,18 @@ from app.core.config.integrations import (
 
 class Ga4ApiError(IntegrationApiError):
     """A GA4 API call failed; carries a config-owned error token."""
+
+
+class Ga4DimensionCompatibilityError(Ga4ApiError):
+    """The property rejected the primary item dataset's dimension mix.
+
+    Raised ONLY for the primary item source/medium dataset when an HTTP
+    400's capped provider detail explicitly identifies an incompatible
+    dimension/metric combination — the sync worker's signal to fall back
+    to the channel-group item template in the same run. Authentication,
+    rate-limit, malformed-body, and generic 400 failures keep the
+    base-class behavior (no fallback).
+    """
 
 
 @dataclass(frozen=True)
@@ -93,25 +109,53 @@ class Ga4ReportPage:
     raw_row_count: int
 
 
-def _ga4_template_for_dimensions(
-    dimensions: Sequence[str],
+def _ga4_template(
+    dataset: str, dimensions: Sequence[str]
 ) -> IntegrationDatasetTemplate:
-    """Resolve the config-owned GA4 dataset template being paged.
+    """Resolve + validate the config-owned GA4 dataset template being paged.
 
-    The worker pages each config dataset by its declared dimensions; the
-    matching template owns the request's metric set (contract C1). An
-    unknown dimension tuple fails loud — the config templates are the
-    only dataset vocabulary.
+    The worker pages each config dataset by its id AND its declared
+    dimensions; the matching template owns the request's metric set
+    (contract C1). Keying on the (dataset, dimensions) PAIR — never on
+    dimensions alone — because the ecommerce source/medium report shares
+    its dimension tuple with ``ga4_source_medium_daily`` and differs only
+    in metrics. An unknown dataset id or a dimension mismatch fails loud:
+    the config templates are the only dataset vocabulary.
     """
-    for template in INTEGRATION_DATASET_TEMPLATES.values():
-        if template.provider == INTEGRATION_PROVIDER_GA4 and tuple(
-            template.dimensions
-        ) == tuple(dimensions):
-            return template
-    raise Ga4ApiError(
-        f"no GA4 dataset template for dimensions {tuple(dimensions)!r}",
-        error_code=ERROR_PROVIDER_API,
-    )
+    template = INTEGRATION_DATASET_TEMPLATES.get(dataset)
+    if (
+        template is None
+        or template.provider != INTEGRATION_PROVIDER_GA4
+        or tuple(template.dimensions) != tuple(dimensions)
+    ):
+        raise Ga4ApiError(
+            f"no GA4 dataset template {dataset!r} for dimensions "
+            f"{tuple(dimensions)!r}",
+            error_code=ERROR_PROVIDER_API,
+        )
+    return template
+
+
+def _report_currency_code(report: dict) -> str | None:
+    """The property's ISO currency from ``metadata.currencyCode``.
+
+    A GA4 property is single-currency and the Data API reports that code
+    on every ``runReport`` response — the ONLY currency source for the A1
+    attribution slice (the Shopify ``shop.currencyCode`` cannot serve A1:
+    A1 ships before Shopify). Normalized (strip + upper) and accepted only
+    as exactly three ASCII letters; anything else degrades to ``None``
+    (never guessed).
+    """
+    metadata = report.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    raw = metadata.get("currencyCode")
+    if not isinstance(raw, str):
+        return None
+    code = raw.strip().upper()
+    if len(code) == 3 and code.isalpha() and code.isascii():
+        return code
+    return None
 
 
 def _coerce_metric_value(raw: object) -> int | float | None:
@@ -184,6 +228,7 @@ class Ga4Client:
         *,
         access_token: str,
         property_ref: str,
+        dataset: str,
         dimensions: Sequence[str],
         start_date: date,
         end_date: date,
@@ -197,9 +242,11 @@ class Ga4Client:
         at ``start_row`` offsets of ``sync_page_size`` until a page's RAW
         row count (``raw_row_count``, BEFORE normalization drops malformed
         rows) comes back short of the page size. Raises ``Ga4ApiError``
-        on any failure (classified, never carrying the token).
+        on any failure (classified, never carrying the token) — including
+        the narrowly classified ``Ga4DimensionCompatibilityError`` for the
+        primary item dataset's incompatible-dimension HTTP 400.
         """
-        template = _ga4_template_for_dimensions(dimensions)
+        template = _ga4_template(dataset, dimensions)
         # The path takes the BARE numeric id — a connection account_ref may
         # carry the provider's ``properties/`` resource-name spelling,
         # which would otherwise double the prefix in the URL.
@@ -245,6 +292,26 @@ class Ga4Client:
                 detail = nested_error_detail(response.json())
             except ValueError:
                 detail = ""
+            # The NARROW compatibility classification: only the primary item
+            # dataset, only an HTTP 400, and only when the capped provider
+            # detail explicitly names an incompatible dimension/metric
+            # combination. Not retryable — the worker falls back instead of
+            # burning the attempt budget on a deterministic rejection.
+            if (
+                response.status_code == 400
+                and template.dataset == DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY
+                and any(
+                    marker in detail.casefold()
+                    for marker in GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS
+                )
+            ):
+                suffix = f" ({detail})" if detail else ""
+                raise Ga4DimensionCompatibilityError(
+                    f"GA4 runReport rejected the item source/medium "
+                    f"dimensions{suffix}",
+                    error_code=ERROR_GA4_DIMENSION_INCOMPATIBLE,
+                    retryable=False,
+                )
             suffix = f" ({detail})" if detail else ""
             raise Ga4ApiError(
                 f"GA4 runReport returned HTTP {response.status_code}{suffix}",
@@ -281,6 +348,14 @@ class Ga4Client:
         payload: dict = {"rows": list(rows)}
         if "rowCount" in report:
             payload["rowCount"] = report["rowCount"]
+        # Ecommerce datasets only: persist the property's ISO currency as a
+        # TOP-LEVEL payload key (beside ``rows``/``rowCount``) — never a
+        # report dimension, which would change ``dimension_key`` identity
+        # and explode row cardinality. A1's only currency source (AC3).
+        if template.dataset in ATTRIBUTION_CONSUMED_DATASETS:
+            currency_code = _report_currency_code(report)
+            if currency_code is not None:
+                payload["currency_code"] = currency_code
         return Ga4ReportPage(payload=payload, rows=rows, raw_row_count=len(raw_rows))
 
 

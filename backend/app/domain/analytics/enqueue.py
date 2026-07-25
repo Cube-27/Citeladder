@@ -2,12 +2,17 @@
 # per-kind enqueue helpers with deterministic idempotency keys.
 #
 # ``enqueue_post_sync_projections`` is the hook the integrations worker calls
-# after derivation (contract C5): per import artifact it enqueues
-# ``ingest_referrals`` — the first task of the referral chain — plus one
-# ``traffic_snapshot_refresh`` per distinct affected sync window. The later
-# chain links (``classify_referrals`` on ingest completion, then
-# ``analytics_snapshot_refresh`` on classify completion) are enqueued by the
-# executors themselves via the per-kind helpers below (A5/A6/A8).
+# after derivation (contract C5). It is DATASET-AWARE: each fresh artifact
+# routes by its dataset id to the projection chains that consume it —
+# referral-dimension artifacts enqueue ``ingest_referrals`` (the referral
+# chain's first task; the executors chain ``classify_referrals`` and
+# ``analytics_snapshot_refresh`` on completion), traffic-consumed artifacts
+# trigger one ``traffic_snapshot_refresh`` per distinct affected sync
+# window, and the GA4 ecommerce artifacts trigger one
+# ``attribution_snapshot`` refresh per distinct affected window (WS-B A1).
+# The mapping is additive and many-to-many (``ga4_source_medium_daily``
+# feeds BOTH referral ingest and the traffic refresh); a dataset consumed
+# by no projection chain enqueues nothing.
 #
 # Every helper builds a DETERMINISTIC idempotency key from the kind plus the
 # project/artifact/window identity, and inserts ``ON CONFLICT DO NOTHING`` on
@@ -25,13 +30,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
 )
+from app.core.config.attribution import ATTRIBUTION_CONSUMED_DATASETS
 from app.core.config.task_queue import TASK_STATUS_QUEUED
+from app.core.config.traffic import (
+    TRAFFIC_GA4_REFERRAL_DATASETS,
+    TRAFFIC_REFRESH_TRIGGER_DATASETS,
+)
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationImportArtifact, IntegrationSyncRun
 from app.models.project import Project
@@ -218,6 +229,34 @@ async def enqueue_analytics_snapshot_refresh(
     )
 
 
+async def enqueue_attribution_snapshot_refresh(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    window_start: date,
+    window_end: date,
+    resync_seq: int,
+    priority: int = 0,
+) -> uuid.UUID | None:
+    """Enqueue a rebuild of the attribution snapshot rows for one window.
+
+    The A1 projection refresh (WS-B Task 1): the executor expands
+    ``ANALYTICS_SNAPSHOT_GRANULARITIES``; the revision-keyed dedupe rule is
+    documented on ``_enqueue_window_snapshot_refresh``.
+    """
+    return await _enqueue_window_snapshot_refresh(
+        session,
+        task_kind=ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        window_start=window_start,
+        window_end=window_end,
+        resync_seq=resync_seq,
+        priority=priority,
+    )
+
+
 async def enqueue_referral_retention_sweep(
     session: AsyncSession,
     *,
@@ -253,15 +292,32 @@ async def enqueue_post_sync_projections(
     project_id: uuid.UUID,
     import_artifact_ids: Iterable[uuid.UUID],
 ) -> list[uuid.UUID]:
-    """Enqueue the analytics projection chain for freshly derived artifacts.
+    """Enqueue the analytics projection chains for freshly derived artifacts.
 
-    Per import artifact: one ``ingest_referrals`` task (the chain's first
-    link; the executors chain ``classify_referrals`` and
-    ``analytics_snapshot_refresh`` on completion). Plus one
-    ``traffic_snapshot_refresh`` per distinct affected (sync window,
-    ``resync_seq``) revision (C5) — the refresh idempotency keys carry the
-    triggering run's data revision so a re-sync of an already-projected
-    window re-fires the refresh instead of deduping away.
+    DATASET-AWARE routing (each artifact routes to exactly the chains that
+    consume its dataset; the mapping is additive and many-to-many):
+
+    - ``TRAFFIC_GA4_REFERRAL_DATASETS`` (``ga4_referrer_daily``,
+      ``ga4_source_medium_daily``) → one ``ingest_referrals`` task per
+      artifact (the referral chain's first link; the executors chain
+      ``classify_referrals`` and ``analytics_snapshot_refresh`` on
+      completion).
+    - ``TRAFFIC_REFRESH_TRIGGER_DATASETS`` (the traffic-consumed read set
+      plus the Bing dailies) → one ``traffic_snapshot_refresh`` per
+      distinct affected (sync window, ``resync_seq``) revision (C5).
+      ``ga4_source_medium_daily`` keeps BOTH this trigger and referral
+      ingest.
+    - ``ATTRIBUTION_CONSUMED_DATASETS`` (the three GA4 ecommerce datasets)
+      → one ``attribution_snapshot`` refresh per distinct affected
+      (window, revision) — and NOTHING else (they are not referral, not
+      traffic).
+    - A dataset consumed by no projection chain (e.g. the future Shopify
+      datasets, which enqueue through their own derive path) triggers
+      nothing here.
+
+    The refresh idempotency keys carry the triggering run's data revision
+    so a re-sync of an already-projected window re-fires the refresh
+    instead of deduping away.
 
     Artifact ids are resolved scoped to the project's workspace — an id that
     does not resolve there (unknown or cross-workspace) is skipped, never
@@ -281,6 +337,7 @@ async def enqueue_post_sync_projections(
         await session.execute(
             select(
                 IntegrationImportArtifact.id,
+                IntegrationImportArtifact.dataset,
                 IntegrationSyncRun.window_start,
                 IntegrationSyncRun.window_end,
                 IntegrationSyncRun.resync_seq,
@@ -293,20 +350,24 @@ async def enqueue_post_sync_projections(
             .where(IntegrationImportArtifact.id.in_(artifact_ids))
         )
     ).all()
-    resolved_ids = {row.id for row in rows}
-    # One refresh per DISTINCT affected (window, data revision), deduped
-    # in first-seen order of the returned rows (the SELECT has no ORDER
-    # BY; a hook call normally carries one run's artifacts — one window
-    # at one resync_seq — so ordering is moot in practice).
-    revisions = list(
-        dict.fromkeys(
-            (row.window_start, row.window_end, row.resync_seq) for row in rows
-        )
-    )
+    resolved = {row.id: row for row in rows}
+    # One refresh per DISTINCT affected (window, data revision) PER chain,
+    # deduped in first-seen order of the returned rows (the SELECT has no
+    # ORDER BY; a hook call normally carries one run's artifacts — one
+    # window at one resync_seq — so ordering is moot in practice).
+    traffic_revisions: dict[tuple[date, date, int], None] = {}
+    attribution_revisions: dict[tuple[date, date, int], None] = {}
+    for row in rows:
+        revision = (row.window_start, row.window_end, row.resync_seq)
+        if row.dataset in TRAFFIC_REFRESH_TRIGGER_DATASETS:
+            traffic_revisions.setdefault(revision)
+        if row.dataset in ATTRIBUTION_CONSUMED_DATASETS:
+            attribution_revisions.setdefault(revision)
 
     enqueued: list[uuid.UUID] = []
     for artifact_id in artifact_ids:
-        if artifact_id not in resolved_ids:
+        row = resolved.get(artifact_id)
+        if row is None or row.dataset not in TRAFFIC_GA4_REFERRAL_DATASETS:
             continue
         task_id = await enqueue_ingest_referrals(
             session,
@@ -316,8 +377,19 @@ async def enqueue_post_sync_projections(
         )
         if task_id is not None:
             enqueued.append(task_id)
-    for window_start, window_end, resync_seq in revisions:
+    for window_start, window_end, resync_seq in traffic_revisions:
         task_id = await enqueue_traffic_snapshot_refresh(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            window_start=window_start,
+            window_end=window_end,
+            resync_seq=resync_seq,
+        )
+        if task_id is not None:
+            enqueued.append(task_id)
+    for window_start, window_end, resync_seq in attribution_revisions:
+        task_id = await enqueue_attribution_snapshot_refresh(
             session,
             workspace_id=workspace_id,
             project_id=project_id,

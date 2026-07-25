@@ -30,18 +30,27 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
 from app.core.config.analytics import (
+    ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
 )
 from app.core.config.integrations import (
     DATASET_GA4_CHANNEL_DAILY,
+    DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+    DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    ERROR_GA4_DIMENSION_INCOMPATIBLE,
     ERROR_GRANT_AUTH_FAILED,
+    ERROR_PROVIDER_API,
     EVENT_INTEGRATION_REAUTH_REQUIRED,
     EVENT_INTEGRATION_SYNC_FINISHED,
     EVENT_INTEGRATION_SYNC_STARTED,
+    GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY,
+    GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION,
+    GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP,
     GRANT_STATUS_CONNECTED,
     GRANT_STATUS_NEEDS_REAUTH,
     INTEGRATION_IMPORTER_VERSION,
@@ -73,11 +82,24 @@ _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "integrations"
 _WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
 _PROPERTY_REF = "123456789"
 
+# The datasets a GA4 run pages by default (no persisted capability): the
+# four session datasets + the ecommerce source/medium report + the PRIMARY
+# item report. The channel-group item template runs only as the recorded
+# fallback (exactly one item template per run).
 _GA4_DATASETS = (
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_LANDING_DAILY,
+    DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+)
+
+# GA4's realistic dimension-incompatibility 400 detail (carries the
+# config-owned "incompatib" classifier marker).
+_INCOMPATIBLE_DETAIL = (
+    "The selected dimensions and metrics are incompatible and can not be "
+    "queried together."
 )
 
 
@@ -102,11 +124,21 @@ class _ProviderFake:
     ``drop_row`` swaps the channel dataset's first page for a variant whose
     second row is malformed (a non-numeric metric): the raw page is FULL
     (2 rows) but normalization keeps only 1 — the paging-termination
-    regression fixture.
+    regression fixture. ``item_incompatible`` makes the PRIMARY item
+    source/medium report reject with the realistic incompatible-dimension
+    HTTP 400 (the narrow fallback trigger); ``item_generic_400`` makes it
+    reject with a 400 whose detail carries NO incompatibility marker (no
+    fallback).
     """
 
     def __init__(
-        self, *, ga4_status: int = 200, empty: bool = False, drop_row: bool = False
+        self,
+        *,
+        ga4_status: int = 200,
+        empty: bool = False,
+        drop_row: bool = False,
+        item_incompatible: bool = False,
+        item_generic_400: bool = False,
     ) -> None:
         self.token_calls: list[httpx.Request] = []
         self.ga4_auth: list[str] = []
@@ -115,6 +147,8 @@ class _ProviderFake:
         self._ga4_status = ga4_status
         self._empty = empty
         self._drop_row = drop_row
+        self._item_incompatible = item_incompatible
+        self._item_generic_400 = item_generic_400
 
     def _ga4_response(self, request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
@@ -128,8 +162,33 @@ class _ProviderFake:
         if self._empty:
             return httpx.Response(200, json={"rowCount": 0})
         dimensions = tuple(entry.get("name") for entry in body.get("dimensions") or ())
+        metrics = tuple(entry.get("name") for entry in body.get("metrics") or ())
         offset = int(body.get("offset") or 0)
-        if "sessionDefaultChannelGroup" in dimensions:
+        if "itemId" in dimensions:
+            if "sessionDefaultChannelGroup" in dimensions:
+                if offset:
+                    return httpx.Response(200, json={"rows": [], "rowCount": 2})
+                payload = _fixture("ga4_run_report_item_channel_group.json")
+            else:
+                # The PRIMARY item source/medium report.
+                if self._item_incompatible:
+                    return httpx.Response(
+                        400, json={"error": {"message": _INCOMPATIBLE_DETAIL}}
+                    )
+                if self._item_generic_400:
+                    return httpx.Response(
+                        400,
+                        json={"error": {"message": "Invalid JSON payload received."}},
+                    )
+                if offset:
+                    return httpx.Response(200, json={"rows": [], "rowCount": 2})
+                payload = _fixture("ga4_run_report_item_source_medium.json")
+        elif "transactions" in metrics:
+            # The ecommerce source/medium report (order-level A1 measures).
+            if offset:
+                return httpx.Response(200, json={"rows": [], "rowCount": 2})
+            payload = _fixture("ga4_run_report_ecommerce_source_medium.json")
+        elif "sessionDefaultChannelGroup" in dimensions:
             if offset:
                 payload = _fixture("ga4_run_report_page2.json")
             elif self._drop_row:
@@ -260,6 +319,16 @@ def _channel_requests(fake: _ProviderFake) -> list[dict]:
             entry.get("name") == "sessionDefaultChannelGroup"
             for entry in body["dimensions"]
         )
+        and not any(entry.get("name") == "itemId" for entry in body["dimensions"])
+    ]
+
+
+def _item_requests(fake: _ProviderFake) -> list[dict]:
+    """The item-scoped runReport request bodies (either item template)."""
+    return [
+        body
+        for body in fake.ga4_requests
+        if any(entry.get("name") == "itemId" for entry in body["dimensions"])
     ]
 
 
@@ -297,7 +366,10 @@ async def test_fixture_import_refresh_artifacts_derivation(
     assert form["grant_type"] == ["refresh_token"]
     grant = await db_session.get(IntegrationOAuthGrant, grant_id)
     assert decrypt_secret(grant.access_token_encrypted) == "fresh-access-token"
-    assert fake.ga4_auth == ["Bearer fresh-access-token"] * 5
+    # 9 runReport calls: channel pages 0+2, one page each for the three
+    # remaining session datasets, and a full page + an EMPTY terminator
+    # page for each of the two ecommerce datasets (2 rows == page_size).
+    assert fake.ga4_auth == ["Bearer fresh-access-token"] * 9
 
     # The runReport requests carried the template dimensions/metrics and
     # the limit/offset paging (channel dataset paged 0 -> 2).
@@ -319,7 +391,7 @@ async def test_fixture_import_refresh_artifacts_derivation(
         == [
             f"https://analyticsdata.googleapis.com/v1beta/properties/{_PROPERTY_REF}:runReport"
         ]
-        * 5
+        * 9
     )
 
     artifacts = await _artifacts(db_session, run.id)
@@ -327,10 +399,19 @@ async def test_fixture_import_refresh_artifacts_derivation(
     for artifact in artifacts:
         by_dataset.setdefault(artifact.dataset, []).append(artifact)
     assert sorted(by_dataset) == sorted(_GA4_DATASETS)
-    # Channel dataset paged (2 rows + 1 row); the others are one page each.
+    # Channel dataset paged (2 rows + 1 row); the ecommerce + primary item
+    # fixtures carry EXACTLY one full page (2 rows == page_size), so an
+    # EMPTY second page terminates paging; the other session datasets are
+    # one page each.
     channel = by_dataset[DATASET_GA4_CHANNEL_DAILY]
     assert [a.query_snapshot["startRow"] for a in channel] == [0, 2]
     assert [a.row_count for a in channel] == [2, 1]
+    for dataset in (
+        DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+        DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+    ):
+        assert [a.query_snapshot["startRow"] for a in by_dataset[dataset]] == [0, 2]
+        assert [a.row_count for a in by_dataset[dataset]] == [2, 0]
     for dataset in (
         DATASET_GA4_SOURCE_MEDIUM_DAILY,
         DATASET_GA4_REFERRER_DAILY,
@@ -348,19 +429,33 @@ async def test_fixture_import_refresh_artifacts_derivation(
         assert "token" not in snapshot_text
         assert "authorization" not in snapshot_text
         # Normalized row shape: keys in declared template order + metrics.
+        if artifact.dataset == DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY:
+            expected_keys = {"keys", "transactions", "purchaseRevenue", "sessions"}
+        elif artifact.dataset == DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY:
+            expected_keys = {"keys", "itemRevenue", "itemsPurchased"}
+        else:
+            expected_keys = {"keys", "sessions", "engagedSessions", "conversions"}
         for row in artifact.payload["rows"]:
-            assert set(row) == {
-                "keys",
-                "sessions",
-                "engagedSessions",
-                "conversions",
-            }
+            assert set(row) == expected_keys
             assert all(isinstance(v, str) for v in row["keys"])
-            assert isinstance(row["sessions"], int)
+            if "sessions" in row:
+                assert isinstance(row["sessions"], int)
+        # A1 currency evidence: only the ecommerce datasets persist the
+        # property's ISO currency (runReport metadata) — and only on pages
+        # that carried rows (the empty terminator page has no metadata).
+        if artifact.dataset in (
+            DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+            DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+        ) and artifact.row_count:
+            assert artifact.payload["currency_code"] == "USD"
+        else:
+            assert "currency_code" not in artifact.payload
 
     # Derivation: one metric row per artifact row, full provenance (inv. 4).
     rows = await _metric_rows(db_session, run.id)
-    assert len(rows) == 6  # 3 channel + 1 source/medium + 1 referrer + 1 landing
+    # 3 channel + 1 source/medium + 1 referrer + 1 landing + 2 ecommerce
+    # source/medium + 2 primary item (empty pages derive zero rows).
+    assert len(rows) == 10
     artifact_ids = {artifact.id for artifact in artifacts}
     for row in rows:
         assert row.source_artifact_id in artifact_ids
@@ -382,9 +477,23 @@ async def test_fixture_import_refresh_artifacts_derivation(
     assert landing.dataset == DATASET_GA4_LANDING_DAILY
     source_medium = by_key["google | organic | 20260720"]
     assert source_medium.dataset == DATASET_GA4_SOURCE_MEDIUM_DAILY
+    ecommerce = by_key["chatgpt.com | referral | 20260720"]
+    assert ecommerce.dataset == DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY
+    assert ecommerce.metrics == {
+        "transactions": 2,
+        "purchaseRevenue": 120.5,
+        "sessions": 10,
+    }
+    item = by_key["SKU-1 | chatgpt.com | referral | 20260720"]
+    assert item.dataset == DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY
+    assert item.metrics == {"itemRevenue": 80.0, "itemsPurchased": 1}
 
     # Sync lifecycle: started/finished events + last_synced_at + the C5
-    # projection chain enqueued (one ingest per artifact + one refresh).
+    # projection chain enqueued — dataset-aware routing: one referral
+    # ingest per source/medium + referrer ARTIFACT (the two referral
+    # datasets), one traffic snapshot refresh for the window (channel /
+    # source-medium / landing artifacts), one attribution snapshot refresh
+    # for the window (ecommerce + item artifacts).
     connection = await db_session.get(IntegrationConnection, connection_id)
     assert connection.last_synced_at is not None
     events = list(
@@ -409,9 +518,19 @@ async def test_fixture_import_refresh_artifacts_derivation(
         for task in tasks
         if task.task_kind == ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
     ]
-    assert len(ingest_tasks) == len(artifacts) == 5
+    attribution_tasks = [
+        task
+        for task in tasks
+        if task.task_kind == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT
+    ]
+    assert len(ingest_tasks) == 2
     assert len(refresh_tasks) == 1
     assert refresh_tasks[0].payload == {
+        "window_start": _WINDOW[0].isoformat(),
+        "window_end": _WINDOW[1].isoformat(),
+    }
+    assert len(attribution_tasks) == 1
+    assert attribution_tasks[0].payload == {
         "window_start": _WINDOW[0].isoformat(),
         "window_end": _WINDOW[1].isoformat(),
     }
@@ -596,7 +715,7 @@ async def test_empty_report_pages_write_empty_artifacts(
     assert await _metric_rows(db_session, run.id) == []
     # A fresh (non-expired) grant token was used; no refresh happened.
     assert fake.token_calls == []
-    assert fake.ga4_auth == ["Bearer access-token-1"] * 4
+    assert fake.ga4_auth == ["Bearer access-token-1"] * len(_GA4_DATASETS)
 
 
 @pytest.mark.asyncio
@@ -633,3 +752,226 @@ async def test_ga4_auth_failure_marks_grant_needs_reauth(
     # Nothing derived, nothing projected downstream.
     assert await _metric_rows(db_session, run.id) == []
     assert list((await db_session.scalars(select(AnalyticsTask))).all()) == []
+
+
+_FALLBACK_CAPABILITY = {
+    "selected_dataset": DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
+    "source_granularity": GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP,
+    "reason": ERROR_GA4_DIMENSION_INCOMPATIBLE,
+    "version": GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION,
+}
+
+
+def _dimension_names(body: dict) -> list[str]:
+    return [entry.get("name") for entry in body["dimensions"]]
+
+
+@pytest.mark.asyncio
+async def test_item_dimension_incompatibility_falls_back_to_channel_group(
+    session_factory, db_session
+) -> None:
+    """The NARROW item fallback: a 400 whose detail carries the GA4
+    dimension-incompatibility marker on the PRIMARY item dataset switches
+    the run to the channel-group item template and records the selection.
+
+    The fallback pages in the SAME run (primary item evidence did not
+    exist yet), the capability is stamped with the CURRENT version, and
+    the A1 attribution chain fires off the fallback artifact.
+    """
+    workspace_id, _project_id, _grant_id, connection_id = await _seed_graph(db_session)
+    run = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=_WINDOW[0],
+        window_end=_WINDOW[1],
+    )
+    fake = _ProviderFake(item_incompatible=True)
+
+    ran = await _worker(session_factory, fake.mock_transport()).run_until_idle()
+    assert ran == 1
+
+    await db_session.refresh(run)
+    assert run.status == TASK_STATUS_SUCCEEDED
+    assert run.error_code == ""
+
+    # Two item-scoped calls: the rejected PRIMARY request (session
+    # source/medium) then the channel-group FALLBACK request.
+    item_requests = _item_requests(fake)
+    assert len(item_requests) == 2
+    assert "sessionSource" in _dimension_names(item_requests[0])
+    assert "sessionDefaultChannelGroup" in _dimension_names(item_requests[1])
+
+    # Exactly one item template produced artifacts: the FALLBACK one.
+    artifacts = await _artifacts(db_session, run.id)
+    item_datasets = {
+        artifact.dataset
+        for artifact in artifacts
+        if artifact.dataset
+        in (DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY, DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY)
+    }
+    assert item_datasets == {DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY}
+
+    # The reduced-granularity selection is durable on the connection.
+    connection = await db_session.get(IntegrationConnection, connection_id)
+    assert connection.dataset_capabilities == {
+        GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY: _FALLBACK_CAPABILITY
+    }
+
+    # Fallback rows derive with the channel-group dimension packed (the
+    # date is the LAST key part; the channel group takes the source slot).
+    rows = await _metric_rows(db_session, run.id)
+    by_key = {row.dimension_key: row for row in rows}
+    fallback_row = by_key["SKU-1 | Referral | 20260720"]
+    assert fallback_row.dataset == DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY
+    assert fallback_row.metrics == {"itemRevenue": 80.0, "itemsPurchased": 1}
+
+    # The attribution chain fired once for the window (ecommerce + item
+    # artifacts share the window).
+    tasks = list((await db_session.scalars(select(AnalyticsTask))).all())
+    attribution_tasks = [
+        task
+        for task in tasks
+        if task.task_kind == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT
+    ]
+    assert len(attribution_tasks) == 1
+
+
+@pytest.mark.asyncio
+async def test_persisted_capability_selects_fallback_item_template(
+    session_factory, db_session
+) -> None:
+    """A recorded selection sticks: the NEXT run pages ONLY the fallback.
+
+    Even with a healthy provider (the primary would now succeed), the
+    persisted capability keeps the run on the channel-group item template
+    so item evidence never flips granularity run over run.
+    """
+    workspace_id, _project_id, _grant_id, connection_id = await _seed_graph(db_session)
+    first = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=_WINDOW[0],
+        window_end=_WINDOW[1],
+    )
+    incompatible = _ProviderFake(item_incompatible=True)
+    await _worker(session_factory, incompatible.mock_transport()).run_until_idle()
+    await db_session.refresh(first)
+    assert first.status == TASK_STATUS_SUCCEEDED
+
+    # Second sync of the same window (resync_seq=1), provider now healthy.
+    second = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=_WINDOW[0],
+        window_end=_WINDOW[1],
+    )
+    assert second.resync_seq == 1
+    healthy = _ProviderFake()
+    ran = await _worker(session_factory, healthy.mock_transport()).run_until_idle()
+    assert ran == 1
+
+    await db_session.refresh(second)
+    assert second.status == TASK_STATUS_SUCCEEDED
+    # The PRIMARY item report was never re-probed; exactly one item call,
+    # carrying the channel-group dimensions.
+    item_requests = _item_requests(healthy)
+    assert len(item_requests) == 1
+    assert _dimension_names(item_requests[0]) == [
+        "itemId",
+        "sessionDefaultChannelGroup",
+        "date",
+    ]
+    artifacts = await _artifacts(db_session, second.id)
+    item_datasets = {
+        artifact.dataset
+        for artifact in artifacts
+        if artifact.dataset
+        in (DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY, DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY)
+    }
+    assert item_datasets == {DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY}
+
+
+@pytest.mark.asyncio
+async def test_stale_capability_version_reprobes_primary_item_template(
+    session_factory, db_session
+) -> None:
+    """A capability stamped with an OLDER version is NOT trusted: the run
+    re-probes the primary item template (a version bump re-runs the
+    primary mix, e.g. after GA4 adds the dimension combination).
+    """
+    workspace_id, _project_id, _grant_id, connection_id = await _seed_graph(db_session)
+    connection = await db_session.get(IntegrationConnection, connection_id)
+    connection.dataset_capabilities = {
+        GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY: {
+            **_FALLBACK_CAPABILITY,
+            "version": "ga4-item-attribution-0",  # stale
+        }
+    }
+    await db_session.commit()
+    run = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=_WINDOW[0],
+        window_end=_WINDOW[1],
+    )
+    fake = _ProviderFake()
+
+    ran = await _worker(session_factory, fake.mock_transport()).run_until_idle()
+    assert ran == 1
+
+    await db_session.refresh(run)
+    assert run.status == TASK_STATUS_SUCCEEDED
+    # The primary item report WAS paged again and produced artifacts; the
+    # fallback template did not run.
+    item_requests = _item_requests(fake)
+    assert item_requests
+    assert all(
+        "sessionSource" in _dimension_names(body) for body in item_requests
+    )
+    artifacts = await _artifacts(db_session, run.id)
+    item_datasets = {
+        artifact.dataset
+        for artifact in artifacts
+        if artifact.dataset
+        in (DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY, DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY)
+    }
+    assert item_datasets == {DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY}
+
+
+@pytest.mark.asyncio
+async def test_generic_400_on_item_dataset_does_not_fall_back(
+    session_factory, db_session
+) -> None:
+    """A 400 WITHOUT the incompatibility marker is NOT the fallback
+    trigger: the run fails through the standard provider-API taxonomy and
+    NO capability selection is recorded.
+    """
+    workspace_id, _project_id, _grant_id, connection_id = await _seed_graph(db_session)
+    run = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=_WINDOW[0],
+        window_end=_WINDOW[1],
+    )
+    fake = _ProviderFake(item_generic_400=True)
+
+    await _worker(session_factory, fake.mock_transport()).run_until_idle()
+
+    await db_session.refresh(run)
+    assert run.status == TASK_STATUS_FAILED
+    assert run.error_code == ERROR_PROVIDER_API
+    # No selection recorded, no fallback artifact written.
+    connection = await db_session.get(IntegrationConnection, connection_id)
+    assert connection.dataset_capabilities == {}
+    artifacts = await _artifacts(db_session, run.id)
+    assert {
+        artifact.dataset
+        for artifact in artifacts
+        if artifact.dataset
+        in (DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY, DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY)
+    } == set()

@@ -374,8 +374,8 @@ async def test_fixture_import_writes_immutable_artifacts(
         assert artifact.query_snapshot["endDate"] == _WINDOW[1].isoformat()
 
     # The sync finished: last_synced_at + started/finished events + the C5
-    # projection chain enqueued (one ingest per artifact + one traffic
-    # refresh for the window).
+    # projection chain enqueued (GSC datasets are NOT referral datasets, so
+    # no referral ingests — just the one traffic refresh for the window).
     connection = await db_session.get(IntegrationConnection, seed.connection_id)
     assert connection.last_synced_at is not None
     events = await _events(db_session, seed.workspace_id)
@@ -398,10 +398,7 @@ async def test_fixture_import_writes_immutable_artifacts(
         for task in tasks
         if task.task_kind == ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
     ]
-    assert len(ingest_tasks) == 3
-    assert {task.payload["import_artifact_id"] for task in ingest_tasks} == {
-        str(artifact.id) for artifact in artifacts
-    }
+    assert ingest_tasks == []
     assert len(refresh_tasks) == 1
     assert refresh_tasks[0].payload == {
         "window_start": _WINDOW[0].isoformat(),

@@ -15,12 +15,20 @@ from app.core.config.integrations import (
     DATASET_BING_PAGE_DAILY,
     DATASET_BING_QUERY_DAILY,
     DATASET_GA4_CHANNEL_DAILY,
+    DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+    DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
     GA4_API_BASE_URL,
+    GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS,
+    GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY,
+    GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION,
+    GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP,
+    GA4_ITEM_SOURCE_GRANULARITY_SESSION_SOURCE_MEDIUM,
     GSC_API_BASE_URL,
     INTEGRATION_APPROVED_ENDPOINT_HOSTS,
     INTEGRATION_CLIENT_BUILDERS,
@@ -135,10 +143,28 @@ def test_dataset_templates_match_pinned_c1() -> None:
             INTEGRATION_PROVIDER_GA4,
             ("landingPage", "sessionSource", "sessionMedium", "date"),
         ),
+        DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY: (
+            INTEGRATION_PROVIDER_GA4,
+            ("sessionSource", "sessionMedium", "date"),
+        ),
+        DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY: (
+            INTEGRATION_PROVIDER_GA4,
+            ("itemId", "sessionSource", "sessionMedium", "date"),
+        ),
+        DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY: (
+            INTEGRATION_PROVIDER_GA4,
+            ("itemId", "sessionDefaultChannelGroup", "date"),
+        ),
         DATASET_BING_PAGE_DAILY: (INTEGRATION_PROVIDER_BING, ("page", "date")),
         DATASET_BING_QUERY_DAILY: (INTEGRATION_PROVIDER_BING, ("query", "date")),
     }
     assert set(INTEGRATION_DATASET_TEMPLATES) == set(expected)
+    ga4_session_datasets = {
+        DATASET_GA4_CHANNEL_DAILY,
+        DATASET_GA4_SOURCE_MEDIUM_DAILY,
+        DATASET_GA4_REFERRER_DAILY,
+        DATASET_GA4_LANDING_DAILY,
+    }
     for dataset, (provider, dimensions) in expected.items():
         template = INTEGRATION_DATASET_TEMPLATES[dataset]
         assert template.dataset == dataset
@@ -146,8 +172,13 @@ def test_dataset_templates_match_pinned_c1() -> None:
         assert template.dimensions == dimensions
         if provider == INTEGRATION_PROVIDER_GSC:
             assert template.metrics == ("clicks", "impressions", "ctr", "position")
-        elif provider == INTEGRATION_PROVIDER_GA4:
+        elif dataset in ga4_session_datasets:
             assert template.metrics == ("sessions", "engagedSessions", "conversions")
+        elif dataset == DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY:
+            assert template.metrics == ("transactions", "purchaseRevenue", "sessions")
+        elif provider == INTEGRATION_PROVIDER_GA4:
+            # Both item ecommerce templates carry the item metric set.
+            assert template.metrics == ("itemRevenue", "itemsPurchased")
         else:
             assert template.metrics == ("clicks", "impressions")
     # The Bing api_method literals are the pinned endpoint names.
@@ -158,6 +189,22 @@ def test_dataset_templates_match_pinned_c1() -> None:
     assert (
         INTEGRATION_DATASET_TEMPLATES[DATASET_BING_QUERY_DAILY].api_method
         == "GetQueryStats"
+    )
+
+
+def test_ga4_item_attribution_capability_tokens() -> None:
+    # The capability key/version + granularity + classifier markers are
+    # config-owned vocabulary (never re-literalized by consumers).
+    assert GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY
+    assert GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION
+    assert GA4_ITEM_SOURCE_GRANULARITY_SESSION_SOURCE_MEDIUM == "session_source_medium"
+    assert GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP == "default_channel_group"
+    # The fallback classifier fires only on an explicit incompatibility
+    # marker in the capped provider detail.
+    assert GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS
+    assert all(
+        marker == marker.casefold()
+        for marker in GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS
     )
 
 

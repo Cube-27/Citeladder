@@ -180,6 +180,12 @@ class IntegrationConnection(Base):
     label: Mapped[str] = mapped_column(String(255), default="")
     # Provider-side property/site id (GA4 property id, GSC site URL).
     account_ref: Mapped[str] = mapped_column(String(1024), default="")
+    # Non-secret provider capability state, keyed by the config capability
+    # token (e.g. the GA4 item-attribution selection: which item dataset the
+    # property serves, at which source granularity, why, and the capability
+    # version that decided it). Written under the connection row lock by
+    # the sync worker's narrow fallback handler; NEVER a credential.
+    dataset_capabilities: Mapped[dict] = mapped_column(JSONB, default=dict)
     last_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

@@ -4,10 +4,11 @@ THE one lifecycle test for the referral chain: drive
 ``enqueue_post_sync_projections`` (the hook the integrations worker WILL
 call after derivation in I9) over a freshly derived artifact, drain the
 analytics worker, and assert the full chain ran end to end — ingest
-projected the referral events, classify classified them, and both
-window-level refreshes were enqueued (``analytics_snapshot_refresh`` by the
-classify executor, ``traffic_snapshot_refresh`` by the hook itself) and ran
-to SUCCESS (both kinds wired: A7 traffic, A8 analytics). The chain LINKS
+projected the referral events, classify classified them, and the
+window-level ``analytics_snapshot_refresh`` was enqueued by the classify
+executor and ran to SUCCESS. The seeded artifact is a REFERRER-dataset
+artifact, so the hook's dataset-aware routing fires the referral ingest
+only (the referrer dataset triggers no window refresh). The chain LINKS
 (enqueue + routing) are what this test pins. Requires a real Postgres.
 """
 
@@ -92,13 +93,13 @@ async def test_post_sync_chain_runs_ingest_classify_and_enqueues_refreshes(
             import_artifact_ids=[seed.artifact_id],
         )
         await session.commit()
-    # ingest_referrals (chain link 1) + traffic_snapshot_refresh (hook).
-    assert len(enqueued) == 2
+    # ingest_referrals (chain link 1) only: the referrer dataset is not a
+    # window-refresh trigger.
+    assert len(enqueued) == 1
 
     worker = AnalyticsWorker(session_factory=session_factory, owner="chain-test")
-    # ingest -> classify -> analytics_snapshot_refresh + the hook's
-    # traffic_snapshot_refresh (both refresh kinds are wired — A7/A8).
-    assert await worker.run_until_idle() == 4
+    # ingest -> classify -> analytics_snapshot_refresh.
+    assert await worker.run_until_idle() == 3
 
     async with session_factory() as session:
         # Link 1: ingest ran and projected both referral events.
@@ -149,19 +150,13 @@ async def test_post_sync_chain_runs_ingest_classify_and_enqueues_refreshes(
         assert analytics_refresh[0].status == TASK_STATUS_SUCCEEDED
         assert analytics_refresh[0].error_code == ""
 
-        # The hook enqueued traffic_snapshot_refresh for the same window.
+        # The hook enqueued NO traffic_snapshot_refresh: the seeded
+        # artifact is ga4_referrer_daily, which is not a traffic-refresh
+        # trigger dataset.
         traffic_refresh = await _tasks_by_kind(
             session, ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
         )
-        assert len(traffic_refresh) == 1
-        assert traffic_refresh[0].payload == {
-            "window_start": DEFAULT_WINDOW[0].isoformat(),
-            "window_end": DEFAULT_WINDOW[1].isoformat(),
-        }
-        # Wired in A7: the executor ran (the seeded rows are all
-        # ga4_referrer_daily, which Traffic does not consume — an empty
-        # projection is still a successful refresh).
-        assert traffic_refresh[0].status == TASK_STATUS_SUCCEEDED
+        assert traffic_refresh == []
 
     # The hook is dedup-safe: re-firing it for the same artifact enqueues
     # nothing (deterministic idempotency keys, invariant 8).
@@ -180,12 +175,13 @@ async def test_post_sync_chain_runs_ingest_classify_and_enqueues_refreshes(
 async def test_resync_of_projected_window_refires_refreshes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """A re-sync at a bumped ``resync_seq`` re-fires the window refreshes.
+    """A re-sync at a bumped ``resync_seq`` re-fires the window refresh.
 
     The refresh idempotency keys carry the triggering run's data revision:
-    a second sync of an ALREADY-projected window enqueues exactly one new
-    traffic refresh (and the chain's classify link one new analytics
-    refresh), while a same-revision duplicate still dedupes to nothing.
+    a second sync of an ALREADY-projected window re-fires the chain (one
+    new ingest, and the classify link one new analytics refresh keyed at
+    the new revision), while a same-revision duplicate still dedupes to
+    nothing.
     """
     async with session_factory() as session:
         workspace_id, project_id = await seed_workspace_project(session)
@@ -211,11 +207,11 @@ async def test_resync_of_projected_window_refires_refreshes(
                     import_artifact_ids=[seed0.artifact_id],
                 )
             )
-            == 2
+            == 1
         )
         await session.commit()
     worker = AnalyticsWorker(session_factory=session_factory, owner="chain-test")
-    assert await worker.run_until_idle() == 4
+    assert await worker.run_until_idle() == 3
 
     # Second sync of the SAME window at resync_seq=1 on the same connection.
     async with session_factory() as session:
@@ -238,7 +234,7 @@ async def test_resync_of_projected_window_refires_refreshes(
         )
         await session.commit()
 
-    # Exactly one NEW ingest + one NEW traffic refresh (keyed at seq 1).
+    # Exactly one NEW ingest (the referrer dataset triggers no refresh).
     async with session_factory() as session:
         enqueued = await enqueue_post_sync_projections(
             session,
@@ -246,26 +242,19 @@ async def test_resync_of_projected_window_refires_refreshes(
             import_artifact_ids=[seed1.artifact_id],
         )
         await session.commit()
-    assert len(enqueued) == 2
+    assert len(enqueued) == 1
 
-    # The second chain drains: ingest -> classify -> analytics refresh (seq
-    # 1) + the hook's traffic refresh (seq 1).
-    assert await worker.run_until_idle() == 4
+    # The second chain drains: ingest -> classify -> analytics refresh
+    # (keyed at seq 1).
+    assert await worker.run_until_idle() == 3
 
     async with session_factory() as session:
-        traffic_refreshes = await _tasks_by_kind(
-            session, ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
-        )
-        assert len(traffic_refreshes) == 2
-        assert all(row.status == TASK_STATUS_SUCCEEDED for row in traffic_refreshes)
-        # One refresh per data revision of the same window.
-        assert {
-            row.idempotency_key.rsplit(":", 1)[-1] for row in traffic_refreshes
-        } == {"0", "1"}
         analytics_refreshes = await _tasks_by_kind(
             session, ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH
         )
         assert len(analytics_refreshes) == 2
+        assert all(row.status == TASK_STATUS_SUCCEEDED for row in analytics_refreshes)
+        # One refresh per data revision of the same window.
         assert {
             row.idempotency_key.rsplit(":", 1)[-1] for row in analytics_refreshes
         } == {"0", "1"}

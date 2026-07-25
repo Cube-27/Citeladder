@@ -268,6 +268,12 @@ ERROR_PAYLOAD_TOO_LARGE: Final = "payload_too_large"
 ERROR_MAPPING_PROVIDER_MISMATCH: Final = "mapping_provider_mismatch"
 ERROR_MAPPING_PROPERTY_NOT_OWNED: Final = "mapping_property_not_owned"
 ERROR_MAPPING_ACTIVE_OWNER_CONFLICT: Final = "mapping_active_owner_conflict"
+# GA4 item-attribution fallback (WS-B A1): the property rejected the primary
+# item source/medium dimension mix with an HTTP 400 whose capped detail
+# explicitly names an incompatible dimension/metric combination. Raised as
+# the connector's ``Ga4DimensionCompatibilityError``; the sync worker's
+# NARROW handler switches the run to the channel-group item template.
+ERROR_GA4_DIMENSION_INCOMPATIBLE: Final = "ga4_dimension_incompatible"
 
 # --- Versioning ----------------------------------------------------------------
 # Versions the artifact -> IntegrationMetricRow transform code (NOT the data
@@ -283,15 +289,56 @@ DATASET_GA4_CHANNEL_DAILY: Final = "ga4_channel_daily"
 DATASET_GA4_SOURCE_MEDIUM_DAILY: Final = "ga4_source_medium_daily"
 DATASET_GA4_REFERRER_DAILY: Final = "ga4_referrer_daily"
 DATASET_GA4_LANDING_DAILY: Final = "ga4_landing_daily"
+# GA4 ecommerce datasets (WS-B A1 attribution slice). The source/medium
+# ecommerce report shares its dimension tuple with ``ga4_source_medium_daily``
+# and differs only in METRICS — template resolution therefore keys on the
+# (dataset, dimensions) pair, never on dimensions alone. The channel-group
+# item template is the FALLBACK for properties that reject the primary item
+# source/medium dimension mix (HTTP 400 incompatible combination): exactly
+# one item template runs per sync, selected by the per-connection
+# capability state below.
+DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY: Final = "ga4_ecommerce_source_medium_daily"
+DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY: Final = "ga4_item_source_medium_daily"
+DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY: Final = "ga4_item_channel_group_daily"
 DATASET_BING_PAGE_DAILY: Final = "bing_page_daily"
 DATASET_BING_QUERY_DAILY: Final = "bing_query_daily"
 
 _GSC_SEARCH_ANALYTICS_METRICS: Final = ("clicks", "impressions", "ctr", "position")
 _GA4_SESSION_METRICS: Final = ("sessions", "engagedSessions", "conversions")
+# GA4 ecommerce metric sets (A1): order-level measures on the source/medium
+# report; item-level measures on both item reports. ``purchaseRevenue`` /
+# ``itemRevenue`` are reported in the PROPERTY's single currency — the
+# response's ``metadata.currencyCode`` is the ONLY currency source for A1
+# (persisted on the sanitized page payload as ``currency_code``, never a
+# report dimension — a dimension would change ``dimension_key`` identity
+# and explode cardinality).
+_GA4_ECOMMERCE_METRICS: Final = ("transactions", "purchaseRevenue", "sessions")
+_GA4_ITEM_ECOMMERCE_METRICS: Final = ("itemRevenue", "itemsPurchased")
 # Bing stats endpoints carry click/impression counts only in this pass
 # (I12 derivation mapping; the average-position fields the API also
 # returns are roadmap).
 _BING_STATS_METRICS: Final = ("clicks", "impressions")
+
+# --- GA4 item-attribution capability fallback (WS-B A1) ----------------------
+# Persisted per-connection under ``IntegrationConnection.dataset_capabilities``
+# keyed by this token: which item dataset the property can serve, at which
+# source granularity, and why. Non-secret provider capability state only.
+GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY: Final = "ga4_item_attribution"
+# Versions the capability DECISION logic: a persisted state whose version
+# differs from the current token is stale — the next sync RE-PROBES the
+# primary item template instead of trusting the old selection.
+GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION: Final = "ga4-item-attribution-1"
+# The item source-granularity literals. Owned HERE (not by the attribution
+# config) so the config import graph stays acyclic
+# (attribution -> analytics -> traffic -> integrations); the attribution
+# config aliases these tokens, never re-literalizes them (invariant 2).
+GA4_ITEM_SOURCE_GRANULARITY_SESSION_SOURCE_MEDIUM: Final = "session_source_medium"
+GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP: Final = "default_channel_group"
+# Provider HTTP 400 detail substrings (casefolded) identifying a dimension
+# compatibility rejection. The fallback classifier fires ONLY when one of
+# these markers appears in the capped provider detail — a generic 400
+# keeps the standard provider-error behavior (no fallback).
+GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS: Final = ("incompatib",)
 
 
 @dataclass(frozen=True)
@@ -355,6 +402,31 @@ INTEGRATION_DATASET_TEMPLATES: Final[dict[str, IntegrationDatasetTemplate]] = {
         api_method="runReport",
         dimensions=("landingPage", "sessionSource", "sessionMedium", "date"),
         metrics=_GA4_SESSION_METRICS,
+    ),
+    # A1 attribution slice (WS-B): the ecommerce reports. Both item
+    # templates stay REGISTERED so normalization/derivation resolve them,
+    # but the sync worker pages exactly ONE per run (the capability
+    # selection in ``_provider_datasets``).
+    DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY: IntegrationDatasetTemplate(
+        dataset=DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+        provider=INTEGRATION_PROVIDER_GA4,
+        api_method="runReport",
+        dimensions=("sessionSource", "sessionMedium", "date"),
+        metrics=_GA4_ECOMMERCE_METRICS,
+    ),
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY: IntegrationDatasetTemplate(
+        dataset=DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+        provider=INTEGRATION_PROVIDER_GA4,
+        api_method="runReport",
+        dimensions=("itemId", "sessionSource", "sessionMedium", "date"),
+        metrics=_GA4_ITEM_ECOMMERCE_METRICS,
+    ),
+    DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY: IntegrationDatasetTemplate(
+        dataset=DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
+        provider=INTEGRATION_PROVIDER_GA4,
+        api_method="runReport",
+        dimensions=("itemId", "sessionDefaultChannelGroup", "date"),
+        metrics=_GA4_ITEM_ECOMMERCE_METRICS,
     ),
     # Bing Webmaster stats (I12). ``api_method`` is the pinned endpoint
     # literal under ``BING_API_JSON_ROOT``; the Bing stats API takes no

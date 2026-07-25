@@ -48,9 +48,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.connectors.integrations import oauth as integration_oauth
 from app.connectors.integrations._http import IntegrationApiError
 from app.connectors.integrations.bing import BingApiError
-from app.connectors.integrations.ga4 import Ga4ApiError
+from app.connectors.integrations.ga4 import (
+    Ga4ApiError,
+    Ga4DimensionCompatibilityError,
+)
 from app.connectors.integrations.gsc import GscApiError
 from app.core.config.integrations import (
+    DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+    ERROR_GA4_DIMENSION_INCOMPATIBLE,
     ERROR_GRANT_AUTH_FAILED,
     ERROR_PAYLOAD_TOO_LARGE,
     ERROR_PROVIDER_API,
@@ -59,10 +65,14 @@ from app.core.config.integrations import (
     EVENT_INTEGRATION_REAUTH_REQUIRED,
     EVENT_INTEGRATION_SYNC_FINISHED,
     EVENT_INTEGRATION_SYNC_STARTED,
+    GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY,
+    GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION,
+    GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP,
     GRANT_STATUS_CONNECTED,
     GRANT_STATUS_NEEDS_REAUTH,
     INTEGRATION_CLIENT_BUILDERS,
     INTEGRATION_DATASET_TEMPLATES,
+    INTEGRATION_PROVIDER_GA4,
     INTEGRATION_QUEUE_SPEC,
     IntegrationDatasetTemplate,
     integration_settings,
@@ -129,6 +139,7 @@ class _DataClient(Protocol):
         *,
         access_token: str,
         property_ref: str,
+        dataset: str,
         dimensions: Sequence[str],
         start_date: date,
         end_date: date,
@@ -159,15 +170,52 @@ class _RunContext:
     property_ref: str
     attempt_count: int
     max_attempts: int
+    # The connection's persisted provider capability state, captured at
+    # attempt start (the GA4 item-attribution dataset selection lives here).
+    dataset_capabilities: dict
 
 
-def _provider_datasets(provider: str) -> list[IntegrationDatasetTemplate]:
-    """The config-owned dataset templates for one provider (C1 order)."""
-    return [
+def _selected_item_dataset(capabilities: dict) -> str:
+    """The item dataset a GA4 connection pages this run (capability-aware).
+
+    A persisted capability state at the CURRENT version selects its
+    recorded dataset; absent or stale-version state (a bumped
+    ``GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION``) re-probes the primary —
+    so a changed capability version retries the primary on a future run.
+    """
+    state = capabilities.get(GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY)
+    if (
+        isinstance(state, dict)
+        and state.get("version") == GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION
+        and state.get("selected_dataset") == DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY
+    ):
+        return DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY
+    return DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY
+
+
+def _provider_datasets(
+    provider: str, capabilities: dict | None = None
+) -> list[IntegrationDatasetTemplate]:
+    """The config-owned dataset templates for one provider (C1 order).
+
+    GA4 item attribution: exactly ONE item template is returned per run —
+    the capability-selected one (both stay registered in the config so
+    normalization/derivation resolve either).
+    """
+    templates = [
         template
         for template in INTEGRATION_DATASET_TEMPLATES.values()
         if template.provider == provider
     ]
+    if provider != INTEGRATION_PROVIDER_GA4:
+        return templates
+    selected = _selected_item_dataset(capabilities or {})
+    omitted = (
+        DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY
+        if selected == DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY
+        else DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY
+    )
+    return [template for template in templates if template.dataset != omitted]
 
 
 class IntegrationWorker:
@@ -286,6 +334,7 @@ class IntegrationWorker:
                 property_ref=connection.account_ref,
                 attempt_count=run.attempt_count,
                 max_attempts=run.max_attempts,
+                dataset_capabilities=dict(connection.dataset_capabilities or {}),
             )
             self._append_event(
                 session,
@@ -335,8 +384,8 @@ class IntegrationWorker:
 
         heartbeat = asyncio.create_task(self._heartbeat_loop(ctx.run_id))
         try:
-            for template in _provider_datasets(ctx.provider):
-                synced = await self._sync_dataset(
+            for template in _provider_datasets(ctx.provider, ctx.dataset_capabilities):
+                synced = await self._sync_template(
                     ctx,
                     client=client,
                     template=template,
@@ -524,6 +573,104 @@ class IntegrationWorker:
 
     # --- Paging + immutable artifacts ---------------------------------------
 
+    async def _sync_template(
+        self,
+        ctx: _RunContext,
+        *,
+        client: _DataClient,
+        template: IntegrationDatasetTemplate,
+        access_token: str,
+    ) -> bool:
+        """Page one template, with the NARROW GA4 item fallback path.
+
+        ``Ga4DimensionCompatibilityError`` is caught HERE — around the
+        primary item dataset's ``_sync_dataset`` call only — so it never
+        reaches the broad ``_PROVIDER_API_ERRORS`` handler: the run
+        switches to the channel-group item template, persists the
+        capability selection under the connection row lock, and pages the
+        fallback in the SAME run. Every other error propagates unchanged.
+        """
+        try:
+            return await self._sync_dataset(
+                ctx,
+                client=client,
+                template=template,
+                access_token=access_token,
+            )
+        except Ga4DimensionCompatibilityError:
+            if template.dataset != DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY:
+                # The connector raises only for the primary item dataset;
+                # anything else is a bug — fail loud, never guess.
+                raise
+            # Never overwrite item evidence: a durable primary artifact in
+            # THIS run means the property served the primary mix before, so
+            # the 400 is anomalous — re-raise into the standard taxonomy.
+            if await self._has_dataset_artifact(ctx.run_id, template.dataset):
+                raise
+            persisted = await self._persist_item_fallback_capability(ctx)
+            if not persisted:
+                # Lost lease / cancelled mid-switch: nothing more is ours.
+                return False
+            fallback = INTEGRATION_DATASET_TEMPLATES[
+                DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY
+            ]
+            logger.info(
+                "ga4 item dimensions incompatible; falling back to %s",
+                fallback.dataset,
+                extra={"sync_run_id": str(ctx.run_id)},
+            )
+            return await self._sync_dataset(
+                ctx,
+                client=client,
+                template=fallback,
+                access_token=access_token,
+            )
+
+    async def _has_dataset_artifact(self, run_id: uuid.UUID, dataset: str) -> bool:
+        """True when the run already holds a durable artifact for ``dataset``."""
+        async with self._session_factory() as session:
+            artifact_id = await session.scalar(
+                select(IntegrationImportArtifact.id)
+                .where(
+                    IntegrationImportArtifact.sync_run_id == run_id,
+                    IntegrationImportArtifact.dataset == dataset,
+                )
+                .limit(1)
+            )
+            return artifact_id is not None
+
+    async def _persist_item_fallback_capability(self, ctx: _RunContext) -> bool:
+        """Persist the channel-group item selection under the connection lock.
+
+        Owner-gated exactly like every other write (a lost lease writes
+        NOTHING): the run row is re-locked and re-checked first, then the
+        connection row is locked FOR UPDATE and its
+        ``dataset_capabilities`` entry is stamped with the selected
+        dataset, the reduced source granularity, the reason token, and the
+        CURRENT capability version (a future version bump re-probes the
+        primary instead of trusting this selection).
+        """
+        async with self._session_factory() as session:
+            run = await self._claim_run_if_owned(session, ctx.run_id)
+            if run is None:
+                return False
+            connection = await session.get(
+                IntegrationConnection, ctx.connection_id, with_for_update=True
+            )
+            if connection is None:
+                await session.commit()
+                return False
+            capabilities = dict(connection.dataset_capabilities or {})
+            capabilities[GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY] = {
+                "selected_dataset": DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
+                "source_granularity": GA4_ITEM_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP,
+                "reason": ERROR_GA4_DIMENSION_INCOMPATIBLE,
+                "version": GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION,
+            }
+            connection.dataset_capabilities = capabilities
+            await session.commit()
+            return True
+
     async def _sync_dataset(
         self,
         ctx: _RunContext,
@@ -545,6 +692,7 @@ class IntegrationWorker:
             page = await client.query_search_analytics(
                 access_token=access_token,
                 property_ref=ctx.property_ref,
+                dataset=template.dataset,
                 dimensions=template.dimensions,
                 start_date=ctx.window_start,
                 end_date=ctx.window_end,

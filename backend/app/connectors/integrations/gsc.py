@@ -89,6 +89,7 @@ class GscClient:
         *,
         access_token: str,
         property_ref: str,
+        dataset: str,
         dimensions: Sequence[str],
         start_date: date,
         end_date: date,
@@ -96,6 +97,9 @@ class GscClient:
     ) -> GscQueryPage:
         """Fetch ONE page of search analytics rows.
 
+        ``dataset`` is accepted for protocol uniformity with the other
+        provider clients (the worker pages every dataset through this one
+        seam); GSC resolves its request shape from ``dimensions`` alone.
         The caller owns paging: request pages at ``start_row`` offsets of
         ``sync_page_size`` until a page returns fewer rows than the page
         size. Raises ``GscApiError`` on any failure (classified, never

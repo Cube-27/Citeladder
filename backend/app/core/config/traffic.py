@@ -18,6 +18,8 @@ from typing import Final
 # The GA4 dataset ids are OWNED by config/integrations.py (cross-workstream
 # contract C1) and imported here — never re-literalized (invariant 2).
 from app.core.config.integrations import (
+    DATASET_BING_PAGE_DAILY,
+    DATASET_BING_QUERY_DAILY,
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_REFERRER_DAILY,
@@ -85,6 +87,16 @@ TRAFFIC_CONSUMED_DATASETS: Final[frozenset[str]] = frozenset(
         DATASET_GA4_SOURCE_MEDIUM_DAILY,
         DATASET_GA4_LANDING_DAILY,
     }
+)
+
+# --- Refresh-trigger datasets (the C5 post-sync hook's traffic routing) ------
+# The datasets whose fresh artifacts trigger a ``traffic_snapshot_refresh``
+# for their sync window: the consumed read set above PLUS the Bing dailies.
+# Bing carries no Traffic-consumed dataset in this pass, but its chain
+# already refreshed traffic pre-WS-B and KEEPS that trigger (the mapping is
+# additive — no existing dataset loses a trigger it has today).
+TRAFFIC_REFRESH_TRIGGER_DATASETS: Final[frozenset[str]] = frozenset(
+    TRAFFIC_CONSUMED_DATASETS | {DATASET_BING_PAGE_DAILY, DATASET_BING_QUERY_DAILY}
 )
 
 # --- Sort whitelists (``?sort=`` hits stored aggregates only, invariant 7) ---
