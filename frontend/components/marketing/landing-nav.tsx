@@ -281,8 +281,8 @@ function MobileItemLink({ item, onSelect }: Readonly<{ item: NavDropItem; onSele
  * trigger's `.nav-item`, so Tab moves from the trigger into the submenu links
  * rather than blurring out of the subtree and closing the panel first.
  * ≤860px: a hamburger opens a slide-down menu with
- * tap-to-expand accordions (Esc closes it too). The bar's backdrop
- * intensifies once the page scrolls. Open state is driven from React
+ * tap-to-expand accordions (Esc closes it too). The strip is fixed to the top
+ * of the viewport; its bottom hairline strengthens once the page scrolls. Open state is driven from React
  * (`.open`) so `aria-expanded` stays truthful; class lists go through `cn()`
  * so prettier can't mangle conditional tokens; all transitions live in
  * marketing.css, gated behind prefers-reduced-motion. Anchors are absolute
@@ -293,6 +293,10 @@ export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [openDrop, setOpenDrop] = useState<DropKey | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  // True only when the panel opened while ANOTHER panel was already open —
+  // that is the case that should glide sideways. A first open grows out of
+  // its trigger instead, so the two motions never read as the same gesture.
+  const [isSwitching, setIsSwitching] = useState(false);
   const closeTimer = useRef<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<DropKey | null>(null);
@@ -339,13 +343,21 @@ export function LandingNav() {
     const order: DropKey[] = ['product', 'resources', 'solutions'];
     if (openDrop && openDrop !== key) {
       setSlideDirection(order.indexOf(key) > order.indexOf(openDrop) ? 'right' : 'left');
+      setIsSwitching(true);
+    } else if (!openDrop) {
+      setIsSwitching(false);
     }
     setOpenDrop(key);
   };
 
+  const closeDrop = () => {
+    setOpenDrop(null);
+    setIsSwitching(false);
+  };
+
   const scheduleDropClose = () => {
     clearDropClose();
-    closeTimer.current = window.setTimeout(() => setOpenDrop(null), 140);
+    closeTimer.current = window.setTimeout(closeDrop, 140);
   };
 
   useEffect(() => () => clearDropClose(), []);
@@ -369,12 +381,15 @@ export function LandingNav() {
     onFocusCapture: () => openDesktopDrop(key),
     onBlurCapture: (event: React.FocusEvent<HTMLDivElement>) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        // Functional update: focus can move between triggers faster than a
+        // render, so only close if THIS panel is still the open one.
         setOpenDrop((current) => (current === key ? null : current));
+        setIsSwitching(false);
       }
     },
     onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'Escape') {
-        setOpenDrop(null);
+        closeDrop();
         (document.activeElement as HTMLElement | null)?.blur();
       }
     },
@@ -383,8 +398,8 @@ export function LandingNav() {
   const toggleAcc = (key: DropKey) => setOpenAcc((current) => (current === key ? null : key));
 
   return (
-    <div className="nav-wrap">
-      <nav className={cn('site-nav rim', scrolled && 'scrolled')} aria-label="Main navigation">
+    <div className={cn('nav-wrap', scrolled && 'scrolled')}>
+      <nav className="site-nav" aria-label="Main navigation">
         <Link className="wordmark" href="/" aria-label="Searchify home">
           <LogoCube size={28} />
           <span>Searchify</span>
@@ -418,7 +433,7 @@ export function LandingNav() {
                     'drop shared-drop',
                     isOpen && 'open',
                     `drop-${key}`,
-                    `slide-${slideDirection}`,
+                    isSwitching && `slide-${slideDirection}`,
                   )}
                   id={`desktop-nav-panel-${key}`}
                   role="menu"
@@ -433,21 +448,13 @@ export function LandingNav() {
                             <span className="d-group-label">{group.label}</span>
                             <div className="d-steps">
                               {group.items.map((item) => (
-                                <DropItemLink
-                                  key={item.title}
-                                  item={item}
-                                  onSelect={() => setOpenDrop(null)}
-                                />
+                                <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
                               ))}
                             </div>
                           </div>
                         ) : (
                           group.items.map((item) => (
-                            <DropItemLink
-                              key={item.title}
-                              item={item}
-                              onSelect={() => setOpenDrop(null)}
-                            />
+                            <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
                           ))
                         ),
                       )}

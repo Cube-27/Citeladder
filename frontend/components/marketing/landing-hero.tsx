@@ -10,7 +10,7 @@ import { ByokTrust } from './byok-trust';
 export function LandingHero() {
   return (
     <header className="hero">
-      <div className="hero-inner container">
+      <div className="hero-inner stagger container">
         <div className="hero-badge">
           <span className="eyebrow">Answer-engine optimization</span>
         </div>

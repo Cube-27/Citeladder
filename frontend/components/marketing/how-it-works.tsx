@@ -29,7 +29,7 @@ export function HowItWorks() {
             in <span className="grad-text">three steps.</span>
           </h2>
         </div>
-        <div className="steps">
+        <div className="steps stagger">
           {STEPS.map(({ num, title, body }) => (
             <div className="card step-card" key={num}>
               <span className="step-num">{num}</span>

@@ -50,7 +50,7 @@ export function FeaturesGrid() {
             recommended.
           </p>
         </div>
-        <div className="features-grid">
+        <div className="features-grid stagger">
           {FEATURES.map(({ icon: Icon, title, body }) => (
             <div className="card feature-card" key={title}>
               <span className="f-icon">

@@ -79,6 +79,29 @@ describe('LandingNav', () => {
     expect(screen.queryByRole('link', { name: /^evidence$/i })).not.toBeInTheDocument();
   });
 
+  it('glides sideways only when switching panels, not on a fresh open', () => {
+    renderWithProviders(<LandingNav />);
+
+    const item = (name: RegExp, id: string) => control(name, id).closest('.nav-item') as Element;
+
+    // A fresh open grows out of its trigger — no directional glide class, or
+    // the first open would read as arriving from somewhere off to the side.
+    fireEvent.mouseEnter(item(/^product$/i, 'desktop-nav-panel-product'));
+    const product = panel('desktop-nav-panel-product');
+    expect(product).toHaveClass('open');
+    expect(product.className).not.toMatch(/slide-(left|right)/);
+
+    // Product -> Solutions moves rightwards along the nav, so the incoming
+    // panel glides in from the left.
+    fireEvent.mouseEnter(item(/^solutions$/i, 'desktop-nav-panel-solutions'));
+    const solutions = panel('desktop-nav-panel-solutions');
+    expect(solutions).toHaveClass('open', 'slide-right');
+
+    // Solutions -> Resources moves back leftwards.
+    fireEvent.mouseEnter(item(/^resources$/i, 'desktop-nav-panel-resources'));
+    expect(panel('desktop-nav-panel-resources')).toHaveClass('open', 'slide-left');
+  });
+
   it('gives every dropdown item its own href (9 / 3 / 4 menuitems)', () => {
     renderWithProviders(<LandingNav />);
 
@@ -252,11 +275,16 @@ describe('LandingNav', () => {
       expect(accHead.closest('.acc')).not.toHaveClass('open');
     }
 
+    // The scrolled state lives on .nav-wrap: that element is the fixed strip
+    // and owns the bottom hairline the state strengthens.
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    const navWrap = nav.closest('.nav-wrap');
     Object.defineProperty(window, 'scrollY', { value: 50, configurable: true });
     fireEvent.scroll(window);
-    expect(nav).toHaveClass('scrolled');
+    expect(navWrap).toHaveClass('scrolled');
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+    fireEvent.scroll(window);
+    expect(navWrap).not.toHaveClass('scrolled');
   });
 
   it('has exactly one theme toggle and working auth CTAs for signed-out users', () => {

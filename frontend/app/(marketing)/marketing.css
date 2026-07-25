@@ -31,8 +31,21 @@
   --mkt-r-card: 12px;
   --mkt-r-lg: 14px;
   --mkt-r-pill: 999px;
-  --mkt-container: 1120px;
+  --mkt-container: 1320px;
+  /* One gutter for the whole surface: the container and the fixed nav both
+     use it, so the wordmark sits on the same optical line as the content
+     below. Narrower than the old 24px because the container is wider now. */
+  --mkt-gutter: 20px;
+  /* Height of the fixed top strip — content clears it via padding-top. */
+  --mkt-nav-h: 56px;
   --mkt-ease: cubic-bezier(0.22, 0.68, 0.28, 1);
+  /* Motion curves — the built-in CSS easings are too weak to read as
+     intentional. ease-out for anything entering (starts fast, so the user
+     sees movement at the moment they are watching most closely); ease-in-out
+     only for things moving on screen. Never ease-in: it delays the first
+     frame and makes the whole interface feel sluggish. */
+  --mkt-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --mkt-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --mkt-dot-1: #2f58ff;
   --mkt-dot-2: #6b8aff;
   --mkt-dot-3: #9db2ff;
@@ -55,6 +68,7 @@
   --mkt-accent: #2f58ff;
   --mkt-accent-blue: #2f58ff;
   --mkt-accent-2: #1e3fd0;
+  --mkt-shine: #5f7dff;
   --mkt-eyebrow: #2f58ff;
   --mkt-accent-soft: #eef2ff;
   --mkt-icon-fg: #2f58ff;
@@ -95,6 +109,8 @@
   z-index: 0;
   min-height: 100vh;
   overflow-x: clip;
+  /* Clear the fixed top strip. */
+  padding-top: var(--mkt-nav-h);
   background: var(--mkt-bg);
   color: var(--mkt-text);
   font-family: var(--mkt-font-sans);
@@ -124,8 +140,9 @@ html[data-theme='dark'] .mkt {
   --mkt-text-2: #a1a1ab;
   --mkt-text-3: #8a8a94;
   --mkt-accent: #ffffff;
-  --mkt-accent-blue: #2f58ff;
+  --mkt-accent-blue: #4f72ff;
   --mkt-accent-2: #6b8aff;
+  --mkt-shine: #b9c8ff;
   --mkt-eyebrow: #6b8aff;
   --mkt-accent-soft: rgba(107, 138, 255, 0.12);
   --mkt-icon-fg: #ffffff;
@@ -190,10 +207,11 @@ html[data-theme='dark'] .mkt {
 .mkt .container {
   max-width: var(--mkt-container);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--mkt-gutter);
 }
 .mkt section {
-  scroll-margin-top: 96px;
+  /* Anchor targets must clear the fixed strip. */
+  scroll-margin-top: calc(var(--mkt-nav-h) + 24px);
 }
 .mkt .site-nav,
 .mkt .card,
@@ -225,6 +243,137 @@ html[data-theme='dark'] .mkt {
     transition: none !important;
     animation: none !important;
   }
+
+  /* Reduced motion means fewer and gentler animations, not zero. The headline
+     highlight keeps its COLOUR (that is the emphasis) and loses only the
+     sweep, which is the part that could trigger motion sickness. */
+  .mkt .grad-text,
+  .mkt .grad-text:hover {
+    animation: none !important;
+    background-position: 50% 0;
+  }
+
+  /* Entrance staggers resolve instantly rather than sliding into place. */
+  .mkt .stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Dropdowns keep their fade (it explains what appeared) but lose the
+     scale-up and the sideways glide, which are the motion components. */
+  .mkt .shared-drop.open,
+  .mkt .shared-drop.open.slide-left,
+  .mkt .shared-drop.open.slide-right,
+  .mkt .shared-drop .drop-content {
+    animation: none !important;
+  }
+}
+
+/* ── INTERACTION FEEDBACK ───────────────────────────────────────────────
+   Pressable things scale down a touch on :active. This is the cheapest
+   possible signal that the interface heard the click, and its absence is
+   what makes a page feel inert. Kept subtle (0.97-0.98) and fast (140ms):
+   press feedback must land inside the same frame budget as the click.
+
+   Transforms only — no layout, no paint, straight to the compositor. */
+.mkt .btn,
+.mkt .chip,
+.mkt .seg-chip,
+.mkt .engine-chip,
+.mkt .export-chip,
+.mkt .theme-toggle,
+.mkt .hamburger {
+  transition:
+    transform 140ms var(--mkt-ease-out),
+    background-color 180ms var(--mkt-ease-out),
+    border-color 180ms var(--mkt-ease-out),
+    color 180ms var(--mkt-ease-out);
+}
+.mkt .btn:active,
+.mkt .chip:active,
+.mkt .seg-chip:active,
+.mkt .engine-chip:active,
+.mkt .export-chip:active {
+  transform: scale(0.97);
+}
+/* Icon buttons are small, so they need a shallower press to read as motion
+   rather than a glitch. */
+.mkt .theme-toggle:active,
+.mkt .hamburger:active {
+  transform: scale(0.92);
+}
+
+/* Nav links and dropdown rows: colour/background only. These are hovered
+   dozens of times per visit, so movement here would be noise. */
+.mkt .nav-link,
+.mkt .drop-item,
+.mkt .m-item {
+  transition:
+    background-color 140ms var(--mkt-ease-out),
+    color 140ms var(--mkt-ease-out);
+}
+
+/* Cards lift by a single pixel — enough to register as responsive, small
+   enough that a grid of them doesn't jitter as the pointer crosses it.
+   Gated behind a real pointer: on touch, :hover sticks after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .mkt .feature-card,
+  .mkt .step-card,
+  .mkt .tier-card {
+    transition:
+      transform 200ms var(--mkt-ease-out),
+      border-color 200ms var(--mkt-ease-out);
+  }
+  .mkt .feature-card:hover,
+  .mkt .step-card:hover,
+  .mkt .tier-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--mkt-border-strong);
+  }
+
+  /* The primary CTA's arrow leans into the direction it will take you. */
+  .mkt .btn .arr {
+    transition: transform 200ms var(--mkt-ease-out);
+  }
+  .mkt .btn:hover .arr {
+    transform: translateX(2px);
+  }
+}
+
+/* ── ENTRANCE STAGGER ───────────────────────────────────────────────────
+   Children fade up in sequence rather than snapping in together. Delays are
+   short (55ms apart) so the last item still lands quickly — a long cascade
+   reads as the page being slow, not considered. Decorative only: nothing
+   here blocks interaction, and the elements are in the DOM the whole time. */
+.mkt .stagger > * {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: mkt-rise 420ms var(--mkt-ease-out) forwards;
+}
+.mkt .stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.mkt .stagger > *:nth-child(2) {
+  animation-delay: 55ms;
+}
+.mkt .stagger > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+.mkt .stagger > *:nth-child(4) {
+  animation-delay: 165ms;
+}
+.mkt .stagger > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+.mkt .stagger > *:nth-child(6) {
+  animation-delay: 275ms;
+}
+@keyframes mkt-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── SHARED PIECES ──────────────────────────────────────────────────────── */
@@ -238,8 +387,43 @@ html[data-theme='dark'] .mkt {
   letter-spacing: 0;
   color: var(--mkt-text-3);
 }
+/* Key headline terms — a subtle blue that varies across the phrase, with a
+   slow shine that sweeps once on load and again on hover.
+
+   The sweep is a background-position animation on a clipped gradient: no
+   layout, no paint, and it runs off the main thread. It is deliberately slow
+   (2.6s) and low-contrast because it is decorative — this is a marketing
+   headline seen once per visit, not a control seen hundreds of times a day.
+   Reduced motion drops the sweep and keeps the colour (see the block below),
+   because the colour carries the emphasis and only the movement is the
+   accessibility concern. */
 .mkt .grad-text {
-  color: var(--mkt-text);
+  position: relative;
+  background-image: linear-gradient(
+    100deg,
+    var(--mkt-accent-2) 0%,
+    var(--mkt-accent-2) 26%,
+    var(--mkt-shine) 46%,
+    var(--mkt-accent-2) 66%,
+    var(--mkt-accent-2) 100%
+  );
+  background-size: 260% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: mkt-shine 2.6s var(--mkt-ease-in-out) 0.35s both;
+}
+.mkt .grad-text:hover {
+  animation: mkt-shine 2.6s var(--mkt-ease-in-out) both;
+}
+@keyframes mkt-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
 }
 .mkt .card {
   position: relative;
@@ -344,27 +528,33 @@ html[data-theme='dark'] .mkt {
 }
 
 /* ── NAV ────────────────────────────────────────────────────────────────── */
+/* Fixed full-width top strip: the bar spans the viewport and is pinned to
+   the top edge, with only its bottom hairline separating it from the page.
+   `.mkt` gets the matching top padding below so content starts under it. */
 .mkt .nav-wrap {
-  position: sticky;
-  top: 14px;
+  position: fixed;
+  inset: 0 0 auto;
   z-index: 50;
-  padding: 0 20px;
-  margin-top: 16px;
+  background: var(--mkt-surface-2);
+  border-bottom: 1px solid var(--mkt-border);
+  /* Only the border changes on scroll, so this is a cheap, non-layout
+     transition. */
+  transition: border-color 200ms var(--mkt-ease-out);
+}
+.mkt .nav-wrap.scrolled {
+  border-bottom-color: var(--mkt-border-strong);
 }
 .mkt .site-nav {
   max-width: var(--mkt-container);
   margin: 0 auto;
-  height: 58px;
+  height: 56px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 0 16px;
-  background: var(--mkt-surface-2);
-  border: 1px solid var(--mkt-border);
-  border-radius: 12px;
-}
-.mkt .site-nav.scrolled {
-  border-color: var(--mkt-border-strong);
+  padding: 0 var(--mkt-gutter);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 .mkt .wordmark {
   display: flex;
@@ -444,11 +634,20 @@ html[data-theme='dark'] .mkt {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  /* Closed state: slightly small and lifted toward the trigger, so the panel
+     grows OUT of the nav rather than appearing from nothing. Never scale(0) —
+     nothing in the real world pops in from zero size.
+
+     transform-origin sits at the top edge (set per-panel below) so the growth
+     reads as anchored to the trigger, not to the panel's own centre.
+
+     Exit is faster than enter (140ms vs 220ms): the user has already decided
+     to leave, so the system should get out of the way. */
+  transform: translate(-50%, -6px) scale(0.97);
+  transform-origin: top center;
   transition:
-    left 240ms var(--mkt-ease),
-    width 240ms var(--mkt-ease),
-    opacity 140ms var(--mkt-ease),
-    transform 240ms var(--mkt-ease),
+    opacity 140ms var(--mkt-ease-out),
+    transform 140ms var(--mkt-ease-out),
     visibility 0s linear 140ms;
 }
 /* The product panel is far wider than its trigger, so centering it on the
@@ -457,10 +656,11 @@ html[data-theme='dark'] .mkt {
 .mkt .drop-product {
   width: 620px;
   left: 0;
-  transform: translate(0, 4px);
+  transform: translate(0, -6px) scale(0.97);
+  transform-origin: top left;
 }
 .mkt .shared-drop.drop-product.open {
-  transform: translate(0, 0);
+  transform: translate(0, 0) scale(1);
 }
 .mkt .drop-product .drop-content {
   display: grid;
@@ -497,23 +697,92 @@ html[data-theme='dark'] .mkt {
 .mkt .shared-drop.open {
   opacity: 1;
   visibility: visible;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, 0) scale(1);
   pointer-events: auto;
-  transition-delay: 0s;
+  /* Enter is slower than exit and uses the strong ease-out, so the panel
+     moves immediately on the first frame — the moment the eye is on it. */
+  transition:
+    opacity 220ms var(--mkt-ease-out),
+    transform 220ms var(--mkt-ease-out),
+    visibility 0s;
+}
+
+/* Switching triggers: the panel enters travelling sideways from the trigger
+   the pointer came from, so the group reads as ONE surface sliding along the
+   nav instead of separate panels blinking. The direction classes are set by
+   the component from the trigger order.
+
+   Opacity is deliberately quick (120ms) while the slide runs longer: the box
+   is legible almost immediately and only the motion carries the direction. */
+.mkt .shared-drop.open.slide-right {
+  animation: mkt-drop-glide-right 260ms var(--mkt-ease-out) both;
+}
+.mkt .shared-drop.open.slide-left {
+  animation: mkt-drop-glide-left 260ms var(--mkt-ease-out) both;
+}
+@keyframes mkt-drop-glide-right {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% - 26px), 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+@keyframes mkt-drop-glide-left {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + 26px), 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+/* The product panel is left-anchored, so its glide keyframes use translate(0). */
+.mkt .shared-drop.drop-product.open.slide-right {
+  animation-name: mkt-drop-glide-right-left-anchored;
+}
+.mkt .shared-drop.drop-product.open.slide-left {
+  animation-name: mkt-drop-glide-left-left-anchored;
+}
+@keyframes mkt-drop-glide-right-left-anchored {
+  from {
+    opacity: 0;
+    transform: translate(-26px, 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+@keyframes mkt-drop-glide-left-left-anchored {
+  from {
+    opacity: 0;
+    transform: translate(26px, 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
 }
 .mkt .shared-drop .drop-content {
   width: 100%;
 }
+/* Moving between triggers: the incoming content glides in from the side the
+   pointer travelled FROM, so the panel feels like one surface sliding
+   sideways rather than three separate panels blinking in and out. */
 .mkt .shared-drop.open.slide-right .drop-content {
-  animation: mkt-drop-content-right 170ms var(--mkt-ease) both;
+  animation: mkt-drop-content-right 260ms var(--mkt-ease-out) both;
 }
 .mkt .shared-drop.open.slide-left .drop-content {
-  animation: mkt-drop-content-left 170ms var(--mkt-ease) both;
+  animation: mkt-drop-content-left 260ms var(--mkt-ease-out) both;
 }
 @keyframes mkt-drop-content-right {
   from {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-22px);
   }
   to {
     opacity: 1;
@@ -523,7 +792,7 @@ html[data-theme='dark'] .mkt {
 @keyframes mkt-drop-content-left {
   from {
     opacity: 0;
-    transform: translateX(10px);
+    transform: translateX(22px);
   }
   to {
     opacity: 1;
@@ -648,14 +917,18 @@ html[data-theme='dark'] .mkt {
 }
 .mkt .mobile-menu {
   display: none;
+  /* Anchored to the fixed strip: it hangs directly off the bottom hairline,
+     full-bleed, so it reads as an extension of the bar rather than a
+     floating card. */
   position: absolute;
-  top: calc(100% + 8px);
-  left: 20px;
-  right: 20px;
+  top: 100%;
+  left: 0;
+  right: 0;
   z-index: 55;
-  border-radius: 16px;
-  padding: 10px;
-  max-height: calc(100vh - 104px);
+  border-width: 0 0 1px;
+  border-radius: 0;
+  padding: 10px var(--mkt-gutter) 14px;
+  max-height: calc(100vh - var(--mkt-nav-h));
   overflow: auto;
 }
 .mkt .acc-head {
