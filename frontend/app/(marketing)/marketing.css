@@ -961,8 +961,11 @@ html[data-theme='dark'] .mkt {
   top: calc(100% + 10px);
   left: 50%;
   transform: translate(-50%, 4px);
-  width: 320px;
   padding: 6px;
+  /* width/height come from the component, measured off the active panel's
+     content. Overflow is hidden so the outgoing content is clipped by the
+     shrinking box rather than spilling past its edge mid-morph. */
+  overflow: hidden;
   border-radius: var(--mkt-r-lg);
   z-index: 60;
   opacity: 0;
@@ -977,23 +980,35 @@ html[data-theme='dark'] .mkt {
 
      Exit is faster than enter (140ms vs 220ms): the user has already decided
      to leave, so the system should get out of the way. */
-  transform: translate(-50%, -6px) scale(0.97);
+  /* Closed: a small seed under the trigger. Never scale(0) — nothing in the
+     real world appears from literally nothing — but small enough that the
+     open reads as the panel GROWING out of the nav. */
+  transform: translate(-50%, -10px) scale(0.92);
   transform-origin: top center;
   transition:
-    opacity 140ms var(--mkt-ease-out),
-    transform 140ms var(--mkt-ease-out),
-    visibility 0s linear 140ms;
+    opacity 130ms var(--mkt-ease-out),
+    transform 130ms var(--mkt-ease-out),
+    visibility 0s linear 130ms;
 }
-/* Every panel is centred on its trigger, so the one visible box travels along
-   a single horizontal line as the pointer moves between triggers. The product
-   panel is the widest; the component clamps its centre so it can never run
+/* Natural panel sizes live on the CONTENT: the component measures it and
+   drives the surrounding box's width/height from that, so the box can morph
+   between panels of different shapes. Every panel is centred on its trigger,
+   with the centre clamped in the component so the widest one can never run
    past the left edge of the viewport. */
-.mkt .drop-product {
-  width: 620px;
+.mkt .shared-drop .drop-content {
+  width: 100%;
 }
+/* Product has enough rows to warrant three columns inside the shared frame;
+   the narrower menus use two so their rows do not stretch. */
 .mkt .drop-product .drop-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px 8px;
+}
+.mkt .drop-resources .drop-content,
+.mkt .drop-solutions .drop-content {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 1px 8px;
 }
 /* Labeled sub-group inside a dropdown panel (the product panel's "How it
@@ -1030,41 +1045,46 @@ html[data-theme='dark'] .mkt {
   pointer-events: auto;
   /* Enter is slower than exit and uses the strong ease-out, so the panel
      moves immediately on the first frame — the moment the eye is on it. */
+  /* Enter is deliberately slower than exit (280ms vs 130ms) so the growth is
+     legible: the panel unfolds out of the trigger. Leaving is a decision the
+     user already made, so the system gets out of the way quickly. */
   transition:
-    opacity 220ms var(--mkt-ease-out),
-    transform 220ms var(--mkt-ease-out),
+    opacity 280ms var(--mkt-ease-out),
+    transform 280ms var(--mkt-ease-out),
+    width 280ms var(--mkt-ease-out),
+    height 280ms var(--mkt-ease-out),
     visibility 0s;
 }
 
-/* SWITCHING between triggers: the panel is already open, so it must not fade
-   or scale — it simply travels. `left` and `width` animate with the on-screen
-   ease-in-out curve (this is movement, not an entrance), which is what makes
-   the three panels read as one surface sliding along the nav. */
+/* SWITCHING between triggers: the frame does not move and does not change
+   width — only its HEIGHT eases to fit the incoming content, which is the one
+   dimension that genuinely differs. Opacity and transform are untouched, so
+   the surface is continuously present and the eye reads a single panel whose
+   contents changed, not three panels taking turns. */
 .mkt .shared-drop.open.switching {
   transition:
-    left 320ms var(--mkt-ease-in-out),
-    width 320ms var(--mkt-ease-in-out),
-    opacity 120ms var(--mkt-ease-out),
-    transform 120ms var(--mkt-ease-out),
+    height 260ms var(--mkt-ease-in-out),
     visibility 0s;
 }
 
-.mkt .shared-drop .drop-content {
-  width: 100%;
-}
-/* Moving between triggers: the incoming content glides in from the side the
-   pointer travelled FROM, so the panel feels like one surface sliding
-   sideways rather than three separate panels blinking in and out. */
+/* The content of every panel stays mounted so the box can measure the size it
+   is morphing TO. `visibility: hidden` on a closed .drop already takes its
+   whole subtree out of the tab order and the accessibility tree, so hidden
+   content is never focusable — the panel also carries aria-hidden. */
+/* Moving between triggers: the frame holds still and the incoming content
+   fades up in place with a few pixels of lift from the direction of travel.
+   The offset is small (6px) on purpose — enough to give the swap a direction,
+   too little to read as the panel itself moving. */
 .mkt .shared-drop.open.slide-right .drop-content {
-  animation: mkt-drop-content-right 320ms var(--mkt-ease-out) both;
+  animation: mkt-drop-content-right 220ms var(--mkt-ease-out) both;
 }
 .mkt .shared-drop.open.slide-left .drop-content {
-  animation: mkt-drop-content-left 320ms var(--mkt-ease-out) both;
+  animation: mkt-drop-content-left 220ms var(--mkt-ease-out) both;
 }
 @keyframes mkt-drop-content-right {
   from {
     opacity: 0;
-    transform: translateX(-14px);
+    transform: translateX(-6px);
   }
   to {
     opacity: 1;
@@ -1074,7 +1094,7 @@ html[data-theme='dark'] .mkt {
 @keyframes mkt-drop-content-left {
   from {
     opacity: 0;
-    transform: translateX(14px);
+    transform: translateX(6px);
   }
   to {
     opacity: 1;

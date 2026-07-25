@@ -38,6 +38,16 @@ const ACTIVE_PROJECT_STORAGE_KEY = 'searchify.active-project-id';
 /** Matches --mkt-gutter: the minimum breathing room at the viewport edge. */
 const GUTTER = 20;
 
+/** Matches the `.drop` padding in marketing.css. */
+const PANEL_PADDING = 6;
+
+/**
+ * One width for every dropdown panel. A fixed frame is what lets the surface
+ * stay put while its contents swap — a per-trigger width would force the box
+ * to resize on every hover, which reads as motion rather than continuity.
+ */
+const PANEL_WIDTH = 660;
+
 function hasStoredActiveProject(): boolean {
   if (typeof window === 'undefined') return false;
   try {
@@ -303,10 +313,17 @@ export function LandingNav() {
   const closeTimer = useRef<number | null>(null);
   const navLinksRef = useRef<HTMLDivElement | null>(null);
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  // Centre-x of the active trigger, measured relative to .nav-links. The one
-  // visible panel is positioned from this, so moving between triggers slides
-  // the SAME box sideways instead of closing one panel and opening another.
-  const [anchorX, setAnchorX] = useState<number | null>(null);
+  const contentRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  /**
+   * Geometry of the panel surface: where it sits and how big it is.
+   *
+   * The three triggers each own a panel in the DOM (that nesting is what keeps
+   * the submenu keyboard-reachable), but only ONE is ever visible, and it is
+   * positioned and sized from this single piece of state. Moving between
+   * triggers therefore slides and RESIZES the same box — it never closes and
+   * reopens.
+   */
+  const [box, setBox] = useState<{ x: number; w: number; h: number } | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<DropKey | null>(null);
 
@@ -357,19 +374,27 @@ export function LandingNav() {
    * edge on screen. Without this the widest panel would be half-cut on
    * narrower desktops.
    */
-  const measureAnchor = (key: DropKey): number | null => {
-    const trigger = triggerRefs.current[key];
+  /**
+   * The panel surface is ANCHORED, not per-trigger: one box, centred on the
+   * trigger group, that stays put while the pointer moves along the nav. Only
+   * its height changes, to fit whichever content is showing.
+   *
+   * Moving between triggers therefore swaps the contents inside a stationary
+   * frame — there is no travel and no resize to watch, which is what makes it
+   * feel like a single continuous surface rather than three panels.
+   */
+  const measureBox = (key: DropKey): { x: number; w: number; h: number } | null => {
     const links = navLinksRef.current;
-    const panel = document.getElementById(`desktop-nav-panel-${key}`);
-    if (!trigger || !links) return null;
-    const t = trigger.getBoundingClientRect();
+    const content = contentRefs.current[key];
+    if (!links || !content) return null;
     const l = links.getBoundingClientRect();
-    const centre = t.left - l.left + t.width / 2;
-    const halfPanel = (panel?.offsetWidth ?? 0) / 2;
-    if (!halfPanel) return centre;
-    // Smallest centre that keeps the panel's left edge inside the viewport.
-    const minCentre = halfPanel - l.left + GUTTER;
-    return Math.max(centre, minCentre);
+    // Centre on the trigger group itself, so the frame never moves.
+    const x = l.width / 2;
+    // scrollHeight is the content's own laid-out height, independent of
+    // whatever height the shell is currently stretched to — reading
+    // offsetHeight here would feed the shell its own stale size back.
+    const h = content.scrollHeight + PANEL_PADDING * 2;
+    return { x, w: PANEL_WIDTH, h };
   };
 
   const openDesktopDrop = (key: DropKey) => {
@@ -381,8 +406,11 @@ export function LandingNav() {
     } else if (!openDrop) {
       setIsSwitching(false);
     }
-    setAnchorX(measureAnchor(key));
+    setBox(measureBox(key));
     setOpenDrop(key);
+    // Re-measure on the next frame: the first read can land before the grid
+    // has reflowed, which would leave the frame taller than its content.
+    requestAnimationFrame(() => setBox(measureBox(key)));
   };
 
   const closeDrop = () => {
@@ -471,42 +499,46 @@ export function LandingNav() {
                     always present (so aria-controls resolves) and hidden via
                     .open/aria-hidden; only its content is mounted on open, which
                     keeps the existing remount-driven slide animation. */}
+                {/* ONE shell per trigger, but only the open one is painted —
+                    and it is stretched to `box`, so the surface reads as a
+                    single box being resized rather than panels swapping.
+                    `.measure` holds an unpainted copy of every panel's content
+                    so the next height is known before the stretch starts. */}
                 <div
-                  className={cn(
-                    'drop shared-drop',
-                    isOpen && 'open',
-                    `drop-${key}`,
-                    // `switching` glides the BOX (left/width); `slide-*` slides
-                    // the inner content in from the direction of travel.
-                    isSwitching && 'switching',
-                    isSwitching && `slide-${slideDirection}`,
-                  )}
+                  className={cn('drop shared-drop', isOpen && 'open', `drop-${key}`)}
                   id={`desktop-nav-panel-${key}`}
                   role="menu"
                   aria-hidden={!isOpen}
                   onMouseEnter={clearDropClose}
-                  style={anchorX === null ? undefined : { left: `${anchorX}px` }}
+                  style={
+                    box === null || !isOpen
+                      ? undefined
+                      : { left: `${box.x}px`, width: `${box.w}px`, height: `${box.h}px` }
+                  }
                 >
-                  {isOpen ? (
-                    <div className="drop-content" key={key}>
-                      {groups.map((group) =>
-                        group.label ? (
-                          <div className="d-group" key={group.label}>
-                            <span className="d-group-label">{group.label}</span>
-                            <div className="d-steps">
-                              {group.items.map((item) => (
-                                <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
-                              ))}
-                            </div>
+                  <div
+                    className={cn('drop-content', isSwitching && `slide-${slideDirection}`)}
+                    ref={(node) => {
+                      contentRefs.current[key] = node;
+                    }}
+                  >
+                    {groups.map((group) =>
+                      group.label ? (
+                        <div className="d-group" key={group.label}>
+                          <span className="d-group-label">{group.label}</span>
+                          <div className="d-steps">
+                            {group.items.map((item) => (
+                              <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
+                            ))}
                           </div>
-                        ) : (
-                          group.items.map((item) => (
-                            <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
-                          ))
-                        ),
-                      )}
-                    </div>
-                  ) : null}
+                        </div>
+                      ) : (
+                        group.items.map((item) => (
+                          <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
+                        ))
+                      ),
+                    )}
+                  </div>
                 </div>
               </div>
             );
