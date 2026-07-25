@@ -1771,19 +1771,8 @@ export const productEvidenceResponseSchema = z
 // Opportunity vocabulary (config-owned; per-subsystem severity enum — the
 // site-health `issueSeveritySchema` is NOT reused, they evolve independently).
 export const opportunityTypeSchema = z.enum(['visibility', 'site', 'traffic', 'topic']);
-export const opportunitySeveritySchema = z.enum([
-  'critical',
-  'high',
-  'medium',
-  'low',
-  'info',
-]);
-export const opportunityStatusSchema = z.enum([
-  'open',
-  'in_progress',
-  'dismissed',
-  'resolved',
-]);
+export const opportunitySeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
+export const opportunityStatusSchema = z.enum(['open', 'in_progress', 'dismissed', 'resolved']);
 
 // One live opportunity row in the priority-sorted catalog.
 export const opportunitySchema = z

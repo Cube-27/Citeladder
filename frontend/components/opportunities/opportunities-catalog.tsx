@@ -8,12 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { CursorPager } from '@/components/ui/cursor-pager';
-import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
-  DropdownTrigger,
-} from '@/components/ui/dropdown';
+import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -122,10 +117,7 @@ function PriorityCell({ score }: Readonly<{ score: number }>) {
 }
 
 /** Per-row status control (dropdown → updateStatus mutation). */
-function StatusControl({
-  row,
-  projectId,
-}: Readonly<{ row: Opportunity; projectId: string }>) {
+function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectId: string }>) {
   const updateStatus = useUpdateOpportunityStatus(projectId, row.id);
   return (
     <Dropdown>
@@ -145,9 +137,7 @@ function StatusControl({
           <DropdownItem
             key={choice.value}
             disabled={choice.value === row.status || updateStatus.isPending}
-            onSelect={() =>
-              updateStatus.mutate({ opportunityId: row.id, status: choice.value })
-            }
+            onSelect={() => updateStatus.mutate({ opportunityId: row.id, status: choice.value })}
           >
             {choice.label}
           </DropdownItem>
@@ -263,9 +253,7 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
                   <TableCell>
                     <div className="grid gap-0.5">
                       <span className="text-foreground text-sm font-medium">{row.title}</span>
-                      <span className="mono text-2xs text-muted break-all">
-                        {targetLine(row)}
-                      </span>
+                      <span className="mono text-2xs text-muted break-all">{targetLine(row)}</span>
                     </div>
                   </TableCell>
                   <TableCell>

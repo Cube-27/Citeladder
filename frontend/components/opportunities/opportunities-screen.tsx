@@ -100,8 +100,8 @@ function NeverComputed({ projectId }: Readonly<{ projectId: string }>) {
         <AccentEyebrow>Opportunities</AccentEyebrow>
         <h2 className={displayHeadingLgClasses}>No opportunities computed yet</h2>
         <p className="text-secondary max-w-md text-sm">
-          Opportunities are derived from your latest visibility audit and Site Health crawl.
-          Run those first, then recompute to surface the highest-priority actions here.
+          Opportunities are derived from your latest visibility audit and Site Health crawl. Run
+          those first, then recompute to surface the highest-priority actions here.
         </p>
         <RecomputeButton projectId={projectId} variant="secondary" />
       </CardContent>
@@ -112,9 +112,7 @@ function NeverComputed({ projectId }: Readonly<{ projectId: string }>) {
 function SummaryTile({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div className="grid gap-0.5">
-      <span className="text-2xs text-muted font-mono tracking-[0.08em] uppercase">
-        {label}
-      </span>
+      <span className="text-2xs text-muted font-mono tracking-[0.08em] uppercase">{label}</span>
       <span className="mono text-foreground text-xl font-semibold">{value}</span>
     </div>
   );
@@ -133,8 +131,8 @@ function SummaryStrip({
           <div className="grid gap-1">
             <AccentEyebrow>Opportunity snapshot</AccentEyebrow>
             <p className="text-muted text-xs">
-              Computed {formatAudited(summary.computed_at)} · analyzer{' '}
-              {summary.analyzer_version} · formula {summary.formula_version}
+              Computed {formatAudited(summary.computed_at)} · analyzer {summary.analyzer_version} ·
+              formula {summary.formula_version}
             </p>
           </div>
           <div className="flex items-center gap-2">

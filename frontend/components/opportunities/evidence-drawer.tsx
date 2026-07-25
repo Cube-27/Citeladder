@@ -12,11 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/typography';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
-import type {
-  OpportunityDetail,
-  OpportunityStatus,
-  OpportunityType,
-} from '@/lib/api/types';
+import type { OpportunityDetail, OpportunityStatus, OpportunityType } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
@@ -121,12 +117,9 @@ function EvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   const engines = asStringList(evidence.engines);
   const competitors = asStringList(evidence.competitor_names);
   const ownedDomains = asStringList(evidence.owned_domains);
-  const repetitions =
-    typeof evidence.repetitions === 'number' ? evidence.repetitions : null;
+  const repetitions = typeof evidence.repetitions === 'number' ? evidence.repetitions : null;
   const ownedCitationCount =
-    typeof evidence.owned_citation_count === 'number'
-      ? evidence.owned_citation_count
-      : null;
+    typeof evidence.owned_citation_count === 'number' ? evidence.owned_citation_count : null;
   const issueRuleId = asString(evidence.issue_rule_id);
   const category = asString(evidence.category);
 
@@ -183,13 +176,9 @@ function EvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
 /** Provenance section — rule + versions + source rows + detected-at. */
 function ProvenanceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   const sourceCounts = [
-    detail.source_analysis_ids.length > 0
-      ? `${detail.source_analysis_ids.length} analyses`
-      : null,
+    detail.source_analysis_ids.length > 0 ? `${detail.source_analysis_ids.length} analyses` : null,
     detail.source_issue_ids.length > 0 ? `${detail.source_issue_ids.length} issues` : null,
-    detail.source_metric_ids.length > 0
-      ? `${detail.source_metric_ids.length} snapshot`
-      : null,
+    detail.source_metric_ids.length > 0 ? `${detail.source_metric_ids.length} snapshot` : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -238,9 +227,7 @@ function StatusFooter({
       ) : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xs text-muted font-mono tracking-[0.08em] uppercase">
-            Status
-          </span>
+          <span className="text-2xs text-muted font-mono tracking-[0.08em] uppercase">Status</span>
           <OpportunityStatusBadge status={detail.status} />
         </div>
         <div className="flex items-center gap-2">
