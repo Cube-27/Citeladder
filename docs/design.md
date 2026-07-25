@@ -1,569 +1,667 @@
 # Design System — Searchify
 
-> A **written** design system with **concrete token values**. Everything a build agent needs to
-> author `frontend/app/globals.css` and lay out the seven MVP screens is here — **no screenshot
-> is required**. Task **F1 consumes these token values verbatim.**
+> The **written form** of the Searchify design system. The product app runs on the **Figma
+> design system ported into `frontend/app/globals.css`** — the royal-blue light theme
+> **verbatim**, plus a newly **authored soft slate-charcoal dark theme** (the Figma midnight
+> dark is deliberately not ported). Marketing is a **fully independent creative system**
+> living in `frontend/app/(marketing)/marketing.css`. Machine guards keep this document, the
+> token files, and WCAG AA in sync (`frontend/app/globals.test.ts`,
+> `frontend/scripts/check-design-tokens.mjs`).
 > Companion docs: [`../Agents.md`](../Agents.md), [`invariants.md`](invariants.md),
 > [`backend-architecture.md`](backend-architecture.md), [`frontend-architecture.md`](frontend-architecture.md).
 
 ## 1. Overview
 
-- **`frontend/app/globals.css` is the single source of truth** for tokens. Components consume
-  **bridged Tailwind semantic tokens only** — never raw hex (enforced by the no-raw-hex guard).
-- **Aesthetic**: dense, clean **B2B analytics** in the **CUBE27 midnight** language — a
-  near-black canvas (dark-first), tight 4px rhythm, hairline borders, restrained shadows, one
-  confident **blue accent** reserved for links, active states, focus rings, and charts, and
-  **tabular monospace numerals** for all metrics. The light theme is the warm-paper sibling.
-- **Both themes are always defined.** Dark is the default; light is a full sibling hierarchy.
-  Every text-on-surface pair meets **WCAG AA contrast ≥ 4.5:1**.
+- **`frontend/app/globals.css` is the single source of truth** for app tokens. Components
+  consume **bridged Tailwind semantic tokens only** — never raw hex (no-raw-hex guard). Raw
+  hex lives only in the `:root` and `html[data-theme='dark']` blocks of `globals.css`
+  (app) and in `app/(marketing)/marketing.css` (marketing).
+- **Aesthetic**: dense, confident **B2B analytics** in the Figma visual language — a
+  `#F7F8FA` cool-gray page, white panels **elevated by the `--shadow-1..4` stack** (no longer
+  a flat/hairline-only language), one **royal-blue accent `#2756FF`** reserved for data,
+  links, active states and focus rings, vivid semantic colors, **Inter** for UI text and
+  **Geist Mono** tabular numerals for every metric, 4px grid, WCAG 2.1 AA.
+- **Light is the default theme.** The dark theme is a full sibling: an **authored soft
+  slate-charcoal** in the Perplexity/Claude family — never near-black, with clearly lighter
+  elevated surfaces (see §6). Every documented text/surface pair in **both** themes meets
+  **AA ≥ 4.5:1**, computed programmatically in `globals.test.ts`.
 
 ## 2. Theme model
 
-Two explicit surface hierarchies, lowest → highest elevation. `:root` = light,
-`html[data-theme='dark']` = dark. A pre-hydration script sets `data-theme` to avoid flashing.
-**Dark is the default**: with no stored choice the bootstrap resolves to dark (stored choice →
-dark; the OS preference is not consulted — only an explicit toggle opts into light). Light is a
-full sibling hierarchy, not an afterthought.
+Two explicit surface hierarchies. `:root` = light (default),
+`html[data-theme='dark']` = dark. A pre-hydration script sets `data-theme` before first
+paint. **Light is the default**: the bootstrap resolves `stored choice → light`; the OS
+preference is intentionally not consulted — only an explicit stored `dark` choice (from any
+ThemeToggle) opts into dark.
 
-**Dark surface hierarchy (CUBE27 midnight):** `bg-base #050505` → `bg-alt #0a0a0a` →
-`bg-panel #111114` → `bg-elevated #16161a` → `bg-well #1c1c21`. Sidebar `#0a0a0a`.
+**Light surface hierarchy (Figma):** `bg-base #F7F8FA` → panels/elevated `#FFFFFF`
+(differentiated by shadow, not fill) → sunken wells `#EFF1F6`. Sidebar = panel `#FFFFFF`.
 
-**Light surface hierarchy (warm paper):** `bg-base #fafaf7` → `bg-alt #efefea` →
-`bg-panel #ffffff` → `bg-elevated #ffffff` → `bg-well #f2f2ec`. Sidebar `#f5f5f0`.
+**Dark surface hierarchy (authored):** `bg-base #16181E` → `bg-panel #1F222B` →
+`bg-elevated #272B36` (strictly ascending luminance), sunken `bg-well #12141A`. Sidebar =
+panel `#1F222B`.
 
-Accent is a **blue** (`#2f58ff` light / `#6b8aff` dark) — the CUBE27 brand accent, shared with
-the marketing landing — reserved for links, active states, focus rings, and data visualization.
-Semantic hues (status, sentiment, citation, run, score-band) are unchanged semantically; owned
-citations keep their green identity in both themes.
+The accent is **royal blue** — `#2756FF` light (Figma anchor), a brightened royal-blue
+sibling in dark — reserved for links, active states, focus rings, and data visualization.
+Owned citations are **Figma blue** in both themes (the former green identity is dropped —
+confirmed product decision).
 
-## 3. Token values — LIGHT (`:root`)
+## 3. Figma → Searchify token mapping
+
+Rule: **same name, new Figma value** wherever a semantic equivalent exists; **new token**
+only for new concepts; where our set is finer-grained than Figma's, alias to the nearest
+Figma value and document it. Figma source: `/code/.uploaded_artifacts/1192.css` (tokens) and
+`1198.tsx` (type scale, buttons, badges, elevation).
+
+| Figma (`1192.css`) | Searchify token(s) | Notes |
+|---|---|---|
+| `--blue-50..900`, `--neutral-0..900` | NEW primitive ramps, same names | globals.css-only layer; semantic tokens reference these; not theme-overridden |
+| `--surface-page` | `--bg-base` | light `#F7F8FA` verbatim; dark authored (§6) |
+| `--surface-panel` | `--bg-panel`, `--bg-sidebar` | light `#FFFFFF` verbatim (Figma sidebar = panel bg); dark authored |
+| `--surface-elevated` | `--bg-elevated` | light `#FFFFFF` verbatim; dark authored — clearly lighter than base |
+| `--surface-sunken` | `--bg-well` | light `#EFF1F6` verbatim; dark authored (may dip below base) |
+| `--neutral-100` | `--bg-alt` | light verbatim; dark authored (between base and panel, same family) |
+| `--text-primary` / `--text-secondary` | same names | light `#0D1228` / `#454E6E` verbatim; dark authored (AA-gated) |
+| `--text-tertiary` | `--text-muted` | captions/decorative only — excluded from body-contrast pairs |
+| `--text-disabled` | `--text-subtle` | decorative only |
+| `--text-inverse` | NEW `--text-inverse` | `#FFFFFF` light; `#16181E` dark |
+| `--text-link` | `--text-link`, alias of `--accent-text` | **no `--text-accent` token exists** |
+| `--border-subtle` / `--border-default` / `--border-strong` | `--border-subtle` / `--border` / `--border-strong` | light Figma values verbatim; dark authored |
+| `--accent` family | same names + NEW `--accent-active`; `--accent-foreground` → `--accent-fg` | light anchored `#2756FF` verbatim; dark accent brightened within the royal-blue family for AA; `--accent-soft` kept, derived from `--accent-subtle` via `color-mix(in srgb, var(--accent-subtle) 45%, transparent)` |
+| status `--success/-warning/-danger/-info/-neutral-status` bg/border/text | same semantic names | light verbatim; dark authored (Figma's alpha-wash approach re-based on the authored surfaces); solid `--success` etc. take Figma mid hues (`#10B981` / `#F59E0B` / `#EF4444` / `#2756FF`); `--neutral-bg` ← neutral-status-bg |
+| `--score-{low,mid,good,high}-bg/-border/-text/-ring` | `--score-*` (solid = ring), `--score-*-bg`, NEW `--score-*-text`, `--score-*-ring`, `--score-*-border` | **band thresholds stay 25/50/75 — `score-band.ts` unchanged**; Figma band colors map onto the existing bands |
+| `--run-{state}-bg/-text` | `--run-{state}-bg`, `--run-{state}` (solid = Figma text) | all 8 states; light verbatim (one AA adjustment, §4); dark authored |
+| `--citation-owned/-competitor/-third-*` | `--citation-owned/-competitor/-third-party-*` + NEW `*-border` | **owned becomes Figma blue** — the green identity is dropped (confirmed decision) |
+| `--chart-1..8` | NEW `--chart-1..8`; `--series-1..5` alias to `--chart-1..5`, `--series-other` ← `--neutral-200` | keeps the "fold into Other" rule in `series-palette.ts`; chart hues identical in both themes |
+| `--shadow-1..4` | NEW `--shadow-1..4`; existing `--shadow-xs/sm/card/elevated/lg/modal` alias (xs,sm→1; card→2; elevated→3; lg,modal→4) | component names unchanged; dark shadows authored soft for the lighter surfaces |
+| `--r-xs..xl` (4/6/8/12/16) | `--radius-xs/sm/md/lg/xl` = 4/6/8/12/16; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills** (1198 Btn) |
+| Inter, Geist Mono | `--font-primary-family` = Inter stack; `--font-mono-family` = Geist Mono stack; `--font-display-family` → Inter | next/font in `app/layout.tsx`: Inter replaces Geist; the variable name `--font-sans` is kept |
+
+## 4. Token values — LIGHT (`:root`)
+
+Figma values **verbatim**. The primitive ramps are a globals.css-only layer; semantic tokens
+reference them. One deliberate AA adjustment: Figma's `--run-cancelled` text `#98A2BE`
+measures 2.4:1 on its `#F7F8FA` bg, so it moves one ramp step within the same family
+(neutral-400 → neutral-500 `#667092`) to clear AA 4.5:1.
 
 ```css
 :root {
   color-scheme: light;
 
-  /* Fonts */
+  /* Primitive ramps (Figma verbatim — not theme-overridden) */
+  --blue-50: #ebf0ff;
+  --blue-100: #d5e2ff;
+  --blue-200: #acc4ff;
+  --blue-300: #7a9fff;
+  --blue-400: #4972ff;
+  --blue-500: #2756ff; /* accent anchor */
+  --blue-600: #1a44eb;
+  --blue-700: #1235cc;
+  --blue-800: #0d28a0;
+  --blue-900: #091e78;
+  --neutral-0: #ffffff;
+  --neutral-50: #f7f8fa;
+  --neutral-100: #eff1f6;
+  --neutral-200: #e2e5ee;
+  --neutral-300: #c8cede;
+  --neutral-400: #98a2be;
+  --neutral-500: #667092;
+  --neutral-600: #454e6e;
+  --neutral-700: #2c3454;
+  --neutral-800: #1a2040;
+  --neutral-900: #0d1228;
+
+  /* Fonts — Inter (sans) + Geist Mono; no separate display face */
   --font-primary-family: var(--font-sans), system-ui, sans-serif;
-  --font-mono-family:
-    var(--font-mono), ui-monospace, "Cascadia Code", "Fira Code", monospace;
-  /* One sans family: there is no separate display face. Headings differ from
-     body by size/tracking only. Kept as a token so `font-display` still
-     resolves at every existing call site. */
+  --font-mono-family: var(--font-mono), ui-monospace, "Cascadia Code", "Fira Code", monospace;
   --font-display-family: var(--font-sans), system-ui, sans-serif;
 
   /* Surfaces */
-  --bg-base: #fafaf7;
-  --bg-alt: #efefea;
-  --bg-panel: #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-well: #f2f2ec;
-  --bg-sidebar: #f5f5f0;
-  --surface-overlay: rgba(250, 250, 247, 0.88);
+  --bg-base: var(--neutral-50); /* #F7F8FA */
+  --bg-alt: var(--neutral-100); /* #EFF1F6 */
+  --bg-panel: var(--neutral-0); /* #FFFFFF */
+  --bg-elevated: var(--neutral-0); /* #FFFFFF + shadow-3 */
+  --bg-well: var(--neutral-100); /* sunken */
+  --bg-sidebar: var(--neutral-0); /* Figma sidebar = panel bg */
+  --surface-overlay: rgba(247, 248, 250, 0.88);
 
   /* Borders */
-  --border-subtle: #edece5;
-  --border: #e2e0d8;
-  --border-strong: #cfcbc0;
+  --border-subtle: var(--neutral-100);
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
   --border-focus: var(--accent);
 
-  /* Text — all verified ≥ 4.5:1 on bg-base/bg-panel */
-  --text-primary: #0f1117; /* 18.9:1 on #ffffff, 18.0:1 on #fafaf7 */
-  --text-secondary: #4b4d58; /* 8.4:1 on #ffffff, 8.0:1 on #fafaf7  */
-  --text-muted: #6d6f7a; /* 5.0:1 on #ffffff, 4.8:1 on #fafaf7  */
-  --text-subtle: #a6a6ad; /* decorative only (icons/dividers), not body text */
+  /* Text */
+  --text-primary: var(--neutral-900); /* 17.4:1 on bg-base */
+  --text-secondary: var(--neutral-600); /* 7.7:1 on bg-base */
+  --text-muted: var(--neutral-400); /* captions/decorative only — not body-gated */
+  --text-subtle: var(--neutral-300); /* decorative only */
+  --text-inverse: var(--neutral-0);
+  --text-link: var(--accent-text); /* alias — no --text-accent token */
 
-  /* Accent — blue */
-  --accent: #2f58ff;
-  --accent-hover: #1e3fd0;
-  --accent-fg: #ffffff; /* on accent bg: 5.3:1 */
-  --accent-subtle: rgba(47, 88, 255, 0.1);
-  --accent-soft: rgba(47, 88, 255, 0.06);
-  --accent-border: rgba(47, 88, 255, 0.3);
-  --accent-text: #1e3fd0; /* accent as text on light: 7.8:1 on #ffffff */
+  /* Accent — royal blue */
+  --accent: var(--blue-500);
+  --accent-hover: var(--blue-600);
+  --accent-active: var(--blue-700);
+  --accent-fg: #ffffff; /* Figma accent-foreground — 5.4:1 on accent */
+  --accent-subtle: var(--blue-50);
+  --accent-soft: color-mix(in srgb, var(--accent-subtle) 45%, transparent);
+  --accent-border: var(--blue-200);
+  --accent-text: var(--blue-600); /* 6.8:1 on bg-panel */
 
-  /* Semantic status — text values ≥ 4.5:1 on their bg */
-  --success: #059669;
-  --success-bg: #ecfdf5;
-  --success-border: #a7f3d0;
-  --success-text: #065f46;
-  --warning: #d97706;
-  --warning-bg: #fffbeb;
-  --warning-border: #fcd34d;
-  --warning-text: #92400e;
-  --danger: #dc2626;
-  --danger-bg: #fef2f2;
-  --danger-border: #fca5a5;
-  --danger-text: #991b1b;
-  --info: #2563eb;
-  --info-bg: #eff6ff;
-  --info-border: #bfdbfe;
-  --info-text: #1d4ed8;
-  --neutral-bg: rgba(15, 17, 23, 0.045);
+  /* Status — solids take Figma mid hues */
+  --success: #10b981; --success-bg: #f0fdf4; --success-border: #bbf7d0; --success-text: #15803d;
+  --warning: #f59e0b; --warning-bg: #fffbeb; --warning-border: #fde68a; --warning-text: #92400e;
+  --danger: #ef4444; --danger-bg: #fff1f1; --danger-border: #fecaca; --danger-text: #b91c1c;
+  --info: #2756ff; --info-bg: #ebf0ff; --info-border: #adc4ff; --info-text: #1a44eb;
+  --neutral-bg: #f7f8fa;
 
   /* Sentiment (positive / neutral / negative) */
-  --sentiment-positive: #059669;
-  --sentiment-positive-bg: #ecfdf5;
-  --sentiment-positive-text: #065f46;
-  --sentiment-neutral: #6f756f;
-  --sentiment-neutral-bg: #f1f2f1;
-  --sentiment-neutral-text: #4c524f;
-  --sentiment-negative: #dc2626;
-  --sentiment-negative-bg: #fef2f2;
-  --sentiment-negative-text: #991b1b;
-  /* MVP: sentiment is NOT computed — render the neutral "—" placeholder token below. */
+  --sentiment-positive: var(--success);
+  --sentiment-positive-bg: var(--success-bg);
+  --sentiment-positive-text: var(--success-text);
+  --sentiment-neutral: #667092;
+  --sentiment-neutral-bg: #f7f8fa;
+  --sentiment-neutral-text: #454e6e;
+  --sentiment-negative: var(--danger);
+  --sentiment-negative-bg: var(--danger-bg);
+  --sentiment-negative-text: var(--danger-text);
+  /* Sentiment is not computed yet — render the neutral "—" placeholder. */
   --value-placeholder: var(--text-subtle);
 
-  /* Citation classification (owned / competitor / third-party) */
-  --citation-owned: #0f9d76;
-  --citation-owned-bg: rgba(15, 157, 118, 0.1);
-  --citation-owned-text: #0b6f52;
-  --citation-competitor: #d97706;
-  --citation-competitor-bg: #fffbeb;
-  --citation-competitor-text: #92400e;
-  --citation-third-party: #6366f1;
-  --citation-third-party-bg: #eef2ff;
-  --citation-third-party-text: #4338ca;
+  /* Citations — owned is Figma blue (green identity dropped) */
+  --citation-owned: #2756ff;
+  --citation-owned-bg: #ebf0ff;
+  --citation-owned-border: #adc4ff;
+  --citation-owned-text: #1235cc;
+  --citation-competitor: #f97316;
+  --citation-competitor-bg: #fff7ed;
+  --citation-competitor-border: #fed7aa;
+  --citation-competitor-text: #9a3412;
+  --citation-third-party: #8b5cf6;
+  --citation-third-party-bg: #f5f3ff;
+  --citation-third-party-border: #ddd6fe;
+  --citation-third-party-text: #5b21b6;
 
-  /* Run status (audit lifecycle) */
-  --run-draft: #6f756f;
-  --run-draft-bg: #f1f2f1;
-  --run-queued: #2563eb;
-  --run-queued-bg: #eff6ff;
-  --run-running: #0f9d76;
-  --run-running-bg: rgba(15, 157, 118, 0.12);
-  --run-analyzing: #7c3aed;
-  --run-analyzing-bg: #f5f3ff;
-  --run-completed: #059669;
-  --run-completed-bg: #ecfdf5;
-  --run-partial: #d97706;
-  --run-partial-bg: #fffbeb;
-  --run-failed: #dc2626;
-  --run-failed-bg: #fef2f2;
-  --run-cancelled: #6f756f;
-  --run-cancelled-bg: #f1f2f1;
+  /* Run status — solid = Figma text hue */
+  --run-draft: #667092; --run-draft-bg: #f7f8fa;
+  --run-queued: #454e6e; --run-queued-bg: #f7f8fa;
+  --run-running: #1a44eb; --run-running-bg: #ebf0ff;
+  --run-analyzing: #5b21b6; --run-analyzing-bg: #f5f3ff;
+  --run-completed: #15803d; --run-completed-bg: #f0fdf4;
+  --run-partial: #92400e; --run-partial-bg: #fffbeb;
+  --run-failed: #b91c1c; --run-failed-bg: #fff1f1;
+  /* AA adjustment: Figma cancelled text #98A2BE → neutral-500 (same family). */
+  --run-cancelled: #667092; --run-cancelled-bg: #f7f8fa;
 
-  /* Score bands (visibility %) — low→high */
-  --score-low: #dc2626;
-  --score-low-bg: #fef2f2; /* 0–24%   */
-  --score-mid: #d97706;
-  --score-mid-bg: #fffbeb; /* 25–49%  */
-  --score-good: #2563eb;
-  --score-good-bg: #eff6ff; /* 50–74%  */
-  --score-high: #059669;
-  --score-high-bg: #ecfdf5; /* 75–100% */
+  /* Score bands — thresholds stay 25/50/75; solid = ring hue */
+  --score-low: #ef4444; --score-low-bg: #fff1f1; --score-low-border: #fecaca;
+  --score-low-text: #b91c1c; --score-low-ring: #ef4444; /* 0–24% */
+  --score-mid: #f59e0b; --score-mid-bg: #fffbeb; --score-mid-border: #fde68a;
+  --score-mid-text: #92400e; --score-mid-ring: #f59e0b; /* 25–49% */
+  --score-good: #10b981; --score-good-bg: #ecfdf5; --score-good-border: #a7f3d0;
+  --score-good-text: #065f46; --score-good-ring: #10b981; /* 50–74% */
+  --score-high: #22c55e; --score-high-bg: #f0fdf4; --score-high-border: #bbf7d0;
+  --score-high-text: #14532d; --score-high-ring: #22c55e; /* 75–100% */
 
-  /* Shadows / elevation */
-  --shadow-xs-value: 0 1px 0 rgba(18, 22, 20, 0.04);
-  --shadow-sm-value: 0 1px 2px rgba(18, 22, 20, 0.05);
-  --shadow-card-value: 0 12px 28px rgba(18, 22, 20, 0.04);
-  --shadow-elevated-value:
-    0 18px 42px rgba(18, 22, 20, 0.08), 0 0 0 1px rgba(18, 22, 20, 0.04);
-  --shadow-lg-value:
-    0 22px 56px rgba(18, 22, 20, 0.1), 0 0 0 1px rgba(18, 22, 20, 0.05);
-  --shadow-modal: 0 24px 60px rgba(18, 22, 20, 0.16);
-  --focus-ring: 0 0 0 3px rgba(47, 88, 255, 0.22);
+  /* Chart palette (Figma verbatim, identical in both themes) + series aliases */
+  --chart-1: #2756ff; --chart-2: #10b981; --chart-3: #f59e0b; --chart-4: #ef4444;
+  --chart-5: #8b5cf6; --chart-6: #06b6d4; --chart-7: #f97316; --chart-8: #ec4899;
+  --series-1: var(--chart-1); /* brand — the user's own series */
+  --series-2: var(--chart-2);
+  --series-3: var(--chart-3);
+  --series-4: var(--chart-4);
+  --series-5: var(--chart-5);
+  --series-other: var(--neutral-200); /* "Other" bucket — deliberately achromatic */
+  --chart-tooltip-bg: var(--neutral-800); /* inverse chip, both themes */
+
+  /* Elevation — Figma --shadow-1..4 verbatim; semantic aliases keep the
+     existing component names (xs,sm→1; card→2; elevated→3; lg,modal→4) */
+  --shadow-1: 0 1px 2px rgba(13, 18, 40, 0.05), 0 0 0 1px rgba(13, 18, 40, 0.05);
+  --shadow-2: 0 2px 6px rgba(13, 18, 40, 0.07), 0 0 0 1px rgba(13, 18, 40, 0.06);
+  --shadow-3:
+    0 6px 20px rgba(13, 18, 40, 0.1), 0 1px 4px rgba(13, 18, 40, 0.05),
+    0 0 0 1px rgba(13, 18, 40, 0.07);
+  --shadow-4:
+    0 16px 40px rgba(13, 18, 40, 0.14), 0 4px 10px rgba(13, 18, 40, 0.07),
+    0 0 0 1px rgba(13, 18, 40, 0.09);
+  --shadow-xs-value: var(--shadow-1);
+  --shadow-sm-value: var(--shadow-1);
+  --shadow-card-value: var(--shadow-2);
+  --shadow-elevated-value: var(--shadow-3);
+  --shadow-lg-value: var(--shadow-4);
+  --shadow-modal: var(--shadow-4);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   --overlay-scrim: rgba(0, 0, 0, 0.32);
 
   /* Skeleton */
-  --skeleton-base: #edece4;
-  --skeleton-highlight: #fafaf7;
+  --skeleton-base: var(--neutral-100);
+  --skeleton-highlight: var(--neutral-50);
 }
 ```
 
-## 4. Token values — DARK (`html[data-theme='dark']`)
+## 5. Token values — DARK (`html[data-theme='dark']`)
 
-Only the tokens that change are overridden; the type scale, spacing, radii, and structural
-tokens (§5–§7) are shared. Dark surfaces are the CUBE27 midnight near-black scale.
+**Authored** soft slate-charcoal (per the approved app mockups) — replaces the Figma
+midnight dark. Only tokens that change are overridden; ramps, chart palette, type, spacing,
+radii, and structural tokens are shared from `:root`. Two documented AA adjustments against
+the mockup values: the solid accent `#3F6AFF` → `#3D64FA` (white accent-fg 4.45 → 4.78:1)
+and the cancelled run text `#71788C` → `#8F96A9` (3.1 → 4.65:1) — both minimal moves within
+the same family.
 
 ```css
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Surfaces */
-  --bg-base: #050505;
-  --bg-alt: #0a0a0a;
-  --bg-panel: #111114;
-  --bg-elevated: #16161a;
-  --bg-well: #1c1c21;
-  --bg-sidebar: #0a0a0a;
-  --surface-overlay: rgba(5, 5, 5, 0.92);
+  /* Surfaces — cool slate-charcoal, strict ascending luminance */
+  --bg-base: #16181e;
+  --bg-alt: #1b1e26; /* between base and panel — hover/inset */
+  --bg-panel: #1f222b;
+  --bg-elevated: #272b36;
+  --bg-well: #12141a; /* sunken — may dip below base */
+  --bg-sidebar: #1f222b;
+  --surface-overlay: rgba(22, 24, 30, 0.92);
 
   /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-subtle: #262a35;
+  --border: #303544;
+  --border-strong: #3f4557;
 
-  /* Text — verified ≥ 4.5:1 on bg-base/bg-panel */
-  --text-primary: #fafafa; /* 18.1:1 on #111114, 19.5:1 on #050505 */
-  --text-secondary: #a1a1aa; /* 7.4:1 on #111114, 8.0:1 on #050505  */
-  --text-muted: #85858f; /* 5.2:1 on #111114, 5.6:1 on #050505  */
-  --text-subtle: #52525b; /* decorative only */
+  /* Text */
+  --text-primary: #ecedf2; /* 15.2:1 on bg-base */
+  --text-secondary: #a6acbe; /* 7.8:1 on bg-base, 7.0:1 on bg-panel */
+  --text-muted: #71788c; /* captions/decorative only */
+  --text-subtle: #4a4f60; /* decorative only */
+  --text-inverse: #16181e;
+  --text-link: var(--accent-text);
 
-  /* Accent — blue */
-  --accent: #6b8aff;
-  --accent-hover: #9db2ff;
-  --accent-fg: #0a0a0a; /* dark text on bright accent: 6.3:1 */
-  --accent-subtle: rgba(107, 138, 255, 0.14);
-  --accent-soft: rgba(107, 138, 255, 0.08);
-  --accent-border: rgba(107, 138, 255, 0.34);
-  --accent-text: #9db2ff; /* accent as text on dark: 9.9:1 on #050505 */
+  /* Accent — brightened royal blue (family hue ≈ 228°) */
+  --accent: #3d64fa; /* white accent-fg on accent: 4.78:1 */
+  --accent-hover: #6b90ff;
+  --accent-active: #7da0ff;
+  --accent-fg: #ffffff;
+  --accent-subtle: rgba(63, 106, 255, 0.14);
+  --accent-border: rgba(63, 106, 255, 0.34);
+  --accent-text: #7da0ff; /* 6.3:1 on bg-panel */
 
-  /* Semantic status */
-  --success: #3ecf8e;
-  --success-bg: rgba(62, 207, 142, 0.12);
-  --success-border: rgba(62, 207, 142, 0.28);
-  --success-text: #5fdaa2;
-  --warning: #f5a623;
-  --warning-bg: rgba(245, 166, 35, 0.12);
-  --warning-border: rgba(245, 166, 35, 0.28);
-  --warning-text: #f7b854;
-  --danger: #ff6b6b;
-  --danger-bg: rgba(255, 107, 107, 0.12);
-  --danger-border: rgba(255, 107, 107, 0.28);
-  --danger-text: #ff8f8f;
-  --info: #6ba5ff;
-  --info-bg: rgba(107, 165, 255, 0.12);
-  --info-border: rgba(107, 165, 255, 0.28);
-  --info-text: #8fbcff;
-  --neutral-bg: rgba(255, 255, 255, 0.04);
+  /* Status — translucent fills re-based on the authored surfaces */
+  --success: #34d399; --success-bg: rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.26); --success-text: #6ee7b7;
+  --warning: #fbbf24; --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.26); --warning-text: #fcd34d;
+  --danger: #f87171; --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.26); --danger-text: #fc8181;
+  --info: #7da0ff; --info-bg: rgba(39, 86, 255, 0.14);
+  --info-border: rgba(39, 86, 255, 0.3); --info-text: #7da0ff;
+  --neutral-bg: rgba(255, 255, 255, 0.05);
 
   /* Sentiment */
-  --sentiment-positive: #3ecf8e;
-  --sentiment-positive-bg: rgba(62, 207, 142, 0.12);
-  --sentiment-positive-text: #5fdaa2;
-  --sentiment-neutral: #9ca39c;
+  --sentiment-positive: var(--success);
+  --sentiment-positive-bg: var(--success-bg);
+  --sentiment-positive-text: var(--success-text);
+  --sentiment-neutral: #a6acbe;
   --sentiment-neutral-bg: rgba(255, 255, 255, 0.05);
-  --sentiment-neutral-text: #9ca39c;
-  --sentiment-negative: #ff6b6b;
-  --sentiment-negative-bg: rgba(255, 107, 107, 0.12);
-  --sentiment-negative-text: #ff8f8f;
+  --sentiment-neutral-text: #a6acbe;
+  --sentiment-negative: var(--danger);
+  --sentiment-negative-bg: var(--danger-bg);
+  --sentiment-negative-text: var(--danger-text);
   --value-placeholder: var(--text-subtle);
 
-  /* Citation classification */
-  --citation-owned: #2dd4a7;
-  --citation-owned-bg: rgba(45, 212, 167, 0.12);
-  --citation-owned-text: #58e0bb;
-  --citation-competitor: #f5a623;
-  --citation-competitor-bg: rgba(245, 166, 35, 0.12);
-  --citation-competitor-text: #f7b854;
-  --citation-third-party: #8b8fff;
-  --citation-third-party-bg: rgba(139, 143, 255, 0.12);
-  --citation-third-party-text: #a9adff;
+  /* Citations */
+  --citation-owned: #7da0ff; --citation-owned-bg: rgba(39, 86, 255, 0.16);
+  --citation-owned-border: rgba(39, 86, 255, 0.3); --citation-owned-text: #7da0ff;
+  --citation-competitor: #fca87a; --citation-competitor-bg: rgba(249, 115, 22, 0.12);
+  --citation-competitor-border: rgba(249, 115, 22, 0.24); --citation-competitor-text: #fca87a;
+  --citation-third-party: #c4b5fd; --citation-third-party-bg: rgba(139, 92, 246, 0.12);
+  --citation-third-party-border: rgba(139, 92, 246, 0.24);
+  --citation-third-party-text: #c4b5fd;
 
   /* Run status */
-  --run-draft: #9ca39c;
-  --run-draft-bg: rgba(255, 255, 255, 0.05);
-  --run-queued: #6ba5ff;
-  --run-queued-bg: rgba(107, 165, 255, 0.12);
-  --run-running: #2dd4a7;
-  --run-running-bg: rgba(45, 212, 167, 0.14);
-  --run-analyzing: #a78bfa;
-  --run-analyzing-bg: rgba(167, 139, 250, 0.14);
-  --run-completed: #3ecf8e;
-  --run-completed-bg: rgba(62, 207, 142, 0.12);
-  --run-partial: #f5a623;
-  --run-partial-bg: rgba(245, 166, 35, 0.12);
-  --run-failed: #ff6b6b;
-  --run-failed-bg: rgba(255, 107, 107, 0.12);
-  --run-cancelled: #9ca39c;
-  --run-cancelled-bg: rgba(255, 255, 255, 0.05);
+  --run-draft: #a6acbe; --run-draft-bg: rgba(255, 255, 255, 0.05);
+  --run-queued: #a6acbe; --run-queued-bg: rgba(255, 255, 255, 0.05);
+  --run-running: #7da0ff; --run-running-bg: rgba(39, 86, 255, 0.16);
+  --run-analyzing: #c4b5fd; --run-analyzing-bg: rgba(139, 92, 246, 0.13);
+  --run-completed: #6ee7b7; --run-completed-bg: rgba(16, 185, 129, 0.12);
+  --run-partial: #fcd34d; --run-partial-bg: rgba(245, 158, 11, 0.12);
+  --run-failed: #fc8181; --run-failed-bg: rgba(239, 68, 68, 0.12);
+  /* AA adjustment: mockup cancelled text #71788C → #8F96A9 (same slate family). */
+  --run-cancelled: #8f96a9; --run-cancelled-bg: rgba(255, 255, 255, 0.05);
 
-  /* Score bands */
-  --score-low: #ff6b6b;
-  --score-low-bg: rgba(255, 107, 107, 0.12);
-  --score-mid: #f5a623;
-  --score-mid-bg: rgba(245, 166, 35, 0.12);
-  --score-good: #6ba5ff;
-  --score-good-bg: rgba(107, 165, 255, 0.12);
-  --score-high: #3ecf8e;
-  --score-high-bg: rgba(62, 207, 142, 0.12);
+  /* Score bands — ring hues identical to light; fills translucent */
+  --score-low: #ef4444; --score-low-bg: rgba(239, 68, 68, 0.13);
+  --score-low-border: rgba(239, 68, 68, 0.26); --score-low-text: #fc8181;
+  --score-low-ring: #ef4444;
+  --score-mid: #f59e0b; --score-mid-bg: rgba(245, 158, 11, 0.13);
+  --score-mid-border: rgba(245, 158, 11, 0.26); --score-mid-text: #fcd34d;
+  --score-mid-ring: #f59e0b;
+  --score-good: #10b981; --score-good-bg: rgba(16, 185, 129, 0.13);
+  --score-good-border: rgba(16, 185, 129, 0.26); --score-good-text: #6ee7b7;
+  --score-good-ring: #10b981;
+  --score-high: #22c55e; --score-high-bg: rgba(34, 197, 94, 0.13);
+  --score-high-border: rgba(34, 197, 94, 0.26); --score-high-text: #86efac;
+  --score-high-ring: #22c55e;
 
-  /* Shadows — deep blacks */
-  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-sm-value: 0 2px 4px rgba(0, 0, 0, 0.6);
-  --shadow-card-value: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-elevated-value: 0 12px 28px rgba(0, 0, 0, 0.7);
-  --shadow-lg-value: 0 20px 40px rgba(0, 0, 0, 0.8);
-  --shadow-modal: 0 32px 64px rgba(0, 0, 0, 0.9);
-  --focus-ring: 0 0 0 3px rgba(107, 138, 255, 0.35);
+  /* Chart palette NOT overridden (identity survives the theme switch);
+     only the achromatic "Other" bucket adapts. */
+  --series-other: #3f4557;
+
+  /* Shadows — authored soft stack (low opacity, larger blur) */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-4: 0 16px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   --overlay-scrim: rgba(0, 0, 0, 0.55);
 
   /* Skeleton */
-  --skeleton-base: #16161a;
-  --skeleton-highlight: #1c1c21;
+  --skeleton-base: #1f222b;
+  --skeleton-highlight: #272b36;
 }
 ```
 
-## 5. Type scale (px), weights, tracking, line-heights
+## 6. Authored dark-theme spec (hard constraints, machine-enforced)
 
-Sans = **Geist** (`--font-sans` → `--font-primary-family`); mono = **Geist Mono**
-400/500/600 (`--font-mono` → `--font-mono-family`) with **tabular numerals**
+The Figma midnight dark (`#09090F` / `#0D1228` near-black) is **not ported** — the dark
+theme is authored fresh in the Perplexity/Claude family of lighter, softer darks. Values
+come from the approved app mockups, adjusted only where a documented AA pair fails.
+`globals.test.ts` enforces:
+
+1. **Never near-black** — `--bg-base` relative luminance stays above a floor (0.007) that
+   excludes near-black (the rejected schemes measure ≤ 0.005; the authored `#16181E`
+   measures ≈ 0.0092).
+2. **Clearly lighter elevation** — strict luminance ordering `--bg-base` (0.0092) `<`
+   `--bg-panel` (0.0162) `≤` `--bg-elevated` (0.0258). `--bg-well` may go slightly darker
+   than base for sunken wells.
+3. **AA ≥ 4.5:1 for every documented pair** — the same programmatic pair list as light
+   (body, accent, and every status/sentiment/citation/run/score `*-text` on its `*-bg`,
+   translucent fills composited over `--bg-panel`). Accent and status hues are brightened
+   variants of the light values — never the Figma dark set; the dark accent hue stays in the
+   royal-blue family (215–240°).
+4. **Soft shadows** — the dark stack casts low-opacity (≤ 0.6 alpha), larger-blur shadows
+   from black with a faint white keyline; no crushed near-black shadow stack.
+5. **Decorative-only tones are never body text** — `--text-muted` / `--text-subtle` are
+   asserted present but excluded from ratio gating (captions, icons, dividers, the `—`
+   placeholder).
+
+## 7. Type scale — Figma verbatim
+
+Sans = **Inter** 400/500/600 (`--font-sans` → `--font-primary-family`); mono = **Geist Mono**
+(`--font-mono` → `--font-mono-family`) with **tabular numerals**
 (`font-variant-numeric: tabular-nums`) — mono is reserved for **metric values, percentages,
 counts, positions, timestamps, code and keyboard hints** so columns align; it is never used
-for labels. There is **no separate display face**: `--font-display-family` resolves to the
-same sans, so headings differ from body by size and tracking (-0.02em) only.
+for labels. There is **no separate display face**: `--font-display-family` resolves to Inter,
+so headings differ from body by size and tracking only.
 
-| Token         | Size             | Line-height | Tracking | Weight | Use                                 |
-| ------------- | ---------------- | ----------- | -------- | ------ | ----------------------------------- |
-| `--text-2xs`  | 10px (0.625rem)  | 1.2         | 0.06em   | 600    | uppercase micro-labels              |
-| `--text-xs`   | 11px (0.6875rem) | 1.35        | 0.025em  | 500    | captions, timestamps, table headers |
-| `--text-sm`   | 13px (0.8125rem) | 1.45        | 0em      | 400    | secondary body, table cells         |
-| `--text-base` | 14px (0.875rem)  | 1.5         | 0em      | 400    | primary body                        |
-| `--text-lg`   | 17px (1.0625rem) | 1.35        | -0.01em  | 600    | section / card headings             |
-| `--text-xl`   | 21px (1.3125rem) | 1.25        | -0.02em  | 600    | page headings                       |
-| `--text-2xl`  | 29px (1.8125rem) | 1.15        | -0.02em  | 700    | display (Visibility Score, hero)    |
+| Token | Size | Line-height | Weight | Use |
+|---|---|---|---|---|
+| `--text-2xs` | 11px (0.6875rem) | 1.25 | 500 | micro uppercase labels, table headers |
+| `--text-xs` | 12px (0.75rem) | 1.35 | 400 | captions, timestamps |
+| `--text-sm` | 13px (0.8125rem) | 1.45 | 400 | secondary body, table cells |
+| `--text-base` | 14px (0.875rem) | 1.5 | 400/500 | primary body |
+| `--text-lg` | 15px (0.9375rem) | 1.35 | 600 | card titles |
+| `--text-xl` | 17px (1.0625rem) | 1.3 | 600 | section titles |
+| `--text-2xl` | 26px (1.625rem) | 1.2 | 600 | page titles |
+| `--text-hero` | 48px (3rem) | 1.1 | 600 | NEW — hero metric numeral |
+| `--text-data-lg` | 22px (1.375rem) | 1.25 | 600 | NEW — large mono data |
 
-- **display** = `--text-2xl`; **heading** = `--text-xl`/`--text-lg`; **body** =
-  `--text-base`/`--text-sm`; **label** = `--text-xs`/`--text-2xs` (uppercase).
-- Weights: `--weight-normal:400`, `--weight-medium:500`, `--weight-semibold:600`,
-  `--weight-bold:700`.
-- Tracking tokens: `--tracking-tight:-0.02em`, `--tracking-normal:0em`, `--tracking-wide:0.025em`,
-  `--tracking-wider:0.06em`.
-- Line-height tokens: `--leading-none:1`, `--leading-tight:1.2`, `--leading-snug:1.35`,
-  `--leading-normal:1.5`.
+- The Figma mono scale (48 hero numeric / 22 large data / 13 data cell / 11 micro mono) rides
+  on the same size tokens; `--text-data-lg` is the 22px large-data step.
+- Weights: `--weight-normal: 400`, `--weight-medium: 500`, `--weight-semibold: 600`,
+  `--weight-bold: 600` — the Figma scale tops out at semibold, so `bold` resolves to 600
+  app-wide.
+- Tracking tokens: `--tracking-tight: -0.02em`, `--tracking-normal: 0em`,
+  `--tracking-wide: 0.025em`, `--tracking-wider: 0.06em`.
+- Line-height tokens: `--leading-none: 1`, `--leading-tight: 1.2`, `--leading-snug: 1.35`,
+  `--leading-normal: 1.5`.
 
-## 6. Spacing (4px grid), radii, controls
+## 8. Spacing (4px grid), radii, controls
 
 **Spacing steps** (`--space-N` = 4px × N):
-`--space-1:4px`, `--space-2:8px`, `--space-3:12px`, `--space-4:16px`, `--space-5:20px`,
-`--space-6:24px`, `--space-7:28px`, `--space-8:32px`, `--space-10:40px`, `--space-12:48px`,
-`--space-14:56px`, `--space-16:64px`, `--space-20:80px`. `--card-padding:20px`;
-`--content-gutter:32px`.
+`--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`, `--space-5: 20px`,
+`--space-6: 24px`, `--space-7: 28px`, `--space-8: 32px`, `--space-10: 40px`,
+`--space-12: 48px`, `--space-14: 56px`, `--space-16: 64px`, `--space-20: 80px`.
+`--card-padding: 14px`; `--content-gutter: 20px`.
 
-**Radii:** `--radius-xs:3px`, `--radius-sm:5px`, `--radius-md:7px`, `--radius-lg:10px`,
-`--radius-xl:14px`, `--radius-2xl:20px`, `--radius-full:9999px` (**pill** — badges, toggles,
-segmented control, avatar).
+**Radii (Figma `--r-*` mapped):** `--radius-xs: 4px` (badges, tags), `--radius-sm: 6px`
+(inputs), `--radius-md: 8px` (**buttons**), `--radius-lg: 12px` (cards, panels),
+`--radius-xl: 16px` (modals, large cards), `--radius-2xl: 16px` (aliases xl),
+`--radius-full: 9999px` (**pill** — badges, chips, toggles, segmented control, avatar).
 
-**Controls:** `--control-height-sm:30px`, `--control-height:34px`, `--control-height-lg:38px`,
-`--interactive-border-width:1px`. Table: `--table-row-height:40px`, `--table-header-height:32px`,
+**Controls:** `--control-height-sm: 30px`, `--control-height: 32px`,
+`--control-height-lg: 38px`, `--interactive-border-width: 1px`. Table:
+`--table-row-height: 42px`, `--table-header-height: 30px`,
 `--table-font-size: var(--text-sm)`, `--table-header-font-size: var(--text-xs)`.
 
-## 7. Tailwind v4 bridge (`@theme inline`)
+## 9. Tailwind v4 bridge (`@theme inline`)
 
 Bridge the raw variables to semantic Tailwind utilities so components reference **only** the
-bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`, `text-success`,
-`bg-citation-owned`, `text-run-completed`, `bg-score-high`, `shadow-card`, `rounded-full`,
-`font-mono`, etc.). Example shape:
+bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
+`text-accent-text`, `text-link`, `bg-citation-owned`, `text-run-completed`, `bg-score-high`,
+`text-score-good-text`, `stroke-series-1`, `bg-chart-2`, `shadow-card`, `rounded-md`,
+`font-mono`, `text-hero`, …). Shape:
 
 ```css
 @theme inline {
   --font-sans: var(--font-primary-family);
   --font-mono: var(--font-mono-family);
-  --font-display: var(--font-display-family); /* same sans — no display face */
+  --font-display: var(--font-display-family); /* Inter — no display face */
   --color-background: var(--bg-base);
   --color-panel: var(--bg-panel);
   --color-foreground: var(--text-primary);
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
+  --color-inverse: var(--text-inverse);
+  --color-link: var(--text-link);
   --color-border: var(--border);
   --color-accent: var(--accent);
-  --color-success: var(
-    --success
-  ); /* + warning/danger/info + *-bg/*-border/*-text */
-  --color-sentiment-positive: var(
-    --sentiment-positive
-  ); /* + neutral/negative */
-  --color-citation-owned: var(--citation-owned); /* + competitor/third-party */
+  --color-accent-active: var(--accent-active);
+  --color-success: var(--success); /* + warning/danger/info + *-bg/*-border/*-text */
+  --color-sentiment-positive: var(--sentiment-positive); /* + neutral/negative */
+  --color-citation-owned: var(--citation-owned); /* + competitor/third-party + *-bg/*-border/*-text */
   --color-run-completed: var(--run-completed); /* + every run-status */
-  --color-score-high: var(--score-high); /* + low/mid/good */
-  --shadow-card: var(--shadow-card-value); /* + xs/sm/elevated/lg/modal */
-  /* type sizes, radii, tracking, line-heights bridged here too (see §5–§6) */
+  --color-score-high: var(--score-high); /* + low/mid/good + *-bg/*-border/*-text/*-ring */
+  --color-chart-1: var(--chart-1); /* + chart-2..8 + series-1..5/series-other aliases */
+  --shadow-card: var(--shadow-card-value); /* + xs/sm/elevated/lg/modal (→ --shadow-1..4) */
+  /* type sizes (incl. --text-hero/--text-data-lg), radii, tracking,
+     line-heights bridged here too (§7–§8) */
 }
 ```
 
-**Implementation rules** (F1): raw hex lives **only** in `:root`/`[data-theme='dark']`;
-components use bridged tokens only (no-raw-hex guard); **both themes are always fully defined**;
-`data-theme` is set pre-hydration.
+**Implementation rules:** raw hex lives **only** in `:root`/`[data-theme='dark']`;
+components use bridged tokens only (no-raw-hex guard); **both themes are always fully
+defined**; `data-theme` is set pre-hydration. The Figma levels `--shadow-1..4` stay raw-only
+(bridging them as `--shadow-1: var(--shadow-1)` would be circular) — components consume the
+semantic aliases.
 
-## 8. Component-primitive inventory
+## 10. Component-primitive inventory
 
-All CVA-driven, token-only, Radix where relevant, lucide icons.
+All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Figma specs
+(`1198.tsx` buttons/badges/elevation, `1194.tsx` score ring, `1195.tsx` sparkline).
 
-| Primitive            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `button`             | every variant is a **pill** (`--radius-full`). Primary = **monochrome pill** — `bg-foreground` (the `--text-primary` token: white on midnight, near-black on warm paper) with `text-background` (`--bg-base`); blue accent stays reserved for links, active states, focus rings, and charts. Secondary = raised `bg-elevated` + hairline border + hover lift; neutral = `bg-background-alt`; ghost = transparent with an accent-soft hover fill; destructive = `--danger` fill. Sizes sm/md/lg/icon; `asChild`; icon slot. |
-| `badge`              | variants map to tokens: `status` (success/warning/danger/info), `sentiment` (positive/neutral/negative), `classification` (owned/competitor/third-party), `run-status` (all 8). Pill radius.                                                                                                                                                                                                                                                                                                                               |
-| `table` (dense)      | sticky 32px header (mono eyebrow: `--text-2xs` uppercase, 0.08em tracking, muted), 40px rows, `--text-sm` cells, mono tabular numerals for numeric columns, accent-soft hover row highlight, sortable header carets.                                                                                                                                                                                                                                                                                                       |
-| `table-pagination`   | client-side page state (`useTablePage`, clamp-only reconciliation so refetches never reset the page) + a mono "from–to of total" indicator with ghost Prev/Next pinned to the table card's bottom border.                                                                                                                                                                                                                                                                                                                  |
-| `card`               | `bg-panel`, hairline `border`, `--radius-lg`, `--card-padding`, `shadow-card`; header/title/description/content slots + optional `CardEyebrow` mono panel label (uppercase `--text-2xs`, never a heading).                                                                                                                                                                                                                                                                                                                 |
-| `score-ring`         | circular progress; color from score-band token; center = mono display number (`numeralSize`: `md` = `--text-lg` default, `lg` = `--text-2xl` display for hero surfaces); ARIA label with %.                                                                                                                                                                                                                                                                                                                                |
-| `donut`              | segmented ring for per-engine / citation-share; legend; ARIA.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `trend-chart`        | line/area chart. **Built but unused in MVP** (roadmap trend view); render + ARIA only.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `tabs` / `segmented` | Radix tabs + a pill segmented control (`--segmented-bg`, active = accent-fg on accent).                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `sidebar`            | grouped nav (Analytics / Prompts / Actions / On Page); active item = accent-subtle bg + accent-text; disabled items = muted + "soon".                                                                                                                                                                                                                                                                                                                                                                                      |
-| `top-bar`            | search placeholder, Export hook, Learn link, project-switcher, theme-toggle, user-menu.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `input` / `field`    | 34px height, `border`, `--radius-md`, focus = `--focus-ring`; `field` wraps label + help + error.                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `dialog`             | Radix modal; `--overlay-scrim`, `bg-elevated`, `shadow-modal`, `--radius-xl`.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `dropdown`           | Radix menu; `bg-elevated`, `border`, `shadow-elevated`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `tooltip`            | Radix; `bg-well`/inverse, `--text-xs`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `skeleton`           | `--skeleton-base` → `--skeleton-highlight` shimmer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `history-drawer`     | right-side Radix drawer for run history / execution list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Primitive | Notes |
+|---|---|
+| `button` | **rounded-md (8px) — pill variants retired.** Primary = accent fill + `--accent-fg` (white) text + accent-tinted shadow, 13.5px/500; hover/active walk `--accent-hover`/`--accent-active`. Secondary = panel bg + `--border` hairline; ghost = transparent + accent-subtle hover; destructive = danger tokens. Sizes sm/md/lg/icon; `asChild`; icon slot. |
+| `badge` | pill (`--radius-full`) 11.5px/500 with token bg/border/text. Variants map to tokens: `status` (success/warning/danger/info), `sentiment`, `classification` (**owned = Figma blue**, competitor, third-party), `run-status` (all 8), `score-band` (low/mid/good/high). |
+| `card` | `bg-panel` + `--shadow-2` + `--radius-lg`; elevated = `bg-elevated` + `--shadow-3`; header/title/description/content slots + optional mono eyebrow panel label. |
+| `table` (dense) | 30px sticky header (`--text-2xs` uppercase micro label, muted), 42px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation). |
+| `score-ring` | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-lg`, `lg` = `--text-hero` hero numeral); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.** |
+| `sparkline` | trend-colored 1.5px polyline + end dot (1195). |
+| `donut` | segmented ring for per-engine / citation share; hover-thicken + mono center value; legend; ARIA. |
+| `tabs` / `segmented` | underline tabs (2px accent indicator, per 1199) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent). |
+| `input` / `field` | 14px text, `--border` hairline, `--radius-sm`, focus = accent border + `--focus-ring`; `field` wraps label + help + error. |
+| `dialog` | Radix modal; `--overlay-scrim`, `bg-elevated`, `--shadow-4`, `--radius-xl`. |
+| `dropdown` | Radix menu; `bg-elevated`, `border`, `--shadow-3`. |
+| `tooltip` | Radix; inverse chip (`--chart-tooltip-bg`), `--text-xs`. |
+| `skeleton` | `--skeleton-base` → `--skeleton-highlight` shimmer (~1.2s). |
+| `empty-state` | shared icon chip + heading + body + CTA slots. |
+| `typography` | scale classes for every §7 token incl. `text-hero` / `text-data-lg`. |
+| `series-palette` | values resolve from the `--chart-*` aliases; class strings (`stroke-series-N`) unchanged. |
+| `history-drawer` | right-side Radix drawer for run history / execution list. |
 
-## 9. Per-screen layout prose (seven application screens)
+## 11. Per-screen prose
 
-The app is a fixed **left sidebar (240px)** + **top bar (52px)** + scrolling content region
-(max content width ~1440px, `--content-gutter` padding). Auth screens are the exception
-(centered, no shell).
+The app shell is a fixed **220px left sidebar** + **52px topbar** + scrolling content region
+(4px grid, `--content-gutter` padding). Auth and onboarding screens are exceptions (no
+shell).
 
-### 9.1 Auth (`/login`, `/register`)
+### 11.1 App shell (`(app)/layout.tsx`) — Figma shell geometry (1196), grouped nav kept
 
-**Split-screen shell** (shared `(auth)` route-group layout). At ≥900px a two-column grid
-[5fr 6fr]: the **brand panel** (`bg-panel`, hairline right border, token-driven aurora glows +
-grain overlay) carries the LogoCube + display-font "Searchify" wordmark with a mono uppercase
-"By CUBE27" chip, a mono uppercase eyebrow, a `font-display` brand headline with an
-accent-gradient phrase, three proof points, a static decorative mini stat card (visibility
-score sparkline + share-of-voice bars, aria-hidden), and a mono footer strip. The **form
-panel** centers the auth card (max-width 400px, `shadow-card`); below 900px only the form
-panel renders with a compact wordmark row above the card. Three OAuth `button`s (Google,
-GitHub, Apple — coming-soon wired, 503 → accessible inline notice) sit above an email divider;
-fields (`field` primitive): email, password (+ confirm/name on register). Primary full-width
-`button`. Inline `ApiError` above the form (danger alert). Below: a link toggling
-login/register. No sidebar/top-bar. Theme toggle in the top-right corner. The pages own the
-single h1 — brand-panel wordmarks are spans and the headline is a `<p>`.
+**Sidebar (220px, `bg-sidebar`)**: logo row (LogoCube + wordmark), project switcher
+(brand avatar + name, dropdown), then the grouped nav — the existing **Analyze / Improve**
+groups stay (the Figma flat nav is not adopted) with mono-uppercase eyebrow group labels.
+Nav rows are 36px, 13.5px, `--text-secondary`; the **active item** is `--accent-subtle` bg +
+`--accent-text` + a **3px left accent bar** with the icon at full opacity; hover = bg-alt.
+Bottom = user card (avatar + name/email). **Topbar (52px, `bg-panel`)**: left = the current
+page's title (15px/600, the single h1) + header slot (filters/actions); right = export hook,
+theme toggle, user affordances. Content scrolls independently. A first-run gate redirects
+zero-project users to `/onboarding` (and waits for the projects query to settle before
+redirecting — no flash).
 
-### 9.2 App Shell (`(app)/layout.tsx`)
+### 11.2 Auth (`/login`, `/register`)
 
-**Left sidebar (240px, `bg-sidebar`)**: top = brand row (LogoCube + display-font "Searchify"
-over a mono uppercase "by CUBE27" sub-tag), then the project-switcher (brand avatar + name,
-dropdown). A "Getting Started N of 6" progress card (accent-gradient completion fill).
-Grouped nav sections with mono-uppercase eyebrow group labels — **Analytics** (Visibility =
-live; LLM Analytics, Traffic = disabled "soon"), **Prompts** (Your Prompts = live; Prompt
-Research = live), **Actions** (Content, Opportunities = disabled), **On Page** (Site Health,
-Issues, Knowledge Base = live). Bottom = user-menu (avatar + email). **Top bar (52px)**:
-left = the current page's title (`font-display`, the single h1 — pages render no in-page
-header block); right = Export hook, Learn link, theme-toggle. Active nav item is a pill
-(accent-soft bg + accent-text, `--radius-lg`); disabled items are muted with a "soon"
-pill. Content region scrolls independently.
+Split-screen `(auth)` layout restyled in the Figma language: brand panel (token-driven,
+per the approved mockups) + form panel with an elevated form card (`--shadow-2`,
+`--radius-lg`), larger type, three OAuth buttons above an email divider (coming-soon →
+accessible 503 inline notice), inline `ApiError` danger alert, login/register toggle link,
+theme toggle top-right. The pages own the single h1.
 
-### 9.3 Brand/Project setup (`/setup`)
+### 11.3 Onboarding (`/onboarding`) — Figma-styled, AI auto-discovery (1200)
 
-A five-step wizard (Brand → Market → Domains → Competitors → Defaults) on `bg-base`: a
-horizontal stepper (numbered accent active rings + mono numerals, connector progress line)
-above one step `card` at a time — each with a mono-eyebrow `Step N of 5` panel label;
-react-hook-form keeps values across steps and Next validates only the current step.
-**Brand**: brand avatar, Brand Name, website URL (with derived domain shown muted),
-Alternative names (alias chips with ✕ + "Add alternative name" input, Enter-to-add), an
-"Exact match only" toggle. **Market**: country_code select + a Geographic Reach segmented
-control (Global / Primary market / Nationwide / Regional / Local). **Domains**: owned domains
+First-run route group **without** the app shell (SessionGuard + ProjectProvider; the layout
+redirects to `/visibility` when projects exist). **Full-screen split**: left panel = logo
+header + sign-out, a top progress stepper, the step form, and a footer pager (Back/Continue
++ "Step N of M"); right panel = a **live preview** that summarizes the brand, then populates
+discovered competitors/domains/prompts as they arrive, then mirrors the review selection.
+Flow: **Brand** (name + website URL + derived-domain preview + explicit AI consent
+checkbox) → **Discovery** (competitor + owned-domain + prompt suggestions fire in parallel;
+animated staged progress; per-section status + retry) → **Review** (pre-filled **editable**
+competitor rows, domain chips, prompt rows with theme/intent; market defaults US/en with
+inline change) → **Confirm** (create project + prompt set + prompts, refetch the projects
+query, then land on `/visibility`). When the agent is unconfigured (503) the flow degrades
+to a manual-entry fallback with an inline notice — onboarding never requires the agent.
 
-- unintended domains chip inputs. **Competitors**: repeatable rows (name + aliases + domains,
-  add/remove). **Defaults**: `benchmark_mode` segmented (consumer_like / controlled_localized /
-  forced_grounded) + default repetitions stepper. Footer pager with Back + Next; the final step
-  (and every step in edit mode) offers the primary Save/Create. Create sets active project →
-  routes to `/visibility`. Setup does not own the curated knowledge profile; that lives at
-  **Knowledge Base**. react-hook-form + zod; inline field errors jump to the first failing step.
+### 11.4 Visibility workspace (`/visibility`) — Figma dashboard (1199)
 
-### 9.3.1 Knowledge Base (`/knowledge-base`)
+One workspace: filter bar (run selector defaulting to the latest completed run, engine pill
+filters) above the accessible four-tab underline tablist — **Overview** (default), Trends,
+Mentions & Citations, Query Fanout; the active tab mirrors in `?tab=`. Overview leads with
+the **hero metric card**: ScoreRing 140 + the run's Visibility Score as a 48px hero numeral
+(`--text-hero`), supporting-metric delta chips (SOV, Mentions, Citations, Avg Rank — chips
+render only where the API provides the series; Avg Position and Sentiment stay `—`), and
+run info. Below: the competitors **rankings table** with per-row sparklines (where trends
+exist), the **Share of Voice donut** (hover-thicken, mono center value), and the per-engine
+by-model card. Empty state (no completed runs): shared `empty-state` linking to `/runs`.
 
-For a persisted project, **Knowledge Base** owns description, positioning, products/services,
-and target audience, with manual save plus a consent-gated “Draft with AI” review flow. An AI
-draft never applies immediately; unchanged accepted fields retain AI provenance and edits become
-manual. This knowledge grounds assisted competitor and prompt generation without making those
-facts part of basic project setup. Midnight composition: an accent-dot mono eyebrow +
-display-font "Brand knowledge" heading over a single editor `card` (mono `Brand profile`
-eyebrow + "Facts & positioning" panel title, secondary "Draft with AI" header action, primary
-save). The no-project state is the standard empty-state card (mono eyebrow + icon chip +
-display heading + ghost "Go to Setup" CTA).
+### 11.5 Prompts (`/prompts`, `/prompt-research`)
 
-### 9.4 Prompt library (`/prompts` Your Prompts + `/prompt-research` Prompt Research)
+**Your Prompts** — read-only, score-annotated: summary banner, search, dense table grouped
+by topic with expandable group rows; Visibility Score as a score-band badge (derived from
+persisted audit evidence), Avg Position and Sentiment `—`. **Prompt Research** — the
+management workspace: topics rail (pill items + mono counts, accent-subtle active), toolbar
+(filter, search, CSV bulk upload, Add prompt, consent-gated Generate), Active / Proposed /
+Archived underline tabs with mono counts, dense table (Prompt, Theme badge, Intent, Branded
+badge, Enabled toggle, row actions), shared pagination, CSV preview dialog, shared
+empty-state.
 
-**Your Prompts (`/prompts`)** — read-only, score-annotated view of the active configuration:
-a summary banner ("N visibility prompts across M topics" + "Go to Prompt Research" button),
-search, and a dense table grouped by topic with expandable group rows. Columns: expander,
-Prompt, Visibility Score (mono %, score-band color, derived from persisted audit evidence),
-Avg Position (`—` at MVP), Sentiment (`—`), Topic (badge), Branded (badge). Topic group rows
-show the prompt count and the mean of measured prompt scores.
+### 11.6 Runs (`/runs`, `/runs/[runId]`, executions)
 
-**Prompt Research (`/prompt-research`)** — the management workspace. Two-pane. **Left rail
-(280px)**: Topics list (mono eyebrow header, pill items with mono counts, accent-subtle active)
-with counts + "Add topic"; "All topics" at top; collapses to a full-width Topics select below
-the md breakpoint.
-**Main**: toolbar (Filter menu with mono count chip, search prompts, "Bulk upload" = CSV
-import, primary "Add prompt",
-and "Generate prompts & topics" (opens the AI-generation dialog: count, optional target topic,
-and an explicit consent checkbox before brand evidence is sent to the default agent; results
-land in the Proposed tab for review). Below the toolbar, accent-underline tabs:
-**Active / Proposed / Archived** with mono counts. Dense
-`table`: Prompt text, Theme (badge), Intent, Branded (badge), Enabled toggle, row-action menu
-(edit, delete, enable/disable, review transitions), with the shared `table-pagination`
-footer (mono indicator + ghost Prev/Next). CSV import opens a dialog
-that parses in-browser, previews rows, then persists via `/prompt-sets/{id}/import`. Empty
-state: mono eyebrow + icon chip + display heading + ghost CTAs (add manually or import a CSV).
+Pill status filter chips (mono counts) above the audits table (run-status badge, mono
+counts, timestamp) + Launch dialog (prompt-set + engine chips + repetitions). Run detail:
+progress panel (counts + badge + pulsing live dot while active + Cancel), export links,
+executions table. Execution detail: evidence card — answer text, `search_used` badge,
+citations with owned/competitor/third-party badges (owned = Figma blue), mention chips,
+mono score dict; Sentiment `—`.
 
-### 9.5 Provider Settings (`/providers`)
+### 11.7 Measurement + action surfaces
 
-Grid of three per-engine `card`s, one **direct** transport each (ChatGPT/OpenAI,
-Gemini/Google, Claude/Anthropic). Each card shows its fixed route + default model, an API-key
-`input` (masked, write-only — never shows a stored secret), a "Test connection" `button`
-surfacing success/error inline, and a `configured` status badge. After the v2 direct-provider
-retirement each engine has exactly ONE route, so the **route segmented toggle and the reserved
-"Direct OpenAI — coming soon" option are removed**. Each card displays only its approved
-direct-provider route. Below the engine cards, a separate **Discovery / analysis model**
-selection card (plumbing-only; stored, not invoked). Unconfigured engines show a muted "Not
-configured" state.
+**Site Health** (`/site-health`) — crawl/page detail per `1197.tsx`: score presentation
+(score-band tokens), issue grouping layout, page table. **Issues**, **Content**,
+**Knowledge Base** (description/positioning/products/audience editor + consent-gated "Draft
+with AI" review flow), **Products**, **Analytics**, **Traffic**, **Settings** (providers /
+integrations) — the same Figma-language reskin: tokens + new primitives, hierarchy and
+spacing per this document, shared empty-state; no contract or data-flow changes.
+**Setup** (`/setup`) keeps its wizard flow restyled; `/setup/new` stays for additional
+projects.
 
-### 9.6 Visibility workspace (`/visibility`)
+## Marketing creative system (the `.mkt` contract)
 
-ONE workspace shell: a **shared filter bar** (run selector defaulting to the latest completed
-audit, logical engine, prompt, date range, granularity) above an accessible **four-tab**
-tablist — **Overview** (default), **Trends**, **Mentions & Citations**, **Query Fanout**. Only
-one panel renders at a time; the active tab is mirrored in `?tab=`. There are **no Sources /
-Topics / Sentiment tabs** and no disabled / "coming soon" tabs.
+Marketing pages are a **fully independent creative system** — "marketing pages have no
+relation to the app". Its home is the **existing** `frontend/app/(marketing)/marketing.css`:
+styles scope under the `.mkt` wrapper, the `--mkt-*` token block owns palette/type/motion,
+and plain CSS classes (`hero`, `btn`, `grad-text`, `container`, `eyebrow`) are the
+consumption surface — **no Tailwind bridging**, and hex stays inside the CSS file (CSS files
+are exempt from the no-raw-hex guard; marketing components must stay hex-free). The system
+carries its own branded **dusk** canvas independent of the app's `data-theme`; the Figma app
+scale above does **not** constrain marketing's display type.
 
-- **Overview**: two-column grid. **Left card — Visibility**: mono panel-label eyebrow, the
-  run's **Visibility Score** inside a `score-ring` (`numeralSize="lg"` — the `--text-2xl`
-  display numeral, score-band colored), subtitle "Your brand's visibility across LLMs for this
-  run", the run-status pill chip, and completed/failed mono stats. **Right card — Rankings**:
-  dense `table` of brand + competitors — columns `#`, Brand
-  (avatar + name, "You" pill on own brand), Visibility% (mono + score-band), SOV% (mono),
-  Sentiment (mono `—` placeholder), Avg Position (mono `—` placeholder). Below: a **per-engine
-  comparison** card and a **Share of Voice** card (accent-gradient "you" bars, muted
-  competitors; brand-vs-competitor donut).
-- **Trends**: cross-run metrics + charts (`trend-chart`) over the selected date range /
-  granularity.
-- **Mentions & Citations** and **Query Fanout**: the shared persisted execution-evidence
-  dataset — brand/competitor mention chips, classified citations, and frozen prompts + generated
-  queries with `queries_available | count_only | no_search` states.
+**Dusk palette** (per the approved marketing style guide) — warm charcoal, cream ink, one
+electric signal gradient (violet `#7B6CF6` → orchid `#B34FE0` → ember `#F0566B`):
 
-Empty state (no completed runs): a "Launch your first audit" card linking to `/runs`.
+| Role | Value | Token (task 7 finalizes the `--mkt-*` block) |
+|---|---|---|
+| page canvas | `#262522` | `--mkt-bg` |
+| recessed well / contrast canvas | `#1F1E1B` | `--mkt-bg-0` |
+| panel | `#2C2B28` | `--mkt-surface` |
+| elevated | `#353430` | `--mkt-raised` |
+| primary ink | `#F4F2EB` | `--mkt-text` |
+| secondary ink | `#B4B0A4` | `--mkt-text-2` |
+| accent (violet) | `#7B6CF6` | `--mkt-accent` |
+| accent as text | `#9C92FF` | `--mkt-accent-text` |
+| success | `#46D69C` | `--mkt-up` |
+| competitor | `#FCA87A` | `--mkt-comp` |
+| third-party | `#C9B8FD` | `--mkt-third` |
 
-### 9.7 Run/Executions explorer (`/runs`, `/runs/[runId]`, `.../executions/[executionId]`)
+**Type**: Söhne/Inter-class sans for display and body, Georgia-italic serif accents for the
+human moments, JetBrains Mono for every number; an oversized tight-tracked display scale
+independent of the Figma app scale.
 
-**`/runs`**: pill status filter chips (mono counts, accent-soft active) above a list `table`
-of audits (status badge via run-status token, requested/completed/
-failed mono counts, created timestamp) with the shared `table-pagination` footer, + a
-"Launch audit" `button` opening a dialog (select
-prompts/prompt-set + engines/providers as pill chips + repetitions → `POST /audits`).
-**`/runs/[runId]`**: a progress panel (requested / completed / failed counts + run-status
-badge + a pulsing accent live-dot while active + a **Cancel**
-button via `POST /audits/{id}/cancel`), **polling while active** (SSE optional), CSV/MD export
-links, then an executions `table` (prompt, engine badge with logical+transport, status, latency
-mono). **`.../executions/[executionId]`**: an evidence `card` — answer text, `search_used`
-badge, **citations** listed with owned/competitor/third-party classification badges, brand &
-competitor mention chips, and the per-response `score` dict (mono key/value). Sentiment shows
-the `—` placeholder.
+**Motion**: cinematic and product-demonstrating (answers stream, scores sweep, cards
+parallax/float) — `motion/react` primitives, transform/opacity only, below-fold scenes
+lazy-mounted, **everything gated on `prefers-reduced-motion`** with static fallbacks;
+decorative scenes are `aria-hidden`.
 
-## 10. Motion + accessibility
+**AA roles** — computed on the `#1F1E1B` dusk canvas (the system's darkest surface) and
+machine-checked in `globals.test.ts`:
 
-- **Motion**: `--transition-fast:100ms`, `--transition-base:180ms`, `--transition-slow:280ms`,
-  all `cubic-bezier(0.4,0,0.2,1)`. Respect `prefers-reduced-motion` (disable non-essential
-  transitions/shimmer). Skeleton shimmer ~1.2s loop.
-- **Accessibility**: every text/background pair meets **AA ≥ 4.5:1** (subtle/decorative tokens
-  are never used for body text). Focus is always visible via `--focus-ring`. `score-ring`,
-  `donut`, and `trend-chart` carry ARIA labels with the numeric value. `forced-colors` mode
-  falls back to system colors; badges keep a text label (never color-only meaning). Interactive
-  targets ≥ 30px height.
+- **Body text (≥ 4.5:1 required)**: `#F4F2EB` (14.9:1), `#B4B0A4` (7.7:1), `#9C92FF`
+  (6.3:1), `#46D69C` (9.0:1), `#FCA87A` (8.0:1), `#C9B8FD` (8.5:1).
+- **Display / decorative-only carve-outs (≥ 3:1 large-text bar; never body text)**:
+  `#7B6CF6` (4.22:1 — display type, gradient stops, glows), `#B34FE0` (4.06:1 — gradient
+  stops only), `#7F7B70` (3.94:1 — decorative captions / mono meta). These three tones are
+  display/decorative roles **only**; using any of them for body copy is a design-system
+  violation.
 
-## 11. Implementation rules (F1 checklist)
+## 13. Motion + accessibility (app)
 
-1. Author `:root` (light) + `html[data-theme='dark']` (dark) with **all** tokens from §3–§4.
-2. Add the `@theme inline` bridge (§7) — components use bridged tokens only.
-3. **No raw hex outside the two theme blocks** (no-raw-hex guard).
-4. **Both themes always defined**; `data-theme` set pre-hydration; **dark is the default**
-   (stored choice → dark; the OS preference is not consulted).
+- **Motion**: `--transition-fast: 100ms`, `--transition-base: 180ms`,
+  `--transition-slow: 280ms`, all `cubic-bezier(0.4, 0, 0.2, 1)`. Respect
+  `prefers-reduced-motion` (non-essential transitions/shimmer disabled). Skeleton shimmer
+  ~1.2s loop.
+- **Accessibility**: every documented text/surface pair meets **AA ≥ 4.5:1** in both themes
+  (programmatic suite; muted/subtle tokens are decorative-only and never body text). Focus
+  is always visible: the Figma **2px `--accent` outline** (`:focus-visible`) plus the
+  tokenized `--focus-ring` shadow on `.focus-ring` components. `score-ring`, `donut`, and
+  charts carry ARIA labels with the numeric value. `forced-colors` mode falls back to system
+  colors; badges keep a text label (never color-only meaning). Print rules drop backgrounds.
+  Interactive targets ≥ 30px height.
+
+## 14. Implementation checklist
+
+1. Author `:root` (light, Figma verbatim) + `html[data-theme='dark']` (authored soft
+   charcoal) with **all** tokens from §4–§5, including the primitive ramps, `--chart-1..8`,
+   `--text-inverse`/`--text-link`, `--accent-active`, `--score-*-text/-ring/-border`,
+   `--shadow-1..4` + aliases, and the new radii.
+2. Add the `@theme inline` bridge (§9) — components use bridged tokens only.
+3. **No raw hex outside the two theme blocks** (app) and `marketing.css` (marketing).
+4. **Both themes always defined**; `data-theme` set pre-hydration; **light is the default**
+   (stored choice → light; the OS preference is not consulted).
 5. Mono font gets `font-variant-numeric: tabular-nums`; all metrics use mono.
-6. Ship `prefers-reduced-motion`, `forced-colors`, and `print` rules.
-7. Load Geist / Geist Mono via next/font in `app/layout.tsx` (`--font-sans`, `--font-mono`).
-   `--font-display-family` resolves to the same sans → bridged `font-display` utility; there
-   is no separate display face. Never name a next/font variable `--font-display` — that name
-   is the bridged `@theme` token.
+6. Ship `prefers-reduced-motion`, `forced-colors`, `print`, and theme-swap suppression rules.
+7. Load **Inter** (weights 400/500/600) + **Geist Mono** via next/font in `app/layout.tsx`
+   (`--font-sans`, `--font-mono`). `--font-display-family` resolves to Inter → bridged
+   `font-display` utility; there is no separate display face. Never name a next/font
+   variable `--font-display` — that name is the bridged `@theme` token.
+8. Keep the guard trio green: `app/globals.test.ts` (palette + name-set sync + WCAG suite +
+   §6 dark assertions + marketing dusk contract), `scripts/check-design-tokens.mjs`
+   (required vars across **both** `globals.css` and `marketing.css`), and
+   `scripts/check-frontend-architecture.mjs` (line budgets).
