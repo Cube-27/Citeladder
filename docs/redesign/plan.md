@@ -129,6 +129,8 @@ luminance floor and ordering.
 | `frontend/scripts/check-design-tokens.mjs` | Required vars += ramps, chart, score-ring/text, hero/data sizes, shadows 1–4; extended to scan **both** `app/globals.css` and `app/(marketing)/marketing.css` (the `--mkt-*` namespace) |
 | `frontend/components/layout/*` | Grouped-nav shell restyled in the Figma shell visual language (1196 geometry; Analyze/Improve groups kept) |
 | `frontend/components/ui/*` | Primitives per 1198/1194/1195; `score-band.ts` **unchanged** (thresholds 25/50/75 kept); new `empty-state.tsx` |
+| `frontend/components/opportunities/*` | Post-plan surface merged from main — reskin only (Task 5); detectors/scoring are backend-side and untouched |
+| `frontend/components/site-health/{page-type-*,site-facts-panel}.tsx` | Post-plan site-health v2 surfaces merged from main — extend the Figma detail language rather than restructure (Task 6) |
 | `frontend/components/marketing/motion-primitives.tsx` | NEW — Reveal/Stagger/Parallax/Float/ScrollScene (motion v12, reduced-motion gated) |
 | `frontend/lib/marketing-content/landing.ts` | NEW — landing narrative copy module (designer owns final copy; typed like `pricing.ts`) |
 | `frontend/components/onboarding/*`, `frontend/app/(onboarding)/onboarding/{layout,page}.tsx` | NEW — Figma-styled onboarding (1200) with AI auto-discovery |
@@ -285,16 +287,24 @@ Tests: `pnpm test -- components/visibility`, `playwright test e2e/visibility.spe
 
 Approach: Figma-language reskin (tokens + new primitives, hierarchy/spacing, shared empty-state)
 for `/prompts` + `/prompt-research`, `/products` (+detail), `/runs` (+run + execution detail),
-`/analytics`, `/traffic`. No contract or data-flow changes. Update `e2e/runs.spec.ts`.
+`/analytics`, `/traffic`, `/opportunities`. No contract or data-flow changes. Update
+`e2e/runs.spec.ts`.
 
-Files: `frontend/components/{prompts,products,runs,analytics,traffic}/*`,
-`frontend/app/(app)/{prompts,prompt-research,products,runs,analytics,traffic}/**`,
+**`/opportunities` post-dates the original plan** — it landed on main after this branch was cut
+(commits `cd39ccd`..`7b0d9ea`, merged here). It is a full screen, not a panel:
+`components/opportunities/{opportunities-screen,opportunities-catalog,evidence-drawer}.tsx` plus
+`use-opportunity-status.ts`. It already consumes main's shared cell renderers and is entirely
+token-driven (no raw hex), so the reskin is primitives + hierarchy only — no contract changes.
+Its detectors/priority scoring are backend concerns and stay untouched.
+
+Files: `frontend/components/{prompts,products,runs,analytics,traffic,opportunities}/*`,
+`frontend/app/(app)/{prompts,prompt-research,products,runs,analytics,traffic,opportunities}/**`,
 `frontend/e2e/runs.spec.ts`.
 
 Acceptance: screens render in the Figma language; polling/launch/export flows untouched; runs
 e2e green.
 
-Tests: `pnpm test -- components/prompts components/products components/runs components/analytics components/traffic`,
+Tests: `pnpm test -- components/prompts components/products components/runs components/analytics components/traffic components/opportunities lib/api/opportunities.test.ts`,
 `playwright test e2e/runs.spec.ts`, `pnpm build`.
 
 **Task 6 — Action + settings surfaces reskin (site-health detail per 1197)** [after 3; parallel with 4, 5]
@@ -304,13 +314,26 @@ providers/integrations tabs), setup edit form; restructure `/site-health` crawl/
 `docs/redesign/figma/SiteHealthDetail.tsx` (score presentation, issue grouping layout). Update `e2e/providers.spec.ts`,
 `e2e/content.spec.ts`.
 
+**Site-health v2 post-dates the original plan** — `b59c0ff`..`e11f3a1` landed on main after this
+branch was cut (merged here) and added surfaces the Figma reference predates:
+`page-type-badge.tsx`, `page-type-scores.tsx`, `page-type-select.tsx`, and `site-facts-panel.tsx`
+(the AI-crawler-access panel), backed by `lib/site-health/{page-types,site-facts}.ts`.
+`SiteHealthDetail.tsx` has no counterpart for these, so **extend rather than restructure**: keep
+their information architecture and provenance/"why this type" disclosure intact, and restyle them
+into the Figma language using the same primitives as the rest of the detail view.
+
+Two carry-forwards from main that must not regress: `page-type-scores.tsx` deliberately has **no**
+`font-mono tracking-[0.08em]` on its `<Label>` (`99fd7e7` — mono stays reserved for values, even
+though v2 reinstates the uppercase micro-label at 11px/500/0.06em); and `PageTypeBadge` is a flat
+`--radius-sm` rectangle, not a pill, per the badge rule in §8 of design.md.
+
 Files: `frontend/components/{content,site-health,knowledge-base,settings,providers,setup}/*`,
 matching `app/(app)/**` pages, `frontend/e2e/{providers,content}.spec.ts`.
 
 Acceptance: site-health detail matches the Figma structure; forms/CSV flows unchanged;
 providers + content e2e green.
 
-Tests: `pnpm test -- components/content components/site-health components/knowledge-base components/settings components/providers components/setup`,
+Tests: `pnpm test -- components/content components/site-health components/knowledge-base components/settings components/providers components/setup lib/site-health`,
 `playwright test e2e/providers.spec.ts e2e/content.spec.ts`, `pnpm build`.
 
 ---
@@ -612,12 +635,6 @@ Tests: full suite.
    ports Figma verbatim.
 6. **Marketing**: fully independent creative system with extremely ambitious motion scope; not
    anchored to Figma app tokens. Pricing-facts constraint and the motion-primitives
-   architecture stand.
-
-**Deferred to approved mockups (non-blocking):** the dark family's exact ramp (cool
-slate-charcoal ≈ `#1C1E22` vs warm charcoal ≈ `#2A2926` — either satisfies §3a); the marketing
-palette/type/display scale and final copy; the auth brand-panel layout.
-nstraint and the motion-primitives
    architecture stand.
 
 **Deferred to approved mockups (non-blocking):** the dark family's exact ramp (cool
