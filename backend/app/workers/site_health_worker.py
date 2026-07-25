@@ -1049,9 +1049,9 @@ class SiteHealthWorker:
         for bot in AI_CRAWLER_BOTS:
             allowed = True
             if robots_body:
-                allowed = RobotsPolicy.parse(
-                    robots_body, user_agent=bot
-                ).can_fetch(requested_url)
+                allowed = RobotsPolicy.parse(robots_body, user_agent=bot).can_fetch(
+                    requested_url
+                )
             stance[bot] = (
                 AI_CRAWLER_STANCE_ALLOW if allowed else AI_CRAWLER_STANCE_BLOCK
             )
@@ -1066,9 +1066,7 @@ class SiteHealthWorker:
         llms_fetched = False
         llms_status: int | None = None
         llms_present = False
-        if llms_url and (
-            robots_policy is None or robots_policy.can_fetch(llms_url)
-        ):
+        if llms_url and (robots_policy is None or robots_policy.can_fetch(llms_url)):
             result = await self._fetch_well_known(
                 llms_url,
                 purpose=FETCH_PURPOSE_LLMS,
@@ -1319,9 +1317,7 @@ class SiteHealthWorker:
                 # inventory. Free sample crawls never ingest sitemaps, so
                 # un-admitted URLs never leak into a Free inventory.
                 if depth == 0 and outcome.sitemap_urls and not crawl.sample_mode:
-                    sitemap_candidates = self._sitemap_candidates(
-                        outcome.sitemap_urls
-                    )
+                    sitemap_candidates = self._sitemap_candidates(outcome.sitemap_urls)
                     sitemap_admission = await admit_candidates(
                         session,
                         crawl=crawl,
@@ -2844,9 +2840,9 @@ class SiteHealthWorker:
         )
         rows = (
             await session.execute(
-                select(
-                    ranked.c.id, ranked.c.site_url_id, ranked.c.artifact_id
-                ).where(ranked.c.latest_rank == 1)
+                select(ranked.c.id, ranked.c.site_url_id, ranked.c.artifact_id).where(
+                    ranked.c.latest_rank == 1
+                )
             )
         ).all()
         if not rows:
@@ -2959,8 +2955,7 @@ class SiteHealthWorker:
                     continue
                 checked_count += 1
                 return_tag_found = any(
-                    _canonical_or_empty(str(back.get("url") or ""))
-                    == source_canonical
+                    _canonical_or_empty(str(back.get("url") or "")) == source_canonical
                     for back in target_alternates
                 )
                 if not return_tag_found and target_url not in missing:
@@ -3013,8 +3008,7 @@ class SiteHealthWorker:
                 # sitemap URL that no analyzed page links to is an orphan.
                 anchor_rows = (
                     await session.execute(
-                        select(SiteLinkReference.target_url)
-                        .where(
+                        select(SiteLinkReference.target_url).where(
                             SiteLinkReference.source_analysis_id.in_(analysis_ids),
                             SiteLinkReference.is_internal.is_(True),
                             SiteLinkReference.kind == LINK_KIND_ANCHOR,
@@ -3071,9 +3065,7 @@ class SiteHealthWorker:
                     analyzer_version=crawl.analyzer_version or ANALYZER_VERSION,
                     rule_version=ev.rule_version,
                 )
-                .on_conflict_do_nothing(
-                    index_elements=["analysis_id", "rule_id"]
-                )
+                .on_conflict_do_nothing(index_elements=["analysis_id", "rule_id"])
                 .returning(SiteRuleEvaluation.id)
             )
             if inserted_id is None:

@@ -467,9 +467,7 @@ def test_first_answer_text_walk_skips_script_subtrees():
         b"<main><p>Real answer text after the script.</p></main>"
         b"</body></html>"
     )
-    assert _facts(body)["first_answer_text"] == (
-        "Real answer text after the script."
-    )
+    assert _facts(body)["first_answer_text"] == ("Real answer text after the script.")
 
 
 def test_first_answer_text_hop_bound_gives_up():
@@ -531,9 +529,7 @@ def test_expand_gated_ratio_counts_collapsed_subtrees():
     assert facts["body"]["word_count"] == 13
     assert facts["expand_gated_ratio"] == round(4 / 13, 4)
     # Nothing gated -> 0.0.
-    assert _facts(b"<html><body><p>x y</p></body></html>")[
-        "expand_gated_ratio"
-    ] == 0.0
+    assert _facts(b"<html><body><p>x y</p></body></html>")["expand_gated_ratio"] == 0.0
 
 
 def test_expand_gated_ratio_never_double_counts_nested_gates():
@@ -596,8 +592,7 @@ def test_jsonld_enrichment_name_author_dates_same_as():
 
 def test_jsonld_name_falls_back_to_headline():
     payload = (
-        '{"@type":"Article","headline":"The Headline",'
-        '"author":"A","datePublished":"D"}'
+        '{"@type":"Article","headline":"The Headline","author":"A","datePublished":"D"}'
     )
     blocks = parse_jsonld_blocks([payload], max_blocks=10)
     assert blocks[0]["name"] == "The Headline"

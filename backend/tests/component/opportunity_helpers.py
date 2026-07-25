@@ -515,4 +515,3 @@ def _by_rule(rows: list[Opportunity], rule_id: str) -> Opportunity:
     matches = [row for row in rows if row.rule_id == rule_id]
     assert len(matches) == 1, f"expected exactly one {rule_id} row, got {len(matches)}"
     return matches[0]
-

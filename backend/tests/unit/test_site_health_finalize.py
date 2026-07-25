@@ -92,7 +92,9 @@ def test_sitemap_orphan_fails_with_bounded_evidence():
 
 def test_hreflang_conflict_not_applicable_without_hreflang():
     ev = evaluate_hreflang_conflict(
-        alternate_count=0, checked_count=0, unchecked_count=0,
+        alternate_count=0,
+        checked_count=0,
+        unchecked_count=0,
         missing_return_tags=[],
     )
     assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE
@@ -103,7 +105,9 @@ def test_hreflang_conflict_not_applicable_when_nothing_checkable():
     # Alternates exist but none were analyzed in this crawl: absence
     # fabricates nothing — N/A carrying the counts.
     ev = evaluate_hreflang_conflict(
-        alternate_count=3, checked_count=0, unchecked_count=3,
+        alternate_count=3,
+        checked_count=0,
+        unchecked_count=3,
         missing_return_tags=[],
     )
     assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE
@@ -114,7 +118,9 @@ def test_hreflang_conflict_not_applicable_when_nothing_checkable():
 
 def test_hreflang_conflict_passes_when_return_tags_complete():
     ev = evaluate_hreflang_conflict(
-        alternate_count=2, checked_count=2, unchecked_count=0,
+        alternate_count=2,
+        checked_count=2,
+        unchecked_count=0,
         missing_return_tags=[],
     )
     assert ev.outcome == RULE_OUTCOME_PASS
@@ -126,7 +132,9 @@ def test_hreflang_conflict_fails_with_bounded_evidence():
         f"https://x.example/fr/missing-{i}" for i in range(_MAX_EVIDENCE_URLS + 1)
     ]
     ev = evaluate_hreflang_conflict(
-        alternate_count=15, checked_count=12, unchecked_count=3,
+        alternate_count=15,
+        checked_count=12,
+        unchecked_count=3,
         missing_return_tags=missing,
     )
     assert ev.outcome == RULE_OUTCOME_FAIL

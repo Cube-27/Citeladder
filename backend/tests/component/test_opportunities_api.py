@@ -99,9 +99,7 @@ async def test_cross_workspace_isolation_404(
         session.add(other_ws)
         await session.flush()
         session.add(
-            WorkspaceMember(
-                workspace_id=other_ws.id, user_id=user.id, role="owner"
-            )
+            WorkspaceMember(workspace_id=other_ws.id, user_id=user.id, role="owner")
         )
         await session.commit()
         other_headers = {"X-Workspace-Id": str(other_ws.id)}
@@ -272,9 +270,7 @@ async def test_list_ordering_filters_and_keyset(
     assert page1.status_code == 200
     cursor = page1.json()["next_cursor"]
     assert cursor
-    page2 = await client.get(
-        f"{url}?limit=2&cursor={cursor}", headers=_headers(scn)
-    )
+    page2 = await client.get(f"{url}?limit=2&cursor={cursor}", headers=_headers(scn))
     assert page2.status_code == 200
     assert [item["rule_id"] for item in page2.json()["items"]] == [
         "missing_structured_data",

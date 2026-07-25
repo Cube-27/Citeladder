@@ -12,8 +12,8 @@
 | Deliverable | State | Contents |
 |---|---|---|
 | Design spec | **Merged** (PR #17) | `docs/roadmap/site-health-v2-page-aware.md` — full v2 architecture, competitive research, Scrapling evaluation, P1–P4 phasing |
-| **P1 — page-type-aware analysis** | **PR #19** (branch `vorflux/site-health-v2-p1-page-type-analysis`) | Deterministic classifier (`analysis/site_health/page_types.py`, 9-type taxonomy, URL/content signals outrank schema), `PAGE_TYPE_PROFILES` (per-type thin-content minimums + weight overrides), `page_type:<type>` applicability tokens, `SitePageAnalysis.page_type` + `classifier_version`, `score_summary.by_page_type`, DTO badges/filters/exports column, frontend badges + filter + dashboard panel. Versions: `sh-classifier-1` (new), `sh-analyzer-2`, `sh-scoring-2` |
-| **P2 — expanded AEO rule catalog + site/fetch foundations** | **PR (branch `vorflux/site-health-v2-p2-aeo-rule-catalog`, stacked on P1)** | Rule catalog 9→33: site_root rules (`ai_crawler_access`, `llms_txt_present`, weight-0), schema rules (expected-for-type/required/recommended/content-match, non-circular), citability, extractability, hygiene, `crawl_finalize` rules (broken links, sitemap orphans, hreflang, weight-0) via a finalize pass in `_reconcile_crawl_status`. Robots.txt fetch + per-host policy caching (24h TTL, RFC 9309 5xx=deny/4xx=allow), `llms.txt` fetch, Starter-only sitemap ingestion, `SiteCrawl.site_facts`. Extractor `sh-extractor-2` (author/dates/outbound_domains/landmarks/h3/first-answer/hreflang…), `sh-rules-2` |
+| **P1 — page-type-aware analysis** | **PR #22** (branch `vorflux/site-health-v2`; PR #19 closed/superseded) | Deterministic classifier (`analysis/site_health/page_types.py`, 9-type taxonomy, URL/content signals outrank schema), `PAGE_TYPE_PROFILES` (per-type thin-content minimums + weight overrides), `page_type:<type>` applicability tokens, `SitePageAnalysis.page_type` + `classifier_version`, `score_summary.by_page_type`, DTO badges/filters/exports column, frontend badges + filter + dashboard panel. Versions: `sh-classifier-1` (new), `sh-analyzer-2`, `sh-scoring-2` |
+| **P2 — expanded AEO rule catalog + site/fetch foundations** | **PR #22** (branch `vorflux/site-health-v2`; PR #20 closed/superseded) | Rule catalog 9→33: site_root rules (`ai_crawler_access`, `llms_txt_present`, weight-0), schema rules (expected-for-type/required/recommended/content-match, non-circular), citability, extractability, hygiene, `crawl_finalize` rules (broken links, sitemap orphans, hreflang, weight-0) via a finalize pass in `_reconcile_crawl_status`. Robots.txt fetch + per-host policy caching (24h TTL, RFC 9309 5xx=deny/4xx=allow), `llms.txt` fetch, Starter-only sitemap ingestion, `SiteCrawl.site_facts`. Extractor `sh-extractor-2` (author/dates/outbound_domains/landmarks/h3/first-answer/hreflang…), `sh-rules-2` |
 
 **Consolidated onto one branch (supersedes the stacked-PR plan).** P1 was a
 strict ancestor of P2 (`git merge-base --is-ancestor` confirms it), so there was
@@ -22,20 +22,41 @@ after the flat/hairline restyle (PR #21) and squashed into a single commit on
 `vorflux/site-health-v2`, which carries the whole feature. The two original
 branches and their PRs are **superseded — close them, do not merge them.**
 
-### PENDING before merge — P2 e2e execution
+### RESOLVED — P2 e2e execution
 
-P2's backend suites are green (367 unit/component tests, ruff clean, plus an
-independent review-worktree run of 728 unit + 94 component), and the e2e
-fixture pages were dry-run validated through the real parser/classifier/rules.
-**The full P2 e2e crawl scripts were written but not executed before handoff.**
-Run them first thing: `testing/site-health-v2-e2e/README.md` (dry-run
-re-baseline → Free crawl → negative robots → Starter sitemap/finalize flows).
-If anything fails, the failure is in the integration wiring, not the unit-tested
-rules — start from the script output.
+The e2e crawl scripts have since been repaired (`sh_p2_lib` was missing) and
+**executed**: Suite B (Free) 224/224, Suite C (robots deny) 10/10, Suite D
+(Starter) 45/45, version stamps unchanged.
 
-## 2. What remains
+The harness itself lived at `testing/site-health-v2-e2e/` and was **removed
+from the tree before merge** — same as `testing/local-stack/` before it (added
+in PR #15, deleted in `25f4bd8`); these live-stack harnesses are not carried in
+the repo. `main` has no `testing/` directory. To re-run the suites, rebuild the
+harness from the recipes in §5.
 
-### P3 — curl_cffi fetch escalation (spec §5.4; independent of P1/P2)
+## 2. What remains — P4 only (P3 is shipped; kept below as the as-built record)
+
+### P3 — curl_cffi fetch escalation — **SHIPPED** (spec §5.4)
+
+Shipped on `vorflux/site-health-v2` alongside P1/P2; the checklist below is
+retained as the as-built record. Deltas from the plan, and the follow-ups P4
+inherits:
+
+- **`http_only` is only honored by the discover/analyze page fetches**, not yet
+  by the robots/sitemap/link-probe supporting fetches (threading `fetch_mode`
+  into the setup phase is a broader change).
+- **Rung-2 redirect-hop parity nits:** no content-type gate on redirect bodies,
+  no redirect-limit trace token, and **no fail-closed guard if the `pop_curl`
+  handle is ever not published** — if curl_cffi's internals stop calling
+  `pop_curl` (e.g. a version bump), the live WIRE cap and the early
+  content-type abort silently stop firing. The decoded cap still bounds memory,
+  so this degrades the bound (5 MB wire → 20 MB decoded) rather than removing
+  it. Re-check on any `curl-cffi` upgrade.
+- **No committed fixture for the escalation tunnel routes**
+  (`/blocked-then-chrome`, `/blocked-both`, `/throttled-gzip`), so the P3
+  escalation is exercised by unit tests + live probes, not by CI.
+
+Original plan (as-built unless noted above):
 
 - **Start with the pinned-IP validation spike** (spec §5.4 — non-negotiable):
   the httpx rung pins the resolved IP at the transport layer; curl_cffi needs
@@ -80,15 +101,12 @@ rules — start from the script output.
 
 ### Deferred items (conscious decisions, not oversights)
 
-- **Classifier evidence persistence** — `facts["page_type_evidence"]` is
-  computed and injected but dropped after evaluation (spec §5.5 allocated two
-  columns for P1; no UI consumer exists). If a "why this type" UI affordance is
-  wanted, add a JSONB column on `SitePageAnalysis` (greenfield recreate is
-  cheap) and expose it on the per-URL detail DTO.
-- **`site_facts` frontend display** — P2 exposed `site_facts` on the crawl
-  projection but shipped no frontend rendering (spec §5.3 mentions a dashboard
-  display). Add a small dashboard panel (AI-crawler stance + llms.txt status);
-  data is already in the API.
+- ~~**Classifier evidence persistence**~~ — **SHIPPED**:
+  `SitePageAnalysis.page_type_evidence` (JSONB) is persisted and surfaced as a
+  "why this type" disclosure on the per-URL detail.
+- ~~**`site_facts` frontend display**~~ — **SHIPPED**: the AI-crawler-access
+  dashboard panel (`components/site-health/site-facts-panel.tsx`, wired in
+  `dashboard-layout.tsx`) renders AI-crawler stance + llms.txt status.
 - **Microdata deep extraction** — microdata blocks record `props_present=[]`
   (shallow extraction, documented); property rules mark
   `extraction: microdata_shallow` in evidence. Deep microdata parsing is its
@@ -124,9 +142,19 @@ rules — start from the script output.
 ## 4. Verify commands (focused, per Agents.md)
 
 ```bash
-# Backend (needs local Postgres; suite creates/drops its own throwaway DB)
+# Backend (needs local Postgres; suite creates/drops its own throwaway DB).
+# Credentials come from the repo .env (POSTGRES_PASSWORD); the suite reuses
+# host/port/credentials from settings.database_url.
+#
+# GOTCHA: if a NATIVE Postgres service also listens on 5432 it shadows the
+# compose db's published port, and every DB test dies with
+# `InvalidPasswordError: password authentication failed for user "postgres"`.
+# Check with `Get-NetTCPConnection -LocalPort 5432 -State Listen` (Windows).
+# Reach the compose db on a free port instead of fighting over 5432:
+#   docker run -d --rm --name sf-pg-tunnel --network docker_default -p 55432:5432 \
+#     alpine/socat tcp-listen:5432,fork,reuseaddr tcp-connect:db:5432
 cd backend
-DATABASE_URL=postgresql+asyncpg://postgres:devpassword123@localhost:5432/searchify \
+DATABASE_URL=postgresql+asyncpg://postgres:<POSTGRES_PASSWORD>@localhost:55432/searchify \
   uv run pytest tests/unit/test_site_health_*.py tests/component/test_site_health_*.py -q
 uv run --extra dev ruff check .
 
@@ -138,11 +166,11 @@ node_modules/.bin/eslint components/site-health lib/site-health lib/api
 
 ## 5. Testing recipes + gotchas (hard-won)
 
-The runnable harness (fixture + dry-run + e2e scripts + expectations) is in
-this repo at `testing/site-health-v2-e2e/` — read its README first. Additional
-recipes live in the shared memory volume at
-`/memory/testing/Searchify/` (`setup-instructions.md`,
-`site-health-p1-e2e-fixture.md`). Key points:
+The runnable harness (fixture + dry-run + e2e scripts + expectations) is **not
+in the repo** (see §1) — rebuild it from the recipes in the shared memory volume
+at `/memory/testing/Searchify/` (`setup-instructions.md`,
+`site-health-p1-e2e-fixture.md`), or recover the deleted tree from git history
+(`git show <merge-commit>^:testing/site-health-v2-e2e/README.md`). Key points:
 
 - **SSRF**: the crawler rejects loopback/private IPs. Serve fixture sites
   locally and expose them through the preview tunnel (`port expose`) — the

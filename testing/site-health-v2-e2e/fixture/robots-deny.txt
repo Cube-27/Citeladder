@@ -1,8 +1,0 @@
-# Fixture Co robots.txt — deny variant B (Suite C only).
-# Denies ONLY the crawler's own UA; says nothing about AI bots, so the
-# site_facts AI-crawler stance records all four bots as allowed. The wrapper
-# sh-p2-run-negative.sh installs this over fixture/robots.txt and restores
-# variant A via trap. Never commit this AS fixture/robots.txt — the served
-# default must stay variant A or every crawl is robots_denied by design.
-User-agent: SearchifySiteHealthBot
-Disallow: /

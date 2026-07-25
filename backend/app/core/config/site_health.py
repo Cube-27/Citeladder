@@ -756,9 +756,7 @@ PAGE_TYPE_CART_MARKERS: Final[frozenset[str]] = frozenset(
 # (the sh-extractor-2 author/date facts exist too, but this heuristic keeps
 # reading the visible body text — byline+date co-location is the signal).
 PAGE_TYPE_ARTICLE_SCAN_CHARS: Final = 2000
-PAGE_TYPE_BYLINE_PATTERN: Final = (
-    r"\b[Bb]y\s+[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){1,2}\b"
-)
+PAGE_TYPE_BYLINE_PATTERN: Final = r"\b[Bb]y\s+[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){1,2}\b"
 PAGE_TYPE_DATE_PATTERN: Final = (
     r"(?:\b\d{4}-\d{2}-\d{2}\b"
     r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)"
@@ -978,9 +976,7 @@ PAGE_TYPE_EXPECTED_SCHEMA: Final[dict[str, PageTypeSchemaExpectation]] = {
 SCHEMA_PROPERTY_PATHS: Final[frozenset[str]] = frozenset(
     path
     for expectation in PAGE_TYPE_EXPECTED_SCHEMA.values()
-    for path in (
-        expectation.required_properties + expectation.recommended_properties
-    )
+    for path in (expectation.required_properties + expectation.recommended_properties)
 )
 
 # =========================================================================
@@ -1162,8 +1158,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         weight=2.0,
         applicability_key="has_html",
         description=(
-            "Word count is below the per-page-type minimum "
-            "(PAGE_TYPE_PROFILES)."
+            "Word count is below the per-page-type minimum (PAGE_TYPE_PROFILES)."
         ),
         remediation="Add substantive, answer-oriented body content to the page.",
         display_label="Thin content",
@@ -1204,8 +1199,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         weight=1.0,
         applicability_key="has_html",
         description=(
-            "Meta description length falls inside the recommended band "
-            "(70-160 chars)."
+            "Meta description length falls inside the recommended band (70-160 chars)."
         ),
         remediation="Rewrite the meta description to roughly 70-160 characters.",
         display_label="Meta description length outside recommended band",
@@ -1262,8 +1256,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
             "resource limit."
         ),
         remediation=(
-            "Defer/async non-critical scripts and reduce render-blocking "
-            "stylesheets."
+            "Defer/async non-critical scripts and reduce render-blocking stylesheets."
         ),
         display_label="Too many render-blocking resources",
     ),
@@ -1295,9 +1288,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         weight=0.0,
         applicability_key=APPLICABILITY_SITE_ROOT,
         description="Site serves an llms.txt file at the root.",
-        remediation=(
-            "Publish /llms.txt summarizing the site for AI answer engines."
-        ),
+        remediation=("Publish /llms.txt summarizing the site for AI answer engines."),
         display_label="Missing llms.txt",
     ),
     # --- v2 P2: per-type schema validity (per-page) -------------------------
@@ -1346,9 +1337,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
             "Expected-type structured data carries the recommended properties "
             "for the page type."
         ),
-        remediation=(
-            "Add the recommended properties to strengthen the schema markup."
-        ),
+        remediation=("Add the recommended properties to strengthen the schema markup."),
         display_label="Recommended schema properties missing",
     ),
     SiteHealthRule(
@@ -1418,8 +1407,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         applicability_key=f"{PAGE_TYPE_APPLICABILITY_PREFIX}{PAGE_TYPE_HOMEPAGE}",
         description="Homepage Organization markup carries sameAs identity links.",
         remediation=(
-            "Add sameAs links (official profiles) to the homepage Organization "
-            "schema."
+            "Add sameAs links (official profiles) to the homepage Organization schema."
         ),
         display_label="Missing organization identity links",
     ),
@@ -1436,9 +1424,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
             "The first block under the first heading is a substantive "
             "answer/definitional paragraph."
         ),
-        remediation=(
-            "Open each section with a direct answer before elaborating."
-        ),
+        remediation=("Open each section with a direct answer before elaborating."),
         display_label="No answer-first content structure",
     ),
     SiteHealthRule(
@@ -1462,8 +1448,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         weight=2.0,
         applicability_key="has_html",
         description=(
-            "Key text is present in the server-rendered HTML (not a "
-            "script-only shell)."
+            "Key text is present in the server-rendered HTML (not a script-only shell)."
         ),
         remediation=(
             "Server-render or pre-render primary content so crawlers can "
@@ -1514,9 +1499,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
             "Sitemap URLs are reachable through internal links (not "
             "sitemap-only orphans)."
         ),
-        remediation=(
-            "Link sitemap-listed pages from crawlable internal navigation."
-        ),
+        remediation=("Link sitemap-listed pages from crawlable internal navigation."),
         display_label="Sitemap orphan URLs",
     ),
     SiteHealthRule(

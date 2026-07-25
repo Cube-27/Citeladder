@@ -1241,8 +1241,7 @@ def _make_curl_cap_callback(
             if state.decoded_bytes > max_decoded:
                 state.aborted_by_cap = True
                 state.abort_reason = (
-                    f"decoded {state.decoded_bytes} > {max_decoded}"
-                    " (compression bomb)"
+                    f"decoded {state.decoded_bytes} > {max_decoded} (compression bomb)"
                 )
                 return CURL_WRITEFUNC_ERROR
         except Exception:

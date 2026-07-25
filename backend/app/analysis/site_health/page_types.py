@@ -147,9 +147,7 @@ def _content_heuristic(facts: dict) -> dict[str, Any] | None:
     # Product: a price token AND a cart marker in the bounded body text.
     if body_text and _PRICE_RE.search(body_text):
         lowered = body_text.lower()
-        if any(
-            marker in lowered for marker in _config.PAGE_TYPE_CART_MARKERS
-        ):
+        if any(marker in lowered for marker in _config.PAGE_TYPE_CART_MARKERS):
             return _signal(
                 _config.PAGE_TYPE_SIGNAL_CONTENT_HEURISTIC,
                 _config.PAGE_TYPE_PRODUCT,
@@ -241,7 +239,8 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
     winner = matched[0] if matched else None
     below_threshold = confidence < _config.PAGE_TYPE_CONFIDENCE_THRESHOLD
     page_type = (
-        winner["page_type"] if winner is not None and not below_threshold
+        winner["page_type"]
+        if winner is not None and not below_threshold
         else _config.PAGE_TYPE_OTHER
     )
     classified_by = (

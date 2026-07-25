@@ -99,9 +99,7 @@ def evaluate_sitemap_orphan(
     """
     rule = _catalog_rule("technical.sitemap_orphan")
     if sitemap_url_count <= 0:
-        return _evaluation(
-            rule, RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_sitemap"}
-        )
+        return _evaluation(rule, RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_sitemap"})
     outcome = RULE_OUTCOME_FAIL if orphan_urls else RULE_OUTCOME_PASS
     return _evaluation(
         rule,
@@ -133,9 +131,7 @@ def evaluate_hreflang_conflict(
     """
     rule = _catalog_rule("technical.hreflang_conflict")
     if alternate_count <= 0:
-        return _evaluation(
-            rule, RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_hreflang"}
-        )
+        return _evaluation(rule, RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_hreflang"})
     if checked_count <= 0:
         return _evaluation(
             rule,

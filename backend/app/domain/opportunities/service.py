@@ -776,9 +776,7 @@ async def get_summary(
             OpportunitySnapshot.workspace_id == workspace_id,
             OpportunitySnapshot.project_id == project_id,
         )
-        .order_by(
-            OpportunitySnapshot.created_at.desc(), OpportunitySnapshot.id.desc()
-        )
+        .order_by(OpportunitySnapshot.created_at.desc(), OpportunitySnapshot.id.desc())
         .limit(1)
     )
     if snapshot is None:

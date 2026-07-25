@@ -331,9 +331,7 @@ async def test_callback_landing_is_absolute_frontend_url(
     callback = await _callback(client, "gsc", state)
 
     location = callback.headers["location"]
-    assert location == (
-        "http://localhost:3000/settings?tab=integrations&connected=gsc"
-    )
+    assert location == ("http://localhost:3000/settings?tab=integrations&connected=gsc")
     # An absolute URL on the frontend origin, NOT a backend-relative path.
     split = urlsplit(location)
     assert split.scheme == "http"

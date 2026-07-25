@@ -138,9 +138,7 @@ def test_brand_absent_target_key_falls_back_to_prompt_index() -> None:
             prompt_index=3, prompt_id=None, text="t", theme="", intent=""
         ),
     )
-    evidence = _visibility(
-        (_analysis(3, competitors=("Globex",)),), snapshots
-    )
+    evidence = _visibility((_analysis(3, competitors=("Globex",)),), snapshots)
     (hit,) = detect_brand_absent_high_value_prompt(evidence)
     assert hit.target_key == f"prompt-index:{evidence.audit_id}:3"
     assert hit.target_prompt_id is None
@@ -187,9 +185,7 @@ def test_owned_page_not_cited_fires_with_zero_owned_citations() -> None:
 
 
 def test_owned_page_not_cited_skipped_without_owned_domains() -> None:
-    evidence = _visibility(
-        (_analysis(0),), (_snapshot(0),), owned_domains=()
-    )
+    evidence = _visibility((_analysis(0),), (_snapshot(0),), owned_domains=())
     assert detect_owned_page_not_cited(evidence) == []
 
 
@@ -287,9 +283,7 @@ def test_site_rules_empty_evidence_yields_no_hits() -> None:
         (
             "brand_absent_high_value_prompt",
             detect_brand_absent_high_value_prompt,
-            _visibility(
-                (_analysis(0, competitors=("Globex",)),), (_snapshot(0),)
-            ),
+            _visibility((_analysis(0, competitors=("Globex",)),), (_snapshot(0),)),
         ),
         (
             "owned_page_not_cited",
@@ -299,18 +293,22 @@ def test_site_rules_empty_evidence_yields_no_hits() -> None:
         (
             "missing_structured_data",
             detect_site_issue_opportunities,
-            (lambda url_id: _site(
-                (_issue("aeo.structured_data_present", url_id),),
-                (_url(url_id, "https://acme.com/x"),),
-            ))(uuid.uuid4()),
+            (
+                lambda url_id: _site(
+                    (_issue("aeo.structured_data_present", url_id),),
+                    (_url(url_id, "https://acme.com/x"),),
+                )
+            )(uuid.uuid4()),
         ),
         (
             "thin_content",
             detect_site_issue_opportunities,
-            (lambda url_id: _site(
-                (_issue("technical.thin_content", url_id, category="content"),),
-                (_url(url_id, "https://acme.com/x"),),
-            ))(uuid.uuid4()),
+            (
+                lambda url_id: _site(
+                    (_issue("technical.thin_content", url_id, category="content"),),
+                    (_url(url_id, "https://acme.com/x"),),
+                )
+            )(uuid.uuid4()),
         ),
     ],
 )

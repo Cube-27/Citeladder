@@ -648,7 +648,7 @@ async def test_rung2_content_type_gate_aborts_at_first_chunk():
             _Script(
                 200,
                 headers={"content-type": "application/pdf"},
-                chunks=[b'%PDF'],
+                chunks=[b"%PDF"],
                 handle=handle,
             )
         ],

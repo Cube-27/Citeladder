@@ -323,9 +323,7 @@ def _check_ai_crawler_access(facts: dict) -> tuple[str, dict]:
     site = facts.get("site") or {}
     robots = site.get("robots") or {}
     stance = robots.get("ai_crawlers") or {}
-    bounded_stance = {
-        bot: stance.get(bot, "") for bot in AI_CRAWLER_BOTS
-    }
+    bounded_stance = {bot: stance.get(bot, "") for bot in AI_CRAWLER_BOTS}
     if not robots.get("fetched"):
         # The stance is the fail-open default (robots.txt unfetchable): a
         # PASS would be vacuous for a HIGH-severity signal. N/A instead.
@@ -335,9 +333,7 @@ def _check_ai_crawler_access(facts: dict) -> tuple[str, dict]:
             "ai_crawlers": bounded_stance,
         }
     blocked = [
-        bot
-        for bot in AI_CRAWLER_BOTS
-        if stance.get(bot) == AI_CRAWLER_STANCE_BLOCK
+        bot for bot in AI_CRAWLER_BOTS if stance.get(bot) == AI_CRAWLER_STANCE_BLOCK
     ]
     return _pass_fail(not blocked), {
         "robots_fetched": True,
@@ -372,9 +368,7 @@ def _expectation_for(facts: dict) -> PageTypeSchemaExpectation:
     )
 
 
-def _expected_blocks(
-    facts: dict, expectation: PageTypeSchemaExpectation
-) -> list[dict]:
+def _expected_blocks(facts: dict, expectation: PageTypeSchemaExpectation) -> list[dict]:
     """Structured-data blocks whose type is expected for the page type."""
     sd = facts.get("structured_data") or {}
     expected = set(expectation.expected_types)
@@ -542,9 +536,9 @@ def _check_organization_identity(facts: dict) -> tuple[str, dict]:
 def _check_answer_first(facts: dict) -> tuple[str, dict]:
     headings = facts.get("headings") or {}
     counts = headings.get("counts") or {}
-    has_heading = int(headings.get("h1_count", 0) or 0) > 0 or int(
-        counts.get("h2", 0) or 0
-    ) > 0
+    has_heading = (
+        int(headings.get("h1_count", 0) or 0) > 0 or int(counts.get("h2", 0) or 0) > 0
+    )
     if not has_heading:
         return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_headings"}
     answer = str(facts.get("first_answer_text") or "")

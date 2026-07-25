@@ -366,9 +366,7 @@ def test_thin_content_uses_per_type_minimum():
     other_min = PAGE_TYPE_PROFILES[PAGE_TYPE_OTHER].min_sufficient_words
     assert article_min > other_min  # the config actually differentiates
     # Between the two minimums: an article fails while `other` passes.
-    facts_article = _html_facts(
-        page_type="article", body={"word_count": other_min}
-    )
+    facts_article = _html_facts(page_type="article", body={"word_count": other_min})
     ev = _outcome(facts_article, "technical.thin_content")
     assert ev.outcome == RULE_OUTCOME_FAIL
     assert ev.evidence["minimum"] == article_min
@@ -478,9 +476,10 @@ def test_title_length_band_not_applicable_when_empty():
 
 def test_meta_description_length_band():
     low, high = META_DESCRIPTION_LENGTH_BAND
-    assert _outcome(
-        _html_facts(), "technical.meta_description_length_band"
-    ).outcome == RULE_OUTCOME_PASS
+    assert (
+        _outcome(_html_facts(), "technical.meta_description_length_band").outcome
+        == RULE_OUTCOME_PASS
+    )
     short = _outcome(
         _html_facts(meta_description="x" * (low - 1)),
         "technical.meta_description_length_band",
@@ -516,9 +515,7 @@ def test_hsts_present():
 
 
 def test_ttfb_band():
-    assert _outcome(_html_facts(), "technical.ttfb_band").outcome == (
-        RULE_OUTCOME_PASS
-    )
+    assert _outcome(_html_facts(), "technical.ttfb_band").outcome == (RULE_OUTCOME_PASS)
 
     def _with_ttfb(ttfb):
         facts = _html_facts()
@@ -557,9 +554,12 @@ def test_render_blocking():
             blocking_resources={"scripts": total, "stylesheets": 0, "total": total}
         )
 
-    assert _outcome(
-        _with_total(RENDER_BLOCKING_MAX_RESOURCES), "technical.render_blocking"
-    ).outcome == RULE_OUTCOME_PASS
+    assert (
+        _outcome(
+            _with_total(RENDER_BLOCKING_MAX_RESOURCES), "technical.render_blocking"
+        ).outcome
+        == RULE_OUTCOME_PASS
+    )
     over = _outcome(
         _with_total(RENDER_BLOCKING_MAX_RESOURCES + 1), "technical.render_blocking"
     )
@@ -758,9 +758,7 @@ def test_schema_property_rules_record_microdata_shallow_extraction():
         "same_as": [],
         "props_present": [],
     }
-    facts = _html_facts(
-        page_type="product", structured_data=_sd([microdata_block])
-    )
+    facts = _html_facts(page_type="product", structured_data=_sd([microdata_block]))
     ev = _outcome(facts, "aeo.schema_required_valid")
     assert ev.outcome == RULE_OUTCOME_FAIL
     assert ev.evidence["extraction"] == "microdata_shallow"
@@ -826,18 +824,14 @@ def test_schema_rules_fall_back_to_other_expectation_without_page_type():
     assert _outcome(facts, "aeo.schema_expected_for_type").outcome == (
         RULE_OUTCOME_PASS
     )
-    assert _outcome(facts, "aeo.schema_required_valid").outcome == (
-        RULE_OUTCOME_PASS
-    )
+    assert _outcome(facts, "aeo.schema_required_valid").outcome == (RULE_OUTCOME_PASS)
 
 
 # --- v2 P2: citability rules -------------------------------------------------
 
 
 def test_author_present():
-    assert _outcome(_html_facts(), "aeo.author_present").outcome == (
-        RULE_OUTCOME_PASS
-    )
+    assert _outcome(_html_facts(), "aeo.author_present").outcome == (RULE_OUTCOME_PASS)
     ev = _outcome(_html_facts(author=""), "aeo.author_present")
     assert ev.outcome == RULE_OUTCOME_FAIL
     assert ev.evidence["present"] is False
@@ -846,14 +840,20 @@ def test_author_present():
 def test_date_present():
     assert _outcome(_html_facts(), "aeo.date_present").outcome == RULE_OUTCOME_PASS
     # Either date alone suffices.
-    assert _outcome(
-        _html_facts(dates={"published": "2026-01-15", "modified": ""}),
-        "aeo.date_present",
-    ).outcome == RULE_OUTCOME_PASS
-    assert _outcome(
-        _html_facts(dates={"published": "", "modified": "2026-06-01"}),
-        "aeo.date_present",
-    ).outcome == RULE_OUTCOME_PASS
+    assert (
+        _outcome(
+            _html_facts(dates={"published": "2026-01-15", "modified": ""}),
+            "aeo.date_present",
+        ).outcome
+        == RULE_OUTCOME_PASS
+    )
+    assert (
+        _outcome(
+            _html_facts(dates={"published": "", "modified": "2026-06-01"}),
+            "aeo.date_present",
+        ).outcome
+        == RULE_OUTCOME_PASS
+    )
     ev = _outcome(
         _html_facts(dates={"published": "", "modified": ""}), "aeo.date_present"
     )
@@ -867,9 +867,10 @@ def test_outbound_citations():
         RULE_OUTCOME_PASS
     )
     # No outbound domains at all -> fail.
-    assert _outcome(
-        _html_facts(outbound_domains=[]), "aeo.outbound_citations"
-    ).outcome == RULE_OUTCOME_FAIL
+    assert (
+        _outcome(_html_facts(outbound_domains=[]), "aeo.outbound_citations").outcome
+        == RULE_OUTCOME_FAIL
+    )
     # Social-only outbound links (incl. subdomains) do not count as citations.
     ev = _outcome(
         _html_facts(outbound_domains=["twitter.com", "m.facebook.com"]),
@@ -905,9 +906,10 @@ def test_organization_identity():
     assert ev.outcome == RULE_OUTCOME_FAIL
     assert ev.evidence["has_organization"] is False
     # Not applicable off the homepage.
-    assert _outcome(
-        _html_facts(page_type="article"), "aeo.organization_identity"
-    ).outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert (
+        _outcome(_html_facts(page_type="article"), "aeo.organization_identity").outcome
+        == RULE_OUTCOME_NOT_APPLICABLE
+    )
 
 
 # --- v2 P2: extractability rules ---------------------------------------------
@@ -915,17 +917,16 @@ def test_organization_identity():
 
 def test_answer_first():
     assert _outcome(_html_facts(), "aeo.answer_first").outcome == RULE_OUTCOME_PASS
-    short = _outcome(
-        _html_facts(first_answer_text="Too short."), "aeo.answer_first"
-    )
+    short = _outcome(_html_facts(first_answer_text="Too short."), "aeo.answer_first")
     assert short.outcome == RULE_OUTCOME_FAIL
     assert short.evidence["answer_word_count"] == 2
     assert short.evidence["minimum_words"] == ANSWER_FIRST_MIN_WORDS
     # Exactly at the minimum passes.
     exactly = " ".join(f"w{i}" for i in range(ANSWER_FIRST_MIN_WORDS))
-    assert _outcome(
-        _html_facts(first_answer_text=exactly), "aeo.answer_first"
-    ).outcome == RULE_OUTCOME_PASS
+    assert (
+        _outcome(_html_facts(first_answer_text=exactly), "aeo.answer_first").outcome
+        == RULE_OUTCOME_PASS
+    )
 
 
 def test_answer_first_not_applicable_without_headings():
@@ -981,10 +982,13 @@ def test_no_expand_gating():
         RULE_OUTCOME_PASS
     )
     # The boundary is inclusive: exactly at the max ratio still passes.
-    assert _outcome(
-        _html_facts(expand_gated_ratio=EXPAND_GATED_MAX_RATIO),
-        "aeo.no_expand_gating",
-    ).outcome == RULE_OUTCOME_PASS
+    assert (
+        _outcome(
+            _html_facts(expand_gated_ratio=EXPAND_GATED_MAX_RATIO),
+            "aeo.no_expand_gating",
+        ).outcome
+        == RULE_OUTCOME_PASS
+    )
     ev = _outcome(
         _html_facts(expand_gated_ratio=EXPAND_GATED_MAX_RATIO + 0.1),
         "aeo.no_expand_gating",

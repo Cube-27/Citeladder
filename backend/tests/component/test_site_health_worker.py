@@ -24,6 +24,7 @@ import gzip
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -315,7 +316,7 @@ async def test_starter_discover_admits_children_and_completes(
         assert "https://example.com/" in urls
         assert "https://example.com/a" in urls
         assert "https://example.com/b" in urls
-        assert not any("external.org" in u for u in urls)
+        assert not any(urlsplit(u).hostname == "external.org" for u in urls)
 
         # Host populated on the identity rows (not blank).
         hosts = (
@@ -2806,9 +2807,7 @@ async def test_discover_robots_denied_short_circuits_and_records_site_facts(
         robots = site_facts.get("robots") or {}
         assert robots.get("fetched") is True
         assert robots.get("status_code") == 200
-        assert robots.get("ai_crawlers") == {
-            bot: "block" for bot in AI_CRAWLER_BOTS
-        }
+        assert robots.get("ai_crawlers") == {bot: "block" for bot in AI_CRAWLER_BOTS}
         llms = site_facts.get("llms_txt") or {}
         assert llms.get("fetched") is False
         assert llms.get("present") is False
@@ -2975,8 +2974,7 @@ async def test_link_check_honors_robots_and_skips_denied_targets(
         b"</body></html>"
     )
     plain_html = (
-        b"<html><head><title>Plain</title></head>"
-        b"<body><p>plain</p></body></html>"
+        b"<html><head><title>Plain</title></head><body><p>plain</p></body></html>"
     )
     pages = {
         "/robots.txt": b"User-agent: *\nDisallow: /blocked-link\n",
@@ -2985,9 +2983,7 @@ async def test_link_check_honors_robots_and_skips_denied_targets(
         "/ok-link": b"<html><head><title>OK</title></head><body>ok</body></html>",
     }
     requests: list[tuple[str, str]] = []
-    worker = _worker(
-        session_factory, pages, owner="p2-linkrobots", requests=requests
-    )
+    worker = _worker(session_factory, pages, owner="p2-linkrobots", requests=requests)
     await worker.run_until_idle()
 
     # The denied target was never probed; the allowed one was (HEAD first).
@@ -3015,9 +3011,9 @@ async def test_link_check_honors_robots_and_skips_denied_targets(
         assert by_url[
             "https://example.com/blocked-link"
         ].evidence_fingerprint.startswith("policy_skipped:")
-        assert by_url[
-            "https://example.com/ok-link"
-        ].evidence_fingerprint.startswith("reachable:")
+        assert by_url["https://example.com/ok-link"].evidence_fingerprint.startswith(
+            "reachable:"
+        )
 
         # Finalize counted only the probed link; the policy-skipped one is
         # neither checked nor broken.
@@ -3114,9 +3110,7 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
             **{bot: "allow" for bot in AI_CRAWLER_BOTS},
             "GPTBot": "block",
         }
-        assert robots_facts.get("sitemaps") == [
-            "https://example.com/sitemap.xml"
-        ]
+        assert robots_facts.get("sitemaps") == ["https://example.com/sitemap.xml"]
         llms = site_facts.get("llms_txt") or {}
         assert llms.get("fetched") is True
         assert llms.get("status_code") == 200
@@ -3127,19 +3121,16 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
 
         # Sitemap URLs admitted at depth 1; the out-of-scope one filtered.
         urls = (
-            (
-                await session.execute(
-                    select(SiteUrl.normalized_url, SiteUrl.depth).where(
-                        SiteUrl.project_id == seed.project_id
-                    )
+            await session.execute(
+                select(SiteUrl.normalized_url, SiteUrl.depth).where(
+                    SiteUrl.project_id == seed.project_id
                 )
             )
-            .all()
-        )
+        ).all()
         by_url = {row[0]: row[1] for row in urls}
         assert by_url.get("https://example.com/sm-1") == 1
         assert by_url.get("https://example.com/sm-2") == 1
-        assert not any("external.org" in url for url in by_url)
+        assert not any(urlsplit(url).hostname == "external.org" for url in by_url)
 
         # /sm-2 (never linked) carries the sitemap provenance observation.
         sm2_obs = await session.scalar(
@@ -3198,9 +3189,7 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         issues = (
             (
                 await session.execute(
-                    select(SiteIssue.rule_id).where(
-                        SiteIssue.crawl_id == seed.crawl_id
-                    )
+                    select(SiteIssue.rule_id).where(SiteIssue.crawl_id == seed.crawl_id)
                 )
             )
             .scalars()
@@ -3243,9 +3232,7 @@ async def test_finalize_pass_broken_link_and_hreflang_conflict_end_to_end(
         b'<a href="https://example.com/broken">broken</a>'
         b"</body></html>"
     )
-    fr_html = (
-        b"<html><head><title>FR</title></head><body><p>bonjour</p></body></html>"
-    )
+    fr_html = b"<html><head><title>FR</title></head><body><p>bonjour</p></body></html>"
     pages = {"/rich": root_html, "/fr": fr_html}  # /broken -> 404
     worker = _worker(session_factory, pages, owner="p2-hreflang")
     await worker.run_until_idle()
@@ -3258,12 +3245,16 @@ async def test_finalize_pass_broken_link_and_hreflang_conflict_end_to_end(
 
         async def _evals(analysis_id):
             rows = (
-                await session.execute(
-                    select(SiteRuleEvaluation).where(
-                        SiteRuleEvaluation.analysis_id == analysis_id
+                (
+                    await session.execute(
+                        select(SiteRuleEvaluation).where(
+                            SiteRuleEvaluation.analysis_id == analysis_id
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             return {row.rule_id: row for row in rows}
 
         root_evals = await _evals(root_analysis.id)
@@ -3277,9 +3268,7 @@ async def test_finalize_pass_broken_link_and_hreflang_conflict_end_to_end(
         assert hreflang.outcome == RULE_OUTCOME_FAIL
         assert hreflang.evidence["alternate_count"] == 1
         assert hreflang.evidence["checked_count"] == 1
-        assert hreflang.evidence["missing_return_tags"] == [
-            "https://example.com/fr"
-        ]
+        assert hreflang.evidence["missing_return_tags"] == ["https://example.com/fr"]
 
         # The counterpart page's own finalize rows are clean N/As.
         fr_evals = await _evals(fr_analysis.id)
@@ -3294,9 +3283,7 @@ async def test_finalize_pass_broken_link_and_hreflang_conflict_end_to_end(
         issues = (
             (
                 await session.execute(
-                    select(SiteIssue.rule_id).where(
-                        SiteIssue.crawl_id == seed.crawl_id
-                    )
+                    select(SiteIssue.rule_id).where(SiteIssue.crawl_id == seed.crawl_id)
                 )
             )
             .scalars()
@@ -3380,9 +3367,7 @@ async def test_analyze_injects_site_facts_on_root_analysis_only(
         assert llms.outcome == RULE_OUTCOME_PASS
 
         # Non-root: the same rules are N/A (no injection).
-        other_stance = await _eval(
-            "technical.ai_crawler_access", other_analysis.id
-        )
+        other_stance = await _eval("technical.ai_crawler_access", other_analysis.id)
         assert other_stance is not None
         assert other_stance.outcome == RULE_OUTCOME_NOT_APPLICABLE
         other_llms = await _eval("aeo.llms_txt_present", other_analysis.id)

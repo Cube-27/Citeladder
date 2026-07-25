@@ -289,9 +289,7 @@ def aggregate_by_page_type(
             "technical_score": _mean(
                 [r.technical_score for r in rows if r.technical_score is not None]
             ),
-            "aeo_score": _mean(
-                [r.aeo_score for r in rows if r.aeo_score is not None]
-            ),
+            "aeo_score": _mean([r.aeo_score for r in rows if r.aeo_score is not None]),
             "overall_score": _mean(
                 [r.overall_score for r in rows if r.overall_score is not None]
             ),
