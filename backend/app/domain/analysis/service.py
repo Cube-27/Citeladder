@@ -14,6 +14,7 @@ from typing import overload
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import commerce as commerce_config
 from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     VISIBILITY_EVIDENCE_MAX_LIMIT,
@@ -26,6 +27,7 @@ from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
 )
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.domain.analysis.schemas import (
     CitationEvidence,
@@ -137,6 +139,23 @@ class TrendQueryError(ValueError):
 
     The API layer maps this to HTTP 422; it is never a not-found condition.
     """
+
+
+def validate_shopping_surface(surface: str) -> str:
+    """Validate a requested shopping surface against the configured gate.
+
+    Returns ``surface`` unchanged when it is the measurement identity or a
+    configured ``SHOPPING_SURFACES`` key; raises ``TrendQueryError`` (HTTP
+    422) otherwise. Reads the commerce gate at CALL time so tests can
+    monkeypatch ``app.core.config.commerce.SHOPPING_SURFACES`` with a
+    fixture surface while the shipped gate stays empty.
+    """
+    if (
+        surface == commerce_config.SHOPPING_SURFACE_MEASUREMENT
+        or surface in commerce_config.SHOPPING_SURFACES
+    ):
+        return surface
+    raise TrendQueryError(f"Unknown shopping surface: {surface!r}")
 
 
 async def get_visibility_trends(
@@ -265,6 +284,11 @@ async def get_visibility_evidence(
             Audit.workspace_id == workspace_id,
             Audit.project_id == project_id,
             Audit.status.in_(_DASHBOARD_STATUSES),
+            # Brand evidence is MEASUREMENT-ONLY (§7.1): filter BOTH the
+            # task slot and the analysis row (defense-in-depth) so probe
+            # rows never surface in brand evidence.
+            AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT,
+            ResponseAnalysis.shopping_surface == SHOPPING_SURFACE_MEASUREMENT,
         )
     )
     if audit_id is not None:
@@ -403,6 +427,9 @@ async def load_export_bundle(
                 select(AuditTask)
                 .where(AuditTask.audit_id == audit_id)
                 .where(AuditTask.workspace_id == workspace_id)
+                # Brand exports are MEASUREMENT-ONLY (§7.1): probe rows are
+                # never exported with brand executions.
+                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
                 .order_by(AuditTask.prompt_index.asc(), AuditTask.repetition.asc())
             )
         ).all()

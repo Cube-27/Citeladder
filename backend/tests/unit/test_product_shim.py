@@ -35,6 +35,7 @@ def _sample_project() -> Project:
             price=Decimal("2499.00"),
             currency="USD",
             url="https://voltaic.example/products/voltcity-500",
+            attributes={"category": "footwear", "brand": "Voltaic", "gtin": "0123"},
         ),
         Product(
             id=uuid.uuid4(),
@@ -77,17 +78,24 @@ def test_shim_produces_expected_dict_shape() -> None:
         "price": 2499.00,
         "currency": "USD",
         "url": "https://voltaic.example/products/voltcity-500",
+        # The complete attribute bag freezes verbatim (category-keyed
+        # attribute dimensions read this audit-frozen copy).
+        "attributes": {"category": "footwear", "brand": "Voltaic", "gtin": "0123"},
     }
     # Prices coerce to floats, ids to strings.
     assert isinstance(own["price"], float)
     assert isinstance(own["id"], str)
     # The shim does NOT fold name/sku/variant into aliases (scorer's job).
     assert own["aliases"] == ["VoltCity 500"]
-    # Missing price/currency stay null/empty (never fabricated).
+    # The frozen bag is a copy: mutating the live row never alters it.
+    assert own["attributes"] is not project.products[0].attributes
+    # Missing price/currency stay null/empty (never fabricated); a missing
+    # attribute bag freezes as {}.
     assert imported["price"] is None
     assert imported["currency"] == ""
     assert imported["aliases"] == []
     assert imported["variants"] == []
+    assert imported["attributes"] == {}
 
     competitor_product = identity["competitor_products"][0]
     assert competitor_product == {

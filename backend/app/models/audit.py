@@ -34,6 +34,7 @@ from app.core.config.audits import (
     AUDIT_STATUS_DRAFT,
     TASK_STATUS_QUEUED,
 )
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.database import Base
 from app.models.constants import (
     CASCADE_ALL_DELETE_ORPHAN,
@@ -118,6 +119,15 @@ class Audit(Base):
         cascade=CASCADE_ALL_DELETE_ORPHAN,
         passive_deletes=True,
         order_by="AuditEngineSnapshot.created_at",
+    )
+    shopping_surface_snapshots: Mapped[list[AuditShoppingSurfaceSnapshot]] = (
+        relationship(
+            "AuditShoppingSurfaceSnapshot",
+            back_populates="audit",
+            cascade=CASCADE_ALL_DELETE_ORPHAN,
+            passive_deletes=True,
+            order_by="AuditShoppingSurfaceSnapshot.created_at",
+        )
     )
     tasks: Mapped[list[AuditTask]] = relationship(
         "AuditTask",
@@ -216,6 +226,51 @@ class AuditEngineSnapshot(Base):
     audit: Mapped[Audit] = relationship("Audit", back_populates="engine_snapshots")
 
 
+class AuditShoppingSurfaceSnapshot(Base):
+    """Immutable frozen copy of one shopping-surface route (§7.1, D2).
+
+    Sibling of ``AuditEngineSnapshot`` (which is NOT widened): one row per
+    configured shopping surface, recording the surface id plus its frozen
+    provenance triple + connection. The planner creates no rows while the
+    ``SHOPPING_SURFACES`` gate is empty (M2a).
+    """
+
+    __tablename__ = "audit_shopping_surface_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "audit_id",
+            "shopping_surface",
+            name="uq_audit_shopping_surface_snapshot_surface",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(FK_AUDITS_ID, ondelete="CASCADE"),
+        index=True,
+    )
+    shopping_surface: Mapped[str] = mapped_column(String(32))
+    logical_engine: Mapped[str] = mapped_column(String(32))
+    transport_provider: Mapped[str] = mapped_column(String(32))
+    transport_model: Mapped[str] = mapped_column(String(255))
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    base_url: Mapped[str] = mapped_column(String(1024), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+    audit: Mapped[Audit] = relationship(
+        "Audit", back_populates="shopping_surface_snapshots"
+    )
+
+
 class AuditTask(Base):
     """One queue+lease row: a single (prompt x engine x repetition) slot.
 
@@ -223,7 +278,8 @@ class AuditTask(Base):
     ``lease_expires_at`` + ``heartbeat_at``) plus ``attempt_count`` /
     ``max_attempts`` implement the Postgres queue (invariant 8). Double-claim is
     prevented by ``SKIP LOCKED`` plus the unique ``idempotency_key`` and the
-    unique ``(audit_id, prompt_index, repetition, logical_engine)`` slot key.
+    unique ``(audit_id, prompt_index, repetition, logical_engine,
+    shopping_surface)`` slot key.
     Also serves as the per-execution row (answer/citations/score/snapshot).
     """
 
@@ -235,6 +291,7 @@ class AuditTask(Base):
             "prompt_index",
             "repetition",
             "logical_engine",
+            "shopping_surface",
             name="uq_audit_task_slot",
         ),
     )
@@ -268,6 +325,12 @@ class AuditTask(Base):
     logical_engine: Mapped[str] = mapped_column(String(32))
     transport_provider: Mapped[str] = mapped_column(String(32))
     transport_model: Mapped[str] = mapped_column(String(255))
+    # Shopping-surface slot identity (§7.1): "" = answer-engine-API
+    # measurement. The queue itself never filters on it; brand-metric
+    # queries filter to measurement.
+    shopping_surface: Mapped[str] = mapped_column(
+        String(32), default=SHOPPING_SURFACE_MEASUREMENT
+    )
     # Frozen prompt text (denormalized from the snapshot for the worker).
     prompt_text: Mapped[str] = mapped_column(Text, default="")
     # Frozen route resolution for this slot (never contains the key).

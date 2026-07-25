@@ -61,14 +61,23 @@ async def test_create_audit_enqueues_one_task_per_slot(
         )
         assert len(tasks) == 6
         assert {t.status for t in tasks} == {TASK_STATUS_QUEUED}
-        # Idempotency keys are unique + stable-shaped.
+        # Every planned task is a measurement-surface slot (§7.1).
+        assert {t.shopping_surface for t in tasks} == {""}
+        # Idempotency keys are unique + stable-shaped; the trailing empty
+        # segment reserves the shopping-surface identity.
         keys = {t.idempotency_key for t in tasks}
         assert len(keys) == 6
         for task in tasks:
             assert task.idempotency_key == (
                 f"{audit.id}:{task.prompt_index}:{task.repetition}:"
-                f"{task.logical_engine}"
+                f"{task.logical_engine}:{task.shopping_surface}"
             )
+            assert task.idempotency_key.endswith(":")
+
+        # The disabled surface gate freezes as an empty list; no surface
+        # snapshot rows exist.
+        assert audit.configuration["shopping_surfaces"] == []
+        assert audit.shopping_surface_snapshots == []
 
         # Snapshots frozen.
         prompts = (
@@ -105,7 +114,7 @@ async def test_fixed_seed_reproduces_slot_order(
     async with session_factory() as session:
         audit_a = await _create(session, seed_a, seed_value="99", reps=3)
         order_a = [
-            (t.prompt_index, t.repetition, t.logical_engine)
+            (t.prompt_index, t.repetition, t.logical_engine, t.shopping_surface)
             for t in sorted(
                 await list_tasks(
                     session,
@@ -118,7 +127,7 @@ async def test_fixed_seed_reproduces_slot_order(
     async with session_factory() as session:
         audit_b = await _create(session, seed_b, seed_value="99", reps=3)
         order_b = [
-            (t.prompt_index, t.repetition, t.logical_engine)
+            (t.prompt_index, t.repetition, t.logical_engine, t.shopping_surface)
             for t in sorted(
                 await list_tasks(
                     session,
@@ -329,6 +338,7 @@ async def test_create_audit_freezes_product_catalog(
                 price=Decimal("2499.00"),
                 currency="USD",
                 url="https://acme.com/p/vc500",
+                attributes={"category": "footwear", "brand": "Voltaic"},
             )
         )
         session.add(
@@ -352,12 +362,18 @@ async def test_create_audit_freezes_product_catalog(
         assert frozen["price"] == 2499.0
         assert frozen["currency"] == "USD"
         assert frozen["id"]
+        # The complete attribute bag freezes with the product identity.
+        assert frozen["attributes"] == {"category": "footwear", "brand": "Voltaic"}
         competitor_products = configuration["competitor_products"]
         assert len(competitor_products) == 1
         assert competitor_products[0]["name"] == "Globex CityCommuter 450"
         assert competitor_products[0]["competitor_name"] == "Globex"
         # The brand scoring identity is untouched by the catalog freeze.
         assert configuration["brand_name"] == "Acme Corp"
+        # The disabled shopping-surface gate freezes as an empty list and
+        # creates no surface snapshot rows.
+        assert configuration["shopping_surfaces"] == []
+        assert audit.shopping_surface_snapshots == []
 
     # Later catalog edits never alter the frozen audit (deterministic
     # re-scoring, invariant 9).
@@ -390,3 +406,4 @@ async def test_create_audit_empty_catalog_freezes_empty_lists(
         audit = await _create(session, seed, seed_value="7", reps=1)
         assert audit.configuration["products"] == []
         assert audit.configuration["competitor_products"] == []
+        assert audit.configuration["shopping_surfaces"] == []

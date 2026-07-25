@@ -17,8 +17,8 @@ from typing import Final
 # Stamped onto ``ProductResponseAnalysis`` / ``ProductMention`` /
 # ``ProductMetricSnapshot``. Separate from the brand-level
 # ``config/analysis.py`` versions — the product pass is a sibling analyzer.
-PRODUCT_ANALYZER_VERSION: Final = "product-analysis-1"
-PRODUCT_SCORING_RULE_VERSION: Final = "product-scoring-v1"
+PRODUCT_ANALYZER_VERSION: Final = "product-analysis-2"
+PRODUCT_SCORING_RULE_VERSION: Final = "product-scoring-v2"
 
 # --- Catalog origin vocabulary --------------------------------------------
 PRODUCT_ORIGIN_MANUAL: Final = "manual"

@@ -29,9 +29,10 @@ from app.core.config.products import (
     PRODUCT_ANALYZER_VERSION,
     PRODUCT_SCORING_RULE_VERSION,
 )
-from app.models.audit import Audit, AuditTask
+from app.models.audit import Audit, AuditTask, RawResponseArtifact
 from app.models.product import (
     CompetitorProduct,
+    MerchantMention,
     Product,
     ProductMention,
     ProductMetricSnapshot,
@@ -106,14 +107,20 @@ async def analyze_task_products(
 ) -> ProductResponseAnalysis | None:
     """Score one completed execution's product signals and persist them.
 
-    Deterministic + idempotent: an existing analysis for this task is
-    returned unchanged; a task with no answer text still yields an analysis
-    row (all-false signals) so provenance is complete. No-op (returns None)
-    when the frozen catalog is empty. Caller owns the commit.
+    Deterministic + idempotent per (task, current analyzer/rule version
+    pair): an existing CURRENT-version analysis for this task is returned
+    unchanged, while a persisted v1 row never blocks a v2 re-score (D1). A
+    task with no answer text still yields an analysis row (all-false
+    signals) so provenance is complete. No-op (returns None) when the
+    frozen catalog is empty. Caller owns the commit.
     """
     existing = await session.scalar(
         select(ProductResponseAnalysis).where(
-            ProductResponseAnalysis.task_id == task.id
+            ProductResponseAnalysis.task_id == task.id,
+            ProductResponseAnalysis.product_analyzer_version
+            == PRODUCT_ANALYZER_VERSION,
+            ProductResponseAnalysis.product_scoring_rule_version
+            == PRODUCT_SCORING_RULE_VERSION,
         )
     )
     if existing is not None:
@@ -121,7 +128,15 @@ async def analyze_task_products(
     if not config.products and not config.competitor_products:
         return None
 
-    score = score_product_execution(answer_text=task.answer_text or "", config=config)
+    # Score the PERSISTED artifact text (invariant 7); ``task.answer_text``
+    # is only the fallback for legacy fixture rows with no artifact.
+    answer_text = task.answer_text or ""
+    if task.result_artifact_id is not None:
+        artifact = await session.get(RawResponseArtifact, task.result_artifact_id)
+        if artifact is not None:
+            answer_text = artifact.answer_text or ""
+
+    score = score_product_execution(answer_text=answer_text, config=config)
     analysis = ProductResponseAnalysis(
         workspace_id=task.workspace_id,
         audit_id=task.audit_id,
@@ -134,6 +149,7 @@ async def analyze_task_products(
         transport_model=task.transport_model,
         prompt_index=task.prompt_index,
         repetition=task.repetition,
+        shopping_surface=task.shopping_surface,
         own_product_mention_count=score["own_product_mention_count"],
         competitor_product_mention_count=score["competitor_product_mention_count"],
         products_with_price_match=score["products_with_price_match"],
@@ -153,35 +169,53 @@ async def analyze_task_products(
         if not signals.get("mentioned"):
             continue
         entry_id = str(signals["product_id"])
+        product_id = uuid.UUID(entry_id) if entry_id in live_products else None
         session.add(
             _mention_row(
                 task=task,
                 analysis=analysis,
                 signals=signals,
-                product_id=uuid.UUID(entry_id) if entry_id in live_products else None,
+                product_id=product_id,
                 competitor_product_id=None,
                 matched_name=entry_names.get(entry_id, ""),
                 matched_sku=entry_skus.get(entry_id, ""),
             )
         )
+        for row in _merchant_rows(
+            task=task,
+            analysis=analysis,
+            signals=signals,
+            product_id=product_id,
+            competitor_product_id=None,
+        ):
+            session.add(row)
     competitor_names = {entry.id: entry.name for entry in config.competitor_products}
     for signals in score["competitor_products"]:
         if not signals.get("mentioned"):
             continue
         entry_id = str(signals["competitor_product_id"])
+        competitor_product_id = (
+            uuid.UUID(entry_id) if entry_id in live_competitors else None
+        )
         session.add(
             _mention_row(
                 task=task,
                 analysis=analysis,
                 signals=signals,
                 product_id=None,
-                competitor_product_id=(
-                    uuid.UUID(entry_id) if entry_id in live_competitors else None
-                ),
+                competitor_product_id=competitor_product_id,
                 matched_name=competitor_names.get(entry_id, ""),
                 matched_sku="",
             )
         )
+        for row in _merchant_rows(
+            task=task,
+            analysis=analysis,
+            signals=signals,
+            product_id=None,
+            competitor_product_id=competitor_product_id,
+        ):
+            session.add(row)
     return analysis
 
 
@@ -211,7 +245,115 @@ def _mention_row(
         price_value=signals.get("price_value"),
         price_currency=str(signals.get("price_currency") or "")[:3],
         price_matches_catalog=signals.get("price_matches_catalog"),
+        price_relation=signals.get("price_relation"),
+        # Persist only the pinned {dimension, group, text, offset} shape.
+        attribute_mentions=[
+            {
+                "dimension": str(item.get("dimension") or ""),
+                "group": str(item.get("group") or ""),
+                "text": str(item.get("text") or ""),
+                "offset": item.get("offset"),
+            }
+            for item in signals.get("attribute_mentions") or []
+        ],
     )
+
+
+def _merchant_rows(
+    *,
+    task: AuditTask,
+    analysis: ProductResponseAnalysis,
+    signals: dict,
+    product_id: uuid.UUID | None,
+    competitor_product_id: uuid.UUID | None,
+) -> list[MerchantMention]:
+    """One ``MerchantMention`` per sanitized destination in the signal.
+
+    Same analysis/artifact/version provenance and the same nullable live
+    catalog FK behavior as ``ProductMention`` (exactly one target FK set).
+    """
+    rows: list[MerchantMention] = []
+    for destination in signals.get("merchant_mentions") or []:
+        rows.append(
+            MerchantMention(
+                workspace_id=task.workspace_id,
+                audit_id=task.audit_id,
+                analysis_id=analysis.id,
+                artifact_id=task.result_artifact_id,
+                product_id=product_id,
+                competitor_product_id=competitor_product_id,
+                merchant_name=str(destination.get("merchant_name") or "")[:255],
+                merchant_domain=str(destination.get("merchant_domain") or "")[:255],
+                merchant_kind=str(destination.get("merchant_kind") or "")[:16],
+                destination_url=str(destination.get("destination_url") or ""),
+                price_text=str(destination.get("price_text") or "")[:64],
+                price_value=destination.get("price_value"),
+                price_currency=str(destination.get("price_currency") or "")[:3],
+                product_analyzer_version=PRODUCT_ANALYZER_VERSION,
+            )
+        )
+    return rows
+
+
+def _is_current_version(analysis: ProductResponseAnalysis) -> bool:
+    return (
+        analysis.product_analyzer_version == PRODUCT_ANALYZER_VERSION
+        and analysis.product_scoring_rule_version == PRODUCT_SCORING_RULE_VERSION
+    )
+
+
+def _select_aggregate_analyses(
+    analyses: list[ProductResponseAnalysis],
+) -> list[ProductResponseAnalysis]:
+    """Select ONE persisted analysis per task for the v2 aggregate.
+
+    Mixed-version input rule: prefer the exact current analyzer/rule pair;
+    otherwise fall back to the task's legacy (v1) row. All rows are
+    PRESERVED — this only chooses the aggregation input.
+    """
+    by_task: dict[uuid.UUID, list[ProductResponseAnalysis]] = {}
+    for analysis in analyses:
+        by_task.setdefault(analysis.task_id, []).append(analysis)
+    selected: list[ProductResponseAnalysis] = []
+    for task_analyses in by_task.values():
+        current = [
+            analysis for analysis in task_analyses if _is_current_version(analysis)
+        ]
+        if current:
+            selected.append(current[0])
+        else:
+            selected.append(
+                sorted(
+                    task_analyses,
+                    key=lambda analysis: (analysis.created_at, str(analysis.id)),
+                )[0]
+            )
+    return selected
+
+
+def _aggregate_by(
+    analyses: list[ProductResponseAnalysis],
+    config: ProductScoringConfig,
+    *,
+    surface: str | None = None,
+) -> dict[str, dict[str, dict]]:
+    """Group persisted analyses by engine (within ``surface`` when given)."""
+    scoped = [
+        analysis
+        for analysis in analyses
+        if surface is None or analysis.shopping_surface == surface
+    ]
+    grouped: dict[str, dict[str, dict]] = {}
+    for engine in sorted({analysis.logical_engine for analysis in scoped}):
+        grouped[engine] = aggregate_product_run(
+            [
+                analysis.score or {}
+                for analysis in scoped
+                if analysis.logical_engine == engine
+            ],
+            config,
+        )
+    return grouped
 
 
 async def finalize_audit_product_analysis(
@@ -219,11 +361,17 @@ async def finalize_audit_product_analysis(
 ) -> list[ProductMetricSnapshot]:
     """Upsert the per-(audit, entry) ``ProductMetricSnapshot`` rows.
 
-    Defensively ensures every succeeded task has a product analysis (mirror
-    ``finalize_audit_analysis``), then aggregates from the PERSISTED analyses
-    only (invariant 7) and stamps the exact evidence set per snapshot
-    (invariant 4). Idempotent. Caller owns the commit. Returns [] when the
-    frozen catalog is empty (product analysis disabled for the audit).
+    Defensively ensures every succeeded task has a CURRENT-version product
+    analysis (mirror ``finalize_audit_analysis``; the succeeded-task query
+    is deliberately unfiltered by surface — product analysis covers
+    measurement and future probe rows), then aggregates from the SELECTED
+    persisted analyses only (invariant 7): overall, per-engine, and
+    per-surface (with nested per-engine) breakdowns. Only the
+    current-version snapshot keyed by (entry_id, analyzer/rule version) is
+    created/updated — a v1 snapshot is never mutated. Stamps the exact
+    selected evidence set per snapshot (invariant 4). Idempotent. Caller
+    owns the commit. Returns [] when the frozen catalog is empty (product
+    analysis disabled for the audit).
     """
     config = build_product_scoring_config(audit.configuration)
     if not config.products and not config.competitor_products:
@@ -242,32 +390,40 @@ async def finalize_audit_product_analysis(
         await analyze_task_products(session, task=task, config=config)
     await session.flush()
 
-    analyses = list(
-        (
-            await session.scalars(
-                select(ProductResponseAnalysis).where(
-                    ProductResponseAnalysis.audit_id == audit.id
+    analyses = _select_aggregate_analyses(
+        list(
+            (
+                await session.scalars(
+                    select(ProductResponseAnalysis).where(
+                        ProductResponseAnalysis.audit_id == audit.id
+                    )
                 )
-            )
-        ).all()
+            ).all()
+        )
     )
     aggregates = aggregate_product_run(
         [analysis.score or {} for analysis in analyses], config
     )
 
     # Per-engine breakdown (mirrors ``aggregate_run`` per-engine pattern):
-    # group the persisted analyses by engine and re-aggregate each group.
-    per_engine: dict[str, dict[str, dict]] = {}
-    engines = sorted({analysis.logical_engine for analysis in analyses})
-    for engine in engines:
-        per_engine[engine] = aggregate_product_run(
-            [
-                analysis.score or {}
-                for analysis in analyses
-                if analysis.logical_engine == engine
-            ],
-            config,
-        )
+    # group the selected persisted analyses by engine and re-aggregate.
+    per_engine = _aggregate_by(analyses, config)
+
+    # Per-surface breakdown: the same aggregate shape per surface plus a
+    # nested per-engine slice within that surface.
+    surfaces = sorted({analysis.shopping_surface for analysis in analyses})
+    per_surface = {surface: aggregate_product_run(
+        [
+            analysis.score or {}
+            for analysis in analyses
+            if analysis.shopping_surface == surface
+        ],
+        config,
+    ) for surface in surfaces}
+    per_surface_engine = {
+        surface: _aggregate_by(analyses, config, surface=surface)
+        for surface in surfaces
+    }
 
     existing_snapshots = list(
         (
@@ -281,6 +437,7 @@ async def finalize_audit_product_analysis(
     # Key on the frozen entry id, falling back to the live FKs. A catalog
     # delete SET NULLs both FK columns, so keying on them alone would fail to
     # match the existing row on a re-finalize and insert a duplicate snapshot.
+    # Only CURRENT-version rows are eligible — v1 snapshots are immutable.
     by_entry = {
         str(
             (snapshot.metrics or {}).get("entry_id")
@@ -288,6 +445,8 @@ async def finalize_audit_product_analysis(
             or snapshot.competitor_product_id
         ): snapshot
         for snapshot in existing_snapshots
+        if snapshot.product_analyzer_version == PRODUCT_ANALYZER_VERSION
+        and snapshot.product_scoring_rule_version == PRODUCT_SCORING_RULE_VERSION
     }
 
     live_products, live_competitors = await _live_entry_ids(session, config)
@@ -295,8 +454,8 @@ async def finalize_audit_product_analysis(
     snapshots: list[ProductMetricSnapshot] = []
     for entry_id, aggregate in aggregates.items():
         is_product = aggregate["kind"] == "product"
-        # The exact evidence set for this entry (invariant 4): the persisted
-        # analyses that mention it, and their raw artifacts.
+        # The exact evidence set for this entry (invariant 4): the SELECTED
+        # persisted analyses that mention it, and their raw artifacts.
         evidence = [
             analysis
             for analysis in analyses
@@ -318,6 +477,8 @@ async def finalize_audit_product_analysis(
             is_live=entry_id in (live_products if is_product else live_competitors),
             evidence=evidence,
             per_engine=per_engine,
+            per_surface=per_surface,
+            per_surface_engine=per_surface_engine,
         )
         snapshots.append(snapshot)
     return snapshots
@@ -332,6 +493,8 @@ def _apply_snapshot_fields(
     is_live: bool,
     evidence: list[ProductResponseAnalysis],
     per_engine: dict[str, dict[str, dict]],
+    per_surface: dict[str, dict[str, dict]],
+    per_surface_engine: dict[str, dict[str, dict[str, dict]]],
 ) -> None:
     """Write the aggregate onto a (new or existing) snapshot row."""
     # Same live-row guard as the mention rows: never write a FK pointing at a
@@ -347,6 +510,8 @@ def _apply_snapshot_fields(
     snapshot.rank_distribution = aggregate["rank_distribution"]
     snapshot.price_mention_count = int(aggregate["price_mention_count"])
     snapshot.price_accuracy_rate = aggregate["price_accuracy_rate"]
+    snapshot.win_rate = aggregate["win_rate"]
+    snapshot.price_mismatch_rate = aggregate["price_mismatch_rate"]
     snapshot.metrics = {
         # Frozen entry id: survives the SET NULL a catalog delete triggers on
         # the live FKs, so projections can still key the snapshot.
@@ -355,6 +520,20 @@ def _apply_snapshot_fields(
         "per_engine": {
             engine: engine_aggregates.get(entry_id)
             for engine, engine_aggregates in per_engine.items()
+        },
+        # per_surface[surface]: the same aggregate shape plus a nested
+        # per-engine slice (no extra snapshot row per surface).
+        "per_surface": {
+            surface: {
+                **(surface_aggregates.get(entry_id) or {}),
+                "per_engine": {
+                    engine: engine_aggregates.get(entry_id)
+                    for engine, engine_aggregates in per_surface_engine.get(
+                        surface, {}
+                    ).items()
+                },
+            }
+            for surface, surface_aggregates in per_surface.items()
         },
     }
     snapshot.source_analysis_ids = [str(a.id) for a in evidence]

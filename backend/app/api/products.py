@@ -28,12 +28,17 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.products import (
     PRODUCT_EVIDENCE_DEFAULT_LIMIT,
     PRODUCT_EVIDENCE_MAX_LIMIT,
 )
 from app.core.http_errors import raise_not_found
-from app.domain.analysis.service import AnalysisNotFoundError, TrendQueryError
+from app.domain.analysis.service import (
+    AnalysisNotFoundError,
+    TrendQueryError,
+    validate_shopping_surface,
+)
 from app.domain.products.csv_import import ProductCsvError, parse_product_csv
 from app.domain.products.schemas import (
     CompetitorProductInput,
@@ -348,15 +353,18 @@ async def product_visibility_endpoint(
     session: _SessionDep,
     audit_id: Annotated[uuid.UUID | None, Query()] = None,
     engine: Annotated[str | None, Query()] = None,
+    surface: Annotated[str, Query()] = SHOPPING_SURFACE_MEASUREMENT,
 ) -> ProductVisibilityResponse:
     """Selected-audit product dashboard (defaults to the latest product audit)."""
     try:
+        validate_shopping_surface(surface)
         return await get_product_visibility(
             session,
             workspace_id=ctx.workspace_id,
             project_id=project_id,
             audit_id=audit_id,
             engine=engine,
+            surface=surface,
         )
     except AnalysisNotFoundError as exc:
         raise_not_found("Product visibility", cause=exc)
@@ -374,18 +382,21 @@ async def product_evidence_endpoint(
     session: _SessionDep,
     audit_id: Annotated[uuid.UUID | None, Query()] = None,
     engine: Annotated[str | None, Query()] = None,
+    surface: Annotated[str, Query()] = SHOPPING_SURFACE_MEASUREMENT,
     limit: Annotated[
         int, Query(ge=1, le=PRODUCT_EVIDENCE_MAX_LIMIT)
     ] = PRODUCT_EVIDENCE_DEFAULT_LIMIT,
 ) -> ProductEvidenceResponse:
     """Persisted mention evidence for one product (bounded, newest-first)."""
     try:
+        validate_shopping_surface(surface)
         return await get_product_evidence(
             session,
             workspace_id=ctx.workspace_id,
             product_id=product_id,
             audit_id=audit_id,
             engine=engine,
+            surface=surface,
             limit=limit,
         )
     except ProductNotFoundError as exc:
@@ -402,9 +413,11 @@ async def product_visibility_export_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
     audit_id: Annotated[uuid.UUID | None, Query()] = None,
+    surface: Annotated[str, Query()] = SHOPPING_SURFACE_MEASUREMENT,
 ) -> Response:
     """Download the per-entry product visibility rows as CSV (persisted rows)."""
     try:
+        validate_shopping_surface(surface)
         audit, snapshots = await load_product_visibility_export_bundle(
             session,
             workspace_id=ctx.workspace_id,
@@ -413,7 +426,9 @@ async def product_visibility_export_endpoint(
         )
     except AnalysisNotFoundError as exc:
         raise_not_found("Product visibility", cause=exc)
-    body = product_visibility_csv(audit, snapshots)
+    except TrendQueryError as exc:
+        raise _unprocessable(str(exc)) from exc
+    body = product_visibility_csv(audit, snapshots, surface)
     return Response(
         content=body,
         media_type="text/csv",

@@ -36,6 +36,7 @@ from app.core.config.audits import (
     EVENT_AUDIT_COMPLETED,
     TASK_STATUS_SUCCEEDED,
 )
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.domain.audits.state_events import apply_transition, record_event
 from app.models.analysis import (
     BrandMention,
@@ -116,6 +117,10 @@ async def analyze_task(
         transport_model=task.transport_model,
         prompt_index=task.prompt_index,
         repetition=task.repetition,
+        # Defense-in-depth (§7.1): brand-metric denominators filter on this
+        # column, so even a direct/retry/legacy write path cannot leak a
+        # probe analysis into brand metrics.
+        shopping_surface=task.shopping_surface,
         prompt_class=str(score.get("prompt_class", "")),
         brand_mentioned=bool(score.get("brand_mentioned")),
         brand_first_offset=score.get("brand_first_offset"),
@@ -189,10 +194,16 @@ async def _execution_dicts(
     not lost. Returns
     ``(all_execution_dicts, per_engine_execution_dicts, analyses)``.
     """
+    # Brand denominators are MEASUREMENT-ONLY (§7.1): probe analyses never
+    # enter the overall/per-engine aggregate inputs.
     analyses = list(
         (
             await session.scalars(
-                select(ResponseAnalysis).where(ResponseAnalysis.audit_id == audit_id)
+                select(ResponseAnalysis).where(
+                    ResponseAnalysis.audit_id == audit_id,
+                    ResponseAnalysis.shopping_surface
+                    == SHOPPING_SURFACE_MEASUREMENT,
+                )
             )
         ).all()
     )
@@ -230,7 +241,10 @@ async def _execution_dicts(
     for task_id, provider_metadata in (
         await session.execute(
             select(AuditTask.id, AuditTask.provider_metadata).where(
-                AuditTask.audit_id == audit_id
+                AuditTask.audit_id == audit_id,
+                # Measurement-only: probe usage never enters brand cost/token
+                # aggregation.
+                AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT,
             )
         )
     ).all():
@@ -270,13 +284,17 @@ async def finalize_audit_analysis(
     config = build_scoring_config(audit.configuration)
 
     # Defensively ensure every succeeded execution has a persisted analysis so
-    # the aggregate always matches the per-execution signals.
+    # the aggregate always matches the per-execution signals. Measurement-only
+    # (§7.1): finalize must never (re)create a skipped probe brand analysis.
     succeeded_tasks = list(
         (
             await session.scalars(
                 select(AuditTask)
                 .where(AuditTask.audit_id == audit.id)
                 .where(AuditTask.status == TASK_STATUS_SUCCEEDED)
+                .where(
+                    AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT
+                )
             )
         ).all()
     )

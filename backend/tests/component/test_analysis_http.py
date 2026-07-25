@@ -27,6 +27,7 @@ from app.connectors.answer_engines.contracts import (
     SearchEventResult,
 )
 from app.core.config.audits import AUDIT_STATUS_COMPLETED, audit_settings
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.provider_catalog import ENGINE_GEMINI, TRANSPORT_GOOGLE
 from app.domain.audits.planner import create_audit
 from app.models.analysis import MetricSnapshot
@@ -144,6 +145,9 @@ async def test_endpoints_serve_projections_over_http(
     assert execs.status_code == 200
     exec_rows = execs.json()
     assert exec_rows
+    # Every row carries the shopping-surface slot; the listing defaults to
+    # measurement ("") while the gate is disabled.
+    assert all(row["shopping_surface"] == "" for row in exec_rows)
     execution_id = exec_rows[0]["id"]
     e = await client.get(f"/api/v1/executions/{execution_id}", headers=headers)
     assert e.status_code == 200
@@ -432,7 +436,8 @@ async def _seed_http_evidence(
         transport_provider=TRANSPORT_GOOGLE,
         transport_model="gemini-flash-latest",
         prompt_text="best crm software",
-        idempotency_key=f"{audit.id}:0:0:{ENGINE_GEMINI}",
+        shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
+        idempotency_key=f"{audit.id}:0:0:{ENGINE_GEMINI}:{SHOPPING_SURFACE_MEASUREMENT}",
         answer_text="Acme Corp is great.",
         search_used=True,
         search_events=[],
@@ -474,6 +479,7 @@ async def _seed_http_evidence(
         transport_model="gemini-flash-latest",
         prompt_index=0,
         repetition=0,
+        shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
         brand_mentioned=True,
         search_used=True,
         search_query_count=1,

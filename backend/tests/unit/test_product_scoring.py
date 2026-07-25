@@ -42,6 +42,7 @@ def _config(**overrides) -> ProductScoringConfig:
                 "price": 2499.0,
                 "currency": "USD",
                 "url": "https://acme.com/p/vc500",
+                "attributes": {"category": "Footwear", "brand": "Voltaic"},
             },
             {
                 "id": "p2",
@@ -65,6 +66,7 @@ def _config(**overrides) -> ProductScoringConfig:
                 "currency": "USD",
             }
         ],
+        "owned_domains": ["acme.com"],
     }
     base.update(overrides)
     return ProductScoringConfig.from_project(base)
@@ -85,11 +87,22 @@ def test_from_project_folds_name_sku_aliases_variants_into_match_set() -> None:
     }
     assert entry.price == 2499.0
     assert entry.currency == "USD"
-    # Competitor products match on name + aliases only.
+    # The frozen attribute bag rides along; category is derived from it
+    # (stripped + casefolded).
+    assert entry.attributes == {"category": "Footwear", "brand": "Voltaic"}
+    assert entry.category == "footwear"
+    # A missing attribute bag yields an empty bag + empty category.
+    assert config.products[1].attributes == {}
+    assert config.products[1].category == ""
+    # Competitor products match on name + aliases only and have no attribute
+    # bag (DEFAULT dimensions apply).
     assert set(config.competitor_products[0].aliases) == {
         "RideCore CityCommuter 450",
         "CityCommuter",
     }
+    assert config.competitor_products[0].category == ""
+    # Frozen owned domains feed merchant classification (never live rows).
+    assert config.owned_domains == ("acme.com",)
 
 
 @pytest.mark.parametrize(
@@ -120,6 +133,7 @@ def test_empty_catalog_scores_nothing() -> None:
         "own_product_mention_count": 0,
         "competitor_product_mention_count": 0,
         "products_with_price_match": 0,
+        "mentioned_entry_ids": [],
     }
 
 
@@ -174,19 +188,40 @@ def test_price_matches_catalog_tolerance_edges(
     mentioned: float, currency: str, expected: bool | None
 ) -> None:
     entry = ProductEntry(
-        id="p1", sku="S", name="N", aliases=(), price=2499.0, currency="USD"
+        id="p1",
+        sku="S",
+        name="N",
+        aliases=(),
+        price=2499.0,
+        currency="USD",
+        attributes={},
+        category="",
     )
     assert price_matches_catalog(mentioned, currency, entry) is expected
 
 
 def test_price_matches_catalog_abs_floor_and_missing_catalog_price() -> None:
     cheap = ProductEntry(
-        id="p1", sku="S", name="N", aliases=(), price=10.0, currency="USD"
+        id="p1",
+        sku="S",
+        name="N",
+        aliases=(),
+        price=10.0,
+        currency="USD",
+        attributes={},
+        category="",
     )
     assert price_matches_catalog(11.0, "USD", cheap) is True  # abs floor 1.0
     assert price_matches_catalog(11.01, "USD", cheap) is False
     priceless = ProductEntry(
-        id="p2", sku="S", name="N", aliases=(), price=None, currency=""
+        id="p2",
+        sku="S",
+        name="N",
+        aliases=(),
+        price=None,
+        currency="",
+        attributes={},
+        category="",
     )
     assert price_matches_catalog(2499.0, "USD", priceless) is None
 
@@ -282,6 +317,29 @@ def test_aggregate_product_run_sov_and_rates() -> None:
     assert own["avg_rank"] == 1.0
     assert own["rank_distribution"]["top_1"] == 1
     assert own["price_accuracy_rate"] == 1.0
+    # Rank-1 mention is a win; the price matched the catalog.
+    assert own["win_rate"] == 1.0
+    assert own["price_relation_counts"] == {
+        "match": 1,
+        "higher": 0,
+        "lower": 0,
+        "mismatch": 0,
+    }
+    assert own["price_mismatch_rate"] == 0.0
+    assert own["attribute_dimension_frequency"] == {}
+    assert own["buyer_destination_mix"] == {"total": 0, "by_kind": [], "by_domain": []}
+    # text_a co-mentions the competitor product with p1.
+    assert own["competitor_co_placement"] == {
+        "items": [
+            {
+                "competitor_product_id": None,  # "c1" is not a UUID
+                "competitor_name": "RideCore",
+                "product_name": "RideCore CityCommuter 450",
+                "count": 1,
+            }
+        ],
+        "truncated": False,
+    }
 
     competitor = aggregates["c1"]
     assert competitor["mention_count"] == 2
@@ -294,6 +352,24 @@ def test_aggregate_product_run_sov_and_rates() -> None:
     assert competitor["price_mention_count"] == 2
     assert competitor["price_match_count"] == 1
     assert competitor["price_accuracy_rate"] == 0.5
+    # Ranked once at rank 2 (not a win); the unranked prose mention does not
+    # enter the win-rate denominator.
+    assert competitor["win_rate"] == 0.0
+    assert competitor["price_relation_counts"] == {
+        "match": 1,
+        "higher": 0,
+        "lower": 1,  # $2,100 below the $2,399 catalog price
+        "mismatch": 0,
+    }
+    assert competitor["price_mismatch_rate"] == 0.5
+    assert competitor["attribute_dimension_frequency"] == {}
+    assert competitor["buyer_destination_mix"] == {
+        "total": 0,
+        "by_kind": [],
+        "by_domain": [],
+    }
+    # Only own products co-occur with c1 -> no competitor pairs.
+    assert competitor["competitor_co_placement"] == {"items": [], "truncated": False}
 
     # p2 never mentioned: zero-filled aggregate with nulls, not an error.
     empty = aggregates["p2"]
@@ -302,6 +378,21 @@ def test_aggregate_product_run_sov_and_rates() -> None:
     assert empty["avg_rank"] is None
     assert empty["price_accuracy_rate"] is None
     assert empty["rank_distribution"] == {label: 0 for label in _BUCKET_LABELS}
+    assert empty["win_rate"] is None
+    assert empty["price_relation_counts"] == {
+        "match": 0,
+        "higher": 0,
+        "lower": 0,
+        "mismatch": 0,
+    }
+    assert empty["price_mismatch_rate"] is None
+    assert empty["attribute_dimension_frequency"] == {}
+    assert empty["buyer_destination_mix"] == {
+        "total": 0,
+        "by_kind": [],
+        "by_domain": [],
+    }
+    assert empty["competitor_co_placement"] == {"items": [], "truncated": False}
 
 
 def test_aggregate_product_run_all_empty() -> None:
@@ -313,6 +404,24 @@ def test_aggregate_product_run_all_empty() -> None:
         assert aggregate["avg_rank"] is None
         assert aggregate["price_mention_count"] == 0
         assert aggregate["price_accuracy_rate"] is None
+        assert aggregate["win_rate"] is None
+        assert aggregate["price_relation_counts"] == {
+            "match": 0,
+            "higher": 0,
+            "lower": 0,
+            "mismatch": 0,
+        }
+        assert aggregate["price_mismatch_rate"] is None
+        assert aggregate["attribute_dimension_frequency"] == {}
+        assert aggregate["buyer_destination_mix"] == {
+            "total": 0,
+            "by_kind": [],
+            "by_domain": [],
+        }
+        assert aggregate["competitor_co_placement"] == {
+            "items": [],
+            "truncated": False,
+        }
 
 
 def test_score_product_execution_deterministic() -> None:

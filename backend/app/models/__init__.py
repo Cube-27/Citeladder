@@ -25,6 +25,7 @@ from app.models.audit import (
     AuditEngineSnapshot,
     AuditEvent,
     AuditPromptSnapshot,
+    AuditShoppingSurfaceSnapshot,
     AuditTask,
     ProviderAttempt,
     RawResponseArtifact,
@@ -61,6 +62,7 @@ from app.models.integrations import (
 from app.models.opportunity import Opportunity, OpportunitySnapshot
 from app.models.product import (
     CompetitorProduct,
+    MerchantMention,
     Product,
     ProductMention,
     ProductMetricSnapshot,
@@ -103,6 +105,7 @@ __all__ = [
     "AuditEngineSnapshot",
     "AuditEvent",
     "AuditPromptSnapshot",
+    "AuditShoppingSurfaceSnapshot",
     "AuditTask",
     "Base",
     "Brand",
@@ -130,6 +133,7 @@ __all__ = [
     "IntegrationOAuthState",
     "IntegrationPropertyMapping",
     "IntegrationSyncRun",
+    "MerchantMention",
     "MetricSnapshot",
     "Opportunity",
     "OpportunitySnapshot",

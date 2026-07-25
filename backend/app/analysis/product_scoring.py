@@ -17,12 +17,29 @@ token-tolerant regex for the same aliases.
 from __future__ import annotations
 
 import re
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.analysis.normalization import (
+    domain_matches,
     first_alias_offset,
     normalize_alias,
+    normalize_domain,
+)
+from app.core.config.commerce import (
+    ATTRIBUTE_DIMENSIONS,
+    CO_PLACEMENT_MAX_PAIRS,
+    MERCHANT_DOMAINS,
+    MERCHANT_KIND_BRAND_SITE,
+    MERCHANT_KIND_OTHER,
+    PRICE_RELATION_HIGHER,
+    PRICE_RELATION_LOWER,
+    PRICE_RELATION_MATCH,
+    PRICE_RELATION_MISMATCH,
+    PRODUCT_ATTRIBUTE_WINDOW_CHARS,
+    PRODUCT_WIN_REQUIRES_ENUMERATION,
+    AttributeDimension,
 )
 from app.core.config.products import (
     PRICE_CURRENCY_PATTERNS,
@@ -32,6 +49,7 @@ from app.core.config.products import (
     PRODUCT_RANK_BUCKET_UNRANKED,
     PRODUCT_RANK_BUCKETS,
 )
+from app.domain.analytics.sanitize import sanitize_referral_url
 
 
 # --------------------------------------------------------------------------
@@ -47,6 +65,11 @@ class ProductEntry:
     aliases: tuple[str, ...]
     price: float | None
     currency: str
+    # Frozen attribute bag (audit-frozen at creation — invariant 9). The
+    # category-keyed attribute dimensions read it, never the live catalog.
+    attributes: dict[str, Any]
+    # Casefolded ``attributes["category"]``; selects the dimension tuple.
+    category: str
 
 
 @dataclass(frozen=True)
@@ -57,6 +80,8 @@ class CompetitorProductEntry:
     aliases: tuple[str, ...]
     price: float | None
     currency: str
+    # Competitor products have no attribute bag (M1 model) -> DEFAULT dims.
+    category: str = ""
 
 
 def _as_price(value: Any) -> float | None:
@@ -87,6 +112,10 @@ class ProductScoringConfig:
     competitor_products: tuple[CompetitorProductEntry, ...] = field(
         default_factory=tuple
     )
+    # Frozen owned domains (from the planner's ``project_scoring_identity``):
+    # merchant classification reads this audit-frozen copy, never live
+    # ``OwnedDomain`` rows (invariant 9).
+    owned_domains: tuple[str, ...] = field(default_factory=tuple)
     price_tolerance_pct: float = PRODUCT_PRICE_TOLERANCE_PCT
     price_tolerance_abs: float = PRODUCT_PRICE_TOLERANCE_ABS
 
@@ -95,12 +124,14 @@ class ProductScoringConfig:
         """Build from the audit's FROZEN catalog dict (never live config).
 
         Reads the ``products`` / ``competitor_products`` keys the planner
-        froze via ``project_product_identity`` (mirrors
+        froze via ``project_product_identity`` plus the ``owned_domains``
+        key frozen via ``project_scoring_identity`` (mirrors
         ``ScoringConfig.from_project``).
         """
         products = []
         for item in config.get("products") or []:
             variants = [v for v in (item.get("variants") or []) if isinstance(v, dict)]
+            attributes = dict(item.get("attributes") or {})
             products.append(
                 ProductEntry(
                     id=str(item.get("id") or ""),
@@ -115,6 +146,8 @@ class ProductScoringConfig:
                     ),
                     price=_as_price(item.get("price")),
                     currency=str(item.get("currency") or "").strip().upper(),
+                    attributes=attributes,
+                    category=str(attributes.get("category") or "").strip().casefold(),
                 )
             )
         competitor_products = []
@@ -132,6 +165,9 @@ class ProductScoringConfig:
         return cls(
             products=tuple(products),
             competitor_products=tuple(competitor_products),
+            owned_domains=tuple(
+                str(domain) for domain in (config.get("owned_domains") or [])
+            ),
         )
 
 
@@ -168,6 +204,29 @@ def _original_text_offset(aliases: tuple[str, ...], text: str) -> int | None:
         if match is not None:
             starts.append(match.start())
     return min(starts) if starts else None
+
+
+# --------------------------------------------------------------------------
+# Shared original-text window (price/attribute/destination extraction)
+# --------------------------------------------------------------------------
+def _line_clipped_window(text: str, offset: int, window: int) -> tuple[int, str]:
+    """Centered character window around ``offset`` clipped to its own line.
+
+    Returns the original-text absolute segment start plus the segment. A
+    list item's evidence (price, attributes, links) sits on the same line,
+    so clipping keeps a neighbouring item's evidence from being
+    misattributed. All context extraction locates mentions via
+    ``_original_text_offset`` and scans the segment this returns.
+    """
+    start = max(0, offset - window // 2)
+    end = min(len(text), offset + window // 2)
+    line_start = text.rfind("\n", 0, offset) + 1
+    line_end = text.find("\n", offset)
+    if line_end == -1:
+        line_end = len(text)
+    start = max(start, line_start)
+    end = min(end, line_end)
+    return start, text[start:end]
 
 
 # --------------------------------------------------------------------------
@@ -220,18 +279,7 @@ def extract_price_mentions(
     """
     if not text:
         return []
-    start = max(0, offset - window // 2)
-    end = min(len(text), offset + window // 2)
-    # Clip to the line containing the mention: a list item's price sits on
-    # the same line, and a wider window would misattribute a neighbouring
-    # item's price.
-    line_start = text.rfind("\n", 0, offset) + 1
-    line_end = text.find("\n", offset)
-    if line_end == -1:
-        line_end = len(text)
-    start = max(start, line_start)
-    end = min(end, line_end)
-    segment = text[start:end]
+    start, segment = _line_clipped_window(text, offset, window)
 
     matches: list[dict[str, Any]] = []
     for currency, pattern in _CURRENCY_PATTERNS:
@@ -287,6 +335,171 @@ def price_matches_catalog(
         return None
     tolerance = max(entry.price * tolerance_pct, tolerance_abs)
     return abs(mentioned_value - entry.price) <= tolerance + 1e-9
+
+
+def price_relation(
+    mentioned_value: float,
+    mentioned_currency: str,
+    entry: ProductEntry | CompetitorProductEntry,
+    *,
+    tolerance_pct: float = PRODUCT_PRICE_TOLERANCE_PCT,
+    tolerance_abs: float = PRODUCT_PRICE_TOLERANCE_ABS,
+) -> str | None:
+    """Direction of a mentioned price vs the catalog price.
+
+    Returns None exactly where ``price_matches_catalog`` is unverifiable
+    (absent catalog price, or both currencies present and unequal),
+    ``match`` when its tolerance comparison holds, else ``higher``/``lower``
+    against the catalog price. The legacy ``price_matches_catalog`` boolean
+    keeps being written beside this for compatibility.
+    """
+    matches = price_matches_catalog(
+        mentioned_value,
+        mentioned_currency,
+        entry,
+        tolerance_pct=tolerance_pct,
+        tolerance_abs=tolerance_abs,
+    )
+    if matches is None:
+        return None
+    if matches:
+        return PRICE_RELATION_MATCH
+    catalog_price = entry.price
+    if catalog_price is None:  # unreachable: matches is None above in that case
+        return None
+    if mentioned_value > catalog_price:
+        return PRICE_RELATION_HIGHER
+    return PRICE_RELATION_LOWER
+
+
+# --------------------------------------------------------------------------
+# Attribute extraction (config-owned dimension phrases; frequency only)
+# --------------------------------------------------------------------------
+def _phrase_pattern(phrase: str) -> re.Pattern[str] | None:
+    """Token-tolerant whole-phrase regex (mirrors ``_original_text_offset``)."""
+    tokens = normalize_alias(phrase).split()
+    if not tokens:
+        return None
+    pattern = r"(?<!\w)" + r"[^\w]+".join(re.escape(t) for t in tokens) + r"(?!\w)"
+    return re.compile(pattern, flags=re.IGNORECASE)
+
+
+def extract_attribute_mentions(
+    text: str,
+    offset: int,
+    dimensions: tuple[AttributeDimension, ...],
+    window: int = PRODUCT_ATTRIBUTE_WINDOW_CHARS,
+) -> list[dict[str, Any]]:
+    """Phrase-matched attribute mentions in the mention's line-clipped window.
+
+    Casefolded whole-phrase matching against the ORIGINAL text segment.
+    Each item: ``{"dimension", "group", "text", "offset"}`` with the exact
+    matched substring and its original-text absolute offset, deduped by
+    (dimension, group, offset) and position-ordered. Frequency has no
+    valence (invariant 9).
+    """
+    if not text or not dimensions:
+        return []
+    start, segment = _line_clipped_window(text, offset, window)
+    found: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, int]] = set()
+    for dimension in dimensions:
+        for phrase in dimension.phrases:
+            pattern = _phrase_pattern(phrase)
+            if pattern is None:
+                continue
+            for match in pattern.finditer(segment):
+                absolute = start + match.start()
+                key = (dimension.key, dimension.group, absolute)
+                if key in seen:
+                    continue
+                seen.add(key)
+                found.append(
+                    {
+                        "dimension": dimension.key,
+                        "group": dimension.group,
+                        "text": match.group(0),
+                        "offset": absolute,
+                    }
+                )
+    found.sort(key=lambda item: (item["offset"], item["dimension"], item["group"]))
+    return found
+
+
+# --------------------------------------------------------------------------
+# Buyer-destination extraction (absolute URLs + markdown-link targets)
+# --------------------------------------------------------------------------
+_MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\((https?://[^)\s]+)\)", flags=re.IGNORECASE)
+_ABSOLUTE_URL_RE = re.compile(r"https?://[^\s<>()\[\]\"']+", flags=re.IGNORECASE)
+# Bare URLs in prose are usually followed by sentence punctuation or a
+# closing bracket; those characters are never part of the destination.
+_URL_TRAILING_PUNCT = ".,;:!?)]}'\"*»”’"
+
+
+def extract_destination_urls(
+    text: str, offset: int, window: int = PRODUCT_ATTRIBUTE_WINDOW_CHARS
+) -> list[dict[str, Any]]:
+    """Absolute http(s) URLs and markdown-link targets in the window.
+
+    Every candidate is sanitized with ``sanitize_referral_url`` (fragment,
+    credentials, and non-allowlisted query params dropped) BEFORE being
+    returned, deduped by the sanitized URL, and position-ordered. Each
+    item: ``{"url", "offset"}`` with the offset in original-text
+    coordinates.
+    """
+    if not text:
+        return []
+    start, segment = _line_clipped_window(text, offset, window)
+    candidates: list[tuple[int, str]] = []
+    for match in _MARKDOWN_LINK_RE.finditer(segment):
+        candidates.append((start + match.start(1), match.group(1)))
+    for match in _ABSOLUTE_URL_RE.finditer(segment):
+        candidates.append(
+            (start + match.start(), match.group(0).rstrip(_URL_TRAILING_PUNCT))
+        )
+    candidates.sort(key=lambda item: item[0])
+    seen: set[str] = set()
+    destinations: list[dict[str, Any]] = []
+    for absolute, raw in candidates:
+        sanitized = sanitize_referral_url(raw)
+        if not sanitized or sanitized in seen:
+            continue
+        seen.add(sanitized)
+        destinations.append({"url": sanitized, "offset": absolute})
+    return destinations
+
+
+def classify_destination(url: str, *, owned_domains: tuple[str, ...]) -> dict[str, str]:
+    """Classify a sanitized destination URL into its merchant identity.
+
+    Order: any frozen ``owned_domains`` match -> ``brand_site`` with the
+    normalized host as the name; any ``MERCHANT_DOMAINS`` key match -> the
+    configured display name and kind; otherwise -> ``other`` with the
+    normalized host as the name. All matching is suffix-safe
+    (``domain_matches``): ``notamazon.com`` stays ``other`` while a
+    subdomain of ``amazon.com`` is the Amazon marketplace.
+    ``merchant_domain`` is always the normalized host.
+    """
+    host = normalize_domain(url)
+    for owned in owned_domains:
+        if domain_matches(host, owned):
+            return {
+                "merchant_name": host,
+                "merchant_domain": host,
+                "merchant_kind": MERCHANT_KIND_BRAND_SITE,
+            }
+    for domain, (merchant_name, merchant_kind) in MERCHANT_DOMAINS.items():
+        if domain_matches(host, domain):
+            return {
+                "merchant_name": merchant_name,
+                "merchant_domain": host,
+                "merchant_kind": merchant_kind,
+            }
+    return {
+        "merchant_name": host,
+        "merchant_domain": host,
+        "merchant_kind": MERCHANT_KIND_OTHER,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -423,6 +636,9 @@ def _entry_signals(
         "price_value": None,
         "price_currency": "",
         "price_matches_catalog": None,
+        "price_relation": None,
+        "attribute_mentions": [],
+        "merchant_mentions": [],
     }
     if not mentioned:
         return signals
@@ -443,6 +659,39 @@ def _entry_signals(
             tolerance_pct=config.price_tolerance_pct,
             tolerance_abs=config.price_tolerance_abs,
         )
+        signals["price_relation"] = price_relation(
+            first["value"],
+            first["currency"],
+            entry,
+            tolerance_pct=config.price_tolerance_pct,
+            tolerance_abs=config.price_tolerance_abs,
+        )
+    # Attribute dimensions: DEFAULT always, plus the frozen category's tuple
+    # (unknown/empty category -> DEFAULT only). Competitor entries carry no
+    # attribute bag, so they evaluate DEFAULT dimensions too.
+    dimensions = ATTRIBUTE_DIMENSIONS["DEFAULT"] + ATTRIBUTE_DIMENSIONS.get(
+        entry.category, ()
+    )
+    signals["attribute_mentions"] = extract_attribute_mentions(
+        answer_text, original_offset, dimensions
+    )
+    merchant_mentions: list[dict[str, Any]] = []
+    for destination in extract_destination_urls(answer_text, original_offset):
+        classification = classify_destination(
+            destination["url"], owned_domains=config.owned_domains
+        )
+        merchant_mentions.append(
+            {
+                **classification,
+                "destination_url": destination["url"],
+                # Reuse the first same-line price extraction as optional
+                # merchant price evidence.
+                "price_text": signals["price_text"],
+                "price_value": signals["price_value"],
+                "price_currency": signals["price_currency"],
+            }
+        )
+    signals["merchant_mentions"] = merchant_mentions
     return signals
 
 
@@ -494,6 +743,16 @@ def score_product_execution(
         "products_with_price_match": sum(
             1 for p in all_signals if p["price_matches_catalog"] is True
         ),
+        # Deterministic co-placement input: mentioned entry ids in catalog
+        # order (own ids first, then competitor ids).
+        "mentioned_entry_ids": [
+            *[p["product_id"] for p in products if p["mentioned"]],
+            *[
+                c["competitor_product_id"]
+                for c in competitor_products
+                if c["mentioned"]
+            ],
+        ],
     }
 
 
@@ -506,6 +765,173 @@ def _rank_bucket(rank: int) -> str:
 
 def _rate(numerator: int, denominator: int) -> float:
     return round(numerator / denominator, 4) if denominator else 0.0
+
+
+def _mentioned_id_sets(scores: list[dict[str, Any]]) -> list[set[str]]:
+    """Per-execution mentioned entry-id sets (co-placement input).
+
+    v2 score dicts carry ``mentioned_entry_ids``; legacy v1 dicts fall back
+    to the mentioned flags in their own/competitor sections (mixed-version
+    aggregation).
+    """
+    id_sets: list[set[str]] = []
+    for score in scores:
+        ids = score.get("mentioned_entry_ids")
+        if ids is None:
+            ids = [
+                str(signals.get("product_id") or "")
+                for signals in score.get("products") or []
+                if signals.get("mentioned")
+            ] + [
+                str(signals.get("competitor_product_id") or "")
+                for signals in score.get("competitor_products") or []
+                if signals.get("mentioned")
+            ]
+        id_sets.append({str(value) for value in ids})
+    return id_sets
+
+
+def _price_relation_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Relation tallies over one entry's persisted mention rows.
+
+    v2 rows count their persisted ``price_relation`` string. Legacy rows
+    (relation absent/null) fall back to the ``price_matches_catalog``
+    boolean: True -> ``match``, False -> ``mismatch`` (no direction is ever
+    inferred for v1 data). Unverifiable rows (both null) are not counted.
+    """
+    counts = {
+        PRICE_RELATION_MATCH: 0,
+        PRICE_RELATION_HIGHER: 0,
+        PRICE_RELATION_LOWER: 0,
+        PRICE_RELATION_MISMATCH: 0,
+    }
+    for row in rows:
+        relation = row.get("price_relation")
+        if relation is None:
+            legacy = row.get("price_matches_catalog")
+            if legacy is True:
+                relation = PRICE_RELATION_MATCH
+            elif legacy is False:
+                relation = PRICE_RELATION_MISMATCH
+        if relation in counts:
+            counts[relation] += 1
+    return counts
+
+
+def _attribute_dimension_frequency(
+    rows: list[dict[str, Any]],
+) -> dict[str, dict[str, int]]:
+    """``{group: {dimension: count}}`` over persisted attribute mentions.
+
+    Both key levels are sorted so serialization is stable; an entry with no
+    observations gets ``{}``.
+    """
+    frequency: dict[str, dict[str, int]] = {}
+    for row in rows:
+        for item in row.get("attribute_mentions") or []:
+            group = str(item.get("group") or "")
+            dimension = str(item.get("dimension") or "")
+            if not group or not dimension:
+                continue
+            group_counts = frequency.setdefault(group, {})
+            group_counts[dimension] = group_counts.get(dimension, 0) + 1
+    return {
+        group: {
+            dimension: group_counts[dimension] for dimension in sorted(group_counts)
+        }
+        for group, group_counts in sorted(frequency.items())
+    }
+
+
+def _buyer_destination_mix(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """``{"total", "by_kind", "by_domain"}`` over persisted destinations.
+
+    ``total`` counts every destination observation; ``by_kind`` sorts by
+    (-count, merchant_kind) and ``by_domain`` by (-count, merchant_domain,
+    merchant_name, merchant_kind).
+    """
+    total = 0
+    kind_counts: dict[str, int] = {}
+    domain_counts: dict[tuple[str, str, str], int] = {}
+    for row in rows:
+        for item in row.get("merchant_mentions") or []:
+            total += 1
+            kind = str(item.get("merchant_kind") or "")
+            domain = str(item.get("merchant_domain") or "")
+            name = str(item.get("merchant_name") or "")
+            kind_counts[kind] = kind_counts.get(kind, 0) + 1
+            key = (domain, name, kind)
+            domain_counts[key] = domain_counts.get(key, 0) + 1
+    return {
+        "total": total,
+        "by_kind": [
+            {"merchant_kind": kind, "count": count}
+            for kind, count in sorted(
+                kind_counts.items(), key=lambda kv: (-kv[1], kv[0])
+            )
+        ],
+        "by_domain": [
+            {
+                "merchant_domain": domain,
+                "merchant_name": name,
+                "merchant_kind": kind,
+                "count": count,
+            }
+            for (domain, name, kind), count in sorted(
+                domain_counts.items(),
+                key=lambda kv: (-kv[1], kv[0][0], kv[0][1], kv[0][2]),
+            )
+        ],
+    }
+
+
+def _competitor_co_placement(
+    entry_id: str,
+    mentioned_sets: list[set[str]],
+    competitor_identity: dict[str, tuple[str, str]],
+) -> dict[str, Any]:
+    """Competitor products co-mentioned with ``entry_id`` (self excluded).
+
+    Sorted by (-count, casefolded competitor name, casefolded product name,
+    str(competitor_product_id or "")); capped at ``CO_PLACEMENT_MAX_PAIRS``
+    with ``truncated`` recording whether pairs were omitted (always
+    present, including false).
+    """
+    pair_counts: dict[str, int] = {}
+    for id_set in mentioned_sets:
+        if entry_id not in id_set:
+            continue
+        for other_id in id_set:
+            if other_id == entry_id or other_id not in competitor_identity:
+                continue
+            pair_counts[other_id] = pair_counts.get(other_id, 0) + 1
+    items: list[dict[str, Any]] = []
+    for other_id, count in pair_counts.items():
+        competitor_name, product_name = competitor_identity[other_id]
+        try:
+            competitor_product_id: str | None = str(uuid.UUID(other_id))
+        except ValueError:
+            competitor_product_id = None
+        items.append(
+            {
+                "competitor_product_id": competitor_product_id,
+                "competitor_name": competitor_name,
+                "product_name": product_name,
+                "count": count,
+            }
+        )
+    items.sort(
+        key=lambda item: (
+            -item["count"],
+            item["competitor_name"].casefold(),
+            item["product_name"].casefold(),
+            item["competitor_product_id"] or "",
+        )
+    )
+    return {
+        "items": items[:CO_PLACEMENT_MAX_PAIRS],
+        "truncated": len(items) > CO_PLACEMENT_MAX_PAIRS,
+    }
 
 
 def aggregate_product_run(
@@ -539,6 +965,11 @@ def aggregate_product_run(
                     mentions[entry_id].append(signals)
 
     total_mentions = sum(len(rows) for rows in mentions.values())
+    mentioned_sets = _mentioned_id_sets(scores)
+    competitor_identity = {
+        entry.id: (entry.competitor, entry.name)
+        for entry in config.competitor_products
+    }
     aggregates: dict[str, dict[str, Any]] = {}
     for entry_id, section in entries:
         rows = mentions[entry_id]
@@ -554,6 +985,30 @@ def aggregate_product_run(
             r for r in price_mentions if r.get("price_matches_catalog") is not None
         ]
         matches = [r for r in verifiable if r["price_matches_catalog"] is True]
+
+        # Win rate: with PRODUCT_WIN_REQUIRES_ENUMERATION the denominator is
+        # only this SKU's mention rows carrying a rank (an enumeration that
+        # omits the SKU is invisible to win rate, not a loss); else every
+        # mention row. Null when the denominator is zero.
+        if PRODUCT_WIN_REQUIRES_ENUMERATION:
+            denominator_rows = [
+                row for row in rows if row.get("rank_position") is not None
+            ]
+        else:
+            denominator_rows = rows
+        wins = sum(1 for row in denominator_rows if row.get("rank_position") == 1)
+        win_rate = (
+            round(wins / len(denominator_rows), 4) if denominator_rows else None
+        )
+
+        relation_counts = _price_relation_counts(rows)
+        verifiable_relations = sum(relation_counts.values())
+        mismatches = (
+            relation_counts[PRICE_RELATION_HIGHER]
+            + relation_counts[PRICE_RELATION_LOWER]
+            + relation_counts[PRICE_RELATION_MISMATCH]
+        )
+
         aggregates[entry_id] = {
             "kind": "product" if section == "products" else "competitor_product",
             "mention_count": mention_count,
@@ -564,6 +1019,18 @@ def aggregate_product_run(
             "price_match_count": len(matches),
             "price_accuracy_rate": (
                 _rate(len(matches), len(verifiable)) if verifiable else None
+            ),
+            "win_rate": win_rate,
+            "price_relation_counts": relation_counts,
+            "price_mismatch_rate": (
+                round(mismatches / verifiable_relations, 4)
+                if verifiable_relations
+                else None
+            ),
+            "attribute_dimension_frequency": _attribute_dimension_frequency(rows),
+            "buyer_destination_mix": _buyer_destination_mix(rows),
+            "competitor_co_placement": _competitor_co_placement(
+                entry_id, mentioned_sets, competitor_identity
             ),
         }
     return aggregates

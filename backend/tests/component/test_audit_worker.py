@@ -13,6 +13,7 @@ claim/lease loop against a Postgres schema:
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import func, select
@@ -710,3 +711,117 @@ async def test_worker_records_one_attempt_per_provider_call(
             .where(RawResponseArtifact.audit_id == audit.id)
         )
         assert artifacts == 1
+
+
+_FIXTURE_SURFACE = "google_shopping"
+
+
+def _probe_row(measurement: AuditTask, *, surface: str) -> AuditTask:
+    """A shopping-surface probe sharing the measurement slot (5th column)."""
+    return AuditTask(
+        audit_id=measurement.audit_id,
+        workspace_id=measurement.workspace_id,
+        prompt_snapshot_id=measurement.prompt_snapshot_id,
+        engine_snapshot_id=measurement.engine_snapshot_id,
+        prompt_index=measurement.prompt_index,
+        repetition=measurement.repetition,
+        randomized_position=measurement.randomized_position,
+        logical_engine=measurement.logical_engine,
+        transport_provider=measurement.transport_provider,
+        transport_model=measurement.transport_model,
+        shopping_surface=surface,
+        prompt_text=measurement.prompt_text,
+        provider_route_snapshot=measurement.provider_route_snapshot,
+        idempotency_key=f"{measurement.idempotency_key}{surface}",
+        max_attempts=measurement.max_attempts,
+    )
+
+
+@pytest.mark.asyncio
+async def test_probe_rows_skip_brand_analysis_and_keep_denominators(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+) -> None:
+    """§7.1 isolation: probe rows never move brand metrics/counts.
+
+    Seeds one TERMINAL probe (already succeeded — the worker must ignore it)
+    and one LIVE probe (queued — the worker drains it but skips brand
+    analysis). Progress denominators, the MetricSnapshot, and the
+    ResponseAnalysis rows must be identical to the measurement-only baseline.
+    """
+    seed, audit = await _make_audit(session_factory, prompts=2, reps=1)  # 2
+
+    async with session_factory() as session:
+        measurement = await session.scalar(
+            select(AuditTask)
+            .where(AuditTask.audit_id == audit.id)
+            .order_by(AuditTask.prompt_index)
+            .limit(1)
+        )
+        assert measurement is not None
+        assert measurement.shopping_surface == ""
+        terminal_probe = _probe_row(measurement, surface=_FIXTURE_SURFACE)
+        terminal_probe.status = "succeeded"
+        terminal_probe.answer_text = "probe answer persisted earlier"
+        terminal_probe.attempt_count = 1
+        terminal_probe.completed_at = datetime.now(UTC)
+        live_probe = _probe_row(measurement, surface="bing_shopping")
+        session.add_all([terminal_probe, live_probe])
+        await session.commit()
+        terminal_probe_id = terminal_probe.id
+        live_probe_id = live_probe.id
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-probes")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        # The live probe drained through the worker: artifact + answer, but
+        # NO brand score (brand analysis is measurement-only, §7.1).
+        live = await session.get(AuditTask, live_probe_id)
+        assert live is not None
+        assert live.status == "succeeded"
+        assert live.result_artifact_id is not None
+        assert live.answer_text
+        assert live.score is None
+
+        # The terminal probe was never touched by the worker.
+        terminal = await session.get(AuditTask, terminal_probe_id)
+        assert terminal is not None
+        assert terminal.status == "succeeded"
+        assert terminal.result_artifact_id is None
+        assert terminal.score is None
+
+        # Brand denominators are measurement-only: identical to the baseline
+        # (2 measurement tasks, both succeeded) as if no probe rows existed.
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        assert refreshed.status == AUDIT_STATUS_COMPLETED
+        assert refreshed.completed_count == 2
+        assert refreshed.failed_count == 0
+
+        snapshot = await session.scalar(
+            select(MetricSnapshot).where(MetricSnapshot.audit_id == audit.id)
+        )
+        assert snapshot is not None
+        assert snapshot.total_completed == 2
+        assert snapshot.total_failed == 0
+        assert snapshot.visibility_score == 100.0
+
+        # Brand analyses exist only for the two measurement tasks.
+        analyses = (
+            await session.scalars(
+                select(ResponseAnalysis.task_id).where(
+                    ResponseAnalysis.audit_id == audit.id
+                )
+            )
+        ).all()
+        assert len(analyses) == 2
+        assert live_probe_id not in set(analyses)
+        assert terminal_probe_id not in set(analyses)
+
+        # Executions listing still defaults to the measurement surface.
+        tasks = await list_tasks(
+            session, workspace_id=seed.workspace_id, audit_id=audit.id
+        )
+        assert len(tasks) == 2
+        assert all(t.shopping_surface == "" for t in tasks)

@@ -28,13 +28,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analysis.exports import audit_to_csv, audit_to_markdown
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.core.config.audits import AUDIT_TERMINAL_STATUSES
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.database import SessionLocal
 from app.core.http_errors import raise_not_found
 from app.domain.analysis.schemas import MetricsResponse
 from app.domain.analysis.service import (
     AnalysisNotFoundError,
+    TrendQueryError,
     get_metrics,
     load_export_bundle,
+    validate_shopping_surface,
 )
 from app.domain.audits.planner import (
     AuditNotFoundError,
@@ -130,14 +133,24 @@ async def cancel_audit_endpoint(
 
 @router.get("/{audit_id}/executions", response_model=list[AuditTaskResponse])
 async def list_executions_endpoint(
-    audit_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    audit_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    surface: Annotated[str, Query()] = SHOPPING_SURFACE_MEASUREMENT,
 ) -> list[AuditTaskResponse]:
     try:
         tasks = await list_tasks(
-            session, workspace_id=ctx.workspace_id, audit_id=audit_id
+            session,
+            workspace_id=ctx.workspace_id,
+            audit_id=audit_id,
+            surface=validate_shopping_surface(surface),
         )
     except AuditNotFoundError as exc:
         raise_not_found("Audit", cause=exc)
+    except TrendQueryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     return [AuditTaskResponse.model_validate(t) for t in tasks]
 
 

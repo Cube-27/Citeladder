@@ -26,6 +26,7 @@ from app.core.config.analytics import (
     REFERRAL_SANITIZE_VERSION,
 )
 from app.core.config.audits import AUDIT_STATUS_COMPLETED
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.integrations import (
     DATASET_GA4_REFERRER_DAILY,
     GRANT_STATUS_CONNECTED,
@@ -405,7 +406,12 @@ async def seed_theme_analysis(
         logical_engine=logical_engine,
         transport_provider="google",
         transport_model="gemini-flash-latest",
-        idempotency_key=uuid.uuid4().hex,
+        # Measurement slot identity (explicit like the planner's rows).
+        shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
+        idempotency_key=(
+            f"{audit_id}:{prompt_index}:{repetition}:{logical_engine}:"
+            f"{SHOPPING_SURFACE_MEASUREMENT}"
+        ),
     )
     session.add(task)
     await session.flush()
@@ -418,6 +424,7 @@ async def seed_theme_analysis(
         logical_engine=logical_engine,
         prompt_index=prompt_index,
         repetition=repetition,
+        shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
         brand_mentioned=brand_mentioned,
         score={"competitors_mentioned": list(competitors_mentioned or [])},
     )
