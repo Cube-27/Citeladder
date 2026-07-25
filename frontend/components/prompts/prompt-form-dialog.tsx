@@ -66,7 +66,6 @@ export function PromptFormDialog({
       open={open}
       onOpenChange={handleOpenChange}
       title={isEdit ? 'Edit prompt' : 'Add prompt'}
-      description="Prompts are the questions we ask each engine when running an audit."
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>

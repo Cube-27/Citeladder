@@ -168,12 +168,7 @@ export function ProductVisibilityPanel({
         />
       </div>
 
-      <RankingsCard
-        title="Product rankings"
-        description="Your products — mentions, rank distribution, and price accuracy for the selected run."
-        rows={visibility.products}
-        kind="own"
-      />
+      <RankingsCard title="Product rankings" rows={visibility.products} kind="own" />
       <RankingsCard
         title="Competitor products"
         description="Competitor products measured in the same run."
@@ -211,7 +206,12 @@ function RankingsCard({
   kind,
 }: Readonly<{
   title: string;
-  description: string;
+  /**
+   * Optional. "Product rankings" needs no gloss — the title and the columns
+   * under it say what the table is. "Competitor products" keeps one, because
+   * "measured in the same run" is a real qualifier the table cannot show.
+   */
+  description?: string;
   rows: ProductVisibilityEntry[] | CompetitorProductVisibilityEntry[];
   kind: 'own' | 'competitor';
 }>) {
@@ -221,7 +221,7 @@ function RankingsCard({
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
           <CardTitle>{title}</CardTitle>
-          <p className="text-secondary text-sm">{description}</p>
+          {description ? <p className="text-secondary text-sm">{description}</p> : null}
         </div>
       </CardHeader>
       <CardContent className="p-0">

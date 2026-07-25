@@ -280,7 +280,7 @@ describe('TrafficScreen — empty + bounded-miss states', () => {
     mockConnections([]);
     renderWithProviders(<TrafficScreen />);
 
-    expect(await screen.findByText('Connect search data to see traffic')).toBeInTheDocument();
+    expect(await screen.findByText('Connect search data')).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: 'Connect an integration' });
     expect(cta).toHaveAttribute('href', '/settings?tab=integrations');
     expect(screen.queryByTestId('traffic-toolbar')).not.toBeInTheDocument();

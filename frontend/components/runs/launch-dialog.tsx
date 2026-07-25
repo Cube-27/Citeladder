@@ -122,7 +122,6 @@ export function LaunchDialog({
         open={open}
         onOpenChange={onOpenChange}
         title="Launch an audit"
-        description="Run your prompts across the selected AI engines and measure your brand's visibility."
         footer={
           <>
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
