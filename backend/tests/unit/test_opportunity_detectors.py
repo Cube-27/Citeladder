@@ -242,7 +242,7 @@ def test_site_rules_fire_from_mapped_issues() -> None:
         (
             _issue("aeo.structured_data_present", url_id),
             _issue(
-                "aeo.sufficient_text",
+                "technical.thin_content",
                 url_id,
                 severity="medium",
                 category="content",
@@ -308,7 +308,7 @@ def test_site_rules_empty_evidence_yields_no_hits() -> None:
             "thin_content",
             detect_site_issue_opportunities,
             (lambda url_id: _site(
-                (_issue("aeo.sufficient_text", url_id, category="content"),),
+                (_issue("technical.thin_content", url_id, category="content"),),
                 (_url(url_id, "https://acme.com/x"),),
             ))(uuid.uuid4()),
         ),

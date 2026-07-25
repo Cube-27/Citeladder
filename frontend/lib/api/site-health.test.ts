@@ -357,6 +357,9 @@ describe('pageDetailSchema (field_cwv_available literal false)', () => {
     issue_count: 2,
     last_audited: '2026-07-15T00:00:00Z',
     page_type: 'homepage',
+    // T5 contract: the backend page-detail serializer always carries this key
+    // (null until the URL has an analysis) — the fixture must include it.
+    page_type_evidence: null,
     facts: {
       title: 'Home',
       meta_description: null,

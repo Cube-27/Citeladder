@@ -451,7 +451,7 @@ async def _add_site(
         project_id=project_id,
         crawl=crawl,
         site_url=url_b,
-        rule_id="aeo.sufficient_text",
+        rule_id="technical.thin_content",
         severity="low",
     )
     # Unmapped rule -> never becomes an opportunity (own URL: one analyze

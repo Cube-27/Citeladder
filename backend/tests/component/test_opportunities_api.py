@@ -342,7 +342,7 @@ async def test_detail_200_and_404(
     assert body["id"] == item["id"]
     assert body["rule_id"] == "thin_content"
     assert body["remediation"]
-    assert body["evidence"]["issue_rule_id"] == "aeo.sufficient_text"
+    assert body["evidence"]["issue_rule_id"] == "technical.thin_content"
     assert body["source_issue_ids"] == [str(scn.issue_thin_id)]
     assert body["source_traffic_ids"] == []
     assert body["analyzer_version"]
