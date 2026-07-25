@@ -433,8 +433,14 @@ BOT_BLOCK_STATUSES: Final[frozenset[int]] = frozenset({401, 403, 503})
 BOT_BLOCK_BODY_MARKERS: Final[tuple[str, ...]] = (
     "cf-chl",
     "challenge-platform",
-    "just a moment",
-    "attention required",
+    # Distinctive Cloudflare interstitial title, verbatim including the
+    # ellipsis — the bare phrase "just a moment" is ordinary English and would
+    # false-trigger an impersonated refetch on a healthy page whose copy
+    # contains it.
+    "just a moment...",
+    # NOTE: "attention required" was removed — it is plain English, not a
+    # distinctive challenge-platform string, so it could false-positive a
+    # healthy page into ERROR_BOT_BLOCKED (no artifact, no analysis).
     "px-captcha",
     "perimeterx",
     "datadome",

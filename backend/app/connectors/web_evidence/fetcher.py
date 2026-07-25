@@ -902,7 +902,16 @@ class SecureFetcher:
                 curl_options={
                     CurlOpt.RESOLVE: [
                         f"{target.host}:{target.port}:{target.connect_ip}"
-                    ]
+                    ],
+                    # Disable libcurl's NATIVE env-proxy detection. In
+                    # curl_cffi 0.15.0 ``trust_env=False`` is stored but never
+                    # read, so without an explicit empty PROXY, libcurl falls
+                    # back to HTTP(S)_PROXY/NO_PROXY — routing rung-2 traffic
+                    # through any configured proxy, voiding the RESOLVE pin
+                    # (proxy-side DNS/connect defeats resolve_target
+                    # validation and rebinding protection) and disclosing the
+                    # target URL. An empty string suppresses it.
+                    CurlOpt.PROXY: "",
                 },
             )
             headers = dict(request.headers)

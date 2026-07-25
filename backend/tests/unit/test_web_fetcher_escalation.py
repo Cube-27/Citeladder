@@ -387,9 +387,13 @@ async def test_rung2_pins_ip_sends_canonical_url_and_closes_env_trust():
     # Hostile defaults closed: no env proxy/CA trust, explicit certifi bundle.
     assert factory_calls[0]["trust_env"] is False
     assert factory_calls[0]["verify"] == certifi.where()
-    # Pinned-IP dial of the VALIDATED resolver IP...
+    # Pinned-IP dial of the VALIDATED resolver IP, with libcurl's NATIVE
+    # env-proxy detection explicitly disabled (trust_env=False is a no-op in
+    # curl_cffi 0.15.0, so an empty PROXY is what actually suppresses
+    # HTTP(S)_PROXY/NO_PROXY and keeps the pin from being voided).
     assert factory_calls[0]["curl_options"] == {
-        CurlOpt.RESOLVE: [f"example.com:443:{_PUBLIC_IP}"]
+        CurlOpt.RESOLVE: [f"example.com:443:{_PUBLIC_IP}"],
+        CurlOpt.PROXY: "",
     }
     # ...while the CANONICAL URL is sent (Host + SNI intact).
     assert curl_calls[0]["url"] == "https://example.com/page"
