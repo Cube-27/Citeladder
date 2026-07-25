@@ -101,7 +101,10 @@ export function Donut({
                   strokeDashoffset={dashOffset}
                   className={cn(
                     segment.colorClass,
-                    'origin-center transition-[stroke-width] duration-150 ease-out hover:[stroke-width:calc(var(--donut-stroke)+3px)] motion-reduce:transition-none',
+                    // `motion-safe:hover:` — under prefers-reduced-motion the
+                    // thickening is dropped outright, not merely un-transitioned
+                    // (an untransitioned jump is the motion, instantly).
+                    'origin-center transition-[stroke-width] duration-150 ease-out motion-safe:hover:[stroke-width:calc(var(--donut-stroke)+3px)] motion-reduce:transition-none',
                   )}
                   style={{ '--donut-stroke': `${strokeWidth}px` } as CSSProperties}
                 />

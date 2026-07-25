@@ -6,7 +6,7 @@ import { FeaturesGrid } from '@/components/marketing/features-grid';
 import { HowItWorks } from '@/components/marketing/how-it-works';
 import { LandingHero } from '@/components/marketing/landing-hero';
 import { LandingSessionRedirect } from '@/components/marketing/landing-session-redirect';
-import { ProductVisual } from '@/components/marketing/product-visual';
+import { EditorialShift } from '@/components/marketing/editorial-shift';
 
 const DESCRIPTION =
   'Searchify audits ChatGPT, Gemini, and Claude with the prompts your buyers actually ask. ' +
@@ -52,7 +52,7 @@ export default function LandingPage() {
       <main>
         <LandingHero />
         <EngineStrip />
-        <ProductVisual />
+        <EditorialShift />
         <HowItWorks />
         <FeaturesGrid />
         <EvidenceBand />

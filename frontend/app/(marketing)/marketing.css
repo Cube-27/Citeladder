@@ -31,13 +31,13 @@
   --mkt-r-card: 12px;
   --mkt-r-lg: 14px;
   --mkt-r-pill: 999px;
-  --mkt-container: 1320px;
+  --mkt-container: 1180px;
   /* One gutter for the whole surface: the container and the fixed nav both
      use it, so the wordmark sits on the same optical line as the content
-     below. Narrower than the old 24px because the container is wider now. */
-  --mkt-gutter: 20px;
+     below. Fluid so the wide Signal/Dusk layout keeps its margins. */
+  --mkt-gutter: clamp(20px, 4vw, 48px);
   /* Height of the fixed top strip — content clears it via padding-top. */
-  --mkt-nav-h: 56px;
+  --mkt-nav-h: 68px;
   --mkt-ease: cubic-bezier(0.22, 0.68, 0.28, 1);
   /* Motion curves — the built-in CSS easings are too weak to read as
      intentional. ease-out for anything entering (starts fast, so the user
@@ -125,7 +125,7 @@
   background: var(--mkt-bg);
   color: var(--mkt-text);
   font-family: var(--mkt-font-sans);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -4693,12 +4693,8 @@ html[data-theme='dark'] .mkt {
     radial-gradient(circle at 78% 6%, rgba(123, 108, 246, 0.13), transparent 30rem), var(--mkt-bg);
 }
 
-.mkt {
-  --mkt-container: 1180px;
-  --mkt-gutter: clamp(20px, 4vw, 48px);
-  --mkt-nav-h: 68px;
-  font-size: 16px;
-}
+/* --mkt-container / --mkt-gutter / --mkt-nav-h / font-size are declared once,
+   in the token block at the top of this file. */
 
 .mkt .container {
   width: 100%;
@@ -5897,6 +5893,7 @@ html[data-theme='dark'] .mkt {
   padding: 15px 0;
   overflow: hidden;
   border-top: 1px solid var(--mkt-border);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
 
@@ -5943,6 +5940,7 @@ html[data-theme='dark'] .mkt {
 .mkt .signal-ticker {
   margin-bottom: clamp(86px, 11vw, 132px);
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
 }
 
@@ -6051,9 +6049,10 @@ html[data-theme='dark'] .mkt {
   background: var(--mkt-raised);
 }
 
-.mkt .shift-row span {
+/* The "from" column is an <s> — the strike is semantic, so the element carries
+   its own line-through and this rule only sets colour and size. */
+.mkt .shift-row s {
   color: var(--mkt-text-3);
-  text-decoration: line-through;
   font-size: 13px;
 }
 .mkt .shift-row svg {
@@ -6773,7 +6772,7 @@ html[data-theme='dark'] .mkt {
     grid-template-columns: 1fr 16px 1.2fr;
     padding-inline: 13px;
   }
-  .mkt .shift-row span,
+  .mkt .shift-row s,
   .mkt .shift-row strong {
     font-size: 12px;
   }

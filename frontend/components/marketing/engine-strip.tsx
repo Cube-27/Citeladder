@@ -30,7 +30,10 @@ export function EngineStrip() {
           ))}
         </div>
       </div>
-      <div className="prompt-marquee" aria-label="Example audited buyer prompts">
+      {/* `aria-label` only names an element that has a role to attach it to; on
+          a bare <div> it is dropped. `role="group"` is the cheapest named
+          container that does not imply interactivity or landmark status. */}
+      <div className="prompt-marquee" role="group" aria-label="Example audited buyer prompts">
         <div className="prompt-track">
           {[...BUYER_PROMPTS, ...BUYER_PROMPTS].map((prompt, index) => (
             <span aria-hidden={index >= BUYER_PROMPTS.length || undefined} key={`${prompt}-${index}`}>

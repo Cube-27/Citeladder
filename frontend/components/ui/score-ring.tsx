@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
 import { cn } from '@/lib/utils';
 import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
 
@@ -41,6 +45,17 @@ export function ScoreRing({
   const dashOffset = circumference * (1 - clamped / 100);
   const ariaLabel = label ?? `Visibility score: ${clamped}%`;
 
+  // A CSS transition only animates a CHANGE, so the arc has to be painted empty
+  // first and moved to its value afterwards — rendering it at `dashOffset` from
+  // the start would just appear there with the transition never firing. Under
+  // `motion-reduce` the transition is off, so the same two paints read as the
+  // ring simply appearing at its final value.
+  const [swept, setSwept] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setSwept(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <div
       className={cn('relative inline-flex items-center justify-center', className)}
@@ -70,7 +85,7 @@ export function ScoreRing({
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
+          strokeDashoffset={swept ? dashOffset : circumference}
           className={cn(
             'transition-[stroke-dashoffset] duration-[800ms] ease-out motion-reduce:transition-none',
             scoreBandStroke[band],

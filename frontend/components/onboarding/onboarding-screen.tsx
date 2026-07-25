@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { Alert } from '@/components/ui/alert';
@@ -23,7 +23,10 @@ import {
   type ReviewDomain,
   type ReviewPrompt,
 } from '@/lib/onboarding/forms';
-import { createProjectFromOnboarding } from '@/lib/onboarding/create-project';
+import {
+  createProjectFromOnboarding,
+  type OnboardingProgress,
+} from '@/lib/onboarding/create-project';
 import { useDiscovery } from '@/lib/onboarding/use-discovery';
 import { useProjectContext } from '@/lib/project/project-context';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
@@ -102,10 +105,21 @@ export function OnboardingScreen() {
     }
   }, [discoveryState.prompts]);
 
+  // Survives a failed confirm so "Create project" retries the writes that failed
+  // instead of creating a second project. Cleared only when the brand changes
+  // (see submitBrand) — that is a different project, not a retry.
+  const createdProgress = useRef<OnboardingProgress>({});
+
   const confirm = useMutation({
     mutationFn: () => {
       if (!brand) throw new Error('Brand details are missing.');
-      return createProjectFromOnboarding({ brand, competitors, domains, prompts });
+      return createProjectFromOnboarding({
+        brand,
+        competitors,
+        domains,
+        prompts,
+        progress: createdProgress.current,
+      });
     },
     onSuccess: async (project) => {
       setActiveProjectId(project.id);
@@ -118,6 +132,22 @@ export function OnboardingScreen() {
   });
 
   const submitBrand = form.handleSubmit((values) => {
+    // Correcting the brand starts a NEW discovery run, so the review lists must
+    // be emptied first: the seeding effects bail out when `prev.length > 0` and
+    // would otherwise leave the previous brand's results standing in front of
+    // the new ones. Keyed on the same brand_name|website_url pair useDiscovery
+    // re-fires on — Back → Continue with the values unchanged re-runs nothing,
+    // so clearing there would blank the review step for good.
+    const rediscovers =
+      brand !== null &&
+      (brand.brand_name !== values.brand_name || brand.website_url !== values.website_url);
+    if (rediscovers) {
+      setDomains([]);
+      setCompetitors([]);
+      setPrompts([]);
+      // A different brand is a fresh creation, not a retry of the last confirm.
+      createdProgress.current = {};
+    }
     setBrand(values);
     setStep(1);
   });

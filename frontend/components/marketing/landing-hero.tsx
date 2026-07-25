@@ -83,17 +83,20 @@ export function LandingHero() {
               <span className="ok"><Check /> deterministic replay</span>
             </div>
           </div>
-          <div className="float-card fc-1">
+          {/* Decorative echoes of the scene above, which is itself aria-hidden.
+              Announcing invented figures ("62.4%", "13 answers") as page
+              content would read as a real result to a screen-reader user. */}
+          <div className="float-card fc-1" aria-hidden="true">
             <span className="fc-label">Visibility · Northwind</span>
             <span><b className="fc-big">62.4%</b><i className="fc-delta">▲ 4.2</i></span>
             <svg className="fc-spark" viewBox="0 0 160 30">
               <path d="M2 24 L24 19 L46 21 L68 13 L90 15 L112 7 L134 9 L158 3" pathLength="100" />
             </svg>
           </div>
-          <div className="float-card fc-2">
+          <div className="float-card fc-2" aria-hidden="true">
             <span className="fc-check"><i><Check /></i><span><b>Evidence linked.</b><small>13 answers mention your brand</small></span></span>
           </div>
-          <div className="float-card fc-4">
+          <div className="float-card fc-4" aria-hidden="true">
             <span className="hud-chip hc-owned">Citation · owned · northwind.com</span>
           </div>
           </div>

@@ -52,6 +52,12 @@ export function StaggerGroup({ children, className }: MotionChildren) {
 }
 
 export function StaggerItem({ children, className }: MotionChildren) {
+  // Mirrors StaggerGroup's guard. Without it, a StaggerItem whose group fell
+  // back to a plain <div> keeps its `hidden` variant as the initial state with
+  // nothing left to drive it to `shown` — the content stays at opacity 0.
+  const reduceMotion = useReducedMotion();
+  const canAnimate = useCanAnimateInView();
+  if (reduceMotion || !canAnimate) return <div className={className}>{children}</div>;
   return (
     <motion.div
       className={className}
@@ -71,7 +77,14 @@ export function Float({ children, className }: MotionChildren) {
     <motion.div
       className={className}
       animate={reduceMotion ? undefined : { y: [0, -7, 0] }}
-      transition={{ duration: 5.5, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
+      // Dropped along with `animate`: an infinitely-repeating transition left
+      // attached on the reduced-motion path keeps the element in a live
+      // animation loop even with nothing to animate.
+      transition={
+        reduceMotion
+          ? undefined
+          : { duration: 5.5, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }
+      }
     >
       {children}
     </motion.div>

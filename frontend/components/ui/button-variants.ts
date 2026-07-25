@@ -28,7 +28,10 @@ export const buttonVariants = cva(
         neutral: 'border-border bg-background-alt text-foreground hover:bg-well',
         ghost:
           'border-transparent bg-transparent text-secondary hover:bg-background-alt hover:text-foreground',
-        destructive: 'border-transparent bg-danger text-accent-fg hover:opacity-90',
+        // `text-danger-fg`, not `text-accent-fg`: white clears AA on the accent
+        // fill but not on the danger solid in either theme (globals.test.ts
+        // gates the pair).
+        destructive: 'border-transparent bg-danger text-danger-fg hover:opacity-90',
       },
       size: {
         sm: 'h-[var(--control-height-sm)] px-2.5 text-xs',

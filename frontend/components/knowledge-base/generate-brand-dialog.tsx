@@ -52,7 +52,17 @@ export function GenerateBrandDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {resultSummary ? 'Close' : 'Cancel'}
           </Button>
-          <Button variant="primary" onClick={() => void onGenerate()} disabled={isGenerating}>
+          {/* The rejection is caught, not discarded: callers pass a mutateAsync
+              wrapper, whose failure already lands in the `error` prop rendered
+              by SuggestErrorAlert below. Swallowing it here keeps that the only
+              surface instead of also raising an unhandled rejection. */}
+          <Button
+            variant="primary"
+            onClick={() => {
+              void Promise.resolve(onGenerate()).catch(() => {});
+            }}
+            disabled={isGenerating}
+          >
             <Sparkles className="size-4" aria-hidden />
             {isGenerating ? 'Generating…' : 'Generate'}
           </Button>

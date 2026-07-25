@@ -194,6 +194,9 @@ const BODY_PAIRS: Array<[string, string]> = [
   ['text-secondary', 'bg-base'],
   ['text-secondary', 'bg-panel'],
   ['accent-fg', 'accent'],
+  // The destructive button paints its label on the danger SOLID, not on a
+  // wash, so that pair needs its own gate (buttonVariants.destructive).
+  ['danger-fg', 'danger'],
   ['accent-text', 'bg-panel'],
   ['accent-text', 'bg-base'],
   ['text-link', 'bg-panel'],

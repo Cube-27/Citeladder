@@ -84,7 +84,7 @@ export function ContentScreen() {
             href="/projects"
             className="text-accent-text text-sm font-medium underline underline-offset-4"
           >
-            Go to Setup
+            Go to Projects
           </Link>
         </CardContent>
       </Card>

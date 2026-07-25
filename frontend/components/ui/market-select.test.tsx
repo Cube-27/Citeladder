@@ -9,6 +9,7 @@ import { MarketSelect } from './market-select';
 
 function renderSelect(overrides?: Partial<Parameters<typeof MarketSelect>[0]>) {
   const onChange = vi.fn();
+  const onBlur = vi.fn();
   // Stateful harness: mirrors react-hook-form round-tripping the committed
   // value back into the `value` prop.
   function Harness() {
@@ -18,6 +19,7 @@ function renderSelect(overrides?: Partial<Parameters<typeof MarketSelect>[0]>) {
         ariaLabel="Country"
         options={COUNTRY_OPTIONS}
         placeholder="Search countries…"
+        onBlur={onBlur}
         {...overrides}
         value={value}
         onChange={(next) => {
@@ -28,7 +30,7 @@ function renderSelect(overrides?: Partial<Parameters<typeof MarketSelect>[0]>) {
     );
   }
   const utils = render(<Harness />);
-  return { onChange, ...utils };
+  return { onChange, onBlur, ...utils };
 }
 
 describe('MarketSelect', () => {
@@ -75,7 +77,7 @@ describe('MarketSelect', () => {
 
   it('reverts the text to the committed label on Escape', async () => {
     const user = userEvent.setup();
-    const { onChange } = renderSelect();
+    const { onChange, onBlur } = renderSelect();
 
     const input = screen.getByRole('combobox', { name: /^country$/i });
     await user.click(input);
@@ -85,6 +87,9 @@ describe('MarketSelect', () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(input).toHaveValue('United States');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    // Escape closes the list but keeps focus in the input, so the field has not
+    // been left — reporting a blur here would mark it touched mid-edit.
+    expect(onBlur).not.toHaveBeenCalled();
   });
 
   it('discards uncommitted text on blur when it matches no option', async () => {

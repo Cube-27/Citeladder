@@ -2,6 +2,19 @@ import { projectsApi } from '@/lib/api/projects';
 import { promptsApi } from '@/lib/api/prompts';
 import type { Project } from '@/lib/api/types';
 
+/**
+ * What a partially-completed confirm already created.
+ *
+ * The chain is several writes long and only the last of them is retried from a
+ * clean slate. Without carrying the earlier successes forward, a failure on the
+ * prompt writes would leave the user pressing "Create project" against a
+ * project that already exists, creating a duplicate every time.
+ */
+export type OnboardingProgress = {
+  project?: Project;
+  promptSetId?: string;
+};
+
 import {
   normalizeIntent,
   onboardingToProjectInput,
@@ -72,23 +85,37 @@ export async function createProjectFromOnboarding({
   competitors,
   domains,
   prompts,
+  progress,
 }: {
   brand: BrandStepValues;
   competitors: ReviewCompetitor[];
   domains: ReviewDomain[];
   prompts: ReviewPrompt[];
+  /**
+   * Mutable record of what earlier attempts already created. Each step writes
+   * its result here before the next one can fail, so a retry resumes instead of
+   * duplicating. Callers reset it only for a genuinely new submission.
+   */
+  progress?: OnboardingProgress;
 }): Promise<Project> {
-  const project = await projectsApi.createProject(
-    onboardingToProjectInput(brand, competitors, domains),
-  );
+  const project =
+    progress?.project ??
+    (await projectsApi.createProject(onboardingToProjectInput(brand, competitors, domains)));
+  if (progress) progress.project = project;
 
   const chosen = prompts.filter((prompt) => prompt.selected);
   if (chosen.length === 0) return project;
 
-  const set = await promptsApi.createPromptSet({
-    project_id: project.id,
-    name: 'Starting prompts',
-  });
+  const setId =
+    progress?.promptSetId ??
+    (
+      await promptsApi.createPromptSet({
+        project_id: project.id,
+        name: 'Starting prompts',
+      })
+    ).id;
+  if (progress) progress.promptSetId = setId;
+
   const topicIds = await createTopics(project.id, chosen);
 
   // Sequential rather than Promise.all: these are writes against one set, and a
@@ -96,7 +123,7 @@ export async function createProjectFromOnboarding({
   // on a list this size.
   for (const prompt of chosen) {
     const topicId = topicIds.get(prompt.theme.trim().toLowerCase());
-    await promptsApi.createPrompt(set.id, {
+    await promptsApi.createPrompt(setId, {
       text: prompt.text,
       // Backend theme is a non-null `str = ""` — send empty, never null.
       theme: prompt.theme ?? '',

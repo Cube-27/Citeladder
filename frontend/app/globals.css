@@ -2,9 +2,10 @@
    Searchify — Design System (single token source of truth)
    v2 redesign (Task P1): the Figma design system ported into the app.
    LIGHT = Figma values VERBATIM (royal blue #2756FF, neutral-50 page).
-   DARK  = authored soft slate-charcoal (per approved mockups — never
-   near-black; base < panel ≤ elevated by luminance; brightened accent and
-   status hues). The Figma midnight dark is intentionally NOT ported.
+   DARK  = the authored warm-charcoal "dusk" deck of §5, shared verbatim with
+   the marketing surface (never near-black; base < panel ≤ elevated by
+   luminance; violet accent and warm status hues). Neither the Figma midnight
+   dark nor the earlier cool slate-charcoal dark is ported.
    Values mirror docs/design.md. Components consume ONLY the bridged
    Tailwind semantic tokens below — never raw hex (no-raw-hex guard).
    Figma type scale verbatim · elevated cards (shadow-1..4) · 4px grid ·
@@ -68,6 +69,7 @@
   --color-warning-border: var(--warning-border);
   --color-warning-text: var(--warning-text);
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-danger-bg: var(--danger-bg);
   --color-danger-border: var(--danger-border);
   --color-danger-text: var(--danger-text);
@@ -312,6 +314,11 @@
   --warning-border: #fde68a;
   --warning-text: #92400e;
   --danger: #ef4444;
+  /* Foreground for the DANGER SOLID (destructive button fill). White on
+     #EF4444 is only 3.76:1, so the destructive label takes the dark ink
+     instead (4.9:1) rather than deepening --danger, which is also the
+     sentiment-negative solid and every danger accent. */
+  --danger-fg: var(--neutral-900);
   --danger-bg: #fff1f1;
   --danger-border: #fecaca;
   --danger-text: #b91c1c;
@@ -580,6 +587,7 @@ html[data-theme='dark'] {
   --warning-border: rgba(242, 193, 78, 0.28);
   --warning-text: #f2c14e;
   --danger: #ff8f85;
+  --danger-fg: #1f1e1b; /* dark ink on the coral solid — 7.5:1 */
   --danger-bg: rgba(255, 143, 133, 0.13);
   --danger-border: rgba(255, 143, 133, 0.28);
   --danger-text: #ff8f85;
