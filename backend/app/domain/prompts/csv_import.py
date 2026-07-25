@@ -1,4 +1,4 @@
-# CSV parsing for MVP prompt bulk-import.
+# CSV parsing for prompt bulk-import.
 #
 # The import endpoint accepts either already-parsed JSON rows OR a raw CSV
 # upload (the committed frontend contract posts a CSV ``File``; a future F7 may

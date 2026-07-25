@@ -1,7 +1,7 @@
 # Products router: catalog CRUD + CSV import + competitor products.
 #
 # Workspace-scoped through the parent project (invariant 5); the active
-# workspace is resolved by ``require_active_workspace`` (flat MVP surface —
+# workspace is resolved by ``require_active_workspace`` (flat surface —
 # mirrors ``api/prompts.py``). The surface:
 #   - GET/POST /projects/{project_id}/products
 #   - GET/PATCH/DELETE /products/{product_id}

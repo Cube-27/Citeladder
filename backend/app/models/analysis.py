@@ -51,7 +51,7 @@ class ResponseAnalysis(Base):
     (brand mention, owned/unintended citation, prompt class, search fanout) plus
     the full ``score`` dict; the mention/citation child rows hang off it.
 
-    Sentiment + average position are deliberately NOT computed at MVP (decision
+    Sentiment + average position are deliberately NOT computed yet (decision
     B-2, invariant 9 — no LLM for headline metrics): the columns are present and
     nullable so the projection shape is stable until the roadmap fills them.
     """

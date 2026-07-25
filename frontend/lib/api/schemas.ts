@@ -6,7 +6,7 @@
  *   - **Every `id` and `*_id` field is `z.string().uuid()`.** No numeric ids.
  *   - **No `user_id` anywhere** — the contract is workspace-scoped.
  *   - Provider secrets are **never** present on the wire (BYOK, invariant 6).
- *   - `sentiment` / `avg_position` are nullable at MVP (not computed; roadmap).
+ *   - `sentiment` / `avg_position` are nullable (not computed yet; roadmap).
  *   - Validation **fails loud** via `strictValidate` — a mismatch is a bug to
  *     fix in the schema (backend is source of truth), never to swallow.
  */
@@ -526,7 +526,8 @@ export const rankingRowSchema = z
 
 // Selected-run dashboard projection (B6 `VisibilityResponse`). Computed
 // server-side from the persisted MetricSnapshot for the selected audit
-// (defaults to the latest completed audit). No cross-run trend at MVP.
+// (defaults to the latest completed audit). No cross-run trend in this payload
+// — the Trends tab reads /visibility/trends for that.
 export const visibilitySchema = z
   .object({
     project_id: uuid(),

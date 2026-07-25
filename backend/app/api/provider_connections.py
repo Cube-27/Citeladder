@@ -1,7 +1,7 @@
 # BYOK provider-connections router (B4): workspace-scoped CRUD + /test +
 # provider-catalog (invariant 5 + 6).
 #
-# The MVP API surface is flat (no workspace_id in the path); the active
+# The API surface is flat (no workspace_id in the path); the active
 # workspace is resolved by ``require_active_workspace`` from the
 # ``X-Workspace-Id`` header (or the caller's default workspace). Every query
 # filters by that workspace. No endpoint here returns the BYOK secret — the

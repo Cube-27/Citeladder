@@ -7,7 +7,7 @@
 # ever called and nothing is recomputed at read time: an absent snapshot
 # yields an empty payload (the trends empty-history precedent).
 #
-# The surface is flat like the other MVP routers: the active workspace is
+# The surface is flat like the other routers: the active workspace is
 # resolved by ``require_active_workspace`` (``X-Workspace-Id`` header or the
 # caller's default workspace) and the project is authorized through the
 # workspace before any read (invariant 5).

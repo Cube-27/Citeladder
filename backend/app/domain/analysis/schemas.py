@@ -61,7 +61,7 @@ class VisibilityResponse(BaseModel):
 
     Computed server-side from the persisted ``MetricSnapshot`` for the selected
     audit (defaults to the project's latest completed audit). No cross-run trend
-    at MVP (roadmap). Visibility % + SOV are populated; sentiment + average
+    yet (roadmap). Visibility % + SOV are populated; sentiment + average
     position are present but null (decision B-2).
     """
 

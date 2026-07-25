@@ -125,7 +125,7 @@ async def analyze_task(
         citation_count=int(score.get("citation_count") or 0),
         search_used=bool(score.get("search_used")),
         search_query_count=int(score.get("search_query_count") or 0),
-        # Roadmap (B-2): no LLM at MVP, so these stay null.
+        # Roadmap (B-2): no LLM analysis yet, so these stay null.
         sentiment=None,
         avg_position=None,
         score=score,

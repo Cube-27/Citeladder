@@ -15,7 +15,7 @@
 # ``{sync_run_id, connection_id, status}``). The snapshot refresh fires
 # when those integrations runs complete (the C5 hook).
 #
-# The surface is flat like the other MVP routers: the active workspace is
+# The surface is flat like the other routers: the active workspace is
 # resolved by ``require_active_workspace`` (``X-Workspace-Id`` header or the
 # caller's default workspace) and the project is authorized through the
 # workspace before any read (invariant 5).

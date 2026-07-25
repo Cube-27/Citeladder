@@ -39,7 +39,9 @@ export default function RegisterPage() {
   return (
     <div className="grid gap-5">
       <div className="grid gap-1">
-        <h1 className="text-foreground text-lg font-semibold">Create your account</h1>
+        <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">
+          Create your account
+        </h1>
         <p className="text-secondary text-sm">Start measuring your AI search visibility.</p>
       </div>
 

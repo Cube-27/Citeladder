@@ -1,8 +1,8 @@
 # Generic Postgres task queue (invariant 8): FOR UPDATE SKIP LOCKED claim +
 # leasing, parameterized over the queue-row model via ``PostgresQueueSpec``.
 #
-# The MVP ``TaskQueue[T]`` implementation. Postgres is both durable state and
-# the queue (no Redis at MVP). The claim runs in one short transaction that
+# The ``TaskQueue[T]`` implementation. Postgres is both durable state and
+# the queue (no Redis yet). The claim runs in one short transaction that
 # locks eligible rows with ``FOR UPDATE SKIP LOCKED`` and commits BEFORE the
 # worker does any I/O, so a DB transaction is never held across a network call.
 # ``SKIP LOCKED`` plus each model's unique idempotency key and slot constraint

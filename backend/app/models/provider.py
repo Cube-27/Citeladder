@@ -5,7 +5,7 @@
 # response DTO or log line. ``ProviderRoute`` records the logical -> transport
 # identity resolution (invariant 10). ``ProviderConnectionTest`` is an
 # append-only history of connectivity checks. ``DiscoveryModelConfig`` is
-# plumbing-only per decision B-4 — stored, not invoked at MVP.
+# plumbing-only per decision B-4 — stored, not invoked yet.
 #
 # Everything is scoped by ``workspace_id`` (invariant 5).
 from __future__ import annotations
@@ -182,7 +182,7 @@ class ProviderConnectionTest(Base):
 class DiscoveryModelConfig(Base):
     """Plumbing-only prompt-discovery model config (decision B-4).
 
-    Stored so the schema + settings surface is complete, but NOT invoked at MVP
+    Stored so the schema + settings surface is complete, but NOT invoked yet
     (the ``/prompt-sets/{id}/generate`` endpoint is a stub). Records which
     logical engine / transport / model would drive AI prompt suggestion.
     """

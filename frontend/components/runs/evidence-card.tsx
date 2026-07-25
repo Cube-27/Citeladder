@@ -34,7 +34,8 @@ function formatScoreValue(value: unknown): string {
  * grounding badge, the classified citations (owned / competitor / third-party;
  * the backend's `unintended` class folds onto the owned visual), brand +
  * competitor mention chips, and the per-response `score` dict (mono key/value).
- * Sentiment is present but not computed at MVP, so it shows the `—` placeholder.
+ * Sentiment is present in the payload but not yet computed, so it shows the
+ * `—` placeholder rather than an invented value.
  *
  * The evidence endpoint (`GET /executions/{id}`) is projection-only and does not
  * carry the raw answer text — that lives on the execution/queue row

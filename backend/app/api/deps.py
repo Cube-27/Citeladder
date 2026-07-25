@@ -105,7 +105,7 @@ async def require_active_workspace(
 ) -> WorkspaceContext:
     """Resolve the caller's *active* workspace for flat (non-path) routes.
 
-    The MVP API surface for projects/prompts/providers is flat — the workspace
+    The API surface for projects/prompts/providers is flat — the workspace
     is not in the URL (docs/backend-architecture.md §3). The active workspace is
     carried in the ``X-Workspace-Id`` header when the client selects one;
     otherwise it defaults to the caller's earliest-joined workspace. Either way

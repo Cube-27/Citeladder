@@ -392,7 +392,7 @@ def aggregate_run(
         "per_prompt": _per_prompt_stability(completed),
         "token_usage": token_usage,
         "cost": _aggregate_cost(completed, token_usage, config),
-        # Roadmap metrics (decision B-2): not computed at MVP (no LLM for
+        # Roadmap metrics (decision B-2): not computed yet (no LLM for
         # headline metrics, invariant 9). Present + null so the projection shape
         # is stable and the frontend can render the columns.
         "sentiment": None,

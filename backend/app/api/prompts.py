@@ -4,7 +4,7 @@
 # workspace is resolved by ``require_active_workspace``. The surface:
 #   - GET/POST /prompt-sets, GET/PATCH/DELETE /prompt-sets/{id}
 #   - GET/POST /prompt-sets/{id}/prompts, PATCH/DELETE /prompts/{id}
-#   - POST /prompt-sets/{id}/import  -> MVP CSV bulk-create
+#   - POST /prompt-sets/{id}/import  -> CSV bulk-create
 #   - POST /prompt-sets/{id}/generate -> AI topic/prompt generation
 #     (default agent, config/agent.py; suggestions land as status='proposed')
 #   - POST /prompt-sets/{id}/prompts/bulk-status -> review transitions
@@ -256,7 +256,7 @@ async def delete_prompt_endpoint(
 
 
 # --------------------------------------------------------------------------
-# CSV import (MVP bulk-create) + /generate stub (roadmap, B-4)
+# CSV import (bulk-create) + /generate stub (roadmap, B-4)
 # --------------------------------------------------------------------------
 async def _resolve_import_rows(
     request: Request, file: UploadFile | None

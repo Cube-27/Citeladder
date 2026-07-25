@@ -243,7 +243,7 @@
   --sentiment-positive: #059669; --sentiment-positive-bg: #ecfdf5; --sentiment-positive-text: #065f46;
   --sentiment-neutral:  #6f756f; --sentiment-neutral-bg:  #f1f2f1; --sentiment-neutral-text:  #4c524f;
   --sentiment-negative: #dc2626; --sentiment-negative-bg: #fef2f2; --sentiment-negative-text: #991b1b;
-  /* MVP: sentiment is NOT computed — render the neutral "—" placeholder token below. */
+  /* Sentiment is not computed yet — render the neutral "—" placeholder below. */
   --value-placeholder: var(--text-subtle);
 
   /* Citation classification (owned / competitor / third-party) */
@@ -533,7 +533,7 @@ samp {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Value placeholder — the neutral "—" shown for uncomputed metrics (MVP) */
+/* Value placeholder — the neutral "—" shown for not-yet-computed metrics. */
 .value-placeholder {
   color: var(--value-placeholder);
 }

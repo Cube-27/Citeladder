@@ -41,7 +41,7 @@ PROMPT_INTENTS: Final[frozenset[str]] = frozenset(
 
 # --- Prompt origin --------------------------------------------------------
 # How a prompt entered the library. ``generated`` is roadmap (B-4) — the
-# ``/generate`` endpoint is a stub at MVP, but the origin value is defined here
+# ``/generate`` endpoint is a stub, but the origin value is defined here
 # so the enum is complete and stable.
 PROMPT_ORIGIN_MANUAL: Final = "manual"
 PROMPT_ORIGIN_IMPORTED: Final = "imported"

@@ -322,7 +322,7 @@ async def import_prompts(
     prompt_set_id: uuid.UUID,
     rows: list[Any],
 ) -> PromptSet:
-    """MVP CSV bulk-create: persist already-parsed prompt rows as ``imported``.
+    """CSV bulk-create: persist already-parsed prompt rows as ``imported``.
 
     Rows with empty text are skipped; intents are casefolded + validated.
     Duplicates (same normalized text as an existing prompt in the set, or a

@@ -37,9 +37,8 @@ function optionKey(option: DiscoveryModelOption): string {
  * Discovery / analysis model selection (F8, plumbing-only, design.md §9.5).
  *
  * A separate control that maps to the roadmap `DiscoveryModelConfig`. The choice
- * is persisted locally so the plumbing is exercised, but it is NOT invoked at
- * MVP — the audit pipeline does not read it yet. Options are driven off the
- * catalog's approved routes.
+ * is persisted locally so the plumbing is exercised, but the audit pipeline does
+ * not read it yet. Options are driven off the catalog's approved routes.
  */
 export function DiscoveryModelCard({
   catalog,
@@ -52,7 +51,8 @@ export function DiscoveryModelCard({
       <CardHeader>
         <CardTitle className="text-base">Discovery / analysis model</CardTitle>
         <p className="text-secondary text-xs">
-          Used for prompt discovery and answer analysis. Stored for later — not invoked at MVP.
+          Used for prompt discovery and answer analysis. Saved to your workspace; the audit pipeline
+          does not use it yet.
         </p>
       </CardHeader>
       <CardContent className="grid gap-1.5">

@@ -94,14 +94,14 @@ describe('LandingNav', () => {
       'Deterministic scoring',
       'Evidence explorer',
       'Competitor benchmarking',
-      'BYOK privacy',
+      'Your own API keys',
       'Repeatable trends',
     ]) {
       expect(
         within(product).getByRole('menuitem', { name: new RegExp(title, 'i') }),
       ).toHaveAttribute('href', '/#features');
     }
-    for (const title of ['Define your workspace', 'Run the audit', 'Read the evidence']) {
+    for (const title of ['Set up', 'Run the audit', 'Read the evidence']) {
       expect(
         within(product).getByRole('menuitem', { name: new RegExp(title, 'i') }),
       ).toHaveAttribute('href', '/#how-it-works');

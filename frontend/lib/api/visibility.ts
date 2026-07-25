@@ -1,7 +1,7 @@
 /**
  * Visibility domain endpoint (F2): the selected-run dashboard projection —
  * Visibility Score, per-engine comparison, and the brand-vs-competitor rankings
- * table. `sentiment` / `avg_position` are present but nullable at MVP. Defaults
+ * table. `sentiment` / `avg_position` are present but nullable. Defaults
  * to the project's latest completed audit when `audit_id` is omitted. Response
  * passes through `strictValidate`.
  *

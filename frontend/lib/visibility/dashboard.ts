@@ -6,8 +6,8 @@
  * The B6 `/projects/{id}/visibility` endpoint is a selected-run projection
  * keyed only by `audit_id`; the engine filter is a client-side display filter
  * that also participates in the React Query key. There is NO per-prompt-type
- * (branded / non-branded) breakdown in `VisibilityResponse` at MVP, so that
- * control is a disabled "coming soon" affordance and does not affect the query.
+ * (branded / non-branded) breakdown in `VisibilityResponse` yet, so no such
+ * control is offered.
  */
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { shouldPollAudit } from '@/lib/runs/status';

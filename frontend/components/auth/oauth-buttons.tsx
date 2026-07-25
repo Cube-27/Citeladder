@@ -120,9 +120,7 @@ export function OAuthSection() {
 
       <div className="flex items-center gap-3">
         <span aria-hidden="true" className="bg-border h-px flex-1" />
-        <span className="text-muted text-2xs font-mono tracking-[0.14em] uppercase">
-          or continue with email
-        </span>
+        <span className="text-muted text-xs">or continue with email</span>
         <span aria-hidden="true" className="bg-border h-px flex-1" />
       </div>
     </div>

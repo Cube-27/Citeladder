@@ -332,7 +332,7 @@ def _limitation_lines():
         "consistency, not statistical confidence or day-to-day volatility.",
         "- Only explicit citations are scored; a mention without a citation is "
         "recorded as a mention, not a source.",
-        "- Sentiment and average position are roadmap metrics and are not computed "
-        "at this MVP.",
+        "- Sentiment and average position are not computed yet; they are reported "
+        "as empty rather than estimated.",
         "",
     ]

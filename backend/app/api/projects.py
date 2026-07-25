@@ -1,6 +1,6 @@
 # Projects router: workspace-scoped CRUD (invariant 5).
 #
-# The MVP API surface is flat (no workspace_id in the path); the active
+# The API surface is flat (no workspace_id in the path); the active
 # workspace is resolved by ``require_active_workspace`` from the
 # ``X-Workspace-Id`` header (or the caller's default workspace). Every query
 # filters by that workspace. ``/projects/{id}/visibility`` is added in B6.
@@ -356,7 +356,7 @@ async def get_visibility_endpoint(
     Visibility Score + per-engine comparison + brand-vs-competitor rankings,
     computed server-side from the persisted ``MetricSnapshot``. Defaults to the
     project's latest completed audit when ``audit_id`` is omitted. No provider
-    is called; no cross-run trend at MVP (roadmap).
+    is called; no cross-run trend in this payload (see /visibility/trends).
     """
     # Authorize the project first (404 for a cross-workspace/missing project).
     await _get_project_or_404(session, ctx.workspace_id, project_id)

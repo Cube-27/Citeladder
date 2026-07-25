@@ -22,7 +22,7 @@ import type { ContentGenerationDetail, ContentGenerationListItem } from './types
 
 /** Mirrors backend `CONTENT_PROMPT_MAX_LEN` (trimmed length, 422 above). */
 export const CONTENT_PROMPT_MAX_LEN = 4000;
-/** The only output type at MVP (backend `CONTENT_DEFAULT_OUTPUT_TYPE`). */
+/** The only output type currently supported (backend `CONTENT_DEFAULT_OUTPUT_TYPE`). */
 export const CONTENT_OUTPUT_TYPE_WEBSITE_PAGE = 'website_page';
 /** Mirrors backend `CONTENT_LIST_DEFAULT_LIMIT` (max 100 server-side). */
 export const CONTENT_LIST_DEFAULT_LIMIT = 50;

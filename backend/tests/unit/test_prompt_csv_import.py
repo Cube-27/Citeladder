@@ -1,4 +1,4 @@
-"""Unit tests for the MVP prompt CSV parser (B3)."""
+"""Unit tests for the prompt CSV parser (B3)."""
 
 from __future__ import annotations
 

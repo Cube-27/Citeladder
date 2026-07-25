@@ -50,7 +50,7 @@ class PromptUpdate(BaseModel):
 
 
 class PromptImport(BaseModel):
-    """MVP CSV bulk-create payload: already-parsed prompt rows.
+    """CSV bulk-create payload: already-parsed prompt rows.
 
     The browser parses the CSV at F7 and posts the rows here through the normal
     import path; the service persists them via the prompt resource with
