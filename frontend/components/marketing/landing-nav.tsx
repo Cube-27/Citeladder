@@ -35,6 +35,9 @@ import { LogoCube } from '@/components/ui/logo-cube';
 
 const ACTIVE_PROJECT_STORAGE_KEY = 'searchify.active-project-id';
 
+/** Matches --mkt-gutter: the minimum breathing room at the viewport edge. */
+const GUTTER = 20;
+
 function hasStoredActiveProject(): boolean {
   if (typeof window === 'undefined') return false;
   try {
@@ -298,6 +301,12 @@ export function LandingNav() {
   // its trigger instead, so the two motions never read as the same gesture.
   const [isSwitching, setIsSwitching] = useState(false);
   const closeTimer = useRef<number | null>(null);
+  const navLinksRef = useRef<HTMLDivElement | null>(null);
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  // Centre-x of the active trigger, measured relative to .nav-links. The one
+  // visible panel is positioned from this, so moving between triggers slides
+  // the SAME box sideways instead of closing one panel and opening another.
+  const [anchorX, setAnchorX] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<DropKey | null>(null);
 
@@ -338,6 +347,31 @@ export function LandingNav() {
   // The panel renders inside the open trigger's .nav-item (which is
   // position:relative), so the base `.drop { left: 50% }` already centers it on
   // that trigger — no measured offset needed.
+  /**
+   * Centre of `key`'s trigger, in .nav-links coordinates — the x the panel
+   * centres itself on.
+   *
+   * Clamped so a panel wider than its offset (the 620px Product panel sits
+   * over the leftmost trigger) can never run off the left edge of the
+   * viewport: the centre is pushed right just enough to keep the panel's left
+   * edge on screen. Without this the widest panel would be half-cut on
+   * narrower desktops.
+   */
+  const measureAnchor = (key: DropKey): number | null => {
+    const trigger = triggerRefs.current[key];
+    const links = navLinksRef.current;
+    const panel = document.getElementById(`desktop-nav-panel-${key}`);
+    if (!trigger || !links) return null;
+    const t = trigger.getBoundingClientRect();
+    const l = links.getBoundingClientRect();
+    const centre = t.left - l.left + t.width / 2;
+    const halfPanel = (panel?.offsetWidth ?? 0) / 2;
+    if (!halfPanel) return centre;
+    // Smallest centre that keeps the panel's left edge inside the viewport.
+    const minCentre = halfPanel - l.left + GUTTER;
+    return Math.max(centre, minCentre);
+  };
+
   const openDesktopDrop = (key: DropKey) => {
     clearDropClose();
     const order: DropKey[] = ['product', 'resources', 'solutions'];
@@ -347,6 +381,7 @@ export function LandingNav() {
     } else if (!openDrop) {
       setIsSwitching(false);
     }
+    setAnchorX(measureAnchor(key));
     setOpenDrop(key);
   };
 
@@ -405,7 +440,12 @@ export function LandingNav() {
           <span>Searchify</span>
           <span className="by-tag">by CUBE27</span>
         </Link>
-        <div className="nav-links" onMouseEnter={clearDropClose} onMouseLeave={scheduleDropClose}>
+        <div
+          className="nav-links"
+          ref={navLinksRef}
+          onMouseEnter={clearDropClose}
+          onMouseLeave={scheduleDropClose}
+        >
           {NAV_DROPS.map(({ key, label, groups }) => {
             const isOpen = openDrop === key;
             return (
@@ -413,6 +453,9 @@ export function LandingNav() {
                 <button
                   className="nav-link"
                   type="button"
+                  ref={(node) => {
+                    triggerRefs.current[key] = node;
+                  }}
                   aria-expanded={isOpen}
                   aria-haspopup="true"
                   aria-controls={`desktop-nav-panel-${key}`}
@@ -433,12 +476,16 @@ export function LandingNav() {
                     'drop shared-drop',
                     isOpen && 'open',
                     `drop-${key}`,
+                    // `switching` glides the BOX (left/width); `slide-*` slides
+                    // the inner content in from the direction of travel.
+                    isSwitching && 'switching',
                     isSwitching && `slide-${slideDirection}`,
                   )}
                   id={`desktop-nav-panel-${key}`}
                   role="menu"
                   aria-hidden={!isOpen}
                   onMouseEnter={clearDropClose}
+                  style={anchorX === null ? undefined : { left: `${anchorX}px` }}
                 >
                   {isOpen ? (
                     <div className="drop-content" key={key}>

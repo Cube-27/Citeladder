@@ -263,10 +263,10 @@ html[data-theme='dark'] .mkt {
   /* Dropdowns keep their fade (it explains what appeared) but lose the
      scale-up and the sideways glide, which are the motion components. */
   .mkt .shared-drop.open,
-  .mkt .shared-drop.open.slide-left,
-  .mkt .shared-drop.open.slide-right,
+  .mkt .shared-drop.open.switching,
   .mkt .shared-drop .drop-content {
     animation: none !important;
+    transition-duration: 0ms !important;
   }
 }
 
@@ -599,8 +599,342 @@ html[data-theme='dark'] .mkt {
   color: var(--mkt-text);
   background: var(--mkt-raised);
 }
-.mkt .nav-item {
+
+/* ── INTERACTION FEEDBACK ───────────────────────────────────────────────
+   Pressable things scale down a touch on :active. This is the cheapest
+   possible signal that the interface heard the click, and its absence is
+   what makes a page feel inert. Kept subtle (0.97-0.98) and fast (140ms):
+   press feedback must land inside the same frame budget as the click.
+
+   Transforms only — no layout, no paint, straight to the compositor. */
+.mkt .btn,
+.mkt .chip,
+.mkt .seg-chip,
+.mkt .engine-chip,
+.mkt .export-chip,
+.mkt .theme-toggle,
+.mkt .hamburger {
+  transition:
+    transform 140ms var(--mkt-ease-out),
+    background-color 180ms var(--mkt-ease-out),
+    border-color 180ms var(--mkt-ease-out),
+    color 180ms var(--mkt-ease-out);
+}
+.mkt .btn:active,
+.mkt .chip:active,
+.mkt .seg-chip:active,
+.mkt .engine-chip:active,
+.mkt .export-chip:active {
+  transform: scale(0.97);
+}
+/* Icon buttons are small, so they need a shallower press to read as motion
+   rather than a glitch. */
+.mkt .theme-toggle:active,
+.mkt .hamburger:active {
+  transform: scale(0.92);
+}
+
+/* Nav links and dropdown rows: colour/background only. These are hovered
+   dozens of times per visit, so movement here would be noise. */
+.mkt .nav-link,
+.mkt .drop-item,
+.mkt .m-item {
+  transition:
+    background-color 140ms var(--mkt-ease-out),
+    color 140ms var(--mkt-ease-out);
+}
+
+/* Cards lift by a single pixel — enough to register as responsive, small
+   enough that a grid of them doesn't jitter as the pointer crosses it.
+   Gated behind a real pointer: on touch, :hover sticks after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .mkt .feature-card,
+  .mkt .step-card,
+  .mkt .tier-card {
+    transition:
+      transform 200ms var(--mkt-ease-out),
+      border-color 200ms var(--mkt-ease-out);
+  }
+  .mkt .feature-card:hover,
+  .mkt .step-card:hover,
+  .mkt .tier-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--mkt-border-strong);
+  }
+
+  /* The primary CTA's arrow leans into the direction it will take you. */
+  .mkt .btn .arr {
+    transition: transform 200ms var(--mkt-ease-out);
+  }
+  .mkt .btn:hover .arr {
+    transform: translateX(2px);
+  }
+}
+
+/* ── ENTRANCE STAGGER ───────────────────────────────────────────────────
+   Children fade up in sequence rather than snapping in together. Delays are
+   short (55ms apart) so the last item still lands quickly — a long cascade
+   reads as the page being slow, not considered. Decorative only: nothing
+   here blocks interaction, and the elements are in the DOM the whole time. */
+.mkt .stagger > * {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: mkt-rise 420ms var(--mkt-ease-out) forwards;
+}
+.mkt .stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.mkt .stagger > *:nth-child(2) {
+  animation-delay: 55ms;
+}
+.mkt .stagger > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+.mkt .stagger > *:nth-child(4) {
+  animation-delay: 165ms;
+}
+.mkt .stagger > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+.mkt .stagger > *:nth-child(6) {
+  animation-delay: 275ms;
+}
+@keyframes mkt-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── SHARED PIECES ──────────────────────────────────────────────────────── */
+.mkt .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--mkt-text-3);
+}
+/* Key headline terms — a subtle blue that varies across the phrase, with a
+   slow shine that sweeps once on load and again on hover.
+
+   The sweep is a background-position animation on a clipped gradient: no
+   layout, no paint, and it runs off the main thread. It is deliberately slow
+   (2.6s) and low-contrast because it is decorative — this is a marketing
+   headline seen once per visit, not a control seen hundreds of times a day.
+   Reduced motion drops the sweep and keeps the colour (see the block below),
+   because the colour carries the emphasis and only the movement is the
+   accessibility concern. */
+.mkt .grad-text {
   position: relative;
+  background-image: linear-gradient(
+    100deg,
+    var(--mkt-accent-2) 0%,
+    var(--mkt-accent-2) 26%,
+    var(--mkt-shine) 46%,
+    var(--mkt-accent-2) 66%,
+    var(--mkt-accent-2) 100%
+  );
+  background-size: 260% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: mkt-shine 2.6s var(--mkt-ease-in-out) 0.35s both;
+}
+.mkt .grad-text:hover {
+  animation: mkt-shine 2.6s var(--mkt-ease-in-out) both;
+}
+@keyframes mkt-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.mkt .card {
+  position: relative;
+  background: var(--mkt-surface);
+  border: 1px solid var(--mkt-border);
+  border-radius: var(--mkt-r-card);
+  box-shadow: 0 0 70px -28px var(--mkt-glow-1);
+}
+.mkt .card:hover {
+  box-shadow:
+    0 0 96px -24px var(--mkt-glow-2),
+    0 18px 44px -32px var(--mkt-glow-1);
+}
+.mkt .rim {
+  position: relative;
+}
+.mkt .rim::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--mkt-hairline);
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+.mkt .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: var(--mkt-r-pill);
+  white-space: nowrap;
+}
+.mkt .btn-primary {
+  background: var(--mkt-btn-bg);
+  color: var(--mkt-btn-text);
+  padding: 14px 27px;
+}
+.mkt .btn-primary:hover {
+  background: var(--mkt-accent-2);
+}
+.mkt .btn-ghost {
+  background: var(--mkt-surface);
+  border: 1px solid var(--mkt-border);
+  color: var(--mkt-text);
+  padding: 14px 26px;
+}
+.mkt .btn-ghost:hover {
+  background: var(--mkt-surface-2);
+  border-color: var(--mkt-border-strong);
+}
+.mkt .btn .arr {
+  transition: transform 0.25s var(--mkt-ease);
+}
+.mkt .btn:hover .arr {
+  transform: translateX(3px);
+}
+.mkt .btn-sm {
+  padding: 8.5px 18px;
+  font-size: 14px;
+}
+.mkt .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: var(--mkt-r-pill);
+  border: 1px solid var(--mkt-border);
+  background: var(--mkt-surface);
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
+  color: var(--mkt-text-2);
+  padding: 5px 12px;
+}
+.mkt .h2 {
+  font-size: clamp(28px, 3.2vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.mkt .section-head {
+  max-width: 760px;
+  margin: 0 auto 58px;
+  text-align: center;
+}
+.mkt .section-head .eyebrow {
+  margin-bottom: 18px;
+}
+.mkt .section-head p {
+  margin-top: 16px;
+  color: var(--mkt-text-2);
+  font-size: 17px;
+}
+
+/* ── NAV ────────────────────────────────────────────────────────────────── */
+/* Fixed full-width top strip: the bar spans the viewport and is pinned to
+   the top edge, with only its bottom hairline separating it from the page.
+   `.mkt` gets the matching top padding below so content starts under it. */
+.mkt .nav-wrap {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  background: var(--mkt-surface-2);
+  border-bottom: 1px solid var(--mkt-border);
+  /* Only the border changes on scroll, so this is a cheap, non-layout
+     transition. */
+  transition: border-color 200ms var(--mkt-ease-out);
+}
+.mkt .nav-wrap.scrolled {
+  border-bottom-color: var(--mkt-border-strong);
+}
+.mkt .site-nav {
+  max-width: var(--mkt-container);
+  margin: 0 auto;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--mkt-gutter);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.mkt .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16.5px;
+  letter-spacing: -0.01em;
+  margin-right: 14px;
+}
+.mkt .wordmark svg {
+  display: block;
+  flex: none;
+}
+.mkt .by-tag {
+  font-family: var(--mkt-font-sans);
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--mkt-text-3);
+  border-radius: var(--mkt-r-pill);
+  padding: 3.5px 8px;
+  margin-left: 1px;
+  white-space: nowrap;
+}
+.mkt .nav-links {
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 2px;
+  margin-right: auto;
+}
+.mkt .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--mkt-text-2);
+  padding: 8px 13px;
+  border-radius: var(--mkt-r-pill);
+}
+.mkt .nav-link:hover {
+  color: var(--mkt-text);
+  background: var(--mkt-raised);
+}
+/* Deliberately NOT position:relative. The panel is a child of .nav-item (for
+   keyboard reachability — Tab must move from trigger into the menu without
+   leaving the subtree), but it is POSITIONED against .nav-links so the one
+   visible panel can slide horizontally between triggers. */
+.mkt .nav-item {
+  position: static;
 }
 .mkt .nav-item::after {
   content: '';
@@ -624,7 +958,7 @@ html[data-theme='dark'] .mkt {
 }
 .mkt .drop {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 10px);
   left: 50%;
   transform: translate(-50%, 4px);
   width: 320px;
@@ -650,17 +984,12 @@ html[data-theme='dark'] .mkt {
     transform 140ms var(--mkt-ease-out),
     visibility 0s linear 140ms;
 }
-/* The product panel is far wider than its trigger, so centering it on the
-   trigger pushes it past the nav's left edge. Anchor its LEFT edge to the
-   trigger instead and let it open rightwards, where there is room. */
+/* Every panel is centred on its trigger, so the one visible box travels along
+   a single horizontal line as the pointer moves between triggers. The product
+   panel is the widest; the component clamps its centre so it can never run
+   past the left edge of the viewport. */
 .mkt .drop-product {
   width: 620px;
-  left: 0;
-  transform: translate(0, -6px) scale(0.97);
-  transform-origin: top left;
-}
-.mkt .shared-drop.drop-product.open {
-  transform: translate(0, 0) scale(1);
 }
 .mkt .drop-product .drop-content {
   display: grid;
@@ -707,66 +1036,19 @@ html[data-theme='dark'] .mkt {
     visibility 0s;
 }
 
-/* Switching triggers: the panel enters travelling sideways from the trigger
-   the pointer came from, so the group reads as ONE surface sliding along the
-   nav instead of separate panels blinking. The direction classes are set by
-   the component from the trigger order.
+/* SWITCHING between triggers: the panel is already open, so it must not fade
+   or scale — it simply travels. `left` and `width` animate with the on-screen
+   ease-in-out curve (this is movement, not an entrance), which is what makes
+   the three panels read as one surface sliding along the nav. */
+.mkt .shared-drop.open.switching {
+  transition:
+    left 320ms var(--mkt-ease-in-out),
+    width 320ms var(--mkt-ease-in-out),
+    opacity 120ms var(--mkt-ease-out),
+    transform 120ms var(--mkt-ease-out),
+    visibility 0s;
+}
 
-   Opacity is deliberately quick (120ms) while the slide runs longer: the box
-   is legible almost immediately and only the motion carries the direction. */
-.mkt .shared-drop.open.slide-right {
-  animation: mkt-drop-glide-right 260ms var(--mkt-ease-out) both;
-}
-.mkt .shared-drop.open.slide-left {
-  animation: mkt-drop-glide-left 260ms var(--mkt-ease-out) both;
-}
-@keyframes mkt-drop-glide-right {
-  from {
-    opacity: 0;
-    transform: translate(calc(-50% - 26px), 0) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-@keyframes mkt-drop-glide-left {
-  from {
-    opacity: 0;
-    transform: translate(calc(-50% + 26px), 0) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-/* The product panel is left-anchored, so its glide keyframes use translate(0). */
-.mkt .shared-drop.drop-product.open.slide-right {
-  animation-name: mkt-drop-glide-right-left-anchored;
-}
-.mkt .shared-drop.drop-product.open.slide-left {
-  animation-name: mkt-drop-glide-left-left-anchored;
-}
-@keyframes mkt-drop-glide-right-left-anchored {
-  from {
-    opacity: 0;
-    transform: translate(-26px, 0) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-}
-@keyframes mkt-drop-glide-left-left-anchored {
-  from {
-    opacity: 0;
-    transform: translate(26px, 0) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-}
 .mkt .shared-drop .drop-content {
   width: 100%;
 }
@@ -774,15 +1056,15 @@ html[data-theme='dark'] .mkt {
    pointer travelled FROM, so the panel feels like one surface sliding
    sideways rather than three separate panels blinking in and out. */
 .mkt .shared-drop.open.slide-right .drop-content {
-  animation: mkt-drop-content-right 260ms var(--mkt-ease-out) both;
+  animation: mkt-drop-content-right 320ms var(--mkt-ease-out) both;
 }
 .mkt .shared-drop.open.slide-left .drop-content {
-  animation: mkt-drop-content-left 260ms var(--mkt-ease-out) both;
+  animation: mkt-drop-content-left 320ms var(--mkt-ease-out) both;
 }
 @keyframes mkt-drop-content-right {
   from {
     opacity: 0;
-    transform: translateX(-22px);
+    transform: translateX(-14px);
   }
   to {
     opacity: 1;
@@ -792,7 +1074,7 @@ html[data-theme='dark'] .mkt {
 @keyframes mkt-drop-content-left {
   from {
     opacity: 0;
-    transform: translateX(22px);
+    transform: translateX(14px);
   }
   to {
     opacity: 1;

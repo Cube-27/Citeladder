@@ -79,27 +79,30 @@ describe('LandingNav', () => {
     expect(screen.queryByRole('link', { name: /^evidence$/i })).not.toBeInTheDocument();
   });
 
-  it('glides sideways only when switching panels, not on a fresh open', () => {
+  it('travels between triggers only when switching, not on a fresh open', () => {
     renderWithProviders(<LandingNav />);
 
     const item = (name: RegExp, id: string) => control(name, id).closest('.nav-item') as Element;
 
-    // A fresh open grows out of its trigger — no directional glide class, or
-    // the first open would read as arriving from somewhere off to the side.
+    // A fresh open grows out of its trigger: no `switching`, so it uses the
+    // scale-up entrance rather than the horizontal travel transition.
     fireEvent.mouseEnter(item(/^product$/i, 'desktop-nav-panel-product'));
     const product = panel('desktop-nav-panel-product');
     expect(product).toHaveClass('open');
+    expect(product).not.toHaveClass('switching');
     expect(product.className).not.toMatch(/slide-(left|right)/);
 
-    // Product -> Solutions moves rightwards along the nav, so the incoming
-    // panel glides in from the left.
+    // Product -> Solutions: `switching` swaps the panel onto the left/width
+    // transition so the SAME box slides along the nav instead of fading out
+    // and a new one fading in. `slide-right` carries the inner content in
+    // from the direction of travel.
     fireEvent.mouseEnter(item(/^solutions$/i, 'desktop-nav-panel-solutions'));
     const solutions = panel('desktop-nav-panel-solutions');
-    expect(solutions).toHaveClass('open', 'slide-right');
+    expect(solutions).toHaveClass('open', 'switching', 'slide-right');
 
-    // Solutions -> Resources moves back leftwards.
+    // Solutions -> Resources travels back leftwards.
     fireEvent.mouseEnter(item(/^resources$/i, 'desktop-nav-panel-resources'));
-    expect(panel('desktop-nav-panel-resources')).toHaveClass('open', 'slide-left');
+    expect(panel('desktop-nav-panel-resources')).toHaveClass('open', 'switching', 'slide-left');
   });
 
   it('gives every dropdown item its own href (9 / 3 / 4 menuitems)', () => {
