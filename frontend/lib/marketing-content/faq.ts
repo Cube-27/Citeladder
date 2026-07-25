@@ -1,9 +1,9 @@
 /**
  * FAQ content for /faq — four groups matching the approved mockup.
  *
- * Answers are grounded in README.md and docs/site-health.md;
- * account/billing answers stay '[TODO(user)]' until the user fills
- * them in.
+ * Product answers are grounded in README.md and docs/site-health.md;
+ * commercial answers follow lib/marketing-content/pricing.ts, which is the
+ * single source for every published price and quota.
  */
 
 export type FaqItem = {
@@ -127,8 +127,10 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       {
         q: 'How much does Searchify cost?',
         a:
-          'Self-hosting the full stack is free on your own infrastructure — you pay only ' +
-          'your own AI provider usage on your own keys. Hosted plan details will be published before launch.',
+          'Free to start, then $49/mo (Starter) or $149/mo (Pro); Enterprise is a custom annual ' +
+          'agreement. Every plan is a flat platform fee — because audits run on your own provider ' +
+          'keys, model usage is billed by your provider at their rates and is never marked up by ' +
+          'us. Self-hosting is free on your own infrastructure. See /pricing for the full table.',
       },
       {
         q: 'Can I self-host Searchify?',
@@ -138,12 +140,16 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
           'usage on your own keys.',
       },
       {
-        q: 'What’s the refund policy?',
-        a: 'Refund terms will be published with hosted-plan availability.',
+        q: 'Do I need a credit card to try it?',
+        a:
+          'No. The Free plan needs no card, and paid plans start with a trial. You will need your ' +
+          'own AI provider key to run an audit, since audits execute on your keys.',
       },
       {
-        q: 'How do I get an invoice?',
-        a: 'Invoice options will be published with hosted-plan availability.',
+        q: 'Can I change plan later?',
+        a:
+          'Yes — plans change at any time and take effect on the next billing period. Your runs, ' +
+          'evidence and exports are unaffected by a plan change.',
       },
     ],
   },

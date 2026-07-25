@@ -82,14 +82,17 @@ describe('FAQ page (public marketing `/faq`)', () => {
     }
   });
 
-  it('uses presentation-safe billing copy while hosted details are finalized', () => {
-    render(<Page />);
+  it('publishes the real plan prices under Account & billing', () => {
+    const { container } = render(<Page />);
 
     const billing = screen.getByRole('region', { name: 'Account & billing' });
-    expect(
-      within(billing).getByText(/Hosted plan details will be published before launch/i),
-    ).toBeInTheDocument();
-    expect(within(billing).getByText(/Refund terms will be published/i)).toBeInTheDocument();
+    // Prices match lib/marketing-content/pricing.ts, the single source.
+    expect(within(billing).getByText(/\$49\/mo \(Starter\)/)).toBeInTheDocument();
+    expect(within(billing).getByText(/\$149\/mo \(Pro\)/)).toBeInTheDocument();
+    // The BYOK-therefore-flat-fee reasoning is stated, not implied.
+    expect(within(billing).getByText(/never marked up by/i)).toBeInTheDocument();
+    // No unfinished placeholder may reach the page.
+    expect(container.textContent).not.toMatch(/TODO\(user\)/);
   });
 
   it('answers the self-host question under Account & billing', () => {

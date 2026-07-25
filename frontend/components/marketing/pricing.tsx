@@ -1,16 +1,14 @@
 import { ArrowRight, Check, Minus } from 'lucide-react';
 import Link from 'next/link';
 
-import { PRICING_TABLE_ROWS, PRICING_TIERS } from '@/lib/marketing-content/pricing';
+import { PRICING_NOTE, PRICING_TABLE_ROWS, PRICING_TIERS } from '@/lib/marketing-content/pricing';
 import type { PricingTier } from '@/lib/marketing-content/pricing';
 import { cn } from '@/lib/utils';
 
 /**
  * Pricing page sections (`/pricing`). All plan data renders verbatim from
- * `@/lib/marketing-content/pricing` — prices the user has not filled in yet
- * show the '[TODO(user)]' placeholder on purpose. Structure, copy, and class
- * names follow the approved mockup (`docs` design `page-pricing.html`); the
- * mockup's `.tier`/`.tier-featured` card is `.tier-card`/`.popular` here.
+ * `@/lib/marketing-content/pricing`, which is the single source for every
+ * published price and quota — change a commercial term there, not here.
  */
 
 /** Table column order — matches the PricingTableRow fields one to one. */
@@ -31,6 +29,7 @@ export function PricingTiers() {
             <TierCard key={tier.key} tier={tier} />
           ))}
         </div>
+        <p className="tiers-note">{PRICING_NOTE}</p>
       </div>
     </section>
   );

@@ -1,6 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Searchify">
-  <rect x="1" y="1" width="62" height="62" rx="13" fill="#0f1117"/>
-  <path d="M32 10 54 22v20L32 54 10 42V22L32 10Z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
-  <path d="m10 22 22 12 22-12M32 34v20" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
-  <path d="m32 34 11-6v12l-11 6V34Z" fill="#2f58ff"/>
+  <style>
+    /* Static asset — can't reach the app's CSS vars, so the bubble follows the
+       browser/OS scheme directly. Values mirror --text-primary / --accent. */
+    .bubble { stroke: #0f1117; }
+    .spark { fill: #2f58ff; }
+    @media (prefers-color-scheme: dark) {
+      .bubble { stroke: #f3f3f5; }
+      .spark { fill: #6b8aff; }
+    }
+  </style>
+  <path class="bubble" d="M53 31.5c0 11.3-9.4 20.5-21 20.5-2.8 0-5.5-.5-8-1.5L12.5 55l3.2-9.6C12.6 41.6 11 36.8 11 31.5 11 20.2 20.4 11 32 11s21 9.2 21 20.5Z" fill="none" stroke-width="4.2" stroke-linejoin="round"/>
+  <path class="spark" d="M32 18c1.65 4.95 3.05 8.7 4.65 10.35C38.3 29.95 42.05 31.35 47 33c-4.95 1.65-8.7 3.05-10.35 4.65C35.05 39.3 33.65 43.05 32 48c-1.65-4.95-3.05-8.7-4.65-10.35C25.7 36.05 21.95 34.65 17 33c4.95-1.65 8.7-3.05 10.35-4.65C28.95 26.7 30.35 22.95 32 18Z"/>
 </svg>

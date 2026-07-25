@@ -1,35 +1,33 @@
-import { BarChart3, Globe, KeyRound, Sigma, TrendingUp } from 'lucide-react';
-
-import { ICONS } from '@/lib/icons';
+import { Columns3, FileSearch, Lock, MessagesSquare, Repeat2, Target } from 'lucide-react';
 
 const FEATURES = [
   {
-    icon: Globe,
+    icon: MessagesSquare,
     title: 'Three-engine coverage',
     body: 'One audit queries ChatGPT, Gemini, and Claude side by side. Same prompts, same repetitions, comparable scores.',
   },
   {
-    icon: Sigma,
+    icon: Target,
     title: 'Deterministic scoring',
-    body: 'Mentions, citations, and share-of-voice are computed from the raw response text. Same data, same score.',
+    body: 'Mentions, citations, and share of answers is computed from the raw response text. Same data, same score.',
   },
   {
-    icon: ICONS.visibility,
+    icon: FileSearch,
     title: 'Evidence explorer',
     body: 'Every metric links to the exact run it came from. Open the raw response in Runs and check the math yourself.',
   },
   {
-    icon: BarChart3,
+    icon: Columns3,
     title: 'Competitor benchmarking',
     body: 'Track the competitors that matter. Watch share-of-voice shift across engines, prompt by prompt.',
   },
   {
-    icon: KeyRound,
-    title: 'BYOK privacy',
-    body: 'Audits run on your own provider keys. Fernet-encrypted at rest, write-only, never returned by the API.',
+    icon: Lock,
+    title: 'Your own API keys',
+    body: 'Audits run on your own provider keys — encrypted at rest, write-only, and never returned by the API.',
   },
   {
-    icon: TrendingUp,
+    icon: Repeat2,
     title: 'Repeatable trends',
     body: 'Rerun audits on your cadence. Watch visibility move period over period, engine over engine.',
   },

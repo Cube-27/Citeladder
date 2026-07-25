@@ -42,11 +42,14 @@ describe('Pricing page (public marketing `/pricing`)', () => {
       ).toHaveAttribute('href', tier.cta.href);
     }
 
-    // Pricing remains presentation-safe until commercial values are approved.
-    expect(byName('Starter').querySelector('.amount')).toHaveTextContent('Custom');
-    expect(byName('Pro').querySelector('.amount')).toHaveTextContent('Custom');
-    expect(byName('Free sample').querySelector('.amount')).toHaveTextContent('$0');
+    // Published prices render verbatim from the content module.
+    expect(byName('Free').querySelector('.amount')).toHaveTextContent('$0');
+    expect(byName('Starter').querySelector('.amount')).toHaveTextContent('$49');
+    expect(byName('Pro').querySelector('.amount')).toHaveTextContent('$149');
     expect(byName('Enterprise').querySelector('.amount')).toHaveTextContent('Custom');
+
+    // No unfinished placeholder may reach the page.
+    expect(container.textContent).not.toMatch(/TODO\(user\)/);
 
     // The highlighted tier is the featured card.
     expect(byName('Pro')).toHaveClass('popular');
@@ -68,15 +71,12 @@ describe('Pricing page (public marketing `/pricing`)', () => {
     }
 
     // Spot-check grounded pro cells: full inventory rides every paid tier.
-    const inventoryRow = screen.getByRole('row', { name: /Site Health crawl mode/ });
+    const inventoryRow = screen.getByRole('row', { name: /Site health crawl mode/ });
     expect(within(inventoryRow).getAllByText('Full progressive inventory')).toHaveLength(3);
-    // Pro/Enterprise monitored-URL sizes are commercial terms the repo can't
-    // ground, so they render with a visible [TODO(user)] placeholder.
+    // Monitored-URL quotas are published numbers, not placeholders.
     const monitoredRow = screen.getByRole('row', { name: /Monitored URL set/ });
-    expect(
-      within(monitoredRow).getByText(/Expanded selection — \[TODO\(user\)\]/),
-    ).toBeInTheDocument();
-    expect(within(monitoredRow).getByText('Quota-controlled selection')).toBeInTheDocument();
+    expect(within(monitoredRow).getByText('100 URLs')).toBeInTheDocument();
+    expect(within(monitoredRow).getByText('1,000 URLs')).toBeInTheDocument();
   });
 
   it('renders the BYOK trust strip', () => {

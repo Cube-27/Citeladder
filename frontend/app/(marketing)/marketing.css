@@ -80,10 +80,8 @@
   --mkt-chip-live: #eef2ff;
   --mkt-live-text: #1e3fd0;
   --mkt-spark-area: rgba(47, 88, 255, 0.1);
-  --mkt-logo-tile: #0f1117;
-  --mkt-logo-stroke: #ffffff;
-  --mkt-logo-facet: #2f58ff;
-  --mkt-logo-ring: transparent;
+  --mkt-logo-bubble: #0f1117;
+  --mkt-logo-spark: #2f58ff;
   --mkt-mark-hl: #eef2ff;
   --mkt-dash-grad: #ffffff;
   --mkt-nav-shadow: none;
@@ -153,10 +151,8 @@ html[data-theme='dark'] .mkt {
   --mkt-chip-live: rgba(107, 138, 255, 0.12);
   --mkt-live-text: #9db2ff;
   --mkt-spark-area: rgba(107, 138, 255, 0.12);
-  --mkt-logo-tile: #0f1117;
-  --mkt-logo-stroke: #ffffff;
-  --mkt-logo-facet: #2f58ff;
-  --mkt-logo-ring: rgba(255, 255, 255, 0.16);
+  --mkt-logo-bubble: #f3f3f5;
+  --mkt-logo-spark: #6b8aff;
   --mkt-mark-hl: rgba(107, 138, 255, 0.16);
   --mkt-dash-grad: #131316;
   --mkt-nav-shadow: none;
@@ -558,13 +554,19 @@ html[data-theme='dark'] .mkt {
 .mkt .drop-item:hover .d-ext {
   color: var(--mkt-text-2);
 }
-.mkt .f-icon,
+/* The check marker keeps its tinted tile (it IS the affirmation); feature
+   icons are bare glyphs in muted ink, matching the nav dropdown. */
 .mkt .audit-check {
   display: grid;
   place-items: center;
   background: var(--mkt-accent-soft);
   border: 1px solid var(--mkt-icon-bd);
   color: var(--mkt-icon-fg);
+}
+.mkt .f-icon {
+  display: grid;
+  place-items: center;
+  color: var(--mkt-text-3);
 }
 /* Dropdown row glyph — a bare 16px icon in muted ink, no tinted tile. It
    brightens with the row on hover, so the accent is never spent on chrome. */
@@ -1397,10 +1399,14 @@ html[data-theme='dark'] .mkt {
   transform: translateY(-2px);
 }
 .mkt .f-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  margin-bottom: 18px;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 16px;
+}
+.mkt .f-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
 }
 .mkt .f-icon svg {
   width: 18px;
@@ -1621,16 +1627,12 @@ html[data-theme='dark'] .mkt {
   margin-top: 22px;
 }
 
-/* ── LOGO MARK (cube tile colors via tokens — components stay hex-free) ─── */
-.mkt .logo-tile {
-  fill: var(--mkt-logo-tile);
-  stroke: var(--mkt-logo-ring);
+/* ── LOGO MARK (tile-less: bubble + spark paint via tokens) ─────────────── */
+.mkt .logo-bubble {
+  stroke: var(--mkt-logo-bubble);
 }
-.mkt .logo-stroke {
-  stroke: var(--mkt-logo-stroke);
-}
-.mkt .logo-facet {
-  fill: var(--mkt-logo-facet);
+.mkt .logo-spark {
+  fill: var(--mkt-logo-spark);
 }
 
 /* ── SPARKLINE (SVG paint via tokens) ───────────────────────────────────── */
@@ -1906,10 +1908,10 @@ html[data-theme='dark'] .mkt {
   gap: 6px;
   border-radius: var(--mkt-r-pill);
   padding: 4px 12px;
-  font-family: var(--mkt-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--mkt-font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--mkt-live-text);
   background: var(--mkt-chip-live);
   border: 1px solid var(--mkt-icon-bd);
@@ -1950,14 +1952,14 @@ html[data-theme='dark'] .mkt {
 }
 
 .mkt .per {
-  font-family: var(--mkt-font-mono);
-  font-size: 12px;
+  font-family: var(--mkt-font-sans);
+  font-size: 13px;
   color: var(--mkt-text-3);
 }
 
 .mkt .tier-note {
-  font-family: var(--mkt-font-mono);
-  font-size: 11px;
+  font-family: var(--mkt-font-sans);
+  font-size: 12px;
   line-height: 1.6;
   color: var(--mkt-text-3);
   margin-top: 9px;
@@ -1982,9 +1984,8 @@ html[data-theme='dark'] .mkt {
 
 .mkt .tier-list li.lead {
   color: var(--mkt-text-3);
-  font-family: var(--mkt-font-mono);
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
+  font-size: 12.5px;
+  font-weight: 500;
 }
 
 .mkt .tick {
@@ -3925,4 +3926,14 @@ html[data-theme='dark'] .mkt {
   .mkt .footer-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Why every plan is a flat fee — shown under the tier cards. */
+.mkt .tiers-note {
+  max-width: 680px;
+  margin: 28px auto 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mkt-text-3);
 }

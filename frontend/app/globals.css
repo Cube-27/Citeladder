@@ -584,17 +584,14 @@ samp {
 }
 
 /* ─── Brand utilities — LogoCube default paints + auth split-screen ────
-   The marketing `.mkt` paint rules in marketing.css stay more specific and
-   keep the landing's dark tile; these defaults invert per theme (matching
-   the marketing light treatment) so the mark renders correctly anywhere
-   outside `.mkt` (auth split-screen, app shell). */
-.logo-tile {
-  fill: var(--text-primary);
+   The mark is tile-less: the bubble is drawn in the current text color and
+   the spark in the accent, so it reads on any surface and inverts with the
+   theme for free. The marketing `.mkt` paint rules in marketing.css stay
+   more specific and keep the landing's treatment. */
+.logo-bubble {
+  stroke: var(--text-primary);
 }
-.logo-stroke {
-  stroke: var(--bg-panel);
-}
-.logo-facet {
+.logo-spark {
   fill: var(--accent);
 }
 

@@ -67,7 +67,9 @@ export const SEARCHIFY_COLUMN: readonly { dimension: string; searchify: string }
   },
   {
     dimension: 'Price transparency',
-    searchify: 'Free self-host option on your own infrastructure — hosted plans [TODO(user)].',
+    searchify:
+      'Published flat-rate plans, plus a free self-host option on your own infrastructure. ' +
+      'Model usage is billed by your own provider at their rates and never marked up.',
   },
 ];
 

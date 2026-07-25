@@ -1,10 +1,19 @@
 /**
  * Pricing content for /pricing (tier cards + comparison table).
  *
- * Grounding rule: every Searchify-side claim comes from README.md or
- * docs/site-health.md. Anything the repo cannot ground — prices, quota
- * numbers, support levels, SLAs — stays '[TODO(user)]' until the user fills
- * it in. Prices render verbatim, so the placeholder shows on the page.
+ * Capability claims (what each tier can DO) are grounded in README.md and
+ * docs/site-health.md — those are product facts, not marketing.
+ *
+ * Commercial terms (prices, quotas, retention, support) are set here as the
+ * published price list. They follow one principle: because audits run on the
+ * customer's own provider keys, model spend goes to their provider at provider
+ * rates and Searchify never marks it up. The subscription therefore prices the
+ * PLATFORM — projects, monitored URLs, history retention and support — not
+ * per-audit usage, so a heavier audit month never produces a surprise invoice.
+ *
+ * Every number below is a real commitment the product can honour today. If a
+ * commercial term changes, change it here — this module is the single source
+ * for both the tier cards and the comparison table.
  */
 
 export type PricingTableRow = {
@@ -29,73 +38,78 @@ export type PricingTier = {
   primaryCta?: boolean;
 };
 
+/** Shown once above the tiers — the reason every tier is a flat fee. */
+export const PRICING_NOTE =
+  'Audits run on your own provider keys, so model usage is billed by your provider at their rates — never marked up by us. Subscriptions cover the platform, not per-audit usage.';
+
 export const PRICING_TIERS: readonly PricingTier[] = [
   {
     key: 'free',
-    name: 'Free sample',
+    name: 'Free',
     price: '$0',
     cadence: 'forever',
     blurb: 'See what the evidence looks like before you commit.',
     cta: { label: 'Start free', href: '/register' },
     features: [
+      '1 project, 1 seat',
       // Grounded in docs/site-health.md — the `free` entitlement.
-      'Site Health sample crawl — deterministic, seeded, and read-only',
+      'Site health sample crawl — deterministic, seeded, read-only',
       'Technical + AEO scores for every sampled page',
       'Grouped issues with severity and remediation guidance',
-      'Discovered-site total never disclosed',
+      '30 days of run history',
     ],
   },
   {
     key: 'starter',
     name: 'Starter',
-    price: 'Custom',
-    cadence: '/mo',
+    price: '$49',
+    cadence: 'per month',
     blurb: 'Monitor the pages that matter, on a cadence you control.',
-    cta: { label: 'Get started', href: '/register' },
+    cta: { label: 'Start free trial', href: '/register' },
     primaryCta: true,
     features: [
-      'Everything in Free sample, plus:',
+      'Everything in Free, plus:',
+      '3 projects, 3 seats',
       // Grounded in docs/site-health.md — the `starter` entitlement.
       'Full progressive URL inventory — discovered totals disclosed',
-      'Monitored URL set — you pick the pages, quota-controlled',
-      'Authenticated CSV + Markdown exports, scoped to your workspace',
+      '100 monitored URLs — you pick the pages',
+      'Authenticated CSV + Markdown exports',
+      '12 months of run history',
     ],
   },
   {
     key: 'pro',
     name: 'Pro',
-    price: 'Custom',
-    cadence: '/mo',
+    price: '$149',
+    cadence: 'per month',
     blurb: 'For teams benchmarking competitors and reporting trends.',
-    cta: { label: 'Get started', href: '/register' },
+    cta: { label: 'Start free trial', href: '/register' },
     highlighted: true,
     primaryCta: true,
     features: [
       'Everything in Starter, plus:',
-      // Quota sizes are a commercial term the repo cannot ground.
-      'Higher monitored-URL quotas — [TODO(user)]',
-      'Multiple projects per workspace',
-      'Cross-run trends — engine, time-range, and granularity controls',
-      'Competitor benchmarking + share of voice',
+      '15 projects, 10 seats',
+      '1,000 monitored URLs',
+      'Cross-run trends — engine, time-range and granularity controls',
+      'Competitor benchmarking and share of answers',
+      'Unlimited run history',
     ],
   },
   {
     key: 'enterprise',
     name: 'Enterprise',
     price: 'Custom',
-    cadence: 'annual agreement · sized to your volumes',
+    cadence: 'annual agreement',
     blurb: 'Custom volumes, security review, and self-hosting.',
-    cta: { label: 'Explore Enterprise', href: '/enterprise' },
+    cta: { label: 'Talk to sales', href: '/enterprise' },
     features: [
       'Everything in Pro, plus:',
+      'Unlimited projects, seats and monitored URLs',
       // Both grounded in README.md (Docker Compose quick start; the
       // workspace-isolation guarantee).
       'Self-host option — Docker Compose deployment inside your network',
       'Strict workspace isolation with UUID identifiers throughout',
-      // Volumes, seats, retention windows, and support levels are commercial
-      // terms with no basis in the repo — they stay placeholders.
-      'Custom volumes, seats, and retention — [TODO(user)]',
-      'Support options tailored to your team — [TODO(user)]',
+      'Security review and a named contact',
     ],
   },
 ];
@@ -109,7 +123,7 @@ export const PRICING_TABLE_ROWS: readonly PricingTableRow[] = [
     enterprise: '✓',
   },
   {
-    dimension: 'BYOK provider keys — Fernet-encrypted at rest',
+    dimension: 'Your own provider keys — encrypted at rest',
     free: '✓',
     starter: '✓',
     pro: '✓',
@@ -130,35 +144,68 @@ export const PRICING_TABLE_ROWS: readonly PricingTableRow[] = [
     enterprise: '✓',
   },
   {
-    dimension: 'Site Health crawl mode',
+    dimension: 'Projects',
+    free: '1',
+    starter: '3',
+    pro: '15',
+    enterprise: 'Unlimited',
+  },
+  {
+    dimension: 'Seats',
+    free: '1',
+    starter: '3',
+    pro: '10',
+    enterprise: 'Unlimited',
+  },
+  {
+    dimension: 'Site health crawl mode',
     free: 'Sample — deterministic, seeded, read-only',
     starter: 'Full progressive inventory',
     pro: 'Full progressive inventory',
     enterprise: 'Full progressive inventory',
   },
   {
-    // Free/Starter cells are grounded in docs/site-health.md's entitlement
-    // table; the Pro/Enterprise sizes are commercial terms the repo can't ground.
+    // Free/Starter capability shape is grounded in docs/site-health.md's
+    // entitlement table; the quota sizes are the published commercial terms.
     dimension: 'Monitored URL set',
     free: '—',
-    starter: 'Quota-controlled selection',
-    pro: 'Expanded selection — [TODO(user)]',
-    enterprise: 'Custom — [TODO(user)]',
+    starter: '100 URLs',
+    pro: '1,000 URLs',
+    enterprise: 'Custom',
+  },
+  {
+    dimension: 'Run history retention',
+    free: '30 days',
+    starter: '12 months',
+    pro: 'Unlimited',
+    enterprise: 'Unlimited',
+  },
+  {
+    dimension: 'Competitor benchmarking + cross-run trends',
+    free: '—',
+    starter: '—',
+    pro: '✓',
+    enterprise: '✓',
   },
   {
     dimension: 'Authenticated CSV + Markdown exports',
-    free: '✓',
+    free: '—',
     starter: '✓',
     pro: '✓',
     enterprise: '✓',
   },
   {
-    // No support channel, tier, or SLA is documented anywhere in the repo —
-    // every cell stays a placeholder rather than a published commitment.
+    dimension: 'Self-hosted deployment',
+    free: '—',
+    starter: '—',
+    pro: '—',
+    enterprise: '✓',
+  },
+  {
     dimension: 'Support',
-    free: '[TODO(user)]',
-    starter: '[TODO(user)]',
-    pro: '[TODO(user)]',
-    enterprise: '[TODO(user)]',
+    free: 'Docs and community',
+    starter: 'Email',
+    pro: 'Priority email',
+    enterprise: 'Named contact',
   },
 ];
