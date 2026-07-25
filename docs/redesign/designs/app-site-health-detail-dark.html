@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Searchify — Site Health Detail (Dark)</title>
+<meta name="description" content="Searchify Site Health page detail in the Figma design system: crawled URL header, Technical/AEO/Combined score rings, delivery metrics grid, severity-tagged issues with remediation, and issue history. Soft slate-charcoal dark theme.">
+<!--
+  DESIGN SYSTEM — Searchify (tokens verbatim from Figma file 1192.css)
+  Type scale: 11 micro-label (500, uppercase, .06em) / 12 caption / 12.5 pill / 13 secondary / 13.5 nav+tabs+table / 14 body / 15 card+page title 600 / 22 KPI mono 600 / 52 hero mono 600.
+  Fonts: Inter (system fallback), Geist Mono (ui-monospace fallback) for all numerals/data.
+  Surfaces: page #F7F8FA, panel #FFFFFF, sunken #EFF1F6. Cards: 1px --border-default, radius --r-lg (12px), --shadow-1.
+  Accent: royal blue ramp, --accent #2756FF; active nav = blue-50 bg + blue-600 text + 3px left indicator.
+  Layout rhythm: 220px sidebar, 52px topbar, 28px content gutter, 24px section gap, 4px spacing grid.
+  Section headers: 15px/600 card title + 11.5px count chip, actions right-aligned.
+  Score bands (app thresholds mapped to Figma band colors): low <25 #EF4444 / mid 25–49 #F59E0B / good 50–74 #10B981 / high 75–100 #22C55E.
+  Deltas: up #15803D, down #B91C1C. Owned citations render in Figma citation-owned blue (#1235CC on #EBF0FF).
+  Model identity colors: ChatGPT #10A37F, Claude #D97757, Gemini #4285F4.
+-->
+<style>
+/* ===== Tokens — verbatim from Figma 1192.css (light) ===== */
+:root{
+  --blue-50:#EBF0FF; --blue-100:#D5E2FF; --blue-200:#ACC4FF; --blue-300:#7A9FFF; --blue-400:#4972FF;
+  --blue-500:#2756FF; --blue-600:#1A44EB; --blue-700:#1235CC; --blue-800:#0D28A0; --blue-900:#091E78;
+  --neutral-0:#FFFFFF; --neutral-50:#F7F8FA; --neutral-100:#EFF1F6; --neutral-200:#E2E5EE; --neutral-300:#C8CEDE;
+  --neutral-400:#98A2BE; --neutral-500:#667092; --neutral-600:#454E6E; --neutral-700:#2C3454; --neutral-800:#1A2040; --neutral-900:#0D1228;
+  --surface-page:var(--neutral-50); --surface-panel:var(--neutral-0); --surface-elevated:var(--neutral-0); --surface-sunken:var(--neutral-100);
+  --text-primary:var(--neutral-900); --text-secondary:var(--neutral-600); --text-tertiary:var(--neutral-400); --text-disabled:var(--neutral-300);
+  --text-inverse:var(--neutral-0); --text-accent:var(--blue-600); --text-link:var(--blue-600);
+  --border-subtle:var(--neutral-100); --border-default:var(--neutral-200); --border-strong:var(--neutral-300);
+  --accent:var(--blue-500); --accent-hover:var(--blue-600); --accent-active:var(--blue-700);
+  --accent-subtle:var(--blue-50); --accent-border:var(--blue-200); --accent-text:var(--blue-600); --accent-foreground:#FFFFFF;
+  --success-bg:#F0FDF4; --success-border:#BBF7D0; --success-text:#15803D;
+  --warning-bg:#FFFBEB; --warning-border:#FDE68A; --warning-text:#92400E;
+  --danger-bg:#FFF1F1; --danger-border:#FECACA; --danger-text:#B91C1C;
+  --info-bg:#EBF0FF; --info-border:#ADC4FF; --info-text:#1A44EB;
+  --neutral-status-bg:#F7F8FA; --neutral-status-border:#E2E5EE; --neutral-status-text:#454E6E;
+  --score-low-bg:#FFF1F1; --score-low-border:#FECACA; --score-low-text:#B91C1C; --score-low-ring:#EF4444;
+  --score-mid-bg:#FFFBEB; --score-mid-border:#FDE68A; --score-mid-text:#92400E; --score-mid-ring:#F59E0B;
+  --score-good-bg:#ECFDF5; --score-good-border:#A7F3D0; --score-good-text:#065F46; --score-good-ring:#10B981;
+  --score-high-bg:#F0FDF4; --score-high-border:#BBF7D0; --score-high-text:#14532D; --score-high-ring:#22C55E;
+  --run-running-bg:#EBF0FF; --run-running-text:#1A44EB;
+  --run-completed-bg:#F0FDF4; --run-completed-text:#15803D;
+  --run-failed-bg:#FFF1F1; --run-failed-text:#B91C1C;
+  --run-queued-bg:#F7F8FA; --run-queued-text:#454E6E;
+  --run-partial-bg:#FFFBEB; --run-partial-text:#92400E;
+  --run-cancelled-bg:#F7F8FA; --run-cancelled-text:#98A2BE;
+  --run-analyzing-bg:#F5F3FF; --run-analyzing-text:#5B21B6;
+  --run-draft-bg:#F7F8FA; --run-draft-text:#667092;
+  --citation-owned-bg:#EBF0FF; --citation-owned-text:#1235CC; --citation-owned-border:#ADC4FF;
+  --citation-competitor-bg:#FFF7ED; --citation-competitor-text:#9A3412; --citation-competitor-border:#FED7AA;
+  --citation-third-bg:#F5F3FF; --citation-third-text:#5B21B6; --citation-third-border:#DDD6FE;
+  --chart-1:#2756FF; --chart-2:#10B981; --chart-3:#F59E0B; --chart-4:#EF4444;
+  --chart-5:#8B5CF6; --chart-6:#06B6D4; --chart-7:#F97316; --chart-8:#EC4899;
+  --shadow-1:0 1px 2px rgba(13,18,40,0.05), 0 0 0 1px rgba(13,18,40,0.05);
+  --shadow-2:0 2px 6px rgba(13,18,40,0.07), 0 0 0 1px rgba(13,18,40,0.06);
+  --shadow-3:0 6px 20px rgba(13,18,40,0.10), 0 1px 4px rgba(13,18,40,0.05), 0 0 0 1px rgba(13,18,40,0.07);
+  --shadow-4:0 16px 40px rgba(13,18,40,0.14), 0 4px 10px rgba(13,18,40,0.07), 0 0 0 1px rgba(13,18,40,0.09);
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:9999px;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'Geist Mono','JetBrains Mono',ui-monospace,'Fira Mono',monospace;
+  /* Theme-bridging vars (values from Figma AppShell/screen components) */
+  --nav-active-bg:var(--blue-50); --nav-active-text:var(--blue-600);
+  --row-accent:var(--blue-50); --chip-bg:var(--neutral-100);
+  --avatar-bg:var(--neutral-100); --avatar-text:var(--text-tertiary);
+  --you-bg:var(--blue-100); --you-text:var(--blue-700);
+  --ring-track:rgba(0,0,0,0.07);
+  --band-good-num:#065F46; --band-mid-num:#92400E; --band-high-num:#14532D; --band-low-num:#B91C1C;
+  --delta-up:#15803D; --delta-down:#B91C1C;
+  --score-you:#10B981; --donut-other:#E2E5EE;
+  --input-bg:var(--surface-sunken);
+  --hover-nav:var(--surface-sunken); --hover-row:var(--surface-page);
+}
+/* ===== Dark theme — soft slate-charcoal (Perplexity/Claude-style: lighter base, clearly
+   elevated panels, soft medium borders, comfortable contrast, never near-black).
+   Replaces the Figma midnight dark per user direction; light theme above stays verbatim. ===== */
+.dark{
+  --surface-page:#16181E;       /* base charcoal, cool slate with a slight blue tint */
+  --surface-panel:#1F222B;      /* panels clearly lighter than base */
+  --surface-elevated:#272B36;   /* popovers / raised cards */
+  --surface-sunken:#12141A;
+  --text-primary:#ECEDF2;
+  --text-secondary:#A6ACBE;
+  --text-tertiary:#71788C;
+  --text-disabled:#4A4F60;
+  --text-inverse:#16181E;
+  --text-accent:#7DA0FF;
+  --text-link:#7DA0FF;
+  --border-subtle:#262A35;
+  --border-default:#303544;
+  --border-strong:#3F4557;
+  --accent:#3F6AFF;
+  --accent-hover:#6B90FF;
+  --accent-active:#7DA0FF;
+  --accent-subtle:rgba(63,106,255,0.14);
+  --accent-border:rgba(63,106,255,0.34);
+  --accent-text:#7DA0FF;
+  --accent-foreground:#FFFFFF;
+  --success-bg:rgba(16,185,129,0.12); --success-border:rgba(16,185,129,0.26); --success-text:#6EE7B7;
+  --warning-bg:rgba(245,158,11,0.12); --warning-border:rgba(245,158,11,0.26); --warning-text:#FCD34D;
+  --danger-bg:rgba(239,68,68,0.12); --danger-border:rgba(239,68,68,0.26); --danger-text:#FC8181;
+  --info-bg:rgba(39,86,255,0.14); --info-border:rgba(39,86,255,0.30); --info-text:#7DA0FF;
+  --neutral-status-bg:rgba(255,255,255,0.05); --neutral-status-border:rgba(255,255,255,0.09); --neutral-status-text:#A6ACBE;
+  --score-low-bg:rgba(239,68,68,0.13); --score-low-border:rgba(239,68,68,0.26); --score-low-text:#FC8181; --score-low-ring:#EF4444;
+  --score-mid-bg:rgba(245,158,11,0.13); --score-mid-border:rgba(245,158,11,0.26); --score-mid-text:#FCD34D; --score-mid-ring:#F59E0B;
+  --score-good-bg:rgba(16,185,129,0.13); --score-good-border:rgba(16,185,129,0.26); --score-good-text:#6EE7B7; --score-good-ring:#10B981;
+  --score-high-bg:rgba(34,197,94,0.13); --score-high-border:rgba(34,197,94,0.26); --score-high-text:#86EFAC; --score-high-ring:#22C55E;
+  --run-running-bg:rgba(39,86,255,0.16); --run-running-text:#7DA0FF;
+  --run-completed-bg:rgba(16,185,129,0.12); --run-completed-text:#6EE7B7;
+  --run-failed-bg:rgba(239,68,68,0.12); --run-failed-text:#FC8181;
+  --run-queued-bg:rgba(255,255,255,0.05); --run-queued-text:#A6ACBE;
+  --run-partial-bg:rgba(245,158,11,0.12); --run-partial-text:#FCD34D;
+  --run-cancelled-bg:rgba(255,255,255,0.05); --run-cancelled-text:#71788C;
+  --run-analyzing-bg:rgba(139,92,246,0.13); --run-analyzing-text:#C4B5FD;
+  --run-draft-bg:rgba(255,255,255,0.05); --run-draft-text:#A6ACBE;
+  --citation-owned-bg:rgba(39,86,255,0.16); --citation-owned-text:#7DA0FF; --citation-owned-border:rgba(39,86,255,0.30);
+  --citation-competitor-bg:rgba(249,115,22,0.12); --citation-competitor-text:#FCA87A; --citation-competitor-border:rgba(249,115,22,0.24);
+  --citation-third-bg:rgba(139,92,246,0.12); --citation-third-text:#C4B5FD; --citation-third-border:rgba(139,92,246,0.24);
+  --shadow-1:0 1px 2px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.03);
+  --shadow-2:0 2px 8px rgba(0,0,0,0.34), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-3:0 8px 24px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-4:0 16px 48px rgba(0,0,0,0.52), 0 0 0 1px rgba(255,255,255,0.06);
+  /* Theme-bridging vars */
+  --nav-active-bg:rgba(63,106,255,0.16); --nav-active-text:#7DA0FF;
+  --row-accent:rgba(63,106,255,0.10); --chip-bg:rgba(255,255,255,0.07);
+  --avatar-bg:rgba(255,255,255,0.09); --avatar-text:#A6ACBE;
+  --you-bg:rgba(63,106,255,0.22); --you-text:#7DA0FF;
+  --ring-track:rgba(255,255,255,0.09);
+  --band-good-num:#6EE7B7; --band-mid-num:#FCD34D; --band-high-num:#86EFAC; --band-low-num:#FC8181;
+  --delta-up:#6EE7B7; --delta-down:#FC8181;
+  --score-you:#6EE7B7; --donut-other:#3F4557;
+  --input-bg:rgba(255,255,255,0.04);
+  --hover-nav:rgba(255,255,255,0.04); --hover-row:rgba(255,255,255,0.03);
+}
+.dark ::-webkit-scrollbar-thumb{background:var(--border-strong)}
+/* ===== Base ===== */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--font-sans);font-size:14px;line-height:1.5;color:var(--text-primary);background:var(--surface-page);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font-family:var(--font-sans);transition:all .1s ease}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--neutral-300);border-radius:99px}
+.mono{font-family:var(--font-mono)}
+/* ===== App shell ===== */
+.app{display:flex;min-height:100vh;width:1440px;margin:0 auto}
+.sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface-panel);border-right:1px solid var(--border-default)}
+.sb-logo{height:52px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border-default);gap:10px;flex-shrink:0}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand{font-weight:600;font-size:15px;letter-spacing:-0.01em;color:var(--text-primary)}
+.sb-switcher{padding:12px 12px 8px;border-bottom:1px solid var(--border-default);flex-shrink:0}
+.switcher-btn{width:100%;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;border:1px solid var(--border-default);background:var(--surface-page);cursor:pointer;color:var(--text-primary)}
+.proj-avatar{width:20px;height:20px;border-radius:5px;background:#4A72FF;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0}
+.proj-name{font-size:13px;font-weight:500;flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-nav{flex:1;padding:8px;overflow-y:auto}
+.nav-group-label{font-size:11px;font-weight:500;color:var(--text-tertiary);letter-spacing:0.06em;text-transform:uppercase;padding:14px 10px 6px;user-select:none}
+.nav-group-label:first-child{padding-top:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:0 10px;height:36px;border-radius:7px;cursor:pointer;color:var(--text-secondary);font-size:13.5px;margin-bottom:1px;position:relative;user-select:none}
+.nav-item>span.ic{display:flex;opacity:.65}
+.nav-item:hover{background:var(--hover-nav)}
+.nav-item.active{background:var(--nav-active-bg);color:var(--nav-active-text);font-weight:500}
+.nav-item.active>span.ic{opacity:1}
+.nav-item.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:var(--accent)}
+.nav-badge{margin-left:auto;font-size:11px;font-weight:500;background:var(--run-running-bg);color:var(--run-running-text);padding:1px 6px;border-radius:99px}
+.sb-bottom{padding:4px 8px 8px;flex-shrink:0}
+.sb-user{padding:10px 12px;border-top:1px solid var(--border-default);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.user-avatar{width:30px;height:30px;border-radius:99px;background:linear-gradient(135deg,#4A72FF,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;font-weight:500;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-mail{font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:52px;flex-shrink:0;display:flex;align-items:center;padding:0 24px;background:var(--surface-panel);border-bottom:1px solid var(--border-default);gap:10px}
+.topbar h1{font-size:15px;font-weight:600;letter-spacing:-0.01em;color:var(--text-primary);flex:1;margin:0}
+.pill{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:7px;border:1px solid var(--border-default);background:var(--input-bg);font-size:12.5px;font-weight:500;color:var(--text-primary);cursor:pointer;white-space:nowrap}
+.pill-muted{color:var(--text-secondary);font-weight:400}
+.dot-live{width:6px;height:6px;border-radius:99px;background:#22C55E;flex-shrink:0}
+.icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--border-default);background:transparent;color:var(--text-tertiary);cursor:pointer;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(39,86,255,.28)}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:var(--surface-panel);color:var(--text-primary);border-color:var(--border-default)}
+.btn-secondary:hover{background:var(--hover-row)}
+/* ===== Filter bar / tabs ===== */
+.filterbar{padding:0 28px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px;background:var(--surface-panel)}
+.tabs{display:flex;align-items:center;flex:1}
+.tab{padding:14px 16px;border:none;background:transparent;color:var(--text-secondary);font-size:13.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--text-primary)}
+.tab.active{color:var(--accent-text);font-weight:500;border-bottom-color:var(--accent)}
+.engine-filter{display:flex;gap:4px}
+.engine-chip{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer}
+.engine-chip.active{border-color:var(--accent);background:var(--accent-subtle);color:var(--accent-text);font-weight:500}
+.mdot{width:7px;height:7px;border-radius:99px;display:inline-block;flex-shrink:0}
+/* ===== Content ===== */
+.content{padding:28px;display:flex;flex-direction:column;gap:24px}
+.card{background:var(--surface-panel);border:1px solid var(--border-default);border-radius:var(--r-lg);box-shadow:var(--shadow-1)}
+.card-hd{padding:16px 20px 12px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:10px}
+.card-title{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:-0.01em}
+.count-chip{font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:99px;background:var(--chip-bg);color:var(--text-tertiary)}
+.hd-link{font-size:12px;color:var(--accent-text);background:none;border:none;cursor:pointer;font-weight:500;margin-left:auto}
+
+/* ===== Site health page ===== */
+.crumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);min-width:0}
+.crumb-link{color:var(--text-link);cursor:pointer;white-space:nowrap}
+.crumb-cur{color:var(--text-tertiary);font-family:var(--font-mono);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.url-chip{font-family:var(--font-mono);font-size:13.5px;color:var(--text-primary);background:var(--surface-sunken);padding:5px 10px;border-radius:6px;border:1px solid var(--border-subtle);max-width:580px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.mini-btn{padding:5px 9px;border-radius:6px;border:1px solid var(--border-default);background:transparent;cursor:pointer;color:var(--text-tertiary);display:inline-flex;align-items:center;gap:4px;font-size:12px}
+.mini-btn:hover{color:var(--text-primary);background:var(--hover-row)}
+.http-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:13px;font-weight:600;background:var(--success-bg);color:var(--success-text);border:1px solid var(--success-border);border-radius:5px;padding:1px 8px}
+.meta-label{font-size:11px;font-weight:500;color:var(--text-tertiary);letter-spacing:0.06em;text-transform:uppercase}
+.score-tile{background:var(--surface-panel);border:1px solid var(--border-default);border-radius:var(--r-lg);padding:24px 24px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:var(--shadow-2);text-align:center}
+.band-pill{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:500;border:1px solid}
+.band-good{background:var(--score-good-bg);border-color:var(--score-good-border);color:var(--score-good-text)}
+.band-mid{background:var(--score-mid-bg);border-color:var(--score-mid-border);color:var(--score-mid-text)}
+.metric-cell{padding:12px 16px}
+.metric-value{font-size:16px;font-weight:600;color:var(--text-primary)}
+.metric-value.mono{font-family:var(--font-mono)}
+.metric-warn{color:var(--warning-text)}
+.sev{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:0.03em;white-space:nowrap;border:1px solid}
+.sev-critical{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger-text)}
+.sev-warning{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}
+.sev-info{background:var(--info-bg);border-color:var(--info-border);color:var(--info-text)}
+.sev-dot{width:5px;height:5px;border-radius:99px;display:inline-block}
+.issue-row{padding:14px 20px;display:flex;align-items:flex-start;gap:14px}
+.issue-title{font-size:13.5px;font-weight:500;color:var(--text-primary);margin-bottom:3px;line-height:1.4}
+.issue-desc{font-size:13px;color:var(--text-secondary);line-height:1.5}
+.remediation{margin:0 20px 14px;padding:14px 16px;background:var(--surface-sunken);border:1px solid var(--border-subtle);border-radius:8px}
+.rem-label{font-size:11px;font-weight:600;color:var(--text-tertiary);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px}
+.rem-text{font-size:13.5px;color:var(--text-secondary);line-height:1.6;margin:0}
+.btn-accent{padding:6px 14px;border-radius:6px;border:1px solid var(--accent-border);background:var(--accent-subtle);color:var(--accent-text);font-size:12.5px;font-weight:500;cursor:pointer}
+.btn-plain{padding:6px 14px;border-radius:6px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-size:12.5px;cursor:pointer}
+.hist-change{font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;font-family:var(--font-mono)}
+.stack{display:flex;gap:2px;margin-top:8px;height:4px;border-radius:99px;overflow:hidden}
+
+.hist-down{background:var(--success-bg);color:var(--success-text)}
+.hist-up{background:var(--danger-bg);color:var(--danger-text)}
+.hist-new{background:var(--info-bg);color:var(--info-text)}
+/* Hero */
+.hero{display:flex;align-items:center;gap:48px;padding:28px 32px}
+.hero-num{font-size:52px;font-weight:600;font-family:var(--font-mono);color:var(--score-you);letter-spacing:-0.03em;line-height:1}
+.delta-badge{display:inline-flex;align-items:center;gap:4px;background:var(--success-bg);border:1px solid var(--success-border);border-radius:6px;padding:4px 10px;font-size:14px;font-weight:600;color:var(--success-text);font-family:var(--font-mono)}
+.hero-sub{font-size:13.5px;color:var(--text-tertiary);font-style:italic}
+.hero-title{font-size:15px;font-weight:500;color:var(--text-primary);letter-spacing:-0.01em;margin:6px 0 18px}
+.kpi-strip{display:flex}
+.kpi{padding-left:0}
+.kpi+.kpi{padding-left:24px;margin-left:24px;border-left:1px solid var(--border-subtle)}
+.kpi-label{font-size:11px;font-weight:500;color:var(--text-tertiary);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px}
+.kpi-value{font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--text-primary);letter-spacing:-0.02em}
+.kpi-delta{font-size:12px;font-weight:500;font-family:var(--font-mono);color:var(--delta-up);margin-left:6px}
+.run-info{display:flex;flex-direction:column;gap:8px;padding:16px 20px;background:var(--surface-sunken);border-radius:10px;border:1px solid var(--border-subtle);flex-shrink:0}
+.run-info-title{font-size:11px;font-weight:500;color:var(--text-tertiary);letter-spacing:0.06em;text-transform:uppercase}
+.run-info-row{display:flex;gap:10px;align-items:center}
+.run-info-label{font-size:12px;color:var(--text-tertiary);width:56px;flex-shrink:0}
+.run-info-value{font-size:13px;font-weight:500;font-family:var(--font-mono);color:var(--text-primary)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:500;border:1px solid}
+.badge-completed{background:var(--run-completed-bg);color:var(--run-completed-text);border-color:var(--success-border)}
+/* Tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 16px;font-size:11px;font-weight:500;color:var(--text-tertiary);letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid var(--border-subtle);white-space:nowrap;text-align:left}
+.tbl td{padding:12px 16px;border-bottom:1px solid var(--border-subtle);vertical-align:middle}
+.tbl tbody tr{transition:background .1s ease;cursor:pointer}
+.tbl tbody tr:hover:not(.row-you){background:var(--hover-row)}
+.row-you{background:var(--row-accent)}
+.row-you:hover{background:var(--row-accent)}
+.rank{font-size:12.5px;font-family:var(--font-mono);color:var(--text-tertiary);font-weight:500}
+.avatar-tile{width:26px;height:26px;border-radius:6px;background:var(--avatar-bg);color:var(--avatar-text);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.avatar-you{background:var(--you-bg);color:var(--you-text)}
+.you-chip{font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--you-bg);color:var(--you-text);letter-spacing:0.04em}
+.brand-name{font-size:13.5px;color:var(--text-primary);white-space:nowrap}
+.brand-domain{font-size:11.5px;color:var(--text-tertiary);font-family:var(--font-mono)}
+.cell-strong{font-size:13.5px;font-weight:600;font-family:var(--font-mono);color:var(--text-primary)}
+.cell-strong-you{color:var(--score-you)}
+.cell-num{font-size:13px;font-family:var(--font-mono);color:var(--text-secondary)}
+.delta-cell{font-size:11.5px;font-family:var(--font-mono);font-weight:500;width:44px;text-align:right;display:inline-block}
+.tbl-foot{padding:10px 20px;display:flex;justify-content:center}
+.tbl-foot span{font-size:12px;color:var(--text-tertiary)}
+/* Donut + model */
+.legend-row{display:flex;align-items:center;gap:8px}
+.legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend-label{font-size:12.5px;color:var(--text-secondary);flex:1}
+.legend-value{font-size:12.5px;font-weight:500;font-family:var(--font-mono);color:var(--text-primary)}
+.model-tile{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fff;flex-shrink:0}
+.cit-chip{display:inline-flex;align-items:center;padding:1px 7px;border-radius:99px;font-size:11.5px;font-weight:500;font-family:var(--font-mono);background:var(--citation-owned-bg);color:var(--citation-owned-text);border:1px solid var(--citation-owned-border)}
+.vis-high{color:#22C55E}.vis-good{color:#10B981}.vis-mid{color:#F59E0B}.vis-low{color:#EF4444}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" data-component-id="sidebar">
+    <div class="sb-logo" data-component-id="brand-mark">
+      <div class="logo-mark">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="5" r="4" stroke="white" stroke-width="1.5"/><line x1="8" y1="8" x2="13" y2="13" stroke="white" stroke-width="1.75" stroke-linecap="round"/><circle cx="5" cy="5" r="1.5" fill="white"/></svg>
+      </div>
+      <span class="brand">Searchify</span>
+    </div>
+    <div class="sb-switcher" data-component-id="project-switcher">
+      <button class="switcher-btn" aria-label="Switch project">
+        <span class="proj-avatar">A</span>
+        <span class="proj-name">Acme Corporation</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5L6 7.5L9 4.5"/></svg>
+      </button>
+    </div>
+    <nav class="sb-nav" data-component-id="sidebar-nav">
+      <div class="nav-group-label">Analyze</div>
+      <div class="nav-item" data-component-id="nav-visibility"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span><span>Visibility</span></div>
+      <div class="nav-item" data-component-id="nav-answers"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><line x1="8" y1="9.5" x2="16" y2="9.5"/><line x1="8" y1="13" x2="13" y2="13"/></svg></span><span>Answers</span></div>
+      <div class="nav-item" data-component-id="nav-traffic"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22,7 13.5,15.5 8.5,10.5 2,17"/><polyline points="16,7 22,7 22,13"/></svg></span><span>Traffic</span></div>
+      <div class="nav-item" data-component-id="nav-prompts"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span><span>Prompts</span></div>
+      <div class="nav-item" data-component-id="nav-products"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span><span>Products</span></div>
+      <div class="nav-item" data-component-id="nav-runs"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></span><span>Runs</span><span class="nav-badge">3</span></div>
+      <div class="nav-group-label">Improve</div>
+      <div class="nav-item" data-component-id="nav-content"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span>Content</span></div>
+      <div class="nav-item active" data-component-id="nav-site-health"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg></span><span>Site health</span></div>
+      <div class="nav-item" data-component-id="nav-issues"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><span>Issues</span></div>
+      <div class="nav-item" data-component-id="nav-brand-knowledge"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span>Brand knowledge</span></div>
+    </nav>
+    <div class="sb-bottom">
+      <div class="nav-item" data-component-id="nav-settings"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="14" cy="6" r="2" fill="var(--surface-panel)"/><circle cx="8" cy="12" r="2" fill="var(--surface-panel)"/><circle cx="16" cy="18" r="2" fill="var(--surface-panel)"/></svg></span><span>Settings</span></div>
+    </div>
+    <div class="sb-user" data-component-id="user-menu">
+      <div class="user-avatar">JS</div>
+      <div style="flex:1;min-width:0">
+        <div class="user-name">Jamie Sutton</div>
+        <div class="user-mail">jamie@acmecorp.com</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar" data-component-id="topbar">
+      <h1 style="flex:0 0 auto">Site Health</h1>
+      <div class="crumb" data-component-id="breadcrumb">
+        <span class="crumb-link">Site Health</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 3L7.5 6L4.5 9"/></svg>
+        <span class="crumb-link">Crawl Jul 22</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 3L7.5 6L4.5 9"/></svg>
+        <span class="crumb-link">Pages</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 3L7.5 6L4.5 9"/></svg>
+        <span class="crumb-cur">/products/data-analytics-platform</span>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary" data-component-id="export-button"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+      <button class="btn btn-primary" data-component-id="recrawl-button"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21,3 21,8 16,8"/></svg>Re-crawl now</button>
+    </header>
+
+    <main class="content" style="gap:20px">
+      <!-- URL header -->
+      <section class="card" data-component-id="url-header-card" style="padding:20px 24px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="url-chip" data-component-id="page-url">https://acmecorp.com/products/data-analytics-platform</span>
+          <button class="mini-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
+          <button class="mini-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open</button>
+        </div>
+        <div style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:16px">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span class="meta-label">HTTP status</span>
+            <span class="http-badge">● 200 OK</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span class="meta-label">Content type</span>
+            <span style="font-size:13.5px;color:var(--text-primary)">text/html</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span class="meta-label">Last crawled</span>
+            <span style="font-size:13.5px;color:var(--text-primary)">2 hours ago</span>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border-subtle);padding-top:14px">
+          <div class="meta-label" style="margin-bottom:6px">Page title</div>
+          <div style="font-size:15px;font-weight:500;color:var(--text-primary);margin-bottom:10px">Enterprise Data Analytics Platform | Acme Corporation</div>
+          <div class="meta-label" style="margin-bottom:5px">Meta description</div>
+          <div style="font-size:13.5px;color:var(--text-secondary);line-height:1.5;max-width:680px">
+            Transform your data into actionable insights with Acme's enterprise analytics platform. Purpose-built for marketing and growth teams managing complex, multi-channel data ecosystems.
+            <span style="font-size:11.5px;font-family:var(--font-mono);background:var(--warning-bg);color:var(--warning-text);border:1px solid var(--warning-border);border-radius:4px;padding:0 5px;margin-left:4px">187 chars</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Score tiles -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px" data-component-id="score-tiles">
+        <div class="score-tile" data-component-id="tile-technical">
+          <svg width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Score 73 out of 100">
+            <circle cx="64" cy="64" r="58.5" fill="none" stroke="var(--ring-track)" stroke-width="11"/>
+            <circle cx="64" cy="64" r="58.5" fill="none" stroke="var(--score-good-ring)" stroke-width="11" stroke-linecap="round" stroke-dasharray="268.33 99.24" transform="rotate(-90 64 64)"/>
+            <text x="64" y="65" text-anchor="middle" dominant-baseline="middle" style="font-family:var(--font-mono);font-size:28px;font-weight:500;fill:var(--band-good-num)">73</text>
+          </svg>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:5px">Technical Health</div>
+            <div style="font-size:12.5px;color:var(--text-tertiary);line-height:1.5;max-width:200px">Performance, crawlability, and HTTP fundamentals</div>
+          </div>
+          <span class="band-pill band-good">Good</span>
+        </div>
+        <div class="score-tile" data-component-id="tile-aeo">
+          <svg width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Score 48 out of 100">
+            <circle cx="64" cy="64" r="58.5" fill="none" stroke="var(--ring-track)" stroke-width="11"/>
+            <circle cx="64" cy="64" r="58.5" fill="none" stroke="var(--score-mid-ring)" stroke-width="11" stroke-linecap="round" stroke-dasharray="176.43 191.14" transform="rotate(-90 64 64)"/>
+            <text x="64" y="65" text-anchor="middle" dominant-baseline="middle" style="font-family:var(--font-mono);font-size:28px;font-weight:500;fill:var(--band-mid-num)">48</text>
+          </svg>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:5px">AEO Health</div>
+            <div style="font-size:12.5px;color:var(--text-tertiary);line-height:1.5;max-width:200px">Answer Engine Optimization — AI-readiness signals</div>
+          </div>
+          <span class="band-pill band-mid">Needs work</span>
+        </div>
+        <div class="score-tile" data-component-id="tile-combined">
+          <svg width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Score 61 out of 100">
+            <circle cx="64" cy="64" r="58.5" fill="none" stroke="var(--ring-track)" stroke-width="11"/>
+            <circle cx="64" cy="64" r="58.5" fill="none" stroke="var(--score-good-ring)" stroke-width="11" stroke-linecap="round" stroke-dasharray="224.22 143.35" transform="rotate(-90 64 64)"/>
+            <text x="64" y="65" text-anchor="middle" dominant-baseline="middle" style="font-family:var(--font-mono);font-size:28px;font-weight:500;fill:var(--band-good-num)">61</text>
+          </svg>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:5px">Combined Score</div>
+            <div style="font-size:12.5px;color:var(--text-tertiary);line-height:1.5;max-width:200px">Weighted average of Technical and AEO scores</div>
+          </div>
+          <span class="band-pill band-good">Good</span>
+        </div>
+      </div>
+
+      <!-- Delivery metrics -->
+      <section class="card" data-component-id="delivery-metrics" style="padding:18px 24px">
+        <div class="card-title" style="margin-bottom:16px">Delivery Metrics</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr)">
+              <div class="metric-cell" style="border-right:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">Response Time</div>
+                <div class="metric-value mono metric-warn">324ms</div>
+              </div>
+              <div class="metric-cell" style="border-right:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">TTFB</div>
+                <div class="metric-value mono metric-warn">187ms</div>
+              </div>
+              <div class="metric-cell" style="border-right:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">Page Size</div>
+                <div class="metric-value mono">2.4 MB</div>
+              </div>
+              <div class="metric-cell" style="border-bottom:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">Compression</div>
+                <div class="metric-value">Gzip</div>
+              </div>
+              <div class="metric-cell" style="border-right:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">Redirects</div>
+                <div class="metric-value mono">1</div>
+              </div>
+              <div class="metric-cell" style="border-right:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">HTTP Status</div>
+                <div class="metric-value">200 OK</div>
+              </div>
+              <div class="metric-cell" style="border-right:1px solid var(--border-subtle);">
+                <div class="meta-label" style="margin-bottom:6px">Cache-Control</div>
+                <div class="metric-value mono">max-age=86400</div>
+              </div>
+              <div class="metric-cell" style="">
+                <div class="meta-label" style="margin-bottom:6px">Content Type</div>
+                <div class="metric-value">text/html</div>
+              </div>
+        </div>
+      </section>
+
+      <!-- Issues + history -->
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+        <section class="card" data-component-id="issues-list" style="overflow:hidden;align-self:start">
+          <div class="card-hd" style="padding:16px 20px">
+            <span class="card-title">All Issues</span>
+            <span class="count-chip">7</span>
+            <div style="flex:1"></div>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-tertiary)"><span style="width:6px;height:6px;border-radius:99px;background:#EF4444;display:inline-block"></span>2 critical</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-tertiary)"><span style="width:6px;height:6px;border-radius:99px;background:#F59E0B;display:inline-block"></span>3 warnings</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-tertiary)"><span style="width:6px;height:6px;border-radius:99px;background:#2756FF;display:inline-block"></span>2 info</span>
+          </div>
+          <div>
+            <div style="border-bottom:1px solid var(--border-subtle);" data-component-id="issue-1">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-critical"><span class="sev-dot" style="background:#EF4444"></span>Critical</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">Missing structured data markup</div>
+                  <div class="issue-desc">No JSON-LD or Microdata schema found on this page. Structured data significantly improves AI answer eligibility.</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0;margin-top:2px;transform:rotate(90deg);"><path d="M5.25 3.5L8.75 7L5.25 10.5"/></svg>
+              </div>
+              <div class="remediation" data-component-id="issue-remediation">
+                <div class="rem-label">Remediation guidance</div>
+                <p class="rem-text">Add an Organization, Product, or FAQ schema using JSON-LD in the &lt;head&gt; tag. Use schema.org/Product for product pages. Validate with Google's Rich Results Test before deploying.</p>
+                <div style="margin-top:12px;display:flex;gap:8px">
+                  <button class="btn-accent">View in docs →</button>
+                  <button class="btn-plain">Mark resolved</button>
+                </div>
+              </div>
+            </div>
+            <div style="border-bottom:1px solid var(--border-subtle);" data-component-id="issue-2">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-critical"><span class="sev-dot" style="background:#EF4444"></span>Critical</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">No FAQ schema detected</div>
+                  <div class="issue-desc">FAQ schema increases the probability of content being pulled into AI-generated answers. This page has Q&amp;A-style content but no FAQPage markup.</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0;margin-top:2px;"><path d="M5.25 3.5L8.75 7L5.25 10.5"/></svg>
+              </div>
+              
+            </div>
+            <div style="border-bottom:1px solid var(--border-subtle);" data-component-id="issue-3">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-warning"><span class="sev-dot" style="background:#F59E0B"></span>Warning</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">Meta description exceeds 160 characters</div>
+                  <div class="issue-desc">Current meta description is 187 characters (recommended max: 160). Truncated descriptions perform worse in AI summarization.</div>
+                </div>
+                
+              </div>
+              
+            </div>
+            <div style="border-bottom:1px solid var(--border-subtle);" data-component-id="issue-4">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-warning"><span class="sev-dot" style="background:#F59E0B"></span>Warning</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">4 images missing alt text</div>
+                  <div class="issue-desc">Alt text improves accessibility and provides context for AI parsing. Images without descriptions are skipped during content extraction.</div>
+                </div>
+                
+              </div>
+              
+            </div>
+            <div style="border-bottom:1px solid var(--border-subtle);" data-component-id="issue-5">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-warning"><span class="sev-dot" style="background:#F59E0B"></span>Warning</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">No H2 headings found</div>
+                  <div class="issue-desc">This page uses H3–H6 headings but skips H2, breaking semantic structure. AI models rely on heading hierarchy to understand content organization.</div>
+                </div>
+                
+              </div>
+              
+            </div>
+            <div style="border-bottom:1px solid var(--border-subtle);" data-component-id="issue-6">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-info"><span class="sev-dot" style="background:#2756FF"></span>Info</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">Slow server response time (&gt;300ms TTFB)</div>
+                  <div class="issue-desc">TTFB of 324ms exceeds the recommended 200ms threshold. Slower pages are crawled less frequently.</div>
+                </div>
+                
+              </div>
+              
+            </div>
+            <div style="" data-component-id="issue-7">
+              <div class="issue-row" style="cursor:pointer">
+                <div style="margin-top:1px;flex-shrink:0"><span class="sev sev-info"><span class="sev-dot" style="background:#2756FF"></span>Info</span></div>
+                <div style="flex:1;min-width:0">
+                  <div class="issue-title">Reading level is Grade 12+</div>
+                  <div class="issue-desc">Current Flesch-Kincaid grade: 12.4. AI models favor content readable at Grade 8–10. Simplifying language can improve mention frequency.</div>
+                </div>
+                
+              </div>
+              
+            </div>
+          </div>
+        </section>
+
+        <section class="card" data-component-id="issue-history" style="overflow:hidden;align-self:start">
+          <div class="card-hd" style="padding:16px 18px"><span class="card-title">Issue history</span></div>
+          <div>
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border-subtle);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Jul 22, 2026</div>
+                  <div style="font-size:11.5px;color:var(--text-tertiary);font-family:var(--font-mono)">Crawl #47</div>
+                </div>
+                <span class="hist-change hist-down">-1 issues</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#EF4444;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">2</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#F59E0B;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">3</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#2756FF;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">2</span></span>
+                <span style="font-size:12px;color:var(--text-tertiary);margin-left:auto">7 total</span>
+              </div>
+              <div class="stack">
+                <div style="flex:2;background:#EF4444;border-radius:99px 0 0 99px;opacity:0.8"></div>
+                <div style="flex:3;background:#F59E0B;opacity:0.8"></div>
+                <div style="flex:2;background:#4D7BFF;border-radius:0 99px 99px 0;opacity:0.8"></div>
+              </div>
+            </div>
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border-subtle);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Jul 15, 2026</div>
+                  <div style="font-size:11.5px;color:var(--text-tertiary);font-family:var(--font-mono)">Crawl #45</div>
+                </div>
+                <span class="hist-change hist-down">-1 issues</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#EF4444;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">2</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#F59E0B;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">4</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#2756FF;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">2</span></span>
+                <span style="font-size:12px;color:var(--text-tertiary);margin-left:auto">8 total</span>
+              </div>
+              <div class="stack">
+                <div style="flex:2;background:#EF4444;border-radius:99px 0 0 99px;opacity:0.8"></div>
+                <div style="flex:4;background:#F59E0B;opacity:0.8"></div>
+                <div style="flex:2;background:#4D7BFF;border-radius:0 99px 99px 0;opacity:0.8"></div>
+              </div>
+            </div>
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border-subtle);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Jul 8, 2026</div>
+                  <div style="font-size:11.5px;color:var(--text-tertiary);font-family:var(--font-mono)">Crawl #43</div>
+                </div>
+                <span class="hist-change hist-up">+1 issues</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#EF4444;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">3</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#F59E0B;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">4</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#2756FF;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">2</span></span>
+                <span style="font-size:12px;color:var(--text-tertiary);margin-left:auto">9 total</span>
+              </div>
+              <div class="stack">
+                <div style="flex:3;background:#EF4444;border-radius:99px 0 0 99px;opacity:0.8"></div>
+                <div style="flex:4;background:#F59E0B;opacity:0.8"></div>
+                <div style="flex:2;background:#4D7BFF;border-radius:0 99px 99px 0;opacity:0.8"></div>
+              </div>
+            </div>
+            <div style="padding:14px 18px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Jul 1, 2026</div>
+                  <div style="font-size:11.5px;color:var(--text-tertiary);font-family:var(--font-mono)">Crawl #41</div>
+                </div>
+                <span class="hist-change hist-new">New issues</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#EF4444;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">3</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#F59E0B;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">5</span></span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:99px;background:#2756FF;display:inline-block"></span><span style="font-size:12px;color:var(--text-tertiary)">2</span></span>
+                <span style="font-size:12px;color:var(--text-tertiary);margin-left:auto">10 total</span>
+              </div>
+              <div class="stack">
+                <div style="flex:3;background:#EF4444;border-radius:99px 0 0 99px;opacity:0.8"></div>
+                <div style="flex:5;background:#F59E0B;opacity:0.8"></div>
+                <div style="flex:2;background:#4D7BFF;border-radius:0 99px 99px 0;opacity:0.8"></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:12px 18px;border-top:1px solid var(--border-subtle);background:var(--surface-sunken)">
+            <div style="display:flex;align-items:center;gap:6px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--success-text)" stroke-width="2" stroke-linecap="round"><polyline points="22,7 13.5,15.5 8.5,10.5 2,17"/><polyline points="16,7 22,7 22,13"/></svg>
+              <span style="font-size:12.5px;color:var(--success-text);font-weight:500">Improving</span>
+              <span style="font-size:12.5px;color:var(--text-tertiary)">— 3 issues fixed in 4 weeks</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

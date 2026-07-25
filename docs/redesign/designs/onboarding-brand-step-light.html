@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  SEARCHIFY · ONBOARDING STEP 1 — BRAND ENTRY (LIGHT)
+  Design system (source of truth: Figma export — tokens verbatim):
+    Accent ramp royal blue #2756FF / hover #1A44EB / subtle #EBF0FF / border #ACC4FF
+    Neutrals blue-gray: page #F7F8FA · panel #FFFFFF · borders #EFF1F6/#E2E5EE/#C8CEDE
+    Text: #0D1228 primary · #454E6E secondary · #667092 meta (AA-safe) · #98A2BE placeholder only
+    Type: Inter 400/500/600 · Geist Mono for domains/data · scale 11/12/13/14/15/17/26
+    Radius: 6 inputs→8 · 12 cards · 999 pills   Shadows: Figma elevation 1–3, blue-tinted CTA shadow
+    Gradient (AI moments only): 135deg #4972FF → #8B5CF6
+    Right panel: midnight 160deg #0D1A3D → #0F1228 → #12172E + blue dot-grid + radial glow (Figma)
+  Layout: full-screen stepper (NO app shell) — header / 3-node stepper / form column / footer bar + 420px midnight panel.
+  Motion: staggered .reveal rises; all animation disabled under prefers-reduced-motion.
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding — Brand entry (Light)</title>
+<meta name="description" content="First-run onboarding step 1 of 3 (Light): brand name + website URL with optional collapsed aliases — AI drafts everything else.">
+<style>
+:root{
+  --blue-50:#EBF0FF;--blue-100:#D5E2FF;--blue-200:#ACC4FF;--blue-400:#4972FF;--blue-500:#2756FF;--blue-600:#1A44EB;
+  --surface-page:#F7F8FA;--surface-panel:#FFFFFF;--surface-sunken:#EFF1F6;
+  --text-primary:#0D1228;--text-secondary:#454E6E;--text-meta:#667092;--text-placeholder:#98A2BE;
+  --border-subtle:#EFF1F6;--border-default:#E2E5EE;--border-strong:#C8CEDE;
+  --accent:#2756FF;--accent-hover:#1A44EB;--accent-subtle:#EBF0FF;--accent-border:#ACC4FF;--accent-text:#1A44EB;
+  --ring:rgba(39,86,255,.16);
+  --shadow-1:0 1px 2px rgba(13,18,40,.05),0 0 0 1px rgba(13,18,40,.05);
+  --shadow-2:0 2px 6px rgba(13,18,40,.07),0 0 0 1px rgba(13,18,40,.06);
+  --shadow-cta:0 1px 3px rgba(39,86,255,.30),0 0 0 1px rgba(39,86,255,.15);
+  --shadow-ai:0 4px 16px rgba(99,92,246,.32),0 1px 3px rgba(39,86,255,.22);
+  --grad-ai:linear-gradient(135deg,#3A63EE 0%,#7C4DEB 100%);
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'Geist Mono','JetBrains Mono','Fira Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--surface-page);color:var(--text-primary);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+a{color:var(--accent-text);text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--blue-100)}
+
+/* ── shell ─────────────────────────────────────────── */
+.ob{display:flex;height:100dvh;overflow:hidden}
+.ob-main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.ob-head{display:flex;align-items:center;justify-content:space-between;padding:18px 44px 0;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-mark{width:26px;height:26px;border-radius:6px;background:var(--accent);display:grid;place-items:center;flex-shrink:0}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.head-right{display:flex;align-items:center;gap:14px}
+.head-step{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--text-meta)}
+.head-sep{width:1px;height:14px;background:var(--border-default)}
+.signout{font-size:13px;color:var(--text-meta)}
+.signout:hover{color:var(--text-secondary)}
+
+/* ── stepper ───────────────────────────────────────── */
+.stepper{display:flex;align-items:flex-start;justify-content:center;padding:26px 44px 0;flex-shrink:0}
+.st{display:flex;flex-direction:column;align-items:center;gap:6px;width:104px}
+.st-node{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:600;background:var(--surface-panel);border:1.5px solid var(--border-default);color:var(--text-meta);transition:all .2s ease}
+.st-label{font-size:11.5px;font-weight:500;color:var(--text-meta);letter-spacing:.01em;text-align:center}
+.st[data-state=now] .st-node{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 4px var(--accent-subtle)}
+.st[data-state=now] .st-label{color:var(--accent-text);font-weight:600}
+.st[data-state=done] .st-node{background:#F0FDF4;border-color:#BBF7D0;color:#15803D}
+.st[data-state=done] .st-label{color:var(--text-secondary)}
+.st-link{width:56px;height:1.5px;background:var(--border-default);margin:14px 10px 0}
+.st-link.done{background:#86C9A5}
+
+/* ── body ──────────────────────────────────────────── */
+.ob-body{flex:1;display:flex;padding:26px 44px 20px;overflow:auto;min-height:0}
+.ob-col{width:100%;max-width:520px;margin:auto}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.08em;color:var(--accent-text);text-transform:uppercase;margin-bottom:10px}
+h1{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.25}
+.sub{margin-top:8px;font-size:14.5px;line-height:1.6;color:var(--text-secondary)}
+
+.form{margin-top:26px;display:flex;flex-direction:column;gap:18px}
+.field{display:flex;flex-direction:column;gap:6px}
+.label{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.opt-badge{font-size:10.5px;font-weight:500;color:var(--text-meta);background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:99px;padding:1px 7px}
+.input-wrap{position:relative}
+.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-placeholder);pointer-events:none;display:flex}
+.input{width:100%;padding:11px 13px;border-radius:8px;border:1px solid var(--border-default);background:var(--surface-panel);font-size:14.5px;color:var(--text-primary);font-family:var(--font-sans);transition:border-color .12s ease,box-shadow .12s ease}
+.input.has-icon{padding-left:36px}
+.input.mono{font-family:var(--font-mono);font-size:13.5px}
+.input::placeholder{color:var(--text-placeholder)}
+.input:hover{border-color:var(--border-strong)}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.hint{font-size:12px;color:var(--text-meta)}
+
+/* aliases — collapsed disclosure */
+.aliases{border:1px solid var(--border-default);border-radius:10px;background:var(--surface-panel);padding:12px 14px;display:flex;align-items:center;gap:10px;text-align:left;width:100%;transition:border-color .12s ease}
+.aliases:hover{border-color:var(--border-strong)}
+.aliases-chev{color:var(--text-meta);display:flex;flex-shrink:0}
+.aliases-txt{flex:1;min-width:0}
+.aliases-title{font-size:13.5px;font-weight:500}
+.aliases-sub{font-size:12px;color:var(--text-meta);margin-top:1px}
+.aliases-add{font-size:12px;font-weight:500;color:var(--accent-text);flex-shrink:0}
+
+/* ── footer ────────────────────────────────────────── */
+.ob-foot{border-top:1px solid var(--border-default);background:var(--surface-panel);padding:14px 44px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.foot-note{font-size:13px;color:var(--text-meta)}
+.foot-note a{font-weight:500}
+.foot-spacer{flex:1}
+.foot-step{font-size:12px;color:var(--text-meta)}
+.btn-ai{display:inline-flex;align-items:center;gap:8px;background:var(--grad-ai);color:#fff;border-radius:8px;padding:11px 24px;font-size:14px;font-weight:600;letter-spacing:-.005em;box-shadow:var(--shadow-ai);transition:filter .12s ease,transform .12s ease}
+.btn-ai:hover{filter:brightness(1.06)}
+.btn-ghost{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border-default);border-radius:8px;padding:10px 18px;font-size:14px;font-weight:500;color:var(--text-secondary);background:transparent;transition:border-color .12s ease,color .12s ease}
+.btn-ghost:hover{border-color:var(--border-strong);color:var(--text-primary)}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border-radius:8px;padding:11px 22px;font-size:14px;font-weight:600;box-shadow:var(--shadow-cta);transition:background .12s ease}
+.btn-primary:hover{background:var(--accent-hover)}
+
+/* ── midnight panel (Figma RightPanel) ─────────────── */
+.mn{flex:0 0 420px;position:relative;overflow:hidden;padding:42px 40px;display:flex;flex-direction:column;background:linear-gradient(160deg,#0D1A3D 0%,#0F1228 60%,#12172E 100%)}
+.mn::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at center,rgba(39,86,255,.07) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.mn-glow{position:absolute;top:-110px;right:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(39,86,255,.16) 0%,transparent 70%);pointer-events:none}
+.mn-in{position:relative;z-index:1;display:flex;flex-direction:column;gap:22px;height:100%}
+.mn-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;border:1px solid rgba(39,86,255,.35);background:rgba(39,86,255,.12);width:fit-content}
+.mn-pill i{width:6px;height:6px;border-radius:99px;background:#4D7BFF}
+.mn-pill span{font-size:11.5px;font-weight:500;color:#7DA0FF;letter-spacing:.05em}
+.mn h3{font-size:22px;font-weight:600;color:#ECEEF5;line-height:1.3;letter-spacing:-.02em;margin-bottom:9px}
+.mn .mn-sub{font-size:14px;color:rgba(255,255,255,.55);line-height:1.65}
+.mn-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:18px 20px}
+.mn-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);letter-spacing:.07em;text-transform:uppercase;margin-bottom:13px}
+.mn-row{display:flex;gap:12px;align-items:baseline;padding:5px 0}
+.mn-row .k{font-size:11.5px;color:rgba(255,255,255,.55);width:58px;flex-shrink:0}
+.mn-row .v{font-size:14px;color:rgba(255,255,255,.88);font-weight:500}
+.mn-row .v.mono{font-family:var(--font-mono);font-size:13px}
+.mn-list{display:flex;flex-direction:column;gap:10px}
+.mn-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.mn-ic{width:30px;height:30px;border-radius:8px;background:rgba(73,114,255,.16);border:1px solid rgba(73,114,255,.28);display:grid;place-items:center;color:#7DA0FF;flex-shrink:0}
+.mn-item .t1{font-size:13px;font-weight:600;color:rgba(255,255,255,.85)}
+.mn-item .t2{font-size:12px;color:rgba(255,255,255,.55);margin-top:1px}
+.mn-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mn-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px}
+.mn-stat .n{font-size:24px;font-weight:600;color:rgba(255,255,255,.48);font-family:var(--font-mono);margin-bottom:4px}
+.mn-stat .l{font-size:11.5px;font-weight:500;color:rgba(255,255,255,.55)}
+.mn-stat .h{font-size:11px;color:rgba(255,255,255,.56);margin-top:2px}
+.mn-foot{margin-top:auto;font-size:11.5px;color:rgba(255,255,255,.56);display:flex;align-items:center;gap:7px}
+
+/* ── motion ────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(10px);animation:rise .55s cubic-bezier(.2,.7,.25,1) forwards}
+.d1{animation-delay:.04s}.d2{animation-delay:.12s}.d3{animation-delay:.20s}.d4{animation-delay:.28s}.d5{animation-delay:.36s}.d6{animation-delay:.44s}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="ob" data-component-id="onboarding-shell">
+
+  <!-- ══ left: stepper content ══ -->
+  <div class="ob-main">
+    <header class="ob-head reveal d1" data-component-id="onboarding-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="5" r="4" stroke="#fff" stroke-width="1.5"/><line x1="8" y1="8" x2="13" y2="13" stroke="#fff" stroke-width="1.75" stroke-linecap="round"/><circle cx="5" cy="5" r="1.5" fill="#fff"/></svg>
+        </span>
+        <span class="brand-name">Searchify</span>
+      </div>
+      <div class="head-right">
+        <span class="head-step">SETUP · 3 STEPS</span>
+        <span class="head-sep" aria-hidden="true"></span>
+        <button class="signout" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <nav class="stepper reveal d2" aria-label="Setup progress" data-component-id="stepper">
+      <div class="st" data-state="now" aria-current="step">
+        <span class="st-node">1</span>
+        <span class="st-label">Brand</span>
+      </div>
+      <span class="st-link" aria-hidden="true"></span>
+      <div class="st" data-state="todo">
+        <span class="st-node">2</span>
+        <span class="st-label">AI discovery</span>
+      </div>
+      <span class="st-link" aria-hidden="true"></span>
+      <div class="st" data-state="todo">
+        <span class="st-node">3</span>
+        <span class="st-label">Review</span>
+      </div>
+    </nav>
+
+    <div class="ob-body">
+      <div class="ob-col">
+        <p class="eyebrow reveal d2">Brand profile</p>
+        <h1 class="reveal d3" data-component-id="step-title">Tell us about your brand</h1>
+        <p class="sub reveal d3">Two fields is all we need. Searchify's AI scans your site and drafts your competitors, owned domains, and starter prompts for review.</p>
+
+        <form class="form" data-component-id="brand-form">
+          <div class="field reveal d4">
+            <label class="label" for="brand-name">Brand name</label>
+            <input class="input" id="brand-name" type="text" value="Acme Corporation" placeholder="Acme Corporation" autocomplete="organization">
+          </div>
+
+          <div class="field reveal d4">
+            <label class="label" for="brand-domain">Brand website</label>
+            <div class="input-wrap">
+              <span class="input-icon" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </span>
+              <input class="input has-icon mono" id="brand-domain" type="url" value="acmecorp.com" placeholder="acmecorp.com" autocomplete="url">
+            </div>
+            <span class="hint">Primary domain used to identify owned citations.</span>
+          </div>
+
+          <button class="aliases reveal d5" type="button" aria-expanded="false" data-component-id="aliases-disclosure">
+            <span class="aliases-chev" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </span>
+            <span class="aliases-txt">
+              <span class="aliases-title">Brand aliases <span class="opt-badge">Optional</span></span>
+              <span class="aliases-sub" style="display:block">Other names AI models might call you — e.g. Acme, Acme Corp.</span>
+            </span>
+            <span class="aliases-add">Add</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <footer class="ob-foot reveal d5" data-component-id="step-footer">
+      <span class="foot-note">Prefer full control? <a href="#" onclick="return false">Set up manually instead</a></span>
+      <span class="foot-spacer"></span>
+      <span class="foot-step">Step 1 of 3</span>
+      <button class="btn-ai" type="button" data-component-id="cta-discover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>
+        Discover with AI
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </footer>
+  </div>
+
+  <!-- ══ right: midnight panel ══ -->
+  <aside class="mn" data-component-id="midnight-panel">
+    <span class="mn-glow" aria-hidden="true"></span>
+    <div class="mn-in">
+      <span class="mn-pill reveal d2"><i></i><span>BRAND SETUP</span></span>
+
+      <div class="reveal d3">
+        <h3>Your brand's AI presence starts here</h3>
+        <p class="mn-sub">Searchify measures how often your brand appears in answers from ChatGPT, Claude, and Gemini — and how you compare to competitors.</p>
+      </div>
+
+      <div class="mn-card reveal d4" data-component-id="brand-preview">
+        <div class="mn-label">Brand profile preview</div>
+        <div class="mn-row"><span class="k">Name</span><span class="v">Acme Corporation</span></div>
+        <div class="mn-row"><span class="k">Domain</span><span class="v mono">acmecorp.com</span></div>
+      </div>
+
+      <div class="mn-card reveal d5" data-component-id="ai-drafts-list" style="padding:16px 18px">
+        <div class="mn-label" style="margin-bottom:12px">AI drafts these for you</div>
+        <div class="mn-list">
+          <div class="mn-item">
+            <span class="mn-ic" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span><span class="t1">Competitors</span><span class="t2" style="display:block">Brands AI answers mention alongside yours</span></span>
+          </div>
+          <div class="mn-item">
+            <span class="mn-ic" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            <span><span class="t1">Owned domains</span><span class="t2" style="display:block">Subdomains and properties you control</span></span>
+          </div>
+          <div class="mn-item">
+            <span class="mn-ic" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span><span class="t1">Starter prompts</span><span class="t2" style="display:block">The questions your buyers actually ask AI</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mn-stats reveal d6">
+        <div class="mn-stat"><div class="n">—</div><div class="l">Visibility Score</div><div class="h">After first audit</div></div>
+        <div class="mn-stat"><div class="n">—</div><div class="l">Share of Voice</div><div class="h">vs competitors</div></div>
+      </div>
+
+      <span class="mn-foot">© 2026 CUBE27</span>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

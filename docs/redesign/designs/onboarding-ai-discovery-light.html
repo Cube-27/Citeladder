@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  SEARCHIFY · ONBOARDING STEP 2 — AI AUTO-DISCOVERY (LIGHT)
+  Design system: Figma tokens verbatim (royal #2756FF accent, blue-gray neutrals, Inter + Geist Mono,
+  radius 8/10/12, elevation 1–2). Gradient (AA-safe #3A63EE→#7C4DEB) reserved for AI progress moments only.
+  Kind badges reuse Figma citation tokens: competitor = orange, owned domain = blue, prompt = violet.
+  Motion: one 13s pure-CSS discovery timeline — phases queue→scan→done, progress bar 8→92% with
+  shimmer sweep + stepped % readout, "found so far" feed pops in staggered, skeleton chip loops.
+  prefers-reduced-motion: freezes on a representative mid-scan frame (phase 2 active, 4 feed items, 45%).
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding — AI auto-discovery (Light)</title>
+<meta name="description" content="First-run onboarding step 2 of 3 (Light): animated AI discovery — scanning the site, finding competitors and owned domains, drafting starter prompts, with a live found-so-far feed.">
+<style>
+:root{
+  --blue-50:#EBF0FF;--blue-100:#D5E2FF;--blue-200:#ACC4FF;--blue-400:#4972FF;--blue-500:#2756FF;--blue-600:#1A44EB;
+  --surface-page:#F7F8FA;--surface-panel:#FFFFFF;--surface-sunken:#EFF1F6;
+  --text-primary:#0D1228;--text-secondary:#454E6E;--text-meta:#667092;--text-placeholder:#98A2BE;
+  --border-subtle:#EFF1F6;--border-default:#E2E5EE;--border-strong:#C8CEDE;
+  --accent:#2756FF;--accent-hover:#1A44EB;--accent-subtle:#EBF0FF;--accent-border:#ACC4FF;--accent-text:#1A44EB;
+  --ring:rgba(39,86,255,.16);
+  --shadow-1:0 1px 2px rgba(13,18,40,.05),0 0 0 1px rgba(13,18,40,.05);
+  --shadow-2:0 2px 6px rgba(13,18,40,.07),0 0 0 1px rgba(13,18,40,.06);
+  --grad-ai:linear-gradient(135deg,#3A63EE 0%,#7C4DEB 100%);
+  --cit-comp-bg:#FFF7ED;--cit-comp-text:#9A3412;--cit-comp-border:#FED7AA;
+  --cit-own-bg:#EBF0FF;--cit-own-text:#1235CC;--cit-own-border:#ADC4FF;
+  --cit-pr-bg:#F5F3FF;--cit-pr-text:#5B21B6;--cit-pr-border:#DDD6FE;
+  --success-bg:#F0FDF4;--success-border:#BBF7D0;--success-text:#15803D;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'Geist Mono','JetBrains Mono','Fira Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--surface-page);color:var(--text-primary);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--blue-100)}
+
+/* ── shell ─────────────────────────────────────────── */
+.ob{display:flex;height:100dvh;overflow:hidden}
+.ob-main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.ob-head{display:flex;align-items:center;justify-content:space-between;padding:18px 44px 0;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-mark{width:26px;height:26px;border-radius:6px;background:var(--accent);display:grid;place-items:center;flex-shrink:0}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.head-right{display:flex;align-items:center;gap:14px}
+.head-step{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--text-meta)}
+.head-sep{width:1px;height:14px;background:var(--border-default)}
+.signout{font-size:13px;color:var(--text-meta)}
+
+/* ── stepper ───────────────────────────────────────── */
+.stepper{display:flex;align-items:flex-start;justify-content:center;padding:14px 44px 0;flex-shrink:0}
+.st{display:flex;flex-direction:column;align-items:center;gap:6px;width:104px}
+.st-node{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:600;background:var(--surface-panel);border:1.5px solid var(--border-default);color:var(--text-meta)}
+.st-label{font-size:11.5px;font-weight:500;color:var(--text-meta);text-align:center}
+.st[data-state=now] .st-node{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 4px var(--accent-subtle)}
+.st[data-state=now] .st-label{color:var(--accent-text);font-weight:600}
+.st[data-state=done] .st-node{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}
+.st[data-state=done] .st-label{color:var(--text-secondary)}
+.st-link{width:56px;height:1.5px;background:var(--border-default);margin:14px 10px 0}
+.st-link.done{background:#86C9A5}
+
+/* ── body ──────────────────────────────────────────── */
+.ob-body{flex:1;display:flex;padding:12px 44px 10px;overflow:auto;min-height:0}
+.ob-col{width:100%;max-width:600px;margin:auto}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.08em;color:var(--accent-text);text-transform:uppercase;margin-bottom:8px}
+h1{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.25}
+.sub{margin-top:7px;font-size:14.5px;line-height:1.6;color:var(--text-secondary)}
+.sub .mono{font-family:var(--font-mono);font-size:13px;color:var(--accent-text)}
+
+/* ── progress block ────────────────────────────────── */
+.progress{margin-top:14px;display:flex;align-items:center;gap:14px}
+.bar{flex:1;height:6px;border-radius:99px;background:var(--surface-sunken);overflow:hidden;position:relative}
+.bar-fill{height:100%;width:8%;border-radius:99px;background:var(--grad-ai);position:relative;animation:barGrow 12.4s cubic-bezier(.25,.6,.35,1) forwards}
+.bar-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.55) 50%,transparent 80%);animation:shimmer 1.7s ease-in-out infinite;transform:translateX(-100%)}
+@keyframes shimmer{60%,100%{transform:translateX(100%)}}
+@keyframes barGrow{to{width:92%}}
+.pct{font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--accent-text);min-width:44px;text-align:right;position:relative;display:block;height:18px}
+.pct i{font-style:normal;position:absolute;right:0;top:0;opacity:0;animation:pcIn .25s forwards,pcOut .25s forwards}
+.pct i:nth-child(1){opacity:1;animation:pcOut .25s 2.6s forwards}
+.pct i:nth-child(2){animation-delay:2.6s,5s}
+.pct i:nth-child(3){animation-delay:5s,6.2s}
+.pct i:nth-child(4){animation-delay:6.2s,8s}
+.pct i:nth-child(5){animation-delay:8s,9.4s}
+.pct i:nth-child(6){animation-delay:9.4s,11s}
+.pct i:nth-child(7){animation-delay:11s,12.3s}
+.pct i:nth-child(8){animation:pcIn .25s 12.3s forwards}
+.pct b{display:none;font-weight:600}
+@keyframes pcIn{to{opacity:1}}
+@keyframes pcOut{to{opacity:0}}
+.phaseof{margin-top:8px;font-size:12px;color:var(--text-meta);position:relative;height:16px}
+.phaseof span{position:absolute;left:0;top:0;opacity:0;animation:poIn .3s forwards}
+.phaseof span:nth-child(1){animation-delay:.2s}
+.phaseof span:nth-child(2){animation-delay:2.6s}
+.phaseof span:nth-child(3){animation-delay:6.2s}
+.phaseof span:nth-child(4){animation-delay:9.4s}
+.phaseof span::after{content:"";position:absolute;inset:0;background:var(--surface-page);opacity:0}
+@keyframes poIn{to{opacity:1}}
+.phaseof span:not(:last-child){animation:poIn .3s forwards,poOut .3s forwards}
+.phaseof span:nth-child(1){animation-delay:.2s,2.6s}
+.phaseof span:nth-child(2){animation-delay:2.6s,6.2s}
+.phaseof span:nth-child(3){animation-delay:6.2s,9.4s}
+@keyframes poOut{to{opacity:0}}
+
+/* ── phases ────────────────────────────────────────── */
+.phases{margin-top:10px;display:flex;flex-direction:column;border:1px solid var(--border-default);border-radius:12px;background:var(--surface-panel);box-shadow:var(--shadow-1);overflow:hidden}
+.ph{--t0:.2s;--t1:9999s;display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--border-subtle)}
+.ph:last-child{border-bottom:0}
+.ph[data-ph="1"]{--t0:.2s;--t1:2.6s}
+.ph[data-ph="2"]{--t0:2.6s;--t1:6.2s}
+.ph[data-ph="3"]{--t0:6.2s;--t1:9.4s}
+.ph[data-ph="4"]{--t0:9.4s;--t1:9999s}
+.ph-ic{width:26px;height:26px;border-radius:99px;border:1.5px solid var(--border-default);display:grid;place-items:center;position:relative;flex-shrink:0;animation:ringOn .3s var(--t0) forwards,ringDone .3s var(--t1) forwards}
+@keyframes ringOn{to{border-color:var(--accent)}}
+@keyframes ringDone{to{border-color:var(--success-border);background:var(--success-bg)}}
+.ph-dot{width:6px;height:6px;border-radius:99px;background:var(--border-strong);position:absolute;animation:fadeOut .25s var(--t0) forwards}
+.ph-spin{position:absolute;opacity:0;animation:fadeIn .25s var(--t0) forwards,fadeOut .25s var(--t1) forwards}
+.ph-spin svg{display:block;animation:rot .9s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.ph-check{position:absolute;opacity:0;transform:scale(.5);animation:checkIn .35s var(--t1) cubic-bezier(.2,.9,.3,1.4) forwards}
+@keyframes checkIn{to{opacity:1;transform:scale(1)}}
+@keyframes fadeIn{to{opacity:1}}
+@keyframes fadeOut{to{opacity:0}}
+.ph-txt{flex:1;min-width:0}
+.ph-title{font-size:13.5px;font-weight:500;color:var(--text-meta);animation:titleOn .3s var(--t0) forwards}
+@keyframes titleOn{to{color:var(--text-primary)}}
+.ph-desc{font-size:12px;color:var(--text-meta);margin-top:1px}
+.ph-status{position:relative;width:74px;text-align:right;flex-shrink:0;font-size:11.5px;font-weight:500}
+.ph-status i{font-style:normal;position:absolute;right:0;top:50%;transform:translateY(-50%);opacity:0;white-space:nowrap}
+.st-q{color:var(--text-meta);opacity:1;animation:fadeOut .25s var(--t0) forwards}
+.st-a{color:var(--accent-text);animation:fadeIn .25s var(--t0) forwards,fadeOut .25s var(--t1) forwards}
+.st-d{color:var(--success-text);animation:fadeIn .25s var(--t1) forwards}
+
+/* ── found feed ────────────────────────────────────── */
+.feed-head{margin-top:14px;display:flex;align-items:center;gap:8px}
+.feed-label{font-size:11px;font-weight:600;letter-spacing:.07em;color:var(--text-meta);text-transform:uppercase}
+.live{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--accent-text)}
+.live i{width:6px;height:6px;border-radius:99px;background:var(--accent);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(39,86,255,.35)}50%{box-shadow:0 0 0 5px rgba(39,86,255,0)}}
+.feed{margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.fi{display:flex;align-items:center;gap:9px;padding:7px 11px;border-radius:10px;background:var(--surface-panel);border:1px solid var(--border-subtle);box-shadow:var(--shadow-1);min-width:0;opacity:0;transform:translateY(8px) scale(.97);animation:pop .5s cubic-bezier(.2,.8,.3,1.15) forwards}
+@keyframes pop{to{opacity:1;transform:none}}
+.fi-ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex-shrink:0}
+.fi-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-sub{font-family:var(--font-mono);font-size:11px;color:var(--text-meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-txt{flex:1;min-width:0}
+.kind{margin-left:auto;font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:2px 7px;border-radius:99px;border:1px solid;flex-shrink:0}
+.k-comp{background:var(--cit-comp-bg);color:var(--cit-comp-text);border-color:var(--cit-comp-border)}
+.k-own{background:var(--cit-own-bg);color:var(--cit-own-text);border-color:var(--cit-own-border)}
+.k-pr{background:var(--cit-pr-bg);color:var(--cit-pr-text);border-color:var(--cit-pr-border)}
+.k-site{background:var(--surface-sunken);color:var(--text-secondary);border-color:var(--border-default)}
+.skel{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:10px;border:1.5px dashed var(--border-default);min-width:0;opacity:0;animation:pop .5s 11.9s forwards}
+.skel i{width:24px;height:24px;border-radius:7px;background:linear-gradient(100deg,var(--surface-sunken) 30%,#f5f7ff 50%,var(--surface-sunken) 70%);background-size:200% 100%;animation:skMove 1.4s linear infinite}
+.skel b{height:9px;flex:1;border-radius:99px;background:linear-gradient(100deg,var(--surface-sunken) 30%,#f5f7ff 50%,var(--surface-sunken) 70%);background-size:200% 100%;animation:skMove 1.4s linear infinite}
+@keyframes skMove{to{background-position:-200% 0}}
+
+/* ── footer ────────────────────────────────────────── */
+.ob-foot{border-top:1px solid var(--border-default);background:var(--surface-panel);padding:13px 44px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.btn-ghost-sm{border:1px solid var(--border-default);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;color:var(--text-meta)}
+.btn-ghost-sm:hover{color:var(--text-secondary);border-color:var(--border-strong)}
+.foot-spacer{flex:1}
+.foot-status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-meta)}
+.foot-status .mono{font-family:var(--font-mono);font-size:11.5px;color:var(--accent-text)}
+
+/* ── midnight panel ────────────────────────────────── */
+.mn{flex:0 0 400px;position:relative;overflow:hidden;padding:42px 38px;display:flex;flex-direction:column;background:linear-gradient(160deg,#0D1A3D 0%,#0F1228 60%,#12172E 100%)}
+.mn::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at center,rgba(39,86,255,.07) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.mn-glow{position:absolute;top:-110px;right:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(39,86,255,.16) 0%,transparent 70%);pointer-events:none}
+.mn-in{position:relative;z-index:1;display:flex;flex-direction:column;gap:20px;height:100%}
+.mn-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;border:1px solid rgba(39,86,255,.35);background:rgba(39,86,255,.12);width:fit-content}
+.mn-pill i{width:6px;height:6px;border-radius:99px;background:#4D7BFF;animation:pulse 1.6s ease-in-out infinite}
+.mn-pill span{font-size:11.5px;font-weight:500;color:#7DA0FF;letter-spacing:.05em}
+.mn h3{font-size:22px;font-weight:600;color:#ECEEF5;line-height:1.3;letter-spacing:-.02em;margin-bottom:9px}
+.mn .mn-sub{font-size:14px;color:rgba(255,255,255,.55);line-height:1.65}
+.mn-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:16px 18px}
+.mn-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);letter-spacing:.07em;text-transform:uppercase;margin-bottom:12px}
+.eng-grid{display:flex;flex-direction:column;gap:8px}
+.eng{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.eng-av{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.eng-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.85)}
+.eng-model{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.62)}
+.eng-live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:500;color:#7DA0FF}
+.eng-live i{width:5px;height:5px;border-radius:99px;background:#4D7BFF;animation:pulse 1.6s ease-in-out infinite}
+.mn-list{display:flex;flex-direction:column;gap:9px}
+.mn-li{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:rgba(255,255,255,.60);line-height:1.5}
+.mn-li svg{flex-shrink:0;margin-top:2px;color:#7DA0FF}
+.mn-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,.56)}
+.mn-foot .mono{font-family:var(--font-mono);color:#7DA0FF}
+
+/* ── entrance + reduced motion ─────────────────────── */
+.reveal{opacity:0;transform:translateY(10px);animation:rise .55s cubic-bezier(.2,.7,.25,1) forwards}
+.d1{animation-delay:.02s}.d2{animation-delay:.08s}.d3{animation-delay:.14s}.d4{animation-delay:.2s}
+@keyframes rise{to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+  /* representative mid-scan frame: phase 1 done, phase 2 scanning, 3–4 queued */
+  .bar-fill{width:45%}
+  .pct i{display:none}
+  .pct b{display:block}
+  .phaseof span{display:none}
+  .phaseof span:nth-child(2){display:block;opacity:1;position:static}
+  .ph-ic{animation:none}
+  .ph .ph-dot{opacity:0}
+  .ph[data-ph="1"] .ph-ic{border-color:var(--success-border);background:var(--success-bg)}
+  .ph[data-ph="1"] .ph-check{opacity:1;transform:none}
+  .ph[data-ph="1"] .ph-title{color:var(--text-primary)}
+  .ph[data-ph="2"] .ph-ic{border-color:var(--accent)}
+  .ph[data-ph="2"] .ph-spin{opacity:1}
+  .ph[data-ph="2"] .ph-title{color:var(--text-primary)}
+  .ph[data-ph="3"] .ph-dot,.ph[data-ph="4"] .ph-dot{opacity:1}
+  .ph-status i{position:static;transform:none}
+  .ph .st-q,.ph .st-a,.ph .st-d{opacity:0;animation:none}
+  .ph[data-ph="1"] .st-d{opacity:1}
+  .ph[data-ph="2"] .st-a{opacity:1}
+  .ph[data-ph="3"] .st-q,.ph[data-ph="4"] .st-q{opacity:1}
+  .fi{opacity:1;transform:none}
+  .fi:nth-of-type(n+5){display:none}
+  .skel{display:none}
+}
+</style>
+</head>
+<body>
+<div class="ob" data-component-id="onboarding-shell">
+
+  <div class="ob-main">
+    <header class="ob-head reveal d1" data-component-id="onboarding-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="5" r="4" stroke="#fff" stroke-width="1.5"/><line x1="8" y1="8" x2="13" y2="13" stroke="#fff" stroke-width="1.75" stroke-linecap="round"/><circle cx="5" cy="5" r="1.5" fill="#fff"/></svg>
+        </span>
+        <span class="brand-name">Searchify</span>
+      </div>
+      <div class="head-right">
+        <span class="head-step">SETUP · 3 STEPS</span>
+        <span class="head-sep" aria-hidden="true"></span>
+        <button class="signout" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <nav class="stepper reveal d2" aria-label="Setup progress" data-component-id="stepper">
+      <div class="st" data-state="done">
+        <span class="st-node"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="st-label">Brand</span>
+      </div>
+      <span class="st-link done" aria-hidden="true"></span>
+      <div class="st" data-state="now" aria-current="step">
+        <span class="st-node">2</span>
+        <span class="st-label">AI discovery</span>
+      </div>
+      <span class="st-link" aria-hidden="true"></span>
+      <div class="st" data-state="todo">
+        <span class="st-node">3</span>
+        <span class="st-label">Review</span>
+      </div>
+    </nav>
+
+    <div class="ob-body">
+      <div class="ob-col">
+        <p class="eyebrow reveal d2">AI auto-discovery</p>
+        <h1 class="reveal d3" data-component-id="step-title">Building your project…</h1>
+        <p class="sub reveal d3">Searchify is scanning <span class="mono">acmecorp.com</span> and drafting your setup. You review and edit everything in the next step — nothing is final.</p>
+
+        <div class="progress reveal d4" data-component-id="discovery-progress">
+          <div class="bar" role="progressbar" aria-label="Discovery progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="45">
+            <div class="bar-fill"></div>
+          </div>
+          <span class="pct" aria-hidden="true"><i>8%</i><i>30%</i><i>50%</i><i>58%</i><i>72%</i><i>79%</i><i>87%</i><i>92%</i><b>45%</b></span>
+        </div>
+        <div class="phaseof reveal d4" aria-hidden="true">
+          <span>Phase 1 of 4 · Scanning your site</span>
+          <span>Phase 2 of 4 · Finding competitors</span>
+          <span>Phase 3 of 4 · Mapping owned domains</span>
+          <span>Phase 4 of 4 · Drafting starter prompts</span>
+        </div>
+
+        <div class="phases reveal d4" data-component-id="phase-list">
+          <div class="ph" data-ph="1">
+            <span class="ph-ic">
+              <span class="ph-dot"></span>
+              <span class="ph-spin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2756FF" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg></span>
+              <span class="ph-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#15803D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="ph-txt">
+              <span class="ph-title">Scanning acmecorp.com</span>
+              <span class="ph-desc" style="display:block">47 pages · sitemap · metadata parsed</span>
+            </span>
+            <span class="ph-status"><i class="st-q">Queued</i><i class="st-a">Scanning…</i><i class="st-d">Done</i></span>
+          </div>
+          <div class="ph" data-ph="2">
+            <span class="ph-ic">
+              <span class="ph-dot"></span>
+              <span class="ph-spin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2756FF" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg></span>
+              <span class="ph-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#15803D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="ph-txt">
+              <span class="ph-title">Finding competitors</span>
+              <span class="ph-desc" style="display:block">Querying AI answers in your market</span>
+            </span>
+            <span class="ph-status"><i class="st-q">Queued</i><i class="st-a">Scanning…</i><i class="st-d">Done</i></span>
+          </div>
+          <div class="ph" data-ph="3">
+            <span class="ph-ic">
+              <span class="ph-dot"></span>
+              <span class="ph-spin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2756FF" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg></span>
+              <span class="ph-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#15803D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="ph-txt">
+              <span class="ph-title">Mapping owned domains</span>
+              <span class="ph-desc" style="display:block">Subdomains and properties you control</span>
+            </span>
+            <span class="ph-status"><i class="st-q">Queued</i><i class="st-a">Scanning…</i><i class="st-d">Done</i></span>
+          </div>
+          <div class="ph" data-ph="4">
+            <span class="ph-ic">
+              <span class="ph-dot"></span>
+              <span class="ph-spin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2756FF" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg></span>
+              <span class="ph-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#15803D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="ph-txt">
+              <span class="ph-title">Drafting starter prompts</span>
+              <span class="ph-desc" style="display:block">The questions your buyers actually ask AI</span>
+            </span>
+            <span class="ph-status"><i class="st-q">Queued</i><i class="st-a">Scanning…</i><i class="st-d">Done</i></span>
+          </div>
+        </div>
+
+        <div class="feed-head reveal d4" data-component-id="found-feed-label">
+          <span class="feed-label">Found so far</span>
+          <span class="live"><i></i>Live</span>
+        </div>
+        <div class="feed" data-component-id="found-feed">
+          <div class="fi" style="animation-delay:.9s">
+            <span class="fi-ic" style="background:var(--surface-sunken);color:var(--text-secondary)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">Site profile detected</span><span class="fi-sub" style="display:block">B2B analytics · 47 pages</span></span>
+            <span class="kind k-site">SITE</span>
+          </div>
+          <div class="fi" style="animation-delay:3.2s">
+            <span class="fi-ic" style="background:var(--cit-comp-bg);color:var(--cit-comp-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">TechCo</span><span class="fi-sub" style="display:block">techco.io</span></span>
+            <span class="kind k-comp">COMPETITOR</span>
+          </div>
+          <div class="fi" style="animation-delay:4.1s">
+            <span class="fi-ic" style="background:var(--cit-comp-bg);color:var(--cit-comp-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">DataFlow Inc</span><span class="fi-sub" style="display:block">dataflow.com</span></span>
+            <span class="kind k-comp">COMPETITOR</span>
+          </div>
+          <div class="fi" style="animation-delay:5s">
+            <span class="fi-ic" style="background:var(--cit-comp-bg);color:var(--cit-comp-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">Nexus AI</span><span class="fi-sub" style="display:block">nexusai.com</span></span>
+            <span class="kind k-comp">COMPETITOR</span>
+          </div>
+          <div class="fi" style="animation-delay:7s">
+            <span class="fi-ic" style="background:var(--cit-own-bg);color:var(--cit-own-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">blog.acmecorp.com</span><span class="fi-sub" style="display:block">Subdomain · content hub</span></span>
+            <span class="kind k-own">OWNED</span>
+          </div>
+          <div class="fi" style="animation-delay:7.9s">
+            <span class="fi-ic" style="background:var(--cit-own-bg);color:var(--cit-own-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">docs.acmecorp.com</span><span class="fi-sub" style="display:block">Subdomain · documentation</span></span>
+            <span class="kind k-own">OWNED</span>
+          </div>
+          <div class="fi" style="animation-delay:10.1s">
+            <span class="fi-ic" style="background:var(--cit-pr-bg);color:var(--cit-pr-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">best product analytics platform for B2B</span><span class="fi-sub" style="display:block">Category prompt</span></span>
+            <span class="kind k-pr">PROMPT</span>
+          </div>
+          <div class="fi" style="animation-delay:11s">
+            <span class="fi-ic" style="background:var(--cit-pr-bg);color:var(--cit-pr-text)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="fi-txt"><span class="fi-name">acmecorp vs techco — which is better?</span><span class="fi-sub" style="display:block">Comparison prompt</span></span>
+            <span class="kind k-pr">PROMPT</span>
+          </div>
+          <div class="skel" aria-hidden="true"><i></i><b></b></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="ob-foot" data-component-id="step-footer">
+      <button class="btn-ghost-sm" type="button">Cancel setup</button>
+      <span class="foot-spacer"></span>
+      <span class="foot-status">
+        <span class="live"><i></i>Discovering</span>
+        <span aria-hidden="true">·</span>
+        <span>auto-continues to review — usually 20–40s</span>
+      </span>
+    </footer>
+  </div>
+
+  <aside class="mn" data-component-id="midnight-panel">
+    <span class="mn-glow" aria-hidden="true"></span>
+    <div class="mn-in">
+      <span class="mn-pill reveal d2"><i></i><span>AI AUTO-DISCOVERY</span></span>
+
+      <div class="reveal d3">
+        <h3>Watch your market take shape</h3>
+        <p class="mn-sub">One click in — Searchify reads your site, queries the major AI engines, and assembles a project you can edit in the next step.</p>
+      </div>
+
+      <div class="mn-card reveal d4" data-component-id="engines-panel">
+        <div class="mn-label">Querying AI engines</div>
+        <div class="eng-grid">
+          <div class="eng">
+            <span class="eng-av" style="background:#10A37F">C</span>
+            <span><span class="eng-name">ChatGPT</span><span class="eng-model" style="display:block">GPT-4o</span></span>
+            <span class="eng-live"><i></i>LIVE</span>
+          </div>
+          <div class="eng">
+            <span class="eng-av" style="background:#D97757">C</span>
+            <span><span class="eng-name">Claude</span><span class="eng-model" style="display:block">Claude 3.5</span></span>
+            <span class="eng-live"><i></i>LIVE</span>
+          </div>
+          <div class="eng">
+            <span class="eng-av" style="background:#4285F4">G</span>
+            <span><span class="eng-name">Gemini</span><span class="eng-model" style="display:block">Gemini 1.5</span></span>
+            <span class="eng-live"><i></i>LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mn-card reveal d4" data-component-id="ai-reads-panel">
+        <div class="mn-label">What the AI reads</div>
+        <div class="mn-list">
+          <span class="mn-li"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Your public pages, docs, and sitemap</span>
+          <span class="mn-li"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Real AI answers for category queries</span>
+          <span class="mn-li"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Citation patterns — who gets mentioned and where</span>
+        </div>
+      </div>
+
+      <div class="mn-foot">
+        <span class="mono">acmecorp.com</span>
+        <span>elapsed <span class="mono">00:12</span></span>
+      </div>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

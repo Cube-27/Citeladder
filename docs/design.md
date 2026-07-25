@@ -50,10 +50,10 @@ confirmed product decision).
 
 Rule: **same name, new Figma value** wherever a semantic equivalent exists; **new token**
 only for new concepts; where our set is finer-grained than Figma's, alias to the nearest
-Figma value and document it. Figma source: `/code/.uploaded_artifacts/1192.css` (tokens) and
-`1198.tsx` (type scale, buttons, badges, elevation).
+Figma value and document it. Figma source: `docs/redesign/figma/tokens.css` (tokens) and
+`docs/redesign/figma/DesignSystemSheet.tsx` (type scale, buttons, badges, elevation).
 
-| Figma (`1192.css`) | Searchify token(s) | Notes |
+| Figma (`docs/redesign/figma/tokens.css`) | Searchify token(s) | Notes |
 |---|---|---|
 | `--blue-50..900`, `--neutral-0..900` | NEW primitive ramps, same names | globals.css-only layer; semantic tokens reference these; not theme-overridden |
 | `--surface-page` | `--bg-base` | light `#F7F8FA` verbatim; dark authored (§6) |
@@ -74,7 +74,7 @@ Figma value and document it. Figma source: `/code/.uploaded_artifacts/1192.css` 
 | `--citation-owned/-competitor/-third-*` | `--citation-owned/-competitor/-third-party-*` + NEW `*-border` | **owned becomes Figma blue** — the green identity is dropped (confirmed decision) |
 | `--chart-1..8` | NEW `--chart-1..8`; `--series-1..5` alias to `--chart-1..5`, `--series-other` ← `--neutral-200` | keeps the "fold into Other" rule in `series-palette.ts`; chart hues identical in both themes |
 | `--shadow-1..4` | NEW `--shadow-1..4`; existing `--shadow-xs/sm/card/elevated/lg/modal` alias (xs,sm→1; card→2; elevated→3; lg,modal→4) | component names unchanged; dark shadows authored soft for the lighter surfaces |
-| `--r-xs..xl` (4/6/8/12/16) | `--radius-xs/sm/md/lg/xl` = 4/6/8/12/16; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills** (1198 Btn) |
+| `--r-xs..xl` (4/6/8/12/16) | `--radius-xs/sm/md/lg/xl` = 4/6/8/12/16; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills** (DesignSystemSheet.tsx Btn) |
 | Inter, Geist Mono | `--font-primary-family` = Inter stack; `--font-mono-family` = Geist Mono stack; `--font-display-family` → Inter | next/font in `app/layout.tsx`: Inter replaces Geist; the variable name `--font-sans` is kept |
 
 ## 4. Token values — LIGHT (`:root`)
@@ -476,7 +476,7 @@ semantic aliases.
 ## 10. Component-primitive inventory
 
 All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Figma specs
-(`1198.tsx` buttons/badges/elevation, `1194.tsx` score ring, `1195.tsx` sparkline).
+(`docs/redesign/figma/DesignSystemSheet.tsx` buttons/badges/elevation, `docs/redesign/figma/ScoreRing.tsx` score ring, `docs/redesign/figma/Sparkline.tsx` sparkline).
 
 | Primitive | Notes |
 |---|---|
@@ -485,9 +485,9 @@ All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Fi
 | `card` | `bg-panel` + `--shadow-2` + `--radius-lg`; elevated = `bg-elevated` + `--shadow-3`; header/title/description/content slots + optional mono eyebrow panel label. |
 | `table` (dense) | 30px sticky header (`--text-2xs` uppercase micro label, muted), 42px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation). |
 | `score-ring` | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-lg`, `lg` = `--text-hero` hero numeral); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.** |
-| `sparkline` | trend-colored 1.5px polyline + end dot (1195). |
+| `sparkline` | trend-colored 1.5px polyline + end dot (Sparkline.tsx). |
 | `donut` | segmented ring for per-engine / citation share; hover-thicken + mono center value; legend; ARIA. |
-| `tabs` / `segmented` | underline tabs (2px accent indicator, per 1199) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent). |
+| `tabs` / `segmented` | underline tabs (2px accent indicator, per VisibilityDashboard.tsx) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent). |
 | `input` / `field` | 14px text, `--border` hairline, `--radius-sm`, focus = accent border + `--focus-ring`; `field` wraps label + help + error. |
 | `dialog` | Radix modal; `--overlay-scrim`, `bg-elevated`, `--shadow-4`, `--radius-xl`. |
 | `dropdown` | Radix menu; `bg-elevated`, `border`, `--shadow-3`. |
@@ -504,7 +504,7 @@ The app shell is a fixed **220px left sidebar** + **52px topbar** + scrolling co
 (4px grid, `--content-gutter` padding). Auth and onboarding screens are exceptions (no
 shell).
 
-### 11.1 App shell (`(app)/layout.tsx`) — Figma shell geometry (1196), grouped nav kept
+### 11.1 App shell (`(app)/layout.tsx`) — Figma shell geometry (AppShell.tsx), grouped nav kept
 
 **Sidebar (220px, `bg-sidebar`)**: logo row (LogoCube + wordmark), project switcher
 (brand avatar + name, dropdown), then the grouped nav — the existing **Analyze / Improve**
@@ -525,7 +525,7 @@ per the approved mockups) + form panel with an elevated form card (`--shadow-2`,
 accessible 503 inline notice), inline `ApiError` danger alert, login/register toggle link,
 theme toggle top-right. The pages own the single h1.
 
-### 11.3 Onboarding (`/onboarding`) — Figma-styled, AI auto-discovery (1200)
+### 11.3 Onboarding (`/onboarding`) — Figma-styled, AI auto-discovery (OnboardingScreen.tsx)
 
 First-run route group **without** the app shell (SessionGuard + ProjectProvider; the layout
 redirects to `/visibility` when projects exist). **Full-screen split**: left panel = logo
@@ -540,7 +540,7 @@ inline change) → **Confirm** (create project + prompt set + prompts, refetch t
 query, then land on `/visibility`). When the agent is unconfigured (503) the flow degrades
 to a manual-entry fallback with an inline notice — onboarding never requires the agent.
 
-### 11.4 Visibility workspace (`/visibility`) — Figma dashboard (1199)
+### 11.4 Visibility workspace (`/visibility`) — Figma dashboard (VisibilityDashboard.tsx)
 
 One workspace: filter bar (run selector defaulting to the latest completed run, engine pill
 filters) above the accessible four-tab underline tablist — **Overview** (default), Trends,
@@ -574,7 +574,7 @@ mono score dict; Sentiment `—`.
 
 ### 11.7 Measurement + action surfaces
 
-**Site Health** (`/site-health`) — crawl/page detail per `1197.tsx`: score presentation
+**Site Health** (`/site-health`) — crawl/page detail per `docs/redesign/figma/SiteHealthDetail.tsx`: score presentation
 (score-band tokens), issue grouping layout, page table. **Issues**, **Content**,
 **Knowledge Base** (description/positioning/products/audience editor + consent-gated "Draft
 with AI" review flow), **Products**, **Analytics**, **Traffic**, **Settings** (providers /
