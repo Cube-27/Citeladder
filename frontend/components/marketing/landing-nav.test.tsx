@@ -55,9 +55,17 @@ describe('LandingNav', () => {
       expect(trigger).toHaveAttribute('aria-expanded', 'false');
       const drop = panel(`desktop-nav-panel-${key}`);
       expect(drop).toHaveAttribute('role', 'menu');
-      expect(drop).toHaveClass('drop', 'shared-drop');
+      expect(drop).toHaveClass('drop');
       expect(trigger.closest('.nav-item')).toContainElement(drop);
     }
+
+    // The visible surface is ONE shared frame in .nav-links — always mounted,
+    // decorative (aria-hidden), never a menu itself. The panels above are
+    // transparent content layers stacked on top of it.
+    const frames = document.querySelectorAll('.nav-links .drop-frame');
+    expect(frames).toHaveLength(1);
+    expect(frames[0]).toHaveAttribute('aria-hidden', 'true');
+    expect(frames[0]).not.toHaveAttribute('role');
 
     // Enterprise / Pricing are plain links — no dropdown chrome whatsoever.
     for (const [name, href] of [
@@ -84,23 +92,30 @@ describe('LandingNav', () => {
 
     const item = (name: RegExp, id: string) => control(name, id).closest('.nav-item') as Element;
 
-    // A fresh open grows out of its trigger: no `switching`, so it uses the
-    // scale-up entrance rather than the horizontal travel transition.
+    const frame = document.querySelector('.nav-links .drop-frame') as HTMLElement;
+
+    // A fresh open is a plain appearance: no `switching`, so the frame snaps
+    // to size and fades in rather than stretching from a previous shape.
     fireEvent.mouseEnter(item(/^product$/i, 'desktop-nav-panel-product'));
     const product = panel('desktop-nav-panel-product');
     expect(product).toHaveClass('open');
     expect(product).not.toHaveClass('switching');
     expect(product.className).not.toMatch(/slide-(left|right)/);
+    expect(frame).toHaveClass('open');
+    expect(frame).not.toHaveClass('switching');
 
-    // Product -> Solutions: `switching` swaps the panel onto the left/width
-    // transition so the SAME box slides along the nav instead of fading out
-    // and a new one fading in. `slide-right` carries the inner content in
-    // from the direction of travel.
+    // Product -> Solutions: `switching` puts the frame AND the incoming panel
+    // on the height-only transition, so the one stationary surface stretches
+    // to fit the new content instead of fading out and back in. `slide-right`
+    // drifts the incoming content in from the direction of travel.
     fireEvent.mouseEnter(item(/^solutions$/i, 'desktop-nav-panel-solutions'));
     const solutions = panel('desktop-nav-panel-solutions');
     expect(solutions).toHaveClass('open', 'switching', 'slide-right');
+    expect(frame).toHaveClass('open', 'switching');
+    // The outgoing panel hides (its exit fade) but the shared frame does not.
+    expect(product).not.toHaveClass('open');
 
-    // Solutions -> Resources travels back leftwards.
+    // Solutions -> Resources drifts back leftwards.
     fireEvent.mouseEnter(item(/^resources$/i, 'desktop-nav-panel-resources'));
     expect(panel('desktop-nav-panel-resources')).toHaveClass('open', 'switching', 'slide-left');
   });

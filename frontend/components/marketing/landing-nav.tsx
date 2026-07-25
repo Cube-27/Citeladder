@@ -35,18 +35,14 @@ import { LogoCube } from '@/components/ui/logo-cube';
 
 const ACTIVE_PROJECT_STORAGE_KEY = 'searchify.active-project-id';
 
-/** Matches --mkt-gutter: the minimum breathing room at the viewport edge. */
-const GUTTER = 20;
-
-/** Matches the `.drop` padding in marketing.css. */
-const PANEL_PADDING = 6;
-
 /**
- * One width for every dropdown panel. A fixed frame is what lets the surface
- * stay put while its contents swap — a per-trigger width would force the box
- * to resize on every hover, which reads as motion rather than continuity.
+ * Vertical chrome around a dropdown panel's content: the 7px top and bottom
+ * padding on `.drop` in marketing.css. The frame's height is the content's
+ * measured height plus this, so the surface always fits what it is showing.
+ * (Width and horizontal position are fixed in CSS — the frame never moves or
+ * widens, so height is the only measured dimension.)
  */
-const PANEL_WIDTH = 660;
+const PANEL_CHROME_Y = 14;
 
 function hasStoredActiveProject(): boolean {
   if (typeof window === 'undefined') return false;
@@ -290,9 +286,20 @@ function MobileItemLink({ item, onSelect }: Readonly<{ item: NavDropItem; onSele
  * never closes a hover-open panel — and item click + Esc close; chevron
  * rotates, an invisible bridge covers the trigger→panel gap so the pointer
  * never loses hover). "Enterprise" / "Pricing" are plain links with no
- * dropdown chrome. One panel exists at a time and renders inside the open
- * trigger's `.nav-item`, so Tab moves from the trigger into the submenu links
- * rather than blurring out of the subtree and closing the panel first.
+ * dropdown chrome.
+ *
+ * The visible dropdown SURFACE is a single `.drop-frame` element that lives in
+ * `.nav-links` and never remounts: it paints the background, border and
+ * shadow, and the only thing that ever animates about it is its height (plus a
+ * fade on open/close). Each trigger still owns a `.drop` panel nested inside
+ * its `.nav-item` — that nesting is what keeps the submenu keyboard-reachable
+ * (Tab moves from the trigger into the menu items without leaving the subtree,
+ * so onBlurCapture doesn't close it) — but those panels are transparent
+ * content layers pinned to the exact same fixed geometry as the frame.
+ * Switching triggers therefore reads as one stationary box stretching to fit
+ * new contents: the frame holds opacity 1 and position while its height eases,
+ * and only the content cross-fades.
+ *
  * ≤860px: a hamburger opens a slide-down menu with
  * tap-to-expand accordions (Esc closes it too). The strip is fixed to the top
  * of the viewport; its bottom hairline strengthens once the page scrolls. Open state is driven from React
@@ -311,19 +318,14 @@ export function LandingNav() {
   // its trigger instead, so the two motions never read as the same gesture.
   const [isSwitching, setIsSwitching] = useState(false);
   const closeTimer = useRef<number | null>(null);
-  const navLinksRef = useRef<HTMLDivElement | null>(null);
-  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const contentRefs = useRef<Record<string, HTMLDivElement | null>>({});
   /**
-   * Geometry of the panel surface: where it sits and how big it is.
-   *
-   * The three triggers each own a panel in the DOM (that nesting is what keeps
-   * the submenu keyboard-reachable), but only ONE is ever visible, and it is
-   * positioned and sized from this single piece of state. Moving between
-   * triggers therefore slides and RESIZES the same box — it never closes and
-   * reopens.
+   * Height of the shared `.drop-frame` surface (and of the open panel, which
+   * clips its content to the same edge). This is the ONE measured dimension:
+   * left and width are fixed in CSS, so moving between triggers can only ever
+   * stretch the box vertically — it never travels, resizes sideways or fades.
    */
-  const [box, setBox] = useState<{ x: number; w: number; h: number } | null>(null);
+  const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<DropKey | null>(null);
 
@@ -361,40 +363,20 @@ export function LandingNav() {
     closeTimer.current = null;
   };
 
-  // The panel renders inside the open trigger's .nav-item (which is
-  // position:relative), so the base `.drop { left: 50% }` already centers it on
-  // that trigger — no measured offset needed.
   /**
-   * Centre of `key`'s trigger, in .nav-links coordinates — the x the panel
-   * centres itself on.
+   * Height the frame must stretch to for `key`'s content.
    *
-   * Clamped so a panel wider than its offset (the 620px Product panel sits
-   * over the leftmost trigger) can never run off the left edge of the
-   * viewport: the centre is pushed right just enough to keep the panel's left
-   * edge on screen. Without this the widest panel would be half-cut on
-   * narrower desktops.
+   * Every panel keeps its fixed 660px CSS width whether open or closed
+   * (closed ones are merely visibility:hidden), so the content is always laid
+   * out at its real wrap width and scrollHeight is accurate on the first
+   * synchronous read — no deferred re-measure needed. scrollHeight is the
+   * content's own laid-out height, independent of whatever height the shell
+   * is currently clipped to, so the shell can never feed its stale size back.
    */
-  /**
-   * The panel surface is ANCHORED, not per-trigger: one box, centred on the
-   * trigger group, that stays put while the pointer moves along the nav. Only
-   * its height changes, to fit whichever content is showing.
-   *
-   * Moving between triggers therefore swaps the contents inside a stationary
-   * frame — there is no travel and no resize to watch, which is what makes it
-   * feel like a single continuous surface rather than three panels.
-   */
-  const measureBox = (key: DropKey): { x: number; w: number; h: number } | null => {
-    const links = navLinksRef.current;
+  const measurePanelHeight = (key: DropKey): number | null => {
     const content = contentRefs.current[key];
-    if (!links || !content) return null;
-    const l = links.getBoundingClientRect();
-    // Centre on the trigger group itself, so the frame never moves.
-    const x = l.width / 2;
-    // scrollHeight is the content's own laid-out height, independent of
-    // whatever height the shell is currently stretched to — reading
-    // offsetHeight here would feed the shell its own stale size back.
-    const h = content.scrollHeight + PANEL_PADDING * 2;
-    return { x, w: PANEL_WIDTH, h };
+    if (!content) return null;
+    return content.scrollHeight + PANEL_CHROME_Y;
   };
 
   const openDesktopDrop = (key: DropKey) => {
@@ -406,11 +388,8 @@ export function LandingNav() {
     } else if (!openDrop) {
       setIsSwitching(false);
     }
-    setBox(measureBox(key));
+    setPanelHeight(measurePanelHeight(key));
     setOpenDrop(key);
-    // Re-measure on the next frame: the first read can land before the grid
-    // has reflowed, which would leave the frame taller than its content.
-    requestAnimationFrame(() => setBox(measureBox(key)));
   };
 
   const closeDrop = () => {
@@ -468,12 +447,7 @@ export function LandingNav() {
           <span>Searchify</span>
           <span className="by-tag">by CUBE27</span>
         </Link>
-        <div
-          className="nav-links"
-          ref={navLinksRef}
-          onMouseEnter={clearDropClose}
-          onMouseLeave={scheduleDropClose}
-        >
+        <div className="nav-links" onMouseEnter={clearDropClose} onMouseLeave={scheduleDropClose}>
           {NAV_DROPS.map(({ key, label, groups }) => {
             const isOpen = openDrop === key;
             return (
@@ -481,9 +455,6 @@ export function LandingNav() {
                 <button
                   className="nav-link"
                   type="button"
-                  ref={(node) => {
-                    triggerRefs.current[key] = node;
-                  }}
                   aria-expanded={isOpen}
                   aria-haspopup="true"
                   aria-controls={`desktop-nav-panel-${key}`}
@@ -497,27 +468,31 @@ export function LandingNav() {
                     subtree, so Tab moves from the trigger into the menu items
                     instead of closing the panel first. The panel element is
                     always present (so aria-controls resolves) and hidden via
-                    .open/aria-hidden; only its content is mounted on open, which
-                    keeps the existing remount-driven slide animation. */}
-                {/* ONE shell per trigger, but only the open one is painted —
-                    and it is stretched to `box`, so the surface reads as a
-                    single box being resized rather than panels swapping.
-                    `.measure` holds an unpainted copy of every panel's content
-                    so the next height is known before the stretch starts. */}
+                    .open/aria-hidden.
+
+                    Visually the panel is a TRANSPARENT content layer: it has
+                    no background or border of its own (the shared .drop-frame
+                    below paints the surface), sits at the same fixed left and
+                    width as the frame, and carries the same inline height so
+                    its overflow clip tracks the frame's bottom edge exactly
+                    while the height eases. `switching` + `slide-*` drive the
+                    content's directional fade when moving between triggers. */}
                 <div
-                  className={cn('drop shared-drop', isOpen && 'open', `drop-${key}`)}
+                  className={cn(
+                    'drop',
+                    `drop-${key}`,
+                    isOpen && 'open',
+                    isOpen && isSwitching && 'switching',
+                    isOpen && isSwitching && `slide-${slideDirection}`,
+                  )}
                   id={`desktop-nav-panel-${key}`}
                   role="menu"
                   aria-hidden={!isOpen}
                   onMouseEnter={clearDropClose}
-                  style={
-                    box === null || !isOpen
-                      ? undefined
-                      : { left: `${box.x}px`, width: `${box.w}px`, height: `${box.h}px` }
-                  }
+                  style={panelHeight === null ? undefined : { height: `${panelHeight}px` }}
                 >
                   <div
-                    className={cn('drop-content', isSwitching && `slide-${slideDirection}`)}
+                    className="drop-content"
                     ref={(node) => {
                       contentRefs.current[key] = node;
                     }}
@@ -549,6 +524,19 @@ export function LandingNav() {
           <Link className="nav-link" href="/pricing">
             Pricing
           </Link>
+          {/* The one visible dropdown surface. Always mounted, never remounts,
+              purely decorative (the menu semantics live on the panels above),
+              so switching triggers can never flicker: its opacity only changes
+              on open/close, and between triggers only its height eases. */}
+          <div
+            className={cn(
+              'drop-frame',
+              openDrop !== null && 'open',
+              openDrop !== null && isSwitching && 'switching',
+            )}
+            aria-hidden="true"
+            style={panelHeight === null ? undefined : { height: `${panelHeight}px` }}
+          />
         </div>
         <div className="nav-actions">
           <button
