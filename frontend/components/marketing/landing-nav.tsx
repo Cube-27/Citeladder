@@ -1,17 +1,16 @@
 'use client';
 
-import { ArrowUpRight, ChevronDown, Menu, Moon, Sun, X } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import { applyTheme, readTheme, subscribeTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
-import { LogoCube } from '@/components/ui/logo-cube';
+import { MarketingLogo } from './marketing-logo';
 
 const ACTIVE_PROJECT_STORAGE_KEY = 'searchify.active-project-id';
 
@@ -266,7 +265,6 @@ function MobileItemLink({ item, onSelect }: Readonly<{ item: NavDropItem; onSele
  * (`/#features`, `/#how-it-works`) so they resolve from any subpage.
  */
 export function LandingNav() {
-  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => 'light');
   const [scrolled, setScrolled] = useState(false);
   const [openDrop, setOpenDrop] = useState<DropKey | null>(null);
   // True only when the panel opened while ANOTHER panel was already open —
@@ -360,7 +358,7 @@ export function LandingNav() {
     <div className={cn('nav-wrap', scrolled && 'scrolled')}>
       <nav className="site-nav" aria-label="Main navigation">
         <Link className="wordmark" href="/" aria-label="Searchify home">
-          <LogoCube size={28} />
+          <MarketingLogo size={27} />
           <span>Searchify</span>
           <span className="by-tag">by CUBE27</span>
         </Link>
@@ -473,20 +471,6 @@ export function LandingNav() {
           >
             <Menu className="icon-menu" aria-hidden />
             <X className="icon-close" aria-hidden />
-          </button>
-          <button
-            className="theme-toggle"
-            type="button"
-            aria-label="Toggle color theme"
-            aria-pressed={theme === 'dark'}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={() => applyTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? (
-              <Sun strokeWidth={1.8} aria-hidden />
-            ) : (
-              <Moon strokeWidth={1.8} aria-hidden />
-            )}
           </button>
           {isAuthenticated ? (
             <Link className="btn btn-primary btn-sm" href={dashboardHref}>

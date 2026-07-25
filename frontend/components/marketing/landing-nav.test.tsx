@@ -317,7 +317,7 @@ describe('LandingNav', () => {
     expect(navWrap).not.toHaveClass('scrolled');
   });
 
-  it('has exactly one theme toggle and working auth CTAs for signed-out users', () => {
+  it('uses the fixed dusk brand theme and renders working auth CTAs for signed-out users', () => {
     mswServer.use(
       http.get('/api/v1/auth/me', () =>
         HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 }),
@@ -326,7 +326,7 @@ describe('LandingNav', () => {
 
     renderWithProviders(<LandingNav />);
 
-    expect(screen.getAllByRole('button', { name: /toggle color theme/i })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /toggle color theme/i })).toBeNull();
 
     const signIns = screen.getAllByRole('link', { name: /sign in/i });
     expect(signIns.length).toBeGreaterThan(0);

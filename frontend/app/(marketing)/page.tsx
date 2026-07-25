@@ -17,17 +17,17 @@ const DESCRIPTION =
 // domain for the app, and OG image URLs must be absolute. Add both once the
 // production domain exists.
 export const metadata: Metadata = {
-  title: 'Searchify — See how AI answers talk about your brand',
+  title: 'Searchify — Know where your brand stands in AI answers',
   description: DESCRIPTION,
   openGraph: {
-    title: 'Searchify — See how AI answers talk about your brand',
+    title: 'Searchify — Know where your brand stands in AI answers',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'Searchify — See how AI answers talk about your brand',
+    title: 'Searchify — Know where your brand stands in AI answers',
     description: DESCRIPTION,
   },
 };
@@ -51,10 +51,10 @@ export default function LandingPage() {
     <LandingSessionRedirect>
       <main>
         <LandingHero />
-        <ProductVisual />
         <EngineStrip />
-        <FeaturesGrid />
+        <ProductVisual />
         <HowItWorks />
+        <FeaturesGrid />
         <EvidenceBand />
         <FinalCta />
       </main>

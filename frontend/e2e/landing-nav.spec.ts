@@ -49,30 +49,10 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(menu).toBeHidden();
   });
 
-  test('theme is dark-first by default and an explicit choice persists across reload', async ({
-    page,
-  }) => {
+  test('marketing keeps its fixed dusk identity independent of the app theme', async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => window.localStorage.removeItem('searchify-theme'));
-    await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await page.getByRole('button', { name: 'Toggle color theme' }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  });
-
-  test('app routes share the dark-first default when no choice is stored', async ({ page }) => {
-    // Even a light OS does not flip the app default: with no stored choice
-    // both the marketing surface and /login resolve to dark (stored → dark).
-    await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/');
-    await page.evaluate(() => window.localStorage.removeItem('searchify-theme'));
-    await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await page.getByRole('link', { name: 'Sign in' }).first().click();
-    await expect(page).toHaveURL(/\/login/);
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.getByRole('button', { name: 'Toggle color theme' })).toHaveCount(0);
+    await expect(page.locator('.mkt')).toHaveCSS('color-scheme', 'dark');
   });
 
   test('mobile evidence rows flow inline without overlap', async ({ page }) => {

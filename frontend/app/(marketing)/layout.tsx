@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { LandingFooter } from '@/components/marketing/landing-footer';
 import { LandingNav } from '@/components/marketing/landing-nav';
-import { MarketingThemeReset } from '@/components/marketing/marketing-theme-reset';
 
 import './marketing.css';
 
@@ -19,8 +18,6 @@ import './marketing.css';
 export default function MarketingLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="mkt">
-      {/* Handles theme defaulting on mount and restoration on exit (see MarketingThemeReset). */}
-      <MarketingThemeReset />
       {/* Shared chrome — every route in the (marketing) group inherits the nav
           and the footer from this layout. The aurora/grain backdrop is gone:
           the flat language has no atmosphere layer. */}

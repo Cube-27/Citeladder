@@ -42,7 +42,7 @@ describe('Landing page (public marketing `/`)', () => {
 
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
-    expect(h1s[0]).toHaveTextContent(/talk about your brand/i);
+    expect(h1s[0]).toHaveTextContent(/own the answer/i);
 
     // No h2-h6 may contain the product name (keeps heading queries unambiguous).
     const headings = screen.getAllByRole('heading');
@@ -75,7 +75,7 @@ describe('Landing page (public marketing `/`)', () => {
     renderWithProviders(<Page />);
 
     const finalCta = screen.getByRole('region', { name: 'Get started' });
-    const cta = within(finalCta).getByRole('link', { name: /get started/i });
+    const cta = within(finalCta).getByRole('link', { name: /run your first audit/i });
     expect(cta).toHaveAttribute('href', '/register');
   });
 });

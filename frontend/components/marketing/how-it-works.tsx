@@ -1,41 +1,78 @@
-const STEPS = [
-  {
-    num: '01',
-    title: 'Define your workspace',
-    body: 'Your brand, the competitors you watch, and the prompts your buyers ask answer engines.',
-  },
-  {
-    num: '02',
-    title: 'Run the audit',
-    body: 'Each prompt executes across ChatGPT, Gemini, and Claude. Repeated runs on your own API keys.',
-  },
-  {
-    num: '03',
-    title: 'Read the evidence',
-    body: 'Scores roll up to a visibility dashboard. Every number drills down to the raw response behind it.',
-  },
-] as const;
+import { Check, ExternalLink } from 'lucide-react';
 
-/** HowItWorks — section #how-it-works: prompts to proof in three steps. */
+import { LANDING_CONTENT, type LandingChapter } from '@/lib/marketing-content/landing';
+
+import { Reveal } from './motion-primitives';
+
+function ChapterScene({ scene }: Readonly<{ scene: LandingChapter['scene'] }>) {
+  if (scene === 'prompts') {
+    return (
+      <div className="chapter-scene prompt-scene" aria-hidden="true">
+        <small>Prompt library</small>
+        <span><i>Discovery</i> best analytics platform for retail teams</span>
+        <span><i>Compare</i> northwind vs shelfmetrics</span>
+        <span><i>Purchase</i> analytics tools with first-party data</span>
+      </div>
+    );
+  }
+  if (scene === 'engines') {
+    return (
+      <div className="chapter-scene run-scene" aria-hidden="true">
+        <small>Audit running</small>
+        {[
+          ['ChatGPT', 'engine-dot-chatgpt'],
+          ['Gemini', 'engine-dot-gemini'],
+          ['Claude', 'engine-dot-claude'],
+        ].map(([name, className]) => (
+          <span key={name}>
+            <b><i className={className} />{name}</b>
+            <em><i /></em>
+            <Check />
+          </span>
+        ))}
+      </div>
+    );
+  }
+  if (scene === 'evidence') return (
+    <div className="chapter-scene evidence-scene" aria-hidden="true">
+      <small>Deterministic scoring</small>
+      <div><strong>62</strong><span>Visibility score</span></div>
+      <p>analyzer v3.2 · rules v12 <Check /></p>
+      <blockquote>mentions + citations + share of voice → <mark>same score</mark></blockquote>
+    </div>
+  );
+  return (
+    <div className="chapter-scene evidence-scene" aria-hidden="true">
+      <small>Evidence explorer</small>
+      <div><strong>52%</strong><span>Visibility · comparison prompts</span></div>
+      <p>drills to Run #47 · ChatGPT <ExternalLink /></p>
+      <blockquote>“Northwind is a strong choice for…” <mark>[1]</mark></blockquote>
+    </div>
+  );
+}
+
 export function HowItWorks() {
   return (
-    <section className="how" id="how-it-works" aria-label="How it works">
+    <section className="story" id="how-it-works" aria-labelledby="story-title">
       <div className="container">
-        <div className="section-head">
+        <Reveal className="section-head story-head">
           <span className="eyebrow">How it works</span>
-          <h2 className="h2">
-            From prompts to proof
-            <br />
-            in <span className="grad-text">three steps.</span>
+          <h2 className="h2" id="story-title">
+            From prompt <span className="serif-accent">to</span> proof.
           </h2>
-        </div>
-        <div className="steps stagger">
-          {STEPS.map(({ num, title, body }) => (
-            <div className="card step-card" key={num}>
-              <span className="step-num">{num}</span>
-              <h3>{title}</h3>
-              <p>{body}</p>
-            </div>
+          <p>Four chapters, one audit. No black boxes—every step leaves evidence you can open.</p>
+        </Reveal>
+        <div className="story-list">
+          {LANDING_CONTENT.chapters.map((chapter) => (
+            <Reveal className="story-chapter" key={chapter.number}>
+              <div className="chapter-number">{chapter.number}</div>
+              <div className="chapter-copy">
+                <span>{chapter.eyebrow}</span>
+                <h3>{chapter.title}</h3>
+                <p>{chapter.body}</p>
+              </div>
+              <ChapterScene scene={chapter.scene} />
+            </Reveal>
           ))}
         </div>
       </div>

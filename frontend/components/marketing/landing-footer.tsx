@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { CONTACT_EMAIL, SOCIAL_LINKS, type SocialLink } from '@/lib/marketing-content/social';
 
-import { LogoCube } from '@/components/ui/logo-cube';
+import { MarketingLogo } from './marketing-logo';
 
 type FooterLink = {
   label: string;
@@ -123,7 +123,7 @@ export function LandingFooter() {
         <nav className="footer-grid" aria-label="Footer">
           <div className="footer-brand">
             <Link className="wordmark" href="/" aria-label="Searchify home">
-              <LogoCube size={24} />
+              <MarketingLogo size={25} />
               <span>Searchify</span>
             </Link>
             <p className="footer-desc">Open-source AI visibility and site intelligence platform.</p>
