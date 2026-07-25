@@ -44,7 +44,7 @@ export function PageTypeScores({
     <Card data-testid="page-type-scores">
       <CardContent className="grid gap-3">
         <div className="grid gap-0.5">
-          <Label className="font-mono tracking-[0.08em]">Scores by Page Type</Label>
+          <Label>Scores by Page Type</Label>
           <span className="text-secondary text-sm">
             Mean scores across the analyzed pages of each type.
           </span>
