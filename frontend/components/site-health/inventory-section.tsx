@@ -333,12 +333,7 @@ function ScoredInventory({
           <div className="mb-1 ml-auto flex items-center gap-2">
             <PageTypeSelect value={pageType} onChange={selectPageType} />
             {active ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={onCancel}
-                disabled={cancelPending}
-              >
+              <Button variant="destructive" size="sm" onClick={onCancel} disabled={cancelPending}>
                 {cancelPending ? 'Cancelling…' : 'Cancel'}
               </Button>
             ) : null}
