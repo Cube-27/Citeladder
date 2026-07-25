@@ -1,5 +1,5 @@
-# Brand-suggestions router: stateless AI competitor / owned-domain suggestions
-# for the setup form (F6).
+# Brand-suggestions router: stateless AI competitor / owned-domain / prompt
+# suggestions for the setup form (F6) and onboarding auto-discovery.
 #
 # No project id in the path — the setup form may be for a brand-new, unsaved
 # project, so brand context arrives in the request body and nothing is
@@ -21,12 +21,17 @@ from app.domain.projects.schemas import (
     CompetitorSuggestResponse,
     OwnedDomainSuggestRequest,
     OwnedDomainSuggestResponse,
+    PromptSuggestionItem,
+    PromptSuggestRequest,
+    PromptSuggestResponse,
 )
 from app.domain.projects.suggestions import (
     SuggestionOutputError,
     SuggestionValidationError,
     suggest_competitors,
     suggest_owned_domains,
+    suggest_prompts,
+    validate_prompt_suggestion_payload,
     validate_suggestion_payload,
 )
 
@@ -147,3 +152,44 @@ async def suggest_owned_domains_endpoint(
     except ProviderError as exc:
         _raise_agent_failed(exc)
     return OwnedDomainSuggestResponse(domains=domains, dropped_duplicates=dropped)
+
+
+@router.post(
+    "/prompts",
+    response_model=PromptSuggestResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def suggest_prompts_endpoint(
+    payload: PromptSuggestRequest, _ctx: _WorkspaceDep
+) -> PromptSuggestResponse:
+    """AI prompt suggestions via the app-level default agent.
+
+    Stateless sibling of ``POST /prompt-sets/{id}/generate`` for the pre-save
+    setup/onboarding flow: the same agent prompt construction (reused from
+    ``domain/prompts/generation.py``), but nothing is persisted — the caller
+    reviews the rows and saves what it keeps. Same guard order as the other
+    suggestion endpoints: confirmation/bounds (422) before agent
+    configuration (503), then provider/output failures (502).
+    """
+    try:
+        # 422 before 503: an invalid payload must be rejected as invalid even
+        # when no agent is configured (mirrors generate_prompts_endpoint).
+        validate_prompt_suggestion_payload(payload)
+    except SuggestionValidationError as exc:
+        _raise_invalid(exc)
+    agent = _resolve_agent()
+    try:
+        prompts, dropped = await suggest_prompts(payload=payload, agent=agent)
+    except SuggestionValidationError as exc:
+        _raise_invalid(exc)
+    except SuggestionOutputError as exc:
+        _raise_unparseable(exc)
+    except ProviderError as exc:
+        _raise_agent_failed(exc)
+    return PromptSuggestResponse(
+        prompts=[
+            PromptSuggestionItem(text=p.text, theme=p.theme, intent=p.intent)
+            for p in prompts
+        ],
+        dropped_duplicates=dropped,
+    )

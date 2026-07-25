@@ -1,10 +1,10 @@
 # Brand-suggestion configuration (invariant 1: all config lives here).
 #
 # Owns the knobs and system-prompt templates for the AI-assisted setup-form
-# suggestions (competitors and owned domains). Domain and API code READ these
-# values; they never hard-code the literals inline. The suggestion model is
-# the app-level default agent (``config/agent.py``) — never a measurement
-# engine.
+# suggestions (competitors, owned domains, and prompts). Domain and API code
+# READ these values; they never hard-code the literals inline. The suggestion
+# model is the app-level default agent (``config/agent.py``) — never a
+# measurement engine.
 from __future__ import annotations
 
 from typing import Final
@@ -92,3 +92,47 @@ class BrandSuggestionSettings(BaseSettings):
 
 
 brand_suggestion_settings = BrandSuggestionSettings()
+
+
+class PromptSuggestionSettings(BaseSettings):
+    """Env-overridable prompt-suggestion knobs (``PROMPT_SUGGESTION_*``).
+
+    Separate from ``BrandSuggestionSettings``: a starting prompt set wants a
+    higher default/cap than a competitor or domain list (mirrors the
+    persisted-generation defaults in ``config/prompts.py``). The prompt
+    contract itself — system prompt, output shape, intents — is owned by
+    ``config/prompts.py`` and reused as-is (invariant 2).
+    """
+
+    model_config = SettingsConfigDict(extra="ignore")
+
+    # ``ge=1`` floors mirror the request model's ``ge=1`` on ``count`` (see
+    # ``BrandSuggestionSettings`` for why this fails at construction).
+    default_count: int = Field(
+        default=10,
+        ge=1,
+        validation_alias=AliasChoices(
+            "PROMPT_SUGGESTION_DEFAULT_COUNT", "prompt_suggestion_default_count"
+        ),
+    )
+    max_count: int = Field(
+        default=20,
+        ge=1,
+        validation_alias=AliasChoices(
+            "PROMPT_SUGGESTION_MAX_COUNT", "prompt_suggestion_max_count"
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _default_within_max(self) -> PromptSuggestionSettings:
+        # Same guard as BrandSuggestionSettings: a default above the cap would
+        # make every omitted-count request fail validation.
+        if self.default_count > self.max_count:
+            raise ValueError(
+                "PROMPT_SUGGESTION_DEFAULT_COUNT must not exceed "
+                f"PROMPT_SUGGESTION_MAX_COUNT ({self.default_count} > {self.max_count})"
+            )
+        return self
+
+
+prompt_suggestion_settings = PromptSuggestionSettings()

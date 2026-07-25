@@ -25,7 +25,10 @@ from app.core.config.projects import (
     MAX_REPETITIONS,
     MIN_REPETITIONS,
 )
-from app.core.config.suggestions import brand_suggestion_settings
+from app.core.config.suggestions import (
+    brand_suggestion_settings,
+    prompt_suggestion_settings,
+)
 from app.domain.prompts.schemas import PromptSetResponse
 
 BenchmarkMode = Literal["consumer_like", "controlled_localized", "forced_grounded"]
@@ -240,6 +243,33 @@ class CompetitorSuggestResponse(BaseModel):
 
 class OwnedDomainSuggestResponse(BaseModel):
     domains: list[str] = Field(default_factory=list)
+    dropped_duplicates: int = 0
+
+
+class PromptSuggestRequest(BrandContextRequest):
+    # Prompts carry their own count knobs (``PROMPT_SUGGESTION_*``): a starting
+    # prompt set wants a higher default/cap than a competitor or domain list.
+    count: int = Field(
+        default_factory=lambda: prompt_suggestion_settings.default_count, ge=1
+    )
+    # Optional competitor context (the form may already hold manually entered
+    # competitors) — feeds the generation message's competitor line.
+    competitor_names: list[Annotated[str, Field(max_length=255)]] = Field(
+        default_factory=list, max_length=200
+    )
+    existing_prompt_texts: list[Annotated[str, Field(max_length=1024)]] = Field(
+        default_factory=list, max_length=200
+    )
+
+
+class PromptSuggestionItem(BaseModel):
+    text: str = Field(min_length=1)
+    theme: str = Field(default="", max_length=255)
+    intent: str = ""
+
+
+class PromptSuggestResponse(BaseModel):
+    prompts: list[PromptSuggestionItem] = Field(default_factory=list)
     dropped_duplicates: int = 0
 
 

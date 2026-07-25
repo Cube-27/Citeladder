@@ -1,4 +1,4 @@
-# AI competitor / owned-domain suggestion service for the setup form.
+# AI competitor / owned-domain / prompt suggestion service for the setup form.
 #
 # Stateless sibling of ``domain/prompts/generation.py``: uses the app-level
 # default agent (``connectors/agent``) — never a measurement engine and never
@@ -8,6 +8,13 @@
 # project save flow persists whatever survives review. Brand context is sent
 # to the agent only after the caller has explicitly confirmed
 # (``confirm_send_evidence``, enforced HERE, not just in the UI).
+#
+# Prompt suggestions reuse the agent prompt-construction half of prompt
+# generation in its owner (invariant 2): the system prompt
+# (``config/prompts.py``), the user-message builder, the output contract, and
+# the parser (``domain/prompts/generation.py``) are imported, never copied;
+# this module only adapts the topic-grouped output to the stateless
+# ``{text, theme, intent}`` row shape.
 from __future__ import annotations
 
 import json
@@ -17,12 +24,20 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from app.connectors.agent.client import DefaultAgentClient
+from app.core.config.prompts import GENERATION_SYSTEM_PROMPT
 from app.core.config.suggestions import (
     COMPETITOR_SUGGESTION_SYSTEM_PROMPT,
     OWNED_DOMAIN_SUGGESTION_SYSTEM_PROMPT,
     brand_suggestion_settings,
+    prompt_suggestion_settings,
 )
 from app.domain.projects.knowledge_base import serialize_brand_knowledge_context
+from app.domain.prompts.generation import (
+    GenerationOutputError,
+    build_generation_user_message,
+    parse_generation_output,
+)
+from app.domain.prompts.normalization import prompt_text_hash
 
 
 class SuggestionValidationError(ValueError):
@@ -216,23 +231,26 @@ def build_owned_domain_user_message(
 # --------------------------------------------------------------------------
 # Orchestration
 # --------------------------------------------------------------------------
-def validate_suggestion_payload(payload: Any) -> None:
+def validate_suggestion_payload(payload: Any, *, max_count: int | None = None) -> None:
     """Confirmation + bounds checks (422 at the API layer).
 
     Pure and agent-free so the API layer can order guards as 422 -> 503: an
     invalid payload must fail validation even when no agent is configured.
     Runs BEFORE any brand context is assembled for the agent — the backend
     enforces consent, never just the UI.
+
+    ``max_count`` overrides the competitor/domain cap (prompt suggestions
+    carry their own ``PROMPT_SUGGESTION_MAX_COUNT``).
     """
     if not payload.confirm_send_evidence:
         raise SuggestionValidationError(
             "confirm_send_evidence must be true to send brand evidence to the "
             "default agent"
         )
-    max_count = brand_suggestion_settings.max_count
-    if payload.count > max_count:
+    cap = max_count if max_count is not None else brand_suggestion_settings.max_count
+    if payload.count > cap:
         raise SuggestionValidationError(
-            f"count must be at most {max_count} (requested {payload.count})"
+            f"count must be at most {cap} (requested {payload.count})"
         )
 
 
@@ -291,3 +309,119 @@ async def suggest_owned_domains(
     )
     domains, dropped = parse_owned_domain_output(raw, existing_domains=existing)
     return domains[: payload.count], dropped
+
+
+# --------------------------------------------------------------------------
+# Prompt suggestions (stateless adapter over the generation contract)
+# --------------------------------------------------------------------------
+class SuggestedPromptRow(BaseModel):
+    """One flattened suggestion; ``theme`` is the topic the agent grouped it under."""
+
+    text: str = Field(min_length=1)
+    theme: str = Field(default="", max_length=255)
+    intent: str = ""
+
+
+def validate_prompt_suggestion_payload(payload: Any) -> None:
+    """Prompt-suggestion consent + bounds (422 at the API layer).
+
+    Same contract as ``validate_suggestion_payload`` under the prompt-specific
+    count cap (``PROMPT_SUGGESTION_MAX_COUNT``) — kept as a named entry point
+    so the API layer orders guards 422 -> 503 without reading config itself.
+    """
+    validate_suggestion_payload(payload, max_count=prompt_suggestion_settings.max_count)
+
+
+def build_prompt_suggestion_user_message(
+    *,
+    brand_context: dict[str, Any],
+    competitor_names: list[str],
+    existing_texts: list[str],
+    count: int,
+) -> str:
+    """Assemble the user message via the generation builder (its owner).
+
+    Reshapes the flat setup-form brand context into the dict layout
+    ``build_generation_user_message`` consumes — the same shape the persisted
+    flow builds from ORM rows (knowledge-base block + brand/alias/competitor/
+    market lines). Topic and intent scoping don't exist pre-save, so those
+    constraints stay empty.
+    """
+    generation_context = {
+        # Mirrors ``build_brand_knowledge_data``: aliases ride their own line
+        # in the generation message; empty values are omitted.
+        "knowledge_base": {
+            key: value
+            for key, value in brand_context.items()
+            if key != "brand_aliases" and value
+        },
+        "brand_name": brand_context.get("brand_name", ""),
+        "brand_aliases": brand_context.get("brand_aliases", []),
+        "competitors": [{"name": name, "aliases": []} for name in competitor_names],
+        "country_code": brand_context.get("country_code", ""),
+        "language_code": brand_context.get("language_code", ""),
+    }
+    return build_generation_user_message(
+        brand_context=generation_context,
+        existing_topics=[],
+        existing_prompts=existing_texts,
+        count=count,
+        intents=[],
+    )
+
+
+def parse_prompt_suggestion_output(
+    raw: str, *, existing_texts: list[str]
+) -> tuple[list[SuggestedPromptRow], int]:
+    """Flatten the generation output contract into theme-tagged prompt rows.
+
+    Structure and intra-response dedupe stay with the owner parser
+    (``parse_generation_output``); this adapter flattens topics to
+    ``{text, theme, intent}`` rows and additionally drops texts equivalent to
+    ``existing_texts`` already in the caller's form (counted as duplicates,
+    same normalized-text hash as the persisted flow).
+
+    Returns ``(rows, dropped_duplicate_count)``.
+    """
+    try:
+        topics, dropped = parse_generation_output(raw)
+    except GenerationOutputError as exc:
+        raise SuggestionOutputError(str(exc)) from exc
+
+    seen = {prompt_text_hash(text) for text in existing_texts if text.strip()}
+    rows: list[SuggestedPromptRow] = []
+    for topic in topics:
+        for prompt in topic.prompts:
+            text_hash = prompt_text_hash(prompt.text)
+            if text_hash in seen:
+                dropped += 1
+                continue
+            seen.add(text_hash)
+            rows.append(
+                SuggestedPromptRow(
+                    text=prompt.text, theme=topic.name, intent=prompt.intent
+                )
+            )
+    if not rows:
+        raise SuggestionOutputError("Agent output contained no usable prompts")
+    return rows, dropped
+
+
+async def suggest_prompts(
+    *, payload: Any, agent: DefaultAgentClient
+) -> tuple[list[SuggestedPromptRow], int]:
+    """Validate consent/bounds, call the agent, and parse prompt suggestions."""
+    validate_prompt_suggestion_payload(payload)
+    existing = [t for t in payload.existing_prompt_texts if t.strip()]
+    competitor_names = [n for n in payload.competitor_names if n.strip()]
+    user_message = build_prompt_suggestion_user_message(
+        brand_context=_payload_brand_context(payload),
+        competitor_names=competitor_names,
+        existing_texts=existing,
+        count=payload.count,
+    )
+    raw = await agent.complete_json(
+        system=GENERATION_SYSTEM_PROMPT, user=user_message
+    )
+    rows, dropped = parse_prompt_suggestion_output(raw, existing_texts=existing)
+    return rows[: payload.count], dropped
