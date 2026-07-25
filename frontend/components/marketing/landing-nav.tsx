@@ -1,27 +1,6 @@
 'use client';
 
-import {
-  ArrowUpRight,
-  Building2,
-  ChevronDown,
-  CircleHelp,
-  Columns3,
-  FileSearch,
-  Lock,
-  Megaphone,
-  Menu,
-  MessagesSquare,
-  Moon,
-  Newspaper,
-  Repeat2,
-  Rocket,
-  Scale,
-  Sun,
-  Target,
-  Users,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Menu, Moon, Sun, X } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -56,7 +35,7 @@ function hasStoredActiveProject(): boolean {
 type DropKey = 'product' | 'resources' | 'solutions';
 
 type NavDropItem =
-  | { icon: LucideIcon; title: string; desc: string; href: string; external?: boolean }
+  | { title: string; desc: string; href: string; external?: boolean }
   | { num: string; title: string; desc: string; href: string };
 
 type NavDropGroup = {
@@ -78,39 +57,33 @@ const NAV_DROPS: readonly NavDrop[] = [
       {
         items: [
           {
-            icon: MessagesSquare,
             title: 'Three-engine coverage',
-            desc: 'ChatGPT, Gemini, and Claude — one audit.',
+            desc: 'One audit across all engines',
             href: '/#features',
           },
           {
-            icon: Target,
             title: 'Deterministic scoring',
-            desc: 'Same data, same score — every time.',
+            desc: 'Same data scores the same',
             href: '/#features',
           },
           {
-            icon: FileSearch,
             title: 'Evidence explorer',
-            desc: 'Every metric links to its raw run.',
+            desc: 'Every metric links to its run',
             href: '/#features',
           },
           {
-            icon: Columns3,
             title: 'Competitor benchmarking',
-            desc: 'Share of answers, prompt by prompt.',
+            desc: 'Share of answers per prompt',
             href: '/#features',
           },
           {
-            icon: Lock,
             title: 'Your own API keys',
-            desc: 'Encrypted at rest, never shared.',
+            desc: 'Encrypted and never shared',
             href: '/#features',
           },
           {
-            icon: Repeat2,
             title: 'Repeatable trends',
-            desc: 'Visibility, period over period.',
+            desc: 'Visibility period over period',
             href: '/#features',
           },
         ],
@@ -121,19 +94,19 @@ const NAV_DROPS: readonly NavDrop[] = [
           {
             num: '01',
             title: 'Set up',
-            desc: 'Brand, competitors, prompts.',
+            desc: 'Set your brand and prompts',
             href: '/#how-it-works',
           },
           {
             num: '02',
             title: 'Run the audit',
-            desc: 'Every prompt, on your own keys.',
+            desc: 'Every prompt on your own keys',
             href: '/#how-it-works',
           },
           {
             num: '03',
             title: 'Read the evidence',
-            desc: 'Each score links to its response.',
+            desc: 'Each score links to a response',
             href: '/#how-it-works',
           },
         ],
@@ -147,21 +120,18 @@ const NAV_DROPS: readonly NavDrop[] = [
       {
         items: [
           {
-            icon: Newspaper,
             title: 'Blog',
-            desc: 'AEO guides, engine notes, and audit teardowns.',
+            desc: 'Guides and audit teardowns',
             href: '/blog',
           },
           {
-            icon: CircleHelp,
             title: 'FAQ',
-            desc: 'Straight answers on scoring, keys, and data.',
+            desc: 'Straight answers on how it works',
             href: '/faq',
           },
           {
-            icon: Scale,
             title: 'Compare',
-            desc: 'Searchify vs Profound, Otterly, Scrunch, Peec.',
+            desc: 'How Searchify compares',
             href: '/compare',
           },
         ],
@@ -175,27 +145,23 @@ const NAV_DROPS: readonly NavDrop[] = [
       {
         items: [
           {
-            icon: Users,
             title: 'Agencies',
-            desc: 'Audits across every client workspace.',
+            desc: 'Audits for every client workspace',
             href: '/solutions#agencies',
           },
           {
-            icon: Building2,
             title: 'In-house teams',
-            desc: 'AI answers beside your classic rankings.',
+            desc: 'AI answers beside your rankings',
             href: '/solutions#in-house',
           },
           {
-            icon: Rocket,
             title: 'Founders',
-            desc: 'See whether AI engines recommend you.',
+            desc: 'See if engines recommend you',
             href: '/solutions#founders',
           },
           {
-            icon: Megaphone,
             title: 'PR & comms',
-            desc: 'Check what engines say after a campaign.',
+            desc: 'See what engines say after a launch',
             href: '/solutions#pr',
           },
         ],
@@ -204,17 +170,16 @@ const NAV_DROPS: readonly NavDrop[] = [
   },
 ];
 
-/** Icon tile for a dropdown/menu row: lucide glyph or mono step number. */
+/**
+ * Leading marker for a dropdown row. Feature rows have none — the rows are
+ * text only. The "How it works" steps keep their number because it carries
+ * the sequence; it is content, not decoration.
+ */
 function DropGlyph({ item }: Readonly<{ item: NavDropItem }>) {
   if ('num' in item) {
     return <span className="d-icon mono-num">{item.num}</span>;
   }
-  const Icon = item.icon;
-  return (
-    <span className="d-icon">
-      <Icon aria-hidden />
-    </span>
-  );
+  return null;
 }
 
 /** True for items that leave the site (plain <a target="_blank">). */
