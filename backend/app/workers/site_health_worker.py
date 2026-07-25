@@ -382,6 +382,7 @@ class SiteHealthWorker:
         owner: str | None = None,
         resolver: DnsResolver | None = None,
         transport=None,
+        curl_session_factory=None,
     ) -> None:
         self._session_factory = session_factory or SessionLocal
         self._queue: PostgresTaskQueue[SiteCrawlTask] = PostgresTaskQueue(
@@ -392,6 +393,10 @@ class SiteHealthWorker:
         # An injected httpx transport (tests pass ``httpx.MockTransport``);
         # None in production so the fetcher pins the validated connection IP.
         self._transport = transport
+        # An injected curl session factory for the fetcher's rung-2
+        # escalation (tests pass a fake session builder); None in production
+        # so the fetcher uses its real impersonated-curl factory.
+        self._curl_session_factory = curl_session_factory
         self._host_semaphores: dict[str, asyncio.Semaphore] = {}
         self._host_start_locks: dict[str, asyncio.Lock] = {}
         self._host_last_started: dict[str, float] = {}
@@ -410,6 +415,19 @@ class SiteHealthWorker:
         self._robots_cache: dict[str, tuple[RobotsPolicy, str | None, int | None]] = {}
         self._robots_cache_ts: dict[str, float] = {}
         self._robots_locks: dict[str, asyncio.Lock] = {}
+
+    def _new_fetcher(self) -> SecureFetcher:
+        """Build a fetcher with the worker's injected transport seams.
+
+        The resolver, httpx transport (rung 1), and curl session factory
+        (rung 2 escalation) are all injected together so offline tests never
+        touch the network on EITHER rung.
+        """
+        return SecureFetcher(
+            resolver=self._resolver,
+            transport=self._transport,
+            curl_session_factory=self._curl_session_factory,
+        )
 
     async def run_once(self) -> int:
         """Sweep expired leases, claim a batch of all task kinds, execute it.
@@ -763,9 +781,7 @@ class SiteHealthWorker:
         )
         started = time.monotonic()
         try:
-            async with SecureFetcher(
-                resolver=self._resolver, transport=self._transport
-            ) as fetcher:
+            async with self._new_fetcher() as fetcher:
                 result = await fetcher.fetch(
                     request,
                     root_registrable_domain=root_registrable_domain or None,
@@ -918,9 +934,7 @@ class SiteHealthWorker:
             max_decoded_bytes=max_bytes,
         )
         try:
-            async with SecureFetcher(
-                resolver=self._resolver, transport=self._transport
-            ) as fetcher:
+            async with self._new_fetcher() as fetcher:
                 return await fetcher.fetch(request, enforce_scope=False)
         except FetchError:
             return None
@@ -1048,9 +1062,7 @@ class SiteHealthWorker:
         files: list[str] = []
         queue: list[tuple[str, int]] = [(seed, 0) for seed in seeds]
         queued = {seed for seed in seeds}
-        async with SecureFetcher(
-            resolver=self._resolver, transport=self._transport
-        ) as fetcher:
+        async with self._new_fetcher() as fetcher:
             while queue and len(files) < settings.max_sitemap_documents:
                 url, depth = queue.pop(0)
                 if url in files:
@@ -1853,9 +1865,7 @@ class SiteHealthWorker:
         )
         started = time.monotonic()
         try:
-            async with SecureFetcher(
-                resolver=self._resolver, transport=self._transport
-            ) as fetcher:
+            async with self._new_fetcher() as fetcher:
                 result = await fetcher.fetch(
                     request,
                     root_registrable_domain=root_registrable_domain or None,
@@ -2353,9 +2363,7 @@ class SiteHealthWorker:
                 timeout_seconds=timeout,
             )
             try:
-                async with SecureFetcher(
-                    resolver=self._resolver, transport=self._transport
-                ) as fetcher:
+                async with self._new_fetcher() as fetcher:
                     result = await fetcher.fetch(request, enforce_scope=False)
             except FetchError:
                 continue

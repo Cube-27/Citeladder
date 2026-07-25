@@ -403,6 +403,58 @@ AI_CRAWLER_STANCE_ALLOW: Final = "allow"
 AI_CRAWLER_STANCE_BLOCK: Final = "block"
 
 # =========================================================================
+# Fetch escalation rung 2 (v2 P3 — spec §5.4): curl_cffi impersonated retry
+# =========================================================================
+# Rung 2 retries a bot-blocked fetch ONCE, inside the same ``fetch()`` call,
+# with curl_cffi (no extra queue attempt, no queue-semantics change). Every
+# knob lives here (invariant 1).
+#
+# Full Chrome impersonation is a settled user decision (D2, #3072): the UA
+# AND the TLS fingerprint present as Chrome so WAF/bot layers that reject a
+# non-browser ClientHello answer the real page. This is a deliberate evasion
+# trade-off — rung 2 no longer identifies as our crawler UA, so it fires ONLY
+# after a config-owned bot-block signature trips on rung 1, never by default.
+# Revert without touching fetcher code: set SITE_HEALTH_CURL_UA_MODE to
+# CURL_UA_MODE_SITE_BOT (rung 2 then sends the crawler's own UA through plain
+# curl_cffi, no impersonation).
+SITE_HEALTH_CURL_IMPERSONATE_TARGET: Final = "chrome131"
+CURL_UA_MODE_IMPERSONATE: Final = "impersonate"
+CURL_UA_MODE_SITE_BOT: Final = "site_bot"
+SITE_HEALTH_CURL_UA_MODE: Final = CURL_UA_MODE_IMPERSONATE
+# Bot-block signatures that trigger the rung-1 -> rung-2 escalation:
+# - a terminal status in this table (WAF reject/challenge statuses)...
+BOT_BLOCK_STATUSES: Final[frozenset[int]] = frozenset({401, 403, 503})
+# - ...or a challenge/block body marker within the first
+#   BOT_BLOCK_MARKER_SCAN_BYTES of the DECODED body (catches interstitial
+#   challenge pages served on other statuses). Markers are matched
+#   case-folded and are deliberately distinctive challenge-platform strings —
+#   never generic words like "captcha" that ordinary pages legitimately
+#   contain, so a normal page cannot false-trigger an impersonated refetch.
+BOT_BLOCK_BODY_MARKERS: Final[tuple[str, ...]] = (
+    "cf-chl",
+    "challenge-platform",
+    "just a moment",
+    "attention required",
+    "px-captcha",
+    "perimeterx",
+    "datadome",
+    "incapsula",
+    "distil_r",
+)
+BOT_BLOCK_MARKER_SCAN_BYTES: Final = 8192
+# - ...or a TLS-layer block: rung 1's SEND-PHASE transport failure whose
+#   underlying exception text matches one of these, case-folded (a WAF
+#   resetting the handshake on a non-browser ClientHello). Never applied to
+#   URL-policy rejections (those stay ``ssrf_blocked``) or to timeouts.
+BOT_BLOCK_TLS_ERROR_MARKERS: Final[tuple[str, ...]] = (
+    "ssl",
+    "tls",
+    "handshake",
+    "connection reset",
+    "eof",
+)
+
+# =========================================================================
 # Safe per-task error tokens (never persist raw bodies/sensitive headers)
 # =========================================================================
 ERROR_ROBOTS_DENIED: Final = "robots_denied"

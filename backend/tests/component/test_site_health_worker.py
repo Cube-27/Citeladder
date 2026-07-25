@@ -114,6 +114,30 @@ class _ByteStream(httpx.AsyncByteStream):
         return None
 
 
+class _StubCurlSession:
+    """Offline stand-in for the fetcher's rung-2 curl session (T7).
+
+    Replays one scripted status so worker tests that return a bot-block
+    signature status (401/403/503) never touch the real network when the
+    curl_cffi escalation rung fires.
+    """
+
+    def __init__(self, status: int) -> None:
+        self._status = status
+
+    async def __aenter__(self) -> _StubCurlSession:
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        return None
+
+    async def request(self, method, url, **kwargs):
+        callback = kwargs.get("content_callback")
+        if callback is not None:
+            callback(b"stub")
+        return httpx.Response(self._status, headers={"content-type": "text/html"})
+
+
 def _site_transport(
     pages: dict[str, bytes | tuple[bytes, dict[str, str]]],
     *,
@@ -2882,6 +2906,9 @@ async def test_discover_robots_5xx_fails_unavailable_without_page_fetch(
         owner="p2-robots5xx",
         resolver=_FakeResolver(),
         transport=httpx.MockTransport(handler),
+        # A 503 robots.txt is a bot-block signature (T7): the fetcher's
+        # curl_cffi escalation rung fires — keep it offline replaying 503.
+        curl_session_factory=lambda **kwargs: _StubCurlSession(503),
     )
     await worker.run_until_idle()
 

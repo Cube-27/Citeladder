@@ -68,6 +68,44 @@ class RedirectHop:
 
 
 @dataclass(frozen=True, slots=True)
+class FetchCallTrace:
+    """One REAL network call made while serving a single ``SecureFetcher.fetch``.
+
+    The per-network-call trace (T7): rung 1 (httpx) and the optional rung-2
+    curl_cffi escalation each make one network call per redirect hop, and
+    EVERY such call appends exactly one entry — including blocked, failed,
+    and cap-aborted calls — so a persistence layer (T8) can write one
+    ``SiteFetchAttempt`` row per actual HTTP attempt (its documented
+    append-only contract, invariant 3) without the losing rung's calls
+    vanishing.
+
+    Order/uniqueness key: ``(task_id, attempt_number, request_ordinal)``.
+    ``attempt_number`` stays the QUEUE-attempt number owned by the worker;
+    ``request_ordinal`` is the deterministic per-call ordinal assigned here,
+    0-based across the whole ``fetch()`` call (escalation continues the
+    sequence, it does not restart it). When the fetch returns a result, the
+    entry describing that result is always the LAST one.
+    """
+
+    request_ordinal: int
+    # 1 = httpx rung, 2 = curl_cffi escalation rung.
+    rung_number: int
+    url: str
+    method: str
+    # None when the call failed before any response was received.
+    status_code: int | None
+    # A config ``SITE_FETCH_ERROR_TOKENS`` value when the call itself failed
+    # (timeout / cap abort / transport error); None when an HTTP response was
+    # received — even a 4xx, since status classification is the caller's job.
+    error_code: str | None
+    # None = body deliberately unread (redirect hop) or counters unavailable.
+    wire_bytes: int | None
+    decoded_bytes: int | None
+    ttfb_ms: int | None
+    latency_ms: int | None
+
+
+@dataclass(frozen=True, slots=True)
 class FetchResult:
     """The bounded, redacted outcome of one successful fetch.
 
@@ -89,6 +127,11 @@ class FetchResult:
     latency_ms: int | None
     redirect_chain: tuple[RedirectHop, ...] = ()
     charset: str = ""
+    # Per-network-call trace (T7): one entry per REAL network call made while
+    # serving this fetch, in call order (see ``FetchCallTrace``). ``FetchError``
+    # carries the same tuple so the trace survives failure; persisting it is
+    # T8's job. Empty only for results built directly by tests/callers.
+    attempts: tuple[FetchCallTrace, ...] = ()
 
 
 class FetchError(Exception):
@@ -109,12 +152,17 @@ class FetchError(Exception):
         status_code: int | None = None,
         retry_after_seconds: float | None = None,
         retryable: bool = False,
+        attempts: tuple[FetchCallTrace, ...] = (),
     ) -> None:
         super().__init__(message)
         self.error_code = error_code
         self.status_code = status_code
         self.retry_after_seconds = retry_after_seconds
         self.retryable = retryable
+        # The same per-network-call trace ``FetchResult`` carries, so a
+        # failed fetch (both rungs blocked, transport failure, cap abort)
+        # does not lose the record of the calls it made (T7).
+        self.attempts = attempts
 
 
 @runtime_checkable
