@@ -45,7 +45,7 @@ import zlib
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
 from typing import Any, cast
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import certifi
 import httpx
@@ -412,7 +412,7 @@ class SecureFetcher:
                     attempts=attempts,
                 )
             raise
-        if not request.allow_escalation or not self._is_bot_block_result(result):
+        if not request.allow_escalation or not is_bot_block_result(result):
             return replace(result, attempts=tuple(attempts))
         return await self._escalate(
             request,
@@ -453,10 +453,6 @@ class SecureFetcher:
                 latency_ms=int((time.monotonic() - started) * 1000),
             )
         )
-
-    def _is_bot_block_result(self, result: FetchResult) -> bool:
-        """Config-owned bot-block signature on a rung-1 RESULT (spec §5.4)."""
-        return is_bot_block_result(result)
 
     def _is_tls_block_signature(self, exc: FetchError) -> bool:
         """TLS-layer bot block: rung 1's SEND-PHASE transport failure only.
@@ -617,7 +613,7 @@ class SecureFetcher:
                         "too many redirects",
                         error_code=ERROR_REDIRECT_LIMIT,
                     )
-                next_url = self._resolve_location(target.url, location)
+                next_url = urljoin(target.url, location)
                 redirect_chain.append(
                     RedirectHop(
                         from_url=target.url,
@@ -703,11 +699,6 @@ class SecureFetcher:
         except UrlPolicyError as exc:
             # Out-of-scope / disallowed scheme-port-userinfo on a redirect hop.
             raise FetchError(str(exc), error_code=ERROR_SSRF_BLOCKED) from exc
-
-    def _resolve_location(self, base_url: str, location: str) -> str:
-        from urllib.parse import urljoin
-
-        return urljoin(base_url, location)
 
     def _finalize_no_body(
         self,
@@ -1028,7 +1019,7 @@ class SecureFetcher:
                         "too many redirects",
                         error_code=ERROR_REDIRECT_LIMIT,
                     )
-                next_url = self._resolve_location(target.url, location)
+                next_url = urljoin(target.url, location)
                 redirect_chain.append(
                     RedirectHop(
                         from_url=target.url,

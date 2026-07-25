@@ -16,6 +16,7 @@ Run from backend/:  uv run python ../testing/site-health-v2-e2e/sh-p2-e2e-negati
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -75,7 +76,6 @@ def main() -> int:
 
 
 def json_dump(obj) -> str:
-    import json
     return json.dumps(obj)[:250]
 
 
