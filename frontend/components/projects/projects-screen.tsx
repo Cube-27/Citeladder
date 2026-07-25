@@ -2,13 +2,17 @@
 
 import { Check, FolderOpen, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
+
+import { ProjectEditPanel } from './project-edit-panel';
 
 /**
  * `/projects` — manage every project in the workspace.
@@ -26,6 +30,7 @@ import { cn } from '@/lib/utils';
 export function ProjectsScreen() {
   const router = useRouter();
   const { projects, activeProjectId, setActiveProjectId, isLoading } = useProjectContext();
+  const [editing, setEditing] = useState<Project | null>(null);
 
   if (isLoading) {
     return (
@@ -69,44 +74,69 @@ export function ProjectsScreen() {
               const label = project.brand_name || project.name;
               return (
                 <li key={project.id}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveProjectId(project.id)}
-                    aria-current={isActive ? 'true' : undefined}
+                  <div
                     className={cn(
-                      'focus-ring hover:bg-background-alt flex w-full items-center gap-3 px-3 py-3 text-left transition-colors',
+                      'flex items-center gap-3 pe-3 transition-colors',
                       isActive && 'bg-accent-subtle',
                     )}
                   >
-                    <span
-                      aria-hidden
-                      className="bg-accent-soft text-accent-text text-2xs flex size-8 shrink-0 items-center justify-center rounded-md font-semibold uppercase"
+                    <button
+                      type="button"
+                      onClick={() => setActiveProjectId(project.id)}
+                      aria-current={isActive ? 'true' : undefined}
+                      className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
                     >
-                      {label.slice(0, 2)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="text-foreground block truncate text-base font-medium">
-                        {label}
+                      <span
+                        aria-hidden
+                        className="bg-accent-soft text-accent-text text-2xs flex size-8 shrink-0 items-center justify-center rounded-md font-semibold uppercase"
+                      >
+                        {label.slice(0, 2)}
                       </span>
-                      {project.website_url ? (
-                        <span className="text-muted block truncate text-xs">
-                          {project.website_url}
+                      <span className="min-w-0 flex-1">
+                        <span className="text-foreground block truncate text-base font-medium">
+                          {label}
+                        </span>
+                        {project.website_url ? (
+                          <span className="text-muted block truncate text-xs">
+                            {project.website_url}
+                          </span>
+                        ) : null}
+                      </span>
+                      {isActive ? (
+                        <span className="text-accent-text inline-flex shrink-0 items-center gap-1.5 text-xs">
+                          <Check className="size-3.5" aria-hidden />
+                          Active
                         </span>
                       ) : null}
-                    </span>
-                    {isActive ? (
-                      <span className="text-accent-text inline-flex shrink-0 items-center gap-1.5 text-xs">
-                        <Check className="size-3.5" aria-hidden />
-                        Active
-                      </span>
-                    ) : null}
-                  </button>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(project)}
+                      aria-label={`Edit ${label}`}
+                    >
+                      Edit
+                    </Button>
+                  </div>
                 </li>
               );
             })}
           </ul>
         </CardContent>
       </Card>
+
+      {/* Keyed so switching rows remounts the panel with that project's values
+          — the fields seed from props in useState, which only reads once. */}
+      {editing ? (
+        <ProjectEditPanel
+          key={editing.id}
+          project={editing}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditing(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
