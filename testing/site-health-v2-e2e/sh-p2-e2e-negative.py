@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """P2 e2e — Suite C: robots.txt denies the crawler's own user-agent.
 
-Precondition: /tmp/sh-fixture/robots.txt has been swapped to the deny variant
-B (User-agent: SearchifySiteHealthBot / Disallow: /).
+Precondition: the served fixture robots.txt has been swapped to the deny
+variant B (User-agent: SearchifySiteHealthBot / Disallow: /) — the wrapper
+sh-p2-run-negative.sh does the swap and restores variant A via trap. The
+worker caches robots per authority for 24h (in-memory), so it must be
+restarted after the swap.
 
 Expected: the root fetch is robots_denied; the crawl terminalizes FAILED with
 zero analyses; site_facts is still persisted on the crawl row (robots WAS
 fetched); llms.txt is not probed (the policy denies it); no page rows exist,
 so site_root rule evaluations are simply absent (never fabricated).
 
-Run from backend/:  uv run python /tmp/sh-p2-e2e-negative.py
+Run from backend/:  uv run python ../testing/site-health-v2-e2e/sh-p2-e2e-negative.py
 """
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "/tmp")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sh_p2_lib import (  # noqa: E402
     Api, check, create_crawl, create_project, list_all, register_or_login,
     summary, wait_crawl,

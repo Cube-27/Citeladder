@@ -5,11 +5,12 @@ Fetches each fixture page through the public tunnel (real delivery facts),
 runs the P2 parser/classifier/rule catalog exactly as the worker does, and
 prints the outcome matrix used as the e2e expectation baseline.
 
-Run from backend/:  uv run python /tmp/sh-p2-dryrun.py [--json]
+Run from backend/:  uv run python ../testing/site-health-v2-e2e/sh-p2-dryrun.py [--json]
 """
 from __future__ import annotations
 
 import json
+import os
 import sys
 import urllib.request
 
@@ -18,7 +19,11 @@ from app.analysis.site_health.parser import extract_page_facts
 from app.analysis.site_health.rules import evaluate_all
 from app.analysis.site_health.scoring import score_analysis
 
-BASE = "https://swk5bwh3qdbz.preview.us1.vorflux.com"
+# Fixture tunnel root (no trailing slash). Override with SH_BASE or
+# FIXTURE_URL; the hardcoded default is rewritten by sh-set-fixture-host.sh.
+BASE = (os.environ.get("SH_BASE")
+        or os.environ.get("FIXTURE_URL")
+        or "https://o4xsrvf5pvla.preview.us1.vorflux.com/").rstrip("/")
 PAGES = [
     ("/", "homepage"),
     ("/blog/post-1/", "article"),

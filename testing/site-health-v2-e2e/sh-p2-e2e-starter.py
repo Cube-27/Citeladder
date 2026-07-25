@@ -14,14 +14,15 @@ but never anchor-linked); broken_internal_link FAIL on the orphan page (it
 links to a 404); broken_internal_link PASS on the 9 normal pages; sitemap
 facts recorded in site_facts.
 
-Run from backend/:  uv run python /tmp/sh-p2-e2e-starter.py
+Run from backend/:  uv run python ../testing/site-health-v2-e2e/sh-p2-e2e-starter.py
 """
 from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "/tmp")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sh_p2_lib import (  # noqa: E402
     Api, FIXTURE_URL, check, create_crawl, create_project, list_all,
     register_or_login, summary, wait_crawl,

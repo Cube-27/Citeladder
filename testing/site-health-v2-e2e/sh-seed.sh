@@ -4,7 +4,7 @@
 # tunnel. Idempotent per email (register 409 -> falls back to login).
 set -euo pipefail
 BASE="${BASE:-http://localhost:8000/api/v1}"
-FIXTURE_URL="${FIXTURE_URL:-https://swk5bwh3qdbz.preview.us1.vorflux.com/}"
+FIXTURE_URL="${FIXTURE_URL:-https://o4xsrvf5pvla.preview.us1.vorflux.com/}"
 EMAIL="sh-p1-test@searchify.dev"
 PASS="ShP1Test!2026Secure#Pass"
 JAR=/tmp/sh-cookies.txt

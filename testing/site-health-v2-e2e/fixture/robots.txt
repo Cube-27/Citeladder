@@ -14,4 +14,4 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
-Sitemap: https://swk5bwh3qdbz.preview.us1.vorflux.com/sitemap.xml
+Sitemap: https://o4xsrvf5pvla.preview.us1.vorflux.com/sitemap.xml

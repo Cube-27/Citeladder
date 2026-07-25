@@ -6,20 +6,25 @@ through the public API: site_facts stance/llms, per-page new-rule outcomes
 (vs the dry-run baseline), site_root weight-0 anchoring, crawl_finalize rows,
 grouped issues with display labels, exports, dashboard, and version stamps.
 
-Run from backend/:  uv run python /tmp/sh-p2-e2e-free.py
+Run from backend/:  uv run python ../testing/site-health-v2-e2e/sh-p2-e2e-free.py
 """
 from __future__ import annotations
 
 import json
+import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "/tmp")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sh_p2_lib import (  # noqa: E402
     Api, FIXTURE_URL, check, create_crawl, create_project, list_all,
     register_or_login, summary, wait_crawl,
 )
 
-EXPECT = json.load(open("/tmp/sh-p2-expectations.json"))
+EXPECT = json.load(open(os.environ.get(
+    "SH_EXPECTATIONS",
+    Path(__file__).resolve().parent / "sh-p2-expectations.json",
+)))
 FINALIZE_RULES = {
     "technical.broken_internal_link",
     "technical.sitemap_orphan",
