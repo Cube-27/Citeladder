@@ -25,6 +25,12 @@ export type ReviewCompetitor = {
 
 export type ReviewPrompt = {
   text: string;
+  /**
+   * The topic the agent filed this prompt under. Carried through review so the
+   * confirm chain can recreate the agent's topics as real `Topic` rows — the
+   * same structure `/generate` produces. Empty means the agent gave it no
+   * topic, and the prompt is created untopiced.
+   */
   theme: string;
   intent: string;
   selected: boolean;

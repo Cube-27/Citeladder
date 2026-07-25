@@ -237,14 +237,26 @@ export const ownedDomainSuggestResponseSchema = z
 // `POST /brand-suggestions/prompts` result. `theme` and `intent` default to ""
 // server-side (PromptSuggestionItem), so they are always present but may be
 // empty — the UI treats empty as "no theme" rather than hiding the row.
+const promptSuggestionItemSchema = z
+  .object({
+    text: z.string(),
+    theme: z.string(),
+    intent: z.string(),
+  })
+  .strict();
+
 export const promptSuggestResponseSchema = z
   .object({
-    prompts: z.array(
+    prompts: z.array(promptSuggestionItemSchema),
+    // The agent's own topic grouping, preserved rather than flattened. A caller
+    // that persists uses this to create the same Topic rows `/generate` does,
+    // so an onboarded prompt set is not left untopiced. Holds the same prompts
+    // as `prompts` above, just grouped.
+    topics: z.array(
       z
         .object({
-          text: z.string(),
-          theme: z.string(),
-          intent: z.string(),
+          name: z.string(),
+          prompts: z.array(promptSuggestionItemSchema),
         })
         .strict(),
     ),

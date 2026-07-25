@@ -12,21 +12,18 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { LogoCube } from '@/components/ui/logo-cube';
 import { MarketSelect } from '@/components/ui/market-select';
-import { projectsApi } from '@/lib/api/projects';
-import { promptsApi } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import {
   brandStepSchema,
   deriveDomain,
   emptyBrandStep,
-  normalizeIntent,
   onboardingErrorMessage,
-  onboardingToProjectInput,
   type BrandStepValues,
   type ReviewCompetitor,
   type ReviewDomain,
   type ReviewPrompt,
 } from '@/lib/onboarding/forms';
+import { createProjectFromOnboarding } from '@/lib/onboarding/create-project';
 import { useDiscovery } from '@/lib/onboarding/use-discovery';
 import { useProjectContext } from '@/lib/project/project-context';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
@@ -106,33 +103,9 @@ export function OnboardingScreen() {
   }, [discoveryState.prompts]);
 
   const confirm = useMutation({
-    mutationFn: async () => {
+    mutationFn: () => {
       if (!brand) throw new Error('Brand details are missing.');
-      const project = await projectsApi.createProject(
-        onboardingToProjectInput(brand, competitors, domains),
-      );
-
-      const chosen = prompts.filter((p) => p.selected);
-      if (chosen.length > 0) {
-        const set = await promptsApi.createPromptSet({
-          project_id: project.id,
-          name: 'Starting prompts',
-        });
-        // Sequential rather than Promise.all: these are writes against one set,
-        // and a burst of parallel creates is a good way to trip rate limits for
-        // no benefit on a list this size.
-        for (const prompt of chosen) {
-          await promptsApi.createPrompt(set.id, {
-            text: prompt.text,
-            // Backend theme is a non-null `str = ""` — send empty, never null.
-            theme: prompt.theme ?? '',
-            intent: normalizeIntent(prompt.intent),
-            branded: false,
-            enabled: true,
-          });
-        }
-      }
-      return project;
+      return createProjectFromOnboarding({ brand, competitors, domains, prompts });
     },
     onSuccess: async (project) => {
       setActiveProjectId(project.id);

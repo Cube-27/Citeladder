@@ -12,8 +12,9 @@ import {
   promptSchema,
   promptSetSchema,
   strictValidate,
+  topicSchema,
 } from './schemas';
-import type { Prompt, PromptGenerateResponse, PromptSet, PromptStatus } from './types';
+import type { Prompt, PromptGenerateResponse, PromptSet, PromptStatus, Topic } from './types';
 
 const promptSetListSchema = z.array(promptSetSchema);
 
@@ -25,6 +26,11 @@ export type PromptInput = {
   intent: Prompt['intent'];
   branded: boolean;
   enabled: boolean;
+  // Files the prompt under an existing topic at creation time. Onboarding
+  // creates its topics first and passes this, rather than creating every
+  // prompt and then PATCHing every prompt. Must name a topic of the prompt's
+  // own project — the backend answers 404 otherwise.
+  topic_id?: string;
 };
 
 export type PromptUpdateInput = Partial<PromptInput> & {
@@ -61,6 +67,27 @@ export const promptsApi = {
   ) => {
     const res = await apiClient.post<PromptSet>('/prompt-sets', input, options);
     return strictValidate(promptSetSchema, res, 'prompts.createPromptSet');
+  },
+  /**
+   * Create a topic on a project. Onboarding calls this once per topic the
+   * agent proposed, then files each prompt under the returned id — mirroring
+   * what `/generate` does server-side, so an onboarded prompt set has the same
+   * topic structure as a generated one.
+   *
+   * Answers 409 when a topic of that name already exists on the project
+   * (uniqueness is case-insensitive).
+   */
+  createTopic: async (
+    projectId: string,
+    input: { name: string; description?: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<Topic>(
+      `/projects/${encodeURIComponent(projectId)}/topics`,
+      input,
+      options,
+    );
+    return strictValidate(topicSchema, res, 'prompts.createTopic');
   },
   createPrompt: async (promptSetId: string, input: PromptInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Prompt>(`/prompt-sets/${promptSetId}/prompts`, input, options);
