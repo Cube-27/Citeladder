@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { CompareDetailView } from '@/components/marketing/compare-detail';
+import { CompareDetailView } from '@/components/marketing/pages/compare-detail';
 import { COMPETITORS, type Competitor } from '@/lib/marketing-content/compare';
 
 type PageParams = { competitor: string };

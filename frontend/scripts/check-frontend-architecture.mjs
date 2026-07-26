@@ -23,7 +23,15 @@ const lineBudgets = [
   // and the authored soft-charcoal dark set on top of the existing semantic
   // tokens (marketing tokens stay out — they live in
   // app/(marketing)/marketing.css), so the budget is raised to 1000.
-  { file: 'app/globals.css', maxLines: 1000 },
+  { file: 'app/globals.css', maxLines: 1020 },
+  // The marketing/auth "Proof" system. This budget is the whole point of the
+  // rewrite: the previous marketing stylesheet reached 6,846 lines of global
+  // cascade because nothing stopped it growing. Sections here are built from
+  // mkt-namespaced Tailwind utilities, and this file holds only the @theme
+  // token block plus the few scene rules a utility cannot express. If a new
+  // section needs CSS here, it needs a primitive in
+  // components/marketing/primitives/ instead — do not raise this number.
+  { file: 'app/(marketing)/marketing-theme.css', maxLines: 400 },
   { file: 'components/ui/theme-toggle.tsx', maxLines: 120 },
   { file: 'lib/theme.ts', maxLines: 160 },
   // F5 app shell: composition only — split any sub-piece that outgrows this.

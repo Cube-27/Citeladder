@@ -45,10 +45,22 @@ test.describe('marketing routes', () => {
     }
   });
 
-  test('marketing subpages keep the dark-first default', async ({ page }) => {
+  test('marketing subpages render the light-only Proof canvas', async ({ page }) => {
     await page.goto('/pricing');
     await page.evaluate(() => window.localStorage.removeItem('searchify-theme'));
     await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    // Warm paper, not the app's cool-gray page — the two systems are separate.
+    await expect(page.locator('.mkt-root')).toHaveCSS('background-color', 'rgb(245, 245, 240)');
+  });
+
+  test('the logged-out auth screens run the same Proof surface', async ({ page }) => {
+    for (const path of ['/login', '/register']) {
+      await page.goto(path);
+      await expect(page.locator('.mkt-root')).toHaveCount(1);
+      await expect(page.locator('h1:visible')).toHaveCount(1);
+      // Proof is light-only: no toggle survives on the auth shell.
+      await expect(page.getByRole('button', { name: 'Toggle color theme' })).toHaveCount(0);
+    }
   });
 });

@@ -230,13 +230,22 @@ Implement `RazorpayBillingProvider` and `StripeBillingProvider` behind a factory
 owns lifecycle rules; adapters only translate provider APIs. Use hosted checkout so Searchify
 never receives card or UPI credentials.
 
-Provider routing is server-owned:
+Provider routing is server-owned. **Country comes from the server's own billing profile, never
+from the request** — a client-supplied `billing_country` would let a caller pick its own tax
+and currency treatment, so the field does not exist in the API (§6):
 
 - verified Indian billing address + INR catalog → Razorpay;
-- non-Indian billing address + enabled export catalog → Stripe, only when the production
-  readiness flag is true;
+- verified non-Indian billing address + enabled export catalog → Stripe, only when the
+  production readiness flag is true;
 - unsupported routes return a clear error; the browser cannot select an arbitrary provider or
   price id.
+
+A profile whose country is still **provisional** (self-declared, not yet confirmed by the
+provider) may open checkout, but the resulting subscription and price route are only retained
+once the provider-confirmed billing address matches the route that was used. On a mismatch the
+subscription is not activated against that route: the webhook handler flags the account for
+re-routing and the entitlement stays at its previous tier rather than being granted on an
+unverified country.
 
 ## 6. API contract
 
@@ -247,7 +256,7 @@ change billing require the billing-account owner. Workspace entitlement reads al
 | Method | Route | Contract |
 |---|---|---|
 | `GET` | `/billing/me` | Own billing summary: tier, normalized state, cadence, paid-through/grace dates, available checkout route; no external ids/secrets |
-| `POST` | `/billing/checkout` | `{tier_key:"paid", cadence, billing_country}` → hosted checkout URL; idempotent and rejects an existing live subscription |
+| `POST` | `/billing/checkout` | `{tier_key:"paid", cadence}` → hosted checkout URL; idempotent and rejects an existing live subscription. **The body carries no country and no price id** — both are resolved server-side from the billing profile (see §5) |
 | `POST` | `/billing/manage` | Hosted management/portal URL or provider management action |
 | `POST` | `/billing/cancel` | End-of-period cancellation; idempotent |
 | `GET` | `/workspaces/{workspace_id}/entitlements` | Effective tier + capability booleans/limits + revision for the active workspace |

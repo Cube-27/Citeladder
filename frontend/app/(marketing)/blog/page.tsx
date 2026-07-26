@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { BlogIndex } from '@/components/marketing/blog';
+import { BlogIndex } from '@/components/marketing/pages/blog';
 
 const DESCRIPTION =
   'Essays, release notes, and field reports on answer-engine optimization — ' +

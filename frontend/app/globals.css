@@ -15,6 +15,13 @@
 
 @import 'tailwindcss';
 
+/* The marketing/auth "Proof" creative system registers its mkt-namespaced
+   tokens here rather than from the (marketing) layout: Tailwind v4 builds
+   utilities from a single `@import 'tailwindcss'` graph, so a second import
+   would duplicate preflight and the whole utility layer. Unused @theme
+   values are tree-shaken — app routes pay nothing for this. */
+@import './(marketing)/marketing-theme.css';
+
 @custom-variant dark (&:where(html[data-theme='dark'] *));
 
 /* ─── TAILWIND v4 TOKEN BRIDGE (§9) ────────────────────────────────────

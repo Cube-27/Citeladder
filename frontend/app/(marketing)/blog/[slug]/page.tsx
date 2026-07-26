@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { BlogPostView } from '@/components/marketing/blog-post';
+import { BlogPostView } from '@/components/marketing/pages/blog';
 import { POSTS } from '@/lib/marketing-content/blog';
 
 /**

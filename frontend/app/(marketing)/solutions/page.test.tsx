@@ -1,6 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
+
 import Page from './page';
 
 // Plain render — the solutions page has no client islands (no providers, no
@@ -38,50 +40,48 @@ describe('Solutions page (public marketing `/solutions`)', () => {
     }
   });
 
-  it('renders each segment with its key feature mappings and a /register CTA', () => {
+  it('renders each segment with its key feature mappings and a demo CTA', () => {
     render(<Page />);
 
-    const agencies = screen.getByRole('region', { name: 'For agencies' });
+    const agencies = screen.getByRole('region', { name: 'Agencies' });
     expect(within(agencies).getByText(/multi-project workspaces/i)).toBeInTheDocument();
     expect(
       within(agencies).getByText(/authenticated CSV \+ Markdown downloads/i),
     ).toBeInTheDocument();
     expect(
-      within(agencies).getByRole('link', { name: /start a client workspace/i }),
-    ).toHaveAttribute('href', '/register');
+      within(agencies).getByRole('link', { name: /see the agency workflow/i }),
+    ).toHaveAttribute('href', DEMO_HREF);
 
-    const inHouse = screen.getByRole('region', { name: 'For in-house teams' });
+    const inHouse = screen.getByRole('region', { name: 'In-house teams' });
     expect(within(inHouse).getByText(/cross-run trends/i)).toBeInTheDocument();
     expect(within(inHouse).getByText(/Site Health \+ AEO scores/i)).toBeInTheDocument();
-    expect(within(inHouse).getByRole('link', { name: /start monitoring/i })).toHaveAttribute(
-      'href',
-      '/register',
-    );
+    expect(
+      within(inHouse).getByRole('link', { name: /see the reporting surfaces/i }),
+    ).toHaveAttribute('href', DEMO_HREF);
 
-    const founders = screen.getByRole('region', { name: 'For founders' });
+    const founders = screen.getByRole('region', { name: 'Founders' });
     expect(within(founders).getByText(/free sample Site Health crawl/i)).toBeInTheDocument();
     expect(within(founders).getByText(/self-host when you outgrow the cloud/i)).toBeInTheDocument();
-    expect(within(founders).getByRole('link', { name: /run a free sample/i })).toHaveAttribute(
-      'href',
-      '/register',
-    );
+    expect(
+      within(founders).getByRole('link', { name: /see what a first audit shows/i }),
+    ).toHaveAttribute('href', DEMO_HREF);
 
-    const pr = screen.getByRole('region', { name: 'For PR and communications' });
+    const pr = screen.getByRole('region', { name: 'PR & communications' });
     expect(within(pr).getByText(/mention \+ citation tracking/i)).toBeInTheDocument();
     expect(within(pr).getByText(/query-fanout evidence/i)).toBeInTheDocument();
-    expect(within(pr).getByRole('link', { name: /track your narrative/i })).toHaveAttribute(
+    expect(within(pr).getByRole('link', { name: /see citation evidence/i })).toHaveAttribute(
       'href',
-      '/register',
+      DEMO_HREF,
     );
   });
 
-  it('closes with a CTA band linking to /register and /pricing', () => {
+  it('closes with a CTA band linking to the demo funnel and /pricing', () => {
     render(<Page />);
 
     const finalCta = screen.getByRole('region', { name: 'Get started' });
-    expect(within(finalCta).getByRole('link', { name: /get started/i })).toHaveAttribute(
+    expect(within(finalCta).getByRole('link', { name: /book a demo/i })).toHaveAttribute(
       'href',
-      '/register',
+      DEMO_HREF,
     );
     expect(within(finalCta).getByRole('link', { name: /see pricing/i })).toHaveAttribute(
       'href',

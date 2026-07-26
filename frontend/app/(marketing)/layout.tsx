@@ -1,29 +1,30 @@
 import type { ReactNode } from 'react';
 
-import { LandingFooter } from '@/components/marketing/landing-footer';
-import { LandingNav } from '@/components/marketing/landing-nav';
-
-import './marketing.css';
+import { MarketingFooter } from '@/components/marketing/chrome/footer';
+import { MarketingNav } from '@/components/marketing/chrome/nav';
 
 /**
- * Marketing route-group layout — public surface, deliberately NOT wrapped in
- * SessionGuard (the landing page must be reachable and server-rendered for
- * anonymous visitors). Scopes all marketing styles under the `.mkt` wrapper
- * (see marketing.css).
+ * Marketing route-group layout — the public "Proof" surface.
  *
- * No fonts are loaded here: marketing uses the same Geist / Geist Mono the
- * root layout puts on <html>, so `--font-sans` / `--font-mono` are already in
- * scope and the old Bricolage/Public Sans/Plex trio is gone.
+ * Deliberately NOT wrapped in SessionGuard: these pages must be reachable and
+ * server-rendered for anonymous visitors.
+ *
+ * `.mkt-root` is the one hook the creative system needs (see
+ * app/(marketing)/marketing-theme.css): it scopes the light-only canvas, the
+ * focus ring, and the reset that lets Tailwind utilities beat the app's
+ * unlayered element base. Everything else is built from mkt-namespaced
+ * utilities — there is no marketing stylesheet to keep in sync.
+ *
+ * No fonts are loaded here: the root layout puts Inter, Geist Mono and Manrope
+ * on <html>, so --font-mkt-display / --font-mkt-sans are already in scope.
  */
 export default function MarketingLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mkt">
-      {/* Shared chrome — every route in the (marketing) group inherits the nav
-          and the footer from this layout. The aurora/grain backdrop is gone:
-          the flat language has no atmosphere layer. */}
-      <LandingNav />
-      {children}
-      <LandingFooter />
+    <div className="mkt-root bg-mkt-paper text-mkt-ink min-h-dvh">
+      <MarketingNav />
+      {/* Clears the fixed nav strip. Every page starts from the same line. */}
+      <div className="pt-mkt-nav">{children}</div>
+      <MarketingFooter />
     </div>
   );
 }

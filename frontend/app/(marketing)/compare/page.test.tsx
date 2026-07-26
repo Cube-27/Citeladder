@@ -1,8 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { CompareDetailView } from '@/components/marketing/compare-detail';
+import { CompareDetailView } from '@/components/marketing/pages/compare-detail';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
+
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import Page from './page';
 
@@ -34,13 +36,13 @@ describe('Compare index page (/compare)', () => {
     expect(within(grid).getByText(/Comparison research is in progress/i)).toBeInTheDocument();
   });
 
-  it('closes with a CTA band linking to /register', () => {
+  it('closes with a CTA band linking to the demo funnel', () => {
     render(<Page />);
 
     const ctaBand = screen.getByRole('region', { name: 'Get started' });
-    expect(within(ctaBand).getByRole('link', { name: /get started/i })).toHaveAttribute(
+    expect(within(ctaBand).getByRole('link', { name: /book a demo/i })).toHaveAttribute(
       'href',
-      '/register',
+      DEMO_HREF,
     );
   });
 });

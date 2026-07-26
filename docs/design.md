@@ -3,10 +3,13 @@
 > The **written form** of the Searchify design system, and its authority: the Figma reference
 > files this was ported from have been removed now that the port is complete. The product app
 > runs on **`frontend/app/globals.css`** — the royal-blue light theme **verbatim** from Figma,
-> plus the **warm-charcoal "dusk" dark theme shared with marketing** (neither the Figma
-> midnight dark nor the earlier slate-charcoal is used). Marketing keeps its own creative
-> system in `frontend/app/(marketing)/marketing.css`, whose dusk palette the app's dark theme
-> now shares. Machine guards keep this document, the token files, and WCAG AA in sync
+> plus the **authored warm-charcoal dark theme** (neither the Figma
+> midnight dark nor the earlier slate-charcoal is used). The public surface — marketing routes
+> **and** the logged-out auth screens — runs its own creative system, **Searchify Proof**, in
+> `frontend/app/(marketing)/marketing-theme.css`. Proof is light-only and independent; it
+> replaced the retired dark "Signal/Dusk" marketing identity, and the app's dark theme now
+> owns its warm charcoals outright rather than sharing them.
+> Machine guards keep this document, the token files, and WCAG AA in sync
 > (`frontend/app/globals.test.ts`, `frontend/scripts/check-design-tokens.mjs`).
 > Companion docs: [`../Agents.md`](../Agents.md), [`invariants.md`](invariants.md),
 > [`backend-architecture.md`](backend-architecture.md), [`frontend-architecture.md`](frontend-architecture.md).
@@ -16,14 +19,14 @@
 - **`frontend/app/globals.css` is the single source of truth** for app tokens. Components
   consume **bridged Tailwind semantic tokens only** — never raw hex (no-raw-hex guard). Raw
   hex lives only in the `:root` and `html[data-theme='dark']` blocks of `globals.css`
-  (app) and in `app/(marketing)/marketing.css` (marketing).
+  (app) and in `app/(marketing)/marketing-theme.css` (marketing + auth).
 - **Aesthetic**: dense, confident **B2B analytics** in the Figma visual language — a
   `#F7F8FA` cool-gray page, white panels **elevated by the `--shadow-1..4` stack** (no longer
   a flat/hairline-only language), one **royal-blue accent `#2756FF`** reserved for data,
   links, active states and focus rings, vivid semantic colors, **Inter** for UI text and
   **Geist Mono** tabular numerals for every metric, 4px grid, WCAG 2.1 AA.
-- **Light is the default theme.** The dark theme is a full sibling: the **warm-charcoal dusk**
-  system shared with marketing — never near-black, with clearly lighter elevated surfaces and
+- **Light is the default theme.** The dark theme is a full sibling: an **authored warm-charcoal**
+  system — never near-black, with clearly lighter elevated surfaces and
   a violet accent (see §6). Every documented text/surface pair in **both** themes meets
   **AA ≥ 4.5:1**, computed programmatically in `globals.test.ts`.
 
@@ -38,14 +41,15 @@ ThemeToggle) opts into dark.
 **Light surface hierarchy (Figma):** `bg-base #F7F8FA` → panels/elevated `#FFFFFF`
 (differentiated by shadow, not fill) → sunken wells `#EFF1F6`. Sidebar = panel `#FFFFFF`.
 
-**Dark surface hierarchy (authored dusk — shared with marketing):** `bg-base #262522` →
+**Dark surface hierarchy (authored warm charcoal):** `bg-base #262522` →
 `bg-panel #2C2B28` → `bg-elevated #353430` (strictly ascending luminance), sunken
-`bg-well #1F1E1B`. Sidebar = panel `#2C2B28`. These are the marketing deck's warm charcoals:
-the app and marketing run **one dark identity** (owner decision).
+`bg-well #1F1E1B`. Sidebar = panel `#2C2B28`. These values were originally shared with the
+marketing surface; marketing has since moved to the light-only Proof system, so **the app
+owns them outright** — `globals.test.ts` pins them so that migration cannot drag the app
+along with it.
 
 The accent is **hue-split by theme, on purpose**: royal blue `#2756FF` in light (the Figma
-anchor) and dusk violet `#6D5DE8` / `#7B6CF6` in dark (the marketing deck). Light follows
-Figma; dark follows marketing. In both themes the accent is reserved for links, active
+anchor) and violet `#6D5DE8` / `#7B6CF6` in dark. In both themes the accent is reserved for links, active
 states, focus rings, and data visualization. Owned citations track the accent — Figma blue in
 light, violet in dark (the former green identity is dropped — confirmed product decision).
 
@@ -256,11 +260,13 @@ family rather than restating the palette:
 
 ## 5. Token values — DARK (`html[data-theme='dark']`)
 
-**Authored warm-charcoal "dusk" — the same dark system the marketing site uses.** Owner
-decision: the app and marketing share one dark identity, so these values come from the
-approved dusk deck (`docs/redesign/designs/marketing-style-guide-dusk.html`) rather than from
-the app mockups. This replaces both the Figma midnight dark and the earlier cool
-slate-charcoal; neither is ported.
+**Authored warm charcoal — owned by the app.** These values were originally shared with the
+marketing site's dark "Dusk" identity. **That identity is retired**: marketing and the
+logged-out auth screens now run the independent, light-only **Searchify Proof** system
+(`app/(marketing)/marketing-theme.css`, see §"Marketing creative system"), and the app keeps
+this ramp outright. There is no longer a no-divergence requirement between the two, and dark
+marketing tokens must not be reintroduced. This replaces both the Figma midnight dark and the
+earlier cool slate-charcoal; neither is ported. `globals.test.ts` pins the values below.
 
 The light theme stays Figma royal blue, so **the accent hue deliberately differs between
 themes** — violet in dark, blue in light. That is the consequence of sharing marketing's dark
@@ -441,11 +447,10 @@ html[data-theme="dark"] {
 ## 6. Authored dark-theme spec (hard constraints, machine-enforced)
 
 The Figma midnight dark (`#09090F` / `#0D1228` near-black) is **not ported**, and neither is
-the cool slate-charcoal that preceded this revision. The dark theme is the marketing deck's
-warm-charcoal dusk, adopted wholesale so the product and the marketing site read as one
-brand in dark mode. Values come from
-`docs/redesign/designs/marketing-style-guide-dusk.html`, adjusted only where a documented AA
-pair fails. `globals.test.ts` enforces:
+the cool slate-charcoal that preceded this revision. The dark theme is an authored warm
+charcoal, adjusted only where a documented AA pair fails. It was once shared with the
+marketing site; that link is gone (see §5) and the app owns these values.
+`globals.test.ts` enforces:
 
 1. **Never near-black** — `--bg-base` relative luminance stays above a floor (0.007) that
    excludes near-black (the rejected schemes measure ≤ 0.005; dusk `#262522` measures
@@ -666,54 +671,85 @@ integrations) — the same Figma-language reskin: tokens + new primitives, hiera
 spacing per this document, shared empty-state; no contract or data-flow changes.
 **Setup** (`/setup`) keeps its wizard flow restyled; `/setup/new` stays for additional
 projects.
-
 ## Marketing creative system (the `.mkt` contract)
 
-Marketing pages are a **fully independent creative system** — "marketing pages have no
-relation to the app". Its home is the **existing** `frontend/app/(marketing)/marketing.css`:
-styles scope under the `.mkt` wrapper, the `--mkt-*` token block owns palette/type/motion,
-and plain CSS classes (`hero`, `btn`, `grad-text`, `container`, `eyebrow`) are the
-consumption surface — **no Tailwind bridging**, and hex stays inside the CSS file (CSS files
-are exempt from the no-raw-hex guard; marketing components must stay hex-free). The system
-carries its own branded **dusk** canvas independent of the app's `data-theme`; the Figma app
-scale above does **not** constrain marketing's display type.
+The public surface — every `(marketing)` route **and** the logged-out auth screens
+(`/login`, `/register`) — runs **Searchify Proof**, a fully independent creative system.
+"Marketing pages have no relation to the app" still holds; Proof simply replaces the retired
+dark **Signal/Dusk** identity. Source of truth for the direction:
+[`searchify-brand-deck.html`](searchify-brand-deck.html).
 
-**Dusk palette** (per the approved marketing style guide) — warm charcoal, cream ink, one
-electric signal gradient (violet `#7B6CF6` → orchid `#B34FE0` → ember `#F0566B`):
+**Architecture.** Tokens live in `frontend/app/(marketing)/marketing-theme.css` as a Tailwind
+v4 `@theme` block in the `mkt-` namespace, imported by `globals.css` (Tailwind builds
+utilities from a single `@import 'tailwindcss'` graph — a second import would duplicate
+preflight and the whole utility layer). Sections are built from **utilities plus the
+primitives in `components/marketing/primitives/`**; the theme file additionally holds only
+the scene rules a utility cannot express (the wallpaper, SVG stroke choreography, keyframes,
+and the `revert-layer` reset that lets utilities beat `globals.css`'s unlayered element
+base). Hex lives ONLY in that file; marketing components stay hex-free.
 
-| Role | Value | Token (task 7 finalizes the `--mkt-*` block) |
+**A 400-line budget on `marketing-theme.css` is machine-enforced**
+(`scripts/check-frontend-architecture.mjs`). The previous marketing stylesheet reached
+**6,846 lines** of global `.mkt` cascade because nothing stopped it growing. If a new section
+needs CSS in the theme file, it needs a **primitive** instead — that is the rule the budget
+exists to force.
+
+**Palette.** Warm paper and exact ink carry the page; colour is rationed to states, provider
+identity and evidence marks — never to headlines.
+
+| Role | Value | Token |
 |---|---|---|
-| page canvas | `#262522` | `--mkt-bg` |
-| recessed well / contrast canvas | `#1F1E1B` | `--mkt-bg-0` |
-| panel | `#2C2B28` | `--mkt-surface` |
-| elevated | `#353430` | `--mkt-raised` |
-| primary ink | `#F4F2EB` | `--mkt-text` |
-| secondary ink | `#B4B0A4` | `--mkt-text-2` |
-| accent (violet) | `#7B6CF6` | `--mkt-accent` |
-| accent as text | `#9C92FF` | `--mkt-accent-text` |
-| success | `#46D69C` | `--mkt-up` |
-| competitor | `#FCA87A` | `--mkt-comp` |
-| third-party | `#C9B8FD` | `--mkt-third` |
+| page canvas | `#F5F5F0` | `--color-mkt-paper` |
+| raised / inset fields | `#FBFBF8` | `--color-mkt-paper-raised` |
+| panels | `#FFFFFF` | `--color-mkt-surface` |
+| primary ink | `#151715` (16.5:1) | `--color-mkt-ink` |
+| body copy | `#454A46` (8.3:1) | `--color-mkt-ink-soft` |
+| meta / captions | `#656B65` (5.0:1) | `--color-mkt-ink-muted` |
+| hairline | `#D8D9D2` | `--color-mkt-line` |
+| wallpaper base | `#CBDAF1` | `--color-mkt-sky` |
+| scene ink on glass | `#425269` | `--color-mkt-slate` |
+| display accent | `#275F9F` | `--color-mkt-accent-display` |
 
-**Type**: Söhne/Inter-class sans for display and body, Georgia-italic serif accents for the
-human moments, JetBrains Mono for every number; an oversized tight-tracked display scale
-independent of the Figma app scale.
+**Mark vs text — the rule that governs every state hue.** A hue that works as a *fill* is not
+automatically legible as *text*. Each state therefore ships in two forms: the **mark**
+(≥ 3:1, dots/bars/tiles only) and the **`-text` variant** (≥ 4.5:1, safe for copy). The
+deck's own values all failed as text, which is why the split exists.
 
-**Motion**: cinematic and product-demonstrating (answers stream, scores sweep, cards
-parallax/float) — `motion/react` primitives, transform/opacity only, below-fold scenes
-lazy-mounted, **everything gated on `prefers-reduced-motion`** with static fallbacks;
-decorative scenes are `aria-hidden`.
+| State | Mark (≥ 3:1) | Text (≥ 4.5:1) |
+|---|---|---|
+| proof / active + linked | `#1668E8` | `#1257C4` (6.0:1) |
+| evidence / verified | `#0A8F6A` | `#087354` (5.4:1) |
+| signal / decline + refusal | `#E95D39` | `#B23A1A` (5.5:1) |
+| review / needs attention | `#BE7D12` | `#8A5D0F` (5.3:1) |
 
-**AA roles** — computed on the `#1F1E1B` dusk canvas (the system's darkest surface) and
-machine-checked in `globals.test.ts`:
+Ratios are computed against `#F5F5F0` — the lightest surface the system paints text on, so
+passing there passes on white too. Machine-enforced in `frontend/app/globals.test.ts`
+("the Proof contract"), which also asserts the system is light-only and that every state hue
+has a `-text` sibling. Amber's mark is darkened from the deck's `#C98616` (2.78:1), which sat
+below the 3:1 floor even for a dot.
 
-- **Body text (≥ 4.5:1 required)**: `#F4F2EB` (14.9:1), `#B4B0A4` (7.7:1), `#9C92FF`
-  (6.3:1), `#46D69C` (9.0:1), `#FCA87A` (8.0:1), `#C9B8FD` (8.5:1).
-- **Display / decorative-only carve-outs (≥ 3:1 large-text bar; never body text)**:
-  `#7B6CF6` (4.22:1 — display type, gradient stops, glows), `#B34FE0` (4.06:1 — gradient
-  stops only), `#7F7B70` (3.94:1 — decorative captions / mono meta). These three tones are
-  display/decorative roles **only**; using any of them for body copy is a design-system
-  violation.
+**Type.** Two faces, one voice: **Manrope** for display (loaded as `--font-manrope` in the
+root layout, consumed only via `--font-mkt-display`), **Inter** for UI and data. There is no
+mono face — the deck's `--mono: Inter` was a smell. "Meta" is a **style**, not a family:
+uppercase, `0.09em` tracking, tabular numerals. Eight fixed steps
+(`text-mkt-d1 … text-mkt-meta`); tracking tightens as size grows.
+
+**Shape and rhythm.** Six radii (`6 / 10 / 14 / 20 / 28 / pill`) — the deck used fifteen.
+Three elevation levels plus one atmospheric scene drop. One container (1240px) and one gutter
+(`clamp(20px, 4vw, 56px)`). Vertical rhythm belongs to the `<Section>` primitive — sections
+never set their own padding, which is what keeps every page breathing identically.
+
+**Scenes.** One recurring wallpaper (`public/brand/wallpaper.svg` — sky/coral/mint) sits
+behind every product moment, with white glass windows inset on it so the atmosphere shows on
+all four sides. Glass alpha is pinned at 0.92+ so the slate ink inside keeps its measured
+contrast. Illustrative figures live inside `aria-hidden` scenes and always carry a visible
+"Example data" mark; page copy contains no invented numbers.
+
+**Motion** is 5/10: one easing pair, durations 200/450/750, transform and opacity only,
+scroll reveals that settle rather than bounce, and everything gated on
+`prefers-reduced-motion` — where scenes hold their finished state rather than freezing
+mid-animation.
+
 
 ## 13. Motion + accessibility (app)
 
@@ -736,16 +772,21 @@ machine-checked in `globals.test.ts`:
    `--text-inverse`/`--text-link`, `--accent-active`, `--score-*-text/-ring/-border`,
    `--shadow-1..4` + aliases, and the new radii.
 2. Add the `@theme inline` bridge (§9) — components use bridged tokens only.
-3. **No raw hex outside the two theme blocks** (app) and `marketing.css` (marketing).
+3. **No raw hex outside the two theme blocks** (app) and `app/(marketing)/marketing-theme.css` (marketing + auth).
 4. **Both themes always defined**; `data-theme` set pre-hydration; **light is the default**
    (stored choice → light; the OS preference is not consulted).
 5. Mono font gets `font-variant-numeric: tabular-nums`; all metrics use mono.
 6. Ship `prefers-reduced-motion`, `forced-colors`, `print`, and theme-swap suppression rules.
 7. Load **Inter** (weights 400/500/600) + **Geist Mono** via next/font in `app/layout.tsx`
    (`--font-sans`, `--font-mono`). `--font-display-family` resolves to Inter → bridged
-   `font-display` utility; there is no separate display face. Never name a next/font
-   variable `--font-display` — that name is the bridged `@theme` token.
-8. Keep the guard trio green: `app/globals.test.ts` (palette + name-set sync + WCAG suite +
-   §6 dark assertions + marketing dusk contract), `scripts/check-design-tokens.mjs`
-   (required vars across **both** `globals.css` and `marketing.css`), and
-   `scripts/check-frontend-architecture.mjs` (line budgets).
+   `font-display` utility; **the app has no separate display face** — Manrope is loaded in
+   the same file as `--font-manrope` but is consumed ONLY by the public Proof surface. Never
+   name a next/font variable `--font-display`: that name is the bridged `@theme` token.
+8. **Keep the two systems separate.** The app's dark theme is its own; do not reintroduce
+   dark marketing tokens, and do not make the public surface follow `data-theme`. Marketing
+   and the logged-out auth screens are light-only by design.
+9. Keep the guard trio green: `app/globals.test.ts` (palette + name-set sync + WCAG suite +
+   §6 dark assertions + the Proof contract), `scripts/check-design-tokens.mjs`
+   (required vars across **both** `globals.css` and `marketing-theme.css`), and
+   `scripts/check-frontend-architecture.mjs` (line budgets, including the 400-line ceiling on
+   `marketing-theme.css`).

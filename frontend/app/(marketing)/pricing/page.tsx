@@ -1,9 +1,8 @@
-import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
-import { ByokTrust } from '@/components/marketing/byok-trust';
-import { PricingCta, PricingTable, PricingTiers } from '@/components/marketing/pricing';
+import { PricingCta, PricingTable, PricingTiers } from '@/components/marketing/pages/pricing';
+import { PageHero } from '@/components/marketing/primitives/page-hero';
+import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
 
 const DESCRIPTION =
   'Pricing for Searchify, the AI visibility and site intelligence platform: ' +
@@ -30,10 +29,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public marketing pricing page (`/pricing`). Server-rendered so the full
- * page is in the initial HTML; it renders NO client islands of its own — the
- * shared chrome (aurora/grain backdrop, LandingNav, LandingFooter) lives in
- * the (marketing) route-group layout.
+ * Public pricing page (`/pricing`). Server-rendered, with no client islands of
+ * its own — the shared chrome lives in the (marketing) route-group layout.
  *
  * Must stay a SYNC component (no async / headers() / cookies()) so the page
  * test can render it directly under Testing Library.
@@ -41,47 +38,16 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   return (
     <main>
-      <header className="page-hero">
-        <div className="hero-inner container">
-          <span className="eyebrow">Pricing</span>
-          <h1>
-            Pay for the evidence layer.
-            <br />
-            <span className="grad-text">Not the API markup.</span>
-          </h1>
-          <p className="hero-sub">
-            Every plan runs audits on your own ChatGPT, Gemini, and Claude keys — provider usage
-            bills straight to your accounts at provider rates. Searchify charges for the workspace,
-            the monitoring, and the evidence behind every score.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        eyebrow="Pricing"
+        title="Pay for the evidence layer."
+        accent="Not the API markup."
+        lead="Every plan runs audits on your own ChatGPT, Gemini and Claude keys — provider usage bills straight to your accounts at provider rates. Searchify charges for the workspace, the monitoring and the evidence behind every score."
+      >
+        <TrustStrip className="mt-8" />
+      </PageHero>
       <PricingTiers />
       <PricingTable />
-      {/* Trust strip: the plan price never includes model-call markup — audits
-          run on the visitor's own provider keys. */}
-      <section className="band byok-strip" aria-label="Bring your own keys">
-        <div className="container">
-          <ByokTrust />
-        </div>
-      </section>
-      <section className="faq-teaser" aria-label="FAQ">
-        <div className="container">
-          <div className="card faq-card rim">
-            <div>
-              <h3>Questions about plans?</h3>
-              <p>
-                How quotas are counted, what BYOK bills to whom, what happens when you hit a limit —
-                the FAQ covers the details.
-              </p>
-            </div>
-            <Link className="btn btn-ghost" href="/faq">
-              Read the FAQ
-              <ArrowRight className="arr" size={15} strokeWidth={2.2} aria-hidden />
-            </Link>
-          </div>
-        </div>
-      </section>
       <PricingCta />
     </main>
   );

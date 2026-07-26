@@ -69,14 +69,21 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
   it('renders the contact CTA with a real destination, never href="#"', () => {
     render(<Page />);
 
+    // The hero CTA jumps down the page to the contact band; the band itself
+    // carries the real destination. Neither may ever be a bare '#'.
     const cta = screen.getByRole('region', { name: 'Contact sales' });
-    const contacts = screen.getAllByRole('link', { name: /contact sales/i });
+    const contacts = screen.getAllByRole('link', { name: /book a demo/i });
     expect(contacts.length).toBeGreaterThan(0);
     for (const contact of contacts) {
-      expect(contact).toHaveAttribute('href', EXPECTED_CONTACT_HREF);
-      // The CTA must never degrade to a dead anchor.
-      expect(contact).not.toHaveAttribute('href', '#');
+      expect(contact.getAttribute('href')).not.toBe('#');
     }
-    expect(within(cta).getByRole('link', { name: /contact sales/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /book a demo/i })[0]).toHaveAttribute(
+      'href',
+      '#contact',
+    );
+    expect(within(cta).getByRole('link', { name: /book a demo/i })).toHaveAttribute(
+      'href',
+      EXPECTED_CONTACT_HREF,
+    );
   });
 });

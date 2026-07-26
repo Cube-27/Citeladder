@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
-import { FaqGroups } from '@/components/marketing/faq';
+import { FaqGroups } from '@/components/marketing/pages/faq';
+import { PageHero } from '@/components/marketing/primitives/page-hero';
 
 const DESCRIPTION =
   'The short version of how Searchify works — engines, scoring, keys, site health, ' +
@@ -26,12 +27,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public marketing FAQ page (`/faq`). Server-rendered so the full page is in
- * the initial HTML (SEO + first paint); the accordion is native
- * <details>/<summary>, so the page renders zero client islands.
- *
- * The shared chrome (aurora/grain backdrop, LandingNav, LandingFooter) lives
- * in the (marketing) route-group layout so every marketing route inherits it.
+ * Public FAQ page (`/faq`). Server-rendered; the accordion is native
+ * <details>/<summary>, so the page ships zero client islands.
  *
  * Must stay a SYNC component (no async / headers() / cookies()) so the page
  * test can render it directly under Testing Library.
@@ -39,18 +36,12 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   return (
     <main>
-      <header className="page-hero">
-        <div className="hero-inner container">
-          <span className="eyebrow">FAQ</span>
-          <h1>
-            Frequently asked <span className="grad-text">questions.</span>
-          </h1>
-          <p className="hero-sub">
-            The short version of how Searchify works — engines, scoring, keys, site health, billing,
-            and self-hosting.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        eyebrow="FAQ"
+        title="Frequently asked"
+        accent="questions."
+        lead="The short version of how Searchify works — engines, scoring, keys, site health, billing, and self-hosting."
+      />
       <FaqGroups />
     </main>
   );
