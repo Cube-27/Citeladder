@@ -106,6 +106,22 @@ describe('BillingSettings', () => {
     ).toBeInTheDocument();
   });
 
+  it('waits for the billing country before requesting the catalog', async () => {
+    const requestedCountries: Array<string | null> = [];
+    mswServer.use(
+      summaryHandler(),
+      http.get('/api/v1/billing/catalog', ({ request }) => {
+        requestedCountries.push(new URL(request.url).searchParams.get('country'));
+        return HttpResponse.json(CATALOG);
+      }),
+    );
+
+    renderWithProviders(<BillingSettings />);
+
+    expect(await screen.findByText('$49.00')).toBeInTheDocument();
+    await waitFor(() => expect(requestedCountries).toEqual(['US']));
+  });
+
   it('requires the styled cancellation dialog before mutating', async () => {
     const user = userEvent.setup();
     let cancellations = 0;
@@ -133,5 +149,26 @@ describe('BillingSettings', () => {
       within(screen.getByRole('dialog')).getByRole('button', { name: /cancel at period end/i }),
     );
     await waitFor(() => expect(cancellations).toBe(1));
+  });
+
+  it('shows cancellation failures inside the open dialog', async () => {
+    const user = userEvent.setup();
+    mswServer.use(
+      summaryHandler({
+        subscription_status: 'active',
+        current_period_end: '2026-08-26T00:00:00Z',
+      }),
+      catalogHandler(),
+      http.post('/api/v1/billing/cancel', () =>
+        HttpResponse.json({ detail: 'provider_unavailable' }, { status: 502 }),
+      ),
+    );
+
+    renderWithProviders(<BillingSettings />);
+    await user.click(await screen.findByRole('button', { name: /cancel at period end/i }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: /cancel at period end/i }));
+
+    expect(await within(dialog).findByText('provider_unavailable')).toBeInTheDocument();
   });
 });

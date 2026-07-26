@@ -145,10 +145,27 @@ The expected public webhook path is:
 https://<backend-public-origin>/api/v1/billing/webhooks/razorpay
 ```
 
-Subscribe at minimum to the Razorpay events required to reconstruct creation,
-authorization, activation/charge, pending, halted, cancellation, completion, and
-expiry. The exact event allow-list will be checked against Razorpay's Dashboard
-when implementation begins.
+Subscribe only to the implemented subscription allow-list:
+
+```text
+subscription.authenticated
+subscription.activated
+subscription.charged
+subscription.pending
+subscription.halted
+subscription.cancelled
+subscription.completed
+subscription.expired
+subscription.paused
+subscription.resumed
+```
+
+The endpoint verifies every signature over the exact raw body before dispatch. A validly
+signed event outside this allow-list is acknowledged with `204` and does not mutate billing
+state. An allow-listed event for an unknown external subscription is recorded as `unmatched`,
+acknowledged with `204`, and does not mutate entitlements. Duplicate event ids and stale
+provider-state versions are also acknowledged idempotently. Malformed payloads and invalid
+signatures remain non-2xx so they are visible as configuration or delivery failures.
 
 The webhook URL must use modern HTTPS/TLS and remain reachable independently of
 the frontend deployment. Add monitoring for invalid signatures, non-2xx delivery,
@@ -164,6 +181,9 @@ uv run python -m scripts.provision_razorpay_plans verify --environment test
 uv run python -m scripts.provision_razorpay_plans create --environment test
 uv run python -m scripts.provision_razorpay_plans create --environment live --confirm-live billing-v1
 ```
+
+`verify` and `create` reject credentials whose Razorpay key prefix does not match the selected
+environment (`rzp_test_…` for test, `rzp_live_…` for live). `propose` performs no provider I/O.
 
 1. Install test credentials in staging.
 2. Run catalog validation and a redacted dry-run.

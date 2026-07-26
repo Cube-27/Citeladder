@@ -47,7 +47,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
   const catalogQuery = useQuery({
     queryKey: queryKeys.billing.catalog(country || undefined),
     queryFn: ({ signal }) => billingApi.catalog(country || undefined, { signal }),
-    enabled,
+    enabled: enabled && summaryQuery.isSuccess,
   });
 
   useEffect(() => {
@@ -296,6 +296,9 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
           Paid capabilities remain available through the verified paid-through date. Completed
           audits and evidence are not deleted when the plan ends.
         </p>
+        {cancelMutation.isError ? (
+          <Alert tone="danger">{message(cancelMutation.error)}</Alert>
+        ) : null}
       </Dialog>
     </div>
   );

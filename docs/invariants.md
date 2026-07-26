@@ -36,9 +36,11 @@ evidence.
 
 ### 5. Workspace auth on every query
 Every project-owned read and write goes through the `require_workspace_member` dependency and
-filters by `workspace_id`. **Never** scope by `user_id`, never trust an id alone, never add an
-"admin" shortcut that bypasses workspace scoping. Cross-workspace access returns 403/404, not
-data. All ids are string UUIDs; there are no integer PKs and no `user_id` scoping anywhere.
+filters by `workspace_id`. **Never** scope project data by `user_id`, never trust an id alone,
+never add an "admin" shortcut that bypasses workspace scoping. Cross-workspace access returns
+403/404, not data. All ids are string UUIDs and there are no integer PKs. Account billing is the
+only ownership exception: `BillingAccount.owner_user_id` identifies the payer, and
+`WorkspaceBillingLink` is the required boundary into workspace-scoped capabilities.
 
 ### 6. BYOK secrets: Fernet-encrypted, never returned, never logged
 Provider API keys are **Fernet-encrypted at rest** (`encrypt_secret`/`decrypt_secret`). The

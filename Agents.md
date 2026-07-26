@@ -26,7 +26,9 @@ documented in the architecture and roadmap references as they are designed and d
 
 ## Unified contract (memorize this — every doc agrees)
 
-- **All ids are string UUIDs.** Workspace-scoped. **No `user_id` scoping. No integer PKs.**
+- **All ids are string UUIDs.** Project data is workspace-scoped with **no `user_id`
+  scoping and no integer PKs**. Account billing alone uses `BillingAccount.owner_user_id`;
+  `WorkspaceBillingLink` is its mandatory boundary into workspace capabilities.
 - **API prefix `/api/v1`** (the reference `/api/ai-visibility` prefix is dropped).
 - **Logical engines**: `chatgpt | gemini | claude` (what the user asked for). **Active
   transports** (how we physically reach an engine) are **exactly** `openai | anthropic |

@@ -76,6 +76,15 @@ def _configured_plan_id(country: str) -> str:
     return billing_settings.razorpay_paid_monthly_usd_plan_id.strip()
 
 
+def _validate_environment(environment: str) -> None:
+    key_id = billing_settings.razorpay_key_id.strip()
+    expected_prefix = f"rzp_{environment}_"
+    if not key_id.startswith(expected_prefix):
+        raise RuntimeError(
+            f"configured Razorpay key does not match --environment {environment}"
+        )
+
+
 def _verify(actual: dict[str, Any], expected: dict[str, Any]) -> None:
     item = actual.get("item")
     if not isinstance(item, dict):
@@ -110,6 +119,7 @@ def main() -> int:
     print(json.dumps({"environment": args.environment, "plans": proposals}, indent=2))
     if args.operation == "propose":
         return 0
+    _validate_environment(args.environment)
     with httpx.Client() as client:
         for country, currency in (("IN", "INR"), ("US", "USD")):
             plan_id = _configured_plan_id(country)

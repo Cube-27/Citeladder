@@ -144,8 +144,11 @@ deterministic ([architecture.md](architecture.md) §11). Metrics are a **project
 
 ## 7. Persistence model
 
-All models use **string UUID PKs** and are **workspace-scoped** (directly or via their
-project). No integer PKs, no `user_id` columns.
+All models use **string UUID PKs**. Project-owned data is **workspace-scoped** directly or
+through its project, with no `user_id` scoping. Account billing is the deliberate exception:
+`BillingAccount.owner_user_id` identifies the paying account owner, while
+`WorkspaceBillingLink` is the boundary that projects that account's entitlement into each
+sponsored workspace. No project-owned query uses that owner id as an authorization shortcut.
 
 | File / model | Purpose | Provenance / version columns |
 |---|---|---|
@@ -335,8 +338,10 @@ projections, a sibling analyzer pass in `workers/audit_worker.py`) have shipped;
 
 ## 14. Known Issues / Drift
 
-- **All ids are UUIDs and workspace-scoped** — never integer PKs, never `user_id`-scoped
-  (invariant 5).
+- **All ids are UUIDs** and project-owned data is workspace-scoped — never integer PKs,
+  never `user_id`-scoped. Account billing alone keys ownership by
+  `BillingAccount.owner_user_id` and crosses into workspace scope only through
+  `WorkspaceBillingLink` (invariant 5).
 - **Sentiment/avg-position are nullable** at MVP; every aggregate must tolerate null and never
   back-fill a fake heuristic (invariant 9).
 - **`request_snapshot` must exclude the API key and brand list** (invariant 6).

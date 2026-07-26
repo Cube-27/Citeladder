@@ -114,7 +114,11 @@ async def billing_summary(session: AsyncSession, user: User) -> BillingSummaryRe
         )
     )
     if entitlement is not None:
-        entitlement = await expire_account_entitlement_if_needed(session, entitlement)
+        entitlement, expired = await expire_account_entitlement_if_needed(
+            session, entitlement
+        )
+        if expired:
+            await session.commit()
     subscription = await session.scalar(
         select(BillingSubscription).where(
             BillingSubscription.billing_account_id == account.id,
@@ -188,13 +192,17 @@ async def create_checkout(
             BillingCheckoutAttempt.idempotency_key == idempotency_key,
         )
     )
+    reconcile_existing = False
     if existing_attempt is not None:
         if existing_attempt.status == "created" and existing_attempt.checkout_url:
             return CheckoutResponse(
                 checkout_url=existing_attempt.checkout_url,
                 expires_at=existing_attempt.expires_at,
             )
-        raise BillingConflictError("checkout_already_in_progress")
+        if existing_attempt.status != "unknown":
+            raise BillingConflictError("checkout_already_in_progress")
+        attempt = existing_attempt
+        reconcile_existing = True
     live_subscription = await session.scalar(
         select(BillingSubscription.id).where(
             BillingSubscription.billing_account_id == account.id,
@@ -203,36 +211,41 @@ async def create_checkout(
     )
     if live_subscription is not None:
         raise BillingConflictError("subscription_already_exists")
-    pending_attempt = await session.scalar(
-        select(BillingCheckoutAttempt.id).where(
-            BillingCheckoutAttempt.billing_account_id == account.id,
-            BillingCheckoutAttempt.status.in_(("pending", "created", "unknown")),
-            BillingCheckoutAttempt.expires_at > datetime.now(UTC),
+    if existing_attempt is None:
+        pending_attempt = await session.scalar(
+            select(BillingCheckoutAttempt.id).where(
+                BillingCheckoutAttempt.billing_account_id == account.id,
+                BillingCheckoutAttempt.status.in_(("pending", "created", "unknown")),
+                BillingCheckoutAttempt.expires_at > datetime.now(UTC),
+            )
         )
-    )
-    if pending_attempt is not None:
-        raise BillingConflictError("checkout_already_in_progress")
+        if pending_attempt is not None:
+            raise BillingConflictError("checkout_already_in_progress")
     if not account.billing_country:
         raise BillingConflictError("billing_country_required")
     quote = quote_for_country(account.billing_country)
     if not quote.available:
         raise BillingUnavailableError("checkout_not_enabled")
-    expires_at = datetime.now(UTC) + timedelta(
-        minutes=billing_settings.checkout_expiry_minutes
-    )
-    attempt = BillingCheckoutAttempt(
-        billing_account_id=account.id,
-        currency=quote.currency,
-        idempotency_key=idempotency_key,
-        expires_at=expires_at,
-    )
-    session.add(attempt)
-    await session.commit()  # reservation is durable before provider I/O
+    if existing_attempt is None:
+        expires_at = datetime.now(UTC) + timedelta(
+            minutes=billing_settings.checkout_expiry_minutes
+        )
+        attempt = BillingCheckoutAttempt(
+            billing_account_id=account.id,
+            currency=quote.currency,
+            idempotency_key=idempotency_key,
+            expires_at=expires_at,
+        )
+        session.add(attempt)
+        await session.commit()  # reservation is durable before provider I/O
+    else:
+        expires_at = attempt.expires_at
     try:
         hosted = await provider.create_subscription(
             plan_id=quote.provider_plan_id,
             attempt_id=str(attempt.id),
             billing_account_id=str(account.id),
+            reconcile_existing=reconcile_existing,
         )
     except BillingProviderError:
         attempt.status = "unknown"
