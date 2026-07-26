@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { CompareIndex } from '@/components/marketing/compare';
+import { CompareIndex } from '@/components/marketing/pages/compare';
 
 const DESCRIPTION =
   'Side-by-side notes on Searchify and other AI visibility tools — what each covers, how ' +

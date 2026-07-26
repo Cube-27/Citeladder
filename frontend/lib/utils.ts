@@ -1,5 +1,33 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+/**
+ * tailwind-merge classifies an unrecognised `text-*` class as a COLOUR, so the
+ * marketing type scale (`text-mkt-sm`, `text-mkt-d2`, …) landed in the same
+ * conflict group as `text-mkt-ink` and silently dropped whichever came first —
+ * which is how a primary button ended up with black text on a black fill.
+ * Teaching the merger which names are sizes keeps size and colour independent.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [
+        {
+          text: [
+            'mkt-d1',
+            'mkt-d2',
+            'mkt-d3',
+            'mkt-d4',
+            'mkt-lead',
+            'mkt-body',
+            'mkt-sm',
+            'mkt-meta',
+          ],
+        },
+      ],
+    },
+  },
+});
 
 /** Merge conditional class names, resolving Tailwind conflicts. */
 export function cn(...inputs: ClassValue[]) {

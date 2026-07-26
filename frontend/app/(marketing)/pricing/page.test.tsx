@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { PRICING_TABLE_ROWS, PRICING_TIERS } from '@/lib/marketing-content/pricing';
 
 import Page from './page';
@@ -23,46 +24,40 @@ describe('Pricing page (public marketing `/pricing`)', () => {
     }
   });
 
-  it('renders the four tier cards from the module, Pro as the popular card', () => {
+  it('renders the four tier cards verbatim from the content module', () => {
     const { container } = render(<Page />);
 
-    const cards = Array.from(container.querySelectorAll<HTMLElement>('.tier-card'));
-    expect(cards).toHaveLength(4);
-
-    const byName = (name: string) => {
-      const card = cards.find((c) => c.querySelector('.tier-name')?.textContent === name);
-      expect(card, `tier card "${name}"`).toBeDefined();
-      return card as HTMLElement;
-    };
+    expect(container.querySelectorAll('[data-tier]')).toHaveLength(PRICING_TIERS.length);
 
     for (const tier of PRICING_TIERS) {
-      const card = byName(tier.name);
+      const card = container.querySelector<HTMLElement>(`[data-tier="${tier.key}"]`);
+      expect(card, `tier card "${tier.name}"`).not.toBeNull();
+      // The published price renders exactly as the module states it.
+      expect(card!.querySelector('[data-price]')).toHaveTextContent(tier.price);
       expect(
-        within(card).getByRole('link', { name: new RegExp(tier.cta.label, 'i') }),
+        within(card!).getByRole('link', { name: new RegExp(tier.cta.label, 'i') }),
       ).toHaveAttribute('href', tier.cta.href);
     }
-
-    // Published prices render verbatim from the content module.
-    expect(byName('Free').querySelector('.amount')).toHaveTextContent('$0');
-    expect(byName('Starter').querySelector('.amount')).toHaveTextContent('$49');
-    expect(byName('Pro').querySelector('.amount')).toHaveTextContent('$149');
-    expect(byName('Enterprise').querySelector('.amount')).toHaveTextContent('Custom');
 
     // No unfinished placeholder may reach the page.
     expect(container.textContent).not.toMatch(/TODO\(user\)/);
 
-    // The highlighted tier is the featured card.
-    expect(byName('Pro')).toHaveClass('popular');
+    // Exactly one recommended tier, and it is the module's highlighted one.
+    const highlighted = container.querySelectorAll('[data-tier][data-highlighted="true"]');
+    expect(highlighted).toHaveLength(1);
+    expect(highlighted[0]).toHaveAttribute(
+      'data-tier',
+      PRICING_TIERS.find((tier) => tier.highlighted)!.key,
+    );
   });
 
-  it('renders the comparison table with the Pro column and the grounded dimensions', () => {
-    render(<Page />);
+  it('renders the comparison table with the grounded dimensions', () => {
+    const { container } = render(<Page />);
 
-    // Column headers come from the tier module; Pro is the highlighted column.
     for (const tier of PRICING_TIERS) {
       expect(screen.getByRole('columnheader', { name: tier.name })).toBeInTheDocument();
     }
-    expect(screen.getByRole('columnheader', { name: 'Pro' })).toHaveClass('hl');
+    expect(container.querySelector('th[data-highlighted="true"]')).toHaveTextContent('Pro');
 
     // One header row + one body row per module dimension, each addressable.
     expect(screen.getAllByRole('row')).toHaveLength(1 + PRICING_TABLE_ROWS.length);
@@ -79,35 +74,27 @@ describe('Pricing page (public marketing `/pricing`)', () => {
     expect(within(monitoredRow).getByText('1,000 URLs')).toBeInTheDocument();
   });
 
-  it('renders the BYOK trust strip', () => {
+  it('states the BYOK trust claims in the hero', () => {
     render(<Page />);
 
-    const strip = screen.getByRole('region', { name: /bring your own keys/i });
-    expect(within(strip).getByText(/bring your own api keys/i)).toBeInTheDocument();
-    expect(within(strip).getByText(/encrypted at rest/i)).toBeInTheDocument();
+    // getAllByText: "encrypted at rest" also appears in a tier's feature list,
+    // which is fine — the claim just has to be stated up front too.
+    expect(screen.getAllByText(/bring your own api keys/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/encrypted at rest/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/no llm-as-judge scoring/i).length).toBeGreaterThan(0);
   });
 
-  it('links the FAQ teaser to /faq', () => {
-    render(<Page />);
-
-    const teaser = screen.getByRole('region', { name: 'FAQ' });
-    expect(within(teaser).getByRole('link', { name: /read the faq/i })).toHaveAttribute(
-      'href',
-      '/faq',
-    );
-  });
-
-  it('closes with CTAs to registration and the Enterprise page', () => {
+  it('closes with the demo-first CTA and a route into the FAQ', () => {
     render(<Page />);
 
     const finalCta = screen.getByRole('region', { name: 'Get started' });
-    expect(within(finalCta).getByRole('link', { name: /get started/i })).toHaveAttribute(
+    expect(within(finalCta).getByRole('link', { name: /book a demo/i })).toHaveAttribute(
       'href',
-      '/register',
+      DEMO_HREF,
     );
-    expect(within(finalCta).getByRole('link', { name: /explore enterprise/i })).toHaveAttribute(
+    expect(within(finalCta).getByRole('link', { name: /read the faq/i })).toHaveAttribute(
       'href',
-      '/enterprise',
+      '/faq',
     );
   });
 });

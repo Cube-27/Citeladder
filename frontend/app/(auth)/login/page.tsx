@@ -4,21 +4,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 
-import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/marketing/primitives/button';
+import { MktAlert, MktField, MktInput } from '@/components/marketing/primitives/field';
 import { authApi } from '@/lib/api/auth';
 import { authErrorMessage, loginFormSchema, type LoginFormValues } from '@/lib/auth/forms';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 /**
- * Login page (F4). react-hook-form + zod client validation; on success the
- * `me` cache is primed and the user is routed directly to `/onboarding` (no
+ * Login page. react-hook-form + zod client validation; on success the `me`
+ * cache is primed and the user is routed directly to `/onboarding` (no
  * projects yet) or `/visibility` — no marketing-landing bounce. Email is the
  * only sign-in path for now; the OAuth buttons stay in
  * `components/auth/oauth-buttons.tsx` until the backend providers are
- * configured. Any `ApiError` surfaces inline in a danger alert above the form.
+ * configured. Any `ApiError` surfaces inline above the form.
+ *
+ * No card wrapper: on a split screen the form column IS the surface, so
+ * boxing the form would put a border around a border.
  */
 export default function LoginPage() {
   const {
@@ -35,20 +36,18 @@ export default function LoginPage() {
   );
 
   const onSubmit = handleSubmit(submit);
+  const pending = isSubmitting || mutation.isPending;
 
   return (
     <div className="grid gap-6">
-      {/* The card wrapper is gone. On a split screen the form column IS the
-          surface — boxing it inside a panel put a border around a border and
-          shrank the fields for no reason. */}
-      <h1 className="text-foreground text-2xl font-semibold tracking-[-0.02em]">Sign in</h1>
+      <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">Sign in</h1>
 
-      {mutation.isError ? <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert> : null}
+      {mutation.isError ? <MktAlert>{authErrorMessage(mutation.error)}</MktAlert> : null}
 
       <form noValidate onSubmit={onSubmit} className="grid gap-4">
-        <Field label="Email" required error={errors.email?.message}>
+        <MktField label="Email" required error={errors.email?.message}>
           {(props) => (
-            <Input
+            <MktInput
               {...props}
               {...register('email')}
               type="email"
@@ -56,11 +55,11 @@ export default function LoginPage() {
               placeholder="you@company.com"
             />
           )}
-        </Field>
+        </MktField>
 
-        <Field label="Password" required error={errors.password?.message}>
+        <MktField label="Password" required error={errors.password?.message}>
           {(props) => (
-            <Input
+            <MktInput
               {...props}
               {...register('password')}
               type="password"
@@ -68,21 +67,16 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
           )}
-        </Field>
+        </MktField>
 
-        <Button
-          type="submit"
-          size="lg"
-          className="mt-1 w-full"
-          disabled={isSubmitting || mutation.isPending}
-        >
-          {isSubmitting || mutation.isPending ? 'Signing in…' : 'Sign in'}
+        <Button type="submit" className="mt-1 w-full" disabled={pending}>
+          {pending ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
 
-      <p className="border-border-subtle text-secondary border-t pt-5 text-sm">
+      <p className="border-mkt-line text-mkt-sm text-mkt-ink-soft border-t pt-5">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="focus-ring text-accent-text rounded-sm font-medium">
+        <Link href="/register" className="text-mkt-proof-text font-semibold">
           Create one
         </Link>
       </p>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist_Mono, Inter } from 'next/font/google';
+import { Geist_Mono, Inter, Manrope } from 'next/font/google';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
@@ -24,6 +24,17 @@ const mono = Geist_Mono({
   display: 'swap',
 });
 
+// Display face for the marketing/auth "Proof" system ONLY — consumed via
+// --font-mkt-display in app/(marketing)/marketing-theme.css. The app's own
+// --font-display-family still resolves to Inter; nothing inside (app)
+// renders Manrope.
+const display = Manrope({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-manrope',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Searchify',
   description: 'AI visibility analytics — see how LLMs represent your brand.',
@@ -31,7 +42,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable} ${display.variable}`}
+    >
       <head>
         {/* Pre-hydration theme bootstrap — sets data-theme before first paint
             to avoid a flash (see lib/theme.ts). Must run before hydration. */}

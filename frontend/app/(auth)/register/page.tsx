@@ -4,16 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 
-import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/marketing/primitives/button';
+import { MktAlert, MktField, MktInput } from '@/components/marketing/primitives/field';
 import { authApi } from '@/lib/api/auth';
 import { authErrorMessage, registerFormSchema, type RegisterFormValues } from '@/lib/auth/forms';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 /**
- * Register page (F4). Mirrors the login page: react-hook-form + zod client
+ * Register page. Mirrors the login page: react-hook-form + zod client
  * validation (with a confirm-password match rule), inline `ApiError`, and — on
  * success — priming the `me` cache and routing straight to `/onboarding` (no
  * projects yet) or `/visibility`. Email is the only sign-up path for now; the
@@ -35,20 +33,18 @@ export default function RegisterPage() {
   );
 
   const onSubmit = handleSubmit(submit);
+  const pending = isSubmitting || mutation.isPending;
 
   return (
     <div className="grid gap-6">
-      {/* No subhead, and no card wrapper — see the notes on the login page. */}
-      <h1 className="text-foreground text-2xl font-semibold tracking-[-0.02em]">
-        Create your account
-      </h1>
+      <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">Create your account</h1>
 
-      {mutation.isError ? <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert> : null}
+      {mutation.isError ? <MktAlert>{authErrorMessage(mutation.error)}</MktAlert> : null}
 
       <form noValidate onSubmit={onSubmit} className="grid gap-4">
-        <Field label="Email" required error={errors.email?.message}>
+        <MktField label="Email" required error={errors.email?.message}>
           {(props) => (
-            <Input
+            <MktInput
               {...props}
               {...register('email')}
               type="email"
@@ -56,11 +52,11 @@ export default function RegisterPage() {
               placeholder="you@company.com"
             />
           )}
-        </Field>
+        </MktField>
 
-        <Field label="Password" required error={errors.password?.message}>
+        <MktField label="Password" required error={errors.password?.message}>
           {(props) => (
-            <Input
+            <MktInput
               {...props}
               {...register('password')}
               type="password"
@@ -68,11 +64,11 @@ export default function RegisterPage() {
               placeholder="At least 8 characters"
             />
           )}
-        </Field>
+        </MktField>
 
-        <Field label="Confirm password" required error={errors.confirmPassword?.message}>
+        <MktField label="Confirm password" required error={errors.confirmPassword?.message}>
           {(props) => (
-            <Input
+            <MktInput
               {...props}
               {...register('confirmPassword')}
               type="password"
@@ -80,21 +76,16 @@ export default function RegisterPage() {
               placeholder="Re-enter your password"
             />
           )}
-        </Field>
+        </MktField>
 
-        <Button
-          type="submit"
-          size="lg"
-          className="mt-1 w-full"
-          disabled={isSubmitting || mutation.isPending}
-        >
-          {isSubmitting || mutation.isPending ? 'Creating account…' : 'Create account'}
+        <Button type="submit" className="mt-1 w-full" disabled={pending}>
+          {pending ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
 
-      <p className="border-border-subtle text-secondary border-t pt-5 text-sm">
+      <p className="border-mkt-line text-mkt-sm text-mkt-ink-soft border-t pt-5">
         Already have an account?{' '}
-        <Link href="/login" className="focus-ring text-accent-text rounded-sm font-medium">
+        <Link href="/login" className="text-mkt-proof-text font-semibold">
           Sign in
         </Link>
       </p>

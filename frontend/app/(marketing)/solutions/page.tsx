@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 
-import { SolutionsSections } from '@/components/marketing/solutions';
+import {
+  SolutionSegments,
+  SolutionsCta,
+  SolutionsHero,
+} from '@/components/marketing/pages/solutions';
 
 const DESCRIPTION =
   'How agencies, in-house marketers, founders, and PR teams use Searchify: multi-project ' +
@@ -27,10 +31,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public marketing solutions page (`/solutions`). Server-rendered so the full
- * page is in the initial HTML (SEO + first paint); the page renders no client
- * islands of its own — the shared chrome (aurora/grain backdrop, LandingNav,
- * LandingFooter) lives in the (marketing) route-group layout.
+ * Public solutions page (`/solutions`). Server-rendered with no client islands
+ * of its own — the shared chrome lives in the (marketing) route-group layout.
  *
  * Must stay a SYNC component (no async / headers() / cookies()) so the page
  * test can render it directly under Testing Library.
@@ -38,7 +40,9 @@ export const metadata: Metadata = {
 export default function SolutionsPage() {
   return (
     <main>
-      <SolutionsSections />
+      <SolutionsHero />
+      <SolutionSegments />
+      <SolutionsCta />
     </main>
   );
 }

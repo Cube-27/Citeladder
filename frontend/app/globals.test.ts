@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const here = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(here, 'globals.css'), 'utf8');
 const design = readFileSync(join(here, '..', '..', 'docs', 'design.md'), 'utf8');
-const marketingCss = readFileSync(join(here, '(marketing)', 'marketing.css'), 'utf8');
+const marketingCss = readFileSync(join(here, '(marketing)', 'marketing-theme.css'), 'utf8');
 
 /* ═══════════════════════════════════════════════════════════════════════
    Parsing + WCAG helpers
@@ -402,10 +402,10 @@ describe('authored dark theme (warm-charcoal dusk, never near-black)', () => {
     ).toBeGreaterThanOrEqual(panel);
   });
 
-  // The app's dark theme shares marketing's dusk identity (owner decision),
-  // so its accent is the deck violet — deliberately a different hue from the
-  // light theme's Figma royal blue. Guarding the violet band keeps a future
-  // edit from silently drifting back to blue or off into magenta.
+  // The dark theme's accent is the warm-charcoal system's violet —
+  // deliberately a different hue from the light theme's Figma royal blue.
+  // Guarding the violet band keeps a future edit from silently drifting back
+  // to blue or off into magenta.
   it('keeps the dark accent in the dusk violet family', () => {
     const hue = hueDegrees(opaqueColor('accent', darkTokens));
     expect(hue, `dark accent hue ${hue.toFixed(1)}° outside dusk violet family`).toBeGreaterThan(
@@ -414,8 +414,11 @@ describe('authored dark theme (warm-charcoal dusk, never near-black)', () => {
     expect(hue).toBeLessThan(265);
   });
 
-  it('shares the dusk surface ramp with the marketing deck', () => {
-    // The deck's warm charcoals — app and marketing must not drift apart.
+  it('pins the authored warm-charcoal dark ramp', () => {
+    // These values are the app's own dark identity. They were originally
+    // shared with the marketing surface; marketing has since moved to the
+    // light-only "Proof" system, so the app owns them outright — pinning them
+    // keeps that migration from quietly dragging the app along with it.
     expect(opaqueColor('bg-base', darkTokens)).toMatchObject(hexToRgb('#262522'));
     expect(opaqueColor('bg-panel', darkTokens)).toMatchObject(hexToRgb('#2C2B28'));
     expect(opaqueColor('bg-elevated', darkTokens)).toMatchObject(hexToRgb('#353430'));
@@ -459,20 +462,49 @@ describe.each([
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   5. Marketing creative system (app/(marketing)/marketing.css)
-   The .mkt system is independent of the app tokens. The dusk palette
-   lands with the marketing rewrite (plan task 7); until marketing.css
-   declares the dusk canvas (#1F1E1B) the pair checks stay gated. The
-   documented carve-outs are value-based so token naming stays free:
-   #7B6CF6 (4.22:1), #B34FE0 (4.06:1), #7F7B70 (3.94:1) are display/
-   decorative-only roles on the dusk canvas — never body text.
-═══════════════════════════════════════════════════════════════════════ */
-const DUSK_CANVAS = '#1F1E1B';
-const MKT_BODY_COLORS = ['#F4F2EB', '#B4B0A4', '#9C92FF', '#46D69C', '#FCA87A', '#C9B8FD'];
-const MKT_DISPLAY_ONLY_COLORS = ['#7B6CF6', '#B34FE0', '#7F7B70'];
+   5. Marketing + auth creative system — the "Proof" contract
+   (app/(marketing)/marketing-theme.css)
 
-describe('marketing creative system (.mkt dusk contract)', () => {
-  it('design.md documents the dusk canvas and the display/decorative carve-outs', () => {
+   Proof is light-only and independent of the app tokens: a warm paper
+   canvas, exact ink, and four state hues that are rationed to states,
+   provider identity and evidence marks.
+
+   The rule this suite enforces is the one the deck itself kept breaking:
+   a hue used as a FILL is not automatically legible as TEXT. Every state
+   hue therefore ships in two forms — the mark (≥ 3:1, decorative) and the
+   `-text` variant (≥ 4.5:1, safe for body copy). The deck's own values
+   (#0A8F6A 3.7:1, #E95D39 3.2:1, #C98616 2.8:1, muted #737973 4.1:1) all
+   failed as text, which is why the `-text` forms exist at all.
+
+   Ratios are computed against the paper canvas — the lightest surface the
+   surface ever paints text on, so passing here passes on white too.
+═══════════════════════════════════════════════════════════════════════ */
+const PROOF_PAPER = '#F5F5F0';
+
+/** Text roles: must clear AA (4.5:1) on paper. */
+const PROOF_TEXT_COLORS = [
+  '#151715', // ink
+  '#454A46', // ink-soft — body copy
+  '#656B65', // ink-muted — meta, captions
+  '#1257C4', // proof-text — links, active labels
+  '#087354', // evidence-text — "verified"
+  '#B23A1A', // signal-text — decline, refusals
+  '#8A5D0F', // amber-text — "needs review"
+];
+
+/**
+ * Mark/fill roles: ≥ 3:1 so a 2px dot or bar stays visible, but explicitly
+ * NEVER body text. Each one has a `-text` sibling above for that job.
+ */
+const PROOF_MARK_COLORS = [
+  '#1668E8', // proof
+  '#0A8F6A', // evidence
+  '#E95D39', // signal
+  '#BE7D12', // amber
+];
+
+describe('marketing + auth creative system (the Proof contract)', () => {
+  it('design.md documents the paper canvas and the mark/text split', () => {
     const marketingSection = design
       .split(/^## /m)
       .find((s) => /^(?:\d+[.:]?\s+)?marketing creative system/i.test(s.trim()));
@@ -480,31 +512,43 @@ describe('marketing creative system (.mkt dusk contract)', () => {
       marketingSection,
       'design.md is missing the marketing creative-system section',
     ).toBeTruthy();
-    expect(marketingSection).toContain(DUSK_CANVAS);
-    for (const color of MKT_DISPLAY_ONLY_COLORS) {
-      expect(marketingSection, `${color} carve-out undocumented`).toContain(color);
+    expect(marketingSection).toContain(PROOF_PAPER);
+    for (const color of PROOF_MARK_COLORS) {
+      expect(marketingSection, `${color} mark role undocumented`).toContain(color);
     }
-    expect(marketingSection?.toLowerCase()).toMatch(/display|decorative/);
+    expect(marketingSection?.toLowerCase()).toMatch(/mark|fill/);
   });
 
-  const duskPresent = marketingCss.toLowerCase().includes(DUSK_CANVAS.toLowerCase());
-  const duskDescribe = duskPresent ? describe : describe.skip;
-  duskDescribe('dusk palette pairs (gated on the task-7 token rewrite landing)', () => {
-    const canvas = { ...hexToRgb(DUSK_CANVAS), a: 1 };
+  it('is light-only: the retired dusk canvas is gone from the token file', () => {
+    // Proof replaced the dark Signal/Dusk marketing identity outright. A dusk
+    // value reappearing here means the two systems are being mixed again.
+    expect(marketingCss.toLowerCase()).not.toContain('#1f1e1b');
+    expect(marketingCss.toLowerCase()).not.toContain('#262522');
+  });
 
-    it.each(MKT_BODY_COLORS)('body color %s on the dusk canvas ≥ 4.5:1', (color) => {
-      expect(marketingCss.toLowerCase()).toContain(color.toLowerCase());
-      const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
-      expect(ratio, `${color} on ${DUSK_CANVAS} = ${FMT(ratio)}:1`).toBeGreaterThanOrEqual(4.5);
-    });
+  const canvas = { ...hexToRgb(PROOF_PAPER), a: 1 };
 
-    it.each(MKT_DISPLAY_ONLY_COLORS)(
-      'display/decorative-only %s on the dusk canvas ≥ 3:1 (carve-out, never body text)',
-      (color) => {
-        expect(marketingCss.toLowerCase()).toContain(color.toLowerCase());
-        const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
-        expect(ratio, `${color} on ${DUSK_CANVAS} = ${FMT(ratio)}:1`).toBeGreaterThanOrEqual(3);
-      },
+  it.each(PROOF_TEXT_COLORS)('text color %s on paper ≥ 4.5:1', (color) => {
+    expect(marketingCss.toLowerCase(), `${color} is not declared`).toContain(color.toLowerCase());
+    const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
+    expect(ratio, `${color} on ${PROOF_PAPER} = ${FMT(ratio)}:1 (< 4.5:1)`).toBeGreaterThanOrEqual(
+      4.5,
     );
+  });
+
+  it.each(PROOF_MARK_COLORS)('mark/fill %s on paper ≥ 3:1 (never body text)', (color) => {
+    expect(marketingCss.toLowerCase(), `${color} is not declared`).toContain(color.toLowerCase());
+    const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
+    expect(ratio, `${color} on ${PROOF_PAPER} = ${FMT(ratio)}:1 (< 3:1)`).toBeGreaterThanOrEqual(3);
+  });
+
+  it('gives every state hue an AA-safe text sibling', () => {
+    // Structural, not cosmetic: a hue with no `-text` form is one a future
+    // section will inevitably use for copy, and it will fail AA silently.
+    for (const role of ['proof', 'evidence', 'signal', 'amber']) {
+      expect(marketingCss, `--color-mkt-${role} has no -text sibling`).toMatch(
+        new RegExp(`--color-mkt-${role}-text\\s*:`),
+      );
+    }
   });
 });

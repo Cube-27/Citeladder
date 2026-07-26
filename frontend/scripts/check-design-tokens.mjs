@@ -8,10 +8,10 @@
  * is the source of truth for VALUES, design.md for the NAME SET.
  *
  * v2 redesign (P1 — Figma token port): the guard now also scans
- * app/(marketing)/marketing.css — the independent marketing creative
+ * app/(marketing)/marketing-theme.css — the independent marketing creative
  * system's `--mkt-*` namespace (docs/design.md §"Marketing creative
  * system"). App tokens are checked against globals.css; marketing tokens
- * against marketing.css.
+ * against marketing-theme.css.
  *
  * Run: node scripts/check-design-tokens.mjs
  */
@@ -20,14 +20,14 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 const cssPath = join(root, 'app', 'globals.css');
-const mktCssPath = join(root, 'app', '(marketing)', 'marketing.css');
+const mktCssPath = join(root, 'app', '(marketing)', 'marketing-theme.css');
 
 if (!existsSync(cssPath)) {
   console.error('check-design-tokens: app/globals.css is missing.');
   process.exit(1);
 }
 if (!existsSync(mktCssPath)) {
-  console.error('check-design-tokens: app/(marketing)/marketing.css is missing.');
+  console.error('check-design-tokens: app/(marketing)/marketing-theme.css is missing.');
   process.exit(1);
 }
 const css = readFileSync(cssPath, 'utf8');
@@ -310,21 +310,51 @@ const requiredBridged = [
   'color-score-high',
 ];
 
-// Marketing creative-system tokens (the `--mkt-*` namespace) that MUST be
-// declared in app/(marketing)/marketing.css — the .mkt contract documented
-// in docs/design.md ("Marketing creative system"). Palette VALUES are
-// rewritten to dusk in plan task 7; these structural/core names are the
-// stable contract.
+// Marketing/auth "Proof" tokens that MUST be declared in
+// app/(marketing)/marketing-theme.css — the contract documented in
+// docs/design.md ("Marketing creative system"). These are Tailwind `@theme`
+// keys, so each one also has to keep generating its utility: renaming any of
+// them silently drops classes across the whole marketing surface, which is
+// exactly the failure this guard exists to catch.
 const requiredMktVars = [
-  'mkt-font-display',
-  'mkt-font-sans',
-  'mkt-font-mono',
-  'mkt-container',
-  'mkt-gutter',
-  'mkt-nav-h',
-  'mkt-bg',
-  'mkt-text',
-  'mkt-accent',
+  // Type — two faces, eight steps
+  'font-mkt-display',
+  'font-mkt-sans',
+  'text-mkt-d1',
+  'text-mkt-d2',
+  'text-mkt-d3',
+  'text-mkt-d4',
+  'text-mkt-lead',
+  'text-mkt-body',
+  'text-mkt-sm',
+  'text-mkt-meta',
+  // Canvas + ink
+  'color-mkt-paper',
+  'color-mkt-surface',
+  'color-mkt-ink',
+  'color-mkt-ink-soft',
+  'color-mkt-ink-muted',
+  'color-mkt-line',
+  // State hues, each with its AA-safe text form
+  'color-mkt-proof',
+  'color-mkt-proof-text',
+  'color-mkt-evidence',
+  'color-mkt-evidence-text',
+  'color-mkt-signal',
+  'color-mkt-signal-text',
+  'color-mkt-amber',
+  'color-mkt-amber-text',
+  // Scene surface (the wallpaper and the glass windows on it)
+  'color-mkt-sky',
+  'color-mkt-glass',
+  'color-mkt-slate',
+  // Shape, layout, motion
+  'radius-mkt-sm',
+  'radius-mkt-lg',
+  'container-mkt',
+  'spacing-mkt-gutter',
+  'spacing-mkt-nav',
+  'ease-mkt-out',
 ];
 
 const missing = [];
@@ -358,7 +388,7 @@ for (const name of requiredMktVars) {
 
 if (missingMkt.length) {
   console.error(
-    `Design-token guard failed: ${missingMkt.length} marketing token(s) are missing from app/(marketing)/marketing.css:`,
+    `Design-token guard failed: ${missingMkt.length} marketing token(s) are missing from app/(marketing)/marketing-theme.css:`,
   );
   for (const m of missingMkt) console.error(`- ${m}`);
   process.exit(1);
@@ -367,5 +397,5 @@ if (missingMkt.length) {
 console.log(
   `design-token guard: OK (${
     requiredVars.length + requiredTypeScale.length + requiredBridged.length
-  } app tokens in globals.css, ${requiredMktVars.length} marketing tokens in marketing.css)`,
+  } app tokens in globals.css, ${requiredMktVars.length} marketing tokens in marketing-theme.css)`,
 );

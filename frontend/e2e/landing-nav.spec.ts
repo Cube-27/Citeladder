@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+/** Item counts come from lib/marketing-content/nav.ts. */
 const DROPS = [
-  { key: 'product', count: 9 },
-  { key: 'resources', count: 3 },
+  { key: 'platform', count: 9 },
   { key: 'solutions', count: 4 },
+  { key: 'resources', count: 3 },
 ] as const;
 
 test.describe('marketing navigation (real-engine CSS contract)', () => {
@@ -11,8 +12,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await page.goto('/');
 
     for (const { key, count } of DROPS) {
-      // Each trigger controls its own panel, nested inside its .nav-item so the
-      // menu items stay reachable when focus moves into them.
       const trigger = page.locator(`button[aria-controls="desktop-nav-panel-${key}"]`);
       const panel = page.locator(`#desktop-nav-panel-${key}`);
 
@@ -49,31 +48,35 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(menu).toBeHidden();
   });
 
-  test('marketing keeps its fixed dusk identity independent of the app theme', async ({ page }) => {
+  test('marketing keeps its fixed light Proof identity, whatever the app theme', async ({
+    page,
+  }) => {
     await page.goto('/');
+    // Proof is light-only, so there is deliberately no toggle to offer.
     await expect(page.getByRole('button', { name: 'Toggle color theme' })).toHaveCount(0);
-    await expect(page.locator('.mkt')).toHaveCSS('color-scheme', 'dark');
+    await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+
+    // Even with dark explicitly stored by the app, the public surface stays paper.
+    await page.evaluate(() => window.localStorage.setItem('searchify-theme', 'dark'));
+    await page.reload();
+    await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
   });
 
-  test('mobile evidence rows flow inline without overlap', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+  test('nav gains its scrolled state after scrolling', async ({ page }) => {
     await page.goto('/');
-    const row = page.locator('.mkt .evidence-row').first();
-    const engine = await row.locator('.ev-engine').boundingBox();
-    const badge = await row.locator('.badge').boundingBox();
-    expect(engine).not.toBeNull();
-    expect(badge).not.toBeNull();
-    expect(Math.abs((engine as { y: number }).y - (badge as { y: number }).y)).toBeLessThan(4);
-    expect(
-      (engine as { x: number; width: number }).x + (engine as { width: number }).width,
-    ).toBeLessThanOrEqual((badge as { x: number }).x);
-  });
-
-  test('nav gains the scrolled class after scrolling', async ({ page }) => {
-    await page.goto('/');
-    const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav).not.toHaveClass(/scrolled/);
+    await expect(page.locator('[data-scrolled="true"]')).toHaveCount(0);
     await page.mouse.wheel(0, 600);
-    await expect(nav).toHaveClass(/scrolled/);
+    await expect(page.locator('[data-scrolled="true"]')).toHaveCount(1);
+  });
+
+  test('the page body never scrolls sideways at 375px', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const path of ['/', '/pricing', '/solutions', '/enterprise', '/faq', '/compare']) {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${path} overflows horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
+    }
   });
 });

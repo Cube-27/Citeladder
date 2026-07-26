@@ -52,7 +52,8 @@ describe('FAQ page (public marketing `/faq`)', () => {
 
     for (const [index, group] of FAQ_GROUPS.entries()) {
       // Accessible name is "<heading> <count>", e.g. "Privacy & keys 3".
-      expect(links[index]).toHaveTextContent(`${group.heading} ${group.items.length}`);
+      expect(links[index]).toHaveTextContent(group.heading);
+      expect(links[index]).toHaveTextContent(String(group.items.length));
       // Each rail anchor resolves to the matching group section on the page.
       const href = links[index].getAttribute('href');
       expect(href).toMatch(/^#faq-/);
@@ -65,8 +66,8 @@ describe('FAQ page (public marketing `/faq`)', () => {
     const { container } = render(<Page />);
 
     // One <details>/<summary> pair per module item — zero client JS.
-    expect(container.querySelectorAll('details.faq-item')).toHaveLength(TOTAL_ITEMS);
-    expect(container.querySelectorAll('summary.faq-q')).toHaveLength(TOTAL_ITEMS);
+    expect(container.querySelectorAll('details')).toHaveLength(TOTAL_ITEMS);
+    expect(container.querySelectorAll('summary')).toHaveLength(TOTAL_ITEMS);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
     // Every question and answer string from the module is rendered. Answers

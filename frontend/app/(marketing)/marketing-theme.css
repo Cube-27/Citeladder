@@ -1,0 +1,318 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Searchify "Proof" — marketing + auth creative system
+   Source of truth: docs/redesign/designs/searchify-brand-deck.html
+
+   This file is the ONLY place marketing hex lives, and it is deliberately
+   small. It holds two things:
+
+     1. An `@theme` block that registers `mkt-`namespaced design tokens with
+        Tailwind v4, so every marketing surface is built from utilities
+        (`bg-mkt-paper`, `text-mkt-ink-soft`, `rounded-mkt-lg`, …).
+     2. The handful of bespoke scene rules utilities genuinely cannot express
+        — the wallpaper field, SVG stroke choreography, keyframes.
+
+   It is imported by app/globals.css (NOT by the marketing layout) because
+   Tailwind v4 generates utilities from a single `@import 'tailwindcss'`
+   graph; a second import would duplicate preflight and the whole utility
+   layer. Unused `@theme` values are tree-shaken, so app routes pay nothing.
+
+   RULE THAT KEEPS THIS FILE SMALL: a new marketing section composes
+   primitives + utilities. If it needs new CSS here, that is a missing
+   primitive in components/marketing/primitives/, not a new rule.
+   A 400-line budget is enforced by scripts/check-frontend-architecture.mjs.
+═══════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ─── Type ────────────────────────────────────────────────────────────
+     Two faces, one voice: Manrope carries display, Inter carries UI and
+     data. There is no mono face — the deck's `--mono: Inter` was a smell.
+     "Meta" (uppercase, tracked-out, tabular) is a STYLE, not a family. */
+  --font-mkt-display: var(--font-manrope), 'Manrope', 'Helvetica Neue', Arial, sans-serif;
+  --font-mkt-sans: var(--font-sans), 'Inter', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Eight steps, no ad-hoc sizes. Tracking tightens as size grows, which is
+     what makes large Manrope read as typography rather than as big text. */
+  --text-mkt-d1: clamp(2.9rem, 6.2vw, 5.25rem);
+  --text-mkt-d1--line-height: 0.96;
+  --text-mkt-d1--letter-spacing: -0.055em;
+  --text-mkt-d2: clamp(2.25rem, 4.2vw, 3.75rem);
+  --text-mkt-d2--line-height: 1;
+  --text-mkt-d2--letter-spacing: -0.045em;
+  --text-mkt-d3: clamp(1.75rem, 2.6vw, 2.25rem);
+  --text-mkt-d3--line-height: 1.08;
+  --text-mkt-d3--letter-spacing: -0.035em;
+  --text-mkt-d4: 1.5rem;
+  --text-mkt-d4--line-height: 1.15;
+  --text-mkt-d4--letter-spacing: -0.03em;
+  --text-mkt-lead: clamp(1.0625rem, 1.4vw, 1.3125rem);
+  --text-mkt-lead--line-height: 1.55;
+  --text-mkt-lead--letter-spacing: -0.015em;
+  --text-mkt-body: 0.9375rem;
+  --text-mkt-body--line-height: 1.6;
+  --text-mkt-sm: 0.8125rem;
+  --text-mkt-sm--line-height: 1.5;
+  --text-mkt-meta: 0.6875rem;
+  --text-mkt-meta--line-height: 1.4;
+  --text-mkt-meta--letter-spacing: 0.09em;
+
+  /* ─── Colour ──────────────────────────────────────────────────────────
+     Paper and ink carry the page; the four state hues are rationed to
+     states, provider identity and evidence marks — never to headlines.
+     Every `-text` variant is the AA-safe form of its hue: the deck's own
+     values (#0A8F6A 3.7:1, #E95D39 3.2:1, #C98616 2.8:1, muted #737973
+     4.1:1) fail as body text and are fills/marks only. Ratios in the
+     comments are against --mkt-paper and are asserted in globals.test.ts. */
+  --color-mkt-paper: #f5f5f0; /* page canvas */
+  --color-mkt-paper-raised: #fbfbf8; /* inset fields, table headers */
+  --color-mkt-surface: #ffffff; /* panels */
+  --color-mkt-surface-sunk: #ecece6;
+  --color-mkt-ink: #151715; /* 16.5:1 */
+  --color-mkt-ink-soft: #454a46; /* 8.3:1 — body copy */
+  --color-mkt-ink-muted: #656b65; /* 5.0:1 — meta, captions */
+  --color-mkt-line: #d8d9d2;
+  --color-mkt-line-strong: #afb2aa;
+
+  --color-mkt-proof: #1668e8; /* mark / fill */
+  --color-mkt-proof-text: #1257c4; /* 6.0:1 — links, active labels */
+  --color-mkt-proof-soft: #dbe9ff;
+  --color-mkt-proof-wash: #edf4ff;
+  --color-mkt-proof-line: #a9c7f5;
+  --color-mkt-evidence: #0a8f6a; /* mark / fill */
+  --color-mkt-evidence-text: #087354; /* 5.4:1 — "verified" */
+  --color-mkt-evidence-soft: #eff9f5;
+  --color-mkt-evidence-line: #a4d8c7;
+  --color-mkt-signal: #e95d39; /* mark / fill */
+  --color-mkt-signal-text: #b23a1a; /* 5.5:1 — decline, "avoid" */
+  --color-mkt-signal-soft: #fdeee9;
+  --color-mkt-signal-line: #f3c3b2;
+  /* Darkened from the deck's #C98616, which sat at 2.78:1 on paper — below
+     the 3:1 floor even for a dot, so a "needs review" mark could vanish. */
+  --color-mkt-amber: #be7d12; /* mark / fill */
+  --color-mkt-amber-text: #8a5d0f; /* 5.3:1 — "needs review" */
+  --color-mkt-amber-soft: #fcf7ed;
+  --color-mkt-amber-line: #e7cca0;
+
+  /* Scene palette — the wallpaper field and the glass windows on top of it.
+     Glass alpha is pinned at 0.92+ so the composite stays near #F4F7FB and
+     the slate ink below keeps its measured ratio. The deck drifted between
+     0.68 and 0.94, which is why its scene text read as washed out. */
+  --color-mkt-sky: #cbdaf1; /* wallpaper base (deck called this "night") */
+  --color-mkt-glass: rgb(255 255 255 / 0.92);
+  --color-mkt-glass-soft: rgb(255 255 255 / 0.72);
+  --color-mkt-glass-line: rgb(76 99 129 / 0.22);
+  --color-mkt-glass-edge: rgb(255 255 255 / 0.5);
+  --color-mkt-slate: #425269; /* 7.4:1 on glass — scene primary */
+  --color-mkt-slate-soft: #55637a; /* 5.7:1 on glass — scene meta */
+  --color-mkt-accent-display: #275f9f; /* display accent — never body copy */
+
+  /* Provider identity — the one place colour is allowed to mean "brand"
+     rather than "state". Marks and 20px tiles only; never text on paper. */
+  --color-mkt-engine-openai: #1f2421;
+  --color-mkt-engine-claude: #d97757;
+  --color-mkt-engine-gemini: #4285f4;
+  --color-mkt-engine-perplexity: #159e92;
+  --color-mkt-engine-grok: #313633;
+  --color-mkt-engine-copilot: #1e73be;
+
+  /* ─── Shape ───────────────────────────────────────────────────────────
+     Six radii, full stop. The deck used fifteen. */
+  --radius-mkt-xs: 6px;
+  --radius-mkt-sm: 10px;
+  --radius-mkt-md: 14px;
+  --radius-mkt-lg: 20px;
+  --radius-mkt-xl: 28px;
+  --radius-mkt-pill: 999px;
+
+  /* ─── Elevation ── three levels; scenes get the one deep atmospheric drop. */
+  --shadow-mkt-raised: 0 1px 2px rgb(21 23 21 / 0.05), 0 8px 30px rgb(21 23 21 / 0.04);
+  --shadow-mkt-float: 0 20px 70px rgb(21 23 21 / 0.12), 0 2px 10px rgb(21 23 21 / 0.05);
+  --shadow-mkt-scene: 0 30px 80px rgb(50 71 103 / 0.2);
+  --shadow-mkt-glass: 0 18px 50px rgb(54 73 101 / 0.16);
+  --shadow-mkt-ink: 0 8px 24px rgb(21 23 21 / 0.14);
+
+  /* ─── Layout ── one container and one gutter for the whole surface. */
+  --container-mkt: 1240px;
+  --container-mkt-wide: 1440px;
+  --spacing-mkt-gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --spacing-mkt-nav: 72px;
+
+  /* ─── Motion ── 5/10. One easing pair, three durations. */
+  --ease-mkt-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-mkt-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  --animate-mkt-float: mkt-float 9s ease-in-out infinite;
+  --animate-mkt-pulse: mkt-pulse 2.6s ease-out infinite;
+  --animate-mkt-travel: mkt-travel 18s linear infinite;
+  --animate-mkt-draw: mkt-draw 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  --animate-mkt-breathe: mkt-breathe 10s ease-in-out infinite;
+  --animate-mkt-verify: mkt-verify 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes mkt-float {
+  50% {
+    transform: translateY(-11px);
+  }
+}
+
+@keyframes mkt-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(10 143 106 / 0.28);
+  }
+  55% {
+    box-shadow: 0 0 0 9px rgb(10 143 106 / 0);
+  }
+}
+
+@keyframes mkt-travel {
+  to {
+    stroke-dashoffset: -220;
+  }
+}
+
+@keyframes mkt-draw {
+  0%,
+  10% {
+    stroke-dashoffset: 440;
+  }
+  58%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes mkt-breathe {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes mkt-verify {
+  0%,
+  12% {
+    opacity: 0.34;
+    transform: translateX(-5px);
+  }
+  35%,
+  72% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0.34;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Scene rules — everything below is here because a utility cannot express
+   it (compositing the wallpaper, SVG stroke choreography, escaping the
+   app's unlayered element base). Nothing else belongs in this block.
+═══════════════════════════════════════════════════════════════════════ */
+
+/* The Proof surface is light-only and must ignore the app's `data-theme`.
+   globals.css paints html/body from --bg-base, which goes warm charcoal in
+   dark mode and would show through on overscroll. */
+html:has(.mkt-root),
+html:has(.mkt-root) body {
+  background-color: var(--color-mkt-paper);
+  color-scheme: light;
+}
+
+/* globals.css styles bare h1–h6/p UNLAYERED, so those declarations outrank
+   anything in Tailwind's @layer utilities. `revert-layer` rolls each
+   property back to the utility layer, which hands control to the classes on
+   the element (and to the UA default when no utility applies). Scoped to
+   the marketing/auth surface so the app's base styling is untouched. */
+.mkt-root :is(h1, h2, h3, h4, h5, h6),
+.mkt-root p {
+  font: revert-layer;
+  color: revert-layer;
+  line-height: revert-layer;
+  letter-spacing: revert-layer;
+  margin: revert-layer;
+}
+
+.mkt-root {
+  font-family: var(--font-mkt-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.mkt-root ::selection {
+  background: var(--color-mkt-proof-soft);
+  color: var(--color-mkt-ink);
+}
+
+.mkt-root :focus-visible {
+  outline: 2px solid var(--color-mkt-proof);
+  outline-offset: 3px;
+}
+
+/* Tabular numerals for every figure — the deck's "mono" role, done right. */
+.mkt-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'ss01';
+}
+
+/* The one recurring atmosphere: sky/coral/mint field behind product scenes,
+   auth brand panels and dark feature cards. */
+/* Stretched, not cropped: `cover` on a short wide band lands inside a single
+   blurred blob and the field reads as flat pale blue. Stretching keeps the
+   whole sky/coral/mint composition visible at every panel aspect — safe here
+   because the art is soft-edged by construction. */
+.mkt-wallpaper {
+  background-color: var(--color-mkt-sky);
+  background-image: url('/brand/wallpaper.svg');
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+/* Orbit field — dashed ellipses whose active ring travels, so the scene
+   reads as observation in progress rather than as decoration. */
+.mkt-orbit-line {
+  fill: none;
+  stroke: rgb(56 83 119 / 0.36);
+  stroke-width: 1;
+  stroke-dasharray: 5 8;
+}
+
+.mkt-orbit-line[data-active] {
+  stroke: rgb(39 95 159 / 0.7);
+  stroke-dasharray: 1 7;
+  stroke-linecap: round;
+}
+
+/* Trend lines draw themselves in, then hold long enough to be read. Paths
+   MUST carry pathLength="440" so the dash pattern spans exactly one line —
+   without it a longer path keeps a permanent gap and the trend looks cut off. */
+.mkt-chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 440;
+  stroke-dashoffset: 440;
+}
+
+/* Motion is never load-bearing: with reduced motion every scene holds its
+   finished state instead of freezing mid-animation. */
+@media (prefers-reduced-motion: reduce) {
+  .mkt-root *,
+  .mkt-root *::before,
+  .mkt-root *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  .mkt-chart-line {
+    stroke-dashoffset: 0;
+  }
+
+  /* Both of these spend part of their cycle dimmed, so collapsing the
+     duration would otherwise freeze them on whichever keyframe happened to
+     be last. Pin them to the finished, fully legible state instead. */
+  .animate-mkt-verify {
+    opacity: 1;
+    transform: none;
+  }
+}

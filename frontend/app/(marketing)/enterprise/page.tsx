@@ -6,7 +6,7 @@ import {
   EnterpriseLimits,
   EnterpriseOps,
   EnterpriseSelfHost,
-} from '@/components/marketing/enterprise';
+} from '@/components/marketing/pages/enterprise';
 
 const DESCRIPTION =
   'Enterprise Searchify: deterministic, auditable AI-visibility scoring over immutable, ' +

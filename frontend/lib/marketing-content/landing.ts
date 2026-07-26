@@ -1,107 +1,180 @@
-export type LandingChapter = {
-  number: string;
-  eyebrow: string;
-  title: string;
-  body: string;
-  scene: 'prompts' | 'engines' | 'evidence' | 'receipt';
-};
+/**
+ * Landing-page copy for the public "Proof" surface, following the approved
+ * brand deck (docs/searchify-brand-deck.html).
+ *
+ * Four writing rules govern this file:
+ *   1. State what was measured, where, and when.
+ *   2. Prefer "shows" and "observed" over "guarantees".
+ *   3. Lead with the decision; keep the proof one step away.
+ *   4. Never fabricate customer results, scale, or certainty.
+ *
+ * Rule 4 is why there are no numbers here. The figures in the product scenes
+ * (visibility 72.4, 1,248 answers, the provider ranking) are illustrative, so
+ * they live inside the aria-hidden scene components with a visible "Example
+ * data" mark — never in page copy, where they would read as a real result.
+ *
+ * NOTE: this is visitor-facing copy, not the design system's own vocabulary.
+ * Words like "choreography", "restraint" and "motion 5/10" describe how the
+ * site is BUILT; they belong in docs/design.md, never on the page.
+ */
 
-export type LandingFeature = {
-  key: 'share' | 'scoring' | 'evidence' | 'byok' | 'health' | 'benchmark' | 'trends';
-  title: string;
-  body: string;
-  wide?: boolean;
-};
+export type ShiftPoint = { num: string; title: string; body: string };
+export type Step = { num: string; kicker: string; title: string; body: string };
 
 export const LANDING_CONTENT = {
   hero: {
-    eyebrow: 'Answer-engine optimization',
-    title: 'When buyers ask AI,',
-    accent: 'own the answer.',
-    body:
-      "Searchify audits how ChatGPT, Gemini, and Claude answer your buyers' questions—scoring every mention, citation, and competitor with deterministic evidence, down to the raw response.",
-    primaryCta: 'Run your first audit',
-    secondaryCta: 'See how it works',
+    eyebrow: 'Verifiable market intelligence',
+    title: 'See your market through',
+    accent: 'AI’s eyes.',
+    body: 'Understand how the world’s answer engines describe your brand, products and competitors — then turn observed evidence into a sharper strategy.',
+    note: 'A limited workspace is available after product evaluation.',
+    secondaryCta: 'Explore the platform',
   },
+
+  engines: {
+    kicker: 'Coverage',
+    title: 'The engines your buyers actually ask.',
+    body: 'Searchify audits ChatGPT, Gemini and Claude today, on your own provider keys. Coverage expands as engines expose stable APIs — we would rather name three we can prove than six we cannot.',
+  },
+
   shift: {
-    eyebrow: 'The shift',
+    index: '01',
+    kicker: 'The shift',
     title: 'The first page of search is now a conversation.',
-    body:
-      "Buyers don't compare ten blue links anymore. They ask once—and trust the answer they get. Your ranking table didn't come with you.",
+    intro:
+      'Buyers no longer compare ten blue links. They ask once, and act on the answer they get back. Your rank tracker did not come with them.',
+    items: [
+      {
+        num: '01',
+        title: 'Buyers ask before they browse',
+        body: 'Comparisons, shortlists and “best tool for…” questions increasingly start inside an answer engine — and end there too.',
+      },
+      {
+        num: '02',
+        title: 'Answers cite, they do not rank',
+        body: 'There is no position ten to climb from. Either the engine names you and cites a page, or your category conversation happens without you.',
+      },
+      {
+        num: '03',
+        title: 'You cannot fix what you cannot see',
+        body: 'Every engine answers differently, and re-asking by hand is not a measurement. Knowing where you stand means running the same questions the same way, on a schedule.',
+      },
+    ] satisfies readonly ShiftPoint[],
   },
-  chapters: [
-    {
-      number: '01',
-      eyebrow: 'Ask',
-      title: 'Ask like a buyer.',
-      body: 'Your prompt library mirrors the questions buyers actually ask—comparisons, best-of lists, alternatives—grouped by intent.',
-      scene: 'prompts',
+
+  voice: {
+    kicker: 'How we report',
+    quote: 'We do not predict the market. We',
+    quoteAccent: 'observe',
+    quoteTail: 'it carefully.',
+    rulesLabel: 'What that commits us to',
+    rules: [
+      { num: '01', text: 'State what was measured, where, and when.' },
+      { num: '02', text: 'Prefer “shows” and “observed” over “guarantees”.' },
+      { num: '03', text: 'Lead with the decision; keep the proof one step away.' },
+      { num: '04', text: 'Never fabricate customer results, scale, or certainty.' },
+    ],
+  },
+
+  howItWorks: {
+    index: '02',
+    kicker: 'Method',
+    title: 'Observe. Verify. Decide.',
+    intro:
+      'One run asks your buyers’ questions across every engine you cover, persists the raw answers, and scores them with versioned rules — so the same evidence always produces the same number.',
+    steps: [
+      {
+        num: '01',
+        kicker: 'Observe',
+        title: 'Ask what your buyers ask',
+        body: 'A prompt library that mirrors real buying questions — comparisons, best-of lists, alternatives — grouped by intent, market and product.',
+      },
+      {
+        num: '02',
+        kicker: 'Verify',
+        title: 'Trace every answer to its source',
+        body: 'Each response is persisted as an artifact. Mentions, citations and share of voice are computed from that text by versioned analyzers, never by one model judging another.',
+      },
+      {
+        num: '03',
+        kicker: 'Decide',
+        title: 'Turn the pattern into strategy',
+        body: 'Visibility gaps, competitor patterns and site evidence resolve into a prioritised set of moves — each one still linked to the answers behind it.',
+      },
+    ] satisfies readonly Step[],
+  },
+
+  platform: {
+    index: '03',
+    kicker: 'Product',
+    title: 'One workspace for the whole market picture.',
+    intro:
+      'Visibility, competitors, products and site evidence share a single observation field, so a number you question is always one click from the answer that produced it.',
+  },
+
+  evidence: {
+    index: '04',
+    kicker: 'Evidence',
+    title: 'Every metric opens to the answer it came from.',
+    intro:
+      'Scores are derived, not asserted. Open one and you get the observed answer, the provider that produced it, the persisted artifact and the rule version that scored it.',
+  },
+
+  stance: {
+    index: '05',
+    kicker: 'Stance',
+    title: 'What we will and will not do.',
+    intro:
+      'Reporting on AI visibility is easy to fake. These are the commitments that make the difference legible from outside.',
+    always: {
+      title: 'Always',
+      items: [
+        'Attach every derived claim to inspectable evidence.',
+        'Persist the raw answer behind each score.',
+        'Version the rules, so a number can be reproduced.',
+        'Run on your own provider keys, encrypted at rest.',
+        'Keep workspace data isolated end to end.',
+      ],
     },
-    {
-      number: '02',
-      eyebrow: 'Compare',
-      title: 'Every engine. Same questions.',
-      body:
-        'The same prompts and repetitions run across ChatGPT, Gemini, and Claude, giving you a comparable view without cherry-picking answers.',
-      scene: 'engines',
+    never: {
+      title: 'Never',
+      items: [
+        'Score with one model silently judging another.',
+        'Report a metric that cannot be traced to a source.',
+        'Present estimates as observations.',
+        'Return your provider keys, to you or to anyone else.',
+        'Claim coverage of engines we do not audit.',
+      ],
     },
-    {
-      number: '03',
-      eyebrow: 'Prove',
-      title: 'Scored, not vibes.',
-      body: 'Mentions, citations, and share of voice are computed from raw response text with versioned analyzers and rules. Same data, same score.',
-      scene: 'evidence',
+  },
+
+  compositions: {
+    query: {
+      tag: 'Query intelligence',
+      title: 'See the questions shaping your category.',
+      body: 'Group real buyer prompts by intent, market, product and provider — then trace the answers they produce.',
+      cards: [
+        'Which platform is trusted by enterprise teams?',
+        'Best AI visibility tools for global agencies',
+        'How does Searchify verify its metrics?',
+      ],
     },
-    {
-      number: '04',
-      eyebrow: 'Inspect',
-      title: 'Drill to the receipts.',
-      body: 'Every metric links to the exact run and response it came from—the prompt, engine, and classified citations.',
-      scene: 'receipt',
+    strategy: {
+      tag: 'Strategic intelligence',
+      title: 'Move from observation to your next best action.',
+      body: 'Searchify connects visibility gaps, competitor patterns, site evidence and product presence into a prioritised strategy.',
     },
-  ] satisfies readonly LandingChapter[],
-  features: [
-    {
-      key: 'share',
-      title: 'Share of answers',
-      body: 'See which brands engines recommend, broken down by prompt and engine.',
-      wide: true,
+    quote: {
+      text: 'The result should feel less like a dashboard making claims — and more like a research team showing its work.',
+      attribution: 'How we build it',
+      detail: 'Evidence before persuasion',
+      mark: 'Searchify',
     },
-    {
-      key: 'scoring',
-      title: 'Deterministic scoring',
-      body: 'Versioned rules over persisted responses—not an opaque LLM judging another LLM.',
-    },
-    {
-      key: 'evidence',
-      title: 'Evidence explorer',
-      body: 'Move from an aggregate score to the exact answer and classified citations.',
-    },
-    {
-      key: 'byok',
-      title: 'Your provider keys',
-      body: 'OpenAI, Google, and Anthropic keys are encrypted at rest and never returned.',
-    },
-    {
-      key: 'health',
-      title: 'Site health, connected',
-      body: 'Audit the pages answer engines may rely on, with technical and AEO issues by URL.',
-    },
-    {
-      key: 'benchmark',
-      title: 'Competitor benchmarking',
-      body: 'Track the set that matters and watch share of voice shift engine by engine.',
-    },
-    {
-      key: 'trends',
-      title: 'Cross-run trends',
-      body: 'Rerun on your cadence and read visibility, mentions, and citations over time.',
-    },
-  ] satisfies readonly LandingFeature[],
-  proof: [
-    { value: '3', label: 'answer engines measured side by side' },
-    { value: 'Every', label: 'reported metric linked to persisted evidence' },
-    { value: '0', label: 'LLM-as-judge calls in deterministic scoring' },
-    { value: '1', label: 'workspace for visibility, evidence, and site health' },
-  ],
+  },
+
+  finalCta: {
+    kicker: 'Get started',
+    title: 'Bring evidence to the conversation about your market.',
+    body: 'A working session on your category, your competitors and the questions your buyers are already asking answer engines.',
+  },
 } as const;

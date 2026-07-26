@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BlogPostView } from '@/components/marketing/blog-post';
+import { BlogPostView } from '@/components/marketing/pages/blog';
 import type { BlogPost } from '@/lib/marketing-content/blog';
 import { BLOG_EMPTY_STATE, POSTS } from '@/lib/marketing-content/blog';
 

@@ -1,20 +1,31 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Smoke: the public marketing landing page renders at `/` (no backend needed —
- * the session island stays inert on error) and the nav theme toggle flips
- * `data-theme` on <html>. The hero h1 is the page's single level-1 heading.
+ * Smoke: the public landing page renders at `/` with no backend running (the
+ * session island stays inert when `/auth/me` fails), the hero owns the page's
+ * single level-1 heading, and the Proof surface paints.
+ *
+ * The previous version of this test clicked a theme toggle in the marketing
+ * nav. There is no such control — the public surface is a fixed light identity
+ * — so it could only ever have failed.
  */
-test('landing renders and theme toggle flips data-theme', async ({ page }) => {
+test('landing renders on the Proof surface without a backend', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(String(error)));
+
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const h1 = page.getByRole('heading', { level: 1 });
+  await expect(h1).toBeVisible();
+  await expect(h1).toHaveCount(1);
 
-  const html = page.locator('html');
-  const initialTheme = (await html.getAttribute('data-theme')) ?? 'dark';
+  // The warm paper canvas is the system's most basic signal that the token
+  // layer compiled at all.
+  await expect(page.locator('.mkt-root')).toHaveCSS('background-color', 'rgb(245, 245, 240)');
 
-  await page.getByRole('button', { name: /toggle color theme/i }).click();
+  // The hero scene is decorative, so its figures must stay out of the
+  // accessibility tree while its honesty mark stays visible.
+  await expect(page.getByText('Example data').first()).toBeVisible();
 
-  const expected = initialTheme === 'dark' ? 'light' : 'dark';
-  await expect(html).toHaveAttribute('data-theme', expected);
+  expect(pageErrors, pageErrors.join('\n')).toHaveLength(0);
 });
