@@ -22,7 +22,7 @@ const TIERS_BY_KEY = new Map(PRICING_TIERS.map((tier) => [tier.key, tier]));
 export function PricingTiers() {
   return (
     <Section rhythm="tight" aria-label="Plans">
-      <StaggerGroup className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <StaggerGroup className="grid gap-4 md:grid-cols-3">
         {PRICING_TIERS.map((tier) => (
           <StaggerItem key={tier.key} className="h-full">
             <TierCard tier={tier} />

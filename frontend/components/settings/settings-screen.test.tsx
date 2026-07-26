@@ -64,6 +64,10 @@ vi.mock('@/components/settings/integration-settings', () => ({
   IntegrationSettings: () => <div data-testid="integration-settings-panel">integrations</div>,
 }));
 
+vi.mock('@/components/settings/billing-settings', () => ({
+  BillingSettings: () => <div data-testid="billing-settings-panel">billing</div>,
+}));
+
 import { SettingsScreen } from './settings-screen';
 
 function renderScreen() {
@@ -81,12 +85,13 @@ describe('SettingsScreen', () => {
     search = '';
   });
 
-  it('renders the four settings tabs with Account selected by default', () => {
+  it('renders the five settings tabs with Account selected by default', () => {
     renderScreen();
     const tablist = screen.getByRole('tablist', { name: /settings sections/i });
     const tabs = within(tablist).getAllByRole('tab');
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Account',
+      'Billing',
       'Providers',
       'Integrations',
       'Danger zone',
@@ -145,6 +150,13 @@ describe('SettingsScreen', () => {
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
   });
 
+  it('opens Billing from a ?tab=billing deep link', () => {
+    search = 'tab=billing';
+    renderScreen();
+    expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('billing-settings-panel')).toBeVisible();
+  });
+
   it('opens the Integrations tab from a ?tab=integrations deep link (the C2 OAuth-callback landing)', () => {
     search = 'tab=integrations';
     renderScreen();
@@ -186,7 +198,7 @@ describe('SettingsScreen', () => {
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'Danger zone' })).toHaveAttribute(
       'aria-selected',

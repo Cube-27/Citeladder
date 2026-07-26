@@ -24,7 +24,7 @@
 | Route | Screen | Status |
 |---|---|---|
 | `/` | Public marketing landing page (shared chrome in `app/(marketing)/layout.tsx`; client island forwards authed visitors to `/visibility` or `/onboarding`) | **MVP** |
-| `/pricing`, `/enterprise`, `/solutions` | Public marketing plans, enterprise, and audience-solution pages | **MVP** |
+| `/pricing`, `/enterprise`, `/demo`, `/solutions` | Public Free/Paid/Enterprise pricing, enterprise explanation, stable demo funnel, and audience-solution pages | **MVP** |
 | `/blog`, `/blog/[slug]` | Public marketing blog index and statically generated posts (`notFound()` for unknown slugs) | **MVP** |
 | `/compare`, `/compare/[competitor]` | Public marketing comparison index and statically generated comparison pages (`notFound()` for unknown slugs) | **MVP** |
 | `/faq` | Public marketing FAQ (native disclosure controls) | **MVP** |
@@ -48,6 +48,7 @@
 | `/knowledge-base` | Curated Brand Knowledge — description, positioning, products/services, audience, and reviewed AI drafting | **MVP** |
 | `/writing` (Tone/Style, Memory) | Writing suite | Roadmap |
 | Settings → Integrations (`?tab=integrations`, 4th settings tab; GSC/GA4/Bing connect, sync, property mapping) | Integrations | **Implemented** — `components/settings/integration-settings.tsx` + `lib/api/integrations.ts` |
+| Settings → Billing (`?tab=billing`; billing country, Free/Paid status, hosted Razorpay upgrade and end-of-period cancellation) | Billing | **Implemented, disabled by default pending merchant readiness** — `components/settings/billing-settings.tsx` + `lib/api/billing.ts` |
 | Settings → Agent, MCP | Agent / MCP | Roadmap |
 
 The sidebar renders only live items (no disabled/"soon" placeholders); Traffic and LLM Analytics are live in the Analyze group.
@@ -77,6 +78,7 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 | Projects | `/projects` + `lib/api/projects.ts` | List/switch projects, add another |
 | Prompts | `/prompts` (Your Prompts) + `/prompt-research` + `lib/api/prompts.ts` + `lib/api/topics.ts` | Your Prompts: topic-grouped read-only view with evidence-derived visibility scores. Prompt Research: prompt CRUD, CSV import, topic rail (create/delete/filter), AI generation dialog (consent-gated), proposed/active/archived status tabs with accept/archive actions |
 | Providers | `/providers` + `lib/api/providers.ts` | BYOK cards, connection test. One **direct** transport per engine (ChatGPT/OpenAI, Gemini/Google, Claude/Anthropic) — the old route toggle and the reserved "Direct OpenAI — coming soon" option are removed. |
+| Billing | Settings Billing + `lib/api/billing.ts` + `lib/billing/entitlement-context.tsx` | Strict catalog/account/entitlement contracts, persisted country selection, Razorpay hosted checkout, webhook-confirmation state, cancellation, and fail-closed workspace capability context. |
 | Visibility | `/visibility` + `lib/api/visibility.ts` | Four-tab workspace with a shared filter bar (§7) |
 | Runs / executions | `/runs/*` + `lib/api/runs.ts` | Launch, progress, cancel, evidence, export |
 | Content | `/content` + `lib/api/content.ts` + `lib/content/{use-content-generations.ts,markdown.tsx}` + `components/content/content-screen.tsx` | **Live** — enqueue (client-generated `Idempotency-Key`), conditional polling while non-terminal, cancel/regenerate/try-again, history list, and a sanitised Markdown renderer (react-markdown + remark-gfm, **no rehype-raw**, http/https/mailto URL allowlist, images dropped, hardened links) |
@@ -93,6 +95,8 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 - **Endpoints per screen**:
   - Auth → `/auth/register|login|logout|me` + `/auth/oauth/providers|{provider}/start|{provider}/callback` (scaffold behind `OAUTH_*` flags; 503 until configured)
   - Shell/switcher → `/workspaces`, `/projects`
+  - Billing → `/billing/catalog`, `/billing/me`, `/billing/profile`, `/billing/checkout`,
+    `/billing/manage`, `/billing/cancel`, `/workspaces/{id}/entitlements`
   - Setup → `/projects` (+ `/projects/{id}`), `GET/PUT /projects/{id}/brand-profile`,
     `POST /projects/{id}/brand-profile/suggest`, and explicit suggestion acceptance
   - Prompts → `/prompt-sets`, `/prompts/{id}`, `/prompt-sets/{id}/import` (CSV),

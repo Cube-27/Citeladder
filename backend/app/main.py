@@ -11,6 +11,7 @@ from fastapi.responses import Response
 from app.api.analytics import router as analytics_router
 from app.api.audits import router as audits_router
 from app.api.auth import router as auth_router
+from app.api.billing import router as billing_router
 from app.api.brand_suggestions import router as brand_suggestions_router
 from app.api.content import router as content_router
 from app.api.executions import router as executions_router
@@ -62,6 +63,7 @@ def _sanitize_correlation_id(value: str) -> str:
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
     auth_router,
+    billing_router,
     oauth_router,
     workspaces_router,
     projects_router,

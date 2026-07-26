@@ -1,0 +1,1 @@
+"""Payment-provider adapter boundary."""

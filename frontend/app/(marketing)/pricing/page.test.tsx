@@ -24,7 +24,7 @@ describe('Pricing page (public marketing `/pricing`)', () => {
     }
   });
 
-  it('renders the four tier cards verbatim from the content module', () => {
+  it('renders the approved tier cards verbatim from the content module', () => {
     const { container } = render(<Page />);
 
     expect(container.querySelectorAll('[data-tier]')).toHaveLength(PRICING_TIERS.length);
@@ -57,7 +57,7 @@ describe('Pricing page (public marketing `/pricing`)', () => {
     for (const tier of PRICING_TIERS) {
       expect(screen.getByRole('columnheader', { name: tier.name })).toBeInTheDocument();
     }
-    expect(container.querySelector('th[data-highlighted="true"]')).toHaveTextContent('Pro');
+    expect(container.querySelector('th[data-highlighted="true"]')).toHaveTextContent('Paid');
 
     // One header row + one body row per module dimension, each addressable.
     expect(screen.getAllByRole('row')).toHaveLength(1 + PRICING_TABLE_ROWS.length);
@@ -65,13 +65,11 @@ describe('Pricing page (public marketing `/pricing`)', () => {
       expect(screen.getByRole('rowheader', { name: row.dimension })).toBeInTheDocument();
     }
 
-    // Spot-check grounded pro cells: full inventory rides every paid tier.
+    // Spot-check the Paid capability mapping.
     const inventoryRow = screen.getByRole('row', { name: /Site health crawl mode/ });
-    expect(within(inventoryRow).getAllByText('Full progressive inventory')).toHaveLength(3);
-    // Monitored-URL quotas are published numbers, not placeholders.
-    const monitoredRow = screen.getByRole('row', { name: /Monitored URL set/ });
-    expect(within(monitoredRow).getByText('100 URLs')).toBeInTheDocument();
-    expect(within(monitoredRow).getByText('1,000 URLs')).toBeInTheDocument();
+    expect(within(inventoryRow).getByText('Full progressive inventory')).toBeInTheDocument();
+    const monitoredRow = screen.getByRole('row', { name: /User-selected monitored URLs/ });
+    expect(within(monitoredRow).getByText('Included')).toBeInTheDocument();
   });
 
   it('states the BYOK trust claims in the hero', () => {

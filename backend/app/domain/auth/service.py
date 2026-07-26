@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password, verify_password
+from app.domain.billing.bootstrap import ensure_user_billing
 from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.user import User
 
@@ -42,7 +43,12 @@ async def register_user(
     )
     session.add(user)
     await session.flush()
-    await ensure_personal_workspace(session, user)
+    workspace = await ensure_personal_workspace(session, user)
+    await ensure_user_billing(
+        session,
+        user,
+        workspace_ids=(workspace.id,) if workspace is not None else None,
+    )
     await session.commit()
     await session.refresh(user)
     logger.info("auth.registered", extra={"user_id": str(user.id)})
@@ -66,8 +72,15 @@ async def authenticate_user(
     ):
         return None
     created = await ensure_personal_workspace(session, user)
+    await ensure_user_billing(
+        session,
+        user,
+        workspace_ids=(created.id,) if created is not None else None,
+    )
+    # Billing repair uses Core upserts, which are not reflected in
+    # ``session.new``; commit unconditionally so a repaired account persists.
+    await session.commit()
     if created is not None:
-        await session.commit()
         logger.info(
             "auth.workspace_autocreated",
             extra={"user_id": str(user.id), "workspace_id": str(created.id)},

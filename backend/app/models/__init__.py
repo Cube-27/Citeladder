@@ -29,6 +29,15 @@ from app.models.audit import (
     ProviderAttempt,
     RawResponseArtifact,
 )
+from app.models.billing import (
+    AccountEntitlement,
+    BillingAccount,
+    BillingCheckoutAttempt,
+    BillingCustomer,
+    BillingSubscription,
+    BillingWebhookEvent,
+    WorkspaceBillingLink,
+)
 from app.models.brand import (
     Brand,
     BrandAlias,
@@ -87,6 +96,7 @@ from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
 __all__ = [
+    "AccountEntitlement",
     "AnalyticsSnapshot",
     "AnalyticsTask",
     "Audit",
@@ -100,6 +110,11 @@ __all__ = [
     "BrandProfile",
     "BrandProfileSuggestion",
     "BrandMention",
+    "BillingAccount",
+    "BillingCheckoutAttempt",
+    "BillingCustomer",
+    "BillingSubscription",
+    "BillingWebhookEvent",
     "Citation",
     "Competitor",
     "CompetitorMention",
@@ -156,5 +171,6 @@ __all__ = [
     "UnintendedDomain",
     "User",
     "Workspace",
+    "WorkspaceBillingLink",
     "WorkspaceMember",
 ]

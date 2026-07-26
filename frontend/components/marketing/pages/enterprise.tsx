@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Fragment } from 'react';
 
-import { CONTACT_EMAIL } from '@/lib/marketing-content/social';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
 import { Meta } from '../primitives/label';
@@ -20,15 +20,10 @@ import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { TrustStrip } from '../primitives/trust-strip';
 
 /**
- * `/enterprise` — the demo-first funnel's destination. Every "Book a demo" CTA
- * on the surface lands on the #contact band at the bottom of this page, so
- * that band is the one place to change when a real demo form exists.
- *
- * Contact href renders `mailto:` once a public address is configured
- * (lib/marketing-content/social.ts); until then it falls back to /register so
- * the CTA is never a dead anchor.
+ * `/enterprise` explains the offer; every sales action uses the stable `/demo`
+ * funnel through the centralized `DEMO_HREF`.
  */
-const CONTACT_HREF = CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : '/register';
+const CONTACT_HREF = DEMO_HREF;
 
 type Capability = { icon: LucideIcon; title: string; blurb: string; points: readonly string[] };
 
@@ -166,7 +161,7 @@ export function EnterpriseHero() {
       lead="The platform security teams can verify: deterministic scoring over immutable, provenance-carrying evidence — deployed in our cloud, or self-hosted inside your network."
     >
       <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row">
-        <ButtonLink href="#contact">
+        <ButtonLink href={DEMO_HREF}>
           Book a demo
           <ArrowRight className="size-3.5" aria-hidden />
         </ButtonLink>

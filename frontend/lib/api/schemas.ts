@@ -1693,6 +1693,71 @@ export const recomputeResponseSchema = z.strictObject({
 });
 
 // ---------------------------------------------------------------------------
+// Billing (provider ids, plan ids, secrets, and billing PII never cross wire)
+// ---------------------------------------------------------------------------
+
+export const billingPriceSchema = z.strictObject({
+  region: z.enum(['india', 'international']),
+  currency: z.enum(['INR', 'USD']),
+  base_amount_minor: z.number().int().nonnegative(),
+  tax_amount_minor: z.number().int().nonnegative(),
+  total_amount_minor: z.number().int().nonnegative(),
+  tax_label: z.string().nullable(),
+  checkout_available: z.boolean(),
+});
+
+export const billingCatalogPlanSchema = z.strictObject({
+  tier_key: z.enum(['free', 'paid', 'enterprise']),
+  name: z.string(),
+  cadence: z.enum(['none', 'monthly', 'custom']),
+  self_serve: z.boolean(),
+  description: z.string(),
+  features: z.array(z.string()),
+  price: billingPriceSchema.nullable(),
+});
+
+export const billingCatalogSchema = z.strictObject({
+  catalog_version: z.string(),
+  country_code: z.string().nullable(),
+  plans: z.array(billingCatalogPlanSchema),
+});
+
+export const billingSummarySchema = z.strictObject({
+  billing_account_id: uuid(),
+  billing_country: z.string(),
+  country_verification: z.string(),
+  tier_key: z.enum(['free', 'paid']),
+  subscription_status: z.string().nullable(),
+  current_period_end: z.string().nullable(),
+  cancel_at_period_end: z.boolean(),
+  paid_through: z.string().nullable(),
+  grace_until: z.string().nullable(),
+  can_checkout: z.boolean(),
+  checkout_block_reason: z.string().nullable(),
+});
+
+export const billingCheckoutSchema = z.strictObject({
+  checkout_url: z.url().refine((value) => value.startsWith('https://')),
+  expires_at: z.string(),
+});
+
+export const billingCancelSchema = z.strictObject({
+  status: z.string(),
+  cancel_at_period_end: z.boolean(),
+});
+
+export const workspaceEntitlementSchema = z.strictObject({
+  workspace_id: uuid(),
+  tier_key: z.enum(['free', 'paid']),
+  capability_revision: z.number().int().nonnegative(),
+  audit_web_search: z.boolean(),
+  audit_scheduling: z.boolean(),
+  site_health_capability: z.enum(['free', 'starter']),
+  paid_through: z.string().nullable(),
+  grace_until: z.string().nullable(),
+});
+
+// ---------------------------------------------------------------------------
 // strictValidate — fail loud on any schema drift (drift policy §6)
 // ---------------------------------------------------------------------------
 

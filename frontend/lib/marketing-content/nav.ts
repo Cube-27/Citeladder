@@ -104,5 +104,5 @@ export const NAV_LINKS = [
  * enterprise page owns the contact affordance (and its mailto fallback), so
  * there is exactly one place to change when a real demo form exists.
  */
-export const DEMO_HREF = '/enterprise#contact';
+export const DEMO_HREF = '/demo';
 export const DEMO_CTA = 'Book a demo';

@@ -1,0 +1,42 @@
+import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import Page from './page';
+
+const originalBooking = process.env.DEMO_BOOKING_URL;
+const originalEmail = process.env.PUBLIC_SALES_EMAIL;
+
+afterEach(() => {
+  process.env.DEMO_BOOKING_URL = originalBooking;
+  process.env.PUBLIC_SALES_EMAIL = originalEmail;
+});
+
+describe('Demo page', () => {
+  it('uses the approved HTTPS booking destination', () => {
+    process.env.DEMO_BOOKING_URL = 'https://cal.example.com/searchify';
+    process.env.PUBLIC_SALES_EMAIL = 'sales@example.com';
+    render(<Page />);
+    expect(screen.getByRole('link', { name: /schedule demo/i })).toHaveAttribute(
+      'href',
+      'https://cal.example.com/searchify',
+    );
+  });
+
+  it('falls back honestly to public sales email', () => {
+    delete process.env.DEMO_BOOKING_URL;
+    process.env.PUBLIC_SALES_EMAIL = 'sales@example.com';
+    render(<Page />);
+    expect(screen.getByRole('link', { name: /email sales/i })).toHaveAttribute(
+      'href',
+      'mailto:sales@example.com',
+    );
+  });
+
+  it('does not render a fake scheduler without configuration', () => {
+    delete process.env.DEMO_BOOKING_URL;
+    delete process.env.PUBLIC_SALES_EMAIL;
+    render(<Page />);
+    expect(screen.queryByRole('link', { name: /schedule demo|email sales/i })).toBeNull();
+    expect(screen.getByText(/scheduling is being configured/i)).toBeInTheDocument();
+  });
+});
