@@ -12,11 +12,17 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class AttributionMetricSet(BaseModel):
+class StrictResponseModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class AttributionMetricSet(StrictResponseModel):
     """One metric bundle (``attributionMetricSetSchema``).
 
     Non-null revenue/AOV requires non-null currency; null denominators
@@ -31,7 +37,7 @@ class AttributionMetricSet(BaseModel):
     conversion_rate: float | None
 
 
-class AttributionSourceRow(BaseModel):
+class AttributionSourceRow(StrictResponseModel):
     """One per-AI-source row of an available method partition."""
 
     ai_source: str
@@ -39,7 +45,7 @@ class AttributionSourceRow(BaseModel):
     metrics: AttributionMetricSet
 
 
-class AttributionProductRow(BaseModel):
+class AttributionProductRow(StrictResponseModel):
     """One per-product row (``attributionProductRowSchema``).
 
     ``ai_source`` is null and ``source_label`` carries the channel-group
@@ -58,7 +64,7 @@ class AttributionProductRow(BaseModel):
     orders: int | None
 
 
-class AttributionMethodMetrics(BaseModel):
+class AttributionMethodMetrics(StrictResponseModel):
     """One method/currency partition (``attributionMethodMetricsSchema``).
 
     ``source_granularity`` is non-null (``session_source_medium`` |
@@ -79,7 +85,18 @@ class AttributionMethodMetrics(BaseModel):
     by_product: list[AttributionProductRow]
 
 
-class AttributionDelta(BaseModel):
+class AttributionCoverage(StrictResponseModel):
+    total_latest_orders: int
+    orders_with_evidence: int
+    linked_ai_orders: int
+    unattributed_orders: int
+    evidence_coverage_rate: float | None
+    attributed_share: float | None
+    window_start: str
+    window_end: str
+
+
+class AttributionDelta(StrictResponseModel):
     """One within-currency A1-minus-A2 delta (values may be negative).
 
     Non-``comparable`` rows carry null metric values. Empty in this scope
@@ -94,7 +111,7 @@ class AttributionDelta(BaseModel):
     conversion_rate: float | None
 
 
-class AttributionUnattributed(BaseModel):
+class AttributionUnattributed(StrictResponseModel):
     """Orders without a current A2 link (empty in this scope)."""
 
     currency: str
@@ -103,7 +120,7 @@ class AttributionUnattributed(BaseModel):
     revenue: float | None
 
 
-class AttributionStatisticalAllocation(BaseModel):
+class AttributionStatisticalAllocation(StrictResponseModel):
     """One statistical allocation row (never emitted in this scope)."""
 
     ai_source: str
@@ -113,7 +130,7 @@ class AttributionStatisticalAllocation(BaseModel):
     estimated_share: float | None
 
 
-class AttributionStatistical(BaseModel):
+class AttributionStatistical(StrictResponseModel):
     """The statistical namespace: persistently ``not_offered`` here."""
 
     state: str
@@ -121,23 +138,24 @@ class AttributionStatistical(BaseModel):
     allocations: list[AttributionStatisticalAllocation]
 
 
-class AttributionDeterministic(BaseModel):
+class AttributionDeterministic(StrictResponseModel):
     """The deterministic namespace: a1 (GA4 platform) + a2/delta/unattributed."""
 
     a1: list[AttributionMethodMetrics]
     a2: list[AttributionMethodMetrics]
     delta: list[AttributionDelta]
     unattributed: list[AttributionUnattributed]
+    coverage: AttributionCoverage
 
 
-class AttributionMetrics(BaseModel):
+class AttributionMetrics(StrictResponseModel):
     """The persisted + served attribution metrics document."""
 
     deterministic: AttributionDeterministic
     statistical: AttributionStatistical
 
 
-class CommerceAttributionResponse(BaseModel):
+class CommerceAttributionResponse(StrictResponseModel):
     """``GET /projects/{id}/commerce/attribution`` — the persisted snapshot.
 
     Served from the persisted ``AttributionSnapshot`` matching
@@ -158,3 +176,56 @@ class CommerceAttributionResponse(BaseModel):
     formula_version: str
     analyzer_version: str
     created_at: str | None
+
+
+class AttributionOrderLineItem(StrictResponseModel):
+    sku: str
+    quantity: int
+    unit_price: str
+    product_id: uuid.UUID | None
+
+
+class AttributionOrderRow(StrictResponseModel):
+    fact_id: uuid.UUID
+    occurred_at: str
+    line_items: list[AttributionOrderLineItem]
+    amount: float
+    currency: str
+    attribution_state: str
+    method: str | None
+    ai_source: str | None
+    confidence: str | None
+    rule_version: str | None
+
+
+class AttributionOrdersPage(StrictResponseModel):
+    items: list[AttributionOrderRow]
+    next_cursor: str | None
+
+
+class AttributionRecomputeRequest(StrictResponseModel):
+    from_date: date | None = Field(default=None, alias="from")
+    to_date: date | None = Field(default=None, alias="to")
+
+
+class AttributionRecomputeResponse(StrictResponseModel):
+    task_id: uuid.UUID
+    project_id: uuid.UUID
+    status: Literal[
+        "queued",
+        "leased",
+        "running",
+        "retry_wait",
+        "succeeded",
+        "failed",
+        "cancelled",
+    ]
+    error_code: str
+    updated_at: str
+    completed_at: str | None
+
+
+# Plan vocabulary aliases kept explicit without duplicating response shapes.
+AttributionMethodSummary = AttributionMethodMetrics
+UnattributedSummary = AttributionUnattributed
+AttributionStatisticalMetrics = AttributionStatistical

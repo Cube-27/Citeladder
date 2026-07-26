@@ -71,7 +71,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -79,6 +79,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
+    AI_REFERRAL_RULE_VERSION,
     AI_SOURCE_OTHER,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
 )
@@ -87,8 +88,12 @@ from app.core.config.attribution import (
     ATTRIBUTION_CONSUMED_DATASETS,
     ATTRIBUTION_DATA_STATE_AVAILABLE,
     ATTRIBUTION_DATA_STATE_NO_DATA,
+    ATTRIBUTION_DELTA_STATE_COMPARABLE,
+    ATTRIBUTION_DELTA_STATE_CURRENCY_UNAVAILABLE,
+    ATTRIBUTION_DELTA_STATE_METHOD_UNAVAILABLE,
     ATTRIBUTION_FORMULA_VERSION,
     ATTRIBUTION_METHOD_GA4_PLATFORM,
+    ATTRIBUTION_METHOD_ORDER_REFERRER,
     ATTRIBUTION_METRICS_NAMESPACE_DETERMINISTIC,
     ATTRIBUTION_METRICS_NAMESPACE_STATISTICAL,
     ATTRIBUTION_SOURCE_GRANULARITY_DEFAULT_CHANNEL_GROUP,
@@ -105,9 +110,11 @@ from app.core.config.integrations import (
 from app.domain.analytics.classification import classify_referral_signals
 from app.domain.analytics.ingest import metric_row_not_superseded
 from app.domain.analytics.tasks import payload_window, raise_if_task_terminal
+from app.domain.commerce.orders import order_fact_not_superseded
 from app.domain.traffic.projection import metric_count
 from app.models.analytics import AnalyticsTask
-from app.models.attribution import AttributionSnapshot
+from app.models.attribution import AttributionLink, AttributionSnapshot
+from app.models.commerce import OrderFact
 from app.models.integrations import IntegrationImportArtifact, IntegrationMetricRow
 from app.models.product import Product
 
@@ -135,6 +142,14 @@ class A1Projection:
 
     metrics: dict[str, Any]
     source_metric_row_ids: list[str]
+
+
+@dataclass(frozen=True)
+class CombinedProjection:
+    metrics: dict[str, Any]
+    source_metric_row_ids: list[str]
+    source_order_fact_ids: list[str]
+    source_link_ids: list[str]
 
 
 # --- Pure helpers --------------------------------------------------------------
@@ -422,6 +437,241 @@ def build_a1_projection(
     )
 
 
+def _ratio(numerator: int, denominator: int) -> float | None:
+    return round(numerator / denominator, _RATE_DECIMALS) if denominator else None
+
+
+def build_combined_projection(
+    a1: A1Projection,
+    orders: Sequence[OrderFact],
+    links: Sequence[AttributionLink],
+    *,
+    window_start: date,
+    window_end: date,
+) -> CombinedProjection:
+    """Add A2, coverage, unattributed, and currency-safe deltas to A1."""
+    metrics = {
+        ATTRIBUTION_METRICS_NAMESPACE_DETERMINISTIC: dict(
+            a1.metrics[ATTRIBUTION_METRICS_NAMESPACE_DETERMINISTIC]
+        ),
+        ATTRIBUTION_METRICS_NAMESPACE_STATISTICAL: dict(
+            a1.metrics[ATTRIBUTION_METRICS_NAMESPACE_STATISTICAL]
+        ),
+    }
+    deterministic = metrics[ATTRIBUTION_METRICS_NAMESPACE_DETERMINISTIC]
+    link_by_order = {link.order_fact_id: link for link in links}
+    orders_by_currency: dict[str, list[OrderFact]] = {}
+    for order in orders:
+        if len(order.currency or "") == 3:
+            orders_by_currency.setdefault(order.currency, []).append(order)
+
+    a2_rows: list[dict[str, Any]] = []
+    unattributed_rows: list[dict[str, Any]] = []
+    for currency, currency_orders in sorted(orders_by_currency.items()):
+        linked = [order for order in currency_orders if order.id in link_by_order]
+        unlinked = [order for order in currency_orders if order.id not in link_by_order]
+        evidence_orders = [
+            order
+            for order in currency_orders
+            if any(
+                (order.attribution_keys or {}).get(key)
+                for key in ("referrer_url", "utm_source", "utm_medium")
+            )
+        ]
+        unattributed_rows.append(
+            {
+                "currency": currency,
+                "orders": len(unlinked),
+                "order_share": _ratio(len(unlinked), len(currency_orders)),
+                "revenue": round(
+                    sum(float(order.total_amount) for order in unlinked),
+                    _MONEY_DECIMALS,
+                ),
+            }
+        )
+        if not linked:
+            a2_rows.append(
+                {
+                    "method": ATTRIBUTION_METHOD_ORDER_REFERRER,
+                    "state": ATTRIBUTION_DATA_STATE_NO_DATA,
+                    "source_granularity": None,
+                    "reduced_granularity": False,
+                    "currency": currency,
+                    "coverage_rate": _ratio(len(evidence_orders), len(currency_orders)),
+                    "totals": _null_metric_set(currency),
+                    "by_ai_source": [],
+                    "by_product": [],
+                }
+            )
+            continue
+
+        source_groups: dict[str, dict[str, Any]] = {}
+        product_groups: dict[tuple[str | None, str, str], dict[str, Any]] = {}
+        for order in linked:
+            link = link_by_order[order.id]
+            evidence = link.evidence_refs or {}
+            ai_source = str(evidence.get("ai_source") or AI_SOURCE_OTHER)
+            source_group = source_groups.setdefault(
+                ai_source, {"orders": 0, "revenue": 0.0}
+            )
+            source_group["orders"] += 1
+            source_group["revenue"] += float(link.revenue_amount)
+            for item in order.line_items or []:
+                if not isinstance(item, Mapping):
+                    continue
+                sku = str(item.get("sku") or "")
+                product_id = item.get("product_id")
+                key = (str(product_id) if product_id else None, sku, ai_source)
+                group = product_groups.setdefault(
+                    key, {"orders": set(), "revenue": 0.0}
+                )
+                group["orders"].add(order.id)
+                try:
+                    group["revenue"] += float(item.get("unit_price") or 0) * int(
+                        item.get("quantity") or 0
+                    )
+                except (TypeError, ValueError):
+                    continue
+
+        by_ai_source = []
+        for ai_source, group in source_groups.items():
+            revenue = round(group["revenue"], _MONEY_DECIMALS)
+            by_ai_source.append(
+                {
+                    "ai_source": ai_source,
+                    "currency": currency,
+                    "metrics": _metric_set(
+                        currency=currency,
+                        revenue=revenue,
+                        orders=group["orders"],
+                        sessions=None,
+                    ),
+                }
+            )
+        by_ai_source.sort(
+            key=lambda row: (-row["metrics"]["revenue"], row["ai_source"])
+        )
+        by_product = [
+            {
+                "product_id": product_id,
+                "sku": sku,
+                "name": sku,
+                "ai_source": ai_source,
+                "source_label": ai_source,
+                "currency": currency,
+                "revenue": round(group["revenue"], _MONEY_DECIMALS),
+                "orders": len(group["orders"]),
+            }
+            for (product_id, sku, ai_source), group in product_groups.items()
+        ]
+        by_product.sort(key=lambda row: (-row["revenue"], row["sku"]))
+        total_revenue = round(
+            sum(float(link_by_order[order.id].revenue_amount) for order in linked),
+            _MONEY_DECIMALS,
+        )
+        a2_rows.append(
+            {
+                "method": ATTRIBUTION_METHOD_ORDER_REFERRER,
+                "state": ATTRIBUTION_DATA_STATE_AVAILABLE,
+                "source_granularity": None,
+                "reduced_granularity": False,
+                "currency": currency,
+                "coverage_rate": _ratio(len(evidence_orders), len(currency_orders)),
+                "totals": _metric_set(
+                    currency=currency,
+                    revenue=total_revenue,
+                    orders=len(linked),
+                    sessions=None,
+                ),
+                "by_ai_source": by_ai_source,
+                "by_product": by_product,
+            }
+        )
+
+    deterministic["a2"] = a2_rows
+    deterministic["unattributed"] = unattributed_rows
+    evidence_order_count = sum(
+        1
+        for order in orders
+        if any(
+            (order.attribution_keys or {}).get(key)
+            for key in ("referrer_url", "utm_source", "utm_medium")
+        )
+    )
+    deterministic["coverage"] = {
+        "total_latest_orders": len(orders),
+        "orders_with_evidence": evidence_order_count,
+        "linked_ai_orders": len(link_by_order),
+        "unattributed_orders": len(orders) - len(link_by_order),
+        "evidence_coverage_rate": _ratio(evidence_order_count, len(orders)),
+        "attributed_share": _ratio(len(link_by_order), len(orders)),
+        "window_start": window_start.isoformat(),
+        "window_end": window_end.isoformat(),
+    }
+    a1_available = {
+        row["currency"]: row
+        for row in deterministic["a1"]
+        if row["state"] == ATTRIBUTION_DATA_STATE_AVAILABLE and row["currency"]
+    }
+    a2_available = {
+        row["currency"]: row
+        for row in a2_rows
+        if row["state"] == ATTRIBUTION_DATA_STATE_AVAILABLE
+    }
+    delta_rows: list[dict[str, Any]] = []
+    currencies = sorted(set(a1_available) | set(orders_by_currency))
+    for currency in currencies:
+        left = a1_available.get(currency)
+        right = a2_available.get(currency)
+        if left is not None and right is not None:
+            left_totals, right_totals = left["totals"], right["totals"]
+            delta_rows.append(
+                {
+                    "currency": currency,
+                    "state": ATTRIBUTION_DELTA_STATE_COMPARABLE,
+                    "revenue": round(
+                        left_totals["revenue"] - right_totals["revenue"],
+                        _MONEY_DECIMALS,
+                    ),
+                    "orders": left_totals["orders"] - right_totals["orders"],
+                    "average_order_value": (
+                        round(
+                            left_totals["average_order_value"]
+                            - right_totals["average_order_value"],
+                            _MONEY_DECIMALS,
+                        )
+                        if left_totals["average_order_value"] is not None
+                        and right_totals["average_order_value"] is not None
+                        else None
+                    ),
+                    "conversion_rate": None,
+                }
+            )
+        else:
+            both_methods_exist = bool(a1_available) and bool(a2_available)
+            delta_rows.append(
+                {
+                    "currency": currency,
+                    "state": (
+                        ATTRIBUTION_DELTA_STATE_CURRENCY_UNAVAILABLE
+                        if both_methods_exist
+                        else ATTRIBUTION_DELTA_STATE_METHOD_UNAVAILABLE
+                    ),
+                    "revenue": None,
+                    "orders": None,
+                    "average_order_value": None,
+                    "conversion_rate": None,
+                }
+            )
+    deterministic["delta"] = delta_rows
+    return CombinedProjection(
+        metrics=metrics,
+        source_metric_row_ids=a1.source_metric_row_ids,
+        source_order_fact_ids=sorted(str(order.id) for order in orders),
+        source_link_ids=sorted(str(link.id) for link in links),
+    )
+
+
 # --- Executor ------------------------------------------------------------------
 
 
@@ -503,6 +753,50 @@ async def _products_by_sku(
     return {sku: product_id for sku, product_id in (await session.execute(stmt)).all()}
 
 
+async def _orders_and_links(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    window_start: date,
+    window_end: date,
+) -> tuple[list[OrderFact], list[AttributionLink]]:
+    start = datetime.combine(window_start, time.min, tzinfo=UTC)
+    end = datetime.combine(window_end + timedelta(days=1), time.min, tzinfo=UTC)
+    orders = list(
+        (
+            await session.scalars(
+                select(OrderFact)
+                .where(OrderFact.workspace_id == workspace_id)
+                .where(OrderFact.project_id == project_id)
+                .where(OrderFact.occurred_at >= start)
+                .where(OrderFact.occurred_at < end)
+                .where(order_fact_not_superseded())
+                .order_by(OrderFact.id.asc())
+            )
+        ).all()
+    )
+    if not orders:
+        return [], []
+    order_ids = [order.id for order in orders]
+    links = list(
+        (
+            await session.scalars(
+                select(AttributionLink)
+                .where(AttributionLink.workspace_id == workspace_id)
+                .where(AttributionLink.project_id == project_id)
+                .where(AttributionLink.order_fact_id.in_(order_ids))
+                .where(AttributionLink.rule_version == AI_REFERRAL_RULE_VERSION)
+                .where(
+                    AttributionLink.analyzer_version == ATTRIBUTION_ANALYZER_VERSION
+                )
+                .order_by(AttributionLink.id.asc())
+            )
+        ).all()
+    )
+    return orders, links
+
+
 async def _upsert_snapshot(
     session: AsyncSession,
     *,
@@ -510,7 +804,7 @@ async def _upsert_snapshot(
     window_start: date,
     window_end: date,
     granularity: str,
-    projection: A1Projection,
+    projection: CombinedProjection,
 ) -> None:
     """The transactional upsert of the one current snapshot row.
 
@@ -531,8 +825,8 @@ async def _upsert_snapshot(
             window_end=window_end,
             granularity=granularity,
             metrics=projection.metrics,
-            source_link_ids=None,
-            source_order_fact_ids=None,
+            source_link_ids=projection.source_link_ids,
+            source_order_fact_ids=projection.source_order_fact_ids,
             source_metric_row_ids=projection.source_metric_row_ids,
             source_snapshot_ids=None,
             analyzer_version=ATTRIBUTION_ANALYZER_VERSION,
@@ -547,6 +841,8 @@ async def _upsert_snapshot(
             ],
             set_={
                 "metrics": projection.metrics,
+                "source_link_ids": projection.source_link_ids,
+                "source_order_fact_ids": projection.source_order_fact_ids,
                 "source_metric_row_ids": projection.source_metric_row_ids,
                 "analyzer_version": ATTRIBUTION_ANALYZER_VERSION,
                 "formula_version": ATTRIBUTION_FORMULA_VERSION,
@@ -597,8 +893,22 @@ async def refresh_attribution_snapshot(
             session, list({row.source_artifact_id for row in rows})
         )
         products = await _products_by_sku(session, project_id=task.project_id)
-        projection = build_a1_projection(
+        a1_projection = build_a1_projection(
             rows, products, currency_by_artifact_id=currencies
+        )
+        orders, links = await _orders_and_links(
+            session,
+            workspace_id=task.workspace_id,
+            project_id=task.project_id,
+            window_start=window_start,
+            window_end=window_end,
+        )
+        projection = build_combined_projection(
+            a1_projection,
+            orders,
+            links,
+            window_start=window_start,
+            window_end=window_end,
         )
         for granularity in sorted(ANALYTICS_SNAPSHOT_GRANULARITIES):
             await _upsert_snapshot(

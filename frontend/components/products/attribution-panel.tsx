@@ -6,7 +6,14 @@ import { ChevronDown, Inbox, RefreshCw } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Dropdown,
   DropdownContent,
@@ -18,6 +25,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { formatUtcTimestamp } from '@/lib/format';
+import { formatPercent } from '@/lib/products/catalog';
 import {
   ATTRIBUTION_SUB_TABS,
   GRANULARITY_OPTIONS,
@@ -151,10 +159,7 @@ export function AttributionPanel({
             disabled={recomputeActive}
             onClick={() => recomputeMutation.mutate()}
           >
-            <RefreshCw
-              className={recomputeActive ? 'size-4 animate-spin' : 'size-4'}
-              aria-hidden
-            />
+            <RefreshCw className={recomputeActive ? 'size-4 animate-spin' : 'size-4'} aria-hidden />
             {recomputeActive ? 'Recomputing…' : 'Recompute'}
           </Button>
         </div>
@@ -177,8 +182,7 @@ export function AttributionPanel({
     <>
       {recomputeMutation.isError ? (
         <Alert tone="danger">
-          Could not start the attribution recompute. Your current snapshot is unchanged — try
-          again.
+          Could not start the attribution recompute. Your current snapshot is unchanged — try again.
         </Alert>
       ) : null}
       {recomputeFailed ? (
@@ -206,9 +210,8 @@ export function AttributionPanel({
               <h2 className={displayHeadingLgClasses}>No attribution snapshot yet</h2>
               <p className="text-secondary max-w-md text-sm">
                 Attribution compares GA4 platform-attributed revenue (A1) with Shopify
-                order-referrer revenue (A2) — side by side, never summed. Connect a revenue
-                source in Settings › Integrations, then Recompute to persist a snapshot for this
-                window.
+                order-referrer revenue (A2) — side by side, never summed. Connect a revenue source
+                in Settings › Integrations, then Recompute to persist a snapshot for this window.
               </p>
             </div>
           </CardContent>
@@ -244,6 +247,7 @@ export function AttributionPanel({
       </div>
     ) : (
       <div className="grid gap-4">
+        <AttributionCoverageCard coverage={snapshot.metrics.deterministic.coverage} />
         {blocks.map((block) => (
           <CurrencyBlockSection
             key={block.currency ?? 'unavailable'}
@@ -275,6 +279,43 @@ export function AttributionPanel({
         panel={panel}
       />
     </div>
+  );
+}
+
+function AttributionCoverageCard({
+  coverage,
+}: Readonly<{
+  coverage: NonNullable<
+    AttributionQueries['snapshotQuery']['data']
+  >['metrics']['deterministic']['coverage'];
+}>) {
+  const metrics = [
+    ['Latest orders', coverage.total_latest_orders.toLocaleString()],
+    ['Orders with evidence', coverage.orders_with_evidence.toLocaleString()],
+    ['Linked AI orders', coverage.linked_ai_orders.toLocaleString()],
+    ['Unattributed orders', coverage.unattributed_orders.toLocaleString()],
+    ['Evidence coverage', formatPercent(coverage.evidence_coverage_rate)],
+    ['Attributed share', formatPercent(coverage.attributed_share)],
+  ] as const;
+  return (
+    <Card aria-label="Attribution coverage">
+      <CardHeader>
+        <CardEyebrow>A2 evidence horizon</CardEyebrow>
+        <CardTitle>Attribution coverage</CardTitle>
+        <CardDescription>
+          Latest Shopify order revisions from {coverage.window_start || '—'} through{' '}
+          {coverage.window_end || '—'}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {metrics.map(([label, value]) => (
+          <div key={label} className="grid gap-1">
+            <span className="text-muted text-xs">{label}</span>
+            <span className="text-foreground mono text-sm font-semibold tabular-nums">{value}</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

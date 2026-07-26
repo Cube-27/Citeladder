@@ -87,6 +87,16 @@ type SnapshotFixture = {
         order_share: number | null;
         revenue: number | null;
       }[];
+      coverage: {
+        total_latest_orders: number;
+        orders_with_evidence: number;
+        linked_ai_orders: number;
+        unattributed_orders: number;
+        evidence_coverage_rate: number | null;
+        attributed_share: number | null;
+        window_start: string;
+        window_end: string;
+      };
     };
     statistical: {
       state: string;
@@ -225,6 +235,16 @@ function makeSnapshot(): SnapshotFixture {
           },
         ],
         unattributed: [{ currency: 'USD', orders: 146, order_share: 0.29, revenue: 16940.0 }],
+        coverage: {
+          total_latest_orders: 502,
+          orders_with_evidence: 356,
+          linked_ai_orders: 356,
+          unattributed_orders: 146,
+          evidence_coverage_rate: 0.71,
+          attributed_share: 0.71,
+          window_start: '2026-06-25',
+          window_end: '2026-07-24',
+        },
       },
       statistical: {
         state: 'available',
@@ -280,10 +300,10 @@ describe('AttributionPanel overview', () => {
     expect(screen.getAllByText('$48,210.00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$41,880.00').length).toBeGreaterThan(0);
     expect(screen.getByText('412')).toBeInTheDocument();
-    expect(screen.getByText('356')).toBeInTheDocument();
+    expect(screen.getAllByText('356').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$117.02').length).toBeGreaterThan(0);
     expect(screen.getByText('2.8%')).toBeInTheDocument();
-    expect(screen.getByText('71%')).toBeInTheDocument();
+    expect(screen.getAllByText('71%').length).toBeGreaterThan(0);
 
     // The backend delta renders signed (U+2212); nothing computes A1 + A2.
     expect(screen.getByText('+$6,330.00')).toBeInTheDocument();
@@ -355,7 +375,9 @@ describe('AttributionPanel overview', () => {
     renderWithProviders(<Harness />);
 
     expect(
-      await screen.findByText(/Reduced GA4 granularity · item revenue is grouped by default channel/),
+      await screen.findByText(
+        /Reduced GA4 granularity · item revenue is grouped by default channel/,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText('Reduced granularity')).toBeInTheDocument();
     expect(screen.getByText('Item × default channel')).toBeInTheDocument();
@@ -395,7 +417,22 @@ describe('AttributionPanel overview', () => {
     useSnapshot({
       ...makeSnapshot(),
       metrics: {
-        deterministic: { a1: [], a2: [], delta: [], unattributed: [] },
+        deterministic: {
+          a1: [],
+          a2: [],
+          delta: [],
+          unattributed: [],
+          coverage: {
+            total_latest_orders: 0,
+            orders_with_evidence: 0,
+            linked_ai_orders: 0,
+            unattributed_orders: 0,
+            evidence_coverage_rate: null,
+            attributed_share: null,
+            window_start: '',
+            window_end: '',
+          },
+        },
         statistical: { state: 'not_offered', sample_size: null, allocations: [] },
       },
       created_at: null,
@@ -454,9 +491,7 @@ describe('AttributionPanel overview', () => {
     // Two paired rows (A1/A2 of one SKU + the unresolved A2-only SKU); the
     // pagination label splits numerals into mono spans, so match the wrapper.
     expect(
-      screen.getByText(
-        (_, el) => el?.tagName === 'SPAN' && el.textContent === '1–2 of 2 products',
-      ),
+      screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === '1–2 of 2 products'),
     ).toBeInTheDocument();
   });
 
@@ -466,8 +501,7 @@ describe('AttributionPanel overview', () => {
     reduced.metrics.deterministic.a1[0]!.reduced_granularity = true;
     reduced.metrics.deterministic.a1[0]!.source_granularity = 'default_channel_group';
     reduced.metrics.deterministic.a1[0]!.by_product[0]!.ai_source = null;
-    reduced.metrics.deterministic.a1[0]!.by_product[0]!.source_label =
-      'Default channel: Referral';
+    reduced.metrics.deterministic.a1[0]!.by_product[0]!.source_label = 'Default channel: Referral';
     useSnapshot(reduced);
     renderWithProviders(<Harness />);
 
@@ -484,71 +518,67 @@ describe('AttributionPanel recompute', () => {
   // Real timers on purpose: fake timers deadlock MSW's fetch resolution and
   // userEvent. The cadence assertions keep ~1s of slack on both sides of the
   // 3,000 ms poll boundary (ATTRIBUTION_RECOMPUTE_POLL_MS).
-  it(
-    'posts once, polls the task every 3s, stops at terminal, and refetches the snapshot',
-    async () => {
-      const counters = { snapshot: 0, post: 0, task: 0 };
-      useSnapshot(makeSnapshot(), counters);
-      mswServer.use(
-        http.post(RECOMPUTE_URL, () => {
-          counters.post += 1;
-          return HttpResponse.json(
-            {
-              task_id: TASK,
-              project_id: PROJECT,
-              status: 'queued',
-              error_code: '',
-              updated_at: '2026-07-24T06:12:00Z',
-              completed_at: null,
-            },
-            { status: 202 },
-          );
-        }),
-        http.get(TASK_URL, () => {
-          counters.task += 1;
-          return HttpResponse.json({
+  it('posts once, polls the task every 3s, stops at terminal, and refetches the snapshot', async () => {
+    const counters = { snapshot: 0, post: 0, task: 0 };
+    useSnapshot(makeSnapshot(), counters);
+    mswServer.use(
+      http.post(RECOMPUTE_URL, () => {
+        counters.post += 1;
+        return HttpResponse.json(
+          {
             task_id: TASK,
             project_id: PROJECT,
-            status: counters.task === 1 ? 'running' : 'succeeded',
+            status: 'queued',
             error_code: '',
             updated_at: '2026-07-24T06:12:00Z',
-            completed_at: counters.task === 1 ? null : '2026-07-24T06:15:00Z',
-          });
-        }),
-      );
-      const user = userEvent.setup();
-      renderWithProviders(<Harness />);
+            completed_at: null,
+          },
+          { status: 202 },
+        );
+      }),
+      http.get(TASK_URL, () => {
+        counters.task += 1;
+        return HttpResponse.json({
+          task_id: TASK,
+          project_id: PROJECT,
+          status: counters.task === 1 ? 'running' : 'succeeded',
+          error_code: '',
+          updated_at: '2026-07-24T06:12:00Z',
+          completed_at: counters.task === 1 ? null : '2026-07-24T06:15:00Z',
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<Harness />);
 
-      // Initial snapshot load; no recompute yet.
-      expect(await screen.findByText('A1 · GA4 platform-attributed')).toBeInTheDocument();
-      expect(counters.snapshot).toBe(1);
+    // Initial snapshot load; no recompute yet.
+    expect(await screen.findByText('A1 · GA4 platform-attributed')).toBeInTheDocument();
+    expect(counters.snapshot).toBe(1);
 
-      await user.click(screen.getByRole('button', { name: 'Recompute' }));
+    await user.click(screen.getByRole('button', { name: 'Recompute' }));
 
-      // One POST; the first task fetch arrives promptly, still non-terminal.
-      await waitFor(() => expect(counters.post).toBe(1));
-      await waitFor(() => expect(counters.task).toBe(1));
-      expect(await screen.findByText('Recomputing…')).toBeInTheDocument();
+    // One POST; the first task fetch arrives promptly, still non-terminal.
+    await waitFor(() => expect(counters.post).toBe(1));
+    await waitFor(() => expect(counters.task).toBe(1));
+    expect(await screen.findByText('Recomputing…')).toBeInTheDocument();
 
-      // 3s cadence: no second poll well before the boundary, then it fires.
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 2_000);
-      });
-      expect(counters.task).toBe(1);
-      await waitFor(() => expect(counters.task).toBe(2), { timeout: 2_500 });
+    // 3s cadence: no second poll well before the boundary, then it fires.
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 2_000);
+    });
+    expect(counters.task).toBe(1);
+    await waitFor(() => expect(counters.task).toBe(2), { timeout: 2_500 });
 
-      // Terminal success: the snapshot namespace refetches, polling stops.
-      await waitFor(() => expect(counters.snapshot).toBe(2));
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 3_500);
-      });
-      expect(counters.task).toBe(2);
-      expect(counters.post).toBe(1);
-      // The button is armed again once the task is terminal.
-      expect(screen.getByRole('button', { name: 'Recompute' })).toBeEnabled();
-    },
-    15_000,
-  );
+    // Terminal success: the snapshot namespace refetches, polling stops.
+    await waitFor(() => expect(counters.snapshot).toBe(2));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 3_500);
+    });
+    expect(counters.task).toBe(2);
+    expect(counters.post).toBe(1);
+    // The button is armed again once the task is terminal.
+    expect(screen.getByRole('button', { name: 'Recompute' })).toBeEnabled();
+  }, 15_000);
 
   it('keeps the snapshot and shows the explicit failure when the task fails', async () => {
     const counters = { snapshot: 0 };

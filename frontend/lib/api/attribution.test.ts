@@ -42,9 +42,7 @@ const snapshot = {
           currency: 'USD',
           coverage_rate: null,
           totals: metricSet,
-          by_ai_source: [
-            { ai_source: 'chatgpt', currency: 'USD', metrics: metricSet },
-          ],
+          by_ai_source: [{ ai_source: 'chatgpt', currency: 'USD', metrics: metricSet }],
           by_product: [
             {
               product_id: UUID,
@@ -89,6 +87,16 @@ const snapshot = {
         },
       ],
       unattributed: [{ currency: 'USD', orders: 146, order_share: 0.29, revenue: 16940.0 }],
+      coverage: {
+        total_latest_orders: 502,
+        orders_with_evidence: 356,
+        linked_ai_orders: 356,
+        unattributed_orders: 146,
+        evidence_coverage_rate: 0.71,
+        attributed_share: 0.71,
+        window_start: '2026-06-25',
+        window_end: '2026-07-24',
+      },
     },
     statistical: { state: 'not_offered', sample_size: null, allocations: [] },
   },
@@ -216,7 +224,22 @@ describe('attributionApi', () => {
       window_start: '',
       window_end: '',
       metrics: {
-        deterministic: { a1: [], a2: [], delta: [], unattributed: [] },
+        deterministic: {
+          a1: [],
+          a2: [],
+          delta: [],
+          unattributed: [],
+          coverage: {
+            total_latest_orders: 0,
+            orders_with_evidence: 0,
+            linked_ai_orders: 0,
+            unattributed_orders: 0,
+            evidence_coverage_rate: null,
+            attributed_share: null,
+            window_start: '',
+            window_end: '',
+          },
+        },
         statistical: { state: 'not_offered', sample_size: null, allocations: [] },
       },
       source_link_ids: [],

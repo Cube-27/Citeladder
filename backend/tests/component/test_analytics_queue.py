@@ -21,8 +21,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
+    AI_REFERRAL_RULE_VERSION,
     ANALYTICS_QUEUE_SPEC,
     ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
     ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
@@ -38,6 +40,8 @@ from app.core.config.integrations import (
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DATASET_SHOPIFY_ORDERS,
+    DATASET_SHOPIFY_PRODUCTS,
     GRANT_STATUS_CONNECTED,
 )
 from app.core.config.task_queue import (
@@ -50,6 +54,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.domain.analytics.enqueue import (
+    enqueue_attribution_snapshot_refresh,
     enqueue_ingest_referrals,
     enqueue_post_sync_projections,
     enqueue_referral_retention_sweep,
@@ -205,8 +210,9 @@ async def test_analytics_queue_claims_by_task_kind(
     # An unrestricted claim picks up whatever kinds remain.
     rest = await queue.claim(owner="analytics-a", limit=10)
     assert {t.id for t in rest} == set(
-        seeded[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
-        + seeded[ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH]
+            seeded[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
+            + seeded[ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH]
+            + seeded[ANALYTICS_TASK_KIND_ATTRIBUTION_LINK]
         + seeded[ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT]
         + seeded[ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP]
     )
@@ -385,6 +391,8 @@ async def test_enqueue_post_sync_projections_routes_by_dataset(
                 DATASET_GA4_LANDING_DAILY,
                 DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
                 DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+                DATASET_SHOPIFY_PRODUCTS,
+                DATASET_SHOPIFY_ORDERS,
             ),
         )
         await session.commit()
@@ -397,8 +405,9 @@ async def test_enqueue_post_sync_projections_routes_by_dataset(
         await session.commit()
     # 1 ingest (source/medium) + 1 traffic refresh (source/medium +
     # landing share the window) + 1 attribution refresh (both ecommerce
-    # datasets share the window).
-    assert len(enqueued) == 3
+    # datasets share the window) + 1 attribution link for the Shopify order
+    # artifact. Catalog artifacts deliberately enqueue no attribution work.
+    assert len(enqueued) == 4
 
     async with session_factory() as session:
         rows = list((await session.scalars(select(AnalyticsTask))).all())
@@ -420,7 +429,51 @@ async def test_enqueue_post_sync_projections_routes_by_dataset(
     assert attribution_rows[0].payload == {
         "window_start": _WINDOW[0].isoformat(),
         "window_end": _WINDOW[1].isoformat(),
+        "resync_seq": 0,
     }
+    link_rows = by_kind[ANALYTICS_TASK_KIND_ATTRIBUTION_LINK]
+    assert len(link_rows) == 1
+    assert link_rows[0].payload["rule_version"] == AI_REFERRAL_RULE_VERSION
+    assert uuid.UUID(link_rows[0].payload["sync_run_id"])
+
+
+@pytest.mark.asyncio
+async def test_attribution_refresh_dedupes_per_source_run_not_window_sequence(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Independent integrations commonly both start a window at revision zero."""
+    async with session_factory() as session:
+        workspace_id, project_id = await _seed_workspace_project(session)
+        source_runs = [uuid.uuid4(), uuid.uuid4()]
+        enqueued = [
+            await enqueue_attribution_snapshot_refresh(
+                session,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                window_start=_WINDOW[0],
+                window_end=_WINDOW[1],
+                resync_seq=0,
+                source_revision=str(source_run),
+            )
+            for source_run in source_runs
+        ]
+        await session.commit()
+    assert all(task_id is not None for task_id in enqueued)
+
+    async with session_factory() as session:
+        tasks = list(
+            (
+                await session.scalars(
+                    select(AnalyticsTask).where(
+                        AnalyticsTask.task_kind
+                        == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT
+                    )
+                )
+            ).all()
+        )
+    assert len(tasks) == 2
+    assert len({task.idempotency_key for task in tasks}) == 2
+    assert {task.payload["resync_seq"] for task in tasks} == {0}
 
 
 @pytest.mark.asyncio

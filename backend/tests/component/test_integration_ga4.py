@@ -533,6 +533,7 @@ async def test_fixture_import_refresh_artifacts_derivation(
     assert attribution_tasks[0].payload == {
         "window_start": _WINDOW[0].isoformat(),
         "window_end": _WINDOW[1].isoformat(),
+        "resync_seq": 0,
     }
 
 

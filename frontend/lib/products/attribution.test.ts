@@ -26,9 +26,7 @@ import {
 
 describe('exact user-visible labels', () => {
   it('pins the method/delta/alert copy verbatim', () => {
-    expect(ATTRIBUTION_METHOD_LABELS.ga4_platform_attributed).toBe(
-      'A1 · GA4 platform-attributed',
-    );
+    expect(ATTRIBUTION_METHOD_LABELS.ga4_platform_attributed).toBe('A1 · GA4 platform-attributed');
     expect(ATTRIBUTION_METHOD_LABELS.order_referrer).toBe('A2 · Shopify order referrer');
     expect(ATTRIBUTION_DELTA_LABEL).toBe('Delta · A1 − A2');
     expect(REDUCED_GRANULARITY_COPY).toBe(
@@ -119,7 +117,23 @@ function snapshotWith(
     window_end: '2026-07-24',
     granularity: 'week',
     metrics: {
-      deterministic: { a1: [], a2: [], delta: [], unattributed: [], ...deterministic },
+      deterministic: {
+        a1: [],
+        a2: [],
+        delta: [],
+        unattributed: [],
+        coverage: {
+          total_latest_orders: 0,
+          orders_with_evidence: 0,
+          linked_ai_orders: 0,
+          unattributed_orders: 0,
+          evidence_coverage_rate: null,
+          attributed_share: null,
+          window_start: '2026-06-25',
+          window_end: '2026-07-24',
+        },
+        ...deterministic,
+      },
       statistical: { state: 'not_offered', sample_size: null, allocations: [] },
     },
     source_link_ids: [],
@@ -135,11 +149,28 @@ function snapshotWith(
 describe('buildAttributionBlocks', () => {
   it('pairs A1/A2/delta/unattributed per ISO code, first-seen order', () => {
     const snapshot = snapshotWith({
-      a1: [methodRow('ga4_platform_attributed', 'USD'), methodRow('ga4_platform_attributed', 'EUR')],
+      a1: [
+        methodRow('ga4_platform_attributed', 'USD'),
+        methodRow('ga4_platform_attributed', 'EUR'),
+      ],
       a2: [methodRow('order_referrer', 'USD'), methodRow('order_referrer', 'EUR')],
       delta: [
-        { currency: 'USD', state: 'comparable', revenue: 10, orders: 1, average_order_value: 1, conversion_rate: null },
-        { currency: 'EUR', state: 'comparable', revenue: -5, orders: -1, average_order_value: -1, conversion_rate: null },
+        {
+          currency: 'USD',
+          state: 'comparable',
+          revenue: 10,
+          orders: 1,
+          average_order_value: 1,
+          conversion_rate: null,
+        },
+        {
+          currency: 'EUR',
+          state: 'comparable',
+          revenue: -5,
+          orders: -1,
+          average_order_value: -1,
+          conversion_rate: null,
+        },
       ],
       unattributed: [
         { currency: 'USD', orders: 3, order_share: 0.1, revenue: 30 },

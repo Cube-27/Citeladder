@@ -24,12 +24,14 @@ import uuid
 from collections.abc import Iterable
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.analytics import (
+    AI_REFERRAL_RULE_VERSION,
     ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
     ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
@@ -38,7 +40,11 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
 )
-from app.core.config.attribution import ATTRIBUTION_CONSUMED_DATASETS
+from app.core.config.attribution import (
+    ATTRIBUTION_ANALYZER_VERSION,
+    ATTRIBUTION_CONSUMED_DATASETS,
+)
+from app.core.config.integrations import DATASET_SHOPIFY_ORDERS
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.core.config.traffic import (
     TRAFFIC_GA4_REFERRAL_DATASETS,
@@ -158,15 +164,18 @@ async def _enqueue_window_snapshot_refresh(
     window re-fires the refresh while a same-revision duplicate still
     dedupes.
     """
+    payload: dict[str, object] = {
+        "window_start": window_start.isoformat(),
+        "window_end": window_end.isoformat(),
+    }
+    if task_kind == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT:
+        payload["resync_seq"] = resync_seq
     return await _enqueue_task(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
         task_kind=task_kind,
-        payload={
-            "window_start": window_start.isoformat(),
-            "window_end": window_end.isoformat(),
-        },
+        payload=payload,
         idempotency_key=_idempotency_key(
             task_kind, project_id, window_start, window_end, resync_seq
         ),
@@ -238,6 +247,7 @@ async def enqueue_attribution_snapshot_refresh(
     window_start: date,
     window_end: date,
     resync_seq: int,
+    source_revision: str | None = None,
     priority: int = 0,
 ) -> uuid.UUID | None:
     """Enqueue a rebuild of the attribution snapshot rows for one window.
@@ -246,14 +256,116 @@ async def enqueue_attribution_snapshot_refresh(
     ``ANALYTICS_SNAPSHOT_GRANULARITIES``; the revision-keyed dedupe rule is
     documented on ``_enqueue_window_snapshot_refresh``.
     """
-    return await _enqueue_window_snapshot_refresh(
+    payload: dict[str, object] = {
+        "window_start": window_start.isoformat(),
+        "window_end": window_end.isoformat(),
+        "resync_seq": resync_seq,
+    }
+    return await _enqueue_task(
         session,
+        workspace_id=workspace_id,
+        project_id=project_id,
         task_kind=ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+        payload=payload,
+        idempotency_key=_idempotency_key(
+            ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+            project_id,
+            window_start,
+            window_end,
+            resync_seq,
+            *([source_revision] if source_revision is not None else []),
+        ),
+        priority=priority,
+    )
+
+
+async def enqueue_attribution_recompute(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    window_start: date,
+    window_end: date,
+    priority: int = 0,
+) -> uuid.UUID:
+    """Allocate and enqueue a fresh manual attribution projection revision.
+
+    The project row lock serializes revision allocation across automatic and
+    manual snapshot tasks. The revision lives on the durable task payload,
+    not an integration run or mutable snapshot row.
+    """
+    project = await session.scalar(
+        select(Project)
+        .where(Project.id == project_id, Project.workspace_id == workspace_id)
+        .with_for_update()
+    )
+    if project is None:
+        raise ValueError(f"unknown project: {project_id}")
+
+    window_start_text = window_start.isoformat()
+    window_end_text = window_end.isoformat()
+    max_revision = await session.scalar(
+        select(
+            func.max(cast(AnalyticsTask.payload["resync_seq"].astext, Integer))
+        )
+        .where(AnalyticsTask.workspace_id == workspace_id)
+        .where(AnalyticsTask.project_id == project_id)
+        .where(AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT)
+        .where(AnalyticsTask.payload["window_start"].astext == window_start_text)
+        .where(AnalyticsTask.payload["window_end"].astext == window_end_text)
+    )
+    resync_seq = (max_revision if max_revision is not None else -1) + 1
+    task_id = await enqueue_attribution_snapshot_refresh(
+        session,
         workspace_id=workspace_id,
         project_id=project_id,
         window_start=window_start,
         window_end=window_end,
         resync_seq=resync_seq,
+        priority=priority,
+    )
+    if task_id is not None:
+        return task_id
+
+    # Defensive idempotency-race fallback: always return the pollable row.
+    existing_id = await session.scalar(
+        select(AnalyticsTask.id)
+        .where(AnalyticsTask.workspace_id == workspace_id)
+        .where(AnalyticsTask.project_id == project_id)
+        .where(AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT)
+        .where(AnalyticsTask.payload["window_start"].astext == window_start_text)
+        .where(AnalyticsTask.payload["window_end"].astext == window_end_text)
+        .where(AnalyticsTask.payload["resync_seq"].astext == str(resync_seq))
+        .order_by(AnalyticsTask.created_at.desc(), AnalyticsTask.id.desc())
+    )
+    if existing_id is None:
+        raise RuntimeError("attribution recompute enqueue lost without a durable task")
+    return existing_id
+
+
+async def enqueue_attribution_link(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    sync_run_id: uuid.UUID,
+    rule_version: str = AI_REFERRAL_RULE_VERSION,
+    priority: int = 0,
+) -> uuid.UUID | None:
+    """Enqueue deterministic links for the latest order facts of one sync run."""
+    return await _enqueue_task(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        task_kind=ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
+        payload={"sync_run_id": str(sync_run_id), "rule_version": rule_version},
+        idempotency_key=_idempotency_key(
+            ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
+            project_id,
+            sync_run_id,
+            rule_version,
+            ATTRIBUTION_ANALYZER_VERSION,
+        ),
         priority=priority,
     )
 
@@ -365,6 +477,7 @@ async def enqueue_post_sync_projections(
             select(
                 IntegrationImportArtifact.id,
                 IntegrationImportArtifact.dataset,
+                IntegrationImportArtifact.sync_run_id,
                 IntegrationSyncRun.window_start,
                 IntegrationSyncRun.window_end,
                 IntegrationSyncRun.resync_seq,
@@ -383,13 +496,16 @@ async def enqueue_post_sync_projections(
     # ORDER BY; a hook call normally carries one run's artifacts — one
     # window at one resync_seq — so ordering is moot in practice).
     traffic_revisions: dict[tuple[date, date, int], None] = {}
-    attribution_revisions: dict[tuple[date, date, int], None] = {}
+    attribution_revisions: dict[tuple[date, date, int, uuid.UUID], None] = {}
+    order_sync_runs: dict[uuid.UUID, None] = {}
     for row in rows:
         revision = (row.window_start, row.window_end, row.resync_seq)
         if row.dataset in TRAFFIC_REFRESH_TRIGGER_DATASETS:
             traffic_revisions.setdefault(revision)
         if row.dataset in ATTRIBUTION_CONSUMED_DATASETS:
-            attribution_revisions.setdefault(revision)
+            attribution_revisions.setdefault((*revision, row.sync_run_id))
+        if row.dataset == DATASET_SHOPIFY_ORDERS:
+            order_sync_runs.setdefault(row.sync_run_id)
 
     enqueued: list[uuid.UUID] = []
     for artifact_id in artifact_ids:
@@ -415,7 +531,7 @@ async def enqueue_post_sync_projections(
         )
         if task_id is not None:
             enqueued.append(task_id)
-    for window_start, window_end, resync_seq in attribution_revisions:
+    for window_start, window_end, resync_seq, sync_run_id in attribution_revisions:
         task_id = await enqueue_attribution_snapshot_refresh(
             session,
             workspace_id=workspace_id,
@@ -423,6 +539,16 @@ async def enqueue_post_sync_projections(
             window_start=window_start,
             window_end=window_end,
             resync_seq=resync_seq,
+            source_revision=str(sync_run_id),
+        )
+        if task_id is not None:
+            enqueued.append(task_id)
+    for sync_run_id in order_sync_runs:
+        task_id = await enqueue_attribution_link(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            sync_run_id=sync_run_id,
         )
         if task_id is not None:
             enqueued.append(task_id)

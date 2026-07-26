@@ -20,7 +20,7 @@ from app.models.analytics import (
     ReferralClassification,
     ReferralEvent,
 )
-from app.models.attribution import AttributionSnapshot
+from app.models.attribution import AttributionLink, AttributionSnapshot
 from app.models.audit import (
     Audit,
     AuditEngineSnapshot,
@@ -103,6 +103,7 @@ __all__ = [
     "AccountEntitlement",
     "AnalyticsSnapshot",
     "AnalyticsTask",
+    "AttributionLink",
     "AttributionSnapshot",
     "Audit",
     "AuditEngineSnapshot",

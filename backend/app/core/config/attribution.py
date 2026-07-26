@@ -44,6 +44,10 @@ from app.core.config.integrations import (
 # CONFIDENCE_HEURISTIC, CONFIDENCE_BUCKETS.
 __all__ = [
     "ATTRIBUTION_ANALYZER_VERSION",
+    "ATTRIBUTION_ORDERS_PAGE_SIZE",
+    "ATTRIBUTION_ORDER_STATE_ATTRIBUTED",
+    "ATTRIBUTION_ORDER_STATE_UNATTRIBUTED",
+    "ATTRIBUTION_ORDER_STATES",
     "ATTRIBUTION_CONSUMED_DATASETS",
     "ATTRIBUTION_DATA_STATE_AVAILABLE",
     "ATTRIBUTION_DATA_STATE_NO_DATA",
@@ -83,6 +87,12 @@ ATTRIBUTION_METHODS: Final[frozenset[str]] = frozenset(
 # to the exact projection code + formula set that produced it.
 ATTRIBUTION_ANALYZER_VERSION: Final = "attribution-analysis-1"
 ATTRIBUTION_FORMULA_VERSION: Final = "attribution-formula-1"
+ATTRIBUTION_ORDERS_PAGE_SIZE: Final = 50
+ATTRIBUTION_ORDER_STATE_ATTRIBUTED: Final = "attributed"
+ATTRIBUTION_ORDER_STATE_UNATTRIBUTED: Final = "unattributed"
+ATTRIBUTION_ORDER_STATES: Final[frozenset[str]] = frozenset(
+    {ATTRIBUTION_ORDER_STATE_ATTRIBUTED, ATTRIBUTION_ORDER_STATE_UNATTRIBUTED}
+)
 # The minimum-sample floor for any future statistical estimate: follows the
 # existing analytics floor exactly. NO statistical estimate consumes it in
 # this scope (the statistical namespace is persistently ``not_offered``).

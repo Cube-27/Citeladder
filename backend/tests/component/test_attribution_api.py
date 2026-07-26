@@ -28,14 +28,18 @@ nothing to cancel against). Requires a real Postgres.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 import httpx
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.analytics import ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT
+from app.core.config.analytics import (
+    AI_REFERRAL_RULE_VERSION,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+)
 from app.core.config.attribution import (
     ATTRIBUTION_ANALYZER_VERSION,
     ATTRIBUTION_FORMULA_VERSION,
@@ -48,6 +52,8 @@ from app.core.config.integrations import (
 )
 from app.domain.attribution.snapshot import refresh_attribution_snapshot
 from app.models.analytics import AnalyticsTask
+from app.models.attribution import AttributionLink
+from app.models.commerce import OrderFact
 from app.models.integrations import IntegrationImportArtifact, IntegrationMetricRow
 from app.models.product import Product
 from tests.component.analytics_helpers import (
@@ -74,7 +80,7 @@ _RESPONSE_KEYS = {
     "created_at",
 }
 _METRICS_KEYS = {"deterministic", "statistical"}
-_DETERMINISTIC_KEYS = {"a1", "a2", "delta", "unattributed"}
+_DETERMINISTIC_KEYS = {"a1", "a2", "delta", "unattributed", "coverage"}
 _STATISTICAL_KEYS = {"state", "sample_size", "allocations"}
 _METHOD_KEYS = {
     "method",
@@ -311,6 +317,10 @@ async def test_cross_workspace_project_is_404(client: httpx.AsyncClient) -> None
 
     resp = await client.get(f"/api/v1/projects/{project_id}/commerce/attribution")
     assert resp.status_code == 404
+    orders = await client.get(
+        f"/api/v1/projects/{project_id}/commerce/attribution/orders"
+    )
+    assert orders.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +347,16 @@ async def test_empty_contract_when_no_snapshot(client: httpx.AsyncClient) -> Non
         "a2": [],
         "delta": [],
         "unattributed": [],
+        "coverage": {
+            "total_latest_orders": 0,
+            "orders_with_evidence": 0,
+            "linked_ai_orders": 0,
+            "unattributed_orders": 0,
+            "evidence_coverage_rate": None,
+            "attributed_share": None,
+            "window_start": "",
+            "window_end": "",
+        },
     }
     assert body["metrics"]["statistical"] == {
         "state": "not_offered",
@@ -400,7 +420,16 @@ async def test_serves_persisted_a1_projection(
     assert set(deterministic) == _DETERMINISTIC_KEYS
     # A2/delta/unattributed are empty in this scope (Task 4 lands them).
     assert deterministic["a2"] == []
-    assert deterministic["delta"] == []
+    assert deterministic["delta"] == [
+        {
+            "currency": "USD",
+            "state": "method_unavailable",
+            "revenue": None,
+            "orders": None,
+            "average_order_value": None,
+            "conversion_rate": None,
+        }
+    ]
     assert deterministic["unattributed"] == []
     assert metrics["statistical"] == {
         "state": "not_offered",
@@ -555,3 +584,158 @@ async def test_invalid_granularity_and_window_are_422(
     assert (
         await client.get(url, params={"from": "2026-07-22", "to": "2026-07-20"})
     ).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_combined_a2_unattributed_delta_and_safe_order_page(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "attribution-a2@example.com")
+    project_id_raw, workspace_id_raw = await _create_project(client)
+    project_id = uuid.UUID(project_id_raw)
+    workspace_id = uuid.UUID(workspace_id_raw)
+    async with session_factory() as session:
+        seed = await _seed_ecommerce_chain(
+            session, workspace_id=workspace_id, project_id=project_id
+        )
+        product_id = await session.scalar(
+            select(Product.id).where(Product.project_id == project_id)
+        )
+        linked = OrderFact(
+            workspace_id=workspace_id,
+            project_id=project_id,
+            connection_id=seed.connection_id,
+            provider="shopify",
+            order_ref_hash="a" * 64,
+            resync_seq=0,
+            occurred_at=datetime(2026, 7, 20, 12, tzinfo=UTC),
+            currency="USD",
+            total_amount=Decimal("75.00"),
+            line_items=[
+                {
+                    "sku": "SKU-1",
+                    "quantity": 1,
+                    "unit_price": "75.00",
+                    "product_id": str(product_id),
+                }
+            ],
+            attribution_keys={"referrer_url": "https://chatgpt.com/c/opaque"},
+            source_artifact_id=seed.artifact_id,
+        )
+        old_unlinked = OrderFact(
+            workspace_id=workspace_id,
+            project_id=project_id,
+            connection_id=seed.connection_id,
+            provider="shopify",
+            order_ref_hash="b" * 64,
+            resync_seq=0,
+            occurred_at=datetime(2026, 7, 21, 12, tzinfo=UTC),
+            currency="USD",
+            total_amount=Decimal("100.00"),
+            line_items=[],
+            attribution_keys={},
+            source_artifact_id=seed.artifact_id,
+        )
+        unlinked = OrderFact(
+            workspace_id=workspace_id,
+            project_id=project_id,
+            connection_id=seed.connection_id,
+            provider="shopify",
+            order_ref_hash="b" * 64,
+            resync_seq=1,
+            occurred_at=datetime(2026, 7, 21, 12, tzinfo=UTC),
+            currency="USD",
+            total_amount=Decimal("25.00"),
+            line_items=[],
+            attribution_keys={},
+            source_artifact_id=seed.artifact_id,
+        )
+        session.add_all([linked, old_unlinked, unlinked])
+        await session.flush()
+        session.add(
+            AttributionLink(
+                workspace_id=workspace_id,
+                project_id=project_id,
+                order_fact_id=linked.id,
+                method="order_referrer",
+                confidence="exact",
+                matched_rule_id="host-chatgpt-com",
+                rule_version=AI_REFERRAL_RULE_VERSION,
+                analyzer_version=ATTRIBUTION_ANALYZER_VERSION,
+                evidence_refs={"ai_source": "chatgpt", "match_signal": "referrer"},
+                revenue_amount=Decimal("75.00"),
+                currency="USD",
+            )
+        )
+        await session.commit()
+    await _drive_refresh(
+        session_factory, workspace_id=workspace_id, project_id=project_id
+    )
+
+    response = await client.get(
+        f"/api/v1/projects/{project_id}/commerce/attribution",
+        params={"from": WINDOW[0].isoformat(), "to": WINDOW[1].isoformat()},
+    )
+    assert response.status_code == 200
+    deterministic = response.json()["metrics"]["deterministic"]
+    assert deterministic["a2"][0]["source_granularity"] is None
+    assert deterministic["a2"][0]["coverage_rate"] == 0.5
+    assert deterministic["coverage"] == {
+        "total_latest_orders": 2,
+        "orders_with_evidence": 1,
+        "linked_ai_orders": 1,
+        "unattributed_orders": 1,
+        "evidence_coverage_rate": 0.5,
+        "attributed_share": 0.5,
+        "window_start": WINDOW[0].isoformat(),
+        "window_end": WINDOW[1].isoformat(),
+    }
+    assert deterministic["a2"][0]["by_ai_source"][0]["ai_source"] == "chatgpt"
+    assert deterministic["unattributed"] == [
+        {"currency": "USD", "orders": 1, "order_share": 0.5, "revenue": 25.0}
+    ]
+    assert deterministic["delta"][0]["state"] == "comparable"
+    assert "total" not in deterministic
+
+    orders = await client.get(
+        f"/api/v1/projects/{project_id}/commerce/attribution/orders",
+        params={"attribution_state": "attributed"},
+    )
+    assert orders.status_code == 200
+    row = orders.json()["items"][0]
+    assert set(row) == {
+        "fact_id",
+        "occurred_at",
+        "line_items",
+        "amount",
+        "currency",
+        "attribution_state",
+        "method",
+        "ai_source",
+        "confidence",
+        "rule_version",
+    }
+    assert row["ai_source"] == "chatgpt"
+    assert "order_ref_hash" not in row
+
+    monkeypatch.setattr(
+        "app.domain.attribution.service.ATTRIBUTION_ORDERS_PAGE_SIZE", 1
+    )
+    first_page = await client.get(
+        f"/api/v1/projects/{project_id}/commerce/attribution/orders"
+    )
+    assert first_page.status_code == 200
+    cursor = first_page.json()["next_cursor"]
+    assert cursor
+    replay = await client.get(
+        f"/api/v1/projects/{project_id}/commerce/attribution/orders",
+        params={"cursor": cursor, "attribution_state": "attributed"},
+    )
+    assert replay.status_code == 400
+    tampered = await client.get(
+        f"/api/v1/projects/{project_id}/commerce/attribution/orders",
+        params={"cursor": "not-a-valid-cursor"},
+    )
+    assert tampered.status_code == 400

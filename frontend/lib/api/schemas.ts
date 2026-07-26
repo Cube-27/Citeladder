@@ -1518,26 +1518,26 @@ export const productCompletenessSchema = z.strictObject({
 export const productOriginSchema = z.enum(['manual', 'imported', 'synced']);
 
 export const productSchema = z.strictObject({
-    id: uuid(),
-    project_id: uuid(),
-    sku: z.string(),
-    name: z.string(),
-    aliases: z.array(z.string()),
-    variants: z.array(productVariantSchema),
-    price: z.number().nullable(),
-    currency: z.string(),
-    url: z.string(),
-    attributes: z.record(z.string(), z.unknown()),
-    origin: productOriginSchema,
-    // Feed binding (nullable): the connection that owns the row, the
-    // provider's item reference, and the last sync run that observed it.
-    connection_id: uuid().nullable(),
-    external_item_ref: z.string().nullable(),
-    last_seen_sync_run_id: uuid().nullable(),
-    completeness: productCompletenessSchema,
-    created_at: z.string(),
-    updated_at: z.string(),
-  });
+  id: uuid(),
+  project_id: uuid(),
+  sku: z.string(),
+  name: z.string(),
+  aliases: z.array(z.string()),
+  variants: z.array(productVariantSchema),
+  price: z.number().nullable(),
+  currency: z.string(),
+  url: z.string(),
+  attributes: z.record(z.string(), z.unknown()),
+  origin: productOriginSchema,
+  // Feed binding (nullable): the connection that owns the row, the
+  // provider's item reference, and the last sync run that observed it.
+  connection_id: uuid().nullable(),
+  external_item_ref: z.string().nullable(),
+  last_seen_sync_run_id: uuid().nullable(),
+  completeness: productCompletenessSchema,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 export const competitorProductSchema = z.strictObject({
   id: uuid(),
@@ -1553,7 +1553,12 @@ export const competitorProductSchema = z.strictObject({
 });
 
 // Buyer-destination classification vocabulary (backend `MERCHANT_KINDS`).
-export const buyerDestinationKindSchema = z.enum(['marketplace', 'retailer', 'brand_site', 'other']);
+export const buyerDestinationKindSchema = z.enum([
+  'marketplace',
+  'retailer',
+  'brand_site',
+  'other',
+]);
 
 // Persisted buyer-destination aggregate for one visibility entry: the total
 // destination count, per-kind tallies, and per-domain rows (sanitized —
@@ -2004,6 +2009,18 @@ export const attributionDeterministicSchema = z
     a2: z.array(attributionMethodMetricsSchema),
     delta: z.array(attributionDeltaSchema),
     unattributed: z.array(unattributedMetricsSchema),
+    coverage: z
+      .object({
+        total_latest_orders: z.number().int(),
+        orders_with_evidence: z.number().int(),
+        linked_ai_orders: z.number().int(),
+        unattributed_orders: z.number().int(),
+        evidence_coverage_rate: z.number().nullable(),
+        attributed_share: z.number().nullable(),
+        window_start: z.string(),
+        window_end: z.string(),
+      })
+      .strict(),
   })
   .strict();
 

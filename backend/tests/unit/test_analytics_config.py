@@ -20,6 +20,7 @@ from app.core.config.analytics import (
     ANALYTICS_MAX_WINDOW_DAYS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_TTL_S,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
     ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
     ANALYTICS_TASK_KINDS,
@@ -87,6 +88,7 @@ def test_traffic_refresh_trigger_datasets() -> None:
 
 
 def test_analytics_task_kinds_include_attribution_snapshot() -> None:
+    assert ANALYTICS_TASK_KIND_ATTRIBUTION_LINK == "attribution_link"
     assert ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT == "attribution_snapshot"
     assert ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP == "order_retention_sweep"
     assert ANALYTICS_TASK_KINDS == frozenset(
@@ -96,7 +98,8 @@ def test_analytics_task_kinds_include_attribution_snapshot() -> None:
             "traffic_snapshot_refresh",
             "analytics_snapshot_refresh",
             "referral_retention_sweep",
-            "attribution_snapshot",
+                "attribution_snapshot",
+                "attribution_link",
             "order_retention_sweep",
         }
     )

@@ -177,8 +177,15 @@ def _entry_metrics(
     """
     metrics = snapshot.metrics or {}
     if surface == SHOPPING_SURFACE_MEASUREMENT and engine is None:
-        # The overall snapshot columns are the authoritative overall slice;
-        # the v2 JSONB shapes come from the persisted aggregate spread.
+        # Current snapshots persist an exact measurement slice beside future
+        # probe surfaces. Prefer it so probe analyses cannot inflate the
+        # default dashboard; legacy snapshots without ``per_surface`` retain
+        # their historical snapshot-column fallback.
+        measurement = (metrics.get("per_surface") or {}).get(
+            SHOPPING_SURFACE_MEASUREMENT
+        )
+        if measurement is not None:
+            return _normalize_aggregate(measurement)
         return _normalize_aggregate(
             {
                 **metrics,

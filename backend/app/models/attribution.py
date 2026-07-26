@@ -11,8 +11,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -98,6 +107,52 @@ class AttributionSnapshot(Base):
     formula_version: Mapped[str] = mapped_column(
         String(64), default=ATTRIBUTION_FORMULA_VERSION
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
+class AttributionLink(Base):
+    """One deterministic AI-attribution match for an immutable order fact."""
+
+    __tablename__ = "attribution_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "order_fact_id",
+            "matched_rule_id",
+            "rule_version",
+            name="uq_attribution_link_order_rule_version",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "order_fact_id"],
+            ["order_facts.workspace_id", "order_facts.id"],
+            ondelete=_ON_DELETE_CASCADE,
+            name="fk_attribution_link_order_fact_scoped",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    order_fact_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
+    method: Mapped[str] = mapped_column(String(24))
+    confidence: Mapped[str] = mapped_column(String(16))
+    matched_rule_id: Mapped[str] = mapped_column(String(64))
+    rule_version: Mapped[str] = mapped_column(String(64))
+    analyzer_version: Mapped[str] = mapped_column(String(64))
+    evidence_refs: Mapped[dict] = mapped_column(JSONB, default=dict)
+    revenue_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(3))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
