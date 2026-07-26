@@ -636,7 +636,16 @@ than navigating, and the active one is marked `Current`.
 
 Built on the Radix dialog primitive directly, **not** `components/ui/dialog.tsx` — that
 wrapper owns a title/description/close header, and a palette's header is its input. It reuses
-the same scrim and surface tokens, so the two stay consistent.
+the same scrim and surface tokens, so the two stay consistent. The accessible name comes from
+an `sr-only` `Dialog.Title`, with `aria-describedby={undefined}` opting out of the description
+Radix otherwise expects.
+
+**Focus is handed back explicitly.** Radix returns focus to its own `Trigger`, but the ⌘K path
+has no trigger — without the explicit hand-back, closing drops focus to `<body>` and the caller
+loses their place in the page. The palette records `document.activeElement` when the shortcut
+fires (and the sidebar button records itself), then restores it on close, guarding with
+`isConnected` because switching project re-renders the shell and can unmount the original
+element. Regression-tested in `command-palette.test.tsx`.
 
 Filtering is a plain substring match over label + group. There is deliberately no fuzzy
 matcher and no index: the corpus is ~12 nav items plus a handful of projects, where
@@ -826,8 +835,25 @@ Anything above the fold is already past its entry range at load, so the hero nev
 
 `Reveal` marks a single block (`[data-mkt-reveal]`); `StaggerGroup` marks a container whose
 direct children each key off their **own** scroll position, so the cascade tracks the scroll
-instead of running ahead of it on a fixed delay. **Never introduce motion here that content
-depends on to become visible.**
+instead of running ahead of it on a fixed delay. The generic selector excludes the stagger
+container (`:not([data-mkt-reveal='stagger'])`) — animating both group and children fades
+every item twice. **Never introduce motion here that content depends on to become visible.**
+
+**Hero marquee.** Two counter-moving strips fill the bottom of the first screen: the provider
+roster travelling right, buyer questions travelling left. Opposite directions are the point —
+engines and questions are the two axes the product crosses, so one shared direction would read
+as a single list. `Marquee` renders the item list N times (`copies`, default 4) and the CSS
+translates by the width of exactly **one** copy, so copy 2 lands where copy 1 began and the
+loop is seamless. Translating a fixed `-50%` would tear as soon as the copy count changed;
+`--mkt-marquee-copy` is `1/N`, so the distance follows the content. `copies` must be high
+enough that one copy overflows the viewport — a short list that fits on screen visibly empties
+before looping, which is the usual cause of a marquee that stutters at the seam. Every copy
+after the first is `aria-hidden`, so the list is announced once. Motion pauses on hover, and
+under reduced motion the track stops at its start and becomes a plain horizontal scroll region.
+
+Both strips sit **directly on the paper** — no cards, borders or fills. Provider marks are the
+official brand geometry from `engine-logo.tsx` in each provider's own colour, and the questions
+are quoted and italic so they read as things buyers ask rather than as claims we are making.
 
 
 ## 13. Motion + accessibility (app)

@@ -143,7 +143,10 @@
    cascade tied to the scroll instead of running ahead of it. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    [data-mkt-reveal],
+    /* A stagger container is excluded from the generic rule: it delegates
+       motion to its children, and animating both would fade every item twice
+       — once with the group, once on its own. */
+    [data-mkt-reveal]:not([data-mkt-reveal='stagger']),
     [data-mkt-reveal='stagger'] > * {
       animation: mkt-reveal-in linear both;
       animation-timeline: view();
@@ -160,6 +163,64 @@
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+}
+
+/* ─── Marquee — infinite horizontal strips ────────────────────────────────
+   The track renders the item list N times and translates by the width of
+   exactly ONE copy, so at the loop point copy 2 sits precisely where copy 1
+   started and the restart is invisible. Translating a percentage of the track
+   would depend on how many copies exist; translating one copy's width does
+   not, which is what keeps the seam correct as items are added or removed.
+
+   `--mkt-marquee-copy` is that width, set inline per strip as `1 / N` of the
+   track. N must be high enough that one copy always overflows the viewport —
+   a six-item strip that fits on screen would visibly empty before looping,
+   which is the usual cause of a marquee that "stutters" at the seam.
+
+   Duration is per-strip via `--mkt-marquee-duration`, direction via the
+   `reverse` modifier, so one keyframe drives both the logos (rightward) and
+   the prompts (leftward). Edges are masked rather than covered with a
+   gradient overlay, so the strip works on any background. */
+.mkt-marquee {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+}
+
+.mkt-marquee-track {
+  display: flex;
+  width: max-content;
+  flex-wrap: nowrap;
+  will-change: transform;
+  animation: mkt-marquee var(--mkt-marquee-duration, 42s) linear infinite;
+}
+
+.mkt-marquee-track[data-direction='reverse'] {
+  animation-name: mkt-marquee-reverse;
+}
+
+/* Pausing on hover lets a reader actually finish a prompt they spotted. */
+.mkt-marquee:hover .mkt-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Leftward: travel exactly one copy, then snap back to an identical frame. */
+@keyframes mkt-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--mkt-marquee-copy, 50%)), 0, 0);
+  }
+}
+
+/* Rightward: the same journey run backwards. */
+@keyframes mkt-marquee-reverse {
+  from {
+    transform: translate3d(calc(-1 * var(--mkt-marquee-copy, 50%)), 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -193,5 +254,20 @@
     animation: none !important;
     opacity: 1;
     transform: none;
+  }
+
+  /* The marquee stops at its START, not wherever a 1ms run happened to land
+     (which for the reverse strip is a full list off-screen). The track then
+     overflows its container as a normal horizontal scroll region, so every
+     item is still reachable — the content is never trapped behind motion. */
+  .mkt-marquee {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .mkt-marquee-track {
+    animation: none !important;
+    transform: none !important;
   }
 }

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-import { EngineLogo, isOfficialEngine } from './engine-logo';
+import { EngineLogo } from './engine-logo';
 
 /**
  * Provider identity. The engines Searchify actually audits come first; the
@@ -11,34 +11,39 @@ import { EngineLogo, isOfficialEngine } from './engine-logo';
 export const ENGINES = {
   openai: {
     label: 'OpenAI',
-    initial: 'O',
     tile: 'bg-mkt-engine-openai',
     dot: 'bg-mkt-engine-openai',
+    mark: 'text-mkt-engine-openai',
   },
   claude: {
     label: 'Claude',
-    initial: 'C',
     tile: 'bg-mkt-engine-claude',
     dot: 'bg-mkt-engine-claude',
+    mark: 'text-mkt-engine-claude',
   },
   gemini: {
     label: 'Gemini',
-    initial: 'G',
     tile: 'bg-mkt-engine-gemini',
     dot: 'bg-mkt-engine-gemini',
+    mark: 'text-mkt-engine-gemini',
   },
   perplexity: {
     label: 'Perplexity',
-    initial: 'P',
     tile: 'bg-mkt-engine-perplexity',
     dot: 'bg-mkt-engine-perplexity',
+    mark: 'text-mkt-engine-perplexity',
   },
-  grok: { label: 'Grok', initial: 'X', tile: 'bg-mkt-engine-grok', dot: 'bg-mkt-engine-grok' },
+  grok: {
+    label: 'Grok',
+    tile: 'bg-mkt-engine-grok',
+    dot: 'bg-mkt-engine-grok',
+    mark: 'text-mkt-engine-grok',
+  },
   copilot: {
     label: 'Microsoft Copilot',
-    initial: 'M',
     tile: 'bg-mkt-engine-copilot',
     dot: 'bg-mkt-engine-copilot',
+    mark: 'text-mkt-engine-copilot',
   },
 } as const;
 
@@ -47,11 +52,29 @@ export type EngineKey = keyof typeof ENGINES;
 /** Audited today — the only set any factual claim may be made about. */
 export const AUDITED_ENGINES: readonly EngineKey[] = ['openai', 'gemini', 'claude'];
 
+/**
+ * The full supported roster, in display order. Providers are a UI-level
+ * addition and paid workspaces can connect any provider they hold keys for,
+ * so coverage surfaces may show all of these unqualified.
+ *
+ * AUDITED_ENGINES stays a separate, narrower list: it is the set the DEFAULT
+ * workspace audits out of the box, and remains the only set a specific
+ * measured claim ("we observed X across…") may be made about.
+ */
+export const ALL_ENGINES: readonly EngineKey[] = [
+  'openai',
+  'gemini',
+  'claude',
+  'perplexity',
+  'grok',
+  'copilot',
+];
+
 export function EngineChip({
   engine,
   className,
 }: Readonly<{ engine: EngineKey; className?: string }>) {
-  const { label, initial, tile } = ENGINES[engine];
+  const { label, tile } = ENGINES[engine];
   return (
     <span
       className={cn(
@@ -68,8 +91,35 @@ export function EngineChip({
           tile,
         )}
       >
-        {isOfficialEngine(engine) ? <EngineLogo engine={engine} className="size-3.5" /> : initial}
+        <EngineLogo engine={engine} className="size-3.5" />
       </span>
+      {label}
+    </span>
+  );
+}
+
+/**
+ * Bare form for the hero strip — the official brand mark plus the name, set
+ * directly on the paper with no card, border or tile behind either. The strip
+ * is a passing roster, not a set of tappable objects, so chip chrome would add
+ * six competing rectangles to the first screen for no meaning.
+ *
+ * Every provider in the roster has a vendored mark, so there is no initial
+ * fallback here; the mark takes the provider's own colour.
+ */
+export function EngineWordmark({
+  engine,
+  className,
+}: Readonly<{ engine: EngineKey; className?: string }>) {
+  const { label, mark } = ENGINES[engine];
+  return (
+    <span
+      className={cn(
+        'text-mkt-ink-soft inline-flex items-center gap-2.5 text-[1.0625rem] font-semibold',
+        className,
+      )}
+    >
+      <EngineLogo engine={engine} className={cn('size-5 shrink-0', mark)} />
       {label}
     </span>
   );

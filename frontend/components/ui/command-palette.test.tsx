@@ -2,21 +2,29 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const push = vi.fn();
-const setActiveProjectId = vi.fn();
+// Hoisted so the mock factories below — which vitest lifts above these
+// statements — can reference the state safely rather than relying on the
+// factories happening to run lazily.
+const { push, setActiveProjectId, projectContext } = vi.hoisted(() => {
+  const pushFn = vi.fn();
+  const setActiveProjectIdFn = vi.fn();
+  return {
+    push: pushFn,
+    setActiveProjectId: setActiveProjectIdFn,
+    projectContext: {
+      projects: [
+        { id: 'p1', brand_name: 'Acme' },
+        { id: 'p2', brand_name: 'Orbit' },
+      ],
+      activeProjectId: 'p1',
+      setActiveProjectId: setActiveProjectIdFn,
+    },
+  };
+});
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
-
-const projectContext = {
-  projects: [
-    { id: 'p1', brand_name: 'Acme' },
-    { id: 'p2', brand_name: 'Orbit' },
-  ],
-  activeProjectId: 'p1',
-  setActiveProjectId,
-};
 
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => projectContext,
@@ -118,5 +126,32 @@ describe('CommandPalette', () => {
     await user.keyboard('zzzzz{Enter}');
     expect(push).not.toHaveBeenCalled();
     expect(setActiveProjectId).not.toHaveBeenCalled();
+  });
+
+  it('returns focus to where the caller was before ⌘K', async () => {
+    // Radix restores focus to its own Trigger; the shortcut path has none, so
+    // without an explicit hand-back focus falls to <body> and the caller
+    // loses their place in the page.
+    const user = userEvent.setup();
+    render(
+      <>
+        <input data-testid="outside" />
+        <CommandPalette />
+      </>,
+    );
+    const outside = screen.getByTestId('outside');
+    outside.focus();
+
+    await user.keyboard('{Control>}k{/Control}');
+    await screen.findByRole('listbox');
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(outside));
+  });
+
+  it('gives the dialog an accessible name without a visible heading', async () => {
+    await open();
+    expect(screen.getByRole('dialog', { name: /command palette/i })).toBeInTheDocument();
   });
 });

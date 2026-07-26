@@ -46,15 +46,33 @@ export function CommandPalette() {
   const listboxId = useId();
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Where focus goes when the palette closes. Radix restores focus to its own
+  // Trigger, but the ⌘K path has no trigger, so without this the caller loses
+  // their place in the page and focus falls back to <body>.
+  const returnFocusTo = useRef<HTMLElement | null>(null);
+
+  const restoreFocus = useCallback(() => {
+    const target = returnFocusTo.current;
+    returnFocusTo.current = null;
+    // The element may have unmounted while the palette was open — switching
+    // project re-renders the shell — so check it is still in the document.
+    if (target?.isConnected) target.focus();
+  }, []);
+
   // Opening resets the palette. Done in the handler, not an effect — the reset
   // is caused by the interaction, not by state outside React.
-  const setOpenState = useCallback((next: boolean) => {
-    setOpen(next);
-    if (next) {
-      setQuery('');
-      setActive(0);
-    }
-  }, []);
+  const setOpenState = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (next) {
+        setQuery('');
+        setActive(0);
+      } else {
+        restoreFocus();
+      }
+    },
+    [restoreFocus],
+  );
 
   // ⌘K / Ctrl+K toggles from anywhere. Bound on keydown so it beats the
   // browser's own find-in-page on the platforms that map ⌘K.
@@ -63,7 +81,12 @@ export function CommandPalette() {
       if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
       setOpen((wasOpen) => {
-        if (!wasOpen) {
+        if (wasOpen) {
+          restoreFocus();
+        } else {
+          // Capture the caller's position before the dialog steals focus.
+          const activeEl = document.activeElement;
+          returnFocusTo.current = activeEl instanceof HTMLElement ? activeEl : null;
           setQuery('');
           setActive(0);
         }
@@ -72,7 +95,7 @@ export function CommandPalette() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [restoreFocus]);
 
   const commands = useMemo<Command[]>(() => {
     const navigation = NAV_GROUPS.flatMap((group) =>
@@ -147,10 +170,15 @@ export function CommandPalette() {
 
   return (
     <>
-      {/* The sidebar's pointer affordance for the same palette. */}
+      {/* The sidebar's pointer affordance for the same palette. It records
+          itself as the focus target for the same reason the ⌘K path does —
+          this button is not a Radix Trigger, so nothing else would. */}
       <button
         type="button"
-        onClick={() => setOpenState(true)}
+        onClick={(event) => {
+          returnFocusTo.current = event.currentTarget;
+          setOpenState(true);
+        }}
         aria-label="Search or jump to"
         aria-keyshortcuts="Meta+K Control+K"
         className="border-border bg-panel text-muted focus-ring hover:border-border-strong flex h-8 w-full items-center gap-2 rounded-md border px-2 text-left transition-colors"
@@ -164,9 +192,15 @@ export function CommandPalette() {
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
           <DialogPrimitive.Content
-            aria-label="Command palette"
+            // Radix requires a Title for the dialog's accessible name and
+            // warns when one is absent. The palette has no visible heading —
+            // its input is the header — so the title is screen-reader only.
+            // `aria-describedby={undefined}` opts out of the description Radix
+            // otherwise looks for, which this dialog deliberately lacks.
+            aria-describedby={undefined}
             className="border-border bg-elevated shadow-modal-value fixed top-[18%] left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-xl border focus:outline-none"
           >
+            <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border-subtle flex items-center gap-3 border-b px-4">
               <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
               <input
