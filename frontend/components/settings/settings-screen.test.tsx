@@ -100,10 +100,9 @@ describe('SettingsScreen', () => {
   it('renders the session email, account role, and initials avatar', () => {
     renderScreen();
 
-    // Email appears in the summary and the detail row.
+    // Email and role now appear once, in the identity row — the duplicate
+    // detail rows that restated both were removed.
     expect(screen.getAllByText('test.user@example.test').length).toBeGreaterThanOrEqual(1);
-    // Account role label (not "workspace owner") + the free-form role value.
-    expect(screen.getByText('Account role')).toBeInTheDocument();
     expect(screen.getAllByText('user').length).toBeGreaterThanOrEqual(1);
     // Initials avatar from the email local part.
     expect(screen.getByText('TE')).toBeInTheDocument();
@@ -136,7 +135,7 @@ describe('SettingsScreen', () => {
     await ue.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
     // Account content is hidden while another tab is active.
-    expect(screen.getByText('Account role')).not.toBeVisible();
+    expect(screen.getByText('Appearance')).not.toBeVisible();
   });
 
   it('opens the Provider Settings tab from a ?tab=providers deep link', () => {

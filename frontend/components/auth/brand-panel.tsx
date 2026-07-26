@@ -1,7 +1,7 @@
 import { FileSearch, Lock, Target } from 'lucide-react';
 import Link from 'next/link';
 
-import { LogoCube } from '@/components/ui/logo-cube';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { cn } from '@/lib/utils';
 
 /**
@@ -38,7 +38,7 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
       aria-label="Searchify home"
       className="focus-ring inline-flex items-center gap-2.5 rounded-md no-underline"
     >
-      <LogoCube size={compact ? 24 : 26} />
+      <LogoMark size={compact ? 24 : 28} />
       <span
         className={cn(
           'text-foreground font-semibold tracking-[-0.02em]',
@@ -54,30 +54,40 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
 
 export function AuthBrandPanel() {
   return (
-    <aside className="bg-sidebar border-border flex flex-col justify-between border-r p-12 max-[900px]:hidden">
+    <aside className="auth-brand border-border bg-well relative isolate col-span-5 flex flex-col overflow-hidden border-r px-12 py-8 max-[900px]:hidden">
       <AuthWordmark />
 
-      {/* Centred block — the panel's optical weight sits with the form card
-          across the fold rather than pinned to the top. */}
-      <div className="max-w-[420px] py-12">
-        <p className="text-foreground text-2xl font-semibold tracking-[-0.02em]">
-          See how AI answers talk about your brand.
-        </p>
-        <p className="text-secondary mt-3 text-base">
-          Audits ChatGPT, Gemini, and Claude with the prompts your buyers ask.
-        </p>
+      {/* Centred body — same band rhythm as the form column, so the headline
+          sits on the form's optical centre line rather than drifting. */}
+      <div className="flex flex-1 items-center py-12">
+        <div className="max-w-[420px]">
+          <p className="text-foreground text-2xl leading-[1.15] font-semibold tracking-[-0.02em]">
+            See how AI answers talk about your brand.
+          </p>
+          <p className="text-secondary mt-3 text-base">
+            Audits ChatGPT, Gemini, and Claude with the prompts your buyers ask.
+          </p>
 
-        <ul className="mt-10 grid list-none gap-3 p-0">
-          {PROOF_POINTS.map((proof) => (
-            <li key={proof.lead} className="flex items-center gap-3">
-              <proof.icon className="text-muted size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-              <span className="text-secondary text-sm">{proof.lead}</span>
-            </li>
-          ))}
-        </ul>
+          {/* Rule + list rather than free-floating rows: the panel had three
+              icon rows with nothing anchoring them, which is most of why it
+              read as unstructured. */}
+          <ul className="border-border-subtle mt-10 grid list-none gap-3 border-t p-0 pt-6">
+            {PROOF_POINTS.map((proof) => (
+              <li key={proof.lead} className="flex items-center gap-3">
+                <span
+                  aria-hidden
+                  className="border-border-subtle bg-panel text-accent-text flex size-7 shrink-0 items-center justify-center rounded-md border"
+                >
+                  <proof.icon className="size-3.5" strokeWidth={1.75} />
+                </span>
+                <span className="text-secondary text-sm">{proof.lead}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
-      <p className="text-muted text-2xs">© {new Date().getFullYear()} CUBE27</p>
+      <p className="text-subtle text-xs">© {new Date().getFullYear()} CUBE27</p>
     </aside>
   );
 }

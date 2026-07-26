@@ -37,9 +37,9 @@ export default function RegisterPage() {
   const onSubmit = handleSubmit(submit);
 
   return (
-    <div className="grid gap-5">
-      {/* No subhead — see the note on the login page. */}
-      <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">
+    <div className="grid gap-6">
+      {/* No subhead, and no card wrapper — see the notes on the login page. */}
+      <h1 className="text-foreground text-2xl font-semibold tracking-[-0.02em]">
         Create your account
       </h1>
 
@@ -82,14 +82,19 @@ export default function RegisterPage() {
           )}
         </Field>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || mutation.isPending}>
+        <Button
+          type="submit"
+          size="lg"
+          className="mt-1 w-full"
+          disabled={isSubmitting || mutation.isPending}
+        >
           {isSubmitting || mutation.isPending ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
 
-      <p className="text-secondary text-center text-sm">
+      <p className="border-border-subtle text-secondary border-t pt-5 text-sm">
         Already have an account?{' '}
-        <Link href="/login" className="focus-ring text-accent-text rounded-sm">
+        <Link href="/login" className="focus-ring text-accent-text rounded-sm font-medium">
           Sign in
         </Link>
       </p>

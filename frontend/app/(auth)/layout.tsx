@@ -1,52 +1,47 @@
-import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
-import { Card } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 /**
  * Auth route-group layout.
  *
- * Split-screen shell: at ≥900px a two-column grid pairs the brand panel
- * (components/auth/brand-panel) with the centred auth card; below 900px only
- * the form panel renders, with a compact wordmark above the card. Shared by
- * `/login` and `/register`.
+ * Split screen at ≥900px, **asymmetric on purpose**: the brand panel takes
+ * 5/12 and the form 7/12. The old 50/50 gave equal weight to marketing copy and
+ * the thing the user came to do, which is what made the screen read as flat —
+ * a sign-in page should lean toward the form.
  *
- * The single-h1 rule: the pages own the only h1 — the wordmarks are spans,
- * and the brand headline is a `<p>`.
+ * Both columns share one three-band rhythm — header / centred body / footer —
+ * so the wordmark, the form and the fine print line up across the divide
+ * instead of each column floating its own way. Below 900px the brand panel
+ * drops and the form keeps the same bands.
+ *
+ * The single-h1 rule: the pages own the only h1 — the wordmarks are spans, and
+ * the brand headline is a `<p>`.
  */
 export default function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="bg-background min-h-dvh min-[900px]:grid min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="bg-background min-h-dvh min-[900px]:grid min-[900px]:grid-cols-12">
       <AuthBrandPanel />
 
-      {/* ── Form panel ───────────────────────────────────────────────── */}
-      <main className="bg-background relative flex min-h-dvh flex-col items-center justify-center px-6 py-12">
-        <div className="absolute top-5 right-5">
-          <ThemeToggle />
-        </div>
-        <div className="flex w-full max-w-[380px] flex-col gap-5">
-          <div className="flex flex-col items-center gap-3 min-[900px]:hidden">
+      <main className="relative flex min-h-dvh flex-col px-6 py-8 min-[900px]:col-span-7 sm:px-10">
+        {/* Header band — mirrors the brand panel's wordmark row so the two
+            columns start on the same line. */}
+        <header className="flex items-center justify-between gap-3">
+          <div className="min-[900px]:invisible">
             <AuthWordmark compact />
-            {/* The single-h1 rule keeps this a <p> — the page owns the h1. */}
-            <p className="text-secondary text-center text-base">
-              See how AI answers talk about your brand.
-            </p>
           </div>
+          <ThemeToggle />
+        </header>
 
-          <Card className="w-full p-6" elevation="raised">
-            {children}
-          </Card>
-
-          {/* Mobile only: on desktop the brand panel already carries this as a
-              proof point, and repeating it either side of the fold is exactly
-              the kind of duplication that made the screen feel busy. */}
-          <p className="text-muted flex items-center justify-center gap-1.5 text-xs min-[900px]:hidden">
-            <Lock className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
-            Your own API keys, encrypted at rest
-          </p>
+        <div className="flex flex-1 items-center justify-center py-10">
+          <div className="w-full max-w-[400px]">{children}</div>
         </div>
+
+        {/* Footer band — balances the brand panel's copyright row. */}
+        <footer className="text-subtle text-xs">
+          <span className="min-[900px]:hidden">Your own API keys, encrypted at rest</span>
+        </footer>
       </main>
     </div>
   );

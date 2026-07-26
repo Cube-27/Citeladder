@@ -814,11 +814,60 @@ samp {
   color: var(--text-primary);
 }
 
-/* ─── Brand utilities — LogoCube default paints + auth split-screen ────
-   The mark is tile-less: the bubble is drawn in the current text color and
-   the spark in the accent, so it reads on any surface and inverts with the
-   theme for free. The marketing `.mkt` paint rules in marketing.css stay
-   more specific and keep the landing's treatment. */
+/* ─── Brand utilities — the Searchify mark ─────────────────────────────
+   `.logo-mark` is the product mark: a magnifier glyph on a gradient chip,
+   shared with the marketing surface so the app and the landing show the
+   same logo. The marketing `.mkt .marketing-logo` rules stay more specific
+   and keep the landing's heavier glow.
+
+   The gradient is stated here rather than derived from --accent: it spans
+   violet → orchid → ember, and only its first stop is the accent. Hex is
+   allowed in this file (the no-raw-hex guard scans .ts/.tsx only), which is
+   why the component is class-driven. */
+.logo-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 9px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #7b6cf6, #b34fe0 58%, #f0566b);
+}
+.logo-mark svg {
+  width: 60%;
+  height: 60%;
+}
+.logo-mark circle,
+.logo-mark path {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.logo-mark .logo-mark-dot {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Auth brand panel — an accent wash bled in from the top-left corner.
+   Colour-mix off --accent rather than a fixed hex, so it follows the theme
+   (royal blue in light, dusk violet in dark) and needs no dark override. It
+   is decoration behind text that already meets AA on --bg-well: the wash tops
+   out at 10% alpha, which cannot move a contrast pair across the threshold. */
+.auth-brand::before {
+  content: '';
+  position: absolute;
+  inset: -20% 40% 55% -20%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 10%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Legacy LogoCube paints — the mark is retired but the component is still
+   exported; these keep it rendering correctly wherever it lingers. */
 .logo-bubble {
   stroke: var(--text-primary);
 }

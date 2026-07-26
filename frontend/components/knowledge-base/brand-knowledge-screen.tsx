@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -14,9 +14,6 @@ import { useActiveProject } from '@/lib/project/project-context';
 import { setupErrorMessage } from '@/lib/setup/forms';
 
 import { BrandProfilePanel } from './brand-profile-panel';
-import { AccentEyebrow } from '@/components/ui/eyebrow';
-import { IconChip } from '@/components/ui/icon-chip';
-import { displayHeadingLgClasses, displayHeadingXlClasses } from '@/components/ui/typography';
 
 /**
  * Workspace-owned editor for the curated brand knowledge used by assisted
@@ -40,55 +37,36 @@ export function BrandKnowledgeScreen() {
 
   if (!project) {
     return (
-      <div className="mx-auto grid max-w-3xl">
-        <Card>
-          <CardContent className="grid justify-items-center gap-4 py-12 text-center">
-            <CardEyebrow>Knowledge base</CardEyebrow>
-            <IconChip>
-              <BookOpen className="size-6" aria-hidden />
-            </IconChip>
-            <div className="grid gap-1">
-              <h2 className={displayHeadingLgClasses}>Create a project first</h2>
-              <p className="text-secondary max-w-md text-sm">
-                Brand knowledge belongs to a project. Set one up, then curate the facts and
-                positioning Searchify uses to ground assisted features.
-              </p>
-            </div>
-            <Button asChild variant="ghost" size="md">
-              <Link href="/projects">Go to Projects</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <EmptyState
+        icon={BookOpen}
+        heading="Create a project first"
+        description="Brand knowledge belongs to a project."
+        action={
+          <Button asChild size="md">
+            <Link href="/projects">Go to Projects</Link>
+          </Button>
+        }
+      />
     );
   }
 
   if (profileQuery.isLoading) {
     return (
-      <div className="mx-auto grid max-w-3xl gap-5" aria-hidden>
-        <Skeleton className="h-9 w-64" />
+      <div className="grid gap-4" aria-hidden>
         <Skeleton className="h-96 w-full" />
       </div>
     );
   }
   if (profileQuery.error) {
-    return (
-      <div className="mx-auto grid max-w-3xl">
-        <Alert tone="danger">{setupErrorMessage(profileQuery.error)}</Alert>
-      </div>
-    );
+    return <Alert tone="danger">{setupErrorMessage(profileQuery.error)}</Alert>;
   }
   if (!profileQuery.data) return null;
 
+  // Full width, and no page header: the shell's top bar already reads "Brand
+  // knowledge", so the eyebrow + h2 + strapline repeated the title three more
+  // times inside a rail that left half the screen empty.
   return (
-    <div className="mx-auto grid max-w-3xl gap-5">
-      <div className="grid gap-1">
-        <AccentEyebrow>Knowledge base</AccentEyebrow>
-        <h2 className={displayHeadingXlClasses}>Brand knowledge</h2>
-        <p className="text-secondary text-sm">
-          Maintain the facts and positioning that Searchify uses to ground assisted features.
-        </p>
-      </div>
+    <div className="grid gap-4">
       <BrandProfilePanel
         key={profileQuery.data.updated_at}
         projectId={project.id}

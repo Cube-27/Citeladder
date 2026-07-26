@@ -3,7 +3,7 @@
 import { Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { LogoCube } from '@/components/ui/logo-cube';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { PageHeader } from './page-header';
@@ -40,7 +40,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               sidebar hairline. The mark returns to the app chrome here; it had
               been marketing/auth-only during the flat phase. */}
           <div className="border-border-subtle flex h-[52px] shrink-0 items-center gap-2.5 border-b px-5">
-            <LogoCube size={26} />
+            <LogoMark size={26} />
             <span className="text-foreground text-lg font-semibold tracking-tight">Searchify</span>
           </div>
 

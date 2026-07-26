@@ -37,10 +37,11 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(submit);
 
   return (
-    <div className="grid gap-5">
-      {/* No subhead: "Welcome back — sign in to your workspace" restated the
-          heading and the button label. The form is self-evident. */}
-      <h1 className="text-foreground text-xl font-semibold tracking-[-0.02em]">Sign in</h1>
+    <div className="grid gap-6">
+      {/* The card wrapper is gone. On a split screen the form column IS the
+          surface — boxing it inside a panel put a border around a border and
+          shrank the fields for no reason. */}
+      <h1 className="text-foreground text-2xl font-semibold tracking-[-0.02em]">Sign in</h1>
 
       {mutation.isError ? <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert> : null}
 
@@ -69,14 +70,19 @@ export default function LoginPage() {
           )}
         </Field>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || mutation.isPending}>
+        <Button
+          type="submit"
+          size="lg"
+          className="mt-1 w-full"
+          disabled={isSubmitting || mutation.isPending}
+        >
           {isSubmitting || mutation.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
 
-      <p className="text-secondary text-center text-sm">
+      <p className="border-border-subtle text-secondary border-t pt-5 text-sm">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="focus-ring text-accent-text rounded-sm">
+        <Link href="/register" className="focus-ring text-accent-text rounded-sm font-medium">
           Create one
         </Link>
       </p>

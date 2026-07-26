@@ -207,14 +207,14 @@ export function SettingsScreen() {
         tabIndex={0}
         className="focus-ring outline-none"
       >
-        <div className="grid max-w-2xl gap-6">
+        {/* Two columns from lg, not a narrow centred rail. These cards are
+            short, so a max-w-2xl column left most of a wide screen empty and
+            pushed everything below the fold for no reason. */}
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
           <Card>
             <CardHeader>
               <CardTitle>Account</CardTitle>
-              <CardDescription>
-                Your Searchify account details. Account fields are read-only here and shown for
-                reference.
-              </CardDescription>
+              <CardDescription>Read-only — shown for reference.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3.5">
@@ -226,25 +226,17 @@ export function SettingsScreen() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-foreground truncate text-sm font-semibold">{user.email}</div>
-                  <div className="text-muted mt-0.5 text-sm">
-                    Account role: <span className="capitalize">{user.role}</span>
-                  </div>
+                  <div className="text-muted mt-0.5 text-sm capitalize">{user.role}</div>
                 </div>
                 <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
                   {user.is_active ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
 
+              {/* Only what the header above does NOT already state. Email, role
+                  and status were each rendered twice — once in the identity row
+                  and again as a detail row. */}
               <dl className="border-border-subtle mt-5 border-t">
-                <DetailRow label="Email">{user.email}</DetailRow>
-                <DetailRow label="Account role">
-                  <Badge variant="neutral">{user.role}</Badge>
-                </DetailRow>
-                <DetailRow label="Account status">
-                  <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
-                </DetailRow>
                 {createdLabel ? (
                   <DetailRow label="Account created" mono>
                     {createdLabel}
@@ -313,7 +305,7 @@ export function SettingsScreen() {
         tabIndex={0}
         className="focus-ring outline-none"
       >
-        <div className="grid max-w-2xl gap-6">
+        <div className="grid gap-4">
           <Card>
             <CardHeader>
               <CardTitle>Danger zone</CardTitle>

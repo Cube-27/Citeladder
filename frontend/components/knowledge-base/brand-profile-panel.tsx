@@ -170,51 +170,58 @@ export function BrandProfilePanel({
           </Alert>
         ) : null}
 
-        <Field label="Description">
-          {(field) => (
-            <Textarea
-              {...field}
-              value={draft.description}
-              onChange={(event) =>
-                setDraft((value) => ({ ...value, description: event.target.value }))
-              }
-            />
-          )}
-        </Field>
-        <Field
-          label="Positioning"
-          hint="Include price tier, differentiation, and competitive segment."
-        >
-          {(field) => (
-            <Textarea
-              {...field}
-              value={draft.positioning}
-              onChange={(event) =>
-                setDraft((value) => ({ ...value, positioning: event.target.value }))
-              }
-            />
-          )}
-        </Field>
-        <Field label="Products and services" hint="Comma-separated category labels.">
-          {(field) => (
-            <Input
-              {...field}
-              value={productsInput}
-              onChange={(event) => setProductsInput(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label="Target audience">
-          {(field) => (
-            <Textarea
-              {...field}
-              value={draft.target_audience}
-              onChange={(event) =>
-                setDraft((value) => ({ ...value, target_audience: event.target.value }))
-              }
-            />
-          )}
-        </Field>
+        {/* Two columns from lg. Four stacked textareas in one rail meant
+            scrolling to see fields that comfortably fit side by side once the
+            screen stopped being a narrow centred column. */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Field label="Description">
+            {(field) => (
+              <Textarea
+                {...field}
+                value={draft.description}
+                onChange={(event) =>
+                  setDraft((value) => ({ ...value, description: event.target.value }))
+                }
+              />
+            )}
+          </Field>
+          <Field
+            label="Positioning"
+            hint="Include price tier, differentiation, and competitive segment."
+          >
+            {(field) => (
+              <Textarea
+                {...field}
+                value={draft.positioning}
+                onChange={(event) =>
+                  setDraft((value) => ({ ...value, positioning: event.target.value }))
+                }
+              />
+            )}
+          </Field>
+          <Field label="Target audience">
+            {(field) => (
+              <Textarea
+                {...field}
+                value={draft.target_audience}
+                onChange={(event) =>
+                  setDraft((value) => ({ ...value, target_audience: event.target.value }))
+                }
+              />
+            )}
+          </Field>
+          {/* Single-line input, so it sits with the textareas rather than
+              stretching across both columns. */}
+          <Field label="Products and services" hint="Comma-separated category labels.">
+            {(field) => (
+              <Input
+                {...field}
+                value={productsInput}
+                onChange={(event) => setProductsInput(event.target.value)}
+              />
+            )}
+          </Field>
+        </div>
 
         <div className="flex justify-end gap-2">
           {suggestion ? (

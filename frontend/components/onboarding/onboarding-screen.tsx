@@ -10,7 +10,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { LogoCube } from '@/components/ui/logo-cube';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { MarketSelect } from '@/components/ui/market-select';
 import { queryKeys } from '@/lib/api/query-keys';
 import {
@@ -29,6 +29,7 @@ import {
 } from '@/lib/onboarding/create-project';
 import { useDiscovery } from '@/lib/onboarding/use-discovery';
 import { useProjectContext } from '@/lib/project/project-context';
+import { cn } from '@/lib/utils';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 
 import { DiscoveryProgress } from './discovery-progress';
@@ -164,29 +165,48 @@ export function OnboardingScreen() {
   return (
     <div className="bg-background min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
       <main className="flex min-h-dvh flex-col px-6 py-8 sm:px-10">
-        <header className="flex items-center gap-2.5">
-          <LogoCube size={26} />
-          <span className="text-foreground text-lg font-semibold tracking-tight">Searchify</span>
+        <header className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2.5">
+            <LogoMark size={26} />
+            <span className="text-foreground text-lg font-semibold tracking-tight">Searchify</span>
+          </span>
+          <span className="text-subtle text-xs">
+            Step {step + 1} of {STEPS.length}
+          </span>
         </header>
 
         <div className="mx-auto flex w-full max-w-[520px] flex-1 flex-col justify-center py-10">
-          <ol className="mb-8 flex list-none items-center gap-2 p-0">
-            {STEPS.map((label, index) => (
-              <li key={label} className="flex flex-1 items-center gap-2">
-                <span
-                  className={
-                    index <= step
-                      ? 'bg-accent h-0.5 flex-1 rounded-full'
-                      : 'bg-border h-0.5 flex-1 rounded-full'
-                  }
-                />
-              </li>
-            ))}
+          {/* Labelled stepper. The bars alone said "three of something" without
+              saying what, so the user could not tell what was coming — which is
+              most of what a stepper is for. `aria-current` marks the active step
+              rather than relying on colour. */}
+          <ol className="mb-8 grid list-none grid-cols-3 gap-2 p-0">
+            {STEPS.map((label, index) => {
+              const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
+              return (
+                <li
+                  key={label}
+                  aria-current={state === 'current' ? 'step' : undefined}
+                  className="grid gap-1.5"
+                >
+                  <span
+                    className={cn(
+                      'h-0.5 rounded-full',
+                      state === 'upcoming' ? 'bg-border' : 'bg-accent',
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-2xs font-medium',
+                      state === 'current' ? 'text-foreground' : 'text-subtle',
+                    )}
+                  >
+                    {label}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
-
-          <p className="text-muted text-2xs mb-2 font-medium tracking-wider uppercase">
-            Step {step + 1} of {STEPS.length}
-          </p>
 
           {step === 0 ? (
             <form noValidate onSubmit={submitBrand} className="grid gap-5">
