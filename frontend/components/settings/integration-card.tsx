@@ -17,47 +17,14 @@ import {
   type IntegrationProvider,
   type IntegrationSyncRun,
 } from '@/lib/api/integrations';
+import { FAMILY_META, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
 import { queryKeys } from '@/lib/api/query-keys';
 import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
 import { isActiveSyncRun, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
 import { assignLocation } from '@/lib/navigate';
 
-/** OAuth grant family — gsc/ga4 share ONE Google grant; bing rides a Microsoft grant. */
-export type GrantFamily = 'google' | 'microsoft';
-
-/** Presentation model for one OAuth grant (connections grouped by `grant_id`). */
-export type GrantModel = {
-  grantId: string;
-  family: GrantFamily;
-  status: IntegrationConnection['grant_status'];
-  scopes: string[];
-  connections: IntegrationConnection[];
-};
-
 type GrantStatus = IntegrationConnection['grant_status'];
 type SyncRunStatus = IntegrationSyncRun['status'];
-
-export const GRANT_FAMILY: Record<IntegrationProvider, GrantFamily> = {
-  gsc: 'google',
-  ga4: 'google',
-  bing: 'microsoft',
-};
-
-export const FAMILY_META: Record<
-  GrantFamily,
-  { title: string; connectProvider: IntegrationProvider; blurb: string }
-> = {
-  google: {
-    title: 'Google',
-    connectProvider: 'gsc',
-    blurb: 'One consent links Search Console and Analytics 4 on a shared grant.',
-  },
-  microsoft: {
-    title: 'Microsoft',
-    connectProvider: 'bing',
-    blurb: 'Links Bing Webmaster Tools through one Microsoft OAuth grant.',
-  },
-};
 
 const PROVIDER_META: Record<IntegrationProvider, { label: string; Icon: LucideIcon }> = {
   gsc: { label: 'Google Search Console', Icon: Search },

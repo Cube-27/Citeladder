@@ -27,6 +27,7 @@ from app.api.provider_connections import router as provider_connections_router
 from app.api.site_health import router as site_health_router
 from app.api.traffic import router as traffic_router
 from app.api.workspaces import router as workspaces_router
+from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.core.config import get_frontend_origins, settings
 from app.core.database import dispose_engine
 from app.core.telemetry import (
@@ -87,6 +88,9 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        # The provider connectivity probe (/provider-connections/{id}/test) runs
+        # in this process, so the web app owns a pooled answer-engine client too.
+        await aclose_shared_clients()
         await dispose_engine()
 
 

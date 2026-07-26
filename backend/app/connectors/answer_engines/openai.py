@@ -34,6 +34,7 @@ from app.connectors.answer_engines.errors import (
     parse_retry_after,
     raise_provider_http_error,
 )
+from app.connectors.answer_engines.http_client import shared_client
 from app.connectors.answer_engines.openai_parser import parse_openai_response
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -85,7 +86,12 @@ class OpenAIAnswerEngineAdapter:
     transport_provider = TRANSPORT_OPENAI
 
     def __init__(
-        self, *, api_key: str, country_code: str = "", base_url: str = ""
+        self,
+        *,
+        api_key: str,
+        country_code: str = "",
+        base_url: str = "",
+        client: httpx.AsyncClient | None = None,
     ) -> None:
         if not api_key:
             raise ProviderError(
@@ -96,6 +102,8 @@ class OpenAIAnswerEngineAdapter:
         self._api_key = api_key
         self._country_code = country_code
         self._url = base_url or provider_catalog_settings.openai_responses_url
+        # Injected only by tests; production uses the per-loop pooled client.
+        self._client = client
 
     async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
         headers = {
@@ -103,13 +111,14 @@ class OpenAIAnswerEngineAdapter:
             "Content-Type": "application/json",
         }
         started = time.monotonic()
+        client = self._client or shared_client()
         try:
-            async with httpx.AsyncClient(timeout=request.timeout_seconds) as client:
-                response = await client.post(
-                    self._url,
-                    json=_payload(request, country_code=self._country_code),
-                    headers=headers,
-                )
+            response = await client.post(
+                self._url,
+                json=_payload(request, country_code=self._country_code),
+                headers=headers,
+                timeout=request.timeout_seconds,
+            )
         except (
             httpx.ConnectTimeout,
             httpx.ReadTimeout,

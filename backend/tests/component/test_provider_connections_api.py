@@ -224,31 +224,30 @@ async def test_test_endpoint_returns_status_success(
     # Mock the transport so no real API call is made.
     from app.connectors.answer_engines import openai as openai_mod
 
-    _real_client = openai_mod.httpx.AsyncClient
+    payload = {
+        "id": "resp-x",
+        "object": "response",
+        "status": "completed",
+        "model": "gpt-5.4",
+        "output": [
+            {
+                "type": "message",
+                "id": "m",
+                "content": [{"type": "output_text", "text": "ok"}],
+            }
+        ],
+        "usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+    }
 
-    def _fake_client(*args, **kwargs):  # noqa: ANN002, ANN003
-        payload = {
-            "id": "resp-x",
-            "object": "response",
-            "status": "completed",
-            "model": "gpt-5.4",
-            "output": [
-                {
-                    "type": "message",
-                    "id": "m",
-                    "content": [{"type": "output_text", "text": "ok"}],
-                }
-            ],
-            "usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
-        }
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
 
-        def handler(_request: httpx.Request) -> httpx.Response:
-            return httpx.Response(200, json=payload)
-
-        kwargs["transport"] = httpx.MockTransport(handler)
-        return _real_client(*args, **kwargs)
-
-    monkeypatch.setattr(openai_mod.httpx, "AsyncClient", _fake_client)
+    # Patch the POOLED-CLIENT ACCESSOR, not `httpx.AsyncClient`. Adapters no
+    # longer construct a client per call (they reuse one keep-alive connection
+    # per provider host), so patching the constructor only landed if this test
+    # happened to be the one that created the pooled client.
+    mock_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(openai_mod, "shared_client", lambda: mock_client)
 
     resp = await client.post(f"/api/v1/provider-connections/{conn_id}/test")
     assert resp.status_code == 200
@@ -273,16 +272,12 @@ async def test_test_endpoint_reports_failure_and_redacts_logs(
 
     from app.connectors.answer_engines import openai as openai_mod
 
-    _real_client = openai_mod.httpx.AsyncClient
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": "unauthorized"})
 
-    def _fake_client(*args, **kwargs):  # noqa: ANN002, ANN003
-        def handler(_request: httpx.Request) -> httpx.Response:
-            return httpx.Response(401, json={"error": "unauthorized"})
-
-        kwargs["transport"] = httpx.MockTransport(handler)
-        return _real_client(*args, **kwargs)
-
-    monkeypatch.setattr(openai_mod.httpx, "AsyncClient", _fake_client)
+    # Patch the pooled-client accessor — see the note in the success-path test.
+    mock_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(openai_mod, "shared_client", lambda: mock_client)
 
     with caplog.at_level(logging.DEBUG):
         resp = await client.post(f"/api/v1/provider-connections/{conn_id}/test")

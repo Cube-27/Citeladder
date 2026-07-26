@@ -37,7 +37,12 @@ describe('Button', () => {
       </Button>,
     );
     const btn = screen.getByRole('button', { name: 'Delete' });
-    expect(btn.className).toContain('bg-danger');
+    expect(btn.className).toContain('bg-danger-solid');
+    // White label on the deepened fill — not the dark ink the flat phase used.
+    expect(btn.className).toContain('text-danger-fg');
+    // Hover walks the ramp (like primary) rather than fading opacity, which
+    // used to wash the label out along with the fill.
+    expect(btn.className).toContain('hover:bg-danger-solid-hover');
     expect(btn.className).toContain('h-[var(--control-height-lg)]');
   });
 

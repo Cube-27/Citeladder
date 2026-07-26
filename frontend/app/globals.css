@@ -69,6 +69,8 @@
   --color-warning-border: var(--warning-border);
   --color-warning-text: var(--warning-text);
   --color-danger: var(--danger);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-solid-hover: var(--danger-solid-hover);
   --color-danger-fg: var(--danger-fg);
   --color-danger-bg: var(--danger-bg);
   --color-danger-border: var(--danger-border);
@@ -314,11 +316,14 @@
   --warning-border: #fde68a;
   --warning-text: #92400e;
   --danger: #ef4444;
-  /* Foreground for the DANGER SOLID (destructive button fill). White on
-     #EF4444 is only 3.76:1, so the destructive label takes the dark ink
-     instead (4.9:1) rather than deepening --danger, which is also the
-     sentiment-negative solid and every danger accent. */
-  --danger-fg: var(--neutral-900);
+  /* DESTRUCTIVE BUTTON FILL — the red ramp one step deeper than --danger
+     (red-500 → red-600) so the label can be white like every other solid-fill
+     button (white on #EF4444 is only 3.76:1, so the FILL moves, not the label).
+     Separate from --danger, which is also the sentiment-negative solid and the
+     score-low ring — neither should darken. */
+  --danger-solid: #dc2626; /* white on this: 4.83:1 */
+  --danger-solid-hover: #b91c1c; /* one step deeper again — 6.47:1 */
+  --danger-fg: #ffffff;
   --danger-bg: #fff1f1;
   --danger-border: #fecaca;
   --danger-text: #b91c1c;
@@ -587,7 +592,11 @@ html[data-theme='dark'] {
   --warning-border: rgba(242, 193, 78, 0.28);
   --warning-text: #f2c14e;
   --danger: #ff8f85;
-  --danger-fg: #1f1e1b; /* dark ink on the coral solid — 7.5:1 */
+  /* Destructive button fill — the deck coral deepened until white clears AA
+     (the coral itself is 2.21:1 against white); stays in the warm family. */
+  --danger-solid: #b8463c; /* white on this: 5.28:1 */
+  --danger-solid-hover: #a33c33;
+  --danger-fg: #ffffff;
   --danger-bg: rgba(255, 143, 133, 0.13);
   --danger-border: rgba(255, 143, 133, 0.28);
   --danger-text: #ff8f85;

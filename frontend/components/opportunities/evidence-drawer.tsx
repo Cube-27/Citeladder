@@ -6,10 +6,10 @@ import { X } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import type { StatusValue } from '@/components/ui/badge-variants';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/typography';
+import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-status-meta';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail, OpportunityStatus, OpportunityType } from '@/lib/api/types';
@@ -31,22 +31,6 @@ import { cn } from '@/lib/utils';
  * chips), provenance (rule + versions + source row ids + detected-at),
  * remediation, and a status-workflow footer (the one mutation).
  */
-
-/**
- * Workflow-status presentation meta — the SINGLE label + palette source for
- * every status control on the surface (drawer badge/footer, catalog filter
- * chips, catalog row dropdown). Insertion order is the display order.
- * Mockup palette: open=info, in-progress=warning, resolved=success.
- */
-export const OPPORTUNITY_STATUS_META: Record<
-  OpportunityStatus,
-  { label: string; badge: StatusValue | 'neutral' }
-> = {
-  open: { label: 'Open', badge: 'info' },
-  in_progress: { label: 'In progress', badge: 'warning' },
-  dismissed: { label: 'Dismissed', badge: 'neutral' },
-  resolved: { label: 'Resolved', badge: 'success' },
-};
 
 const TYPE_LABEL: Record<OpportunityType, string> = {
   visibility: 'Visibility',

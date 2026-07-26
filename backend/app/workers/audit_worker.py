@@ -44,6 +44,7 @@ from app.connectors.answer_engines.contracts import (
 )
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
+from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.core.config import settings
 from app.core.config.audits import (
     ATTEMPT_STATUS_FAILED,
@@ -276,6 +277,36 @@ def _warn_if_pool_undersized() -> None:
         )
 
 
+def _warn_if_provider_pacing_unbounded() -> None:
+    """Surface the provider-rate-limit risk of the concurrency defaults.
+
+    The sibling of ``_warn_if_pool_undersized``, for the ceiling the worker does
+    NOT control. ``worker_concurrency`` bounds in-flight tasks, but nothing here
+    bounds tokens-per-minute at the provider: with pacing off, N slots can start
+    N calls against the same transport at once. Grounded answers carry the web
+    search results back in as input (measured ~16k input tokens per Claude call),
+    so the burst is large enough to 429 on a low tier.
+
+    Deliberately a warning rather than a non-zero default interval: spacing every
+    start would serialize the pool's ramp-up and undo the throughput the
+    pipelined pump exists for. Operators who need pacing set
+    ``AUDIT_MIN_REQUEST_INTERVAL_SECONDS``; this makes the exposure visible
+    instead of leaving it to the config comment.
+    """
+    concurrency = max(1, audit_settings.worker_concurrency)
+    interval = max(0.0, audit_settings.min_request_interval_seconds)
+    if interval > 0 or concurrency <= 1:
+        return
+    logger.warning(
+        "provider request pacing is disabled; concurrent calls may hit provider "
+        "rate limits (set AUDIT_MIN_REQUEST_INTERVAL_SECONDS to spread starts)",
+        extra={
+            "worker_concurrency": concurrency,
+            "min_request_interval_seconds": interval,
+        },
+    )
+
+
 class AuditWorker:
     """Owns a claim/lease loop against ``PostgresTaskQueue``.
 
@@ -298,6 +329,31 @@ class AuditWorker:
         self._session_factory = session_factory or SessionLocal
         self._queue = PostgresTaskQueue(self._session_factory, AUDIT_QUEUE_SPEC)
         self.owner = owner or f"worker-{uuid.uuid4().hex[:12]}"
+        # Shared across this worker's concurrency slots — see _sweep_expired_leases.
+        self._sweep_lock = asyncio.Lock()
+        self._last_sweep_at: float | None = None
+
+    async def _sweep_expired_leases(self) -> None:
+        """Release expired leases, at most once per poll interval per worker.
+
+        Every slot sweeps before every claim, so at concurrency N an unthrottled
+        sweep means N UPDATEs across the leased rows per claim cycle — and a fast
+        task makes that cycle tight. The lease TTL is measured in minutes, so
+        sweeping more often than the poll interval buys nothing.
+
+        The gate is shared worker state rather than per-slot: the point is one
+        sweep for the whole pool, not one per slot. The timestamp is advanced
+        before the await so concurrent slots queued on the lock skip their turn,
+        and a failed sweep simply waits out the interval (the caller logs it, and
+        the lease TTL is orders of magnitude longer).
+        """
+        interval = max(0.05, audit_settings.poll_interval_seconds)
+        async with self._sweep_lock:
+            now = time.monotonic()
+            if self._last_sweep_at is not None and now - self._last_sweep_at < interval:
+                return
+            self._last_sweep_at = now
+            await self._queue.release_expired()
 
     async def run_once(self) -> int:
         """Sweep expired leases, claim a batch, execute it. Returns count run.
@@ -330,11 +386,88 @@ class AuditWorker:
                     )
         return len(tasks)
 
+    async def run_pipelined(self, *, drain: bool) -> int:
+        """Keep ``worker_concurrency`` calls in flight, refilling as each lands.
+
+        This is the throughput path, and it exists because ``run_once``'s
+        lock-step batching has a convoy problem. Claiming N tasks, gathering ALL
+        of them, then claiming the next N means a batch takes as long as its
+        SLOWEST member while its finished slots sit idle. Provider latency is
+        wildly uneven — measured Claude calls on one run ranged 3.4s to 46.3s,
+        because latency tracks the answer's output-token count — so the spread
+        within a batch is the common case, not the exception.
+
+        A free-tier run is 10 prompts x 3 providers = 30 calls. Over that many
+        tasks the difference is large: with the batch loop the run costs
+        ``sum(slowest per batch)``, with a refilling pool it approaches
+        ``sum(all) / concurrency``.
+
+        Each slot claims exactly one task, so in-flight work never exceeds the
+        configured concurrency. Per-task crashes stay isolated the same way
+        ``run_once`` isolates them: ``_execute_task`` records its own failures,
+        and a raising cleanup path is logged rather than allowed to cancel the
+        sibling tasks still talking to providers.
+
+        With ``drain=True`` every slot stops as soon as a claim comes back empty
+        (one-shot / test mode). With ``drain=False`` slots keep polling, which is
+        the long-running worker.
+        """
+        concurrency = max(1, audit_settings.worker_concurrency)
+        completed = 0
+
+        async def slot() -> None:
+            # Each slot decides for ITSELF when to stop. Deliberately no shared
+            # idle flag: one slot seeing an empty queue must not make its
+            # siblings skip their next claim, or work that arrived a moment
+            # later is left sitting while the pool winds down.
+            nonlocal completed
+            while True:
+                try:
+                    await self._sweep_expired_leases()
+                    claimed = await self._queue.claim(owner=self.owner, limit=1)
+                except Exception:
+                    # A claim failure (DB blip) must not kill the slot — back off
+                    # and retry, or stop if we are draining.
+                    logger.exception("audit worker claim failed")
+                    if drain:
+                        return
+                    await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
+                    continue
+                if not claimed:
+                    # This slot observed the queue empty. In drain mode that is
+                    # its own exit condition; siblings keep claiming.
+                    if drain:
+                        return
+                    await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
+                    continue
+                for task in claimed:
+                    try:
+                        await self._execute_task(task)
+                    except BaseException as exc:  # noqa: BLE001 - see docstring
+                        if isinstance(exc, asyncio.CancelledError):
+                            raise
+                        logger.error(
+                            "audit task cleanup failed",
+                            exc_info=exc,
+                            extra={"task_id": str(task.id)},
+                        )
+                    completed += 1
+
+        await asyncio.gather(
+            *(slot() for _ in range(concurrency)), return_exceptions=True
+        )
+        return completed
+
     async def run_until_idle(self, *, max_batches: int = 1000) -> int:
-        """Drain the queue until a claim returns nothing (test/one-shot mode)."""
+        """Drain the queue until a claim returns nothing (test/one-shot mode).
+
+        ``max_batches`` is retained for callers that pass it; the pipelined pump
+        drains in one pass, so it now only bounds the degenerate case where new
+        work keeps arriving faster than the pool empties.
+        """
         total = 0
-        for _ in range(max_batches):
-            ran = await self.run_once()
+        for _ in range(max(1, max_batches)):
+            ran = await self.run_pipelined(drain=True)
             if ran == 0:
                 break
             total += ran
@@ -343,14 +476,19 @@ class AuditWorker:
     async def run_forever(self) -> None:  # pragma: no cover - long-running loop
         logger.info("audit worker started", extra={"owner": self.owner})
         _warn_if_pool_undersized()
-        while True:
-            try:
-                ran = await self.run_once()
-            except Exception:  # defensive: a bad task must not kill the loop
-                logger.exception("audit worker loop iteration failed")
-                ran = 0
-            if ran == 0:
-                await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
+        _warn_if_provider_pacing_unbounded()
+        try:
+            while True:
+                try:
+                    # Never returns while work keeps arriving; the slots poll.
+                    await self.run_pipelined(drain=False)
+                except Exception:  # defensive: a bad task must not kill the loop
+                    logger.exception("audit worker loop iteration failed")
+                    await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
+        finally:
+            # Release the pooled provider connections on shutdown (SIGTERM /
+            # cancellation) rather than dropping sockets on process exit.
+            await aclose_shared_clients()
 
     # --- per-task execution ------------------------------------------------
 

@@ -505,9 +505,12 @@ async def recompute(
     session.add_all(new_rows)
     await session.flush()
     for live in live_rows:
-        new_id = successor_ids.get(live.id)
-        if new_id is not None:
-            live.superseded_by_id = new_id
+        # Distinct name from the `new_id` built above: that one is always a UUID,
+        # this lookup is optional, and reusing the name made the binding
+        # `UUID | None` for both.
+        successor_id = successor_ids.get(live.id)
+        if successor_id is not None:
+            live.superseded_by_id = successor_id
 
     snapshot = _build_snapshot(
         workspace_id=workspace_id,

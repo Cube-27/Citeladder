@@ -20,10 +20,10 @@ import {
 } from '@/components/ui/table';
 import {
   EvidenceDrawer,
-  OPPORTUNITY_STATUS_META,
   OpportunityStatusBadge,
   OpportunityTypeBadge,
 } from '@/components/opportunities/evidence-drawer';
+import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-status-meta';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
 import type { Opportunity, OpportunityStatus } from '@/lib/api/types';

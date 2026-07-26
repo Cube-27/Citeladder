@@ -2982,7 +2982,11 @@ class SiteHealthWorker:
                     )
                 )
             ).all()
-            hash_by_site_url = dict(site_url_rows)
+            # Built by index rather than dict(rows): a SQLAlchemy Row is not a
+            # 2-tuple to the type checker, so dict() infers dict[Never, Never].
+            hash_by_site_url: dict[uuid.UUID, str] = {
+                row[0]: row[1] for row in site_url_rows
+            }
             root_analysis_id = next(
                 (
                     row.id

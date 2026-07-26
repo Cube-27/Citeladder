@@ -25,7 +25,7 @@ import {
   toggleEngine,
 } from '@/lib/runs/launch';
 
-import { filterChipClasses } from './filter-chip';
+import { filterChipClasses } from './filter-chip-variants';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return error.message;

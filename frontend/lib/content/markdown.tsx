@@ -3,7 +3,7 @@
  *
  * The model output is UNTRUSTED. Defences, all local to this module:
  *   - raw HTML is never parsed (no `rehype-raw`; react-markdown escapes it),
- *   - URLs pass `safeUrlTransform` — only http/https/mailto survive
+ *   - URLs pass `safeUrlTransform` (./safe-url) — only http/https/mailto survive
  *     (`javascript:`/`data:`/etc. are neutralised to an empty href),
  *   - links open in a new tab with `rel="noopener noreferrer"`,
  *   - a restricted component map (no images, no iframes) with token-only
@@ -12,22 +12,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:'];
-
-/** Allow only http/https/mailto; anything else (javascript:, data:, vbscript:,
- * protocol-relative tricks) collapses to an empty, inert URL. Relative URLs
- * are allowed (they resolve same-origin). */
-export function safeUrlTransform(url: string): string {
-  const trimmed = url.trim();
-  if (trimmed === '') return '';
-  try {
-    const parsed = new URL(trimmed, 'https://local.invalid');
-    if (!SAFE_PROTOCOLS.includes(parsed.protocol)) return '';
-  } catch {
-    return '';
-  }
-  return trimmed;
-}
+import { safeUrlTransform } from './safe-url';
 
 /** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
 export function ContentMarkdown({ markdown }: { markdown: string }) {

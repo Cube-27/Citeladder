@@ -7,12 +7,8 @@ import { useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  GRANT_FAMILY,
-  IntegrationCard,
-  type GrantFamily,
-  type GrantModel,
-} from '@/components/settings/integration-card';
+import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
+import { IntegrationCard } from '@/components/settings/integration-card';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';

@@ -116,11 +116,15 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/searchify",
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
+    # Sized so one audit worker at AUDIT_WORKER_CONCURRENCY=10 can cover its
+    # peak of ~2 sessions per in-flight task (20) without queueing on checkout.
+    # Postgres ``max_connections`` is the shared ceiling across every service, so
+    # raise these together with it rather than in isolation.
     db_pool_size: int = Field(
-        default=5, validation_alias=AliasChoices("DB_POOL_SIZE", "db_pool_size")
+        default=8, validation_alias=AliasChoices("DB_POOL_SIZE", "db_pool_size")
     )
     db_max_overflow: int = Field(
-        default=10, validation_alias=AliasChoices("DB_MAX_OVERFLOW", "db_max_overflow")
+        default=12, validation_alias=AliasChoices("DB_MAX_OVERFLOW", "db_max_overflow")
     )
     db_pool_recycle_seconds: int = Field(
         default=600,

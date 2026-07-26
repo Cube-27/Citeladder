@@ -80,9 +80,8 @@ function resolveValue(value: string, tokens: Map<string, string>, depth: number)
     return { ...hexToRgb(v), a: 1 };
   }
 
-  const rgbMatch = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/i.exec(
-    v,
-  );
+  const rgbMatch =
+    /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/i.exec(v);
   if (rgbMatch) {
     let a = 1;
     if (rgbMatch[4] !== undefined) {
@@ -97,8 +96,9 @@ function resolveValue(value: string, tokens: Map<string, string>, depth: number)
   }
 
   // color-mix(in srgb, <color> <n>%, transparent) — alpha scale.
-  const mixMatch =
-    /^color-mix\(\s*in srgb\s*,\s*(.+?)\s+([\d.]+)%\s*,\s*transparent\s*\)$/i.exec(v);
+  const mixMatch = /^color-mix\(\s*in srgb\s*,\s*(.+?)\s+([\d.]+)%\s*,\s*transparent\s*\)$/i.exec(
+    v,
+  );
   if (mixMatch) {
     const inner = resolveValue(mixMatch[1], tokens, depth + 1);
     if (!inner) return null;
@@ -194,38 +194,37 @@ const BODY_PAIRS: Array<[string, string]> = [
   ['text-secondary', 'bg-base'],
   ['text-secondary', 'bg-panel'],
   ['accent-fg', 'accent'],
-  // The destructive button paints its label on the danger SOLID, not on a
-  // wash, so that pair needs its own gate (buttonVariants.destructive).
-  ['danger-fg', 'danger'],
+  // The destructive button paints its label on its own fill token, not on a
+  // wash and not on `--danger` (white fails AA there), so that pair needs its
+  // own gate (buttonVariants.destructive).
+  ['danger-fg', 'danger-solid'],
+  ['danger-fg', 'danger-solid-hover'],
   ['accent-text', 'bg-panel'],
   ['accent-text', 'bg-base'],
   ['text-link', 'bg-panel'],
 ];
 // Each status/sentiment/score/run/citation *-text (or solid-as-text) on its *-bg.
 const FAMILY_PAIRS: Array<[string, string]> = [
-  ...['success', 'warning', 'danger', 'info'].map(
-    (f): [string, string] => [`${f}-text`, `${f}-bg`],
-  ),
-  ...['positive', 'neutral', 'negative'].map(
-    (f): [string, string] => [`sentiment-${f}-text`, `sentiment-${f}-bg`],
-  ),
-  ...['owned', 'competitor', 'third-party'].map(
-    (f): [string, string] => [`citation-${f}-text`, `citation-${f}-bg`],
-  ),
+  ...['success', 'warning', 'danger', 'info'].map((f): [string, string] => [
+    `${f}-text`,
+    `${f}-bg`,
+  ]),
+  ...['positive', 'neutral', 'negative'].map((f): [string, string] => [
+    `sentiment-${f}-text`,
+    `sentiment-${f}-bg`,
+  ]),
+  ...['owned', 'competitor', 'third-party'].map((f): [string, string] => [
+    `citation-${f}-text`,
+    `citation-${f}-bg`,
+  ]),
   // Run badges render the solid token as the text color (solid = Figma text).
-  ...[
-    'draft',
-    'queued',
-    'running',
-    'analyzing',
-    'completed',
-    'partial',
-    'failed',
-    'cancelled',
-  ].map((s): [string, string] => [`run-${s}`, `run-${s}-bg`]),
-  ...['low', 'mid', 'good', 'high'].map(
-    (b): [string, string] => [`score-${b}-text`, `score-${b}-bg`],
+  ...['draft', 'queued', 'running', 'analyzing', 'completed', 'partial', 'failed', 'cancelled'].map(
+    (s): [string, string] => [`run-${s}`, `run-${s}-bg`],
   ),
+  ...['low', 'mid', 'good', 'high'].map((b): [string, string] => [
+    `score-${b}-text`,
+    `score-${b}-bg`,
+  ]),
 ];
 const ALL_PAIRS = [...BODY_PAIRS, ...FAMILY_PAIRS];
 // Decorative-only tokens: asserted present, never ratio-gated.
@@ -331,7 +330,16 @@ describe('Figma light palette (verbatim port)', () => {
   });
 
   it('declares the Figma chart palette verbatim', () => {
-    const expected = ['#2756ff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899'];
+    const expected = [
+      '#2756ff',
+      '#10b981',
+      '#f59e0b',
+      '#ef4444',
+      '#8b5cf6',
+      '#06b6d4',
+      '#f97316',
+      '#ec4899',
+    ];
     expected.forEach((value, i) => {
       expect(lightTokens.get(`--chart-${i + 1}`), `--chart-${i + 1}`).toBe(value);
     });
@@ -468,7 +476,10 @@ describe('marketing creative system (.mkt dusk contract)', () => {
     const marketingSection = design
       .split(/^## /m)
       .find((s) => /^(?:\d+[.:]?\s+)?marketing creative system/i.test(s.trim()));
-    expect(marketingSection, 'design.md is missing the marketing creative-system section').toBeTruthy();
+    expect(
+      marketingSection,
+      'design.md is missing the marketing creative-system section',
+    ).toBeTruthy();
     expect(marketingSection).toContain(DUSK_CANVAS);
     for (const color of MKT_DISPLAY_ONLY_COLORS) {
       expect(marketingSection, `${color} carve-out undocumented`).toContain(color);

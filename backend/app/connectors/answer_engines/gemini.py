@@ -30,6 +30,7 @@ from app.connectors.answer_engines.errors import (
     parse_retry_after,
 )
 from app.connectors.answer_engines.gemini_parser import parse_interaction
+from app.connectors.answer_engines.http_client import shared_client
 from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
     ERROR_AUTH,
@@ -83,7 +84,13 @@ class GeminiAnswerEngineAdapter:
     logical_engine = ENGINE_GEMINI
     transport_provider = TRANSPORT_GOOGLE
 
-    def __init__(self, *, api_key: str, base_url: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str = "",
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
         if not api_key:
             raise ProviderError(
                 "Gemini API key is not configured",
@@ -92,6 +99,8 @@ class GeminiAnswerEngineAdapter:
             )
         self._api_key = api_key
         self._url = base_url or provider_catalog_settings.google_interactions_url
+        # Injected only by tests; production uses the per-loop pooled client.
+        self._client = client
 
     async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
         payload = _build_payload(request)
@@ -100,9 +109,14 @@ class GeminiAnswerEngineAdapter:
             "Content-Type": "application/json",
         }
         started = time.monotonic()
+        client = self._client or shared_client()
         try:
-            async with httpx.AsyncClient(timeout=request.timeout_seconds) as client:
-                response = await client.post(self._url, json=payload, headers=headers)
+            response = await client.post(
+                self._url,
+                json=payload,
+                headers=headers,
+                timeout=request.timeout_seconds,
+            )
         except (
             httpx.ConnectTimeout,
             httpx.ReadTimeout,

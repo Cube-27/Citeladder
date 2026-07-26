@@ -84,9 +84,15 @@ token set, and `frontend/app/globals.css` for its values.
 ## 4. Token values — LIGHT (`:root`)
 
 Figma values **verbatim**. The primitive ramps are a globals.css-only layer; semantic tokens
-reference them. One deliberate AA adjustment: Figma's `--run-cancelled` text `#98A2BE`
-measures 2.4:1 on its `#F7F8FA` bg, so it moves one ramp step within the same family
-(neutral-400 → neutral-500 `#667092`) to clear AA 4.5:1.
+reference them. **Two deliberate AA adjustments**, each moving one swatch within its own
+family rather than restating the palette:
+
+1. **`--run-cancelled`** — Figma's text `#98A2BE` measures 2.4:1 on its `#F7F8FA` bg, so it
+   moves one ramp step (neutral-400 → neutral-500 `#667092`) to clear AA 4.5:1.
+2. **`--danger-solid`** (destructive button fill) — white on Figma's `--danger` `#EF4444`
+   reaches only 3.76:1, so the FILL steps one deeper down the red ramp (red-500 → red-600
+   `#DC2626`, 4.83:1) instead of the label going dark. `--danger` itself is unchanged — it is
+   also the sentiment-negative solid and the score-low ring, neither of which should darken.
 
 ```css
 :root {
@@ -157,6 +163,10 @@ measures 2.4:1 on its `#F7F8FA` bg, so it moves one ramp step within the same fa
   --success: #10b981; --success-bg: #f0fdf4; --success-border: #bbf7d0; --success-text: #15803d;
   --warning: #f59e0b; --warning-bg: #fffbeb; --warning-border: #fde68a; --warning-text: #92400e;
   --danger: #ef4444; --danger-bg: #fff1f1; --danger-border: #fecaca; --danger-text: #b91c1c;
+  /* Destructive BUTTON FILL — the red ramp one step deeper than --danger, so the
+     label can be white (#EF4444 only reaches 3.76:1 against white) without
+     darkening --danger, which is also sentiment-negative and the score-low ring. */
+  --danger-solid: #dc2626; --danger-solid-hover: #b91c1c; --danger-fg: #ffffff;
   --info: #2756ff; --info-bg: #ebf0ff; --info-border: #adc4ff; --info-text: #1a44eb;
   --neutral-bg: #f7f8fa;
 
@@ -258,11 +268,18 @@ identity, not an oversight, and `globals.test.ts` guards the violet band so a la
 cannot quietly drift it back to blue.
 
 Only tokens that change are overridden; ramps, chart palette, type, spacing, radii, and
-structural tokens are shared from `:root`. One documented AA adjustment against the deck: the
-solid accent `#7B6CF6` → `#6D5DE8` (white `accent-fg` 3.95 → 4.79:1). The deck violet survives
-verbatim as `--accent-hover` and inside every wash and border, so the hue is unchanged — only
-the one swatch that has to carry white text is deepened. The deck's dim tones (`#7F7B70`
-3.6:1) stay decorative-only, exactly as the marketing contract already documents them.
+structural tokens are shared from `:root`. **Two documented AA adjustments against the deck**,
+both following the same rule as light (§4): deepen only the swatch that has to carry white
+text, leave the hue and every wash/border alone.
+
+1. **Solid accent** `#7B6CF6` → `#6D5DE8` (white `accent-fg` 3.95 → 4.79:1). The deck violet
+   survives verbatim as `--accent-hover` and inside every wash and border.
+2. **`--danger-solid`** (destructive button fill) — the deck coral `#FF8F85` is only 2.21:1
+   against white, so the fill deepens to `#B8463C` (5.28:1) while `--danger` keeps the coral
+   for washes, sentiment-negative, and the score-low ring.
+
+The deck's dim tones (`#7F7B70` 3.6:1) stay decorative-only, exactly as the marketing contract
+already documents them.
 
 ```css
 html[data-theme="dark"] {
@@ -313,6 +330,10 @@ html[data-theme="dark"] {
   --warning-border: rgba(242, 193, 78, 0.28);
   --warning-text: #f2c14e;
   --danger: #ff8f85;
+  /* Destructive button fill — the deck coral deepened until white clears AA. */
+  --danger-solid: #b8463c;
+  --danger-solid-hover: #a33c33;
+  --danger-fg: #ffffff;
   --danger-bg: rgba(255, 143, 133, 0.13);
   --danger-border: rgba(255, 143, 133, 0.28);
   --danger-text: #ff8f85;

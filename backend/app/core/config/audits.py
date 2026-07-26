@@ -163,12 +163,39 @@ class AuditSettings(BaseSettings):
 
     # Hard cap on slots (prompts x engines x repetitions) an audit may create.
     max_tasks_per_audit: int = 500
-    # Up to N tasks a single worker runs concurrently within its loop.
-    worker_concurrency: int = 4
-    # How long the loop sleeps when the queue is empty before polling again.
+    # Up to N tasks a single worker keeps IN FLIGHT at once (the pipelined pump
+    # refills a slot the moment its task lands — see AuditWorker.run_pipelined).
+    #
+    # Sized for the free-tier run shape: 10 prompts x 3 providers = 30 calls at
+    # ~29s average, so 10 in flight puts a run at roughly 90s instead of the
+    # ~4 minutes a concurrency of 4 gave. Paired with DB_POOL_SIZE/
+    # DB_MAX_OVERFLOW (peak demand is ~2 sessions per in-flight task; the
+    # startup guard warns if the pool cannot cover it).
+    #
+    # CEILING IS THE PROVIDER, NOT THIS NUMBER. Grounded answers carry the web
+    # search results back in as input: measured Claude calls averaged ~16k INPUT
+    # tokens each, so 10 concurrent Claude calls burst ~160k input-tokens/min and
+    # will 429 on a low Anthropic tier. Raise this only as far as the account's
+    # input-tokens-per-minute allowance permits, and use
+    # ``min_request_interval_seconds`` to spread starts per transport.
+    #
+    # The worker logs this exposure at startup
+    # (``_warn_if_provider_pacing_unbounded``) whenever concurrency is > 1 with
+    # pacing off, so the risk is visible in the logs rather than only here.
+    worker_concurrency: int = 10
+    # How long the loop sleeps when the queue is empty before polling again. Also
+    # gates the expired-lease sweep (``AuditWorker._sweep_expired_leases``) so
+    # the pool's slots share one sweep per interval instead of one each.
     poll_interval_seconds: float = 1.0
     # Minimum spacing between provider request starts, per transport, to respect
     # rate limits (mainly Gemini's low per-minute quota).
+    #
+    # Left at 0 ON PURPOSE. Spacing every start would serialize the pipelined
+    # pump's ramp-up and undo the throughput it exists for, and the right
+    # interval depends entirely on the operator's provider tier — there is no
+    # default that is correct for both a tier-1 and a tier-4 account. Deployments
+    # that need pacing set AUDIT_MIN_REQUEST_INTERVAL_SECONDS; the startup
+    # warning above makes the unpaced default explicit rather than silent.
     min_request_interval_seconds: float = 0.0
     # Hard per-call ceiling enforced with ``asyncio.wait_for`` around the
     # provider call, independent of the HTTP client timeout.

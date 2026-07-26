@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { ContentMarkdown, safeUrlTransform } from './markdown';
+import { ContentMarkdown } from './markdown';
+import { safeUrlTransform } from './safe-url';
 
 describe('safeUrlTransform', () => {
   it('allows http/https/mailto and relative URLs', () => {
@@ -17,6 +18,16 @@ describe('safeUrlTransform', () => {
     expect(safeUrlTransform('data:text/html,<script>alert(1)</script>')).toBe('');
     expect(safeUrlTransform('vbscript:msgbox(1)')).toBe('');
     expect(safeUrlTransform('JAVASCRIPT:alert(1)')).toBe('');
+  });
+
+  it('neutralises protocol-relative URLs', () => {
+    // `//evil.example/x` resolves to a `https:` URL against the fallback origin,
+    // so the protocol allowlist alone lets it through — and the browser would
+    // then resolve the returned value against the app's own origin and navigate
+    // off-site. Relative paths must keep working (asserted above).
+    expect(safeUrlTransform('//evil.example/x')).toBe('');
+    expect(safeUrlTransform('  //evil.example/x')).toBe('');
+    expect(safeUrlTransform('//')).toBe('');
   });
 });
 

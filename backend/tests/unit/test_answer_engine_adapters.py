@@ -194,49 +194,29 @@ async def test_gemini_adapter_executes_and_records_provenance() -> None:
         model="gemini-flash-latest",
         timeout_seconds=5,
     )
-    # Patch the module-level client construction to use the mock transport.
-    import app.connectors.answer_engines.gemini as gemini_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    gemini_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        result = await adapter.execute(request)
-    finally:
-        gemini_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+    adapter = GeminiAnswerEngineAdapter(
+        api_key="k", client=httpx.AsyncClient(transport=transport)
+    )
+    result = await adapter.execute(request)
     assert result.transport_provider == "google"
     assert result.logical_engine == "gemini"
     assert result.search_used is True
 
 
 async def test_gemini_adapter_maps_http_error() -> None:
-    adapter = GeminiAnswerEngineAdapter(api_key="k")
     transport = _mock_transport({"error": {"status": "RESOURCE_EXHAUSTED"}}, 429)
-    import app.connectors.answer_engines.gemini as gemini_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    gemini_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        with pytest.raises(ProviderError) as excinfo:
-            await adapter.execute(
-                AnswerEngineRequest(
-                    prompt="x",
-                    system_instruction="",
-                    model="gemini-flash-latest",
-                    timeout_seconds=5,
-                )
+    adapter = GeminiAnswerEngineAdapter(
+        api_key="k", client=httpx.AsyncClient(transport=transport)
+    )
+    with pytest.raises(ProviderError) as excinfo:
+        await adapter.execute(
+            AnswerEngineRequest(
+                prompt="x",
+                system_instruction="",
+                model="gemini-flash-latest",
+                timeout_seconds=5,
             )
-    finally:
-        gemini_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+        )
     assert excinfo.value.error_code == "rate_limit"
     assert excinfo.value.retryable is True
 
@@ -362,29 +342,19 @@ async def test_anthropic_http_error_surfaces_safe_detail() -> None:
         },
     }
     transport = _mock_transport(error_body, status_code=400)
-    adapter = AnthropicAnswerEngineAdapter(api_key="secret-anthropic-key")
-
-    import app.connectors.answer_engines.anthropic as anthropic_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    anthropic_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        with pytest.raises(ProviderError) as excinfo:
-            await adapter.execute(
-                AnswerEngineRequest(
-                    prompt="x",
-                    system_instruction="",
-                    model="claude-sonnet-4-6",
-                    timeout_seconds=5,
-                )
+    adapter = AnthropicAnswerEngineAdapter(
+        api_key="secret-anthropic-key",
+        client=httpx.AsyncClient(transport=transport),
+    )
+    with pytest.raises(ProviderError) as excinfo:
+        await adapter.execute(
+            AnswerEngineRequest(
+                prompt="x",
+                system_instruction="",
+                model="claude-sonnet-4-6",
+                timeout_seconds=5,
             )
-    finally:
-        anthropic_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+        )
     assert "HTTP 400" in str(excinfo.value)
     assert "credit balance is too low" in str(excinfo.value)
     assert excinfo.value.retryable is False
@@ -428,28 +398,18 @@ async def test_anthropic_adapter_executes_and_records_provenance() -> None:
         "usage": {"input_tokens": 1, "output_tokens": 1},
     }
     transport = _mock_transport(payload)
-    adapter = AnthropicAnswerEngineAdapter(api_key="secret-anthropic-key")
-
-    import app.connectors.answer_engines.anthropic as anthropic_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    anthropic_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        result = await adapter.execute(
-            AnswerEngineRequest(
-                prompt="x",
-                system_instruction="",
-                model="claude-sonnet-4-6",
-                timeout_seconds=5,
-            )
+    adapter = AnthropicAnswerEngineAdapter(
+        api_key="secret-anthropic-key",
+        client=httpx.AsyncClient(transport=transport),
+    )
+    result = await adapter.execute(
+        AnswerEngineRequest(
+            prompt="x",
+            system_instruction="",
+            model="claude-sonnet-4-6",
+            timeout_seconds=5,
         )
-    finally:
-        anthropic_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+    )
     assert result.transport_provider == "anthropic"
     assert result.logical_engine == "claude"
     assert result.transport_model == "claude-sonnet-4-6"
@@ -547,29 +507,19 @@ async def test_openai_http_error_surfaces_safe_detail() -> None:
         }
     }
     transport = _mock_transport(error_body, status_code=429)
-    adapter = OpenAIAnswerEngineAdapter(api_key="secret-openai-key")
-
-    import app.connectors.answer_engines.openai as openai_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    openai_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        with pytest.raises(ProviderError) as excinfo:
-            await adapter.execute(
-                AnswerEngineRequest(
-                    prompt="x",
-                    system_instruction="",
-                    model="gpt-5.4",
-                    timeout_seconds=5,
-                )
+    adapter = OpenAIAnswerEngineAdapter(
+        api_key="secret-openai-key",
+        client=httpx.AsyncClient(transport=transport),
+    )
+    with pytest.raises(ProviderError) as excinfo:
+        await adapter.execute(
+            AnswerEngineRequest(
+                prompt="x",
+                system_instruction="",
+                model="gpt-5.4",
+                timeout_seconds=5,
             )
-    finally:
-        openai_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+        )
     assert "HTTP 429" in str(excinfo.value)
     assert "exceeded your current quota" in str(excinfo.value)
     assert excinfo.value.retryable is True
@@ -665,28 +615,18 @@ async def test_openai_adapter_sends_bearer_auth_only_and_records_provenance() ->
 
     transport = httpx.MockTransport(handler)
     adapter = OpenAIAnswerEngineAdapter(
-        api_key="test-fake-openai-key", country_code="AU"
+        api_key="test-fake-openai-key",
+        country_code="AU",
+        client=httpx.AsyncClient(transport=transport),
     )
-    import app.connectors.answer_engines.openai as openai_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    openai_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        result = await adapter.execute(
-            AnswerEngineRequest(
-                prompt="running shoes",
-                system_instruction="",
-                model="gpt-5.4",
-                timeout_seconds=5,
-            )
+    result = await adapter.execute(
+        AnswerEngineRequest(
+            prompt="running shoes",
+            system_instruction="",
+            model="gpt-5.4",
+            timeout_seconds=5,
         )
-    finally:
-        openai_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+    )
     # BYOK key travels only in the Authorization header, never the body.
     assert captured["auth"] == "Bearer test-fake-openai-key"
     body = captured["body"]
@@ -699,29 +639,19 @@ async def test_openai_adapter_sends_bearer_auth_only_and_records_provenance() ->
 
 
 async def test_openai_adapter_maps_http_status_to_error_code() -> None:
-    adapter = OpenAIAnswerEngineAdapter(api_key="k")
     transport = _mock_transport({"error": {"message": "rate limited"}}, 429)
-    import app.connectors.answer_engines.openai as openai_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    openai_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        with pytest.raises(ProviderError) as excinfo:
-            await adapter.execute(
-                AnswerEngineRequest(
-                    prompt="x",
-                    system_instruction="",
-                    model="gpt-5.4",
-                    timeout_seconds=5,
-                )
+    adapter = OpenAIAnswerEngineAdapter(
+        api_key="k", client=httpx.AsyncClient(transport=transport)
+    )
+    with pytest.raises(ProviderError) as excinfo:
+        await adapter.execute(
+            AnswerEngineRequest(
+                prompt="x",
+                system_instruction="",
+                model="gpt-5.4",
+                timeout_seconds=5,
             )
-    finally:
-        openai_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+        )
     assert excinfo.value.error_code == "rate_limit"
     assert excinfo.value.retryable is True
 
@@ -731,28 +661,19 @@ async def test_openai_adapter_maps_timeout() -> None:
         raise httpx.ReadTimeout("slow")
 
     transport = httpx.MockTransport(handler)
-    adapter = OpenAIAnswerEngineAdapter(api_key="k")
-    import app.connectors.answer_engines.openai as openai_mod
-
-    orig = httpx.AsyncClient
-
-    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
-        kwargs["transport"] = transport
-        return orig(*args, **kwargs)
-
-    openai_mod.httpx.AsyncClient = _client  # type: ignore[misc, assignment]
-    try:
-        with pytest.raises(ProviderError) as excinfo:
-            await adapter.execute(
-                AnswerEngineRequest(
-                    prompt="x",
-                    system_instruction="",
-                    model="gpt-5.4",
-                    timeout_seconds=1,
-                )
+    adapter = OpenAIAnswerEngineAdapter(
+        api_key="k",
+        client=httpx.AsyncClient(transport=transport),
+    )
+    with pytest.raises(ProviderError) as excinfo:
+        await adapter.execute(
+            AnswerEngineRequest(
+                prompt="x",
+                system_instruction="",
+                model="gpt-5.4",
+                timeout_seconds=1,
             )
-    finally:
-        openai_mod.httpx.AsyncClient = orig  # type: ignore[misc]
+        )
     assert excinfo.value.error_code == "timeout"
     assert excinfo.value.retryable is True
 

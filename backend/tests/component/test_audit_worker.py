@@ -243,6 +243,77 @@ async def test_worker_executes_claimed_batch_concurrently(
         assert refreshed.completed_count == 4
 
 
+class _BlockingFirstCallAdapter(_StubAdapter):
+    """First call blocks until released; every later call returns immediately."""
+
+    release: asyncio.Event
+    started = 0
+    finished = 0
+
+    async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
+        cls = _BlockingFirstCallAdapter
+        cls.started += 1
+        if cls.started == 1:
+            await cls.release.wait()
+        result = await super().execute(request)
+        cls.finished += 1
+        return result
+
+
+@pytest.mark.asyncio
+async def test_worker_refills_slots_while_a_slow_call_is_still_in_flight(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The convoy regression. The worker used to claim a batch of
+    # ``worker_concurrency`` tasks, ``gather`` ALL of them, and only then claim
+    # the next batch — so one slow call stalled every finished slot behind it.
+    # Provider latency is very uneven in practice (a measured Claude run ranged
+    # 3.4s to 46.3s, because latency tracks the answer's output-token count), so
+    # a straggler in the batch is the normal case.
+    #
+    # Asserted behaviourally rather than by wall-clock, which would be both
+    # flaky and a weak signal: uniform latency has no convoy effect at all, so a
+    # timing threshold mostly measures fixture overhead. Here ONE call is pinned
+    # open while the others run. Under lock-step batching the first batch can
+    # never complete, so NO further task could even be claimed; pipelined, the
+    # free slot keeps draining the queue past it.
+    seed, audit = await _make_audit(session_factory, prompts=6, reps=1)
+
+    _BlockingFirstCallAdapter.release = asyncio.Event()
+    _BlockingFirstCallAdapter.started = 0
+    _BlockingFirstCallAdapter.finished = 0
+    monkeypatch.setattr(
+        audit_worker, "build_adapter", lambda **_: _BlockingFirstCallAdapter()
+    )
+    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
+    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
+    monkeypatch.setattr(audit_settings, "worker_concurrency", 2)
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-pipeline")
+    run = asyncio.create_task(worker.run_until_idle())
+    try:
+        # The other slot must get through the remaining 5 tasks unaided. With a
+        # concurrency of 2, batching could not finish even one.
+        async with asyncio.timeout(30):
+            while _BlockingFirstCallAdapter.finished < 5:
+                await asyncio.sleep(0.01)
+    finally:
+        _BlockingFirstCallAdapter.release.set()
+    await run
+
+    assert _BlockingFirstCallAdapter.finished == 6
+    async with session_factory() as session:
+        tasks = await list_tasks(
+            session, workspace_id=seed.workspace_id, audit_id=audit.id
+        )
+        assert {t.status for t in tasks} == {"succeeded"}
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        assert refreshed.status == AUDIT_STATUS_COMPLETED
+        assert refreshed.completed_count == 6
+
+
 @pytest.mark.asyncio
 async def test_worker_persists_openai_provenance(
     session_factory: async_sessionmaker[AsyncSession],

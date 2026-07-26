@@ -84,6 +84,24 @@ _CLEANUP_SQL = "DO $$ BEGIN SET CONSTRAINTS ALL DEFERRED; {deletes} END $$;".for
 
 
 @pytest.fixture(autouse=True)
+async def _reset_pooled_answer_engine_clients():
+    """Give every test a clean answer-engine connection pool.
+
+    Adapters reuse a pooled ``httpx.AsyncClient`` per event loop so a run's
+    provider calls share keep-alive connections instead of handshaking 30 times.
+    That cache would otherwise outlive a test: whichever test happened to make
+    the first provider call would fix the client every later test reuses,
+    silently defeating per-test transport stubs and leaking sockets across the
+    loops pytest-asyncio hands out.
+    """
+    from app.connectors.answer_engines.http_client import aclose_shared_clients
+
+    await aclose_shared_clients()
+    yield
+    await aclose_shared_clients()
+
+
+@pytest.fixture(autouse=True)
 def _pin_site_health_capability_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     """Isolate the suite from dev ``.env`` capability overrides.
 
