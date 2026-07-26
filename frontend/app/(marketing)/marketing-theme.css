@@ -202,6 +202,55 @@
   }
 }
 
+/* This marketing-only motion explains the question → evidence → action flow.
+   Stages settle as the scene enters; arrows then hand attention left to right. */
+@supports (animation-timeline: view()) {
+  .mkt-flow-stage {
+    animation: mkt-flow-stage-in linear both;
+    animation-timeline: view();
+  }
+
+  .mkt-flow-stage[data-flow-stage='1'] {
+    animation-range: entry 0% entry 55%;
+  }
+
+  .mkt-flow-stage[data-flow-stage='2'] {
+    animation-range: entry 12% entry 67%;
+  }
+
+  .mkt-flow-stage[data-flow-stage='3'] {
+    animation-range: entry 24% entry 79%;
+  }
+}
+
+.mkt-flow-arrow {
+  animation: mkt-flow-arrow 3.6s var(--ease-mkt-out) infinite;
+}
+
+.mkt-flow-arrow[data-flow-arrow='2'] {
+  animation-delay: 1.8s;
+}
+
+@keyframes mkt-flow-stage-in {
+  from {
+    opacity: 0.72;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes mkt-flow-arrow {
+  0%,
+  35%,
+  100% {
+    opacity: 0.45;
+    transform: none;
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(3px);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    Scene rules — everything below is here because a utility cannot express
    it (compositing the wallpaper, SVG stroke choreography, escaping the
@@ -312,6 +361,13 @@ html:has(.mkt-root) body {
      duration would otherwise freeze them on whichever keyframe happened to
      be last. Pin them to the finished, fully legible state instead. */
   .animate-mkt-verify {
+    opacity: 1;
+    transform: none;
+  }
+
+  .mkt-flow-stage,
+  .mkt-flow-arrow {
+    animation: none !important;
     opacity: 1;
     transform: none;
   }

@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils';
 
+import { EngineLogo, isOfficialEngine } from './engine-logo';
+
 /**
  * Provider identity. The engines Searchify actually audits come first; the
  * rest appear only in coverage scenes. Keeping the roster in one place stops
@@ -66,7 +68,7 @@ export function EngineChip({
           tile,
         )}
       >
-        {initial}
+        {isOfficialEngine(engine) ? <EngineLogo engine={engine} className="size-3.5" /> : initial}
       </span>
       {label}
     </span>

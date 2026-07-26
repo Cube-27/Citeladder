@@ -36,7 +36,10 @@ export function Compositions() {
           </div>
 
           <GlassPanel className="lg:divide-mkt-glass-line relative grid min-w-0 overflow-hidden lg:grid-cols-3 lg:divide-x">
-            <article className="flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8">
+            <article
+              className="mkt-flow-stage flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8"
+              data-flow-stage="1"
+            >
               <Meta as="p" className="text-mkt-slate-soft whitespace-nowrap">
                 01 / Buyer question
               </Meta>
@@ -52,11 +55,18 @@ export function Compositions() {
             </article>
 
             <div className="border-mkt-glass-line bg-mkt-glass absolute top-1/2 left-1/3 z-2 hidden size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border lg:grid">
-              <ArrowRight className="text-mkt-slate-soft size-4" aria-hidden />
+              <ArrowRight
+                className="mkt-flow-arrow text-mkt-slate-soft size-4"
+                data-flow-arrow="1"
+                aria-hidden
+              />
             </div>
             <MobileArrow />
 
-            <article className="flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8">
+            <article
+              className="mkt-flow-stage flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8"
+              data-flow-stage="2"
+            >
               <Meta as="p" className="text-mkt-slate-soft whitespace-nowrap">
                 02 / Observed pattern
               </Meta>
@@ -82,11 +92,18 @@ export function Compositions() {
             </article>
 
             <div className="border-mkt-glass-line bg-mkt-glass absolute top-1/2 left-2/3 z-2 hidden size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border lg:grid">
-              <ArrowRight className="text-mkt-slate-soft size-4" aria-hidden />
+              <ArrowRight
+                className="mkt-flow-arrow text-mkt-slate-soft size-4"
+                data-flow-arrow="2"
+                aria-hidden
+              />
             </div>
             <MobileArrow />
 
-            <article className="bg-mkt-glass-soft flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8">
+            <article
+              className="mkt-flow-stage bg-mkt-glass-soft flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8"
+              data-flow-stage="3"
+            >
               <Meta as="p" className="text-mkt-slate-soft whitespace-nowrap">
                 03 / Next action
               </Meta>

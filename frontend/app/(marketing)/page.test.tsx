@@ -118,7 +118,7 @@ describe('Landing page (public marketing `/`)', () => {
     expect(screen.getByText('From buyer question to next best action.')).toBeInTheDocument();
     expect(screen.getByText('01 / Buyer question')).toBeInTheDocument();
     expect(screen.getByText('02 / Observed pattern')).toBeInTheDocument();
-    expect(screen.getByText('03 / Recommended move')).toBeInTheDocument();
+    expect(screen.getByText('03 / Next action')).toBeInTheDocument();
     expect(screen.queryByText(/less like a dashboard making claims/i)).toBeNull();
   });
 });
