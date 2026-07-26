@@ -47,8 +47,10 @@ async def process_razorpay_webhook(
     if not isinstance(payload, dict):
         raise InvalidWebhookError("invalid_payload")
     event_type = payload.get("event")
-    if not isinstance(event_type, str) or event_type not in RAZORPAY_EVENT_TYPES:
-        raise InvalidWebhookError("unsupported_event")
+    if not isinstance(event_type, str) or not event_type:
+        raise InvalidWebhookError("invalid_event")
+    if event_type not in RAZORPAY_EVENT_TYPES:
+        return "ignored"
     entity = _subscription_entity(payload)
     external_subscription_id = entity.get("id")
     provider_status = entity.get("status")

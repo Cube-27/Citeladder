@@ -190,7 +190,12 @@ class BillingSettings(BaseSettings):
     razorpay_api_base_url: str = "https://api.razorpay.com/v1"
     razorpay_checkout_hosts: str = "rzp.io,razorpay.com"
     request_timeout_seconds: float = 15.0
+    http_max_connections: int = 20
+    http_max_keepalive_connections: int = 10
+    http_keepalive_expiry_seconds: float = 60.0
     checkout_expiry_minutes: int = 60
+    reconciliation_list_count: int = 100
+    reconciliation_lookback_seconds: int = 86_400
     subscription_total_cycles: int = 1200
     past_due_grace_days: int = 3
     max_webhook_body_bytes: int = 262_144

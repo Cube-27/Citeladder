@@ -64,6 +64,22 @@ async def test_country_is_persisted_but_disabled_checkout_fails_closed(
 
 
 @pytest.mark.asyncio
+async def test_same_country_update_preserves_verification(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    await _register(client)
+    account = (await db_session.scalars(select(BillingAccount))).one()
+    account.billing_country = "IN"
+    account.country_verification = "verified"
+    await db_session.commit()
+    response = await client.patch(
+        "/api/v1/billing/profile", json={"country_code": "in"}
+    )
+    assert response.status_code == 200
+    assert response.json()["country_verification"] == "verified"
+
+
+@pytest.mark.asyncio
 async def test_catalog_is_public_and_contains_no_provider_ids(
     client: httpx.AsyncClient,
 ) -> None:
@@ -92,6 +108,26 @@ async def test_webhook_rejects_invalid_signature(client: httpx.AsyncClient) -> N
         },
     )
     assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_signed_unhandled_webhook_is_acknowledged(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret = "component-webhook-secret"
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(secret))
+    raw = b'{"event":"payment.captured"}'
+    signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    response = await client.post(
+        "/api/v1/billing/webhooks/razorpay",
+        content=raw,
+        headers={
+            "X-Razorpay-Signature": signature,
+            "X-Razorpay-Event-Id": "evt_unhandled",
+            "Content-Type": "application/json",
+        },
+    )
+    assert response.status_code == 204
 
 
 @pytest.mark.asyncio

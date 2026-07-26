@@ -4,16 +4,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard, ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { billingApi } from '@/lib/api/billing';
+import { BILLING_CONFIRM_MAX_POLLS, BILLING_CONFIRM_POLL_MS, billingApi } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
 
 function money(amountMinor: number, currency: 'INR' | 'USD') {
   return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
@@ -29,28 +30,54 @@ function message(error: unknown) {
 export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean }>) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const { activeProject } = useProjectContext();
+  const { entitlement, isLoading: entitlementLoading } = useEntitlement();
   const [countryDraft, setCountryDraft] = useState('');
-  const confirming = searchParams.get('checkout') === 'return';
+  const [confirming] = useState(() => searchParams.get('checkout') === 'return');
+  const [confirmationPolls, setConfirmationPolls] = useState(0);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const summaryQuery = useQuery({
     queryKey: queryKeys.billing.me(),
     queryFn: ({ signal }) => billingApi.me({ signal }),
     enabled,
-    refetchInterval: (query) =>
-      confirming && query.state.data?.tier_key !== 'paid' ? 3_000 : false,
   });
+  const summaryTier = summaryQuery.data?.tier_key;
+  const refetchSummary = summaryQuery.refetch;
   const country = countryDraft || summaryQuery.data?.billing_country || '';
   const catalogQuery = useQuery({
     queryKey: queryKeys.billing.catalog(country || undefined),
     queryFn: ({ signal }) => billingApi.catalog(country || undefined, { signal }),
     enabled,
   });
-  const entitlementQuery = useQuery({
-    queryKey: queryKeys.billing.entitlement(activeProject?.workspace_id ?? null),
-    queryFn: ({ signal }) => billingApi.entitlement(activeProject!.workspace_id, { signal }),
-    enabled: enabled && Boolean(activeProject?.workspace_id),
-  });
+
+  useEffect(() => {
+    if (!confirming) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('checkout');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    );
+  }, [confirming, searchParams]);
+
+  useEffect(() => {
+    if (
+      !enabled ||
+      !confirming ||
+      summaryTier === 'paid' ||
+      confirmationPolls >= BILLING_CONFIRM_MAX_POLLS
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void refetchSummary().finally(() => {
+        setConfirmationPolls((count) => count + 1);
+      });
+    }, BILLING_CONFIRM_POLL_MS);
+    return () => window.clearTimeout(timer);
+  }, [confirmationPolls, confirming, enabled, refetchSummary, summaryTier]);
 
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
@@ -65,7 +92,10 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
   });
   const cancelMutation = useMutation({
     mutationFn: () => billingApi.cancel(),
-    onSuccess: refresh,
+    onSuccess: async () => {
+      setCancelOpen(false);
+      await refresh();
+    },
   });
 
   if (!enabled || summaryQuery.isLoading) {
@@ -85,14 +115,21 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
   const summary = summaryQuery.data;
   const paidPlan = catalogQuery.data?.plans.find((plan) => plan.tier_key === 'paid');
   const price = paidPlan?.price;
+  const effectiveTier = entitlement?.tier_key ?? summary.tier_key;
+  const confirmationTimedOut =
+    confirming && summary.tier_key !== 'paid' && confirmationPolls >= BILLING_CONFIRM_MAX_POLLS;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
       {confirming ? (
-        <Alert tone={summary.tier_key === 'paid' ? 'success' : 'info'}>
+        <Alert
+          tone={summary.tier_key === 'paid' ? 'success' : confirmationTimedOut ? 'warning' : 'info'}
+        >
           {summary.tier_key === 'paid'
             ? 'Payment confirmed. Paid capabilities are active.'
-            : 'Confirming payment with Razorpay. Access changes only after a verified webhook; this page will refresh automatically.'}
+            : confirmationTimedOut
+              ? 'Payment is still confirming. Your plan has not changed; contact support if Razorpay shows a completed payment.'
+              : 'Confirming payment with Razorpay. Access changes only after a verified webhook; this page will refresh automatically.'}
         </Alert>
       ) : null}
 
@@ -106,26 +143,20 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
         <CardContent className="grid gap-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-foreground text-lg font-semibold capitalize">
-                {entitlementQuery.data?.tier_key ?? summary.tier_key}
-              </p>
+              <p className="text-foreground text-lg font-semibold capitalize">{effectiveTier}</p>
               <p className="text-muted mt-1 text-xs">
                 {summary.subscription_status
                   ? `Razorpay subscription: ${summary.subscription_status.replaceAll('_', ' ')}`
                   : 'No Razorpay subscription'}
               </p>
             </div>
-            <Badge
-              variant="status"
-              value={
-                (entitlementQuery.data?.tier_key ?? summary.tier_key) === 'paid'
-                  ? 'success'
-                  : 'info'
-              }
-            >
-              {(entitlementQuery.data?.tier_key ?? summary.tier_key) === 'paid' ? 'Paid' : 'Free'}
+            <Badge variant="status" value={effectiveTier === 'paid' ? 'success' : 'info'}>
+              {effectiveTier === 'paid' ? 'Paid' : 'Free'}
             </Badge>
           </div>
+          {entitlementLoading ? (
+            <p className="text-muted text-xs">Loading workspace entitlement…</p>
+          ) : null}
           {summary.current_period_end ? (
             <p className="text-secondary text-sm">
               {summary.cancel_at_period_end ? 'Access scheduled to end' : 'Current period ends'}{' '}
@@ -136,11 +167,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
             <Button
               variant="secondary"
               disabled={cancelMutation.isPending}
-              onClick={() => {
-                if (window.confirm('Cancel Paid at the end of the current billing cycle?')) {
-                  cancelMutation.mutate();
-                }
-              }}
+              onClick={() => setCancelOpen(true)}
             >
               {cancelMutation.isPending ? 'Scheduling cancellation…' : 'Cancel at period end'}
             </Button>
@@ -160,7 +187,13 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          {price && price.total_amount_minor > 0 ? (
+          {catalogQuery.isError ? (
+            <Alert tone="danger">
+              Could not load the regional price catalog. Check your connection and retry.
+            </Alert>
+          ) : catalogQuery.isLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : price && price.total_amount_minor > 0 ? (
             <div>
               <p className="text-foreground text-2xl font-semibold">
                 {money(price.base_amount_minor, price.currency)}
@@ -232,6 +265,38 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(open) => {
+          if (!cancelMutation.isPending) setCancelOpen(open);
+        }}
+        title="Cancel Paid plan"
+        description="Cancellation takes effect at the end of the current billing period."
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={cancelMutation.isPending}
+              onClick={() => setCancelOpen(false)}
+            >
+              Keep Paid
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate()}
+            >
+              {cancelMutation.isPending ? 'Scheduling cancellation…' : 'Cancel at period end'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-secondary text-sm">
+          Paid capabilities remain available through the verified paid-through date. Completed
+          audits and evidence are not deleted when the plan ends.
+        </p>
+      </Dialog>
     </div>
   );
 }

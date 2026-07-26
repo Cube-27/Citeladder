@@ -4,7 +4,6 @@ import type { Metadata } from 'next';
 import { ButtonLink } from '@/components/marketing/primitives/button';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section } from '@/components/marketing/primitives/section';
-import { CONTACT_EMAIL } from '@/lib/marketing-content/social';
 
 export const metadata: Metadata = {
   title: 'Book an enterprise demo — Searchify',
@@ -24,7 +23,7 @@ function safeBookingUrl(value: string | undefined): string | null {
 
 export default function DemoPage() {
   const bookingUrl = safeBookingUrl(process.env.DEMO_BOOKING_URL);
-  const salesEmail = process.env.PUBLIC_SALES_EMAIL?.trim() || CONTACT_EMAIL;
+  const salesEmail = process.env.PUBLIC_SALES_EMAIL?.trim();
   const actionHref = bookingUrl ?? (salesEmail ? `mailto:${salesEmail}` : null);
 
   return (

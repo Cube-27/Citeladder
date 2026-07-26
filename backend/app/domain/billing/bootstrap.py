@@ -66,3 +66,40 @@ async def ensure_user_billing(
 
     await session.flush()
     return account
+
+
+async def user_billing_bootstrap_complete(session: AsyncSession, user: User) -> bool:
+    """Cheap read-only guard for the common successful-login path."""
+    account = await session.scalar(
+        select(BillingAccount).where(BillingAccount.owner_user_id == user.id)
+    )
+    if account is None:
+        return False
+    entitlement_id = await session.scalar(
+        select(AccountEntitlement.id).where(
+            AccountEntitlement.billing_account_id == account.id
+        )
+    )
+    if entitlement_id is None:
+        return False
+    owner_workspace_ids = set(
+        (
+            await session.scalars(
+                select(WorkspaceMember.workspace_id).where(
+                    WorkspaceMember.user_id == user.id,
+                    WorkspaceMember.role == "owner",
+                )
+            )
+        ).all()
+    )
+    linked_workspace_ids = set(
+        (
+            await session.scalars(
+                select(WorkspaceBillingLink.workspace_id).where(
+                    WorkspaceBillingLink.billing_account_id == account.id,
+                    WorkspaceBillingLink.workspace_id.in_(owner_workspace_ids),
+                )
+            )
+        ).all()
+    )
+    return owner_workspace_ids == linked_workspace_ids

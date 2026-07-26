@@ -23,8 +23,6 @@ import { TrustStrip } from '../primitives/trust-strip';
  * `/enterprise` explains the offer; every sales action uses the stable `/demo`
  * funnel through the centralized `DEMO_HREF`.
  */
-const CONTACT_HREF = DEMO_HREF;
-
 type Capability = { icon: LucideIcon; title: string; blurb: string; points: readonly string[] };
 
 /**
@@ -266,8 +264,8 @@ export function EnterpriseLimits() {
 }
 
 /**
- * The demo band. Named `#contact` because that anchor is already linked from
- * the nav CTA, the footer and every page's closing button.
+ * Enterprise closing band. Its sales action routes through the stable `/demo`
+ * funnel so booking/contact configuration remains centralized there.
  */
 export function EnterpriseContactCta() {
   return (
@@ -281,7 +279,7 @@ export function EnterpriseContactCta() {
           around them, starting with a walkthrough of your own category.
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-          <ButtonLink href={CONTACT_HREF} className="w-full sm:w-auto">
+          <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
             Book a demo
             <ArrowRight className="size-3.5" aria-hidden />
           </ButtonLink>

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -20,7 +21,7 @@ class RazorpayBillingProvider:
         self,
         *,
         settings: BillingSettings = billing_settings,
-        client: httpx.AsyncClient | None = None,
+        client: httpx.AsyncClient,
     ) -> None:
         self.settings = settings
         self._client = client
@@ -35,21 +36,16 @@ class RazorpayBillingProvider:
     async def _request(
         self, method: str, path: str, *, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        owns_client = self._client is None
-        client = self._client or httpx.AsyncClient()
         try:
-            response = await client.request(
+            response = await self._client.request(
                 method,
                 f"{self.settings.razorpay_api_base_url.rstrip('/')}{path}",
                 auth=self._auth(),
                 json=payload,
                 timeout=self.settings.request_timeout_seconds,
             )
-        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+        except httpx.TransportError as exc:
             raise BillingProviderError("provider_unavailable", retryable=True) from exc
-        finally:
-            if owns_client:
-                await client.aclose()
         if response.status_code >= 400:
             code = (
                 "provider_rejected"
@@ -96,6 +92,9 @@ class RazorpayBillingProvider:
     async def create_subscription(
         self, *, plan_id: str, attempt_id: str, billing_account_id: str
     ) -> HostedSubscription:
+        existing = await self._find_subscription_by_attempt(attempt_id)
+        if existing is not None:
+            return self._hosted_subscription(existing)
         data = await self._request(
             "POST",
             "/subscriptions",
@@ -109,12 +108,45 @@ class RazorpayBillingProvider:
                 },
             },
         )
+        return self._hosted_subscription(data)
+
+    def _hosted_subscription(self, data: dict[str, Any]) -> HostedSubscription:
         subscription = self._subscription(data)
         return HostedSubscription(
             external_subscription_id=subscription.external_subscription_id,
             checkout_url=self._validated_checkout_url(data.get("short_url")),
             status=subscription.status,
         )
+
+    async def _find_subscription_by_attempt(
+        self, attempt_id: str
+    ) -> dict[str, Any] | None:
+        since = (
+            int(datetime.now(UTC).timestamp())
+            - self.settings.reconciliation_lookback_seconds
+        )
+        data = await self._request(
+            "GET",
+            f"/subscriptions?count={self.settings.reconciliation_list_count}&from={since}",
+        )
+        items = data.get("items")
+        if not isinstance(items, list):
+            raise BillingProviderError("provider_invalid_response")
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            notes = item.get("notes")
+            if (
+                isinstance(notes, dict)
+                and notes.get("searchify_attempt_id") == attempt_id
+            ):
+                if item.get("short_url"):
+                    return item
+                external_id = item.get("id")
+                if not isinstance(external_id, str):
+                    raise BillingProviderError("provider_invalid_response")
+                return await self._request("GET", f"/subscriptions/{external_id}")
+        return None
 
     async def fetch_subscription(
         self, external_subscription_id: str

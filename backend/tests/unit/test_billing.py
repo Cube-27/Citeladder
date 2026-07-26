@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -11,6 +13,7 @@ from pydantic import SecretStr
 from app.connectors.billing.base import BillingProviderError
 from app.connectors.billing.razorpay import RazorpayBillingProvider
 from app.core.config.billing import billing_settings, quote_for_country
+from app.domain.auth import service as auth_service
 from app.domain.billing.service import catalog
 from app.domain.billing.webhooks import verify_razorpay_signature
 
@@ -76,6 +79,39 @@ def test_webhook_signature_uses_exact_raw_body(
 
 
 @pytest.mark.asyncio
+async def test_login_skips_billing_repair_when_bootstrap_is_complete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = SimpleNamespace(
+        id="11111111-1111-4111-8111-111111111111",
+        is_active=True,
+        hashed_password="hash",
+    )
+    repair = AsyncMock()
+    session = SimpleNamespace(commit=AsyncMock())
+    monkeypatch.setattr(auth_service, "get_user_by_email", AsyncMock(return_value=user))
+    monkeypatch.setattr(auth_service, "verify_password", lambda *_args: True)
+    monkeypatch.setattr(
+        auth_service, "ensure_personal_workspace", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        auth_service,
+        "user_billing_bootstrap_complete",
+        AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(auth_service, "ensure_user_billing", repair)
+    monkeypatch.setattr(auth_service, "create_access_token", lambda _user_id: "token")
+
+    result = await auth_service.authenticate_user(
+        session, "user@example.com", "password"
+    )
+
+    assert result == ("token", user)
+    repair.assert_not_awaited()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_razorpay_adapter_creates_hosted_subscription(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -87,6 +123,8 @@ async def test_razorpay_adapter_creates_hosted_subscription(
     async def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/v1/subscriptions"
         assert request.headers["authorization"].startswith("Basic ")
+        if request.method == "GET":
+            return httpx.Response(200, json={"items": []})
         body = request.content.decode()
         assert '"plan_id":"plan_test"' in body
         assert "test-secret" not in body
@@ -120,6 +158,8 @@ async def test_razorpay_adapter_rejects_untrusted_checkout_host(
     )
 
     async def handler(_request: httpx.Request) -> httpx.Response:
+        if _request.method == "GET":
+            return httpx.Response(200, json={"items": []})
         return httpx.Response(
             200,
             json={
@@ -137,3 +177,61 @@ async def test_razorpay_adapter_rejects_untrusted_checkout_host(
                 attempt_id="attempt",
                 billing_account_id="account",
             )
+
+
+@pytest.mark.asyncio
+async def test_razorpay_adapter_reuses_subscription_found_by_attempt_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
+    monkeypatch.setattr(
+        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
+    )
+    requests: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "id": "sub_existing",
+                        "status": "created",
+                        "short_url": "https://rzp.io/i/existing",
+                        "notes": {"searchify_attempt_id": "attempt"},
+                    }
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RazorpayBillingProvider(client=client)
+        hosted = await provider.create_subscription(
+            plan_id="plan_test", attempt_id="attempt", billing_account_id="account"
+        )
+    assert hosted.external_subscription_id == "sub_existing"
+    assert [request.method for request in requests] == ["GET"]
+
+
+@pytest.mark.asyncio
+async def test_razorpay_adapter_maps_all_transport_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
+    monkeypatch.setattr(
+        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ProtocolError("broken transport", request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RazorpayBillingProvider(client=client)
+        with pytest.raises(BillingProviderError, match="provider_unavailable") as exc:
+            await provider.create_subscription(
+                plan_id="plan_test",
+                attempt_id="attempt",
+                billing_account_id="account",
+            )
+    assert exc.value.retryable is True

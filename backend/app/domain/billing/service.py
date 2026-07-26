@@ -160,8 +160,9 @@ async def update_country(
     )
     if current is not None and account.billing_country != country_code:
         raise BillingConflictError("billing_country_locked_by_subscription")
-    account.billing_country = country_code
-    account.country_verification = "provisional"
+    if account.billing_country != country_code:
+        account.billing_country = country_code
+        account.country_verification = "provisional"
     await session.commit()
     return await billing_summary(session, user)
 
@@ -205,7 +206,7 @@ async def create_checkout(
     pending_attempt = await session.scalar(
         select(BillingCheckoutAttempt.id).where(
             BillingCheckoutAttempt.billing_account_id == account.id,
-            BillingCheckoutAttempt.status.in_(("pending", "created")),
+            BillingCheckoutAttempt.status.in_(("pending", "created", "unknown")),
             BillingCheckoutAttempt.expires_at > datetime.now(UTC),
         )
     )

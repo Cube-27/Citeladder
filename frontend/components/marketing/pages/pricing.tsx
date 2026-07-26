@@ -36,7 +36,7 @@ export function PricingTiers() {
 
 function TierCard({ tier }: Readonly<{ tier: PricingTier }>) {
   // A "Custom" price has no per-period label — its cadence drops to the note
-  // line so the price row keeps the same optical weight across all four cards.
+  // line so the price row keeps the same optical weight across all three cards.
   const isCustom = tier.price === 'Custom';
   return (
     <div
