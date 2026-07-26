@@ -745,8 +745,8 @@ all four sides. Glass alpha is pinned at 0.92+ so the slate ink inside keeps its
 contrast. Illustrative figures live inside `aria-hidden` scenes and always carry a visible
 "Example data" mark; page copy contains no invented numbers.
 
-**Motion** is 5/10: one easing pair, durations 200/450/750, transform and opacity only,
-scroll reveals that settle rather than bounce, and everything gated on
+**Motion** is 5/10: one easing pair, 140–220ms interaction feedback plus longer explanatory
+beats, transform and opacity only, scroll reveals that settle rather than bounce, and everything gated on
 `prefers-reduced-motion` — where scenes hold their finished state rather than freezing
 mid-animation.
 

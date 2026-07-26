@@ -39,12 +39,13 @@ export default function PricingPage() {
   return (
     <main>
       <PageHero
+        centered
         eyebrow="Pricing"
         title="Pay for the evidence layer."
         accent="Not the API markup."
         lead="Every plan runs audits on your own ChatGPT, Gemini and Claude keys — provider usage bills straight to your accounts at provider rates. Searchify charges for the workspace, the monitoring and the evidence behind every score."
       >
-        <TrustStrip className="mt-8" />
+        <TrustStrip className="mt-8 justify-center" />
       </PageHero>
       <PricingTiers />
       <PricingTable />

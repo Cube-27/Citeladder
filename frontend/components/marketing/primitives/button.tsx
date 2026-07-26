@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
  * The one button on the Proof surface. Four intents, two sizes — the deck's
  * `.btn-primary / -secondary / -blue / -night` collapsed onto tokens.
  *
- * The lift is 2px on a long ease-out, matched to the deck's motion budget
- * (5/10): enough to feel physical, not enough to read as a bounce.
+ * Fine pointers get a responsive 2px hover lift; every pointer gets a short
+ * press settle so the control stays physically connected to the interaction.
  */
 const INTENT = {
   /** Default page action — exact ink on paper. */
@@ -31,10 +31,11 @@ const SIZE = {
 
 const BASE =
   'inline-flex items-center justify-center gap-2.5 border border-transparent font-bold ' +
-  'transition-[transform,background-color,border-color,box-shadow] duration-[450ms] ' +
-  'ease-mkt-out hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ' +
-  '[&_svg]:transition-transform [&_svg]:duration-[450ms] [&_svg]:ease-mkt-out ' +
-  'hover:[&_svg]:translate-x-0.5';
+  '[transition:transform_140ms_var(--ease-mkt-out),background-color_200ms_var(--ease-mkt-out),border-color_200ms_var(--ease-mkt-out),box-shadow_200ms_var(--ease-mkt-out)] ' +
+  'active:[transform:translateY(0)_scale(0.98)] disabled:pointer-events-none disabled:opacity-40 ' +
+  '[@media(hover:hover)_and_(pointer:fine)_and_(prefers-reduced-motion:no-preference)]:hover:-translate-y-0.5 ' +
+  '[&_svg]:transition-transform [&_svg]:duration-[140ms] [&_svg]:ease-mkt-out ' +
+  '[@media(hover:hover)_and_(pointer:fine)_and_(prefers-reduced-motion:no-preference)]:hover:[&_svg]:translate-x-0.5';
 
 type ButtonVisualProps = Readonly<{
   intent?: keyof typeof INTENT;

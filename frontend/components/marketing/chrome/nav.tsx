@@ -23,6 +23,7 @@ import { Wordmark } from '../primitives/wordmark';
 import { DropItemLink, MobileItemLink } from './nav-items';
 
 const ACTIVE_PROJECT_STORAGE_KEY = 'searchify.active-project-id';
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 function hasStoredActiveProject(): boolean {
   if (typeof window === 'undefined') return false;
@@ -46,7 +47,7 @@ const NAV_LINK =
  */
 const COLUMN = 304;
 const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
-  platform: { width: COLUMN * 2, twoColumn: true },
+  platform: { width: COLUMN, twoColumn: false },
   solutions: { width: COLUMN, twoColumn: false },
   resources: { width: COLUMN, twoColumn: false },
 };
@@ -57,10 +58,8 @@ const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
  * Desktop: Platform / Solutions / Resources open hover-intent panels (hover
  * AND keyboard focus; the trigger click only ever OPENS, so a hover-open panel
  * never flickers shut under the cursor; item click, blur-out and Esc close).
- * One panel element stays mounted across trigger switches — giving each
- * trigger its own panel and sharing a layoutId made Motion crossfade the two,
- * which read as a blink. With a single element `layout` just resizes the box
- * (FLIP) while the rows swap inside it.
+ * One stable panel element stays mounted across trigger switches. Dropdown
+ * contents swap immediately so the pointer target never moves or blinks.
  *
  * The lens is the deck's signature: a paper pill that glides under whichever
  * trigger the pointer is on. It is measured from the live element rather than
@@ -150,7 +149,7 @@ export function MarketingNav() {
   };
   const scheduleDropClose = () => {
     clearDropClose();
-    closeTimer.current = window.setTimeout(closeDrop, 140);
+    closeTimer.current = window.setTimeout(closeDrop, 220);
   };
 
   const moveLens = (element: HTMLElement) => {
@@ -162,10 +161,7 @@ export function MarketingNav() {
   };
 
   /**
-   * Anchor the panel under the trigger that opened it, then clamp it inside
-   * the nav's own bounds. Centring it under the whole link group (the first
-   * version) left a wide slab floating with no relationship to the item you
-   * were pointing at.
+   * Centre the panel beneath its top-level item, then clamp it inside the nav.
    */
   const anchorPanel = (trigger: HTMLElement, key: NavDropKey) => {
     const container = linksRef.current;
@@ -175,8 +171,9 @@ export function MarketingNav() {
     const containerBox = container.getBoundingClientRect();
     const navBox = nav.getBoundingClientRect();
     const width = DROP_LAYOUT[key].width;
+    const desired = triggerBox.left + triggerBox.width / 2 - width / 2;
     const clamped = Math.min(
-      Math.max(triggerBox.left, navBox.left),
+      Math.max(desired, navBox.left),
       Math.max(navBox.right - width, navBox.left),
     );
     setPanelLeft(clamped - containerBox.left);
@@ -223,48 +220,76 @@ export function MarketingNav() {
           onKeyDown={escapeToClose}
         >
           {lens && (
-            <span
+            <motion.span
+              layout={!reduceMotion}
               aria-hidden
-              style={{ transform: `translateX(${lens.left}px)`, width: lens.width }}
+              style={{ left: lens.left, width: lens.width }}
+              transition={{ layout: { duration: 0.18, ease: EASE_OUT } }}
               className={cn(
                 'border-mkt-line bg-mkt-surface shadow-mkt-raised rounded-mkt-xs pointer-events-none',
-                'ease-mkt-out absolute inset-y-0 left-0 border transition-[transform,width] duration-700',
+                'absolute inset-y-0 border',
               )}
             />
           )}
 
-          {NAV_DROPS.map(({ key, label }) => (
-            <button
+          {NAV_DROPS.map(({ key, label, href }) => (
+            <div
               key={key}
-              type="button"
-              className={NAV_LINK}
-              aria-expanded={openDrop === key}
-              aria-haspopup="true"
-              aria-controls={openDrop === key ? `desktop-nav-panel-${key}` : undefined}
-              onClick={(event) => {
-                openDesktopDrop(key);
-                anchorPanel(event.currentTarget, key);
-              }}
+              className="relative z-1 flex items-center"
               onMouseEnter={(event) => {
                 openDesktopDrop(key);
                 anchorPanel(event.currentTarget, key);
                 moveLens(event.currentTarget);
               }}
-              onFocus={(event) => {
-                openDesktopDrop(key);
-                anchorPanel(event.currentTarget, key);
-                moveLens(event.currentTarget);
-              }}
             >
-              {label}
-              <ChevronDown
-                aria-hidden
-                className={cn(
-                  'size-3 transition-transform duration-300',
-                  openDrop === key && 'rotate-180',
-                )}
-              />
-            </button>
+              <Link
+                href={href}
+                className={cn(NAV_LINK, 'pr-1.5')}
+                onFocus={(event) => {
+                  const parent = event.currentTarget.parentElement;
+                  if (!parent) return;
+                  openDesktopDrop(key);
+                  anchorPanel(parent, key);
+                  moveLens(parent);
+                }}
+              >
+                {label}
+              </Link>
+              <button
+                type="button"
+                className="text-mkt-ink-soft hover:text-mkt-ink rounded-mkt-xs relative z-1 grid size-7 place-items-center"
+                aria-label={`Open ${label} menu`}
+                aria-expanded={openDrop === key}
+                aria-haspopup="true"
+                aria-controls={openDrop === key ? `desktop-nav-panel-${key}` : undefined}
+                onClick={(event) => {
+                  const parent = event.currentTarget.parentElement;
+                  if (!parent) return;
+                  if (openDrop === key) {
+                    closeDrop();
+                    return;
+                  }
+                  openDesktopDrop(key);
+                  anchorPanel(parent, key);
+                }}
+                onFocus={(event) => {
+                  const parent = event.currentTarget.parentElement;
+                  if (!parent) return;
+                  openDesktopDrop(key);
+                  anchorPanel(parent, key);
+                  moveLens(parent);
+                }}
+              >
+                {' '}
+                <ChevronDown
+                  aria-hidden
+                  className={cn(
+                    'size-3 transition-transform duration-300',
+                    openDrop === key && 'rotate-180',
+                  )}
+                />
+              </button>
+            </div>
           ))}
 
           {NAV_LINKS.map(({ label, href }) => (
@@ -290,19 +315,10 @@ export function MarketingNav() {
 
           <AnimatePresence>
             {openDrop !== null && (
-              <motion.div
-                layout
+              <div
                 role="menu"
                 id={`desktop-nav-panel-${openDrop}`}
                 onMouseEnter={clearDropClose}
-                initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.97 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { type: 'spring', stiffness: 320, damping: 34, mass: 0.7 }
-                }
                 style={{
                   left: panelLeft,
                   width: DROP_LAYOUT[openDrop].width,
@@ -313,13 +329,7 @@ export function MarketingNav() {
                   'mt-1.5 overflow-hidden border',
                 )}
               >
-                <motion.div
-                  key={openDrop}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={reduceMotion ? { duration: 0 } : { duration: 0.14, ease: 'easeOut' }}
-                  className={cn('grid', DROP_LAYOUT[openDrop].twoColumn && 'sm:grid-cols-2')}
-                >
+                <div className={cn('grid', DROP_LAYOUT[openDrop].twoColumn && 'sm:grid-cols-2')}>
                   {(NAV_DROPS.find((d) => d.key === openDrop)?.groups ?? []).map((group) =>
                     group.label ? (
                       // The labelled group is a rail on paper — a plain
@@ -344,8 +354,8 @@ export function MarketingNav() {
                       </div>
                     ),
                   )}
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             )}
           </AnimatePresence>
         </div>
@@ -385,73 +395,83 @@ export function MarketingNav() {
         </div>
       </nav>
 
-      <div
-        id="mobile-menu"
-        hidden={!mobileOpen}
-        className="border-mkt-line bg-mkt-paper-raised px-mkt-gutter max-h-[calc(100dvh-var(--spacing-mkt-nav))] overflow-y-auto border-t py-4 lg:hidden"
-      >
-        {NAV_DROPS.map(({ key, label, groups }) => (
-          <div key={key} className="border-mkt-line border-b last:border-b-0">
-            <button
-              type="button"
-              className="text-mkt-body text-mkt-ink flex w-full items-center justify-between py-3.5 font-semibold"
-              aria-expanded={openAcc === key}
-              aria-controls={`acc-${key}`}
-              onClick={() => setOpenAcc((current) => (current === key ? null : key))}
-            >
-              {label}
-              <ChevronDown
-                aria-hidden
-                className={cn(
-                  'size-4 transition-transform duration-300',
-                  openAcc === key && 'rotate-180',
-                )}
-              />
-            </button>
-            <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-2">
-              {groups.map((group) => (
-                <Fragment key={group.label ?? 'items'}>
-                  {group.label && (
-                    <p className="text-mkt-meta text-mkt-ink-muted px-3 pt-3 pb-1 uppercase">
-                      {group.label}
-                    </p>
-                  )}
-                  {group.items.map((item) => (
-                    <MobileItemLink
-                      key={item.title}
-                      item={item}
-                      onSelect={() => {
-                        setMobileOpen(false);
-                        setOpenAcc(null);
-                      }}
-                    />
-                  ))}
-                </Fragment>
-              ))}
+      {mobileOpen && (
+        <div
+          id="mobile-menu"
+          className="border-mkt-line bg-mkt-paper-raised px-mkt-gutter max-h-[calc(100dvh-var(--spacing-mkt-nav))] overflow-y-auto border-t py-4 lg:hidden"
+        >
+          {NAV_DROPS.map(({ key, label, href, groups }) => (
+            <div key={key} className="border-mkt-line border-b last:border-b-0">
+              <div className="flex items-center">
+                <Link
+                  href={href}
+                  className="text-mkt-body text-mkt-ink flex-1 py-3.5 font-semibold"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {label}
+                </Link>
+                <button
+                  type="button"
+                  className="text-mkt-ink grid size-10 place-items-center"
+                  aria-label={`Open ${label} menu`}
+                  aria-expanded={openAcc === key}
+                  aria-controls={`acc-${key}`}
+                  onClick={() => setOpenAcc((current) => (current === key ? null : key))}
+                >
+                  <ChevronDown
+                    aria-hidden
+                    className={cn(
+                      'size-4 transition-transform duration-300',
+                      openAcc === key && 'rotate-180',
+                    )}
+                  />
+                </button>
+              </div>
+              <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-2">
+                {groups.map((group) => (
+                  <Fragment key={group.label ?? 'items'}>
+                    {group.label && (
+                      <p className="text-mkt-meta text-mkt-ink-muted px-3 pt-3 pb-1 uppercase">
+                        {group.label}
+                      </p>
+                    )}
+                    {group.items.map((item) => (
+                      <MobileItemLink
+                        key={item.title}
+                        item={item}
+                        onSelect={() => {
+                          setMobileOpen(false);
+                          setOpenAcc(null);
+                        }}
+                      />
+                    ))}
+                  </Fragment>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        <div className="mt-4 grid gap-2">
-          {NAV_LINKS.map(({ label, href }) => (
+          <div className="mt-4 grid gap-2">
+            {NAV_LINKS.map(({ label, href }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-mkt-body text-mkt-ink py-2 font-semibold"
+                onClick={() => setMobileOpen(false)}
+              >
+                {label}
+              </Link>
+            ))}
             <Link
-              key={href}
-              href={href}
-              className="text-mkt-body text-mkt-ink py-2 font-semibold"
+              href={isAuthenticated ? dashboardHref : '/login'}
+              className="text-mkt-body text-mkt-ink-soft py-2 font-semibold"
               onClick={() => setMobileOpen(false)}
             >
-              {label}
+              {isAuthenticated ? 'Dashboard' : 'Log in'}
             </Link>
-          ))}
-          <Link
-            href={isAuthenticated ? dashboardHref : '/login'}
-            className="text-mkt-body text-mkt-ink-soft py-2 font-semibold"
-            onClick={() => setMobileOpen(false)}
-          >
-            {isAuthenticated ? 'Dashboard' : 'Log in'}
-          </Link>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

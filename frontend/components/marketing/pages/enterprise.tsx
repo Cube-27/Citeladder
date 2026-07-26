@@ -159,12 +159,13 @@ function CapabilityCard({ icon: Icon, title, blurb, points }: Capability) {
 export function EnterpriseHero() {
   return (
     <PageHero
+      centered
       eyebrow="Enterprise"
       title="AI visibility, with"
       accent="enterprise-grade evidence."
       lead="The platform security teams can verify: deterministic scoring over immutable, provenance-carrying evidence — deployed in our cloud, or self-hosted inside your network."
     >
-      <div className="mt-9 flex flex-col gap-2.5 sm:flex-row">
+      <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row">
         <ButtonLink href="#contact">
           Book a demo
           <ArrowRight className="size-3.5" aria-hidden />
@@ -173,7 +174,7 @@ export function EnterpriseHero() {
           Compare plans
         </ButtonLink>
       </div>
-      <TrustStrip className="mt-8" />
+      <TrustStrip className="mt-8 justify-center" />
     </PageHero>
   );
 }

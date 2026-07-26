@@ -7,25 +7,20 @@ import { ButtonLink } from '../primitives/button';
 import { Eyebrow, Meta } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
-import { ObservationField } from '../scenes/observation-field';
 
-/**
- * The page's single h1, then the observation scene. Copy is centred and the
- * scene is full width — the deck's composition, on the shared container so
- * the wordmark, the headline and the scene edge all sit on one optical line.
- */
+/** A centred, text-only first screen; the workspace begins on the next scroll. */
 export function Hero() {
   const { hero } = LANDING_CONTENT;
   return (
-    <header className="pt-16 pb-14 md:pt-24 md:pb-16">
+    <header className="flex min-h-[calc(100svh-var(--spacing-mkt-nav))] items-center py-12">
       <Container>
-        <Reveal className="mx-auto mb-14 max-w-4xl text-center md:mb-16">
+        <Reveal className="mx-auto max-w-4xl text-center">
           <Eyebrow>{hero.eyebrow}</Eyebrow>
-          <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-6 mb-6 max-w-[16ch] font-medium">
+          <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-5 mb-5 max-w-[16ch] font-medium">
             {hero.title} <em className="text-mkt-accent-display not-italic">{hero.accent}</em>
           </h1>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[46ch]">{hero.body}</p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+          <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
               {DEMO_CTA}
               <ArrowRight className="size-3.5" aria-hidden />
@@ -34,13 +29,9 @@ export function Hero() {
               {hero.secondaryCta}
             </ButtonLink>
           </div>
-          <Meta as="p" className="mt-5">
+          <Meta as="p" className="mt-4">
             {hero.note}
           </Meta>
-        </Reveal>
-
-        <Reveal>
-          <ObservationField />
         </Reveal>
       </Container>
     </header>

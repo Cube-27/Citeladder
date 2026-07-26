@@ -98,4 +98,27 @@ describe('Landing page (public marketing `/`)', () => {
       ).not.toBeNull();
     }
   });
+
+  it('keeps the first screen text-only and places the workspace directly after it', () => {
+    stubAnonymous();
+    const { container } = renderWithProviders(<Page />);
+
+    const hero = container.querySelector('header');
+    const main = container.querySelector('main');
+    expect(hero).not.toBeNull();
+    expect(hero).not.toHaveTextContent(/your ai visibility|tracking your brand/i);
+    expect(main?.children[0]).toBe(hero);
+    expect(main?.children[1]).toHaveAttribute('id', 'platform');
+  });
+
+  it('presents strategy as one question-to-action workflow', () => {
+    stubAnonymous();
+    renderWithProviders(<Page />);
+
+    expect(screen.getByText('From buyer question to next best action.')).toBeInTheDocument();
+    expect(screen.getByText('01 / Buyer question')).toBeInTheDocument();
+    expect(screen.getByText('02 / Observed pattern')).toBeInTheDocument();
+    expect(screen.getByText('03 / Recommended move')).toBeInTheDocument();
+    expect(screen.queryByText(/less like a dashboard making claims/i)).toBeNull();
+  });
 });

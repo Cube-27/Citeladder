@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 /** Item counts come from lib/marketing-content/nav.ts. */
 const DROPS = [
-  { key: 'platform', count: 9 },
+  { key: 'platform', count: 4 },
   { key: 'solutions', count: 4 },
   { key: 'resources', count: 3 },
 ] as const;
@@ -12,15 +12,19 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await page.goto('/');
 
     for (const { key, count } of DROPS) {
+      const directLink = page.getByRole('link', { name: new RegExp(`^${key}$`, 'i') }).first();
       const trigger = page.locator(`button[aria-controls="desktop-nav-panel-${key}"]`);
       const panel = page.locator(`#desktop-nav-panel-${key}`);
 
-      await trigger.hover();
+      await directLink.hover();
       await expect(panel).toBeVisible();
       await expect(trigger).toHaveAttribute('aria-expanded', 'true');
       await expect(panel.getByRole('menuitem')).toHaveCount(count);
+      await panel.getByRole('menuitem').first().hover();
+      await page.waitForTimeout(500);
+      await expect(panel).toBeVisible();
 
-      await trigger.focus();
+      await directLink.focus();
       await expect(panel).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(panel).toBeHidden();

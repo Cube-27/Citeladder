@@ -1,10 +1,13 @@
+import { ArrowUpRight, FileCheck2 } from 'lucide-react';
+
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
-import { Badge } from '../primitives/badge';
+import { Badge, VerifiedMark } from '../primitives/badge';
+import { EngineDot, type EngineKey } from '../primitives/engine-chip';
 import { Meta } from '../primitives/label';
-import { Section, SectionHeader } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
-import { ExampleDataNote } from '../scenes/wallpaper-panel';
+import { Section, SectionHeader } from '../primitives/section';
+import { ExampleDataNote, GlassPanel, WallpaperPanel } from '../scenes/wallpaper-panel';
 
 /**
  * The evidence chapter: what a traced result actually looks like. A table of
@@ -12,18 +15,42 @@ import { ExampleDataNote } from '../scenes/wallpaper-panel';
  * product's central claim, shown together so the link between them is the
  * point rather than a footnote.
  *
- * Illustrative rows, so the table is aria-hidden and marked as example data.
- * The section's real argument lives in the heading and the note under the
- * score, which are readable by everyone.
+ * Illustrative rows, so the product scene is aria-hidden and marked as
+ * example data. The section's real argument lives in the heading and the
+ * explanatory note under the score, which remain readable by everyone.
  */
-const ROWS = [
-  ['Best analytics platforms for enterprise teams', 'ChatGPT', '09F3C21E', 'Mentioned', 'good'],
-  ['How to measure brand visibility in AI answers', 'Claude', '1A64D0BC', 'Cited', 'proof'],
-  ['Searchify alternatives for global agencies', 'Gemini', '3E92BA71', 'Review', 'warn'],
-] as const;
+const ROWS: readonly {
+  answer: string;
+  engine: EngineKey;
+  artifact: string;
+  finding: string;
+  tone: 'good' | 'proof' | 'warn';
+}[] = [
+  {
+    answer: 'Best analytics platforms for enterprise teams',
+    engine: 'openai',
+    artifact: '09F3C21E',
+    finding: 'Mentioned',
+    tone: 'good',
+  },
+  {
+    answer: 'How to measure brand visibility in AI answers',
+    engine: 'claude',
+    artifact: '1A64D0BC',
+    finding: 'Cited',
+    tone: 'proof',
+  },
+  {
+    answer: 'Searchify alternatives for global agencies',
+    engine: 'gemini',
+    artifact: '3E92BA71',
+    finding: 'Review',
+    tone: 'warn',
+  },
+];
 
-const CELL =
-  'grid grid-cols-[minmax(0,1.6fr)_auto] items-center gap-x-4 gap-y-2 px-5 py-4 lg:grid-cols-[minmax(0,1.5fr)_0.8fr_0.7fr_auto]';
+const TABLE_GRID =
+  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 lg:grid-cols-[minmax(0,1fr)_8.5rem_7rem_8rem] lg:gap-x-4';
 
 export function Evidence() {
   const { evidence } = LANDING_CONTENT;
@@ -37,50 +64,126 @@ export function Evidence() {
         headingId="evidence-title"
       />
 
-      <Reveal className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="border-mkt-line rounded-mkt-lg bg-mkt-surface overflow-hidden border">
-          <div className={`${CELL} bg-mkt-paper-raised border-mkt-line border-b`}>
-            <Meta>Observed answer</Meta>
-            <Meta className="hidden lg:block">Provider</Meta>
-            <Meta className="hidden lg:block">Artifact</Meta>
-            <ExampleDataNote className="justify-self-end" />
-          </div>
-          {ROWS.map(([answer, provider, artifact, finding, tone]) => (
-            <div
-              aria-hidden
-              key={artifact}
-              className={`${CELL} border-mkt-line text-mkt-sm border-b last:border-b-0`}
-            >
-              <strong className="text-mkt-ink font-semibold">{answer}</strong>
-              <span className="text-mkt-ink-soft hidden lg:block">{provider}</span>
-              <Meta className="hidden lg:block">{artifact}</Meta>
-              <Badge tone={tone} className="justify-self-end">
-                {finding}
-              </Badge>
+      <Reveal>
+        <WallpaperPanel className="p-3 sm:p-5 lg:p-7">
+          <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 px-1 sm:px-2">
+            <div className="flex items-center gap-3">
+              <span className="border-mkt-glass-line bg-mkt-glass text-mkt-proof-text grid size-8 place-items-center rounded-full border backdrop-blur-md">
+                <FileCheck2 aria-hidden className="size-4" strokeWidth={1.8} />
+              </span>
+              <Meta as="p" className="text-mkt-slate-soft">
+                Audit evidence / selected run
+              </Meta>
             </div>
-          ))}
-        </div>
+            <ExampleDataNote />
+          </div>
 
-        <div className="border-mkt-line rounded-mkt-lg bg-mkt-surface flex flex-col border p-7">
-          <div className="flex items-center justify-between gap-3">
-            <Meta>Visibility index</Meta>
-            <Meta>Formula v4.2</Meta>
-          </div>
-          <p
+          <div
             aria-hidden
-            className="text-mkt-ink mkt-num my-10 text-[4.75rem] leading-none font-medium tracking-[-0.07em]"
+            className="grid gap-3.5 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.75fr)]"
           >
-            72.4 <small className="text-mkt-ink-muted text-mkt-meta font-normal">/ 100</small>
-          </p>
-          <div aria-hidden className="grid grid-cols-[72fr_28fr] gap-1">
-            <i className="bg-mkt-proof block h-1.5 rounded-full" />
-            <i className="bg-mkt-surface-sunk block h-1.5 rounded-full" />
+            <GlassPanel className="overflow-hidden">
+              <div
+                className={`${TABLE_GRID} border-mkt-glass-line bg-mkt-glass-soft border-b px-5 py-4 sm:px-6`}
+              >
+                <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-3">
+                  <span aria-hidden className="size-7" />
+                  <div>
+                    <Meta as="p" className="text-mkt-slate-soft">
+                      Observed answer
+                    </Meta>
+                    <p className="text-mkt-sm text-mkt-slate mt-1">3 persisted responses</p>
+                  </div>
+                </div>
+                <Meta className="text-mkt-slate-soft hidden lg:block">Provider</Meta>
+                <Meta className="text-mkt-slate-soft hidden lg:block">Artifact</Meta>
+                <Meta className="text-mkt-slate-soft justify-self-start">Finding</Meta>
+              </div>
+
+              {ROWS.map(({ answer, engine, artifact, finding, tone }, index) => (
+                <div
+                  key={artifact}
+                  className={`${TABLE_GRID} border-mkt-glass-line group min-h-[6.25rem] border-b px-5 py-4 last:border-b-0 sm:px-6`}
+                >
+                  <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
+                    <span className="bg-mkt-paper-raised text-mkt-ink-muted mkt-num text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div>
+                      <strong className="text-mkt-ink text-mkt-body block max-w-[34ch] leading-snug font-semibold">
+                        {answer}
+                      </strong>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 lg:hidden">
+                        <EngineDot engine={engine} />
+                        <Meta>{artifact}</Meta>
+                      </div>
+                    </div>
+                  </div>
+                  <EngineDot engine={engine} className="hidden lg:inline-flex" />
+                  <Meta className="text-mkt-slate hidden lg:block">{artifact}</Meta>
+                  <Badge tone={tone} className="justify-self-end lg:justify-self-start">
+                    {finding}
+                  </Badge>
+                </div>
+              ))}
+            </GlassPanel>
+
+            <GlassPanel className="flex min-h-[25rem] flex-col p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <Meta as="p" className="text-mkt-slate-soft">
+                    Visibility index
+                  </Meta>
+                  <VerifiedMark>Reproducible</VerifiedMark>
+                </div>
+                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta rounded-mkt-pill inline-flex items-center gap-1.5 border px-2.5 py-1.5 uppercase">
+                  Formula v4.2
+                  <ArrowUpRight className="size-3" strokeWidth={1.8} />
+                </span>
+              </div>
+
+              <div className="my-8 flex items-end gap-3 sm:my-10">
+                <strong className="font-mkt-display text-mkt-ink mkt-num text-[5.25rem] leading-[0.8] font-medium tracking-[-0.075em]">
+                  72.4
+                </strong>
+                <span className="text-mkt-sm text-mkt-slate mkt-num pb-1.5">/ 100</span>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <Meta className="text-mkt-proof-text">Strong visibility</Meta>
+                  <Meta className="text-mkt-slate-soft">+4.8 this run</Meta>
+                </div>
+                <div className="bg-mkt-surface-sunk relative h-2 overflow-hidden rounded-full">
+                  <span className="bg-mkt-proof block h-full w-[72.4%] rounded-full" />
+                  <span className="bg-mkt-surface ring-mkt-proof absolute top-1/2 left-[72.4%] size-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2" />
+                </div>
+              </div>
+
+              <div className="border-mkt-line mt-6 grid grid-cols-3 border-y py-4">
+                {[
+                  ['3 / 3', 'Artifacts'],
+                  ['2', 'Signals'],
+                  ['1', 'Review'],
+                ].map(([value, label], index) => (
+                  <div
+                    key={label}
+                    className={`px-3 first:pl-0 last:pr-0 ${index > 0 ? 'border-mkt-line border-l' : ''}`}
+                  >
+                    <strong className="text-mkt-ink mkt-num block text-lg font-medium">
+                      {value}
+                    </strong>
+                    <Meta className="mt-1 block">{label}</Meta>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-mkt-sm text-mkt-ink-soft mt-auto pt-6">
+                Computed from persisted answers, with every point traceable to its source artifact.
+              </p>
+            </GlassPanel>
           </div>
-          <p className="text-mkt-sm text-mkt-ink-soft mt-5">
-            Computed from persisted answers, never from a model’s opinion of another model. Open the
-            score to inspect every contributing artifact.
-          </p>
-        </div>
+        </WallpaperPanel>
       </Reveal>
     </Section>
   );

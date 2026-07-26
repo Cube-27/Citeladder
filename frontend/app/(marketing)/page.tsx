@@ -55,10 +55,10 @@ export default function LandingPage() {
     <LandingSessionRedirect>
       <main>
         <Hero />
+        <Platform />
         <EngineBand />
         <Shift />
         <HowItWorks />
-        <Platform />
         <Evidence />
         <Stance />
         <Compositions />

@@ -4,6 +4,7 @@ import { Meta } from '../primitives/label';
 import { Section, SectionHeader } from '../primitives/section';
 import { StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { ExampleDataNote, WallpaperPanel } from '../scenes/wallpaper-panel';
+import { RotatingEngineLabel } from './rotating-engine-label';
 
 /**
  * Observe → Verify → Decide, each step carrying a small scene that shows what
@@ -17,7 +18,7 @@ const SCENES = {
     <div className="text-mkt-slate text-mkt-d4 flex min-h-[8rem] items-center">
       <span>Measure</span>
       <span className="border-mkt-slate/40 text-mkt-accent-display ml-2 inline-block min-w-[7.5rem] border-b pb-0.5">
-        ChatGPT
+        <RotatingEngineLabel />
       </span>
     </div>
   ),

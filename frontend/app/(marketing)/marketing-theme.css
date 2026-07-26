@@ -32,7 +32,7 @@
 
   /* Eight steps, no ad-hoc sizes. Tracking tightens as size grows, which is
      what makes large Manrope read as typography rather than as big text. */
-  --text-mkt-d1: clamp(2.9rem, 6.2vw, 5.25rem);
+  --text-mkt-d1: clamp(2.75rem, 5.2vw, 4.5rem);
   --text-mkt-d1--line-height: 0.96;
   --text-mkt-d1--letter-spacing: -0.055em;
   --text-mkt-d2: clamp(2.25rem, 4.2vw, 3.75rem);
@@ -136,7 +136,7 @@
   --spacing-mkt-gutter: clamp(1.25rem, 4vw, 3.5rem);
   --spacing-mkt-nav: 72px;
 
-  /* ─── Motion ── 5/10. One easing pair, three durations. */
+  /* ─── Motion ── 5/10. One easing pair, timing matched to interaction frequency. */
   --ease-mkt-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-mkt-soft: cubic-bezier(0.65, 0, 0.35, 1);
   --animate-mkt-float: mkt-float 9s ease-in-out infinite;
@@ -214,7 +214,7 @@
 html:has(.mkt-root),
 html:has(.mkt-root) body {
   background-color: var(--color-mkt-paper);
-  color-scheme: light;
+  color-scheme: light !important;
 }
 
 /* globals.css styles bare h1–h6/p UNLAYERED, so those declarations outrank

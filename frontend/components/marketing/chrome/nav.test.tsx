@@ -47,16 +47,31 @@ function stubSignedIn() {
  * file guards behaviour only.
  */
 describe('MarketingNav', () => {
+  it('gives every Platform menu row a distinct destination', () => {
+    const platform = NAV_DROPS.find((drop) => drop.key === 'platform');
+    const hrefs = platform?.groups.flatMap((group) => group.items.map((item) => item.href)) ?? [];
+
+    expect(hrefs).toHaveLength(4);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
   it('opens a dropdown on hover and on focus, and closes it with Escape', async () => {
     stubAnonymous();
     const user = userEvent.setup();
     renderWithProviders(<MarketingNav />);
 
     for (const drop of NAV_DROPS) {
-      const trigger = screen.getByRole('button', { name: new RegExp(`^${drop.label}$`, 'i') });
+      const directLink = screen.getByRole('link', {
+        name: new RegExp(`^${drop.label}$`, 'i'),
+      });
+      const trigger = document.querySelector<HTMLElement>(
+        `nav button[aria-label="Open ${drop.label} menu"]`,
+      );
+      expect(directLink).toHaveAttribute('href', drop.href);
+      expect(trigger).not.toBeNull();
       expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
-      await user.hover(trigger);
+      await user.hover(directLink);
       await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'));
 
       const panel = screen.getByRole('menu');
@@ -66,7 +81,7 @@ describe('MarketingNav', () => {
 
       await user.keyboard('{Escape}');
       await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
-      await user.unhover(trigger);
+      await user.unhover(directLink);
     }
   });
 
@@ -92,6 +107,9 @@ describe('MarketingNav', () => {
       const expected = drop.groups.reduce((sum, group) => sum + group.items.length, 0);
       expect(within(body!).getAllByRole('link')).toHaveLength(expected);
     }
+
+    await user.click(screen.getByRole('button', { name: 'Close menu' }));
+    await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
   });
 
   it('shows the demo-first CTA and a login link to an anonymous visitor', async () => {

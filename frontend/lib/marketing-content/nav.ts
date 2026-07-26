@@ -11,54 +11,40 @@ export type NavDropItem =
 
 export type NavDropGroup = { label?: string; items: readonly NavDropItem[] };
 
-export type NavDrop = { key: NavDropKey; label: string; groups: readonly NavDropGroup[] };
+export type NavDrop = {
+  key: NavDropKey;
+  label: string;
+  href: string;
+  groups: readonly NavDropGroup[];
+};
 
 export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'platform',
     label: 'Platform',
+    href: '/#platform',
     groups: [
       {
         items: [
           {
-            title: 'Market observation',
-            desc: 'One run across every major engine',
+            title: 'Visibility workspace',
+            desc: 'See the complete market picture',
             href: '/#platform',
           },
-          { title: 'Deterministic scoring', desc: 'Same answers, same score', href: '/#platform' },
+          {
+            title: 'How it works',
+            desc: 'Observe, verify and decide',
+            href: '/#how-it-works',
+          },
           {
             title: 'Evidence explorer',
-            desc: 'Every metric opens to its source',
+            desc: 'Open the answer behind every metric',
             href: '/#evidence',
           },
           {
-            title: 'Competitor benchmarking',
-            desc: 'Share of answers, engine by engine',
-            href: '/#platform',
-          },
-          {
-            title: 'Your own provider keys',
-            desc: 'Encrypted at rest, never returned',
-            href: '/#evidence',
-          },
-          { title: 'Cross-run trends', desc: 'Visibility period over period', href: '/#platform' },
-        ],
-      },
-      {
-        label: 'How it works',
-        items: [
-          { num: '01', title: 'Observe', desc: 'Ask what your buyers ask', href: '/#how-it-works' },
-          {
-            num: '02',
-            title: 'Verify',
-            desc: 'Trace each answer to evidence',
-            href: '/#how-it-works',
-          },
-          {
-            num: '03',
-            title: 'Decide',
-            desc: 'Turn the pattern into strategy',
-            href: '/#how-it-works',
+            title: 'Why Searchify',
+            desc: 'The standards behind every result',
+            href: '/#why',
           },
         ],
       },
@@ -67,6 +53,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'solutions',
     label: 'Solutions',
+    href: '/solutions',
     groups: [
       {
         items: [
@@ -93,6 +80,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'resources',
     label: 'Resources',
+    href: '/blog',
     groups: [
       {
         items: [
