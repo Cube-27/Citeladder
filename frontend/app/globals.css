@@ -19,8 +19,13 @@
    tokens here rather than from the (marketing) layout: Tailwind v4 builds
    utilities from a single `@import 'tailwindcss'` graph, so a second import
    would duplicate preflight and the whole utility layer. Unused @theme
-   values are tree-shaken — app routes pay nothing for this. */
+   values are tree-shaken — app routes pay nothing for this.
+
+   Two owners: -theme holds the @theme token block plus the scene rules a
+   utility cannot express; -motion holds every keyframe and scroll timeline.
+   The split keeps the token file inside its deliberate 400-line budget. */
 @import './(marketing)/marketing-theme.css';
+@import './(marketing)/marketing-motion.css';
 
 @custom-variant dark (&:where(html[data-theme='dark'] *));
 
@@ -433,19 +438,22 @@
   --series-other: var(--neutral-200); /* the "Other" bucket — deliberately achromatic */
   --chart-tooltip-bg: var(--neutral-800); /* inverse chip, identical in both themes */
 
-  /* Shadows / elevation — Figma --shadow-1..4 verbatim (light). Semantic
-     aliases keep the existing component names: xs,sm→1; card→2;
-     elevated→3; lg,modal→4. var() aliases resolve per theme. */
-  --shadow-1:
-    0 1px 2px rgba(13, 18, 40, 0.05), 0 0 0 1px rgba(13, 18, 40, 0.05);
-  --shadow-2:
-    0 2px 6px rgba(13, 18, 40, 0.07), 0 0 0 1px rgba(13, 18, 40, 0.06);
+  /* Shadows / elevation — Figma --shadow-1..4 (light). Semantic aliases keep
+     the existing component names: xs,sm→1; card→2; elevated→3; lg,modal→4.
+     var() aliases resolve per theme.
+
+     The Figma originals each ended in a `0 0 0 1px` ring, but every surface
+     taking one ALSO draws a real border-border hairline (components/ui/card
+     .tsx) — so the ring double-drew the edge, which is what made dense screens
+     read as soft. Rings dropped. Drop shadows STAY: panel #FFFFFF and base
+     #F7F8FA differ so little that the shadow is the only thing making surfaces
+     read as layered. Borders plus one honest shadow, never two edges. */
+  --shadow-1: 0 1px 2px rgba(13, 18, 40, 0.05);
+  --shadow-2: 0 2px 6px rgba(13, 18, 40, 0.07);
   --shadow-3:
-    0 6px 20px rgba(13, 18, 40, 0.1), 0 1px 4px rgba(13, 18, 40, 0.05),
-    0 0 0 1px rgba(13, 18, 40, 0.07);
+    0 6px 20px rgba(13, 18, 40, 0.1), 0 1px 4px rgba(13, 18, 40, 0.05);
   --shadow-4:
-    0 16px 40px rgba(13, 18, 40, 0.14), 0 4px 10px rgba(13, 18, 40, 0.07),
-    0 0 0 1px rgba(13, 18, 40, 0.09);
+    0 16px 40px rgba(13, 18, 40, 0.14), 0 4px 10px rgba(13, 18, 40, 0.07);
   --shadow-xs-value: var(--shadow-1);
   --shadow-sm-value: var(--shadow-1);
   --shadow-card-value: var(--shadow-2);
@@ -687,7 +695,13 @@ html[data-theme='dark'] {
   --series-other: #5b584d;
 
   /* Shadows — soft stack for the warm surfaces (low opacity, larger blur;
-     no crushed near-black). */
+     no crushed near-black).
+
+     These KEEP their `0 0 0 1px` ring where the light theme drops it, and the
+     asymmetry is deliberate: here the ring is a warm LIGHT hairline, a
+     catchlight that separates a raised surface from the charcoal beneath it.
+     Light mode's ring was a dark line duplicating the element's own border;
+     this one has no equivalent and is doing real work. Do not "align" them. */
   --shadow-1:
     0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 250, 240, 0.03);
   --shadow-2:

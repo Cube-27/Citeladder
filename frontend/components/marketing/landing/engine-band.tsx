@@ -20,7 +20,7 @@ export function EngineBand() {
           <Meta as="p" className="mb-3">
             {engines.kicker}
           </Meta>
-          <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink max-w-[22ch] font-medium">
+          <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w max-w-[22ch]">
             {engines.title}
           </h2>
           <p className="text-mkt-body text-mkt-ink-soft mt-3 max-w-[62ch]">{engines.body}</p>

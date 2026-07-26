@@ -46,7 +46,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <div>
               <Eyebrow>Comparison</Eyebrow>
             </div>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[16ch] font-medium">
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mkt-display-w mt-6 mb-6 max-w-[18ch]">
               Searchify vs{' '}
               <em className="text-mkt-accent-display not-italic">{competitor.name}.</em>
             </h1>
@@ -145,7 +145,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
               className="border-mkt-line rounded-mkt-lg border border-dashed p-7"
             >
               <TodoPill>{block.tag}</TodoPill>
-              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-4 font-medium">
+              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w mt-4">
                 {block.heading}
               </h2>
               <p className="text-mkt-sm text-mkt-ink-muted mt-3">{block.hint}</p>
@@ -156,7 +156,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
 
       <Section divided rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[16ch]">
             See your own numbers instead.
           </h2>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

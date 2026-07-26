@@ -1,8 +1,8 @@
 'use client';
 
-import { Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { CommandPalette } from '@/components/ui/command-palette';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -19,6 +19,9 @@ import { UserMenu } from './user-menu';
  * switcher + command row → grouped nav → user card, each band separated by a
  * hairline; and a 52px top bar over the content column carrying the page title
  * and a header slot.
+ *
+ * The command row is the ⌘K palette (components/ui/command-palette.tsx), which
+ * owns both the global key binding and its own sidebar trigger.
  *
  * The top bar is back. The flat/hairline phase had retired it and moved the
  * title into the content column; the Figma shell puts it in its own band again,
@@ -47,19 +50,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           <div className="border-border-subtle flex flex-col gap-2 border-b p-3">
             <ProjectSwitcher />
 
-            {/* Command row — non-functional for now; Phase 2 wires a real
-                command palette behind it. Rendered as a button so it is
-                focusable and announced, but marked disabled until then. */}
-            <button
-              type="button"
-              disabled
-              aria-label="Search or jump to (coming soon)"
-              className="border-border bg-panel text-muted focus-ring flex h-8 w-full items-center gap-2 rounded-md border px-2 text-left disabled:cursor-default"
-            >
-              <Search className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-              <span className="text-xs">Search or jump to…</span>
-              <kbd className="text-subtle ms-auto font-mono text-[10px]">⌘K</kbd>
-            </button>
+            {/* Command row — owns both the ⌘K binding and its own trigger. */}
+            <CommandPalette />
           </div>
 
           <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto p-2">
