@@ -60,8 +60,32 @@ export type ProductEvidenceParams = {
   audit_id?: string;
   /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
+  /**
+   * Analysis surface slice: `''` (or omitted) is the measurement surface
+   * ("Answer-engine APIs"); a configured surface id slices to that surface.
+   */
+  surface?: string;
   /** Newest-window size (backend default 100, max 500). */
   limit?: number;
+};
+
+/** Filters for the selected-audit product visibility projection. */
+export type ProductVisibilityParams = {
+  /** Restrict to one audit; omit for the latest product audit. */
+  audit_id?: string;
+  /** Logical engine slice; omit for the cross-engine aggregate. */
+  engine?: string;
+  /** Analysis surface slice (`''`/omitted = measurement). */
+  surface?: string;
+};
+
+/** Query params for the product visibility CSV export URL. */
+export type ProductVisibilityExportParams = {
+  audit_id?: string;
+  /** Engine slice; export receives the same engine+surface intersection. */
+  engine?: string;
+  /** Analysis surface slice (`''`/omitted = measurement). */
+  surface?: string;
 };
 
 export const productsApi = {
@@ -142,11 +166,12 @@ export const productsApi = {
     apiClient.delete<void>(`/competitor-products/${competitorProductId}`, options),
   /**
    * Selected-audit product dashboard (defaults to the latest product audit).
-   * `engine` slices entries to their persisted per-engine aggregate.
+   * `engine` slices entries to their persisted per-engine aggregate and
+   * `surface` slices to one analysis surface (`''`/omitted = measurement).
    */
   getProductVisibility: async (
     projectId: string,
-    params?: { audit_id?: string; engine?: string },
+    params?: ProductVisibilityParams,
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.get<ProductVisibility>(
@@ -167,10 +192,13 @@ export const productsApi = {
     );
     return strictValidate(productEvidenceResponseSchema, res, 'products.getProductEvidence');
   },
-  /** Same-origin export URL (browser navigation / download link). */
-  exportCsvUrl: (projectId: string, auditId?: string) =>
+  /**
+   * Same-origin export URL (browser navigation / download link). Receives
+   * the same engine + surface intersection as the on-screen slice.
+   */
+  exportCsvUrl: (projectId: string, params?: ProductVisibilityExportParams) =>
     withQuery(
       `${API_BASE_URL}/projects/${projectId}/products/visibility/export.csv`,
-      definedQuery({ audit_id: auditId }),
+      definedQuery(params),
     ),
 };

@@ -1,0 +1,122 @@
+'use client';
+
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+
+import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
+import { cn } from '@/lib/utils';
+
+/**
+ * Accessible segmented tablist (WAI-ARIA tabs) shared by the Products
+ * workspace's top-level tabs and every NESTED sub-tablist (Visibility,
+ * Attribution, and the drill-down evidence kinds). Roving tabindex,
+ * `aria-selected`, Arrow/Home/End keyboard navigation with focus transfer +
+ * automatic activation and wraparound, exactly one rendered `tabpanel`, and
+ * horizontal scrolling at narrow widths. Built on the existing
+ * `segmented.tsx` class recipes — no new primitive. Controlled view: the
+ * parent owns the selection state (URL-synced at the top level, local React
+ * state for nested levels).
+ */
+export function NestedTabs<T extends string>({
+  tabs,
+  activeTab,
+  onSelectTab,
+  ariaLabel,
+  idPrefix,
+  panel,
+}: Readonly<{
+  tabs: readonly { id: T; label: string }[];
+  activeTab: T;
+  onSelectTab: (tab: T) => void;
+  ariaLabel: string;
+  /** Unique id stem for the tab/panel ARIA wiring (`{idPrefix}-tab-{id}`). */
+  idPrefix: string;
+  /** The rendered content of the active panel (the parent owns composition). */
+  panel: ReactNode;
+}>) {
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const activeIndex = tabs.findIndex((tab) => tab.id === activeTab);
+
+  function focusTab(index: number) {
+    const tab = tabs[index];
+    if (!tab) return;
+    onSelectTab(tab.id);
+    tabRefs.current[tab.id]?.focus();
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const last = tabs.length - 1;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        event.preventDefault();
+        focusTab(activeIndex >= last ? 0 : activeIndex + 1);
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        event.preventDefault();
+        focusTab(activeIndex <= 0 ? last : activeIndex - 1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        focusTab(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        focusTab(last);
+        break;
+      default:
+        break;
+    }
+  }
+
+  const tabId = (tab: T) => `${idPrefix}-tab-${tab}`;
+  const panelId = (tab: T) => `${idPrefix}-panel-${tab}`;
+
+  return (
+    <div className="grid gap-4">
+      <div
+        role="tablist"
+        aria-label={ariaLabel}
+        aria-orientation="horizontal"
+        className={cn(
+          segmentedTrackClasses,
+          'flex w-fit max-w-full [scrollbar-width:none] flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden',
+        )}
+      >
+        {tabs.map((tab) => {
+          const selected = tab.id === activeTab;
+          return (
+            <button
+              key={tab.id}
+              ref={(node) => {
+                tabRefs.current[tab.id] = node;
+              }}
+              type="button"
+              role="tab"
+              id={tabId(tab.id)}
+              aria-selected={selected}
+              aria-controls={panelId(tab.id)}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => onSelectTab(tab.id)}
+              onKeyDown={onKeyDown}
+              className={cn(segmentedItemClasses(selected), 'shrink-0')}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={panelId(activeTab)}
+        aria-labelledby={tabId(activeTab)}
+        tabIndex={0}
+        className="focus-ring outline-none"
+      >
+        {panel}
+      </div>
+    </div>
+  );
+}

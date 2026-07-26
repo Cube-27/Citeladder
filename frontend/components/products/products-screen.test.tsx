@@ -28,6 +28,10 @@ vi.mock('@/lib/products/use-products-screen', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/products/use-products-screen')>();
   return {
     ...original,
+    useCatalogQueries: () => ({
+      productsQuery: { isLoading: false },
+      catalogHealthQuery: { isLoading: false },
+    }),
     useProductVisibilityQueries: () => ({
       auditsQuery: { isLoading: false },
       runOptions: [],
@@ -36,7 +40,20 @@ vi.mock('@/lib/products/use-products-screen', async (importOriginal) => {
       engine: 'all',
       setEngine: vi.fn(),
       engineParam: undefined,
+      surface: '',
+      setSurface: vi.fn(),
       visibilityQuery: { isLoading: true },
+    }),
+    useAttributionQueries: () => ({
+      range: 'latest',
+      setRange: vi.fn(),
+      granularity: 'week',
+      setGranularity: vi.fn(),
+      filters: { from: null, to: null, granularity: 'week' },
+      snapshotQuery: { isLoading: true },
+      recomputeMutation: { isPending: false, isError: false, mutate: vi.fn() },
+      recomputeTaskQuery: { data: undefined },
+      recomputeTerminal: false,
     }),
   };
 });
@@ -47,6 +64,10 @@ vi.mock('./catalog-panel', () => ({
 
 vi.mock('./product-visibility-panel', () => ({
   ProductVisibilityPanel: () => <div data-testid="visibility-panel">Visibility panel</div>,
+}));
+
+vi.mock('./attribution-panel', () => ({
+  AttributionPanel: () => <div data-testid="attribution-panel">Attribution panel</div>,
 }));
 
 describe('ProductsScreen tabs', () => {
@@ -63,8 +84,13 @@ describe('ProductsScreen tabs', () => {
       'aria-selected',
       'false',
     );
+    expect(screen.getByRole('tab', { name: 'Attribution' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
     expect(screen.getByTestId('catalog-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('visibility-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('attribution-panel')).not.toBeInTheDocument();
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
   });
 
@@ -86,6 +112,22 @@ describe('ProductsScreen tabs', () => {
     urlTab = 'visibility';
     render(<ProductsScreen />);
     expect(screen.getByTestId('visibility-panel')).toBeInTheDocument();
+  });
+
+  it('switches to the Attribution tab and mirrors it into ?tab=', async () => {
+    const user = userEvent.setup();
+    render(<ProductsScreen />);
+
+    await user.click(screen.getByRole('tab', { name: 'Attribution' }));
+    expect(screen.getByTestId('attribution-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('catalog-panel')).not.toBeInTheDocument();
+    expect(replaceSpy).toHaveBeenCalledWith('/products?tab=attribution');
+  });
+
+  it('reads the Attribution tab from ?tab=attribution', () => {
+    urlTab = 'attribution';
+    render(<ProductsScreen />);
+    expect(screen.getByTestId('attribution-panel')).toBeInTheDocument();
   });
 
   it('supports ArrowRight keyboard navigation between tabs', async () => {

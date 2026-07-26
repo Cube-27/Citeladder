@@ -1,20 +1,26 @@
 /**
  * Products (agentic commerce) display helpers — pure, framework-free.
  *
- * The tab model for the `/products` workspace (Catalog | Visibility) plus the
- * formatters the catalog table, the visibility summary strip, and the
- * rankings tables share. Every number rendered here is derived from persisted
- * backend values — never invented.
+ * The tab model for the `/products` Commerce workspace (Catalog | Visibility
+ * | Attribution) plus the formatters the catalog table, the visibility
+ * summary strip, and the rankings tables share. Every number rendered here
+ * is derived from persisted backend values — never invented.
  */
 import type {
+  BuyerDestinationKind,
+  BuyerDestinationMix,
   CompetitorProductVisibilityEntry,
+  FeedHealthStatus,
   LogicalEngine,
+  PriceRelationCounts,
+  ProductFeedHealth,
+  ProductOrigin,
   ProductVisibility,
   ProductVisibilityEntry,
 } from '@/lib/api/types';
 
-/** The two `/products` workspace tabs, in display order; Catalog is default. */
-export type ProductsTab = 'catalog' | 'visibility';
+/** The three `/products` workspace tabs, in display order; Catalog is default. */
+export type ProductsTab = 'catalog' | 'visibility' | 'attribution';
 
 /** Engine filter value for the products surfaces (`all` = cross-engine). */
 export type ProductEngineFilter = LogicalEngine | 'all';
@@ -22,6 +28,31 @@ export type ProductEngineFilter = LogicalEngine | 'all';
 export const PRODUCTS_TABS: readonly { id: ProductsTab; label: string }[] = [
   { id: 'catalog', label: 'Catalog' },
   { id: 'visibility', label: 'Visibility' },
+  { id: 'attribution', label: 'Attribution' },
+] as const;
+
+/**
+ * Nested Visibility sub-tabs (local React state, NOT mirrored in `?tab=`).
+ */
+export type VisibilitySubTab = 'overview' | 'attributes' | 'destinations' | 'co-placement';
+
+export const VISIBILITY_SUB_TABS: readonly { id: VisibilitySubTab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'attributes', label: 'Attributes' },
+  { id: 'destinations', label: 'Destinations' },
+  { id: 'co-placement', label: 'Co-placement' },
+] as const;
+
+/**
+ * Nested product drill-down evidence sub-tabs (local React state, NOT in the
+ * URL): the unified evidence stream splits by `evidence_kind`.
+ */
+export type ProductEvidenceSubTab = 'mentions' | 'attributes' | 'destinations';
+
+export const PRODUCT_EVIDENCE_SUB_TABS: readonly { id: ProductEvidenceSubTab; label: string }[] = [
+  { id: 'mentions', label: 'Mentions' },
+  { id: 'attributes', label: 'Attributes' },
+  { id: 'destinations', label: 'Destinations' },
 ] as const;
 
 const DEFAULT_TAB: ProductsTab = 'catalog';
@@ -142,4 +173,250 @@ export function summarizeProductVisibility(
     avgRank: rankCount > 0 ? rankSum / rankCount : null,
     priceAccuracy: accuracyWeight > 0 ? accuracySum / accuracyWeight : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Commerce v2 (analyzer v2 columns, feed health, surface slicing)
+// ---------------------------------------------------------------------------
+
+/** Catalog origin badge labels (backend `Product.origin` vocabulary). */
+export const PRODUCT_ORIGIN_LABELS: Record<ProductOrigin, string> = {
+  manual: 'Manual',
+  imported: 'CSV import',
+  synced: 'Synced feed',
+};
+
+/** Buyer-destination kind badge labels (backend `MERCHANT_KINDS`). */
+export const BUYER_DESTINATION_KIND_LABELS: Record<BuyerDestinationKind, string> = {
+  marketplace: 'Marketplace',
+  retailer: 'Retailer',
+  brand_site: 'Brand site',
+  other: 'Other',
+};
+
+/** UI label for the measurement surface (`''` in `available_surfaces`). */
+export const MEASUREMENT_SURFACE_LABEL = 'Answer-engine APIs';
+
+/**
+ * The analyzer-v1 version lineage (mirrors the backend config-owned
+ * `PRODUCT_ANALYZER_VERSION` history: v1 = `product-analysis-1`). v1 rows
+ * recorded price mismatches without a direction, so direction is NEVER
+ * inferred for them.
+ */
+const PRODUCT_ANALYZER_V1_VERSION = 'product-analysis-1';
+
+export function isV1ProductAnalyzer(version: string): boolean {
+  return version === PRODUCT_ANALYZER_V1_VERSION;
+}
+
+/**
+ * Display model for the Price relation column. A v1 entry with persisted
+ * mismatches renders `Direction unavailable` (never Higher/Lower); otherwise
+ * the persisted match/higher/lower counts render as badges, and an entry
+ * with no verifiable relation renders the null placeholder.
+ */
+export type PriceRelationDisplay =
+  | { kind: 'unavailable'; mismatch: number }
+  | { kind: 'counts'; match: number; higher: number; lower: number }
+  | { kind: 'empty' };
+
+export function priceRelationDisplay(entry: {
+  product_analyzer_version: string;
+  price_relation_counts: PriceRelationCounts;
+}): PriceRelationDisplay {
+  const counts = entry.price_relation_counts;
+  const mismatch = counts.mismatch ?? 0;
+  if (isV1ProductAnalyzer(entry.product_analyzer_version) && mismatch > 0) {
+    return { kind: 'unavailable', mismatch };
+  }
+  const match = counts.match ?? 0;
+  const higher = counts.higher ?? 0;
+  const lower = counts.lower ?? 0;
+  if (match + higher + lower === 0) return { kind: 'empty' };
+  return { kind: 'counts', match, higher, lower };
+}
+
+/** True when any entry renders `Direction unavailable` (drives the v1 alert). */
+export function hasDirectionUnavailableRows(
+  entries: readonly {
+    product_analyzer_version: string;
+    price_relation_counts: PriceRelationCounts;
+  }[],
+): boolean {
+  return entries.some((entry) => priceRelationDisplay(entry).kind === 'unavailable');
+}
+
+/** One attribute group row: integer frequency per dimension + group total. */
+export type AttributeFrequencyGroup = {
+  group: string;
+  dimensions: { dimension: string; count: number }[];
+  total: number;
+};
+
+/**
+ * Aggregate the selected projection's row-level `attribute_dimension_frequency`
+ * for display only — persisted counts are added, evidence is never re-scored.
+ * Groups sort by total descending, dimensions by count descending.
+ */
+export function aggregateAttributeFrequency(
+  entries: readonly { attribute_dimension_frequency: Record<string, Record<string, number>> }[],
+): AttributeFrequencyGroup[] {
+  const groups = new Map<string, Map<string, number>>();
+  for (const entry of entries) {
+    for (const [group, dimensions] of Object.entries(entry.attribute_dimension_frequency)) {
+      let bucket = groups.get(group);
+      if (!bucket) {
+        bucket = new Map();
+        groups.set(group, bucket);
+      }
+      for (const [dimension, count] of Object.entries(dimensions)) {
+        bucket.set(dimension, (bucket.get(dimension) ?? 0) + count);
+      }
+    }
+  }
+  return [...groups.entries()]
+    .map(([group, dimensions]) => {
+      const rows = [...dimensions.entries()]
+        .map(([dimension, count]) => ({ dimension, count }))
+        .sort((a, b) => b.count - a.count || a.dimension.localeCompare(b.dimension));
+      const total = rows.reduce((sum, row) => sum + row.count, 0);
+      return { group, dimensions: rows, total };
+    })
+    .sort((a, b) => b.total - a.total || a.group.localeCompare(b.group));
+}
+
+/**
+ * Aggregate row-level `buyer_destination_mix` for display only (persisted
+ * counts added; kinds and domains sorted by count descending).
+ */
+export function aggregateBuyerDestinationMix(
+  entries: readonly { buyer_destination_mix: BuyerDestinationMix }[],
+): BuyerDestinationMix {
+  const byKind = new Map<BuyerDestinationKind, number>();
+  const byDomain = new Map<
+    string,
+    { merchant_domain: string; merchant_name: string; merchant_kind: BuyerDestinationKind; count: number }
+  >();
+  let total = 0;
+  for (const entry of entries) {
+    total += entry.buyer_destination_mix.total;
+    for (const row of entry.buyer_destination_mix.by_kind) {
+      byKind.set(row.merchant_kind, (byKind.get(row.merchant_kind) ?? 0) + row.count);
+    }
+    for (const row of entry.buyer_destination_mix.by_domain) {
+      const existing = byDomain.get(row.merchant_domain);
+      if (existing) existing.count += row.count;
+      else byDomain.set(row.merchant_domain, { ...row });
+    }
+  }
+  return {
+    total,
+    by_kind: [...byKind.entries()]
+      .map(([merchant_kind, count]) => ({ merchant_kind, count }))
+      .sort((a, b) => b.count - a.count || a.merchant_kind.localeCompare(b.merchant_kind)),
+    by_domain: [...byDomain.values()].sort(
+      (a, b) => b.count - a.count || a.merchant_domain.localeCompare(b.merchant_domain),
+    ),
+  };
+}
+
+/** Row/column matrix model for the competitor co-placement table. */
+export type CoPlacementMatrix = {
+  /** Column labels (competitor product names), most-placed first. */
+  columns: { key: string; productName: string; competitorName: string }[];
+  rows: {
+    key: string;
+    productName: string;
+    sku: string;
+    /** One cell per column; null = never co-placed (renders `—`). */
+    cells: (number | null)[];
+  }[];
+  /** Preserved from the backend: true when ANY row's pair list was truncated. */
+  truncated: boolean;
+};
+
+/**
+ * Build the co-placement matrix from own-product entries (each entry's
+ * persisted `competitor_co_placement.items` are that row's cells). Display
+ * only — persisted counts are added, never recomputed.
+ */
+export function buildCoPlacementMatrix(
+  entries: readonly Pick<
+    ProductVisibilityEntry,
+    'product_id' | 'sku' | 'name' | 'competitor_co_placement'
+  >[],
+): CoPlacementMatrix {
+  const columnTotals = new Map<string, { productName: string; competitorName: string; total: number }>();
+  const rowCells = entries.map((entry) => {
+    const cells = new Map<string, number>();
+    for (const item of entry.competitor_co_placement.items) {
+      const key = item.competitor_product_id ?? `${item.competitor_name} ${item.product_name}`;
+      cells.set(key, (cells.get(key) ?? 0) + item.count);
+      const column = columnTotals.get(key) ?? {
+        productName: item.product_name,
+        competitorName: item.competitor_name,
+        total: 0,
+      };
+      column.total += item.count;
+      columnTotals.set(key, column);
+    }
+    return { entry, cells };
+  });
+  const orderedColumns = [...columnTotals.entries()].sort(
+    (a, b) => b[1].total - a[1].total || a[1].productName.localeCompare(b[1].productName),
+  );
+  return {
+    columns: orderedColumns.map(([key, column]) => ({
+      key,
+      productName: column.productName,
+      competitorName: column.competitorName,
+    })),
+    rows: rowCells.map(({ entry, cells }) => ({
+      key: entry.product_id ?? entry.sku,
+      productName: entry.name,
+      sku: entry.sku,
+      cells: orderedColumns.map(([key]) => cells.get(key) ?? null),
+    })),
+    truncated: entries.some((entry) => entry.competitor_co_placement.truncated),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Catalog feed health + sync display model (null-safe commerce formatters)
+// ---------------------------------------------------------------------------
+
+/**
+ * Feed-health cell model: an unbound product (null `connection_id`) is
+ * `Not feed-bound`; a bound product with no projected health row is
+ * `Feed health unavailable`; otherwise the persisted status renders.
+ */
+export type FeedHealthDisplay =
+  | { kind: 'unbound' }
+  | { kind: 'no-row' }
+  | { kind: 'status'; status: FeedHealthStatus; issueCount: number; ruleIds: string[] };
+
+export function feedHealthDisplay(
+  product: { connection_id: string | null },
+  healthRow: ProductFeedHealth | undefined,
+): FeedHealthDisplay {
+  if (!product.connection_id) return { kind: 'unbound' };
+  if (!healthRow) return { kind: 'no-row' };
+  return {
+    kind: 'status',
+    status: healthRow.status,
+    issueCount: healthRow.issue_count,
+    ruleIds: healthRow.rule_ids,
+  };
+}
+
+/** The badge text for a feed-health cell (meaning is never color-only). */
+export function feedHealthLabel(display: FeedHealthDisplay): string {
+  if (display.kind === 'unbound') return 'Not feed-bound';
+  if (display.kind === 'no-row') return 'Feed health unavailable';
+  if (display.status === 'healthy') return 'Healthy';
+  if (display.status === 'unavailable') return 'Unavailable';
+  if (display.status === 'warning') {
+    return `${display.issueCount} warning${display.issueCount === 1 ? '' : 's'}`;
+  }
+  return `${display.issueCount} error${display.issueCount === 1 ? '' : 's'}`;
 }

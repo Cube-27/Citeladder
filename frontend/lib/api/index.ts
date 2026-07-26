@@ -6,7 +6,9 @@
  * methods (which each own transport + `strictValidate`) plus the query key and
  * error surfaces. The architecture guard enforces the no-transport rule.
  */
+import { attributionApi } from './attribution';
 import { authApi } from './auth';
+import { commerceApi } from './commerce';
 import { contentApi } from './content';
 import { opportunitiesApi } from './opportunities';
 import { productsApi } from './products';
@@ -19,7 +21,9 @@ import { topicsApi } from './topics';
 import { visibilityApi } from './visibility';
 
 export const api = {
+  ...attributionApi,
   ...authApi,
+  ...commerceApi,
   ...contentApi,
   ...opportunitiesApi,
   ...productsApi,
@@ -32,8 +36,10 @@ export const api = {
   ...visibilityApi,
 };
 
+export { attributionApi } from './attribution';
 export { authApi } from './auth';
 export { billingApi } from './billing';
+export { commerceApi } from './commerce';
 export {
   contentApi,
   CONTENT_PROMPT_MAX_LEN,

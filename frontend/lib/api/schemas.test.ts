@@ -502,6 +502,9 @@ describe('products contract (agentic commerce)', () => {
     url: 'https://acme.com/p/voltbike',
     attributes: { brand: 'Acme' },
     origin: 'manual',
+    connection_id: null,
+    external_item_ref: null,
+    last_seen_sync_run_id: null,
     completeness: { score: 0.75, present: 9, total: 12, missing: ['gtin'] },
     created_at: '2026-07-15T00:00:00Z',
     updated_at: '2026-07-15T00:00:00Z',
@@ -540,11 +543,21 @@ describe('products contract (agentic commerce)', () => {
   });
 
   it('validates the visibility projection with nullable ids and rates', () => {
+    // The analyzer-v2 fields every entry carries (own + competitor).
+    const entryV2 = {
+      product_analyzer_version: 'product-analysis-2',
+      win_rate: null,
+      price_mismatch_rate: null,
+      price_relation_counts: {},
+      attribute_dimension_frequency: {},
+      buyer_destination_mix: { total: 0, by_kind: [], by_domain: [] },
+      competitor_co_placement: { items: [], truncated: false },
+    };
     const projection = {
       project_id: UUID2,
       audit_id: UUID,
       audit_status: 'completed',
-      product_analyzer_version: 'product-analysis-1',
+      product_analyzer_version: 'product-analysis-2',
       product_scoring_rule_version: 'product-scoring-v1',
       total_mentions: 4,
       total_analyses: 2,
@@ -559,6 +572,7 @@ describe('products contract (agentic commerce)', () => {
           rank_distribution: { top_1: 2, top_2_3: 0, top_4_5: 0, rank_6_plus: 0, unranked: 0 },
           price_mention_count: 2,
           price_accuracy_rate: 1.0,
+          ...entryV2,
         },
       ],
       competitor_products: [
@@ -573,13 +587,32 @@ describe('products contract (agentic commerce)', () => {
           rank_distribution: { top_1: 0, top_2_3: 2, top_4_5: 0, rank_6_plus: 0, unranked: 0 },
           price_mention_count: 0,
           price_accuracy_rate: null,
+          ...entryV2,
         },
       ],
+      available_surfaces: [''],
       created_at: '2026-07-15T00:00:00Z',
     };
     const parsed = strictValidate(productVisibilitySchema, projection, 'productVisibility');
     expect(parsed.competitor_products[0]?.competitor_product_id).toBeNull();
     expect(parsed.competitor_products[0]?.price_accuracy_rate).toBeNull();
+    expect(parsed.available_surfaces).toEqual(['']);
+    // A negative frequency count is contract drift.
+    expect(() =>
+      strictValidate(
+        productVisibilitySchema,
+        {
+          ...projection,
+          products: [
+            {
+              ...projection.products[0],
+              attribute_dimension_frequency: { Facts: { Price: -1 } },
+            },
+          ],
+        },
+        'productVisibility',
+      ),
+    ).toThrow();
     expect(() =>
       strictValidate(
         productVisibilitySchema,
@@ -591,7 +624,9 @@ describe('products contract (agentic commerce)', () => {
 
   it('validates the evidence envelope (items + truncated, nullable fields)', () => {
     const item = {
-      mention_id: UUID,
+      evidence_id: UUID,
+      analysis_id: UUID2,
+      evidence_kind: 'product_mention',
       audit_id: UUID,
       task_id: UUID2,
       artifact_id: null,
@@ -600,15 +635,26 @@ describe('products contract (agentic commerce)', () => {
       prompt_text: 'best option 0',
       prompt_index: 0,
       repetition: 0,
+      product_analyzer_version: 'product-analysis-2',
+      shopping_surface: '',
       matched_name: 'Acme VoltBike 500',
       matched_sku: 'AC-VB500',
+      created_at: '2026-07-15T00:00:00Z',
       first_offset: null,
       rank_position: 1,
-      price_text: '$2,499.00',
       price_value: 2499.0,
-      price_currency: 'USD',
       price_matches_catalog: null,
-      created_at: '2026-07-15T00:00:00Z',
+      price_relation: 'higher',
+      price_text: '$2,499.00',
+      price_currency: 'USD',
+      attribute_dimension: null,
+      attribute_group: null,
+      attribute_text: null,
+      attribute_offset: null,
+      merchant_name: null,
+      merchant_domain: null,
+      merchant_kind: null,
+      destination_url: null,
     };
     const parsed = strictValidate(
       productEvidenceResponseSchema,
@@ -617,6 +663,15 @@ describe('products contract (agentic commerce)', () => {
     );
     expect(parsed.truncated).toBe(true);
     expect(parsed.items[0]?.price_matches_catalog).toBeNull();
+    expect(parsed.items[0]?.evidence_kind).toBe('product_mention');
+    // `mismatch` is NOT a storable item-level relation (v1 aggregate only).
+    expect(() =>
+      strictValidate(
+        productEvidenceResponseSchema,
+        { items: [{ ...item, price_relation: 'mismatch' }], truncated: false },
+        'productEvidence',
+      ),
+    ).toThrow();
     expect(() =>
       strictValidate(
         productEvidenceResponseSchema,
