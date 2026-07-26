@@ -32,6 +32,17 @@ const lineBudgets = [
   // section needs CSS here, it needs a primitive in
   // components/marketing/primitives/ instead — do not raise this number.
   { file: 'app/(marketing)/marketing-theme.css', maxLines: 400 },
+  // Marketing motion — split out of -theme.css when the scroll-reveal work
+  // pushed it over budget. Same principle: keyframes and scroll timelines are
+  // a separate concern from tokens, so they get an owner rather than a raised
+  // ceiling. Motion here is always additive over already-rendered content —
+  // nothing that content needs in order to become visible belongs in it.
+  //
+  // Unlike marketing-theme.css this ceiling MAY rise, because this file exists
+  // to hold motion and each new kind of motion legitimately costs lines (260 →
+  // 300 for the hero marquee). What it may not hold is anything that is not
+  // motion. If it starts accumulating layout or colour, split it instead.
+  { file: 'app/(marketing)/marketing-motion.css', maxLines: 300 },
   { file: 'components/ui/theme-toggle.tsx', maxLines: 120 },
   { file: 'lib/theme.ts', maxLines: 160 },
   // F5 app shell: composition only — split any sub-piece that outgrows this.

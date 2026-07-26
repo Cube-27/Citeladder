@@ -109,7 +109,7 @@ export function SectionHeader({
       )}
       <Heading
         id={headingId}
-        className="font-mkt-display text-mkt-d2 text-mkt-ink max-w-[18ch] font-medium"
+        className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w max-w-[18ch]"
       >
         {title}
       </Heading>

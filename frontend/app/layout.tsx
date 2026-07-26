@@ -28,9 +28,21 @@ const mono = Geist_Mono({
 // --font-mkt-display in app/(marketing)/marketing-theme.css. The app's own
 // --font-display-family still resolves to Inter; nothing inside (app)
 // renders Manrope.
+//
+// Loaded as the VARIABLE font (no `weight` array) rather than four static
+// cuts. That unlocks the off-axis weight stops the display scale uses — 460
+// for marketing body, 540 for display — which sit deliberately between
+// Regular and Medium. Static instances can only land on 400/500/600/700, and
+// the whole point of the stop is that it is not one of those.
+//
+// PAYLOAD UNVERIFIED: a variable face may be larger than the four cuts it
+// replaces. This could not be measured where it was written (both configs
+// produced byte-identical build output, so next/font was serving Manrope from
+// cache). Check the transferred size of the Manrope woff2 on a marketing route
+// in a real deploy; if the variable file is materially heavier, revert to
+// `weight: ['400','500','600','700']` and drop the 460/540 stops with it.
 const display = Manrope({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
   variable: '--font-manrope',
   display: 'swap',
 });

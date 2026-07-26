@@ -1,15 +1,14 @@
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
-import { AUDITED_ENGINES, EngineChip } from '../primitives/engine-chip';
+import { ALL_ENGINES, EngineChip } from '../primitives/engine-chip';
 import { Meta } from '../primitives/label';
 import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
 /**
- * Coverage band. The claim is deliberately narrow: three engines we audit
- * today, named, with the reason the list is short stated in the same
- * breath. A logo wall of engines we do not cover would be the exact
- * fabrication the system forbids.
+ * Coverage band. The moving roster lives in the hero; this band is the static,
+ * readable statement of the same fact — the full provider list beside the
+ * sentence that explains what "coverage" actually means here.
  */
 export function EngineBand() {
   const { engines } = LANDING_CONTENT;
@@ -20,13 +19,13 @@ export function EngineBand() {
           <Meta as="p" className="mb-3">
             {engines.kicker}
           </Meta>
-          <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink max-w-[22ch] font-medium">
+          <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w max-w-[22ch]">
             {engines.title}
           </h2>
           <p className="text-mkt-body text-mkt-ink-soft mt-3 max-w-[62ch]">{engines.body}</p>
         </div>
         <div className="flex flex-wrap gap-2.5 lg:justify-end">
-          {AUDITED_ENGINES.map((engine) => (
+          {ALL_ENGINES.map((engine) => (
             <EngineChip key={engine} engine={engine} />
           ))}
         </div>

@@ -52,7 +52,7 @@ export function Shift() {
           <Meta as="p" className="mb-6">
             {voice.kicker}
           </Meta>
-          <p className="font-mkt-display text-mkt-d2 text-mkt-ink max-w-[16ch] font-medium">
+          <p className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w max-w-[16ch]">
             {voice.quote}{' '}
             <em className="text-mkt-accent-display not-italic">{voice.quoteAccent}</em>{' '}
             {voice.quoteTail}

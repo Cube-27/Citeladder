@@ -50,7 +50,7 @@ export function AuthBrandPanel() {
             the headline sits on the form's optical centre line. */}
         <div className="flex flex-1 items-center py-12">
           <GlassPanel className="max-w-[26rem] p-8">
-            <p className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">
+            <p className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w">
               See how AI answers talk about your brand.
             </p>
             <p className="text-mkt-body text-mkt-slate mt-3">

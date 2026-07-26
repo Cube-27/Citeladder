@@ -49,7 +49,7 @@ function BlogCta({
   return (
     <Section divided rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[16ch]">
           {title}
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
@@ -90,7 +90,7 @@ export function BlogIndex() {
                 <p
                   role="heading"
                   aria-level={2}
-                  className="font-mkt-display text-mkt-d3 text-mkt-ink max-w-[20ch] font-medium"
+                  className="font-mkt-display text-mkt-d3 text-mkt-ink mkt-display-w max-w-[20ch]"
                 >
                   <Link href={`/blog/${featured.slug}`}>{featured.title}</Link>
                 </p>
@@ -145,7 +145,7 @@ export function BlogIndex() {
             <span className="border-mkt-line bg-mkt-paper text-mkt-ink-soft mx-auto grid size-11 place-items-center rounded-full border">
               <PenLine aria-hidden strokeWidth={1.8} className="size-5" />
             </span>
-            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-6 font-medium">
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w mt-6">
               {BLOG_EMPTY_STATE.heading}
             </h2>
             <p className="text-mkt-body text-mkt-ink-soft mx-auto mt-3 max-w-[52ch]">
@@ -181,7 +181,7 @@ function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
   switch (block.type) {
     case 'heading':
       return (
-        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-10 mb-4 font-medium">
+        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w mt-10 mb-4">
           {block.text}
         </h2>
       );
@@ -217,7 +217,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               <Eyebrow>Field notes</Eyebrow>
             </div>
             <TagRow tags={post.tags} />
-            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink mt-4 font-medium">
+            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mt-4">
               {post.title}
             </h1>
             <div className="border-mkt-line mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-6">

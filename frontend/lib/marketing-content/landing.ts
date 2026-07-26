@@ -34,7 +34,28 @@ export const LANDING_CONTENT = {
   engines: {
     kicker: 'Coverage',
     title: 'The engines your buyers actually ask.',
-    body: 'Searchify audits ChatGPT, Gemini and Claude today, on your own provider keys. Coverage expands as engines expose stable APIs — we would rather name three we can prove than six we cannot.',
+    body: 'ChatGPT, Gemini and Claude are audited out of the box on your own provider keys. Paid workspaces can connect any other provider they hold keys for — the answer engines your buyers use, not the ones we happen to support.',
+    /**
+     * Buyer questions for the hero strip, rendered quoted and italic so they
+     * read as things people ask rather than as claims we are making.
+     *
+     * Rule 4 still governs: these name generic software categories, never a
+     * real company, and carry no numbers or outcomes. They illustrate the
+     * SHAPE of what buyers ask an answer engine — comparisons, alternatives,
+     * best-of lists — not anything Searchify has measured.
+     */
+    promptSamples: [
+      'best analytics tools for enterprise teams',
+      'top rated CRM software this year',
+      'alternatives to the market leader in project management',
+      'which help desk platform has the best support',
+      'cheapest email marketing tool for small teams',
+      'most reliable cloud hosting provider',
+      'what do reviewers say about open source BI tools',
+      'is an SEO platform worth it for a small business',
+      'compare the leading data warehouse options',
+      'which password manager do security teams recommend',
+    ],
   },
 
   shift: {

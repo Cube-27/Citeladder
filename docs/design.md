@@ -233,16 +233,13 @@ family rather than restating the palette:
   --series-other: var(--neutral-200); /* "Other" bucket — deliberately achromatic */
   --chart-tooltip-bg: var(--neutral-800); /* inverse chip, both themes */
 
-  /* Elevation — Figma --shadow-1..4 verbatim; semantic aliases keep the
-     existing component names (xs,sm→1; card→2; elevated→3; lg,modal→4) */
-  --shadow-1: 0 1px 2px rgba(13, 18, 40, 0.05), 0 0 0 1px rgba(13, 18, 40, 0.05);
-  --shadow-2: 0 2px 6px rgba(13, 18, 40, 0.07), 0 0 0 1px rgba(13, 18, 40, 0.06);
-  --shadow-3:
-    0 6px 20px rgba(13, 18, 40, 0.1), 0 1px 4px rgba(13, 18, 40, 0.05),
-    0 0 0 1px rgba(13, 18, 40, 0.07);
-  --shadow-4:
-    0 16px 40px rgba(13, 18, 40, 0.14), 0 4px 10px rgba(13, 18, 40, 0.07),
-    0 0 0 1px rgba(13, 18, 40, 0.09);
+  /* Elevation — Figma --shadow-1..4, ring dropped (see note below); semantic
+     aliases keep the existing component names (xs,sm→1; card→2; elevated→3;
+     lg,modal→4) */
+  --shadow-1: 0 1px 2px rgba(13, 18, 40, 0.05);
+  --shadow-2: 0 2px 6px rgba(13, 18, 40, 0.07);
+  --shadow-3: 0 6px 20px rgba(13, 18, 40, 0.1), 0 1px 4px rgba(13, 18, 40, 0.05);
+  --shadow-4: 0 16px 40px rgba(13, 18, 40, 0.14), 0 4px 10px rgba(13, 18, 40, 0.07);
   --shadow-xs-value: var(--shadow-1);
   --shadow-sm-value: var(--shadow-1);
   --shadow-card-value: var(--shadow-2);
@@ -257,6 +254,22 @@ family rather than restating the palette:
   --skeleton-highlight: var(--neutral-50);
 }
 ```
+
+### Elevation: one edge, not two
+
+The Figma originals each ended in a `0 0 0 1px` ring. Every surface that takes one of these
+also draws a real `border-border` hairline (`components/ui/card.tsx`), so the ring
+**double-drew the edge** — two lines a fraction of a pixel apart, which is what made dense
+screens read as slightly soft. The rings are dropped in light mode.
+
+The **drop shadows stay**. Light-mode panel (`#FFFFFF`) and base (`#F7F8FA`) differ by so
+little that the shadow is the only thing making surfaces read as layered rather than merely
+drawn; removing it flattens the app. Depth = borders + one honest shadow.
+
+**The dark theme deliberately keeps its ring**, and that asymmetry is not an oversight: there
+the ring is a warm *light* hairline (`rgba(255, 250, 240, 0.03–0.06)`) acting as a catchlight
+that separates a raised surface from the charcoal beneath it. Light mode's ring duplicated an
+existing border; dark mode's has no equivalent and is doing real work. Do not "align" them.
 
 ## 5. Token values — DARK (`html[data-theme='dark']`)
 
@@ -499,6 +512,13 @@ so headings differ from body by size and tracking only.
   app-wide.
 - Tracking tokens: `--tracking-tight: -0.02em`, `--tracking-normal: 0em`,
   `--tracking-wide: 0.025em`, `--tracking-wider: 0.06em`.
+
+> **The app scale is deliberately not the marketing scale.** The marketing surface runs a
+> 30–64px display ladder with off-axis 460/540 weights; this one runs 11–26px at 400/500/600
+> and is tuned for data density. They are different products — a dashboard and a landing page
+> — and importing the marketing steps into `(app)` routes would be a straight downgrade. The
+> same holds for the two-radius binary the marketing reference favours: the app's
+> 4/6/8/12/16 ladder is doing real work across tables, chips, cards and modals.
 - Line-height tokens: `--leading-none: 1`, `--leading-tight: 1.2`, `--leading-snug: 1.35`,
   `--leading-normal: 1.5`.
 
@@ -579,6 +599,7 @@ All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Fi
 | `tabs` / `segmented` | underline tabs (2px accent indicator, per VisibilityDashboard.tsx) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent). |
 | `input` / `field` | 14px text, `--border` hairline, `--radius-sm`, focus = accent border + `--focus-ring`; `field` wraps label + help + error. |
 | `dialog` | Radix modal; `--overlay-scrim`, `bg-elevated`, `--shadow-4`, `--radius-xl`. |
+| `command-palette` | ⌘K/Ctrl+K navigation over nav destinations + workspace projects, plus the sidebar command row that opens it. Radix dialog primitive directly (not `dialog` — a palette's header is its input); same scrim/surface tokens. Substring filter, clamped cursor, `role="listbox"` + `aria-activedescendant`. |
 | `dropdown` | Radix menu; `bg-elevated`, `border`, `--shadow-3`. |
 | `tooltip` | Radix; inverse chip (`--chart-tooltip-bg`), `--text-xs`. |
 | `skeleton` | `--skeleton-base` → `--skeleton-highlight` shimmer (~1.2s). |
@@ -596,8 +617,9 @@ shell).
 ### 11.1 App shell (`(app)/layout.tsx`) — Figma shell geometry (AppShell.tsx), grouped nav kept
 
 **Sidebar (220px, `bg-sidebar`)**: logo row (LogoCube + wordmark), project switcher
-(brand avatar + name, dropdown), then the grouped nav — the existing **Analyze / Improve**
-groups stay (the Figma flat nav is not adopted) with mono-uppercase eyebrow group labels.
+(brand avatar + name, dropdown), the **command row**, then the grouped nav — the existing
+**Analyze / Improve** groups stay (the Figma flat nav is not adopted) with mono-uppercase
+eyebrow group labels.
 Nav rows are 36px, 13.5px, `--text-secondary`; the **active item** is `--accent-subtle` bg +
 `--accent-text` + a **3px left accent bar** with the icon at full opacity; hover = bg-alt.
 Bottom = user card (avatar + name/email). **Topbar (52px, `bg-panel`)**: left = the current
@@ -605,6 +627,45 @@ page's title (15px/600, the single h1) + header slot (filters/actions); right = 
 theme toggle, user affordances. Content scrolls independently. A first-run gate redirects
 zero-project users to `/onboarding` (and waits for the projects query to settle before
 redirecting — no flash).
+
+**Command palette (⌘K / Ctrl+K).** `components/ui/command-palette.tsx` owns both the global
+key binding and the sidebar command row that triggers it, so the two can never disagree. It
+indexes every `NAV_GROUPS` destination plus every project in the workspace; choosing a
+project calls `setActiveProjectId` (which re-scopes the API client's workspace header) rather
+than navigating, and the active one is marked `Current`.
+
+Built on the Radix dialog primitive directly, **not** `components/ui/dialog.tsx` — that
+wrapper owns a title/description/close header, and a palette's header is its input. It reuses
+the same scrim and surface tokens, so the two stay consistent. The accessible name comes from
+an `sr-only` `Dialog.Title`, with `aria-describedby={undefined}` opting out of the description
+Radix otherwise expects.
+
+**Focus is handed back explicitly.** Radix returns focus to its own `Trigger`, but the ⌘K path
+has no trigger — without the explicit hand-back, closing drops focus to `<body>` and the caller
+loses their place in the page. The palette records `document.activeElement` when the shortcut
+fires (and the sidebar button records itself), then restores it on close, guarding with
+`isConnected` because switching project re-renders the shell and can unmount the original
+element. Regression-tested in `command-palette.test.tsx`.
+
+Filtering is a plain substring match over label + group. There is deliberately no fuzzy
+matcher and no index: the corpus is ~12 nav items plus a handful of projects, where
+subsequence matching mostly produces surprising ranking for no measurable gain. The cursor is
+**clamped during render** rather than corrected in an effect, so a filter that shrinks the
+list can never render a frame with nothing selected. `role="listbox"` +
+`aria-activedescendant` keeps focus in the input while the selection moves.
+
+**Layout.** Rows are grouped under Analyze / Improve / Switch project headings rather than
+carrying a right-aligned group label, and each row leads with its canonical nav glyph (projects
+render `ProjectSwitcher`'s initials avatar instead). Results keep ONE flat order for the
+keyboard cursor and are re-sectioned from that list at render time — grouping first and
+flattening for keys would let the highlighted row and the Enter target drift apart. A footer
+states the keyboard controls, since this is a keyboard surface first.
+
+The search input suppresses the global `:focus-visible` outline
+(`focus-visible:outline-none!`). It is the only focusable element and is focused for as long
+as the palette is open, so the ring would be a permanent blue rectangle carrying no
+information. The `!` is required: that global rule is unlayered and would otherwise win over
+a utility regardless of specificity.
 
 ### 11.2 Auth (`/login`, `/register`)
 
@@ -684,15 +745,17 @@ v4 `@theme` block in the `mkt-` namespace, imported by `globals.css` (Tailwind b
 utilities from a single `@import 'tailwindcss'` graph — a second import would duplicate
 preflight and the whole utility layer). Sections are built from **utilities plus the
 primitives in `components/marketing/primitives/`**; the theme file additionally holds only
-the scene rules a utility cannot express (the wallpaper, SVG stroke choreography, keyframes,
-and the `revert-layer` reset that lets utilities beat `globals.css`'s unlayered element
-base). Hex lives ONLY in that file; marketing components stay hex-free.
+the scene rules a utility cannot express (the wallpaper, SVG stroke geometry, and the
+`revert-layer` reset that lets utilities beat `globals.css`'s unlayered element base). Every
+keyframe and scroll timeline lives in the sibling `marketing-motion.css`. Hex lives ONLY in
+those two files; marketing components stay hex-free.
 
 **A 400-line budget on `marketing-theme.css` is machine-enforced**
-(`scripts/check-frontend-architecture.mjs`). The previous marketing stylesheet reached
-**6,846 lines** of global `.mkt` cascade because nothing stopped it growing. If a new section
-needs CSS in the theme file, it needs a **primitive** instead — that is the rule the budget
-exists to force.
+(`scripts/check-frontend-architecture.mjs`), with a companion 260-line budget on
+`marketing-motion.css`. The previous marketing stylesheet reached **6,846 lines** of global
+`.mkt` cascade because nothing stopped it growing. If a new section needs CSS in the theme
+file, it needs a **primitive** instead — that is the rule the budget exists to force. When a
+genuinely new *concern* arrives (as motion did), give it an owner; do not raise the ceiling.
 
 **Palette.** Warm paper and exact ink carry the page; colour is rationed to states, provider
 identity and evidence marks — never to headlines.
@@ -734,6 +797,24 @@ mono face — the deck's `--mono: Inter` was a smell. "Meta" is a **style**, not
 uppercase, `0.09em` tracking, tabular numerals. Eight fixed steps
 (`text-mkt-d1 … text-mkt-meta`); tracking tightens as size grows.
 
+**Display ladder.** `d1`/`d2`/`d3` resolve to **36 → 64px**, **30 → 48px** and **24 → 28px**,
+landing on a 36/48/64 ladder at the standard breakpoints. The earlier scale capped at 72px and
+floored at **44px**, which wrapped an 18ch headline into four or five stubby lines on a phone,
+and tracked roughly **2× tighter** than the size warranted (`-0.055em` ≈ −3.96px at 72px) — so
+headlines read as oversized and cramped at once. `--text-mkt-d1--line-height: 0.96` is
+unchanged: that compression is the signature.
+
+**Off-axis weights.** Manrope is loaded as the **variable** face (no `weight` array), which
+unlocks the stops the display scale uses: **540** for display (`.mkt-display-w`) and **460**
+for marketing body (`.mkt-body-w`). These sit deliberately between Regular and Medium —
+heavier than expected without ever reading as bold. They are *not* folded into
+`.font-mkt-display`: that name is Tailwind's generated font-**family** utility, and
+redefining it would both collide with the generated rule and lose to the `font-medium` that
+call sites carry. Against a static fallback the browser rounds to the nearest cut, so the
+page degrades to the previous look rather than breaking. **The variable payload is
+unverified** — see the note in `app/layout.tsx`; if it proves materially heavier than the
+four static cuts it replaced, revert both the font and the 460/540 stops together.
+
 **Shape and rhythm.** Six radii (`6 / 10 / 14 / 20 / 28 / pill`) — the deck used fifteen.
 Three elevation levels plus one atmospheric scene drop. One container (1240px) and one gutter
 (`clamp(20px, 4vw, 56px)`). Vertical rhythm belongs to the `<Section>` primitive — sections
@@ -749,6 +830,43 @@ contrast. Illustrative figures live inside `aria-hidden` scenes and always carry
 beats, transform and opacity only, scroll reveals that settle rather than bounce, and everything gated on
 `prefers-reduced-motion` — where scenes hold their finished state rather than freezing
 mid-animation.
+
+Motion lives in its own owner, **`marketing-motion.css`** (budget 260 lines), split out of the
+theme file when the scroll-reveal work pushed it past 400. Same principle as the theme budget:
+keyframes and scroll timelines are a separate concern from tokens, so they get an owner rather
+than a raised ceiling. The `--animate-mkt-*` bindings stay in the `@theme` block; their
+keyframes live in the motion file.
+
+**Scroll reveals are CSS-only**, driven by `animation-timeline: view()` inside an `@supports`
+guard. This is a hard constraint, not a preference: an earlier JS implementation swapped the
+server-rendered node for an opacity-zero motion node after hydration and **made every route
+visibly flash**, which is why `Reveal` was previously reduced to a pass-through div. The
+current design cannot regress that way — elements server-render in their **finished** state
+and animate only where view timelines exist, so there is no hydration boundary to flash
+across, and an unsupported browser or a disabled-JS client simply gets the static page.
+Anything above the fold is already past its entry range at load, so the hero never animates.
+
+`Reveal` marks a single block (`[data-mkt-reveal]`); `StaggerGroup` marks a container whose
+direct children each key off their **own** scroll position, so the cascade tracks the scroll
+instead of running ahead of it on a fixed delay. The generic selector excludes the stagger
+container (`:not([data-mkt-reveal='stagger'])`) — animating both group and children fades
+every item twice. **Never introduce motion here that content depends on to become visible.**
+
+**Hero marquee.** Two counter-moving strips fill the bottom of the first screen: the provider
+roster travelling right, buyer questions travelling left. Opposite directions are the point —
+engines and questions are the two axes the product crosses, so one shared direction would read
+as a single list. `Marquee` renders the item list N times (`copies`, default 4) and the CSS
+translates by the width of exactly **one** copy, so copy 2 lands where copy 1 began and the
+loop is seamless. Translating a fixed `-50%` would tear as soon as the copy count changed;
+`--mkt-marquee-copy` is `1/N`, so the distance follows the content. `copies` must be high
+enough that one copy overflows the viewport — a short list that fits on screen visibly empties
+before looping, which is the usual cause of a marquee that stutters at the seam. Every copy
+after the first is `aria-hidden`, so the list is announced once. Motion pauses on hover, and
+under reduced motion the track stops at its start and becomes a plain horizontal scroll region.
+
+Both strips sit **directly on the paper** — no cards, borders or fills. Provider marks are the
+official brand geometry from `engine-logo.tsx` in each provider's own colour, and the questions
+are quoted and italic so they read as things buyers ask rather than as claims we are making.
 
 
 ## 13. Motion + accessibility (app)

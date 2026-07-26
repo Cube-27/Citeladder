@@ -18,7 +18,7 @@ export function FinalCta() {
     <Section rhythm="loose" divided aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
         <Eyebrow>{finalCta.kicker}</Eyebrow>
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mt-6 mb-5 max-w-[18ch] font-medium">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mt-6 mb-5 max-w-[18ch]">
           {finalCta.title}
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">{finalCta.body}</p>

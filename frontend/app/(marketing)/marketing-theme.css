@@ -31,16 +31,19 @@
   --font-mkt-sans: var(--font-sans), 'Inter', 'Helvetica Neue', Arial, sans-serif;
 
   /* Eight steps, no ad-hoc sizes. Tracking tightens as size grows, which is
-     what makes large Manrope read as typography rather than as big text. */
-  --text-mkt-d1: clamp(2.75rem, 5.2vw, 4.5rem);
+     what makes large Manrope read as typography rather than as big text.
+     Display lands on a 36/48/64 ladder: the old scale capped at 72px, floored
+     at 44px (stubby wrapped headlines on phones) and tracked ~2× tighter than
+     the size warranted. 0.96 leading on d1 is the signature — leave it. */
+  --text-mkt-d1: clamp(2.25rem, 4.6vw, 4rem); /* 36 → 64px */
   --text-mkt-d1--line-height: 0.96;
-  --text-mkt-d1--letter-spacing: -0.055em;
-  --text-mkt-d2: clamp(2.25rem, 4.2vw, 3.75rem);
+  --text-mkt-d1--letter-spacing: -0.03em;
+  --text-mkt-d2: clamp(1.875rem, 3.4vw, 3rem); /* 30 → 48px */
   --text-mkt-d2--line-height: 1;
-  --text-mkt-d2--letter-spacing: -0.045em;
-  --text-mkt-d3: clamp(1.75rem, 2.6vw, 2.25rem);
+  --text-mkt-d2--letter-spacing: -0.0275em;
+  --text-mkt-d3: clamp(1.5rem, 2vw, 1.75rem); /* 24 → 28px */
   --text-mkt-d3--line-height: 1.08;
-  --text-mkt-d3--letter-spacing: -0.035em;
+  --text-mkt-d3--letter-spacing: -0.0225em;
   --text-mkt-d4: 1.5rem;
   --text-mkt-d4--line-height: 1.15;
   --text-mkt-d4--letter-spacing: -0.03em;
@@ -147,110 +150,6 @@
   --animate-mkt-verify: mkt-verify 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
-@keyframes mkt-float {
-  50% {
-    transform: translateY(-11px);
-  }
-}
-
-@keyframes mkt-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgb(10 143 106 / 0.28);
-  }
-  55% {
-    box-shadow: 0 0 0 9px rgb(10 143 106 / 0);
-  }
-}
-
-@keyframes mkt-travel {
-  to {
-    stroke-dashoffset: -220;
-  }
-}
-
-@keyframes mkt-draw {
-  0%,
-  10% {
-    stroke-dashoffset: 440;
-  }
-  58%,
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes mkt-breathe {
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-@keyframes mkt-verify {
-  0%,
-  12% {
-    opacity: 0.34;
-    transform: translateX(-5px);
-  }
-  35%,
-  72% {
-    opacity: 1;
-    transform: none;
-  }
-  100% {
-    opacity: 0.34;
-  }
-}
-
-/* This marketing-only motion explains the question → evidence → action flow.
-   Stages settle as the scene enters; arrows then hand attention left to right. */
-@supports (animation-timeline: view()) {
-  .mkt-flow-stage {
-    animation: mkt-flow-stage-in linear both;
-    animation-timeline: view();
-  }
-
-  .mkt-flow-stage[data-flow-stage='1'] {
-    animation-range: entry 0% entry 55%;
-  }
-
-  .mkt-flow-stage[data-flow-stage='2'] {
-    animation-range: entry 12% entry 67%;
-  }
-
-  .mkt-flow-stage[data-flow-stage='3'] {
-    animation-range: entry 24% entry 79%;
-  }
-}
-
-.mkt-flow-arrow {
-  animation: mkt-flow-arrow 3.6s var(--ease-mkt-out) infinite;
-}
-
-.mkt-flow-arrow[data-flow-arrow='2'] {
-  animation-delay: 1.8s;
-}
-
-@keyframes mkt-flow-stage-in {
-  from {
-    opacity: 0.72;
-    transform: translateY(12px);
-  }
-}
-
-@keyframes mkt-flow-arrow {
-  0%,
-  35%,
-  100% {
-    opacity: 0.45;
-    transform: none;
-  }
-  12% {
-    opacity: 1;
-    transform: translateX(3px);
-  }
-}
-
 /* ═══════════════════════════════════════════════════════════════════════
    Scene rules — everything below is here because a utility cannot express
    it (compositing the wallpaper, SVG stroke choreography, escaping the
@@ -284,6 +183,28 @@ html:has(.mkt-root) body {
   font-family: var(--font-mkt-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Off-axis weight stops. 460 and 540 sit deliberately between Regular and
+   Medium — heavier than expected without ever reading as bold, which is what
+   keeps large Manrope feeling composed rather than shouted. They need the
+   variable face (app/layout.tsx); against a static fallback the browser rounds
+   to the nearest cut, so the page degrades to today's look rather than
+   breaking. `font-weight` is set alongside so that rounding is sensible.
+
+   These are deliberately NOT folded into `.font-mkt-display` — that name is
+   Tailwind's generated font-FAMILY utility, and redefining it here would both
+   collide with the generated rule and lose to the `font-medium` that every
+   call site already carries. Weight is its own decision; use `.mkt-display-w`
+   with `font-mkt-display`, replacing `font-medium`. */
+.mkt-display-w {
+  font-weight: 540;
+  font-variation-settings: 'wght' 540;
+}
+
+.mkt-body-w {
+  font-weight: 460;
+  font-variation-settings: 'wght' 460;
 }
 
 .mkt-root ::selection {
@@ -340,35 +261,4 @@ html:has(.mkt-root) body {
   stroke-linejoin: round;
   stroke-dasharray: 440;
   stroke-dashoffset: 440;
-}
-
-/* Motion is never load-bearing: with reduced motion every scene holds its
-   finished state instead of freezing mid-animation. */
-@media (prefers-reduced-motion: reduce) {
-  .mkt-root *,
-  .mkt-root *::before,
-  .mkt-root *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
-  }
-
-  .mkt-chart-line {
-    stroke-dashoffset: 0;
-  }
-
-  /* Both of these spend part of their cycle dimmed, so collapsing the
-     duration would otherwise freeze them on whichever keyframe happened to
-     be last. Pin them to the finished, fully legible state instead. */
-  .animate-mkt-verify {
-    opacity: 1;
-    transform: none;
-  }
-
-  .mkt-flow-stage,
-  .mkt-flow-arrow {
-    animation: none !important;
-    opacity: 1;
-    transform: none;
-  }
 }

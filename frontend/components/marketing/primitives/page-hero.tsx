@@ -34,7 +34,7 @@ export function PageHero({
           <Eyebrow>{eyebrow}</Eyebrow>
           <h1
             className={cn(
-              'font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[16ch] font-medium',
+              'font-mkt-display text-mkt-d1 text-mkt-ink mkt-display-w mt-6 mb-6 max-w-[18ch]',
               centered && 'mx-auto',
             )}
           >
