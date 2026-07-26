@@ -41,7 +41,9 @@ async def resolve_workspace_entitlement(
         )
     ).scalar_one_or_none()
     if row is not None:
-        row = await expire_account_entitlement_if_needed(session, row)
+        row, expired = await expire_account_entitlement_if_needed(session, row)
+        if expired:
+            await session.commit()
     tier_key = row.tier_key if row is not None else TIER_FREE
     profile = capability_profile(tier_key)
     return WorkspaceEntitlementResponse(
@@ -58,10 +60,10 @@ async def resolve_workspace_entitlement(
 
 async def expire_account_entitlement_if_needed(
     session: AsyncSession, entitlement: AccountEntitlement
-) -> AccountEntitlement:
+) -> tuple[AccountEntitlement, bool]:
     """Fail closed when a verified grace/paid-through window has elapsed."""
     if entitlement.tier_key != TIER_PAID:
-        return entitlement
+        return entitlement, False
     locked = (
         await session.execute(
             select(AccountEntitlement)
@@ -89,7 +91,7 @@ async def expire_account_entitlement_if_needed(
         and locked.paid_through <= now
     )
     if not grace_elapsed and not paid_window_elapsed:
-        return locked
+        return locked, False
     locked.tier_key = TIER_FREE
     locked.grace_until = None
     locked.capability_revision += 1
@@ -97,8 +99,8 @@ async def expire_account_entitlement_if_needed(
         subscription.is_current = False
         subscription.ended_at = now
     await synchronize_sponsored_workspaces(session, locked)
-    await session.commit()
-    return locked
+    await session.flush()
+    return locked, True
 
 
 async def synchronize_sponsored_workspaces(

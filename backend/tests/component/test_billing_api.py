@@ -11,10 +11,13 @@ from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import billing as billing_api
+from app.connectors.billing.base import BillingProviderError, HostedSubscription
 from app.core.config.billing import billing_settings
 from app.models.billing import (
     AccountEntitlement,
     BillingAccount,
+    BillingCheckoutAttempt,
     BillingSubscription,
     BillingWebhookEvent,
 )
@@ -77,6 +80,97 @@ async def test_same_country_update_preserves_verification(
     )
     assert response.status_code == 200
     assert response.json()["country_verification"] == "verified"
+
+
+@pytest.mark.asyncio
+async def test_unknown_checkout_attempt_reconciles_on_same_key_retry(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client)
+    await client.patch("/api/v1/billing/profile", json={"country_code": "US"})
+    monkeypatch.setattr(billing_settings, "checkout_enabled", True)
+    monkeypatch.setattr(billing_settings, "razorpay_live_ready", True)
+    monkeypatch.setattr(billing_settings, "razorpay_international_ready", True)
+    monkeypatch.setattr(
+        billing_settings, "razorpay_paid_monthly_usd_plan_id", "plan_usd"
+    )
+
+    class AmbiguousThenReconciledProvider:
+        def __init__(self) -> None:
+            self.reconciliation_flags: list[bool] = []
+
+        async def create_subscription(
+            self,
+            *,
+            plan_id: str,
+            attempt_id: str,
+            billing_account_id: str,
+            reconcile_existing: bool = False,
+        ) -> HostedSubscription:
+            self.reconciliation_flags.append(reconcile_existing)
+            if len(self.reconciliation_flags) == 1:
+                raise BillingProviderError("provider_unavailable", retryable=True)
+            return HostedSubscription(
+                external_subscription_id="sub_reconciled",
+                checkout_url="https://rzp.io/i/reconciled",
+                status="created",
+            )
+
+    provider = AmbiguousThenReconciledProvider()
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    headers = {"Idempotency-Key": "billing-reconciliation-0001"}
+    payload = {"tier_key": "paid", "cadence": "monthly"}
+
+    first = await client.post(
+        "/api/v1/billing/checkout", headers=headers, json=payload
+    )
+    retry = await client.post(
+        "/api/v1/billing/checkout", headers=headers, json=payload
+    )
+
+    assert first.status_code == 502
+    assert retry.status_code == 200
+    assert retry.json()["checkout_url"] == "https://rzp.io/i/reconciled"
+    assert provider.reconciliation_flags == [False, True]
+    attempt = (await db_session.scalars(select(BillingCheckoutAttempt))).one()
+    assert attempt.status == "created"
+
+
+@pytest.mark.asyncio
+async def test_entitlement_expiry_is_committed_by_read_caller(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    await _register(client)
+    workspace = (await client.get("/api/v1/workspaces")).json()[0]
+    account = (await db_session.scalars(select(BillingAccount))).one()
+    entitlement = (await db_session.scalars(select(AccountEntitlement))).one()
+    expired_at = datetime.now(UTC) - timedelta(minutes=1)
+    subscription = BillingSubscription(
+        billing_account_id=account.id,
+        external_subscription_id="sub_expired_cancel",
+        external_price_id="plan_test",
+        currency="USD",
+        status="cancel_scheduled",
+        current_period_end=expired_at,
+    )
+    db_session.add(subscription)
+    await db_session.flush()
+    entitlement.tier_key = "paid"
+    entitlement.source_subscription_id = subscription.id
+    entitlement.paid_through = expired_at
+    await db_session.commit()
+
+    response = await client.get(
+        f"/api/v1/workspaces/{workspace['id']}/entitlements"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["tier_key"] == "free"
+    db_session.expire_all()
+    persisted = (await db_session.scalars(select(AccountEntitlement))).one()
+    assert persisted.tier_key == "free"
 
 
 @pytest.mark.asyncio

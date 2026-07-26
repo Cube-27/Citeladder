@@ -32,7 +32,12 @@ class ProviderSubscription:
 
 class BillingProvider(Protocol):
     async def create_subscription(
-        self, *, plan_id: str, attempt_id: str, billing_account_id: str
+        self,
+        *,
+        plan_id: str,
+        attempt_id: str,
+        billing_account_id: str,
+        reconcile_existing: bool = False,
     ) -> HostedSubscription: ...
 
     async def fetch_subscription(

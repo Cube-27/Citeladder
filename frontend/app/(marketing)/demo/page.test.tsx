@@ -7,8 +7,10 @@ const originalBooking = process.env.DEMO_BOOKING_URL;
 const originalEmail = process.env.PUBLIC_SALES_EMAIL;
 
 afterEach(() => {
-  process.env.DEMO_BOOKING_URL = originalBooking;
-  process.env.PUBLIC_SALES_EMAIL = originalEmail;
+  if (originalBooking === undefined) delete process.env.DEMO_BOOKING_URL;
+  else process.env.DEMO_BOOKING_URL = originalBooking;
+  if (originalEmail === undefined) delete process.env.PUBLIC_SALES_EMAIL;
+  else process.env.PUBLIC_SALES_EMAIL = originalEmail;
 });
 
 describe('Demo page', () => {

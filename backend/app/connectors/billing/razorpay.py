@@ -90,11 +90,17 @@ class RazorpayBillingProvider:
         return value
 
     async def create_subscription(
-        self, *, plan_id: str, attempt_id: str, billing_account_id: str
+        self,
+        *,
+        plan_id: str,
+        attempt_id: str,
+        billing_account_id: str,
+        reconcile_existing: bool = False,
     ) -> HostedSubscription:
-        existing = await self._find_subscription_by_attempt(attempt_id)
-        if existing is not None:
-            return self._hosted_subscription(existing)
+        if reconcile_existing:
+            existing = await self._find_subscription_by_attempt(attempt_id)
+            if existing is not None:
+                return self._hosted_subscription(existing)
         data = await self._request(
             "POST",
             "/subscriptions",
@@ -125,28 +131,33 @@ class RazorpayBillingProvider:
             int(datetime.now(UTC).timestamp())
             - self.settings.reconciliation_lookback_seconds
         )
-        data = await self._request(
-            "GET",
-            f"/subscriptions?count={self.settings.reconciliation_list_count}&from={since}",
-        )
-        items = data.get("items")
-        if not isinstance(items, list):
-            raise BillingProviderError("provider_invalid_response")
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            notes = item.get("notes")
-            if (
-                isinstance(notes, dict)
-                and notes.get("searchify_attempt_id") == attempt_id
-            ):
-                if item.get("short_url"):
-                    return item
-                external_id = item.get("id")
-                if not isinstance(external_id, str):
-                    raise BillingProviderError("provider_invalid_response")
-                return await self._request("GET", f"/subscriptions/{external_id}")
-        return None
+        page_size = self.settings.reconciliation_list_count
+        skip = 0
+        while True:
+            data = await self._request(
+                "GET",
+                f"/subscriptions?count={page_size}&skip={skip}&from={since}",
+            )
+            items = data.get("items")
+            if not isinstance(items, list):
+                raise BillingProviderError("provider_invalid_response")
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                notes = item.get("notes")
+                if (
+                    isinstance(notes, dict)
+                    and notes.get("searchify_attempt_id") == attempt_id
+                ):
+                    if item.get("short_url"):
+                        return item
+                    external_id = item.get("id")
+                    if not isinstance(external_id, str):
+                        raise BillingProviderError("provider_invalid_response")
+                    return await self._request("GET", f"/subscriptions/{external_id}")
+            if len(items) < page_size:
+                return None
+            skip += len(items)
 
     async def fetch_subscription(
         self, external_subscription_id: str

@@ -16,6 +16,7 @@ from app.core.config.billing import billing_settings, quote_for_country
 from app.domain.auth import service as auth_service
 from app.domain.billing.service import catalog
 from app.domain.billing.webhooks import verify_razorpay_signature
+from scripts.provision_razorpay_plans import _validate_environment
 
 
 def _ready(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -122,9 +123,8 @@ async def test_razorpay_adapter_creates_hosted_subscription(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/v1/subscriptions"
+        assert request.method == "POST"
         assert request.headers["authorization"].startswith("Basic ")
-        if request.method == "GET":
-            return httpx.Response(200, json={"items": []})
         body = request.content.decode()
         assert '"plan_id":"plan_test"' in body
         assert "test-secret" not in body
@@ -158,8 +158,7 @@ async def test_razorpay_adapter_rejects_untrusted_checkout_host(
     )
 
     async def handler(_request: httpx.Request) -> httpx.Response:
-        if _request.method == "GET":
-            return httpx.Response(200, json={"items": []})
+        assert _request.method == "POST"
         return httpx.Response(
             200,
             json={
@@ -208,10 +207,66 @@ async def test_razorpay_adapter_reuses_subscription_found_by_attempt_note(
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
         hosted = await provider.create_subscription(
-            plan_id="plan_test", attempt_id="attempt", billing_account_id="account"
+            plan_id="plan_test",
+            attempt_id="attempt",
+            billing_account_id="account",
+            reconcile_existing=True,
         )
     assert hosted.external_subscription_id == "sub_existing"
     assert [request.method for request in requests] == ["GET"]
+
+
+@pytest.mark.asyncio
+async def test_razorpay_reconciliation_paginates_until_attempt_is_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
+    monkeypatch.setattr(
+        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
+    )
+    monkeypatch.setattr(billing_settings, "reconciliation_list_count", 1)
+    skips: list[str | None] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        skips.append(request.url.params.get("skip"))
+        if request.url.params.get("skip") == "0":
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "id": "sub_other",
+                            "status": "created",
+                            "notes": {"searchify_attempt_id": "other"},
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "id": "sub_existing",
+                        "status": "created",
+                        "short_url": "https://rzp.io/i/existing",
+                        "notes": {"searchify_attempt_id": "attempt"},
+                    }
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RazorpayBillingProvider(client=client)
+        hosted = await provider.create_subscription(
+            plan_id="plan_test",
+            attempt_id="attempt",
+            billing_account_id="account",
+            reconcile_existing=True,
+        )
+
+    assert hosted.external_subscription_id == "sub_existing"
+    assert skips == ["0", "1"]
 
 
 @pytest.mark.asyncio
@@ -235,3 +290,26 @@ async def test_razorpay_adapter_maps_all_transport_errors(
                 billing_account_id="account",
             )
     assert exc.value.retryable is True
+
+
+@pytest.mark.parametrize(
+    ("environment", "key_id", "valid"),
+    [
+        ("test", "rzp_test_example", True),
+        ("live", "rzp_live_example", True),
+        ("test", "rzp_live_example", False),
+        ("live", "rzp_test_example", False),
+    ],
+)
+def test_plan_provisioning_validates_credential_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    environment: str,
+    key_id: str,
+    valid: bool,
+) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_key_id", key_id)
+    if valid:
+        _validate_environment(environment)
+    else:
+        with pytest.raises(RuntimeError, match="does not match"):
+            _validate_environment(environment)
