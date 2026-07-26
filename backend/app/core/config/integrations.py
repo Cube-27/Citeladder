@@ -20,7 +20,7 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,27 +35,52 @@ if TYPE_CHECKING:
 INTEGRATION_PROVIDER_GSC: Final = "gsc"
 INTEGRATION_PROVIDER_GA4: Final = "ga4"
 INTEGRATION_PROVIDER_BING: Final = "bing"
+INTEGRATION_PROVIDER_SHOPIFY: Final = "shopify"
 INTEGRATION_PROVIDERS: Final[frozenset[str]] = frozenset(
-    {INTEGRATION_PROVIDER_GSC, INTEGRATION_PROVIDER_GA4, INTEGRATION_PROVIDER_BING}
+    {
+        INTEGRATION_PROVIDER_GSC,
+        INTEGRATION_PROVIDER_GA4,
+        INTEGRATION_PROVIDER_BING,
+        INTEGRATION_PROVIDER_SHOPIFY,
+    }
 )
 
 INTEGRATION_TRANSPORT_GOOGLE: Final = "google_oauth"
 INTEGRATION_TRANSPORT_MICROSOFT: Final = "microsoft_oauth"
+INTEGRATION_TRANSPORT_SHOPIFY: Final = "shopify_oauth"
 INTEGRATION_TRANSPORTS: Final[frozenset[str]] = frozenset(
-    {INTEGRATION_TRANSPORT_GOOGLE, INTEGRATION_TRANSPORT_MICROSOFT}
+    {
+        INTEGRATION_TRANSPORT_GOOGLE,
+        INTEGRATION_TRANSPORT_MICROSOFT,
+        INTEGRATION_TRANSPORT_SHOPIFY,
+    }
 )
 
 # Provider -> transport compatibility map (spec section 3): a connection's
 # provider must be compatible with its grant's transport. GSC + GA4 share ONE
 # Google consent (one grant carries both connections); Bing rides a Microsoft
-# grant.
+# grant; Shopify rides its own per-shop offline-token grant.
 INTEGRATION_PROVIDER_TRANSPORT: Final[dict[str, str]] = {
     INTEGRATION_PROVIDER_GSC: INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_PROVIDER_GA4: INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_PROVIDER_BING: INTEGRATION_TRANSPORT_MICROSOFT,
+    INTEGRATION_PROVIDER_SHOPIFY: INTEGRATION_TRANSPORT_SHOPIFY,
+}
+
+# Whether a transport's grant carries a refreshable access token. Shopify's
+# offline Admin API token never expires and has no refresh token: the sync
+# worker returns it directly instead of attempting a refresh (a ``None``
+# ``token_expires_at`` is NOT near-expiry for a non-refreshable transport).
+INTEGRATION_OAUTH_REFRESHABLE: Final[dict[str, bool]] = {
+    INTEGRATION_TRANSPORT_GOOGLE: True,
+    INTEGRATION_TRANSPORT_MICROSOFT: True,
+    INTEGRATION_TRANSPORT_SHOPIFY: False,
 }
 
 # --- OAuth endpoints (per transport) + redirect ------------------------------
+# STATIC endpoint maps stay Google/Microsoft-only: Shopify's authorize/token
+# endpoints are PER-SHOP (``https://{shop}.myshopify.com/admin/oauth/...``)
+# and are resolved through the validated dynamic builders below.
 INTEGRATION_OAUTH_AUTHORIZE_URLS: Final[dict[str, str]] = {
     INTEGRATION_TRANSPORT_GOOGLE: "https://accounts.google.com/o/oauth2/v2/auth",
     INTEGRATION_TRANSPORT_MICROSOFT: (
@@ -70,10 +95,13 @@ INTEGRATION_OAUTH_TOKEN_URLS: Final[dict[str, str]] = {
 }
 # The Microsoft identity platform exposes no OAuth grant-revocation endpoint,
 # so its entry is intentionally empty: remote revoke is Google-only and a
-# Microsoft grant disconnects locally (spec section 5).
+# Microsoft grant disconnects locally (spec section 5). Shopify likewise has
+# no token-revocation endpoint for an offline Admin API grant — a Shopify
+# disconnect is local-only (the merchant revokes in their admin).
 INTEGRATION_OAUTH_REVOKE_URLS: Final[dict[str, str]] = {
     INTEGRATION_TRANSPORT_GOOGLE: "https://oauth2.googleapis.com/revoke",
     INTEGRATION_TRANSPORT_MICROSOFT: "",
+    INTEGRATION_TRANSPORT_SHOPIFY: "",
 }
 # Minimal scope set per transport (spec section 7). The ONE Google grant
 # combines the GSC + GA4 read scopes so a single consent yields both
@@ -98,6 +126,14 @@ INTEGRATION_OAUTH_SCOPES: Final[dict[str, tuple[str, ...]]] = {
     INTEGRATION_TRANSPORT_MICROSOFT: (
         "offline_access",
         "https://webmaster.bing.com/api/webmaster.manage",
+    ),
+    # Shopify custom-app Admin API scopes: catalog + order READS only. No
+    # write scope and no ``read_all_orders`` (the orders read scope is
+    # sufficient for the app's own orders; requesting more would fail the
+    # least-privilege rule).
+    INTEGRATION_TRANSPORT_SHOPIFY: (
+        "read_products",
+        "read_orders",
     ),
 }
 
@@ -165,6 +201,86 @@ def normalize_ga4_property_ref(property_ref: str) -> str:
     user-supplied; this helper only normalizes spelling.
     """
     return property_ref.strip().removeprefix(GA4_PROPERTY_RESOURCE_PREFIX)
+
+
+# --- Shopify per-shop endpoints (Admin GraphQL API only) ---------------------
+# Shopify's OAuth authorize/token endpoints and the Admin GraphQL endpoint are
+# PER-SHOP: ``https://{shop}.myshopify.com/...``. The shop host is therefore
+# validated against this STRICT canonical pattern before it is ever
+# interpolated into a URL — a single lowercase alnum/hyphen label on the
+# ``myshopify.com`` suffix exactly. This rejects hostile suffixes
+# (``shop.myshopify.com.evil.com``), the bare suffix (``myshopify.com``),
+# multi-label hosts (``a.b.myshopify.com``), and any other scheme/host.
+SHOPIFY_SHOP_DOMAIN_PATTERN: Final = re.compile(
+    r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.myshopify\.com$"
+)
+SHOPIFY_SHOP_DOMAIN_SUFFIX: Final = ".myshopify.com"
+
+# OAuth path templates interpolated onto a validated shop host.
+SHOPIFY_OAUTH_AUTHORIZE_PATH: Final = "/admin/oauth/authorize"
+SHOPIFY_OAUTH_TOKEN_PATH: Final = "/admin/oauth/access_token"
+
+# The ONLY Shopify API surface this app calls: the Admin GraphQL endpoint
+# (greenfield — there is no REST compatibility or fallback path). The API
+# version literal lives HERE and nowhere else (invariant 1); connector code
+# never owns it.
+SHOPIFY_ADMIN_API_VERSION: Final[str] = "2026-07"
+SHOPIFY_ADMIN_GRAPHQL_PATH: Final[str] = "/admin/api/{version}/graphql.json"
+
+
+def normalize_shopify_shop_domain(value: str) -> str:
+    """Canonicalize a user-supplied shop domain to its strict host form.
+
+    Strips whitespace, lowercases, drops any scheme, and expands a bare
+    single-label shop name (``my-shop``) to ``my-shop.myshopify.com``.
+    Raises ``ValueError`` unless the result matches the canonical pattern
+    exactly — callers map that to a 422; they never fall back to a guessed
+    host.
+    """
+    candidate = value.strip().lower()
+    if "://" in candidate:
+        candidate = urlsplit(candidate).netloc
+    # Drop a path/query fragment a user may have pasted after the host.
+    candidate = candidate.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+    # A bare single-label shop name expands onto the canonical suffix.
+    if candidate and "." not in candidate:
+        candidate = f"{candidate}{SHOPIFY_SHOP_DOMAIN_SUFFIX}"
+    if not SHOPIFY_SHOP_DOMAIN_PATTERN.match(candidate):
+        raise ValueError(f"invalid Shopify shop domain: {value!r}")
+    return candidate
+
+
+def is_shopify_shop_domain(host: str) -> bool:
+    """True when ``host`` is a canonical ``{shop}.myshopify.com`` host.
+
+    Used by the SSRF allow-list for the dynamic Shopify host: a dynamic
+    host passes ONLY this exact pattern — there is deliberately no
+    wildcard/suffix match.
+    """
+    return bool(SHOPIFY_SHOP_DOMAIN_PATTERN.match(host.strip().lower()))
+
+
+def _shopify_shop_url(shop: str, path: str) -> str:
+    """Absolute per-shop URL; the host is validated BEFORE interpolation."""
+    canonical = normalize_shopify_shop_domain(shop)
+    return f"https://{canonical}{path}"
+
+
+def shopify_oauth_authorize_url(shop: str) -> str:
+    """Per-shop OAuth authorize endpoint (validated canonical host only)."""
+    return _shopify_shop_url(shop, SHOPIFY_OAUTH_AUTHORIZE_PATH)
+
+
+def shopify_oauth_token_url(shop: str) -> str:
+    """Per-shop OAuth token endpoint (validated canonical host only)."""
+    return _shopify_shop_url(shop, SHOPIFY_OAUTH_TOKEN_PATH)
+
+
+def shopify_admin_graphql_url(shop: str) -> str:
+    """Per-shop Admin GraphQL endpoint at the config-owned API version."""
+    return _shopify_shop_url(
+        shop, SHOPIFY_ADMIN_GRAPHQL_PATH.format(version=SHOPIFY_ADMIN_API_VERSION)
+    )
 
 
 # Bing Webmaster API v1 literals, pinned from Microsoft docs at I12 (plan
@@ -254,6 +370,9 @@ ERROR_GRANT_AUTH_FAILED: Final = "grant_auth_failed"
 ERROR_OAUTH_STATE_INVALID: Final = "oauth_state_invalid"
 ERROR_OAUTH_EXCHANGE_FAILED: Final = "oauth_exchange_failed"
 ERROR_OAUTH_NOT_CONFIGURED: Final = "oauth_not_configured"
+# Shopify connect start: the required ``shop`` query param was missing,
+# non-canonical, or was passed for a non-Shopify provider (422).
+ERROR_OAUTH_SHOP_INVALID: Final = "oauth_shop_invalid"
 # Sync enqueue (I5/I7): the window body failed validation (422) and the
 # partial active-window index rejected a duplicate in-flight run (409).
 ERROR_SYNC_WINDOW_INVALID: Final = "sync_window_invalid"
@@ -302,6 +421,76 @@ DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY: Final = "ga4_item_source_medium_daily"
 DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY: Final = "ga4_item_channel_group_daily"
 DATASET_BING_PAGE_DAILY: Final = "bing_page_daily"
 DATASET_BING_QUERY_DAILY: Final = "bing_query_daily"
+# Shopify Admin GraphQL datasets (commerce suite). These carry NO report
+# dimensions/metrics: they are entity feeds (one catalog row per product
+# variant; one sanitized order per order node), paged by GraphQL cursor.
+DATASET_SHOPIFY_PRODUCTS: Final = "shopify.products"
+DATASET_SHOPIFY_ORDERS: Final = "shopify.orders"
+
+# --- Dataset paging modes ------------------------------------------------------
+# How the sync worker pages a dataset. ``offset`` datasets use the provider's
+# row-offset paging and terminate on a short page (``raw_row_count <
+# sync_page_size``); ``cursor`` datasets are paged by an opaque provider
+# cursor whose resume position is persisted per page in the immutable
+# artifact's ``query_snapshot`` (``pagingMode``/``pageCursor``/
+# ``nextPageCursor``) and terminate on ``pageInfo.hasNextPage == false``.
+PAGING_MODE_OFFSET: Final = "offset"
+PAGING_MODE_CURSOR: Final = "cursor"
+PAGING_MODES: Final[frozenset[str]] = frozenset(
+    {PAGING_MODE_OFFSET, PAGING_MODE_CURSOR}
+)
+
+# --- Shopify GraphQL operation texts (config-owned, invariant 1) -------------
+# Every GraphQL query text lives HERE; the Shopify connector READS these
+# constants and never declares query text of its own. Pinned selection sets:
+# the products feed normalizes one safe catalog row per variant (no PII);
+# the orders feed carries customer-journey attribution and line items the
+# WORKER sanitizer allowlists before any persistence (the connector never
+# sanitizes). ``landingSiteUrl: landingPage`` is a deliberate alias: it
+# gives the sanitizer the source-spec key while reading Shopify's current
+# ``CustomerVisit.landingPage`` field.
+SHOPIFY_GRAPHQL_PRODUCTS: Final = (
+    "query ShopifyProducts($first: Int!, $after: String, $query: String!, "
+    "$variantFirst: Int!) { shop { currencyCode } products(first: $first, "
+    "after: $after, sortKey: UPDATED_AT, query: $query) { pageInfo { "
+    "hasNextPage endCursor } nodes { id title handle description vendor "
+    "productType status onlineStoreUrl updatedAt variants(first: "
+    "$variantFirst) { pageInfo { hasNextPage endCursor } nodes { id title "
+    "sku barcode price inventoryQuantity updatedAt } } } } }"
+)
+SHOPIFY_GRAPHQL_PRODUCT_VARIANTS: Final = (
+    "query ShopifyProductVariants($id: ID!, $first: Int!, $after: String) { "
+    "product(id: $id) { variants(first: $first, after: $after) { pageInfo { "
+    "hasNextPage endCursor } nodes { id title sku barcode price "
+    "inventoryQuantity updatedAt } } } }"
+)
+SHOPIFY_GRAPHQL_ORDERS: Final = (
+    "query ShopifyOrders($first: Int!, $after: String, $query: String!, "
+    "$lineItemFirst: Int!) { orders(first: $first, after: $after, sortKey: "
+    "UPDATED_AT, query: $query) { pageInfo { hasNextPage endCursor } nodes { "
+    "id createdAt updatedAt cancelledAt currencyCode currentTotalPriceSet { "
+    "shopMoney { amount currencyCode } } displayFinancialStatus "
+    "displayFulfillmentStatus customerJourneySummary { ready firstVisit { "
+    "landingSiteUrl: landingPage referrerUrl referralCode source "
+    "sourceDescription sourceType utmParameters { campaign content medium "
+    "source term } } lastVisit { landingSiteUrl: landingPage referrerUrl "
+    "referralCode source sourceDescription sourceType utmParameters { "
+    "campaign content medium source term } } } lineItems(first: "
+    "$lineItemFirst) { pageInfo { hasNextPage endCursor } nodes { id sku "
+    "quantity currentQuantity originalUnitPriceSet { shopMoney { amount "
+    "currencyCode } } } } } } }"
+)
+SHOPIFY_GRAPHQL_ORDER_LINE_ITEMS: Final = (
+    "query ShopifyOrderLineItems($id: ID!, $first: Int!, $after: String) { "
+    "order(id: $id) { lineItems(first: $first, after: $after) { pageInfo { "
+    "hasNextPage endCursor } nodes { id sku quantity currentQuantity "
+    "originalUnitPriceSet { shopMoney { amount currencyCode } } } } } }"
+)
+# Cheap authenticated probe for the connection test (NOT the Google GSC
+# probe): proves the offline token validates against this shop.
+SHOPIFY_GRAPHQL_CONNECTION_PROBE: Final = (
+    "query ShopifyConnectionProbe { shop { id } }"
+)
 
 _GSC_SEARCH_ANALYTICS_METRICS: Final = ("clicks", "impressions", "ctr", "position")
 _GA4_SESSION_METRICS: Final = ("sessions", "engagedSessions", "conversions")
@@ -349,6 +538,9 @@ class IntegrationDatasetTemplate:
     dimension values in exactly this order, so the template is the single
     owner of ``dimension_key`` packing for both workstreams (integrations
     produces, analytics/traffic consumes).
+
+    ``paging_mode`` selects the worker's paging/resume protocol (``offset``
+    by default; Shopify's GraphQL entity feeds are ``cursor``).
     """
 
     dataset: str
@@ -356,6 +548,7 @@ class IntegrationDatasetTemplate:
     api_method: str
     dimensions: tuple[str, ...]
     metrics: tuple[str, ...]
+    paging_mode: str = PAGING_MODE_OFFSET
 
 
 # Pinned C1 dataset ids + shapes. Both workstreams code against these exact
@@ -448,6 +641,26 @@ INTEGRATION_DATASET_TEMPLATES: Final[dict[str, IntegrationDatasetTemplate]] = {
         dimensions=("query", "date"),
         metrics=_BING_STATS_METRICS,
     ),
+    # Shopify GraphQL entity feeds (commerce suite). Empty dimensions/metrics
+    # — these are not metric reports; ``api_method`` names the config-owned
+    # GraphQL operation the connector runs. Cursor paging: the worker
+    # persists the resume cursor in each page's ``query_snapshot``.
+    DATASET_SHOPIFY_PRODUCTS: IntegrationDatasetTemplate(
+        dataset=DATASET_SHOPIFY_PRODUCTS,
+        provider=INTEGRATION_PROVIDER_SHOPIFY,
+        api_method="ShopifyProducts",
+        dimensions=(),
+        metrics=(),
+        paging_mode=PAGING_MODE_CURSOR,
+    ),
+    DATASET_SHOPIFY_ORDERS: IntegrationDatasetTemplate(
+        dataset=DATASET_SHOPIFY_ORDERS,
+        provider=INTEGRATION_PROVIDER_SHOPIFY,
+        api_method="ShopifyOrders",
+        dimensions=(),
+        metrics=(),
+        paging_mode=PAGING_MODE_CURSOR,
+    ),
 }
 
 
@@ -515,6 +728,14 @@ class IntegrationSettings(BaseSettings):
     gsc_requests_per_minute: int = Field(default=200, gt=0)
     ga4_requests_per_minute: int = Field(default=60, gt=0)
     bing_requests_per_minute: int = Field(default=30, gt=0)
+    shopify_requests_per_minute: int = Field(default=40, gt=0)
+
+    # --- Shopify GraphQL page sizes ------------------------------------------------
+    # Outer connection page size (products/orders per request) and the nested
+    # first-page size for variants/line items. Nested continuation pages use
+    # the nested size as well; every continuation call is paced.
+    shopify_page_size: int = Field(default=50, gt=0)
+    shopify_nested_page_size: int = Field(default=100, gt=0)
 
     @model_validator(mode="after")
     def _check_operational_bounds(self) -> IntegrationSettings:
@@ -619,10 +840,17 @@ def _bing_client_builder(*, transport: Any = None) -> Any:
     return build_bing_client(transport=transport)
 
 
+def _shopify_client_builder(*, transport: Any = None) -> Any:
+    from app.connectors.integrations.shopify import build_shopify_client
+
+    return build_shopify_client(transport=transport)
+
+
 INTEGRATION_CLIENT_BUILDERS: Final[dict[str, Callable[..., Any]]] = {
     INTEGRATION_PROVIDER_GSC: _gsc_client_builder,
     INTEGRATION_PROVIDER_GA4: _ga4_client_builder,
     INTEGRATION_PROVIDER_BING: _bing_client_builder,
+    INTEGRATION_PROVIDER_SHOPIFY: _shopify_client_builder,
 }
 
 

@@ -30,6 +30,7 @@ from app.core.config.integrations import (
     ERROR_RATE_LIMITED,
     ERROR_UNAPPROVED_ENDPOINT,
     INTEGRATION_APPROVED_ENDPOINT_HOSTS,
+    is_shopify_shop_domain,
 )
 
 # Cap on provider-supplied error text surfaced in exceptions (defensive:
@@ -54,12 +55,27 @@ class IntegrationApiError(RuntimeError):
         self.retry_after_seconds = retry_after_seconds
 
 
+def is_approved_integration_host(host: str) -> bool:
+    """True when ``host`` may receive integration provider traffic (SSRF).
+
+    Fixed provider hosts (Google/Microsoft/Bing) match the config allow-list
+    EXACTLY. The one dynamic host family — a per-shop Shopify
+    ``{shop}.myshopify.com`` host — passes only the config-owned canonical
+    shop-domain pattern. There is deliberately NO wildcard/suffix match:
+    ``shop.myshopify.com.evil.com`` never passes.
+    """
+    normalized = host.strip().lower()
+    return normalized in INTEGRATION_APPROVED_ENDPOINT_HOSTS or is_shopify_shop_domain(
+        normalized
+    )
+
+
 def assert_approved_url(
     url: str, *, label: str, error_type: type[IntegrationApiError]
 ) -> None:
     """SSRF guard: integration clients only call allow-listed hosts (config)."""
     host = (urlsplit(url).hostname or "").lower()
-    if host not in INTEGRATION_APPROVED_ENDPOINT_HOSTS:
+    if not is_approved_integration_host(host):
         raise error_type(
             f"{label} endpoint host is not approved: {host or '<none>'}",
             error_code=ERROR_UNAPPROVED_ENDPOINT,

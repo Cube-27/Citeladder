@@ -21,6 +21,7 @@ from app.core.config.analytics import (
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_TTL_S,
     ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+    ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
     ANALYTICS_TASK_KINDS,
     CONFIDENCE_BUCKETS,
     CORRELATION_MIN_SAMPLE,
@@ -87,6 +88,7 @@ def test_traffic_refresh_trigger_datasets() -> None:
 
 def test_analytics_task_kinds_include_attribution_snapshot() -> None:
     assert ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT == "attribution_snapshot"
+    assert ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP == "order_retention_sweep"
     assert ANALYTICS_TASK_KINDS == frozenset(
         {
             "ingest_referrals",
@@ -95,6 +97,7 @@ def test_analytics_task_kinds_include_attribution_snapshot() -> None:
             "analytics_snapshot_refresh",
             "referral_retention_sweep",
             "attribution_snapshot",
+            "order_retention_sweep",
         }
     )
 

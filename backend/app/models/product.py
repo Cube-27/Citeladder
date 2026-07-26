@@ -75,8 +75,28 @@ class Product(Base):
     # Free-form attribute bag (brand/category/gtin/availability/...). The
     # deterministic completeness matrix reads config-owned keys from it.
     attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
-    # manual | imported (config/products.py PRODUCT_ORIGIN_*).
+    # manual | imported | synced (config/products.py PRODUCT_ORIGIN_*).
     origin: Mapped[str] = mapped_column(String(32), default=DEFAULT_PRODUCT_ORIGIN)
+    # --- Feed provenance (commerce suite; all null/"" for manual|imported) ---
+    # The integration connection whose feed last carried this SKU. SET NULL
+    # keeps the catalog row when the connection disconnects.
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("integration_connections.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
+    # The provider's opaque item id (Shopify: the variant id) — provenance
+    # only; catalog identity stays (project_id, sku).
+    external_item_ref: Mapped[str] = mapped_column(String(255), default="")
+    # The latest sync run whose feed carried this SKU: staleness is inferred
+    # by comparing this to the connection's latest successful catalog run.
+    last_seen_sync_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("integration_sync_runs.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

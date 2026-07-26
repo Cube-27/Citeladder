@@ -23,6 +23,8 @@ from app.core.config.integrations import (
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
+    DATASET_SHOPIFY_ORDERS,
+    DATASET_SHOPIFY_PRODUCTS,
     GA4_API_BASE_URL,
     GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS,
     GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY,
@@ -36,22 +38,33 @@ from app.core.config.integrations import (
     INTEGRATION_GRANT_STATUSES,
     INTEGRATION_IMPORTER_VERSION,
     INTEGRATION_OAUTH_AUTHORIZE_URLS,
+    INTEGRATION_OAUTH_REFRESHABLE,
     INTEGRATION_OAUTH_REVOKE_URLS,
     INTEGRATION_OAUTH_SCOPES,
     INTEGRATION_OAUTH_TOKEN_URLS,
     INTEGRATION_PROVIDER_BING,
     INTEGRATION_PROVIDER_GA4,
     INTEGRATION_PROVIDER_GSC,
+    INTEGRATION_PROVIDER_SHOPIFY,
     INTEGRATION_PROVIDER_TRANSPORT,
     INTEGRATION_PROVIDERS,
     INTEGRATION_QUEUE_SPEC,
     INTEGRATION_SYNC_KINDS,
     INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_TRANSPORT_MICROSOFT,
+    INTEGRATION_TRANSPORT_SHOPIFY,
     INTEGRATION_TRANSPORTS,
+    PAGING_MODE_CURSOR,
+    PAGING_MODE_OFFSET,
+    SHOPIFY_ADMIN_API_VERSION,
     IntegrationSettings,
     _integration_claim_order,
+    is_shopify_shop_domain,
+    normalize_shopify_shop_domain,
     pack_dimension_key,
+    shopify_admin_graphql_url,
+    shopify_oauth_authorize_url,
+    shopify_oauth_token_url,
 )
 from app.models.integrations import IntegrationSyncRun
 
@@ -72,16 +85,26 @@ def test_claim_order_mirrors_content_priority_fifo_position() -> None:
 
 
 def test_provider_transport_vocabulary_and_compatibility() -> None:
-    assert INTEGRATION_PROVIDERS == frozenset({"gsc", "ga4", "bing"})
-    assert INTEGRATION_TRANSPORTS == frozenset({"google_oauth", "microsoft_oauth"})
-    # GSC + GA4 share the one Google grant; Bing rides the Microsoft grant.
+    assert INTEGRATION_PROVIDERS == frozenset({"gsc", "ga4", "bing", "shopify"})
+    assert INTEGRATION_TRANSPORTS == frozenset(
+        {"google_oauth", "microsoft_oauth", "shopify_oauth"}
+    )
+    # GSC + GA4 share the one Google grant; Bing rides the Microsoft grant;
+    # Shopify rides its own per-shop offline-token grant.
     assert INTEGRATION_PROVIDER_TRANSPORT == {
         "gsc": INTEGRATION_TRANSPORT_GOOGLE,
         "ga4": INTEGRATION_TRANSPORT_GOOGLE,
         "bing": INTEGRATION_TRANSPORT_MICROSOFT,
+        "shopify": INTEGRATION_TRANSPORT_SHOPIFY,
     }
     # Every provider maps to a known transport (no orphan vocabulary).
     assert set(INTEGRATION_PROVIDER_TRANSPORT) == INTEGRATION_PROVIDERS
+    # Shopify's offline token is the one NON-refreshable transport.
+    assert INTEGRATION_OAUTH_REFRESHABLE == {
+        "google_oauth": True,
+        "microsoft_oauth": True,
+        "shopify_oauth": False,
+    }
 
 
 def test_status_and_kind_tokens() -> None:
@@ -92,21 +115,61 @@ def test_status_and_kind_tokens() -> None:
 
 
 def test_oauth_endpoints_per_transport_https_and_allow_listed() -> None:
+    # The STATIC authorize/token maps stay single-tenant-only: Shopify's
+    # endpoints are per-shop and resolved through the validated dynamic
+    # builders. The revoke map covers every transport ("" = local-only).
+    assert set(INTEGRATION_OAUTH_AUTHORIZE_URLS) == {
+        INTEGRATION_TRANSPORT_GOOGLE,
+        INTEGRATION_TRANSPORT_MICROSOFT,
+    }
+    assert set(INTEGRATION_OAUTH_TOKEN_URLS) == {
+        INTEGRATION_TRANSPORT_GOOGLE,
+        INTEGRATION_TRANSPORT_MICROSOFT,
+    }
+    assert set(INTEGRATION_OAUTH_REVOKE_URLS) == set(INTEGRATION_TRANSPORTS)
     for urls in (
         INTEGRATION_OAUTH_AUTHORIZE_URLS,
         INTEGRATION_OAUTH_TOKEN_URLS,
         INTEGRATION_OAUTH_REVOKE_URLS,
     ):
-        assert set(urls) == INTEGRATION_TRANSPORTS
         for url in urls.values():
             if not url:
                 continue
             parts = urlsplit(url)
             assert parts.scheme == "https"
             assert parts.hostname in INTEGRATION_APPROVED_ENDPOINT_HOSTS
-    # Google supports remote revoke; Microsoft does not (empty = local-only).
+    # Google supports remote revoke; Microsoft + Shopify do not (empty =
+    # local-only disconnect).
     assert INTEGRATION_OAUTH_REVOKE_URLS[INTEGRATION_TRANSPORT_GOOGLE]
     assert INTEGRATION_OAUTH_REVOKE_URLS[INTEGRATION_TRANSPORT_MICROSOFT] == ""
+    assert INTEGRATION_OAUTH_REVOKE_URLS[INTEGRATION_TRANSPORT_SHOPIFY] == ""
+
+
+def test_shopify_dynamic_endpoint_builders_validate_the_shop_host() -> None:
+    authorize = shopify_oauth_authorize_url("My-Shop")
+    assert authorize == "https://my-shop.myshopify.com/admin/oauth/authorize"
+    token = shopify_oauth_token_url("my-shop.myshopify.com")
+    assert token == "https://my-shop.myshopify.com/admin/oauth/access_token"
+    graphql = shopify_admin_graphql_url("my-shop")
+    assert graphql == (
+        f"https://my-shop.myshopify.com/admin/api/"
+        f"{SHOPIFY_ADMIN_API_VERSION}/graphql.json"
+    )
+    # Hostile/non-canonical hosts are rejected before any URL is built.
+    for hostile in (
+        "shop.myshopify.com.evil.com",
+        "myshopify.com",
+        "a.b.myshopify.com",
+        "",
+    ):
+        with pytest.raises(ValueError):
+            normalize_shopify_shop_domain(hostile)
+        with pytest.raises(ValueError):
+            shopify_admin_graphql_url(hostile)
+    # The dynamic-host allow-list check passes ONLY canonical shop hosts.
+    assert is_shopify_shop_domain("a1.myshopify.com")
+    assert not is_shopify_shop_domain("a1.myshopify.com.evil.com")
+    assert not is_shopify_shop_domain("evil.myshopify.com.au")
 
 
 def test_google_grant_combines_gsc_and_ga4_scopes() -> None:
@@ -121,6 +184,12 @@ def test_google_grant_combines_gsc_and_ga4_scopes() -> None:
     assert "https://webmaster.bing.com/api/webmaster.manage" in microsoft_scopes
     # bingads.manage is the ADS API scope — never requested here.
     assert all("bingads" not in scope for scope in microsoft_scopes)
+    # The Shopify grant is read-only products + orders: no write scope and
+    # no read_all_orders (least privilege).
+    shopify_scopes = INTEGRATION_OAUTH_SCOPES[INTEGRATION_TRANSPORT_SHOPIFY]
+    assert shopify_scopes == ("read_products", "read_orders")
+    assert all("write" not in scope for scope in shopify_scopes)
+    assert "read_all_orders" not in shopify_scopes
 
 
 def test_dataset_templates_match_pinned_c1() -> None:
@@ -157,6 +226,9 @@ def test_dataset_templates_match_pinned_c1() -> None:
         ),
         DATASET_BING_PAGE_DAILY: (INTEGRATION_PROVIDER_BING, ("page", "date")),
         DATASET_BING_QUERY_DAILY: (INTEGRATION_PROVIDER_BING, ("query", "date")),
+        # Shopify entity feeds declare NO report dimensions/metrics.
+        DATASET_SHOPIFY_PRODUCTS: (INTEGRATION_PROVIDER_SHOPIFY, ()),
+        DATASET_SHOPIFY_ORDERS: (INTEGRATION_PROVIDER_SHOPIFY, ()),
     }
     assert set(INTEGRATION_DATASET_TEMPLATES) == set(expected)
     ga4_session_datasets = {
@@ -179,6 +251,8 @@ def test_dataset_templates_match_pinned_c1() -> None:
         elif provider == INTEGRATION_PROVIDER_GA4:
             # Both item ecommerce templates carry the item metric set.
             assert template.metrics == ("itemRevenue", "itemsPurchased")
+        elif provider == INTEGRATION_PROVIDER_SHOPIFY:
+            assert template.metrics == ()
         else:
             assert template.metrics == ("clicks", "impressions")
     # The Bing api_method literals are the pinned endpoint names.
@@ -189,6 +263,23 @@ def test_dataset_templates_match_pinned_c1() -> None:
     assert (
         INTEGRATION_DATASET_TEMPLATES[DATASET_BING_QUERY_DAILY].api_method
         == "GetQueryStats"
+    )
+    # Paging modes: every metric dataset pages by offset; the Shopify feeds
+    # page by GraphQL cursor.
+    for dataset, template in INTEGRATION_DATASET_TEMPLATES.items():
+        expected_mode = (
+            PAGING_MODE_CURSOR
+            if dataset in {DATASET_SHOPIFY_PRODUCTS, DATASET_SHOPIFY_ORDERS}
+            else PAGING_MODE_OFFSET
+        )
+        assert template.paging_mode == expected_mode
+    assert (
+        INTEGRATION_DATASET_TEMPLATES[DATASET_SHOPIFY_PRODUCTS].api_method
+        == "ShopifyProducts"
+    )
+    assert (
+        INTEGRATION_DATASET_TEMPLATES[DATASET_SHOPIFY_ORDERS].api_method
+        == "ShopifyOrders"
     )
 
 

@@ -239,3 +239,115 @@ PRODUCT_EVIDENCE_KINDS: Final[frozenset[str]] = frozenset(
 PRODUCT_ATTRIBUTE_EVIDENCE_NAMESPACE: Final[uuid.UUID] = uuid.UUID(
     "73a01bbd-f974-58d4-a213-a178455bc018"
 )
+
+# --- Shopify order sanitization (commerce suite, invariant 6) ---------------
+# Versions the raw-order -> SanitizedOrder transform. Stamped on every
+# sanitized artifact payload + OrderFact so a sanitizer change is visible in
+# provenance (re-sanitization happens on the next sync, never in place).
+ORDER_SANITIZE_VERSION: Final = "order-sanitize-1"
+# Hex length of the persisted ``order_ref_hash``: the FULL HMAC-SHA256 of the
+# raw Shopify order id keyed with ``Settings.order_hash_salt`` (the raw id
+# never persists — it is PII-adjacent provider data).
+ORDER_REF_HASH_HEX_LENGTH: Final = 64
+# Persisted order facts are hard-deleted past this horizon by the order
+# retention sweep (mirrors the referral retention posture).
+ORDER_RETENTION_DAYS: Final = 90
+# Bound on order facts deleted per committed sweep batch.
+ORDER_RETENTION_DELETE_BATCH_SIZE: Final = 500
+
+# The ONLY order-level keys the sanitizer allowlists (``SanitizedOrder``
+# fields). Anything outside this set on a raw provider order — customer,
+# email, phone, addresses, payment, note, IP — never survives.
+ORDER_SANITIZED_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "order_ref_hash",
+        "occurred_at",
+        "updated_at",
+        "cancelled_at",
+        "currency",
+        "total_amount",
+        "financial_status",
+        "fulfillment_status",
+        "journey_state",
+        "line_items",
+        "attribution_keys",
+    }
+)
+# The ONLY keys a sanitized line item carries. ``product_id`` is added by
+# order derivation AFTER SKU resolution (never part of the artifact payload).
+ORDER_LINE_ITEM_KEYS: Final[tuple[str, ...]] = ("sku", "quantity", "unit_price")
+# Journey coverage vocabulary: ``customerJourneySummary.ready`` false (or no
+# visit) records EXPLICIT unavailable coverage — never a guessed journey.
+ORDER_JOURNEY_STATE_AVAILABLE: Final = "available"
+ORDER_JOURNEY_STATE_UNAVAILABLE: Final = "unavailable"
+# The allowlist of non-PII attribution evidence keys a sanitized order may
+# carry (URLs pre-sanitized through the shared referral-URL sanitizer).
+ORDER_ATTRIBUTION_KEY_ALLOWLIST: Final[frozenset[str]] = frozenset(
+    {
+        "landing_url",
+        "referrer_url",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_term",
+        "utm_content",
+        "source_name",
+    }
+)
+
+# --- Commerce importer version ------------------------------------------------
+# Versions the artifact -> catalog/feed/order-fact derivation code (NOT the
+# data revision — that identity is the fact's ``resync_seq``).
+COMMERCE_IMPORTER_VERSION: Final = "commerce-importer-1"
+
+# --- Feed rules (§9.3 deterministic rules only) ------------------------------
+# Severity vocabulary for FeedIssue rows.
+FEED_SEVERITY_INFO: Final = "info"
+FEED_SEVERITY_WARNING: Final = "warning"
+FEED_SEVERITY_ERROR: Final = "error"
+FEED_SEVERITIES: Final[frozenset[str]] = frozenset(
+    {FEED_SEVERITY_INFO, FEED_SEVERITY_WARNING, FEED_SEVERITY_ERROR}
+)
+# The in-scope deterministic rule ids. M3's ``feed.stale_catalog_data``,
+# ``feed.ai_channel_ineligible``, and ``feed.entity_inconsistency`` are
+# deliberately NOT here. The spec §9.3 "platform AI-eligibility verdict"
+# feed source is a documented DELIBERATE EXCLUSION in this slice: it
+# arrives with GMC (excluded) and Shopify's native Agentic Commerce
+# Dashboard is not a read API we consume.
+FEED_RULE_MISSING_SKU: Final = "feed.missing_sku"
+FEED_RULE_MISSING_GTIN_MPN: Final = "feed.missing_gtin_mpn"
+FEED_RULE_MISSING_AVAILABILITY: Final = "feed.missing_availability"
+FEED_RULE_CATALOG_PRICE_DIVERGENCE: Final = "feed.catalog_price_divergence"
+FEED_RULE_DUPLICATE_SKU_ACROSS_CONNECTIONS: Final = (
+    "feed.duplicate_sku_across_connections"
+)
+FEED_RULE_SEVERITIES: Final[dict[str, str]] = {
+    FEED_RULE_MISSING_SKU: FEED_SEVERITY_ERROR,
+    FEED_RULE_MISSING_GTIN_MPN: FEED_SEVERITY_WARNING,
+    FEED_RULE_MISSING_AVAILABILITY: FEED_SEVERITY_WARNING,
+    FEED_RULE_CATALOG_PRICE_DIVERGENCE: FEED_SEVERITY_WARNING,
+    FEED_RULE_DUPLICATE_SKU_ACROSS_CONNECTIONS: FEED_SEVERITY_ERROR,
+}
+FEED_RULES: Final[frozenset[str]] = frozenset(FEED_RULE_SEVERITIES)
+
+# --- Catalog merge (§9.2) ------------------------------------------------------
+# The platform-owned Product ``attributes`` keys a Shopify feed row may
+# overwrite (``gtin`` comes from the variant barcode). Aliases are NEVER in
+# the platform-owned set — a sync never creates/replaces/deletes an alias.
+SHOPIFY_PLATFORM_ATTRIBUTE_KEYS: Final[frozenset[str]] = frozenset(
+    {"gtin", "description", "vendor", "product_type", "status", "availability"}
+)
+# Shopify's single-variant placeholder title: normalized to "" so a real
+# variant title never gets polluted by the provider's default.
+SHOPIFY_DEFAULT_VARIANT_TITLE: Final = "Default Title"
+# Availability attribute values projected from variant inventory (the
+# catalog ``attributes["availability"]`` key). A null inventory quantity
+# leaves the attribute ABSENT (the missing-availability rule fires).
+SHOPIFY_AVAILABILITY_IN_STOCK: Final = "in_stock"
+SHOPIFY_AVAILABILITY_OUT_OF_STOCK: Final = "out_of_stock"
+# Catalog-price divergence rule: fire when the feed price differs from the
+# persisted Product price by MORE than this absolute tolerance OR this
+# relative fraction of the persisted price (whichever is larger) — exact
+# equality within rounding never pages.
+FEED_PRICE_DIVERGENCE_ABS_TOLERANCE: Final = "0.01"
+FEED_PRICE_DIVERGENCE_REL_TOLERANCE: Final = "0.001"

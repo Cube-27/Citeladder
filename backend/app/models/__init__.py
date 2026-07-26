@@ -49,6 +49,7 @@ from app.models.brand import (
     OwnedDomain,
     UnintendedDomain,
 )
+from app.models.commerce import FeedIssue, OrderFact
 from app.models.content import ContentGeneration, ContentGenerationAttempt
 from app.models.integrations import (
     IntegrationConnection,
@@ -127,6 +128,7 @@ __all__ = [
     "ContentGeneration",
     "ContentGenerationAttempt",
     "DiscoveryModelConfig",
+    "FeedIssue",
     "IntegrationConnection",
     "IntegrationEvent",
     "IntegrationImportArtifact",
@@ -139,6 +141,7 @@ __all__ = [
     "MetricSnapshot",
     "Opportunity",
     "OpportunitySnapshot",
+    "OrderFact",
     "OwnedDomain",
     "Product",
     "ProductMention",

@@ -33,6 +33,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
@@ -278,6 +279,32 @@ async def enqueue_referral_retention_sweep(
         payload={"sweep_key": sweep_key},
         idempotency_key=_idempotency_key(
             ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP, workspace_id, sweep_key
+        ),
+        priority=priority,
+    )
+
+
+async def enqueue_order_retention_sweep(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    sweep_key: str,
+    priority: int = 0,
+) -> uuid.UUID | None:
+    """Enqueue one workspace-scoped order retention sweep (commerce suite).
+
+    Mirrors the referral sweep contract: ``sweep_key`` is the caller-chosen
+    period token making the sweep deterministic per period — at most one
+    sweep row per ``(workspace_id, sweep_key)`` is ever queued.
+    """
+    return await _enqueue_task(
+        session,
+        workspace_id=workspace_id,
+        project_id=None,
+        task_kind=ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
+        payload={"sweep_key": sweep_key},
+        idempotency_key=_idempotency_key(
+            ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP, workspace_id, sweep_key
         ),
         priority=priority,
     )

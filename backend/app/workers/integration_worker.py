@@ -53,9 +53,11 @@ from app.connectors.integrations.ga4 import (
     Ga4DimensionCompatibilityError,
 )
 from app.connectors.integrations.gsc import GscApiError
+from app.connectors.integrations.shopify import ShopifyApiError
 from app.core.config.integrations import (
     DATASET_GA4_ITEM_CHANNEL_GROUP_DAILY,
     DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+    DATASET_SHOPIFY_ORDERS,
     ERROR_GA4_DIMENSION_INCOMPATIBLE,
     ERROR_GRANT_AUTH_FAILED,
     ERROR_PAYLOAD_TOO_LARGE,
@@ -72,8 +74,11 @@ from app.core.config.integrations import (
     GRANT_STATUS_NEEDS_REAUTH,
     INTEGRATION_CLIENT_BUILDERS,
     INTEGRATION_DATASET_TEMPLATES,
+    INTEGRATION_OAUTH_REFRESHABLE,
     INTEGRATION_PROVIDER_GA4,
+    INTEGRATION_PROVIDER_SHOPIFY,
     INTEGRATION_QUEUE_SPEC,
+    PAGING_MODE_CURSOR,
     IntegrationDatasetTemplate,
     integration_settings,
 )
@@ -88,6 +93,9 @@ from app.core.database import SessionLocal
 from app.core.security import decrypt_secret, encrypt_secret
 from app.core.telemetry import configure_logging
 from app.domain.analytics.enqueue import enqueue_post_sync_projections
+from app.domain.analytics.sanitize import sanitize_referral_url
+from app.domain.commerce.derive import derive_shopify_run
+from app.domain.commerce.sanitize import sanitize_order_payload
 from app.domain.integrations.derive import UnmappedPropertyError, derive_run
 from app.models.integrations import (
     IntegrationConnection,
@@ -111,6 +119,15 @@ class _UnsupportedProviderError(RuntimeError):
 
 class _PayloadTooLargeError(RuntimeError):
     """A fetched page exceeds the inline-payload cap (rejected, not truncated)."""
+
+
+class _MalformedProviderPageError(RuntimeError):
+    """A cursor-mode page's outer ``pageInfo`` is missing/malformed.
+
+    ``hasNextPage`` must be a bool; ``hasNextPage=true`` requires a
+    non-empty ``endCursor``. Fails the run terminally (deterministic
+    provider-data condition) BEFORE the malformed page is persisted.
+    """
 
 
 class _ClientPage(Protocol):
@@ -149,7 +166,37 @@ class _DataClient(Protocol):
 
 # The classified provider-error taxonomy every client raises (GSC-shaped:
 # config-owned error token + retryable + Retry-After advice).
-_PROVIDER_API_ERRORS = (GscApiError, Ga4ApiError, BingApiError)
+_PROVIDER_API_ERRORS = (GscApiError, Ga4ApiError, BingApiError, ShopifyApiError)
+
+
+@dataclass(frozen=True)
+class _WorkerPage:
+    """A worker-transformed page (the sanitized orders payload).
+
+    Same contract shape as the connector pages; built when the worker
+    transforms a connector page before persistence (the orders sanitizer).
+    """
+
+    payload: dict
+    rows: tuple[dict, ...]
+    raw_row_count: int
+
+
+@dataclass(frozen=True)
+class _DatasetResume:
+    """One dataset's durable resume state, read from its artifacts ONLY.
+
+    ``start_row`` is the worker's logical page offset (bookkeeping — never
+    translated into a provider offset); ``page_cursor`` is the cursor-mode
+    resume position persisted in the latest page's ``query_snapshot``
+    (``nextPageCursor``); ``complete`` means the durable pages already
+    terminate the dataset. No cursor is ever held only in memory across a
+    process restart.
+    """
+
+    start_row: int
+    page_cursor: str | None
+    complete: bool
 
 
 @dataclass(frozen=True)
@@ -401,6 +448,17 @@ class IntegrationWorker:
                 ctx, exc, retry_after_seconds=exc.retry_after_seconds
             )
             return
+        except _MalformedProviderPageError as exc:
+            # Malformed cursor pageInfo: deterministic, terminal, and the
+            # malformed page was NEVER persisted (validation precedes the
+            # artifact write).
+            await self._queue.fail(
+                task_id=ctx.run_id,
+                owner=self.owner,
+                error_code=ERROR_PROVIDER_API,
+                error_detail=str(exc),
+            )
+            return
         except _PayloadTooLargeError as exc:
             await self._queue.fail(
                 task_id=ctx.run_id,
@@ -443,10 +501,14 @@ class IntegrationWorker:
         the spec-§2 serialization point and the documented carve-out from
         commit-before-I/O (the QUEUE claim itself was committed long before);
         it is released before any other provider I/O.
+
+        A NON-refreshable transport (``INTEGRATION_OAUTH_REFRESHABLE`` —
+        Shopify's offline Admin API token) never enters the refresh path:
+        its token never expires and carries no refresh token, so
+        ``token_expires_at=None`` is NOT near-expiry — the stored token is
+        decrypted and returned directly.
         """
-        client = integration_oauth.build_oauth_client(
-            ctx.transport, transport=self._transport
-        )
+        refreshable = INTEGRATION_OAUTH_REFRESHABLE.get(ctx.transport, True)
         async with self._session_factory() as session:
             grant = await session.get(
                 IntegrationOAuthGrant, ctx.grant_id, with_for_update=True
@@ -456,6 +518,11 @@ class IntegrationWorker:
                 raise integration_oauth.IntegrationOAuthError(
                     "grant row is missing", error_code=ERROR_GRANT_AUTH_FAILED
                 )
+            if not refreshable:
+                access_token = decrypt_secret(grant.access_token_encrypted)
+                # Release the grant row lock BEFORE provider I/O.
+                await session.commit()
+                return access_token
             now = _utcnow()
             skew = timedelta(seconds=integration_settings.token_refresh_skew_seconds)
             near_expiry = (
@@ -472,6 +539,11 @@ class IntegrationWorker:
                     "grant has no refresh token", error_code=ERROR_GRANT_AUTH_FAILED
                 )
             refresh_token = decrypt_secret(grant.refresh_token_encrypted)
+            # Built only here — a non-refreshable transport never constructs
+            # an OAuth client.
+            client = integration_oauth.build_oauth_client(
+                ctx.transport, transport=self._transport
+            )
             try:
                 bundle = await client.refresh(refresh_token=refresh_token)
             except BaseException:
@@ -679,16 +751,35 @@ class IntegrationWorker:
         template: IntegrationDatasetTemplate,
         access_token: str,
     ) -> bool:
-        """Page one dataset to completion. False = lost lease / cancelled."""
+        """Page one dataset to completion. False = lost lease / cancelled.
+
+        Cursor-mode templates (Shopify) run the durable-cursor protocol:
+        the resume cursor comes ONLY from the latest immutable artifact's
+        ``query_snapshot`` and is injected into the client before each
+        unchanged-protocol call; each returned page's outer ``pageInfo``
+        is validated BEFORE the artifact write (malformed = terminal);
+        the dataset finishes when ``hasNextPage`` is false. Offset
+        templates keep the short-page termination rule.
+        """
+        cursor_mode = template.paging_mode == PAGING_MODE_CURSOR
         page_size = integration_settings.sync_page_size
-        start_row, complete = await self._dataset_resume(ctx.run_id, template.dataset)
-        if complete:
+        resume = await self._dataset_resume(ctx.run_id, template)
+        if resume.complete:
             return True
+        start_row = resume.start_row
+        page_cursor = resume.page_cursor
         while True:
             # Cooperative cancel / lost-lease at the PAGE BOUNDARY: stop
             # BEFORE the next provider call (invariant 9).
             if not await self._still_owned(ctx.run_id):
                 return False
+            if cursor_mode:
+                # The narrow optional cursor capability: the value is sent
+                # as the GraphQL ``after`` variable; ``start_row`` stays a
+                # logical offset and is never translated.
+                set_page_cursor = getattr(client, "set_page_cursor", None)
+                if set_page_cursor is not None:
+                    set_page_cursor(page_cursor)
             page = await client.query_search_analytics(
                 access_token=access_token,
                 property_ref=ctx.property_ref,
@@ -698,54 +789,167 @@ class IntegrationWorker:
                 end_date=ctx.window_end,
                 start_row=start_row,
             )
+            page_info = (
+                self._validated_cursor_page_info(page) if cursor_mode else None
+            )
+            if template.dataset == DATASET_SHOPIFY_ORDERS:
+                # Sanitize BEFORE the immutable artifact write: raw order
+                # nodes (customer PII) never persist — the artifact stores
+                # only allowlisted SanitizedOrder payloads (AC7).
+                page = self._sanitize_orders_page(page)
             wrote = await self._write_artifact(
-                ctx, template=template, page=page, start_row=start_row
+                ctx,
+                template=template,
+                page=page,
+                start_row=start_row,
+                page_cursor=page_cursor if cursor_mode else None,
+                page_info=page_info,
             )
             if not wrote:
                 return False
+            if cursor_mode:
+                assert page_info is not None  # validated above
+                if not page_info["hasNextPage"]:
+                    return True
+                page_cursor = page_info["endCursor"]
+                # Logical offset for bookkeeping/resume ordering only.
+                start_row += page.raw_row_count
+                continue
             # Terminate on the RAW provider count: a full page whose
             # normalization dropped malformed rows is not the last page.
             if page.raw_row_count < page_size:
                 return True
             start_row += page_size
 
+    @staticmethod
+    def _validated_cursor_page_info(page: _ClientPage) -> dict:
+        """Validate one cursor-mode page's outer ``pageInfo`` (pre-write).
+
+        Returns the normalized ``{"hasNextPage": bool, "endCursor": str |
+        None}``. Missing/non-dict pageInfo, a non-bool ``hasNextPage``, or
+        ``hasNextPage=true`` without a non-empty ``endCursor`` raise
+        ``_MalformedProviderPageError`` — malformed provider data is never
+        persisted and never guessed.
+        """
+        payload = page.payload if isinstance(page.payload, dict) else {}
+        page_info = payload.get("pageInfo")
+        if not isinstance(page_info, dict):
+            raise _MalformedProviderPageError(
+                "cursor page payload has no pageInfo object"
+            )
+        has_next = page_info.get("hasNextPage")
+        if not isinstance(has_next, bool):
+            raise _MalformedProviderPageError(
+                "cursor pageInfo.hasNextPage is not a bool"
+            )
+        end_cursor = page_info.get("endCursor")
+        if end_cursor is not None and not isinstance(end_cursor, str):
+            raise _MalformedProviderPageError(
+                "cursor pageInfo.endCursor is not a string"
+            )
+        if has_next and not end_cursor:
+            raise _MalformedProviderPageError(
+                "cursor pageInfo hasNextPage without an endCursor"
+            )
+        return {"hasNextPage": has_next, "endCursor": end_cursor or None}
+
+    @staticmethod
+    def _sanitize_orders_page(page: _ClientPage) -> _WorkerPage:
+        """Transform a raw orders page into its sanitized persistable form.
+
+        The connector returns structurally-normalized-but-RAW order nodes;
+        HERE — in the worker, before the immutable artifact write — each
+        is allowlist-sanitized (the connector never sanitizes). The
+        sanitized payload keeps the outer ``pageInfo`` for the cursor
+        protocol; ``raw_row_count`` (the outer node count) is preserved.
+        """
+        payload = page.payload if isinstance(page.payload, dict) else {}
+        orders = payload.get("orders")
+        sanitized = (
+            [
+                sanitize_order_payload(
+                    order, url_sanitizer=sanitize_referral_url
+                ).to_payload()
+                for order in orders
+                if isinstance(order, dict)
+            ]
+            if isinstance(orders, list)
+            else []
+        )
+        return _WorkerPage(
+            payload={"orders": sanitized, "pageInfo": payload.get("pageInfo") or {}},
+            rows=tuple(sanitized),
+            raw_row_count=page.raw_row_count,
+        )
+
     async def _dataset_resume(
-        self, run_id: uuid.UUID, dataset: str
-    ) -> tuple[int, bool]:
-        """Resume offset for one dataset from its DURABLE artifacts.
+        self, run_id: uuid.UUID, template: IntegrationDatasetTemplate
+    ) -> _DatasetResume:
+        """Resume state for one dataset from its DURABLE artifacts.
 
         A retry never refetches a persisted page (immutability + idempotent
         retries): the artifact pages already written for this run tell us
-        either that the dataset is complete (last page's RAW provider row
-        count was partial) or the next ``startRow`` to request.
-        ``row_count`` is the raw per-page count for exactly this decision —
-        the same measure the live paging loop terminates on.
+        either that the dataset is complete or where to resume. Offset
+        datasets: complete when the last page's RAW provider row count was
+        partial, else resume at the next ``startRow``. Cursor datasets:
+        complete when the last page's ``pageInfo.hasNextPage`` is false,
+        else resume from the snapshot's ``nextPageCursor`` — no cursor is
+        ever held only in memory across a process restart.
         """
         page_size = integration_settings.sync_page_size
+        cursor_mode = template.paging_mode == PAGING_MODE_CURSOR
         async with self._session_factory() as session:
             rows = (
                 await session.execute(
                     select(
                         IntegrationImportArtifact.query_snapshot,
                         IntegrationImportArtifact.row_count,
+                        IntegrationImportArtifact.payload,
                     ).where(
                         IntegrationImportArtifact.sync_run_id == run_id,
-                        IntegrationImportArtifact.dataset == dataset,
+                        IntegrationImportArtifact.dataset == template.dataset,
                     )
                 )
             ).all()
         if not rows:
-            return 0, False
+            return _DatasetResume(start_row=0, page_cursor=None, complete=False)
         last_start_row = 0
         last_row_count = 0
-        for query_snapshot, row_count in rows:
-            snapshot_start = int((query_snapshot or {}).get("startRow") or 0)
+        last_snapshot: dict = {}
+        last_payload: dict = {}
+        for query_snapshot, row_count, payload in rows:
+            snapshot = query_snapshot or {}
+            snapshot_start = int(snapshot.get("startRow") or 0)
             if snapshot_start >= last_start_row:
                 last_start_row = snapshot_start
                 last_row_count = row_count
+                last_snapshot = snapshot
+                last_payload = payload if isinstance(payload, dict) else {}
+        if cursor_mode:
+            page_info = last_payload.get("pageInfo")
+            has_next = (
+                isinstance(page_info, dict) and page_info.get("hasNextPage") is True
+            )
+            if not has_next:
+                return _DatasetResume(start_row=0, page_cursor=None, complete=True)
+            next_cursor = last_snapshot.get("nextPageCursor")
+            if not isinstance(next_cursor, str) or not next_cursor:
+                # Unreachable through the write path (validation precedes
+                # persistence): a continuing page always carries its next
+                # cursor. Corrupted durable state fails loud, never guesses.
+                raise _MalformedProviderPageError(
+                    "durable cursor page is missing its nextPageCursor"
+                )
+            return _DatasetResume(
+                start_row=last_start_row + last_row_count,
+                page_cursor=next_cursor,
+                complete=False,
+            )
         if last_row_count < page_size:
-            return 0, True
-        return last_start_row + page_size, False
+            return _DatasetResume(start_row=0, page_cursor=None, complete=True)
+        return _DatasetResume(
+            start_row=last_start_row + page_size, page_cursor=None, complete=False
+        )
 
     async def _still_owned(self, run_id: uuid.UUID) -> bool:
         async with self._session_factory() as session:
@@ -803,8 +1007,16 @@ class IntegrationWorker:
         template: IntegrationDatasetTemplate,
         page: _ClientPage,
         start_row: int,
+        page_cursor: str | None = None,
+        page_info: dict | None = None,
     ) -> bool:
-        """Write ONE immutable artifact for one fetched page (owner-gated)."""
+        """Write ONE immutable artifact for one fetched page (owner-gated).
+
+        Cursor-mode datasets additionally persist the durable paging state
+        (``pagingMode``/``pageCursor``/``nextPageCursor``) in the
+        credential-free ``query_snapshot`` — the ONLY resume source after a
+        process restart. Offset datasets keep their exact current key set.
+        """
         canonical = json.dumps(page.payload, sort_keys=True, separators=(",", ":"))
         encoded = canonical.encode("utf-8")
         if len(encoded) > integration_settings.max_inline_payload_bytes:
@@ -814,6 +1026,25 @@ class IntegrationWorker:
             )
         payload_hash = hashlib.sha256(encoded).hexdigest()
         now = _utcnow()
+        # The exact credential-free API query (invariant 6).
+        query_snapshot: dict = {
+            "api_method": template.api_method,
+            "dataset": template.dataset,
+            "property_ref": ctx.property_ref,
+            "startDate": ctx.window_start.isoformat(),
+            "endDate": ctx.window_end.isoformat(),
+            "dimensions": list(template.dimensions),
+            "metrics": list(template.metrics),
+            "rowLimit": integration_settings.sync_page_size,
+            "startRow": start_row,
+        }
+        if page_info is not None:
+            # Cursor datasets only: the durable resume protocol state.
+            query_snapshot["pagingMode"] = template.paging_mode
+            query_snapshot["pageCursor"] = page_cursor
+            query_snapshot["nextPageCursor"] = (
+                page_info["endCursor"] if page_info["hasNextPage"] else None
+            )
         async with self._session_factory() as session:
             run = await self._claim_run_if_owned(session, ctx.run_id)
             if run is None:
@@ -827,18 +1058,7 @@ class IntegrationWorker:
                     workspace_id=ctx.workspace_id,
                     provider=ctx.provider,
                     dataset=template.dataset,
-                    # The exact credential-free API query (invariant 6).
-                    query_snapshot={
-                        "api_method": template.api_method,
-                        "dataset": template.dataset,
-                        "property_ref": ctx.property_ref,
-                        "startDate": ctx.window_start.isoformat(),
-                        "endDate": ctx.window_end.isoformat(),
-                        "dimensions": list(template.dimensions),
-                        "metrics": list(template.metrics),
-                        "rowLimit": integration_settings.sync_page_size,
-                        "startRow": start_row,
-                    },
+                    query_snapshot=query_snapshot,
                     payload_hash=payload_hash,
                     fetched_at=now,
                     # The RAW provider count (pre-normalization): the resume
@@ -887,9 +1107,22 @@ class IntegrationWorker:
                 await session.commit()
                 return
             try:
-                derived = await derive_run(
-                    session, run=run, connection=connection, artifacts=artifacts
-                )
+                if ctx.provider == INTEGRATION_PROVIDER_SHOPIFY:
+                    # Shopify derives catalog/feed/order projections (no
+                    # metric rows); metric providers keep ``derive_run``.
+                    derived = await derive_shopify_run(
+                        session, run=run, connection=connection, artifacts=artifacts
+                    )
+                    derived_project_id = derived.project_id
+                    derived_artifact_ids = derived.artifact_ids
+                    derived_metric_row_count = 0
+                else:
+                    metric_derived = await derive_run(
+                        session, run=run, connection=connection, artifacts=artifacts
+                    )
+                    derived_project_id = metric_derived.project_id
+                    derived_artifact_ids = metric_derived.artifact_ids
+                    derived_metric_row_count = metric_derived.metric_row_count
             except UnmappedPropertyError as exc:
                 # Never guessed (spec section 4): the run fails terminal.
                 run.status = TASK_STATUS_FAILED
@@ -900,11 +1133,13 @@ class IntegrationWorker:
                 run.lease_expires_at = None
                 await session.commit()
                 return
-            # C5: post-sync projections are the FINAL derivation step.
+            # C5: post-sync projections are the FINAL derivation step
+            # (Shopify datasets route to no chain here — they enqueue
+            # nothing; the call stays the uniform last step).
             await enqueue_post_sync_projections(
                 session,
-                project_id=derived.project_id,
-                import_artifact_ids=derived.artifact_ids,
+                project_id=derived_project_id,
+                import_artifact_ids=derived_artifact_ids,
             )
             connection.last_synced_at = now
             self._append_event(
@@ -919,10 +1154,10 @@ class IntegrationWorker:
                     "window_start": ctx.window_start.isoformat(),
                     "window_end": ctx.window_end.isoformat(),
                     "resync_seq": ctx.resync_seq,
-                    "project_id": str(derived.project_id),
-                    "artifact_ids": [str(a) for a in derived.artifact_ids],
+                    "project_id": str(derived_project_id),
+                    "artifact_ids": [str(a) for a in derived_artifact_ids],
                     "row_count": sum(a.row_count for a in artifacts),
-                    "metric_row_count": derived.metric_row_count,
+                    "metric_row_count": derived_metric_row_count,
                 },
             )
             run.status = TASK_STATUS_SUCCEEDED

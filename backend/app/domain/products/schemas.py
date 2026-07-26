@@ -8,12 +8,18 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.products.completeness import product_completeness
 from app.models.product import CompetitorProduct, Product
+
+
+def _empty_str_to_none(value: Any) -> Any:
+    # The model stores "" for an unbound external_item_ref; the DTO
+    # contract is null (the frontend schema is strict-nullable).
+    return None if value == "" else value
 
 
 def _clean_str_list(values: Any) -> list[str]:
@@ -107,7 +113,13 @@ class ProductResponse(BaseModel):
     currency: str
     url: str
     attributes: dict[str, Any]
-    origin: str
+    # manual | imported | synced (config/products.py PRODUCT_ORIGINS).
+    origin: Literal["manual", "imported", "synced"]
+    # Feed provenance (commerce suite): required-nullable — null for
+    # unbound manual/imported products. Never a token or PII field.
+    connection_id: uuid.UUID | None
+    external_item_ref: str | None
+    last_seen_sync_run_id: uuid.UUID | None
     # Computed on read (never persisted): ``product_to_response`` overwrites
     # this placeholder via ``model_copy``.
     completeness: ProductCompleteness = Field(
@@ -117,6 +129,10 @@ class ProductResponse(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
+
+    _external_item_ref_none = field_validator("external_item_ref", mode="before")(
+        _empty_str_to_none
+    )
 
 
 class CompetitorProductInput(BaseModel):

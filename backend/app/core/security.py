@@ -77,6 +77,7 @@ def create_oauth_state(
     workspace_id: str | None = None,
     user_id: str | None = None,
     jti: str | None = None,
+    provider_account_ref: str | None = None,
 ) -> tuple[str, str]:
     """Mint a signed, short-lived OAuth state token bound to a session nonce.
 
@@ -94,6 +95,11 @@ def create_oauth_state(
     carry the id of the persisted, atomically-consumed state row. They are
     omitted entirely when not passed, so auth sign-in callers produce
     byte-identical tokens.
+
+    The optional ``provider_account_ref`` claim binds the state to a
+    per-account OAuth target (Shopify: the canonical shop host) so the
+    callback can require the provider-returned account to match the one the
+    member initiated against.
     """
     session_nonce = secrets.token_urlsafe(32)
     expires_at = datetime.now(UTC) + timedelta(seconds=oauth_settings.state_ttl_seconds)
@@ -110,6 +116,8 @@ def create_oauth_state(
         payload["user_id"] = user_id
     if jti is not None:
         payload["jti"] = jti
+    if provider_account_ref is not None:
+        payload["provider_account_ref"] = provider_account_ref
     state_token = jwt.encode(
         {"alg": settings.jwt_algorithm},
         payload,
