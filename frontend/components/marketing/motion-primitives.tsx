@@ -1,8 +1,8 @@
 'use client';
 
-import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type MotionChildren = Readonly<{ children: ReactNode; className?: string }>;
 
@@ -66,38 +66,6 @@ export function StaggerItem({ children, className }: MotionChildren) {
         shown: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
       }}
     >
-      {children}
-    </motion.div>
-  );
-}
-
-export function Float({ children, className }: MotionChildren) {
-  const reduceMotion = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      animate={reduceMotion ? undefined : { y: [0, -7, 0] }}
-      // Dropped along with `animate`: an infinitely-repeating transition left
-      // attached on the reduced-motion path keeps the element in a live
-      // animation loop even with nothing to animate.
-      transition={
-        reduceMotion
-          ? undefined
-          : { duration: 5.5, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }
-      }
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-export function Parallax({ children, className }: MotionChildren) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], reduceMotion ? [0, 0] : [24, -24]);
-  return (
-    <motion.div ref={ref} className={className} style={{ y }}>
       {children}
     </motion.div>
   );

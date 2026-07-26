@@ -22,15 +22,18 @@ const SNAP_A = '88888888-8888-4888-8888-888888888888';
 
 // ---------------------------------------------------------------------------
 // next/navigation mock — a controllable URL so ?tab= sync + back/forward can be
-// asserted. `replace` updates the params; the hooks read the same live object.
+// asserted. The dashboard mirrors the active tab with `history.replaceState`
+// (shallow URL bookkeeping, not an App Router navigation), so the spy below
+// stands in for that and keeps the params the hooks read in sync.
 // ---------------------------------------------------------------------------
 let currentSearch = new URLSearchParams();
-const replaceMock = vi.fn((url: string) => {
+const replaceStateSpy = vi.fn((_data: unknown, _unused: string, url: string) => {
   const q = url.includes('?') ? url.slice(url.indexOf('?') + 1) : '';
   currentSearch = new URLSearchParams(q);
 });
+vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: replaceMock, push: vi.fn(), back: vi.fn(), forward: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), forward: vi.fn() }),
   usePathname: () => '/visibility',
   useSearchParams: () => currentSearch,
 }));
@@ -255,7 +258,7 @@ beforeEach(() => {
   window.localStorage.clear();
   setActiveWorkspaceId(null);
   currentSearch = new URLSearchParams();
-  replaceMock.mockClear();
+  replaceStateSpy.mockClear();
 });
 afterEach(() => {
   mswServer.resetHandlers();
@@ -334,7 +337,7 @@ describe('VisibilityPage — tablist', () => {
     );
   });
 
-  it('syncs ?tab= via router.replace when a tab is clicked', async () => {
+  it('syncs ?tab= via a shallow history.replaceState when a tab is clicked', async () => {
     useBaseHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, () =>
         HttpResponse.json(makeVisibility(AUDIT_LATEST, 67)),
@@ -348,7 +351,7 @@ describe('VisibilityPage — tablist', () => {
     await user.click(screen.getByRole('tab', { name: 'Trends' }));
 
     await waitFor(() =>
-      expect(replaceMock).toHaveBeenCalledWith(expect.stringContaining('tab=trends')),
+      expect(replaceStateSpy).toHaveBeenCalledWith(null, '', expect.stringContaining('tab=trends')),
     );
   });
 

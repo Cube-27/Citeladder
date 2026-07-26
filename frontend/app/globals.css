@@ -866,15 +866,6 @@ samp {
   pointer-events: none;
 }
 
-/* Legacy LogoCube paints — the mark is retired but the component is still
-   exported; these keep it rendering correctly wherever it lingers. */
-.logo-bubble {
-  stroke: var(--text-primary);
-}
-.logo-spark {
-  fill: var(--accent);
-}
-
 /* ═══════════════════════════════════════════════════════════════════════
    ACCESSIBILITY — REDUCED MOTION (WCAG 2.3.3)
 ═══════════════════════════════════════════════════════════════════════ */

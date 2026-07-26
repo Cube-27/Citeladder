@@ -7,6 +7,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -81,17 +82,23 @@ export function SessionGuard({
 
   // Global 401 watchdog: a 401 from any in-flight/finished query means the
   // session is gone — clear + redirect once, regardless of which query failed.
+  //
+  // `clearSession` is only ever *called* from the subscription, never read as a
+  // value it depends on, so it goes through an Effect Event: the cache
+  // subscription is installed once per query client instead of being torn down
+  // and reinstalled every time the callback identity changes.
+  const onCacheEvent = useEffectEvent((error: unknown) => {
+    if (error && httpErrorStatus(error) === 401) clearSession();
+  });
+
   useEffect(() => {
     const cache = queryClient.getQueryCache();
     const unsubscribe = cache.subscribe((event) => {
       if (event.type !== 'updated') return;
-      const queryError = event.query.state.error;
-      if (queryError && httpErrorStatus(queryError) === 401) {
-        clearSession();
-      }
+      onCacheEvent(event.query.state.error);
     });
     return unsubscribe;
-  }, [queryClient, clearSession]);
+  }, [queryClient]);
 
   const value = useMemo<SessionContextValue | null>(
     () => (user ? { user, clearSession } : null),

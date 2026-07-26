@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { EngineFilter } from '@/components/visibility/visibility-toolbar';
@@ -47,7 +47,6 @@ export const ACTIVE_RUN_POLL_MS = 3_000;
  * evidence tabs; granularity → Trends only.
  */
 export function useVisibilityFilters() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlTab = normalizeTab(searchParams?.get('tab'));
@@ -70,7 +69,13 @@ export function useVisibilityFilters() {
     setActiveTab(tab);
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', tab);
-    router.replace(`${pathname}?${params.toString()}`);
+    // Shallow URL bookkeeping, NOT navigation. `router.replace` sent every tab
+    // click through the App Router — an RSC round trip plus a re-render of the
+    // whole route for a query param the page reads locally, which is what made
+    // switching tabs stutter. `history.replaceState` is Next's supported
+    // shallow-update path: `useSearchParams` still reflects it, so refresh /
+    // back / forward keep working.
+    window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
   }
 
   // A narrowing filter (engine, bounded range, or a specific prompt) is active —

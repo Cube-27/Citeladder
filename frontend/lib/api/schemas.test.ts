@@ -28,19 +28,19 @@ const UUID2 = '22222222-2222-4222-8222-222222222222';
 
 describe('strictValidate', () => {
   it('returns parsed data on a match', () => {
-    const schema = z.object({ id: z.string().uuid() });
+    const schema = z.object({ id: z.uuid() });
     expect(strictValidate(schema, { id: UUID }, 'ctx')).toEqual({ id: UUID });
   });
 
   it('throws with the context on a mismatch', () => {
-    const schema = z.object({ id: z.string().uuid() });
+    const schema = z.object({ id: z.uuid() });
     expect(() => strictValidate(schema, { id: 'not-a-uuid' }, 'ctx.here')).toThrow(
       /API validation failure in ctx\.here/,
     );
   });
 
   it('throws on a numeric id (contract forbids numeric ids)', () => {
-    expect(() => strictValidate(z.object({ id: z.string().uuid() }), { id: 7 }, 'ids')).toThrow();
+    expect(() => strictValidate(z.object({ id: z.uuid() }), { id: 7 }, 'ids')).toThrow();
   });
 });
 

@@ -251,14 +251,17 @@ export function VisibilityToolbar({
           lands (F10), rather than shipping a button that does nothing. */}
       <div className="ms-auto flex items-center gap-2">
         <Tooltip content="How these metrics are calculated">
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-label="About these metrics"
-            className="size-[30px] rounded-full px-0"
-            asChild
-          >
-            <a href={METRICS_HELP_URL} target="_blank" rel="noreferrer noopener">
+          <Button variant="secondary" size="sm" className="size-[30px] rounded-full px-0" asChild>
+            {/* The label belongs on the anchor, not on the `asChild` Button:
+                Slot does forward it, but this is the element a screen reader
+                actually announces, and the icon-only link has no text of its
+                own. Static a11y checks read it here too. */}
+            <a
+              href={METRICS_HELP_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label="About these metrics"
+            >
               <CircleHelp className="size-[13px]" aria-hidden strokeWidth={1.75} />
             </a>
           </Button>

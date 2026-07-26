@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
 import { PromptLibrary } from '@/components/prompts/prompt-library';
@@ -24,7 +24,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
  * header.
  */
 function PromptsScreen() {
-  const router = useRouter();
   const modeParam = useSearchParams().get('mode');
   // Local override for the in-page toggle buttons; null = follow the URL.
   const [override, setOverride] = useState<boolean | null>(null);
@@ -32,10 +31,12 @@ function PromptsScreen() {
 
   // Exiting manage mode clears both the override and the URL param, so the
   // read view's `/prompts?mode=manage` links keep working (they would
-  // otherwise self-reference the current URL and no-op).
+  // otherwise self-reference the current URL and no-op). Shallow URL
+  // bookkeeping only — `router.replace` sent this through the App Router and
+  // remounted the read view on top of the local state change.
   const exitManage = () => {
     setOverride(null);
-    if (modeParam === 'manage') router.replace('/prompts');
+    if (modeParam === 'manage') window.history.replaceState(null, '', '/prompts');
   };
 
   if (managing) {

@@ -11,9 +11,12 @@ import { renderWithProviders } from '@/test/render';
 // Stub next/navigation (Link/useSearchParams in jsdom). `search` is mutable per
 // test so the C2 callback params (?connected= / ?error=) can be exercised.
 let search = '';
-const replace = vi.fn();
+// The panel strips the C2 callback params with `history.replaceState` — shallow
+// URL bookkeeping, not an App Router navigation — so the spy stands in for that.
+const replaceState = vi.fn();
+vi.stubGlobal('history', { ...window.history, replaceState });
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => '/settings',
   useSearchParams: () => new URLSearchParams(search),
 }));
@@ -119,7 +122,7 @@ describe('IntegrationSettings — empty state + OAuth navigation', () => {
   beforeEach(() => {
     search = '';
     assignMock.mockClear();
-    replace.mockClear();
+    replaceState.mockClear();
   });
 
   it('renders the empty state and Connect CTAs hard-navigate to the OAuth start endpoints', async () => {
@@ -141,7 +144,7 @@ describe('IntegrationSettings — grant cards', () => {
   beforeEach(() => {
     search = '';
     assignMock.mockClear();
-    replace.mockClear();
+    replaceState.mockClear();
   });
 
   it('groups connections onto one card per grant with scope chips, sub-rows, and mono last-synced', async () => {
@@ -245,7 +248,7 @@ describe('IntegrationSettings — disconnect dialog (shared-grant semantics)', (
   beforeEach(() => {
     search = '';
     assignMock.mockClear();
-    replace.mockClear();
+    replaceState.mockClear();
   });
 
   it('disconnecting one of two Google connections keeps the shared grant alive', async () => {
@@ -329,7 +332,7 @@ describe('IntegrationSettings — sync polling', () => {
   beforeEach(() => {
     search = '';
     assignMock.mockClear();
-    replace.mockClear();
+    replaceState.mockClear();
   });
 
   it('Sync now enqueues, polls the run until terminal, then refreshes the connections list', async () => {
@@ -383,7 +386,7 @@ describe('IntegrationSettings — sync polling', () => {
 describe('IntegrationSettings — OAuth callback notice (C2)', () => {
   beforeEach(() => {
     assignMock.mockClear();
-    replace.mockClear();
+    replaceState.mockClear();
   });
 
   it('shows the success notice for ?connected= and strips the params from the URL', async () => {
@@ -394,7 +397,9 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Google connected.');
     expect(alert).toHaveTextContent(/shared OAuth grant/i);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/settings?tab=integrations'));
+    await waitFor(() =>
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/settings?tab=integrations'),
+    );
   });
 
   it('shows the failure notice for ?error= with the provider code in mono', async () => {
@@ -407,7 +412,9 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     expect(alert).toHaveTextContent('oauth_exchange_failed');
     // The empty state still renders beneath the notice.
     expect(await screen.findByText('No integrations connected')).toBeInTheDocument();
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/settings?tab=integrations'));
+    await waitFor(() =>
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/settings?tab=integrations'),
+    );
   });
 
   it('renders no notice and does not touch the URL without callback params', async () => {
@@ -417,6 +424,6 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
 
     await screen.findByTestId('grant-card-google');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
+    expect(replaceState).not.toHaveBeenCalled();
   });
 });

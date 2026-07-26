@@ -65,13 +65,16 @@ export function BrandKnowledgeScreen() {
   // Full width, and no page header: the shell's top bar already reads "Brand
   // knowledge", so the eyebrow + h2 + strapline repeated the title three more
   // times inside a rail that left half the screen empty.
+  //
+  // Keyed on the PROJECT, not on `updated_at`. Keying on the timestamp remounted
+  // the whole panel every time a save wrote the fresh profile into the cache —
+  // a visible flash of the entire card on button press, and the "saved" notice
+  // was set on an already-unmounted component so it never appeared. The panel
+  // syncs its own draft from the mutation result; the key only needs to reset it
+  // when the user switches to a different project.
   return (
     <div className="grid gap-4">
-      <BrandProfilePanel
-        key={profileQuery.data.updated_at}
-        projectId={project.id}
-        profile={profileQuery.data}
-      />
+      <BrandProfilePanel key={project.id} projectId={project.id} profile={profileQuery.data} />
     </div>
   );
 }

@@ -148,6 +148,9 @@ export function GeneratePromptsDialog({
   );
 }
 
+/** "1 prompt" / "3 prompts". Module scope — it closes over nothing. */
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 /**
  * Success summary. Generated prompts fill the set-wide active pool first, so a
  * run can land rows in Active and/or Proposed — report both counts (and any
@@ -165,8 +168,6 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
   const topicCount = new Set(
     result.generated.map((prompt) => prompt.topic_id).filter((id): id is string => id != null),
   ).size;
-
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   const placements: string[] = [];
   if (active > 0) placements.push(`${plural(active, 'prompt')} added to Active`);

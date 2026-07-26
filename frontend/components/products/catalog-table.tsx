@@ -139,9 +139,7 @@ export function CatalogTable({
  * with the missing attribute list on hover — the badge is never color-only
  * (the `N missing` text carries the meaning).
  */
-export function CompletenessBadge({
-  completeness,
-}: Readonly<{ completeness: ProductCompleteness }>) {
+function CompletenessBadge({ completeness }: Readonly<{ completeness: ProductCompleteness }>) {
   const complete = completeness.missing.length === 0;
   const label = `${completeness.present}/${completeness.total}`;
   const badge = complete ? (

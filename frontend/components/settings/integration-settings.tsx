@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -118,7 +118,6 @@ function CallbackNotice({
  * navigation, never an apiClient fetch.
  */
 export function IntegrationSettings() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { activeProject } = useProjectContext();
@@ -137,8 +136,12 @@ export function IntegrationSettings() {
     if (notice.connected) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
     }
-    router.replace('/settings?tab=integrations');
-  }, [hasCallbackParams, notice.connected, queryClient, router]);
+    // Shallow URL cleanup, NOT a redirect: the params have already been captured
+    // into `notice`, so this only rewrites the address bar. `router.replace`
+    // pushed the whole settings route through the App Router on arrival from the
+    // OAuth callback, which re-rendered every mounted panel for nothing.
+    window.history.replaceState(null, '', '/settings?tab=integrations');
+  }, [hasCallbackParams, notice.connected, queryClient]);
 
   const connectionsQuery = useQuery({
     queryKey: queryKeys.integrations.connections(workspaceId),

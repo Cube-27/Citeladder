@@ -547,7 +547,7 @@ describe('query key isolation (project / crawl / filter)', () => {
 // Sanity: cursorPageSchema is generic and composes with any item schema.
 describe('cursorPageSchema generics', () => {
   it('composes with a trivial item schema', () => {
-    const page = cursorPageSchema(z.object({ x: z.number() }).strict());
+    const page = cursorPageSchema(z.strictObject({ x: z.number() }));
     expect(strictValidate(page, { items: [{ x: 1 }], next_cursor: null }, 'p').items[0].x).toBe(1);
   });
 });

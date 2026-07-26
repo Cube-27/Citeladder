@@ -40,7 +40,18 @@ const splitList = (value: string): string[] =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-type CompetitorDraft = { name: string; domains: string };
+/**
+ * Draft rows carry a stable `key` because the list is editable AND removable.
+ * Keyed by array index, removing the first of three rows shifted every row's
+ * identity: React reused the same DOM inputs for different competitors, so
+ * focus, selection, and any in-flight IME composition landed on the wrong row.
+ * The counter is module-scoped and monotonic — it only has to be unique within
+ * one mounted list, never persisted or sent to the backend.
+ */
+let competitorKeySeq = 0;
+const nextCompetitorKey = () => `competitor-${(competitorKeySeq += 1)}`;
+
+type CompetitorDraft = { key: string; name: string; domains: string };
 
 export function ProjectEditPanel({
   project,
@@ -53,11 +64,17 @@ export function ProjectEditPanel({
   const [websiteUrl, setWebsiteUrl] = useState(project.website_url);
   const [country, setCountry] = useState(project.country_code);
   const [language, setLanguage] = useState(project.language_code);
-  const [aliases, setAliases] = useState(project.brand.aliases.join(', '));
-  const [ownedDomains, setOwnedDomains] = useState(project.owned_domains.join(', '));
-  const [unintendedDomains, setUnintendedDomains] = useState(project.unintended_domains.join(', '));
-  const [competitors, setCompetitors] = useState<CompetitorDraft[]>(
+  // Lazy initializers: these join/map the project's arrays, and a bare
+  // `useState(expr)` re-runs `expr` on every keystroke in this panel only to
+  // throw the result away.
+  const [aliases, setAliases] = useState(() => project.brand.aliases.join(', '));
+  const [ownedDomains, setOwnedDomains] = useState(() => project.owned_domains.join(', '));
+  const [unintendedDomains, setUnintendedDomains] = useState(() =>
+    project.unintended_domains.join(', '),
+  );
+  const [competitors, setCompetitors] = useState<CompetitorDraft[]>(() =>
     project.competitors.map((competitor) => ({
+      key: nextCompetitorKey(),
       name: competitor.name,
       domains: competitor.domains.join(', '),
     })),
@@ -202,7 +219,12 @@ export function ProjectEditPanel({
               variant="ghost"
               size="sm"
               className="ms-auto"
-              onClick={() => setCompetitors((prev) => [...prev, { name: '', domains: '' }])}
+              onClick={() =>
+                setCompetitors((prev) => [
+                  ...prev,
+                  { key: nextCompetitorKey(), name: '', domains: '' },
+                ])
+              }
             >
               <Plus className="size-3.5" aria-hidden />
               Add
@@ -213,7 +235,7 @@ export function ProjectEditPanel({
           ) : (
             <ul className="grid list-none gap-2 p-0">
               {competitors.map((competitor, index) => (
-                <li key={`competitor-${index}`} className="flex items-center gap-2">
+                <li key={competitor.key} className="flex items-center gap-2">
                   <Input
                     value={competitor.name}
                     onChange={(event) => updateCompetitor(index, { name: event.target.value })}

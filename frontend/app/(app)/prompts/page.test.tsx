@@ -16,9 +16,13 @@ import PromptsPage from './page';
 // rendering.
 // ---------------------------------------------------------------------------
 let currentSearch = new URLSearchParams();
-const replaceMock = vi.fn();
+// Leaving manage mode strips `?mode=manage` with `history.replaceState` —
+// shallow URL bookkeeping, not an App Router navigation — so the spy stands in
+// for that.
+const replaceStateSpy = vi.fn();
+vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: replaceMock, push: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => '/prompts',
   useSearchParams: () => currentSearch,
 }));
@@ -154,7 +158,7 @@ beforeEach(() => {
   window.localStorage.clear();
   setActiveWorkspaceId(null);
   currentSearch = new URLSearchParams();
-  replaceMock.mockReset();
+  replaceStateSpy.mockReset();
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -271,7 +275,7 @@ describe('PromptsPage (Your Prompts)', () => {
       await screen.findByText(/configuration includes/, undefined, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage prompts' })).toBeInTheDocument();
-    expect(replaceMock).not.toHaveBeenCalled();
+    expect(replaceStateSpy).not.toHaveBeenCalled();
   });
 
   it('clears the ?mode=manage param when leaving manage mode so manage links stay live', async () => {
@@ -288,7 +292,7 @@ describe('PromptsPage (Your Prompts)', () => {
     // Exiting clears the URL param (the read view's manage links point at
     // /prompts?mode=manage and would no-op against the current URL).
     await user.click(screen.getByRole('button', { name: 'Done managing' }));
-    expect(replaceMock).toHaveBeenCalledWith('/prompts');
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/prompts');
   });
 });
 

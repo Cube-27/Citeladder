@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import type { ComponentPropsWithoutRef } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
@@ -12,20 +12,6 @@ import { cn } from '@/lib/utils';
  */
 export const displayHeadingLgClasses = 'text-foreground text-lg font-semibold tracking-[-0.01em]';
 export const displayHeadingXlClasses = 'text-foreground text-xl font-semibold tracking-[-0.02em]';
-
-/** Page heading with an optional sentence-case kicker/eyebrow. */
-export function PageTitle({
-  children,
-  kicker,
-  className,
-}: Readonly<{ children: ReactNode; kicker?: string; className?: string }>) {
-  return (
-    <div className={cn('space-y-1', className)}>
-      {kicker ? <p className="text-2xs text-muted font-medium">{kicker}</p> : null}
-      <h1 className={displayHeadingXlClasses}>{children}</h1>
-    </div>
-  );
-}
 
 /** Section heading (card / block level). */
 export function SectionTitle({

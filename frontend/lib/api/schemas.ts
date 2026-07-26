@@ -3,7 +3,7 @@
  * shape of every backend response it consumes.
  *
  * Contract invariants (docs/frontend-architecture.md §6/§7):
- *   - **Every `id` and `*_id` field is `z.string().uuid()`.** No numeric ids.
+ *   - **Every `id` and `*_id` field is `z.uuid()`.** No numeric ids.
  *   - **No `user_id` anywhere** — the contract is workspace-scoped.
  *   - Provider secrets are **never** present on the wire (BYOK, invariant 6).
  *   - `sentiment` / `avg_position` are nullable (not computed yet; roadmap).
@@ -13,7 +13,7 @@
 import { z } from 'zod';
 
 /** UUID id helper — all ids and foreign keys use this. */
-const uuid = () => z.string().uuid();
+const uuid = () => z.uuid();
 
 // ---------------------------------------------------------------------------
 // Auth / workspace
@@ -25,53 +25,48 @@ const uuid = () => z.string().uuid();
 // carried on `workspaceSchema.role` below) and must not be conflated with it
 // via a restrictive enum — doing so previously rejected every real register/
 // login response (`role: "user"` is not `owner|admin|member|viewer`).
-export const sessionUserSchema = z
-  .object({
-    id: uuid(),
-    email: z.string().email(),
-    role: z.string(),
-    is_active: z.boolean(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const sessionUserSchema = z.strictObject({
+  id: uuid(),
+  email: z.email(),
+  role: z.string(),
+  is_active: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // register/login/me all return the authenticated user wrapped as
 // `{ user: SessionUser }` (backend `AuthResponse`); the JWT rides the HttpOnly
 // cookie, never the body. Fail loud on any extra key.
-export const authResponseSchema = z.object({ user: sessionUserSchema }).strict();
+export const authResponseSchema = z.strictObject({ user: sessionUserSchema });
 
 // OAuth start scaffold (Phase B backend): a configured provider answers
 // `{ authorize_url, state }`; unconfigured providers answer 503 before this
 // schema is ever parsed.
-export const oauthStartResponseSchema = z
-  .object({ authorize_url: z.string().min(1), state: z.string().min(1) })
-  .strict();
+export const oauthStartResponseSchema = z.strictObject({
+  authorize_url: z.string().min(1),
+  state: z.string().min(1),
+});
 
 // Backend `WorkspaceResponse` is `{ id, name, role, created_at, updated_at }` —
 // no slug; the caller's membership `role` is carried instead.
-export const workspaceSchema = z
-  .object({
-    id: uuid(),
-    name: z.string(),
-    role: z.string(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const workspaceSchema = z.strictObject({
+  id: uuid(),
+  name: z.string(),
+  role: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // Brand / project / prompts
 // ---------------------------------------------------------------------------
 
-export const competitorSchema = z
-  .object({
-    id: uuid(),
-    name: z.string(),
-    aliases: z.array(z.string()),
-    domains: z.array(z.string()),
-  })
-  .strict();
+export const competitorSchema = z.strictObject({
+  id: uuid(),
+  name: z.string(),
+  aliases: z.array(z.string()),
+  domains: z.array(z.string()),
+});
 
 // Intent enum. The B3 backend `normalize_intent` casefolds a free-text intent
 // and normalizes any empty/unknown value to `''` ("unspecified"), so `''` is a
@@ -91,125 +86,105 @@ export const promptStatusSchema = z.enum(['proposed', 'active', 'archived']);
 
 // Backend `PromptResponse.theme` is a non-null string (empty when unset), so
 // the wire value is always a string — never null.
-export const promptSchema = z
-  .object({
-    id: uuid(),
-    prompt_set_id: uuid(),
-    topic_id: uuid().nullable().optional(),
-    text: z.string(),
-    theme: z.string(),
-    intent: promptIntentSchema,
-    branded: z.boolean(),
-    enabled: z.boolean(),
-    status: promptStatusSchema,
-    origin: z.enum(['manual', 'imported', 'generated']),
-    // Provenance for AI-generated prompts (model identity, run id, hashes) —
-    // never contains credentials. Null for manual/imported prompts.
-    generation_evidence: z.record(z.string(), z.unknown()).nullable().optional(),
-    created_at: z.string().optional(),
-    updated_at: z.string().optional(),
-  })
-  .strict();
+export const promptSchema = z.strictObject({
+  id: uuid(),
+  prompt_set_id: uuid(),
+  topic_id: uuid().nullable().optional(),
+  text: z.string(),
+  theme: z.string(),
+  intent: promptIntentSchema,
+  branded: z.boolean(),
+  enabled: z.boolean(),
+  status: promptStatusSchema,
+  origin: z.enum(['manual', 'imported', 'generated']),
+  // Provenance for AI-generated prompts (model identity, run id, hashes) —
+  // never contains credentials. Null for manual/imported prompts.
+  generation_evidence: z.record(z.string(), z.unknown()).nullable().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
 
 // A topical category grouping prompts within a project (first-class resource;
 // counts are per-status projections for the topics rail).
-export const topicSchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    name: z.string(),
-    description: z.string(),
-    origin: z.enum(['manual', 'generated']),
-    active_count: z.number().int(),
-    proposed_count: z.number().int(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const topicSchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  name: z.string(),
+  description: z.string(),
+  origin: z.enum(['manual', 'generated']),
+  active_count: z.number().int(),
+  proposed_count: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // `POST /prompt-sets/{id}/generate` result: inserted suggestions, the topics
 // they landed in (with refreshed counts), and how many duplicates the DB
 // conflict-safe dedupe dropped.
-export const promptGenerateResponseSchema = z
-  .object({
-    generated: z.array(promptSchema),
-    topics: z.array(topicSchema),
-    dropped_duplicates: z.number().int(),
-  })
-  .strict();
+export const promptGenerateResponseSchema = z.strictObject({
+  generated: z.array(promptSchema),
+  topics: z.array(topicSchema),
+  dropped_duplicates: z.number().int(),
+});
 
 // `POST /brand-suggestions/competitors` result: setup-form competitor
 // suggestions (stateless — nothing persisted until the user saves the form).
-export const competitorSuggestResponseSchema = z
-  .object({
-    competitors: z.array(
-      z
-        .object({
-          name: z.string(),
-          aliases: z.array(z.string()),
-          domains: z.array(z.string()),
-        })
-        .strict(),
-    ),
-    dropped_duplicates: z.number().int(),
-  })
-  .strict();
+export const competitorSuggestResponseSchema = z.strictObject({
+  competitors: z.array(
+    z.strictObject({
+      name: z.string(),
+      aliases: z.array(z.string()),
+      domains: z.array(z.string()),
+    }),
+  ),
+  dropped_duplicates: z.number().int(),
+});
 
 export const brandProfileSourceSchema = z.enum(['manual', 'web_evidence', 'ai_suggested']);
 
-const brandProfileFieldSourcesSchema = z
-  .object({
-    description: brandProfileSourceSchema.nullable(),
-    positioning: brandProfileSourceSchema.nullable(),
-    products_services: brandProfileSourceSchema.nullable(),
-    target_audience: brandProfileSourceSchema.nullable(),
-  })
-  .strict();
+const brandProfileFieldSourcesSchema = z.strictObject({
+  description: brandProfileSourceSchema.nullable(),
+  positioning: brandProfileSourceSchema.nullable(),
+  products_services: brandProfileSourceSchema.nullable(),
+  target_audience: brandProfileSourceSchema.nullable(),
+});
 
-const brandProfileSourceArtifactsSchema = z
-  .object({
-    description: uuid().nullable(),
-    positioning: uuid().nullable(),
-    products_services: uuid().nullable(),
-    target_audience: uuid().nullable(),
-  })
-  .strict();
+const brandProfileSourceArtifactsSchema = z.strictObject({
+  description: uuid().nullable(),
+  positioning: uuid().nullable(),
+  products_services: uuid().nullable(),
+  target_audience: uuid().nullable(),
+});
 
-export const brandProfileDraftSchema = z
-  .object({
-    description: z.string(),
-    positioning: z.string(),
-    products_services: z.array(z.string()),
-    target_audience: z.string(),
-  })
-  .strict();
+export const brandProfileDraftSchema = z.strictObject({
+  description: z.string(),
+  positioning: z.string(),
+  products_services: z.array(z.string()),
+  target_audience: z.string(),
+});
 
-export const brandProfileSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    project_id: uuid(),
-    brand_id: uuid(),
-    ...brandProfileDraftSchema.shape,
-    sources: brandProfileFieldSourcesSchema,
-    source_artifact_ids: brandProfileSourceArtifactsSchema,
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const brandProfileSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  project_id: uuid(),
+  brand_id: uuid(),
+  ...brandProfileDraftSchema.shape,
+  sources: brandProfileFieldSourcesSchema,
+  source_artifact_ids: brandProfileSourceArtifactsSchema,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
-export const brandProfileSuggestionSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    project_id: uuid(),
-    brand_id: uuid(),
-    draft: brandProfileDraftSchema,
-    model_identity: z.record(z.string(), z.string()),
-    prompt_template_version: z.string(),
-    created_at: z.string(),
-  })
-  .strict();
+export const brandProfileSuggestionSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  project_id: uuid(),
+  brand_id: uuid(),
+  draft: brandProfileDraftSchema,
+  model_identity: z.record(z.string(), z.string()),
+  prompt_template_version: z.string(),
+  created_at: z.string(),
+});
 
 export const brandProfileFieldSchema = z.enum([
   'description',
@@ -218,65 +193,53 @@ export const brandProfileFieldSchema = z.enum([
   'target_audience',
 ]);
 
-export const brandProfileAcceptResponseSchema = z
-  .object({
-    profile: brandProfileSchema,
-    accepted_fields: z.array(brandProfileFieldSchema),
-    skipped_manual_fields: z.array(brandProfileFieldSchema),
-  })
-  .strict();
+export const brandProfileAcceptResponseSchema = z.strictObject({
+  profile: brandProfileSchema,
+  accepted_fields: z.array(brandProfileFieldSchema),
+  skipped_manual_fields: z.array(brandProfileFieldSchema),
+});
 
 // `POST /brand-suggestions/owned-domains` result: bare owned-domain strings.
-export const ownedDomainSuggestResponseSchema = z
-  .object({
-    domains: z.array(z.string()),
-    dropped_duplicates: z.number().int(),
-  })
-  .strict();
+export const ownedDomainSuggestResponseSchema = z.strictObject({
+  domains: z.array(z.string()),
+  dropped_duplicates: z.number().int(),
+});
 
 // `POST /brand-suggestions/prompts` result. `theme` and `intent` default to ""
 // server-side (PromptSuggestionItem), so they are always present but may be
 // empty — the UI treats empty as "no theme" rather than hiding the row.
-const promptSuggestionItemSchema = z
-  .object({
-    text: z.string(),
-    theme: z.string(),
-    intent: z.string(),
-  })
-  .strict();
+const promptSuggestionItemSchema = z.strictObject({
+  text: z.string(),
+  theme: z.string(),
+  intent: z.string(),
+});
 
-export const promptSuggestResponseSchema = z
-  .object({
-    prompts: z.array(promptSuggestionItemSchema),
-    // The agent's own topic grouping, preserved rather than flattened. A caller
-    // that persists uses this to create the same Topic rows `/generate` does,
-    // so an onboarded prompt set is not left untopiced. Holds the same prompts
-    // as `prompts` above, just grouped.
-    topics: z.array(
-      z
-        .object({
-          name: z.string(),
-          prompts: z.array(promptSuggestionItemSchema),
-        })
-        .strict(),
-    ),
-    dropped_duplicates: z.number().int(),
-  })
-  .strict();
+export const promptSuggestResponseSchema = z.strictObject({
+  prompts: z.array(promptSuggestionItemSchema),
+  // The agent's own topic grouping, preserved rather than flattened. A caller
+  // that persists uses this to create the same Topic rows `/generate` does,
+  // so an onboarded prompt set is not left untopiced. Holds the same prompts
+  // as `prompts` above, just grouped.
+  topics: z.array(
+    z.strictObject({
+      name: z.string(),
+      prompts: z.array(promptSuggestionItemSchema),
+    }),
+  ),
+  dropped_duplicates: z.number().int(),
+});
 
-export const promptSetSchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    name: z.string(),
-    // B3 PromptSetResponse carries a description and a denormalized prompt_count.
-    description: z.string().optional(),
-    prompt_count: z.number().int().optional(),
-    prompts: z.array(promptSchema),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const promptSetSchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  name: z.string(),
+  // B3 PromptSetResponse carries a description and a denormalized prompt_count.
+  description: z.string().optional(),
+  prompt_count: z.number().int().optional(),
+  prompts: z.array(promptSchema),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 export const benchmarkModeSchema = z.enum([
   'consumer_like',
@@ -284,30 +247,26 @@ export const benchmarkModeSchema = z.enum([
   'forced_grounded',
 ]);
 
-export const projectSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    name: z.string(),
-    brand_name: z.string(),
-    website_url: z.string(),
-    country_code: z.string(),
-    language_code: z.string(),
-    benchmark_mode: benchmarkModeSchema,
-    default_repetitions: z.number().int(),
-    brand: z
-      .object({
-        aliases: z.array(z.string()),
-      })
-      .strict(),
-    owned_domains: z.array(z.string()),
-    unintended_domains: z.array(z.string()),
-    competitors: z.array(competitorSchema),
-    prompt_sets: z.array(promptSetSchema),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const projectSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  name: z.string(),
+  brand_name: z.string(),
+  website_url: z.string(),
+  country_code: z.string(),
+  language_code: z.string(),
+  benchmark_mode: benchmarkModeSchema,
+  default_repetitions: z.number().int(),
+  brand: z.strictObject({
+    aliases: z.array(z.string()),
+  }),
+  owned_domains: z.array(z.string()),
+  unintended_domains: z.array(z.string()),
+  competitors: z.array(competitorSchema),
+  prompt_sets: z.array(promptSetSchema),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // Providers (BYOK) — secret never present
@@ -319,61 +278,51 @@ export const logicalEngineSchema = z.enum(['chatgpt', 'gemini', 'claude']);
 
 // A configured route on a connection: which logical engine this transport
 // serves and the concrete transport model to call.
-export const providerRouteSchema = z
-  .object({
-    id: uuid(),
-    logical_engine: logicalEngineSchema,
-    transport_provider: transportProviderSchema,
-    transport_model: z.string(),
-    is_default: z.boolean(),
-    // Backend defaults to true.
-    active: z.boolean().optional(),
-  })
-  .strict();
+export const providerRouteSchema = z.strictObject({
+  id: uuid(),
+  logical_engine: logicalEngineSchema,
+  transport_provider: transportProviderSchema,
+  transport_model: z.string(),
+  is_default: z.boolean(),
+  // Backend defaults to true.
+  active: z.boolean().optional(),
+});
 
-export const providerConnectionSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    // Optional so the pre-B4 minimal shape (used in the schema test) still
-    // validates; the live B4 DTO always sends these.
-    label: z.string().nullable().optional(),
-    transport_provider: transportProviderSchema,
-    base_url: z.string().nullable(),
-    active: z.boolean(),
-    // Presence flag only — the key value itself is NEVER on the wire.
-    api_key_set: z.boolean().optional(),
-    last_tested_at: z.string().nullable().optional(),
-    // Backend defaults to '' (untested); accept any short status string.
-    last_test_status: z.string().optional(),
-    routes: z.array(providerRouteSchema).optional(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  // Strict: an unexpected key (e.g. a leaked `api_key`/`secret`) is a contract
-  // violation and must fail loud — the secret is never present on the wire.
-  .strict();
+// Strict: an unexpected key (e.g. a leaked `api_key`/`secret`) is a contract
+// violation and must fail loud — the secret is never present on the wire.
+export const providerConnectionSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  // Optional so the pre-B4 minimal shape (used in the schema test) still
+  // validates; the live B4 DTO always sends these.
+  label: z.string().nullable().optional(),
+  transport_provider: transportProviderSchema,
+  base_url: z.string().nullable(),
+  active: z.boolean(),
+  // Presence flag only — the key value itself is NEVER on the wire.
+  api_key_set: z.boolean().optional(),
+  last_tested_at: z.string().nullable().optional(),
+  // Backend defaults to '' (untested); accept any short status string.
+  last_test_status: z.string().optional(),
+  routes: z.array(providerRouteSchema).optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
-const providerCatalogRouteSchema = z
-  .object({
-    transport_provider: transportProviderSchema,
-    default_model: z.string(),
-  })
-  .strict();
+const providerCatalogRouteSchema = z.strictObject({
+  transport_provider: transportProviderSchema,
+  default_model: z.string(),
+});
 
-const providerCatalogEngineSchema = z
-  .object({
-    logical_engine: logicalEngineSchema,
-    routes: z.array(providerCatalogRouteSchema),
-  })
-  .strict();
+const providerCatalogEngineSchema = z.strictObject({
+  logical_engine: logicalEngineSchema,
+  routes: z.array(providerCatalogRouteSchema),
+});
 
-export const providerCatalogSchema = z
-  .object({
-    transports: z.array(transportProviderSchema),
-    engines: z.array(providerCatalogEngineSchema),
-  })
-  .strict();
+export const providerCatalogSchema = z.strictObject({
+  transports: z.array(transportProviderSchema),
+  engines: z.array(providerCatalogEngineSchema),
+});
 
 // ---------------------------------------------------------------------------
 // Audits (runs) + executions + evidence
@@ -393,37 +342,33 @@ export const auditStatusSchema = z.enum([
 ]);
 
 // The engine provenance a run froze at launch (B5 `AuditEngineSnapshotResponse`).
-export const auditEngineSnapshotSchema = z
-  .object({
-    logical_engine: z.string(),
-    transport_provider: z.string(),
-    transport_model: z.string(),
-  })
-  .strict();
+export const auditEngineSnapshotSchema = z.strictObject({
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+});
 
 // A run/audit projection (B5 `AuditResponse`). `random_seed` is a decimal
 // STRING (64-bit seed), `error_message` a non-null string ('' when unset), and
 // the engine provenance is carried but the provider key never is (invariant 6).
-export const auditSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    project_id: uuid(),
-    status: auditStatusSchema,
-    benchmark_mode: z.string(),
-    repetitions: z.number().int(),
-    random_seed: z.string(),
-    requested_count: z.number().int(),
-    completed_count: z.number().int(),
-    failed_count: z.number().int(),
-    error_message: z.string(),
-    engine_snapshots: z.array(auditEngineSnapshotSchema),
-    created_at: z.string(),
-    updated_at: z.string(),
-    started_at: z.string().nullable(),
-    completed_at: z.string().nullable(),
-  })
-  .strict();
+export const auditSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  project_id: uuid(),
+  status: auditStatusSchema,
+  benchmark_mode: z.string(),
+  repetitions: z.number().int(),
+  random_seed: z.string(),
+  requested_count: z.number().int(),
+  completed_count: z.number().int(),
+  failed_count: z.number().int(),
+  error_message: z.string(),
+  engine_snapshots: z.array(auditEngineSnapshotSchema),
+  created_at: z.string(),
+  updated_at: z.string(),
+  started_at: z.string().nullable(),
+  completed_at: z.string().nullable(),
+});
 
 // Deterministic citation classification (B6 `_classification`, invariant 4):
 // owned / unintended (owned-but-unwanted) / competitor / third-party.
@@ -435,18 +380,16 @@ export const citationClassificationSchema = z.enum([
 ]);
 
 // One classified source citation on the evidence card (B6 `CitationEvidence`).
-export const citationSchema = z
-  .object({
-    ordinal: z.number().int(),
-    url: z.string(),
-    title: z.string(),
-    domain: z.string(),
-    classification: citationClassificationSchema,
-    is_owned: z.boolean(),
-    is_unintended: z.boolean(),
-    matched_competitor: z.string().nullable(),
-  })
-  .strict();
+export const citationSchema = z.strictObject({
+  ordinal: z.number().int(),
+  url: z.string(),
+  title: z.string(),
+  domain: z.string(),
+  classification: citationClassificationSchema,
+  is_owned: z.boolean(),
+  is_unintended: z.boolean(),
+  matched_competitor: z.string().nullable(),
+});
 
 // Queue/execution row status (B5 task statuses).
 export const executionStatusSchema = z.enum([
@@ -462,119 +405,109 @@ export const executionStatusSchema = z.enum([
 // One execution/queue row in the run's executions table (B5 `AuditTaskResponse`).
 // `answer_text` / `error_detail` default to '' (never null); the classified
 // citation evidence lives on the single-execution evidence endpoint below.
-export const executionSchema = z
-  .object({
-    id: uuid(),
-    audit_id: uuid(),
-    prompt_index: z.number().int(),
-    repetition: z.number().int(),
-    randomized_position: z.number().int(),
-    logical_engine: z.string(),
-    transport_provider: z.string(),
-    transport_model: z.string(),
-    status: executionStatusSchema,
-    attempt_count: z.number().int(),
-    max_attempts: z.number().int(),
-    answer_text: z.string(),
-    search_used: z.boolean(),
-    error_code: z.string(),
-    error_detail: z.string(),
-    latency_ms: z.number().nullable(),
-    created_at: z.string(),
-    completed_at: z.string().nullable(),
-  })
-  .strict();
+export const executionSchema = z.strictObject({
+  id: uuid(),
+  audit_id: uuid(),
+  prompt_index: z.number().int(),
+  repetition: z.number().int(),
+  randomized_position: z.number().int(),
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+  status: executionStatusSchema,
+  attempt_count: z.number().int(),
+  max_attempts: z.number().int(),
+  answer_text: z.string(),
+  search_used: z.boolean(),
+  error_code: z.string(),
+  error_detail: z.string(),
+  latency_ms: z.number().nullable(),
+  created_at: z.string(),
+  completed_at: z.string().nullable(),
+});
 
 // One execution's persisted analysis + evidence (B6 `ExecutionEvidenceResponse`,
 // `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
 // same id space as the executions list — so the evidence page keys off the row
 // id. `analysis_id` is the internal ResponseAnalysis id (traceability only).
 // `sentiment` / `avg_position` are present but null until the roadmap (B-2).
-export const executionEvidenceSchema = z
-  .object({
-    id: uuid(),
-    analysis_id: uuid(),
-    audit_id: uuid(),
-    task_id: uuid(),
-    artifact_id: uuid().nullable(),
-    analyzer_version: z.string(),
-    scoring_rule_version: z.string(),
-    logical_engine: z.string(),
-    transport_provider: z.string(),
-    transport_model: z.string(),
-    prompt_index: z.number().int(),
-    repetition: z.number().int(),
-    prompt_class: z.string(),
-    brand_mentioned: z.boolean(),
-    brand_first_offset: z.number().int().nullable(),
-    owned_domain_cited: z.boolean(),
-    owned_citation_count: z.number().int(),
-    unintended_domain_cited: z.boolean(),
-    citation_count: z.number().int(),
-    search_used: z.boolean(),
-    search_query_count: z.number().int(),
-    sentiment: z.string().nullable(),
-    avg_position: z.number().nullable(),
-    score: z.record(z.string(), z.unknown()).nullable(),
-    citations: z.array(citationSchema),
-    competitors_mentioned: z.array(z.string()),
-    created_at: z.string(),
-  })
-  .strict();
+export const executionEvidenceSchema = z.strictObject({
+  id: uuid(),
+  analysis_id: uuid(),
+  audit_id: uuid(),
+  task_id: uuid(),
+  artifact_id: uuid().nullable(),
+  analyzer_version: z.string(),
+  scoring_rule_version: z.string(),
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+  prompt_index: z.number().int(),
+  repetition: z.number().int(),
+  prompt_class: z.string(),
+  brand_mentioned: z.boolean(),
+  brand_first_offset: z.number().int().nullable(),
+  owned_domain_cited: z.boolean(),
+  owned_citation_count: z.number().int(),
+  unintended_domain_cited: z.boolean(),
+  citation_count: z.number().int(),
+  search_used: z.boolean(),
+  search_query_count: z.number().int(),
+  sentiment: z.string().nullable(),
+  avg_position: z.number().nullable(),
+  score: z.record(z.string(), z.unknown()).nullable(),
+  citations: z.array(citationSchema),
+  competitors_mentioned: z.array(z.string()),
+  created_at: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // Visibility dashboard (selected-run projection)
 // ---------------------------------------------------------------------------
 
 // One per-engine comparison row for the selected run (B6 `EngineComparisonRow`).
-export const visibilityEngineSchema = z
-  .object({
-    logical_engine: z.string(),
-    total_completed: z.number().int(),
-    brand_mention_rate: z.number().nullable(),
-    owned_citation_rate: z.number().nullable(),
-    search_use_rate: z.number().nullable(),
-    visibility_score: z.number().nullable(),
-  })
-  .strict();
+export const visibilityEngineSchema = z.strictObject({
+  logical_engine: z.string(),
+  total_completed: z.number().int(),
+  brand_mention_rate: z.number().nullable(),
+  owned_citation_rate: z.number().nullable(),
+  search_use_rate: z.number().nullable(),
+  visibility_score: z.number().nullable(),
+});
 
 // One brand-vs-competitor rankings-table row (B6 `RankingRow`). `mention_rate`
 // is the Visibility% and `share_of_voice` the SOV%; `sentiment` / `avg_position`
 // are present but null until the roadmap computes them (decision B-2).
-export const rankingRowSchema = z
-  .object({
-    name: z.string(),
-    is_brand: z.boolean(),
-    mention_rate: z.number().nullable(),
-    citation_rate: z.number().nullable(),
-    share_of_voice: z.number().nullable(),
-    mention_count: z.number().int(),
-    sentiment: z.string().nullable(),
-    avg_position: z.number().nullable(),
-  })
-  .strict();
+export const rankingRowSchema = z.strictObject({
+  name: z.string(),
+  is_brand: z.boolean(),
+  mention_rate: z.number().nullable(),
+  citation_rate: z.number().nullable(),
+  share_of_voice: z.number().nullable(),
+  mention_count: z.number().int(),
+  sentiment: z.string().nullable(),
+  avg_position: z.number().nullable(),
+});
 
 // Selected-run dashboard projection (B6 `VisibilityResponse`). Computed
 // server-side from the persisted MetricSnapshot for the selected audit
 // (defaults to the latest completed audit). No cross-run trend in this payload
 // — the Trends tab reads /visibility/trends for that.
-export const visibilitySchema = z
-  .object({
-    project_id: uuid(),
-    audit_id: uuid(),
-    audit_status: auditStatusSchema,
-    analyzer_version: z.string(),
-    scoring_rule_version: z.string(),
-    total_completed: z.number().int(),
-    total_failed: z.number().int(),
-    visibility_score: z.number(),
-    rankings: z.array(rankingRowSchema),
-    per_engine: z.array(visibilityEngineSchema),
-    sentiment: z.string().nullable(),
-    avg_position: z.number().nullable(),
-    created_at: z.string(),
-  })
-  .strict();
+export const visibilitySchema = z.strictObject({
+  project_id: uuid(),
+  audit_id: uuid(),
+  audit_status: auditStatusSchema,
+  analyzer_version: z.string(),
+  scoring_rule_version: z.string(),
+  total_completed: z.number().int(),
+  total_failed: z.number().int(),
+  visibility_score: z.number(),
+  rankings: z.array(rankingRowSchema),
+  per_engine: z.array(visibilityEngineSchema),
+  sentiment: z.string().nullable(),
+  avg_position: z.number().nullable(),
+  created_at: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // Site Health — entitlement, crawl + substates, inventory, monitored set,
@@ -600,19 +533,17 @@ export const siteHealthAccessModeSchema = z.enum(['sample', 'selection']);
 // frontend must read it here and never hard-code 50. `sample_url_limit` is the
 // Free automatic sample size (10). `can_view_discovered_total` gates every
 // discovered-count disclosure (false for Free).
-export const siteHealthEntitlementSchema = z
-  .object({
-    workspace_id: uuid(),
-    plan_key: siteHealthPlanSchema,
-    access_mode: siteHealthAccessModeSchema,
-    sample_url_limit: z.number().int(),
-    monitored_url_limit: z.number().int(),
-    can_view_discovered_total: z.boolean(),
-    capability_revision: z.number().int(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const siteHealthEntitlementSchema = z.strictObject({
+  workspace_id: uuid(),
+  plan_key: siteHealthPlanSchema,
+  access_mode: siteHealthAccessModeSchema,
+  sample_url_limit: z.number().int(),
+  monitored_url_limit: z.number().int(),
+  can_view_discovered_total: z.boolean(),
+  capability_revision: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // Independent crawl lifecycle sub-states (plan §Persistence lifecycle states).
 export const crawlOverallStatusSchema = z.enum([
@@ -692,82 +623,74 @@ export const pageTypeSchema = z.enum([
 // count + mean Technical/AEO/overall scores across the analyzed pages of one
 // page type. A mean is null when no analyzed page of the type produced that
 // score — never a fabricated zero.
-export const pageTypeScoreSummarySchema = z
-  .object({
-    analyzed_count: z.number().int(),
-    technical_score: z.number().nullable(),
-    aeo_score: z.number().nullable(),
-    overall_score: z.number().nullable(),
-  })
-  .strict();
+export const pageTypeScoreSummarySchema = z.strictObject({
+  analyzed_count: z.number().int(),
+  technical_score: z.number().nullable(),
+  aeo_score: z.number().nullable(),
+  overall_score: z.number().nullable(),
+});
 
 // Crawl score/coverage summary (nullable scores until analysis produces them).
 // `by_page_type` breaks the means down per classified page type (empty until
 // at least one analyzed page has been classified).
-export const siteScoreSummarySchema = z
-  .object({
-    overall_score: z.number().nullable(),
-    technical_score: z.number().nullable(),
-    aeo_score: z.number().nullable(),
-    selected_count: z.number().int(),
-    analyzed_count: z.number().int(),
-    issue_count: z.number().int(),
-    scoring_version: z.string(),
-    by_page_type: z.record(z.string(), pageTypeScoreSummarySchema),
-  })
-  .strict();
+export const siteScoreSummarySchema = z.strictObject({
+  overall_score: z.number().nullable(),
+  technical_score: z.number().nullable(),
+  aeo_score: z.number().nullable(),
+  selected_count: z.number().int(),
+  analyzed_count: z.number().int(),
+  issue_count: z.number().int(),
+  scoring_version: z.string(),
+  by_page_type: z.record(z.string(), pageTypeScoreSummarySchema),
+});
 
 // A crawl projection. `total_url_count` is null while full discovery runs and
 // ALWAYS null for a Free sample crawl; `has_more_site_urls`/`discovered_count`
 // are absent (optional) or null under Free redaction — never a leaked total.
-export const siteCrawlSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    project_id: uuid(),
-    profile_id: uuid(),
-    status: crawlOverallStatusSchema,
-    discovery_status: crawlDiscoveryStatusSchema,
-    analysis_status: crawlAnalysisStatusSchema,
-    root_url: z.string(),
-    sample_mode: z.boolean(),
-    seed: z.string(),
-    inventory_complete: z.boolean(),
-    visible_url_count: z.number().int(),
-    analyzed_count: z.number().int(),
-    failed_count: z.number().int(),
-    // Redactable count fields (Free → null / absent, never a number).
-    discovered_count: z.number().int().nullable().optional(),
-    total_url_count: z.number().int().nullable(),
-    has_more_site_urls: z.boolean().nullable().optional(),
-    score_summary: siteScoreSummarySchema.nullable(),
-    // v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
-    // sitemap files). Mirrors the backend's untyped `dict | None`, and is
-    // REQUIRED because the response model always serializes the key — making
-    // it optional would weaken the drift contract.
-    site_facts: z.record(z.string(), z.unknown()).nullable(),
-    extractor_version: z.string(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    scoring_version: z.string(),
-    error_message: z.string(),
-    created_at: z.string(),
-    updated_at: z.string(),
-    started_at: z.string().nullable(),
-    completed_at: z.string().nullable(),
-  })
-  .strict();
+export const siteCrawlSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  project_id: uuid(),
+  profile_id: uuid(),
+  status: crawlOverallStatusSchema,
+  discovery_status: crawlDiscoveryStatusSchema,
+  analysis_status: crawlAnalysisStatusSchema,
+  root_url: z.string(),
+  sample_mode: z.boolean(),
+  seed: z.string(),
+  inventory_complete: z.boolean(),
+  visible_url_count: z.number().int(),
+  analyzed_count: z.number().int(),
+  failed_count: z.number().int(),
+  // Redactable count fields (Free → null / absent, never a number).
+  discovered_count: z.number().int().nullable().optional(),
+  total_url_count: z.number().int().nullable(),
+  has_more_site_urls: z.boolean().nullable().optional(),
+  score_summary: siteScoreSummarySchema.nullable(),
+  // v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
+  // sitemap files). Mirrors the backend's untyped `dict | None`, and is
+  // REQUIRED because the response model always serializes the key — making
+  // it optional would weaken the drift contract.
+  site_facts: z.record(z.string(), z.unknown()).nullable(),
+  extractor_version: z.string(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  scoring_version: z.string(),
+  error_message: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  started_at: z.string().nullable(),
+  completed_at: z.string().nullable(),
+});
 
 // Opaque, filter-bound keyset cursor page envelope. `next_cursor` is null on
 // the last page. There is no offset / page total field (invariant: no Free
 // count side channel; stable cursors while discovery appends rows).
 export const cursorPageSchema = <T extends z.ZodTypeAny>(item: T) =>
-  z
-    .object({
-      items: z.array(item),
-      next_cursor: z.string().nullable(),
-    })
-    .strict();
+  z.strictObject({
+    items: z.array(item),
+    next_cursor: z.string().nullable(),
+  });
 
 // Nullable analysis-summary fields shared by inventory rows and analyzed-page
 // summary rows (null until analysis completes for that URL). `page_type`
@@ -785,91 +708,79 @@ const analysisSummaryFields = {
 // One lightweight inventory row. Ordering is URL-only. The analysis summary
 // fields (`issue_count`, `technical_score`, `aeo_score`, `overall_score`,
 // `last_audited`) are null until analysis completes for that URL.
-export const inventoryRowSchema = z
-  .object({
-    site_url_id: uuid(),
-    normalized_url: z.string(),
-    display_url: z.string(),
-    title: z.string().nullable(),
-    content_type: z.string().nullable(),
-    source: siteUrlSourceSchema.nullable(),
-    depth: z.number().int().nullable(),
-    monitored: z.boolean(),
-    first_seen_at: z.string().nullable(),
-    last_seen_at: z.string().nullable(),
-    ...analysisSummaryFields,
-  })
-  .strict();
+export const inventoryRowSchema = z.strictObject({
+  site_url_id: uuid(),
+  normalized_url: z.string(),
+  display_url: z.string(),
+  title: z.string().nullable(),
+  content_type: z.string().nullable(),
+  source: siteUrlSourceSchema.nullable(),
+  depth: z.number().int().nullable(),
+  monitored: z.boolean(),
+  first_seen_at: z.string().nullable(),
+  last_seen_at: z.string().nullable(),
+  ...analysisSummaryFields,
+});
 
 export const inventoryPageSchema = cursorPageSchema(inventoryRowSchema);
 export const siteCrawlListPageSchema = cursorPageSchema(siteCrawlSchema);
 
 // Workspace-wide monitored quota usage (counts every active monitored row).
-export const monitoredQuotaSchema = z
-  .object({
-    used: z.number().int(),
-    limit: z.number().int(),
-  })
-  .strict();
+export const monitoredQuotaSchema = z.strictObject({
+  used: z.number().int(),
+  limit: z.number().int(),
+});
 
 // One persistent monitored-set row.
-export const monitoredUrlSchema = z
-  .object({
-    site_url_id: uuid(),
-    normalized_url: z.string(),
-    display_url: z.string(),
-    title: z.string().nullable(),
-    active: z.boolean(),
-    selection_source: z.enum(['user', 'free_sample']),
-    selected_at: z.string().nullable(),
-    deselected_at: z.string().nullable(),
-  })
-  .strict();
+export const monitoredUrlSchema = z.strictObject({
+  site_url_id: uuid(),
+  normalized_url: z.string(),
+  display_url: z.string(),
+  title: z.string().nullable(),
+  active: z.boolean(),
+  selection_source: z.enum(['user', 'free_sample']),
+  selected_at: z.string().nullable(),
+  deselected_at: z.string().nullable(),
+});
 
 // `GET /projects/{id}/monitored-urls` — persistent set + revision + quota.
-export const monitoredUrlsResponseSchema = z
-  .object({
-    project_id: uuid(),
-    selection_version: z.number().int(),
-    monitored_urls: z.array(monitoredUrlSchema),
-    quota: monitoredQuotaSchema,
-  })
-  .strict();
+export const monitoredUrlsResponseSchema = z.strictObject({
+  project_id: uuid(),
+  selection_version: z.number().int(),
+  monitored_urls: z.array(monitoredUrlSchema),
+  quota: monitoredQuotaSchema,
+});
 
 // Deterministic HTTP delivery facts. `field_cwv_available` is a literal false —
 // the HTTP-first crawler never fabricates field Core Web Vitals (no LCP/CLS/INP).
-export const deliveryFactsSchema = z
-  .object({
-    field_cwv_available: z.literal(false),
-    status_code: z.number().int().nullable(),
-    ttfb_ms: z.number().nullable(),
-    wire_bytes: z.number().int().nullable(),
-    decoded_bytes: z.number().int().nullable(),
-    html_bytes: z.number().int().nullable(),
-    http_version: z.string().nullable(),
-    compression: z.string().nullable(),
-    cache_control: z.string().nullable(),
-    blocking_resource_count: z.number().int().nullable(),
-  })
-  .strict();
+export const deliveryFactsSchema = z.strictObject({
+  field_cwv_available: z.literal(false),
+  status_code: z.number().int().nullable(),
+  ttfb_ms: z.number().nullable(),
+  wire_bytes: z.number().int().nullable(),
+  decoded_bytes: z.number().int().nullable(),
+  html_bytes: z.number().int().nullable(),
+  http_version: z.string().nullable(),
+  compression: z.string().nullable(),
+  cache_control: z.string().nullable(),
+  blocking_resource_count: z.number().int().nullable(),
+});
 
 // Bounded normalized page facts (deterministic; extractor-versioned).
-export const pageFactsSchema = z
-  .object({
-    title: z.string().nullable(),
-    meta_description: z.string().nullable(),
-    canonical_url: z.string().nullable(),
-    robots_directives: z.array(z.string()),
-    h1_count: z.number().int(),
-    heading_count: z.number().int(),
-    image_count: z.number().int(),
-    image_missing_alt_count: z.number().int(),
-    word_count: z.number().int(),
-    internal_link_count: z.number().int(),
-    external_link_count: z.number().int(),
-    structured_data_types: z.array(z.string()),
-  })
-  .strict();
+export const pageFactsSchema = z.strictObject({
+  title: z.string().nullable(),
+  meta_description: z.string().nullable(),
+  canonical_url: z.string().nullable(),
+  robots_directives: z.array(z.string()),
+  h1_count: z.number().int(),
+  heading_count: z.number().int(),
+  image_count: z.number().int(),
+  image_missing_alt_count: z.number().int(),
+  word_count: z.number().int(),
+  internal_link_count: z.number().int(),
+  external_link_count: z.number().int(),
+  structured_data_types: z.array(z.string()),
+});
 
 // Issue severity + dimension enums (config-owned rule catalog).
 export const issueSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
@@ -879,70 +790,62 @@ export const issueDimensionSchema = z.enum(['technical', 'aeo']);
 // affected page's classification; it is OPTIONAL — the v1 backend DTO has no
 // such key, so the badge renders only when the projection carries it (same
 // absent-or-null treatment as the Free-redacted count fields).
-export const affectedUrlSchema = z
-  .object({
-    site_url_id: uuid(),
-    normalized_url: z.string(),
-    display_url: z.string(),
-    title: z.string().nullable(),
-    page_type: pageTypeSchema.nullable().optional(),
-  })
-  .strict();
+export const affectedUrlSchema = z.strictObject({
+  site_url_id: uuid(),
+  normalized_url: z.string(),
+  display_url: z.string(),
+  title: z.string().nullable(),
+  page_type: pageTypeSchema.nullable().optional(),
+});
 
 // One issue catalog row (failure projection with remediation snapshot).
-export const siteIssueSchema = z
-  .object({
-    id: uuid(),
-    crawl_id: uuid(),
-    rule_id: z.string(),
-    dimension: issueDimensionSchema,
-    category: z.string(),
-    severity: issueSeveritySchema,
-    title: z.string(),
-    remediation: z.string(),
-    affected_url_count: z.number().int(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    created_at: z.string(),
-  })
-  .strict();
+export const siteIssueSchema = z.strictObject({
+  id: uuid(),
+  crawl_id: uuid(),
+  rule_id: z.string(),
+  dimension: issueDimensionSchema,
+  category: z.string(),
+  severity: issueSeveritySchema,
+  title: z.string(),
+  remediation: z.string(),
+  affected_url_count: z.number().int(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  created_at: z.string(),
+});
 
 // Grouped-issue catalog summary (occurrence + severity + affected-page counts).
 // `severity_counts` keys are the severity vocabulary; `dimension_counts` keys
 // are the rule dimensions (technical/aeo); values are occurrence counts.
-export const issuesSummarySchema = z
-  .object({
-    issue_count: z.number().int(),
-    severity_counts: z.record(z.string(), z.number().int()),
-    dimension_counts: z.record(z.string(), z.number().int()),
-    affected_url_count: z.number().int(),
-    monitored_affected_url_count: z.number().int(),
-  })
-  .strict();
+export const issuesSummarySchema = z.strictObject({
+  issue_count: z.number().int(),
+  severity_counts: z.record(z.string(), z.number().int()),
+  dimension_counts: z.record(z.string(), z.number().int()),
+  affected_url_count: z.number().int(),
+  monitored_affected_url_count: z.number().int(),
+});
 
 // Full grouped-issue detail — remediation + evidence + keyset-paginated
 // affected URLs. `id` is the stable canonical (representative) issue id for the
 // rule group; `affected_url_count` is the full deduplicated total and
 // `next_cursor` walks the affected-URL page.
-export const siteIssueDetailSchema = z
-  .object({
-    id: uuid(),
-    crawl_id: uuid(),
-    rule_id: z.string(),
-    dimension: issueDimensionSchema,
-    category: z.string(),
-    severity: issueSeveritySchema,
-    title: z.string(),
-    remediation: z.string(),
-    evidence: z.record(z.string(), z.unknown()),
-    affected_urls: z.array(affectedUrlSchema),
-    affected_url_count: z.number().int(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    created_at: z.string(),
-    next_cursor: z.string().nullable().optional(),
-  })
-  .strict();
+export const siteIssueDetailSchema = z.strictObject({
+  id: uuid(),
+  crawl_id: uuid(),
+  rule_id: z.string(),
+  dimension: issueDimensionSchema,
+  category: z.string(),
+  severity: issueSeveritySchema,
+  title: z.string(),
+  remediation: z.string(),
+  evidence: z.record(z.string(), z.unknown()),
+  affected_urls: z.array(affectedUrlSchema),
+  affected_url_count: z.number().int(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  created_at: z.string(),
+  next_cursor: z.string().nullable().optional(),
+});
 
 // Grouped-issue catalog page — cursor page + API-owned summary (mockup 710).
 export const siteIssuesPageSchema = cursorPageSchema(siteIssueSchema).extend({
@@ -951,144 +854,128 @@ export const siteIssuesPageSchema = cursorPageSchema(siteIssueSchema).extend({
 
 // Analyzed-page summary row (`/pages` list). Scores/issue-count are null when
 // analysis has not completed; `error_code` is '' when there is no error.
-export const pageSummarySchema = z
-  .object({
-    site_url_id: uuid(),
-    crawl_id: uuid(),
-    normalized_url: z.string(),
-    display_url: z.string(),
-    title: z.string().nullable(),
-    monitored: z.boolean(),
-    analysis_status: pageAnalysisStatusSchema,
-    error_code: z.string(),
-    ...analysisSummaryFields,
-  })
-  .strict();
+export const pageSummarySchema = z.strictObject({
+  site_url_id: uuid(),
+  crawl_id: uuid(),
+  normalized_url: z.string(),
+  display_url: z.string(),
+  title: z.string().nullable(),
+  monitored: z.boolean(),
+  analysis_status: pageAnalysisStatusSchema,
+  error_code: z.string(),
+  ...analysisSummaryFields,
+});
 
 export const pagesPageSchema = cursorPageSchema(pageSummarySchema);
 
 // One persisted rule evaluation on a page (all outcomes, current label).
-const ruleEvaluationSchema = z
-  .object({
-    id: uuid(),
-    rule_id: z.string(),
-    title: z.string(),
-    dimension: issueDimensionSchema,
-    category: z.string(),
-    severity: issueSeveritySchema,
-    outcome: z.enum(['pass', 'fail', 'not_applicable', 'error']),
-    weight: z.number(),
-    evidence: z.record(z.string(), z.unknown()),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    created_at: z.string(),
-  })
-  .strict();
+const ruleEvaluationSchema = z.strictObject({
+  id: uuid(),
+  rule_id: z.string(),
+  title: z.string(),
+  dimension: issueDimensionSchema,
+  category: z.string(),
+  severity: issueSeveritySchema,
+  outcome: z.enum(['pass', 'fail', 'not_applicable', 'error']),
+  weight: z.number(),
+  evidence: z.record(z.string(), z.unknown()),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  created_at: z.string(),
+});
 
 // One deduplicated link/asset reference discovered on a page.
-const linkReferenceSchema = z
-  .object({
-    id: uuid(),
-    kind: z.string(),
-    target_url: z.string(),
-    is_internal: z.boolean(),
-    rel: z.string(),
-    anchor_text: z.string(),
-    target_artifact_id: uuid().nullable(),
-  })
-  .strict();
+const linkReferenceSchema = z.strictObject({
+  id: uuid(),
+  kind: z.string(),
+  target_url: z.string(),
+  is_internal: z.boolean(),
+  rel: z.string(),
+  anchor_text: z.string(),
+  target_artifact_id: uuid().nullable(),
+});
 
 // Full analyzed-page detail (persisted facts/delivery/scores/issues/provenance).
-export const pageDetailSchema = z
-  .object({
-    site_url_id: uuid(),
-    crawl_id: uuid(),
-    normalized_url: z.string(),
-    display_url: z.string(),
-    title: z.string().nullable(),
-    analysis_status: pageAnalysisStatusSchema,
-    error_code: z.string(),
-    field_cwv_available: z.literal(false),
-    technical_score: z.number().nullable(),
-    aeo_score: z.number().nullable(),
-    overall_score: z.number().nullable(),
-    issue_count: z.number().int().nullable(),
-    last_audited: z.string().nullable(),
-    page_type: pageTypeSchema.nullable(),
-    // Bounded classifier evidence behind page_type ("why this type?"
-    // disclosure); null until the URL has an analysis.
-    page_type_evidence: z.record(z.string(), z.unknown()).nullable(),
-    facts: pageFactsSchema,
-    delivery: deliveryFactsSchema,
-    issues: z.array(siteIssueSchema),
-    evaluations: z.array(ruleEvaluationSchema),
-    link_references: z.array(linkReferenceSchema),
-    artifact_id: uuid().nullable(),
-    extractor_version: z.string(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    scoring_version: z.string(),
-  })
-  .strict();
+export const pageDetailSchema = z.strictObject({
+  site_url_id: uuid(),
+  crawl_id: uuid(),
+  normalized_url: z.string(),
+  display_url: z.string(),
+  title: z.string().nullable(),
+  analysis_status: pageAnalysisStatusSchema,
+  error_code: z.string(),
+  field_cwv_available: z.literal(false),
+  technical_score: z.number().nullable(),
+  aeo_score: z.number().nullable(),
+  overall_score: z.number().nullable(),
+  issue_count: z.number().int().nullable(),
+  last_audited: z.string().nullable(),
+  page_type: pageTypeSchema.nullable(),
+  // Bounded classifier evidence behind page_type ("why this type?"
+  // disclosure); null until the URL has an analysis.
+  page_type_evidence: z.record(z.string(), z.unknown()).nullable(),
+  facts: pageFactsSchema,
+  delivery: deliveryFactsSchema,
+  issues: z.array(siteIssueSchema),
+  evaluations: z.array(ruleEvaluationSchema),
+  link_references: z.array(linkReferenceSchema),
+  artifact_id: uuid().nullable(),
+  extractor_version: z.string(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  scoring_version: z.string(),
+});
 
 // Identity/status returned by the per-page rerun (202). "Re-audit this page"
 // is normally invoked from a COMPLETED (terminal) source crawl; the backend
 // mints a fresh single-page rerun crawl in that case (`created_new_crawl`),
 // so the client must poll the returned `crawl_id`/`site_url_id` (the fresh
 // run) rather than the terminal source crawl it was invoked from.
-export const rerunPageResponseSchema = z
-  .object({
-    crawl_id: uuid(),
-    site_url_id: uuid(),
-    task_id: uuid(),
-    created_new_crawl: z.boolean(),
-    analysis_status: pageAnalysisStatusSchema,
-  })
-  .strict();
+export const rerunPageResponseSchema = z.strictObject({
+  crawl_id: uuid(),
+  site_url_id: uuid(),
+  task_id: uuid(),
+  created_new_crawl: z.boolean(),
+  analysis_status: pageAnalysisStatusSchema,
+});
 
 // One per-URL issue-history row — an issue occurrence from the selected crawl
 // or a prior crawl in the project chronology (immutable failure projection).
-export const issueHistoryRowSchema = z
-  .object({
-    id: uuid(),
-    crawl_id: uuid(),
-    rule_id: z.string(),
-    dimension: issueDimensionSchema,
-    category: z.string(),
-    severity: issueSeveritySchema,
-    title: z.string(),
-    remediation: z.string(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    created_at: z.string(),
-  })
-  .strict();
+export const issueHistoryRowSchema = z.strictObject({
+  id: uuid(),
+  crawl_id: uuid(),
+  rule_id: z.string(),
+  dimension: issueDimensionSchema,
+  category: z.string(),
+  severity: issueSeveritySchema,
+  title: z.string(),
+  remediation: z.string(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  created_at: z.string(),
+});
 
 // Per-URL issue history page (crawl-bounded, newest-first, cursor-paginated).
 export const issueHistoryPageSchema = cursorPageSchema(issueHistoryRowSchema);
 
 // Append-only safe crawl event. Free payloads never carry total/frontier/
 // overflow data; `event_type` is an open string (backend owns the catalogue).
-export const siteCrawlEventSchema = z
-  .object({
-    id: uuid(),
-    crawl_id: uuid(),
-    event_type: z.string(),
-    message: z.string(),
-    payload: z.record(z.string(), z.unknown()),
-    created_at: z.string(),
-  })
-  .strict();
+export const siteCrawlEventSchema = z.strictObject({
+  id: uuid(),
+  crawl_id: uuid(),
+  event_type: z.string(),
+  message: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  created_at: z.string(),
+});
 
 // Latest / selected crawl dashboard projection (`/projects/{id}/site-health`).
-export const siteHealthDashboardSchema = z
-  .object({
-    project_id: uuid(),
-    crawl: siteCrawlSchema.nullable(),
-    score_summary: siteScoreSummarySchema.nullable(),
-    quota: monitoredQuotaSchema,
-  })
-  .strict();
+export const siteHealthDashboardSchema = z.strictObject({
+  project_id: uuid(),
+  crawl: siteCrawlSchema.nullable(),
+  score_summary: siteScoreSummarySchema.nullable(),
+  quota: monitoredQuotaSchema,
+});
 
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade
 // prompt, quota feedback, stale-revision refetch, retry copy) off these codes.
@@ -1110,16 +997,14 @@ export const siteHealthErrorCodeSchema = z.enum([
 
 // Coded error body. Quota errors carry `limit`/`currently_used`; a stale
 // selection carries the expected/current versions. Extra keys fail loud.
-export const siteHealthErrorSchema = z
-  .object({
-    code: siteHealthErrorCodeSchema,
-    message: z.string(),
-    limit: z.number().int().optional(),
-    currently_used: z.number().int().optional(),
-    expected_selection_version: z.number().int().optional(),
-    current_selection_version: z.number().int().optional(),
-  })
-  .strict();
+export const siteHealthErrorSchema = z.strictObject({
+  code: siteHealthErrorCodeSchema,
+  message: z.string(),
+  limit: z.number().int().optional(),
+  currently_used: z.number().int().optional(),
+  expected_selection_version: z.number().int().optional(),
+  current_selection_version: z.number().int().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Cross-run Visibility trend history (projection over persisted snapshots)
@@ -1131,12 +1016,10 @@ export const siteHealthErrorSchema = z
 // derived from the persisted `share_of_voice.mention_counts`. Both are
 // deterministic reprojections of persisted metrics (invariant 7) and are
 // nullable when the source metric is absent.
-export const visibilityTrendSovSchema = z
-  .object({
-    response: z.number().nullable(),
-    mention: z.number().nullable(),
-  })
-  .strict();
+export const visibilityTrendSovSchema = z.strictObject({
+  response: z.number().nullable(),
+  mention: z.number().nullable(),
+});
 
 // One brand-vs-competitor ranking-history row within a trend point (backend
 // `VisibilityTrendRankingRow`). Field-for-field identical to `rankingRowSchema`
@@ -1149,26 +1032,24 @@ export const visibilityTrendRankingRowSchema = rankingRowSchema;
 // metadata lists every distinct analyzer/scoring version the point folds, with
 // `spans_version_boundary` set when a bucket mixes versions. `sentiment` /
 // `avg_position` stay null (decision B-2 / invariant 9).
-export const visibilityTrendPointSchema = z
-  .object({
-    audit_id: uuid().nullable(),
-    completed_at: z.string(),
-    logical_engine: z.string().nullable(),
-    visibility_score: z.number().nullable(),
-    brand_mention_rate: z.number().nullable(),
-    owned_citation_rate: z.number().nullable(),
-    sov: visibilityTrendSovSchema,
-    rankings: z.array(visibilityTrendRankingRowSchema),
-    sentiment: z.string().nullable(),
-    avg_position: z.number().nullable(),
-    // Provenance (invariant 4): every source snapshot this point folds.
-    source_snapshot_ids: z.array(uuid()),
-    // Distinct versions across the folded snapshots (invariant 4).
-    analyzer_versions: z.array(z.string()),
-    scoring_rule_versions: z.array(z.string()),
-    spans_version_boundary: z.boolean(),
-  })
-  .strict();
+export const visibilityTrendPointSchema = z.strictObject({
+  audit_id: uuid().nullable(),
+  completed_at: z.string(),
+  logical_engine: z.string().nullable(),
+  visibility_score: z.number().nullable(),
+  brand_mention_rate: z.number().nullable(),
+  owned_citation_rate: z.number().nullable(),
+  sov: visibilityTrendSovSchema,
+  rankings: z.array(visibilityTrendRankingRowSchema),
+  sentiment: z.string().nullable(),
+  avg_position: z.number().nullable(),
+  // Provenance (invariant 4): every source snapshot this point folds.
+  source_snapshot_ids: z.array(uuid()),
+  // Distinct versions across the folded snapshots (invariant 4).
+  analyzer_versions: z.array(z.string()),
+  scoring_rule_versions: z.array(z.string()),
+  spans_version_boundary: z.boolean(),
+});
 
 // The trends endpoint returns a chronological list of points (never wrapped).
 export const visibilityTrendListSchema = z.array(visibilityTrendPointSchema);
@@ -1189,68 +1070,60 @@ export const visibilityFanoutStateSchema = z.enum(['queries_available', 'count_o
 // One normalized stored search event (backend `VisibilityEvidenceSearchEvent`).
 // Empty query strings are preserved verbatim (a count-only event); query text
 // is never invented.
-export const visibilityEvidenceSearchEventSchema = z
-  .object({
-    sequence: z.number().int(),
-    query: z.string(),
-    call_id: z.string(),
-    call_sequence: z.number().int(),
-    query_sequence: z.number().int(),
-  })
-  .strict();
+export const visibilityEvidenceSearchEventSchema = z.strictObject({
+  sequence: z.number().int(),
+  query: z.string(),
+  call_id: z.string(),
+  call_sequence: z.number().int(),
+  query_sequence: z.number().int(),
+});
 
 // One persisted brand/competitor mention row (backend
 // `VisibilityMentionEvidence`). Projected directly from `BrandMention` /
 // `CompetitorMention`; never inferred from answer text at read time.
-export const visibilityMentionEvidenceSchema = z
-  .object({
-    kind: z.enum(['brand', 'competitor']),
-    name: z.string(),
-    first_offset: z.number().int().nullable(),
-    artifact_id: uuid().nullable(),
-    analyzer_version: z.string(),
-  })
-  .strict();
+export const visibilityMentionEvidenceSchema = z.strictObject({
+  kind: z.enum(['brand', 'competitor']),
+  name: z.string(),
+  first_offset: z.number().int().nullable(),
+  artifact_id: uuid().nullable(),
+  analyzer_version: z.string(),
+});
 
 // One execution's persisted mention/citation + query-fanout evidence (backend
 // `VisibilityExecutionEvidence`). `prompt_id` is nullable so a deleted source
 // prompt stays readable via its frozen `prompt_text`; `completed_at` is
 // nullable for an incomplete/legacy row.
-export const visibilityExecutionEvidenceSchema = z
-  .object({
-    audit_id: uuid(),
-    task_id: uuid(),
-    analysis_id: uuid(),
-    artifact_id: uuid().nullable(),
-    prompt_snapshot_id: uuid(),
-    prompt_id: uuid().nullable(),
-    prompt_index: z.number().int(),
-    prompt_text: z.string(),
-    repetition: z.number().int(),
-    completed_at: z.string().nullable(),
-    logical_engine: z.string(),
-    transport_provider: z.string(),
-    transport_model: z.string(),
-    search_used: z.boolean(),
-    search_query_count: z.number().int(),
-    query_text_available: z.boolean(),
-    state: visibilityFanoutStateSchema,
-    search_events: z.array(visibilityEvidenceSearchEventSchema),
-    event_source: z.enum(['raw_artifact', 'audit_task', 'none']),
-    mentions: z.array(visibilityMentionEvidenceSchema),
-    citations: z.array(citationSchema),
-  })
-  .strict();
+export const visibilityExecutionEvidenceSchema = z.strictObject({
+  audit_id: uuid(),
+  task_id: uuid(),
+  analysis_id: uuid(),
+  artifact_id: uuid().nullable(),
+  prompt_snapshot_id: uuid(),
+  prompt_id: uuid().nullable(),
+  prompt_index: z.number().int(),
+  prompt_text: z.string(),
+  repetition: z.number().int(),
+  completed_at: z.string().nullable(),
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+  search_used: z.boolean(),
+  search_query_count: z.number().int(),
+  query_text_available: z.boolean(),
+  state: visibilityFanoutStateSchema,
+  search_events: z.array(visibilityEvidenceSearchEventSchema),
+  event_source: z.enum(['raw_artifact', 'audit_task', 'none']),
+  mentions: z.array(visibilityMentionEvidenceSchema),
+  citations: z.array(citationSchema),
+});
 
 // The shared evidence dataset for the two evidence tabs (backend
 // `VisibilityEvidenceResponse`). `items` is newest-first; `truncated` is set
 // when more than `limit` matches exist (no offset/cursor/total).
-export const visibilityEvidenceResponseSchema = z
-  .object({
-    items: z.array(visibilityExecutionEvidenceSchema),
-    truncated: z.boolean(),
-  })
-  .strict();
+export const visibilityEvidenceResponseSchema = z.strictObject({
+  items: z.array(visibilityExecutionEvidenceSchema),
+  truncated: z.boolean(),
+});
 
 // ---------------------------------------------------------------------------
 // Content generation
@@ -1279,70 +1152,64 @@ export const contentOutputTypeSchema = z.enum(['website_page']);
 // Provenance for the frozen Website-context snapshot (backend
 // `WebsiteContextSummary`) — which crawl, how fresh, which sources. Never
 // page bodies, never the key.
-export const websiteContextSummarySchema = z
-  .object({
-    crawl_id: uuid(),
-    crawl_completed_at: z.string().nullable(),
-    extractor_version: z.string(),
-    analyzer_version: z.string(),
-    page_count: z.number().int(),
-    char_count: z.number().int(),
-    site_url_ids: z.array(uuid()),
-    artifact_ids: z.array(uuid()),
-    content_hashes: z.array(z.string()),
-  })
-  .strict();
+export const websiteContextSummarySchema = z.strictObject({
+  crawl_id: uuid(),
+  crawl_completed_at: z.string().nullable(),
+  extractor_version: z.string(),
+  analyzer_version: z.string(),
+  page_count: z.number().int(),
+  char_count: z.number().int(),
+  site_url_ids: z.array(uuid()),
+  artifact_ids: z.array(uuid()),
+  content_hashes: z.array(z.string()),
+});
 
 // Bounded history-list projection (backend `ContentGenerationListItem`) —
 // never `output_text`, never the full prompt. Model provenance is explicit
 // (`requested_model` vs `returned_model`); there is no generic `model` field.
-export const contentGenerationListItemSchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    status: contentGenerationStatusSchema,
-    output_type: contentOutputTypeSchema,
-    website_context_status: websiteContextStatusSchema,
-    requested_model: z.string(),
-    returned_model: z.string().nullable(),
-    provider: z.string().nullable(),
-    created_at: z.string(),
-    updated_at: z.string(),
-    completed_at: z.string().nullable(),
-    error_code: z.string(),
-    prompt_preview: z.string(),
-  })
-  .strict();
+export const contentGenerationListItemSchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  status: contentGenerationStatusSchema,
+  output_type: contentOutputTypeSchema,
+  website_context_status: websiteContextStatusSchema,
+  requested_model: z.string(),
+  returned_model: z.string().nullable(),
+  provider: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  completed_at: z.string().nullable(),
+  error_code: z.string(),
+  prompt_preview: z.string(),
+});
 
 // Full projection of one generation (backend `ContentGenerationDetail`).
 // Superset of the list item; never the provider API key (invariant 6).
-export const contentGenerationDetailSchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    status: contentGenerationStatusSchema,
-    output_type: contentOutputTypeSchema,
-    website_context_status: websiteContextStatusSchema,
-    requested_model: z.string(),
-    returned_model: z.string().nullable(),
-    provider: z.string().nullable(),
-    created_at: z.string(),
-    updated_at: z.string(),
-    completed_at: z.string().nullable(),
-    error_code: z.string(),
-    prompt_preview: z.string(),
-    prompt: z.string(),
-    website_context_enabled: z.boolean(),
-    website_context_summary: websiteContextSummarySchema.nullable(),
-    finish_reason: z.string().nullable(),
-    output_truncated: z.boolean(),
-    output_text: z.string().nullable(),
-    usage: z.record(z.string(), z.unknown()).nullable(),
-    latency_ms: z.number().int().nullable(),
-    error_detail: z.string(),
-    generator_version: z.string(),
-  })
-  .strict();
+export const contentGenerationDetailSchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  status: contentGenerationStatusSchema,
+  output_type: contentOutputTypeSchema,
+  website_context_status: websiteContextStatusSchema,
+  requested_model: z.string(),
+  returned_model: z.string().nullable(),
+  provider: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  completed_at: z.string().nullable(),
+  error_code: z.string(),
+  prompt_preview: z.string(),
+  prompt: z.string(),
+  website_context_enabled: z.boolean(),
+  website_context_summary: websiteContextSummarySchema.nullable(),
+  finish_reason: z.string().nullable(),
+  output_truncated: z.boolean(),
+  output_text: z.string().nullable(),
+  usage: z.record(z.string(), z.unknown()).nullable(),
+  latency_ms: z.number().int().nullable(),
+  error_detail: z.string(),
+  generator_version: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // Integrations (GSC / GA4 / Bing), Traffic, and LLM Analytics
@@ -1389,70 +1256,62 @@ export const integrationSyncRunStatusSchema = z.enum([
 // `GET /integrations` row: a connection joined to its grant's status +
 // granted scopes. Tokens live encrypted on the grant and are NEVER serialized
 // (invariant 6) — any `*_token` key on the wire fails strict validation.
-export const integrationConnectionSchema = z
-  .object({
-    id: uuid(),
-    workspace_id: uuid(),
-    grant_id: uuid(),
-    provider: integrationProviderSchema,
-    label: z.string(),
-    account_ref: z.string(),
-    grant_status: integrationGrantStatusSchema,
-    granted_scopes: z.array(z.string()),
-    last_synced_at: z.string().nullable(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const integrationConnectionSchema = z.strictObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  grant_id: uuid(),
+  provider: integrationProviderSchema,
+  label: z.string(),
+  account_ref: z.string(),
+  grant_status: integrationGrantStatusSchema,
+  granted_scopes: z.array(z.string()),
+  last_synced_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // The list endpoint returns a bare array of connections (never wrapped).
 export const integrationConnectionListSchema = z.array(integrationConnectionSchema);
 
 // `POST /integrations/{id}/test` — cheap authenticated probe result (status +
 // error_code, never the token). `error_code` is '' on success.
-export const integrationTestResultSchema = z
-  .object({
-    connection_id: uuid(),
-    status: z.string(),
-    error_code: z.string(),
-    detail: z.string(),
-    tested_at: z.string(),
-  })
-  .strict();
+export const integrationTestResultSchema = z.strictObject({
+  connection_id: uuid(),
+  status: z.string(),
+  error_code: z.string(),
+  detail: z.string(),
+  tested_at: z.string(),
+});
 
 // Sync-run history/detail projection (status, window, row counts — invariant
 // 7: a read-only projection of the queue row). `row_count` is the number of
 // imported rows; `error_code` / `error_detail` are '' when there is no error.
-export const integrationSyncRunSchema = z
-  .object({
-    id: uuid(),
-    connection_id: uuid(),
-    sync_kind: integrationSyncKindSchema,
-    status: integrationSyncRunStatusSchema,
-    window_start: z.string(),
-    window_end: z.string(),
-    row_count: z.number().int(),
-    resync_seq: z.number().int(),
-    error_code: z.string(),
-    error_detail: z.string(),
-    created_at: z.string(),
-    updated_at: z.string(),
-    completed_at: z.string().nullable(),
-  })
-  .strict();
+export const integrationSyncRunSchema = z.strictObject({
+  id: uuid(),
+  connection_id: uuid(),
+  sync_kind: integrationSyncKindSchema,
+  status: integrationSyncRunStatusSchema,
+  window_start: z.string(),
+  window_end: z.string(),
+  row_count: z.number().int(),
+  resync_seq: z.number().int(),
+  error_code: z.string(),
+  error_detail: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  completed_at: z.string().nullable(),
+});
 
 // `GET /integrations/{id}/syncs` — bare array of run projections.
 export const integrationSyncRunListSchema = z.array(integrationSyncRunSchema);
 
 // 202 enqueue identity (C3) — one per queued run. The frontend polls
 // `GET /integrations/{connection_id}/syncs/{sync_run_id}` until terminal.
-export const integrationSyncEnqueueSchema = z
-  .object({
-    sync_run_id: uuid(),
-    connection_id: uuid(),
-    status: integrationSyncRunStatusSchema,
-  })
-  .strict();
+export const integrationSyncEnqueueSchema = z.strictObject({
+  sync_run_id: uuid(),
+  connection_id: uuid(),
+  status: integrationSyncRunStatusSchema,
+});
 
 // `POST /projects/{id}/traffic/sync` fans out to every active mapped GSC/GA4
 // connection of the project, so the 202 carries one C3 enqueue object per
@@ -1470,81 +1329,69 @@ export const snapshotGranularitySchema = z.enum(['day', 'week', 'month']);
 
 // One dated point of a metric series. A `null` value is an UNAVAILABLE bucket
 // and renders as a chart gap — never coerced to a misleading zero.
-export const metricSeriesPointSchema = z
-  .object({
-    date: z.string(),
-    value: z.number().nullable(),
-  })
-  .strict();
+export const metricSeriesPointSchema = z.strictObject({
+  date: z.string(),
+  value: z.number().nullable(),
+});
 
 export const metricSeriesSchema = z.array(metricSeriesPointSchema);
 
 // Window totals. `ctr` / `position` are null when undefined (zero
 // impressions); `sessions` / `conversions` are null when no GA4 connection
 // feeds the window — the frontend never invents a number.
-export const trafficTotalsSchema = z
-  .object({
-    impressions: z.number().int(),
-    clicks: z.number().int(),
-    ctr: z.number().nullable(),
-    position: z.number().nullable(),
-    sessions: z.number().int().nullable(),
-    conversions: z.number().int().nullable(),
-  })
-  .strict();
+export const trafficTotalsSchema = z.strictObject({
+  impressions: z.number().int(),
+  clicks: z.number().int(),
+  ctr: z.number().nullable(),
+  position: z.number().nullable(),
+  sessions: z.number().int().nullable(),
+  conversions: z.number().int().nullable(),
+});
 
 // `GET /projects/{id}/traffic` — headline projection for the persisted
 // snapshot matching (window, granularity). An absent snapshot yields an empty
 // payload (empty series, zeroed/null totals), never a recomputation.
-export const trafficDashboardSchema = z
-  .object({
-    project_id: uuid(),
-    window_start: z.string(),
-    window_end: z.string(),
-    granularity: snapshotGranularitySchema,
-    totals: trafficTotalsSchema,
-    series: z
-      .object({
-        impressions: metricSeriesSchema,
-        clicks: metricSeriesSchema,
-        ctr: metricSeriesSchema,
-        position: metricSeriesSchema,
-        sessions: metricSeriesSchema,
-        conversions: metricSeriesSchema,
-      })
-      .strict(),
-    formula_version: z.string(),
-    normalization_version: z.string(),
-  })
-  .strict();
+export const trafficDashboardSchema = z.strictObject({
+  project_id: uuid(),
+  window_start: z.string(),
+  window_end: z.string(),
+  granularity: snapshotGranularitySchema,
+  totals: trafficTotalsSchema,
+  series: z.strictObject({
+    impressions: metricSeriesSchema,
+    clicks: metricSeriesSchema,
+    ctr: metricSeriesSchema,
+    position: metricSeriesSchema,
+    sessions: metricSeriesSchema,
+    conversions: metricSeriesSchema,
+  }),
+  formula_version: z.string(),
+  normalization_version: z.string(),
+});
 
 // One persisted per-page stat row (`TrafficPageStat`). `site_url_id` is the
 // optional join to the crawled SiteUrl (SET NULL — unmatched pages are still
 // valid measured pages). Metrics carry the same nullability as the totals.
-export const trafficPageRowSchema = z
-  .object({
-    canonical_url: z.string(),
-    site_url_id: uuid().nullable(),
-    impressions: z.number().int(),
-    clicks: z.number().int(),
-    ctr: z.number().nullable(),
-    position: z.number().nullable(),
-    sessions: z.number().int().nullable(),
-    conversions: z.number().int().nullable(),
-  })
-  .strict();
+export const trafficPageRowSchema = z.strictObject({
+  canonical_url: z.string(),
+  site_url_id: uuid().nullable(),
+  impressions: z.number().int(),
+  clicks: z.number().int(),
+  ctr: z.number().nullable(),
+  position: z.number().nullable(),
+  sessions: z.number().int().nullable(),
+  conversions: z.number().int().nullable(),
+});
 
 // One persisted per-query stat row (`TrafficQueryStat`; the key is the
 // normalized query string — NFKC/casefold/whitespace at projection time).
-export const trafficQueryRowSchema = z
-  .object({
-    normalized_query: z.string(),
-    impressions: z.number().int(),
-    clicks: z.number().int(),
-    ctr: z.number().nullable(),
-    position: z.number().nullable(),
-  })
-  .strict();
+export const trafficQueryRowSchema = z.strictObject({
+  normalized_query: z.string(),
+  impressions: z.number().int(),
+  clicks: z.number().int(),
+  ctr: z.number().nullable(),
+  position: z.number().nullable(),
+});
 
 // Keyset envelopes (C4) — the site-health cursor-page convention.
 export const trafficPagesPageSchema = cursorPageSchema(trafficPageRowSchema);
@@ -1574,68 +1421,58 @@ export const referralMatchSignalSchema = z.enum(['referrer', 'utm', 'user_agent'
 // Visibility ↔ referral correlation summary. Below the minimum aligned-sample
 // size the backend reports `insufficient_data` with a NULL coefficient —
 // never a fabricated number (invariant 9). The UI renders `—` for that state.
-export const analyticsCorrelationSchema = z
-  .object({
-    state: z.enum(['ok', 'insufficient_data']),
-    coefficient: z.number().nullable(),
-    sample_size: z.number().int(),
-  })
-  .strict();
+export const analyticsCorrelationSchema = z.strictObject({
+  state: z.enum(['ok', 'insufficient_data']),
+  coefficient: z.number().nullable(),
+  sample_size: z.number().int(),
+});
 
 // Per-`ai_source` referral breakdown row.
-export const analyticsSourceBreakdownRowSchema = z
-  .object({
-    ai_source: aiSourceSchema,
-    sessions: z.number().int(),
-    share: z.number().nullable(),
-  })
-  .strict();
+export const analyticsSourceBreakdownRowSchema = z.strictObject({
+  ai_source: aiSourceSchema,
+  sessions: z.number().int(),
+  share: z.number().nullable(),
+});
 
 // Per-engine visibility series (folded from persisted MetricSnapshot rows;
 // `logical_engine` is the audited engine vocabulary, invariant 10).
-export const analyticsEngineVisibilitySchema = z
-  .object({
-    logical_engine: z.string(),
-    series: metricSeriesSchema,
-  })
-  .strict();
+export const analyticsEngineVisibilitySchema = z.strictObject({
+  logical_engine: z.string(),
+  series: metricSeriesSchema,
+});
 
 // `GET /projects/{id}/llm-analytics` — headline AEO Insights projection:
 // referral volume/share series, per-source breakdown, per-engine visibility
 // series, and the correlation summary. Empty history → empty payload.
-export const llmAnalyticsSchema = z
-  .object({
-    project_id: uuid(),
-    window_start: z.string(),
-    window_end: z.string(),
-    granularity: snapshotGranularitySchema,
-    referral_volume: metricSeriesSchema,
-    referral_share: metricSeriesSchema,
-    sources: z.array(analyticsSourceBreakdownRowSchema),
-    engine_visibility: z.array(analyticsEngineVisibilitySchema),
-    correlation: analyticsCorrelationSchema,
-    analyzer_version: z.string(),
-    formula_version: z.string(),
-  })
-  .strict();
+export const llmAnalyticsSchema = z.strictObject({
+  project_id: uuid(),
+  window_start: z.string(),
+  window_end: z.string(),
+  granularity: snapshotGranularitySchema,
+  referral_volume: metricSeriesSchema,
+  referral_share: metricSeriesSchema,
+  sources: z.array(analyticsSourceBreakdownRowSchema),
+  engine_visibility: z.array(analyticsEngineVisibilitySchema),
+  correlation: analyticsCorrelationSchema,
+  analyzer_version: z.string(),
+  formula_version: z.string(),
+});
 
 // One classified referral drill-down row (ReferralClassification joined to
 // its ReferralEvent). URLs/UA are sanitized before persistence on the
 // backend; `logical_engine` is null when the source has no audited-engine
 // mapping, and `match_signal` is null when no rule fired (non-AI referral).
-export const analyticsReferralRowSchema = z
-  .object({
-    id: uuid(),
-    occurred_at: z.string(),
-    landing_url: z.string(),
-    referrer_host: z.string().nullable(),
-    is_ai_referral: z.boolean(),
-    ai_source: aiSourceSchema,
-    logical_engine: z.string().nullable(),
-    confidence: referralConfidenceSchema,
-    match_signal: referralMatchSignalSchema.nullable(),
-  })
-  .strict();
+export const analyticsReferralRowSchema = z.strictObject({
+  id: uuid(),
+  occurred_at: z.string(),
+  landing_url: z.string(),
+  referrer_host: z.string().nullable(),
+  is_ai_referral: z.boolean(),
+  ai_source: aiSourceSchema,
+  logical_engine: z.string().nullable(),
+  confidence: referralConfidenceSchema,
+  match_signal: referralMatchSignalSchema.nullable(),
+});
 
 // Keyset envelope (C4) for the referrals drill-down.
 export const analyticsReferralsPageSchema = cursorPageSchema(analyticsReferralRowSchema);
@@ -1643,16 +1480,14 @@ export const analyticsReferralsPageSchema = cursorPageSchema(analyticsReferralRo
 // One theme-level visibility rollup row (grouped by the frozen
 // theme/intent of the audited prompts). Rates/score are null when the
 // underlying metric is absent (no fabricated numbers).
-export const llmAnalyticsThemeRowSchema = z
-  .object({
-    theme: z.string(),
-    intent: promptIntentSchema,
-    total_completed: z.number().int(),
-    brand_mention_rate: z.number().nullable(),
-    visibility_score: z.number().nullable(),
-    share_of_voice: z.number().nullable(),
-  })
-  .strict();
+export const llmAnalyticsThemeRowSchema = z.strictObject({
+  theme: z.string(),
+  intent: promptIntentSchema,
+  total_completed: z.number().int(),
+  brand_mention_rate: z.number().nullable(),
+  visibility_score: z.number().nullable(),
+  share_of_voice: z.number().nullable(),
+});
 
 // `GET /projects/{id}/llm-analytics/themes` — bare array of rollup rows.
 export const llmAnalyticsThemeListSchema = z.array(llmAnalyticsThemeRowSchema);
@@ -1661,138 +1496,120 @@ export const llmAnalyticsThemeListSchema = z.array(llmAnalyticsThemeRowSchema);
 // Products (agentic commerce) — catalog + visibility projections
 // ---------------------------------------------------------------------------
 
-export const productVariantSchema = z
-  .object({
-    name: z.string(),
-    sku: z.string(),
-    price: z.number().nullable(),
-  })
-  .strict();
+export const productVariantSchema = z.strictObject({
+  name: z.string(),
+  sku: z.string(),
+  price: z.number().nullable(),
+});
 
 // Computed data-quality badge: present/total against the backend config
 // matrix (never persisted — computed on read).
-export const productCompletenessSchema = z
-  .object({
-    score: z.number(),
-    present: z.number().int(),
-    total: z.number().int(),
-    missing: z.array(z.string()),
-  })
-  .strict();
+export const productCompletenessSchema = z.strictObject({
+  score: z.number(),
+  present: z.number().int(),
+  total: z.number().int(),
+  missing: z.array(z.string()),
+});
 
-export const productSchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    sku: z.string(),
-    name: z.string(),
-    aliases: z.array(z.string()),
-    variants: z.array(productVariantSchema),
-    price: z.number().nullable(),
-    currency: z.string(),
-    url: z.string(),
-    attributes: z.record(z.string(), z.unknown()),
-    origin: z.string(),
-    completeness: productCompletenessSchema,
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const productSchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  sku: z.string(),
+  name: z.string(),
+  aliases: z.array(z.string()),
+  variants: z.array(productVariantSchema),
+  price: z.number().nullable(),
+  currency: z.string(),
+  url: z.string(),
+  attributes: z.record(z.string(), z.unknown()),
+  origin: z.string(),
+  completeness: productCompletenessSchema,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
-export const competitorProductSchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    competitor_id: uuid(),
-    name: z.string(),
-    aliases: z.array(z.string()),
-    price: z.number().nullable(),
-    currency: z.string(),
-    url: z.string(),
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const competitorProductSchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  competitor_id: uuid(),
+  name: z.string(),
+  aliases: z.array(z.string()),
+  price: z.number().nullable(),
+  currency: z.string(),
+  url: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
-export const productVisibilityEntrySchema = z
-  .object({
-    // Nullable: the aggregate survives the catalog row's delete (SET NULL).
-    product_id: uuid().nullable(),
-    sku: z.string(),
-    name: z.string(),
-    mention_count: z.number().int(),
-    sov_share: z.number(),
-    avg_rank: z.number().nullable(),
-    rank_distribution: z.record(z.string(), z.number().int()),
-    price_mention_count: z.number().int(),
-    // null = no verifiable price mentions (never a fabricated 0).
-    price_accuracy_rate: z.number().nullable(),
-  })
-  .strict();
+export const productVisibilityEntrySchema = z.strictObject({
+  // Nullable: the aggregate survives the catalog row's delete (SET NULL).
+  product_id: uuid().nullable(),
+  sku: z.string(),
+  name: z.string(),
+  mention_count: z.number().int(),
+  sov_share: z.number(),
+  avg_rank: z.number().nullable(),
+  rank_distribution: z.record(z.string(), z.number().int()),
+  price_mention_count: z.number().int(),
+  // null = no verifiable price mentions (never a fabricated 0).
+  price_accuracy_rate: z.number().nullable(),
+});
 
-export const competitorProductVisibilityEntrySchema = z
-  .object({
-    competitor_product_id: uuid().nullable(),
-    competitor_name: z.string(),
-    name: z.string(),
-    mention_count: z.number().int(),
-    sov_share: z.number(),
-    avg_rank: z.number().nullable(),
-    rank_distribution: z.record(z.string(), z.number().int()),
-    price_mention_count: z.number().int(),
-    price_accuracy_rate: z.number().nullable(),
-  })
-  .strict();
+export const competitorProductVisibilityEntrySchema = z.strictObject({
+  competitor_product_id: uuid().nullable(),
+  competitor_name: z.string(),
+  name: z.string(),
+  mention_count: z.number().int(),
+  sov_share: z.number(),
+  avg_rank: z.number().nullable(),
+  rank_distribution: z.record(z.string(), z.number().int()),
+  price_mention_count: z.number().int(),
+  price_accuracy_rate: z.number().nullable(),
+});
 
 // Selected-audit product dashboard projection (persisted rows only). Identity
 // (sku/name/competitor_name) comes from the audit's frozen configuration.
-export const productVisibilitySchema = z
-  .object({
-    project_id: uuid(),
-    audit_id: uuid(),
-    audit_status: auditStatusSchema,
-    product_analyzer_version: z.string(),
-    product_scoring_rule_version: z.string(),
-    total_mentions: z.number().int(),
-    total_analyses: z.number().int(),
-    products: z.array(productVisibilityEntrySchema),
-    competitor_products: z.array(competitorProductVisibilityEntrySchema),
-    created_at: z.string(),
-  })
-  .strict();
+export const productVisibilitySchema = z.strictObject({
+  project_id: uuid(),
+  audit_id: uuid(),
+  audit_status: auditStatusSchema,
+  product_analyzer_version: z.string(),
+  product_scoring_rule_version: z.string(),
+  total_mentions: z.number().int(),
+  total_analyses: z.number().int(),
+  products: z.array(productVisibilityEntrySchema),
+  competitor_products: z.array(competitorProductVisibilityEntrySchema),
+  created_at: z.string(),
+});
 
-export const productEvidenceItemSchema = z
-  .object({
-    mention_id: uuid(),
-    audit_id: uuid(),
-    // Execution id — links to `/runs/[runId]/executions/[executionId]`.
-    task_id: uuid(),
-    artifact_id: uuid().nullable(),
-    logical_engine: z.string(),
-    transport_model: z.string(),
-    // Frozen prompt text (AuditPromptSnapshot) — survives prompt edits.
-    prompt_text: z.string(),
-    prompt_index: z.number().int(),
-    repetition: z.number().int(),
-    matched_name: z.string(),
-    matched_sku: z.string(),
-    first_offset: z.number().int().nullable(),
-    rank_position: z.number().int().nullable(),
-    price_text: z.string(),
-    price_value: z.number().nullable(),
-    price_currency: z.string(),
-    // null = not verifiable (no catalog price / currency mismatch).
-    price_matches_catalog: z.boolean().nullable(),
-    created_at: z.string(),
-  })
-  .strict();
+export const productEvidenceItemSchema = z.strictObject({
+  mention_id: uuid(),
+  audit_id: uuid(),
+  // Execution id — links to `/runs/[runId]/executions/[executionId]`.
+  task_id: uuid(),
+  artifact_id: uuid().nullable(),
+  logical_engine: z.string(),
+  transport_model: z.string(),
+  // Frozen prompt text (AuditPromptSnapshot) — survives prompt edits.
+  prompt_text: z.string(),
+  prompt_index: z.number().int(),
+  repetition: z.number().int(),
+  matched_name: z.string(),
+  matched_sku: z.string(),
+  first_offset: z.number().int().nullable(),
+  rank_position: z.number().int().nullable(),
+  price_text: z.string(),
+  price_value: z.number().nullable(),
+  price_currency: z.string(),
+  // null = not verifiable (no catalog price / currency mismatch).
+  price_matches_catalog: z.boolean().nullable(),
+  created_at: z.string(),
+});
 
-export const productEvidenceResponseSchema = z
-  .object({
-    items: z.array(productEvidenceItemSchema),
-    truncated: z.boolean(),
-  })
-  .strict();
+export const productEvidenceResponseSchema = z.strictObject({
+  items: z.array(productEvidenceItemSchema),
+  truncated: z.boolean(),
+});
 
 // ---------------------------------------------------------------------------
 // Opportunities (deterministic priority catalog — backend owns the contract)
@@ -1805,24 +1622,22 @@ export const opportunitySeveritySchema = z.enum(['critical', 'high', 'medium', '
 export const opportunityStatusSchema = z.enum(['open', 'in_progress', 'dismissed', 'resolved']);
 
 // One live opportunity row in the priority-sorted catalog.
-export const opportunitySchema = z
-  .object({
-    id: uuid(),
-    project_id: uuid(),
-    rule_id: z.string(),
-    opportunity_type: opportunityTypeSchema,
-    severity: opportunitySeveritySchema,
-    priority_score: z.number(),
-    title: z.string(),
-    target_key: z.string(),
-    target_prompt_id: uuid().nullable(),
-    target_url: z.string().nullable(),
-    target_theme: z.string().nullable(),
-    status: opportunityStatusSchema,
-    created_at: z.string(),
-    updated_at: z.string(),
-  })
-  .strict();
+export const opportunitySchema = z.strictObject({
+  id: uuid(),
+  project_id: uuid(),
+  rule_id: z.string(),
+  opportunity_type: opportunityTypeSchema,
+  severity: opportunitySeveritySchema,
+  priority_score: z.number(),
+  title: z.string(),
+  target_key: z.string(),
+  target_prompt_id: uuid().nullable(),
+  target_url: z.string().nullable(),
+  target_theme: z.string().nullable(),
+  status: opportunityStatusSchema,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // Full evidence bundle + provenance for one opportunity. Superseded rows stay
 // readable (only the status PATCH is live-only, coded 409).
@@ -1844,42 +1659,38 @@ export const opportunitiesPageSchema = cursorPageSchema(opportunitySchema);
 
 // Latest recompute snapshot projection. `computed=false` (with empty counts +
 // null ids) before the first recompute — a 200, never a 404.
-export const opportunitySummarySchema = z
-  .object({
-    computed: z.boolean(),
-    run_id: uuid().nullable(),
-    audit_id: uuid().nullable(),
-    site_crawl_id: uuid().nullable(),
-    counts_by_type: z.record(z.string(), z.number().int()),
-    counts_by_severity: z.record(z.string(), z.number().int()),
-    counts_by_status: z.record(z.string(), z.number().int()),
-    total_count: z.number().int(),
-    median_priority: z.number().nullable(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    formula_version: z.string(),
-    computed_at: z.string().nullable(),
-  })
-  .strict();
+export const opportunitySummarySchema = z.strictObject({
+  computed: z.boolean(),
+  run_id: uuid().nullable(),
+  audit_id: uuid().nullable(),
+  site_crawl_id: uuid().nullable(),
+  counts_by_type: z.record(z.string(), z.number().int()),
+  counts_by_severity: z.record(z.string(), z.number().int()),
+  counts_by_status: z.record(z.string(), z.number().int()),
+  total_count: z.number().int(),
+  median_priority: z.number().nullable(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  formula_version: z.string(),
+  computed_at: z.string().nullable(),
+});
 
 // The immutable snapshot written by one recompute run (POST response).
-export const recomputeResponseSchema = z
-  .object({
-    id: uuid(),
-    run_id: uuid(),
-    audit_id: uuid().nullable(),
-    site_crawl_id: uuid().nullable(),
-    counts_by_type: z.record(z.string(), z.number().int()),
-    counts_by_severity: z.record(z.string(), z.number().int()),
-    counts_by_status: z.record(z.string(), z.number().int()),
-    total_count: z.number().int(),
-    median_priority: z.number().nullable(),
-    analyzer_version: z.string(),
-    rule_version: z.string(),
-    formula_version: z.string(),
-    created_at: z.string(),
-  })
-  .strict();
+export const recomputeResponseSchema = z.strictObject({
+  id: uuid(),
+  run_id: uuid(),
+  audit_id: uuid().nullable(),
+  site_crawl_id: uuid().nullable(),
+  counts_by_type: z.record(z.string(), z.number().int()),
+  counts_by_severity: z.record(z.string(), z.number().int()),
+  counts_by_status: z.record(z.string(), z.number().int()),
+  total_count: z.number().int(),
+  median_priority: z.number().nullable(),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  formula_version: z.string(),
+  created_at: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // strictValidate — fail loud on any schema drift (drift policy §6)
