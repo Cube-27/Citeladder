@@ -8,12 +8,18 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.products.completeness import product_completeness
 from app.models.product import CompetitorProduct, Product
+
+
+def _empty_str_to_none(value: Any) -> Any:
+    # The model stores "" for an unbound external_item_ref; the DTO
+    # contract is null (the frontend schema is strict-nullable).
+    return None if value == "" else value
 
 
 def _clean_str_list(values: Any) -> list[str]:
@@ -107,7 +113,13 @@ class ProductResponse(BaseModel):
     currency: str
     url: str
     attributes: dict[str, Any]
-    origin: str
+    # manual | imported | synced (config/products.py PRODUCT_ORIGINS).
+    origin: Literal["manual", "imported", "synced"]
+    # Feed provenance (commerce suite): required-nullable — null for
+    # unbound manual/imported products. Never a token or PII field.
+    connection_id: uuid.UUID | None
+    external_item_ref: str | None
+    last_seen_sync_run_id: uuid.UUID | None
     # Computed on read (never persisted): ``product_to_response`` overwrites
     # this placeholder via ``model_copy``.
     completeness: ProductCompleteness = Field(
@@ -117,6 +129,10 @@ class ProductResponse(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
+
+    _external_item_ref_none = field_validator("external_item_ref", mode="before")(
+        _empty_str_to_none
+    )
 
 
 class CompetitorProductInput(BaseModel):
@@ -173,18 +189,67 @@ def competitor_product_to_response(
 # --------------------------------------------------------------------------
 # Visibility projections (persisted rows only, invariant 7)
 # --------------------------------------------------------------------------
+class BuyerDestinationKindCount(BaseModel):
+    """One merchant-kind bucket of the persisted buyer-destination mix."""
+
+    merchant_kind: str
+    count: int = Field(ge=0)
+
+
+class BuyerDestinationDomainCount(BaseModel):
+    """One merchant-domain bucket of the persisted buyer-destination mix."""
+
+    merchant_domain: str
+    merchant_name: str
+    merchant_kind: str
+    count: int = Field(ge=0)
+
+
+class BuyerDestinationMix(BaseModel):
+    """Persisted buyer-destination mix (exact JSONB shape + ordering)."""
+
+    total: int = Field(ge=0)
+    by_kind: list[BuyerDestinationKindCount] = Field(default_factory=list)
+    by_domain: list[BuyerDestinationDomainCount] = Field(default_factory=list)
+
+
+class CompetitorCoPlacementItem(BaseModel):
+    """One competitor product co-mentioned with the entry (persisted shape)."""
+
+    competitor_product_id: uuid.UUID | None
+    competitor_name: str
+    product_name: str
+    count: int = Field(ge=0)
+
+
+class CompetitorCoPlacement(BaseModel):
+    """Persisted competitor co-placement (``truncated`` always present)."""
+
+    items: list[CompetitorCoPlacementItem] = Field(default_factory=list)
+    truncated: bool = False
+
+
 class ProductVisibilityEntry(BaseModel):
     """One own product's persisted aggregate for the selected audit."""
 
     product_id: uuid.UUID | None
     sku: str
     name: str
+    # Row-level analyzer version (mixed-version audits label each row with
+    # its ACTUAL persisted version, not snapshots[0]).
+    product_analyzer_version: str
     mention_count: int
     sov_share: float
     avg_rank: float | None
     rank_distribution: dict[str, int]
     price_mention_count: int
     price_accuracy_rate: float | None
+    win_rate: float | None
+    price_mismatch_rate: float | None
+    price_relation_counts: dict[str, int]
+    attribute_dimension_frequency: dict[str, dict[str, int]]
+    buyer_destination_mix: BuyerDestinationMix
+    competitor_co_placement: CompetitorCoPlacement
 
 
 class CompetitorProductVisibilityEntry(BaseModel):
@@ -193,12 +258,19 @@ class CompetitorProductVisibilityEntry(BaseModel):
     competitor_product_id: uuid.UUID | None
     competitor_name: str
     name: str
+    product_analyzer_version: str
     mention_count: int
     sov_share: float
     avg_rank: float | None
     rank_distribution: dict[str, int]
     price_mention_count: int
     price_accuracy_rate: float | None
+    win_rate: float | None
+    price_mismatch_rate: float | None
+    price_relation_counts: dict[str, int]
+    attribute_dimension_frequency: dict[str, dict[str, int]]
+    buyer_destination_mix: BuyerDestinationMix
+    competitor_co_placement: CompetitorCoPlacement
 
 
 class ProductVisibilityResponse(BaseModel):
@@ -217,13 +289,26 @@ class ProductVisibilityResponse(BaseModel):
     total_analyses: int
     products: list[ProductVisibilityEntry]
     competitor_products: list[CompetitorProductVisibilityEntry]
+    # Distinct persisted analysis surfaces for the audit ∪ {""}: measurement
+    # ("" = "Answer-engine APIs") first, then non-empty values ascending.
+    # Exactly [""] while the shopping-surface gate is disabled.
+    available_surfaces: list[str] = Field(default_factory=list)
     created_at: datetime
 
 
 class ProductEvidenceItem(BaseModel):
-    """One persisted product mention with its frozen prompt + run linkage."""
+    """One projected evidence row (mention / attribute / destination).
 
-    mention_id: uuid.UUID
+    Strict frontend contract: exactly this pinned key set is emitted (no
+    top-level ``mention_id`` — ``ProductMention.id`` surfaces as
+    ``evidence_id`` on ``product_mention`` rows). Kind-specific fields are
+    present on every row and null for the other kinds.
+    """
+
+    # Common identity + provenance (every kind).
+    evidence_id: uuid.UUID
+    analysis_id: uuid.UUID
+    evidence_kind: str
     audit_id: uuid.UUID
     task_id: uuid.UUID
     artifact_id: uuid.UUID | None
@@ -232,15 +317,29 @@ class ProductEvidenceItem(BaseModel):
     prompt_text: str
     prompt_index: int
     repetition: int
+    product_analyzer_version: str
+    shopping_surface: str
     matched_name: str
     matched_sku: str
-    first_offset: int | None
-    rank_position: int | None
-    price_text: str
-    price_value: float | None
-    price_currency: str
-    price_matches_catalog: bool | None
     created_at: datetime
+    # Product-mention fields (null for non-product_mention kinds).
+    first_offset: int | None = None
+    rank_position: int | None = None
+    price_value: float | None = None
+    price_matches_catalog: bool | None = None
+    price_relation: str | None = None
+    price_text: str = ""
+    price_currency: str = ""
+    # Attribute-mention fields (null for non-attribute_mention kinds).
+    attribute_dimension: str | None = None
+    attribute_group: str | None = None
+    attribute_text: str | None = None
+    attribute_offset: int | None = None
+    # Buyer-destination fields (null for non-buyer_destination kinds).
+    merchant_name: str | None = None
+    merchant_domain: str | None = None
+    merchant_kind: str | None = None
+    destination_url: str | None = None
 
 
 class ProductEvidenceResponse(BaseModel):

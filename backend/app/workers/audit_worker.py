@@ -67,6 +67,7 @@ from app.core.config.audits import (
     TASK_TERMINAL_STATUSES,
     audit_settings,
 )
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.provider_catalog import (
     ERROR_INVALID_SURFACE,
     ERROR_PARSE,
@@ -864,15 +865,20 @@ class AuditWorker:
             # against the just-persisted answer + citations (no provider call)
             # and writes the derived ResponseAnalysis + mention/citation rows,
             # each stamped with the raw-artifact provenance + analyzer_version.
-            config = build_scoring_config(audit.configuration)
-            analysis = await analyze_task(session, task=task, config=config)
-            if analysis is not None:
-                task.score = analysis.score
+            # Brand analysis is MEASUREMENT-ONLY (§7.1): a shopping-surface
+            # probe task skips it entirely so brand metrics stay isolated.
+            if task.shopping_surface == SHOPPING_SURFACE_MEASUREMENT:
+                config = build_scoring_config(audit.configuration)
+                analysis = await analyze_task(session, task=task, config=config)
+                if analysis is not None:
+                    task.score = analysis.score
 
             # Sibling deterministic PRODUCT pass (Agentic Commerce): scores
             # the frozen catalog against the same persisted answer and writes
-            # ProductResponseAnalysis/ProductMention rows (no-op on an empty
-            # frozen catalog). Never touches the brand-level rows above.
+            # ProductResponseAnalysis/ProductMention/MerchantMention rows
+            # (no-op on an empty frozen catalog). Runs for EVERY surface so
+            # product probe evidence remains eligible. Never touches the
+            # brand-level rows above.
             product_config = build_product_scoring_config(audit.configuration)
             await analyze_task_products(session, task=task, config=product_config)
 
@@ -1050,10 +1056,13 @@ class AuditWorker:
                 if audit is not None:
                     await session.rollback()
                 return
+            # Progress/completion denominators are MEASUREMENT-ONLY (§7.1):
+            # shopping-surface probe rows never move audit counts.
             remaining = await session.scalar(
                 select(func.count())
                 .select_from(AuditTask)
                 .where(AuditTask.audit_id == audit_id)
+                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
                 .where(AuditTask.status.not_in(list(TASK_TERMINAL_STATUSES)))
             )
             if remaining and remaining > 0:
@@ -1063,12 +1072,14 @@ class AuditWorker:
                 select(func.count())
                 .select_from(AuditTask)
                 .where(AuditTask.audit_id == audit_id)
+                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
                 .where(AuditTask.status == TASK_STATUS_SUCCEEDED)
             )
             total = await session.scalar(
                 select(func.count())
                 .select_from(AuditTask)
                 .where(AuditTask.audit_id == audit_id)
+                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
             )
             succeeded = int(succeeded or 0)
             total = int(total or 0)

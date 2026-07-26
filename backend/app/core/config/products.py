@@ -17,14 +17,18 @@ from typing import Final
 # Stamped onto ``ProductResponseAnalysis`` / ``ProductMention`` /
 # ``ProductMetricSnapshot``. Separate from the brand-level
 # ``config/analysis.py`` versions — the product pass is a sibling analyzer.
-PRODUCT_ANALYZER_VERSION: Final = "product-analysis-1"
-PRODUCT_SCORING_RULE_VERSION: Final = "product-scoring-v1"
+PRODUCT_ANALYZER_VERSION: Final = "product-analysis-2"
+PRODUCT_SCORING_RULE_VERSION: Final = "product-scoring-v2"
 
 # --- Catalog origin vocabulary --------------------------------------------
 PRODUCT_ORIGIN_MANUAL: Final = "manual"
 PRODUCT_ORIGIN_IMPORTED: Final = "imported"
+# Bound to an integration feed (Shopify catalog sync): provenance columns
+# (``connection_id``/``external_item_ref``/``last_seen_sync_run_id``) carry
+# the feed identity.
+PRODUCT_ORIGIN_SYNCED: Final = "synced"
 PRODUCT_ORIGINS: Final[frozenset[str]] = frozenset(
-    {PRODUCT_ORIGIN_MANUAL, PRODUCT_ORIGIN_IMPORTED}
+    {PRODUCT_ORIGIN_MANUAL, PRODUCT_ORIGIN_IMPORTED, PRODUCT_ORIGIN_SYNCED}
 )
 DEFAULT_PRODUCT_ORIGIN: Final = PRODUCT_ORIGIN_MANUAL
 

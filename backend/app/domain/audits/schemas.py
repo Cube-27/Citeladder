@@ -12,6 +12,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.projects import MAX_REPETITIONS, MIN_REPETITIONS
 
 BenchmarkModeStr = str
@@ -49,6 +50,7 @@ class AuditTaskResponse(BaseModel):
     logical_engine: str
     transport_provider: str
     transport_model: str
+    shopping_surface: str = SHOPPING_SURFACE_MEASUREMENT
     status: str
     attempt_count: int
     max_attempts: int
@@ -64,6 +66,17 @@ class AuditTaskResponse(BaseModel):
 class AuditEngineSnapshotResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    logical_engine: str
+    transport_provider: str
+    transport_model: str
+
+
+class AuditShoppingSurfaceSnapshotResponse(BaseModel):
+    """Frozen shopping-surface identity (empty list while the gate is off)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    shopping_surface: str
     logical_engine: str
     transport_provider: str
     transport_model: str
@@ -86,6 +99,9 @@ class AuditResponse(BaseModel):
     failed_count: int
     error_message: str = ""
     engine_snapshots: list[AuditEngineSnapshotResponse] = Field(default_factory=list)
+    shopping_surface_snapshots: list[AuditShoppingSurfaceSnapshotResponse] = Field(
+        default_factory=list
+    )
     created_at: datetime
     updated_at: datetime
     started_at: datetime | None = None

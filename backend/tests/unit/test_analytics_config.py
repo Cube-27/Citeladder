@@ -20,6 +20,10 @@ from app.core.config.analytics import (
     ANALYTICS_MAX_WINDOW_DAYS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_TTL_S,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+    ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
+    ANALYTICS_TASK_KINDS,
     CONFIDENCE_BUCKETS,
     CORRELATION_MIN_SAMPLE,
     MATCH_SIGNALS,
@@ -34,6 +38,7 @@ from app.core.config.analytics import (
 from app.core.config.integrations import INTEGRATION_DATASET_TEMPLATES
 from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.core.config.traffic import (
+    TRAFFIC_CONSUMED_DATASETS,
     TRAFFIC_DEFAULT_WINDOW_DAYS,
     TRAFFIC_FORMULA_VERSION,
     TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS,
@@ -42,6 +47,7 @@ from app.core.config.traffic import (
     TRAFFIC_NORMALIZATION_VERSION,
     TRAFFIC_PAGE_SORT_WHITELIST,
     TRAFFIC_QUERY_SORT_WHITELIST,
+    TRAFFIC_REFRESH_TRIGGER_DATASETS,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
 
@@ -67,6 +73,36 @@ def test_traffic_ga4_inclusion_vocabularies() -> None:
         {"ga4_referrer_daily", "ga4_source_medium_daily"}
     )
     assert TRAFFIC_GA4_REFERRAL_DATASETS <= set(INTEGRATION_DATASET_TEMPLATES)
+
+
+def test_traffic_refresh_trigger_datasets() -> None:
+    # The C5 hook's traffic routing: the consumed read set PLUS the Bing
+    # dailies (Bing keeps the refresh trigger it had pre-WS-B); the
+    # referrer dataset stays OUT (its chain is the referral ingest).
+    assert TRAFFIC_REFRESH_TRIGGER_DATASETS == TRAFFIC_CONSUMED_DATASETS | {
+        "bing_page_daily",
+        "bing_query_daily",
+    }
+    assert "ga4_referrer_daily" not in TRAFFIC_REFRESH_TRIGGER_DATASETS
+    assert TRAFFIC_REFRESH_TRIGGER_DATASETS <= set(INTEGRATION_DATASET_TEMPLATES)
+
+
+def test_analytics_task_kinds_include_attribution_snapshot() -> None:
+    assert ANALYTICS_TASK_KIND_ATTRIBUTION_LINK == "attribution_link"
+    assert ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT == "attribution_snapshot"
+    assert ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP == "order_retention_sweep"
+    assert ANALYTICS_TASK_KINDS == frozenset(
+        {
+            "ingest_referrals",
+            "classify_referrals",
+            "traffic_snapshot_refresh",
+            "analytics_snapshot_refresh",
+            "referral_retention_sweep",
+                "attribution_snapshot",
+                "attribution_link",
+            "order_retention_sweep",
+        }
+    )
 
 
 def test_traffic_sort_whitelists() -> None:

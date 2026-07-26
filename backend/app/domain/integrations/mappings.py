@@ -43,10 +43,12 @@ from app.analysis.normalization import normalize_domain
 from app.core.config.integrations import (
     GSC_DOMAIN_PROPERTY_PREFIX,
     INTEGRATION_PROVIDER_GA4,
+    INTEGRATION_PROVIDER_SHOPIFY,
     MAPPING_STATUS_ACTIVE,
     MAPPING_STATUS_DISABLED,
     is_ga4_property_ref,
     normalize_ga4_property_ref,
+    normalize_shopify_shop_domain,
 )
 from app.domain.integrations.schemas import IntegrationPropertyMappingResponse
 from app.domain.integrations.service import get_connection
@@ -168,6 +170,22 @@ async def create_mapping(
                 f"GA4 property {property_ref!r} is not a numeric property id"
             )
         canonical_ref = normalize_ga4_property_ref(property_ref)
+    elif provider == INTEGRATION_PROVIDER_SHOPIFY:
+        # A Shopify "property" is the connection's shop itself: the
+        # canonicalized property_ref must EQUAL the connection's
+        # account_ref exactly. The ``myshopify.com`` host is deliberately
+        # NOT compared against the project's custom OwnedDomain rows.
+        try:
+            canonical_ref = normalize_shopify_shop_domain(property_ref)
+        except ValueError as exc:
+            raise MappingPropertyNotOwnedError(
+                f"Shopify property {property_ref!r} is not a canonical shop host"
+            ) from exc
+        if canonical_ref != connection.account_ref:
+            raise MappingPropertyNotOwnedError(
+                f"Shopify property {property_ref!r} does not match the "
+                f"connection's shop {connection.account_ref!r}"
+            )
     else:
         host = property_ref_host(property_ref)
         owned_hosts = {

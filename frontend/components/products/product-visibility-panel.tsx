@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Download, Inbox, Package, RefreshCw } from 'lucide-react';
 
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,14 +31,26 @@ import type { CompetitorProductVisibilityEntry, ProductVisibilityEntry } from '@
 import {
   RANK_BUCKET_LABELS,
   RANK_BUCKET_ORDER,
+  VISIBILITY_SUB_TABS,
+  aggregateAttributeFrequency,
+  aggregateBuyerDestinationMix,
+  buildCoPlacementMatrix,
   formatAvgRank,
   formatPercent,
+  hasDirectionUnavailableRows,
+  priceRelationDisplay,
   summarizeProductVisibility,
+  type VisibilitySubTab,
 } from '@/lib/products/catalog';
 import type { useProductVisibilityQueries } from '@/lib/products/use-products-screen';
 import { cn } from '@/lib/utils';
 
+import { AttributeFrequencyPanel } from './attribute-frequency-panel';
+import { BuyerDestinationBreakdown } from './buyer-destination-breakdown';
+import { CompetitorCoPlacementMatrix } from './competitor-co-placement-matrix';
 import { EngineFilterDropdown } from './engine-filter-dropdown';
+import { NestedTabs } from './nested-tabs';
+import { SurfaceFilterDropdown } from './surface-filter-dropdown';
 
 type VisibilityQueries = ReturnType<typeof useProductVisibilityQueries>;
 
@@ -48,13 +62,18 @@ const RANK_SEGMENT_CLASS: Record<(typeof RANK_BUCKET_ORDER)[number], string> = {
   unranked: 'bg-muted',
 };
 
+/** Exact v1 mixed-version alert copy (analyzer v1 recorded no direction). */
+const V1_DIRECTION_ALERT =
+  'This run was analyzed by product analyzer v1, which recorded price mismatches without a direction. Price relation reads Direction unavailable for those mentions.';
+
 /**
  * Visibility tab (agentic commerce): the selected run's product-vs-competitor
- * projection. A filter bar (Run selector defaulting to latest, engine slice,
- * CSV export) sits above a catalog-wide summary strip (Product SOV, product
- * mentions, avg rank, price-mention accuracy) and the ranked tables — own
- * products first, competitor products second. All values are persisted
- * backend aggregates; states mirror the visibility evidence-states gallery
+ * projection. The Run/Engine/Surface/Export toolbar sits ABOVE the nested
+ * sub-tablist and slices all four sub-panels: `overview` (summary strip +
+ * own/competitor rankings with win rate and price relation), `attributes`
+ * (dimension frequency), `destinations` (buyer-destination mix), and
+ * `co-placement` (the competitor matrix). All values are persisted backend
+ * aggregates; states mirror the visibility evidence-states gallery
  * (skeleton / retryable error / no-audit empty / no-catalog CTA).
  */
 export function ProductVisibilityPanel({
@@ -66,7 +85,18 @@ export function ProductVisibilityPanel({
   queries: VisibilityQueries;
   onGoToCatalog: () => void;
 }>) {
-  const { runOptions, activeRunId, selectRun, engine, setEngine, visibilityQuery } = queries;
+  const {
+    runOptions,
+    activeRunId,
+    selectRun,
+    engine,
+    setEngine,
+    engineParam,
+    surface,
+    setSurface,
+    visibilityQuery,
+  } = queries;
+  const [subTab, setSubTab] = useState<VisibilitySubTab>('overview');
 
   if (visibilityQuery.isLoading) {
     return <VisibilitySkeleton />;
@@ -123,6 +153,57 @@ export function ProductVisibilityPanel({
   if (!visibility) return <VisibilitySkeleton />;
 
   const summary = summarizeProductVisibility(visibility);
+  const showV1Alert = hasDirectionUnavailableRows([
+    ...visibility.products,
+    ...visibility.competitor_products,
+  ]);
+
+  const panel =
+    subTab === 'attributes' ? (
+      <AttributeFrequencyPanel groups={aggregateAttributeFrequency(visibility.products)} />
+    ) : subTab === 'destinations' ? (
+      <BuyerDestinationBreakdown mix={aggregateBuyerDestinationMix(visibility.products)} />
+    ) : subTab === 'co-placement' ? (
+      <CompetitorCoPlacementMatrix matrix={buildCoPlacementMatrix(visibility.products)} />
+    ) : (
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Product SOV"
+            value={formatPercent(summary.sov)}
+            caption="Your share of all product mentions in this run"
+          />
+          <SummaryCard
+            label="Product mentions"
+            value={String(summary.ownMentions)}
+            caption={`of ${summary.totalMentions} product mentions`}
+          />
+          <SummaryCard
+            label="Avg rank in product lists"
+            value={formatAvgRank(summary.avgRank)}
+            caption="Average position when your products are listed"
+          />
+          <SummaryCard
+            label="Price-mention accuracy"
+            value={formatPercent(summary.priceAccuracy)}
+            caption="Extracted prices matching the catalog"
+          />
+        </div>
+
+        <RankingsCard
+          title="Product rankings"
+          description="Your products — mentions, win rate, rank distribution, and price relation for the selected run."
+          rows={visibility.products}
+          kind="own"
+        />
+        <RankingsCard
+          title="Competitor products"
+          description="Competitor products measured in the same run."
+          rows={visibility.competitor_products}
+          kind="competitor"
+        />
+      </div>
+    );
 
   return (
     <div className="grid gap-4">
@@ -135,9 +216,22 @@ export function ProductVisibilityPanel({
 
         <EngineFilterDropdown engine={engine} onChange={setEngine} />
 
+        <SurfaceFilterDropdown
+          surfaces={visibility.available_surfaces}
+          surface={surface}
+          onChange={setSurface}
+        />
+
         <div className="ml-auto">
           <Button asChild variant="ghost" size="sm">
-            <a href={productsApi.exportCsvUrl(projectId, activeRunId ?? undefined)} download>
+            <a
+              href={productsApi.exportCsvUrl(projectId, {
+                audit_id: activeRunId ?? undefined,
+                engine: engineParam,
+                surface,
+              })}
+              download
+            >
               <Download className="size-4" aria-hidden />
               Export CSV
             </a>
@@ -145,35 +239,15 @@ export function ProductVisibilityPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Product SOV"
-          value={formatPercent(summary.sov)}
-          caption="Your share of all product mentions in this run"
-        />
-        <SummaryCard
-          label="Product mentions"
-          value={String(summary.ownMentions)}
-          caption={`of ${summary.totalMentions} product mentions`}
-        />
-        <SummaryCard
-          label="Avg rank in product lists"
-          value={formatAvgRank(summary.avgRank)}
-          caption="Average position when your products are listed"
-        />
-        <SummaryCard
-          label="Price-mention accuracy"
-          value={formatPercent(summary.priceAccuracy)}
-          caption="Extracted prices matching the catalog"
-        />
-      </div>
+      {showV1Alert ? <Alert tone="info">{V1_DIRECTION_ALERT}</Alert> : null}
 
-      <RankingsCard title="Product rankings" rows={visibility.products} kind="own" />
-      <RankingsCard
-        title="Competitor products"
-        description="Competitor products measured in the same run."
-        rows={visibility.competitor_products}
-        kind="competitor"
+      <NestedTabs
+        tabs={VISIBILITY_SUB_TABS}
+        activeTab={subTab}
+        onSelectTab={setSubTab}
+        ariaLabel="Visibility views"
+        idPrefix="product-visibility"
+        panel={panel}
       />
     </div>
   );
@@ -206,12 +280,7 @@ function RankingsCard({
   kind,
 }: Readonly<{
   title: string;
-  /**
-   * Optional. "Product rankings" needs no gloss — the title and the columns
-   * under it say what the table is. "Competitor products" keeps one, because
-   * "measured in the same run" is a real qualifier the table cannot show.
-   */
-  description?: string;
+  description: string;
   rows: ProductVisibilityEntry[] | CompetitorProductVisibilityEntry[];
   kind: 'own' | 'competitor';
 }>) {
@@ -221,7 +290,7 @@ function RankingsCard({
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
           <CardTitle>{title}</CardTitle>
-          {description ? <p className="text-secondary text-sm">{description}</p> : null}
+          <p className="text-secondary text-sm">{description}</p>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -237,9 +306,10 @@ function RankingsCard({
                 <TableHead>Product</TableHead>
                 <TableHead>Mentions</TableHead>
                 <TableHead>SOV</TableHead>
+                <TableHead>Win rate</TableHead>
                 <TableHead className="min-w-[140px]">Rank distribution</TableHead>
                 <TableHead>Avg rank</TableHead>
-                <TableHead>Price accuracy</TableHead>
+                <TableHead className="min-w-[200px]">Price relation</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -295,16 +365,64 @@ function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position
       <TableCell numeric className="text-secondary">
         {formatPercent(entry.sov_share)}
       </TableCell>
+      <TableCell numeric className="text-secondary">
+        {formatPercent(entry.win_rate)}
+      </TableCell>
       <TableCell>
         <RankDistributionBar distribution={entry.rank_distribution} />
       </TableCell>
       <TableCell numeric className="text-secondary">
         {formatAvgRank(entry.avg_rank)}
       </TableCell>
-      <TableCell numeric className="text-secondary">
-        {formatPercent(entry.price_accuracy_rate)}
+      <TableCell>
+        <PriceRelationCell entry={entry} />
       </TableCell>
     </TableRow>
+  );
+}
+
+/**
+ * The Price relation cell: persisted match/higher/lower counts as labelled
+ * badges (Match = success, Higher = warning, Lower = info). An analyzer-v1
+ * row with persisted mismatches reads `Direction unavailable` with the muted
+ * mismatch count — direction is NEVER inferred for v1 data. Nothing
+ * verifiable renders the null placeholder.
+ */
+function PriceRelationCell({
+  entry,
+}: Readonly<{
+  entry: ProductVisibilityEntry | CompetitorProductVisibilityEntry;
+}>) {
+  const display = priceRelationDisplay(entry);
+  if (display.kind === 'empty') return <span className="text-subtle">—</span>;
+  if (display.kind === 'unavailable') {
+    return (
+      <span className="flex items-center gap-2">
+        <Badge variant="status" value="warning">
+          Direction unavailable
+        </Badge>
+        <span className="text-muted mono text-xs">{display.mismatch}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {display.match > 0 ? (
+        <Badge variant="status" value="success">
+          Match {display.match}
+        </Badge>
+      ) : null}
+      {display.higher > 0 ? (
+        <Badge variant="status" value="warning">
+          Higher {display.higher}
+        </Badge>
+      ) : null}
+      {display.lower > 0 ? (
+        <Badge variant="status" value="info">
+          Lower {display.lower}
+        </Badge>
+      ) : null}
+    </span>
   );
 }
 
@@ -410,7 +528,7 @@ function NoAuditEmpty({
           <p className="text-secondary max-w-md text-sm">
             {selectedRun
               ? 'This run completed without product metrics — product visibility is only measured for runs that score your catalog. Pick another run above, or launch a new one.'
-              : `Once a run completes with products in your catalog, each product\u2019s share of
+              : `Once a run completes with products in your catalog, each product’s share of
             voice, rank distribution, and price accuracy appear here. An empty catalog measures
             nothing — add products first, then launch a run.`}
           </p>

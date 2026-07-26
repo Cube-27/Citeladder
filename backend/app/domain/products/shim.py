@@ -12,7 +12,7 @@
 #     {
 #       "products": [
 #           {"id", "sku", "name", "aliases", "variants", "price", "currency",
-#            "url"},
+#            "url", "attributes"},
 #           ...
 #       ],
 #       "competitor_products": [
@@ -58,6 +58,10 @@ def project_product_identity(project: Project) -> dict[str, Any]:
                 "price": _price(product.price),
                 "currency": product.currency or "",
                 "url": product.url or "",
+                # The complete JSON-safe attribute bag (category/gtin/...): the
+                # analyzer reads the category + deterministic dimensions from
+                # this audit-frozen copy, never from live rows (invariant 9).
+                "attributes": dict(product.attributes or {}),
             }
             for product in project.products
         ],

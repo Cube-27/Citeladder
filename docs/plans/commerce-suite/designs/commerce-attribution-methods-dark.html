@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commerce &rsaquo; Attribution &mdash; A1 vs A2 (Dark)</title>
+<meta name="description" content="Commerce Attribution tab showing deterministic GA4 platform-attributed (A1) and Shopify order-referrer (A2) revenue side by side, the A1 minus A2 delta, unattributed share, per-source and per-SKU revenue, and a separately treated statistical estimate.">
+<!--
+  Design system declared (lifted verbatim from the repo theme layer, frontend/app/globals stylesheet):
+  · Type scale: 11 / 12 / 12.5 / 13 / 13.5 / 16 / 21px, Geist sans + Geist Mono
+    (tabular-nums) for metric values only; weights 400/500/600.
+  · Surfaces: bg-base page, bg-panel cards, bg-alt hover/segmented track,
+    bg-sidebar rail. Separation is 1px hairlines only (--shadow-card: none);
+    only floating layers cast a shadow.
+  · Layout rhythm: 236px sidebar, 20px content gutter, 12px grid gap,
+    14px card padding, 42px table rows / 30px table headers, 4px spacing grid.
+  · Section-header pattern: Card > card-head (eyebrow -> CardTitle 13.5/600 ->
+    CardDescription 12px muted), full-bleed table in card-body.p0.
+  · Badges always carry a text label plus a leading 4px current-color dot;
+    null metrics render the em-dash placeholder in --text-subtle.
+-->
+<style>
+:root{
+  color-scheme: dark;
+  --bg-base:#0a0a0b; --bg-alt:#1b1b21; --bg-panel:#131316; --bg-elevated:#17171c;
+  --bg-well:#1e1e24; --bg-sidebar:#0e0e11;
+  --border-subtle:#1e1e24; --border:#26262d; --border-strong:#33333c;
+  --text-primary:#f3f3f5; --text-secondary:#a1a1ab; --text-muted:#8a8a94; --text-subtle:#5b5b64;
+  --accent:#6b8aff; --accent-hover:#9db2ff; --accent-fg:#0a0a0a;
+  --accent-subtle:rgba(107,138,255,0.14); --accent-soft:rgba(107,138,255,0.08);
+  --accent-border:rgba(107,138,255,0.34); --accent-text:#9db2ff;
+  --success:#3ecf8e; --success-bg:rgba(62,207,142,0.12); --success-border:rgba(62,207,142,0.28); --success-text:#5fdaa2;
+  --warning:#f5a623; --warning-bg:rgba(245,166,35,0.12); --warning-border:rgba(245,166,35,0.28); --warning-text:#f7b854;
+  --danger:#ff6b6b;  --danger-bg:rgba(255,107,107,0.12); --danger-border:rgba(255,107,107,0.28); --danger-text:#ff8f8f;
+  --info:#6ba5ff;    --info-bg:rgba(107,165,255,0.12);   --info-border:rgba(107,165,255,0.28);   --info-text:#8fbcff;
+  --neutral-bg:#1e1e24;
+  --sentiment-neutral-bg:rgba(255,255,255,0.05); --sentiment-neutral-text:#9ca39c;
+  --citation-owned-bg:rgba(45,212,167,0.12); --citation-owned-text:#58e0bb;
+  --citation-competitor-bg:rgba(245,166,35,0.12); --citation-competitor-text:#f7b854;
+  --citation-third-party-bg:rgba(139,143,255,0.12); --citation-third-party-text:#a9adff;
+  --run-draft:#9ca39c;     --run-draft-bg:rgba(255,255,255,0.05);
+  --run-queued:#6ba5ff;    --run-queued-bg:rgba(107,165,255,0.12);
+  --run-running:#2dd4a7;   --run-running-bg:rgba(45,212,167,0.14);
+  --run-analyzing:#a78bfa; --run-analyzing-bg:rgba(167,139,250,0.14);
+  --run-completed:#3ecf8e; --run-completed-bg:rgba(62,207,142,0.12);
+  --run-partial:#f5a623;   --run-partial-bg:rgba(245,166,35,0.12);
+  --run-failed:#ff6b6b;    --run-failed-bg:rgba(255,107,107,0.12);
+  --run-cancelled:#9ca39c; --run-cancelled-bg:rgba(255,255,255,0.05);
+  --score-low:#ff6b6b; --score-mid:#f5a623; --score-good:#6ba5ff; --score-high:#3ecf8e;
+  --series-other:#3f3f46;
+  --shadow-elevated-value:0 8px 24px rgba(0,0,0,0.5);
+  --focus-ring:0 0 0 3px rgba(107,138,255,0.35);
+  --skeleton-base:#1b1b21;
+
+  /* Chart series — identical in both themes, fixed order, never cycled. */
+  --series-1:#2f58ff; --series-2:#c62f34; --series-3:#d97706; --series-4:#8b5cf6; --series-5:#30a46c;
+  --value-placeholder: var(--text-subtle);
+
+  --font-primary-family: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono-family: 'Geist Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+
+  --text-2xs:0.6875rem; --text-xs:0.75rem; --text-sm:0.78125rem; --text-base:0.8125rem;
+  --text-lg:0.84375rem; --text-xl:1rem; --text-2xl:1.3125rem;
+
+  --radius-xs:3px; --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-xl:14px;
+  --radius-2xl:20px; --radius-full:9999px;
+
+  --card-padding:14px; --content-gutter:20px;
+  --control-height-sm:30px; --control-height:32px; --control-height-lg:38px;
+  --table-row-height:42px; --table-header-height:30px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg-base); color:var(--text-primary);
+  font-family:var(--font-primary-family);
+  font-size:var(--text-base); line-height:1.5;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+.mono{font-family:var(--font-mono-family); font-variant-numeric:tabular-nums}
+.dash{color:var(--value-placeholder)}
+svg{display:block}
+
+/* ── App shell ───────────────────────────────────────────────── */
+.app{display:flex; min-height:100vh; align-items:stretch}
+.sidebar{
+  width:236px; flex:0 0 236px; display:flex; flex-direction:column; gap:10px;
+  padding:12px; background:var(--bg-sidebar); border-right:1px solid var(--border);
+}
+.project{
+  display:flex; align-items:center; gap:8px; height:36px; padding:0 6px;
+  border-radius:var(--radius-md);
+}
+.project-avatar{
+  width:22px; height:22px; flex:none; border-radius:var(--radius-sm);
+  background:var(--text-primary); color:var(--bg-panel);
+  display:grid; place-items:center; font-size:10px; font-weight:600; letter-spacing:0.02em;
+}
+.project-name{font-size:var(--text-base); font-weight:600; letter-spacing:-0.01em}
+.project-caret{margin-left:auto; color:var(--text-muted)}
+.sb-search{
+  display:flex; align-items:center; gap:8px; height:var(--control-height);
+  padding:0 8px; border:1px solid var(--border); border-radius:var(--radius-md);
+  background:var(--bg-panel); color:var(--text-muted); font-size:var(--text-xs);
+}
+.sb-search kbd{
+  margin-left:auto; font-family:var(--font-mono-family); font-size:10px;
+  color:var(--text-subtle); background:transparent; border:0;
+}
+.nav-group{display:flex; flex-direction:column; gap:1px}
+.nav-title{
+  padding:8px 8px 4px; font-size:var(--text-2xs); font-weight:500; color:var(--text-muted);
+}
+.nav-item{
+  display:flex; align-items:center; gap:10px; height:var(--control-height-lg);
+  padding:0 8px; border-radius:var(--radius-md);
+  color:var(--text-secondary); font-size:var(--text-base); text-decoration:none;
+}
+.nav-item svg{color:var(--text-muted)}
+.nav-item[aria-current="page"]{
+  background:var(--bg-alt); color:var(--text-primary); font-weight:500;
+}
+.nav-item[aria-current="page"] svg{color:var(--text-primary)}
+.sb-foot{
+  margin-top:auto; display:flex; align-items:center; gap:8px;
+  padding-top:10px; border-top:1px solid var(--border);
+}
+.sb-avatar{
+  width:26px; height:26px; border-radius:var(--radius-full);
+  background:var(--bg-alt); border:1px solid var(--border);
+  display:grid; place-items:center; font-size:10px; color:var(--text-secondary);
+}
+.sb-mail{font-size:var(--text-xs); color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sb-theme{margin-left:auto; color:var(--text-muted)}
+
+.main{flex:1; min-width:0}
+.content{
+  max-width:1440px; margin:0 auto; width:100%;
+  display:grid; gap:12px; padding:var(--content-gutter);
+  align-content:start;
+}
+h1.page-title{
+  margin:0; font-size:var(--text-xl); font-weight:600; letter-spacing:-0.02em; line-height:1.3;
+}
+.page-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
+.page-summary{margin:2px 0 0; font-size:var(--text-base); color:var(--text-muted)}
+
+/* ── Segmented tablist ───────────────────────────────────────── */
+.tablist{
+  display:inline-flex; align-items:center; gap:2px; padding:2px;
+  border-radius:var(--radius-full); background:var(--bg-alt); width:max-content;
+}
+.tab{
+  border:0; background:transparent; cursor:pointer; font-family:inherit;
+  padding:4px 10px; border-radius:var(--radius-full);
+  font-size:var(--text-xs); font-weight:500; color:var(--text-muted);
+}
+.tab[aria-selected="true"]{background:var(--bg-panel); color:var(--text-primary)}
+
+/* ── Toolbar row ─────────────────────────────────────────────── */
+.toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.toolbar-end{margin-left:auto; display:flex; align-items:center; gap:8px}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; height:var(--control-height-sm);
+  padding:0 12px; border-radius:var(--radius-full);
+  border:1px solid var(--border); background:var(--bg-panel);
+  font-size:var(--text-xs); color:var(--text-primary); font-family:inherit; cursor:pointer;
+}
+.chip .k{color:var(--text-muted)}
+.chip .v{font-weight:500}
+.chip svg{color:var(--text-muted)}
+.chip-active{
+  border-color:var(--accent-border); background:var(--accent-soft); color:var(--accent-text);
+}
+.chip-active svg, .chip-active .k{color:var(--accent-text)}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  height:var(--control-height); padding:0 12px; border-radius:var(--radius-full);
+  font-family:inherit; font-size:var(--text-xs); font-weight:500; cursor:pointer;
+  border:1px solid transparent; background:transparent; color:var(--text-primary);
+  white-space:nowrap; text-decoration:none;
+}
+.btn-sm{height:var(--control-height-sm); padding:0 10px}
+.btn-primary{background:var(--text-primary); color:var(--bg-base)}
+.btn-secondary{border-color:var(--border); background:var(--bg-panel)}
+.btn-neutral{background:var(--bg-alt)}
+.btn-ghost{color:var(--text-secondary)}
+.btn-ghost svg{color:var(--text-muted)}
+.btn[disabled]{opacity:0.45; cursor:default}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.card{border:1px solid var(--border); background:var(--bg-panel); border-radius:var(--radius-lg)}
+.card-head{display:flex; flex-direction:column; gap:2px; padding:var(--card-padding)}
+.card-head.row{flex-direction:row; align-items:flex-start; justify-content:space-between; gap:8px}
+.card-head.bordered{border-bottom:1px solid var(--border-subtle)}
+.eyebrow{font-size:var(--text-2xs); font-weight:500; color:var(--text-muted)}
+.card-title{margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:-0.01em; color:var(--text-primary)}
+.card-desc{margin:0; font-size:var(--text-xs); color:var(--text-muted)}
+.card-body{padding:var(--card-padding)}
+.card-body.p0{padding:0}
+.grid-4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.grid-3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+.grid-2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start}
+.grid-2-wide{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:12px}
+.metric{font-family:var(--font-mono-family); font-variant-numeric:tabular-nums;
+  font-size:var(--text-2xl); font-weight:600; letter-spacing:-0.02em; line-height:1.2}
+.metric-sm{font-family:var(--font-mono-family); font-variant-numeric:tabular-nums;
+  font-size:var(--text-xl); font-weight:600; letter-spacing:-0.01em}
+.metric-foot{font-size:var(--text-xs); color:var(--text-muted)}
+.stack-2{display:grid; gap:8px}
+.stack-3{display:grid; gap:12px}
+.row-between{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.row-gap{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.hairline{border-top:1px solid var(--border-subtle)}
+
+/* ── Table ───────────────────────────────────────────────────── */
+table{width:100%; border-collapse:collapse; table-layout:auto}
+thead th{
+  height:var(--table-header-height); padding:0 12px; text-align:left; vertical-align:middle;
+  font-size:var(--text-2xs); font-weight:500; color:var(--text-muted);
+  background:var(--bg-panel);
+  border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+}
+thead th:not(:first-child){border-left:1px solid var(--border)}
+tbody td{
+  height:var(--table-row-height); padding:0 12px; text-align:left; vertical-align:middle;
+  font-size:var(--text-sm); color:var(--text-primary);
+  border-bottom:1px solid var(--border-subtle);
+}
+tbody td:not(:first-child){border-left:1px solid var(--border-subtle)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.highlight{background:var(--bg-alt)}
+td.tall{height:auto; padding-top:8px; padding-bottom:8px}
+.cell-title{font-weight:500}
+.cell-sub{font-size:var(--text-xs); color:var(--text-muted)}
+.cell-sub.mono{font-size:var(--text-xs)}
+.idx{color:var(--text-muted); font-family:var(--font-mono-family); width:36px}
+td.nowrap, th.nowrap{white-space:nowrap}
+.col-product{min-width:230px}
+.delta-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.delta-item{display:grid; gap:4px}
+.delta-item .k{font-size:var(--text-2xs); color:var(--text-muted)}
+.num{font-family:var(--font-mono-family); font-variant-numeric:tabular-nums}
+.rowhead{font-weight:500}
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.badge{
+  display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  border-radius:var(--radius-sm); padding:2px 6px;
+  font-size:var(--text-2xs); font-weight:500;
+}
+.badge::before{
+  content:''; width:4px; height:4px; border-radius:var(--radius-full);
+  background:currentColor; flex:none;
+}
+.badge.nodot::before{display:none}
+.b-success{background:var(--success-bg); color:var(--success-text)}
+.b-warning{background:var(--warning-bg); color:var(--warning-text)}
+.b-danger{background:var(--danger-bg); color:var(--danger-text)}
+.b-info{background:var(--info-bg); color:var(--info-text)}
+.b-neutral{background:var(--neutral-bg); color:var(--text-secondary)}
+.b-owned{background:var(--citation-owned-bg); color:var(--citation-owned-text)}
+.b-competitor{background:var(--citation-competitor-bg); color:var(--citation-competitor-text)}
+.b-third-party{background:var(--citation-third-party-bg); color:var(--citation-third-party-text)}
+.b-accent{background:var(--accent-subtle); color:var(--accent-text)}
+.pill{border-radius:var(--radius-full)}
+.b-run-queued{background:var(--run-queued-bg); color:var(--run-queued)}
+.b-run-running{background:var(--run-running-bg); color:var(--run-running)}
+.b-run-completed{background:var(--run-completed-bg); color:var(--run-completed)}
+.b-run-partial{background:var(--run-partial-bg); color:var(--run-partial)}
+.b-run-failed{background:var(--run-failed-bg); color:var(--run-failed)}
+.b-run-cancelled{background:var(--run-cancelled-bg); color:var(--run-cancelled)}
+.b-run-draft{background:var(--run-draft-bg); color:var(--run-draft)}
+
+/* ── Alert ───────────────────────────────────────────────────── */
+.alert{
+  display:flex; align-items:flex-start; gap:8px;
+  border-radius:var(--radius-md); border:1px solid; padding:8px 12px;
+  font-size:var(--text-sm); line-height:1.5;
+}
+.alert svg{flex:none; margin-top:1px}
+.a-warning{border-color:var(--warning-border); background:var(--warning-bg); color:var(--warning-text)}
+.a-info{border-color:var(--info-border); background:var(--info-bg); color:var(--info-text)}
+.a-danger{border-color:var(--danger-border); background:var(--danger-bg); color:var(--danger-text)}
+.a-success{border-color:var(--success-border); background:var(--success-bg); color:var(--success-text)}
+.a-neutral{border-color:var(--border); background:var(--bg-alt); color:var(--text-secondary)}
+
+/* ── Footnote / truncation notice ────────────────────────────── */
+.notice{
+  display:flex; align-items:center; gap:8px;
+  border-top:1px solid var(--border-subtle); padding:10px 16px;
+  font-size:var(--text-xs); color:var(--text-muted);
+}
+
+/* ── Rank distribution bar ───────────────────────────────────── */
+.distbar{
+  display:flex; height:8px; width:100%; min-width:120px; overflow:hidden;
+  border-radius:var(--radius-full); background:var(--neutral-bg);
+}
+.seg-top1{background:var(--success)} .seg-top23{background:var(--info)}
+.seg-top45{background:var(--warning)} .seg-rest{background:var(--danger)}
+.seg-unranked{background:var(--text-muted)}
+
+/* ── Frequency / share bar ───────────────────────────────────── */
+.freqbar{
+  display:block; height:6px; width:100%; min-width:80px; max-width:140px;
+  border-radius:var(--radius-full); background:var(--neutral-bg); overflow:hidden;
+}
+.freqbar > span{display:block; height:6px; border-radius:var(--radius-full); background:var(--accent)}
+
+/* ── Pagination ──────────────────────────────────────────────── */
+.pagination{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  border-top:1px solid var(--border-subtle); padding:8px 12px;
+  font-size:var(--text-2xs); color:var(--text-muted);
+}
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.empty{display:grid; justify-items:center; gap:16px; padding:48px var(--card-padding); text-align:center}
+.icon-chip{
+  width:48px; height:48px; border-radius:var(--radius-full);
+  background:var(--accent-subtle); color:var(--accent-text);
+  display:grid; place-items:center;
+}
+.empty h2{
+  margin:0; font-size:var(--text-xl); font-weight:600; letter-spacing:-0.02em; color:var(--text-primary);
+}
+.empty p{margin:0; max-width:28rem; font-size:var(--text-sm); color:var(--text-secondary)}
+.empty-actions{display:flex; align-items:center; gap:8px}
+
+/* ── Matrix ──────────────────────────────────────────────────── */
+.matrix td.num, .matrix th.num{text-align:left}
+.matrix .selfcell{color:var(--text-subtle)}
+.heat-0{background:transparent}
+.heat-1{background:var(--accent-soft)}
+.heat-2{background:var(--accent-subtle)}
+
+/* ── Method comparison ───────────────────────────────────────── */
+.method-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch}
+.method-grid > .card{display:flex; flex-direction:column}
+.method-grid > .card > .card-body:last-of-type{flex:1}
+.kv{display:grid; grid-template-columns:1fr auto; gap:6px 12px; font-size:var(--text-sm)}
+.kv dt{color:var(--text-muted)}
+.kv dd{margin:0; font-family:var(--font-mono-family); font-variant-numeric:tabular-nums; font-weight:500}
+.statistical{border-color:var(--warning-border)}
+.legend{display:grid; gap:6px; margin:0; padding:0; list-style:none}
+.legend li{display:flex; align-items:center; gap:8px; font-size:var(--text-xs)}
+.legend .swatch{width:8px; height:8px; border-radius:var(--radius-full); flex:none}
+.legend .lbl{color:var(--text-secondary)}
+.legend .val{margin-left:auto; font-family:var(--font-mono-family); font-variant-numeric:tabular-nums}
+.sw-1{background:var(--series-1)} .sw-2{background:var(--series-2)}
+.sw-3{background:var(--series-3)} .sw-4{background:var(--series-4)}
+.sw-5{background:var(--series-5)} .sw-other{background:var(--series-other)}
+.donut-row{display:flex; align-items:center; gap:16px}
+
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" data-component-id="app-sidebar">
+  <div class="project" data-component-id="project-switcher">
+    <span class="project-avatar" aria-hidden="true">AC</span>
+    <span class="project-name">Acme Corp</span>
+    <span class="project-caret"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span>
+  </div>
+  <div class="sb-search" data-component-id="sidebar-search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><span>Search or jump to&hellip;</span><kbd>&#8984;K</kbd>
+  </div>
+  <nav class="nav-group" aria-label="Analyze"><p class="nav-title">Analyze</p><a class="nav-item" href="#" data-component-id="nav-visibility"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg><span>Visibility</span></a><a class="nav-item" href="#" data-component-id="nav-answers"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg><span>Answers</span></a><a class="nav-item" href="#" data-component-id="nav-traffic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg><span>Traffic</span></a><a class="nav-item" href="#" data-component-id="nav-prompts"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></svg><span>Prompts</span></a><a class="nav-item" href="#" aria-current="page" data-component-id="nav-commerce"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/></svg><span>Commerce</span></a><a class="nav-item" href="#" data-component-id="nav-runs"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Runs</span></a></nav><nav class="nav-group" aria-label="Improve"><p class="nav-title">Improve</p><a class="nav-item" href="#" data-component-id="nav-content"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span>Content</span></a><a class="nav-item" href="#" data-component-id="nav-site-health"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg><span>Site health</span></a><a class="nav-item" href="#" data-component-id="nav-issues"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/></svg><span>Issues</span></a><a class="nav-item" href="#" data-component-id="nav-brand-knowledge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16"/><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg><span>Brand knowledge</span></a><a class="nav-item" href="#" data-component-id="nav-setup"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg><span>Setup</span></a></nav>
+  <div class="sb-foot">
+    <span class="sb-avatar" aria-hidden="true">AO</span>
+    <span class="sb-mail">acme.owner@example.com</span>
+    <span class="sb-theme"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+  </div>
+</aside>
+<main class="main">
+<div class="content">
+<div class="page-head">
+  <div><h1 class="page-title">Commerce</h1></div>
+</div>
+<div class="tablist" role="tablist" aria-label="Commerce views" data-component-id="commerce-tablist"><button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-component-id="commerce-tab-catalog">Catalog</button><button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-component-id="commerce-tab-visibility">Visibility</button><button class="tab" type="button" role="tab" aria-selected="true" tabindex="0" data-component-id="commerce-tab-attribution">Attribution</button></div>
+<div class="toolbar" data-component-id="attribution-toolbar">
+  <button class="chip" type="button" data-component-id="attribution-chip-range">
+    <span class="k">Range:</span><span class="v">Jun 25 &ndash; Jul 24, 2026</span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+  <div class="tablist" role="tablist" aria-label="Granularity"
+       data-component-id="attribution-granularity">
+    <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Day</button>
+    <button class="tab" type="button" role="tab" aria-selected="true" tabindex="0">Week</button>
+    <button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1">Month</button>
+  </div>
+  <div class="toolbar-end">
+    <button class="btn btn-secondary btn-sm" type="button" data-component-id="attribution-recompute">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span>Recompute</span>
+    </button>
+  </div>
+</div>
+<div class="row-between" data-component-id="attribution-currency-group-header">
+  <p class="eyebrow">Reported in USD &middot; native currency, no conversion applied</p>
+  <span class="badge b-neutral pill">Snapshot Jul 24, 2026, 06:12 AM</span>
+</div>
+<div class="tablist" role="tablist" aria-label="Attribution sections" data-component-id="attribution-subtablist"><button class="tab" type="button" role="tab" aria-selected="true" tabindex="0" data-component-id="attribution-subtab-overview">Overview</button><button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-component-id="attribution-subtab-by-source">By source</button><button class="tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-component-id="attribution-subtab-by-product">By product</button></div>
+<div role="tabpanel" class="stack-3" aria-label="Overview" data-component-id="attribution-panel-overview">
+<div class="method-grid">
+  <section class="card" data-component-id="attribution-method-a1">
+  <div class="card-head row">
+    <div class="stack-2" style="gap:2px">
+      <p class="eyebrow">A1 &middot; GA4 platform-attributed</p>
+      <h3 class="card-title">$48,210 revenue</h3>
+      <p class="card-desc">Deterministic, aggregate/surface-level. Sessions attributed by GA4 to AI sources.</p>
+    </div>
+    <div class="row-gap" style="gap:4px"><span class="badge b-info nodot">Deterministic</span></div>
+  </div>
+  <div class="card-body"><dl class="kv"><dt>Revenue</dt><dd>$48,210.00</dd><dt>Orders</dt><dd>412</dd><dt>Average order value</dt><dd>$117.02</dd><dt>Conversion rate</dt><dd>2.8%</dd><dt>Data granularity</dt><dd>Item &times; session source</dd></dl></div>
+  
+</section>
+  <section class="card" data-component-id="attribution-method-a2">
+  <div class="card-head row">
+    <div class="stack-2" style="gap:2px">
+      <p class="eyebrow">A2 &middot; Shopify order referrer</p>
+      <h3 class="card-title">$41,880 revenue</h3>
+      <p class="card-desc">Deterministic, per-order and per-SKU. Orders whose referrer resolves to an AI source.</p>
+    </div>
+    <div class="row-gap" style="gap:4px"><span class="badge b-info nodot">Deterministic</span></div>
+  </div>
+  <div class="card-body"><dl class="kv"><dt>Revenue</dt><dd>$41,880.00</dd><dt>Orders</dt><dd>356</dd><dt>Average order value</dt><dd>$117.64</dd><dt>Conversion rate</dt><dd><span class="dash">&mdash;</span></dd><dt>Referrer coverage</dt><dd>71%</dd></dl></div>
+  
+</section>
+  <section class="card" data-component-id="attribution-delta-card">
+  <div class="card-head row">
+    <div class="stack-2" style="gap:2px">
+      <p class="eyebrow">Delta &middot; A1 &minus; A2</p>
+      <h3 class="card-title">Cross-check between methods</h3>
+      <p class="card-desc">A1 and A2 measure the same orders through different evidence. They are
+        never added together.</p>
+    </div>
+  </div>
+  <div class="card-body">
+    <dl class="kv">
+      <dt>Revenue</dt><dd>+$6,330.00</dd>
+      <dt>Orders</dt><dd>+56</dd>
+      <dt>Average order value</dt><dd>&minus;$0.62</dd>
+      <dt>Conversion rate</dt><dd><span class="dash">&mdash;</span></dd>
+    </dl>
+  </div>
+</section>
+  <section class="card" data-component-id="attribution-unattributed-card">
+  <div class="card-head">
+    <p class="eyebrow">Unattributed</p>
+    <h3 class="card-title">146 orders (29%) have no referrer evidence</h3>
+    <p class="card-desc">These orders stay unattributed. No AI source is inferred for them.</p>
+  </div>
+  <div class="card-body">
+    <dl class="kv">
+      <dt>Orders</dt><dd>146</dd>
+      <dt>Order share</dt><dd>29%</dd>
+      <dt>Revenue</dt><dd>$16,940.00</dd>
+    </dl>
+  </div>
+</section>
+</div>
+<section class="card statistical" data-component-id="statistical-allocation-card">
+  <div class="card-head row bordered">
+    <div class="stack-2" style="gap:2px">
+      <p class="eyebrow">Statistical &middot; not deterministic</p>
+      <h3 class="card-title">Statistical estimate</h3>
+      <p class="card-desc">Modelled allocation of unattributed orders. Not a measured value and never part of the A1, A2, or delta figures above.</p>
+    </div>
+    <span class="badge b-warning">Model output</span>
+  </div>
+  <div class="card-body stack-2">
+    <div class="alert a-warning" role="status">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span>Estimated allocation of unattributed orders across AI sources &middot; sample size <span class="num">146</span> orders. Excluded from every deterministic total.</span>
+    </div>
+  </div>
+  <div class="card-body p0">
+    <table>
+      <thead><tr>
+        <th scope="col">AI source</th><th scope="col">Estimated revenue</th>
+        <th scope="col">Estimated orders</th><th scope="col">Estimated share</th>
+      </tr></thead>
+      <tbody><tr><td><span class="badge b-neutral">ChatGPT</span></td><td class="num">$6,910.00</td><td class="num">58</td><td class="num">40%</td></tr><tr><td><span class="badge b-neutral">Perplexity</span></td><td class="num">$4,780.00</td><td class="num">41</td><td class="num">28%</td></tr><tr><td><span class="badge b-neutral">Gemini</span></td><td class="num">$3,120.00</td><td class="num">27</td><td class="num">18%</td></tr><tr><td><span class="badge b-neutral">Unassigned</span></td><td class="num">$2,130.00</td><td class="num">20</td><td class="num">14%</td></tr></tbody>
+    </table>
+  </div>
+</section>
+</div>
+<!-- --------------------------------------------------------------------------
+     Attribution sub-tab panel: By source
+     Rendered only when its sub-tab is selected. Static mockups render exactly one nested
+     panel at a time (matching the top-level tabs), so this panel is preserved here as
+     inert source markup outside the live tree.
+     --------------------------------------------------------------------------
+<div class="stack-3" data-component-id="attribution-panel-by-source">
+<section class="card" data-component-id="attribution-source-table">
+  <div class="card-head">
+    <h3 class="card-title">Revenue by AI source</h3>
+    <p class="card-desc">Each method reported in its own columns &mdash; A1 and A2 are never summed
+      into a combined total.</p>
+  </div>
+  <div class="card-body p0">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">AI source</th>
+          <th scope="col">A1 revenue</th><th scope="col">A1 orders</th>
+          <th scope="col">A1 AOV</th><th scope="col">A1 conversion</th>
+          <th scope="col">A2 revenue</th><th scope="col">A2 orders</th><th scope="col">A2 AOV</th>
+        </tr>
+      </thead>
+      <tbody><tr data-component-id="attribution-source-row-chatgpt"><td><span class="badge b-neutral">ChatGPT</span></td><td class="num">$21,430.00</td><td class="num">184</td><td class="num">$116.47</td><td class="num">3.1%</td><td class="num">$18,220.00</td><td class="num">156</td><td class="num">$116.79</td></tr><tr data-component-id="attribution-source-row-perplexity"><td><span class="badge b-neutral">Perplexity</span></td><td class="num">$14,880.00</td><td class="num">127</td><td class="num">$117.17</td><td class="num">2.6%</td><td class="num">$13,410.00</td><td class="num">115</td><td class="num">$116.61</td></tr><tr data-component-id="attribution-source-row-gemini"><td><span class="badge b-neutral">Gemini</span></td><td class="num">$8,610.00</td><td class="num">74</td><td class="num">$116.35</td><td class="num">2.2%</td><td class="num">$7,940.00</td><td class="num">68</td><td class="num">$116.76</td></tr><tr data-component-id="attribution-source-row-copilot"><td><span class="badge b-neutral">Copilot</span></td><td class="num">$3,290.00</td><td class="num">27</td><td class="num">$121.85</td><td class="num"><span class="dash">&mdash;</span></td><td class="num">$2,310.00</td><td class="num">17</td><td class="num">$135.88</td></tr></tbody>
+    </table>
+  </div>
+</section>
+</div>
+-->
+<!-- --------------------------------------------------------------------------
+     Attribution sub-tab panel: By product
+     Rendered only when its sub-tab is selected. Static mockups render exactly one nested
+     panel at a time (matching the top-level tabs), so this panel is preserved here as
+     inert source markup outside the live tree.
+     --------------------------------------------------------------------------
+<div class="stack-3" data-component-id="attribution-panel-by-product">
+<section class="card" data-component-id="attribution-product-table">
+  <div class="card-head">
+    <h3 class="card-title">Revenue by SKU</h3>
+    <p class="card-desc">GA4 item revenue joined to catalog SKUs beside Shopify line-item
+      revenue.</p>
+  </div>
+  <div class="card-body p0">
+    <table>
+      <thead><tr>
+        <th scope="col">Product</th>
+        <th scope="col">AI source</th>
+        <th scope="col">A1 revenue</th><th scope="col">A1 orders</th>
+        <th scope="col">A2 revenue</th><th scope="col">A2 orders</th>
+      </tr></thead>
+      <tbody><tr><td class="tall"><div class="cell-title">Acme Trailblazer Running Shoe</div><div class="cell-sub mono">ACME-RUN-001</div></td><td><span class="badge b-neutral">ChatGPT</span></td><td class="num">$14,220.00</td><td class="num">112</td><td class="num">$12,640.00</td><td class="num">98</td></tr><tr><td class="tall"><div class="cell-title">Acme StormShield Waterproof Jacket</div><div class="cell-sub mono">ACME-JKT-014</div></td><td><span class="badge b-neutral">Perplexity</span></td><td class="num">$9,470.00</td><td class="num">51</td><td class="num">$8,930.00</td><td class="num">48</td></tr><tr><td class="tall"><div class="cell-title">Acme Voyager 30L Backpack</div><div class="cell-sub mono">ACME-BAG-022</div></td><td><span class="badge b-neutral">Gemini</span></td><td class="num">$3,180.00</td><td class="num">39</td><td class="num">$2,940.00</td><td class="num">36</td></tr><tr><td class="tall"><div class="cell-title">Acme Trailblazer Running Shoe</div><div class="cell-sub mono">ACME-RUN-001</div></td><td><span class="badge b-neutral">Gemini</span></td><td class="num">$2,860.00</td><td class="num">22</td><td class="num">$2,610.00</td><td class="num">20</td></tr><tr><td class="tall"><div class="cell-title">Unresolved catalog item</div><div class="cell-sub mono">ACME-SOCK-009</div><div class="cell-sub">Not matched to a catalog product</div></td><td><span class="badge b-neutral">ChatGPT</span></td><td class="num">$740.00</td><td class="num">12</td><td class="num"><span class="dash">&mdash;</span></td><td class="num"><span class="dash">&mdash;</span></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination" data-component-id="attribution-product-pagination">
+    <span><span class="num">1&ndash;5</span> of <span class="num">18</span> products</span>
+    <div class="row-gap" style="gap:4px">
+      <button class="btn btn-ghost btn-sm" type="button" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Prev</span>
+      </button>
+      <button class="btn btn-ghost btn-sm" type="button">
+        <span>Next</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+</div>
+-->
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -21,41 +21,60 @@ import {
 import { productsApi } from '@/lib/api/products';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Product, ProductEvidenceItem } from '@/lib/api/types';
-import { formatPrice, type ProductEngineFilter } from '@/lib/products/catalog';
+import {
+  BUYER_DESTINATION_KIND_LABELS,
+  PRODUCT_EVIDENCE_SUB_TABS,
+  formatPrice,
+  type ProductEngineFilter,
+  type ProductEvidenceSubTab,
+} from '@/lib/products/catalog';
 import { engineLabel } from '@/lib/providers/catalog';
 
 import { EngineFilterDropdown } from './engine-filter-dropdown';
+import { NestedTabs } from './nested-tabs';
 
 /** Newest-window size for the evidence request (backend max 500). */
 const EVIDENCE_LIMIT = 100;
 
 /**
  * Product evidence drill-down (`/products/[productId]`): the persisted
- * mention evidence for one catalog product — engine, frozen prompt text,
- * rank, extracted price vs catalog (match badge), excerpt offset, and a link
- * to the source execution at `/runs/[runId]/executions/[executionId]`.
- * Bounded newest-first list with a truncation notice (mirrors
- * `mentions-citations.tsx`).
+ * evidence for one catalog product, split by `evidence_kind` into a nested
+ * segmented tablist (Mentions | Attributes | Destinations — local state,
+ * never in the URL). ONE bounded newest-first query feeds all three panels;
+ * the active kind filters client-side. Mentions keep rank/price/relation and
+ * the source-execution link; attribute rows show dimension, group, the exact
+ * matched text, and offset; destination rows show merchant, kind, the
+ * backend-sanitized URL, and any price shown at the destination. Every
+ * panel keeps the 100-row limit, its truncation notice, and `—` for nulls.
  */
 export function ProductEvidenceTable({
   product,
   backHref = '/products',
 }: Readonly<{ product: Product; backHref?: string }>) {
   const [engine, setEngine] = useState<ProductEngineFilter>('all');
+  const [subTab, setSubTab] = useState<ProductEvidenceSubTab>('mentions');
   const engineParam = engine === 'all' ? undefined : engine;
+  // Surface participates in the evidence key/request; the drill-down always
+  // reads the measurement surface ('') — surface discovery lives on the
+  // Visibility projection (`available_surfaces`), which this page never loads.
+  const surface = '';
 
   const evidenceQuery = useQuery({
     queryKey: queryKeys.products.evidence(product.id, {
       engine: engineParam ?? null,
+      surface,
       limit: EVIDENCE_LIMIT,
     }),
     queryFn: ({ signal }) =>
       productsApi.getProductEvidence(
         product.id,
-        { engine: engineParam, limit: EVIDENCE_LIMIT },
+        { engine: engineParam, surface, limit: EVIDENCE_LIMIT },
         { signal },
       ),
   });
+
+  const items = evidenceQuery.data?.items ?? [];
+  const truncated = evidenceQuery.data?.truncated ?? false;
 
   return (
     <div className="grid gap-4">
@@ -83,66 +102,154 @@ export function ProductEvidenceTable({
           </div>
           <EngineFilterDropdown engine={engine} onChange={setEngine} />
         </CardHeader>
-
-        <CardContent className="p-0">
-          {evidenceQuery.isLoading ? (
-            <div className="grid gap-3 p-[var(--card-padding)]" aria-hidden>
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-2/3" />
-            </div>
-          ) : evidenceQuery.isError ? (
-            <div className="p-[var(--card-padding)]">
-              <Alert tone="danger">
-                Could not load this product&apos;s evidence.{' '}
-                <button type="button" className="underline" onClick={() => evidenceQuery.refetch()}>
-                  Retry
-                </button>
-              </Alert>
-            </div>
-          ) : (evidenceQuery.data?.items ?? []).length === 0 ? (
-            <p className="text-secondary p-[var(--card-padding)] text-sm">
-              {engineParam
-                ? `No persisted mentions of this product on ${engineLabel(engineParam)} yet.`
-                : 'No persisted mentions of this product yet. Once a run completes, every mention appears here.'}
-            </p>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Engine</TableHead>
-                    <TableHead className="min-w-[220px]">Prompt</TableHead>
-                    <TableHead>Rank</TableHead>
-                    <TableHead>Price mentioned</TableHead>
-                    <TableHead>vs catalog</TableHead>
-                    <TableHead>Offset</TableHead>
-                    <TableHead className="text-right">Execution</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(evidenceQuery.data?.items ?? []).map((item) => (
-                    <EvidenceRow key={item.mention_id} item={item} />
-                  ))}
-                </TableBody>
-              </Table>
-              {evidenceQuery.data?.truncated ? (
-                <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2.5 text-xs">
-                  <Info className="size-3.5 shrink-0" aria-hidden />
-                  <span>
-                    Showing newest {EVIDENCE_LIMIT} mentions; refine filters to narrow results.
-                  </span>
-                </div>
-              ) : null}
-            </>
-          )}
-        </CardContent>
       </Card>
+
+      {evidenceQuery.isLoading ? (
+        <Card>
+          <CardContent className="grid gap-3" aria-hidden>
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-2/3" />
+          </CardContent>
+        </Card>
+      ) : evidenceQuery.isError ? (
+        <Alert tone="danger">
+          Could not load this product&apos;s evidence.{' '}
+          <button type="button" className="underline" onClick={() => evidenceQuery.refetch()}>
+            Retry
+          </button>
+        </Alert>
+      ) : (
+        <NestedTabs
+          tabs={PRODUCT_EVIDENCE_SUB_TABS}
+          activeTab={subTab}
+          onSelectTab={setSubTab}
+          ariaLabel="Evidence kinds"
+          idPrefix="product-evidence"
+          panel={
+            subTab === 'attributes' ? (
+              <AttributeEvidenceCard
+                items={items.filter((item) => item.evidence_kind === 'attribute_mention')}
+                truncated={truncated}
+                engineParam={engineParam}
+              />
+            ) : subTab === 'destinations' ? (
+              <DestinationEvidenceCard
+                items={items.filter((item) => item.evidence_kind === 'buyer_destination')}
+                truncated={truncated}
+                engineParam={engineParam}
+              />
+            ) : (
+              <MentionEvidenceCard
+                items={items.filter((item) => item.evidence_kind === 'product_mention')}
+                truncated={truncated}
+                engineParam={engineParam}
+              />
+            )
+          }
+        />
+      )}
     </div>
   );
 }
 
-function EvidenceRow({ item }: Readonly<{ item: ProductEvidenceItem }>) {
+type EvidenceKindCardProps = Readonly<{
+  items: ProductEvidenceItem[];
+  truncated: boolean;
+  engineParam: string | undefined;
+}>;
+
+function EvidenceCardShell({
+  eyebrow,
+  title,
+  description,
+  truncated,
+  empty,
+  emptyCopy,
+  notice,
+  children,
+}: Readonly<{
+  eyebrow: string;
+  title: string;
+  description: string;
+  truncated: boolean;
+  empty: boolean;
+  emptyCopy: string;
+  /** Truncation notice shown under the table when the window was cut. */
+  notice: string;
+  children: React.ReactNode;
+}>) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-start justify-between gap-3">
+        <div className="grid gap-1">
+          <CardEyebrow>{eyebrow}</CardEyebrow>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        {truncated && !empty ? (
+          <Badge variant="status" value="warning">
+            Truncated
+          </Badge>
+        ) : null}
+      </CardHeader>
+      <CardContent className="p-0">
+        {empty ? (
+          <p className="text-secondary p-[var(--card-padding)] text-sm">{emptyCopy}</p>
+        ) : (
+          <>
+            {children}
+            {truncated ? (
+              <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2.5 text-xs">
+                <Info className="size-3.5 shrink-0" aria-hidden />
+                <span>{notice}</span>
+              </div>
+            ) : null}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MentionEvidenceCard({ items, truncated, engineParam }: EvidenceKindCardProps) {
+  return (
+    <EvidenceCardShell
+      eyebrow="Evidence · Mentions"
+      title="Where this product was mentioned"
+      description="Answer executions that mentioned the product, with rank, the extracted price and the character offset in the answer text."
+      truncated={truncated}
+      empty={items.length === 0}
+      emptyCopy={
+        engineParam
+          ? `No persisted mentions of this product on ${engineLabel(engineParam)} yet.`
+          : 'No persisted mentions of this product yet. Once a run completes, every mention appears here.'
+      }
+      notice={`Showing the first ${EVIDENCE_LIMIT} mentions for this product; older mentions are truncated.`}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Engine</TableHead>
+            <TableHead className="min-w-[220px]">Prompt</TableHead>
+            <TableHead>Rank</TableHead>
+            <TableHead>Price mentioned</TableHead>
+            <TableHead>vs catalog</TableHead>
+            <TableHead>Offset</TableHead>
+            <TableHead className="text-right">Execution</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <MentionEvidenceRow key={item.evidence_id} item={item} />
+          ))}
+        </TableBody>
+      </Table>
+    </EvidenceCardShell>
+  );
+}
+
+function MentionEvidenceRow({ item }: Readonly<{ item: ProductEvidenceItem }>) {
   return (
     <TableRow>
       <TableCell>
@@ -165,20 +272,7 @@ function EvidenceRow({ item }: Readonly<{ item: ProductEvidenceItem }>) {
         )}
       </TableCell>
       <TableCell>
-        {item.price_matches_catalog === null ? (
-          <span className="text-subtle">—</span>
-        ) : item.price_matches_catalog ? (
-          <Badge variant="status" value="success">
-            Match
-          </Badge>
-        ) : (
-          // Plain badge: the verdict was computed against the audit-time
-          // FROZEN catalog price, so quoting the live price here could
-          // contradict it after a post-audit price edit.
-          <Badge variant="status" value="warning">
-            Mismatch
-          </Badge>
-        )}
+        <PriceRelationBadge item={item} />
       </TableCell>
       <TableCell numeric className="text-secondary">
         {item.first_offset !== null ? item.first_offset : '—'}
@@ -188,9 +282,212 @@ function EvidenceRow({ item }: Readonly<{ item: ProductEvidenceItem }>) {
           href={`/runs/${item.audit_id}/executions/${item.task_id}`}
           className="text-accent-text text-sm hover:underline"
         >
-          View
+          Open
         </Link>
       </TableCell>
     </TableRow>
+  );
+}
+
+/**
+ * The vs-catalog verdict: the persisted item-level `price_relation`
+ * (Match/Higher/Lower) when the analyzer recorded one; otherwise the v1
+ * boolean fallback (Match/Mismatch — direction is never inferred); `—` when
+ * the price was not verifiable.
+ */
+function PriceRelationBadge({ item }: Readonly<{ item: ProductEvidenceItem }>) {
+  if (item.price_relation === 'match') {
+    return (
+      <Badge variant="status" value="success">
+        Match
+      </Badge>
+    );
+  }
+  if (item.price_relation === 'higher') {
+    return (
+      <Badge variant="status" value="warning">
+        Higher
+      </Badge>
+    );
+  }
+  if (item.price_relation === 'lower') {
+    return (
+      <Badge variant="status" value="info">
+        Lower
+      </Badge>
+    );
+  }
+  if (item.price_matches_catalog === null) return <span className="text-subtle">—</span>;
+  // v1 fallback: the verdict was computed against the audit-time FROZEN
+  // catalog price, so quoting the live price here could contradict it after
+  // a post-audit price edit — the badge stands alone.
+  return item.price_matches_catalog ? (
+    <Badge variant="status" value="success">
+      Match
+    </Badge>
+  ) : (
+    <Badge variant="status" value="warning">
+      Mismatch
+    </Badge>
+  );
+}
+
+function AttributeEvidenceCard({ items, truncated, engineParam }: EvidenceKindCardProps) {
+  return (
+    <EvidenceCardShell
+      eyebrow="Evidence · Attributes"
+      title="Attribute mentions for this product"
+      description="Exact attribute text matched in the answer windows around mentions of this product, grouped by dimension and group."
+      truncated={truncated}
+      empty={items.length === 0}
+      emptyCopy={
+        engineParam
+          ? `No persisted attribute mentions of this product on ${engineLabel(engineParam)} yet.`
+          : 'No persisted attribute mentions of this product yet.'
+      }
+      notice={`Showing the first ${EVIDENCE_LIMIT} attribute mentions for this product; the rest are truncated.`}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Engine</TableHead>
+            <TableHead className="min-w-[220px]">Prompt</TableHead>
+            <TableHead>Dimension</TableHead>
+            <TableHead>Group</TableHead>
+            <TableHead className="min-w-[220px]">Matched text</TableHead>
+            <TableHead>Offset</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <TableRow key={item.evidence_id}>
+              <TableCell>
+                <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
+              </TableCell>
+              <TableCell className="max-w-[320px]">
+                <span className="text-foreground line-clamp-2 block text-sm">
+                  {item.prompt_text}
+                </span>
+                <span className="text-muted text-xs">
+                  #{item.prompt_index} · rep {item.repetition}
+                </span>
+              </TableCell>
+              <TableCell className="text-secondary">
+                {item.attribute_dimension ?? '—'}
+              </TableCell>
+              <TableCell className="text-secondary">{item.attribute_group ?? '—'}</TableCell>
+              <TableCell className="max-w-[320px]">
+                {item.attribute_text !== null ? (
+                  <span className="text-foreground line-clamp-2 block text-sm">
+                    &ldquo;{item.attribute_text}&rdquo;
+                  </span>
+                ) : (
+                  <span className="text-subtle">—</span>
+                )}
+              </TableCell>
+              <TableCell numeric className="text-secondary">
+                {item.attribute_offset !== null ? item.attribute_offset : '—'}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </EvidenceCardShell>
+  );
+}
+
+function DestinationEvidenceCard({ items, truncated, engineParam }: EvidenceKindCardProps) {
+  return (
+    <EvidenceCardShell
+      eyebrow="Evidence · Destinations"
+      title="Where answers send buyers for this product"
+      description="Sanitized merchant links surfaced beside mentions of this product, with the destination kind and any price shown at the destination."
+      truncated={truncated}
+      empty={items.length === 0}
+      emptyCopy={
+        engineParam
+          ? `No persisted buyer destinations for this product on ${engineLabel(engineParam)} yet.`
+          : 'No persisted buyer destinations for this product yet.'
+      }
+      notice={`Showing the first ${EVIDENCE_LIMIT} buyer destinations for this product; the rest are truncated.`}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Engine</TableHead>
+            <TableHead className="min-w-[220px]">Prompt</TableHead>
+            <TableHead>Merchant</TableHead>
+            <TableHead>Kind</TableHead>
+            <TableHead className="min-w-[200px]">Destination URL</TableHead>
+            <TableHead>Price</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <TableRow key={item.evidence_id}>
+              <TableCell>
+                <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
+              </TableCell>
+              <TableCell className="max-w-[320px]">
+                <span className="text-foreground line-clamp-2 block text-sm">
+                  {item.prompt_text}
+                </span>
+                <span className="text-muted text-xs">
+                  #{item.prompt_index} · rep {item.repetition}
+                </span>
+              </TableCell>
+              <TableCell className="max-w-[220px]">
+                {item.merchant_name !== null || item.merchant_domain !== null ? (
+                  <div className="grid gap-0.5">
+                    <span className="text-foreground truncate font-medium">
+                      {item.merchant_name ?? item.merchant_domain}
+                    </span>
+                    {item.merchant_name !== null && item.merchant_domain !== null ? (
+                      <span className="text-muted truncate text-xs">{item.merchant_domain}</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <span className="text-subtle">—</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {item.merchant_kind !== null ? (
+                  <Badge variant="neutral">
+                    {BUYER_DESTINATION_KIND_LABELS[item.merchant_kind]}
+                  </Badge>
+                ) : (
+                  <span className="text-subtle">—</span>
+                )}
+              </TableCell>
+              <TableCell className="max-w-[260px]">
+                {item.destination_url !== null ? (
+                  // The backend emits this URL already sanitized; it opens in
+                  // a new tab with noopener/noreferrer.
+                  <a
+                    href={item.destination_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-text block truncate text-sm hover:underline"
+                  >
+                    {item.destination_url}
+                  </a>
+                ) : (
+                  <span className="text-subtle">—</span>
+                )}
+              </TableCell>
+              <TableCell numeric className="text-secondary">
+                {item.price_value !== null ? (
+                  <span title={item.price_text}>
+                    {formatPrice(item.price_value, item.price_currency)}
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </EvidenceCardShell>
   );
 }

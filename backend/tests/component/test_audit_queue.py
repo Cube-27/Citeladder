@@ -161,3 +161,82 @@ async def test_succeed_and_retry_lifecycle(
 
     # A different owner cannot finalize a task it does not hold.
     assert not await queue.succeed(task_id=second, owner="someone-else")
+
+
+_FIXTURE_SURFACE = "google_shopping"
+
+
+@pytest.mark.asyncio
+async def test_claim_transition_sweeper_ignore_shopping_surface(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Fixture probe rows (non-measurement surface) stay fully queue-visible.
+
+    The shopping-surface slot is a planner/API boundary only: claim, the
+    succeed/retry transitions, and the lease sweeper must NOT predicate on
+    ``shopping_surface`` — probe rows drain through the same worker pool.
+    """
+    audit = await _make_queued_audit(session_factory, prompts=1, reps=1)  # 1
+
+    # Seed a probe task sharing the measurement slot except for the surface
+    # segment (the fifth uq_audit_task_slot column + idempotency key suffix).
+    async with session_factory() as session:
+        measurement = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert measurement is not None
+        assert measurement.shopping_surface == ""
+        measurement_id = measurement.id
+        probe = AuditTask(
+            audit_id=audit.id,
+            workspace_id=measurement.workspace_id,
+            prompt_snapshot_id=measurement.prompt_snapshot_id,
+            engine_snapshot_id=measurement.engine_snapshot_id,
+            prompt_index=measurement.prompt_index,
+            repetition=measurement.repetition,
+            randomized_position=measurement.randomized_position,
+            logical_engine=measurement.logical_engine,
+            transport_provider=measurement.transport_provider,
+            transport_model=measurement.transport_model,
+            shopping_surface=_FIXTURE_SURFACE,
+            prompt_text=measurement.prompt_text,
+            provider_route_snapshot=measurement.provider_route_snapshot,
+            idempotency_key=f"{measurement.idempotency_key}{_FIXTURE_SURFACE}",
+            max_attempts=measurement.max_attempts,
+        )
+        session.add(probe)
+        await session.commit()
+        probe_id = probe.id
+
+    queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
+
+    # Claim partitions BOTH rows with no surface predicate.
+    claimed = await queue.claim(owner="w-probe", limit=10)
+    assert {t.id for t in claimed} == {measurement_id, probe_id}
+
+    # Expire only the probe's lease: the sweeper reclaims it (unfiltered).
+    async with session_factory() as session:
+        task = await session.get(AuditTask, probe_id)
+        assert task is not None
+        task.lease_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        await session.commit()
+    assert await queue.release_expired() == 1
+    async with session_factory() as session:
+        task = await session.get(AuditTask, probe_id)
+        assert task is not None
+        assert task.status == TASK_STATUS_RETRY_WAIT
+        assert task.lease_owner is None
+        # The measurement lease was still valid: untouched by the sweep.
+        other = await session.get(AuditTask, measurement_id)
+        assert other is not None
+        assert other.status == TASK_STATUS_LEASED
+
+    # Transitions finalize the probe row exactly like a measurement row.
+    assert await queue.claim(owner="w-probe", limit=10)
+    assert await queue.mark_running(task_id=probe_id, owner="w-probe")
+    assert await queue.succeed(task_id=probe_id, owner="w-probe")
+    async with session_factory() as session:
+        task = await session.get(AuditTask, probe_id)
+        assert task is not None
+        assert task.status == "succeeded"
+        assert task.shopping_surface == _FIXTURE_SURFACE

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import uuid
 from decimal import Decimal
 
@@ -201,8 +202,10 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
     assert body["audit_id"] == str(second.id)
     assert body["project_id"] == str(seed.project_id)
     assert body["audit_status"] == "completed"
-    assert body["product_analyzer_version"]
-    assert body["product_scoring_rule_version"]
+    assert body["product_analyzer_version"] == "product-analysis-2"
+    assert body["product_scoring_rule_version"] == "product-scoring-v2"
+    # The shopping-surface gate ships empty: only measurement is available.
+    assert body["available_surfaces"] == [""]
     # 2 prompts x 1 rep -> 2 executions, each mentioning both entries.
     assert body["total_analyses"] == 2
     assert body["total_mentions"] == 4
@@ -213,12 +216,39 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
     assert entry["product_id"] == str(product.id)
     assert entry["sku"] == "AC-VB500"
     assert entry["name"] == "Acme VoltBike 500"
+    assert entry["product_analyzer_version"] == "product-analysis-2"
     assert entry["mention_count"] == 2
     assert entry["sov_share"] == 0.5
     assert entry["avg_rank"] == 1.0
     assert entry["rank_distribution"]["top_1"] == 2
     assert entry["price_mention_count"] == 2
     assert entry["price_accuracy_rate"] == 1.0
+    # v2 metrics: rank-1 in both enumerations; $2,499.00 matches the catalog.
+    assert entry["win_rate"] == 1.0
+    assert entry["price_relation_counts"] == {
+        "match": 2,
+        "higher": 0,
+        "lower": 0,
+        "mismatch": 0,
+    }
+    assert entry["price_mismatch_rate"] == 0.0
+    assert entry["attribute_dimension_frequency"] == {}
+    assert entry["buyer_destination_mix"] == {
+        "total": 0,
+        "by_kind": [],
+        "by_domain": [],
+    }
+    assert entry["competitor_co_placement"] == {
+        "items": [
+            {
+                "competitor_product_id": str(competitor_product.id),
+                "competitor_name": "Globex",
+                "product_name": "Globex CityBike 450",
+                "count": 2,
+            }
+        ],
+        "truncated": False,
+    }
 
     competitor_entries = body["competitor_products"]
     assert len(competitor_entries) == 1
@@ -226,8 +256,24 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
     assert competitor_entry["competitor_product_id"] == str(competitor_product.id)
     assert competitor_entry["competitor_name"] == "Globex"
     assert competitor_entry["name"] == "Globex CityBike 450"
+    assert competitor_entry["product_analyzer_version"] == "product-analysis-2"
     assert competitor_entry["mention_count"] == 2
     assert competitor_entry["avg_rank"] == 2.0
+    # Rank 2 in both enumerations -> never a win; price matches the catalog.
+    assert competitor_entry["win_rate"] == 0.0
+    assert competitor_entry["price_relation_counts"] == {
+        "match": 2,
+        "higher": 0,
+        "lower": 0,
+        "mismatch": 0,
+    }
+    assert competitor_entry["price_mismatch_rate"] == 0.0
+    # Co-placement only tracks COMPETITOR products, so the competitor entry
+    # itself has no pairs (the own product is not a competitor).
+    assert competitor_entry["competitor_co_placement"] == {
+        "items": [],
+        "truncated": False,
+    }
 
     # An explicit audit_id selects that audit's projection.
     explicit = await client.get(
@@ -336,14 +382,21 @@ async def test_evidence_items_windowing_and_filters(
     assert resp.status_code == 200
     body = resp.json()
     assert body["truncated"] is False
+    # The fixture answer has no URLs or attribute phrases: exactly one
+    # product_mention evidence row per execution, nothing else.
     assert len(body["items"]) == 2
     item = body["items"][0]
+    assert item["evidence_kind"] == "product_mention"
+    assert item["evidence_id"]
+    assert "mention_id" not in item
+    assert item["analysis_id"]
     assert item["audit_id"] == str(audit.id)
     assert item["task_id"]
-    assert item["mention_id"]
     assert item["artifact_id"]
     assert item["logical_engine"] == ENGINE_GEMINI
     assert item["transport_model"]
+    assert item["product_analyzer_version"] == "product-analysis-2"
+    assert item["shopping_surface"] == ""
     assert item["prompt_text"].startswith("best option")
     assert item["matched_name"] == "Acme VoltBike 500"
     assert item["matched_sku"] == "AC-VB500"
@@ -351,6 +404,17 @@ async def test_evidence_items_windowing_and_filters(
     assert item["price_value"] == 2499.0
     assert item["price_currency"] == "USD"
     assert item["price_matches_catalog"] is True
+    # $2,499.00 equals the catalog price -> v2 direction is exactly "match".
+    assert item["price_relation"] == "match"
+    # Kind-specific keys are present on every row and null for other kinds.
+    assert item["attribute_dimension"] is None
+    assert item["attribute_group"] is None
+    assert item["attribute_text"] is None
+    assert item["attribute_offset"] is None
+    assert item["merchant_name"] is None
+    assert item["merchant_domain"] is None
+    assert item["merchant_kind"] is None
+    assert item["destination_url"] is None
 
     # Bounded window: limit=1 truncates deterministically.
     window = await client.get(
@@ -459,9 +523,9 @@ async def test_export_csv_download(
     assert "attachment" in resp.headers["content-disposition"]
     assert "product-visibility-" in resp.headers["content-disposition"]
 
-    lines = [line for line in resp.text.strip().splitlines() if line]
-    header = lines[0].split(",")
-    assert header == [
+    rows = list(csv.DictReader(io.StringIO(resp.text)))
+    assert rows
+    assert list(rows[0].keys()) == [
         "audit_id",
         "product",
         "sku",
@@ -470,16 +534,54 @@ async def test_export_csv_download(
         "avg_rank",
         "price_accuracy",
         "engine",
+        "product_analyzer_version",
+        "surface",
+        "win_rate",
+        "price_mismatch_rate",
+        "price_relation_match_count",
+        "price_relation_higher_count",
+        "price_relation_lower_count",
+        "price_relation_mismatch_count",
+        "attribute_dimension_frequency",
+        "buyer_destination_mix",
+        "competitor_co_placement",
     ]
     # 2 entries x (overall + one engine row) = 4 data rows.
-    rows = lines[1:]
     assert len(rows) == 4
-    assert any("Acme VoltBike 500" in row and row.endswith("all") for row in rows)
-    assert any(
-        "Acme VoltBike 500" in row and row.endswith(ENGINE_GEMINI) for row in rows
+    own_rows = [row for row in rows if row["product"] == "Acme VoltBike 500"]
+    assert {row["engine"] for row in own_rows} == {"all", ENGINE_GEMINI}
+    assert any(row["product"] == "Globex CityBike 450" for row in rows)
+    assert all(row["audit_id"] == str(audit.id) for row in rows)
+    # v2 provenance + metrics on every row; surface stays measurement ("").
+    assert all(row["product_analyzer_version"] == "product-analysis-2" for row in rows)
+    assert all(row["surface"] == "" for row in rows)
+    own_overall = next(row for row in own_rows if row["engine"] == "all")
+    assert float(own_overall["win_rate"]) == 1.0
+    # Zero mismatch is an explicit 0.0 cell, not a blank.
+    assert float(own_overall["price_mismatch_rate"]) == 0.0
+    assert own_overall["price_relation_match_count"] == "2"
+    assert own_overall["price_relation_higher_count"] == "0"
+    assert own_overall["price_relation_lower_count"] == "0"
+    assert own_overall["price_relation_mismatch_count"] == "0"
+    # Structured cells are stable JSON (sorted keys, compact separators).
+    assert json.loads(own_overall["attribute_dimension_frequency"]) == {}
+    assert json.loads(own_overall["buyer_destination_mix"]) == {
+        "total": 0,
+        "by_kind": [],
+        "by_domain": [],
+    }
+    co_placement = json.loads(own_overall["competitor_co_placement"])
+    assert co_placement["truncated"] is False
+    assert [item["product_name"] for item in co_placement["items"]] == [
+        "Globex CityBike 450"
+    ]
+    # Repeated exports are byte-stable.
+    again = await client.get(
+        f"/api/v1/projects/{seed.project_id}/products/visibility/export.csv",
+        headers=_headers(seed),
     )
-    assert any("Globex CityBike 450" in row for row in rows)
-    assert all(str(audit.id) in row for row in rows)
+    assert again.status_code == 200
+    assert again.text == resp.text
 
     # Explicit audit selection works for the export too.
     explicit = await client.get(

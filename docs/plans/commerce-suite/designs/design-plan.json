@@ -1,0 +1,137 @@
+{
+  "title": "Commerce workspace — Catalog, Visibility and Attribution",
+  "summary": "Turns the existing /products workspace into a three-tab Commerce workspace (Catalog | Visibility | Attribution) using only the tokens and primitives already in frontend/app/globals.css and components/ui — no new tokens, no new primitives. Every screen is delivered as a Light and a Dark file because the product ships both themes and dark is the default; the recommended variation in each section is the dark one.\n\nVisibility keeps today's summary cards and rankings tables and extends them in place: a Win rate column (null renders as an em-dash, never 0%), a Price relation column of always-text badges (Match / Higher / Lower), the existing rank-distribution bar, and both Engine and Surface chips in the local filter row. Two variations show the same screen against different data: the v2 populated run, and an analyzer-v1 run where the direction was never recorded and the cell reads \"Direction unavailable\" behind an informational alert instead of inventing higher or lower. Below the tables, an attribute-dimension panel reports frequency only — grouped by characteristics / facts / ratings with integer counts and a within-group share bar, and no valence anywhere — a buyer-destination breakdown pairs the existing Donut with a full text table naming every merchant, its kind (brand site / marketplace / retailer / other) and share, and the competitor co-placement matrix uses a real table with row and column headers, visible numeric cells, and the existing Info-icon footer notice plus a header badge when the pair bound was hit. The populated v2 run is recommended because it is the state operators see most often and it exercises every new column.\n\nAttribution renders A1 (GA4 platform-attributed) and A2 (Shopify order referrer) as two separate, explicitly labelled method cards side by side, each carrying a Deterministic badge and its own granularity/coverage figure, with the backend-projected A1 − A2 delta in its own card labelled \"Delta · A1 − A2\". There is deliberately no combined figure anywhere: the per-source and per-SKU tables give A1 and A2 their own columns rather than a shared total column, so the two methods can never read as addends. Unattributed orders get their own card stating the count, share and revenue in plain language directly under A2. Layer B allocation is quarantined in a warning-bordered \"Statistical estimate\" card with a Model output badge, a sample size and an explicit warning alert, visually distinct from every deterministic card. The second variation shows the GA4 fallback: a reduced-granularity alert at the top of the panel and on the A1 card, the SKU table's source column relabelled \"Item grouping\" with default-channel values so those rows are never passed off as per-AI-source data, and the statistical card guarded as Insufficient data with every estimate an em-dash. The A1-vs-A2 comparison is recommended as the primary state; the reduced-granularity file documents the degraded path.\n\nCatalog keeps the current table and adds a feed-origin badge column (Manual / CSV import / Synced feed), a Feed health column whose badges always carry text (Healthy, N warnings, N errors, Feed health unavailable, Not feed-bound) with the firing rule ids beneath, and a Sync column reusing the existing run-status badge vocabulary with a timestamp. A bound-connection card above the table carries the shop, the sync run status and its window. The feed-bound variation is recommended; the failed-sync variation shows the non-secret error_code and the notice that per-SKU health is from the last successful run.\n\nThe Attribution not-connected state follows the existing empty-state recipe (accent IconChip, display heading, one paragraph, CTA row) and adds both method cards in an explicit Not connected state with em-dash metrics, so a new workspace can see what each connection would contribute before connecting either.",
+  "sections": [
+    {
+      "title": "Commerce › Visibility — populated run",
+      "key": "commerce-visibility",
+      "description": "Rankings with win rate and price-relation badges, attribute frequency, buyer destinations and the co-placement matrix, sliced by engine and surface, and organized into nested sub-tabs — Overview, Attributes, Destinations and Co-placement — that reuse the same segmented tablist one level down under the run/engine/surface toolbar, rendering one panel at a time.",
+      "variations": [
+        {
+          "title": "Analyzer v2 run, full metrics (Light)",
+          "key": "populated-light",
+          "html_link": "commerce-visibility-populated-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "Analyzer v2 run, full metrics (Dark)",
+          "key": "populated-dark",
+          "html_link": "commerce-visibility-populated-dark.html",
+          "is_recommended": true
+        },
+        {
+          "title": "Analyzer v1 run, direction unavailable (Light)",
+          "key": "mixed-version-light",
+          "html_link": "commerce-visibility-mixed-version-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "Analyzer v1 run, direction unavailable (Dark)",
+          "key": "mixed-version-dark",
+          "html_link": "commerce-visibility-mixed-version-dark.html",
+          "is_recommended": false
+        }
+      ]
+    },
+    {
+      "title": "Commerce › Attribution — A1 and A2",
+      "key": "commerce-attribution",
+      "description": "Deterministic A1 and A2 side by side with the A1 − A2 delta, unattributed share, per-source and per-SKU revenue, and a separate statistical estimate, organized into nested sub-tabs — Overview, By source and By product — under the range/granularity/recompute toolbar, rendering one panel at a time.",
+      "variations": [
+        {
+          "title": "A1 vs A2 with delta (Light)",
+          "key": "methods-light",
+          "html_link": "commerce-attribution-methods-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "A1 vs A2 with delta (Dark)",
+          "key": "methods-dark",
+          "html_link": "commerce-attribution-methods-dark.html",
+          "is_recommended": true
+        },
+        {
+          "title": "Reduced GA4 granularity (Light)",
+          "key": "reduced-granularity-light",
+          "html_link": "commerce-attribution-reduced-granularity-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "Reduced GA4 granularity (Dark)",
+          "key": "reduced-granularity-dark",
+          "html_link": "commerce-attribution-reduced-granularity-dark.html",
+          "is_recommended": false
+        }
+      ]
+    },
+    {
+      "title": "Commerce › Catalog — feed origin, health and sync",
+      "key": "commerce-catalog",
+      "description": "Catalog table with origin badges, per-SKU feed health and rule ids, plus the bound Shopify connection's sync state.",
+      "variations": [
+        {
+          "title": "Feed-bound catalog (Light)",
+          "key": "feed-bound-light",
+          "html_link": "commerce-catalog-feed-bound-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "Feed-bound catalog (Dark)",
+          "key": "feed-bound-dark",
+          "html_link": "commerce-catalog-feed-bound-dark.html",
+          "is_recommended": true
+        },
+        {
+          "title": "Failed sync, stale health (Light)",
+          "key": "sync-failed-light",
+          "html_link": "commerce-catalog-sync-failed-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "Failed sync, stale health (Dark)",
+          "key": "sync-failed-dark",
+          "html_link": "commerce-catalog-sync-failed-dark.html",
+          "is_recommended": false
+        }
+      ]
+    },
+    {
+      "title": "Commerce › Attribution — not connected",
+      "key": "commerce-attribution-empty",
+      "description": "What a new workspace sees before Google Analytics 4 or Shopify is connected.",
+      "variations": [
+        {
+          "title": "No GA4 and no Shopify (Light)",
+          "key": "not-connected-light",
+          "html_link": "commerce-attribution-not-connected-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "No GA4 and no Shopify (Dark)",
+          "key": "not-connected-dark",
+          "html_link": "commerce-attribution-not-connected-dark.html",
+          "is_recommended": true
+        }
+      ]
+    },
+    {
+      "title": "Commerce › Product drill-down — evidence by kind",
+      "key": "commerce-product-drilldown",
+      "description": "Per-product evidence at /products/[productId]: a header with the product name, catalog completeness badge and a back link to /products, then nested sub-tabs — Mentions, Attributes and Destinations — reusing the same segmented tablist, one panel rendered at a time. Each evidence table is capped at 100 rows with a truncation notice and renders null values as an em-dash.",
+      "variations": [
+        {
+          "title": "Product drill-down (Light)",
+          "key": "drilldown-light",
+          "html_link": "commerce-product-drilldown-light.html",
+          "is_recommended": false
+        },
+        {
+          "title": "Product drill-down (Dark)",
+          "key": "drilldown-dark",
+          "html_link": "commerce-product-drilldown-dark.html",
+          "is_recommended": true
+        }
+      ]
+    }
+  ]
+}

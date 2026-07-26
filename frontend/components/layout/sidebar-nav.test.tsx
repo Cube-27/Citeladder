@@ -58,7 +58,7 @@ describe('SidebarNav', () => {
       'Answers',
       'Traffic',
       'Prompts',
-      'Products',
+      'Commerce',
       'Runs',
       'Content',
       'Site health',

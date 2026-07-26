@@ -69,6 +69,10 @@ async def test_product_crud_round_trip(client: httpx.AsyncClient) -> None:
     assert body["currency"] == "USD"  # normalized
     assert body["origin"] == "manual"
     assert body["variants"][0]["name"] == "Graphite / Standard"
+    # Sync provenance fields are present and null for a manual product.
+    assert body["connection_id"] is None
+    assert body["external_item_ref"] is None
+    assert body["last_seen_sync_run_id"] is None
     # Completeness badge is computed on read from the config matrix.
     completeness = body["completeness"]
     assert completeness["present"] < completeness["total"]

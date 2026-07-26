@@ -29,13 +29,16 @@ from app.core.config.integrations import (
     ERROR_MAPPING_PROVIDER_MISMATCH,
     ERROR_OAUTH_EXCHANGE_FAILED,
     ERROR_OAUTH_NOT_CONFIGURED,
+    ERROR_OAUTH_SHOP_INVALID,
     ERROR_OAUTH_STATE_INVALID,
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
     ERROR_SYNC_WINDOW_INVALID,
     INTEGRATION_OAUTH_CALLBACK_PATH,
+    INTEGRATION_PROVIDER_SHOPIFY,
     INTEGRATION_PROVIDERS,
     SYNC_KIND_ON_DEMAND,
     integration_oauth_landing_url,
+    normalize_shopify_shop_domain,
 )
 from app.core.http_errors import raise_not_found
 from app.domain.integrations.mappings import (
@@ -121,9 +124,34 @@ async def integration_oauth_start(
     request: Request,
     ctx: _WorkspaceDep,
     session: _SessionDep,
+    shop: Annotated[str, Query()] = "",
 ) -> RedirectResponse:
-    """Begin the OAuth connect flow: 302 to the provider consent screen."""
+    """Begin the OAuth connect flow: 302 to the provider consent screen.
+
+    ``shop`` is REQUIRED for Shopify (the per-shop OAuth target) and
+    rejected for every other provider — both misuse forms are a 422, never
+    a guessed redirect target.
+    """
     _require_known_provider(provider)
+    provider_account_ref = ""
+    if provider == INTEGRATION_PROVIDER_SHOPIFY:
+        if not shop.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=ERROR_OAUTH_SHOP_INVALID,
+            )
+        try:
+            provider_account_ref = normalize_shopify_shop_domain(shop)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=ERROR_OAUTH_SHOP_INVALID,
+            ) from exc
+    elif shop.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ERROR_OAUTH_SHOP_INVALID,
+        )
     try:
         authorize_url = await start_connect(
             session,
@@ -131,6 +159,7 @@ async def integration_oauth_start(
             user_id=ctx.user.id,
             provider=provider,
             redirect_uri=_redirect_uri(request, provider),
+            provider_account_ref=provider_account_ref,
         )
     except IntegrationNotConfiguredError as exc:
         raise HTTPException(
@@ -169,6 +198,9 @@ async def integration_oauth_callback(
             state=state,
             user=user,
             redirect_uri=_redirect_uri(request, provider),
+            # The full query map for the Shopify callback HMAC verification
+            # (ignored by the single-tenant transports).
+            callback_params={key: value for key, value in request.query_params.items()},
         )
     except IntegrationStateError:
         return _landing_redirect({"error": ERROR_OAUTH_STATE_INVALID})

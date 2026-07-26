@@ -1,0 +1,32 @@
+{
+  "dimensionHeaders": [
+    {"name": "sessionSource"},
+    {"name": "sessionMedium"},
+    {"name": "date"}
+  ],
+  "metricHeaders": [
+    {"name": "transactions", "type": "TYPE_INTEGER"},
+    {"name": "purchaseRevenue", "type": "TYPE_FLOAT"},
+    {"name": "sessions", "type": "TYPE_INTEGER"}
+  ],
+  "rows": [
+    {
+      "dimensionValues": [
+        {"value": "chatgpt.com"},
+        {"value": "referral"},
+        {"value": "20260720"}
+      ],
+      "metricValues": [{"value": "2"}, {"value": "120.5"}, {"value": "10"}]
+    },
+    {
+      "dimensionValues": [
+        {"value": "google"},
+        {"value": "organic"},
+        {"value": "20260721"}
+      ],
+      "metricValues": [{"value": "5"}, {"value": "300.25"}, {"value": "40"}]
+    }
+  ],
+  "rowCount": 2,
+  "metadata": {"currencyCode": "USD", "timeZone": "America/New_York"}
+}

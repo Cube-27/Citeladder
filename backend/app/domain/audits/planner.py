@@ -37,6 +37,10 @@ from app.core.config.audits import (
     audit_settings,
     system_instruction_for_mode,
 )
+from app.core.config.commerce import (
+    SHOPPING_SURFACE_MEASUREMENT,
+    SHOPPING_SURFACES,
+)
 from app.core.config.projects import (
     BENCHMARK_MODES,
     DEFAULT_BENCHMARK_MODE,
@@ -309,6 +313,10 @@ async def create_audit(
         **project_product_identity(project),
         "benchmark_mode": mode,
         "engines": engine_list,
+        # Frozen shopping-surface gate (§7.1): ``[]`` while the gate is
+        # disabled — no probe slots are generated and ``total`` is not
+        # multiplied.
+        "shopping_surfaces": list(SHOPPING_SURFACES),
         "repetitions": reps,
         "max_attempts": audit_settings.max_attempts,
         "max_call_seconds": audit_settings.max_call_seconds,
@@ -384,7 +392,13 @@ async def create_audit(
         prompt_snapshot = prompt_snapshots[prompt_index]
         engine_snapshot = engine_snapshots[engine]
         route, connection = routes[engine]
-        idempotency_key = f"{audit.id}:{prompt_index}:{repetition}:{engine}"
+        # The trailing surface segment is intentional: it reserves the
+        # shopping-surface identity in the idempotency key (measurement is
+        # the empty string, so shipped keys end in ":").
+        idempotency_key = (
+            f"{audit.id}:{prompt_index}:{repetition}:{engine}:"
+            f"{SHOPPING_SURFACE_MEASUREMENT}"
+        )
         session.add(
             AuditTask(
                 audit_id=audit.id,
@@ -397,6 +411,7 @@ async def create_audit(
                 logical_engine=engine,
                 transport_provider=route.transport_provider,
                 transport_model=route.transport_model,
+                shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
                 prompt_text=prompt_snapshot.text,
                 provider_route_snapshot={
                     "logical_engine": engine,
@@ -454,7 +469,10 @@ async def get_audit(
 ) -> Audit:
     result = await session.execute(
         select(Audit)
-        .options(selectinload(Audit.engine_snapshots))
+        .options(
+            selectinload(Audit.engine_snapshots),
+            selectinload(Audit.shopping_surface_snapshots),
+        )
         .where(
             Audit.id == audit_id,
             Audit.workspace_id == workspace_id,
@@ -475,7 +493,10 @@ async def list_audits(
 ) -> list[Audit]:
     stmt = (
         select(Audit)
-        .options(selectinload(Audit.engine_snapshots))
+        .options(
+            selectinload(Audit.engine_snapshots),
+            selectinload(Audit.shopping_surface_snapshots),
+        )
         .where(Audit.workspace_id == workspace_id)
         .order_by(Audit.created_at.desc())
         .limit(limit)
@@ -486,12 +507,20 @@ async def list_audits(
 
 
 async def list_tasks(
-    session: AsyncSession, *, workspace_id: uuid.UUID, audit_id: uuid.UUID
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    audit_id: uuid.UUID,
+    surface: str = SHOPPING_SURFACE_MEASUREMENT,
 ) -> list[AuditTask]:
+    """List an audit's tasks for ONE shopping surface (default measurement)."""
     await get_audit(session, workspace_id=workspace_id, audit_id=audit_id)
     stmt = (
         select(AuditTask)
-        .where(AuditTask.audit_id == audit_id)
+        .where(
+            AuditTask.audit_id == audit_id,
+            AuditTask.shopping_surface == surface,
+        )
         .order_by(AuditTask.randomized_position.asc())
     )
     return list((await session.scalars(stmt)).all())

@@ -10,6 +10,7 @@
  * `lib/visibility/use-visibility-dashboard.ts`.
  */
 import type { IntegrationSyncRun } from '@/lib/api/integrations';
+import type { RunStatusValue } from '@/components/ui/badge-variants';
 
 /** Poll cadence for an in-flight sync run (mirrors ACTIVE_RUN_POLL_MS). */
 export const SYNC_RUN_POLL_MS = 3_000;
@@ -26,4 +27,21 @@ export function isActiveSyncRun(status: SyncRunStatus): boolean {
 /** A terminal run succeeded only on the `succeeded` status. */
 export function isSucceededSyncRun(status: SyncRunStatus): boolean {
   return status === 'succeeded';
+}
+
+/** Sync-run wire statuses rendered through the run-status badge family. */
+export const SYNC_RUN_BADGE: Record<SyncRunStatus, RunStatusValue> = {
+  queued: 'queued',
+  leased: 'queued',
+  running: 'running',
+  retry_wait: 'running',
+  succeeded: 'completed',
+  failed: 'failed',
+  cancelled: 'cancelled',
+};
+
+/** Human label for a sync-run wire status (`retry_wait` → `Retry wait`). */
+export function syncRunStatusLabel(status: SyncRunStatus): string {
+  const words = status.replaceAll('_', ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

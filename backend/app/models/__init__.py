@@ -20,11 +20,13 @@ from app.models.analytics import (
     ReferralClassification,
     ReferralEvent,
 )
+from app.models.attribution import AttributionLink, AttributionSnapshot
 from app.models.audit import (
     Audit,
     AuditEngineSnapshot,
     AuditEvent,
     AuditPromptSnapshot,
+    AuditShoppingSurfaceSnapshot,
     AuditTask,
     ProviderAttempt,
     RawResponseArtifact,
@@ -47,6 +49,7 @@ from app.models.brand import (
     OwnedDomain,
     UnintendedDomain,
 )
+from app.models.commerce import FeedIssue, OrderFact
 from app.models.content import ContentGeneration, ContentGenerationAttempt
 from app.models.integrations import (
     IntegrationConnection,
@@ -61,6 +64,7 @@ from app.models.integrations import (
 from app.models.opportunity import Opportunity, OpportunitySnapshot
 from app.models.product import (
     CompetitorProduct,
+    MerchantMention,
     Product,
     ProductMention,
     ProductMetricSnapshot,
@@ -99,10 +103,13 @@ __all__ = [
     "AccountEntitlement",
     "AnalyticsSnapshot",
     "AnalyticsTask",
+    "AttributionLink",
+    "AttributionSnapshot",
     "Audit",
     "AuditEngineSnapshot",
     "AuditEvent",
     "AuditPromptSnapshot",
+    "AuditShoppingSurfaceSnapshot",
     "AuditTask",
     "Base",
     "Brand",
@@ -122,6 +129,7 @@ __all__ = [
     "ContentGeneration",
     "ContentGenerationAttempt",
     "DiscoveryModelConfig",
+    "FeedIssue",
     "IntegrationConnection",
     "IntegrationEvent",
     "IntegrationImportArtifact",
@@ -130,9 +138,11 @@ __all__ = [
     "IntegrationOAuthState",
     "IntegrationPropertyMapping",
     "IntegrationSyncRun",
+    "MerchantMention",
     "MetricSnapshot",
     "Opportunity",
     "OpportunitySnapshot",
+    "OrderFact",
     "OwnedDomain",
     "Product",
     "ProductMention",

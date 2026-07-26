@@ -241,6 +241,7 @@ class BingClient:
         *,
         access_token: str,
         property_ref: str,
+        dataset: str,
         dimensions: Sequence[str],
         start_date: date,
         end_date: date,
@@ -248,7 +249,10 @@ class BingClient:
     ) -> BingStatsPage:
         """Fetch the stats page for one dataset (the worker's contract).
 
-        The method name + signature mirror the GSC reference client — the
+        ``dataset`` is accepted for protocol uniformity with the other
+        provider clients; the stats endpoint is resolved from
+        ``dimensions`` (page vs query) exactly as before. The method name
+        + signature mirror the GSC reference client — the
         worker pages every provider through this one seam; here it issues
         one ``GetPageStats``/``GetQueryStats`` GET. The Bing stats API is
         unpaged (no date-range or offset parameters — the window is

@@ -28,16 +28,41 @@ const product = {
   url: 'https://acme.com/p/voltbike',
   attributes: { brand: 'Acme', category: 'E-Bikes' },
   origin: 'manual',
+  connection_id: null,
+  external_item_ref: null,
+  last_seen_sync_run_id: null,
   completeness: { score: 0.75, present: 9, total: 12, missing: ['gtin', 'mpn', 'condition'] },
   created_at: '2026-07-15T00:00:00Z',
   updated_at: '2026-07-15T00:00:00Z',
+};
+
+// The analyzer-v2 fields every visibility entry carries (own + competitor).
+const entryV2 = {
+  product_analyzer_version: 'product-analysis-2',
+  win_rate: 0.4,
+  price_mismatch_rate: 0.1,
+  price_relation_counts: { match: 3, higher: 1, lower: 0 },
+  attribute_dimension_frequency: { Facts: { Price: 2 } },
+  buyer_destination_mix: {
+    total: 1,
+    by_kind: [{ merchant_kind: 'brand_site', count: 1 }],
+    by_domain: [
+      {
+        merchant_domain: 'acme.com',
+        merchant_name: 'Acme',
+        merchant_kind: 'brand_site',
+        count: 1,
+      },
+    ],
+  },
+  competitor_co_placement: { items: [], truncated: false },
 };
 
 const visibility = {
   project_id: UUID2,
   audit_id: UUID3,
   audit_status: 'completed',
-  product_analyzer_version: 'product-analysis-1',
+  product_analyzer_version: 'product-analysis-2',
   product_scoring_rule_version: 'product-scoring-v1',
   total_mentions: 4,
   total_analyses: 2,
@@ -52,6 +77,7 @@ const visibility = {
       rank_distribution: { top_1: 2, top_2_3: 0, top_4_5: 0, rank_6_plus: 0, unranked: 0 },
       price_mention_count: 2,
       price_accuracy_rate: 1.0,
+      ...entryV2,
     },
   ],
   competitor_products: [
@@ -65,15 +91,19 @@ const visibility = {
       rank_distribution: { top_1: 0, top_2_3: 2, top_4_5: 0, rank_6_plus: 0, unranked: 0 },
       price_mention_count: 2,
       price_accuracy_rate: null,
+      ...entryV2,
     },
   ],
+  available_surfaces: ['', 'chatgpt-shopping'],
   created_at: '2026-07-15T00:00:00Z',
 };
 
 const evidence = {
   items: [
     {
-      mention_id: UUID,
+      evidence_id: UUID,
+      analysis_id: UUID,
+      evidence_kind: 'product_mention',
       audit_id: UUID3,
       task_id: UUID2,
       artifact_id: UUID,
@@ -82,15 +112,26 @@ const evidence = {
       prompt_text: 'best option 0',
       prompt_index: 0,
       repetition: 0,
+      product_analyzer_version: 'product-analysis-2',
+      shopping_surface: '',
       matched_name: 'Acme VoltBike 500',
       matched_sku: 'AC-VB500',
+      created_at: '2026-07-15T00:00:00Z',
       first_offset: 4,
       rank_position: 1,
-      price_text: '$2,499.00',
       price_value: 2499.0,
-      price_currency: 'USD',
       price_matches_catalog: true,
-      created_at: '2026-07-15T00:00:00Z',
+      price_relation: 'match',
+      price_text: '$2,499.00',
+      price_currency: 'USD',
+      attribute_dimension: null,
+      attribute_group: null,
+      attribute_text: null,
+      attribute_offset: null,
+      merchant_name: null,
+      merchant_domain: null,
+      merchant_kind: null,
+      destination_url: null,
     },
   ],
   truncated: false,
@@ -212,6 +253,17 @@ describe('productsApi', () => {
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
       `/api/v1/projects/${UUID2}/products/visibility?audit_id=${UUID3}`,
     );
+
+    await productsApi.getProductVisibility(UUID2, {
+      audit_id: UUID3,
+      engine: 'gemini',
+      surface: 'chatgpt-shopping',
+    });
+    const slicedUrl = String(fetchMock.mock.calls[2]?.[0]);
+    const sliced = new URLSearchParams(slicedUrl.split('?')[1]);
+    expect(sliced.get('audit_id')).toBe(UUID3);
+    expect(sliced.get('engine')).toBe('gemini');
+    expect(sliced.get('surface')).toBe('chatgpt-shopping');
   });
 
   it('builds the evidence path with audit/engine/limit filters', async () => {
@@ -229,6 +281,7 @@ describe('productsApi', () => {
     await productsApi.getProductEvidence(UUID, {
       audit_id: UUID3,
       engine: 'gemini',
+      surface: 'chatgpt-shopping',
       limit: 50,
     });
     const url = String(fetchMock.mock.calls[1]?.[0]);
@@ -236,17 +289,26 @@ describe('productsApi', () => {
     const params = new URLSearchParams(url.split('?')[1]);
     expect(params.get('audit_id')).toBe(UUID3);
     expect(params.get('engine')).toBe('gemini');
+    expect(params.get('surface')).toBe('chatgpt-shopping');
     expect(params.get('limit')).toBe('50');
   });
 
-  it('builds same-origin export URLs with an optional audit_id', async () => {
+  it('builds same-origin export URLs with audit/engine/surface params', async () => {
     const { productsApi } = await import('./products');
     expect(productsApi.exportCsvUrl(UUID2)).toBe(
       `/api/v1/projects/${UUID2}/products/visibility/export.csv`,
     );
-    expect(productsApi.exportCsvUrl(UUID2, UUID3)).toBe(
+    expect(productsApi.exportCsvUrl(UUID2, { audit_id: UUID3 })).toBe(
       `/api/v1/projects/${UUID2}/products/visibility/export.csv?audit_id=${UUID3}`,
     );
+    const sliced = new URLSearchParams(
+      productsApi
+        .exportCsvUrl(UUID2, { audit_id: UUID3, engine: 'gemini', surface: 'chatgpt-shopping' })
+        .split('?')[1],
+    );
+    expect(sliced.get('audit_id')).toBe(UUID3);
+    expect(sliced.get('engine')).toBe('gemini');
+    expect(sliced.get('surface')).toBe('chatgpt-shopping');
   });
 
   it('fails loud on contract drift (numeric id, missing completeness)', async () => {

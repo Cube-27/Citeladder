@@ -31,8 +31,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Traffic', href: '/traffic', icon: ICONS.traffic },
       // Single prompts surface: read view by default, manage mode in-page.
       { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
-      // Agentic commerce: product catalog + product visibility in one surface.
-      { label: 'Products', href: '/products', icon: ICONS.products },
+      // Commerce workspace: catalog + product visibility + attribution in one
+      // surface. The href stays `/products`; only the label changed.
+      { label: 'Commerce', href: '/products', icon: ICONS.products },
       { label: 'Runs', href: '/runs', icon: ICONS.runs },
     ],
   },

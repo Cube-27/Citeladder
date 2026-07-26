@@ -21,17 +21,27 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
+    AI_REFERRAL_RULE_VERSION,
     ANALYTICS_QUEUE_SPEC,
     ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
+    ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     ANALYTICS_TASK_KINDS,
     ERROR_EXECUTOR_NOT_WIRED,
 )
 from app.core.config.integrations import (
+    DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+    DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+    DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_REFERRER_DAILY,
+    DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DATASET_SHOPIFY_ORDERS,
+    DATASET_SHOPIFY_PRODUCTS,
     GRANT_STATUS_CONNECTED,
 )
 from app.core.config.task_queue import (
@@ -44,6 +54,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.domain.analytics.enqueue import (
+    enqueue_attribution_snapshot_refresh,
     enqueue_ingest_referrals,
     enqueue_post_sync_projections,
     enqueue_referral_retention_sweep,
@@ -99,8 +110,14 @@ async def _seed_artifacts(
     *,
     artifact_count: int = 2,
     window: tuple[date, date] = _WINDOW,
+    dataset: str = DATASET_GA4_REFERRER_DAILY,
+    datasets: tuple[str, ...] | None = None,
 ) -> list[uuid.UUID]:
-    """Seed one grant + connection + sync run + import artifacts."""
+    """Seed one grant + connection + sync run + import artifacts.
+
+    ``datasets`` overrides ``artifact_count``/``dataset``: one artifact per
+    listed dataset, all on the SAME run (mixed-dataset routing coverage).
+    """
     grant = IntegrationOAuthGrant(
         workspace_id=workspace_id,
         transport="google_oauth",
@@ -129,14 +146,17 @@ async def _seed_artifacts(
     )
     session.add(run)
     await session.flush()
+    artifact_datasets = (
+        list(datasets) if datasets is not None else [dataset] * artifact_count
+    )
     artifact_ids = []
-    for index in range(artifact_count):
+    for index, artifact_dataset in enumerate(artifact_datasets):
         artifact = IntegrationImportArtifact(
             workspace_id=workspace_id,
             sync_run_id=run.id,
             connection_id=connection.id,
             provider="ga4",
-            dataset=DATASET_GA4_REFERRER_DAILY,
+            dataset=artifact_dataset,
             query_snapshot={"dimensions": ["fullReferrer", "date"]},
             payload_hash=f"{index}" * 64,
             row_count=1,
@@ -190,8 +210,11 @@ async def test_analytics_queue_claims_by_task_kind(
     # An unrestricted claim picks up whatever kinds remain.
     rest = await queue.claim(owner="analytics-a", limit=10)
     assert {t.id for t in rest} == set(
-        seeded[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
-        + seeded[ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH]
+            seeded[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
+            + seeded[ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH]
+            + seeded[ANALYTICS_TASK_KIND_ATTRIBUTION_LINK]
+        + seeded[ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT]
+        + seeded[ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP]
     )
 
 
@@ -312,9 +335,9 @@ async def test_enqueue_post_sync_projections_enqueues_chain_tasks(
             session, project_id=project_id, import_artifact_ids=artifact_ids
         )
         await session.commit()
-    # One ingest_referrals per artifact + one traffic_snapshot_refresh for
-    # the single distinct sync window.
-    assert len(enqueued) == len(artifact_ids) + 1
+    # One ingest_referrals per artifact; the referrer dataset triggers NO
+    # window refresh (dataset-aware routing).
+    assert len(enqueued) == len(artifact_ids)
 
     async with session_factory() as session:
         rows = list((await session.scalars(select(AnalyticsTask))).all())
@@ -326,12 +349,6 @@ async def test_enqueue_post_sync_projections_enqueues_chain_tasks(
     assert len(ingest_rows) == len(artifact_ids)
     assert {row.payload["import_artifact_id"] for row in ingest_rows} == {
         str(a) for a in artifact_ids
-    }
-    refresh_rows = by_kind[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
-    assert len(refresh_rows) == 1
-    assert refresh_rows[0].payload == {
-        "window_start": _WINDOW[0].isoformat(),
-        "window_end": _WINDOW[1].isoformat(),
     }
     for row in rows:
         assert row.workspace_id == workspace_id
@@ -348,7 +365,115 @@ async def test_enqueue_post_sync_projections_enqueues_chain_tasks(
     assert again == []
     async with session_factory() as session:
         count = await session.scalar(select(func.count(AnalyticsTask.id)))
-    assert count == len(artifact_ids) + 1
+    assert count == len(artifact_ids)
+
+
+@pytest.mark.asyncio
+async def test_enqueue_post_sync_projections_routes_by_dataset(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The hook routes by ARTIFACT dataset: referral datasets get a
+    per-artifact ingest, traffic-consumed datasets fold into ONE traffic
+    refresh per window, A1-consumed ecommerce datasets fold into ONE
+    attribution refresh per window.
+    """
+    async with session_factory() as session:
+        workspace_id, project_id = await _seed_workspace_project(session)
+    async with session_factory() as session:
+        # source/medium rides BOTH the referral ingest and the traffic
+        # refresh; landing is traffic-only; the two ecommerce datasets are
+        # attribution-only.
+        artifact_ids = await _seed_artifacts(
+            session,
+            workspace_id,
+            datasets=(
+                DATASET_GA4_SOURCE_MEDIUM_DAILY,
+                DATASET_GA4_LANDING_DAILY,
+                DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+                DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+                DATASET_SHOPIFY_PRODUCTS,
+                DATASET_SHOPIFY_ORDERS,
+            ),
+        )
+        await session.commit()
+        source_medium_id = artifact_ids[0]
+
+    async with session_factory() as session:
+        enqueued = await enqueue_post_sync_projections(
+            session, project_id=project_id, import_artifact_ids=artifact_ids
+        )
+        await session.commit()
+    # 1 ingest (source/medium) + 1 traffic refresh (source/medium +
+    # landing share the window) + 1 attribution refresh (both ecommerce
+    # datasets share the window) + 1 attribution link for the Shopify order
+    # artifact. Catalog artifacts deliberately enqueue no attribution work.
+    assert len(enqueued) == 4
+
+    async with session_factory() as session:
+        rows = list((await session.scalars(select(AnalyticsTask))).all())
+    by_kind: dict[str, list[AnalyticsTask]] = {}
+    for row in rows:
+        by_kind.setdefault(row.task_kind, []).append(row)
+
+    ingest_rows = by_kind[ANALYTICS_TASK_KIND_INGEST_REFERRALS]
+    assert len(ingest_rows) == 1
+    assert ingest_rows[0].payload == {"import_artifact_id": str(source_medium_id)}
+    traffic_rows = by_kind[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
+    assert len(traffic_rows) == 1
+    assert traffic_rows[0].payload == {
+        "window_start": _WINDOW[0].isoformat(),
+        "window_end": _WINDOW[1].isoformat(),
+    }
+    attribution_rows = by_kind[ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT]
+    assert len(attribution_rows) == 1
+    assert attribution_rows[0].payload == {
+        "window_start": _WINDOW[0].isoformat(),
+        "window_end": _WINDOW[1].isoformat(),
+        "resync_seq": 0,
+    }
+    link_rows = by_kind[ANALYTICS_TASK_KIND_ATTRIBUTION_LINK]
+    assert len(link_rows) == 1
+    assert link_rows[0].payload["rule_version"] == AI_REFERRAL_RULE_VERSION
+    assert uuid.UUID(link_rows[0].payload["sync_run_id"])
+
+
+@pytest.mark.asyncio
+async def test_attribution_refresh_dedupes_per_source_run_not_window_sequence(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Independent integrations commonly both start a window at revision zero."""
+    async with session_factory() as session:
+        workspace_id, project_id = await _seed_workspace_project(session)
+        source_runs = [uuid.uuid4(), uuid.uuid4()]
+        enqueued = [
+            await enqueue_attribution_snapshot_refresh(
+                session,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                window_start=_WINDOW[0],
+                window_end=_WINDOW[1],
+                resync_seq=0,
+                source_revision=str(source_run),
+            )
+            for source_run in source_runs
+        ]
+        await session.commit()
+    assert all(task_id is not None for task_id in enqueued)
+
+    async with session_factory() as session:
+        tasks = list(
+            (
+                await session.scalars(
+                    select(AnalyticsTask).where(
+                        AnalyticsTask.task_kind
+                        == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT
+                    )
+                )
+            ).all()
+        )
+    assert len(tasks) == 2
+    assert len({task.idempotency_key for task in tasks}) == 2
+    assert {task.payload["resync_seq"] for task in tasks} == {0}
 
 
 @pytest.mark.asyncio
@@ -376,8 +501,9 @@ async def test_enqueue_post_sync_projections_skips_foreign_artifacts(
             import_artifact_ids=[*own_ids, *foreign_ids],
         )
         await session.commit()
-    # Only the own-workspace artifact produced tasks (ingest + one refresh).
-    assert len(enqueued) == 2
+    # Only the own-workspace artifact produced tasks (one ingest; the
+    # referrer dataset triggers no refresh).
+    assert len(enqueued) == 1
     async with session_factory() as session:
         rows = list((await session.scalars(select(AnalyticsTask))).all())
     assert all(row.workspace_id == workspace_id for row in rows)

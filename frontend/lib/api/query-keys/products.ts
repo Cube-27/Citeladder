@@ -9,9 +9,18 @@ export const productKeys = {
     ['products', 'competitor-products', projectId] as const,
   // `auditId ?? 'latest'` mirrors the backend default-to-latest resolution so
   // the unfiltered view and an explicit selection cache separately; the engine
-  // slice participates so switching engines re-derives the view.
-  visibility: (projectId: string, auditId?: string, engine?: string) =>
-    ['products', 'visibility', projectId, auditId ?? 'latest', engine ?? 'all'] as const,
+  // and surface slices participate so switching a control re-derives the view.
+  // `surface || 'measurement'` normalizes the measurement surface ('' or
+  // omitted) to one cache entry.
+  visibility: (projectId: string, auditId?: string, engine?: string, surface?: string) =>
+    [
+      'products',
+      'visibility',
+      projectId,
+      auditId ?? 'latest',
+      engine ?? 'all',
+      surface || 'measurement',
+    ] as const,
   // Every filter (audit_id, engine, limit) participates in the key so
   // switching a control re-derives the view.
   evidence: (productId: string, filters: ListFilters = {}) =>

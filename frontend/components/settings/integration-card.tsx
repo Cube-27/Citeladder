@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import type { RunStatusValue } from '@/components/ui/badge-variants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -15,16 +14,14 @@ import {
   integrationsApi,
   type IntegrationConnection,
   type IntegrationProvider,
-  type IntegrationSyncRun,
 } from '@/lib/api/integrations';
 import { FAMILY_META, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
 import { queryKeys } from '@/lib/api/query-keys';
 import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
-import { isActiveSyncRun, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
+import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
 import { assignLocation } from '@/lib/navigate';
 
 type GrantStatus = IntegrationConnection['grant_status'];
-type SyncRunStatus = IntegrationSyncRun['status'];
 
 const PROVIDER_META: Record<IntegrationProvider, { label: string; Icon: LucideIcon }> = {
   gsc: { label: 'Google Search Console', Icon: Search },
@@ -50,17 +47,6 @@ const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
   pending_revocation: 'Pending revocation',
   error: 'Error',
   revoked: 'Revoked',
-};
-
-/** Sync-run wire statuses rendered through the existing run-status badge family. */
-const SYNC_RUN_BADGE: Record<SyncRunStatus, RunStatusValue> = {
-  queued: 'queued',
-  leased: 'queued',
-  running: 'running',
-  retry_wait: 'running',
-  succeeded: 'completed',
-  failed: 'failed',
-  cancelled: 'cancelled',
 };
 
 /** Scope chips show the short scope name (`…/auth/webmasters.readonly` → `webmasters.readonly`). */

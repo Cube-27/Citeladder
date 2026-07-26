@@ -275,16 +275,21 @@ REFERRAL_SESSION_HASH_HEX_LENGTH: Final = 32
 REFERRAL_RETENTION_DAYS: Final = 90
 
 # --- Analytics task-kind vocabulary (A3 queue spine) --------------------------
-# The five analytics queue-row kinds. A3 lands the queue spine only (model +
-# queue spec + worker skeleton); the per-kind executors are registered in the
+# The analytics queue-row kinds. A3 landed the queue spine (model + queue
+# spec + worker skeleton); the per-kind executors are registered in the
 # worker dispatch table by A5 (ingest_referrals), A6 (classify_referrals,
-# referral_retention_sweep), A7 (traffic_snapshot_refresh) and A8
-# (analytics_snapshot_refresh).
+# referral_retention_sweep), A7 (traffic_snapshot_refresh), A8
+# (analytics_snapshot_refresh) and WS-B Task 1 (attribution_snapshot — the
+# A1 commerce-attribution projection refresh).
 ANALYTICS_TASK_KIND_INGEST_REFERRALS: Final = "ingest_referrals"
 ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS: Final = "classify_referrals"
 ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH: Final = "traffic_snapshot_refresh"
 ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH: Final = "analytics_snapshot_refresh"
 ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP: Final = "referral_retention_sweep"
+ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT: Final = "attribution_snapshot"
+ANALYTICS_TASK_KIND_ATTRIBUTION_LINK: Final = "attribution_link"
+# Commerce suite: workspace-scoped sweep hard-deleting expired OrderFacts.
+ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP: Final = "order_retention_sweep"
 ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
     {
         ANALYTICS_TASK_KIND_INGEST_REFERRALS,
@@ -292,6 +297,9 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
         ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
         ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH,
         ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
+        ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
+        ANALYTICS_TASK_KIND_ATTRIBUTION_LINK,
+        ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
     }
 )
 

@@ -32,6 +32,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.products import DEFAULT_PRODUCT_ORIGIN
 from app.core.database import Base
 from app.models.constants import (
@@ -74,8 +75,28 @@ class Product(Base):
     # Free-form attribute bag (brand/category/gtin/availability/...). The
     # deterministic completeness matrix reads config-owned keys from it.
     attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
-    # manual | imported (config/products.py PRODUCT_ORIGIN_*).
+    # manual | imported | synced (config/products.py PRODUCT_ORIGIN_*).
     origin: Mapped[str] = mapped_column(String(32), default=DEFAULT_PRODUCT_ORIGIN)
+    # --- Feed provenance (commerce suite; all null/"" for manual|imported) ---
+    # The integration connection whose feed last carried this SKU. SET NULL
+    # keeps the catalog row when the connection disconnects.
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("integration_connections.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
+    # The provider's opaque item id (Shopify: the variant id) — provenance
+    # only; catalog identity stays (project_id, sku).
+    external_item_ref: Mapped[str] = mapped_column(String(255), default="")
+    # The latest sync run whose feed carried this SKU: staleness is inferred
+    # by comparing this to the connection's latest successful catalog run.
+    last_seen_sync_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("integration_sync_runs.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -143,15 +164,21 @@ class ProductResponseAnalysis(Base):
     Sibling of ``ResponseAnalysis`` (``models/analysis.py`` B6): computed from
     the same immutable ``RawResponseArtifact`` by the product analyzer pass,
     stamped with ``product_analyzer_version`` + ``product_scoring_rule_version``
-    (invariant 4). One row per execution (unique ``task_id``); its
-    ``ProductMention`` children hang off it. Never touches the brand-level
-    derived rows.
+    (invariant 4). One row per execution PER analyzer/rule version pair
+    (D1: a persisted v1 analysis and a v2 re-score coexist); its
+    ``ProductMention``/``MerchantMention`` children hang off it. Never
+    touches the brand-level derived rows.
     """
 
     __tablename__ = "product_response_analyses"
     __table_args__ = (
-        # Exactly one product analysis per execution (single deterministic writer).
-        UniqueConstraint("task_id", name="uq_product_response_analysis_task"),
+        # One product analysis per execution per analyzer/rule version pair.
+        UniqueConstraint(
+            "task_id",
+            "product_analyzer_version",
+            "product_scoring_rule_version",
+            name="uq_product_response_analysis_task_version",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -188,6 +215,11 @@ class ProductResponseAnalysis(Base):
     transport_model: Mapped[str] = mapped_column(String(255), default="")
     prompt_index: Mapped[int] = mapped_column(Integer, default=0)
     repetition: Mapped[int] = mapped_column(Integer, default=0)
+    # Shopping-surface slot identity (§7.1): "" = answer-engine-API
+    # measurement; probe surfaces stamp their configured id.
+    shopping_surface: Mapped[str] = mapped_column(
+        String(32), default=SHOPPING_SURFACE_MEASUREMENT
+    )
 
     # Flat headline signals (per-execution).
     own_product_mention_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -202,6 +234,12 @@ class ProductResponseAnalysis(Base):
 
     product_mentions: Mapped[list[ProductMention]] = relationship(
         "ProductMention",
+        back_populates="analysis",
+        cascade=CASCADE_ALL_DELETE_ORPHAN,
+        passive_deletes=True,
+    )
+    merchant_mentions: Mapped[list[MerchantMention]] = relationship(
+        "MerchantMention",
         back_populates="analysis",
         cascade=CASCADE_ALL_DELETE_ORPHAN,
         passive_deletes=True,
@@ -266,12 +304,82 @@ class ProductMention(Base):
     price_currency: Mapped[str] = mapped_column(String(3), default="")
     # null = not verifiable (no catalog price / currency mismatch).
     price_matches_catalog: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # Analyzer v2 price direction (commerce.py PRICE_RELATION_*): null =
+    # unverifiable; v1 rows predate the column and read back via the
+    # match/mismatch projection fallback.
+    price_relation: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Analyzer v2 attribute evidence: [{"dimension", "group", "text",
+    # "offset"}] objects only (frequency, no valence).
+    attribute_mentions: Mapped[list] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     analysis: Mapped[ProductResponseAnalysis] = relationship(
         "ProductResponseAnalysis", back_populates="product_mentions"
+    )
+
+
+class MerchantMention(Base):
+    """One observed buyer-destination URL attached to a product signal.
+
+    Written by the analyzer v2 pass beside the ``ProductMention`` rows: one
+    row per sanitized destination URL observed in the mention's window, with
+    the same provenance and nullable live-catalog FK behavior (exactly one
+    target FK is set at write time; no CHECK — a catalog delete can
+    legitimately SET NULL both, §5.6/D3).
+    """
+
+    __tablename__ = "merchant_mentions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        index=True,
+    )
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(FK_AUDITS_ID, ondelete="CASCADE"),
+        index=True,
+    )
+    analysis_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("product_response_analyses.id", ondelete="CASCADE"),
+        index=True,
+    )
+    artifact_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("raw_response_artifacts.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("products.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    competitor_product_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("competitor_products.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    merchant_name: Mapped[str] = mapped_column(String(255))
+    merchant_domain: Mapped[str] = mapped_column(String(255))
+    merchant_kind: Mapped[str] = mapped_column(String(16))
+    destination_url: Mapped[str] = mapped_column(Text)
+    # Optional merchant price evidence (the first same-line price).
+    price_text: Mapped[str] = mapped_column(String(64), default="")
+    price_value: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    price_currency: Mapped[str] = mapped_column(String(3), default="")
+    product_analyzer_version: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    analysis: Mapped[ProductResponseAnalysis] = relationship(
+        "ProductResponseAnalysis", back_populates="merchant_mentions"
     )
 
 
@@ -287,10 +395,14 @@ class ProductMetricSnapshot(Base):
 
     __tablename__ = "product_metric_snapshots"
     __table_args__ = (
+        # Versioned identity: v1 and v2 snapshots for the same entry
+        # coexist (historical snapshots stay immutable).
         Index(
             "uq_product_metric_snapshot_product",
             "audit_id",
             "product_id",
+            "product_analyzer_version",
+            "product_scoring_rule_version",
             unique=True,
             postgresql_where=text("product_id IS NOT NULL"),
         ),
@@ -298,6 +410,8 @@ class ProductMetricSnapshot(Base):
             "uq_product_metric_snapshot_competitor_product",
             "audit_id",
             "competitor_product_id",
+            "product_analyzer_version",
+            "product_scoring_rule_version",
             unique=True,
             postgresql_where=text("competitor_product_id IS NOT NULL"),
         ),
@@ -341,7 +455,11 @@ class ProductMetricSnapshot(Base):
     rank_distribution: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     price_mention_count: Mapped[int] = mapped_column(Integer, default=0)
     price_accuracy_rate: Mapped[float | None] = mapped_column(nullable=True)
-    # Full aggregate dict (per-engine breakdown, price match counts, ...).
+    # Analyzer v2 scalars (null on v1 rows / when their denominator is 0).
+    win_rate: Mapped[float | None] = mapped_column(nullable=True)
+    price_mismatch_rate: Mapped[float | None] = mapped_column(nullable=True)
+    # Full aggregate dict (per-engine/per-surface breakdowns, relation
+    # counts, attribute frequency, destination mix, co-placement, ...).
     metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Provenance (invariant 4): the exact evidence set aggregated.
     source_analysis_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
