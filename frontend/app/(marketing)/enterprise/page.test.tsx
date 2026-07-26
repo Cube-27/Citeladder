@@ -1,14 +1,12 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { CONTACT_EMAIL } from '@/lib/marketing-content/social';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import Page from './page';
 
 // Plain render — the page is a sync RSC with no client islands, so it needs
 // no providers and no MSW.
-const EXPECTED_CONTACT_HREF = CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : '/register';
-
 describe('Enterprise page (public marketing `/enterprise`)', () => {
   it('renders exactly one h1 and no product-name subheadings', () => {
     render(<Page />);
@@ -69,8 +67,7 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
   it('renders the contact CTA with a real destination, never href="#"', () => {
     render(<Page />);
 
-    // The hero CTA jumps down the page to the contact band; the band itself
-    // carries the real destination. Neither may ever be a bare '#'.
+    // Both actions route through the stable internal demo funnel.
     const cta = screen.getByRole('region', { name: 'Contact sales' });
     const contacts = screen.getAllByRole('link', { name: /book a demo/i });
     expect(contacts.length).toBeGreaterThan(0);
@@ -79,11 +76,11 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
     }
     expect(screen.getAllByRole('link', { name: /book a demo/i })[0]).toHaveAttribute(
       'href',
-      '#contact',
+      DEMO_HREF,
     );
     expect(within(cta).getByRole('link', { name: /book a demo/i })).toHaveAttribute(
       'href',
-      EXPECTED_CONTACT_HREF,
+      DEMO_HREF,
     );
   });
 });

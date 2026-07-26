@@ -127,10 +127,11 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       {
         q: 'How much does Searchify cost?',
         a:
-          'Free to start, then $49/mo (Starter) or $149/mo (Pro); Enterprise is a custom annual ' +
-          'agreement. Every plan is a flat platform fee — because audits run on your own provider ' +
-          'keys, model usage is billed by your provider at their rates and is never marked up by ' +
-          'us. Self-hosting is free on your own infrastructure. See /pricing for the full table.',
+          'Free to start, then $49/month before applicable tax for Paid; Enterprise is a custom ' +
+          'sales-assisted agreement. India is charged through a fixed INR Razorpay plan with GST ' +
+          'added. International cards are charged in USD and the card issuer may convert that ' +
+          'amount. Because audits run on your own provider keys, model usage is billed by your ' +
+          'provider at their rates and is never marked up by us. See /pricing for the full table.',
       },
       {
         q: 'Can I self-host Searchify?',

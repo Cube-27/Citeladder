@@ -11,6 +11,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password, verify_password
+from app.domain.billing.bootstrap import (
+    ensure_user_billing,
+    user_billing_bootstrap_complete,
+)
 from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.user import User
 
@@ -42,7 +46,12 @@ async def register_user(
     )
     session.add(user)
     await session.flush()
-    await ensure_personal_workspace(session, user)
+    workspace = await ensure_personal_workspace(session, user)
+    await ensure_user_billing(
+        session,
+        user,
+        workspace_ids=(workspace.id,) if workspace is not None else None,
+    )
     await session.commit()
     await session.refresh(user)
     logger.info("auth.registered", extra={"user_id": str(user.id)})
@@ -66,8 +75,17 @@ async def authenticate_user(
     ):
         return None
     created = await ensure_personal_workspace(session, user)
-    if created is not None:
+    needs_billing_repair = (
+        created is not None or not await user_billing_bootstrap_complete(session, user)
+    )
+    if needs_billing_repair:
+        await ensure_user_billing(
+            session,
+            user,
+            workspace_ids=(created.id,) if created is not None else None,
+        )
         await session.commit()
+    if created is not None:
         logger.info(
             "auth.workspace_autocreated",
             extra={"user_id": str(user.id), "workspace_id": str(created.id)},

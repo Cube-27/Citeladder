@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SessionGuard } from '@/lib/auth/session-guard';
+import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
 
 /**
@@ -24,9 +25,11 @@ export default function AppLayout({ children }: Readonly<{ children: ReactNode }
   return (
     <SessionGuard fallback={<ShellFallback />}>
       <ProjectProvider>
-        <OnboardingGate>
-          <AppShell>{children}</AppShell>
-        </OnboardingGate>
+        <EntitlementProvider>
+          <OnboardingGate>
+            <AppShell>{children}</AppShell>
+          </OnboardingGate>
+        </EntitlementProvider>
       </ProjectProvider>
     </SessionGuard>
   );

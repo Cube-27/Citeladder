@@ -88,8 +88,8 @@ describe('FAQ page (public marketing `/faq`)', () => {
 
     const billing = screen.getByRole('region', { name: 'Account & billing' });
     // Prices match lib/marketing-content/pricing.ts, the single source.
-    expect(within(billing).getByText(/\$49\/mo \(Starter\)/)).toBeInTheDocument();
-    expect(within(billing).getByText(/\$149\/mo \(Pro\)/)).toBeInTheDocument();
+    expect(within(billing).getByText(/\$49\/month.*Paid/)).toBeInTheDocument();
+    expect(within(billing).getByText(/India.*INR.*GST/)).toBeInTheDocument();
     // The BYOK-therefore-flat-fee reasoning is stated, not implied.
     expect(within(billing).getByText(/never marked up by/i)).toBeInTheDocument();
     // No unfinished placeholder may reach the page.

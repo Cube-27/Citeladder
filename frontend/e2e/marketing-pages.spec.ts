@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-const MARKETING_PAGES = ['/pricing', '/enterprise', '/solutions', '/blog', '/compare', '/faq'];
+const MARKETING_PAGES = [
+  '/pricing',
+  '/enterprise',
+  '/demo',
+  '/solutions',
+  '/blog',
+  '/compare',
+  '/faq',
+];
 
 test.describe('marketing routes', () => {
   test('public routes render anonymously with one visible h1', async ({ page }) => {

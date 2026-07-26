@@ -6,6 +6,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.billing.bootstrap import ensure_user_billing
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -62,6 +63,8 @@ async def create_workspace(
         role=WORKSPACE_ROLE_OWNER,
     )
     session.add(member)
+    await session.flush()
+    await ensure_user_billing(session, user, workspace_ids=(workspace.id,))
     await session.commit()
     await session.refresh(workspace)
     await session.refresh(member)

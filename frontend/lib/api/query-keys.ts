@@ -16,6 +16,7 @@
  * 20+ existing importers keep the single `@/lib/api/query-keys` entry point.
  */
 import { analyticsKeys } from './query-keys/analytics';
+import { billingKeys } from './query-keys/billing';
 import {
   authKeys,
   contentKeys,
@@ -34,6 +35,7 @@ import { trafficKeys } from './query-keys/traffic';
 
 export const queryKeys = {
   auth: authKeys,
+  billing: billingKeys,
   workspaces: workspaceKeys,
   projects: projectKeys,
   prompts: promptKeys,

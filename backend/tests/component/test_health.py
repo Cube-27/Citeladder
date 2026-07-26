@@ -40,9 +40,10 @@ def test_health_route_and_router_stubs_registered() -> None:
     # the twelfth (12); the integrations router adds the thirteenth (13); the
     # LLM-Analytics router adds the fourteenth (14); the Traffic router adds
     # the fifteenth (15); the products router adds the sixteenth (16); the
-    # Opportunities router adds the seventeenth (17 total).
+    # Opportunities router adds the seventeenth; Billing adds the eighteenth
+    # (18 total).
     from app.main import _ROUTERS
 
     paths = {getattr(route, "path", None) for route in app.routes}
     assert "/health" in paths
-    assert len(_ROUTERS) == 17
+    assert len(_ROUTERS) == 18

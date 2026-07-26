@@ -72,6 +72,7 @@ services.
 |---|---|
 | `app/api/auth.py` | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
 | `app/api/workspaces.py` | `GET /workspaces`, `POST /workspaces` |
+| `app/api/billing.py` | Public `GET /billing/catalog`; authenticated billing summary/profile/checkout/manage/cancel; membership-authorized workspace entitlements; signed Razorpay webhook |
 | `app/api/projects.py` | `GET/POST /projects`, `GET/PATCH/DELETE /projects/{id}`, `GET/PUT /projects/{id}/brand-profile`, `POST /projects/{id}/brand-profile/suggest`, `POST /projects/{id}/brand-profile/suggestions/{suggestion_id}/accept`, `GET /projects/{id}/visibility?audit_id=`, `GET /projects/{id}/visibility/trends`, `GET /projects/{id}/visibility/evidence` |
 | `app/api/prompts.py` | `GET/POST /prompt-sets`, prompt CRUD (`PATCH/DELETE /prompts/{id}`), `POST /prompt-sets/{id}/import` (MVP CSV bulk-create), `POST /prompt-sets/{id}/generate` (AI topic+prompt generation via default agent), `POST /prompt-sets/{id}/prompts/bulk-status`, topics CRUD (`GET/POST /projects/{id}/topics`, `PATCH/DELETE /topics/{id}`) |
 | `app/api/provider_connections.py` | `GET/POST /provider-connections`, `PATCH/DELETE /provider-connections/{id}`, `POST /provider-connections/{id}/test`; `GET /provider-catalog` |
@@ -132,7 +133,8 @@ deterministic ([architecture.md](architecture.md) §11). Metrics are a **project
 | `app/core/{database,security,telemetry}.py` | `Base`/engine/session; argon2/JWT/Fernet; structlog + correlation ids. |
 | `app/models/*` | SQLAlchemy persistence (UUID PKs, provenance columns). |
 | `app/schemas/*` | Pydantic request/response DTOs (secrets never present). |
-| `app/domain/{auth,workspaces,projects,prompts,providers,audits,content,opportunities}/*` | Services + business rules per resource. |
+| `app/domain/{auth,workspaces,projects,prompts,providers,audits,content,opportunities,billing,entitlements}/*` | Services + business rules per resource. |
+| `app/connectors/billing/*` | Provider-neutral subscription boundary and Razorpay hosted-checkout adapter; credentials stay server-side. |
 | `app/connectors/answer_engines/*` | Answer-engine adapters + parsers (gemini, anthropic, openai — direct OpenAI Responses API). |
 | `app/connectors/discovery_models/*` | Discovery/generative model connectors for the content vertical (Mistral chat-completions at v1). Provider-agnostic contract; the API key is env-held (`SecretStr`), resolved only at call time — deliberately **not** BYOK: content generation is a platform capability, measurement keys stay per-workspace. |
 | `app/orchestration/{audit_state,task_queue,postgres_task_queue}.py` + `domain/audits/planner.py` | State machine, `TaskQueue` Protocol + Postgres impl (generic over queue specs — see §10), slot planning. |
@@ -148,6 +150,7 @@ project). No integer PKs, no `user_id` columns.
 | File / model | Purpose | Provenance / version columns |
 |---|---|---|
 | `models/user.py` `User` | Auth identity | — |
+| `models/billing.py` billing account, sponsorship, subscription, entitlement, checkout and webhook rows | Provider-neutral account billing and immutable subscription/event history; no provider ids or billing PII in normal DTOs | Catalog version + monotonic capability revision + provider state version |
 | `models/workspace.py` `Workspace`, `WorkspaceMember` | Tenant + membership | — |
 | `models/project.py` `Project` | Workspace-scoped project (brand_name, website_url, country_code, language_code, benchmark_mode, default_repetitions) | — |
 | `models/brand.py` `Brand`, `BrandAlias`, `Competitor`, `OwnedDomain`, `UnintendedDomain` | Normalized brand identity (serialized back to the dict the scorer expects) | — |

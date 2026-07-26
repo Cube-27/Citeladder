@@ -6,8 +6,8 @@ import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
 
 const DESCRIPTION =
   'Pricing for Searchify, the AI visibility and site intelligence platform: ' +
-  'free sample crawl, Starter monitoring with quota-controlled URLs, Pro for benchmarking ' +
-  'teams, Enterprise — every plan runs on your own ChatGPT, Gemini, and Claude keys.';
+  'Free, Paid at $49 per month before applicable tax, and sales-assisted Enterprise. ' +
+  'India is billed in INR with GST added; international cards are charged in USD.';
 
 // NOTE: no openGraph.images / metadataBase yet — there is no canonical public
 // domain for the app, and OG image URLs must be absolute. Add both once the

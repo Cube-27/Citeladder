@@ -33,6 +33,7 @@ export const api = {
 };
 
 export { authApi } from './auth';
+export { billingApi } from './billing';
 export {
   contentApi,
   CONTENT_PROMPT_MAX_LEN,

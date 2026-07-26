@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog } from '@/components/ui/dialog';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
+import { BillingSettings } from '@/components/settings/billing-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
 import { projectsApi } from '@/lib/api/projects';
@@ -60,6 +61,7 @@ function DetailRow({
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
+  { id: 'billing', label: 'Billing' },
   { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'danger', label: 'Danger zone' },
@@ -199,6 +201,17 @@ export function SettingsScreen() {
 
       {/* All panels stay mounted (hidden when inactive) so every tab's
           aria-controls resolves and panel state survives tab switches. */}
+      <div
+        role="tabpanel"
+        id={PANEL_ID('billing')}
+        aria-labelledby={TAB_ID('billing')}
+        hidden={activeTab !== 'billing'}
+        tabIndex={0}
+        className="focus-ring outline-none"
+      >
+        <BillingSettings enabled={activeTab === 'billing'} />
+      </div>
+
       <div
         role="tabpanel"
         id={PANEL_ID('account')}
