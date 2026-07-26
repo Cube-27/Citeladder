@@ -1,7 +1,7 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Search } from 'lucide-react';
+import { CornerDownLeft, Search, type LucideIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
@@ -30,12 +30,39 @@ type Command = {
   id: string;
   label: string;
   group: string;
+  /** Nav destinations carry their canonical glyph; projects render initials. */
+  icon?: LucideIcon;
+  initials?: string;
   hint?: string;
   run: () => void;
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
-const ROW = 'flex w-full items-center gap-3 rounded-md px-3 text-left text-base h-9';
+const ROW = 'flex w-full items-center gap-2.5 rounded-md px-2.5 text-left text-base h-[34px]';
+
+/** Two-letter avatar initials, matching ProjectSwitcher's treatment. */
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+/**
+ * Results keep ONE flat order for the keyboard cursor, but render grouped.
+ * Rebuilding sections from that flat list (rather than grouping first and
+ * flattening for keys) is what keeps the highlighted row and the Enter target
+ * the same element — the two orders can never drift apart.
+ */
+function toSections(results: readonly Command[]) {
+  const sections: { group: string; rows: { command: Command; index: number }[] }[] = [];
+  results.forEach((command, index) => {
+    const last = sections.at(-1);
+    if (last?.group === command.group) last.rows.push({ command, index });
+    else sections.push({ group: command.group, rows: [{ command, index }] });
+  });
+  return sections;
+}
 
 export function CommandPalette() {
   const router = useRouter();
@@ -103,6 +130,7 @@ export function CommandPalette() {
         id: `nav:${item.href}`,
         label: item.label,
         group: group.title,
+        icon: item.icon,
         run: () => router.push(item.href),
       })),
     );
@@ -115,6 +143,7 @@ export function CommandPalette() {
       // guard here; ProjectSwitcher shows the same label.
       label: project.brand_name,
       group: 'Switch project',
+      initials: initialsOf(project.brand_name),
       hint: project.id === activeProjectId ? 'Current' : undefined,
       run: () => setActiveProjectId(project.id),
     }));
@@ -214,9 +243,16 @@ export function CommandPalette() {
                 aria-activedescendant={
                   results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
                 }
-                className="text-foreground placeholder:text-muted h-12 min-w-0 flex-1 bg-transparent text-base outline-none"
+                // The input is the only focusable thing in the palette and is
+                // focused the whole time it is open, so the global
+                // `:focus-visible` outline would draw a permanent blue ring
+                // around the header for no information. `!` is needed because
+                // that rule is unlayered and would otherwise beat a utility.
+                className="text-foreground placeholder:text-muted h-12 min-w-0 flex-1 bg-transparent text-base outline-none focus-visible:outline-none!"
               />
-              <kbd className="text-subtle shrink-0 font-mono text-[10px]">ESC</kbd>
+              <kbd className="border-border text-subtle shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px]">
+                esc
+              </kbd>
             </div>
 
             <div
@@ -224,38 +260,82 @@ export function CommandPalette() {
               id={listboxId}
               role="listbox"
               aria-label="Commands"
-              className="content-scroll min-h-0 flex-1 overflow-y-auto p-2"
+              className="content-scroll min-h-0 flex-1 overflow-y-auto p-1.5"
             >
               {results.length === 0 ? (
                 <p className={cn(ROW, 'text-muted')}>No matches for “{query}”</p>
               ) : (
-                results.map((command, index) => {
-                  const isActive = index === activeIndex;
-                  return (
-                    <button
-                      key={command.id}
-                      id={`${listboxId}-${command.id}`}
-                      type="button"
-                      role="option"
-                      aria-selected={isActive}
-                      data-active={isActive}
-                      onMouseMove={() => setActive(index)}
-                      onClick={() => runCommand(command)}
-                      className={cn(
-                        ROW,
-                        'transition-colors',
-                        isActive ? 'bg-accent-subtle text-foreground' : 'text-secondary',
-                      )}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{command.label}</span>
-                      {command.hint ? (
-                        <span className="text-muted shrink-0 text-xs">{command.hint}</span>
-                      ) : null}
-                      <span className="text-subtle shrink-0 text-xs">{command.group}</span>
-                    </button>
-                  );
-                })
+                toSections(results).map((section) => (
+                  <div key={section.group} className="mb-1 last:mb-0">
+                    <p className="text-subtle px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-[0.06em] uppercase">
+                      {section.group}
+                    </p>
+                    {section.rows.map(({ command, index }) => {
+                      const isActive = index === activeIndex;
+                      const Icon = command.icon;
+                      return (
+                        <button
+                          key={command.id}
+                          id={`${listboxId}-${command.id}`}
+                          type="button"
+                          role="option"
+                          aria-selected={isActive}
+                          data-active={isActive}
+                          onMouseMove={() => setActive(index)}
+                          onClick={() => runCommand(command)}
+                          className={cn(
+                            ROW,
+                            'transition-colors',
+                            isActive
+                              ? 'bg-accent-subtle text-accent-text'
+                              : 'text-secondary hover:bg-background-alt',
+                          )}
+                        >
+                          {Icon ? (
+                            <Icon
+                              className={cn('size-4 shrink-0', !isActive && 'text-muted')}
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          ) : (
+                            <span
+                              aria-hidden
+                              className="bg-foreground text-background grid size-4 shrink-0 place-items-center rounded-[3px] text-[8px] font-semibold"
+                            >
+                              {command.initials}
+                            </span>
+                          )}
+                          <span className="min-w-0 flex-1 truncate">{command.label}</span>
+                          {command.hint ? (
+                            <span className="text-muted shrink-0 text-xs">{command.hint}</span>
+                          ) : null}
+                          {isActive ? (
+                            <CornerDownLeft
+                              className="text-muted size-3.5 shrink-0"
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))
               )}
+            </div>
+
+            {/* Keyboard legend — the palette is a keyboard surface first, so
+                it states its own controls rather than assuming they are known. */}
+            <div className="border-border-subtle text-subtle flex shrink-0 items-center gap-4 border-t px-4 py-2 text-[11px]">
+              <span className="flex items-center gap-1.5">
+                <kbd className="border-border rounded border px-1 font-mono">↑</kbd>
+                <kbd className="border-border rounded border px-1 font-mono">↓</kbd>
+                navigate
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="border-border rounded border px-1 font-mono">↵</kbd>
+                select
+              </span>
             </div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>

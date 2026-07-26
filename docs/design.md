@@ -654,6 +654,19 @@ subsequence matching mostly produces surprising ranking for no measurable gain. 
 list can never render a frame with nothing selected. `role="listbox"` +
 `aria-activedescendant` keeps focus in the input while the selection moves.
 
+**Layout.** Rows are grouped under Analyze / Improve / Switch project headings rather than
+carrying a right-aligned group label, and each row leads with its canonical nav glyph (projects
+render `ProjectSwitcher`'s initials avatar instead). Results keep ONE flat order for the
+keyboard cursor and are re-sectioned from that list at render time — grouping first and
+flattening for keys would let the highlighted row and the Enter target drift apart. A footer
+states the keyboard controls, since this is a keyboard surface first.
+
+The search input suppresses the global `:focus-visible` outline
+(`focus-visible:outline-none!`). It is the only focusable element and is focused for as long
+as the palette is open, so the ring would be a permanent blue rectangle carrying no
+information. The `!` is required: that global rule is unlayered and would otherwise win over
+a utility regardless of specificity.
+
 ### 11.2 Auth (`/login`, `/register`)
 
 Split-screen `(auth)` layout restyled in the Figma language: brand panel (token-driven,
