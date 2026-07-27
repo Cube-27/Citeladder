@@ -10,12 +10,14 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.abuse import abuse_settings
 from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     VISIBILITY_EVIDENCE_MAX_LIMIT,
@@ -342,17 +344,26 @@ async def get_visibility_evidence_endpoint(
         ) from exc
 
 
-def _logo_response(content: bytes, content_type: str, asset_sha256: str) -> Response:
+def _logo_response(
+    content: bytes,
+    content_type: str,
+    asset_sha256: str,
+    if_none_match: str | None,
+) -> Response:
+    etag = f'"{asset_sha256}"'
+    headers = {
+        "Cache-Control": f"private, max-age={BRAND_LOGO_CACHE_MAX_AGE_SECONDS}",
+        "Content-Disposition": "inline",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "ETag": etag,
+        "X-Content-Type-Options": "nosniff",
+    }
+    if if_none_match == etag:
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
     return Response(
         content=content,
         media_type=content_type,
-        headers={
-            "Cache-Control": (f"private, max-age={BRAND_LOGO_CACHE_MAX_AGE_SECONDS}"),
-            "Content-Disposition": "inline",
-            "Content-Security-Policy": "default-src 'none'; sandbox",
-            "ETag": f'"{asset_sha256}"',
-            "X-Content-Type-Options": "nosniff",
-        },
+        headers=headers,
     )
 
 
@@ -360,6 +371,13 @@ def _logo_response(content: bytes, content_type: str, asset_sha256: str) -> Resp
 async def refresh_project_logos_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ProjectResponse:
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="brand_logo_refresh",
+        limit=abuse_settings.brand_logo_refresh_limit,
+        window_seconds=abuse_settings.brand_logo_refresh_window_seconds,
+    )
     try:
         project = await refresh_project_logos(
             session,
@@ -373,7 +391,10 @@ async def refresh_project_logos_endpoint(
 
 @router.get("/{project_id}/logo", response_class=Response)
 async def get_brand_logo_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    project_id: uuid.UUID,
+    request: Request,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
 ) -> Response:
     try:
         asset = await get_project_logo_asset(
@@ -383,7 +404,12 @@ async def get_brand_logo_endpoint(
         )
     except BrandLogoNotFoundError as exc:
         raise_not_found("Brand logo", cause=exc)
-    return _logo_response(asset.image_data or b"", asset.content_type, asset.sha256)
+    return _logo_response(
+        asset.image_data or b"",
+        asset.content_type,
+        asset.sha256,
+        request.headers.get("if-none-match"),
+    )
 
 
 @router.get(
@@ -393,6 +419,7 @@ async def get_brand_logo_endpoint(
 async def get_competitor_logo_endpoint(
     project_id: uuid.UUID,
     competitor_id: uuid.UUID,
+    request: Request,
     ctx: _WorkspaceDep,
     session: _SessionDep,
 ) -> Response:
@@ -405,7 +432,12 @@ async def get_competitor_logo_endpoint(
         )
     except BrandLogoNotFoundError as exc:
         raise_not_found("Competitor logo", cause=exc)
-    return _logo_response(asset.image_data or b"", asset.content_type, asset.sha256)
+    return _logo_response(
+        asset.image_data or b"",
+        asset.content_type,
+        asset.sha256,
+        request.headers.get("if-none-match"),
+    )
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

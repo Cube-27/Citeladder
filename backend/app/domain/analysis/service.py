@@ -226,7 +226,7 @@ async def get_visibility_trends(
     for point in points:
         for ranking in point.rankings:
             ranking.logo_url = _logo_url_for_name(
-                ranking.name, logo_urls, logo_identity_ids
+                ranking.name, ranking.is_brand, logo_urls, logo_identity_ids
             )
     return points
 
@@ -687,16 +687,16 @@ async def _project_logo_context(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-) -> tuple[dict[uuid.UUID, str], dict[str, uuid.UUID]]:
+) -> tuple[dict[uuid.UUID, str], dict[tuple[bool, str], uuid.UUID]]:
     project = await get_project(
         session, workspace_id=workspace_id, project_id=project_id
     )
     logo_urls = get_project_logo_urls(project)
-    identity_ids: dict[str, uuid.UUID] = {}
+    identity_ids: dict[tuple[bool, str], uuid.UUID] = {}
     if project.brand is not None:
-        identity_ids[project.brand.name] = project.brand.id
+        identity_ids[(True, project.brand.name)] = project.brand.id
     for competitor in project.competitors:
-        identity_ids[competitor.name] = competitor.id
+        identity_ids[(False, competitor.name)] = competitor.id
     return logo_urls, identity_ids
 
 
@@ -704,7 +704,7 @@ def _rankings(
     metrics: dict,
     *,
     logo_urls: dict[uuid.UUID, str] | None = None,
-    logo_identity_ids: dict[str, uuid.UUID] | None = None,
+    logo_identity_ids: dict[tuple[bool, str], uuid.UUID] | None = None,
 ) -> list[RankingRow]:
     """Build the brand-vs-competitor rankings table from the aggregate.
 
@@ -723,7 +723,7 @@ def _rankings(
             name=brand_name,
             is_brand=True,
             logo_url=_logo_url_for_name(
-                brand_name, logo_urls or {}, logo_identity_ids or {}
+                brand_name, True, logo_urls or {}, logo_identity_ids or {}
             ),
             mention_rate=metrics.get("brand_mention_rate"),
             citation_rate=metrics.get("owned_citation_rate"),
@@ -737,7 +737,7 @@ def _rankings(
                 name=name,
                 is_brand=False,
                 logo_url=_logo_url_for_name(
-                    name, logo_urls or {}, logo_identity_ids or {}
+                    name, False, logo_urls or {}, logo_identity_ids or {}
                 ),
                 mention_rate=competitor_mention.get(name),
                 citation_rate=competitor_citation.get(name),
@@ -752,10 +752,11 @@ def _rankings(
 
 def _logo_url_for_name(
     name: str,
+    is_brand: bool,
     logo_urls: dict[uuid.UUID, str],
-    identity_ids: dict[str, uuid.UUID],
+    identity_ids: dict[tuple[bool, str], uuid.UUID],
 ) -> str | None:
-    identity_id = identity_ids.get(name)
+    identity_id = identity_ids.get((is_brand, name))
     return logo_urls.get(identity_id) if identity_id is not None else None
 
 

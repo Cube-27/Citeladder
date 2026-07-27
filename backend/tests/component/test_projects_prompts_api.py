@@ -122,6 +122,15 @@ async def test_project_logo_assets_are_workspace_scoped(
     assert own_logo.headers["cache-control"] == "private, max-age=86400"
     assert own_logo.headers["etag"] == f'"{hashlib.sha256(png).hexdigest()}"'
     assert own_logo.headers["x-content-type-options"] == "nosniff"
+    not_modified = await client.get(
+        f"/api/v1/projects/{project['id']}/logo",
+        headers={"If-None-Match": own_logo.headers["etag"]},
+    )
+    assert not_modified.status_code == 304
+    assert not_modified.content == b""
+    assert not_modified.headers["cache-control"] == own_logo.headers["cache-control"]
+    assert not_modified.headers["etag"] == own_logo.headers["etag"]
+    assert not_modified.headers["x-content-type-options"] == "nosniff"
 
     client.cookies.clear()
     await _register(client, "logo-outsider@example.com")

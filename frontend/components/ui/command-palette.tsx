@@ -136,7 +136,7 @@ export function CommandPalette() {
       // guard here; ProjectSwitcher shows the same label.
       label: project.brand_name,
       group: 'Switch project',
-      logoUrl: project.brand.logo_url,
+      logoUrl: project.brand?.logo_url,
       hint: project.id === activeProjectId ? 'Current' : undefined,
       run: () => setActiveProjectId(project.id),
     }));

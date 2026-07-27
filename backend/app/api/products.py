@@ -203,7 +203,7 @@ async def _resolve_import_rows(
     ``api/prompts.py``). Malformed CSV (e.g. headerless) is a 422, not a 500.
     """
     if file is not None:
-        raw = (await read_limited_upload(file)).decode("utf-8-sig", errors="replace")
+        raw = _decode_csv(await read_limited_upload(file))
         return parse_product_csv(raw)
 
     content_type = request.headers.get("content-type", "")
@@ -220,8 +220,15 @@ async def _resolve_import_rows(
             raise _unprocessable(f"Invalid product import payload: {exc}") from exc
 
     # Raw CSV posted as text/csv (no multipart wrapper).
-    csv_body = (await read_limited_body(request)).decode("utf-8-sig", errors="replace")
+    csv_body = _decode_csv(await read_limited_body(request))
     return parse_product_csv(csv_body)
+
+
+def _decode_csv(body: bytes) -> str:
+    try:
+        return body.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise _unprocessable("CSV must be valid UTF-8") from exc
 
 
 @router.post(

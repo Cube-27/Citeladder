@@ -337,28 +337,30 @@ def build_a1_projection(
         )
 
         # --- Product rows over the item reports ---------------------------
-        product_groups: dict[tuple[str, str | None, str], dict[str, Any]] = {}
+        product_groups: dict[tuple[str, str | None], dict[str, Any]] = {}
         for row in item_primary:
             item_id, source, medium = _dimension_values(row) or ("", "", "")
             ai_source = _classify_source_medium(source, medium)
-            primary_key = (item_id, ai_source, f"{source} / {medium}")
+            primary_key = (item_id, ai_source)
             group = product_groups.setdefault(
-                primary_key, {"revenue": 0.0, "orders": 0}
+                primary_key, {"revenue": 0.0, "orders": 0, "source_labels": set()}
             )
+            group["source_labels"].add(f"{source} / {medium}")
             group["revenue"] += _metric_money(row.metrics, "itemRevenue")
             group["orders"] += metric_count(row.metrics, "itemsPurchased")
         for row in item_fallback:
             item_id, channel_group = _dimension_values(row) or ("", "")
             # Reduced granularity: never guessed into an AI source; the
             # channel-group name is the source label.
-            fallback_key = (item_id, None, channel_group)
+            fallback_key = (item_id, None)
             group = product_groups.setdefault(
-                fallback_key, {"revenue": 0.0, "orders": 0}
+                fallback_key, {"revenue": 0.0, "orders": 0, "source_labels": set()}
             )
+            group["source_labels"].add(channel_group)
             group["revenue"] += _metric_money(row.metrics, "itemRevenue")
             group["orders"] += metric_count(row.metrics, "itemsPurchased")
         by_product: list[dict[str, Any]] = []
-        for (sku, product_ai_source, source_label), group in product_groups.items():
+        for (sku, product_ai_source), group in product_groups.items():
             matched_product_id = products_by_sku.get(sku)
             by_product.append(
                 {
@@ -370,7 +372,7 @@ def build_a1_projection(
                     "sku": sku,
                     "name": sku,
                     "ai_source": product_ai_source,
-                    "source_label": source_label,
+                    "source_label": "; ".join(sorted(group["source_labels"])),
                     "currency": currency,
                     "revenue": round(group["revenue"], _MONEY_DECIMALS),
                     "orders": group["orders"],

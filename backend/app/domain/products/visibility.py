@@ -361,6 +361,8 @@ async def get_product_visibility(
     selected = [
         by_entry[entry_id] for entry_id in selected_entry_ids if entry_id in by_entry
     ]
+    if not selected:
+        raise AnalysisNotFoundError("Product metrics not available for audit")
     first = selected[0]
     return ProductVisibilityResponse(
         project_id=project_id,

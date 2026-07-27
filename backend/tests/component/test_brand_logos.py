@@ -76,6 +76,44 @@ async def test_refresh_attaches_ready_db_cache_without_crawling(
     }
 
 
+async def test_refresh_revalidates_stale_ready_cache(
+    db_session: AsyncSession, monkeypatch
+) -> None:
+    workspace, project = await _project(db_session)
+    asset = BrandLogoAsset(
+        domain="acme.com",
+        status=BRAND_LOGO_STATUS_READY,
+        source_url="https://acme.com/old.png",
+        content_type="image/png",
+        image_data=PNG,
+        byte_size=len(PNG),
+        sha256="old-hash",
+        fetched_at=datetime.now(UTC) - timedelta(days=8),
+    )
+    db_session.add(asset)
+    await db_session.commit()
+
+    async def fetched(targets):
+        assert [target.domain for target in targets] == ["acme.com"]
+        return {
+            "acme.com": FetchedBrandLogo(
+                source_url="https://acme.com/new.png",
+                content_type="image/png",
+                image_data=PNG + b"-new",
+            )
+        }
+
+    monkeypatch.setattr(logo_service, "_fetch_missing", fetched)
+    refreshed = await logo_service.refresh_project_logos(
+        db_session, workspace_id=workspace.id, project_id=project.id
+    )
+
+    assert refreshed.brand is not None
+    assert refreshed.brand.logo_asset_id == asset.id
+    assert refreshed.brand.logo_asset is not None
+    assert refreshed.brand.logo_asset.source_url == "https://acme.com/new.png"
+
+
 async def test_refresh_honors_fresh_negative_cache(
     db_session: AsyncSession, monkeypatch
 ) -> None:
@@ -135,7 +173,9 @@ async def test_expired_negative_cache_is_refreshed_and_attached(
     assert isinstance(refreshed.brand.logo_asset_id, uuid.UUID)
 
 
-async def test_fetch_missing_isolates_unexpected_target_failure(monkeypatch) -> None:
+async def test_fetch_missing_isolates_unexpected_target_failure(
+    monkeypatch, caplog
+) -> None:
     class FakeSecureFetcher:
         def __init__(self, **_kwargs) -> None:
             pass
@@ -160,6 +200,7 @@ async def test_fetch_missing_isolates_unexpected_target_failure(monkeypatch) -> 
 
     monkeypatch.setattr(logo_service, "SecureFetcher", FakeSecureFetcher)
     monkeypatch.setattr(logo_service, "fetch_brand_logo", fetch)
+    caplog.set_level("ERROR", logger=logo_service.__name__)
     targets = [
         logo_service._LogoTarget("broken.example", "https://broken.example/"),
         logo_service._LogoTarget("ok.example", "https://ok.example/"),
@@ -168,6 +209,7 @@ async def test_fetch_missing_isolates_unexpected_target_failure(monkeypatch) -> 
     results = await logo_service._fetch_missing(targets)
 
     assert results == {"broken.example": None, "ok.example": expected}
+    assert "Unexpected brand logo fetch failure" in caplog.text
 
 
 async def test_fetch_missing_has_a_hard_total_timeout(monkeypatch) -> None:

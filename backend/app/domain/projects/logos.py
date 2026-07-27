@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import uuid
 from collections.abc import Collection
 from dataclasses import dataclass, field
@@ -31,12 +32,15 @@ from app.core.config.brand_logos import (
     BRAND_LOGO_REFRESH_TIMEOUT_SECONDS,
     BRAND_LOGO_STATUS_FAILED,
     BRAND_LOGO_STATUS_READY,
+    BRAND_LOGO_SUCCESS_CACHE_SECONDS,
     BRAND_LOGO_USER_AGENT,
 )
 from app.models.brand import Brand, BrandLogoAsset, Competitor
 from app.models.project import Project
 
 from .service import brand_logo_url, competitor_logo_url, get_project
+
+logger = logging.getLogger(__name__)
 
 
 class BrandLogoNotFoundError(LookupError):
@@ -100,6 +104,12 @@ def _negative_cache_is_fresh(asset: BrandLogoAsset, now: datetime) -> bool:
     )
 
 
+def _ready_cache_is_fresh(asset: BrandLogoAsset, now: datetime) -> bool:
+    return asset.fetched_at is not None and asset.fetched_at > now - timedelta(
+        seconds=BRAND_LOGO_SUCCESS_CACHE_SECONDS
+    )
+
+
 def _is_ready_asset(
     asset: BrandLogoAsset | None,
 ) -> TypeGuard[BrandLogoAsset]:
@@ -138,6 +148,10 @@ async def _fetch_missing(
                         target.homepage_url, fetcher=fetcher
                     )
                 except Exception:
+                    logger.exception(
+                        "Unexpected brand logo fetch failure",
+                        extra={"domain": target.domain},
+                    )
                     results[target.domain] = None
 
         try:
@@ -240,6 +254,8 @@ async def refresh_project_logos(
         asset = cached.get(domain)
         if _is_ready_asset(asset):
             _attach_asset(project, target, asset.id)
+            if not _ready_cache_is_fresh(asset, now):
+                missing.append(target)
         elif asset is None or not _negative_cache_is_fresh(asset, now):
             missing.append(target)
 

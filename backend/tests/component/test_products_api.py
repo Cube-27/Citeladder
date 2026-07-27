@@ -180,6 +180,21 @@ async def test_product_import_headerless_csv_rejected(
 
 
 @pytest.mark.asyncio
+async def test_product_import_invalid_utf8_rejected(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "prod-import-utf8@example.com")
+    project = await _project(client)
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/products/import",
+        files={"file": ("catalog.csv", b"sku,name\nVC-500,Volt\xffCity\n", "text/csv")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "CSV must be valid UTF-8"
+
+
+@pytest.mark.asyncio
 async def test_product_import_malformed_json_is_422_not_500(
     client: httpx.AsyncClient,
 ) -> None:

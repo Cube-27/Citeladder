@@ -334,7 +334,7 @@ export function SettingsScreen() {
                     <div className="flex min-w-0 items-center gap-2.5">
                       <BrandLogo
                         name={activeProject.brand_name}
-                        logoUrl={activeProject.brand.logo_url}
+                        logoUrl={activeProject.brand?.logo_url}
                         size="md"
                       />
                       <div className="min-w-0">
