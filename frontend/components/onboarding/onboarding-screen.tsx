@@ -34,7 +34,6 @@ import { cn } from '@/lib/utils';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 
 import { DiscoveryProgress } from './discovery-progress';
-import { PreviewPanel } from './preview-panel';
 import { ReviewStep } from './review-step';
 
 /**
@@ -171,57 +170,67 @@ export function OnboardingScreen() {
   );
 
   return (
-    <div className="bg-background min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-      <main className="flex min-h-dvh flex-col px-6 py-8 sm:px-10">
-        <header className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2">
-            <LogoMark size={24} />
-            <span className="text-foreground text-heading-sm">Searchify</span>
-          </span>
-          <span className="text-subtle text-xs">
-            Step {step + 1} of {STEPS.length}
-          </span>
-        </header>
+    <div className="bg-background flex min-h-dvh flex-col">
+      <header className="border-border-subtle flex items-center justify-between gap-3 border-b px-6 py-4 sm:px-10">
+        <span className="flex items-center gap-2">
+          <LogoMark size={24} />
+          <span className="text-foreground text-heading-sm">Searchify</span>
+        </span>
+        <span className="text-subtle text-xs">
+          Step {step + 1} of {STEPS.length}
+        </span>
+      </header>
 
-        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center py-10">
-          {/* Labelled stepper. The bars alone said "three of something" without
-              saying what, so the user could not tell what was coming — which is
-              most of what a stepper is for. `aria-current` marks the active step
-              rather than relying on colour. */}
-          <ol className="mb-8 grid list-none grid-cols-3 gap-2 p-0">
-            {STEPS.map((label, index) => {
-              const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
-              return (
-                <li
-                  key={label}
-                  aria-current={state === 'current' ? 'step' : undefined}
-                  className="grid gap-1.5"
+      {/* Top-aligned, full-width content. The old shell centred a `max-w-lg`
+          island with `justify-center`, which left dead bands above and below
+          and pushed the review lists into a vertical scroll. `justify-start`
+          and a wider column keep everything in the viewport; a sticky footer
+          bar holds the actions so they never scroll away. */}
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-8 pb-24 sm:px-10">
+        {/* Labelled stepper. The bars alone said "three of something" without
+            saying what, so the user could not tell what was coming — which is
+            most of what a stepper is for. `aria-current` marks the active step
+            rather than relying on colour. */}
+        <ol className="mb-6 grid list-none grid-cols-3 gap-2 p-0">
+          {STEPS.map((label, index) => {
+            const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
+            return (
+              <li
+                key={label}
+                aria-current={state === 'current' ? 'step' : undefined}
+                className="grid gap-1.5"
+              >
+                <span
+                  className={cn(
+                    'h-0.5 rounded-full',
+                    state === 'upcoming' ? 'bg-border' : 'bg-accent',
+                  )}
+                />
+                <span
+                  className={cn(
+                    'text-2xs font-medium',
+                    state === 'current' ? 'text-foreground' : 'text-subtle',
+                  )}
                 >
-                  <span
-                    className={cn(
-                      'h-0.5 rounded-full',
-                      state === 'upcoming' ? 'bg-border' : 'bg-accent',
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      'text-2xs font-medium',
-                      state === 'current' ? 'text-foreground' : 'text-subtle',
-                    )}
-                  >
-                    {label}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+                  {label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
 
-          {step === 0 ? (
-            <form noValidate onSubmit={submitBrand} className="grid gap-5">
+        {step === 0 ? (
+          <form noValidate onSubmit={submitBrand} className="grid gap-5">
+            <div className="grid gap-1">
               <h1 className="text-foreground text-2xl">
                 {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
               </h1>
+              <p className="text-muted text-sm">
+                We&apos;ll discover your domains, competitors and starting prompts from this.
+              </p>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Brand name" required error={form.formState.errors.brand_name?.message}>
                 {(props) => (
                   <Input {...props} {...form.register('brand_name')} placeholder="Acme" />
@@ -239,130 +248,125 @@ export function OnboardingScreen() {
                 )}
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Country" error={form.formState.errors.country_code?.message}>
-                  {(props) => (
-                    <Controller
-                      control={form.control}
-                      name="country_code"
-                      render={({ field }) => (
-                        <MarketSelect
-                          {...props}
-                          ariaLabel="Country"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          options={COUNTRY_OPTIONS}
-                        />
-                      )}
-                    />
-                  )}
-                </Field>
-                <Field label="Language" error={form.formState.errors.language_code?.message}>
-                  {(props) => (
-                    <Controller
-                      control={form.control}
-                      name="language_code"
-                      render={({ field }) => (
-                        <MarketSelect
-                          {...props}
-                          ariaLabel="Language"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          options={LANGUAGE_OPTIONS}
-                        />
-                      )}
-                    />
-                  )}
-                </Field>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button type="submit">Continue</Button>
-                {isAdditional ? (
-                  <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
-                    Cancel
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          ) : null}
-
-          {step === 1 ? (
-            <div className="grid gap-5">
-              <h1 className="text-foreground text-2xl">
-                Finding what to track
-              </h1>
-
-              <DiscoveryProgress state={discovery.state} onRetry={discovery.retry} />
-
-              {discovery.agentUnconfigured ? (
-                <Alert tone="warning">
-                  AI discovery is unavailable. You can continue and add competitors and prompts
-                  yourself.
-                </Alert>
-              ) : null}
-
-              <div className="flex items-center gap-2">
-                <Button onClick={() => setStep(2)} disabled={discovery.isRunning}>
-                  {discovery.isRunning ? 'Searching…' : 'Review'}
-                </Button>
-                <Button variant="ghost" onClick={() => setStep(0)}>
-                  Back
-                </Button>
-              </div>
+              <Field label="Country" error={form.formState.errors.country_code?.message}>
+                {(props) => (
+                  <Controller
+                    control={form.control}
+                    name="country_code"
+                    render={({ field }) => (
+                      <MarketSelect
+                        {...props}
+                        ariaLabel="Country"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        options={COUNTRY_OPTIONS}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
+              <Field label="Language" error={form.formState.errors.language_code?.message}>
+                {(props) => (
+                  <Controller
+                    control={form.control}
+                    name="language_code"
+                    render={({ field }) => (
+                      <MarketSelect
+                        {...props}
+                        ariaLabel="Language"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        options={LANGUAGE_OPTIONS}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
             </div>
-          ) : null}
 
-          {step === 2 ? (
-            <div className="grid gap-5">
-              <h1 className="text-foreground text-2xl">
-                Does this look right?
-              </h1>
-
-              <ReviewStep
-                domains={domains}
-                competitors={competitors}
-                prompts={prompts}
-                onToggleDomain={toggle(setDomains)}
-                onToggleCompetitor={toggle(setCompetitors)}
-                onTogglePrompt={toggle(setPrompts)}
-                onRenameCompetitor={(index, name) =>
-                  setCompetitors((prev) =>
-                    prev.map((item, i) => (i === index ? { ...item, name } : item)),
-                  )
-                }
-                onAddCompetitor={() =>
-                  setCompetitors((prev) => [...prev, { name: '', domains: [], selected: true }])
-                }
-              />
-
-              {confirm.isError ? (
-                <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
+            <div className="flex items-center gap-2 pt-1">
+              <Button type="submit">Continue</Button>
+              {isAdditional ? (
+                <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
+                  Cancel
+                </Button>
               ) : null}
-
-              <div className="flex items-center gap-2">
-                <Button onClick={() => confirm.mutate()} disabled={confirm.isPending}>
-                  {confirm.isPending ? 'Creating…' : 'Create project'}
-                </Button>
-                <Button variant="ghost" onClick={() => setStep(1)} disabled={confirm.isPending}>
-                  Back
-                </Button>
-              </div>
             </div>
-          ) : null}
-        </div>
+          </form>
+        ) : null}
+
+        {step === 1 ? (
+          <div className="grid gap-5">
+            <div className="grid gap-1">
+              <h1 className="text-foreground text-2xl">Finding what to track</h1>
+              <p className="text-muted text-sm">
+                Three searches run in parallel for {brand?.brand_name || 'your brand'}.
+              </p>
+            </div>
+
+            <DiscoveryProgress state={discovery.state} onRetry={discovery.retry} />
+
+            {discovery.agentUnconfigured ? (
+              <Alert tone="warning">
+                AI discovery is unavailable. You can continue and add competitors and prompts
+                yourself.
+              </Alert>
+            ) : null}
+
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setStep(2)} disabled={discovery.isRunning}>
+                {discovery.isRunning ? 'Searching…' : 'Review'}
+              </Button>
+              <Button variant="ghost" onClick={() => setStep(0)}>
+                Back
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 2 ? (
+          <div className="grid gap-5">
+            <div className="grid gap-1">
+              <h1 className="text-foreground text-2xl">Does this look right?</h1>
+              <p className="text-muted text-sm">
+                Deselect anything you don&apos;t want — you can change all of it after setup.
+              </p>
+            </div>
+
+            <ReviewStep
+              domains={domains}
+              competitors={competitors}
+              prompts={prompts}
+              onToggleDomain={toggle(setDomains)}
+              onToggleCompetitor={toggle(setCompetitors)}
+              onTogglePrompt={toggle(setPrompts)}
+              onRenameCompetitor={(index, name) =>
+                setCompetitors((prev) =>
+                  prev.map((item, i) => (i === index ? { ...item, name } : item)),
+                )
+              }
+              onAddCompetitor={() =>
+                setCompetitors((prev) => [...prev, { name: '', domains: [], selected: true }])
+              }
+            />
+
+            {confirm.isError ? (
+              <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
+            ) : null}
+
+            <div className="flex items-center gap-2">
+              <Button onClick={() => confirm.mutate()} disabled={confirm.isPending}>
+                {confirm.isPending ? 'Creating…' : 'Create project'}
+              </Button>
+              <Button variant="ghost" onClick={() => setStep(1)} disabled={confirm.isPending}>
+                Back
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </main>
-
-      <PreviewPanel
-        brandName={form.watch('brand_name')}
-        domain={derivedDomain}
-        domains={domains}
-        competitors={competitors}
-        prompts={prompts}
-        step={step}
-      />
     </div>
   );
 }

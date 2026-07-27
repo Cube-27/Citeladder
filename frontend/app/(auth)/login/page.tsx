@@ -40,7 +40,12 @@ export default function LoginPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">Sign in</h1>
+      <div className="grid gap-1.5">
+        <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">Sign in</h1>
+        <p className="text-mkt-body text-mkt-ink-soft">
+          Pick up where your brand left off.
+        </p>
+      </div>
 
       {mutation.isError ? <MktAlert>{authErrorMessage(mutation.error)}</MktAlert> : null}
 

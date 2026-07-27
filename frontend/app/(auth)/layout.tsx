@@ -37,7 +37,28 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
         </header>
 
         <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-[26rem]">{children}</div>
+          <div className="w-full max-w-[24rem]">
+            {children}
+
+            {/* Quiet reassurance under the form — the same claims as the brand
+                panel's proof points, kept to one flat strip so the form column
+                stops reading as a void. Shown only where the brand panel is
+                hidden (below 900px), so the two columns never repeat the list. */}
+            <ul className="border-mkt-line text-mkt-ink-muted mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-5 text-mkt-sm min-[900px]:hidden">
+              <li className="flex items-center gap-1.5">
+                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
+                Deterministic scoring
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
+                Evidence for every number
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
+                Your own API keys
+              </li>
+            </ul>
+          </div>
         </div>
 
         {/* Footer band — balances the brand panel's copyright row. */}
