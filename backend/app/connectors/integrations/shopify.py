@@ -292,7 +292,7 @@ class ShopifyClient:
         owner_id: str,
         connection_key: str,
         first_nodes: list,
-        first_page_info: dict[str, Any],
+        first_page_info: object,
         label: str,
     ) -> list:
         """Exhaust a nested connection (variants/lineItems) to its end.

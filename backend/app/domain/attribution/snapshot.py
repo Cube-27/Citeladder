@@ -317,7 +317,7 @@ def build_a1_projection(
             group["revenue"] += _metric_money(row.metrics, "purchaseRevenue")
             group["orders"] += metric_count(row.metrics, "transactions")
             group["sessions"] += metric_count(row.metrics, "sessions")
-        by_ai_source = [
+        by_ai_source: list[dict[str, Any]] = [
             {
                 "ai_source": ai_source,
                 "currency": currency,
@@ -341,27 +341,35 @@ def build_a1_projection(
         for row in item_primary:
             item_id, source, medium = _dimension_values(row) or ("", "", "")
             ai_source = _classify_source_medium(source, medium)
-            key = (item_id, ai_source, f"{source} / {medium}")
-            group = product_groups.setdefault(key, {"revenue": 0.0, "orders": 0})
+            primary_key = (item_id, ai_source, f"{source} / {medium}")
+            group = product_groups.setdefault(
+                primary_key, {"revenue": 0.0, "orders": 0}
+            )
             group["revenue"] += _metric_money(row.metrics, "itemRevenue")
             group["orders"] += metric_count(row.metrics, "itemsPurchased")
         for row in item_fallback:
             item_id, channel_group = _dimension_values(row) or ("", "")
             # Reduced granularity: never guessed into an AI source; the
             # channel-group name is the source label.
-            key = (item_id, None, channel_group)
-            group = product_groups.setdefault(key, {"revenue": 0.0, "orders": 0})
+            fallback_key = (item_id, None, channel_group)
+            group = product_groups.setdefault(
+                fallback_key, {"revenue": 0.0, "orders": 0}
+            )
             group["revenue"] += _metric_money(row.metrics, "itemRevenue")
             group["orders"] += metric_count(row.metrics, "itemsPurchased")
         by_product: list[dict[str, Any]] = []
-        for (sku, ai_source, source_label), group in product_groups.items():
-            product_id = products_by_sku.get(sku)
+        for (sku, product_ai_source, source_label), group in product_groups.items():
+            matched_product_id = products_by_sku.get(sku)
             by_product.append(
                 {
-                    "product_id": str(product_id) if product_id is not None else None,
+                    "product_id": (
+                        str(matched_product_id)
+                        if matched_product_id is not None
+                        else None
+                    ),
                     "sku": sku,
                     "name": sku,
-                    "ai_source": ai_source,
+                    "ai_source": product_ai_source,
                     "source_label": source_label,
                     "currency": currency,
                     "revenue": round(group["revenue"], _MONEY_DECIMALS),
@@ -533,7 +541,7 @@ def build_combined_projection(
                 except (TypeError, ValueError):
                     continue
 
-        by_ai_source = []
+        by_ai_source: list[dict[str, Any]] = []
         for ai_source, group in source_groups.items():
             revenue = round(group["revenue"], _MONEY_DECIMALS)
             by_ai_source.append(

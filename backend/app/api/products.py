@@ -220,8 +220,8 @@ async def _resolve_import_rows(
             raise _unprocessable(f"Invalid product import payload: {exc}") from exc
 
     # Raw CSV posted as text/csv (no multipart wrapper).
-    raw_body = (await read_limited_body(request)).decode("utf-8-sig", errors="replace")
-    return parse_product_csv(raw_body)
+    csv_body = (await read_limited_body(request)).decode("utf-8-sig", errors="replace")
+    return parse_product_csv(csv_body)
 
 
 @router.post(

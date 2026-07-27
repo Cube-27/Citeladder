@@ -285,8 +285,8 @@ async def _resolve_import_rows(
         return PromptImport.model_validate_json(raw_body).prompts
 
     # Raw CSV posted as text/csv (no multipart wrapper).
-    raw_body = (await read_limited_body(request)).decode("utf-8-sig", errors="replace")
-    return parse_prompt_csv(raw_body)
+    csv_body = (await read_limited_body(request)).decode("utf-8-sig", errors="replace")
+    return parse_prompt_csv(csv_body)
 
 
 @router.post(

@@ -356,10 +356,10 @@ async def get_product_visibility(
     # Response-level version label: the first catalog entry's selected
     # snapshot (deterministic catalog order). Row-level DTOs carry their own
     # version, so a mixed-version audit is still labelled correctly per row.
+    selected_entry_ids = [entry.id for entry in config.products]
+    selected_entry_ids.extend(entry.id for entry in config.competitor_products)
     selected = [
-        by_entry[entry.id]
-        for entry in [*config.products, *config.competitor_products]
-        if entry.id in by_entry
+        by_entry[entry_id] for entry_id in selected_entry_ids if entry_id in by_entry
     ]
     first = selected[0]
     return ProductVisibilityResponse(
