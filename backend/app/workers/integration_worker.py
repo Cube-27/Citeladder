@@ -139,9 +139,14 @@ class _ClientPage(Protocol):
     came out short is NOT the last page).
     """
 
-    payload: dict
-    rows: tuple[dict, ...]
-    raw_row_count: int
+    @property
+    def payload(self) -> dict: ...
+
+    @property
+    def rows(self) -> tuple[dict, ...]: ...
+
+    @property
+    def raw_row_count(self) -> int: ...
 
 
 class _DataClient(Protocol):

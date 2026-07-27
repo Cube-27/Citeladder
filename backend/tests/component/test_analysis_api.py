@@ -72,6 +72,32 @@ from app.workers.audit_worker import AuditWorker
 from tests.component.audit_helpers import seed_audit_fixtures
 
 
+def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
+    brand_id = _uuid.uuid4()
+    competitor_id = _uuid.uuid4()
+    logo_urls = {
+        brand_id: "/brand-logo",
+        competitor_id: "/competitor-logo",
+    }
+    identity_ids = {
+        (True, "Shared name"): brand_id,
+        (False, "Shared name"): competitor_id,
+    }
+
+    assert (
+        analysis_service._logo_url_for_name(
+            "Shared name", True, logo_urls, identity_ids
+        )
+        == "/brand-logo"
+    )
+    assert (
+        analysis_service._logo_url_for_name(
+            "Shared name", False, logo_urls, identity_ids
+        )
+        == "/competitor-logo"
+    )
+
+
 class _StubAdapter:
     """In-memory answer-engine stand-in: mentions the brand + cites owned +
     competitor domains so the analysis has signal to aggregate (no network)."""

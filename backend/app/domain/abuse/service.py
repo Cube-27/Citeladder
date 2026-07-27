@@ -114,7 +114,7 @@ async def consume_usage(
         raise UsageLimitExceededError(
             operation=operation, retry_after_seconds=retry_after
         )
-    stmt = insert(UsageWindow).values(
+    insert_stmt = insert(UsageWindow).values(
         id=uuid.uuid4(),
         subject_kind=subject_kind,
         subject_hash=opaque_subject(subject),
@@ -125,7 +125,7 @@ async def consume_usage(
         created_at=current,
         updated_at=current,
     )
-    stmt = stmt.on_conflict_do_update(
+    consume_stmt = insert_stmt.on_conflict_do_update(
         constraint="uq_usage_window_subject_operation_start",
         set_={
             "count": UsageWindow.count + amount,
@@ -133,7 +133,7 @@ async def consume_usage(
         },
         where=(UsageWindow.count + amount <= limit),
     ).returning(UsageWindow.count)
-    consumed = await session.scalar(stmt)
+    consumed = await session.scalar(consume_stmt)
     if consumed is None:
         retry_after = math.ceil((expires - current).total_seconds())
         raise UsageLimitExceededError(

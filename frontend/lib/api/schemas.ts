@@ -66,6 +66,7 @@ export const competitorSchema = z.strictObject({
   name: z.string(),
   aliases: z.array(z.string()),
   domains: z.array(z.string()),
+  logo_url: z.string().nullable().optional(),
 });
 
 // Intent enum. The B3 backend `normalize_intent` casefolds a free-text intent
@@ -259,6 +260,7 @@ export const projectSchema = z.strictObject({
   default_repetitions: z.number().int(),
   brand: z.strictObject({
     aliases: z.array(z.string()),
+    logo_url: z.string().nullable().optional(),
   }),
   owned_domains: z.array(z.string()),
   unintended_domains: z.array(z.string()),
@@ -481,6 +483,7 @@ export const visibilityEngineSchema = z.strictObject({
 export const rankingRowSchema = z.strictObject({
   name: z.string(),
   is_brand: z.boolean(),
+  logo_url: z.string().nullable().optional(),
   mention_rate: z.number().nullable(),
   citation_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),

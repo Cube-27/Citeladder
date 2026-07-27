@@ -12,10 +12,17 @@ The ``/generate`` endpoint is covered in ``test_prompt_generation_api.py``.
 
 from __future__ import annotations
 
+import hashlib
 import io
+import uuid
 
 import httpx
 import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config.brand_logos import BRAND_LOGO_STATUS_READY
+from app.models.brand import Brand, BrandLogoAsset, Competitor
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -57,10 +64,12 @@ async def test_create_project_persists_normalized_identity(
     assert "-" in body["id"] and "-" in body["workspace_id"]
     assert body["brand_name"] == "Acme Corp"
     assert body["brand"]["aliases"] == ["Acme", "ACME Inc"]
+    assert body["brand"]["logo_url"] is None
     assert body["owned_domains"] == ["acme.com"]
     assert body["unintended_domains"] == ["support.acme.com"]
     assert len(body["competitors"]) == 1
     assert body["competitors"][0]["name"] == "Globex"
+    assert body["competitors"][0]["logo_url"] is None
     assert "-" in body["competitors"][0]["id"]
     assert body["prompt_sets"] == []
 
@@ -68,6 +77,71 @@ async def test_create_project_persists_normalized_identity(
     got = await client.get(f"/api/v1/projects/{body['id']}")
     assert got.status_code == 200
     assert got.json()["brand"]["aliases"] == ["Acme", "ACME Inc"]
+
+
+@pytest.mark.asyncio
+async def test_project_logo_assets_are_workspace_scoped(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    await _register(client, "logo-owner@example.com")
+    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    project_id = uuid.UUID(project["id"])
+    brand = await db_session.scalar(select(Brand).where(Brand.project_id == project_id))
+    competitor = await db_session.scalar(
+        select(Competitor).where(Competitor.project_id == project_id)
+    )
+    assert brand is not None and competitor is not None
+    png = b"\x89PNG\r\n\x1a\nasset"
+    asset = BrandLogoAsset(
+        domain="acme.com",
+        status=BRAND_LOGO_STATUS_READY,
+        source_url="https://acme.com/favicon.png",
+        content_type="image/png",
+        image_data=png,
+        byte_size=len(png),
+        sha256=hashlib.sha256(png).hexdigest(),
+    )
+    db_session.add(asset)
+    await db_session.flush()
+    brand.logo_asset_id = asset.id
+    competitor.logo_asset_id = asset.id
+    await db_session.commit()
+
+    refreshed = await client.get(f"/api/v1/projects/{project['id']}")
+    assert refreshed.json()["brand"]["logo_url"].endswith(
+        f"/projects/{project['id']}/logo"
+    )
+    competitor_id = project["competitors"][0]["id"]
+    own_logo = await client.get(f"/api/v1/projects/{project['id']}/logo")
+    competitor_logo = await client.get(
+        f"/api/v1/projects/{project['id']}/competitors/{competitor_id}/logo"
+    )
+    assert own_logo.status_code == 200 and own_logo.content == png
+    assert competitor_logo.status_code == 200 and competitor_logo.content == png
+    assert own_logo.headers["content-type"] == "image/png"
+    assert own_logo.headers["cache-control"] == "private, max-age=86400"
+    assert own_logo.headers["etag"] == f'"{hashlib.sha256(png).hexdigest()}"'
+    assert own_logo.headers["x-content-type-options"] == "nosniff"
+    not_modified = await client.get(
+        f"/api/v1/projects/{project['id']}/logo",
+        headers={"If-None-Match": own_logo.headers["etag"]},
+    )
+    assert not_modified.status_code == 304
+    assert not_modified.content == b""
+    assert not_modified.headers["cache-control"] == own_logo.headers["cache-control"]
+    assert not_modified.headers["etag"] == own_logo.headers["etag"]
+    assert not_modified.headers["x-content-type-options"] == "nosniff"
+
+    client.cookies.clear()
+    await _register(client, "logo-outsider@example.com")
+    assert (
+        await client.get(f"/api/v1/projects/{project['id']}/logo")
+    ).status_code == 404
+    assert (
+        await client.get(
+            f"/api/v1/projects/{project['id']}/competitors/{competitor_id}/logo"
+        )
+    ).status_code == 404
 
 
 @pytest.mark.asyncio

@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config.api import API_V1_PREFIX
 from app.domain.projects.normalization import normalize_benchmark_mode
 from app.domain.projects.schemas import (
     BrandResponse,
@@ -34,6 +35,14 @@ from app.models.prompt import PromptSet
 
 class ProjectNotFoundError(LookupError):
     """Raised when a project is missing or not in the caller's workspace."""
+
+
+def brand_logo_url(project_id: uuid.UUID) -> str:
+    return f"{API_V1_PREFIX}/projects/{project_id}/logo"
+
+
+def competitor_logo_url(project_id: uuid.UUID, competitor_id: uuid.UUID) -> str:
+    return f"{API_V1_PREFIX}/projects/{project_id}/competitors/{competitor_id}/logo"
 
 
 def _loaded_project_query():
@@ -63,7 +72,12 @@ def project_to_response(project: Project) -> ProjectResponse:
         brand=BrandResponse(
             aliases=(
                 [alias.alias for alias in brand.aliases] if brand is not None else []
-            )
+            ),
+            logo_url=(
+                brand_logo_url(project.id)
+                if brand is not None and brand.logo_asset_id is not None
+                else None
+            ),
         ),
         website_url=project.website_url,
         owned_domains=[d.domain for d in project.owned_domains],
@@ -74,6 +88,11 @@ def project_to_response(project: Project) -> ProjectResponse:
                 name=c.name,
                 aliases=list(c.aliases or []),
                 domains=list(c.domains or []),
+                logo_url=(
+                    competitor_logo_url(project.id, c.id)
+                    if c.logo_asset_id is not None
+                    else None
+                ),
             )
             for c in project.competitors
         ],

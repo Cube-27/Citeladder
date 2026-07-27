@@ -507,8 +507,11 @@ async def enqueue_post_sync_projections(
 
     enqueued: list[uuid.UUID] = []
     for artifact_id in artifact_ids:
-        row = resolved.get(artifact_id)
-        if row is None or row.dataset not in TRAFFIC_GA4_REFERRAL_DATASETS:
+        resolved_row = resolved.get(artifact_id)
+        if (
+            resolved_row is None
+            or resolved_row.dataset not in TRAFFIC_GA4_REFERRAL_DATASETS
+        ):
             continue
         task_id = await enqueue_ingest_referrals(
             session,

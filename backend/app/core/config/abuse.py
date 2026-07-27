@@ -27,6 +27,8 @@ class AbuseSettings(BaseSettings):
     provider_test_window_seconds: int = Field(default=3600, ge=1)
     crawl_create_limit: int = Field(default=10, ge=1)
     crawl_create_window_seconds: int = Field(default=86400, ge=1)
+    brand_logo_refresh_limit: int = Field(default=10, ge=1)
+    brand_logo_refresh_window_seconds: int = Field(default=3600, ge=1)
 
     active_audits_per_workspace: int = Field(default=3, ge=1)
     audit_tasks_per_workspace_daily: int = Field(default=1500, ge=1)

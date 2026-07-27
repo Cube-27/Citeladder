@@ -7,6 +7,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -330,11 +331,20 @@ export function SettingsScreen() {
               {activeProject ? (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-foreground truncate text-sm font-semibold">
-                        {activeProject.name}
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <BrandLogo
+                        name={activeProject.brand_name}
+                        logoUrl={activeProject.brand?.logo_url}
+                        size="md"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-foreground truncate text-sm font-semibold">
+                          {activeProject.name}
+                        </div>
+                        <p className="text-muted mt-0.5 text-xs">
+                          Brand: {activeProject.brand_name}
+                        </p>
                       </div>
-                      <p className="text-muted mt-0.5 text-xs">Brand: {activeProject.brand_name}</p>
                     </div>
                     <Button
                       variant="destructive"

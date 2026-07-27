@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { NAV_GROUPS } from '@/components/layout/nav-items';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -30,23 +31,15 @@ type Command = {
   id: string;
   label: string;
   group: string;
-  /** Nav destinations carry their canonical glyph; projects render initials. */
+  /** Nav destinations carry their canonical glyph; projects render a brand logo. */
   icon?: LucideIcon;
-  initials?: string;
+  logoUrl?: string | null;
   hint?: string;
   run: () => void;
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW = 'flex w-full items-center gap-2.5 rounded-md px-2.5 text-left text-base h-[34px]';
-
-/** Two-letter avatar initials, matching ProjectSwitcher's treatment. */
-function initialsOf(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
@@ -143,7 +136,7 @@ export function CommandPalette() {
       // guard here; ProjectSwitcher shows the same label.
       label: project.brand_name,
       group: 'Switch project',
-      initials: initialsOf(project.brand_name),
+      logoUrl: project.brand?.logo_url,
       hint: project.id === activeProjectId ? 'Current' : undefined,
       run: () => setActiveProjectId(project.id),
     }));
@@ -298,12 +291,12 @@ export function CommandPalette() {
                               strokeWidth={1.75}
                             />
                           ) : (
-                            <span
-                              aria-hidden
-                              className="bg-foreground text-background grid size-4 shrink-0 place-items-center rounded-[3px] text-[8px] font-semibold"
-                            >
-                              {command.initials}
-                            </span>
+                            <BrandLogo
+                              name={command.label}
+                              logoUrl={command.logoUrl}
+                              size="xs"
+                              className="bg-foreground text-background"
+                            />
                           )}
                           <span className="min-w-0 flex-1 truncate">{command.label}</span>
                           {command.hint ? (

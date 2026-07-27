@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -86,12 +87,7 @@ export function ProjectsScreen() {
                       aria-current={isActive ? 'true' : undefined}
                       className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
                     >
-                      <span
-                        aria-hidden
-                        className="bg-accent-soft text-accent-text text-2xs flex size-8 shrink-0 items-center justify-center rounded-md font-semibold uppercase"
-                      >
-                        {label.slice(0, 2)}
-                      </span>
+                      <BrandLogo name={label} logoUrl={project.brand.logo_url} size="md" />
                       <span className="min-w-0 flex-1">
                         <span className="text-foreground block truncate text-base font-medium">
                           {label}

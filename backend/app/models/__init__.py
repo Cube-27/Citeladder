@@ -44,6 +44,7 @@ from app.models.billing import (
 from app.models.brand import (
     Brand,
     BrandAlias,
+    BrandLogoAsset,
     BrandProfile,
     BrandProfileSuggestion,
     Competitor,
@@ -115,6 +116,7 @@ __all__ = [
     "Base",
     "Brand",
     "BrandAlias",
+    "BrandLogoAsset",
     "BrandProfile",
     "BrandProfileSuggestion",
     "BrandMention",

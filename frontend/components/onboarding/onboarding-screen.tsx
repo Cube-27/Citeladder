@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { MarketSelect } from '@/components/ui/market-select';
 import { queryKeys } from '@/lib/api/query-keys';
+import { projectsApi } from '@/lib/api/projects';
 import {
   brandStepSchema,
   deriveDomain,
@@ -124,6 +125,13 @@ export function OnboardingScreen() {
     },
     onSuccess: async (project) => {
       setActiveProjectId(project.id);
+      // Logo hydration is best-effort and never blocks onboarding. The backend
+      // checks its database cache before crawling; once it finishes, refresh
+      // the project list so every shared BrandLogo instance updates together.
+      void projectsApi
+        .refreshProjectLogos(project.id)
+        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
+        .catch(() => undefined);
       // Await the refetch before navigating. The gate reads the projects query;
       // if it is still holding the stale empty list when /visibility mounts, it
       // bounces the user straight back here.

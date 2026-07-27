@@ -112,6 +112,10 @@ export const projectsApi = {
   },
   deleteProject: (projectId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/projects/${projectId}`, options),
+  refreshProjectLogos: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<Project>(`/projects/${projectId}/logos/refresh`, {}, options);
+    return strictValidate(projectSchema, res, 'projects.refreshProjectLogos');
+  },
   getBrandProfile: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<BrandProfile>(`/projects/${projectId}/brand-profile`, options);
     return strictValidate(brandProfileSchema, res, 'projects.getBrandProfile');

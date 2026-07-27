@@ -59,6 +59,7 @@ class BrandInput(BaseModel):
 
 class BrandResponse(BaseModel):
     aliases: list[str] = Field(default_factory=list)
+    logo_url: str | None = None
 
 
 class CompetitorInput(BaseModel):
@@ -74,6 +75,7 @@ class CompetitorResponse(BaseModel):
     name: str
     aliases: list[str] = Field(default_factory=list)
     domains: list[str] = Field(default_factory=list)
+    logo_url: str | None = None
 
 
 class BrandProfileSources(BaseModel):

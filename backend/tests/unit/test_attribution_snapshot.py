@@ -350,6 +350,37 @@ def test_by_product_primary_rows_resolve_skus_and_labels() -> None:
     assert a1["reduced_granularity"] is False
 
 
+def test_by_product_combines_labels_for_the_same_product_and_ai_source() -> None:
+    artifact_id = uuid.uuid4()
+    rows = [
+        _item_primary_row(
+            "SKU-1",
+            source,
+            "referral",
+            item_revenue=revenue,
+            items_purchased=orders,
+            artifact_id=artifact_id,
+        )
+        for source, revenue, orders in (
+            ("chatgpt.com", 80.0, 1),
+            ("chat.openai.com", 20.0, 2),
+        )
+    ]
+
+    projection = build_a1_projection(
+        rows, {}, currency_by_artifact_id={artifact_id: "USD"}
+    )
+
+    (a1,) = _a1(projection.metrics)
+    (product,) = a1["by_product"]
+    assert product["ai_source"] == AI_SOURCE_CHATGPT
+    assert product["source_label"] == (
+        "chat.openai.com / referral; chatgpt.com / referral"
+    )
+    assert product["revenue"] == 100.0
+    assert product["orders"] == 3
+
+
 def test_fallback_item_rows_label_channel_group_reduced_granularity() -> None:
     artifact_id = uuid.uuid4()
     rows = [

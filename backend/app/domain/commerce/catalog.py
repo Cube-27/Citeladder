@@ -24,6 +24,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -131,7 +132,7 @@ def _apply_platform_fields(
     name = _display_name(row) or name_fallback
     if name:
         product.name = name[:255]
-    product.price = _parse_price(row.get("price"))
+    product.price = cast(float | None, _parse_price(row.get("price")))
     product.currency = _str(row.get("currency"))[:3]
     product.url = _str(row.get("url"))
     variant_title = _variant_title(row)
