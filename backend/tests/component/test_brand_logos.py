@@ -174,7 +174,7 @@ async def test_expired_negative_cache_is_refreshed_and_attached(
 
 
 async def test_fetch_missing_isolates_unexpected_target_failure(
-    monkeypatch, caplog
+    monkeypatch,
 ) -> None:
     class FakeSecureFetcher:
         def __init__(self, **_kwargs) -> None:
@@ -200,7 +200,12 @@ async def test_fetch_missing_isolates_unexpected_target_failure(
 
     monkeypatch.setattr(logo_service, "SecureFetcher", FakeSecureFetcher)
     monkeypatch.setattr(logo_service, "fetch_brand_logo", fetch)
-    caplog.set_level("ERROR", logger=logo_service.__name__)
+    logged: list[tuple[str, dict[str, str]]] = []
+
+    def log_exception(message: str, *, extra: dict[str, str]) -> None:
+        logged.append((message, extra))
+
+    monkeypatch.setattr(logo_service.logger, "exception", log_exception)
     targets = [
         logo_service._LogoTarget("broken.example", "https://broken.example/"),
         logo_service._LogoTarget("ok.example", "https://ok.example/"),
@@ -209,7 +214,12 @@ async def test_fetch_missing_isolates_unexpected_target_failure(
     results = await logo_service._fetch_missing(targets)
 
     assert results == {"broken.example": None, "ok.example": expected}
-    assert "Unexpected brand logo fetch failure" in caplog.text
+    assert logged == [
+        (
+            "Unexpected brand logo fetch failure",
+            {"domain": "broken.example"},
+        )
+    ]
 
 
 async def test_fetch_missing_has_a_hard_total_timeout(monkeypatch) -> None:

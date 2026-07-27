@@ -589,12 +589,18 @@ async def test_integration_queue_claims_without_double_claim(
     assert claimed_a | claimed_b == set(ids)
     assert all(t.status == TASK_STATUS_LEASED for r in results for t in r)
 
-    first = results[0][0]
-    assert await queue.mark_running(task_id=first.id, owner="integration-a")
-    assert await queue.heartbeat(task_id=first.id, owner="integration-a")
+    owners = ("integration-a", "integration-b")
+    owner, first = next(
+        (claim_owner, tasks[0])
+        for claim_owner, tasks in zip(owners, results, strict=True)
+        if tasks
+    )
+    stranger = next(claim_owner for claim_owner in owners if claim_owner != owner)
+    assert await queue.mark_running(task_id=first.id, owner=owner)
+    assert await queue.heartbeat(task_id=first.id, owner=owner)
     # A stranger's heartbeat never extends an owned lease.
-    assert not await queue.heartbeat(task_id=first.id, owner="integration-b")
-    assert await queue.succeed(task_id=first.id, owner="integration-a")
+    assert not await queue.heartbeat(task_id=first.id, owner=stranger)
+    assert await queue.succeed(task_id=first.id, owner=owner)
     async with session_factory() as session:
         refreshed = await session.get(IntegrationSyncRun, first.id)
     assert refreshed is not None
