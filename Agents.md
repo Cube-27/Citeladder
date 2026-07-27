@@ -121,9 +121,9 @@ uv run ruff check .
 
 # Migrations — 0001_initial is the frozen explicit production baseline.
 # Never edit it; schema changes require additive, reviewed revision files.
-# Verify both migration execution and ORM drift (`alembic check`) on a
-# disposable database.
-uv run alembic upgrade head
+# Verify both migration execution and ORM drift on a DISPOSABLE database.
+uv run alembic upgrade head   # migrations apply cleanly from scratch
+uv run alembic check          # no drift between the ORM models and head
 
 # Frontend — focused (from frontend/)
 pnpm test -- <file>          # Vitest

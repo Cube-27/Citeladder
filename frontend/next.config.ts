@@ -18,6 +18,30 @@ import type { NextConfig } from 'next';
  *     exposed to the browser. Defaults to `http://localhost:8000` for local dev;
  *     production builds fail closed when it is absent or points at loopback.
  */
+/**
+ * True for an IPv4-mapped IPv6 literal (`::ffff:7f00:1`, `::ffff:127.0.0.1`, or
+ * the uncompressed `0:0:0:0:0:ffff:…`).
+ *
+ * These defeat a naive loopback check: `http://[::ffff:127.0.0.1]` is
+ * normalized by `URL` to `[::ffff:7f00:1]`, which is neither `::1` nor prefixed
+ * `127.`, so it slipped through. Rather than decode the embedded address and
+ * test it for 127/8, reject EVERY mapped IPv4 literal — there is no legitimate
+ * reason to express a backend origin that way, and enumerating which mapped
+ * ranges are loopback is exactly the kind of check that gets one case wrong.
+ *
+ * Written as a segment walk rather than a regex: the natural pattern for the
+ * optional-zero-groups prefix nests quantifiers and backtracks super-linearly.
+ */
+function isMappedIpv4Literal(host: string): boolean {
+  if (!host.includes(':')) return false;
+  const segments = host.split(':');
+  const marker = segments.findIndex((segment) => segment === 'ffff');
+  if (marker < 0) return false;
+  // Everything before the `ffff` marker must be the 80 leading zero bits,
+  // written either as empty (compressed) or explicit zero groups.
+  return segments.slice(0, marker).every((segment) => segment === '' || /^0+$/.test(segment));
+}
+
 export function resolveBackendOrigin(
   configuredValue = process.env.BACKEND_ORIGIN,
   production = process.env.NODE_ENV === 'production',
@@ -40,14 +64,20 @@ export function resolveBackendOrigin(
   if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
     throw new Error('BACKEND_ORIGIN must not include a path, query, or fragment.');
   }
-  const host = parsed.hostname.toLowerCase().replace(/[.]+$/, '');
+  // `URL` keeps IPv6 literals bracketed; strip them so one set of comparisons
+  // covers both forms.
+  const host = parsed.hostname
+    .toLowerCase()
+    .replace(/[.]+$/, '')
+    .replace(/^\[|\]$/g, '');
   if (
     production &&
     (host === 'localhost' ||
       host === '0.0.0.0' ||
+      host === '::' ||
       host === '::1' ||
-      host === '[::1]' ||
-      host.startsWith('127.'))
+      host.startsWith('127.') ||
+      isMappedIpv4Literal(host))
   ) {
     throw new Error('BACKEND_ORIGIN must not use a loopback host in production.');
   }

@@ -132,7 +132,7 @@ Searchify/
 ├── frontend/                 # Next.js App Router app
 │   ├── app/                  # Routes (auth, app shell, screens)
 │   └── lib/api/             # Typed API-contract layer (zod schemas)
-├── migrations/               # Alembic (single squashed bootstrap revision; see gotcha)
+├── migrations/               # Alembic (frozen 0001_initial baseline + additive revisions)
 ├── infra/docker/             # docker-compose.yml + env template
 └── docs/                     # Architecture, invariants, design, plans
     ├── DEVELOPMENT.md        # Environment setup + full gotchas runbook
@@ -227,8 +227,13 @@ Migrations live in `migrations/` and are applied with Alembic:
 ```bash
 cd backend
 uv run alembic upgrade head          # create the full schema
-uv run alembic downgrade base        # drop everything
+uv run alembic check                 # assert no ORM-vs-migration drift
 ```
+
+> [!WARNING]
+> `uv run alembic downgrade base` **drops every table**. Run it only against a
+> disposable local or CI database that you are willing to lose — never against a
+> shared, staging, or production database.
 
 > **Frozen production baseline.** `0001_initial` contains explicit Alembic
 > operations and must never be edited. Every later schema change requires an

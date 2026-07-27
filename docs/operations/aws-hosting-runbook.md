@@ -279,12 +279,24 @@ not only an edge setting:
 Verify CloudFront alone, ALB alone, the Next.js rewrite, FastAPI, and the full
 browser path with timestamped chunk captures: every hop must deliver each
 keepalive within 15 seconds and must show no response buffering. Test a stream
-longer than every configured idle threshold. During deployment, stop new worker
-claims first, give ECS tasks a 120-second `stopTimeout`, keep provider work
-cooperative at the execution boundary, and let API/Node streams close cleanly
-before target deregistration completes. The client must reconnect with
-`Last-Event-ID` when possible and polling remains the authoritative recovery
-path after any timeout, disconnect, deploy, or missed event.
+longer than every configured idle threshold.
+
+**Deployment drain order.** Stop new worker claims first, then let provider work
+finish cooperatively at the execution boundary, then close active API/Node
+streams, and only stop the task once the ALB reports the target `unused`.
+
+`stopTimeout` is 120 seconds, and that is a **force-kill deadline, not a budget
+to spend**: when it expires ECS sends `SIGKILL` regardless of in-flight work, so
+the application must enforce its own drain deadline well below it — target ~90
+seconds, leaving headroom for `SIGTERM` propagation and ALB deregistration.
+Deregistration delay must also fit inside the same window; if the target is still
+`draining` when the task dies, the ALB has connections pointed at a dead task and
+clients see 5xx. Verify with a deploy under active SSE load: no request should
+fail, and no stream should terminate without a clean close frame.
+
+The client must reconnect with `Last-Event-ID` when possible, and polling remains
+the authoritative recovery path after any timeout, disconnect, deploy, or missed
+event.
 
 ## AWS WAF policy
 
@@ -584,11 +596,22 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
 - Monthly retained recovery points according to approved customer/legal policy.
 - IaC state, ECR digests/SBOMs, configuration versions, and all historical
   application decryption keys included in the recovery inventory.
-- Production Secrets Manager values, including current and historical
-  application-encryption key versions, are replicated to the approved recovery
-  region under a regional recovery KMS key or restored from a separately
-  encrypted, versioned recovery package. Database backup alone is not a secret
-  recovery mechanism.
+- **Secrets Manager replication is not the historical key archive.** Replication
+  mirrors the *current* secret and its rotation window into the recovery region;
+  it is not a retention-controlled archive, and a rotation or a deletion
+  propagates to the replica. Any Fernet-encrypted BYOK ciphertext written under
+  a superseded `ENCRYPTION_KEY` version becomes permanently unreadable the
+  moment that version is no longer retrievable.
+  Therefore maintain a **separate versioned, retention-controlled archive** of
+  every application key version — an S3 archive with Object Lock and its own KMS
+  key, or an encrypted offline recovery package — with retention at least as long
+  as the longest ciphertext retention, and deletion gated by the same approval
+  path as the vault. Replication remains useful for fast regional failover; it
+  does not satisfy this requirement.
+  Recovery drills must **restore and verify every retained key version**, not
+  just the current one: decrypt one known ciphertext per key version and record
+  the result. A drill that only exercises the current key does not prove the
+  archive works. Database backup alone is not a secret recovery mechanism.
 - A cross-account `BackupCopyRole` may copy only the named plans/vaults.
   A human-assumable `RecoveryOperatorRole` may start restores but cannot read
   application secrets. A separate approval-gated `RecoveryDecryptRole` may
@@ -620,13 +643,26 @@ Do not publish these as an SLA until drills demonstrate them.
 1. Select a recovery point without disclosing production values to testers.
 2. Restore into isolated subnets under a unique test identifier; never overwrite
    production.
-3. Assume the approval-gated recovery roles, restore with the destination-vault
-   KMS key, and retrieve the corresponding regional secret and historical
-   application-encryption key versions. Prove CloudTrail records both role
-   assumptions and every decrypt.
-4. Verify RDS storage decryption, run schema/version checks, and start one
-   isolated API/worker set with all
-   outbound provider calls and billing disabled.
+3. Assume the approval-gated recovery roles. **Three distinct keys are in play
+   and each needs its own access and validation — do not treat them as one:**
+   - the **destination backup-vault KMS key**, which decrypts the recovery point
+     itself;
+   - the **DR-region RDS KMS key**, which encrypts the *restored* instance's
+     storage. `RestoreDBInstanceFromDBSnapshot`'s `KmsKeyId` names this
+     resource-specific key, **not** the vault key; a restore into a region where
+     that key is missing or ungranted fails even though the recovery point read
+     succeeded;
+   - the **regional Secrets Manager KMS key**, which decrypts the replicated
+     secret material and the retained historical application-encryption key
+     versions (see the archive requirement in the backup policy).
+
+   Retrieve the regional secret and **every** retained application-encryption key
+   version. Require CloudTrail evidence for **both decryption paths** — the
+   vault/RDS key path and the Secrets Manager key path — plus both role
+   assumptions. A drill that only evidences one path has not proven recovery.
+4. Verify that the restored instance reports encryption under the DR-region RDS
+   key (not the vault key), run schema/version checks, and start one isolated
+   API/worker set with all outbound provider calls and billing disabled.
 5. Verify row counts, random workspace/artifact relationships, encrypted BYOK
    decryptability, immutable artifact hashes, and queue consistency.
 6. Measure restore and application-ready time; record achieved RPO/RTO.
@@ -637,8 +673,10 @@ Run a full regional recovery exercise at least twice yearly. CloudFront is
 global, but the origin, database, NAT, tasks, and regional secrets must be
 recreated and the distribution origin changed deliberately. The drill passes
 only when IaC recreates the destination vault/key/grant/role contract, the
-restored database decrypts under the DR-region KMS key, the regional Secrets
-Manager material decrypts under the recovery role, and the isolated
+recovery point reads under the destination **backup-vault** key, the restored
+database is encrypted under the DR-region **RDS** key, the regional Secrets
+Manager material decrypts under its own **regional secrets** key via the recovery
+role, CloudTrail evidences each of those key paths separately, and the isolated
 API/migration/worker tasks start and complete read-only application checks.
 
 ## Observability and alerting
