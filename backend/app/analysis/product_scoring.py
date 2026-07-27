@@ -967,8 +967,7 @@ def aggregate_product_run(
     total_mentions = sum(len(rows) for rows in mentions.values())
     mentioned_sets = _mentioned_id_sets(scores)
     competitor_identity = {
-        entry.id: (entry.competitor, entry.name)
-        for entry in config.competitor_products
+        entry.id: (entry.competitor, entry.name) for entry in config.competitor_products
     }
     aggregates: dict[str, dict[str, Any]] = {}
     for entry_id, section in entries:
@@ -997,9 +996,7 @@ def aggregate_product_run(
         else:
             denominator_rows = rows
         wins = sum(1 for row in denominator_rows if row.get("rank_position") == 1)
-        win_rate = (
-            round(wins / len(denominator_rows), 4) if denominator_rows else None
-        )
+        win_rate = round(wins / len(denominator_rows), 4) if denominator_rows else None
 
         relation_counts = _price_relation_counts(rows)
         verifiable_relations = sum(relation_counts.values())

@@ -98,8 +98,8 @@ def test_analytics_task_kinds_include_attribution_snapshot() -> None:
             "traffic_snapshot_refresh",
             "analytics_snapshot_refresh",
             "referral_retention_sweep",
-                "attribution_snapshot",
-                "attribution_link",
+            "attribution_snapshot",
+            "attribution_link",
             "order_retention_sweep",
         }
     )

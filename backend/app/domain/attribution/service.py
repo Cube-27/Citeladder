@@ -292,9 +292,7 @@ async def get_attribution_orders(
         attribution_state is not None
         and attribution_state not in ATTRIBUTION_ORDER_STATES
     ):
-        raise AttributionQueryError(
-            f"unknown attribution_state: {attribution_state!r}"
-        )
+        raise AttributionQueryError(f"unknown attribution_state: {attribution_state!r}")
     if source is not None and attribution_state == ATTRIBUTION_ORDER_STATE_UNATTRIBUTED:
         raise AttributionQueryError("source cannot filter unattributed orders")
 

@@ -129,8 +129,7 @@ def _ga4_template(
         or tuple(template.dimensions) != tuple(dimensions)
     ):
         raise Ga4ApiError(
-            f"no GA4 dataset template {dataset!r} for dimensions "
-            f"{tuple(dimensions)!r}",
+            f"no GA4 dataset template {dataset!r} for dimensions {tuple(dimensions)!r}",
             error_code=ERROR_PROVIDER_API,
         )
     return template
@@ -307,8 +306,7 @@ class Ga4Client:
             ):
                 suffix = f" ({detail})" if detail else ""
                 raise Ga4DimensionCompatibilityError(
-                    f"GA4 runReport rejected the item source/medium "
-                    f"dimensions{suffix}",
+                    f"GA4 runReport rejected the item source/medium dimensions{suffix}",
                     error_code=ERROR_GA4_DIMENSION_INCOMPATIBLE,
                     retryable=False,
                 )

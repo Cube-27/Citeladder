@@ -87,9 +87,7 @@ def _oauth_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         settings, "integration_microsoft_client_secret", _MS_CLIENT_SECRET
     )
-    monkeypatch.setattr(
-        settings, "integration_shopify_client_id", _SHOPIFY_CLIENT_ID
-    )
+    monkeypatch.setattr(settings, "integration_shopify_client_id", _SHOPIFY_CLIENT_ID)
     monkeypatch.setattr(
         settings, "integration_shopify_client_secret", _SHOPIFY_CLIENT_SECRET
     )
@@ -150,9 +148,7 @@ class _FakeOAuthServer:
         return [r for r in self.requests if r.url.path.endswith("/token")]
 
     def shopify_token_calls(self) -> list[httpx.Request]:
-        return [
-            r for r in self.requests if r.url.path == "/admin/oauth/access_token"
-        ]
+        return [r for r in self.requests if r.url.path == "/admin/oauth/access_token"]
 
 
 @pytest.fixture
@@ -795,9 +791,7 @@ async def test_shopify_callback_bad_hmac_rejected_before_any_exchange(
     _fake_oauth: _FakeOAuthServer,
 ) -> None:
     await _register(client, "int-shopify-badhmac@example.com")
-    state = _state_from_start(
-        await _start(client, "shopify", params={"shop": _SHOP})
-    )
+    state = _state_from_start(await _start(client, "shopify", params={"shop": _SHOP}))
 
     callback = await _shopify_callback(client, state, tamper="hmac")
     assert callback.status_code == 302
@@ -823,9 +817,7 @@ async def test_shopify_callback_shop_mismatch_rejected(
 ) -> None:
     """A validly-signed callback for a DIFFERENT shop fails the three-way match."""
     await _register(client, "int-shopify-mismatch@example.com")
-    state = _state_from_start(
-        await _start(client, "shopify", params={"shop": _SHOP})
-    )
+    state = _state_from_start(await _start(client, "shopify", params={"shop": _SHOP}))
 
     # The HMAC is valid for these exact params — but the provider-returned
     # shop disagrees with the signed+persisted target.

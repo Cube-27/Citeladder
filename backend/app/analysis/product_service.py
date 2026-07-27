@@ -412,14 +412,17 @@ async def finalize_audit_product_analysis(
     # Per-surface breakdown: the same aggregate shape per surface plus a
     # nested per-engine slice within that surface.
     surfaces = sorted({analysis.shopping_surface for analysis in analyses})
-    per_surface = {surface: aggregate_product_run(
-        [
-            analysis.score or {}
-            for analysis in analyses
-            if analysis.shopping_surface == surface
-        ],
-        config,
-    ) for surface in surfaces}
+    per_surface = {
+        surface: aggregate_product_run(
+            [
+                analysis.score or {}
+                for analysis in analyses
+                if analysis.shopping_surface == surface
+            ],
+            config,
+        )
+        for surface in surfaces
+    }
     per_surface_engine = {
         surface: _aggregate_by(analyses, config, surface=surface)
         for surface in surfaces

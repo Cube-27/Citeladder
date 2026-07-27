@@ -148,12 +148,12 @@ async def get_catalog_health(
     # findings must not leak onto products absent from that run or reappear as
     # orphan rows in the current catalog-health response.
     run_ids = {run.id for run, _row_count in latest_runs.values()}
-    issues_by_product: dict[
-        tuple[uuid.UUID, uuid.UUID], list[FeedIssue]
-    ] = defaultdict(list)
-    orphan_issues: dict[
-        tuple[uuid.UUID, uuid.UUID, str], list[FeedIssue]
-    ] = defaultdict(list)
+    issues_by_product: dict[tuple[uuid.UUID, uuid.UUID], list[FeedIssue]] = defaultdict(
+        list
+    )
+    orphan_issues: dict[tuple[uuid.UUID, uuid.UUID, str], list[FeedIssue]] = (
+        defaultdict(list)
+    )
     if run_ids:
         issues = (
             await session.scalars(

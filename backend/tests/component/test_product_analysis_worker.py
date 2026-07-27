@@ -180,14 +180,10 @@ async def test_persisted_artifacts_rescore_to_v2_rows_and_snapshots(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        seed, product, competitor_product = await _seed_with_catalog(
-            session, prompts=2
-        )
+        seed, product, competitor_product = await _seed_with_catalog(session, prompts=2)
     audit = await _plan_audit(session_factory, seed, reps=1)  # 2 tasks
     await _persist_fixture_artifacts(session_factory, audit.id)
-    _audit, analyses, snapshots = await _rescore_and_finalize(
-        session_factory, audit.id
-    )
+    _audit, analyses, snapshots = await _rescore_and_finalize(session_factory, audit.id)
 
     async with session_factory() as session:
         # One current-version ProductResponseAnalysis per execution (inv 4).
@@ -443,9 +439,7 @@ async def test_v1_rows_survive_v2_rescore_and_finalize(
         v1_snapshot_id = v1_snapshot.id
         v1_snapshot_metrics = dict(v1_snapshot.metrics or {})
 
-    _audit, analyses, snapshots = await _rescore_and_finalize(
-        session_factory, audit.id
-    )
+    _audit, analyses, snapshots = await _rescore_and_finalize(session_factory, audit.id)
 
     async with session_factory() as session:
         # The re-score ADDED a v2 analysis; the v1 row is untouched (D1).
@@ -530,9 +524,7 @@ async def test_empty_catalog_writes_no_product_rows(
         seed = await seed_audit_fixtures(session, prompt_count=2)
     audit = await _plan_audit(session_factory, seed, reps=1)
     await _persist_fixture_artifacts(session_factory, audit.id)
-    _audit, analyses, snapshots = await _rescore_and_finalize(
-        session_factory, audit.id
-    )
+    _audit, analyses, snapshots = await _rescore_and_finalize(session_factory, audit.id)
 
     assert analyses == []
     assert snapshots == []

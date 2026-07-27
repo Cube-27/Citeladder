@@ -87,9 +87,7 @@ async def test_recompute_rejects_bad_window_and_cross_workspace_task(
     project = await _create_project(client)
     await _seed_completed_window(db_session, project)
     path = f"/api/v1/projects/{project['id']}/commerce/attribution/recompute"
-    invalid = await client.post(
-        path, json={"from": "2026-07-22", "to": "2026-07-20"}
-    )
+    invalid = await client.post(path, json={"from": "2026-07-22", "to": "2026-07-20"})
     assert invalid.status_code == 422
     task = await client.post(path)
     assert task.status_code == 202

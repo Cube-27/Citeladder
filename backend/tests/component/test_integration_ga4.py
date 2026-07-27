@@ -443,10 +443,14 @@ async def test_fixture_import_refresh_artifacts_derivation(
         # A1 currency evidence: only the ecommerce datasets persist the
         # property's ISO currency (runReport metadata) — and only on pages
         # that carried rows (the empty terminator page has no metadata).
-        if artifact.dataset in (
-            DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
-            DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
-        ) and artifact.row_count:
+        if (
+            artifact.dataset
+            in (
+                DATASET_GA4_ECOMMERCE_SOURCE_MEDIUM_DAILY,
+                DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
+            )
+            and artifact.row_count
+        ):
             assert artifact.payload["currency_code"] == "USD"
         else:
             assert "currency_code" not in artifact.payload
@@ -930,9 +934,7 @@ async def test_stale_capability_version_reprobes_primary_item_template(
     # fallback template did not run.
     item_requests = _item_requests(fake)
     assert item_requests
-    assert all(
-        "sessionSource" in _dimension_names(body) for body in item_requests
-    )
+    assert all("sessionSource" in _dimension_names(body) for body in item_requests)
     artifacts = await _artifacts(db_session, run.id)
     item_datasets = {
         artifact.dataset

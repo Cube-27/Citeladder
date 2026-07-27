@@ -84,12 +84,8 @@ async def _seed_grant(
         workspace_id=workspace_id,
         transport=transport,
         access_token_encrypted=encrypt_secret(_FAKE_ACCESS),
-        refresh_token_encrypted=(
-            "" if offline else encrypt_secret(_FAKE_REFRESH)
-        ),
-        token_expires_at=(
-            None if offline else datetime.now(UTC) + timedelta(hours=1)
-        ),
+        refresh_token_encrypted=("" if offline else encrypt_secret(_FAKE_REFRESH)),
+        token_expires_at=(None if offline else datetime.now(UTC) + timedelta(hours=1)),
         granted_scopes=["scope-a", "scope-b"],
         status="connected",
     )
@@ -101,9 +97,7 @@ async def _seed_grant(
             grant_id=grant.id,
             provider=provider,
             label=f"{provider} label",
-            account_ref=(
-                _SHOP if provider == "shopify" else f"{provider}-account-ref"
-            ),
+            account_ref=(_SHOP if provider == "shopify" else f"{provider}-account-ref"),
         )
         for provider in providers
     ]
@@ -137,9 +131,7 @@ class _FakeProvider:
             )
         if host == _SHOP:
             if self.probe_status != 200:
-                return httpx.Response(
-                    self.probe_status, json={"errors": "probe boom"}
-                )
+                return httpx.Response(self.probe_status, json={"errors": "probe boom"})
             return httpx.Response(200, json={"data": {"shop": {"id": "gid://s/1"}}})
         if host == "oauth2.googleapis.com" and request.url.path == "/revoke":
             return httpx.Response(self.revoke_status)

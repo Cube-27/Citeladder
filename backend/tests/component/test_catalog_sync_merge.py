@@ -214,9 +214,7 @@ async def test_create_stamps_synced_origin_and_provenance(db_session) -> None:
 async def test_named_variant_builds_title_slash_variant_name(db_session) -> None:
     graph = await _seed_graph(db_session)
 
-    result = await _merge(
-        db_session, graph, _catalog_row(variant_title="500W / Black")
-    )
+    result = await _merge(db_session, graph, _catalog_row(variant_title="500W / Black"))
 
     assert result.product is not None
     assert result.product.name == "VoltCity 500 / 500W / Black"
@@ -270,7 +268,11 @@ async def test_update_same_connection_reapplies_platform_fields(db_session) -> N
     second = await _merge(
         db_session,
         graph,
-        _catalog_row(price="69.99", inventory_quantity=0, variant_ref="gid://shopify/ProductVariant/v1"),
+        _catalog_row(
+            price="69.99",
+            inventory_quantity=0,
+            variant_ref="gid://shopify/ProductVariant/v1",
+        ),
     )
 
     assert second.outcome == MERGE_OUTCOME_UPDATED
