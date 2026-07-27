@@ -15,7 +15,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --config playwright.config.ts",
-    "check:policy": "node scripts/check-token-escapes.mjs && node scripts/check-frontend-architecture.mjs && node scripts/check-design-tokens.mjs"
+    "check:policy": "node scripts/check-token-escapes.mjs && node scripts/check-frontend-architecture.mjs && node scripts/check-design-tokens.mjs && node scripts/check-flat-elevation.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

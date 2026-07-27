@@ -98,7 +98,12 @@ export function CommandPalette() {
   // browser's own find-in-page on the platforms that map ⌘K.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+      // Modifier first, then `key`. This handler runs on EVERY keystroke in the
+      // app, so the cheap test should gate the string work — and `event.key` is
+      // optional on a programmatically constructed KeyboardEvent (browser
+      // extensions and IMEs dispatch these), where reading `.toLowerCase()` off
+      // it threw "Cannot read properties of undefined".
+      if (!(event.metaKey || event.ctrlKey) || event.key?.toLowerCase() !== 'k') return;
       event.preventDefault();
       setOpen((wasOpen) => {
         if (wasOpen) {

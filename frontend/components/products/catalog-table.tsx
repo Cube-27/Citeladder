@@ -139,9 +139,7 @@ export function CatalogTable({
                 <SyncCell
                   product={product}
                   connection={
-                    product.connection_id
-                      ? connectionById.get(product.connection_id)
-                      : undefined
+                    product.connection_id ? connectionById.get(product.connection_id) : undefined
                   }
                   override={
                     product.connection_id ? syncOverrides[product.connection_id] : undefined
@@ -316,11 +314,11 @@ function SyncCell({
           {syncRunStatusLabel(live.status)}
         </Badge>
         {live.status === 'failed' && live.error_code ? (
-          <span className="text-danger-text font-mono text-2xs">{live.error_code}</span>
+          <span className="text-danger-text text-2xs font-mono">{live.error_code}</span>
         ) : null}
       </span>
       {timestamp ? (
-        <span className="text-muted font-mono text-2xs tabular-nums">
+        <span className="text-muted text-2xs font-mono tabular-nums">
           {formatUtcTimestamp(timestamp)}
         </span>
       ) : null}

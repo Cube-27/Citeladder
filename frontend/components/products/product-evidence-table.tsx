@@ -8,7 +8,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -372,9 +379,7 @@ function AttributeEvidenceCard({ items, truncated, engineParam }: EvidenceKindCa
                   #{item.prompt_index} · rep {item.repetition}
                 </span>
               </TableCell>
-              <TableCell className="text-secondary">
-                {item.attribute_dimension ?? '—'}
-              </TableCell>
+              <TableCell className="text-secondary">{item.attribute_dimension ?? '—'}</TableCell>
               <TableCell className="text-secondary">{item.attribute_group ?? '—'}</TableCell>
               <TableCell className="max-w-[320px]">
                 {item.attribute_text !== null ? (

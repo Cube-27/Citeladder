@@ -7,7 +7,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Dropdown (§8) — Radix menu. Surface = bg-elevated, border, shadow-elevated.
+ * Dropdown (§8) — Radix menu. Surface = bg-elevated, border,
+ * shadow-modal-value (the single live overlay rung — see docs/design.md §4a).
  * Re-exports the Radix parts with token-styled Content / Item defaults.
  */
 export const Dropdown = DropdownPrimitive.Root;
@@ -27,7 +28,7 @@ export function DropdownContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'border-border bg-elevated shadow-elevated z-[300] min-w-[10rem] overflow-hidden rounded-md border p-1 focus:outline-none',
+          'border-border bg-elevated shadow-modal-value z-[300] min-w-[10rem] overflow-hidden rounded-md border p-1 focus:outline-none',
           className,
         )}
         {...props}
@@ -64,7 +65,10 @@ export function DropdownCheckboxItem({
   return (
     <DropdownPrimitive.CheckboxItem
       className={cn(
-        'text-foreground data-[highlighted]:bg-background-alt flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-2.5 pl-7 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        // `relative` makes each row the containing block for its own absolutely
+        // positioned indicator below — without it every checkmark resolves
+        // against a distant ancestor and they all stack in one spot.
+        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-2.5 pl-7 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,
       )}
       {...props}

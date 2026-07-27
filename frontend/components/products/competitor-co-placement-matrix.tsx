@@ -3,7 +3,14 @@
 import { Info } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -34,7 +41,11 @@ export function CompetitorCoPlacementMatrix({ matrix }: Readonly<{ matrix: CoPla
             Answer executions where both products appear in the same product list.
           </CardDescription>
         </div>
-        {matrix.truncated ? <Badge variant="status" value="warning">Truncated</Badge> : null}
+        {matrix.truncated ? (
+          <Badge variant="status" value="warning">
+            Truncated
+          </Badge>
+        ) : null}
       </CardHeader>
       <CardContent className="p-0">
         {empty ? (
@@ -83,8 +94,8 @@ export function CompetitorCoPlacementMatrix({ matrix }: Readonly<{ matrix: CoPla
               <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2.5 text-xs">
                 <Info className="size-3.5 shrink-0" aria-hidden />
                 <span>
-                  Showing the most frequent competitor pairs for this run — less frequent pairs
-                  are truncated.
+                  Showing the most frequent competitor pairs for this run — less frequent pairs are
+                  truncated.
                 </span>
               </div>
             ) : null}

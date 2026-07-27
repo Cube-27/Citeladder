@@ -2,7 +2,14 @@
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import type {
   AttributionDelta,
   AttributionMethodMetrics,
@@ -55,10 +62,7 @@ export function AttributionMethodComparison({
 }
 
 /** One metric row (label + persisted value) inside a method/delta card. */
-function MetricRow({
-  label,
-  value,
-}: Readonly<{ label: string; value: React.ReactNode }>) {
+function MetricRow({ label, value }: Readonly<{ label: string; value: React.ReactNode }>) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span className="text-muted text-sm">{label}</span>
@@ -77,8 +81,7 @@ const METHOD_DESCRIPTIONS = {
 const METHOD_NOT_CONNECTED_NOTES = {
   ga4_platform_attributed:
     'Search Console and Analytics 4 share one Google OAuth grant in Settings › Integrations.',
-  order_referrer:
-    'Searchify requests read-only order scopes and never stores customer data.',
+  order_referrer: 'Searchify requests read-only order scopes and never stores customer data.',
 } as const;
 
 function MethodCard({
@@ -122,13 +125,14 @@ function MethodCard({
               Not connected
             </Badge>
           ) : null}
-          {state === 'no_data' ? (
-            <Badge variant="neutral">No data</Badge>
-          ) : null}
+          {state === 'no_data' ? <Badge variant="neutral">No data</Badge> : null}
         </div>
       </CardHeader>
       <CardContent className="grid gap-2">
-        <MetricRow label="Revenue" value={available ? formatMoney(totals?.revenue, currency) : '—'} />
+        <MetricRow
+          label="Revenue"
+          value={available ? formatMoney(totals?.revenue, currency) : '—'}
+        />
         <MetricRow
           label="Orders"
           value={available && totals?.orders !== null ? totals?.orders : '—'}
@@ -202,7 +206,9 @@ function DeltaCard({ delta }: Readonly<{ delta: AttributionDelta | undefined }>)
         <MetricRow
           label="Average order value"
           value={
-            comparable ? formatSignedMoney(delta?.average_order_value, delta?.currency ?? null) : '—'
+            comparable
+              ? formatSignedMoney(delta?.average_order_value, delta?.currency ?? null)
+              : '—'
           }
         />
         <MetricRow
@@ -214,9 +220,7 @@ function DeltaCard({ delta }: Readonly<{ delta: AttributionDelta | undefined }>)
   );
 }
 
-function UnattributedCard({
-  unattributed,
-}: Readonly<{ unattributed: UnattributedMetrics }>) {
+function UnattributedCard({ unattributed }: Readonly<{ unattributed: UnattributedMetrics }>) {
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3">

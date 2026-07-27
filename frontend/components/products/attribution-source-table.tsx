@@ -25,9 +25,7 @@ import {
  * Rows are the union of the block's A1/A2 source keys; a source measured by
  * only one method renders `—` on the other side.
  */
-export function AttributionSourceTable({
-  block,
-}: Readonly<{ block: AttributionCurrencyBlock }>) {
+export function AttributionSourceTable({ block }: Readonly<{ block: AttributionCurrencyBlock }>) {
   const keys = sourceRowKeys(block);
   return (
     <Card>

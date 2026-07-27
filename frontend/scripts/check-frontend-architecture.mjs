@@ -17,13 +17,19 @@ const root = process.cwd();
 // Line budgets — split any owner that exceeds its limit.
 const lineBudgets = [
   { file: 'app/layout.tsx', maxLines: 120 },
-  // globals.css is the single token source — the v2 redesign (Figma token
-  // port, plan Task P1) adds the primitive --blue-*/--neutral-* ramps, the
-  // Figma --chart-1..8 palette, --score-*-text/-ring/-border, --shadow-1..4,
-  // and the authored soft-charcoal dark set on top of the existing semantic
-  // tokens (marketing tokens stay out — they live in
-  // app/(marketing)/marketing.css), so the budget is raised to 1000.
-  { file: 'app/globals.css', maxLines: 1020 },
+  // The Atlassian primitive layer: --ds-* values ported verbatim from
+  // @atlaskit/tokens, light + dark. Values only — it declares no semantics and
+  // nothing consumes it directly. Growth here should mean "we started using
+  // another ADS token", which is cheap and legitimate; what it may not hold is
+  // a semantic name or a component rule.
+  { file: 'app/ds-tokens.css', maxLines: 400 },
+  // globals.css owns the SEMANTIC layer that maps onto ds-tokens.css. The
+  // budget dropped from 1020 to 900 with the ADS port: the hand-authored dark
+  // block (120 restated values) collapsed to `color-scheme: dark`, because
+  // every semantic token resolves through a var(--ds-*) that already flips.
+  // Do not raise this to accommodate restated dark values — if a token needs a
+  // dark override here, that is a signal the primitive layer is missing one.
+  { file: 'app/globals.css', maxLines: 900 },
   // The marketing/auth "Proof" system. This budget is the whole point of the
   // rewrite: the previous marketing stylesheet reached 6,846 lines of global
   // cascade because nothing stopped it growing. Sections here are built from

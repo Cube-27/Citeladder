@@ -264,14 +264,20 @@ describe('buildCoPlacementMatrix', () => {
           count: 5,
         },
       ]),
-      row('p2', 'SKU-2', 'Product B', [
-        {
-          competitor_product_id: 'c2',
-          competitor_name: 'Initech',
-          product_name: 'Initech Trike',
-          count: 7,
-        },
-      ], true),
+      row(
+        'p2',
+        'SKU-2',
+        'Product B',
+        [
+          {
+            competitor_product_id: 'c2',
+            competitor_name: 'Initech',
+            product_name: 'Initech Trike',
+            count: 7,
+          },
+        ],
+        true,
+      ),
     ]);
     // Most-placed competitor first.
     expect(matrix.columns.map((column) => column.productName)).toEqual([
@@ -326,15 +332,15 @@ describe('feedHealthDisplay / feedHealthLabel', () => {
   it('labels every cell kind in text (never color-only)', () => {
     expect(feedHealthLabel({ kind: 'unbound' })).toBe('Not feed-bound');
     expect(feedHealthLabel({ kind: 'no-row' })).toBe('Feed health unavailable');
-    expect(
-      feedHealthLabel({ kind: 'status', status: 'healthy', issueCount: 0, ruleIds: [] }),
-    ).toBe('Healthy');
-    expect(
-      feedHealthLabel({ kind: 'status', status: 'warning', issueCount: 2, ruleIds: [] }),
-    ).toBe('2 warnings');
-    expect(
-      feedHealthLabel({ kind: 'status', status: 'error', issueCount: 1, ruleIds: [] }),
-    ).toBe('1 error');
+    expect(feedHealthLabel({ kind: 'status', status: 'healthy', issueCount: 0, ruleIds: [] })).toBe(
+      'Healthy',
+    );
+    expect(feedHealthLabel({ kind: 'status', status: 'warning', issueCount: 2, ruleIds: [] })).toBe(
+      '2 warnings',
+    );
+    expect(feedHealthLabel({ kind: 'status', status: 'error', issueCount: 1, ruleIds: [] })).toBe(
+      '1 error',
+    );
     expect(
       feedHealthLabel({ kind: 'status', status: 'unavailable', issueCount: 0, ruleIds: [] }),
     ).toBe('Unavailable');

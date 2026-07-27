@@ -362,7 +362,7 @@ export function MultiTrendChart({
           style={{ left: `${(xAt(hover) / width) * 100}%`, transform: 'translateX(-50%)' }}
           role="status"
         >
-          <p className="mb-1.5 text-[11.5px] text-white/60">{labels[hover]}</p>
+          <p className="text-chart-tooltip-fg/60 mb-1.5 text-[11.5px]">{labels[hover]}</p>
           <ul className="grid gap-1">
             {series.map((s, si) => {
               const v = s.values[hover];
@@ -372,8 +372,8 @@ export function MultiTrendChart({
                     className={cn('size-2 shrink-0 rounded-[2px]', seriesBg(slots[si]))}
                     aria-hidden
                   />
-                  <span className="flex-1 truncate text-white/80">{s.name}</span>
-                  <span className="mono font-medium text-white">
+                  <span className="text-chart-tooltip-fg/80 flex-1 truncate">{s.name}</span>
+                  <span className="mono text-chart-tooltip-fg font-medium">
                     {v === null || v === undefined || !Number.isFinite(v)
                       ? '—'
                       : `${v}${valueSuffix}`}

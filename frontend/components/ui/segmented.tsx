@@ -13,8 +13,12 @@ import { cn } from '@/lib/utils';
 export const segmentedTrackClasses =
   'bg-background-alt inline-flex items-center gap-0.5 rounded-full p-0.5';
 
+/* Flat 2.0: the selected pill is a plain --bg-panel fill on the tinted track.
+   It previously carried `shadow-xs` to lift off the track; the track is now an
+   alpha neutral, so white-on-tint already separates them and the shadow was
+   only softening the edge. */
 export const segmentedItemClasses = (selected: boolean) =>
   cn(
     'focus-ring rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
-    selected ? 'bg-panel text-foreground shadow-xs' : 'text-muted hover:text-foreground',
+    selected ? 'bg-panel text-foreground' : 'text-muted hover:text-foreground',
   );

@@ -5,8 +5,12 @@ import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(here, 'globals.css'), 'utf8');
+const dsCss = readFileSync(join(here, 'ds-tokens.css'), 'utf8');
 const design = readFileSync(join(here, '..', '..', 'docs', 'design.md'), 'utf8');
 const marketingCss = readFileSync(join(here, '(marketing)', 'marketing-theme.css'), 'utf8');
+// The token source is the two files together: ds-tokens.css holds ADS values,
+// globals.css maps semantics onto them. Name-set checks span both.
+const allCss = `${dsCss}\n${css}`;
 
 /* ═══════════════════════════════════════════════════════════════════════
    Parsing + WCAG helpers
@@ -45,12 +49,25 @@ function parseDeclarations(block: string): Map<string, string> {
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const h = hex.replace('#', '');
-  const full = h.length === 3 ? [...h].map((c) => c + c).join('') : h;
+  const full = h.length === 3 || h.length === 4 ? [...h].map((c) => c + c).join('') : h;
   return {
     r: parseInt(full.slice(0, 2), 16),
     g: parseInt(full.slice(2, 4), 16),
     b: parseInt(full.slice(4, 6), 16),
   };
+}
+
+/**
+ * Alpha channel of a #RGBA / #RRGGBBAA hex, or 1 when there is none. The ADS
+ * port made this necessary: Atlassian states every translucent token as 8-digit
+ * hex (`--ds-border: #091E4224`) rather than rgba(), and the old resolver only
+ * understood 3- and 6-digit forms, so those tokens silently resolved to null.
+ */
+function hexAlpha(hex: string): number {
+  const h = hex.replace('#', '');
+  if (h.length === 4) return parseInt(h[3] + h[3], 16) / 255;
+  if (h.length === 8) return parseInt(h.slice(6, 8), 16) / 255;
+  return 1;
 }
 
 /**
@@ -76,8 +93,8 @@ function resolveValue(value: string, tokens: Map<string, string>, depth: number)
     return varMatch[2] ? resolveValue(varMatch[2], tokens, depth + 1) : null;
   }
 
-  if (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) {
-    return { ...hexToRgb(v), a: 1 };
+  if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) {
+    return { ...hexToRgb(v), a: hexAlpha(v) };
   }
 
   const rgbMatch =
@@ -136,7 +153,18 @@ function contrastRatio(fg: Rgba, bg: Rgba): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** Hue (degrees) of an opaque color, for the royal-blue family assertion. */
+/**
+ * Shortest angular distance between two hues, in degrees (0–180). Hue is
+ * circular, so a plain `Math.abs(a - b)` overstates any pair straddling 0°: red
+ * at 355° and orange at 30° are 35° apart, not 325°. Every hue comparison in
+ * this suite goes through here so a genuine collision cannot pass by wrapping.
+ */
+function hueDistance(a: number, b: number): number {
+  const raw = Math.abs(a - b);
+  return Math.min(raw, 360 - raw);
+}
+
+/** Hue (degrees) of an opaque color, for the accent-family assertions. */
 function hueDegrees({ r, g, b }: Rgba): number {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
@@ -149,11 +177,19 @@ function hueDegrees({ r, g, b }: Rgba): number {
   return h < 0 ? h + 360 : h;
 }
 
-/* ── Theme token maps ────────────────────────────────────────────────── */
-const lightTokens = parseDeclarations(extractBlock(css, /:root\s*\{/));
-const darkOverrides = parseDeclarations(extractBlock(css, /html\[data-theme='dark'\]\s*\{/));
-// Dark inherits every shared :root token it does not override.
-const darkTokens = new Map([...lightTokens, ...darkOverrides]);
+/* ── Theme token maps ─────────────────────────────────────────────────
+   Both files declare under the same two selectors, and resolution flows
+   ds-tokens → globals, so each theme map is the ADS primitives with the
+   semantic layer laid over them. A semantic token's var(--ds-*) chain can
+   only be followed if both halves are in the same map. */
+const dsLight = parseDeclarations(extractBlock(dsCss, /:root\s*\{/));
+const dsDark = parseDeclarations(extractBlock(dsCss, /html\[data-theme='dark'\]\s*\{/));
+const semanticLight = parseDeclarations(extractBlock(css, /:root\s*\{/));
+const semanticDark = parseDeclarations(extractBlock(css, /html\[data-theme='dark'\]\s*\{/));
+
+const lightTokens = new Map([...dsLight, ...semanticLight]);
+// Dark inherits every shared token it does not override, at both layers.
+const darkTokens = new Map([...lightTokens, ...dsDark, ...semanticDark]);
 
 function resolvedPair(
   fgName: string,
@@ -244,8 +280,8 @@ describe('globals.css token set matches docs/design.md', () => {
 
   it('declares every raw --token documented in design.md (app sections)', () => {
     // The marketing creative-system section documents the --mkt-* namespace
-    // that lives in app/(marketing)/marketing.css, not globals.css — exclude
-    // it from the app name-set sync (checked against marketing.css below).
+    // that lives in app/(marketing)/marketing-theme.css — exclude it from the
+    // app name-set sync (checked against that file below).
     const sections = design.split(/^## /m);
     const appSections = sections.filter(
       (s) => !/^(?:\d+[.:]?\s+)?marketing creative system/i.test(s.trim()),
@@ -256,92 +292,106 @@ describe('globals.css token set matches docs/design.md', () => {
     for (const m of appDesign.matchAll(/--([a-z0-9-]+)\s*:/gi)) {
       declared.add(m[1]);
     }
-    expect(declared.size).toBeGreaterThan(80);
+    expect(declared.size).toBeGreaterThan(60);
 
     const missing: string[] = [];
     for (const name of declared) {
       const re = new RegExp(`--${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:`);
-      if (!re.test(css)) missing.push(name);
+      if (!re.test(allCss)) missing.push(name);
     }
-    expect(missing, `Tokens in design.md missing from globals.css: ${missing.join(', ')}`).toEqual(
-      [],
-    );
+    expect(
+      missing,
+      `Tokens in design.md missing from ds-tokens.css + globals.css: ${missing.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('keeps globals.css free of authored hex — the primitive layer owns values', () => {
+    // The whole point of the split: globals.css names meanings, ds-tokens.css
+    // holds Atlassian's values. A hex appearing here means someone authored a
+    // colour into the semantic layer instead of adding an ADS primitive.
+    const themeBlocks = [
+      extractBlock(css, /:root\s*\{/),
+      extractBlock(css, /html\[data-theme='dark'\]\s*\{/),
+    ].join('\n');
+    const hexes = [...themeBlocks.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/#[0-9a-f]{3,8}\b/gi)];
+    expect(
+      hexes.map((m) => m[0]),
+      'globals.css theme blocks must reference var(--ds-*), not author hex',
+    ).toEqual([]);
   });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   2. Figma light palette — ported VERBATIM
+   2. Atlassian palette — ported VERBATIM into ds-tokens.css
 ═══════════════════════════════════════════════════════════════════════ */
-describe('Figma light palette (verbatim port)', () => {
-  it('anchors the accent on royal blue #2756FF', () => {
-    expect(lightTokens.get('--accent')).toBe('var(--blue-500)');
-    expect(lightTokens.get('--blue-500')).toBe('#2756ff');
+describe('Atlassian palette (verbatim port)', () => {
+  it('anchors the accent on ADS brand blue #0C66E4', () => {
+    expect(lightTokens.get('--accent')).toBe('var(--ds-background-brand-bold)');
+    expect(dsLight.get('--ds-background-brand-bold')).toBe('#0c66e4');
+    expect(dsDark.get('--ds-background-brand-bold')).toBe('#579dff');
   });
 
-  it('declares the Figma blue ramp verbatim', () => {
-    const expected: Record<string, string> = {
-      '--blue-50': '#ebf0ff',
-      '--blue-100': '#d5e2ff',
-      '--blue-200': '#acc4ff',
-      '--blue-300': '#7a9fff',
-      '--blue-400': '#4972ff',
-      '--blue-500': '#2756ff',
-      '--blue-600': '#1a44eb',
-      '--blue-700': '#1235cc',
-      '--blue-800': '#0d28a0',
-      '--blue-900': '#091e78',
-    };
-    for (const [name, value] of Object.entries(expected)) {
-      expect(lightTokens.get(name), name).toBe(value);
+  it('declares the ADS surface ladder verbatim, both themes', () => {
+    const expected: Array<[string, string, string]> = [
+      // token, light, dark
+      ['--ds-surface-sunken', '#f7f8f9', '#101214'],
+      ['--ds-surface', '#ffffff', '#161a1d'],
+      ['--ds-surface-raised', '#ffffff', '#1d2125'],
+      ['--ds-surface-overlay', '#ffffff', '#22272b'],
+    ];
+    for (const [name, light, dark] of expected) {
+      expect(dsLight.get(name), `${name} (light)`).toBe(light);
+      expect(dsDark.get(name), `${name} (dark)`).toBe(dark);
     }
   });
 
-  it('declares the Figma neutral ramp verbatim', () => {
-    const expected: Record<string, string> = {
-      '--neutral-0': '#ffffff',
-      '--neutral-50': '#f7f8fa',
-      '--neutral-100': '#eff1f6',
-      '--neutral-200': '#e2e5ee',
-      '--neutral-300': '#c8cede',
-      '--neutral-400': '#98a2be',
-      '--neutral-500': '#667092',
-      '--neutral-600': '#454e6e',
-      '--neutral-700': '#2c3454',
-      '--neutral-800': '#1a2040',
-      '--neutral-900': '#0d1228',
-    };
-    for (const [name, value] of Object.entries(expected)) {
-      expect(lightTokens.get(name), name).toBe(value);
+  it('keeps borders ALPHA so a hairline composes over any tint', () => {
+    // The flat language leans entirely on 1px edges. An opaque border only
+    // ever matches one surface; these are #091E42 at 14% / #A6C5E2 at 16%.
+    expect(dsLight.get('--ds-border')).toBe('#091e4224');
+    expect(dsDark.get('--ds-border')).toBe('#a6c5e229');
+    for (const tokens of [dsLight, dsDark]) {
+      const border = resolveValue(tokens.get('--ds-border') ?? '', tokens, 0);
+      expect(border?.a, 'ds-border must be translucent').toBeLessThan(1);
     }
   });
 
-  it('maps the Figma surface/text/accent values onto the semantic tokens', () => {
-    expect(opaqueColor('bg-base', lightTokens)).toMatchObject(hexToRgb('#F7F8FA'));
+  it('maps the ADS surface/text/accent values onto the semantic tokens', () => {
+    expect(opaqueColor('bg-base', lightTokens)).toMatchObject(hexToRgb('#F7F8F9'));
     expect(opaqueColor('bg-panel', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
     expect(opaqueColor('bg-elevated', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
-    expect(opaqueColor('bg-well', lightTokens)).toMatchObject(hexToRgb('#EFF1F6'));
+    expect(opaqueColor('bg-input', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
+    // Sidebar takes the PANEL surface, not the canvas: sidebar + top bar form
+    // one continuous chrome frame around a recessed content well.
     expect(opaqueColor('bg-sidebar', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
-    expect(opaqueColor('text-primary', lightTokens)).toMatchObject(hexToRgb('#0D1228'));
-    expect(opaqueColor('text-secondary', lightTokens)).toMatchObject(hexToRgb('#454E6E'));
+    expect(opaqueColor('text-primary', lightTokens)).toMatchObject(hexToRgb('#172B4D'));
+    expect(opaqueColor('text-secondary', lightTokens)).toMatchObject(hexToRgb('#44546F'));
+    expect(opaqueColor('text-muted', lightTokens)).toMatchObject(hexToRgb('#626F86'));
     expect(opaqueColor('text-inverse', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
-    expect(opaqueColor('accent', lightTokens)).toMatchObject(hexToRgb('#2756FF'));
-    expect(opaqueColor('accent-text', lightTokens)).toMatchObject(hexToRgb('#1A44EB'));
+    expect(opaqueColor('accent', lightTokens)).toMatchObject(hexToRgb('#0C66E4'));
+    expect(opaqueColor('accent-text', lightTokens)).toMatchObject(hexToRgb('#0C66E4'));
     expect(opaqueColor('accent-fg', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
   });
 
-  it('declares the Figma chart palette verbatim', () => {
-    const expected = [
-      '#2756ff',
-      '#10b981',
-      '#f59e0b',
-      '#ef4444',
-      '#8b5cf6',
-      '#06b6d4',
-      '#f97316',
-      '#ec4899',
-    ];
-    expected.forEach((value, i) => {
-      expect(lightTokens.get(`--chart-${i + 1}`), `--chart-${i + 1}`).toBe(value);
+  it('gives the quiet-control ladder three distinct alpha depths', () => {
+    // bg-alt / bg-well / bg-active used to collapse onto one value, which left
+    // `neutral` and `ghost` buttons with no visible hover at all.
+    const depths = ['bg-alt', 'bg-well', 'bg-active'].map((name) => {
+      const c = resolveColor(name, lightTokens);
+      expect(c, `--${name} must resolve`).toBeTruthy();
+      return c!.a;
+    });
+    expect(new Set(depths).size, `alpha depths collapsed: ${depths.join(', ')}`).toBe(3);
+    expect(depths[0]).toBeLessThan(depths[1]);
+    expect(depths[1]).toBeLessThan(depths[2]);
+  });
+
+  it('composes the chart palette from the ADS accent ramp, one hue per slot', () => {
+    const expected = ['blue', 'green', 'orange', 'red', 'purple', 'teal', 'yellow', 'magenta'];
+    expected.forEach((hue, i) => {
+      expect(lightTokens.get(`--chart-${i + 1}`), `--chart-${i + 1}`).toBe(
+        `var(--ds-accent-${hue}-bolder)`,
+      );
     });
     // The legacy series slots alias onto the chart palette.
     for (let i = 1; i <= 5; i += 1) {
@@ -349,93 +399,176 @@ describe('Figma light palette (verbatim port)', () => {
     }
   });
 
+  it('closes the chart-tooltip foreground gap (was a literal text-white)', () => {
+    // trend-chart.tsx painted its tooltip label with `text-white`, the one
+    // untokenized colour left in the tree. It is a real token now, and it has
+    // to stay legible on the inverse chip in BOTH themes — in dark the chip
+    // goes light, so the foreground has to flip with it.
+    for (const [name, tokens] of [
+      ['light', lightTokens],
+      ['dark', darkTokens],
+    ] as const) {
+      const ratio = pairRatio('chart-tooltip-fg', 'chart-tooltip-bg', tokens);
+      expect(ratio, `${name} tooltip fg on bg = ${FMT(ratio)}:1`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it('aliases --text-link to --accent-text and declares NO --text-accent token', () => {
-    expect(lightTokens.get('--text-link')).toBe('var(--accent-text)');
-    expect(darkTokens.get('--text-link')).toBe('var(--accent-text)');
+    expect(semanticLight.get('--text-link')).toBe('var(--accent-text)');
     expect(css).not.toMatch(/--text-accent\s*:/);
   });
 
-  it('declares the new tokens: accent-active, score text/ring, hero/data sizes, shadows 1–4', () => {
-    expect(lightTokens.get('--accent-active')).toBe('var(--blue-700)');
+  it('declares score band text/ring/border and the hero/data type sizes', () => {
     for (const band of ['low', 'mid', 'good', 'high']) {
       expect(lightTokens.has(`--score-${band}-text`), `--score-${band}-text`).toBe(true);
       expect(lightTokens.has(`--score-${band}-ring`), `--score-${band}-ring`).toBe(true);
       expect(lightTokens.has(`--score-${band}-border`), `--score-${band}-border`).toBe(true);
     }
-    for (const level of ['1', '2', '3', '4']) {
-      expect(lightTokens.has(`--shadow-${level}`), `--shadow-${level}`).toBe(true);
-    }
     expect(css).toMatch(/--text-hero:\s*3rem/); // 48px hero metric
     expect(css).toMatch(/--text-data-lg:\s*1\.375rem/); // 22px large mono data
   });
 
-  it('drops the legacy green owned-citation identity (owned is Figma blue)', () => {
-    expect(opaqueColor('citation-owned', lightTokens)).toMatchObject(hexToRgb('#2756FF'));
+  it('runs the score bands as four distinct hues, not two greens', () => {
+    // The defect this guards: the old set spent `good` and `high` on two greens
+    // (#10B981 / #22C55E) only 7° apart, so 50–74% and 75–100% were
+    // near-indistinguishable at badge size. Now red → orange → teal → green.
+    const bands = ['low', 'mid', 'good', 'high'] as const;
+    const hues = bands.map((band) => hueDegrees(opaqueColor(`score-${band}-ring`, lightTokens)));
+    const label = bands.map((b, i) => `${b} ${hues[i].toFixed(0)}°`).join(', ');
+
+    // All four are different colours…
+    expect(new Set(hues).size, `score ring hues collapsed: ${label}`).toBe(4);
+    // …and the top two bands in particular are well clear of each other. Red and
+    // orange sit closer in hue (≈23°) but separate strongly on lightness, which
+    // is why this asserts the pair that actually regressed rather than a blanket
+    // pairwise minimum.
+    const gap = hueDistance(hues[3], hues[2]);
+    expect(gap, `good/high too close to distinguish: ${label}`).toBeGreaterThan(25);
+  });
+
+  it('keeps owned citations on the accent and competitor off the warning hue', () => {
+    expect(opaqueColor('citation-owned', lightTokens)).toMatchObject(hexToRgb('#0C66E4'));
     expect(css).not.toMatch(/--citation-owned:\s*#0f9d76/);
+    // Competitor moved orange → magenta: warning is orange now, and a
+    // competitor citation in the warning hue read as an error state.
+    const competitor = hueDegrees(opaqueColor('citation-competitor', lightTokens));
+    const warning = hueDegrees(opaqueColor('warning', lightTokens));
+    expect(
+      hueDistance(competitor, warning),
+      `competitor ${competitor.toFixed(0)}° collides with the warning hue ${warning.toFixed(0)}°`,
+    ).toBeGreaterThan(60);
   });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   3. Authored dark theme — §3a hard constraints
+   3. Flat 2.0 elevation — the token half of the policy
+   The component half lives in scripts/check-flat-elevation.mjs.
 ═══════════════════════════════════════════════════════════════════════ */
-describe('authored dark theme (warm-charcoal dusk, never near-black)', () => {
-  // Luminance floor excluding near-black: the rejected Figma midnight
-  // (#09090F ≈ 0.0029) and the old CUBE27 scale (#050505 ≈ 0.0015) sit far
-  // below it; the dusk base (#262522 ≈ 0.0185) clears it comfortably.
-  const LUMINANCE_FLOOR = 0.007;
+describe('flat 2.0 elevation', () => {
+  const IN_FLOW_RUNGS = [
+    'shadow-xs-value',
+    'shadow-sm-value',
+    'shadow-card-value',
+    'shadow-elevated-value',
+  ];
 
-  it('keeps --bg-base above the not-near-black luminance floor', () => {
-    const lum = relativeLuminance(opaqueColor('bg-base', darkTokens));
-    expect(lum, `bg-base luminance ${lum.toFixed(4)} < floor ${LUMINANCE_FLOOR}`).toBeGreaterThan(
-      LUMINANCE_FLOOR,
-    );
+  it.each(IN_FLOW_RUNGS)('--%s resolves to none', (rung) => {
+    // If these come back, every card silently lifts off the page again — which
+    // is exactly how every previous design pass regressed.
+    expect(lightTokens.get(`--${rung}`)).toBe('none');
+    expect(darkTokens.get(`--${rung}`)).toBe('none');
   });
 
-  it('orders surfaces by luminance: bg-base < bg-panel ≤ bg-elevated', () => {
-    const base = relativeLuminance(opaqueColor('bg-base', darkTokens));
-    const panel = relativeLuminance(opaqueColor('bg-panel', darkTokens));
-    const elevated = relativeLuminance(opaqueColor('bg-elevated', darkTokens));
-    expect(panel, `panel ${panel.toFixed(4)} <= base ${base.toFixed(4)}`).toBeGreaterThan(base);
-    expect(
-      elevated,
-      `elevated ${elevated.toFixed(4)} < panel ${panel.toFixed(4)}`,
-    ).toBeGreaterThanOrEqual(panel);
-  });
-
-  // The dark theme's accent is the warm-charcoal system's violet —
-  // deliberately a different hue from the light theme's Figma royal blue.
-  // Guarding the violet band keeps a future edit from silently drifting back
-  // to blue or off into magenta.
-  it('keeps the dark accent in the dusk violet family', () => {
-    const hue = hueDegrees(opaqueColor('accent', darkTokens));
-    expect(hue, `dark accent hue ${hue.toFixed(1)}° outside dusk violet family`).toBeGreaterThan(
-      240,
-    );
-    expect(hue).toBeLessThan(265);
-  });
-
-  it('pins the authored warm-charcoal dark ramp', () => {
-    // These values are the app's own dark identity. They were originally
-    // shared with the marketing surface; marketing has since moved to the
-    // light-only "Proof" system, so the app owns them outright — pinning them
-    // keeps that migration from quietly dragging the app along with it.
-    expect(opaqueColor('bg-base', darkTokens)).toMatchObject(hexToRgb('#262522'));
-    expect(opaqueColor('bg-panel', darkTokens)).toMatchObject(hexToRgb('#2C2B28'));
-    expect(opaqueColor('bg-elevated', darkTokens)).toMatchObject(hexToRgb('#353430'));
-    expect(opaqueColor('text-primary', darkTokens)).toMatchObject(hexToRgb('#F4F2EB'));
-  });
-
-  it('uses a soft dark shadow stack (no crushed near-black shadows)', () => {
-    for (const level of ['1', '2', '3', '4']) {
-      const value = darkTokens.get(`--shadow-${level}`) ?? '';
-      const alphas = [...value.matchAll(/rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*([\d.]+)\s*\)/g)].map(
-        (m) => parseFloat(m[1]),
-      );
-      expect(alphas.length, `--shadow-${level} should cast from black`).toBeGreaterThan(0);
-      for (const a of alphas) {
-        expect(a, `--shadow-${level} black alpha ${a} is crushed`).toBeLessThanOrEqual(0.6);
+  it('leaves exactly one live shadow rung, for overlays', () => {
+    for (const tokens of [lightTokens, darkTokens]) {
+      expect(tokens.get('--shadow-modal')).toBe('var(--ds-shadow-overlay)');
+      expect(tokens.get('--shadow-lg-value')).toBe('var(--ds-shadow-overlay)');
+      // --shadow-1..3 are the in-flow rungs; only --shadow-4 casts.
+      for (const level of ['1', '2', '3']) {
+        expect(tokens.get(`--shadow-${level}`), `--shadow-${level}`).toBe('none');
       }
+      expect(tokens.get('--shadow-4')).toBe('var(--ds-shadow-overlay)');
     }
+  });
+
+  it('drops the dark catchlight ring the dusk theme relied on', () => {
+    // The old dark stack ended every rung in `0 0 0 1px rgba(255,250,240,…)` —
+    // a warm keyline compensating for surfaces that barely differed. The ADS
+    // ladder separates its four steps by fill, so the ring has no job left.
+    const overlay = dsDark.get('--ds-shadow-overlay') ?? '';
+    expect(overlay, 'dark overlay shadow should exist').not.toBe('');
+    expect(overlay).not.toMatch(/rgba\(\s*255\s*,\s*250\s*,\s*240/);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3a. Dark theme — hard constraints (§6)
+═══════════════════════════════════════════════════════════════════════ */
+describe('dark theme (ADS, hard constraints)', () => {
+  it.each([
+    ['light', lightTokens],
+    ['dark', darkTokens],
+  ] as const)(
+    'orders %s surfaces by luminance: bg-base < bg-panel ≤ bg-elevated',
+    (_name, tokens) => {
+      // The invariant flat design actually depends on: with no shadows, the
+      // tint step is the ONLY thing distinguishing these surfaces.
+      const base = relativeLuminance(opaqueColor('bg-base', tokens));
+      const panel = relativeLuminance(opaqueColor('bg-panel', tokens));
+      const elevated = relativeLuminance(opaqueColor('bg-elevated', tokens));
+      expect(panel, `panel ${panel.toFixed(4)} <= base ${base.toFixed(4)}`).toBeGreaterThan(base);
+      expect(
+        elevated,
+        `elevated ${elevated.toFixed(4)} < panel ${panel.toFixed(4)}`,
+      ).toBeGreaterThanOrEqual(panel);
+    },
+  );
+
+  it('keeps the accent in ONE blue family across both themes', () => {
+    // Reversal from the dusk system, which split the accent by theme on
+    // purpose (royal blue light / violet dark). ADS uses one blue family
+    // throughout, so the bands are guarded both ways: a later edit can drift
+    // it neither to violet nor off into cyan.
+    for (const [name, tokens] of [
+      ['light', lightTokens],
+      ['dark', darkTokens],
+    ] as const) {
+      const hue = hueDegrees(opaqueColor('accent', tokens));
+      expect(
+        hue,
+        `${name} accent hue ${hue.toFixed(1)}° outside the ADS blue family`,
+      ).toBeGreaterThan(200);
+      expect(hue, `${name} accent hue ${hue.toFixed(1)}°`).toBeLessThan(230);
+    }
+  });
+
+  it('keeps every chart slot on the same HUE across themes', () => {
+    // Replaces the old "chart palette is not overridden in dark" rule. Series
+    // identity means hue, not an exact value: holding one value for both
+    // themes kept identity but cost legibility on the dark canvas. ADS ramps
+    // are hue-stable, so lightness can move and identity still survives.
+    for (let slot = 1; slot <= 8; slot += 1) {
+      const light = hueDegrees(opaqueColor(`chart-${slot}`, lightTokens));
+      const dark = hueDegrees(opaqueColor(`chart-${slot}`, darkTokens));
+      const drift = hueDistance(light, dark);
+      expect(
+        drift,
+        `--chart-${slot} hue drifts ${drift.toFixed(1)}° (${light.toFixed(0)}° → ${dark.toFixed(0)}°)`,
+      ).toBeLessThan(6);
+    }
+  });
+
+  it('records the two constraints deliberately dropped from the dusk system', () => {
+    // Kept as an assertion rather than a deleted test, so the reversal is
+    // visible to whoever wonders where these rules went.
+    //
+    // 1. The "never near-black" luminance floor (0.007). It was an aesthetic
+    //    rule for the warm-charcoal deck (base #262522 ≈ 0.0185). ADS dark
+    //    genuinely is near-black and we follow it.
+    const base = relativeLuminance(opaqueColor('bg-base', darkTokens));
+    expect(base, 'ADS dark canvas is intentionally near-black').toBeLessThan(0.007);
+    // 2. The soft-shadow-stack rule — there is no dark shadow stack left.
+    expect(darkTokens.get('--shadow-2')).toBe('none');
   });
 });
 

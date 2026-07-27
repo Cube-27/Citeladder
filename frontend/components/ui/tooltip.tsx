@@ -36,12 +36,12 @@ export function Tooltip({
           align={align}
           sideOffset={6}
           className={cn(
-            'border-border-strong bg-well text-foreground z-[200] max-w-[min(320px,calc(100vw-24px))] rounded-md border px-2 py-1 text-xs leading-normal font-medium shadow-sm',
+            'border-border bg-elevated text-foreground shadow-modal-value z-[200] max-w-[min(320px,calc(100vw-24px))] rounded-md border px-2 py-1 text-xs leading-normal font-medium',
             className,
           )}
         >
           {content}
-          <TooltipPrimitive.Arrow className="fill-well" />
+          <TooltipPrimitive.Arrow className="fill-elevated" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

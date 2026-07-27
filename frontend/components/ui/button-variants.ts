@@ -15,6 +15,14 @@ import { cva } from 'class-variance-authority';
  *
  * Hover moves the fill one step along the accent ramp rather than fading
  * opacity, so the label keeps its verified AA contrast in every state.
+ *
+ * Flat 2.0: the quiet variants now walk the ADS alpha-neutral ladder
+ * (bg-alt 6% → bg-well 14% → bg-active 31%) instead of swapping between two
+ * opaque greys. Because the fills are alpha, `neutral` and `ghost` look
+ * correct on a white card, on the sunken canvas, and inside a tinted panel —
+ * an opaque grey only ever matched one of the three. `secondary` keeps its
+ * hairline and panel fill: it is the outline button, and on a sunken canvas
+ * that reads as the raised option without needing a shadow.
  */
 export const buttonVariants = cva(
   'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border font-sans font-medium leading-none no-underline transition-[background-color,color,border-color] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
@@ -24,16 +32,18 @@ export const buttonVariants = cva(
         primary:
           'border-transparent bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-active',
         secondary:
-          'border-border bg-panel text-foreground hover:bg-background-alt hover:border-border-strong',
-        neutral: 'border-border bg-background-alt text-foreground hover:bg-well',
+          'border-border bg-panel text-foreground hover:bg-background-alt hover:border-border-strong active:bg-well',
+        neutral:
+          'border-transparent bg-background-alt text-foreground hover:bg-well active:bg-active',
         ghost:
-          'border-transparent bg-transparent text-secondary hover:bg-background-alt hover:text-foreground',
-        // Destructive paints white on its OWN fill token, not on `--danger`:
-        // white fails AA against the Figma red-500 / dusk coral, so
-        // `--danger-solid` is that ramp one step deeper (globals.test.ts gates
-        // the `danger-fg` ↔ `danger-solid` pair). Hover walks the ramp like
-        // primary does instead of fading opacity, which used to wash the label
-        // out along with the fill.
+          'border-transparent bg-transparent text-secondary hover:bg-background-alt hover:text-foreground active:bg-well',
+        // Destructive paints on its OWN fill token, not on `--danger`, which is
+        // also the sentiment-negative solid and the score-low ring.
+        // `--danger-solid` / `-hover` are the ADS background.danger.bold and
+        // -bold-hovered pair, which already clear AA against their foreground —
+        // no hand-deepening, unlike the previous system. Hover walks the ramp
+        // instead of fading opacity, which used to wash the label out along with
+        // the fill. globals.test.ts gates both `danger-fg` ↔ fill pairs.
         destructive:
           'border-transparent bg-danger-solid text-danger-fg hover:bg-danger-solid-hover',
       },
