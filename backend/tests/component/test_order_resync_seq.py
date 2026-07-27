@@ -266,9 +266,7 @@ async def test_revision_allocates_monotonic_seq_with_immutable_priors(
 async def test_sequences_are_per_order(db_session) -> None:
     graph = await _seed_graph(db_session)
 
-    await _derive(
-        db_session, graph, _WINDOW_A, [_sanitized("o1"), _sanitized("o2")]
-    )
+    await _derive(db_session, graph, _WINDOW_A, [_sanitized("o1"), _sanitized("o2")])
     await _derive(db_session, graph, _WINDOW_B, [_sanitized("o1", total="1.00")])
 
     facts = await _facts(db_session, graph)

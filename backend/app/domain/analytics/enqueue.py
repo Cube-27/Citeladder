@@ -305,9 +305,7 @@ async def enqueue_attribution_recompute(
     window_start_text = window_start.isoformat()
     window_end_text = window_end.isoformat()
     max_revision = await session.scalar(
-        select(
-            func.max(cast(AnalyticsTask.payload["resync_seq"].astext, Integer))
-        )
+        select(func.max(cast(AnalyticsTask.payload["resync_seq"].astext, Integer)))
         .where(AnalyticsTask.workspace_id == workspace_id)
         .where(AnalyticsTask.project_id == project_id)
         .where(AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT)

@@ -789,9 +789,7 @@ class IntegrationWorker:
                 end_date=ctx.window_end,
                 start_row=start_row,
             )
-            page_info = (
-                self._validated_cursor_page_info(page) if cursor_mode else None
-            )
+            page_info = self._validated_cursor_page_info(page) if cursor_mode else None
             if template.dataset == DATASET_SHOPIFY_ORDERS:
                 # Sanitize BEFORE the immutable artifact write: raw order
                 # nodes (customer PII) never persist — the artifact stores

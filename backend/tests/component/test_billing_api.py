@@ -123,12 +123,8 @@ async def test_unknown_checkout_attempt_reconciles_on_same_key_retry(
     headers = {"Idempotency-Key": "billing-reconciliation-0001"}
     payload = {"tier_key": "paid", "cadence": "monthly"}
 
-    first = await client.post(
-        "/api/v1/billing/checkout", headers=headers, json=payload
-    )
-    retry = await client.post(
-        "/api/v1/billing/checkout", headers=headers, json=payload
-    )
+    first = await client.post("/api/v1/billing/checkout", headers=headers, json=payload)
+    retry = await client.post("/api/v1/billing/checkout", headers=headers, json=payload)
 
     assert first.status_code == 502
     assert retry.status_code == 200
@@ -162,9 +158,7 @@ async def test_entitlement_expiry_is_committed_by_read_caller(
     entitlement.paid_through = expired_at
     await db_session.commit()
 
-    response = await client.get(
-        f"/api/v1/workspaces/{workspace['id']}/entitlements"
-    )
+    response = await client.get(f"/api/v1/workspaces/{workspace['id']}/entitlements")
 
     assert response.status_code == 200
     assert response.json()["tier_key"] == "free"

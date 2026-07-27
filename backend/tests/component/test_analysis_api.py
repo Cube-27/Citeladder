@@ -1288,14 +1288,17 @@ async def test_probe_surface_rows_excluded_from_brand_evidence_and_export(
     """
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=1)
-        audit, _snapshot, measurement_task, measurement_analysis = (
-            await _seed_evidence_execution(
-                session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                completed_at=datetime(2026, 2, 1, tzinfo=UTC),
-                brand_mentions=[("Acme Corp", 0)],
-            )
+        (
+            audit,
+            _snapshot,
+            measurement_task,
+            measurement_analysis,
+        ) = await _seed_evidence_execution(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=datetime(2026, 2, 1, tzinfo=UTC),
+            brand_mentions=[("Acme Corp", 0)],
         )
         # Same audit, same logical engine, different slot: a shopping probe.
         _audit, _s, probe_task, probe_analysis = await _seed_evidence_execution(

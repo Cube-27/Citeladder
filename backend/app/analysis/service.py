@@ -201,8 +201,7 @@ async def _execution_dicts(
             await session.scalars(
                 select(ResponseAnalysis).where(
                     ResponseAnalysis.audit_id == audit_id,
-                    ResponseAnalysis.shopping_surface
-                    == SHOPPING_SURFACE_MEASUREMENT,
+                    ResponseAnalysis.shopping_surface == SHOPPING_SURFACE_MEASUREMENT,
                 )
             )
         ).all()
@@ -292,9 +291,7 @@ async def finalize_audit_analysis(
                 select(AuditTask)
                 .where(AuditTask.audit_id == audit.id)
                 .where(AuditTask.status == TASK_STATUS_SUCCEEDED)
-                .where(
-                    AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT
-                )
+                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
             )
         ).all()
     )

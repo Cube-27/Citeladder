@@ -135,9 +135,7 @@ def _normalize_aggregate(aggregate: dict[str, Any]) -> dict[str, Any]:
         # v1 fallback: direction was never persisted, so only the derived
         # mismatch rate is available.
         relation_counts = {}
-        mismatch_rate = (
-            None if price_accuracy is None else round(1 - price_accuracy, 4)
-        )
+        mismatch_rate = None if price_accuracy is None else round(1 - price_accuracy, 4)
     return {
         "mention_count": int(aggregate.get("mention_count") or 0),
         "sov_share": float(aggregate.get("sov_share") or 0.0),
@@ -316,9 +314,7 @@ async def get_product_visibility(
                 win_rate=metrics["win_rate"],
                 price_mismatch_rate=metrics["price_mismatch_rate"],
                 price_relation_counts=metrics["price_relation_counts"],
-                attribute_dimension_frequency=metrics[
-                    "attribute_dimension_frequency"
-                ],
+                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
                 buyer_destination_mix=metrics["buyer_destination_mix"],
                 competitor_co_placement=metrics["competitor_co_placement"],
             )
@@ -345,9 +341,7 @@ async def get_product_visibility(
                 win_rate=metrics["win_rate"],
                 price_mismatch_rate=metrics["price_mismatch_rate"],
                 price_relation_counts=metrics["price_relation_counts"],
-                attribute_dimension_frequency=metrics[
-                    "attribute_dimension_frequency"
-                ],
+                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
                 buyer_destination_mix=metrics["buyer_destination_mix"],
                 competitor_co_placement=metrics["competitor_co_placement"],
             )
@@ -721,9 +715,9 @@ def product_visibility_csv(
         if surface == SHOPPING_SURFACE_MEASUREMENT:
             per_engine = metrics.get("per_engine") or {}
         else:
-            per_engine = (
-                (metrics.get("per_surface") or {}).get(surface) or {}
-            ).get("per_engine") or {}
+            per_engine = ((metrics.get("per_surface") or {}).get(surface) or {}).get(
+                "per_engine"
+            ) or {}
         for engine in sorted(per_engine):
             aggregate = per_engine[engine]
             if aggregate is None:

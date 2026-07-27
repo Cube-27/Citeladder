@@ -328,9 +328,7 @@ class ShopifyClient:
             if not isinstance(continuation_nodes, list):
                 raise _malformed(f"{label} continuation nodes are not a list")
             nodes.extend(continuation_nodes)
-            page_info = _validated_page_info(
-                connection.get("pageInfo"), label=label
-            )
+            page_info = _validated_page_info(connection.get("pageInfo"), label=label)
         return nodes
 
     def _validated_connection(
@@ -392,8 +390,7 @@ class ShopifyClient:
             ) from exc
         url = shopify_admin_graphql_url(shop)
         window_query = (
-            f"updated_at:>={start_date.isoformat()} "
-            f"updated_at:<={end_date.isoformat()}"
+            f"updated_at:>={start_date.isoformat()} updated_at:<={end_date.isoformat()}"
         )
         if template.dataset == DATASET_SHOPIFY_PRODUCTS:
             return await self._products_page(

@@ -377,9 +377,7 @@ def test_attributes_unknown_or_empty_category_falls_back_to_default(
     category: str,
 ) -> None:
     config = _config(products=(_own_entry(category=category),))
-    text = (
-        "1. VoltCity Commuter 500 — arch support with free shipping, $2,499.00"
-    )
+    text = "1. VoltCity Commuter 500 — arch support with free shipping, $2,499.00"
     score = score_product_execution(answer_text=text, config=config)
     mentions = score["products"][0]["attribute_mentions"]
     # DEFAULT dimensions only: "arch support" (footwear) is NOT evaluated.
@@ -723,4 +721,3 @@ def test_attribute_dimensions_config_is_complete() -> None:
         for dimension in dimensions:
             assert dimension.group in ATTRIBUTE_DIMENSION_GROUPS
             assert dimension.phrases, dimension.key
-

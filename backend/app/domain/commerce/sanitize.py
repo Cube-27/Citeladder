@@ -146,9 +146,11 @@ def _sanitize_line_item(value: object) -> dict[str, object] | None:
     quantity = value.get("currentQuantity")
     if not isinstance(quantity, int) or isinstance(quantity, bool):
         fallback = value.get("quantity")
-        quantity = fallback if isinstance(fallback, int) and not isinstance(
-            fallback, bool
-        ) else 0
+        quantity = (
+            fallback
+            if isinstance(fallback, int) and not isinstance(fallback, bool)
+            else 0
+        )
     return {
         "sku": _str(value.get("sku")),
         "quantity": quantity,

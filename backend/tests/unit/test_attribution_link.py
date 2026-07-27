@@ -69,5 +69,7 @@ def test_classifier_confidence_and_rule_are_propagated(monkeypatch) -> None:
 
 def test_linking_uses_only_sanitized_order_signals() -> None:
     # No session id/user-agent/raw payload is accepted by the link helper.
-    values = _link_values(_order(source_name="ChatGPT", landing_url="https://shop.test"))
+    values = _link_values(
+        _order(source_name="ChatGPT", landing_url="https://shop.test")
+    )
     assert values is None

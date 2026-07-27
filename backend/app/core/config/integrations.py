@@ -488,9 +488,7 @@ SHOPIFY_GRAPHQL_ORDER_LINE_ITEMS: Final = (
 )
 # Cheap authenticated probe for the connection test (NOT the Google GSC
 # probe): proves the offline token validates against this shop.
-SHOPIFY_GRAPHQL_CONNECTION_PROBE: Final = (
-    "query ShopifyConnectionProbe { shop { id } }"
-)
+SHOPIFY_GRAPHQL_CONNECTION_PROBE: Final = "query ShopifyConnectionProbe { shop { id } }"
 
 _GSC_SEARCH_ANALYTICS_METRICS: Final = ("clicks", "impressions", "ctr", "position")
 _GA4_SESSION_METRICS: Final = ("sessions", "engagedSessions", "conversions")

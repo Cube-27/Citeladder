@@ -146,9 +146,7 @@ def test_rule_severities_cover_every_emitted_rule() -> None:
     row["barcode"] = ""
     row["inventory_quantity"] = None
     row["price"] = "1.00"
-    findings = validate_feed_row(
-        row=row, product=Product(price=Decimal("64.99"))
-    )
+    findings = validate_feed_row(row=row, product=Product(price=Decimal("64.99")))
     assert findings
     for finding in findings:
         assert finding.severity == FEED_RULE_SEVERITIES[finding.rule_id]

@@ -787,9 +787,7 @@ async def _orders_and_links(
                 .where(AttributionLink.project_id == project_id)
                 .where(AttributionLink.order_fact_id.in_(order_ids))
                 .where(AttributionLink.rule_version == AI_REFERRAL_RULE_VERSION)
-                .where(
-                    AttributionLink.analyzer_version == ATTRIBUTION_ANALYZER_VERSION
-                )
+                .where(AttributionLink.analyzer_version == ATTRIBUTION_ANALYZER_VERSION)
                 .order_by(AttributionLink.id.asc())
             )
         ).all()

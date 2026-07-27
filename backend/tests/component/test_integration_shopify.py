@@ -296,11 +296,7 @@ class _ShopifyFake:
         if after == "cursor-p1":
             product = _product_node(
                 "p3",
-                [
-                    _variant_node(
-                        "v3", sku="VC-100", inventory=None, price="9.99"
-                    )
-                ],
+                [_variant_node("v3", sku="VC-100", inventory=None, price="9.99")],
                 title="VoltCity 100",
             )
             return httpx.Response(
@@ -351,9 +347,7 @@ class _ShopifyFake:
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         assert request.url.host == _SHOP, f"unexpected host: {request.url.host}"
-        assert request.url.path == _GRAPHQL_PATH, (
-            f"unexpected path: {request.url.path}"
-        )
+        assert request.url.path == _GRAPHQL_PATH, f"unexpected path: {request.url.path}"
         body = json.loads(request.content)
         query = body["query"]
         if "query ShopifyProducts" in query:
@@ -378,9 +372,7 @@ class _ShopifyFake:
 
     def operation_calls(self, operation: str) -> list[dict]:
         return [
-            call["variables"]
-            for call in self.calls
-            if call["operation"] == operation
+            call["variables"] for call in self.calls if call["operation"] == operation
         ]
 
 
@@ -581,11 +573,7 @@ async def test_shopify_sync_end_to_end(session_factory, db_session) -> None:
     assert all(len(f.order_ref_hash) == 64 for f in facts)
     # Two distinct orders -> two distinct opaque hashes.
     assert len({f.order_ref_hash for f in facts}) == 2
-    fact_o1 = next(
-        f
-        for f in facts
-        if f.source_artifact_id == order_artifacts[0].id
-    )
+    fact_o1 = next(f for f in facts if f.source_artifact_id == order_artifacts[0].id)
     assert fact_o1.currency == "USD"
     assert fact_o1.total_amount == Decimal("64.99")
     assert fact_o1.line_items[0]["sku"] == "VC-500"

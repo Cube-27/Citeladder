@@ -103,9 +103,7 @@ class OrderFact(Base):
         ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
         index=True,
     )
-    connection_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), index=True
-    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
     # gsc | ga4 | bing | shopify (only shopify writes order facts today).
     provider: Mapped[str] = mapped_column(String(16))
     # Opaque HMAC of the raw provider order id (64 hex) — the raw id never
@@ -187,9 +185,7 @@ class FeedIssue(Base):
         ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
         index=True,
     )
-    connection_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), index=True
-    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
     sync_run_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
     # The provider's opaque item id (Shopify: the variant id); "" for a
     # finding that could not resolve one (e.g. a missing-SKU row).
