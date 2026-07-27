@@ -60,6 +60,7 @@ from app.connectors.web_evidence.contracts import (
     FetchResult,
 )
 from app.connectors.web_evidence.fetcher import SecureFetcher, is_bot_block_result
+from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.connectors.web_evidence.sitemaps import (
     SitemapCollector,
@@ -392,28 +393,6 @@ def _crawl_root_identity(crawl: SiteCrawl) -> tuple[str, str]:
         return "", ""
 
 
-class _SystemDnsResolver:
-    """Production DNS resolver using the event loop's ``getaddrinfo``.
-
-    Returns every resolved address (IPv4 + IPv6) so the URL policy can reject
-    the whole target if ANY answer is unsafe (rebinding defence). Injected by
-    default; tests pass a fake resolver so nothing hits the network.
-    """
-
-    async def resolve(self, host: str, port: int) -> list[str]:
-        loop = asyncio.get_running_loop()
-        infos = await loop.getaddrinfo(host, port)
-        # infos: list of (family, type, proto, canonname, sockaddr); sockaddr[0]
-        # is the IP literal for both AF_INET and AF_INET6.
-        seen: list[str] = []
-        for info in infos:
-            sockaddr = info[4]
-            ip = str(sockaddr[0])
-            if ip and ip not in seen:
-                seen.append(ip)
-        return seen
-
-
 class SiteHealthWorker:
     """Owns a claim/lease loop over ``SiteCrawlTask`` discover rows.
 
@@ -437,7 +416,7 @@ class SiteHealthWorker:
             self._session_factory, SITE_CRAWL_QUEUE_SPEC
         )
         self.owner = owner or f"site-worker-{uuid.uuid4().hex[:12]}"
-        self._resolver = resolver or _SystemDnsResolver()
+        self._resolver = resolver or SystemDnsResolver()
         # An injected httpx transport (tests pass ``httpx.MockTransport``);
         # None in production so the fetcher pins the validated connection IP.
         self._transport = transport

@@ -13,13 +13,53 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
+
+
+class BrandLogoAsset(Base):
+    """Shared, domain-keyed database cache for safely fetched brand icons."""
+
+    __tablename__ = "brand_logo_assets"
+    __table_args__ = (UniqueConstraint("domain", name="uq_brand_logo_asset_domain"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    domain: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(16))
+    source_url: Mapped[str] = mapped_column(String(2048), default="")
+    content_type: Mapped[str] = mapped_column(String(100), default="")
+    image_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    byte_size: Mapped[int] = mapped_column(Integer, default=0)
+    sha256: Mapped[str] = mapped_column(String(64), default="")
+    fetched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    retry_after: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
 
 
 class Brand(Base):
@@ -40,6 +80,12 @@ class Brand(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
+    logo_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("brand_logo_assets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -51,6 +97,7 @@ class Brand(Base):
     )
 
     project: Mapped[Project] = relationship("Project", back_populates="brand")
+    logo_asset: Mapped[BrandLogoAsset | None] = relationship("BrandLogoAsset")
     profile: Mapped[BrandProfile | None] = relationship(
         "BrandProfile",
         back_populates="brand",
@@ -208,6 +255,12 @@ class Competitor(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
+    logo_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("brand_logo_assets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255))
     aliases: Mapped[list] = mapped_column(JSONB, default=list)
     domains: Mapped[list] = mapped_column(JSONB, default=list)
@@ -221,6 +274,7 @@ class Competitor(Base):
     )
 
     project: Mapped[Project] = relationship("Project", back_populates="competitors")
+    logo_asset: Mapped[BrandLogoAsset | None] = relationship("BrandLogoAsset")
     # Competitor product catalog (Agentic Commerce surface).
     products: Mapped[list[CompetitorProduct]] = relationship(
         "CompetitorProduct",

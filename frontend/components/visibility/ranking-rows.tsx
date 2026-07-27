@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { seriesBg } from '@/components/ui/series-palette';
 import { Sparkline } from '@/components/ui/sparkline';
@@ -76,6 +77,7 @@ export function RankingRowsTable({
               </TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
+                  <BrandLogo name={row.name} logoUrl={row.logo_url} size="sm" />
                   <span
                     aria-hidden
                     className={cn('size-2 shrink-0 rounded-[2px]', seriesBg(slot))}

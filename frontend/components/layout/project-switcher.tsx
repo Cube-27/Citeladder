@@ -11,16 +11,9 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from '@/components/ui/dropdown';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
-
-/** Two-letter avatar initials from a brand/project name. */
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
@@ -33,7 +26,6 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     useProjectContext();
 
   const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
-  const avatar = activeProject ? initials(label) : '—';
 
   return (
     <Dropdown>
@@ -44,12 +36,12 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         )}
         disabled={isLoading}
       >
-        <span
-          aria-hidden
-          className="bg-foreground text-background text-2xs flex size-[26px] shrink-0 items-center justify-center rounded-md font-semibold uppercase"
-        >
-          {avatar}
-        </span>
+        <BrandLogo
+          name={label}
+          logoUrl={activeProject?.brand.logo_url}
+          size="sm"
+          className="bg-foreground text-background size-[26px] rounded-md"
+        />
         <span className="text-foreground min-w-0 flex-1 truncate text-base font-medium">
           {label}
         </span>
@@ -66,12 +58,11 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
               onSelect={() => setActiveProjectId(project.id)}
               className={selected ? 'text-accent-text' : undefined}
             >
-              <span
-                aria-hidden
-                className="bg-accent-soft text-2xs text-accent-text flex size-6 shrink-0 items-center justify-center rounded font-semibold uppercase"
-              >
-                {initials(project.brand_name || project.name)}
-              </span>
+              <BrandLogo
+                name={project.brand_name || project.name}
+                logoUrl={project.brand.logo_url}
+                size="sm"
+              />
               <span className="min-w-0 flex-1 truncate">{project.brand_name || project.name}</span>
               {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
             </DropdownItem>

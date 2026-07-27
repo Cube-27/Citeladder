@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
@@ -21,6 +21,7 @@ from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_MAX_LIMIT,
     VISIBILITY_TREND_DEFAULT_GRANULARITY,
 )
+from app.core.config.brand_logos import BRAND_LOGO_CACHE_MAX_AGE_SECONDS
 from app.core.http_errors import raise_not_found
 from app.domain.analysis.schemas import (
     VisibilityEvidenceResponse,
@@ -48,6 +49,11 @@ from app.domain.projects.brand_profile_suggestions import (
     brand_profile_suggestion_to_response,
     suggest_brand_profile,
     validate_brand_profile_suggest_request,
+)
+from app.domain.projects.logos import (
+    BrandLogoNotFoundError,
+    get_project_logo_asset,
+    refresh_project_logos,
 )
 from app.domain.projects.schemas import (
     BrandProfileAcceptRequest,
@@ -334,6 +340,72 @@ async def get_visibility_evidence_endpoint(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
+
+
+def _logo_response(content: bytes, content_type: str, asset_sha256: str) -> Response:
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Cache-Control": (f"private, max-age={BRAND_LOGO_CACHE_MAX_AGE_SECONDS}"),
+            "Content-Disposition": "inline",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "ETag": f'"{asset_sha256}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.post("/{project_id}/logos/refresh", response_model=ProjectResponse)
+async def refresh_project_logos_endpoint(
+    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> ProjectResponse:
+    try:
+        project = await refresh_project_logos(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+        )
+    except ProjectNotFoundError as exc:
+        raise_not_found(_RES_PROJECT, cause=exc)
+    return project_to_response(project)
+
+
+@router.get("/{project_id}/logo", response_class=Response)
+async def get_brand_logo_endpoint(
+    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> Response:
+    try:
+        asset = await get_project_logo_asset(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+        )
+    except BrandLogoNotFoundError as exc:
+        raise_not_found("Brand logo", cause=exc)
+    return _logo_response(asset.image_data or b"", asset.content_type, asset.sha256)
+
+
+@router.get(
+    "/{project_id}/competitors/{competitor_id}/logo",
+    response_class=Response,
+)
+async def get_competitor_logo_endpoint(
+    project_id: uuid.UUID,
+    competitor_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+) -> Response:
+    try:
+        asset = await get_project_logo_asset(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            competitor_id=competitor_id,
+        )
+    except BrandLogoNotFoundError as exc:
+        raise_not_found("Competitor logo", cause=exc)
+    return _logo_response(asset.image_data or b"", asset.content_type, asset.sha256)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

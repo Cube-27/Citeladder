@@ -32,6 +32,7 @@ from app.api.workspaces import router as workspaces_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.connectors.billing.http_client import aclose_shared_billing_clients
 from app.core.config import get_frontend_origins, settings
+from app.core.config.api import API_V1_PREFIX
 from app.core.database import dispose_engine
 from app.core.http_security import ApiNoStoreMiddleware, RequestBodyLimitMiddleware
 from app.core.telemetry import (
@@ -43,9 +44,6 @@ from app.core.telemetry import (
 )
 
 logger = logging.getLogger("app")
-
-# All application routes live under /api/v1 (workspace-scoped per invariant 5).
-API_V1_PREFIX = "/api/v1"
 
 
 def _sanitize_correlation_id(value: str) -> str:

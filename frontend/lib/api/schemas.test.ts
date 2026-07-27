@@ -100,15 +100,24 @@ describe('contract schemas', () => {
       language_code: 'en',
       benchmark_mode: 'consumer_like',
       default_repetitions: 3,
-      brand: { aliases: ['Acme Inc'] },
+      brand: { aliases: ['Acme Inc'], logo_url: '/api/v1/projects/acme/logo' },
       owned_domains: ['acme.example'],
       unintended_domains: [],
-      competitors: [{ id: UUID2, name: 'Beta', aliases: [], domains: ['beta.example'] }],
+      competitors: [
+        {
+          id: UUID2,
+          name: 'Beta',
+          aliases: [],
+          domains: ['beta.example'],
+          logo_url: null,
+        },
+      ],
       prompt_sets: [],
       created_at: '2026-07-15T00:00:00Z',
       updated_at: '2026-07-15T00:00:00Z',
     };
     expect(strictValidate(projectSchema, project, 'project').benchmark_mode).toBe('consumer_like');
+    expect(strictValidate(projectSchema, project, 'project').brand.logo_url).toContain('/logo');
     expect(() =>
       strictValidate(projectSchema, { ...project, benchmark_mode: 'nope' }, 'project'),
     ).toThrow();

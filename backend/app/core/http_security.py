@@ -79,7 +79,7 @@ class RequestBodyLimitMiddleware:
 
 
 class ApiNoStoreMiddleware:
-    """Prevent intermediaries from caching API data, downloads, or errors."""
+    """Default API responses to no-store unless they opt into private caching."""
 
     def __init__(self, app: ASGIApp):
         self.app = app
@@ -93,17 +93,25 @@ class ApiNoStoreMiddleware:
         async def add_headers(message: dict) -> None:
             if is_api and message.get("type") == "http.response.start":
                 headers = list(message.get("headers", []))
-                blocked = {b"cache-control", b"pragma", b"expires"}
-                headers = [
-                    (key, value) for key, value in headers if key.lower() not in blocked
-                ]
-                headers.extend(
-                    [
-                        (b"cache-control", b"private, no-store, max-age=0"),
-                        (b"pragma", b"no-cache"),
-                        (b"expires", b"0"),
-                    ]
+                private_cache = any(
+                    key.lower() == b"cache-control"
+                    and value.lower().startswith(b"private, max-age=")
+                    for key, value in headers
                 )
+                if not private_cache:
+                    blocked = {b"cache-control", b"pragma", b"expires"}
+                    headers = [
+                        (key, value)
+                        for key, value in headers
+                        if key.lower() not in blocked
+                    ]
+                    headers.extend(
+                        [
+                            (b"cache-control", b"private, no-store, max-age=0"),
+                            (b"pragma", b"no-cache"),
+                            (b"expires", b"0"),
+                        ]
+                    )
                 message["headers"] = headers
             await send(message)
 

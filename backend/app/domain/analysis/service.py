@@ -45,6 +45,8 @@ from app.domain.analysis.schemas import (
     VisibilityTrendRankingRow,
     VisibilityTrendSov,
 )
+from app.domain.projects.logos import get_project_logo_urls
+from app.domain.projects.service import get_project
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -117,6 +119,9 @@ async def get_visibility(
         session, workspace_id=workspace_id, audit_id=audit_id
     )
     metrics = snapshot.metrics or {}
+    logo_urls, logo_identity_ids = await _project_logo_context(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
     return VisibilityResponse(
         project_id=project_id,
         audit_id=audit_id,
@@ -126,7 +131,11 @@ async def get_visibility(
         total_completed=snapshot.total_completed,
         total_failed=snapshot.total_failed,
         visibility_score=snapshot.visibility_score,
-        rankings=_rankings(metrics),
+        rankings=_rankings(
+            metrics,
+            logo_urls=logo_urls,
+            logo_identity_ids=logo_identity_ids,
+        ),
         per_engine=_engine_rows(metrics),
         sentiment=metrics.get("sentiment"),
         avg_position=metrics.get("avg_position"),
@@ -208,9 +217,18 @@ async def get_visibility_trends(
         sources = sources[-VISIBILITY_TREND_MAX_POINTS:]
 
     if granularity == "run":
-        return [_raw_point(source) for source in sources]
-
-    return _bucket_points(sources, granularity)
+        points = [_raw_point(source) for source in sources]
+    else:
+        points = _bucket_points(sources, granularity)
+    logo_urls, logo_identity_ids = await _project_logo_context(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    for point in points:
+        for ranking in point.rankings:
+            ranking.logo_url = _logo_url_for_name(
+                ranking.name, logo_urls, logo_identity_ids
+            )
+    return points
 
 
 async def get_visibility_evidence(
@@ -664,7 +682,30 @@ async def _latest_dashboard_audit_id(
     )
 
 
-def _rankings(metrics: dict) -> list[RankingRow]:
+async def _project_logo_context(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> tuple[dict[uuid.UUID, str], dict[str, uuid.UUID]]:
+    project = await get_project(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    logo_urls = get_project_logo_urls(project)
+    identity_ids: dict[str, uuid.UUID] = {}
+    if project.brand is not None:
+        identity_ids[project.brand.name] = project.brand.id
+    for competitor in project.competitors:
+        identity_ids[competitor.name] = competitor.id
+    return logo_urls, identity_ids
+
+
+def _rankings(
+    metrics: dict,
+    *,
+    logo_urls: dict[uuid.UUID, str] | None = None,
+    logo_identity_ids: dict[str, uuid.UUID] | None = None,
+) -> list[RankingRow]:
     """Build the brand-vs-competitor rankings table from the aggregate.
 
     Visibility % (mention rate) + SOV are populated; sentiment + average
@@ -681,6 +722,9 @@ def _rankings(metrics: dict) -> list[RankingRow]:
         RankingRow(
             name=brand_name,
             is_brand=True,
+            logo_url=_logo_url_for_name(
+                brand_name, logo_urls or {}, logo_identity_ids or {}
+            ),
             mention_rate=metrics.get("brand_mention_rate"),
             citation_rate=metrics.get("owned_citation_rate"),
             share_of_voice=share.get(brand_name),
@@ -692,6 +736,9 @@ def _rankings(metrics: dict) -> list[RankingRow]:
             RankingRow(
                 name=name,
                 is_brand=False,
+                logo_url=_logo_url_for_name(
+                    name, logo_urls or {}, logo_identity_ids or {}
+                ),
                 mention_rate=competitor_mention.get(name),
                 citation_rate=competitor_citation.get(name),
                 share_of_voice=share.get(name),
@@ -701,6 +748,15 @@ def _rankings(metrics: dict) -> list[RankingRow]:
     # Deterministic order: highest SOV first, then name for stable ties.
     rows.sort(key=lambda r: (-(r.share_of_voice or 0.0), r.name))
     return rows
+
+
+def _logo_url_for_name(
+    name: str,
+    logo_urls: dict[uuid.UUID, str],
+    identity_ids: dict[str, uuid.UUID],
+) -> str | None:
+    identity_id = identity_ids.get(name)
+    return logo_urls.get(identity_id) if identity_id is not None else None
 
 
 def _brand_name(counts: dict, metrics: dict) -> str:
