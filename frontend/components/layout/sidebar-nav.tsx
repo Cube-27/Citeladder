@@ -10,16 +10,19 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { NAV_GROUPS, type NavItem } from './nav-items';
 
 /**
- * SidebarNav — grouped sidebar navigation in the v2 Figma shell language
- * (docs/design.md §9.2).
+ * SidebarNav — grouped sidebar navigation in the ADS shell language.
  *
- * Rows are 36px. The active item is an accent statement — `bg-accent-subtle`
- * fill, `text-accent-text` label, a 3px accent bar on the leading edge, and a
- * full-opacity icon — replacing the flat phase's panel pill behind a hairline.
- * Idle icons sit at 65% so the active row reads first.
+ * Rows are 32px (`--nav-item-height`, ADS's default menu-item rung). The
+ * active item is an accent statement — a `bg-accent-border` fill (ADS's
+ * selected-nav tint; the old `bg-accent-subtle` sat ΔE 1.8 from the sidebar
+ * surface and was invisible), a `text-accent-hover` label (4.94:1 light /
+ * 6.11:1 dark on the fill — `text-accent-text` on the same fill is 3.88:1
+ * and fails AA, so the label steps one rung darker), a 4px accent
+ * rail on the leading edge, and a full-opacity icon. Idle icons sit at 80%
+ * so the active row reads first without dropping below usable contrast.
  *
- * Group labels use the shared `eyebrowClasses` recipe, which v2 returns to
- * uppercase 11px/500 at 0.06em.
+ * Group labels use the shared `eyebrowClasses` recipe — 12/16 @600, sentence
+ * case, matching ADS's side-nav heading item.
  *
  * Highlighting matches the current route or any nested route (e.g. `/runs/[id]`
  * highlights Runs).
@@ -35,23 +38,23 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-base transition-colors',
+        'relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-sm px-2 text-sm transition-colors',
         active
-          ? 'bg-accent-subtle text-accent-text font-medium'
+          ? 'bg-accent-border text-accent-hover font-medium'
           : 'text-secondary hover:text-foreground hover:bg-background-alt',
       )}
     >
       {active ? (
-        <span aria-hidden className="bg-accent absolute inset-y-2 left-0 w-[3px] rounded-e-sm" />
+        <span aria-hidden className="bg-accent absolute inset-y-1.5 start-0 w-1 rounded-e-sm" />
       ) : null}
       <Icon
-        className={cn('size-4 shrink-0', active ? 'opacity-100' : 'opacity-65')}
+        className={cn('size-4 shrink-0', active ? 'opacity-100' : 'opacity-80')}
         aria-hidden
-        strokeWidth={1.75}
+        strokeWidth={2}
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.count !== undefined ? (
-        <span className="bg-background-alt text-muted text-2xs mono rounded-sm px-1.5 py-0.5">
+        <span className="bg-neutral-bg text-secondary text-2xs mono rounded-xs min-w-6 px-1 py-0 text-center">
           {item.count}
         </span>
       ) : null}
@@ -63,11 +66,11 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
   const pathname = usePathname() ?? '';
 
   return (
-    <nav aria-label="Primary" className={cn('flex flex-col gap-4', className)}>
+    <nav aria-label="Primary" className={cn('flex flex-col gap-6', className)}>
       {NAV_GROUPS.map((group) => (
-        <div key={group.title} className="flex flex-col gap-0.5">
-          <p className={cn(eyebrowClasses, 'mb-1 px-2.5')}>{group.title}</p>
-          <ul className="flex flex-col gap-0.5">
+        <div key={group.title} className="flex flex-col gap-1">
+          <p className={cn(eyebrowClasses, 'px-2 pb-1')}>{group.title}</p>
+          <ul className="flex flex-col gap-1">
             {group.items.map((item) => (
               <li key={item.href}>
                 <NavLink item={item} active={isActive(pathname, item.href)} />

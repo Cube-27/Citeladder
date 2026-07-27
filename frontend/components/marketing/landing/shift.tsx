@@ -18,7 +18,7 @@ import { WallpaperPanel } from '../scenes/wallpaper-panel';
 export function Shift() {
   const { shift, voice } = LANDING_CONTENT;
   return (
-    <Section id="why" rhythm="loose" divided aria-labelledby="shift-title">
+    <Section id="why" tone="sunken" rhythm="loose" aria-labelledby="shift-title">
       <SectionHeader
         index={shift.index}
         kicker={shift.kicker}
@@ -33,7 +33,7 @@ export function Shift() {
             key={item.num}
             className="border-mkt-line flex min-h-[15rem] flex-col border-b p-8 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
           >
-            <Meta className="text-mkt-proof-text">{item.num}</Meta>
+            <Meta className="text-mkt-ink-soft">{item.num}</Meta>
             {/* A FIXED gap under the number, not `mt-auto`. Pushing the block
                 to the bottom aligned the three cards on their last line of
                 body copy, which left the titles at three different heights. */}
@@ -52,25 +52,25 @@ export function Shift() {
           <Meta as="p" className="mb-6">
             {voice.kicker}
           </Meta>
-          <p className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w max-w-[16ch]">
+          <p className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium max-w-[16ch]">
             {voice.quote}{' '}
-            <em className="text-mkt-accent-display not-italic">{voice.quoteAccent}</em>{' '}
+            <em className="text-mkt-proof not-italic">{voice.quoteAccent}</em>{' '}
             {voice.quoteTail}
           </p>
         </div>
 
-        <WallpaperPanel className="rounded-none border-0 border-t shadow-none lg:border-t-0 lg:border-l">
+        <WallpaperPanel className="rounded-none border-0 border-t lg:border-t-0 lg:border-l">
           <div className="relative z-1 p-9 md:p-11">
-            <Meta as="p" className="text-mkt-slate-soft mb-6">
+            <Meta as="p" className="text-mkt-ink-muted mb-6">
               {voice.rulesLabel}
             </Meta>
             <ul className="grid gap-4">
               {voice.rules.map((rule) => (
                 <li
                   key={rule.num}
-                  className="border-mkt-glass-edge text-mkt-slate text-mkt-sm flex gap-3.5 border-b pb-4 last:border-b-0 last:pb-0"
+                  className="border-mkt-line text-mkt-ink-soft text-mkt-sm flex gap-3.5 border-b pb-4 last:border-b-0 last:pb-0"
                 >
-                  <b className="text-mkt-meta text-mkt-accent-display mkt-num shrink-0 pt-0.5">
+                  <b className="text-mkt-meta text-mkt-proof font-mono tabular-nums shrink-0 pt-0.5">
                     {rule.num}
                   </b>
                   <span>{rule.text}</span>

@@ -5,40 +5,53 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { eyebrowClasses } from '@/components/ui/eyebrow';
+
 import { resolveTitle } from './page-titles';
 
 /**
- * PageHeader — the page title line, rendered inside the shell's 52px top bar.
+ * PageHeader — the page title block, rendered as the first row of the content
+ * column (it no longer lives in the shell's 48px chrome bar, which could not
+ * hold a real ADS header).
  *
- * The v2 Figma shell restores the top bar that the flat phase had retired, so
- * this sits in its own chrome band again rather than in the content column.
- * Title is 15px/600 per the Figma top bar; it is the page's single `<h1>`.
+ * ADS PageHeader recipe: the title is the page's single `<h1>` at H-L (24/28,
+ * `text-xl`), wrapping with `overflow-wrap: break-word` instead of truncating;
+ * the actions slot pins to the inline end (`ms-auto`, `shrink-0`, 32px inline
+ * padding); the summary is a real description block that wraps at a 70ch
+ * measure in `text-secondary`. An optional `eyebrow` slot sits above the title
+ * as the dependency-free stand-in for ADS's breadcrumb row.
  *
- * `summary` is the one-line sentence that follows the title on the same row
- * (e.g. the Visibility overview's "… is mentioned in 62% of answers"), and
- * `actions` is the right-aligned header slot for inline metrics or controls.
- * Both stay on one line inside the bar and truncate rather than wrap.
+ * No block-end margin here — the content grid's `gap-[var(--card-gap)]`
+ * (16px) supplies it.
  */
 export function PageHeader({
   summary,
   actions,
   title,
+  eyebrow,
   className,
 }: Readonly<{
   summary?: ReactNode;
   actions?: ReactNode;
   /** Overrides the route-derived title (rare — prefer the table above). */
   title?: string;
+  /** Optional overline above the title (ADS breadcrumb-row stand-in). */
+  eyebrow?: ReactNode;
   className?: string;
 }>) {
   const pathname = usePathname() ?? '';
   const resolved = title ?? resolveTitle(pathname);
 
   return (
-    <div className={cn('flex min-w-0 flex-1 items-center gap-3', className)}>
-      <h1 className="text-foreground shrink-0 text-lg font-semibold tracking-tight">{resolved}</h1>
-      {summary ? <p className="text-muted min-w-0 flex-1 truncate text-base">{summary}</p> : null}
-      {actions ? <div className="ms-auto flex shrink-0 items-center gap-3">{actions}</div> : null}
+    <div className={cn('flex flex-col gap-1', className)}>
+      {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
+      <div className="flex flex-nowrap items-start gap-2">
+        <h1 className="text-foreground min-w-0 flex-1 text-xl [overflow-wrap:break-word]">
+          {resolved}
+        </h1>
+        {actions ? <div className="ms-auto flex shrink-0 items-center gap-2 ps-8">{actions}</div> : null}
+      </div>
+      {summary ? <p className="text-secondary max-w-[70ch] text-sm">{summary}</p> : null}
     </div>
   );
 }

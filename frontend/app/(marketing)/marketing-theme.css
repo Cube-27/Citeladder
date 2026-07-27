@@ -9,7 +9,21 @@
         Tailwind v4, so every marketing surface is built from utilities
         (`bg-mkt-paper`, `text-mkt-ink-soft`, `rounded-mkt-lg`, …).
      2. The handful of bespoke scene rules utilities genuinely cannot express
-        — the wallpaper field, SVG stroke choreography, keyframes.
+        — the wallpaper field and the SVG stroke choreography.
+
+   After the ADS fold-in, only four genuinely brand-differentiating buckets
+   remain here (owner decision 3185):
+
+     B1  Warm paper/ink neutrals — the paper carries the warmth; the ink,
+         border and state-hue VALUES are verbatim ADS so marketing and app
+         share one character. Everything resolves from literal hex or
+         theme-independent type rungs, never from `--ds-*`/semantic names
+         that flip under `html[data-theme='dark']` — Proof is LIGHT-ONLY.
+     B2  The three vendor engine colours (real brand marks, verbatim).
+     B3  Type: the two fluid display steps above the ADS 35px ceiling ride
+         the shared `--text-display-1/-2` rungs; every other step aliases
+         the ADS ladder in app/ds-type.css.
+     B4  Marketing layout — container, gutter, nav chrome height.
 
    It is imported by app/globals.css (NOT by the marketing layout) because
    Tailwind v4 generates utilities from a single `@import 'tailwindcss'`
@@ -24,136 +38,113 @@
 
 @theme {
   /* ─── Type ────────────────────────────────────────────────────────────
-     Two faces, one voice: Manrope carries display, Inter carries UI and
-     data. There is no mono face — the deck's `--mono: Inter` was a smell.
-     "Meta" (uppercase, tracked-out, tabular) is a STYLE, not a family. */
-  --font-mkt-display: var(--font-manrope), 'Manrope', 'Helvetica Neue', Arial, sans-serif;
-  --font-mkt-sans: var(--font-sans), 'Inter', 'Helvetica Neue', Arial, sans-serif;
+     One face, one ladder: Inter everywhere. The display name survives
+     because the guard requires it and call sites carry `font-mkt-display`;
+     it resolves to the same family as `font-sans`, which is the point. */
+  --font-mkt-display: var(--font-sans), 'Inter', 'Helvetica Neue', Arial, sans-serif;
 
-  /* Eight steps, no ad-hoc sizes. Tracking tightens as size grows, which is
-     what makes large Manrope read as typography rather than as big text.
-     Display lands on a 36/48/64 ladder: the old scale capped at 72px, floored
-     at 44px (stubby wrapped headlines on phones) and tracked ~2× tighter than
-     the size warranted. 0.96 leading on d1 is the signature — leave it. */
-  --text-mkt-d1: clamp(2.25rem, 4.6vw, 4rem); /* 36 → 64px */
-  --text-mkt-d1--line-height: 0.96;
-  --text-mkt-d1--letter-spacing: -0.03em;
-  --text-mkt-d2: clamp(1.875rem, 3.4vw, 3rem); /* 30 → 48px */
-  --text-mkt-d2--line-height: 1;
-  --text-mkt-d2--letter-spacing: -0.0275em;
-  --text-mkt-d3: clamp(1.5rem, 2vw, 1.75rem); /* 24 → 28px */
-  --text-mkt-d3--line-height: 1.08;
-  --text-mkt-d3--letter-spacing: -0.0225em;
-  --text-mkt-d4: 1.5rem;
-  --text-mkt-d4--line-height: 1.15;
-  --text-mkt-d4--letter-spacing: -0.03em;
-  --text-mkt-lead: clamp(1.0625rem, 1.4vw, 1.3125rem);
-  --text-mkt-lead--line-height: 1.55;
-  --text-mkt-lead--letter-spacing: -0.015em;
-  --text-mkt-body: 0.9375rem;
-  --text-mkt-body--line-height: 1.6;
-  --text-mkt-sm: 0.8125rem;
-  --text-mkt-sm--line-height: 1.5;
-  --text-mkt-meta: 0.6875rem;
-  --text-mkt-meta--line-height: 1.4;
-  --text-mkt-meta--letter-spacing: 0.09em;
+  /* Eight names, no ad-hoc sizes: d1/d2 ride the two fluid display steps
+     above the ADS ceiling; everything else is a rung of the app ladder.
+     ADS defines no letter-spacing tokens — tracking is 0 at every step. */
+  --text-mkt-d1: var(--text-display-1); /* 35 → 64px fluid */
+  --text-mkt-d1--line-height: var(--text-display-1--line-height);
+  --text-mkt-d1--font-weight: var(--text-display-1--font-weight);
+  --text-mkt-d2: var(--text-display-2); /* 29 → 48px fluid */
+  --text-mkt-d2--line-height: var(--text-display-2--line-height);
+  --text-mkt-d2--font-weight: var(--text-display-2--font-weight);
+  --text-mkt-d3: var(--text-2xl); /* 29px — ADS font.heading.xlarge */
+  --text-mkt-d3--line-height: var(--text-2xl--line-height);
+  --text-mkt-d3--font-weight: var(--text-2xl--font-weight);
+  --text-mkt-d4: var(--text-xl); /* 24px — ADS font.heading.large */
+  --text-mkt-d4--line-height: var(--text-xl--line-height);
+  --text-mkt-d4--font-weight: var(--text-xl--font-weight);
+  --text-mkt-lead: var(--text-base); /* 16px — ADS font.body.large */
+  --text-mkt-lead--line-height: var(--text-base--line-height);
+  --text-mkt-body: var(--text-base); /* 16px — one step above the app's 14px */
+  --text-mkt-body--line-height: var(--text-base--line-height);
+  --text-mkt-sm: var(--text-sm); /* 14px — ADS font.body */
+  --text-mkt-sm--line-height: var(--text-sm--line-height);
+  --text-mkt-meta: var(--text-xs); /* 12px — ADS font.heading.xxsmall size */
+  --text-mkt-meta--line-height: var(--text-xs--line-height);
 
   /* ─── Colour ──────────────────────────────────────────────────────────
-     Paper and ink carry the page; the four state hues are rationed to
-     states, provider identity and evidence marks — never to headlines.
-     Every `-text` variant is the AA-safe form of its hue: the deck's own
-     values (#0A8F6A 3.7:1, #E95D39 3.2:1, #C98616 2.8:1, muted #737973
-     4.1:1) fail as body text and are fills/marks only. Ratios in the
-     comments are against --mkt-paper and are asserted in globals.test.ts. */
-  --color-mkt-paper: #f5f5f0; /* page canvas */
+     Paper carries the brand; ink, hairlines and the state hues are verbatim
+     ADS values held as literal hex so the light-only surface never flips
+     with the app's dark theme. Ratios in the comments are against
+     --mkt-paper and are asserted in globals.test.ts ("the Proof contract").
+     Every `-text` variant is the AA-safe form of its hue — except proof:
+     #0C66E4 clears 4.5:1 on paper as both mark and text, so blue ships ONE
+     token and a hover step instead of the mark/text split. */
+  --color-mkt-paper: #f5f5f0; /* page canvas — the brand warmth */
   --color-mkt-paper-raised: #fbfbf8; /* inset fields, table headers */
   --color-mkt-surface: #ffffff; /* panels */
-  --color-mkt-surface-sunk: #ecece6;
-  --color-mkt-ink: #151715; /* 16.5:1 */
-  --color-mkt-ink-soft: #454a46; /* 8.3:1 — body copy */
-  --color-mkt-ink-muted: #656b65; /* 5.0:1 — meta, captions */
-  --color-mkt-line: #d8d9d2;
-  --color-mkt-line-strong: #afb2aa;
+  --color-mkt-surface-sunk: #e9e9e0; /* sunken band, bar tracks — ΔE 3.21 vs paper */
+  --color-mkt-wash: #eaf1fa; /* warmed accent band — ΔE 7.12 vs paper */
+  --color-mkt-ink: #172b4d; /* 12.9:1 — ADS text */
+  --color-mkt-ink-soft: #44546f; /* 7.0:1 — body copy */
+  --color-mkt-ink-muted: #626f86; /* 4.6:1 — meta, captions (tightest pair) */
+  --color-mkt-line: #091e4224; /* ADS border — alpha hairline over warm paper */
+  --color-mkt-line-strong: #758195; /* ADS border-bold */
 
-  --color-mkt-proof: #1668e8; /* mark / fill */
-  --color-mkt-proof-text: #1257c4; /* 6.0:1 — links, active labels */
-  --color-mkt-proof-soft: #dbe9ff;
-  --color-mkt-proof-wash: #edf4ff;
-  --color-mkt-proof-line: #a9c7f5;
-  --color-mkt-evidence: #0a8f6a; /* mark / fill */
-  --color-mkt-evidence-text: #087354; /* 5.4:1 — "verified" */
-  --color-mkt-evidence-soft: #eff9f5;
-  --color-mkt-evidence-line: #a4d8c7;
-  --color-mkt-signal: #e95d39; /* mark / fill */
-  --color-mkt-signal-text: #b23a1a; /* 5.5:1 — decline, "avoid" */
-  --color-mkt-signal-soft: #fdeee9;
-  --color-mkt-signal-line: #f3c3b2;
-  /* Darkened from the deck's #C98616, which sat at 2.78:1 on paper — below
-     the 3:1 floor even for a dot, so a "needs review" mark could vanish. */
-  --color-mkt-amber: #be7d12; /* mark / fill */
-  --color-mkt-amber-text: #8a5d0f; /* 5.3:1 — "needs review" */
-  --color-mkt-amber-soft: #fcf7ed;
-  --color-mkt-amber-line: #e7cca0;
+  --color-mkt-proof: #0c66e4; /* 4.76:1 — mark AND text */
+  --color-mkt-proof-hover: #0055cc; /* 6.05:1 — hover/active step */
+  --color-mkt-proof-soft: #cce0ff; /* ADS blue-subtler */
+  --color-mkt-proof-line: #579dff; /* ADS blue-subtle */
+  --color-mkt-evidence: #1f845a; /* mark / fill — 4.26:1 */
+  --color-mkt-evidence-text: #216e4e; /* 5.64:1 — "verified" */
+  --color-mkt-evidence-soft: #dffcf0; /* ADS green-subtlest */
+  --color-mkt-evidence-line: #4bce97; /* ADS green-subtle */
+  --color-mkt-signal: #ca3521; /* mark / fill — 4.75:1 */
+  --color-mkt-signal-text: #ae2a19; /* 6.11:1 — decline, "avoid" */
+  --color-mkt-signal-soft: #ffedeb; /* ADS red-subtlest */
+  --color-mkt-signal-line: #f87462; /* ADS red-subtle */
+  /* ADS orange, not yellow: yellow-bolder reads sickly on warm paper. */
+  --color-mkt-amber: #b65c02; /* mark / fill — 4.25:1 */
+  --color-mkt-amber-text: #974f0c; /* 5.58:1 — "needs review" */
+  --color-mkt-amber-soft: #fff4e5; /* ADS orange-subtlest */
+  --color-mkt-amber-line: #faa53d; /* ADS orange-subtle */
 
-  /* Scene palette — the wallpaper field and the glass windows on top of it.
-     Glass alpha is pinned at 0.92+ so the composite stays near #F4F7FB and
-     the slate ink below keeps its measured ratio. The deck drifted between
-     0.68 and 0.94, which is why its scene text read as washed out. */
-  --color-mkt-sky: #cbdaf1; /* wallpaper base (deck called this "night") */
-  --color-mkt-glass: rgb(255 255 255 / 0.92);
-  --color-mkt-glass-soft: rgb(255 255 255 / 0.72);
-  --color-mkt-glass-line: rgb(76 99 129 / 0.22);
-  --color-mkt-glass-edge: rgb(255 255 255 / 0.5);
-  --color-mkt-slate: #425269; /* 7.4:1 on glass — scene primary */
-  --color-mkt-slate-soft: #55637a; /* 5.7:1 on glass — scene meta */
-  --color-mkt-accent-display: #275f9f; /* display accent — never body copy */
+  /* Display art only: the wallpaper field behind product scenes. */
+  --color-mkt-sky: #cbdaf1;
 
   /* Provider identity — the one place colour is allowed to mean "brand"
      rather than "state". Marks and 20px tiles only; never text on paper. */
   --color-mkt-engine-openai: #1f2421;
   --color-mkt-engine-claude: #d97757;
   --color-mkt-engine-gemini: #4285f4;
-  --color-mkt-engine-perplexity: #159e92;
-  --color-mkt-engine-grok: #313633;
-  --color-mkt-engine-copilot: #1e73be;
 
   /* ─── Shape ───────────────────────────────────────────────────────────
-     Six radii, full stop. The deck used fifteen. */
-  --radius-mkt-xs: 6px;
-  --radius-mkt-sm: 10px;
-  --radius-mkt-md: 14px;
-  --radius-mkt-lg: 20px;
-  --radius-mkt-xl: 28px;
-  --radius-mkt-pill: 999px;
+     Marketing shares the ADS radius scale; only the two guard-mandated
+     names remain, holding ADS values (8px = radius.md, 16px = radius.xl).
+     Everything else uses the shared `rounded-sm/md/lg/xl/full` rungs. */
+  --radius-mkt-sm: 8px;
+  --radius-mkt-lg: 16px;
 
-  /* ─── Elevation ── three levels; scenes get the one deep atmospheric drop. */
-  --shadow-mkt-raised: 0 1px 2px rgb(21 23 21 / 0.05), 0 8px 30px rgb(21 23 21 / 0.04);
-  --shadow-mkt-float: 0 20px 70px rgb(21 23 21 / 0.12), 0 2px 10px rgb(21 23 21 / 0.05);
-  --shadow-mkt-scene: 0 30px 80px rgb(50 71 103 / 0.2);
-  --shadow-mkt-glass: 0 18px 50px rgb(54 73 101 / 0.16);
-  --shadow-mkt-ink: 0 8px 24px rgb(21 23 21 / 0.14);
+  /* ─── Elevation ── none. Surfaces separate by a tint step and a 1px
+     hairline; the only shadow on the surface is `shadow-modal-value` on the
+     nav's two floating overlays (flat 2.0, docs/design.md). */
 
   /* ─── Layout ── one container and one gutter for the whole surface. */
   --container-mkt: 1240px;
   --container-mkt-wide: 1440px;
-  --spacing-mkt-gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --spacing-mkt-gutter: clamp(1.25rem, 4vw, 2.5rem); /* 20 → 40px, both ADS steps */
+  /* 72px is off the ADS spacing ladder (64/80 are the neighbours), but it is
+     a fixed chrome height, not spacing — 13 calc() offsets depend on it
+     (hero min-height, mobile menu max-height). Documented exception. */
   --spacing-mkt-nav: 72px;
 
-  /* ─── Motion ── 5/10. One easing pair, timing matched to interaction frequency. */
+  /* ─── Motion ── the marketing settle curve is legitimately different from
+     the app's; docs/design.md calls settle-not-bounce a hard constraint. */
   --ease-mkt-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-mkt-soft: cubic-bezier(0.65, 0, 0.35, 1);
-  --animate-mkt-float: mkt-float 9s ease-in-out infinite;
   --animate-mkt-pulse: mkt-pulse 2.6s ease-out infinite;
-  --animate-mkt-travel: mkt-travel 18s linear infinite;
   --animate-mkt-draw: mkt-draw 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  --animate-mkt-breathe: mkt-breathe 10s ease-in-out infinite;
   --animate-mkt-verify: mkt-verify 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    Scene rules — everything below is here because a utility cannot express
-   it (compositing the wallpaper, SVG stroke choreography, escaping the
-   app's unlayered element base). Nothing else belongs in this block.
+   it (compositing the wallpaper, SVG stroke choreography). Nothing else
+   belongs in this block.
 ═══════════════════════════════════════════════════════════════════════ */
 
 /* The Proof surface is light-only and must ignore the app's `data-theme`.
@@ -165,46 +156,10 @@ html:has(.mkt-root) body {
   color-scheme: light !important;
 }
 
-/* globals.css styles bare h1–h6/p UNLAYERED, so those declarations outrank
-   anything in Tailwind's @layer utilities. `revert-layer` rolls each
-   property back to the utility layer, which hands control to the classes on
-   the element (and to the UA default when no utility applies). Scoped to
-   the marketing/auth surface so the app's base styling is untouched. */
-.mkt-root :is(h1, h2, h3, h4, h5, h6),
-.mkt-root p {
-  font: revert-layer;
-  color: revert-layer;
-  line-height: revert-layer;
-  letter-spacing: revert-layer;
-  margin: revert-layer;
-}
-
 .mkt-root {
-  font-family: var(--font-mkt-sans);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-}
-
-/* Off-axis weight stops. 460 and 540 sit deliberately between Regular and
-   Medium — heavier than expected without ever reading as bold, which is what
-   keeps large Manrope feeling composed rather than shouted. They need the
-   variable face (app/layout.tsx); against a static fallback the browser rounds
-   to the nearest cut, so the page degrades to today's look rather than
-   breaking. `font-weight` is set alongside so that rounding is sensible.
-
-   These are deliberately NOT folded into `.font-mkt-display` — that name is
-   Tailwind's generated font-FAMILY utility, and redefining it here would both
-   collide with the generated rule and lose to the `font-medium` that every
-   call site already carries. Weight is its own decision; use `.mkt-display-w`
-   with `font-mkt-display`, replacing `font-medium`. */
-.mkt-display-w {
-  font-weight: 540;
-  font-variation-settings: 'wght' 540;
-}
-
-.mkt-body-w {
-  font-weight: 460;
-  font-variation-settings: 'wght' 460;
 }
 
 .mkt-root ::selection {
@@ -215,12 +170,6 @@ html:has(.mkt-root) body {
 .mkt-root :focus-visible {
   outline: 2px solid var(--color-mkt-proof);
   outline-offset: 3px;
-}
-
-/* Tabular numerals for every figure — the deck's "mono" role, done right. */
-.mkt-num {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'ss01';
 }
 
 /* The one recurring atmosphere: sky/coral/mint field behind product scenes,
@@ -234,21 +183,6 @@ html:has(.mkt-root) body {
   background-image: url('/brand/wallpaper.svg');
   background-position: center;
   background-size: 100% 100%;
-}
-
-/* Orbit field — dashed ellipses whose active ring travels, so the scene
-   reads as observation in progress rather than as decoration. */
-.mkt-orbit-line {
-  fill: none;
-  stroke: rgb(56 83 119 / 0.36);
-  stroke-width: 1;
-  stroke-dasharray: 5 8;
-}
-
-.mkt-orbit-line[data-active] {
-  stroke: rgb(39 95 159 / 0.7);
-  stroke-dasharray: 1 7;
-  stroke-linecap: round;
 }
 
 /* Trend lines draw themselves in, then hold long enough to be read. Paths

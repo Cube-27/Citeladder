@@ -34,7 +34,7 @@ export function EngineCard({
       <CardHeader className="flex-row items-center justify-between gap-2">
         <div className="grid gap-1">
           <CardEyebrow>AI engine</CardEyebrow>
-          <h3 className="text-foreground text-base font-semibold">{model.label}</h3>
+          <h3 className="text-foreground text-heading-sm">{model.label}</h3>
           <div className="flex items-center gap-2">
             {transport ? (
               <Badge variant="neutral">via {TRANSPORT_LABELS[transport]}</Badge>

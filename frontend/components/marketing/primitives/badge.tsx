@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
  */
 const TONE = {
   neutral: 'border-mkt-line bg-mkt-paper-raised text-mkt-ink-soft [&>i]:bg-mkt-line-strong',
-  proof: 'border-mkt-proof-line bg-mkt-proof-wash text-mkt-proof-text [&>i]:bg-mkt-proof',
+  proof: 'border-mkt-proof-line bg-mkt-wash text-mkt-proof [&>i]:bg-mkt-proof',
   good: 'border-mkt-evidence-line bg-mkt-evidence-soft text-mkt-evidence-text [&>i]:bg-mkt-evidence',
   warn: 'border-mkt-amber-line bg-mkt-amber-soft text-mkt-amber-text [&>i]:bg-mkt-amber',
 } as const;
@@ -24,7 +24,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'text-mkt-meta rounded-mkt-pill inline-flex min-h-6.5 items-center gap-1.5 border px-2.5 uppercase',
+        'text-mkt-meta rounded-full inline-flex min-h-6 items-center gap-1.5 border px-2.5 uppercase',
         TONE[tone],
         className,
       )}
@@ -44,7 +44,7 @@ export function VerifiedMark({ children = 'Verified' }: Readonly<{ children?: Re
     <span className="text-mkt-meta text-mkt-evidence-text inline-flex items-center gap-1.5 uppercase">
       <span
         aria-hidden
-        className="border-mkt-evidence-line grid size-4 place-items-center rounded-full border text-[0.5rem] leading-none"
+        className="border-mkt-evidence-line grid size-4 place-items-center rounded-full border text-2xs leading-none"
       >
         ✓
       </span>

@@ -8,7 +8,7 @@ import { ProductWindow } from '../scenes/product-window';
 export function Platform() {
   const { platform } = LANDING_CONTENT;
   return (
-    <Section id="platform" rhythm="loose" divided aria-labelledby="platform-title">
+    <Section id="platform" tone="surface" rhythm="loose" aria-labelledby="platform-title">
       <SectionHeader
         index={platform.index}
         kicker={platform.kicker}

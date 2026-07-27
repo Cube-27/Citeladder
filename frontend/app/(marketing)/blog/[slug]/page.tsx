@@ -27,13 +27,13 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = POSTS.find((candidate) => candidate.slug === slug);
   if (!post) return {};
-  const title = `${post.title} — Searchify Blog`;
-  // NOTE: no openGraph.images / metadataBase yet — there is no canonical
-  // public domain for the app, and OG image URLs must be absolute. Add both
-  // once the production domain exists.
+  // The root template appends ' · Searchify', so the bare post title is enough.
+  const title = post.title;
+  // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
   return {
     title,
     description: post.excerpt,
+    alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title,
       description: post.excerpt,

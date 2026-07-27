@@ -12,26 +12,25 @@ import { cn } from '@/lib/utils';
  */
 const INTENT = {
   /** Default page action — exact ink on paper. */
-  primary: 'bg-mkt-ink text-mkt-surface shadow-mkt-ink hover:bg-mkt-ink/90 hover:shadow-mkt-float',
+  primary: 'bg-mkt-ink text-mkt-surface hover:bg-mkt-ink/90',
   /** Companion action — hairline on surface. */
-  secondary:
-    'bg-mkt-surface text-mkt-ink border-mkt-line hover:border-mkt-line-strong hover:shadow-mkt-raised',
+  secondary: 'bg-mkt-surface text-mkt-ink border-mkt-line hover:border-mkt-line-strong',
   /** In-product / active-state action. */
-  proof: 'bg-mkt-proof text-mkt-surface hover:bg-mkt-proof-text',
+  proof: 'bg-mkt-proof text-mkt-surface hover:bg-mkt-proof-hover',
   /** For use ON the wallpaper, where a white button would disappear. */
-  scene: 'bg-mkt-slate text-mkt-surface hover:bg-mkt-ink',
+  scene: 'bg-mkt-ink-soft text-mkt-surface hover:bg-mkt-ink',
 } as const;
 
-// Both sizes carry the same 13px label — they differ in height and padding,
+// Both sizes carry the same 14px label — they differ in height and padding,
 // not in type size. Shrinking the text too would drop it below the ramp.
 const SIZE = {
   md: 'min-h-12 rounded-mkt-sm px-5 text-mkt-sm',
-  sm: 'min-h-9.5 rounded-mkt-xs px-3.5 text-mkt-sm',
+  sm: 'min-h-9 rounded-sm px-3.5 text-mkt-sm',
 } as const;
 
 const BASE =
   'inline-flex items-center justify-center gap-2.5 border border-transparent font-bold ' +
-  '[transition:transform_140ms_var(--ease-mkt-out),background-color_200ms_var(--ease-mkt-out),border-color_200ms_var(--ease-mkt-out),box-shadow_200ms_var(--ease-mkt-out)] ' +
+  '[transition:transform_140ms_var(--ease-mkt-out),background-color_200ms_var(--ease-mkt-out),border-color_200ms_var(--ease-mkt-out)] ' +
   'active:[transform:translateY(0)_scale(0.98)] disabled:pointer-events-none disabled:opacity-40 ' +
   '[@media(hover:hover)_and_(pointer:fine)_and_(prefers-reduced-motion:no-preference)]:hover:-translate-y-0.5 ' +
   '[&_svg]:transition-transform [&_svg]:duration-[140ms] [&_svg]:ease-mkt-out ' +

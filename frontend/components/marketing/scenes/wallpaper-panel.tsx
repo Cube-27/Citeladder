@@ -16,7 +16,7 @@ export function WallpaperPanel({
   return (
     <div
       className={cn(
-        'mkt-wallpaper border-mkt-slate/25 rounded-mkt-xl shadow-mkt-scene relative overflow-hidden border',
+        'mkt-wallpaper border-mkt-line rounded-mkt-lg relative overflow-hidden border',
         className,
       )}
       {...rest}
@@ -32,28 +32,23 @@ export function WallpaperPanel({
  */
 export function SceneStrip({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="border-mkt-glass-edge bg-mkt-glass-soft flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 backdrop-blur-md sm:px-6">
+    <div className="border-mkt-line bg-mkt-paper-raised flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
       {children}
     </div>
   );
 }
 
 /**
- * Glass window — the white panel that sits on the wallpaper. Alpha is pinned
- * high enough that the slate ink inside keeps its measured contrast; the deck
- * let it drift down to 0.68, which is what made its scene text look washed.
+ * Scene window — the white panel that sits on the wallpaper. Flat by rule
+ * (docs/design.md "Flat 2.0"): an opaque surface and a 1px hairline, no
+ * glass, no blur, no shadow.
  */
-export function GlassPanel({
+export function Panel({
   children,
   className,
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <div
-      className={cn(
-        'border-mkt-glass-line bg-mkt-glass shadow-mkt-glass rounded-mkt-md border backdrop-blur-lg',
-        className,
-      )}
-    >
+    <div className={cn('border-mkt-line bg-mkt-surface rounded-mkt-sm border', className)}>
       {children}
     </div>
   );
@@ -69,8 +64,8 @@ export function ExampleDataNote({ className }: Readonly<{ className?: string }>)
   return (
     <span
       className={cn(
-        'text-mkt-meta text-mkt-slate-soft border-mkt-glass-line bg-mkt-glass rounded-mkt-pill',
-        'inline-flex items-center border px-2.5 py-1 uppercase backdrop-blur-md',
+        'text-mkt-meta text-mkt-ink-muted border-mkt-line bg-mkt-surface rounded-full',
+        'inline-flex items-center border px-2.5 py-1 uppercase',
         className,
       )}
     >

@@ -226,7 +226,7 @@ export function ProjectEditPanel({
                 ])
               }
             >
-              <Plus className="size-3.5" aria-hidden />
+              <Plus className="size-4" aria-hidden />
               Add
             </Button>
           </div>

@@ -71,7 +71,7 @@ export function OpportunityTypeBadge({ type }: Readonly<{ type: OpportunityType 
 function KvRow({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex items-start justify-between gap-3 py-1">
-      <span className="text-2xs text-muted shrink-0 font-mono tracking-[0.08em] uppercase">
+      <span className="text-2xs text-muted shrink-0 font-mono uppercase">
         {label}
       </span>
       <span className="text-secondary text-right text-sm break-words">{value}</span>
@@ -109,7 +109,7 @@ function EvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
 
   return (
     <section className="grid gap-2">
-      <Label className="font-mono tracking-[0.08em]">Evidence</Label>
+      <Label className="font-mono">Evidence</Label>
       {promptText ? (
         <blockquote className="border-accent-border bg-accent-subtle rounded-lg border-l-2 px-3 py-2">
           <p className="text-foreground text-sm">“{promptText}”</p>
@@ -174,7 +174,7 @@ function ProvenanceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) 
 
   return (
     <section className="grid gap-2">
-      <Label className="font-mono tracking-[0.08em]">Provenance</Label>
+      <Label className="font-mono">Provenance</Label>
       <div className="divide-border-subtle divide-y">
         <KvRow label="Rule" value={detail.rule_id} />
         <KvRow label="Rule version" value={detail.rule_version} />
@@ -211,7 +211,7 @@ function StatusFooter({
       ) : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xs text-muted font-mono tracking-[0.08em] uppercase">Status</span>
+          <span className="text-2xs text-muted font-mono uppercase">Status</span>
           <OpportunityStatusBadge status={detail.status} />
         </div>
         <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export function EvidenceDrawer({
         <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
         <DialogPrimitive.Content className="border-border bg-elevated shadow-modal-value fixed top-0 right-0 z-[101] flex h-full w-[448px] max-w-full flex-col border-l focus:outline-none">
           <header className="border-border-subtle flex items-center justify-between gap-2 border-b px-4 py-3">
-            <DialogPrimitive.Title className="text-foreground truncate text-base font-semibold">
+            <DialogPrimitive.Title className="text-foreground truncate text-heading-sm">
               Opportunity detail
             </DialogPrimitive.Title>
             <DialogPrimitive.Close asChild>
@@ -313,7 +313,7 @@ export function EvidenceDrawer({
             ) : (
               <div className="grid gap-5">
                 <div className="grid gap-2">
-                  <h2 className="text-foreground text-lg font-semibold">{detail.title}</h2>
+                  <h2 className="text-foreground text-lg">{detail.title}</h2>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant="status" value={severityBadgeValue(detail.severity)}>
                       {severityLabel(detail.severity)}
@@ -322,7 +322,7 @@ export function EvidenceDrawer({
                     <OpportunityStatusBadge status={detail.status} />
                   </div>
                   <p className="text-secondary text-sm">
-                    <span className="mono text-foreground text-base font-semibold">
+                    <span className="mono text-foreground text-sm font-semibold">
                       {detail.priority_score.toFixed(1)}
                     </span>{' '}
                     priority · deterministic formula {detail.formula_version}
@@ -332,7 +332,7 @@ export function EvidenceDrawer({
                 <ProvenanceSection detail={detail} />
                 {detail.remediation ? (
                   <section className="grid gap-2">
-                    <Label className="font-mono tracking-[0.08em]">Remediation</Label>
+                    <Label className="font-mono">Remediation</Label>
                     <div className="border-border-subtle bg-background-alt rounded-lg border p-3">
                       <p className="text-secondary text-sm whitespace-pre-line">
                         {detail.remediation}

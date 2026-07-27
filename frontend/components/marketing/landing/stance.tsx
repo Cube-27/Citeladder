@@ -19,7 +19,7 @@ export function Stance() {
   ];
 
   return (
-    <Section rhythm="loose" divided aria-labelledby="stance-title">
+    <Section tone="paper" rhythm="loose" aria-labelledby="stance-title">
       <SectionHeader
         index={stance.index}
         kicker={stance.kicker}
@@ -33,7 +33,7 @@ export function Stance() {
             key={title}
             className="border-mkt-line rounded-mkt-lg bg-mkt-surface border p-8 md:p-9"
           >
-            <h3 className="font-mkt-display text-mkt-ink mb-6 text-[1.0625rem] font-semibold tracking-[-0.03em]">
+            <h3 className="font-mkt-display text-mkt-ink mb-6 text-heading-sm font-semibold">
               {title}
             </h3>
             <ul className="grid gap-3.5">

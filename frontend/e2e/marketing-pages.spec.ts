@@ -6,8 +6,21 @@ const MARKETING_PAGES = [
   '/demo',
   '/solutions',
   '/blog',
+  '/blog/how-we-measure-ai-visibility-deterministically',
   '/compare',
+  '/compare/profound',
   '/faq',
+];
+
+// Every visitor-reachable route: the ten marketing pages, one blog post and
+// one comparison detail, plus the two Proof-surface auth routes.
+const PUBLIC_ROUTES = [
+  '/',
+  ...MARKETING_PAGES,
+  '/blog/how-we-measure-ai-visibility-deterministically',
+  '/compare/profound',
+  '/login',
+  '/register',
 ];
 
 test.describe('marketing routes', () => {
@@ -19,11 +32,20 @@ test.describe('marketing routes', () => {
     }
   });
 
-  test('unknown content slugs return 404', async ({ page }) => {
+  test('published content slugs return 200 and unknown slugs return 404', async ({ page }) => {
+    for (const path of [
+      '/blog/how-we-measure-ai-visibility-deterministically',
+      '/compare/profound',
+      '/compare/otterly-ai',
+      '/compare/scrunch-ai',
+      '/compare/peec-ai',
+    ]) {
+      const response = await page.goto(path);
+      expect(response?.status()).toBe(200);
+    }
     for (const path of [
       '/blog/hello-searchify',
       '/blog/does-not-exist',
-      '/compare/profound',
       '/compare/does-not-exist',
     ]) {
       const response = await page.goto(path);
@@ -69,6 +91,23 @@ test.describe('marketing routes', () => {
       await expect(page.locator('h1:visible')).toHaveCount(1);
       // Proof is light-only: no toggle survives on the auth shell.
       await expect(page.getByRole('button', { name: 'Toggle color theme' })).toHaveCount(0);
+    }
+  });
+
+  test('the public surface makes no self-host, open-source or unaudited-engine claim', async ({
+    page,
+  }) => {
+    for (const path of PUBLIC_ROUTES) {
+      await page.goto(path);
+      await expect(page.locator('body')).not.toHaveText(
+        /self-host|self host|open source|Docker Compose|scheduled audits|TODO\(user\)|searchify\.example/i,
+      );
+      // Perplexity / Grok / Copilot are detected AI-referral sources, never
+      // audited engines — they may be named only in the one FAQ answer that
+      // explains the referral classification.
+      if (path !== '/faq') {
+        await expect(page.locator('body')).not.toHaveText(/Perplexity|Grok|Copilot/i);
+      }
     }
   });
 });

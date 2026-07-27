@@ -1,7 +1,7 @@
 import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 
-import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from '@/lib/marketing-content/compare';
 import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
@@ -14,23 +14,9 @@ import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
  * `/compare` — the comparison index. Competitor cards render from the content
  * module; the "how we compare fairly" band exists because these pages make
  * claims about other people's products, and the honest-framing rule (every
- * unverified cell says so rather than guessing) has to be visible to the
- * reader, not just enforced in the data.
+ * unverified cell stays blank and says so) has to be visible to the reader,
+ * not just enforced in the data.
  */
-const FAIRNESS_POINTS = [
-  'Deterministic scoring — versioned rules over persisted evidence',
-  'BYOK — audits run on your own provider keys',
-  'Evidence-first scoring — no LLM-as-judge',
-] as const;
-
-const FACT_ROWS = [
-  { key: 'Engines', value: 'ChatGPT · Gemini · Claude — one audit' },
-  { key: 'Scoring', value: 'Deterministic rules, versioned projections' },
-  { key: 'Evidence', value: 'Every metric drills to the raw run' },
-  { key: 'Keys', value: 'BYOK · Fernet-encrypted at rest' },
-  { key: 'Site health', value: 'Technical + AEO auditing built in' },
-  { key: 'Deployment', value: 'Cloud or self-host with Docker Compose' },
-] as const;
 
 export function CompareIndex() {
   return (
@@ -42,7 +28,7 @@ export function CompareIndex() {
         lead="Side-by-side notes on Searchify and other AI visibility tools — what each covers, how scoring works, and where the evidence lives. Maintained by the Searchify team, marked wherever we still need to verify."
       />
 
-      <Section rhythm="tight" aria-label="Competitors">
+      <Section tone="surface" rhythm="tight" aria-label="Competitors">
         <div className="border-mkt-line mb-6 flex items-center justify-between gap-4 border-b pb-4">
           <Meta as="p">Choose a tool</Meta>
           <Meta>{COMPETITORS.length} comparisons</Meta>
@@ -58,12 +44,12 @@ export function CompareIndex() {
               <StaggerItem key={competitor.slug} className="h-full">
                 <Link
                   href={`/compare/${competitor.slug}`}
-                  className="border-mkt-line bg-mkt-surface hover:border-mkt-line-strong hover:shadow-mkt-raised rounded-mkt-lg flex h-full flex-col border p-6 transition-[border-color,box-shadow] duration-300"
+                  className="border-mkt-line bg-mkt-paper hover:border-mkt-line-strong rounded-mkt-lg flex h-full flex-col border p-6 transition-[border-color] duration-300"
                 >
                   <span className="flex items-center gap-3">
                     <span
                       aria-hidden
-                      className="border-mkt-line bg-mkt-paper text-mkt-ink rounded-mkt-xs font-mkt-display text-mkt-body grid size-9 place-items-center border font-bold"
+                      className="border-mkt-line bg-mkt-surface text-mkt-ink rounded-sm font-mkt-display text-mkt-body grid size-9 place-items-center border font-bold"
                     >
                       {competitor.name.charAt(0)}
                     </span>
@@ -71,10 +57,12 @@ export function CompareIndex() {
                       {competitor.name}
                     </span>
                   </span>
-                  <span className="text-mkt-sm text-mkt-ink-muted mt-4 block">
-                    {competitor.tagline}
-                  </span>
-                  <span className="text-mkt-sm text-mkt-proof-text mt-auto flex items-center gap-2 pt-6 font-semibold">
+                  {competitor.tagline && (
+                    <span className="text-mkt-sm text-mkt-ink-muted mt-4 block">
+                      {competitor.tagline}
+                    </span>
+                  )}
+                  <span className="text-mkt-sm text-mkt-proof mt-auto flex items-center gap-2 pt-6 font-semibold">
                     Searchify vs {competitor.name}
                     <ArrowRight className="size-3.5" aria-hidden />
                   </span>
@@ -85,11 +73,11 @@ export function CompareIndex() {
         )}
       </Section>
 
-      <Section divided rhythm="loose" aria-labelledby="compare-fair-title">
+      <Section tone="sunken" rhythm="loose" aria-labelledby="compare-fair-title">
         <SectionHeader
           kicker="How we compare fairly"
           title="Compared honestly, in the open."
-          intro="Where a competitor fact isn’t verified first-party, the cell says so instead of guessing."
+          intro="Where a competitor fact is not verified first-party, the cell stays blank and says so."
           headingId="compare-fair-title"
         />
         <Reveal className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
@@ -132,9 +120,9 @@ export function CompareIndex() {
         </Reveal>
       </Section>
 
-      <Section divided rhythm="loose" aria-label="Get started">
+      <Section tone="paper" rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[16ch]">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
             Don’t compare pages. Compare evidence.
           </h2>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

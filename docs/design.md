@@ -46,7 +46,7 @@ the selector under which **both** files declare their values. A pre-hydration sc
 `stored choice → light`; the OS preference is intentionally not consulted — only an explicit
 stored `dark` choice (from any ThemeToggle) opts into dark.
 
-**Light surface ladder:** canvas `--bg-base #F7F8F9` (ADS `surface-sunken`) → panels
+**Light surface ladder:** canvas `--bg-base #F1F2F4` (`--ds-surface-canvas`, see §4) → panels
 `--bg-panel #FFFFFF` (`surface`) → `--bg-elevated #FFFFFF` (`surface-raised`) → overlays
 `#FFFFFF`. Sidebar = panel `#FFFFFF`.
 
@@ -74,16 +74,16 @@ value layer restyled the whole app without touching component code.
 
 | ADS primitive | Searchify token(s) | Notes |
 |---|---|---|
-| `elevation.surface.sunken` | `--bg-base` | the app canvas is **recessed** — `#F7F8F9` / `#101214` |
+| `accent.gray.subtlest` (as `--ds-surface-canvas`) | `--bg-base` | the app canvas is **recessed** — `#F1F2F4` / `#101214`; a measured departure from ADS `surface.sunken` (§4) |
 | `elevation.surface` | `--bg-panel`, `--bg-sidebar` | cards, tables, and the sidebar+topbar chrome frame |
 | `elevation.surface.raised` | `--bg-elevated` | dropdowns, drawers, tooltips; in light it equals `surface` (ADS separates them with the raised shadow, which flat 2.0 bans) |
 | `elevation.surface.overlay` | `--surface-overlay` | modal/palette surface |
 | `color.background.neutral` / `-hovered` / `-pressed` | `--bg-alt` / `--bg-well` / `--bg-active` | **alpha**, at 6% / 14% / 31%; the quiet-control interaction ladder |
 | `color.background.input` | `--bg-input` | field fill; replaced the old `bg-well` resting state so hover has somewhere to go |
 | `color.text` / `.subtle` / `.subtlest` / `.disabled` | `--text-primary` / `--text-secondary` / `--text-muted` / `--text-subtle` | `subtlest` is captions (4.6:1, gated); `disabled` is decorative only |
-| `color.text.inverse` | `--text-inverse` | on accent/bold fills |
+| `color.text.inverse` | `--text-inverse`, `--text-on-inverse` | on accent/bold fills; `--text-on-inverse` pairs with `--bg-inverse` (`background.neutral.bold`) for the tooltip — 7.65:1 both themes |
 | `color.link` | `--accent-text`, and `--text-link` as its alias | **no `--text-accent` token exists** |
-| `color.border` / `.bold` / `.focused` | `--border-subtle` + `--border` / `--border-strong` / `--border-focus` | **alpha hairlines** (`#091E4224` / `#A6C5E229`) so an edge composes over any tint. `--border-subtle` and `--border` resolve to the same value: at 14% on white there is no room for two tiers |
+| `color.border` / `.bold` / `.focused` (+ `--ds-border-subtle`) | `--border-subtle` + `--border` / `--border-strong` / `--border-focus` | **alpha hairlines** so an edge composes over any tint, in two real tiers: 6% (`#091E420F` / `#A1BDD914`) inside, 14% (`#091E4224` / `#A6C5E229`) at the edge |
 | `color.background.brand.bold` + `-hovered` / `-pressed` | `--accent` / `--accent-hover` / `--accent-active` | `#0C66E4`; `--accent-soft` kept, derived via `color-mix(in srgb, var(--accent-subtle) 45%, transparent)` |
 | `color.background.accent.<hue>.{subtlest,subtler,bolder}` + `color.text.accent.<hue>` | every status, sentiment, citation, run-status and score-band family | the whole point of the ramp: `subtlest` fill + matching `text` ink is the AA-safe pairing, so ~110 domain tokens are composed rather than hand-picked |
 | `color.background.danger.bold` + `-hovered` | `--danger-solid` / `--danger-solid-hover` | ADS states this pair for exactly this case and both already clear AA against white (5.2:1 / 6.7:1), so unlike the Figma port **no hand-deepening is needed** |
@@ -116,6 +116,21 @@ Two domain decisions worth recording, because they changed meaning rather than v
    spent two rungs on green (`good` `#10B981`, `high` `#22C55E`), which made 50–74% and
    75–100% nearly indistinguishable at badge size.
 
+And two deliberate departures from the literal ADS token set, both measured:
+
+1. **The app canvas is `--ds-surface-canvas` (`#F1F2F4`, ADS `accent.gray.subtlest`), not the
+   sunken surface.** ADS ships a single sunken (`#F7F8F9`), which sits only 2.54 ΔE76 from a
+   white card — below perceptual threshold, which is exactly why the first flat pass was
+   invisible. The canvas step takes card↔canvas separation to 4.66. Dark keeps `#101214`:
+   ADS dark `gray.subtlest` (`#22272B`) is *lighter* than `--ds-surface` there and would
+   invert the ladder. `--bg-input` shares the canvas, so a field reads as an inset well on a
+   white card (4.66) instead of disappearing into it (0.00).
+2. **Borders are two real tiers.** `--ds-border-subtle` (`#091e420f` light / `#a1bdd914`
+   dark — the 6% neutral alpha; ADS ships no `border.subtle`) for in-card separators and
+   table rules, `--ds-border` (14%) for card edges and fields: 4.66 vs 11.61 ΔE76 on white.
+   `globals.test.ts` asserts the subtle alpha stays strictly weaker. The inverse pair
+   `--bg-inverse` / `--text-on-inverse` (7.65:1 both themes) backs the tooltip.
+
 ### 4a. Flat 2.0 — the five rules
 
 Machine-enforced by `scripts/check-flat-elevation.mjs`, wired into `pnpm check:policy`.
@@ -125,9 +140,10 @@ Machine-enforced by `scripts/check-flat-elevation.mjs`, wired into `pnpm check:p
 2. **Shadow only on true overlays** — modal, dropdown, popover, tooltip, toast, command
    palette — through the single `shadow-modal-value` rung. The guard holds an explicit
    allowlist of the files permitted to apply it; adding one is a design decision.
-3. **Depth is a 3-step tint ladder, not light.** Sunken canvas → surface panel → raised hover.
-4. **Every surface boundary is a 1px alpha hairline.** Alpha, not opaque, so it composes over
-   any tint.
+3. **Depth is a 3-step tint ladder, not light.** Canvas (`#F1F2F4`) → surface panel → raised
+   hover — the canvas step alone separates a white card by 4.66 ΔE76.
+4. **Every surface boundary is a 1px alpha hairline, in two tiers.** Alpha, not opaque, so it
+   composes over any tint: `--border-subtle` (6%) inside, `--border` (14%) at the edge.
 5. **No gradients on UI chrome, no glass/blur, no inner catchlight rings.** Gradients are
    display art only (`components/marketing/`), never a control or container.
 
@@ -138,17 +154,19 @@ again.
 
 **What this replaced.** The previous revision argued that light-mode panel `#FFFFFF` and base
 `#F7F8FA` "differ by so little that the shadow is the only thing making surfaces read as
-layered". That was true of *those* values. It is not true now: the canvas is
-`surface-sunken` and the card is `surface`, so the tint step does the work the shadow was
-faking. The dark theme's `0 0 0 1px` warm catchlight ring is gone with it — ADS dark separates
-its four surface steps by fill alone, and the ring was compensating for a ladder that did not.
+layered". That was true of *those* values. It is measurably not true now: the canvas is
+`--ds-surface-canvas` (`#F1F2F4`) and the card is white, so the tint step (4.66 ΔE76) does
+the work the shadow was faking — Phase 1's `#F7F8F9` canvas managed only 2.54, weaker than
+the 2.67 shadow it deleted, which is why that pass shipped invisibly. The dark theme's
+`0 0 0 1px` warm catchlight ring is gone with it — ADS dark separates its four surface steps
+by fill alone, and the ring was compensating for a ladder that did not.
 
 Consequences already applied: `Card` lost its `elevation` prop outright rather than keeping a
 no-op API; the segmented control's active pill lost `shadow-xs` (white on a tinted track
-already separates them); the tooltip moved from `bg-well` to `bg-elevated` (a portaled surface
-cannot use an alpha fill); and `.logo-mark` lost its violet → orchid → ember gradient for a
-flat `--accent` fill — a three-stop gradient on the one mark present on every screen was the
-loudest possible exception to rule 5.
+already separates them); the tooltip rides the inverse pair (`bg-surface-inverse` /
+`text-on-inverse`, a bold surface that needs no hairline); and `.logo-mark` lost its
+violet → orchid → ember gradient for a flat `--accent` fill — a three-stop gradient on the
+one mark present on every screen was the loudest possible exception to rule 5.
 
 ## 5. Dark theme
 
@@ -199,60 +217,83 @@ in `globals.test.ts` rather than silently deleted:
 
 ## 7. Type scale — Figma verbatim
 
-Sans = **Inter** 400/500/600 (`--font-sans` → `--font-primary-family`); mono = **Geist Mono**
-(`--font-mono` → `--font-mono-family`) with **tabular numerals**
+Sans = **Inter** 400/500/600/700 (`--font-sans` → `--font-primary-family`); mono =
+**Geist Mono** (`--font-mono` → `--font-mono-family`) with **tabular numerals**
 (`font-variant-numeric: tabular-nums`) — mono is reserved for **metric values, percentages,
 counts, positions, timestamps, code and keyboard hints** so columns align; it is never used
 for labels. There is **no separate display face**: `--font-display-family` resolves to Inter,
-so headings differ from body by size and tracking only.
+so headings differ from body by size and weight only.
 
-| Token | Size | Line-height | Weight | Use |
+The ladder is the ADS `font.*` composite scale. **13px and 15px do not exist.** Every step
+carries its own line-height, and the heading steps bake their weight into the token, so call
+sites carry size only (an explicit `font-*`/`leading-*` utility still wins — Tailwind emits
+it after the baked default). `--text-heading-xs` and `--text-heading-sm` exist as separate
+names because ADS's 14px and 16px headings collide on *size* with `--text-sm`/`--text-base`
+but not on line-height or weight, and Tailwind cannot express two line-heights for one size
+token.
+
+| Token | Size / line-height | Weight | ADS source | Use |
 |---|---|---|---|---|
-| `--text-2xs` | 11px (0.6875rem) | 1.25 | 500 | micro uppercase labels, table headers |
-| `--text-xs` | 12px (0.75rem) | 1.35 | 400 | captions, timestamps |
-| `--text-sm` | 13px (0.8125rem) | 1.45 | 400 | secondary body, table cells |
-| `--text-base` | 14px (0.875rem) | 1.5 | 400/500 | primary body |
-| `--text-lg` | 15px (0.9375rem) | 1.35 | 600 | card titles |
-| `--text-xl` | 17px (1.0625rem) | 1.3 | 600 | section titles |
-| `--text-2xl` | 26px (1.625rem) | 1.2 | 600 | page titles |
-| `--text-hero` | 48px (3rem) | 1.1 | 600 | NEW — hero metric numeral |
-| `--text-data-lg` | 22px (1.375rem) | 1.25 | 600 | NEW — large mono data |
+| `--text-2xs` | 11px / 16px | 400 | `font.body.small` | micro captions |
+| `--text-xs` | 12px / 16px | 400 | `font.body.UNSAFE_small` | captions, timestamps, the eyebrow recipe |
+| `--text-sm` | 14px / 20px | 400 | `font.body` | **the body default** — table cells, secondary lines |
+| `--text-base` | 16px / 24px | 400 | `font.body.large` | lead paragraphs only |
+| `--text-heading-xs` | 14px / 16px | 600 | `font.heading.xsmall` | card titles, panel h3 |
+| `--text-heading-sm` | 16px / 20px | 600 | `font.heading.small` | section h2, dialog titles, wordmark |
+| `--text-lg` | 20px / 24px | 500 | `font.heading.medium` | page `<h1>` |
+| `--text-xl` | 24px / 28px | 500 | `font.heading.large` | onboarding / empty-page titles |
+| `--text-2xl` | 29px / 32px | 600 | `font.heading.xlarge` | rare, hero numerals |
+| `--text-hero` | 35px / 40px | 500 | `font.heading.xxlarge` | app display ceiling — name kept, was 48px |
+| `--text-display-1` | clamp, 35 → 64px / 1.04 | 500 | above the ADS ceiling | marketing hero (aliased as `--text-mkt-d1`) |
+| `--text-display-2` | clamp, 29 → 48px / 1.08 | 500 | above the ADS ceiling | marketing section head (aliased as `--text-mkt-d2`) |
 
-- The Figma mono scale (48 hero numeric / 22 large data / 13 data cell / 11 micro mono) rides
-  on the same size tokens; `--text-data-lg` is the 22px large-data step.
+- The eyebrow recipe is ADS `font.heading.xxsmall` — 12/16 @600, **no uppercase, no
+  tracking** — composed at the call site as `text-xs font-semibold` (`eyebrowClasses`); there
+  is no dedicated eyebrow token.
 - Weights: `--weight-normal: 400`, `--weight-medium: 500`, `--weight-semibold: 600`,
-  `--weight-bold: 600` — the Figma scale tops out at semibold, so `bold` resolves to 600
-  app-wide.
-- Tracking tokens: `--tracking-tight: -0.02em`, `--tracking-normal: 0em`,
-  `--tracking-wide: 0.025em`, `--tracking-wider: 0.06em`.
-
-> **The app scale is deliberately not the marketing scale.** The marketing surface runs a
-> 30–64px display ladder with off-axis 460/540 weights; this one runs 11–26px at 400/500/600
-> and is tuned for data density. They are different products — a dashboard and a landing page
-> — and importing the marketing steps into `(app)` routes would be a straight downgrade. The
-> same holds for the two-radius binary the marketing reference favours: the app's
-> 2/4/8/12/16 ladder is doing real work across tables, chips, cards and modals.
-- Line-height tokens: `--leading-none: 1`, `--leading-tight: 1.2`, `--leading-snug: 1.35`,
+  `--weight-bold: 700` — headings run at 500/600 and `bold` is a true 700 (the Inter 700 cut
+  is loaded).
+- **There is no letter-spacing anywhere.** ADS defines no tracking rungs, so the
+  `--tracking-*` namespace is removed from the bridge (`--tracking-*: initial`), every
+  `tracking-*` utility class is deleted (zero-ceiling guard in `check-ads-scale.mjs`), and no
+  `--text-*--letter-spacing` modifier exists — including the display steps.
+- Retired: `--text-data-lg` (the 22px step — it had zero call sites) and the old 48px hero
+  value. Machine-enforced: `check-ads-scale.mjs` fails on `text-data-lg` and on any
+  arbitrary `text-[…]` size.
+- Line-height tokens (explicit overrides only — line-height normally arrives with the size
+  token): `--leading-none: 1`, `--leading-tight: 1.2`, `--leading-snug: 1.35`,
   `--leading-normal: 1.5`.
 
-## 8. Spacing (4px grid), radii, controls
+## 8. Spacing (ADS `space.*` ladder), radii, controls
 
-**Spacing steps** (`--space-N` = 4px × N):
-`--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`, `--space-5: 20px`,
-`--space-6: 24px`, `--space-7: 28px`, `--space-8: 32px`, `--space-10: 40px`,
-`--space-12: 48px`, `--space-14: 56px`, `--space-16: 64px`, `--space-20: 80px`.
-`--card-padding: 14px`; `--content-gutter: 20px`.
+**Spacing steps** — the ADS ladder, each rung a `var(--ds-space-*)` reference: `--space-0: 0`,
+`--space-025: 2px`, `--space-050: 4px`, `--space-075: 6px`, `--space-100: 8px`,
+`--space-150: 12px`, `--space-200: 16px`, `--space-250: 20px`, `--space-300: 24px`,
+`--space-400: 32px`, `--space-500: 40px`, `--space-600: 48px`, `--space-800: 64px`,
+`--space-1000: 80px`. **28px and 56px do not exist**; 2px and 6px are new. Component
+spacing otherwise uses Tailwind's built-in 4px scale — its off-ladder steps (10/14/28/36/44/
+56px) are counted and capped by `check-ads-scale.mjs` so the count can only go down.
 
-**Radii (the ADS `radius.*` scale):** `--radius-xs: 2px` (`radius.xsmall` — tags, the smallest
-chips), `--radius-sm: 4px` (`radius.small` — badges, skeletons, the logo mark),
-`--radius-md: 8px` (`radius.medium` — **buttons**, inputs), `--radius-lg: 12px`
-(`radius.large` — cards, panels), `--radius-xl: 16px` (modals, large cards),
-`--radius-2xl: 16px` (aliases xl), `--radius-full: 9999px` (**pill** — chips, toggles,
-segmented control, avatar). The xs/sm rungs tightened from 4/6 with the ADS port.
+**Density + shell geometry:** `--card-padding: var(--space-200)` (16px),
+`--card-gap: var(--space-200)` (card grids), `--content-gutter: var(--space-300)` (24px page
+gutter), `--sidebar-width: 240px`, `--topbar-height: 48px`, `--nav-item-height: 32px`,
+`--content-max-width: 1440px`. The shell consumes these as `var()` escapes
+(`w-[var(--sidebar-width)]`, `h-[var(--topbar-height)]`, `gap-[var(--card-gap)]`,
+`max-w-[var(--content-max-width)]`, `h-[var(--nav-item-height)]`) — no px literals.
 
-**Controls:** `--control-height-sm: 30px`, `--control-height: 32px`,
-`--control-height-lg: 38px`, `--interactive-border-width: 1px`. Table:
-`--table-row-height: 42px`, `--table-header-height: 30px`,
+**Radii (the ADS `radius.*` scale, every rung resolving through `--ds-radius-*`):**
+`--radius-xs: 2px` (`radius.xsmall` — tags, the smallest chips), `--radius-sm: 4px`
+(`radius.small` — badges, skeletons, the logo mark), `--radius-md: 8px` (`radius.medium` —
+**buttons**, inputs), `--radius-lg: 12px` (`radius.large` — cards, panels), `--radius-xl:
+16px` (`radius.xlarge` — modals, large cards), `--radius-2xl: 16px` (aliases xl),
+`--radius-full: 9999px` (**pill** — chips, toggles, segmented control, avatar). Arbitrary
+`rounded-[Npx]` values and bare `rounded` are normalised onto this ladder.
+
+**Controls:** `--control-height-sm: 24px` (ADS compact), `--control-height: 32px` (ADS
+default), `--control-height-lg: 38px` (kept, not the ADS 40 — the launch dialog's large
+controls are tuned to it), `--interactive-border-width: 1px`. Table:
+`--table-row-height: 40px`, `--table-header-height: 32px`,
+`--table-cell-padding-x: var(--space-150)`, `--table-cell-padding-y: var(--space-075)`,
 `--table-font-size: var(--text-sm)`, `--table-header-font-size: var(--text-xs)`.
 
 ## 9. Tailwind v4 bridge (`@theme inline`)
@@ -286,8 +327,8 @@ bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
   --color-chart-1: var(--chart-1); /* + chart-2..8 + series-1..5/series-other aliases */
   --shadow-card: var(--shadow-card-value); /* + xs/sm/elevated — all `none` (flat 2.0, §4a) */
   --shadow-modal-value: var(--shadow-modal); /* the only live rung — overlays only */
-  /* type sizes (incl. --text-hero/--text-data-lg), radii, tracking,
-     line-heights bridged here too (§7–§8) */
+  /* type sizes (incl. --text-hero/--text-display-1/-2), radii,
+     line-heights bridged here too (§7–§8) — no tracking namespace */
 }
 ```
 
@@ -306,11 +347,11 @@ All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Fi
 
 | Primitive | Notes |
 |---|---|
-| `button` | **rounded-md (8px) — pill variants retired.** Primary = accent fill + `--accent-fg` (white) text + accent-tinted shadow, 13.5px/500; hover/active walk `--accent-hover`/`--accent-active`. Secondary = panel bg + `--border` hairline; ghost = transparent + accent-subtle hover; destructive = danger tokens. Sizes sm/md/lg/icon; `asChild`; icon slot. |
+| `button` | **rounded-md (8px) — pill variants retired.** Primary = accent fill + `--accent-fg` (white) text + accent-tinted shadow, 14px/500; hover/active walk `--accent-hover`/`--accent-active`. Secondary = panel bg + `--border` hairline; ghost = transparent + accent-subtle hover; destructive = danger tokens. Sizes sm/md/lg/icon; `asChild`; icon slot. |
 | `badge` | pill (`--radius-full`) 11.5px/500 with token bg/border/text. Variants map to tokens: `status` (success/warning/danger/info), `sentiment`, `classification` (**owned = Figma blue**, competitor, third-party), `run-status` (all 8), `score-band` (low/mid/good/high). |
 | `card` | `bg-panel` + `--shadow-2` + `--radius-lg`; elevated = `bg-elevated` + `--shadow-3`; header/title/description/content slots + optional mono eyebrow panel label. |
-| `table` (dense) | 30px sticky header (`--text-2xs` uppercase micro label, muted), 42px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation). |
-| `score-ring` | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-lg`, `lg` = `--text-hero` hero numeral); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.** |
+| `table` (dense) | 32px sticky header (the `--text-xs` @600 eyebrow recipe, muted), 40px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation). |
+| `score-ring` | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-heading-sm`, `lg` = `--text-xl`, `hero` = `--text-hero`); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.** |
 | `sparkline` | trend-colored 1.5px polyline + end dot (Sparkline.tsx). |
 | `donut` | segmented ring for per-engine / citation share; hover-thicken + mono center value; legend; ARIA. |
 | `tabs` / `segmented` | underline tabs (2px accent indicator, per VisibilityDashboard.tsx) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent). |
@@ -327,19 +368,19 @@ All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Fi
 
 ## 11. Per-screen prose
 
-The app shell is a fixed **220px left sidebar** + **52px topbar** + scrolling content region
+The app shell is a fixed **240px left sidebar** + **48px topbar** + scrolling content region
 (4px grid, `--content-gutter` padding). Auth and onboarding screens are exceptions (no
 shell).
 
 ### 11.1 App shell (`(app)/layout.tsx`) — Figma shell geometry (AppShell.tsx), grouped nav kept
 
-**Sidebar (220px, `bg-sidebar`)**: logo row (LogoCube + wordmark), project switcher
+**Sidebar (240px, `bg-sidebar`)**: logo row (LogoCube + wordmark), project switcher
 (brand avatar + name, dropdown), the **command row**, then the grouped nav — the existing
 **Analyze / Improve** groups stay (the Figma flat nav is not adopted) with mono-uppercase
 eyebrow group labels.
-Nav rows are 36px, 13.5px, `--text-secondary`; the **active item** is `--accent-subtle` bg +
+Nav rows are 32px, 14px, `--text-secondary`; the **active item** is `--accent-subtle` bg +
 `--accent-text` + a **3px left accent bar** with the icon at full opacity; hover = bg-alt.
-Bottom = user card (avatar + name/email). **Topbar (52px, `bg-panel`)**: left = the current
+Bottom = user card (avatar + name/email). **Topbar (48px, `bg-panel`)**: left = the current
 page's title (15px/600, the single h1) + header slot (filters/actions); right = export hook,
 theme toggle, user affordances. Content scrolls independently. A first-run gate redirects
 zero-project users to `/onboarding` (and waits for the projects query to settle before
@@ -462,13 +503,19 @@ v4 `@theme` block in the `mkt-` namespace, imported by `globals.css` (Tailwind b
 utilities from a single `@import 'tailwindcss'` graph — a second import would duplicate
 preflight and the whole utility layer). Sections are built from **utilities plus the
 primitives in `components/marketing/primitives/`**; the theme file additionally holds only
-the scene rules a utility cannot express (the wallpaper, SVG stroke geometry, and the
-`revert-layer` reset that lets utilities beat `globals.css`'s unlayered element base). Every
+the scene rules a utility cannot express (the wallpaper and SVG stroke geometry). Every
 keyframe and scroll timeline lives in the sibling `marketing-motion.css`. Hex lives ONLY in
 those two files; marketing components stay hex-free.
 
+After the ADS fold-in the theme file keeps only four genuinely brand-differentiating buckets:
+the **warm paper/ink neutrals**, the **three vendor engine colours**, the **two fluid display
+steps** above the ADS 35px ceiling (riding the shared `--text-display-1/-2` rungs), and the
+**marketing layout widths**. Everything else — ink, hairlines, state hues, radii, type — is a
+verbatim ADS value held as literal hex or as a theme-independent alias, never a `--ds-*`
+semantic name that would flip under `html[data-theme='dark']`: Proof is light-only.
+
 **A 400-line budget on `marketing-theme.css` is machine-enforced**
-(`scripts/check-frontend-architecture.mjs`), with a companion 260-line budget on
+(`scripts/check-frontend-architecture.mjs`), with a companion 300-line budget on
 `marketing-motion.css`. The previous marketing stylesheet reached **6,846 lines** of global
 `.mkt` cascade because nothing stopped it growing. If a new section needs CSS in the theme
 file, it needs a **primitive** instead — that is the rule the budget exists to force. When a
@@ -482,13 +529,21 @@ identity and evidence marks — never to headlines.
 | page canvas | `#F5F5F0` | `--color-mkt-paper` |
 | raised / inset fields | `#FBFBF8` | `--color-mkt-paper-raised` |
 | panels | `#FFFFFF` | `--color-mkt-surface` |
-| primary ink | `#151715` (16.5:1) | `--color-mkt-ink` |
-| body copy | `#454A46` (8.3:1) | `--color-mkt-ink-soft` |
-| meta / captions | `#656B65` (5.0:1) | `--color-mkt-ink-muted` |
-| hairline | `#D8D9D2` | `--color-mkt-line` |
+| band tint (sunken) | `#E9E9E0` | `--color-mkt-surface-sunk` |
+| band tint (wash) | `#EAF1FA` | `--color-mkt-wash` |
+| primary ink | `#172B4D` (12.9:1) | `--color-mkt-ink` |
+| body copy | `#44546F` (7.0:1) | `--color-mkt-ink-soft` |
+| meta / captions (paper/surface only) | `#626F86` (4.6:1) | `--color-mkt-ink-muted` |
+| hairline | `#091E4224` | `--color-mkt-line` |
 | wallpaper base | `#CBDAF1` | `--color-mkt-sky` |
-| scene ink on glass | `#425269` | `--color-mkt-slate` |
-| display accent | `#275F9F` | `--color-mkt-accent-display` |
+
+The paper is the brand; the ink ramp and the hairline are the **same ADS values the app
+ships** (`#172B4D` / `#44546F` / `#626F86`, `#091E4224`), so marketing and app read as one
+product. `#626F86` at 4.64:1 is the tightest pair in the system — it passes AA, but the
+margin is 0.14, so any future darkening of the paper must re-derive this token first. That
+tightness also caps where the token may sit: on the darker band fills it falls below AA
+(4.16:1 on sunken, 4.46:1 on wash), so **ink-muted is legal on paper and surface only** —
+meta text on a sunken or wash band steps up to `--color-mkt-ink-soft` (6.27 / 6.73:1).
 
 **Mark vs text — the rule that governs every state hue.** A hue that works as a *fill* is not
 automatically legible as *text*. Each state therefore ships in two forms: the **mark**
@@ -497,58 +552,82 @@ deck's own values all failed as text, which is why the split exists.
 
 | State | Mark (≥ 3:1) | Text (≥ 4.5:1) |
 |---|---|---|
-| proof / active + linked | `#1668E8` | `#1257C4` (6.0:1) |
-| evidence / verified | `#0A8F6A` | `#087354` (5.4:1) |
-| signal / decline + refusal | `#E95D39` | `#B23A1A` (5.5:1) |
-| review / needs attention | `#BE7D12` | `#8A5D0F` (5.3:1) |
+| proof / active + linked | `#0C66E4` | `#0C66E4` (4.76:1) |
+| evidence / verified | `#1F845A` | `#216E4E` (5.64:1) |
+| signal / decline + refusal | `#CA3521` | `#AE2A19` (6.11:1) |
+| review / needs attention | `#B65C02` | `#974F0C` (5.58:1) |
+
+Blue is the one hue that needs no split: `#0C66E4` clears AA on paper as both mark and text,
+so proof ships a single token plus a `#0055CC` (6.05:1) hover step. The other three hues keep
+their `-text` siblings, and all four mark values are the ADS `*-bolder` steps — "needs
+review" is ADS **orange**, not yellow, which reads sickly on warm paper.
 
 Ratios are computed against `#F5F5F0` — the lightest surface the system paints text on, so
 passing there passes on white too. Machine-enforced in `frontend/app/globals.test.ts`
 ("the Proof contract"), which also asserts the system is light-only and that every state hue
-has a `-text` sibling. Amber's mark is darkened from the deck's `#C98616` (2.78:1), which sat
-below the 3:1 floor even for a dot.
+except proof has a `-text` sibling.
 
-**Type.** Two faces, one voice: **Manrope** for display (loaded as `--font-manrope` in the
-root layout, consumed only via `--font-mkt-display`), **Inter** for UI and data. There is no
-mono face — the deck's `--mono: Inter` was a smell. "Meta" is a **style**, not a family:
-uppercase, `0.09em` tracking, tabular numerals. Eight fixed steps
-(`text-mkt-d1 … text-mkt-meta`); tracking tightens as size grows.
+**Type.** One face, one ladder: **Inter** everywhere — `--font-mkt-display` aliases the app
+sans, and every `--text-mkt-*` step aliases the shared ADS ladder in `ds-type.css` (§7), so
+13px and 15px do not exist here either and there is no letter-spacing at any step. Figures
+and "meta" labels render in **Geist Mono** (`font-mono tabular-nums`) — the deck faked
+tabular figures with a font-feature hack (`.mkt-num`), and the fix is the real mono face the
+app already loads, the same way every number in the app is mono. Eight names
+(`text-mkt-d1 … text-mkt-meta`) — d1/d2 ride the two fluid display steps, d3 = `--text-2xl`,
+d4 = `--text-xl`, lead/body = `--text-base` (marketing body stays one step above the app's
+14px), sm = `--text-sm`, meta = `--text-xs`.
 
-**Display ladder.** `d1`/`d2`/`d3` resolve to **36 → 64px**, **30 → 48px** and **24 → 28px**,
-landing on a 36/48/64 ladder at the standard breakpoints. The earlier scale capped at 72px and
-floored at **44px**, which wrapped an 18ch headline into four or five stubby lines on a phone,
-and tracked roughly **2× tighter** than the size warranted (`-0.055em` ≈ −3.96px at 72px) — so
-headlines read as oversized and cramped at once. `--text-mkt-d1--line-height: 0.96` is
-unchanged: that compression is the signature.
+**Display ladder.** `d1`/`d2` resolve to **35 → 64px** and **29 → 48px** fluid
+(`--text-display-1`/`-2`, line-heights 1.04/1.08, weight 500 baked). The earlier scale capped
+at 72px and floored at **44px**, which wrapped an 18ch headline into four or five stubby
+lines on a phone — so headlines read as oversized and cramped at once.
 
-**Off-axis weights.** Manrope is loaded as the **variable** face (no `weight` array), which
-unlocks the stops the display scale uses: **540** for display (`.mkt-display-w`) and **460**
-for marketing body (`.mkt-body-w`). These sit deliberately between Regular and Medium —
-heavier than expected without ever reading as bold. They are *not* folded into
-`.font-mkt-display`: that name is Tailwind's generated font-**family** utility, and
-redefining it would both collide with the generated rule and lose to the `font-medium` that
-call sites carry. Against a static fallback the browser rounds to the nearest cut, so the
-page degrades to the previous look rather than breaking. **The variable payload is
-unverified** — see the note in `app/layout.tsx`; if it proves materially heavier than the
-four static cuts it replaced, revert both the font and the 460/540 stops together.
+**Weights.** Inter's static cuts only — display runs at `font-medium` (500), body at 400,
+meta at 600. The off-axis 460/540 stops are gone with Manrope: they required the variable
+face, and the ADS ladder has no rungs between Regular and Medium.
 
-**Shape and rhythm.** Six radii (`6 / 10 / 14 / 20 / 28 / pill`) — the deck used fifteen.
-Three elevation levels plus one atmospheric scene drop. One container (1240px) and one gutter
-(`clamp(20px, 4vw, 56px)`). Vertical rhythm belongs to the `<Section>` primitive — sections
+**Shape and rhythm.** Marketing shares the ADS shape scale (`2 / 4 / 8 / 12 / 16 / full`)
+with the app — the deck's fifteen-radius sprawl and the six-name marketing alias set are
+gone; only two named aliases remain, `radius-mkt-sm` (8px) and `radius-mkt-lg` (16px), and
+everything else uses the shared `rounded-*` utilities. Marketing is **flat**: separation
+comes from a tint step plus a 1px `border-mkt-line` hairline, never from elevation — the
+only shadow left in the section is `shadow-modal-value` on the nav's two overlays (lens and
+dropdown), the same modal token the app uses. One container (1240px) and one gutter
+(`clamp(20px, 4vw, 40px)`). Vertical rhythm belongs to the `<Section>` primitive — sections
 never set their own padding, which is what keeps every page breathing identically.
 
-**Scenes.** One recurring wallpaper (`public/brand/wallpaper.svg` — sky/coral/mint) sits
-behind every product moment, with white glass windows inset on it so the atmosphere shows on
-all four sides. Glass alpha is pinned at 0.92+ so the slate ink inside keeps its measured
-contrast. Illustrative figures live inside `aria-hidden` scenes and always carry a visible
+**Scenes.** One recurring wallpaper (`public/brand/wallpaper.svg` — sky/coral/mint) stays
+behind every product moment as display art, but the windows inset on it are now **opaque
+white panels with hairline borders** — no glass, no backdrop blur, no alpha to police (flat
+rule 5). The slate scene-ink ramp is gone with the glass: scene copy uses the shared ink
+ramp, so contrast inside a scene is the same measured contrast as everywhere else.
+Illustrative figures live inside `aria-hidden` scenes and always carry a visible
 "Example data" mark; page copy contains no invented numbers.
+
+**Band rhythm.** Sections alternate background **tone** so pages read as a rhythm of bands
+rather than one long sheet. `<Section>` takes a `tone` prop with four fills — `paper`
+(`#F5F5F0`, the canvas), `surface` (`#FFFFFF`), `sunken` (`#E9E9E0`), and `wash`
+(`#EAF1FA`, the cool accent beat). The steps are deliberately small — ΔE2000 against paper
+is 3.32 for surface, 3.21 for sunken, 7.12 for wash — enough to register as a band change,
+never enough to read as a new page. The rule is **no two adjacent bands share a tone**;
+wherever the tone changes, the `divided` hairline is dropped because the tint step already
+draws the boundary. Panels sitting on a band keep their `border-mkt-line` hairline
+regardless of the fill beneath them, and a card never matches its band: cards on `paper`
+are `bg-mkt-surface` (ΔE 3.32), cards on `surface` are `bg-mkt-paper` (3.32), cards on
+`sunken` or `wash` are `bg-mkt-surface` (6.46 / 5.56) — tint step plus hairline, never
+the hairline alone. Scenes inside `WallpaperPanel` frames are display art and exempt.
+Text follows the same per-fill discipline: `--color-mkt-ink-muted` is paper/surface-only
+(4.16 on sunken, 4.46 on wash — both below AA), so band meta text uses
+`--color-mkt-ink-soft`; proof keeps its text role on paper (4.76) and wash (4.57) but is
+mark/link-only on sunken (4.26). The Proof contract in `globals.test.ts` gates every
+text colour against each band fill, not just paper.
 
 **Motion** is 5/10: one easing pair, 140–220ms interaction feedback plus longer explanatory
 beats, transform and opacity only, scroll reveals that settle rather than bounce, and everything gated on
 `prefers-reduced-motion` — where scenes hold their finished state rather than freezing
 mid-animation.
 
-Motion lives in its own owner, **`marketing-motion.css`** (budget 260 lines), split out of the
+Motion lives in its own owner, **`marketing-motion.css`** (budget 300 lines), split out of the
 theme file when the scroll-reveal work pushed it past 400. Same principle as the theme budget:
 keyframes and scroll timelines are a separate concern from tokens, so they get an owner rather
 than a raised ceiling. The `--animate-mkt-*` bindings stay in the `@theme` block; their
@@ -617,11 +696,12 @@ are quoted and italic so they read as things buyers ask rather than as claims we
    (stored choice → light; the OS preference is not consulted).
 7. Mono font gets `font-variant-numeric: tabular-nums`; all metrics use mono.
 8. Ship `prefers-reduced-motion`, `forced-colors`, `print`, and theme-swap suppression rules.
-9. Load **Inter** (weights 400/500/600) + **Geist Mono** via next/font in `app/layout.tsx`
-   (`--font-sans`, `--font-mono`). `--font-display-family` resolves to Inter → bridged
-   `font-display` utility; **the app has no separate display face** — Manrope is loaded in
-   the same file as `--font-manrope` but is consumed ONLY by the public Proof surface. Never
-   name a next/font variable `--font-display`: that name is the bridged `@theme` token.
+9. Load **Inter** (weights 400/500/600/700 — the 700 cut backs `--weight-bold`) + **Geist
+   Mono** via next/font in `app/layout.tsx` (`--font-sans`, `--font-mono`).
+   `--font-display-family` resolves to Inter → bridged `font-display` utility; **there is no
+   separate display face anywhere** — the marketing `--font-mkt-display` aliases the same
+   sans. Never name a next/font variable `--font-display`: that name is the bridged `@theme`
+   token.
 10. **Marketing is still a separate system, for now.** Folding `--mkt-*` onto the ADS layer is
     Phase 2 of the ADS adoption; until then marketing and the logged-out auth screens stay
     light-only, and `check-flat-elevation.mjs` carries a documented, self-expiring exemption

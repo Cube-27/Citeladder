@@ -4,14 +4,16 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Heading recipes: `displayHeadingLgClasses` for panel / empty-state headings,
- * `displayHeadingXlClasses` for page titles. There is no separate display
- * face — `font-display` resolves to the one sans, so headings differ from body
- * by size and tracking only. These are class recipes, not components — the
- * call site keeps whichever heading element is semantic.
+ * Heading recipes: `displayHeadingLgClasses` for panel / empty-state headings
+ * (the ADS `font.heading.medium` rung — 20/24 @500), `displayHeadingXlClasses`
+ * for page titles (ADS `font.heading.large` — 24/28 @500). There is no
+ * separate display face, so headings differ from body by size and weight only,
+ * and both rungs bake their weight into the `--text-*` token. These are class
+ * recipes, not components — the call site keeps whichever heading element is
+ * semantic.
  */
-export const displayHeadingLgClasses = 'text-foreground text-lg font-semibold tracking-[-0.01em]';
-export const displayHeadingXlClasses = 'text-foreground text-xl font-semibold tracking-[-0.02em]';
+export const displayHeadingLgClasses = 'text-foreground text-lg';
+export const displayHeadingXlClasses = 'text-foreground text-xl';
 
 /** Section heading (card / block level). */
 export function SectionTitle({
@@ -20,7 +22,7 @@ export function SectionTitle({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h2'>>) {
   return (
-    <h2 {...props} className={cn('text-foreground text-lg font-semibold', className)}>
+    <h2 {...props} className={cn('text-foreground text-heading-sm', className)}>
       {children}
     </h2>
   );

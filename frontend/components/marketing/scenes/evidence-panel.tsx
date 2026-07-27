@@ -4,7 +4,7 @@ import type { SolutionScene } from '@/lib/marketing-content/solutions';
 
 import { Badge } from '../primitives/badge';
 import { Meta } from '../primitives/label';
-import { ExampleDataNote, GlassPanel, WallpaperPanel } from './wallpaper-panel';
+import { ExampleDataNote, Panel, WallpaperPanel } from './wallpaper-panel';
 
 /**
  * Four small product panels, one per audience segment. They show the SHAPE of
@@ -31,7 +31,7 @@ function Bar({ width, own = false }: Readonly<{ width: number; own?: boolean }>)
 }
 
 function Placeholder({ width }: Readonly<{ width: string }>) {
-  return <span style={{ width }} className="bg-mkt-line block h-2 rounded-full" />;
+  return <span style={{ width }} className="bg-mkt-surface-sunk block h-2 rounded-full" />;
 }
 
 const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = {
@@ -51,7 +51,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
           {['Mentions (CSV)', 'Evidence (Markdown)'].map((label) => (
             <span
               key={label}
-              className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-soft rounded-mkt-xs text-mkt-sm inline-flex items-center gap-2 border px-2.5 py-1.5"
+              className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-soft rounded-sm text-mkt-sm inline-flex items-center gap-2 border px-2.5 py-1.5"
             >
               <Download aria-hidden strokeWidth={2} className="size-3.5" />
               {label}
@@ -68,9 +68,9 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
         <div className="grid gap-4">
           {GAUGES.map(({ name, value }) => (
             <div key={name} className="flex items-center gap-3">
-              <span className="text-mkt-sm text-mkt-slate w-20 shrink-0">{name}</span>
+              <span className="text-mkt-sm text-mkt-ink-soft w-20 shrink-0">{name}</span>
               <Bar width={value} own={name === 'Technical'} />
-              <span className="text-mkt-sm text-mkt-ink mkt-num w-6 text-right font-medium">
+              <span className="text-mkt-sm text-mkt-ink font-mono tabular-nums w-6 text-right font-medium">
                 {value}
               </span>
             </div>
@@ -92,7 +92,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
             key={row}
             className="border-mkt-line flex items-center justify-between gap-4 border-b pb-3 last:border-b-0 last:pb-0"
           >
-            <span className="text-mkt-sm text-mkt-slate">{row}</span>
+            <span className="text-mkt-sm text-mkt-ink-soft">{row}</span>
             <Placeholder width={`${[64, 48, 56][index]}px`} />
           </div>
         ))}
@@ -123,14 +123,14 @@ export function SolutionEvidencePanel({ scene }: Readonly<{ scene: SolutionScene
   return (
     <WallpaperPanel className="p-4 sm:p-6">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <Meta as="p" className="text-mkt-slate-soft">
+        <Meta as="p" className="text-mkt-ink-muted">
           {label}
         </Meta>
         <ExampleDataNote />
       </div>
-      <GlassPanel className="p-5">
+      <Panel className="p-5">
         <div aria-hidden>{body}</div>
-      </GlassPanel>
+      </Panel>
     </WallpaperPanel>
   );
 }

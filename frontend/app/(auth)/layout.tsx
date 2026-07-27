@@ -15,9 +15,8 @@ import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
  * instead of each column floating its own way. Below 900px the brand panel
  * drops and the form keeps the same bands.
  *
- * `.mkt-root` scopes the Proof system (light-only canvas, focus ring, the
- * reset that lets utilities beat the app's unlayered element base). There is
- * no ThemeToggle here: Proof is a light-only identity, and a toggle that
+ * `.mkt-root` scopes the Proof system (light-only canvas, focus ring). There
+ * is no ThemeToggle here: Proof is a light-only identity, and a toggle that
  * changed nothing would be a broken control.
  *
  * The single-h1 rule: the pages own the only h1 — the wordmarks are spans,

@@ -4,26 +4,24 @@ import { cn } from '@/lib/utils';
 
 /**
  * Control-height input (§8, --control-height = 32px); focus = --focus-ring via
- * `.focus-ring` plus a focused border. Native <select> controls consume
- * `inputClasses` too, so the same treatment flows to every select.
+ * `.focus-ring` plus the ADS focused border (`focus:border-accent`). Native
+ * <select> controls consume `inputClasses` too, so the same treatment flows
+ * to every select.
  *
- * v2 sets the field text at `text-base` (14px). The flat phase used 13px,
- * which read as secondary next to the labels above it — what the user types
- * should be primary body text.
+ * The field text is `text-sm` (14/20) — the ADS body default, so what the
+ * user types reads as primary body text next to the labels above it.
  *
- * Flat 2.0 moves the fill from `bg-well` to `bg-input` (ADS
- * --ds-background-input: white in light, a raised charcoal in dark). The well
- * was an alpha neutral, which is now a HOVER depth — using it as the resting fill
- * left no room to indicate hover, and made a field on a tinted card read as a
- * different shade from the same field on a white one. Hover deepens the
+ * The fill is the canvas (`--bg-input` → `--ds-surface-canvas`), so the
+ * field reads as an inset well on a white card (ΔE76 4.66) instead of
+ * vanishing into it (0.00, the Phase 1 regression). Hover deepens the
  * hairline to border-strong rather than tinting it brand blue: blue on hover
- * pre-empts the focus signal.
+ * pre-empts the focus signal, which owns blue on its own.
  */
 export const inputClasses =
-  'focus-ring h-[var(--control-height)] w-full rounded-md border border-border bg-input px-2.5 text-base leading-normal text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-ring h-[var(--control-height)] w-full rounded-sm border border-border bg-input px-2 text-sm text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong focus:border-accent aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 const textareaClasses =
-  'focus-ring min-h-[96px] w-full resize-y rounded-md border border-border bg-input px-3 py-2 text-base leading-normal text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-ring min-h-[96px] w-full resize-y rounded-sm border border-border bg-input p-2 text-sm text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong focus:border-accent aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 export function Input({
   className,

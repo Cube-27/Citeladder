@@ -15,12 +15,12 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BillingSettings } from '@/components/settings/billing-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
-import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
+import { tabItemClasses, tabListClasses } from '@/components/ui/tabs';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cn, emailInitials } from '@/lib/utils';
+import { emailInitials } from '@/lib/utils';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -51,7 +51,7 @@ function DetailRow({
   mono = false,
 }: Readonly<{ label: string; children: React.ReactNode; mono?: boolean }>) {
   return (
-    <div className="border-border-subtle grid grid-cols-[minmax(0,180px)_1fr] items-center gap-4 border-b py-3.5 last:border-b-0 last:pb-0">
+    <div className="border-border-subtle grid grid-cols-[minmax(0,180px)_1fr] items-center gap-4 border-b py-4 last:border-b-0 last:pb-0">
       <dt className="text-secondary text-sm font-medium">{label}</dt>
       <dd className={mono ? 'mono text-secondary text-xs' : 'text-foreground text-sm'}>
         {children}
@@ -171,10 +171,7 @@ export function SettingsScreen() {
         role="tablist"
         aria-label="Settings sections"
         aria-orientation="horizontal"
-        className={cn(
-          segmentedTrackClasses,
-          'flex w-fit max-w-full [scrollbar-width:none] flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden',
-        )}
+        className={tabListClasses}
       >
         {SETTINGS_TABS.map((tab) => {
           const selected = tab.id === activeTab;
@@ -192,7 +189,7 @@ export function SettingsScreen() {
               tabIndex={selected ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               onKeyDown={onKeyDown}
-              className={cn(segmentedItemClasses(selected), 'shrink-0')}
+              className={tabItemClasses(selected)}
             >
               {tab.label}
             </button>
@@ -231,10 +228,10 @@ export function SettingsScreen() {
               <CardDescription>Read-only — shown for reference.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-4">
                 <span
                   aria-hidden
-                  className="bg-accent-soft text-accent-text flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase"
+                  className="bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase"
                 >
                   {emailInitials(user.email)}
                 </span>

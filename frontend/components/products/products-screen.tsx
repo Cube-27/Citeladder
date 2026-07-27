@@ -19,7 +19,7 @@ import { ProductsTabs } from './products-tabs';
 export function ProductsScreenSkeleton() {
   return (
     <div className="grid gap-4" aria-hidden>
-      <Skeleton className="h-9 w-72" />
+      <Skeleton className="h-8 w-72" />
       <Card>
         <CardContent className="grid gap-3">
           <Skeleton className="h-8 w-56" />

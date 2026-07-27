@@ -126,8 +126,8 @@ export function EvidenceFilteredEmpty({
 
 export function TruncationNotice({ limit }: Readonly<{ limit: number }>) {
   return (
-    <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2.5 text-xs">
-      <Info className="size-3.5 shrink-0" aria-hidden />
+    <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2 text-xs">
+      <Info className="size-4 shrink-0" aria-hidden />
       <span>Showing newest {limit} executions; refine filters to narrow results.</span>
     </div>
   );

@@ -12,7 +12,6 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from '@/components/ui/dropdown';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { authApi } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
@@ -35,16 +34,16 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <Dropdown>
-        <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors">
+        <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors">
           <span
             aria-hidden
-            className="bg-background-alt text-2xs text-secondary flex size-[26px] shrink-0 items-center justify-center rounded-full font-semibold uppercase"
+            className="bg-background-alt text-2xs text-secondary flex size-6 shrink-0 items-center justify-center rounded-full font-semibold uppercase"
           >
             {emailInitials(user.email)}
           </span>
           <span className="text-secondary min-w-0 flex-1 truncate text-xs">{user.email}</span>
         </DropdownTrigger>
-        <DropdownContent align="start" side="top" className="w-[212px]">
+        <DropdownContent align="start" side="top" className="w-56">
           <DropdownLabel>{user.email}</DropdownLabel>
           <DropdownSeparator className="bg-border-subtle my-1 h-px" />
           <DropdownItem asChild>
@@ -70,7 +69,6 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           ) : null}
         </DropdownContent>
       </Dropdown>
-      <ThemeToggle className="size-[26px] shrink-0" />
     </div>
   );
 }

@@ -28,10 +28,9 @@ function groupAnchor(group: FaqGroup): string {
   return GROUP_ANCHORS[group.heading] ?? `faq-${fallback}`;
 }
 
-// Answers are plain strings from the content module. Two inline transforms
-// keep them faithful: bare '[TODO(user)]' placeholders render as a marked
-// pill, and bare URLs render as real links.
-const INLINE_TOKEN_RE = /\[TODO\(user\)\]|https?:\/\/\S+/g;
+// Answers are plain strings from the content module. One inline transform
+// keeps them faithful: bare URLs render as real links.
+const INLINE_TOKEN_RE = /https?:\/\/\S+/g;
 // Sentence punctuation straight after a URL belongs to the prose, not the href.
 const TRAILING_PUNCT_RE = /[.,;:!?)]+$/;
 
@@ -43,33 +42,21 @@ function AnswerText({ text }: Readonly<{ text: string }>) {
     const token = match[0];
     const start = match.index;
     if (start > cursor) nodes.push(text.slice(cursor, start));
-    if (token.startsWith('http')) {
-      const trailing = token.match(TRAILING_PUNCT_RE)?.[0] ?? '';
-      const href = trailing ? token.slice(0, -trailing.length) : token;
-      nodes.push(
-        <a
-          key={key}
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="text-mkt-proof-text underline underline-offset-2"
-        >
-          {href}
-        </a>,
-      );
-      key += 1;
-      if (trailing) nodes.push(trailing);
-    } else {
-      nodes.push(
-        <span
-          key={key}
-          className="border-mkt-line text-mkt-ink-muted rounded-mkt-xs text-mkt-sm border border-dashed px-1.5 py-0.5"
-        >
-          {token}
-        </span>,
-      );
-      key += 1;
-    }
+    const trailing = token.match(TRAILING_PUNCT_RE)?.[0] ?? '';
+    const href = trailing ? token.slice(0, -trailing.length) : token;
+    nodes.push(
+      <a
+        key={key}
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="text-mkt-proof underline underline-offset-2"
+      >
+        {href}
+      </a>,
+    );
+    key += 1;
+    if (trailing) nodes.push(trailing);
     cursor = start + token.length;
   }
   if (cursor < text.length) nodes.push(text.slice(cursor));
@@ -88,10 +75,10 @@ export function FaqGroups() {
             <a
               key={group.heading}
               href={`#${groupAnchor(group)}`}
-              className="text-mkt-sm text-mkt-ink-soft hover:bg-mkt-surface hover:text-mkt-ink rounded-mkt-xs flex items-center justify-between gap-3 px-3 py-2 transition-colors duration-200"
+              className="text-mkt-sm text-mkt-ink-soft hover:bg-mkt-surface hover:text-mkt-ink rounded-sm flex items-center justify-between gap-3 px-3 py-2 transition-colors duration-200"
             >
               {group.heading}
-              <span className="text-mkt-ink-muted mkt-num text-mkt-meta">{group.items.length}</span>
+              <span className="text-mkt-ink-muted font-mono tabular-nums text-mkt-meta">{group.items.length}</span>
             </a>
           ))}
         </div>
@@ -101,14 +88,14 @@ export function FaqGroups() {
         {FAQ_GROUPS.map((group) => (
           <section key={group.heading} id={groupAnchor(group)} aria-label={group.heading}>
             <div className="border-mkt-line mb-2 flex items-baseline justify-between gap-4 border-b pb-4">
-              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w">
+              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">
                 {group.heading}
               </h2>
               <Meta>{group.items.length} answers</Meta>
             </div>
             {group.items.map((item) => (
               <details key={item.q} className="border-mkt-line group border-b">
-                <summary className="text-mkt-body text-mkt-ink hover:text-mkt-proof-text flex cursor-pointer list-none items-center justify-between gap-6 py-5 font-semibold transition-colors [&::-webkit-details-marker]:hidden">
+                <summary className="text-mkt-body text-mkt-ink hover:text-mkt-proof flex cursor-pointer list-none items-center justify-between gap-6 py-5 font-semibold transition-colors [&::-webkit-details-marker]:hidden">
                   {item.q}
                   <Plus
                     aria-hidden

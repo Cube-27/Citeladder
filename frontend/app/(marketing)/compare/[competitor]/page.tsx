@@ -15,9 +15,7 @@ function findCompetitor(slug: string): Competitor | undefined {
   return COMPETITORS.find((competitor) => competitor.slug === slug);
 }
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export async function generateMetadata({
   params,
 }: Readonly<{ params: Promise<PageParams> }>): Promise<Metadata> {
@@ -26,14 +24,20 @@ export async function generateMetadata({
   if (!competitor) {
     return { title: 'Comparison not found' };
   }
+  // Absolute title: the 'Searchify vs X' phrasing stands on its own — the root
+  // template would only duplicate the brand.
   const title = `Searchify vs ${competitor.name}`;
   const description =
     `How Searchify compares to ${competitor.name}: engines covered, scoring model, evidence ` +
     'drill-down, BYOK privacy, and site-health auditing. The Searchify column is ' +
-    `sourced from our docs; the ${competitor.name} column is pending first-party verification.`;
+    'sourced from our source code' +
+    (competitor.verified
+      ? `. Last reviewed ${competitor.lastReviewed}.`
+      : `; the ${competitor.name} column is pending first-party verification.`);
   return {
-    title,
+    title: { absolute: title },
     description,
+    alternates: { canonical: `/compare/${competitor.slug}` },
     openGraph: {
       title,
       description,

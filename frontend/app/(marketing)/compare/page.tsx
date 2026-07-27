@@ -7,12 +7,11 @@ const DESCRIPTION =
   'scoring works, and where the evidence lives. Maintained by the Searchify team, marked ' +
   'wherever we still need to verify.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
   title: 'How Searchify compares',
   description: DESCRIPTION,
+  alternates: { canonical: '/compare' },
   openGraph: {
     title: 'How Searchify compares',
     description: DESCRIPTION,

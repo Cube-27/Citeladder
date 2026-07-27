@@ -86,7 +86,7 @@ export function OverviewSummary({
       data-testid="overview-summary"
       className={cn('flex flex-wrap items-baseline gap-x-4 gap-y-2', className)}
     >
-      <p className="text-muted min-w-0 flex-1 text-base">
+      <p className="text-muted min-w-0 flex-1 text-sm">
         {score === null ? (
           <>Visibility for {brandName} is not available for this run.</>
         ) : (

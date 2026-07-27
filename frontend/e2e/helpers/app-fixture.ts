@@ -1,0 +1,84 @@
+import type { Page } from '@playwright/test';
+
+import { THEME_STORAGE_KEY } from '../../lib/theme';
+
+/**
+ * Authed-shell network fixture for e2e + visual specs.
+ *
+ * The app authenticates by cookie session: `SessionGuard` calls
+ * `GET /api/v1/auth/me` and `ProjectProvider` calls `GET /api/v1/projects`,
+ * so stubbing those two endpoints is the whole "logged in with one project"
+ * arrangement — no token needs seeding. The ids are the canonical ones the
+ * existing specs already use (shell.spec.ts, content.spec.ts, …).
+ */
+export const FIXTURE_USER = {
+  id: '22222222-2222-4222-8222-222222222222',
+  email: 'shell@example.com',
+  role: 'owner',
+  is_active: true,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+} as const;
+
+export const FIXTURE_PROJECT = {
+  id: '11111111-1111-4111-8111-111111111111',
+  workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  name: 'Acme',
+  brand_name: 'Acme',
+  website_url: 'https://acme.example',
+  country_code: 'US',
+  language_code: 'en',
+  benchmark_mode: 'consumer_like',
+  default_repetitions: 3,
+  brand: { aliases: [] },
+  owned_domains: [],
+  unintended_domains: [],
+  competitors: [],
+  prompt_sets: [],
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+} as const;
+
+/**
+ * Stub the two shell endpoints, plus a 404 catch-all for everything else
+ * under `/api/v1/`. The catch-all is what makes screenshots deterministic:
+ * 4xx never retries (lib/api/query-client.ts), so every unstubbed data query
+ * settles into its empty/error state in ONE attempt instead of flapping
+ * between skeleton and error across the two-retry window. Playwright matches
+ * routes in reverse registration order, so the specific stubs below win over
+ * the catch-all.
+ */
+export async function stubAuthedShell(page: Page): Promise<void> {
+  await page.route('**/api/v1/**', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
+    }),
+  );
+  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));
+  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [FIXTURE_PROJECT] }));
+}
+
+/**
+ * Hide the Next.js dev overlay (`<nextjs-portal>`) — dev chrome, not product
+ * UI. Its badge reflects build activity, so leaving it visible is a flake
+ * source in baselines. Call AFTER navigation (addStyleTag needs a document).
+ */
+export async function hideDevChrome(page: Page): Promise<void> {
+  await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+}
+
+/**
+ * Persist the theme choice BEFORE first paint: the bootstrap script in the
+ * root layout reads THEME_STORAGE_KEY from localStorage pre-hydration, so an
+ * init script beats it to the document and no reload is needed.
+ */
+export async function seedTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
+  await page.addInitScript(
+    ([key, value]) => {
+      window.localStorage.setItem(key, value);
+    },
+    [THEME_STORAGE_KEY, theme] as const,
+  );
+}

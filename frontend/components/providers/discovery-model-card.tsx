@@ -49,7 +49,7 @@ export function DiscoveryModelCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Discovery / analysis model</CardTitle>
+        <CardTitle>Discovery / analysis model</CardTitle>
         <p className="text-secondary text-xs">
           Used for prompt discovery and answer analysis. Saved to your workspace; the audit pipeline
           does not use it yet.

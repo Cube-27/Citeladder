@@ -169,7 +169,7 @@ export function CatalogPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-secondary text-sm">
           {products.length} product{products.length === 1 ? '' : 's'} in the catalog
         </p>

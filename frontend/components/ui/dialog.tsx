@@ -9,7 +9,9 @@ import { Button } from './button';
 
 /**
  * Dialog (§8) — Radix modal. Scrim = --overlay-scrim, surface = bg-elevated,
- * shadow-modal, --radius-xl. Header/body/footer slots; built-in close button.
+ * shadow-modal, --radius-lg (12px = the ADS modal rung). Header/body/footer
+ * slots padded on the ADS modal rhythm (24px inline; 24/16 block); built-in
+ * close button.
  */
 export function Dialog({
   open,
@@ -34,17 +36,17 @@ export function Dialog({
         <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
         <DialogPrimitive.Content
           className={cn(
-            'border-border bg-elevated shadow-modal-value fixed top-1/2 left-1/2 z-[101] flex max-h-[85vh] w-[640px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border focus:outline-none',
+            'border-border bg-elevated shadow-modal-value fixed top-1/2 left-1/2 z-[101] flex max-h-[85vh] w-[640px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border focus:outline-none',
             className,
           )}
         >
-          <header className="border-border-subtle flex items-start justify-between gap-4 border-b px-5 py-4">
-            <div className="min-w-0">
-              <DialogPrimitive.Title className="text-foreground text-lg font-semibold">
+          <header className="border-border-subtle flex items-start justify-between gap-4 border-b px-6 pt-6 pb-4">
+            <div className="grid min-w-0 gap-1">
+              <DialogPrimitive.Title className="text-foreground text-lg">
                 {title}
               </DialogPrimitive.Title>
               {description ? (
-                <DialogPrimitive.Description className="text-secondary mt-1 text-sm">
+                <DialogPrimitive.Description className="text-secondary text-sm">
                   {description}
                 </DialogPrimitive.Description>
               ) : null}
@@ -55,9 +57,9 @@ export function Dialog({
               </Button>
             </DialogPrimitive.Close>
           </header>
-          <div className="min-h-0 flex-1 overflow-auto px-5 py-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-auto px-6 py-1">{children}</div>
           {footer ? (
-            <footer className="border-border-subtle flex items-center justify-end gap-2 border-t px-5 py-4">
+            <footer className="border-border-subtle flex items-center justify-end gap-2 border-t px-6 pt-4 pb-6">
               {footer}
             </footer>
           ) : null}

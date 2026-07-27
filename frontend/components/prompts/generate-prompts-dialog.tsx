@@ -130,7 +130,7 @@ export function GeneratePromptsDialog({
           </select>
         </label>
 
-        <label className="border-border bg-background-alt flex items-start gap-2 rounded-md border px-3 py-2.5 text-sm">
+        <label className="border-border bg-background-alt flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
           <input
             type="checkbox"
             checked={confirmed}

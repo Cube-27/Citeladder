@@ -3,10 +3,12 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * The "meta" role. The deck called this mono, but the system has no mono
- * face — what actually distinguishes these labels is that they are small,
- * upper-cased, tracked out and tabular. Codifying it as a style (rather than
- * pretending Inter is a monospace) is why every label on the surface matches.
+ * The "meta" role: small (12/16), semibold labels in Geist Mono
+ * (`font-mono tabular-nums`) — the same mono face every figure in the app
+ * renders in, so numbers align and read as data. The default ink is
+ * `text-mkt-ink-muted` (paper/surface-only — on sunken/wash bands callers
+ * pass `text-mkt-ink-soft`); kickers layer `uppercase` on top. Codifying
+ * the recipe as one component is why every label on the surface matches.
  */
 export function Meta({
   children,
@@ -14,7 +16,7 @@ export function Meta({
   as: Tag = 'span',
 }: Readonly<{ children: ReactNode; className?: string; as?: 'span' | 'p' | 'div' }>) {
   return (
-    <Tag className={cn('text-mkt-meta text-mkt-ink-muted mkt-num uppercase', className)}>
+    <Tag className={cn('text-mkt-meta text-mkt-ink-muted font-mono tabular-nums font-semibold', className)}>
       {children}
     </Tag>
   );
@@ -32,7 +34,7 @@ export function Eyebrow({
   return (
     <span
       className={cn(
-        'text-mkt-meta text-mkt-ink-soft inline-flex items-center gap-2.5 font-medium uppercase',
+        'text-mkt-meta text-mkt-ink-soft inline-flex items-center gap-2.5 font-semibold',
         className,
       )}
     >
@@ -48,7 +50,7 @@ export function Eyebrow({
  */
 export function LiveDot({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <span className="text-mkt-meta text-mkt-slate mkt-num inline-flex items-center gap-2 uppercase">
+    <span className="text-mkt-meta text-mkt-ink-soft font-mono tabular-nums inline-flex items-center gap-2 uppercase">
       <span className="bg-mkt-evidence animate-mkt-pulse size-1.5 shrink-0 rounded-full" />
       {children}
     </span>

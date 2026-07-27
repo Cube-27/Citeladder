@@ -54,7 +54,7 @@ export function RankingRowsTable({
           <TableHead className="w-10">#</TableHead>
           <TableHead>Brand</TableHead>
           <TableHead numeric>Visibility</TableHead>
-          {showTrend ? <TableHead className="w-[72px]">Trend</TableHead> : null}
+          {showTrend ? <TableHead className="w-20">Trend</TableHead> : null}
           <TableHead numeric>Share</TableHead>
           <TableHead numeric>Sentiment</TableHead>
           <TableHead numeric>Position</TableHead>
@@ -80,7 +80,7 @@ export function RankingRowsTable({
                   <BrandLogo name={row.name} logoUrl={row.logo_url} size="sm" />
                   <span
                     aria-hidden
-                    className={cn('size-2 shrink-0 rounded-[2px]', seriesBg(slot))}
+                    className={cn('size-2 shrink-0 rounded-xs', seriesBg(slot))}
                   />
                   <span className="text-foreground font-medium">{row.name}</span>
                   {row.is_brand ? (

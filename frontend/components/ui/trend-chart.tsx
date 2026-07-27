@@ -335,7 +335,7 @@ export function MultiTrendChart({
             x={xAt(i)}
             y={height - 4}
             textAnchor={i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle'}
-            className="fill-muted text-[10px]"
+            className="fill-muted text-2xs"
           >
             {l}
           </text>
@@ -355,21 +355,21 @@ export function MultiTrendChart({
         ))}
       </svg>
 
-      {/* Tooltip — dark card, muted 11.5px title, one row per series. */}
+      {/* Tooltip — dark inverse card, muted micro title, one row per series. */}
       {hover !== null ? (
         <div
-          className="bg-chart-tooltip pointer-events-none absolute top-2 z-10 min-w-[168px] rounded-md p-2.5"
+          className="bg-chart-tooltip pointer-events-none absolute top-2 z-10 min-w-[168px] rounded-sm p-2"
           style={{ left: `${(xAt(hover) / width) * 100}%`, transform: 'translateX(-50%)' }}
           role="status"
         >
-          <p className="text-chart-tooltip-fg/60 mb-1.5 text-[11.5px]">{labels[hover]}</p>
+          <p className="text-chart-tooltip-fg/60 mb-1 text-2xs">{labels[hover]}</p>
           <ul className="grid gap-1">
             {series.map((s, si) => {
               const v = s.values[hover];
               return (
-                <li key={s.name} className="flex items-center gap-2 text-[11.5px]">
+                <li key={s.name} className="flex items-center gap-2 text-2xs">
                   <span
-                    className={cn('size-2 shrink-0 rounded-[2px]', seriesBg(slots[si]))}
+                    className={cn('size-2 shrink-0 rounded-xs', seriesBg(slots[si]))}
                     aria-hidden
                   />
                   <span className="text-chart-tooltip-fg/80 flex-1 truncate">{s.name}</span>

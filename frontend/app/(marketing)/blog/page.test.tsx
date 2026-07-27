@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlogPostView } from '@/components/marketing/pages/blog';
 import type { BlogPost } from '@/lib/marketing-content/blog';
 import { BLOG_EMPTY_STATE, POSTS } from '@/lib/marketing-content/blog';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import BlogPage from './page';
 
 // The typed content module is mocked with a lazy POSTS getter so individual
 // tests can swap the posts array (empty state, multi-post grid) while the
-// default render keeps the module's real placeholder entry. BLOG_EMPTY_STATE
+// default render keeps the module's real launch post. BLOG_EMPTY_STATE
 // and the types pass through from the actual module.
 const blogState = vi.hoisted(() => ({
   posts: undefined as readonly BlogPost[] | undefined,
@@ -29,13 +30,13 @@ beforeEach(() => {
 });
 
 describe('Blog index (public marketing `/blog`)', () => {
-  it('renders the intentional empty state until an editorial post is approved', () => {
+  it('renders the launch post in the featured slot', () => {
     const { container } = render(<BlogPage />);
 
     // Exactly one h1; no h2–h6 may contain the product name. Post titles are
     // styled paragraphs carrying role="heading" for assistive tech, so this
     // asserts against literal h2–h6 tags rather than the heading role — the
-    // placeholder title is a heading to screen readers but not an h2–h6.
+    // post title is a heading to screen readers but not an h2–h6.
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent(/notes on/i);
@@ -43,16 +44,19 @@ describe('Blog index (public marketing `/blog`)', () => {
       expect(heading).not.toHaveTextContent(/searchify/i);
     }
 
+    const featured = screen.getByRole('region', { name: 'Featured post' });
     expect(
-      screen.getByRole('heading', { level: 2, name: BLOG_EMPTY_STATE.heading }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(BLOG_EMPTY_STATE.body)).toBeInTheDocument();
-    expect(container.querySelector('.featured')).toBeNull();
-    expect(container.querySelector('.post-grid')).toBeNull();
+      within(featured).getByRole('link', { name: POSTS[0].title }),
+    ).toHaveAttribute('href', '/blog/how-we-measure-ai-visibility-deterministically');
+
+    // The empty state is gone now that a real post is live.
+    expect(
+      screen.queryByRole('heading', { name: BLOG_EMPTY_STATE.heading }),
+    ).toBeNull();
+    expect(screen.queryByText(BLOG_EMPTY_STATE.body)).toBeNull();
   });
 
-  // Deferred until finalized editorial fixtures provide a featured post plus grid entries.
-  it.skip('maps posts beyond the featured one to the card grid', () => {
+  it('maps posts beyond the featured one to the card grid', () => {
     const second: BlogPost = {
       slug: 'second-note',
       title: 'A second note on evidence.',
@@ -64,40 +68,36 @@ describe('Blog index (public marketing `/blog`)', () => {
       body: [],
     };
     blogState.posts = [...POSTS, second];
-    const { container } = render(<BlogPage />);
+    render(<BlogPage />);
 
-    const grid = container.querySelector('.post-grid');
-    expect(grid).not.toBeNull();
-    // Grid carries the second post only — the featured placeholder is not duplicated.
-    expect(within(grid as HTMLElement).getByRole('link', { name: second.title })).toHaveAttribute(
+    const grid = screen.getByRole('region', { name: 'All posts' });
+    // Grid carries the second post only — the featured post is not duplicated.
+    expect(within(grid).getByRole('link', { name: second.title })).toHaveAttribute(
       'href',
       '/blog/second-note',
     );
-    expect(
-      within(grid as HTMLElement).queryByText(/own how your brand appears in ai answers/i),
-    ).toBeNull();
-    expect(screen.getByText('2 posts')).toBeInTheDocument();
+    expect(within(grid).queryByRole('link', { name: POSTS[0].title })).toBeNull();
+    expect(screen.getByText('1 post')).toBeInTheDocument();
   });
 
   it('renders the empty state when the posts array is empty', () => {
     blogState.posts = [];
-    const { container } = render(<BlogPage />);
+    render(<BlogPage />);
 
     expect(
       screen.getByRole('heading', { level: 2, name: BLOG_EMPTY_STATE.heading }),
     ).toBeInTheDocument();
     expect(screen.getByText(BLOG_EMPTY_STATE.body)).toBeInTheDocument();
-    expect(container.querySelector('.featured')).toBeNull();
-    expect(container.querySelector('.post-grid')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Featured post' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'All posts' })).toBeNull();
 
     // The page hero (and its single h1) still renders above the empty state.
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 });
 
-// Deferred until a finalized post supplies real byline and body-block content.
-describe.skip('BlogPostView (`/blog/[slug]` sync view)', () => {
-  it('renders the title, byline, and every BlogBlock variant', () => {
+describe('BlogPostView (`/blog/[slug]` sync view)', () => {
+  it('renders the title, body blocks, and no placeholder chrome', () => {
     const post = POSTS[0];
     const { container } = render(<BlogPostView post={post} />);
 
@@ -107,27 +107,54 @@ describe.skip('BlogPostView (`/blog/[slug]` sync view)', () => {
     expect(h1s[0]).toHaveTextContent(post.title);
     expect(screen.getByRole('link', { name: /all notes/i })).toHaveAttribute('href', '/blog');
 
-    // Byline: author, date, and read time render verbatim from the module
-    // ('[TODO(user)]' placeholders until the user fills them in).
-    expect(container.querySelector('.byline-name')).toHaveTextContent(post.author);
-    const meta = container.querySelector('.byline-meta');
-    expect(meta).toHaveTextContent(post.date);
-    expect(meta).toHaveTextContent(post.readTime);
-
-    // Body blocks: the placeholder exercises all three BlogBlock variants.
-    // Lede (excerpt) + two paragraph blocks:
-    expect(container.querySelector('.prose .lede')).toHaveTextContent(post.excerpt);
-    expect(container.querySelectorAll('.prose > p')).toHaveLength(3);
-    // One heading block:
-    expect(screen.getByRole('heading', { level: 2, name: '[TODO(user)]' })).toBeInTheDocument();
-    // One list block with three items:
-    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(3);
-
-    // Closing CTA band links to /register.
-    const ctaBand = screen.getByRole('region', { name: 'Get started' });
-    expect(within(ctaBand).getByRole('link', { name: /get started/i })).toHaveAttribute(
-      'href',
-      '/register',
+    // The excerpt renders as the lede, then one <h2> per heading block and
+    // one <ul> per list block, all inside the article.
+    const article = screen.getByRole('article', { name: 'Post content' });
+    expect(within(article).getByText(post.excerpt)).toBeInTheDocument();
+    const headingTexts = post.body.flatMap((block) =>
+      block.type === 'heading' ? [block.text] : [],
     );
+    expect(headingTexts.length).toBeGreaterThan(0);
+    const renderedH2s = within(article).getAllByRole('heading', { level: 2 });
+    expect(renderedH2s).toHaveLength(headingTexts.length);
+    for (const text of headingTexts) {
+      expect(
+        within(article).getByRole('heading', { level: 2, name: text }),
+      ).toBeInTheDocument();
+    }
+    const listCount = post.body.filter((block) => block.type === 'list').length;
+    const listItems = post.body.flatMap((block) => (block.type === 'list' ? block.items : []));
+    const renderedLists = within(article).getAllByRole('list');
+    expect(renderedLists).toHaveLength(listCount);
+    expect(within(article).getAllByRole('listitem')).toHaveLength(listItems.length);
+
+    // No byline row while the owner-supplied fields are absent (B5), and no
+    // unfinished placeholder may reach the page.
+    const header = container.querySelector('header');
+    expect(header?.querySelector('.border-t')).toBeNull();
+    expect(container.textContent).not.toMatch(/TODO\(user\)/);
+
+    // Closing CTA band routes through the stable demo funnel.
+    const ctaBand = screen.getByRole('region', { name: 'Get started' });
+    expect(within(ctaBand).getByRole('link', { name: /book a demo/i })).toHaveAttribute(
+      'href',
+      DEMO_HREF,
+    );
+  });
+
+  it('emits BlogPosting JSON-LD, omitting byline fields until the owner supplies them', () => {
+    const post = POSTS[0];
+    const { container } = render(<BlogPostView post={post} />);
+
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+    const data = JSON.parse(script?.textContent ?? '') as Record<string, unknown>;
+    expect(data['@context']).toBe('https://schema.org');
+    expect(data['@type']).toBe('BlogPosting');
+    expect(data.headline).toBe(post.title);
+    expect(data.description).toBe(post.excerpt);
+    // B5 unfilled: datePublished/author are omitted, not guessed.
+    expect(data).not.toHaveProperty('datePublished');
+    expect(data).not.toHaveProperty('author');
   });
 });

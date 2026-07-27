@@ -122,7 +122,7 @@ function ShareOfVoiceCard({ visibility }: Readonly<{ visibility: Visibility }>) 
         {rows.length === 0 ? (
           <p className="text-secondary text-sm">{PLACEHOLDER} No mentions recorded for this run.</p>
         ) : (
-          <div role="img" aria-label={`Share of voice: ${summary}`} className="grid gap-3.5">
+          <div role="img" aria-label={`Share of voice: ${summary}`} className="grid gap-4">
             {rows.map((row) => (
               <ShareOfVoiceRow
                 key={`${row.is_brand ? 'brand' : 'competitor'}-${row.name}`}

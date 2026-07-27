@@ -103,7 +103,7 @@ function MethodCard({
         <div className="grid gap-1">
           <CardTitle>{ATTRIBUTION_METHOD_LABELS[method]}</CardTitle>
           {available ? (
-            <p className="text-foreground mono text-xl font-semibold tabular-nums">
+            <p className="text-foreground mono text-lg font-semibold tabular-nums">
               {formatMoney(totals?.revenue, currency)} revenue
             </p>
           ) : null}

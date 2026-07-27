@@ -19,11 +19,11 @@ describe('Button', () => {
   it('renders default variant/size classes', () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole('button', { name: 'Save' });
-    // primary variant → accent fill with its verified foreground, and the v2
-    // rounded-md shape (the pill is retired for buttons); md → control-height
+    // primary variant → accent fill with its verified foreground, and the ADS
+    // rounded-sm shape (radius.small; the pill is retired for buttons)
     expect(btn.className).toContain('bg-accent');
     expect(btn.className).toContain('text-accent-fg');
-    expect(btn.className).toContain('rounded-md');
+    expect(btn.className).toContain('rounded-sm');
     expect(btn.className).not.toContain('rounded-full');
     expect(btn.className).toContain('h-[var(--control-height)]');
     // real <button> defaults to type=button (no accidental submit)
@@ -150,16 +150,17 @@ describe('Card', () => {
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 
-  it('CardEyebrow renders the uppercase micro-label (never a heading)', () => {
+  it('CardEyebrow renders the ADS micro-label recipe (never a heading)', () => {
     render(<CardEyebrow>Visibility score</CardEyebrow>);
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
-    expect(eyebrow.className).toContain('text-2xs');
+    // ADS font.heading.xxsmall: 12/16 @600, muted — no uppercase, no
+    // tracking (design.md §7), and never the mono face (reserved for values).
+    expect(eyebrow.className).toContain('text-xs');
     expect(eyebrow.className).toContain('text-muted');
-    // v2 reinstates the uppercase tracked eyebrow (design.md §7) — but NOT the
-    // mono face, which stays reserved for values.
-    expect(eyebrow.className).toContain('uppercase');
-    expect(eyebrow.className).toContain('tracking-wider');
+    expect(eyebrow.className).toContain('font-semibold');
+    expect(eyebrow.className).not.toContain('uppercase');
+    expect(eyebrow.className).not.toContain('tracking-');
     expect(eyebrow.className).not.toContain('font-mono');
   });
 });
@@ -187,8 +188,11 @@ describe('Table (dense)', () => {
     // Sticky header at the dense height, sentence-case sans micro-label.
     expect(headers[0].className).toContain('h-[var(--table-header-height)]');
     expect(headers[0].className).toContain('sticky');
-    // v2 table headers share the uppercase eyebrow recipe; mono stays for values.
-    expect(headers[0].className).toContain('uppercase');
+    // Table headers share the ADS eyebrow recipe (12/16 @600, no uppercase,
+    // no tracking); mono stays for values.
+    expect(headers[0].className).toContain('text-xs');
+    expect(headers[0].className).toContain('font-semibold');
+    expect(headers[0].className).not.toContain('uppercase');
     expect(headers[0].className).not.toContain('font-mono');
     // Flat grid: header sits on the panel and is left-aligned even when numeric.
     expect(headers[0].className).toContain('bg-panel');
@@ -202,6 +206,11 @@ describe('Table (dense)', () => {
     const bodyRow = rows[1];
     expect(bodyRow.className).toContain('h-[var(--table-row-height)]');
     expect(screen.getByText('82').className).toContain('tabular-nums');
+    // Cells carry real vertical padding again (the py-0 regression is gone)
+    // and no column-separator hairlines.
+    const cell = screen.getByText('How good is X?');
+    expect(cell.className).not.toContain('py-0');
+    expect(cell.className).not.toContain('border-l');
   });
 });
 
@@ -219,6 +228,12 @@ describe('Input + Field', () => {
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('alert')).toHaveTextContent('Required');
     expect(input.className).toContain('h-[var(--control-height)]');
+    // The Phase 1 regressions stay fixed: the field keeps its visible fill
+    // (canvas tint on the white card) and its accent focus border, and the
+    // invalid state has its own danger border (ADS Textfield).
+    expect(input.className).toContain('bg-input');
+    expect(input.className).toContain('focus:border-accent');
+    expect(input.className).toContain('aria-invalid:border-danger');
   });
 });
 
@@ -270,15 +285,15 @@ describe('ScoreRing', () => {
   it('renders the display-size numeral with numeralSize="lg"', () => {
     render(<ScoreRing value={82} size={128} numeralSize="lg" />);
     const numeral = screen.getByText('82');
-    expect(numeral.className).toContain('text-2xl');
+    expect(numeral.className).toContain('text-xl');
     expect(numeral).toHaveAttribute('aria-hidden', 'true');
     // The accessible label still lives on the ring, not the numeral.
     expect(screen.getByRole('img', { name: 'Visibility score: 82%' })).toBeInTheDocument();
   });
 
-  it('defaults to the text-lg numeral', () => {
+  it('defaults to the text-heading-sm numeral', () => {
     render(<ScoreRing value={82} />);
-    expect(screen.getByText('82').className).toContain('text-lg');
+    expect(screen.getByText('82').className).toContain('text-heading-sm');
   });
 });
 

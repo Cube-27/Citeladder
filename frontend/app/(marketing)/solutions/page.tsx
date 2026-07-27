@@ -11,21 +11,20 @@ const DESCRIPTION =
   'client workspaces with CSV/MD evidence exports, period-over-period trends, free sample ' +
   'crawls on BYOK rates, and citation-ownership evidence for every narrative.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Searchify Solutions — AI visibility for agencies, in-house teams, founders & PR',
+  title: 'Solutions — for agencies, in-house teams, founders & PR',
   description: DESCRIPTION,
+  alternates: { canonical: '/solutions' },
   openGraph: {
-    title: 'Searchify Solutions — AI visibility for agencies, in-house teams, founders & PR',
+    title: 'Solutions — for agencies, in-house teams, founders & PR',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'Searchify Solutions — AI visibility for agencies, in-house teams, founders & PR',
+    title: 'Solutions — for agencies, in-house teams, founders & PR',
     description: DESCRIPTION,
   },
 };

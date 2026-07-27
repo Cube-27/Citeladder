@@ -113,7 +113,7 @@ export function CsvImportDialog({
             accept=".csv,text/csv"
             aria-label="CSV file"
             onChange={(event) => void handleFile(event.target.files?.[0])}
-            className="focus-ring border-border bg-well text-foreground file:bg-background-alt file:text-foreground block w-full rounded-md border px-2.5 py-1.5 text-sm file:mr-3 file:rounded file:border-0 file:px-2.5 file:py-1 file:text-sm"
+            className="focus-ring border-border bg-well text-foreground file:bg-background-alt file:text-foreground block w-full rounded-sm border px-2 py-1.5 text-sm file:me-2 file:rounded-xs file:border-0 file:px-2 file:py-1 file:text-sm"
           />
         </label>
 

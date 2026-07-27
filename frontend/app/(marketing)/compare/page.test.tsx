@@ -27,13 +27,21 @@ describe('Compare index page (/compare)', () => {
     }
   });
 
-  it('renders the research state until verified comparisons are published', () => {
+  it('lists one card per published comparison', () => {
     render(<Page />);
 
     const grid = screen.getByRole('region', { name: 'Competitors' });
-    expect(within(grid).queryAllByRole('link')).toHaveLength(COMPETITORS.length);
+    const links = within(grid).getAllByRole('link');
+    expect(links).toHaveLength(COMPETITORS.length);
+    for (const competitor of COMPETITORS) {
+      expect(
+        links.some((link) => link.getAttribute('href') === `/compare/${competitor.slug}`),
+        `expected a card linking to /compare/${competitor.slug}`,
+      ).toBe(true);
+    }
     expect(within(grid).getByText(`${COMPETITORS.length} comparisons`)).toBeInTheDocument();
-    expect(within(grid).getByText(/Comparison research is in progress/i)).toBeInTheDocument();
+    // The research-in-progress state is gone now that pages are live.
+    expect(within(grid).queryByText(/Comparison research is in progress/i)).toBeNull();
   });
 
   it('closes with a CTA band linking to the demo funnel', () => {
@@ -47,8 +55,7 @@ describe('Compare index page (/compare)', () => {
   });
 });
 
-// Deferred until first-party competitor research is approved and COMPETITORS is populated.
-describe.skip('CompareDetailView (/compare/[competitor])', () => {
+describe('CompareDetailView (/compare/[competitor])', () => {
   const competitor = COMPETITORS[0];
 
   it('renders exactly one h1 and no h2–h6 containing the product name', () => {
@@ -64,31 +71,41 @@ describe.skip('CompareDetailView (/compare/[competitor])', () => {
     }
   });
 
-  it('shows the real Searchify column and visibly marked TODO competitor cells', () => {
-    render(<CompareDetailView competitor={competitor} />);
+  it('shows the real Searchify column and the explicit unverified competitor state', () => {
+    const { container } = render(<CompareDetailView competitor={competitor} />);
 
     // Table header: real Searchify column, competitor column named for the slug.
     expect(screen.getByRole('columnheader', { name: 'Searchify' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: competitor.name })).toBeInTheDocument();
 
-    // Searchify column: the docs-grounded strings render verbatim.
+    // Searchify column: the source-grounded strings render verbatim.
     for (const row of competitor.rows) {
       expect(screen.getByText(row.dimension)).toBeInTheDocument();
       expect(screen.getByText(row.searchify)).toBeInTheDocument();
     }
 
-    // Every competitor cell stays visibly '[TODO(user)]' until first-party
-    // research lands (one per row, plus the tagline chip and verdict slot).
-    const todoMarks = screen.getAllByText('[TODO(user)]');
-    expect(todoMarks.length).toBeGreaterThanOrEqual(competitor.rows.length);
+    // Every competitor cell renders the fixed unverified state — the page
+    // would rather show a gap than a guess — and the badge says so too.
+    expect(screen.getAllByText('Not verified by us')).toHaveLength(competitor.rows.length);
+    expect(screen.getByText('Not independently verified')).toBeInTheDocument();
+
+    // No editorial placeholder or instruction text may reach the DOM.
+    expect(container.textContent).not.toMatch(/TODO\(user\)/);
+    expect(container.textContent).not.toMatch(/2–3 paragraphs/);
+
+    // No narrative section exists while the owner-supplied verdict is absent.
+    expect(screen.queryByRole('region', { name: 'Narrative comparison' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Our verdict' })).toBeNull();
   });
 
   it('shows the honest-framing line under the table', () => {
     render(<CompareDetailView competitor={competitor} />);
 
     expect(screen.getByText(/maintained by the Searchify team/i)).toBeInTheDocument();
-    expect(screen.getByText(/pending first-party research/i)).toBeInTheDocument();
-    expect(screen.getByText(/verify current competitor features/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/have not independently verified this vendor/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/rather show a gap than a guess/i)).toBeInTheDocument();
   });
 
   it('links back to the comparison index', () => {

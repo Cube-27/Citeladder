@@ -76,7 +76,7 @@ export default function LoginPage() {
 
       <p className="border-mkt-line text-mkt-sm text-mkt-ink-soft border-t pt-5">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-mkt-proof-text font-semibold">
+        <Link href="/register" className="text-mkt-proof font-semibold">
           Create one
         </Link>
       </p>

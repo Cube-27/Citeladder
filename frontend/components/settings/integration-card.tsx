@@ -181,7 +181,7 @@ function ConnectionRow({
       className="border-border-subtle [&+&]:border-t"
       data-testid={`connection-row-${connection.provider}`}
     >
-      <div className="flex items-center gap-3 px-3.5 py-3">
+      <div className="flex items-center gap-3 px-4 py-3">
         <span
           aria-hidden
           className="bg-well text-secondary flex size-8 shrink-0 items-center justify-center rounded-md"
@@ -209,7 +209,7 @@ function ConnectionRow({
           >
             {syncMutation.isPending ? (
               <>
-                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                <Loader2 className="size-4 animate-spin" aria-hidden />
                 Syncing…
               </>
             ) : (
@@ -229,7 +229,7 @@ function ConnectionRow({
       </div>
 
       {runActive && activeRun ? (
-        <div className="flex items-center gap-2.5 px-3.5 pb-3 pl-[58px]">
+        <div className="flex items-center gap-2 px-4 pb-3 ps-15">
           <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
             {activeRun.status.replace('_', ' ')}
           </Badge>
@@ -241,7 +241,7 @@ function ConnectionRow({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2.5 px-3.5 pb-3 pl-[58px]">
+      <div className="flex items-center gap-2 px-4 pb-3 ps-15">
         <span className={eyebrowClasses}>Last synced</span>
         <span className="text-secondary font-mono text-xs tabular-nums">
           {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
@@ -249,12 +249,12 @@ function ConnectionRow({
       </div>
 
       {testState ? (
-        <div className="px-3.5 pb-3 pl-[58px]">
+        <div className="px-4 pb-3 ps-15">
           <Alert tone={testState.ok ? 'success' : 'danger'}>{testState.message}</Alert>
         </div>
       ) : null}
       {syncMutation.isError ? (
-        <div className="px-3.5 pb-3 pl-[58px]">
+        <div className="px-4 pb-3 ps-15">
           <Alert tone="danger">{errorMessage(syncMutation.error)}</Alert>
         </div>
       ) : null}
@@ -294,7 +294,7 @@ function ConnectionRow({
           </>
         }
       >
-        <div className="grid gap-2.5">
+        <div className="grid gap-2">
           {lastConnection ? (
             <>
               <p className="text-secondary text-sm">
@@ -362,7 +362,7 @@ export function IntegrationCard({
         <CardHeader className="flex-row items-start justify-between gap-2">
           <div className="grid gap-1">
             <CardEyebrow>OAuth grant</CardEyebrow>
-            <h3 className="text-foreground text-base font-semibold">{meta.title}</h3>
+            <h3 className="text-foreground text-heading-sm">{meta.title}</h3>
             <p className="text-muted text-xs">{meta.blurb}</p>
           </div>
           <Badge variant="neutral">Not connected</Badge>
@@ -387,7 +387,7 @@ export function IntegrationCard({
       <CardHeader className="flex-row items-start justify-between gap-2">
         <div className="grid min-w-0 gap-1">
           <CardEyebrow>OAuth grant</CardEyebrow>
-          <h3 className="text-foreground text-base font-semibold">{meta.title}</h3>
+          <h3 className="text-foreground text-heading-sm">{meta.title}</h3>
           {grant.scopes.length > 0 ? (
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
               <span className={eyebrowClasses}>Scopes</span>
@@ -414,7 +414,7 @@ export function IntegrationCard({
         <GrantAlert family={family} status={grant.status} />
 
         <div className="text-muted flex items-center gap-1.5 text-xs">
-          <Info className="size-3.5 shrink-0" aria-hidden />
+          <Info className="size-4 shrink-0" aria-hidden />
           One OAuth grant shared by {grant.connections.length}{' '}
           {grant.connections.length === 1 ? 'connection' : 'connections'}.
         </div>

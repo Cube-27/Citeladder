@@ -91,8 +91,8 @@ export function CompetitorCoPlacementMatrix({ matrix }: Readonly<{ matrix: CoPla
               </TableBody>
             </Table>
             {matrix.truncated ? (
-              <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2.5 text-xs">
-                <Info className="size-3.5 shrink-0" aria-hidden />
+              <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2 text-xs">
+                <Info className="size-4 shrink-0" aria-hidden />
                 <span>
                   Showing the most frequent competitor pairs for this run — less frequent pairs are
                   truncated.

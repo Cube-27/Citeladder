@@ -5,8 +5,9 @@ import { cva } from 'class-variance-authority';
  * tokens only (no raw hex). Sizes use the control-height tokens via bridged
  * `h-*` utilities defined in globals.css (--control-height*).
  *
- * v2 language: buttons are `rounded-md` (8px), not pills — the pill shape is
- * retired app-wide and now belongs to badges and the segmented control only.
+ * ADS language: buttons are `rounded-sm` (4px = ADS `radius.small`), not
+ * pills — the pill shape is retired app-wide and now belongs to badges and
+ * the segmented control only.
  * Primary is an accent fill (`bg-accent` + `text-accent-fg`), replacing the
  * flat phase's monochrome `bg-foreground` pill; the accent is no longer
  * reserved away from actions, since the primary action is exactly the thing a
@@ -25,7 +26,7 @@ import { cva } from 'class-variance-authority';
  * that reads as the raised option without needing a shadow.
  */
 export const buttonVariants = cva(
-  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border font-sans font-medium leading-none no-underline transition-[background-color,color,border-color] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[background-color,color,border-color] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
@@ -45,12 +46,12 @@ export const buttonVariants = cva(
         // instead of fading opacity, which used to wash the label out along with
         // the fill. globals.test.ts gates both `danger-fg` ↔ fill pairs.
         destructive:
-          'border-transparent bg-danger-solid text-danger-fg hover:bg-danger-solid-hover',
+          'border-transparent bg-danger-solid text-danger-fg hover:bg-danger-solid-hover active:bg-danger-solid-hover',
       },
       size: {
-        sm: 'h-[var(--control-height-sm)] px-2.5 text-xs',
+        sm: 'h-[var(--control-height-sm)] px-2 text-xs',
         md: 'h-[var(--control-height)] px-3 text-sm',
-        lg: 'h-[var(--control-height-lg)] px-4 text-base',
+        lg: 'h-[var(--control-height-lg)] px-4 text-sm',
         icon: 'size-[var(--control-height)] px-0',
       },
     },

@@ -1,10 +1,19 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { Dialog } from './dialog';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from './dropdown';
-import { HistoryDrawer } from './history-drawer';
 import { Tooltip, TooltipProvider } from './tooltip';
+
+// jsdom has no ResizeObserver, which Radix's tooltip arrow measurement
+// requires once the content actually mounts. A no-op stub is enough — the
+// assertions below pin class strings, not geometry.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver;
 
 describe('Dialog', () => {
   it('renders title/description/children/footer when open', () => {
@@ -66,35 +75,18 @@ describe('Tooltip', () => {
     );
     expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument();
   });
-});
 
-describe('HistoryDrawer', () => {
-  it('renders items with run-status badges when open', () => {
+  it('renders the ADS inverse chip when open (never white-on-white)', async () => {
     render(
-      <HistoryDrawer
-        open
-        onOpenChange={() => {}}
-        onSelect={() => {}}
-        items={[
-          {
-            id: 'abcdef12-3456-7890-abcd-ef1234567890',
-            status: 'completed',
-            createdAt: '2026-07-10T00:00:00Z',
-            label: 'Audit #1',
-          },
-        ]}
-      />,
+      <TooltipProvider>
+        <Tooltip content="Coming soon" delayDuration={0}>
+          <button type="button">Generate</button>
+        </Tooltip>
+      </TooltipProvider>,
     );
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Run history')).toBeInTheDocument();
-    expect(screen.getByText('Audit #1')).toBeInTheDocument();
-    // Short id + run-status badge label.
-    expect(screen.getByText('#abcdef12')).toBeInTheDocument();
-    expect(screen.getByText('completed')).toBeInTheDocument();
-  });
-
-  it('shows an empty state when there is no history', () => {
-    render(<HistoryDrawer open onOpenChange={() => {}} onSelect={() => {}} items={[]} />);
-    expect(screen.getByText('No history found.')).toBeInTheDocument();
+    fireEvent.focus(screen.getByRole('button', { name: 'Generate' }));
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.className).toContain('bg-surface-inverse');
+    expect(tip.className).toContain('text-on-inverse');
   });
 });

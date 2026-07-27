@@ -6,11 +6,16 @@ import { describe, expect, it } from 'vitest';
 const here = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(here, 'globals.css'), 'utf8');
 const dsCss = readFileSync(join(here, 'ds-tokens.css'), 'utf8');
+const dsTypeCss = readFileSync(join(here, 'ds-type.css'), 'utf8');
+const dsSpaceCss = readFileSync(join(here, 'ds-space.css'), 'utf8');
+const appChromeCss = readFileSync(join(here, 'app-chrome.css'), 'utf8');
 const design = readFileSync(join(here, '..', '..', 'docs', 'design.md'), 'utf8');
 const marketingCss = readFileSync(join(here, '(marketing)', 'marketing-theme.css'), 'utf8');
-// The token source is the two files together: ds-tokens.css holds ADS values,
-// globals.css maps semantics onto them. Name-set checks span both.
-const allCss = `${dsCss}\n${css}`;
+// The token source spans the owners: ds-tokens.css holds ADS values,
+// globals.css maps colour semantics onto them, and ds-type.css / ds-space.css
+// hold the type and space ladders that were split out of globals.css.
+// Name-set checks span all of them.
+const allCss = `${dsCss}\n${css}\n${dsTypeCss}\n${dsSpaceCss}\n${appChromeCss}`;
 
 /* ═══════════════════════════════════════════════════════════════════════
    Parsing + WCAG helpers
@@ -237,7 +242,15 @@ const BODY_PAIRS: Array<[string, string]> = [
   ['danger-fg', 'danger-solid-hover'],
   ['accent-text', 'bg-panel'],
   ['accent-text', 'bg-base'],
+  // The sidebar active nav item and the empty-state icon chip paint
+  // accent-hover on the deep accent-border fill (the clearly-visible
+  // selected tint): 4.94:1 light, 6.11:1 dark. accent-text on the same
+  // fill is 3.88:1 in light — sub-AA — which is why the label/icon uses
+  // the darker rung and why this pair is gated.
+  ['accent-hover', 'accent-border'],
   ['text-link', 'bg-panel'],
+  // The inverse pair (tooltip surface): 7.65:1 in both themes.
+  ['text-on-inverse', 'bg-inverse'],
 ];
 // Each status/sentiment/score/run/citation *-text (or solid-as-text) on its *-bg.
 const FAMILY_PAIRS: Array<[string, string]> = [
@@ -276,6 +289,9 @@ describe('globals.css token set matches docs/design.md', () => {
     expect(css).toMatch(/:root\s*\{/);
     expect(css).toMatch(/html\[data-theme='dark'\]\s*\{/);
     expect(css).toMatch(/@theme inline\s*\{/);
+    // The dark custom-variant makes `dark:` utilities real; it was silently
+    // deleted once already, which turned every `dark:` class into a no-op.
+    expect(css).toMatch(/@custom-variant dark \(&:where\(html\[data-theme='dark'\] \*\)\);/);
   });
 
   it('declares every raw --token documented in design.md (app sections)', () => {
@@ -338,6 +354,9 @@ describe('Atlassian palette (verbatim port)', () => {
       ['--ds-surface', '#ffffff', '#161a1d'],
       ['--ds-surface-raised', '#ffffff', '#1d2125'],
       ['--ds-surface-overlay', '#ffffff', '#22272b'],
+      // The one addition: the app canvas (documented departure — ADS's only
+      // sunken surface sits 2.54 ΔE76 from a white card, below threshold).
+      ['--ds-surface-canvas', '#f1f2f4', '#101214'],
     ];
     for (const [name, light, dark] of expected) {
       expect(dsLight.get(name), `${name} (light)`).toBe(light);
@@ -350,17 +369,28 @@ describe('Atlassian palette (verbatim port)', () => {
     // ever matches one surface; these are #091E42 at 14% / #A6C5E2 at 16%.
     expect(dsLight.get('--ds-border')).toBe('#091e4224');
     expect(dsDark.get('--ds-border')).toBe('#a6c5e229');
+    expect(dsLight.get('--ds-border-subtle')).toBe('#091e420f');
+    expect(dsDark.get('--ds-border-subtle')).toBe('#a1bdd914');
     for (const tokens of [dsLight, dsDark]) {
       const border = resolveValue(tokens.get('--ds-border') ?? '', tokens, 0);
       expect(border?.a, 'ds-border must be translucent').toBeLessThan(1);
+      const subtle = resolveValue(tokens.get('--ds-border-subtle') ?? '', tokens, 0);
+      expect(subtle?.a, 'ds-border-subtle must be translucent').toBeLessThan(1);
+      // Two REAL tiers: the subtle hairline is strictly weaker, so they can
+      // never re-collapse onto one alpha the way Phase 1 collapsed them.
+      expect(
+        subtle!.a,
+        `ds-border-subtle alpha (${subtle!.a}) must be strictly < ds-border (${border!.a})`,
+      ).toBeLessThan(border!.a);
     }
   });
 
   it('maps the ADS surface/text/accent values onto the semantic tokens', () => {
-    expect(opaqueColor('bg-base', lightTokens)).toMatchObject(hexToRgb('#F7F8F9'));
+    expect(opaqueColor('bg-base', lightTokens)).toMatchObject(hexToRgb('#F1F2F4'));
     expect(opaqueColor('bg-panel', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
     expect(opaqueColor('bg-elevated', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
-    expect(opaqueColor('bg-input', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
+    // The field fill is the canvas: an inset well on a white card (ΔE76 4.66).
+    expect(opaqueColor('bg-input', lightTokens)).toMatchObject(hexToRgb('#F1F2F4'));
     // Sidebar takes the PANEL surface, not the canvas: sidebar + top bar form
     // one continuous chrome frame around a recessed content well.
     expect(opaqueColor('bg-sidebar', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
@@ -418,14 +448,29 @@ describe('Atlassian palette (verbatim port)', () => {
     expect(css).not.toMatch(/--text-accent\s*:/);
   });
 
-  it('declares score band text/ring/border and the hero/data type sizes', () => {
+  it('declares score band text/ring/border and the ADS type ladder rungs', () => {
     for (const band of ['low', 'mid', 'good', 'high']) {
       expect(lightTokens.has(`--score-${band}-text`), `--score-${band}-text`).toBe(true);
       expect(lightTokens.has(`--score-${band}-ring`), `--score-${band}-ring`).toBe(true);
       expect(lightTokens.has(`--score-${band}-border`), `--score-${band}-border`).toBe(true);
     }
-    expect(css).toMatch(/--text-hero:\s*3rem/); // 48px hero metric
-    expect(css).toMatch(/--text-data-lg:\s*1\.375rem/); // 22px large mono data
+    // The type ladder lives in ds-type.css since the file split — matched
+    // against the combined token source. The ADS rungs: body is 14/20, the
+    // hero numeral is 35/40 (name kept, was 48px), bold is a true 700.
+    expect(allCss).toMatch(/--text-sm:\s*0\.875rem/); // 14px body default
+    expect(allCss).toMatch(/--text-sm--line-height:\s*1\.25rem/); // 20px
+    expect(allCss).toMatch(/--text-hero:\s*2\.1875rem/); // 35px hero metric
+    expect(allCss).toMatch(/--text-hero--line-height:\s*2\.5rem/); // 40px
+    expect(allCss).toMatch(/--weight-bold:\s*700/);
+  });
+
+  it('declares NO letter-spacing tokens anywhere — ADS tracking is 0 at every step', () => {
+    // The --tracking-* namespace was removed with the ADS ladder: no token in
+    // any CSS layer may reintroduce it, and check-ads-scale.mjs bans the
+    // utility classes in ts/tsx (zero ceiling).
+    expect(allCss).not.toMatch(/--tracking-[a-z]+\s*:/);
+    expect(allCss).not.toMatch(/--text-[a-z0-9-]+--letter-spacing\s*:/);
+    expect(allCss).not.toMatch(/--text-data-lg\s*:/); // the retired 22px step
   });
 
   it('runs the score bands as four distinct hues, not two greens', () => {
@@ -609,31 +654,60 @@ describe.each([
    (#0A8F6A 3.7:1, #E95D39 3.2:1, #C98616 2.8:1, muted #737973 4.1:1) all
    failed as text, which is why the `-text` forms exist at all.
 
+   Blue is the one exemption: the ADS `#0C66E4` clears 4.5:1 on paper as
+   both mark and text, so proof ships a single token (plus a hover step)
+   and appears in BOTH arrays below. That is intentional, not a copy-paste
+   error — a `-text` sibling would be a duplicate token, not a safety net.
+
    Ratios are computed against the paper canvas — the lightest surface the
-   surface ever paints text on, so passing here passes on white too.
+   system paints text on, so passing there passes on white too — AND against
+   the two darker band fills (sunken, wash), which have taken text since the
+   band rhythm landed. The paper gate alone once let ink-muted (4.16:1) and
+   proof (4.26:1) ship as text on sunken; the per-fill lists below encode
+   which text colours are legal on which band.
 ═══════════════════════════════════════════════════════════════════════ */
 const PROOF_PAPER = '#F5F5F0';
 
 /** Text roles: must clear AA (4.5:1) on paper. */
 const PROOF_TEXT_COLORS = [
-  '#151715', // ink
-  '#454A46', // ink-soft — body copy
-  '#656B65', // ink-muted — meta, captions
-  '#1257C4', // proof-text — links, active labels
-  '#087354', // evidence-text — "verified"
-  '#B23A1A', // signal-text — decline, refusals
-  '#8A5D0F', // amber-text — "needs review"
+  '#172B4D', // ink — 12.89:1
+  '#44546F', // ink-soft — 7.00:1, body copy
+  '#626F86', // ink-muted — 4.64:1, meta (tightest pair; paper/surface-only, see band gates)
+  '#0C66E4', // proof — 4.76:1, links and active labels (no -text split; sunken is mark-only)
+  '#216E4E', // evidence-text — 5.64:1, "verified"
+  '#AE2A19', // signal-text — 6.11:1, decline, refusals
+  '#974F0C', // amber-text — 5.58:1, "needs review"
 ];
 
 /**
+ * Band fills darker than paper that sections paint via `tone`. Every text
+ * colour used on these fills must clear AA against the fill itself.
+ */
+const BAND_FILLS = {
+  sunken: '#E9E9E0',
+  wash: '#EAF1FA',
+} as const;
+
+/**
+ * Text colours legal on each band fill. ink-muted (#626F86) drops to
+ * 4.16:1 on sunken and 4.46:1 on wash, so band meta text steps up to
+ * ink-soft (#44546F — 6.27/6.73:1). proof (#0C66E4) stays a text colour on
+ * wash (4.57:1) but falls to 4.26:1 on sunken, where it is mark/link-only.
+ */
+const BAND_TEXT_COLORS = {
+  sunken: ['#172B4D', '#44546F', '#216E4E', '#AE2A19', '#974F0C'],
+  wash: ['#172B4D', '#44546F', '#0C66E4', '#216E4E', '#AE2A19', '#974F0C'],
+} as const;
+
+/**
  * Mark/fill roles: ≥ 3:1 so a 2px dot or bar stays visible, but explicitly
- * NEVER body text. Each one has a `-text` sibling above for that job.
+ * NEVER body text. Each one except proof has a `-text` sibling above.
  */
 const PROOF_MARK_COLORS = [
-  '#1668E8', // proof
-  '#0A8F6A', // evidence
-  '#E95D39', // signal
-  '#BE7D12', // amber
+  '#0C66E4', // proof — 4.76:1: the one mark that also clears AA as text
+  '#1F845A', // evidence — 4.26:1
+  '#CA3521', // signal — 4.75:1
+  '#B65C02', // amber — 4.25:1
 ];
 
 describe('marketing + auth creative system (the Proof contract)', () => {
@@ -669,6 +743,24 @@ describe('marketing + auth creative system (the Proof contract)', () => {
     );
   });
 
+  it.each(Object.entries(BAND_TEXT_COLORS))(
+    'text colors on the %s band fill ≥ 4.5:1',
+    (band, colors) => {
+      const fill = BAND_FILLS[band as keyof typeof BAND_FILLS];
+      expect(marketingCss.toLowerCase(), `${fill} band fill is not declared`).toContain(
+        fill.toLowerCase(),
+      );
+      const bandCanvas = { ...hexToRgb(fill), a: 1 };
+      for (const color of colors) {
+        const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, bandCanvas);
+        expect(
+          ratio,
+          `${color} on ${band} ${fill} = ${FMT(ratio)}:1 (< 4.5:1)`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
+
   it.each(PROOF_MARK_COLORS)('mark/fill %s on paper ≥ 3:1 (never body text)', (color) => {
     expect(marketingCss.toLowerCase(), `${color} is not declared`).toContain(color.toLowerCase());
     const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
@@ -678,7 +770,9 @@ describe('marketing + auth creative system (the Proof contract)', () => {
   it('gives every state hue an AA-safe text sibling', () => {
     // Structural, not cosmetic: a hue with no `-text` form is one a future
     // section will inevitably use for copy, and it will fail AA silently.
-    for (const role of ['proof', 'evidence', 'signal', 'amber']) {
+    // Blue is exempt by measurement, not by exception: #0C66E4 clears AA as
+    // text on paper, so a proof `-text` sibling would be a duplicate token.
+    for (const role of ['evidence', 'signal', 'amber']) {
       expect(marketingCss, `--color-mkt-${role} has no -text sibling`).toMatch(
         new RegExp(`--color-mkt-${role}-text\\s*:`),
       );

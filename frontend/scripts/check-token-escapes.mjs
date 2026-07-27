@@ -15,7 +15,7 @@ import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
 const SEARCH_ROOTS = ['app', 'components', 'lib'];
-const TOKEN_ESCAPE_PATTERN = /\b(?:bg|text|border|shadow|ring|fill|stroke)-\[var\(--/;
+const TOKEN_ESCAPE_PATTERN = /\b(?:bg|text|border|shadow|ring|fill|stroke)-(?:\[var\(--|\(--)/;
 const RAW_HEX_PATTERN = /#[0-9a-fA-F]{3,8}\b/;
 
 function walk(dir) {
@@ -41,7 +41,7 @@ for (const root of SEARCH_ROOTS) {
       violations.push(`${normalized}: raw CSS-var Tailwind escape (use a bridged token)`);
     }
     if (RAW_HEX_PATTERN.test(text)) {
-      violations.push(`${normalized}: raw hex color (only globals.css theme blocks may hold hex)`);
+      violations.push(`${normalized}: raw hex color (no hex in component/app .ts/.tsx source)`);
     }
   }
 }

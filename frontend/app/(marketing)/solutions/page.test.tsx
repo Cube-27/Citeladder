@@ -54,16 +54,26 @@ describe('Solutions page (public marketing `/solutions`)', () => {
 
     const inHouse = screen.getByRole('region', { name: 'In-house teams' });
     expect(within(inHouse).getByText(/cross-run trends/i)).toBeInTheDocument();
-    expect(within(inHouse).getByText(/Site Health \+ AEO scores/i)).toBeInTheDocument();
+    expect(within(inHouse).getByText(/33 deterministic site-health rules/i)).toBeInTheDocument();
+    expect(within(inHouse).getByText(/Bing Webmaster Tools/i)).toBeInTheDocument();
     expect(
       within(inHouse).getByRole('link', { name: /see the reporting surfaces/i }),
     ).toHaveAttribute('href', DEMO_HREF);
 
     const founders = screen.getByRole('region', { name: 'Founders' });
     expect(within(founders).getByText(/free sample Site Health crawl/i)).toBeInTheDocument();
-    expect(within(founders).getByText(/self-host when you outgrow the cloud/i)).toBeInTheDocument();
+    expect(
+      within(founders).getByText(/provenance stamps on every projection/i),
+    ).toBeInTheDocument();
     expect(
       within(founders).getByRole('link', { name: /see what a first audit shows/i }),
+    ).toHaveAttribute('href', DEMO_HREF);
+
+    const commerce = screen.getByRole('region', { name: 'Ecommerce' });
+    expect(within(commerce).getByText(/price accuracy/i)).toBeInTheDocument();
+    expect(within(commerce).getByText(/competitor co-placement/i)).toBeInTheDocument();
+    expect(
+      within(commerce).getByRole('link', { name: /see the commerce workflow/i }),
     ).toHaveAttribute('href', DEMO_HREF);
 
     const pr = screen.getByRole('region', { name: 'PR & communications' });

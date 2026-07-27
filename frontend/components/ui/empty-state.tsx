@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { IconChip } from '@/components/ui/icon-chip';
+import { displayHeadingLgClasses } from '@/components/ui/typography';
 
 /**
  * EmptyState — the one empty-state pattern for the whole app.
@@ -37,17 +38,17 @@ export function EmptyState({
 }>) {
   return (
     <Card className={className}>
-      <CardContent className="grid justify-items-center gap-3 py-10 text-center">
+      <CardContent className="grid justify-items-center gap-4 py-12 text-center">
         <IconChip>
-          <Icon className="size-5" aria-hidden />
+          <Icon className="size-6" aria-hidden />
         </IconChip>
-        <div className="grid gap-1">
-          <h2 className="text-foreground text-lg font-semibold tracking-tight">{heading}</h2>
+        <div className="grid gap-2">
+          <h2 className={displayHeadingLgClasses}>{heading}</h2>
           {description ? (
-            <p className="text-secondary mx-auto max-w-[42ch] text-sm">{description}</p>
+            <p className="text-secondary mx-auto max-w-[46ch] text-sm">{description}</p>
           ) : null}
         </div>
-        {action ? <div className="mt-1 flex items-center gap-2">{action}</div> : null}
+        {action ? <div className="mt-2 flex items-center gap-2">{action}</div> : null}
       </CardContent>
     </Card>
   );

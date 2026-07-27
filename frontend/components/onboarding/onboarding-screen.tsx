@@ -174,16 +174,16 @@ export function OnboardingScreen() {
     <div className="bg-background min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
       <main className="flex min-h-dvh flex-col px-6 py-8 sm:px-10">
         <header className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2.5">
-            <LogoMark size={26} />
-            <span className="text-foreground text-lg font-semibold tracking-tight">Searchify</span>
+          <span className="flex items-center gap-2">
+            <LogoMark size={24} />
+            <span className="text-foreground text-heading-sm">Searchify</span>
           </span>
           <span className="text-subtle text-xs">
             Step {step + 1} of {STEPS.length}
           </span>
         </header>
 
-        <div className="mx-auto flex w-full max-w-[520px] flex-1 flex-col justify-center py-10">
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center py-10">
           {/* Labelled stepper. The bars alone said "three of something" without
               saying what, so the user could not tell what was coming — which is
               most of what a stepper is for. `aria-current` marks the active step
@@ -218,7 +218,7 @@ export function OnboardingScreen() {
 
           {step === 0 ? (
             <form noValidate onSubmit={submitBrand} className="grid gap-5">
-              <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+              <h1 className="text-foreground text-2xl">
                 {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
               </h1>
 
@@ -291,7 +291,7 @@ export function OnboardingScreen() {
 
           {step === 1 ? (
             <div className="grid gap-5">
-              <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+              <h1 className="text-foreground text-2xl">
                 Finding what to track
               </h1>
 
@@ -317,7 +317,7 @@ export function OnboardingScreen() {
 
           {step === 2 ? (
             <div className="grid gap-5">
-              <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+              <h1 className="text-foreground text-2xl">
                 Does this look right?
               </h1>
 

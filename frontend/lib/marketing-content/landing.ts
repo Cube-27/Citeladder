@@ -34,7 +34,7 @@ export const LANDING_CONTENT = {
   engines: {
     kicker: 'Coverage',
     title: 'The engines your buyers actually ask.',
-    body: 'ChatGPT, Gemini and Claude are audited out of the box on your own provider keys. Paid workspaces can connect any other provider they hold keys for — the answer engines your buyers use, not the ones we happen to support.',
+    body: 'ChatGPT, Gemini and Claude are audited out of the box on your own provider keys. Each engine runs through exactly one approved transport, and every run records all three identities — logical engine, transport provider, and the exact transport model.',
     /**
      * Buyer questions for the hero strip, rendered quoted and italic so they
      * read as things people ask rather than as claims we are making.
@@ -51,7 +51,7 @@ export const LANDING_CONTENT = {
       'which help desk platform has the best support',
       'cheapest email marketing tool for small teams',
       'most reliable cloud hosting provider',
-      'what do reviewers say about open source BI tools',
+      'what do reviewers say about self-serve BI tools',
       'is an SEO platform worth it for a small business',
       'compare the leading data warehouse options',
       'which password manager do security teams recommend',
@@ -108,7 +108,7 @@ export const LANDING_CONTENT = {
         num: '01',
         kicker: 'Observe',
         title: 'Ask what your buyers ask',
-        body: 'A prompt library that mirrors real buying questions — comparisons, best-of lists, alternatives — grouped by intent, market and product.',
+        body: 'Type your brand and its website. Searchify proposes the competitors, the domains you own and a starting prompt library — comparisons, best-of lists, alternatives — and every suggestion arrives editable before anything runs.',
       },
       {
         num: '02',
@@ -130,7 +130,7 @@ export const LANDING_CONTENT = {
     kicker: 'Product',
     title: 'One workspace for the whole market picture.',
     intro:
-      'Visibility, competitors, products and site evidence share a single observation field, so a number you question is always one click from the answer that produced it.',
+      'Visibility, Answers, Traffic, Commerce, Content and Site health share one observation field, so a number you question is always one click from the answer that produced it.',
   },
 
   evidence: {
@@ -177,19 +177,13 @@ export const LANDING_CONTENT = {
       cards: [
         'Which platform is trusted by enterprise teams?',
         'Best AI visibility tools for global agencies',
-        'How does Searchify verify its metrics?',
+        'Which vendor publishes how its scores are calculated?',
       ],
     },
     strategy: {
       tag: 'Strategic intelligence',
       title: 'Move from observation to your next best action.',
       body: 'Searchify connects visibility gaps, competitor patterns, site evidence and product presence into a prioritised strategy.',
-    },
-    quote: {
-      text: 'The result should feel less like a dashboard making claims — and more like a research team showing its work.',
-      attribution: 'How we build it',
-      detail: 'Evidence before persuasion',
-      mark: 'Searchify',
     },
   },
 

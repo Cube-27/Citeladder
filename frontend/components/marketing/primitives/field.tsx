@@ -74,7 +74,7 @@ export function MktInput({ className, ...props }: ComponentPropsWithoutRef<'inpu
         'border-mkt-line bg-mkt-paper-raised text-mkt-ink placeholder:text-mkt-ink-muted rounded-mkt-sm',
         'focus:border-mkt-proof focus:ring-mkt-proof-soft text-mkt-body min-h-12 w-full border px-3.5',
         'transition-[border-color,box-shadow,background-color] duration-200 outline-none',
-        'focus:bg-mkt-surface aria-invalid:border-mkt-signal focus:ring-3',
+        'focus:bg-mkt-surface aria-invalid:border-mkt-signal focus:ring-2',
         className,
       )}
     />

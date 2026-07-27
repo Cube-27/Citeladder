@@ -233,7 +233,7 @@ export function PromptLibrary() {
   if (isLoading) {
     return (
       <div className="grid gap-3">
-        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-8 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
     );

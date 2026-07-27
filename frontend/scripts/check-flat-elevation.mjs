@@ -12,11 +12,14 @@
  *   2. Shadow ONLY on true overlays — modal, dropdown, popover, tooltip,
  *      toast, command palette — via the single `shadow-modal-value` rung.
  *   3. Depth is a tint step plus a 1px alpha hairline, never light.
- *   4. No gradients or backdrop-blur on UI chrome. Marketing display art
- *      (hero scenes, wallpaper) is exempt; a control or container is not.
+ *   4. No gradients or backdrop-blur on UI chrome. Display art that is not
+ *      a control or container (the marketing wallpaper SVG, the marquee
+ *      mask) lives in CSS, which this component scan does not read.
  *
- * Marketing is exempt from the gradient rule only, and only under
- * components/marketing/ — it still may not shadow an in-flow surface.
+ * Marketing is inside the policy with no exemption: the `--shadow-mkt-*`
+ * family and the glass utilities are gone, the nav's two floating overlays
+ * use `shadow-modal-value` like every other overlay, and the wallpaper
+ * scenes are opaque panels with hairline borders.
  *
  * Run: node scripts/check-flat-elevation.mjs
  */
@@ -37,7 +40,6 @@ const OVERLAY_ALLOWLIST = new Set([
   'components/ui/tooltip.tsx',
   'components/ui/command-palette.tsx',
   'components/ui/market-select.tsx',
-  'components/ui/history-drawer.tsx',
   'components/opportunities/evidence-drawer.tsx',
   // Marketing nav dropdown — the one floating surface on the landing.
   'components/marketing/chrome/nav.tsx',
@@ -63,18 +65,6 @@ const SHADOW_UTILITY =
   /(?<![\w-])shadow-(?!none\b|modal-value\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
 const GRADIENT_UTILITY =
   /(?<![\w-])(?:bg-gradient-to-[a-z]+|bg-linear-|bg-radial-|bg-conic-|backdrop-blur)/g;
-
-/**
- * PHASE 2 PENDING — the marketing surface still runs the `--shadow-mkt-*`
- * family from the parallel `mkt-*` token system. Phase 2 folds marketing onto
- * the ADS layer and deletes those tokens; until then its shadows are exempt so
- * the app half of the policy can be enforced independently.
- *
- * DELETE THIS SET in Phase 2. The guard fails if it stops suppressing
- * anything, so it cannot quietly outlive its purpose.
- */
-const MARKETING_SHADOW_EXEMPTION = 'components/marketing/';
-let marketingSuppressions = 0;
 
 /**
  * Blank out comments while preserving line numbers and column offsets, so a
@@ -111,17 +101,12 @@ for (const root of SEARCH_ROOTS) {
   for (const absolute of walk(rootPath)) {
     const file = relative(ROOT, absolute).replaceAll('\\', '/');
     const isOverlay = OVERLAY_ALLOWLIST.has(file);
-    const isMarketing = file.startsWith(MARKETING_SHADOW_EXEMPTION);
     const lines = stripComments(readFileSync(absolute, 'utf8')).split(/\r?\n/);
 
     lines.forEach((text, index) => {
       const lineNumber = index + 1;
 
       for (const [match] of text.matchAll(SHADOW_UTILITY)) {
-        if (isMarketing) {
-          marketingSuppressions += 1;
-          continue;
-        }
         report(
           file,
           lineNumber,
@@ -131,7 +116,6 @@ for (const root of SEARCH_ROOTS) {
         );
       }
 
-      if (isMarketing) return;
       for (const [match] of text.matchAll(GRADIENT_UTILITY)) {
         report(
           file,
@@ -171,14 +155,6 @@ if (!existsSync(globalsPath)) {
       );
     }
   }
-}
-
-/* Rot detection for the Phase 2 exemption — see MARKETING_SHADOW_EXEMPTION. */
-if (marketingSuppressions === 0) {
-  violations.push(
-    'scripts/check-flat-elevation.mjs: MARKETING_SHADOW_EXEMPTION no longer suppresses ' +
-      'anything — marketing is flat. Delete the exemption and this check.',
-  );
 }
 
 if (violations.length) {

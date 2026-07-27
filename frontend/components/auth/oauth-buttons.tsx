@@ -93,13 +93,13 @@ export function OAuthSection() {
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {OAUTH_PROVIDERS.map((provider) => (
           <Button
             key={provider.id}
             variant="secondary"
             size="lg"
-            className="w-full gap-2.5"
+            className="w-full gap-2"
             disabled={pending !== null}
             onClick={() => void startOAuth(provider)}
           >

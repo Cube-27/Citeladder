@@ -89,7 +89,7 @@ export function ProjectsScreen() {
                     >
                       <BrandLogo name={label} logoUrl={project.brand.logo_url} size="md" />
                       <span className="min-w-0 flex-1">
-                        <span className="text-foreground block truncate text-base font-medium">
+                        <span className="text-foreground block truncate text-sm font-medium">
                           {label}
                         </span>
                         {project.website_url ? (
@@ -100,7 +100,7 @@ export function ProjectsScreen() {
                       </span>
                       {isActive ? (
                         <span className="text-accent-text inline-flex shrink-0 items-center gap-1.5 text-xs">
-                          <Check className="size-3.5" aria-hidden />
+                          <Check className="size-4" aria-hidden />
                           Active
                         </span>
                       ) : null}

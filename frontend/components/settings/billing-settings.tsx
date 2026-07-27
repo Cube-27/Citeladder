@@ -143,7 +143,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
         <CardContent className="grid gap-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-foreground text-lg font-semibold capitalize">{effectiveTier}</p>
+              <p className="text-foreground text-heading-sm capitalize">{effectiveTier}</p>
               <p className="text-muted mt-1 text-xs">
                 {summary.subscription_status
                   ? `Razorpay subscription: ${summary.subscription_status.replaceAll('_', ' ')}`
@@ -195,7 +195,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
             <Skeleton className="h-16 w-full" />
           ) : price && price.total_amount_minor > 0 ? (
             <div>
-              <p className="text-foreground text-2xl font-semibold">
+              <p className="text-foreground text-xl font-semibold">
                 {money(price.base_amount_minor, price.currency)}
                 <span className="text-muted ml-1 text-sm font-normal">/ month</span>
               </p>

@@ -34,11 +34,19 @@ describe('Demo page', () => {
     );
   });
 
-  it('does not render a fake scheduler without configuration', () => {
+  it('converts to self-serve when no booking channel is configured', () => {
     delete process.env.DEMO_BOOKING_URL;
     delete process.env.PUBLIC_SALES_EMAIL;
     render(<Page />);
     expect(screen.queryByRole('link', { name: /schedule demo|email sales/i })).toBeNull();
-    expect(screen.getByText(/scheduling is being configured/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /start free/i })).toHaveAttribute(
+      'href',
+      '/register',
+    );
+    expect(screen.getByRole('link', { name: /compare plans/i })).toHaveAttribute(
+      'href',
+      '/pricing',
+    );
+    expect(screen.getByText(/self-serve signup is open now/i)).toBeInTheDocument();
   });
 });

@@ -50,7 +50,7 @@ export function PreviewPanel({
       <p className={eyebrowClasses}>Your workspace</p>
 
       <div className="mt-4">
-        <p className="text-foreground text-lg font-semibold tracking-tight">
+        <p className="text-foreground text-heading-sm">
           {brandName.trim() || 'Your brand'}
         </p>
         {domain ? <p className="text-muted mt-0.5 text-sm">{domain}</p> : null}

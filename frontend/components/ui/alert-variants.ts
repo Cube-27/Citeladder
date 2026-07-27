@@ -2,7 +2,7 @@ import { cva } from 'class-variance-authority';
 
 /** Alert CVA (§8) — tone maps to bridged status token classes (no raw hex). */
 export const alertVariants = cva(
-  'flex items-start gap-2 rounded-md border px-3 py-2 text-sm leading-normal',
+  'flex items-start gap-2 rounded-md border p-4 text-sm',
   {
     variants: {
       tone: {

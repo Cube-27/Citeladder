@@ -332,7 +332,7 @@ test('four tabs in order, no Sources/Topics/Sentiment, Overview by default, one 
   await expect(tablist).toBeVisible();
 
   const tabs = tablist.getByRole('tab');
-  await expect(tabs).toHaveText(['Overview', 'Trends', 'Mentions & Citations', 'Query Fanout']);
+  await expect(tabs).toHaveText(['Overview', 'Trends', 'Mentions', 'Search queries']);
 
   // Forbidden tabs are absent.
   await expect(tablist.getByRole('tab', { name: 'Sources' })).toHaveCount(0);
@@ -344,7 +344,7 @@ test('four tabs in order, no Sources/Topics/Sentiment, Overview by default, one 
     'aria-selected',
     'true',
   );
-  await expect(page.getByRole('img', { name: 'Visibility score: 67%' })).toBeVisible();
+  await expect(page.getByTestId('overview-summary')).toContainText('67% of answers');
 
   // Exactly one panel is rendered at a time.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -354,24 +354,24 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   const { requests, evidenceUrls } = await setup(page, { evidence: fanoutStatesResponse() });
   await page.goto('/visibility');
 
-  await expect(page.getByRole('img', { name: 'Visibility score: 67%' })).toBeVisible();
+  await expect(page.getByTestId('overview-summary')).toContainText('67% of answers');
 
   // Trends.
   await page.getByRole('tab', { name: 'Trends' }).click();
   await expect(page).toHaveURL(/[?&]tab=trends/);
   await expect(page.getByTestId('trend-chart-visibility_score')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  await expect(page.getByRole('img', { name: 'Visibility score: 67%' })).toHaveCount(0);
+  await expect(page.getByTestId('overview-summary')).toHaveCount(0);
 
   // Mentions & Citations.
-  await page.getByRole('tab', { name: 'Mentions & Citations' }).click();
+  await page.getByRole('tab', { name: 'Mentions' }).click();
   await expect(page).toHaveURL(/[?&]tab=mentions-citations/);
   await expect(page.getByText('Best affordable clothing stores in Australia?')).toBeVisible();
   await expect(page.getByText('Acme Blog')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Query Fanout — reuses the shared evidence cache.
-  await page.getByRole('tab', { name: 'Query Fanout' }).click();
+  await page.getByRole('tab', { name: 'Search queries' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
   await expect(page.getByText('affordable family clothing Australia 2026')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -393,11 +393,11 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
   await expect(page.getByRole('tab', { name: 'Trends' })).toBeFocused();
 
   await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Search queries' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Search queries' })).toBeFocused();
 
   // Wraps forward from the last tab back to the first.
   await page.keyboard.press('ArrowRight');
@@ -408,7 +408,7 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
 
   await page.keyboard.press('End');
   await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Mentions' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -425,18 +425,18 @@ test('shared engine filter persists across tab switches', async ({ page }) => {
   const { evidenceUrls } = await setup(page);
   await page.goto('/visibility');
 
-  await expect(page.getByRole('img', { name: 'Visibility score: 67%' })).toBeVisible();
+  await expect(page.getByTestId('overview-summary')).toContainText('67% of answers');
 
   // Pick an engine on Overview.
-  await page.getByRole('button', { name: 'Filter by engine' }).click();
+  await page.getByRole('button', { name: 'Filter by model' }).click();
   await page.getByRole('menuitem', { name: 'Gemini' }).click();
-  await expect(page.getByRole('button', { name: 'Filter by engine' })).toContainText('Gemini');
+  await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
 
   // Switch to an evidence tab; the engine filter carries into the query params.
-  await page.getByRole('tab', { name: 'Mentions & Citations' }).click();
+  await page.getByRole('tab', { name: 'Mentions' }).click();
   await expect(page.getByText('Best affordable clothing stores in Australia?')).toBeVisible();
   // The engine filter is still shown on the toolbar above the tablist.
-  await expect(page.getByRole('button', { name: 'Filter by engine' })).toContainText('Gemini');
+  await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
 
   await expect
     .poll(() => evidenceUrls.some((u) => u.searchParams.get('engine') === 'gemini'))
@@ -488,9 +488,13 @@ test('mobile viewport: tablist is a single horizontally-scrollable row, one pane
 
   const tablist = page.getByRole('tablist', { name: 'Visibility views' });
   await expect(tablist).toBeVisible();
-  // Single horizontally-scrollable row (not wrapped / stacked).
+  // ADS underline tablist: a single horizontally-scrollable row (not wrapped
+  // / stacked) with the full-width rule under the tabs.
   await expect(tablist).toHaveClass(/overflow-x-auto/);
   await expect(tablist).toHaveClass(/flex-nowrap/);
+  await expect(tablist).toHaveClass(/before:bg-border/);
+  // The selected tab carries the 2px accent underline, not a pill fill.
+  await expect(tablist.getByRole('tab', { selected: true })).toHaveClass(/after:bg-accent/);
 
   // All four tabs are still present in the one row.
   await expect(tablist.getByRole('tab')).toHaveCount(4);
@@ -499,7 +503,7 @@ test('mobile viewport: tablist is a single horizontally-scrollable row, one pane
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Shared filters remain usable: the engine dropdown still opens + selects.
-  await page.getByRole('button', { name: 'Filter by engine' }).click();
+  await page.getByRole('button', { name: 'Filter by model' }).click();
   await page.getByRole('menuitem', { name: 'Gemini' }).click();
-  await expect(page.getByRole('button', { name: 'Filter by engine' })).toContainText('Gemini');
+  await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
 });

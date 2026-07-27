@@ -15,6 +15,7 @@ import { Eyebrow, Meta } from '../primitives/label';
 import { PageHero } from '../primitives/page-hero';
 import { Container, Section } from '../primitives/section';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
+import { blogPostingJsonLd, JsonLd } from '../seo/json-ld';
 
 /**
  * `/blog` and `/blog/[slug]`.
@@ -35,9 +36,13 @@ function TagRow({ tags }: Readonly<{ tags: readonly string[] }>) {
 }
 
 function PostMeta({ post }: Readonly<{ post: BlogPost }>) {
+  // Byline fields are owner-supplied; the row is omitted entirely while both
+  // are absent, and a single present value renders without the separator.
+  const parts = [post.date, post.readTime].filter((value): value is string => Boolean(value));
+  if (parts.length === 0) return null;
   return (
     <Meta as="p" className="mt-5">
-      {post.date} · {post.readTime}
+      {parts.join(' · ')}
     </Meta>
   );
 }
@@ -47,9 +52,9 @@ function BlogCta({
   secondary,
 }: Readonly<{ title: string; secondary: { href: string; label: string } }>) {
   return (
-    <Section divided rhythm="loose" aria-label="Get started">
+    <Section tone="sunken" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[16ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
           {title}
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
@@ -84,13 +89,13 @@ export function BlogIndex() {
       {featured ? (
         <>
           <Section rhythm="tight" aria-label="Featured post">
-            <Reveal className="border-mkt-line rounded-mkt-xl bg-mkt-surface grid overflow-hidden border lg:grid-cols-[1.2fr_0.8fr]">
+            <Reveal className="border-mkt-line rounded-mkt-lg bg-mkt-paper grid overflow-hidden border lg:grid-cols-[1.2fr_0.8fr]">
               <div className="p-8 md:p-10">
                 <TagRow tags={featured.tags} />
                 <p
                   role="heading"
                   aria-level={2}
-                  className="font-mkt-display text-mkt-d3 text-mkt-ink mkt-display-w max-w-[20ch]"
+                  className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium max-w-[20ch]"
                 >
                   <Link href={`/blog/${featured.slug}`}>{featured.title}</Link>
                 </p>
@@ -99,18 +104,15 @@ export function BlogIndex() {
                 </p>
                 <PostMeta post={featured} />
               </div>
-              {/* Cover art is user-supplied per post; the slot stays visibly
-                  empty rather than filling with a stock image. */}
-              <div className="mkt-wallpaper grid min-h-[14rem] place-items-center p-8">
-                <Meta className="border-mkt-glass-line bg-mkt-glass rounded-mkt-pill border border-dashed px-3 py-1.5">
-                  Post cover — user supplied
-                </Meta>
-              </div>
+              {/* Cover art is owner-supplied per post; until a cover field
+                  exists the slot stays as plain wallpaper — a shipped page
+                  must not carry placeholder chrome. */}
+              <div className="mkt-wallpaper grid min-h-[14rem] place-items-center p-8" />
             </Reveal>
           </Section>
 
           {rest.length > 0 && (
-            <Section rhythm="tight" aria-label="All posts">
+            <Section tone="paper" rhythm="tight" aria-label="All posts">
               <div className="border-mkt-line mb-6 flex items-center justify-between gap-4 border-b pb-4">
                 <Meta as="p">All notes</Meta>
                 <Meta>
@@ -127,7 +129,7 @@ export function BlogIndex() {
                     <p
                       role="heading"
                       aria-level={3}
-                      className="font-mkt-display text-mkt-ink text-[1.0625rem] font-semibold tracking-[-0.03em]"
+                      className="font-mkt-display text-mkt-ink text-heading-sm font-semibold"
                     >
                       <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                     </p>
@@ -140,12 +142,12 @@ export function BlogIndex() {
           )}
         </>
       ) : (
-        <Section rhythm="tight" aria-label="No posts yet">
-          <Reveal className="border-mkt-line rounded-mkt-xl bg-mkt-surface mx-auto max-w-2xl border border-dashed p-12 text-center">
-            <span className="border-mkt-line bg-mkt-paper text-mkt-ink-soft mx-auto grid size-11 place-items-center rounded-full border">
+        <Section tone="surface" rhythm="tight" aria-label="No posts yet">
+          <Reveal className="border-mkt-line rounded-mkt-lg bg-mkt-paper mx-auto max-w-2xl border border-dashed p-12 text-center">
+            <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft mx-auto grid size-11 place-items-center rounded-full border">
               <PenLine aria-hidden strokeWidth={1.8} className="size-5" />
             </span>
-            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w mt-6">
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium mt-6">
               {BLOG_EMPTY_STATE.heading}
             </h2>
             <p className="text-mkt-body text-mkt-ink-soft mx-auto mt-3 max-w-[52ch]">
@@ -172,24 +174,30 @@ export function BlogIndex() {
   );
 }
 
-/** First letter of the author name for the avatar tile ('[TODO(user)]' → 'T'). */
+/** First letter of the author name for the avatar tile. */
 function authorInitial(author: string) {
   return author.match(/[a-z]/i)?.[0].toUpperCase() ?? '?';
+}
+
+/** Date/read-time pair for the post-view byline; omitted while both are absent. */
+function PostMetaByline({ post }: Readonly<{ post: BlogPost }>) {
+  const parts = [post.date, post.readTime].filter((value): value is string => Boolean(value));
+  if (parts.length === 0) return null;
+  return <Meta>{parts.join(' · ')}</Meta>;
 }
 
 function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
   switch (block.type) {
     case 'heading':
       return (
-        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w mt-10 mb-4">
+        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium mt-10 mb-4">
           {block.text}
         </h2>
       );
     case 'list':
       return (
         <ul className="text-mkt-body text-mkt-ink-soft my-5 grid list-disc gap-2 pl-5">
-          {/* Keyed by index — items may repeat verbatim (placeholder posts
-              are all '[TODO(user)]'). */}
+          {/* Keyed by index — items in one list may repeat verbatim. */}
           {block.items.map((item, index) => (
             <li key={index}>{item}</li>
           ))}
@@ -203,6 +211,8 @@ function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
 export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
   return (
     <>
+      {/* datePublished/author appear only once the owner supplies them (B5). */}
+      <JsonLd data={blogPostingJsonLd(post)} />
       <header className="pt-16 pb-10 md:pt-24 md:pb-12">
         <Container>
           <Reveal className="max-w-[70ch]">
@@ -217,23 +227,27 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               <Eyebrow>Field notes</Eyebrow>
             </div>
             <TagRow tags={post.tags} />
-            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mt-4">
+            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mt-4">
               {post.title}
             </h1>
-            <div className="border-mkt-line mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-6">
-              <span className="text-mkt-sm text-mkt-ink flex items-center gap-2.5 font-semibold">
-                <span
-                  aria-hidden
-                  className="bg-mkt-ink text-mkt-surface text-mkt-sm grid size-7 place-items-center rounded-full"
-                >
-                  {authorInitial(post.author)}
-                </span>
-                {post.author}
-              </span>
-              <Meta>
-                {post.date} · {post.readTime}
-              </Meta>
-            </div>
+            {/* The byline is owner-supplied: the row renders only once at
+                least one of author/date/readTime exists. */}
+            {(post.author ?? post.date ?? post.readTime) && (
+              <div className="border-mkt-line mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-6">
+                {post.author && (
+                  <span className="text-mkt-sm text-mkt-ink flex items-center gap-2.5 font-semibold">
+                    <span
+                      aria-hidden
+                      className="bg-mkt-ink text-mkt-surface text-mkt-sm grid size-7 place-items-center rounded-full"
+                    >
+                      {authorInitial(post.author)}
+                    </span>
+                    {post.author}
+                  </span>
+                )}
+                <PostMetaByline post={post} />
+              </div>
+            )}
           </Reveal>
         </Container>
       </header>

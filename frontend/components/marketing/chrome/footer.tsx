@@ -70,7 +70,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
 ];
 
 const LINK =
-  'text-mkt-sm text-mkt-ink-muted hover:text-mkt-ink inline-flex items-center gap-1 transition-colors duration-200';
+  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink inline-flex items-center gap-1 transition-colors duration-200';
 
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
@@ -101,7 +101,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={social.label}
-      className="border-mkt-line bg-mkt-surface text-mkt-ink-soft hover:border-mkt-line-strong rounded-mkt-xs grid size-9 place-items-center border transition-colors duration-200"
+      className="border-mkt-line bg-mkt-surface text-mkt-ink-soft hover:border-mkt-line-strong rounded-sm grid size-9 place-items-center border transition-colors duration-200"
     >
       <Icon aria-hidden className="size-4" />
     </a>
@@ -115,7 +115,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
  */
 export function MarketingFooter() {
   return (
-    <footer className="border-mkt-line bg-mkt-paper-raised border-t">
+    <footer className="border-mkt-line bg-mkt-surface-sunk border-t">
       <Container className="py-16">
         <nav
           aria-label="Footer"
@@ -125,7 +125,7 @@ export function MarketingFooter() {
             <Link href="/" aria-label="Searchify home">
               <Wordmark />
             </Link>
-            <p className="text-mkt-sm text-mkt-ink-muted mt-4 max-w-[26ch]">
+            <p className="text-mkt-sm text-mkt-ink-soft mt-4 max-w-[26ch]">
               Verifiable AI visibility — every metric opens to the answer it came from.
             </p>
             {SOCIAL_LINKS.length > 0 && (
@@ -151,7 +151,7 @@ export function MarketingFooter() {
           ))}
         </nav>
 
-        <div className="border-mkt-line mt-14 flex flex-wrap items-center justify-between gap-4 border-t pt-7">
+        <div className="border-mkt-line mt-12 flex flex-wrap items-center justify-between gap-4 border-t pt-8">
           <Meta>© {new Date().getFullYear()} Searchify · A CUBE27 product</Meta>
           <Meta>Audits run on your own provider keys</Meta>
         </div>

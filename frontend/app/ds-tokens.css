@@ -2,11 +2,15 @@
    ATLASSIAN DESIGN SYSTEM — PRIMITIVE TOKEN LAYER
    ─────────────────────────────────────────────────────────────────────
    Hand-ported from @atlaskit/tokens (css/atlassian-light.css and
-   css/atlassian-dark.css), values VERBATIM. The package itself is not a
-   dependency: it ships ~1600 variables we do not use, and its theming
+   css/atlassian-dark.css). The TYPE / SPACE / RADIUS / SHADOW primitives match
+   @atlaskit/tokens 3.1.0 verbatim; the COLOUR palette matches the ADS 1.0–1.25
+   era (the palette did not change across the 3.x line). The package itself is
+   not a dependency: it ships ~1600 variables we do not use, and its theming
    runtime applies its own `data-color-mode` / `data-theme` attributes,
    which would collide with the hand-rolled bootstrap in lib/theme.ts.
-   Only the ~150 tokens the app actually consumes are ported.
+   Only the ~150 tokens the app actually consumes are ported. A small number of
+   dark-theme tokens are tuned off-reference for this product and are noted
+   in place below.
 
    THIS FILE IS THE PRIMITIVE LAYER — nothing consumes it directly.
    globals.css maps its own semantic names (--bg-panel, --text-primary,
@@ -47,6 +51,14 @@
   --ds-surface-sunken: #f7f8f9;
   --ds-surface-raised: #ffffff;
   --ds-surface-overlay: #ffffff;
+  /* The app canvas. Light #F1F2F4 is ADS color.background.accent.gray.subtlest,
+     used here because ADS's only sunken surface (#F7F8F9) sits 2.54 ΔE76 from
+     a white card — below perceptual threshold, which is why Phase 1's flatness
+     was invisible. This is a deliberate, documented departure from the literal
+     ADS sunken. Dark keeps #101214: ADS dark gray.subtlest (#2C333A) is LIGHTER
+     than --ds-surface there and would invert the ladder globals.test.ts
+     asserts. */
+  --ds-surface-canvas: #f1f2f4;
 
   /* ─── Neutral backgrounds — alpha, so they tint whatever is beneath ── */
   --ds-background-neutral: #091e420f;
@@ -75,6 +87,10 @@
 
   /* ─── Borders — alpha hairlines (see header note) ──────────────────── */
   --ds-border: #091e4224;
+  /* A second, lighter hairline tier. ADS ships no border.subtle, so the 6%
+     neutral background alpha is reused: composited on white it is 4.66 ΔE76
+     versus --ds-border's 11.61 — the two-tier separation Phase 1 collapsed. */
+  --ds-border-subtle: #091e420f;
   --ds-border-bold: #758195;
   --ds-border-input: #091e4224;
   --ds-border-focused: #388bff;
@@ -176,6 +192,46 @@
   --ds-border-width: 1px;
   --ds-border-width-focused: 2px;
 
+  /* ─── Type primitives — @atlaskit/tokens 3.1.0, verbatim ──────────────
+     The raw rungs ds-type.css's ladder is drawn from. Theme-independent,
+     so they live in :root only (no dark block entry). */
+  --ds-font-size-050: 11px;
+  --ds-font-size-075: 12px;
+  --ds-font-size-100: 14px;
+  --ds-font-size-200: 16px;
+  --ds-font-size-300: 20px;
+  --ds-font-size-400: 24px;
+  --ds-font-size-500: 29px;
+  --ds-font-size-600: 35px;
+  --ds-font-lineHeight-100: 16px;
+  --ds-font-lineHeight-200: 20px;
+  --ds-font-lineHeight-300: 24px;
+  --ds-font-lineHeight-400: 28px;
+  --ds-font-lineHeight-500: 32px;
+  --ds-font-lineHeight-600: 40px;
+  --ds-font-weight-regular: 400;
+  --ds-font-weight-medium: 500;
+  --ds-font-weight-semibold: 600;
+  --ds-font-weight-bold: 700;
+
+  /* ─── Space primitives — @atlaskit/tokens 3.1.0, verbatim ─────────────
+     The raw rungs ds-space.css's ladder is drawn from. Theme-independent,
+     so :root only. ADS ships no 28px or 56px rung; 2px and 6px are new. */
+  --ds-space-0: 0;
+  --ds-space-025: 2px;
+  --ds-space-050: 4px;
+  --ds-space-075: 6px;
+  --ds-space-100: 8px;
+  --ds-space-150: 12px;
+  --ds-space-200: 16px;
+  --ds-space-250: 20px;
+  --ds-space-300: 24px;
+  --ds-space-400: 32px;
+  --ds-space-500: 40px;
+  --ds-space-600: 48px;
+  --ds-space-800: 64px;
+  --ds-space-1000: 80px;
+
   /* ─── Interaction scrim (dialog / drawer backdrop) ──────────────────── */
   --ds-blanket: #091e427d;
 }
@@ -200,6 +256,9 @@ html[data-theme='dark'] {
   --ds-surface-sunken: #101214;
   --ds-surface-raised: #1d2125;
   --ds-surface-overlay: #22272b;
+  /* App canvas — see the light-block note; equal to sunken in dark because
+     ADS dark has no deeper surface that keeps the ladder direction. */
+  --ds-surface-canvas: #101214;
 
   /* Neutral backgrounds */
   --ds-background-neutral: #a1bdd914;
@@ -228,6 +287,8 @@ html[data-theme='dark'] {
 
   /* Borders */
   --ds-border: #a6c5e229;
+  /* The lighter hairline tier — same alpha ratio as light (see above). */
+  --ds-border-subtle: #a1bdd914;
   --ds-border-bold: #738496;
   --ds-border-input: #a6c5e229;
   --ds-border-focused: #579dff;

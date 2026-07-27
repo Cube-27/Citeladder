@@ -4,6 +4,7 @@ import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
@@ -28,7 +29,7 @@ export function DropdownContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'border-border bg-elevated shadow-modal-value z-[300] min-w-[10rem] overflow-hidden rounded-md border p-1 focus:outline-none',
+          'border-border bg-elevated shadow-modal-value z-[300] min-w-[10rem] overflow-hidden rounded-sm border p-1 focus:outline-none',
           className,
         )}
         {...props}
@@ -47,7 +48,7 @@ export function DropdownItem({
   return (
     <DropdownPrimitive.Item
       className={cn(
-        'text-foreground data-[highlighted]:bg-background-alt flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-1.5 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'text-foreground data-[highlighted]:bg-background-alt flex min-h-8 cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,
       )}
       {...props}
@@ -68,14 +69,14 @@ export function DropdownCheckboxItem({
         // `relative` makes each row the containing block for its own absolutely
         // positioned indicator below — without it every checkmark resolves
         // against a distant ancestor and they all stack in one spot.
-        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-2.5 pl-7 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 pe-2 ps-7 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,
       )}
       {...props}
     >
-      <span className="absolute left-2 flex size-3.5 items-center justify-center">
+      <span className="absolute start-2 flex size-4 items-center justify-center">
         <DropdownPrimitive.ItemIndicator>
-          <Check className="text-accent size-3.5" aria-hidden />
+          <Check className="text-accent size-4" aria-hidden />
         </DropdownPrimitive.ItemIndicator>
       </span>
       {children}
@@ -89,7 +90,7 @@ export function DropdownLabel({
 }: Readonly<{ className?: string; children: ReactNode }>) {
   return (
     <DropdownPrimitive.Label
-      className={cn('text-2xs text-muted px-2.5 py-1.5 font-medium', className)}
+      className={cn(eyebrowClasses, 'px-2 py-1', className)}
     >
       {children}
     </DropdownPrimitive.Label>

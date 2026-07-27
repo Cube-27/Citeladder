@@ -115,7 +115,7 @@ export function ProductVisibilityPanel({
         return (
           <div className="grid gap-4">
             <div
-              className="flex flex-wrap items-center gap-2.5"
+              className="flex flex-wrap items-center gap-2"
               data-testid="product-visibility-toolbar"
             >
               <RunSelectorDropdown
@@ -207,7 +207,7 @@ export function ProductVisibilityPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-2.5" data-testid="product-visibility-toolbar">
+      <div className="flex flex-wrap items-center gap-2" data-testid="product-visibility-toolbar">
         <RunSelectorDropdown
           runOptions={runOptions}
           activeRunId={activeRunId}
@@ -262,7 +262,7 @@ function SummaryCard({
     <Card>
       <CardContent className="grid gap-1">
         <CardEyebrow>{label}</CardEyebrow>
-        <p className="font-mono text-2xl tabular-nums">{value}</p>
+        <p className="font-mono text-xl tabular-nums">{value}</p>
         <p className="text-muted text-xs">{caption}</p>
       </CardContent>
     </Card>
@@ -461,7 +461,7 @@ function RankDistributionBar({ distribution }: Readonly<{ distribution: Record<s
 function VisibilitySkeleton() {
   return (
     <div className="grid gap-4" aria-hidden>
-      <Skeleton className="h-9 w-96" />
+      <Skeleton className="h-8 w-96" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-24 w-full" />

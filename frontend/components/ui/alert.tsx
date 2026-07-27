@@ -26,7 +26,7 @@ export function Alert({ children, tone, hideIcon, className }: Readonly<AlertPro
   const Icon = toneIcon[tone ?? 'danger'];
   return (
     <div role="alert" className={cn(alertVariants({ tone }), className)}>
-      {hideIcon ? null : <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />}
+      {hideIcon ? null : <Icon className="size-4 shrink-0" aria-hidden />}
       <div className="min-w-0">{children}</div>
     </div>
   );

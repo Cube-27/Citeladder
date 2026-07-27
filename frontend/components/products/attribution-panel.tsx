@@ -117,7 +117,7 @@ export function AttributionPanel({
 
   const toolbar = (
     <div className="grid gap-2">
-      <div className="flex flex-wrap items-center gap-2.5" data-testid="attribution-toolbar">
+      <div className="flex flex-wrap items-center gap-2" data-testid="attribution-toolbar">
         <Dropdown>
           <DropdownTrigger asChild>
             <Button variant="secondary" size="sm" aria-label="Select date range">
@@ -336,7 +336,7 @@ function CurrencyBlockSection({
   if (!showHeading) return <>{children}</>;
   return (
     <section className="grid gap-3" aria-label={currency ?? 'Unavailable methods'}>
-      <h3 className="text-muted text-sm font-semibold tracking-wide">
+      <h3 className="text-muted text-xs font-semibold">
         {currency ?? 'Unavailable methods'}
       </h3>
       {children}
@@ -347,7 +347,7 @@ function CurrencyBlockSection({
 function AttributionSkeleton() {
   return (
     <div className="grid gap-4" aria-hidden>
-      <Skeleton className="h-9 w-[28rem] max-w-full" />
+      <Skeleton className="h-8 w-[28rem] max-w-full" />
       <div className="grid gap-4 xl:grid-cols-2">
         <Skeleton className="h-56 w-full" />
         <Skeleton className="h-56 w-full" />

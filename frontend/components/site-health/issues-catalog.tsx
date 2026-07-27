@@ -243,7 +243,7 @@ function IssueCard({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: str
         </div>
 
         <div className="grid gap-1">
-          <h3 className="text-foreground text-base font-semibold">{issueTitle(issue)}</h3>
+          <h3 className="text-foreground text-heading-sm">{issueTitle(issue)}</h3>
         </div>
 
         {issue.remediation ? (

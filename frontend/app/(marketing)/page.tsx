@@ -16,12 +16,12 @@ const DESCRIPTION =
   'competitors, traces every conclusion back to the answer it came from, and turns the ' +
   'pattern into strategy. Runs on your own provider keys, encrypted at rest.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Searchify — See your market through AI’s eyes',
+  // Absolute title: the root template must not append to the landing title.
+  title: { absolute: 'Searchify — See your market through AI’s eyes' },
   description: DESCRIPTION,
+  alternates: { canonical: '/' },
   openGraph: {
     title: 'Searchify — See your market through AI’s eyes',
     description: DESCRIPTION,

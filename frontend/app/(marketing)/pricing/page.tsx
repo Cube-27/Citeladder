@@ -9,21 +9,20 @@ const DESCRIPTION =
   'Free, Paid at $49 per month before applicable tax, and sales-assisted Enterprise. ' +
   'India is billed in INR with GST added; international cards are charged in USD.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Searchify Pricing — BYOK AI visibility audits, site health & AEO monitoring',
+  title: 'Pricing — BYOK AI visibility audits, site health & AEO monitoring',
   description: DESCRIPTION,
+  alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'Searchify Pricing — BYOK AI visibility audits, site health & AEO monitoring',
+    title: 'Pricing — BYOK AI visibility audits, site health & AEO monitoring',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'Searchify Pricing — BYOK AI visibility audits, site health & AEO monitoring',
+    title: 'Pricing — BYOK AI visibility audits, site health & AEO monitoring',
     description: DESCRIPTION,
   },
 };

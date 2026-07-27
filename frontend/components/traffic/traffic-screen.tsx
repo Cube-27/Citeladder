@@ -63,7 +63,7 @@ const CHIP_ACTIVE_CLASS =
 export function TrafficSkeleton() {
   return (
     <div className="grid gap-6" aria-busy="true" data-testid="traffic-skeleton">
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         <Skeleton className="h-[30px] w-44 rounded-full" />
         <Skeleton className="h-[38px] w-56 rounded-full" />
         <Skeleton className="ml-auto h-[30px] w-28 rounded-full" />
@@ -102,7 +102,7 @@ function TrafficToolbar({
   onSyncNow: () => void;
 }>) {
   return (
-    <div className="flex flex-wrap items-center gap-2.5" data-testid="traffic-toolbar">
+    <div className="flex flex-wrap items-center gap-2" data-testid="traffic-toolbar">
       <Dropdown>
         <DropdownTrigger asChild>
           <Button
@@ -148,12 +148,12 @@ function TrafficToolbar({
         >
           {syncing || syncPending ? (
             <>
-              <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              <Loader2 className="size-4 animate-spin" aria-hidden />
               Syncing…
             </>
           ) : (
             <>
-              <RefreshCw className="size-3.5" aria-hidden />
+              <RefreshCw className="size-4" aria-hidden />
               Sync now
             </>
           )}
@@ -171,7 +171,7 @@ function StatCard({ stat }: Readonly<{ stat: TrafficStat }>) {
     <Card data-testid={`stat-${stat.key}`}>
       <CardContent className="grid gap-1 p-4">
         <span className={eyebrowClasses}>{stat.label}</span>
-        <span className={cn('mono text-2xl font-semibold', valueClass)}>{stat.value}</span>
+        <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
         <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
       </CardContent>
     </Card>
@@ -375,7 +375,7 @@ export function TrafficScreen() {
 
   const syncBanner = syncing ? (
     <Alert tone="info" hideIcon>
-      <span className="flex items-center gap-2.5" data-testid="sync-status-banner">
+      <span className="flex items-center gap-2" data-testid="sync-status-banner">
         <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
         <span>
           Sync in progress — refreshing Google Search Console and GA4 data. Charts and tables update

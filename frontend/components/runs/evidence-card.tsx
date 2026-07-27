@@ -66,7 +66,7 @@ export function EvidenceCard({
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
+          <p className="text-foreground text-sm whitespace-pre-wrap">
             {answerText?.trim() ? (
               answerText
             ) : (
@@ -79,17 +79,17 @@ export function EvidenceCard({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="min-w-0 overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-base">Citations</CardTitle>
+            <CardTitle>Citations</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
             {evidence.citations.length === 0 ? (
               <p className="text-muted text-sm">No citations were captured.</p>
             ) : (
-              <ul className="grid gap-2.5">
+              <ul className="grid gap-2">
                 {evidence.citations.map((citation) => (
                   <li
                     key={`${citation.ordinal}-${citation.url}`}
-                    className="border-border-subtle flex items-start justify-between gap-3 border-b pb-2.5 last:border-0 last:pb-0"
+                    className="border-border-subtle flex items-start justify-between gap-3 border-b pb-2 last:border-0 last:pb-0"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-foreground truncate text-sm">
@@ -116,7 +116,7 @@ export function EvidenceCard({
         <div className="grid min-w-0 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Mentions</CardTitle>
+              <CardTitle>Mentions</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3">
               <div className="grid gap-1.5">
@@ -152,7 +152,7 @@ export function EvidenceCard({
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Score</CardTitle>
+              <CardTitle>Score</CardTitle>
             </CardHeader>
             <CardContent>
               {scoreEntries.length === 0 ? (

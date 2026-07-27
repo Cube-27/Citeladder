@@ -10,10 +10,11 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
  * shows the mono display number. Carries an ARIA label with the percentage
  * (role="img") so the value is announced to assistive tech.
  *
- * `numeralSize` sets the center numeral: `md` = `text-lg`, `lg` = `text-2xl`,
- * `hero` = `text-hero` (48px) for the Visibility hero card — pair the larger
- * numerals with a larger `size`/`strokeWidth`. The numeral stays `aria-hidden`;
- * the ring's svg keeps the accessible label either way.
+ * `numeralSize` sets the center numeral: `md` = `text-heading-sm`, `lg` =
+ * `text-xl`, `hero` = `text-2xl` (29px) for the Visibility hero card — the
+ * ceiling, so the ring never out-shouts the page title. Pair the larger
+ * numerals with a larger `size`/`strokeWidth`. The numeral stays
+ * `aria-hidden`; the ring's svg keeps the accessible label either way.
  *
  * The arc sweeps to its value over 800ms on mount. `motion-reduce` drops the
  * transition so the ring simply appears at its final value.
@@ -34,7 +35,7 @@ export function ScoreRing({
   /** Accessible label; defaults to "Visibility score: N%". */
   label?: string;
   showValue?: boolean;
-  /** Center numeral: `md` = text-lg (default), `lg` = text-2xl, `hero` = text-hero. */
+  /** Center numeral: `md` = text-heading-sm (default), `lg` = text-xl, `hero` = text-2xl. */
   numeralSize?: 'md' | 'lg' | 'hero';
   className?: string;
 }>) {
@@ -75,7 +76,7 @@ export function ScoreRing({
           r={radius}
           fill="none"
           strokeWidth={strokeWidth}
-          className="stroke-border-subtle"
+          className="stroke-well"
         />
         <circle
           cx={size / 2}
@@ -98,10 +99,10 @@ export function ScoreRing({
           className={cn(
             'mono absolute inset-0 flex items-center justify-center font-semibold',
             numeralSize === 'hero'
-              ? 'text-hero tracking-tight'
+              ? 'text-2xl'
               : numeralSize === 'lg'
-                ? 'text-2xl'
-                : 'text-lg',
+                ? 'text-xl'
+                : 'text-heading-sm',
             scoreBandText[band],
           )}
         >

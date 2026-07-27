@@ -97,9 +97,9 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
 
 function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
   return (
-    <section className="grid gap-2.5">
-      <h3 className="text-foreground text-sm font-semibold">{group.promptText}</h3>
-      <ul className="grid gap-2.5">
+    <section className="grid gap-2">
+      <h3 className="text-foreground text-heading-xs">{group.promptText}</h3>
+      <ul className="grid gap-2">
         {group.executions.map((item) => (
           <ExecutionRow key={item.analysis_id} item={item} />
         ))}
@@ -158,8 +158,8 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
   }
 
   return (
-    <div className="border-border-subtle bg-panel text-muted flex items-center gap-2 rounded-md border px-3 py-2.5 text-xs">
-      <MinusCircle className="size-3.5 shrink-0" aria-hidden />
+    <div className="border-border-subtle bg-panel text-muted flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
+      <MinusCircle className="size-4 shrink-0" aria-hidden />
       <span>No web searches performed for this execution</span>
     </div>
   );
