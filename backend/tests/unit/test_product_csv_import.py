@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.config.http import IMPORT_MAX_CELL_CHARS, IMPORT_MAX_COLUMNS
+from app.core.config.products import PRODUCT_IMPORT_MAX_ROWS
 from app.domain.products.csv_import import ProductCsvError, parse_product_csv
 
 
@@ -97,3 +99,18 @@ def test_parse_rejects_header_missing_either_required_column() -> None:
 def test_parse_empty_returns_empty() -> None:
     assert parse_product_csv("") == []
     assert parse_product_csv("   \n  ") == []
+
+
+def test_product_csv_rejects_excess_rows_columns_and_cell_length() -> None:
+    with pytest.raises(ProductCsvError, match="too many rows"):
+        parse_product_csv(
+            "sku,name\n"
+            + "\n".join(
+                f"sku-{index},Product"
+                for index in range(PRODUCT_IMPORT_MAX_ROWS + 1)
+            )
+        )
+    with pytest.raises(ProductCsvError, match="too many columns"):
+        parse_product_csv(",".join("x" for _ in range(IMPORT_MAX_COLUMNS + 1)))
+    with pytest.raises(ProductCsvError, match="cell is too long"):
+        parse_product_csv("sku,name\n1," + "x" * (IMPORT_MAX_CELL_CHARS + 1))

@@ -29,6 +29,8 @@ from app.analysis.site_health.exports import (
     rows_to_markdown,
 )
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.usage_limits import enforce_workspace_request
+from app.core.config.abuse import abuse_settings
 from app.core.config.site_health import (
     CODE_CRAWL_ALREADY_ACTIVE,
     CRAWL_TERMINAL_STATUSES,
@@ -154,6 +156,13 @@ async def get_entitlements_endpoint(
 async def create_crawl_endpoint(
     payload: CreateCrawlRequest, ctx: _WorkspaceDep, session: _SessionDep
 ) -> CrawlResponse:
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="site_health.crawl_create",
+        limit=abuse_settings.crawl_create_limit,
+        window_seconds=abuse_settings.crawl_create_window_seconds,
+    )
     try:
         crawl = await create_crawl(
             session,

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
+import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
 
 /**
  * Shared login/register mutation wiring (F4): on success, prime the `me` cache
@@ -25,6 +26,10 @@ export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promis
   const mutation = useMutation({
     mutationFn,
     onSuccess: async (user: SessionUser) => {
+      // Login/register is an identity boundary. Remove the previous account's
+      // requests, cache, active workspace header, and project selection before
+      // the newly-confirmed identity is seeded.
+      await clearAccountScopedClientState(queryClient);
       queryClient.setQueryData(queryKeys.auth.me(), user);
       let destination = '/onboarding';
       try {

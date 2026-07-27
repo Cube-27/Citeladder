@@ -144,8 +144,12 @@ IaC must own:
   autoscaling constraints, log groups, and one-off migration task definition;
 - RDS subnet/parameter groups, instance, encryption, backup, monitoring, and
   Secrets Manager credentials;
-- KMS keys, secret/parameter paths, IAM execution/task/deploy/migration roles;
-- dashboards, alarms, SNS/incident destinations, log buckets, and backup vaults.
+- KMS keys, regional Secrets Manager replicas, secret/parameter paths, IAM
+  execution/task/deploy/migration roles, cross-account backup-copy grants, and
+  narrowly scoped restore/decrypt roles;
+- dashboards, alarms, SNS/incident destinations, log buckets, and the primary,
+  cross-account, and cross-region backup vaults defined in the recovery
+  contract below.
 
 Store Terraform state in an encrypted, versioned S3 bucket with locking and
 separate state access roles. Plan on pull requests; require human approval for
@@ -252,9 +256,35 @@ Every authenticated backend response must also emit `Cache-Control: private,
 no-store, max-age=0`. Through CloudFront, verify `Age` never grows and `x-cache`
 never reports a hit for API JSON, errors, redirects, SSE, or exports.
 
-Set CloudFront origin response and ALB idle timeouts to accommodate SSE, but add
-10–15 second SSE keepalive comments so idle edges do not close healthy streams.
-Polling remains the recovery path.
+Treat SSE as one streaming timeout contract across the complete deployed path,
+not only an edge setting:
+
+- CloudFront: set the custom-origin response/read timeout to 60 seconds and the
+  response-completion timeout to at least the maximum supported stream duration
+  (initially 3,600 seconds). Do not cache or compress/buffer `text/event-stream`.
+- ALB: use a 75-second idle timeout and a 120-second deregistration delay. The
+  timeout must reset on each data frame; target draining must not cut an active
+  response before the application shutdown window.
+- Next.js/Node rewrite: configure the production server with no active-response
+  deadline (`requestTimeout=0`) and an upstream rewrite read/idle timeout of at
+  least 75 seconds. Forward each upstream chunk immediately; disable proxy
+  response buffering and any compression that batches SSE frames. If the
+  generated standalone server does not expose these controls, wrap it with the
+  reviewed Node server configuration rather than relying on defaults.
+- FastAPI: the `StreamingResponse` has no application read deadline, yields a
+  `: keepalive\n\n` comment every 10–15 seconds (target 12 seconds), emits
+  `Cache-Control: private, no-store` and `X-Accel-Buffering: no`, and handles
+  disconnect/cancellation without retaining the generator or database session.
+
+Verify CloudFront alone, ALB alone, the Next.js rewrite, FastAPI, and the full
+browser path with timestamped chunk captures: every hop must deliver each
+keepalive within 15 seconds and must show no response buffering. Test a stream
+longer than every configured idle threshold. During deployment, stop new worker
+claims first, give ECS tasks a 120-second `stopTimeout`, keep provider work
+cooperative at the execution boundary, and let API/Node streams close cleanly
+before target deregistration completes. The client must reconnect with
+`Last-Event-ID` when possible and polling remains the authoritative recovery
+path after any timeout, disconnect, deploy, or missed event.
 
 ## AWS WAF policy
 
@@ -543,14 +573,37 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
 ### Backup policy
 
 - RDS automated PITR: 35 days.
-- Daily AWS Backup recovery point copied to a locked cross-account vault.
-- Cross-region copy to an approved secondary India/Asia region at least daily if
-  the business accepts the cost and data-residency route.
+- Daily AWS Backup recovery point copied from the workload account's
+  `ap-south-1` source vault to a Vault-Lock-protected destination vault in the
+  backup/security account. A second destination vault in the approved DR region
+  receives the cross-region copy at least daily after data-residency approval.
+- Each destination vault uses its own customer-managed regional KMS key. IaC
+  owns the vault policies, key policies, grants, retention lock, copy role, and
+  lifecycle; the source AWS Backup role may only copy/encrypt into the named
+  destinations and cannot delete or shorten retention.
 - Monthly retained recovery points according to approved customer/legal policy.
 - IaC state, ECR digests/SBOMs, configuration versions, and all historical
   application decryption keys included in the recovery inventory.
+- Production Secrets Manager values, including current and historical
+  application-encryption key versions, are replicated to the approved recovery
+  region under a regional recovery KMS key or restored from a separately
+  encrypted, versioned recovery package. Database backup alone is not a secret
+  recovery mechanism.
+- A cross-account `BackupCopyRole` may copy only the named plans/vaults.
+  A human-assumable `RecoveryOperatorRole` may start restores but cannot read
+  application secrets. A separate approval-gated `RecoveryDecryptRole` may
+  decrypt the destination backup key and recovery-secret key and may be assumed
+  only during a recorded drill/incident. ECS recovery task roles may read only
+  the exact regional secret ARNs they need; normal runtime, deploy, and
+  migration roles cannot administer vaults, keys, grants, or recovery secrets.
 - CloudTrail/security logs retained in the log-archive account under Object Lock
   where policy requires it.
+
+The repository currently has no AWS IaC, so this remains an open implementation
+gate rather than a claimed deployed control. The future Terraform/CDK stacks
+must create the named vaults, regional KMS keys, Secrets Manager replication or
+recovery package, key/vault policies, cross-account grants, and restore/decrypt
+roles in both staging and production; console-created substitutes are drift.
 
 ### Initial recovery objectives requiring owner approval
 
@@ -567,9 +620,12 @@ Do not publish these as an SLA until drills demonstrate them.
 1. Select a recovery point without disclosing production values to testers.
 2. Restore into isolated subnets under a unique test identifier; never overwrite
    production.
-3. Retrieve the corresponding encryption-key versions through an audited
-   temporary role.
-4. Run schema/version checks and start one isolated API/worker set with all
+3. Assume the approval-gated recovery roles, restore with the destination-vault
+   KMS key, and retrieve the corresponding regional secret and historical
+   application-encryption key versions. Prove CloudTrail records both role
+   assumptions and every decrypt.
+4. Verify RDS storage decryption, run schema/version checks, and start one
+   isolated API/worker set with all
    outbound provider calls and billing disabled.
 5. Verify row counts, random workspace/artifact relationships, encrypted BYOK
    decryptability, immutable artifact hashes, and queue consistency.
@@ -579,7 +635,11 @@ Do not publish these as an SLA until drills demonstrate them.
 
 Run a full regional recovery exercise at least twice yearly. CloudFront is
 global, but the origin, database, NAT, tasks, and regional secrets must be
-recreated and the distribution origin changed deliberately.
+recreated and the distribution origin changed deliberately. The drill passes
+only when IaC recreates the destination vault/key/grant/role contract, the
+restored database decrypts under the DR-region KMS key, the regional Secrets
+Manager material decrypts under the recovery role, and the isolated
+API/migration/worker tasks start and complete read-only application checks.
 
 ## Observability and alerting
 

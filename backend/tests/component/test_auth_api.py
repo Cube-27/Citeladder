@@ -12,6 +12,7 @@ import httpx
 import pytest
 
 from app.core.config import settings
+from app.core.config.abuse import abuse_settings
 
 COOKIE = settings.session_cookie_name
 
@@ -98,6 +99,42 @@ async def test_login_bad_credentials_rejected(client: httpx.AsyncClient) -> None
         json={"email": "eve@example.com", "password": "wrong-password"},
     )
     assert bad.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_rate_limit_is_durable_and_returns_retry_after(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(abuse_settings, "login_email_limit", 2)
+    await _register(client, "limited@example.com")
+    payload = {"email": "limited@example.com", "password": "wrong-password"}
+    assert (await client.post("/api/v1/auth/login", json=payload)).status_code == 401
+    assert (await client.post("/api/v1/auth/login", json=payload)).status_code == 401
+
+    limited = await client.post("/api/v1/auth/login", json=payload)
+    assert limited.status_code == 429
+    assert int(limited.headers["Retry-After"]) > 0
+    assert limited.json()["detail"] == "Too many requests"
+
+
+@pytest.mark.asyncio
+async def test_valid_login_bypasses_attacker_exhausted_email_failure_limit(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(abuse_settings, "login_email_limit", 1)
+    await _register(client, "targeted@example.com")
+
+    failed = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "targeted@example.com", "password": "wrong-password"},
+    )
+    assert failed.status_code == 401
+
+    valid = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "targeted@example.com", "password": "password123"},
+    )
+    assert valid.status_code == 200
 
 
 @pytest.mark.asyncio

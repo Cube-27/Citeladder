@@ -11,10 +11,13 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, require_active_workspace
+from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.abuse import abuse_settings
 from app.domain.projects.schemas import (
     CompetitorInput,
     CompetitorSuggestRequest,
@@ -39,6 +42,7 @@ from app.domain.projects.suggestions import (
 router = APIRouter(prefix="/brand-suggestions", tags=["brand-suggestions"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+_SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 def _resolve_agent() -> DefaultAgentClient:
@@ -90,7 +94,7 @@ def _raise_agent_failed(exc: ProviderError) -> None:
     status_code=status.HTTP_201_CREATED,
 )
 async def suggest_competitors_endpoint(
-    payload: CompetitorSuggestRequest, _ctx: _WorkspaceDep
+    payload: CompetitorSuggestRequest, ctx: _WorkspaceDep, session: _SessionDep
 ) -> CompetitorSuggestResponse:
     """AI competitor suggestions via the app-level default agent.
 
@@ -106,6 +110,13 @@ async def suggest_competitors_endpoint(
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     agent = _resolve_agent()
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="agent.provider_call",
+        limit=abuse_settings.agent_call_limit,
+        window_seconds=abuse_settings.agent_call_window_seconds,
+    )
     try:
         competitors, dropped = await suggest_competitors(payload=payload, agent=agent)
     except SuggestionValidationError as exc:
@@ -129,7 +140,7 @@ async def suggest_competitors_endpoint(
     status_code=status.HTTP_201_CREATED,
 )
 async def suggest_owned_domains_endpoint(
-    payload: OwnedDomainSuggestRequest, _ctx: _WorkspaceDep
+    payload: OwnedDomainSuggestRequest, ctx: _WorkspaceDep, session: _SessionDep
 ) -> OwnedDomainSuggestResponse:
     """AI owned-domain suggestions via the app-level default agent.
 
@@ -144,6 +155,13 @@ async def suggest_owned_domains_endpoint(
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     agent = _resolve_agent()
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="agent.provider_call",
+        limit=abuse_settings.agent_call_limit,
+        window_seconds=abuse_settings.agent_call_window_seconds,
+    )
     try:
         domains, dropped = await suggest_owned_domains(payload=payload, agent=agent)
     except SuggestionValidationError as exc:
@@ -161,7 +179,7 @@ async def suggest_owned_domains_endpoint(
     status_code=status.HTTP_201_CREATED,
 )
 async def suggest_prompts_endpoint(
-    payload: PromptSuggestRequest, _ctx: _WorkspaceDep
+    payload: PromptSuggestRequest, ctx: _WorkspaceDep, session: _SessionDep
 ) -> PromptSuggestResponse:
     """AI prompt suggestions via the app-level default agent.
 
@@ -184,6 +202,13 @@ async def suggest_prompts_endpoint(
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     agent = _resolve_agent()
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="agent.provider_call",
+        limit=abuse_settings.agent_call_limit,
+        window_seconds=abuse_settings.agent_call_window_seconds,
+    )
     try:
         prompts, topics, dropped = await suggest_prompts(payload=payload, agent=agent)
     except SuggestionValidationError as exc:

@@ -119,9 +119,10 @@ in-progress work that breaks the global build).
 uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
 uv run ruff check .
 
-# Migrations — single squashed bootstrap revision (0001_initial, built from
-# Base.metadata). GREENFIELD POLICY: until production, schema changes are made
-# by editing the models and recreating the DB — do NOT add new revision files.
+# Migrations — 0001_initial is the frozen explicit production baseline.
+# Never edit it; schema changes require additive, reviewed revision files.
+# Verify both migration execution and ORM drift (`alembic check`) on a
+# disposable database.
 uv run alembic upgrade head
 
 # Frontend — focused (from frontend/)

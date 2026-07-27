@@ -2,7 +2,12 @@
 
 - **Audit date:** 2026-07-27
 - **Repository revision:** `7effabf91f8012982a816d807ab9df93b9aece85`
-  (`main`)
+  (`main`; parent of the audit-document commit)
+- **Report status:** **pre-remediation baseline**. Findings, counts, and the
+  verdict describe only the revision above. Later changes on
+  `docs/security-production-aws-audit` are remediation candidates, not an
+  audited final tree; this report must be rerun before any finding is marked
+  closed or any launch decision is changed.
 - **Assessment type:** source, configuration, dependency, container, CI/CD, and
   production-operations review
 - **Related runbook:** [AWS hosting runbook](aws-hosting-runbook.md)
@@ -11,11 +16,11 @@
 
 ## Executive verdict
 
-**Searchify is not ready for an unrestricted public production launch.** A
-controlled staging deployment is reasonable after the immediate staging gates
-below are met. Public production should remain blocked until the high-severity
-findings have an owner, an implemented control, and passing verification
-evidence.
+**At the reviewed baseline, Searchify was not ready for an unrestricted public
+production launch.** A controlled staging deployment was reasonable only after
+the immediate staging gates below were met. This historical verdict is not an
+approval or rejection of the remediation branch: the final remediated revision
+requires a new audit, retained evidence, and an updated launch decision.
 
 No obvious direct SQL-injection path, arbitrary-code-execution path, committed
 production credential, BYOK secret response, or workspace-authorization bypass
@@ -70,15 +75,34 @@ advisory checks, package-integrity verification, and focused automated tests.
 
 ### Verification performed
 
-| Check                                                                                 | Result                                                                                                                                                          |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Python dependency audit against the frozen `uv.lock` graph                            | No known vulnerability reported.                                                                                                                                |
-| Frontend production dependency audit                                                  | No known vulnerability reported.                                                                                                                                |
-| Full frontend dependency audit                                                        | One High advisory in a development-only ESLint dependency: `brace-expansion <=5.0.7`, [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg). |
-| pnpm package signatures                                                               | 774 of 774 verified.                                                                                                                                            |
-| Frontend API/auth/session focused tests                                               | 56 passed.                                                                                                                                                      |
-| Backend auth, OAuth, workspace, SSRF, sanitization, webhook, and health focused tests | 185 passed in the broader selection; an independently rerun backend security/health subset passed 148.                                                          |
-| PostgreSQL queue/claim/lease focused tests                                            | 31 passed.                                                                                                                                                      |
+The baseline run did not retain raw console logs, JUnit, SARIF, audit JSON, or
+an immutable CI run URL. The outcomes below are therefore historical
+observations recorded in this report, not independently verifiable artifacts.
+A rerun of the final remediation revision must publish the named report files
+as protected CI artifacts and link them from the replacement audit.
+
+Reproduction environment recorded during the 2026-07-27 audit/remediation
+session: `uv 0.11.28`, `Python 3.12.13`, `pip-audit 2.10.0`,
+`pnpm 11.9.0`, `Node v24.18.0`, and `Docker 29.6.1`. Inputs were repository
+revision `7effabf91f8012982a816d807ab9df93b9aece85`,
+[`backend/uv.lock`](../../backend/uv.lock) Git blob
+`b3fffc26733898cb198f3e59c4bf45f10d7fbb67`,
+[`frontend/pnpm-lock.yaml`](../../frontend/pnpm-lock.yaml) Git blob
+`07da41f509e05d05494cd9aa87a13514273090e1`, and
+[`frontend/pnpm-workspace.yaml`](../../frontend/pnpm-workspace.yaml) Git blob
+`68c2ed83f7a0a1c5106b930e2d3f0b763fc4ea5f`. The reviewed
+[CI workflow](../../.github/workflows/ci.yml) blob was
+`3827a75c081d91974aa0bc88f3fc241383c64069`.
+
+| Check | Exact baseline command / selector | Recorded outcome | Required retained report on rerun |
+| --- | --- | --- | --- |
+| Python locked dependency audit | `cd backend && uv export --frozen --no-emit-project --format requirements.txt -o requirements-audit.txt && uvx pip-audit==2.10.0 --strict -r requirements-audit.txt` | No known vulnerability reported. | `pip-audit.json` plus the exported requirements file |
+| Frontend production dependency audit | `cd frontend && pnpm audit --prod --audit-level high` | No known vulnerability reported. | `pnpm-audit-production.json` |
+| Full frontend dependency audit | `cd frontend && pnpm audit --audit-level high` | One High development-only advisory: `brace-expansion <=5.0.7`, [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg). | `pnpm-audit-full.json` |
+| pnpm package trust/signatures | `cd frontend && pnpm install --frozen-lockfile` with the checked-in `trustPolicy` | 774 of 774 entries passed the configured supply-chain policy. | Complete install log and pnpm store/lock integrity summary |
+| Frontend API/auth/session tests | `cd frontend && pnpm test -- "app/(auth)/login/page.test.tsx" "app/(auth)/register/page.test.tsx" components/auth/oauth-buttons.test.tsx lib/api/client.test.ts lib/api/query-client.test.ts lib/auth/session-guard.test.tsx lib/auth/use-auth-mutation.test.tsx components/marketing/landing-session-redirect.test.tsx` | 56 passed. | `frontend-security-junit.xml` |
+| Backend security/health broader selection | `cd backend && uv run pytest tests/component/test_auth_api.py tests/component/test_oauth_api.py tests/component/test_integrations_oauth_api.py tests/component/test_health.py tests/unit/test_workspace_auth.py tests/unit/test_oauth_state.py tests/unit/test_oauth_config.py tests/unit/test_integrations_oauth.py tests/unit/test_web_fetcher.py tests/unit/test_web_fetcher_escalation.py tests/unit/test_referral_sanitize.py tests/unit/test_order_sanitize.py tests/unit/test_billing.py -q` | 185 passed; a separately selected security/health rerun recorded 148 passed. The exact narrower 148-test selector was not retained and must not be inferred. | `backend-security-junit.xml` for each explicitly named selector |
+| PostgreSQL queue/claim/lease tests | `cd backend && uv run pytest tests/component/test_audit_queue.py tests/component/test_integration_queue.py tests/component/test_analytics_queue.py tests/component/test_task_queue_content.py tests/component/test_site_health_queue.py -q` against PostgreSQL 16 | 31 passed. | `backend-queue-junit.xml` and PostgreSQL server version output |
 
 Passing tests demonstrate the exercised contracts; they do not replace a live
 penetration test or production failure drill.
@@ -133,7 +157,7 @@ API/workers → third-party providers or arbitrary public crawl targets.
 10. **Container user:** the backend runtime uses an unprivileged UID
     (`infra/docker/Dockerfile:23-26`).
 
-## Findings summary
+## Baseline findings summary (open at `7effabf`)
 
 | ID       | Severity | Finding                                                                                    | Public-launch gate               |
 | -------- | -------- | ------------------------------------------------------------------------------------------ | -------------------------------- |

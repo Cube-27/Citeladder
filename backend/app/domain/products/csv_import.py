@@ -10,6 +10,8 @@ from __future__ import annotations
 import csv
 import io
 
+from app.core.config.http import IMPORT_MAX_CELL_CHARS, IMPORT_MAX_COLUMNS
+from app.core.config.products import PRODUCT_IMPORT_MAX_ROWS
 from app.domain.products.schemas import ProductInput, ProductVariant
 
 # Accepted header aliases -> canonical field. Case/space/underscore-insensitive.
@@ -72,7 +74,16 @@ def parse_product_csv(content: str) -> list[ProductInput]:
     if not text.strip():
         return []
     reader = csv.reader(io.StringIO(text))
-    rows = [row for row in reader if any(cell.strip() for cell in row)]
+    rows: list[list[str]] = []
+    for row in reader:
+        if len(row) > IMPORT_MAX_COLUMNS:
+            raise ProductCsvError("Product CSV has too many columns")
+        if any(len(cell) > IMPORT_MAX_CELL_CHARS for cell in row):
+            raise ProductCsvError("Product CSV cell is too long")
+        if any(cell.strip() for cell in row):
+            rows.append(row)
+            if len(rows) > PRODUCT_IMPORT_MAX_ROWS + 1:
+                raise ProductCsvError("Product CSV has too many rows")
     if not rows:
         return []
 

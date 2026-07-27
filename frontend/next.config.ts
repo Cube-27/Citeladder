@@ -15,12 +15,50 @@ import type { NextConfig } from 'next';
  *     backend, e.g. `http://localhost:8000` in local dev or the internal
  *     service URL in production. It is read only in `next.config.ts` (build /
  *     server), is NOT prefixed with `NEXT_PUBLIC_`, and is therefore never
- *     exposed to the browser. Defaults to `http://localhost:8000` for local dev.
+ *     exposed to the browser. Defaults to `http://localhost:8000` for local dev;
+ *     production builds fail closed when it is absent or points at loopback.
  */
-const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN ?? 'http://localhost:8000';
+export function resolveBackendOrigin(
+  configuredValue = process.env.BACKEND_ORIGIN,
+  production = process.env.NODE_ENV === 'production',
+) {
+  const configured = configuredValue?.trim();
+  if (!configured) {
+    if (production) throw new Error('BACKEND_ORIGIN is required for a production build.');
+    return 'http://localhost:8000';
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    throw new Error('BACKEND_ORIGIN must be an absolute http(s) origin.');
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new Error('BACKEND_ORIGIN must be a credential-free http(s) origin.');
+  }
+  if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
+    throw new Error('BACKEND_ORIGIN must not include a path, query, or fragment.');
+  }
+  const host = parsed.hostname.toLowerCase().replace(/[.]+$/, '');
+  if (
+    production &&
+    (host === 'localhost' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host === '[::1]' ||
+      host.startsWith('127.'))
+  ) {
+    throw new Error('BACKEND_ORIGIN must not use a loopback host in production.');
+  }
+  return parsed.origin;
+}
+
+const BACKEND_ORIGIN = resolveBackendOrigin();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   // Next 16 blocks cross-origin requests to /_next/* dev resources. The app is
   // opened via 127.0.0.1 while the dev server treats `localhost` as canonical,
   // so allow the loopback IP or the browser gets a blank (unhydrated) page.

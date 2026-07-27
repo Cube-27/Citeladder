@@ -74,6 +74,7 @@ from app.core.config.provider_catalog import (
     ERROR_TIMEOUT,
     RETRYABLE_ERRORS,
     is_active_transport,
+    is_endpoint_approved,
 )
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret
@@ -629,6 +630,20 @@ class AuditWorker:
                 transport_model=transport_model,
                 error_code=ERROR_NO_CONNECTION,
                 error_detail="provider connection missing or inactive",
+            )
+            return
+
+        # Fail closed before decrypting a BYOK key if a legacy/frozen endpoint
+        # is not the exact operator-configured credential destination.
+        if not is_endpoint_approved(transport_provider, base_url):
+            await self._fail_terminal(
+                task_id=task_id,
+                audit_id=audit_id,
+                logical_engine=logical_engine,
+                transport_provider=transport_provider,
+                transport_model=transport_model,
+                error_code=ERROR_INVALID_SURFACE,
+                error_detail="provider endpoint is not approved",
             )
             return
 

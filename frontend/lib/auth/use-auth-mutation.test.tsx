@@ -4,8 +4,10 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import { createAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
+import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
 
 import { useAuthMutation } from './use-auth-mutation';
@@ -45,14 +47,14 @@ const project = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
-function setup() {
+function setup(mutationFn: () => Promise<typeof sessionUser> = () => Promise.resolve(sessionUser)) {
   const queryClient = createAppQueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   // The auth call itself is stubbed to resolve immediately — routing is driven
   // by the mocked `/projects` response.
-  const hook = renderHook(() => useAuthMutation(() => Promise.resolve(sessionUser)), { wrapper });
+  const hook = renderHook(() => useAuthMutation(mutationFn), { wrapper });
   return { queryClient, ...hook };
 }
 
@@ -60,6 +62,8 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
   replace.mockReset();
+  window.localStorage.clear();
+  setActiveWorkspaceId(null);
 });
 afterAll(() => mswServer.close());
 
@@ -74,6 +78,69 @@ describe('useAuthMutation', () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
+  });
+
+  it('cancels old-account queries and clears only account-scoped state before seeding login', async () => {
+    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
+    const { result, queryClient } = setup();
+    queryClient.setQueryData(['old-account', 'private'], { secret: 'stale' });
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
+    window.localStorage.setItem('searchify-theme', 'dark');
+    setActiveWorkspaceId(project.workspace_id);
+
+    let requestStarted: (() => void) | undefined;
+    let wasAborted = false;
+    const started = new Promise<void>((resolve) => {
+      requestStarted = resolve;
+    });
+    const oldRequest = queryClient
+      .fetchQuery({
+        queryKey: ['old-account', 'in-flight'],
+        queryFn: ({ signal }) =>
+          new Promise<never>((_resolve, reject) => {
+            requestStarted?.();
+            signal.addEventListener(
+              'abort',
+              () => {
+                wasAborted = true;
+                reject(signal.reason);
+              },
+              { once: true },
+            );
+          }),
+      })
+      .catch(() => undefined);
+    await started;
+
+    act(() => {
+      void result.current.submit({});
+    });
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
+    await oldRequest;
+    expect(wasAborted).toBe(true);
+    expect(queryClient.getQueryData(['old-account', 'private'])).toBeUndefined();
+    expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
+    expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem('searchify-theme')).toBe('dark');
+    expect(getActiveWorkspaceId()).toBeNull();
+  });
+
+  it('does not clear the existing account state when authentication fails', async () => {
+    const { result, queryClient } = setup(() => Promise.reject(new Error('invalid credentials')));
+    queryClient.setQueryData(['old-account', 'private'], { stays: true });
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
+    setActiveWorkspaceId(project.workspace_id);
+
+    await act(async () => {
+      await result.current.submit({});
+    });
+
+    await waitFor(() => expect(result.current.mutation.isError).toBe(true));
+    expect(queryClient.getQueryData(['old-account', 'private'])).toEqual({ stays: true });
+    expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBe(project.id);
+    expect(getActiveWorkspaceId()).toBe(project.workspace_id);
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('routes to /visibility when the workspace already has a project', async () => {

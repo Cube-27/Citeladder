@@ -15,8 +15,10 @@ import { setActiveWorkspaceId } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project } from '@/lib/api/types';
-
-const STORAGE_KEY = 'searchify.active-project-id';
+import {
+  readStoredActiveProjectId,
+  writeStoredActiveProjectId,
+} from '@/lib/project/active-project-storage';
 
 type ProjectContextValue = {
   /** All projects the active workspace owns (empty while loading / none yet). */
@@ -32,26 +34,6 @@ type ProjectContextValue = {
 };
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
-
-/** Read the persisted active-project id (SSR-safe: null on the server). */
-function readStoredProjectId(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredProjectId(projectId: string | null) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (projectId) window.localStorage.setItem(STORAGE_KEY, projectId);
-    else window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore storage failures (private mode / quota) — selection stays in memory.
-  }
-}
 
 /**
  * ProjectProvider (F5) — the active-project context consumed by every authed
@@ -75,7 +57,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
     queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
   });
 
-  const [selectedId, setSelectedId] = useState<string | null>(() => readStoredProjectId());
+  const [selectedId, setSelectedId] = useState<string | null>(() => readStoredActiveProjectId());
 
   // Resolve the effective active id: keep a valid selection, else default to
   // the first project, else null.
@@ -94,14 +76,14 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
 
   const setActiveProjectId = useCallback((projectId: string) => {
     setSelectedId(projectId);
-    writeStoredProjectId(projectId);
+    writeStoredActiveProjectId(projectId);
   }, []);
 
   // Persist a resolved default (first project) so a reload is stable, and keep
   // the API client's workspace header in sync with the active project.
   useEffect(() => {
     if (activeProjectId && activeProjectId !== selectedId) {
-      writeStoredProjectId(activeProjectId);
+      writeStoredActiveProjectId(activeProjectId);
       // One-time promotion of the resolved default into state so a reload is
       // stable; guarded above, so it cannot cascade.
       // eslint-disable-next-line react-hooks/set-state-in-effect

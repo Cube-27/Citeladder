@@ -14,11 +14,13 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings
+from app.core.config.abuse import abuse_settings
+from app.domain.abuse.service import UsageLimitExceededError, enforce_and_commit
 from app.domain.auth.schemas import AuthResponse, Credentials, SessionUser
 from app.domain.auth.service import (
     EmailAlreadyRegisteredError,
@@ -50,6 +52,37 @@ def _set_session_cookie(response: Response, token: str) -> None:
     )
 
 
+async def _enforce_limit(
+    session: AsyncSession,
+    *,
+    subject_kind: str,
+    subject: str,
+    operation: str,
+    limit: int,
+    window: int,
+) -> None:
+    try:
+        await enforce_and_commit(
+            session,
+            subject_kind=subject_kind,
+            subject=subject,
+            operation=operation,
+            limit=limit,
+            window_seconds=window,
+        )
+    except UsageLimitExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        ) from exc
+
+
+def _trusted_client_identity(request: Request) -> str:
+    """Return the ASGI peer identity, never an attacker-supplied header."""
+    return request.client.host if request.client is not None else "unavailable"
+
+
 @router.post(
     "/register",
     response_model=AuthResponse,
@@ -57,9 +90,18 @@ def _set_session_cookie(response: Response, token: str) -> None:
 )
 async def register(
     payload: Credentials,
+    request: Request,
     response: Response,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> AuthResponse:
+    await _enforce_limit(
+        session,
+        subject_kind="client",
+        subject=_trusted_client_identity(request),
+        operation="auth.register.client",
+        limit=abuse_settings.register_client_limit,
+        window=abuse_settings.register_window_seconds,
+    )
     try:
         await register_user(session, payload.email, payload.password)
     except EmailAlreadyRegisteredError as exc:
@@ -80,11 +122,31 @@ async def register(
 @router.post("/login", response_model=AuthResponse)
 async def login(
     payload: Credentials,
+    request: Request,
     response: Response,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> AuthResponse:
+    await _enforce_limit(
+        session,
+        subject_kind="client",
+        subject=_trusted_client_identity(request),
+        operation="auth.login.client",
+        limit=abuse_settings.login_client_limit,
+        window=abuse_settings.login_window_seconds,
+    )
     authenticated = await authenticate_user(session, payload.email, payload.password)
     if authenticated is None:
+        # Account/email counters are failure-only. Successful credentials must
+        # not be blocked because an attacker deliberately exhausted a victim's
+        # identifier budget.
+        await _enforce_limit(
+            session,
+            subject_kind="email",
+            subject=payload.email,
+            operation="auth.login.email_failure",
+            limit=abuse_settings.login_email_limit,
+            window=abuse_settings.login_window_seconds,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )

@@ -1,27 +1,20 @@
-"""Initial schema bootstrap (squashed).
+"""Frozen production bootstrap schema.
 
 Revision ID: 0001_initial
 Revises: None
 Create Date: 2026-07-17
 
-GREENFIELD POLICY: this project is pre-production, so the migration history
-was squashed to this single bootstrap revision (previously 0001..0010). The
-schema is created directly from ``Base.metadata`` — the same mechanism the
-test suite uses — so this migration always matches the current ORM models.
-Until there is a production database to preserve, schema changes are made by
-editing the models and recreating the database (``alembic downgrade base``
-then ``alembic upgrade head``, or drop/create the DB), NOT by adding new
-revision files.
+This revision is an immutable production baseline. It contains explicit
+Alembic operations and deliberately does not import live ORM metadata. Future
+schema changes require additive revision files.
 """
 
 from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-
-# env.py imports app.models before version files load, so `app` is importable
-# here (alembic runs from backend/ with prepend_sys_path = .).
-from app.models import Base
+from sqlalchemy import Text
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "0001_initial"
@@ -31,12 +24,4236 @@ depends_on = None
 
 
 def upgrade() -> None:
-    Base.metadata.create_all(bind=op.get_bind())
+    op.create_table(
+        "billing_webhook_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column("external_event_id", sa.String(length=255), nullable=False),
+        sa.Column("event_type", sa.String(length=128), nullable=False),
+        sa.Column("payload_sha256", sa.String(length=64), nullable=False),
+        sa.Column("safe_summary", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("result_code", sa.String(length=64), nullable=False),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "provider", "external_event_id", name="uq_billing_webhook_external"
+        ),
+    )
+    op.create_table(
+        "usage_windows",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("subject_kind", sa.String(length=32), nullable=False),
+        sa.Column("subject_hash", sa.String(length=64), nullable=False),
+        sa.Column("operation", sa.String(length=64), nullable=False),
+        sa.Column("window_started_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("count", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "subject_kind",
+            "subject_hash",
+            "operation",
+            "window_started_at",
+            name="uq_usage_window_subject_operation_start",
+        ),
+    )
+    op.create_index(
+        "ix_usage_windows_expires_at", "usage_windows", ["expires_at"], unique=False
+    )
+    op.create_table(
+        "users",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("hashed_password", sa.String(length=255), nullable=False),
+        sa.Column("role", sa.String(length=20), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
+    op.create_table(
+        "workspaces",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "billing_accounts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("owner_user_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("billing_country", sa.String(length=2), nullable=False),
+        sa.Column("country_verification", sa.String(length=16), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_billing_accounts_owner_user_id"),
+        "billing_accounts",
+        ["owner_user_id"],
+        unique=True,
+    )
+    op.create_table(
+        "integration_oauth_grants",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("transport", sa.String(length=24), nullable=False),
+        sa.Column("access_token_encrypted", sa.Text(), nullable=False),
+        sa.Column("refresh_token_encrypted", sa.Text(), nullable=False),
+        sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "granted_scopes", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("workspace_id", "id", name="uq_integration_grants_ws_id"),
+        sa.UniqueConstraint(
+            "workspace_id", "transport", name="uq_integration_grant_ws_transport"
+        ),
+    )
+    op.create_index(
+        op.f("ix_integration_oauth_grants_status"),
+        "integration_oauth_grants",
+        ["status"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_oauth_grants_workspace_id"),
+        "integration_oauth_grants",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_oauth_states",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("jti", sa.String(length=64), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=16), nullable=False),
+        sa.Column("provider_account_ref", sa.String(length=255), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("jti"),
+    )
+    op.create_index(
+        op.f("ix_integration_oauth_states_user_id"),
+        "integration_oauth_states",
+        ["user_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_oauth_states_workspace_id"),
+        "integration_oauth_states",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "projects",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("brand_name", sa.String(length=255), nullable=False),
+        sa.Column("website_url", sa.String(length=1024), nullable=False),
+        sa.Column("country_code", sa.String(length=8), nullable=False),
+        sa.Column("language_code", sa.String(length=16), nullable=False),
+        sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
+        sa.Column("default_repetitions", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_projects_workspace_id"), "projects", ["workspace_id"], unique=False
+    )
+    op.create_table(
+        "provider_connections",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("label", sa.String(length=255), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("base_url", sa.String(length=1024), nullable=False),
+        sa.Column("api_key_encrypted", sa.Text(), nullable=False),
+        sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column(
+            "deactivation_reason",
+            sa.String(length=64),
+            server_default="",
+            nullable=False,
+        ),
+        sa.Column("last_tested_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_test_status", sa.String(length=16), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_provider_connections_workspace_id"),
+        "provider_connections",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "queue_workspace_turns",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("queue_name", sa.String(length=64), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("last_claimed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "queue_name", "workspace_id", name="uq_queue_workspace_turn"
+        ),
+    )
+    op.create_index(
+        "ix_queue_workspace_turn_order",
+        "queue_workspace_turns",
+        ["queue_name", "last_claimed_at"],
+        unique=False,
+    )
+    op.create_table(
+        "workspace_members",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("role", sa.String(length=20), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),
+    )
+    op.create_index(
+        op.f("ix_workspace_members_user_id"),
+        "workspace_members",
+        ["user_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_workspace_members_workspace_id"),
+        "workspace_members",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "workspace_site_health_entitlements",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("plan_key", sa.String(length=32), nullable=False),
+        sa.Column("capability_revision", sa.Integer(), nullable=False),
+        sa.Column("discovery_mode", sa.String(length=16), nullable=False),
+        sa.Column("discovery_url_cap", sa.Integer(), nullable=True),
+        sa.Column("sample_url_limit", sa.Integer(), nullable=False),
+        sa.Column("monitored_url_limit", sa.Integer(), nullable=False),
+        sa.Column("count_disclosure", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", name="uq_ws_site_health_entitlement_workspace"
+        ),
+    )
+    op.create_index(
+        op.f("ix_workspace_site_health_entitlements_workspace_id"),
+        "workspace_site_health_entitlements",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "analytics_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("window_start", sa.Date(), nullable=False),
+        sa.Column("window_end", sa.Date(), nullable=False),
+        sa.Column("granularity", sa.String(length=8), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_classification_ids",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=True,
+        ),
+        sa.Column(
+            "source_snapshot_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("analyzer_version", sa.String(length=64), nullable=False),
+        sa.Column("formula_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id",
+            "window_start",
+            "window_end",
+            "granularity",
+            name="uq_analytics_snapshot_window",
+        ),
+    )
+    op.create_index(
+        op.f("ix_analytics_snapshots_project_id"),
+        "analytics_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analytics_snapshots_workspace_id"),
+        "analytics_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "analytics_tasks",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=True),
+        sa.Column("task_kind", sa.String(length=32), nullable=False),
+        sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "idempotency_key", name="uq_analytics_task_idempotency_key"
+        ),
+    )
+    op.create_index(
+        op.f("ix_analytics_tasks_available_at"),
+        "analytics_tasks",
+        ["available_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_analytics_tasks_claim",
+        "analytics_tasks",
+        ["status", "available_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_analytics_tasks_lease",
+        "analytics_tasks",
+        ["status", "lease_expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analytics_tasks_project_id"),
+        "analytics_tasks",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analytics_tasks_status"), "analytics_tasks", ["status"], unique=False
+    )
+    op.create_index(
+        op.f("ix_analytics_tasks_workspace_id"),
+        "analytics_tasks",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "attribution_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("window_start", sa.Date(), nullable=False),
+        sa.Column("window_end", sa.Date(), nullable=False),
+        sa.Column("granularity", sa.String(length=8), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_link_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_order_fact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_snapshot_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("analyzer_version", sa.String(length=64), nullable=False),
+        sa.Column("formula_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id",
+            "window_start",
+            "window_end",
+            "granularity",
+            name="uq_attribution_snapshot_window",
+        ),
+    )
+    op.create_index(
+        op.f("ix_attribution_snapshots_project_id"),
+        "attribution_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_attribution_snapshots_workspace_id"),
+        "attribution_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "audits",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=32), nullable=False),
+        sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
+        sa.Column("system_instruction", sa.Text(), nullable=False),
+        sa.Column("repetitions", sa.Integer(), nullable=False),
+        sa.Column("random_seed", sa.String(length=32), nullable=False),
+        sa.Column("configuration", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("summary", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("requested_count", sa.Integer(), nullable=False),
+        sa.Column("completed_count", sa.Integer(), nullable=False),
+        sa.Column("failed_count", sa.Integer(), nullable=False),
+        sa.Column("error_message", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_audits_project_id"), "audits", ["project_id"], unique=False
+    )
+    op.create_index(op.f("ix_audits_status"), "audits", ["status"], unique=False)
+    op.create_index(
+        op.f("ix_audits_workspace_id"), "audits", ["workspace_id"], unique=False
+    )
+    op.create_table(
+        "billing_checkout_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column("tier_key", sa.String(length=24), nullable=False),
+        sa.Column("cadence", sa.String(length=24), nullable=False),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("external_reference", sa.String(length=255), nullable=False),
+        sa.Column("checkout_url", sa.Text(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "idempotency_key",
+            name="uq_billing_checkout_account_idempotency",
+        ),
+    )
+    op.create_index(
+        op.f("ix_billing_checkout_attempts_billing_account_id"),
+        "billing_checkout_attempts",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_table(
+        "billing_customers",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column("external_customer_id", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "provider",
+            name="uq_billing_customer_account_provider",
+        ),
+        sa.UniqueConstraint(
+            "provider", "external_customer_id", name="uq_billing_customer_external"
+        ),
+    )
+    op.create_index(
+        op.f("ix_billing_customers_billing_account_id"),
+        "billing_customers",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_table(
+        "brands",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("project_id", name="uq_brand_project"),
+    )
+    op.create_index(
+        op.f("ix_brands_project_id"), "brands", ["project_id"], unique=False
+    )
+    op.create_table(
+        "competitors",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("aliases", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("domains", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_competitors_project_id"), "competitors", ["project_id"], unique=False
+    )
+    op.create_table(
+        "content_generations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("prompt", sa.Text(), nullable=False),
+        sa.Column("output_type", sa.String(length=32), nullable=False),
+        sa.Column("website_context_enabled", sa.Boolean(), nullable=False),
+        sa.Column("website_context_status", sa.String(length=16), nullable=False),
+        sa.Column(
+            "website_context_snapshot",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=True,
+        ),
+        sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
+        sa.Column("message_digest", sa.String(length=64), nullable=False),
+        sa.Column(
+            "message_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("idempotency_key", sa.String(length=128), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("output_text", sa.Text(), nullable=True),
+        sa.Column("provider", sa.String(length=32), nullable=False),
+        sa.Column("requested_model", sa.String(length=255), nullable=False),
+        sa.Column("returned_model", sa.String(length=255), nullable=True),
+        sa.Column("finish_reason", sa.String(length=32), nullable=True),
+        sa.Column("output_truncated", sa.Boolean(), nullable=False),
+        sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column(
+            "request_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("generator_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "idempotency_key", name="uq_content_generation_ws_idem"
+        ),
+    )
+    op.create_index(
+        op.f("ix_content_generations_available_at"),
+        "content_generations",
+        ["available_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_content_generations_project_id"),
+        "content_generations",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_content_generations_request_fingerprint"),
+        "content_generations",
+        ["request_fingerprint"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_content_generations_status"),
+        "content_generations",
+        ["status"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_content_generations_workspace_id"),
+        "content_generations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "discovery_model_configs",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=True),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("parameters", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_discovery_model_configs_connection_id"),
+        "discovery_model_configs",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_discovery_model_configs_workspace_id"),
+        "discovery_model_configs",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_connections",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("grant_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=16), nullable=False),
+        sa.Column("label", sa.String(length=255), nullable=False),
+        sa.Column("account_ref", sa.String(length=1024), nullable=False),
+        sa.Column(
+            "dataset_capabilities", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("last_synced_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "grant_id"],
+            ["integration_oauth_grants.workspace_id", "integration_oauth_grants.id"],
+            name="fk_integration_connection_grant_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "grant_id", "provider", name="uq_integration_connection_grant_provider"
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "id", name="uq_integration_connections_ws_id"
+        ),
+    )
+    op.create_index(
+        op.f("ix_integration_connections_grant_id"),
+        "integration_connections",
+        ["grant_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_connections_workspace_id"),
+        "integration_connections",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "owned_domains",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("domain", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_owned_domains_project_id"),
+        "owned_domains",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_table(
+        "prompt_sets",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.String(length=1024), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_prompt_sets_project_id"), "prompt_sets", ["project_id"], unique=False
+    )
+    op.create_table(
+        "provider_connection_tests",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("detail", sa.String(length=1024), nullable=False),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_provider_connection_tests_connection_id"),
+        "provider_connection_tests",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_provider_connection_tests_workspace_id"),
+        "provider_connection_tests",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "provider_routes",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("is_default", sa.Boolean(), nullable=False),
+        sa.Column("active", sa.Boolean(), server_default="true", nullable=False),
+        sa.Column(
+            "deactivation_reason",
+            sa.String(length=64),
+            server_default="",
+            nullable=False,
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_provider_routes_connection_id"),
+        "provider_routes",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_provider_routes_workspace_id"),
+        "provider_routes",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_health_profiles",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("root_url", sa.String(length=2048), nullable=False),
+        sa.Column("root_host", sa.String(length=255), nullable=False),
+        sa.Column("registrable_domain", sa.String(length=255), nullable=False),
+        sa.Column("include_globs", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("exclude_globs", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("selection_version", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("project_id", name="uq_site_health_profile_project"),
+    )
+    op.create_index(
+        op.f("ix_site_health_profiles_project_id"),
+        "site_health_profiles",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_health_profiles_workspace_id"),
+        "site_health_profiles",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "topics",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.String(length=1024), nullable=False),
+        sa.Column("origin", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_topics_project_id"), "topics", ["project_id"], unique=False
+    )
+    op.create_index(
+        "uq_topic_project_name",
+        "topics",
+        ["project_id", sa.literal_column("lower(name)")],
+        unique=True,
+    )
+    op.create_table(
+        "traffic_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("window_start", sa.Date(), nullable=False),
+        sa.Column("window_end", sa.Date(), nullable=False),
+        sa.Column("granularity", sa.String(length=8), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("formula_version", sa.String(length=64), nullable=False),
+        sa.Column("normalization_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id",
+            "window_start",
+            "window_end",
+            "granularity",
+            name="uq_traffic_snapshot_window",
+        ),
+        sa.UniqueConstraint("workspace_id", "id", name="uq_traffic_snapshots_ws_id"),
+    )
+    op.create_index(
+        op.f("ix_traffic_snapshots_project_id"),
+        "traffic_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_traffic_snapshots_workspace_id"),
+        "traffic_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "unintended_domains",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("domain", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_unintended_domains_project_id"),
+        "unintended_domains",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_table(
+        "workspace_billing_links",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_workspace_billing_links_billing_account_id"),
+        "workspace_billing_links",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_workspace_billing_links_workspace_id"),
+        "workspace_billing_links",
+        ["workspace_id"],
+        unique=True,
+    )
+    op.create_table(
+        "audit_engine_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=True),
+        sa.Column("base_url", sa.String(length=1024), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "audit_id", "logical_engine", name="uq_audit_engine_snapshot_engine"
+        ),
+    )
+    op.create_index(
+        op.f("ix_audit_engine_snapshots_audit_id"),
+        "audit_engine_snapshots",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_table(
+        "audit_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("event_type", sa.String(length=48), nullable=False),
+        sa.Column("message", sa.Text(), nullable=False),
+        sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_audit_events_audit_id"), "audit_events", ["audit_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_audit_events_created_at"), "audit_events", ["created_at"], unique=False
+    )
+    op.create_table(
+        "audit_shopping_surface_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("shopping_surface", sa.String(length=32), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=True),
+        sa.Column("base_url", sa.String(length=1024), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "audit_id",
+            "shopping_surface",
+            name="uq_audit_shopping_surface_snapshot_surface",
+        ),
+    )
+    op.create_index(
+        op.f("ix_audit_shopping_surface_snapshots_audit_id"),
+        "audit_shopping_surface_snapshots",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_table(
+        "billing_subscriptions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("billing_customer_id", sa.UUID(), nullable=True),
+        sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column("external_subscription_id", sa.String(length=255), nullable=False),
+        sa.Column("external_price_id", sa.String(length=255), nullable=False),
+        sa.Column("tier_key", sa.String(length=24), nullable=False),
+        sa.Column("cadence", sa.String(length=24), nullable=False),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("current_period_start", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("current_period_end", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("cancel_at_period_end", sa.Boolean(), nullable=False),
+        sa.Column("ended_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("provider_state_version", sa.Integer(), nullable=False),
+        sa.Column("is_current", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["billing_customer_id"], ["billing_customers.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "provider",
+            "external_subscription_id",
+            name="uq_billing_subscription_external",
+        ),
+    )
+    op.create_index(
+        op.f("ix_billing_subscriptions_billing_account_id"),
+        "billing_subscriptions",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_billing_subscription_one_current",
+        "billing_subscriptions",
+        ["billing_account_id"],
+        unique=True,
+        postgresql_where=sa.text("is_current"),
+    )
+    op.create_table(
+        "brand_aliases",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("brand_id", sa.UUID(), nullable=False),
+        sa.Column("alias", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["brand_id"], ["brands.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_brand_aliases_brand_id"), "brand_aliases", ["brand_id"], unique=False
+    )
+    op.create_table(
+        "brand_profile_suggestions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("brand_id", sa.UUID(), nullable=False),
+        sa.Column(
+            "model_identity", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("prompt_template_version", sa.String(length=64), nullable=False),
+        sa.Column(
+            "input_context_snapshot",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=False,
+        ),
+        sa.Column("output", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["brand_id"], ["brands.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_brand_profile_suggestions_brand_id"),
+        "brand_profile_suggestions",
+        ["brand_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_brand_profile_suggestions_project_id"),
+        "brand_profile_suggestions",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_brand_profile_suggestions_workspace_id"),
+        "brand_profile_suggestions",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "brand_profiles",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("brand_id", sa.UUID(), nullable=False),
+        sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("positioning", sa.Text(), nullable=False),
+        sa.Column(
+            "products_services", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("target_audience", sa.Text(), nullable=False),
+        sa.Column("sources", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["brand_id"], ["brands.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("brand_id", name="uq_brand_profile_brand"),
+    )
+    op.create_index(
+        op.f("ix_brand_profiles_brand_id"), "brand_profiles", ["brand_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_brand_profiles_project_id"),
+        "brand_profiles",
+        ["project_id"],
+        unique=True,
+    )
+    op.create_index(
+        op.f("ix_brand_profiles_workspace_id"),
+        "brand_profiles",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "competitor_products",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("competitor_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("aliases", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("price", sa.Numeric(precision=12, scale=2), nullable=True),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["competitor_id"], ["competitors.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "competitor_id", "name", name="uq_competitor_product_competitor_name"
+        ),
+    )
+    op.create_index(
+        op.f("ix_competitor_products_competitor_id"),
+        "competitor_products",
+        ["competitor_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_products_project_id"),
+        "competitor_products",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_table(
+        "content_generation_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("content_generation_id", sa.UUID(), nullable=False),
+        sa.Column("attempt_number", sa.Integer(), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("requested_model", sa.String(length=255), nullable=False),
+        sa.Column("returned_model", sa.String(length=255), nullable=True),
+        sa.Column("finish_reason", sa.String(length=32), nullable=True),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["content_generation_id"], ["content_generations.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "content_generation_id",
+            "attempt_number",
+            name="uq_content_generation_attempt_number",
+        ),
+    )
+    op.create_index(
+        op.f("ix_content_generation_attempts_content_generation_id"),
+        "content_generation_attempts",
+        ["content_generation_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=True),
+        sa.Column("grant_id", sa.UUID(), nullable=True),
+        sa.Column("event_type", sa.String(length=48), nullable=False),
+        sa.Column("message", sa.Text(), nullable=False),
+        sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["integration_connections.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["grant_id"], ["integration_oauth_grants.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_integration_events_connection_id"),
+        "integration_events",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_events_created_at"),
+        "integration_events",
+        ["created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_events_workspace_id"),
+        "integration_events",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_property_mappings",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=16), nullable=False),
+        sa.Column("property_ref", sa.String(length=512), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "connection_id"],
+            ["integration_connections.workspace_id", "integration_connections.id"],
+            name="fk_integration_mapping_connection_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_integration_property_mappings_active_owner",
+        "integration_property_mappings",
+        ["workspace_id", "provider", "property_ref"],
+        unique=True,
+        postgresql_where=sa.text("status = 'active'"),
+    )
+    op.create_index(
+        op.f("ix_integration_property_mappings_connection_id"),
+        "integration_property_mappings",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_property_mappings_project_id"),
+        "integration_property_mappings",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_property_mappings_workspace_id"),
+        "integration_property_mappings",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_sync_runs",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("sync_kind", sa.String(length=16), nullable=False),
+        sa.Column("window_start", sa.Date(), nullable=False),
+        sa.Column("window_end", sa.Date(), nullable=False),
+        sa.Column("resync_seq", sa.Integer(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "connection_id"],
+            ["integration_connections.workspace_id", "integration_connections.id"],
+            name="fk_integration_sync_run_connection_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "connection_id",
+            "sync_kind",
+            "window_start",
+            "window_end",
+            "resync_seq",
+            name="uq_integration_sync_run_window_seq",
+        ),
+        sa.UniqueConstraint(
+            "idempotency_key", name="uq_integration_sync_run_idempotency_key"
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "id", name="uq_integration_sync_runs_ws_id"
+        ),
+    )
+    op.create_index(
+        "ix_integration_sync_runs_active_window",
+        "integration_sync_runs",
+        ["connection_id", "sync_kind", "window_start", "window_end"],
+        unique=True,
+        postgresql_where=sa.text(
+            "status IN ('leased', 'queued', 'retry_wait', 'running')"
+        ),
+    )
+    op.create_index(
+        op.f("ix_integration_sync_runs_available_at"),
+        "integration_sync_runs",
+        ["available_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_integration_sync_runs_claim",
+        "integration_sync_runs",
+        ["status", "available_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_sync_runs_connection_id"),
+        "integration_sync_runs",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_integration_sync_runs_lease",
+        "integration_sync_runs",
+        ["status", "lease_expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_sync_runs_status"),
+        "integration_sync_runs",
+        ["status"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_sync_runs_workspace_id"),
+        "integration_sync_runs",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "metric_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("scoring_rule_version", sa.String(length=32), nullable=False),
+        sa.Column("total_completed", sa.Integer(), nullable=False),
+        sa.Column("total_failed", sa.Integer(), nullable=False),
+        sa.Column("visibility_score", sa.Float(), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("audit_id", name="uq_metric_snapshot_audit"),
+    )
+    op.create_index(
+        op.f("ix_metric_snapshots_audit_id"),
+        "metric_snapshots",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_metric_snapshots_project_id"),
+        "metric_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_metric_snapshots_workspace_id"),
+        "metric_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "prompts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("prompt_set_id", sa.UUID(), nullable=False),
+        sa.Column("topic_id", sa.UUID(), nullable=True),
+        sa.Column("text", sa.Text(), nullable=False),
+        sa.Column("normalized_text_hash", sa.String(length=64), nullable=False),
+        sa.Column("theme", sa.String(length=255), nullable=False),
+        sa.Column("intent", sa.String(length=32), nullable=False),
+        sa.Column("branded", sa.Boolean(), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False),
+        sa.Column(
+            "status", sa.String(length=16), server_default="active", nullable=False
+        ),
+        sa.Column("origin", sa.String(length=32), nullable=False),
+        sa.Column(
+            "generation_evidence", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["prompt_set_id"], ["prompt_sets.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["topic_id"], ["topics.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "prompt_set_id",
+            "normalized_text_hash",
+            name="uq_prompt_set_normalized_text",
+        ),
+    )
+    op.create_index(
+        op.f("ix_prompts_prompt_set_id"), "prompts", ["prompt_set_id"], unique=False
+    )
+    op.create_index(op.f("ix_prompts_topic_id"), "prompts", ["topic_id"], unique=False)
+    op.create_table(
+        "site_crawls",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("profile_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("discovery_status", sa.String(length=24), nullable=False),
+        sa.Column("analysis_status", sa.String(length=24), nullable=False),
+        sa.Column("root_url", sa.String(length=2048), nullable=False),
+        sa.Column("random_seed", sa.String(length=32), nullable=False),
+        sa.Column("configuration", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("sample_mode", sa.Boolean(), nullable=False),
+        sa.Column("admitted_url_count", sa.Integer(), nullable=False),
+        sa.Column("discovered_url_count", sa.Integer(), nullable=False),
+        sa.Column("analyzed_url_count", sa.Integer(), nullable=False),
+        sa.Column("failed_url_count", sa.Integer(), nullable=False),
+        sa.Column("inventory_complete", sa.Boolean(), nullable=False),
+        sa.Column("score_summary", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("site_facts", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("extractor_version", sa.String(length=32), nullable=False),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("rule_catalog_version", sa.String(length=32), nullable=False),
+        sa.Column("scoring_version", sa.String(length=32), nullable=False),
+        sa.Column("error_message", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["profile_id"], ["site_health_profiles.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "id", "project_id", "workspace_id", name="uq_site_crawls_id_project"
+        ),
+    )
+    op.create_index(
+        op.f("ix_site_crawls_profile_id"), "site_crawls", ["profile_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_crawls_project_id"), "site_crawls", ["project_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_crawls_status"), "site_crawls", ["status"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_crawls_workspace_id"),
+        "site_crawls",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "traffic_query_stats",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("snapshot_id", sa.UUID(), nullable=False),
+        sa.Column("normalized_query", sa.String(length=1024), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "snapshot_id"],
+            ["traffic_snapshots.workspace_id", "traffic_snapshots.id"],
+            name="fk_traffic_query_stat_snapshot_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "snapshot_id", "normalized_query", name="uq_traffic_query_stat_query"
+        ),
+    )
+    op.create_index(
+        op.f("ix_traffic_query_stats_project_id"),
+        "traffic_query_stats",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_traffic_query_stats_snapshot_id"),
+        "traffic_query_stats",
+        ["snapshot_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_traffic_query_stats_workspace_id"),
+        "traffic_query_stats",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "account_entitlements",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("tier_key", sa.String(length=24), nullable=False),
+        sa.Column("capability_revision", sa.Integer(), nullable=False),
+        sa.Column("source_subscription_id", sa.UUID(), nullable=True),
+        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("paid_through", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("grace_until", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_subscription_id"],
+            ["billing_subscriptions.id"],
+            ondelete="SET NULL",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_account_entitlements_billing_account_id"),
+        "account_entitlements",
+        ["billing_account_id"],
+        unique=True,
+    )
+    op.create_table(
+        "audit_prompt_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("prompt_id", sa.UUID(), nullable=True),
+        sa.Column("prompt_index", sa.Integer(), nullable=False),
+        sa.Column("text", sa.Text(), nullable=False),
+        sa.Column("theme", sa.String(length=255), nullable=False),
+        sa.Column("intent", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["prompt_id"], ["prompts.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "audit_id", "prompt_index", name="uq_audit_prompt_snapshot_index"
+        ),
+    )
+    op.create_index(
+        op.f("ix_audit_prompt_snapshots_audit_id"),
+        "audit_prompt_snapshots",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_import_artifacts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("sync_run_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=16), nullable=False),
+        sa.Column("dataset", sa.String(length=48), nullable=False),
+        sa.Column(
+            "query_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("payload_hash", sa.String(length=64), nullable=False),
+        sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("row_count", sa.Integer(), nullable=False),
+        sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "connection_id"],
+            ["integration_connections.workspace_id", "integration_connections.id"],
+            name="fk_integration_artifact_connection_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "sync_run_id"],
+            ["integration_sync_runs.workspace_id", "integration_sync_runs.id"],
+            name="fk_integration_artifact_sync_run_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "id", name="uq_integration_import_artifacts_ws_id"
+        ),
+    )
+    op.create_index(
+        op.f("ix_integration_import_artifacts_connection_id"),
+        "integration_import_artifacts",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_import_artifacts_payload_hash"),
+        "integration_import_artifacts",
+        ["payload_hash"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_import_artifacts_sync_run_id"),
+        "integration_import_artifacts",
+        ["sync_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_import_artifacts_workspace_id"),
+        "integration_import_artifacts",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "opportunities",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("rule_id", sa.String(length=64), nullable=False),
+        sa.Column("opportunity_type", sa.String(length=16), nullable=False),
+        sa.Column("severity", sa.String(length=16), nullable=False),
+        sa.Column("priority_score", sa.Float(), nullable=False),
+        sa.Column("title", sa.String(length=255), nullable=False),
+        sa.Column("remediation", sa.Text(), nullable=False),
+        sa.Column("target_key", sa.String(length=512), nullable=False),
+        sa.Column("target_prompt_id", sa.UUID(), nullable=True),
+        sa.Column("target_url", sa.Text(), nullable=True),
+        sa.Column("target_theme", sa.String(length=255), nullable=True),
+        sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_issue_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_metric_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_traffic_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("rule_version", sa.String(length=32), nullable=False),
+        sa.Column("formula_version", sa.String(length=32), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("superseded_by_id", sa.UUID(), nullable=True),
+        sa.Column("superseded_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["superseded_by_id"], ["opportunities.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_prompt_id"], ["prompts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_opportunities_filter",
+        "opportunities",
+        ["project_id", "status", "severity", "opportunity_type"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_opportunities_list",
+        "opportunities",
+        ["project_id", "priority_score", "id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunities_project_id"),
+        "opportunities",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunities_workspace_id"),
+        "opportunities",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_opportunities_live_target",
+        "opportunities",
+        ["project_id", "rule_id", "target_key"],
+        unique=True,
+        postgresql_where=sa.text("superseded_at IS NULL"),
+    )
+    op.create_table(
+        "opportunity_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=True),
+        sa.Column("site_crawl_id", sa.UUID(), nullable=True),
+        sa.Column(
+            "counts_by_type", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "counts_by_severity", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "counts_by_status", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("total_count", sa.Integer(), nullable=False),
+        sa.Column("median_priority", sa.Float(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("rule_version", sa.String(length=32), nullable=False),
+        sa.Column("formula_version", sa.String(length=32), nullable=False),
+        sa.Column(
+            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_issue_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["site_crawl_id"], ["site_crawls.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("run_id", name="uq_opportunity_snapshot_run"),
+    )
+    op.create_index(
+        "ix_opportunity_snapshots_project_created",
+        "opportunity_snapshots",
+        ["project_id", "created_at", "id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunity_snapshots_project_id"),
+        "opportunity_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunity_snapshots_workspace_id"),
+        "opportunity_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "products",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("sku", sa.String(length=128), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("aliases", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("variants", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("price", sa.Numeric(precision=12, scale=2), nullable=True),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("attributes", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("origin", sa.String(length=32), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=True),
+        sa.Column("external_item_ref", sa.String(length=255), nullable=False),
+        sa.Column("last_seen_sync_run_id", sa.UUID(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["integration_connections.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["last_seen_sync_run_id"], ["integration_sync_runs.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("project_id", "sku", name="uq_product_project_sku"),
+    )
+    op.create_index(
+        op.f("ix_products_connection_id"), "products", ["connection_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_products_last_seen_sync_run_id"),
+        "products",
+        ["last_seen_sync_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_products_project_id"), "products", ["project_id"], unique=False
+    )
+    op.create_table(
+        "site_crawl_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("event_type", sa.String(length=48), nullable=False),
+        sa.Column("message", sa.Text(), nullable=False),
+        sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_site_crawl_events_crawl_id"),
+        "site_crawl_events",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_crawl_events_created_at"),
+        "site_crawl_events",
+        ["created_at"],
+        unique=False,
+    )
+    op.create_table(
+        "site_health_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("selected_url_count", sa.Integer(), nullable=False),
+        sa.Column("analyzed_url_count", sa.Integer(), nullable=False),
+        sa.Column("technical_score", sa.Float(), nullable=True),
+        sa.Column("aeo_score", sa.Float(), nullable=True),
+        sa.Column("overall_score", sa.Float(), nullable=True),
+        sa.Column("issue_count", sa.Integer(), nullable=False),
+        sa.Column(
+            "severity_counts", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "category_counts", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("source_analysis_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
+        sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
+        sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("scoring_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("crawl_id", name="uq_site_health_snapshot_crawl"),
+    )
+    op.create_index(
+        op.f("ix_site_health_snapshots_crawl_id"),
+        "site_health_snapshots",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_health_snapshots_project_id"),
+        "site_health_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_health_snapshots_workspace_id"),
+        "site_health_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_urls",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("normalized_url", sa.String(length=2048), nullable=False),
+        sa.Column("url_hash", sa.String(length=64), nullable=False),
+        sa.Column("display_url", sa.String(length=2048), nullable=False),
+        sa.Column("host", sa.String(length=255), nullable=False),
+        sa.Column("depth", sa.Integer(), nullable=False),
+        sa.Column("discovery_status", sa.String(length=24), nullable=False),
+        sa.Column("latest_source_kind", sa.String(length=16), nullable=False),
+        sa.Column("latest_title", sa.String(length=1024), nullable=False),
+        sa.Column("latest_content_type", sa.String(length=128), nullable=False),
+        sa.Column("first_seen_crawl_id", sa.UUID(), nullable=True),
+        sa.Column("last_seen_crawl_id", sa.UUID(), nullable=True),
+        sa.Column("first_seen_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["first_seen_crawl_id"], ["site_crawls.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["last_seen_crawl_id"], ["site_crawls.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "id", "project_id", "workspace_id", name="uq_site_urls_id_project"
+        ),
+        sa.UniqueConstraint("project_id", "url_hash", name="uq_site_url_project_hash"),
+    )
+    op.create_index(
+        op.f("ix_site_urls_project_id"), "site_urls", ["project_id"], unique=False
+    )
+    op.create_index(
+        "ix_site_urls_project_keyset",
+        "site_urls",
+        ["project_id", "normalized_url", "id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_urls_workspace_id"), "site_urls", ["workspace_id"], unique=False
+    )
+    op.create_table(
+        "audit_tasks",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("prompt_snapshot_id", sa.UUID(), nullable=False),
+        sa.Column("engine_snapshot_id", sa.UUID(), nullable=False),
+        sa.Column("prompt_index", sa.Integer(), nullable=False),
+        sa.Column("repetition", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("shopping_surface", sa.String(length=32), nullable=False),
+        sa.Column("prompt_text", sa.Text(), nullable=False),
+        sa.Column(
+            "provider_route_snapshot",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=True,
+        ),
+        sa.Column("idempotency_key", sa.String(length=128), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("result_artifact_id", sa.UUID(), nullable=True),
+        sa.Column("answer_text", sa.Text(), nullable=False),
+        sa.Column("search_used", sa.Boolean(), nullable=False),
+        sa.Column("search_events", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("citations", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("score", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "request_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "provider_metadata", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["engine_snapshot_id"], ["audit_engine_snapshots.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["prompt_snapshot_id"], ["audit_prompt_snapshots.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "audit_id",
+            "prompt_index",
+            "repetition",
+            "logical_engine",
+            "shopping_surface",
+            name="uq_audit_task_slot",
+        ),
+        sa.UniqueConstraint("idempotency_key", name="uq_audit_task_idempotency_key"),
+    )
+    op.create_index(
+        op.f("ix_audit_tasks_audit_id"), "audit_tasks", ["audit_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_audit_tasks_available_at"),
+        "audit_tasks",
+        ["available_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_audit_tasks_status"), "audit_tasks", ["status"], unique=False
+    )
+    op.create_index(
+        op.f("ix_audit_tasks_workspace_id"),
+        "audit_tasks",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "feed_issues",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("sync_run_id", sa.UUID(), nullable=False),
+        sa.Column("external_item_ref", sa.String(length=255), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=True),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("rule_id", sa.String(length=64), nullable=False),
+        sa.Column("severity", sa.String(length=16), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("importer_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "connection_id"],
+            ["integration_connections.workspace_id", "integration_connections.id"],
+            name="fk_feed_issue_connection_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "source_artifact_id"],
+            [
+                "integration_import_artifacts.workspace_id",
+                "integration_import_artifacts.id",
+            ],
+            name="fk_feed_issue_artifact_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "sync_run_id"],
+            ["integration_sync_runs.workspace_id", "integration_sync_runs.id"],
+            name="fk_feed_issue_sync_run_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "sync_run_id",
+            "external_item_ref",
+            "rule_id",
+            name="uq_feed_issue_run_item_rule",
+        ),
+    )
+    op.create_index(
+        op.f("ix_feed_issues_connection_id"),
+        "feed_issues",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_feed_issues_project_id"), "feed_issues", ["project_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_feed_issues_source_artifact_id"),
+        "feed_issues",
+        ["source_artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_feed_issues_sync_run_id"), "feed_issues", ["sync_run_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_feed_issues_workspace_id"),
+        "feed_issues",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "integration_metric_rows",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("property_ref", sa.String(length=512), nullable=False),
+        sa.Column("provider", sa.String(length=16), nullable=False),
+        sa.Column("dataset", sa.String(length=48), nullable=False),
+        sa.Column("date", sa.Date(), nullable=False),
+        sa.Column("dimension_key", sa.String(length=1024), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("resync_seq", sa.Integer(), nullable=False),
+        sa.Column("importer_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "source_artifact_id"],
+            [
+                "integration_import_artifacts.workspace_id",
+                "integration_import_artifacts.id",
+            ],
+            name="fk_integration_metric_row_artifact_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id",
+            "property_ref",
+            "provider",
+            "dataset",
+            "date",
+            "dimension_key",
+            "resync_seq",
+            name="uq_integration_metric_row_identity",
+        ),
+    )
+    op.create_index(
+        "ix_integration_metric_rows_project_date",
+        "integration_metric_rows",
+        ["project_id", "date"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_metric_rows_project_id"),
+        "integration_metric_rows",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_metric_rows_source_artifact_id"),
+        "integration_metric_rows",
+        ["source_artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_metric_rows_workspace_id"),
+        "integration_metric_rows",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "monitored_site_urls",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("profile_id", sa.UUID(), nullable=False),
+        sa.Column("site_url_id", sa.UUID(), nullable=False),
+        sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column("selection_source", sa.String(length=16), nullable=False),
+        sa.Column("selecting_membership_id", sa.Integer(), nullable=True),
+        sa.Column("selected_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("deselected_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["profile_id"], ["site_health_profiles.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["site_url_id"], ["site_urls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("project_id", "site_url_id", name="uq_monitored_site_url"),
+    )
+    op.create_index(
+        op.f("ix_monitored_site_urls_profile_id"),
+        "monitored_site_urls",
+        ["profile_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_monitored_site_urls_project_id"),
+        "monitored_site_urls",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_monitored_site_urls_site_url_id"),
+        "monitored_site_urls",
+        ["site_url_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_monitored_site_urls_workspace_id"),
+        "monitored_site_urls",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_monitored_site_urls_ws_active",
+        "monitored_site_urls",
+        ["workspace_id", "active"],
+        unique=False,
+    )
+    op.create_table(
+        "order_facts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.String(length=16), nullable=False),
+        sa.Column("order_ref_hash", sa.String(length=64), nullable=False),
+        sa.Column("resync_seq", sa.Integer(), nullable=False),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("total_amount", sa.Numeric(precision=12, scale=2), nullable=False),
+        sa.Column("line_items", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "attribution_keys", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("importer_version", sa.String(length=64), nullable=False),
+        sa.Column("order_sanitize_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "connection_id"],
+            ["integration_connections.workspace_id", "integration_connections.id"],
+            name="fk_order_fact_connection_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "source_artifact_id"],
+            [
+                "integration_import_artifacts.workspace_id",
+                "integration_import_artifacts.id",
+            ],
+            name="fk_order_fact_artifact_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "connection_id",
+            "order_ref_hash",
+            "resync_seq",
+            name="uq_order_fact_identity",
+        ),
+        sa.UniqueConstraint("workspace_id", "id", name="uq_order_facts_ws_id"),
+    )
+    op.create_index(
+        op.f("ix_order_facts_connection_id"),
+        "order_facts",
+        ["connection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_order_facts_order_ref_hash"),
+        "order_facts",
+        ["order_ref_hash"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_order_facts_project_id"), "order_facts", ["project_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_order_facts_source_artifact_id"),
+        "order_facts",
+        ["source_artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_order_facts_workspace_id"),
+        "order_facts",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "product_metric_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=True),
+        sa.Column("competitor_product_id", sa.UUID(), nullable=True),
+        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("product_scoring_rule_version", sa.String(length=32), nullable=False),
+        sa.Column("mention_count", sa.Integer(), nullable=False),
+        sa.Column("sov_share", sa.Float(), nullable=False),
+        sa.Column("avg_rank", sa.Float(), nullable=True),
+        sa.Column(
+            "rank_distribution", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("price_mention_count", sa.Integer(), nullable=False),
+        sa.Column("price_accuracy_rate", sa.Float(), nullable=True),
+        sa.Column("win_rate", sa.Float(), nullable=True),
+        sa.Column("price_mismatch_rate", sa.Float(), nullable=True),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["competitor_product_id"], ["competitor_products.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_product_metric_snapshots_audit_id"),
+        "product_metric_snapshots",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_product_metric_snapshots_project_id"),
+        "product_metric_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_product_metric_snapshots_workspace_id"),
+        "product_metric_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_product_metric_snapshot_competitor_product",
+        "product_metric_snapshots",
+        [
+            "audit_id",
+            "competitor_product_id",
+            "product_analyzer_version",
+            "product_scoring_rule_version",
+        ],
+        unique=True,
+        postgresql_where=sa.text("competitor_product_id IS NOT NULL"),
+    )
+    op.create_index(
+        "uq_product_metric_snapshot_product",
+        "product_metric_snapshots",
+        [
+            "audit_id",
+            "product_id",
+            "product_analyzer_version",
+            "product_scoring_rule_version",
+        ],
+        unique=True,
+        postgresql_where=sa.text("product_id IS NOT NULL"),
+    )
+    op.create_table(
+        "site_crawl_tasks",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("site_url_id", sa.UUID(), nullable=True),
+        sa.Column("task_kind", sa.String(length=16), nullable=False),
+        sa.Column("requested_url", sa.String(length=2048), nullable=False),
+        sa.Column("url_hash", sa.String(length=64), nullable=False),
+        sa.Column("parent_site_url_id", sa.UUID(), nullable=True),
+        sa.Column("source_task_id", sa.UUID(), nullable=True),
+        sa.Column("depth", sa.Integer(), nullable=False),
+        sa.Column("generation", sa.Integer(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("result_artifact_id", sa.UUID(), nullable=True),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["parent_site_url_id"], ["site_urls.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["site_url_id"], ["site_urls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_task_id"], ["site_crawl_tasks.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "crawl_id",
+            "task_kind",
+            "url_hash",
+            "generation",
+            name="uq_site_crawl_task_slot",
+        ),
+        sa.UniqueConstraint(
+            "idempotency_key", name="uq_site_crawl_task_idempotency_key"
+        ),
+    )
+    op.create_index(
+        op.f("ix_site_crawl_tasks_available_at"),
+        "site_crawl_tasks",
+        ["available_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_site_crawl_tasks_claim",
+        "site_crawl_tasks",
+        ["status", "available_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_crawl_tasks_crawl_id"),
+        "site_crawl_tasks",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_site_crawl_tasks_lease",
+        "site_crawl_tasks",
+        ["status", "lease_expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_crawl_tasks_site_url_id"),
+        "site_crawl_tasks",
+        ["site_url_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_crawl_tasks_status"), "site_crawl_tasks", ["status"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_crawl_tasks_workspace_id"),
+        "site_crawl_tasks",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "traffic_page_stats",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("snapshot_id", sa.UUID(), nullable=False),
+        sa.Column("site_url_id", sa.UUID(), nullable=True),
+        sa.Column("canonical_url", sa.String(length=2048), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["site_url_id"], ["site_urls.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "snapshot_id"],
+            ["traffic_snapshots.workspace_id", "traffic_snapshots.id"],
+            name="fk_traffic_page_stat_snapshot_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "snapshot_id", "canonical_url", name="uq_traffic_page_stat_url"
+        ),
+    )
+    op.create_index(
+        op.f("ix_traffic_page_stats_project_id"),
+        "traffic_page_stats",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_traffic_page_stats_snapshot_id"),
+        "traffic_page_stats",
+        ["snapshot_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_traffic_page_stats_workspace_id"),
+        "traffic_page_stats",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "attribution_links",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("order_fact_id", sa.UUID(), nullable=False),
+        sa.Column("method", sa.String(length=24), nullable=False),
+        sa.Column("confidence", sa.String(length=16), nullable=False),
+        sa.Column("matched_rule_id", sa.String(length=64), nullable=False),
+        sa.Column("rule_version", sa.String(length=64), nullable=False),
+        sa.Column("analyzer_version", sa.String(length=64), nullable=False),
+        sa.Column(
+            "evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("revenue_amount", sa.Numeric(precision=12, scale=2), nullable=False),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "order_fact_id"],
+            ["order_facts.workspace_id", "order_facts.id"],
+            name="fk_attribution_link_order_fact_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "order_fact_id",
+            "matched_rule_id",
+            "rule_version",
+            name="uq_attribution_link_order_rule_version",
+        ),
+    )
+    op.create_index(
+        op.f("ix_attribution_links_order_fact_id"),
+        "attribution_links",
+        ["order_fact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_attribution_links_project_id"),
+        "attribution_links",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_attribution_links_workspace_id"),
+        "attribution_links",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "raw_response_artifacts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("answer_text", sa.Text(), nullable=False),
+        sa.Column("search_used", sa.Boolean(), nullable=False),
+        sa.Column("search_events", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("citations", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "provider_metadata", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_raw_response_artifacts_audit_id"),
+        "raw_response_artifacts",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_raw_response_artifacts_task_id"),
+        "raw_response_artifacts",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_table(
+        "referral_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source", sa.String(length=16), nullable=False),
+        sa.Column("import_id", sa.UUID(), nullable=False),
+        sa.Column("source_metric_row_id", sa.UUID(), nullable=True),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("landing_url", sa.String(length=2048), nullable=False),
+        sa.Column("referrer_host", sa.String(length=512), nullable=False),
+        sa.Column("referrer_url", sa.String(length=2048), nullable=False),
+        sa.Column("utm_source", sa.String(length=512), nullable=False),
+        sa.Column("utm_medium", sa.String(length=512), nullable=False),
+        sa.Column("utm_campaign", sa.String(length=512), nullable=False),
+        sa.Column("user_agent", sa.String(length=128), nullable=False),
+        sa.Column("session_id_hash", sa.String(length=64), nullable=False),
+        sa.Column("raw", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("content_hash", sa.String(length=64), nullable=False),
+        sa.Column("sanitize_version", sa.String(length=64), nullable=False),
+        sa.Column("ingested_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_metric_row_id"],
+            ["integration_metric_rows.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "import_id"],
+            [
+                "integration_import_artifacts.workspace_id",
+                "integration_import_artifacts.id",
+            ],
+            name="fk_referral_event_import_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "import_id", "content_hash", name="uq_referral_event_import_content"
+        ),
+        sa.UniqueConstraint("workspace_id", "id", name="uq_referral_events_ws_id"),
+    )
+    op.create_index(
+        op.f("ix_referral_events_import_id"),
+        "referral_events",
+        ["import_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_referral_events_project_id"),
+        "referral_events",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_referral_events_project_occurred",
+        "referral_events",
+        ["project_id", "occurred_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_referral_events_workspace_id"),
+        "referral_events",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_fetch_artifacts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("fetch_purpose", sa.String(length=16), nullable=False),
+        sa.Column("fetch_engine", sa.String(length=16), nullable=False),
+        sa.Column("requested_url", sa.String(length=2048), nullable=False),
+        sa.Column("final_url", sa.String(length=2048), nullable=False),
+        sa.Column(
+            "redirect_chain", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("status_code", sa.Integer(), nullable=True),
+        sa.Column(
+            "redacted_headers", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("content_type", sa.String(length=128), nullable=False),
+        sa.Column("content_hash", sa.String(length=64), nullable=False),
+        sa.Column("http_version", sa.String(length=16), nullable=False),
+        sa.Column("ttfb_ms", sa.Integer(), nullable=True),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("wire_bytes", sa.Integer(), nullable=True),
+        sa.Column("decoded_bytes", sa.Integer(), nullable=True),
+        sa.Column("extractor_version", sa.String(length=32), nullable=False),
+        sa.Column(
+            "normalized_facts", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["task_id"], ["site_crawl_tasks.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("task_id", name="uq_site_fetch_artifact_task"),
+    )
+    op.create_index(
+        op.f("ix_site_fetch_artifacts_crawl_id"),
+        "site_fetch_artifacts",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_fetch_artifacts_task_id"),
+        "site_fetch_artifacts",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_fetch_artifacts_workspace_id"),
+        "site_fetch_artifacts",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "product_response_analyses",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("product_scoring_rule_version", sa.String(length=32), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("prompt_index", sa.Integer(), nullable=False),
+        sa.Column("repetition", sa.Integer(), nullable=False),
+        sa.Column("shopping_surface", sa.String(length=32), nullable=False),
+        sa.Column("own_product_mention_count", sa.Integer(), nullable=False),
+        sa.Column("competitor_product_mention_count", sa.Integer(), nullable=False),
+        sa.Column("products_with_price_match", sa.Integer(), nullable=False),
+        sa.Column("score", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "task_id",
+            "product_analyzer_version",
+            "product_scoring_rule_version",
+            name="uq_product_response_analysis_task_version",
+        ),
+    )
+    op.create_index(
+        op.f("ix_product_response_analyses_audit_id"),
+        "product_response_analyses",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_product_response_analyses_task_id"),
+        "product_response_analyses",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_product_response_analyses_workspace_id"),
+        "product_response_analyses",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "provider_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("attempt_number", sa.Integer(), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_provider_attempts_audit_id"),
+        "provider_attempts",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_provider_attempts_task_id"),
+        "provider_attempts",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_table(
+        "referral_classifications",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("referral_event_id", sa.UUID(), nullable=False),
+        sa.Column("is_ai_referral", sa.Boolean(), nullable=False),
+        sa.Column("ai_source", sa.String(length=32), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=True),
+        sa.Column("matched_rule_id", sa.String(length=64), nullable=False),
+        sa.Column("match_signal", sa.String(length=16), nullable=False),
+        sa.Column("confidence", sa.String(length=16), nullable=False),
+        sa.Column("rule_version", sa.String(length=64), nullable=False),
+        sa.Column("analyzer_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "referral_event_id"],
+            ["referral_events.workspace_id", "referral_events.id"],
+            name="fk_referral_classification_event_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "referral_event_id", name="uq_referral_classification_event"
+        ),
+    )
+    op.create_index(
+        op.f("ix_referral_classifications_project_id"),
+        "referral_classifications",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_referral_classifications_referral_event_id"),
+        "referral_classifications",
+        ["referral_event_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_referral_classifications_workspace_id"),
+        "referral_classifications",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "response_analyses",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("scoring_rule_version", sa.String(length=32), nullable=False),
+        sa.Column("logical_engine", sa.String(length=32), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("transport_model", sa.String(length=255), nullable=False),
+        sa.Column("prompt_index", sa.Integer(), nullable=False),
+        sa.Column("repetition", sa.Integer(), nullable=False),
+        sa.Column("prompt_class", sa.String(length=32), nullable=False),
+        sa.Column("shopping_surface", sa.String(length=32), nullable=False),
+        sa.Column("brand_mentioned", sa.Boolean(), nullable=False),
+        sa.Column("brand_first_offset", sa.Integer(), nullable=True),
+        sa.Column("owned_domain_cited", sa.Boolean(), nullable=False),
+        sa.Column("owned_citation_count", sa.Integer(), nullable=False),
+        sa.Column("unintended_domain_cited", sa.Boolean(), nullable=False),
+        sa.Column("citation_count", sa.Integer(), nullable=False),
+        sa.Column("search_used", sa.Boolean(), nullable=False),
+        sa.Column("search_query_count", sa.Integer(), nullable=False),
+        sa.Column("sentiment", sa.String(length=16), nullable=True),
+        sa.Column("avg_position", sa.Float(), nullable=True),
+        sa.Column("score", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("task_id", name="uq_response_analysis_task"),
+    )
+    op.create_index(
+        op.f("ix_response_analyses_audit_id"),
+        "response_analyses",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_response_analyses_task_id"),
+        "response_analyses",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_response_analyses_workspace_id"),
+        "response_analyses",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_fetch_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("attempt_number", sa.Integer(), nullable=False),
+        sa.Column("request_ordinal", sa.Integer(), nullable=False),
+        sa.Column("rung_number", sa.Integer(), nullable=True),
+        sa.Column("fetch_engine", sa.String(length=16), nullable=False),
+        sa.Column("method", sa.String(length=8), nullable=False),
+        sa.Column("target_host", sa.String(length=255), nullable=False),
+        sa.Column("outcome", sa.String(length=16), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("status_code", sa.Integer(), nullable=True),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("wire_bytes", sa.Integer(), nullable=True),
+        sa.Column("decoded_bytes", sa.Integer(), nullable=True),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["site_fetch_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["task_id"], ["site_crawl_tasks.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "task_id",
+            "attempt_number",
+            "request_ordinal",
+            name="uq_site_fetch_attempt_call",
+        ),
+    )
+    op.create_index(
+        op.f("ix_site_fetch_attempts_crawl_id"),
+        "site_fetch_attempts",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_fetch_attempts_task_id"),
+        "site_fetch_attempts",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_fetch_attempts_workspace_id"),
+        "site_fetch_attempts",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_page_analyses",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("site_url_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("technical_score", sa.Float(), nullable=True),
+        sa.Column("aeo_score", sa.Float(), nullable=True),
+        sa.Column("overall_score", sa.Float(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("scoring_version", sa.String(length=32), nullable=False),
+        sa.Column("page_type", sa.String(length=24), nullable=False),
+        sa.Column("classifier_version", sa.String(length=32), nullable=False),
+        sa.Column(
+            "page_type_evidence", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
+        sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
+        sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["site_fetch_artifacts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["site_url_id"], ["site_urls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("artifact_id", name="uq_site_page_analysis_artifact"),
+    )
+    op.create_index(
+        op.f("ix_site_page_analyses_artifact_id"),
+        "site_page_analyses",
+        ["artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_page_analyses_crawl_id"),
+        "site_page_analyses",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_page_analyses_project_id"),
+        "site_page_analyses",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_page_analyses_site_url_id"),
+        "site_page_analyses",
+        ["site_url_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_page_analyses_workspace_id"),
+        "site_page_analyses",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_url_observations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("site_url_id", sa.UUID(), nullable=False),
+        sa.Column("source_kind", sa.String(length=16), nullable=False),
+        sa.Column("parent_site_url_id", sa.UUID(), nullable=True),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=True),
+        sa.Column("depth", sa.Integer(), nullable=False),
+        sa.Column("observed_url", sa.String(length=2048), nullable=False),
+        sa.Column("final_url", sa.String(length=2048), nullable=False),
+        sa.Column("status_code", sa.Integer(), nullable=True),
+        sa.Column("content_type", sa.String(length=128), nullable=False),
+        sa.Column("title", sa.String(length=1024), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["parent_site_url_id"], ["site_urls.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_artifact_id"], ["site_fetch_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "crawl_id"],
+            ["site_crawls.workspace_id", "site_crawls.project_id", "site_crawls.id"],
+            name="fk_site_url_observation_crawl_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "site_url_id"],
+            ["site_urls.workspace_id", "site_urls.project_id", "site_urls.id"],
+            name="fk_site_url_observation_site_url_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("crawl_id", "site_url_id", name="uq_site_url_observation"),
+    )
+    op.create_index(
+        op.f("ix_site_url_observations_crawl_id"),
+        "site_url_observations",
+        ["crawl_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_url_observations_project_id"),
+        "site_url_observations",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_url_observations_site_url_id"),
+        "site_url_observations",
+        ["site_url_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_url_observations_workspace_id"),
+        "site_url_observations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "brand_mentions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("brand_name", sa.String(length=255), nullable=False),
+        sa.Column("first_offset", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["response_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_brand_mentions_analysis_id"),
+        "brand_mentions",
+        ["analysis_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_brand_mentions_audit_id"), "brand_mentions", ["audit_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_brand_mentions_workspace_id"),
+        "brand_mentions",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "citations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("ordinal", sa.Integer(), nullable=False),
+        sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("title", sa.Text(), nullable=False),
+        sa.Column("domain", sa.String(length=255), nullable=False),
+        sa.Column("classification", sa.String(length=24), nullable=False),
+        sa.Column("is_owned", sa.Boolean(), nullable=False),
+        sa.Column("is_unintended", sa.Boolean(), nullable=False),
+        sa.Column("matched_competitor", sa.String(length=255), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["response_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_citations_analysis_id"), "citations", ["analysis_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_citations_audit_id"), "citations", ["audit_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_citations_workspace_id"), "citations", ["workspace_id"], unique=False
+    )
+    op.create_table(
+        "competitor_mentions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("competitor_name", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["response_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_competitor_mentions_analysis_id"),
+        "competitor_mentions",
+        ["analysis_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_mentions_audit_id"),
+        "competitor_mentions",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_mentions_workspace_id"),
+        "competitor_mentions",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "merchant_mentions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("product_id", sa.UUID(), nullable=True),
+        sa.Column("competitor_product_id", sa.UUID(), nullable=True),
+        sa.Column("merchant_name", sa.String(length=255), nullable=False),
+        sa.Column("merchant_domain", sa.String(length=255), nullable=False),
+        sa.Column("merchant_kind", sa.String(length=16), nullable=False),
+        sa.Column("destination_url", sa.Text(), nullable=False),
+        sa.Column("price_text", sa.String(length=64), nullable=False),
+        sa.Column("price_value", sa.Numeric(precision=12, scale=2), nullable=True),
+        sa.Column("price_currency", sa.String(length=3), nullable=False),
+        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["product_response_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["competitor_product_id"], ["competitor_products.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_merchant_mentions_analysis_id"),
+        "merchant_mentions",
+        ["analysis_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_merchant_mentions_audit_id"),
+        "merchant_mentions",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_merchant_mentions_workspace_id"),
+        "merchant_mentions",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "product_mentions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=True),
+        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=True),
+        sa.Column("competitor_product_id", sa.UUID(), nullable=True),
+        sa.Column("matched_name", sa.String(length=255), nullable=False),
+        sa.Column("matched_sku", sa.String(length=128), nullable=False),
+        sa.Column("first_offset", sa.Integer(), nullable=True),
+        sa.Column("rank_position", sa.Integer(), nullable=True),
+        sa.Column("price_text", sa.String(length=64), nullable=False),
+        sa.Column("price_value", sa.Numeric(precision=12, scale=2), nullable=True),
+        sa.Column("price_currency", sa.String(length=3), nullable=False),
+        sa.Column("price_matches_catalog", sa.Boolean(), nullable=True),
+        sa.Column("price_relation", sa.String(length=16), nullable=True),
+        sa.Column(
+            "attribute_mentions", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["product_response_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["competitor_product_id"], ["competitor_products.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_product_mentions_analysis_id"),
+        "product_mentions",
+        ["analysis_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_product_mentions_audit_id"),
+        "product_mentions",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_product_mentions_workspace_id"),
+        "product_mentions",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_link_references",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("source_analysis_id", sa.UUID(), nullable=False),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("kind", sa.String(length=16), nullable=False),
+        sa.Column("target_url", sa.String(length=2048), nullable=False),
+        sa.Column("target_hash", sa.String(length=64), nullable=False),
+        sa.Column("is_internal", sa.Boolean(), nullable=False),
+        sa.Column("rel", sa.String(length=128), nullable=False),
+        sa.Column("anchor_text", sa.String(length=1024), nullable=False),
+        sa.Column("evidence_fingerprint", sa.String(length=64), nullable=False),
+        sa.Column("target_task_id", sa.UUID(), nullable=True),
+        sa.Column("target_artifact_id", sa.UUID(), nullable=True),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["source_analysis_id"], ["site_page_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_artifact_id"], ["site_fetch_artifacts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_artifact_id"], ["site_fetch_artifacts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_task_id"], ["site_crawl_tasks.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "source_artifact_id",
+            "kind",
+            "target_hash",
+            "evidence_fingerprint",
+            name="uq_site_link_reference_dedupe",
+        ),
+    )
+    op.create_index(
+        op.f("ix_site_link_references_source_analysis_id"),
+        "site_link_references",
+        ["source_analysis_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_link_references_source_artifact_id"),
+        "site_link_references",
+        ["source_artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_link_references_workspace_id"),
+        "site_link_references",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_rule_evaluations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("rule_id", sa.String(length=64), nullable=False),
+        sa.Column("dimension", sa.String(length=16), nullable=False),
+        sa.Column("category", sa.String(length=32), nullable=False),
+        sa.Column("severity", sa.String(length=16), nullable=False),
+        sa.Column("weight", sa.Float(), nullable=False),
+        sa.Column("outcome", sa.String(length=16), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "supporting_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True
+        ),
+        sa.Column("extractor_version", sa.String(length=32), nullable=False),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("rule_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["site_page_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_artifact_id"], ["site_fetch_artifacts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("analysis_id", "rule_id", name="uq_site_rule_evaluation"),
+    )
+    op.create_index(
+        op.f("ix_site_rule_evaluations_analysis_id"),
+        "site_rule_evaluations",
+        ["analysis_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_rule_evaluations_source_artifact_id"),
+        "site_rule_evaluations",
+        ["source_artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_rule_evaluations_workspace_id"),
+        "site_rule_evaluations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "site_issues",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("site_url_id", sa.UUID(), nullable=False),
+        sa.Column("analysis_id", sa.UUID(), nullable=False),
+        sa.Column("evaluation_id", sa.UUID(), nullable=False),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("rule_id", sa.String(length=64), nullable=False),
+        sa.Column("dimension", sa.String(length=16), nullable=False),
+        sa.Column("category", sa.String(length=32), nullable=False),
+        sa.Column("severity", sa.String(length=16), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("remediation", sa.Text(), nullable=False),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("rule_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_id"], ["site_page_analyses.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["evaluation_id"], ["site_rule_evaluations.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["site_url_id"], ["site_urls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_artifact_id"], ["site_fetch_artifacts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("evaluation_id", name="uq_site_issue_evaluation"),
+    )
+    op.create_index(
+        op.f("ix_site_issues_analysis_id"), "site_issues", ["analysis_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_issues_crawl_id"), "site_issues", ["crawl_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_issues_evaluation_id"),
+        "site_issues",
+        ["evaluation_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_site_issues_filter",
+        "site_issues",
+        ["crawl_id", "severity", "category", "rule_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_issues_project_id"), "site_issues", ["project_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_site_issues_site_url_id"), "site_issues", ["site_url_id"], unique=False
+    )
+    op.create_index(
+        "ix_site_issues_url_created",
+        "site_issues",
+        ["site_url_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_site_issues_workspace_id"),
+        "site_issues",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_foreign_key(
+        "fk_audit_tasks_result_artifact_id",
+        "audit_tasks",
+        "raw_response_artifacts",
+        ["result_artifact_id"],
+        ["id"],
+        ondelete="SET NULL",
+        use_alter=True,
+    )
+    op.create_foreign_key(
+        "fk_site_crawl_tasks_result_artifact_id",
+        "site_crawl_tasks",
+        "site_fetch_artifacts",
+        ["result_artifact_id"],
+        ["id"],
+        ondelete="SET NULL",
+        use_alter=True,
+    )
+    # ### end Alembic commands ###
 
 
 def downgrade() -> None:
-    # metadata.drop_all cannot order the drop (audit/site-health artifact
-    # tables form FK cycles), so drop each table with CASCADE instead.
-    bind = op.get_bind()
-    for table in Base.metadata.tables:
-        bind.execute(sa.text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+    op.drop_constraint(
+        "fk_site_crawl_tasks_result_artifact_id", "site_crawl_tasks", type_="foreignkey"
+    )
+    op.drop_constraint(
+        "fk_audit_tasks_result_artifact_id", "audit_tasks", type_="foreignkey"
+    )
+    op.drop_index(op.f("ix_site_issues_workspace_id"), table_name="site_issues")
+    op.drop_index("ix_site_issues_url_created", table_name="site_issues")
+    op.drop_index(op.f("ix_site_issues_site_url_id"), table_name="site_issues")
+    op.drop_index(op.f("ix_site_issues_project_id"), table_name="site_issues")
+    op.drop_index("ix_site_issues_filter", table_name="site_issues")
+    op.drop_index(op.f("ix_site_issues_evaluation_id"), table_name="site_issues")
+    op.drop_index(op.f("ix_site_issues_crawl_id"), table_name="site_issues")
+    op.drop_index(op.f("ix_site_issues_analysis_id"), table_name="site_issues")
+    op.drop_table("site_issues")
+    op.drop_index(
+        op.f("ix_site_rule_evaluations_workspace_id"),
+        table_name="site_rule_evaluations",
+    )
+    op.drop_index(
+        op.f("ix_site_rule_evaluations_source_artifact_id"),
+        table_name="site_rule_evaluations",
+    )
+    op.drop_index(
+        op.f("ix_site_rule_evaluations_analysis_id"), table_name="site_rule_evaluations"
+    )
+    op.drop_table("site_rule_evaluations")
+    op.drop_index(
+        op.f("ix_site_link_references_workspace_id"), table_name="site_link_references"
+    )
+    op.drop_index(
+        op.f("ix_site_link_references_source_artifact_id"),
+        table_name="site_link_references",
+    )
+    op.drop_index(
+        op.f("ix_site_link_references_source_analysis_id"),
+        table_name="site_link_references",
+    )
+    op.drop_table("site_link_references")
+    op.drop_index(
+        op.f("ix_product_mentions_workspace_id"), table_name="product_mentions"
+    )
+    op.drop_index(op.f("ix_product_mentions_audit_id"), table_name="product_mentions")
+    op.drop_index(
+        op.f("ix_product_mentions_analysis_id"), table_name="product_mentions"
+    )
+    op.drop_table("product_mentions")
+    op.drop_index(
+        op.f("ix_merchant_mentions_workspace_id"), table_name="merchant_mentions"
+    )
+    op.drop_index(op.f("ix_merchant_mentions_audit_id"), table_name="merchant_mentions")
+    op.drop_index(
+        op.f("ix_merchant_mentions_analysis_id"), table_name="merchant_mentions"
+    )
+    op.drop_table("merchant_mentions")
+    op.drop_index(
+        op.f("ix_competitor_mentions_workspace_id"), table_name="competitor_mentions"
+    )
+    op.drop_index(
+        op.f("ix_competitor_mentions_audit_id"), table_name="competitor_mentions"
+    )
+    op.drop_index(
+        op.f("ix_competitor_mentions_analysis_id"), table_name="competitor_mentions"
+    )
+    op.drop_table("competitor_mentions")
+    op.drop_index(op.f("ix_citations_workspace_id"), table_name="citations")
+    op.drop_index(op.f("ix_citations_audit_id"), table_name="citations")
+    op.drop_index(op.f("ix_citations_analysis_id"), table_name="citations")
+    op.drop_table("citations")
+    op.drop_index(op.f("ix_brand_mentions_workspace_id"), table_name="brand_mentions")
+    op.drop_index(op.f("ix_brand_mentions_audit_id"), table_name="brand_mentions")
+    op.drop_index(op.f("ix_brand_mentions_analysis_id"), table_name="brand_mentions")
+    op.drop_table("brand_mentions")
+    op.drop_index(
+        op.f("ix_site_url_observations_workspace_id"),
+        table_name="site_url_observations",
+    )
+    op.drop_index(
+        op.f("ix_site_url_observations_site_url_id"), table_name="site_url_observations"
+    )
+    op.drop_index(
+        op.f("ix_site_url_observations_project_id"), table_name="site_url_observations"
+    )
+    op.drop_index(
+        op.f("ix_site_url_observations_crawl_id"), table_name="site_url_observations"
+    )
+    op.drop_table("site_url_observations")
+    op.drop_index(
+        op.f("ix_site_page_analyses_workspace_id"), table_name="site_page_analyses"
+    )
+    op.drop_index(
+        op.f("ix_site_page_analyses_site_url_id"), table_name="site_page_analyses"
+    )
+    op.drop_index(
+        op.f("ix_site_page_analyses_project_id"), table_name="site_page_analyses"
+    )
+    op.drop_index(
+        op.f("ix_site_page_analyses_crawl_id"), table_name="site_page_analyses"
+    )
+    op.drop_index(
+        op.f("ix_site_page_analyses_artifact_id"), table_name="site_page_analyses"
+    )
+    op.drop_table("site_page_analyses")
+    op.drop_index(
+        op.f("ix_site_fetch_attempts_workspace_id"), table_name="site_fetch_attempts"
+    )
+    op.drop_index(
+        op.f("ix_site_fetch_attempts_task_id"), table_name="site_fetch_attempts"
+    )
+    op.drop_index(
+        op.f("ix_site_fetch_attempts_crawl_id"), table_name="site_fetch_attempts"
+    )
+    op.drop_table("site_fetch_attempts")
+    op.drop_index(
+        op.f("ix_response_analyses_workspace_id"), table_name="response_analyses"
+    )
+    op.drop_index(op.f("ix_response_analyses_task_id"), table_name="response_analyses")
+    op.drop_index(op.f("ix_response_analyses_audit_id"), table_name="response_analyses")
+    op.drop_table("response_analyses")
+    op.drop_index(
+        op.f("ix_referral_classifications_workspace_id"),
+        table_name="referral_classifications",
+    )
+    op.drop_index(
+        op.f("ix_referral_classifications_referral_event_id"),
+        table_name="referral_classifications",
+    )
+    op.drop_index(
+        op.f("ix_referral_classifications_project_id"),
+        table_name="referral_classifications",
+    )
+    op.drop_table("referral_classifications")
+    op.drop_index(op.f("ix_provider_attempts_task_id"), table_name="provider_attempts")
+    op.drop_index(op.f("ix_provider_attempts_audit_id"), table_name="provider_attempts")
+    op.drop_table("provider_attempts")
+    op.drop_index(
+        op.f("ix_product_response_analyses_workspace_id"),
+        table_name="product_response_analyses",
+    )
+    op.drop_index(
+        op.f("ix_product_response_analyses_task_id"),
+        table_name="product_response_analyses",
+    )
+    op.drop_index(
+        op.f("ix_product_response_analyses_audit_id"),
+        table_name="product_response_analyses",
+    )
+    op.drop_table("product_response_analyses")
+    op.drop_index(
+        op.f("ix_site_fetch_artifacts_workspace_id"), table_name="site_fetch_artifacts"
+    )
+    op.drop_index(
+        op.f("ix_site_fetch_artifacts_task_id"), table_name="site_fetch_artifacts"
+    )
+    op.drop_index(
+        op.f("ix_site_fetch_artifacts_crawl_id"), table_name="site_fetch_artifacts"
+    )
+    op.drop_table("site_fetch_artifacts")
+    op.drop_index(op.f("ix_referral_events_workspace_id"), table_name="referral_events")
+    op.drop_index("ix_referral_events_project_occurred", table_name="referral_events")
+    op.drop_index(op.f("ix_referral_events_project_id"), table_name="referral_events")
+    op.drop_index(op.f("ix_referral_events_import_id"), table_name="referral_events")
+    op.drop_table("referral_events")
+    op.drop_index(
+        op.f("ix_raw_response_artifacts_task_id"), table_name="raw_response_artifacts"
+    )
+    op.drop_index(
+        op.f("ix_raw_response_artifacts_audit_id"), table_name="raw_response_artifacts"
+    )
+    op.drop_table("raw_response_artifacts")
+    op.drop_index(
+        op.f("ix_attribution_links_workspace_id"), table_name="attribution_links"
+    )
+    op.drop_index(
+        op.f("ix_attribution_links_project_id"), table_name="attribution_links"
+    )
+    op.drop_index(
+        op.f("ix_attribution_links_order_fact_id"), table_name="attribution_links"
+    )
+    op.drop_table("attribution_links")
+    op.drop_index(
+        op.f("ix_traffic_page_stats_workspace_id"), table_name="traffic_page_stats"
+    )
+    op.drop_index(
+        op.f("ix_traffic_page_stats_snapshot_id"), table_name="traffic_page_stats"
+    )
+    op.drop_index(
+        op.f("ix_traffic_page_stats_project_id"), table_name="traffic_page_stats"
+    )
+    op.drop_table("traffic_page_stats")
+    op.drop_index(
+        op.f("ix_site_crawl_tasks_workspace_id"), table_name="site_crawl_tasks"
+    )
+    op.drop_index(op.f("ix_site_crawl_tasks_status"), table_name="site_crawl_tasks")
+    op.drop_index(
+        op.f("ix_site_crawl_tasks_site_url_id"), table_name="site_crawl_tasks"
+    )
+    op.drop_index("ix_site_crawl_tasks_lease", table_name="site_crawl_tasks")
+    op.drop_index(op.f("ix_site_crawl_tasks_crawl_id"), table_name="site_crawl_tasks")
+    op.drop_index("ix_site_crawl_tasks_claim", table_name="site_crawl_tasks")
+    op.drop_index(
+        op.f("ix_site_crawl_tasks_available_at"), table_name="site_crawl_tasks"
+    )
+    op.drop_table("site_crawl_tasks")
+    op.drop_index(
+        "uq_product_metric_snapshot_product",
+        table_name="product_metric_snapshots",
+        postgresql_where=sa.text("product_id IS NOT NULL"),
+    )
+    op.drop_index(
+        "uq_product_metric_snapshot_competitor_product",
+        table_name="product_metric_snapshots",
+        postgresql_where=sa.text("competitor_product_id IS NOT NULL"),
+    )
+    op.drop_index(
+        op.f("ix_product_metric_snapshots_workspace_id"),
+        table_name="product_metric_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_product_metric_snapshots_project_id"),
+        table_name="product_metric_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_product_metric_snapshots_audit_id"),
+        table_name="product_metric_snapshots",
+    )
+    op.drop_table("product_metric_snapshots")
+    op.drop_index(op.f("ix_order_facts_workspace_id"), table_name="order_facts")
+    op.drop_index(op.f("ix_order_facts_source_artifact_id"), table_name="order_facts")
+    op.drop_index(op.f("ix_order_facts_project_id"), table_name="order_facts")
+    op.drop_index(op.f("ix_order_facts_order_ref_hash"), table_name="order_facts")
+    op.drop_index(op.f("ix_order_facts_connection_id"), table_name="order_facts")
+    op.drop_table("order_facts")
+    op.drop_index("ix_monitored_site_urls_ws_active", table_name="monitored_site_urls")
+    op.drop_index(
+        op.f("ix_monitored_site_urls_workspace_id"), table_name="monitored_site_urls"
+    )
+    op.drop_index(
+        op.f("ix_monitored_site_urls_site_url_id"), table_name="monitored_site_urls"
+    )
+    op.drop_index(
+        op.f("ix_monitored_site_urls_project_id"), table_name="monitored_site_urls"
+    )
+    op.drop_index(
+        op.f("ix_monitored_site_urls_profile_id"), table_name="monitored_site_urls"
+    )
+    op.drop_table("monitored_site_urls")
+    op.drop_index(
+        op.f("ix_integration_metric_rows_workspace_id"),
+        table_name="integration_metric_rows",
+    )
+    op.drop_index(
+        op.f("ix_integration_metric_rows_source_artifact_id"),
+        table_name="integration_metric_rows",
+    )
+    op.drop_index(
+        op.f("ix_integration_metric_rows_project_id"),
+        table_name="integration_metric_rows",
+    )
+    op.drop_index(
+        "ix_integration_metric_rows_project_date", table_name="integration_metric_rows"
+    )
+    op.drop_table("integration_metric_rows")
+    op.drop_index(op.f("ix_feed_issues_workspace_id"), table_name="feed_issues")
+    op.drop_index(op.f("ix_feed_issues_sync_run_id"), table_name="feed_issues")
+    op.drop_index(op.f("ix_feed_issues_source_artifact_id"), table_name="feed_issues")
+    op.drop_index(op.f("ix_feed_issues_project_id"), table_name="feed_issues")
+    op.drop_index(op.f("ix_feed_issues_connection_id"), table_name="feed_issues")
+    op.drop_table("feed_issues")
+    op.drop_index(op.f("ix_audit_tasks_workspace_id"), table_name="audit_tasks")
+    op.drop_index(op.f("ix_audit_tasks_status"), table_name="audit_tasks")
+    op.drop_index(op.f("ix_audit_tasks_available_at"), table_name="audit_tasks")
+    op.drop_index(op.f("ix_audit_tasks_audit_id"), table_name="audit_tasks")
+    op.drop_table("audit_tasks")
+    op.drop_index(op.f("ix_site_urls_workspace_id"), table_name="site_urls")
+    op.drop_index("ix_site_urls_project_keyset", table_name="site_urls")
+    op.drop_index(op.f("ix_site_urls_project_id"), table_name="site_urls")
+    op.drop_table("site_urls")
+    op.drop_index(
+        op.f("ix_site_health_snapshots_workspace_id"),
+        table_name="site_health_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_site_health_snapshots_project_id"), table_name="site_health_snapshots"
+    )
+    op.drop_index(
+        op.f("ix_site_health_snapshots_crawl_id"), table_name="site_health_snapshots"
+    )
+    op.drop_table("site_health_snapshots")
+    op.drop_index(
+        op.f("ix_site_crawl_events_created_at"), table_name="site_crawl_events"
+    )
+    op.drop_index(op.f("ix_site_crawl_events_crawl_id"), table_name="site_crawl_events")
+    op.drop_table("site_crawl_events")
+    op.drop_index(op.f("ix_products_project_id"), table_name="products")
+    op.drop_index(op.f("ix_products_last_seen_sync_run_id"), table_name="products")
+    op.drop_index(op.f("ix_products_connection_id"), table_name="products")
+    op.drop_table("products")
+    op.drop_index(
+        op.f("ix_opportunity_snapshots_workspace_id"),
+        table_name="opportunity_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_opportunity_snapshots_project_id"), table_name="opportunity_snapshots"
+    )
+    op.drop_index(
+        "ix_opportunity_snapshots_project_created", table_name="opportunity_snapshots"
+    )
+    op.drop_table("opportunity_snapshots")
+    op.drop_index(
+        "uq_opportunities_live_target",
+        table_name="opportunities",
+        postgresql_where=sa.text("superseded_at IS NULL"),
+    )
+    op.drop_index(op.f("ix_opportunities_workspace_id"), table_name="opportunities")
+    op.drop_index(op.f("ix_opportunities_project_id"), table_name="opportunities")
+    op.drop_index("ix_opportunities_list", table_name="opportunities")
+    op.drop_index("ix_opportunities_filter", table_name="opportunities")
+    op.drop_table("opportunities")
+    op.drop_index(
+        op.f("ix_integration_import_artifacts_workspace_id"),
+        table_name="integration_import_artifacts",
+    )
+    op.drop_index(
+        op.f("ix_integration_import_artifacts_sync_run_id"),
+        table_name="integration_import_artifacts",
+    )
+    op.drop_index(
+        op.f("ix_integration_import_artifacts_payload_hash"),
+        table_name="integration_import_artifacts",
+    )
+    op.drop_index(
+        op.f("ix_integration_import_artifacts_connection_id"),
+        table_name="integration_import_artifacts",
+    )
+    op.drop_table("integration_import_artifacts")
+    op.drop_index(
+        op.f("ix_audit_prompt_snapshots_audit_id"), table_name="audit_prompt_snapshots"
+    )
+    op.drop_table("audit_prompt_snapshots")
+    op.drop_index(
+        op.f("ix_account_entitlements_billing_account_id"),
+        table_name="account_entitlements",
+    )
+    op.drop_table("account_entitlements")
+    op.drop_index(
+        op.f("ix_traffic_query_stats_workspace_id"), table_name="traffic_query_stats"
+    )
+    op.drop_index(
+        op.f("ix_traffic_query_stats_snapshot_id"), table_name="traffic_query_stats"
+    )
+    op.drop_index(
+        op.f("ix_traffic_query_stats_project_id"), table_name="traffic_query_stats"
+    )
+    op.drop_table("traffic_query_stats")
+    op.drop_index(op.f("ix_site_crawls_workspace_id"), table_name="site_crawls")
+    op.drop_index(op.f("ix_site_crawls_status"), table_name="site_crawls")
+    op.drop_index(op.f("ix_site_crawls_project_id"), table_name="site_crawls")
+    op.drop_index(op.f("ix_site_crawls_profile_id"), table_name="site_crawls")
+    op.drop_table("site_crawls")
+    op.drop_index(op.f("ix_prompts_topic_id"), table_name="prompts")
+    op.drop_index(op.f("ix_prompts_prompt_set_id"), table_name="prompts")
+    op.drop_table("prompts")
+    op.drop_index(
+        op.f("ix_metric_snapshots_workspace_id"), table_name="metric_snapshots"
+    )
+    op.drop_index(op.f("ix_metric_snapshots_project_id"), table_name="metric_snapshots")
+    op.drop_index(op.f("ix_metric_snapshots_audit_id"), table_name="metric_snapshots")
+    op.drop_table("metric_snapshots")
+    op.drop_index(
+        op.f("ix_integration_sync_runs_workspace_id"),
+        table_name="integration_sync_runs",
+    )
+    op.drop_index(
+        op.f("ix_integration_sync_runs_status"), table_name="integration_sync_runs"
+    )
+    op.drop_index("ix_integration_sync_runs_lease", table_name="integration_sync_runs")
+    op.drop_index(
+        op.f("ix_integration_sync_runs_connection_id"),
+        table_name="integration_sync_runs",
+    )
+    op.drop_index("ix_integration_sync_runs_claim", table_name="integration_sync_runs")
+    op.drop_index(
+        op.f("ix_integration_sync_runs_available_at"),
+        table_name="integration_sync_runs",
+    )
+    op.drop_index(
+        "ix_integration_sync_runs_active_window",
+        table_name="integration_sync_runs",
+        postgresql_where=sa.text(
+            "status IN ('leased', 'queued', 'retry_wait', 'running')"
+        ),
+    )
+    op.drop_table("integration_sync_runs")
+    op.drop_index(
+        op.f("ix_integration_property_mappings_workspace_id"),
+        table_name="integration_property_mappings",
+    )
+    op.drop_index(
+        op.f("ix_integration_property_mappings_project_id"),
+        table_name="integration_property_mappings",
+    )
+    op.drop_index(
+        op.f("ix_integration_property_mappings_connection_id"),
+        table_name="integration_property_mappings",
+    )
+    op.drop_index(
+        "ix_integration_property_mappings_active_owner",
+        table_name="integration_property_mappings",
+        postgresql_where=sa.text("status = 'active'"),
+    )
+    op.drop_table("integration_property_mappings")
+    op.drop_index(
+        op.f("ix_integration_events_workspace_id"), table_name="integration_events"
+    )
+    op.drop_index(
+        op.f("ix_integration_events_created_at"), table_name="integration_events"
+    )
+    op.drop_index(
+        op.f("ix_integration_events_connection_id"), table_name="integration_events"
+    )
+    op.drop_table("integration_events")
+    op.drop_index(
+        op.f("ix_content_generation_attempts_content_generation_id"),
+        table_name="content_generation_attempts",
+    )
+    op.drop_table("content_generation_attempts")
+    op.drop_index(
+        op.f("ix_competitor_products_project_id"), table_name="competitor_products"
+    )
+    op.drop_index(
+        op.f("ix_competitor_products_competitor_id"), table_name="competitor_products"
+    )
+    op.drop_table("competitor_products")
+    op.drop_index(op.f("ix_brand_profiles_workspace_id"), table_name="brand_profiles")
+    op.drop_index(op.f("ix_brand_profiles_project_id"), table_name="brand_profiles")
+    op.drop_index(op.f("ix_brand_profiles_brand_id"), table_name="brand_profiles")
+    op.drop_table("brand_profiles")
+    op.drop_index(
+        op.f("ix_brand_profile_suggestions_workspace_id"),
+        table_name="brand_profile_suggestions",
+    )
+    op.drop_index(
+        op.f("ix_brand_profile_suggestions_project_id"),
+        table_name="brand_profile_suggestions",
+    )
+    op.drop_index(
+        op.f("ix_brand_profile_suggestions_brand_id"),
+        table_name="brand_profile_suggestions",
+    )
+    op.drop_table("brand_profile_suggestions")
+    op.drop_index(op.f("ix_brand_aliases_brand_id"), table_name="brand_aliases")
+    op.drop_table("brand_aliases")
+    op.drop_index(
+        "uq_billing_subscription_one_current",
+        table_name="billing_subscriptions",
+        postgresql_where=sa.text("is_current"),
+    )
+    op.drop_index(
+        op.f("ix_billing_subscriptions_billing_account_id"),
+        table_name="billing_subscriptions",
+    )
+    op.drop_table("billing_subscriptions")
+    op.drop_index(
+        op.f("ix_audit_shopping_surface_snapshots_audit_id"),
+        table_name="audit_shopping_surface_snapshots",
+    )
+    op.drop_table("audit_shopping_surface_snapshots")
+    op.drop_index(op.f("ix_audit_events_created_at"), table_name="audit_events")
+    op.drop_index(op.f("ix_audit_events_audit_id"), table_name="audit_events")
+    op.drop_table("audit_events")
+    op.drop_index(
+        op.f("ix_audit_engine_snapshots_audit_id"), table_name="audit_engine_snapshots"
+    )
+    op.drop_table("audit_engine_snapshots")
+    op.drop_index(
+        op.f("ix_workspace_billing_links_workspace_id"),
+        table_name="workspace_billing_links",
+    )
+    op.drop_index(
+        op.f("ix_workspace_billing_links_billing_account_id"),
+        table_name="workspace_billing_links",
+    )
+    op.drop_table("workspace_billing_links")
+    op.drop_index(
+        op.f("ix_unintended_domains_project_id"), table_name="unintended_domains"
+    )
+    op.drop_table("unintended_domains")
+    op.drop_index(
+        op.f("ix_traffic_snapshots_workspace_id"), table_name="traffic_snapshots"
+    )
+    op.drop_index(
+        op.f("ix_traffic_snapshots_project_id"), table_name="traffic_snapshots"
+    )
+    op.drop_table("traffic_snapshots")
+    op.drop_index("uq_topic_project_name", table_name="topics")
+    op.drop_index(op.f("ix_topics_project_id"), table_name="topics")
+    op.drop_table("topics")
+    op.drop_index(
+        op.f("ix_site_health_profiles_workspace_id"), table_name="site_health_profiles"
+    )
+    op.drop_index(
+        op.f("ix_site_health_profiles_project_id"), table_name="site_health_profiles"
+    )
+    op.drop_table("site_health_profiles")
+    op.drop_index(op.f("ix_provider_routes_workspace_id"), table_name="provider_routes")
+    op.drop_index(
+        op.f("ix_provider_routes_connection_id"), table_name="provider_routes"
+    )
+    op.drop_table("provider_routes")
+    op.drop_index(
+        op.f("ix_provider_connection_tests_workspace_id"),
+        table_name="provider_connection_tests",
+    )
+    op.drop_index(
+        op.f("ix_provider_connection_tests_connection_id"),
+        table_name="provider_connection_tests",
+    )
+    op.drop_table("provider_connection_tests")
+    op.drop_index(op.f("ix_prompt_sets_project_id"), table_name="prompt_sets")
+    op.drop_table("prompt_sets")
+    op.drop_index(op.f("ix_owned_domains_project_id"), table_name="owned_domains")
+    op.drop_table("owned_domains")
+    op.drop_index(
+        op.f("ix_integration_connections_workspace_id"),
+        table_name="integration_connections",
+    )
+    op.drop_index(
+        op.f("ix_integration_connections_grant_id"),
+        table_name="integration_connections",
+    )
+    op.drop_table("integration_connections")
+    op.drop_index(
+        op.f("ix_discovery_model_configs_workspace_id"),
+        table_name="discovery_model_configs",
+    )
+    op.drop_index(
+        op.f("ix_discovery_model_configs_connection_id"),
+        table_name="discovery_model_configs",
+    )
+    op.drop_table("discovery_model_configs")
+    op.drop_index(
+        op.f("ix_content_generations_workspace_id"), table_name="content_generations"
+    )
+    op.drop_index(
+        op.f("ix_content_generations_status"), table_name="content_generations"
+    )
+    op.drop_index(
+        op.f("ix_content_generations_request_fingerprint"),
+        table_name="content_generations",
+    )
+    op.drop_index(
+        op.f("ix_content_generations_project_id"), table_name="content_generations"
+    )
+    op.drop_index(
+        op.f("ix_content_generations_available_at"), table_name="content_generations"
+    )
+    op.drop_table("content_generations")
+    op.drop_index(op.f("ix_competitors_project_id"), table_name="competitors")
+    op.drop_table("competitors")
+    op.drop_index(op.f("ix_brands_project_id"), table_name="brands")
+    op.drop_table("brands")
+    op.drop_index(
+        op.f("ix_billing_customers_billing_account_id"), table_name="billing_customers"
+    )
+    op.drop_table("billing_customers")
+    op.drop_index(
+        op.f("ix_billing_checkout_attempts_billing_account_id"),
+        table_name="billing_checkout_attempts",
+    )
+    op.drop_table("billing_checkout_attempts")
+    op.drop_index(op.f("ix_audits_workspace_id"), table_name="audits")
+    op.drop_index(op.f("ix_audits_status"), table_name="audits")
+    op.drop_index(op.f("ix_audits_project_id"), table_name="audits")
+    op.drop_table("audits")
+    op.drop_index(
+        op.f("ix_attribution_snapshots_workspace_id"),
+        table_name="attribution_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_attribution_snapshots_project_id"), table_name="attribution_snapshots"
+    )
+    op.drop_table("attribution_snapshots")
+    op.drop_index(op.f("ix_analytics_tasks_workspace_id"), table_name="analytics_tasks")
+    op.drop_index(op.f("ix_analytics_tasks_status"), table_name="analytics_tasks")
+    op.drop_index(op.f("ix_analytics_tasks_project_id"), table_name="analytics_tasks")
+    op.drop_index("ix_analytics_tasks_lease", table_name="analytics_tasks")
+    op.drop_index("ix_analytics_tasks_claim", table_name="analytics_tasks")
+    op.drop_index(op.f("ix_analytics_tasks_available_at"), table_name="analytics_tasks")
+    op.drop_table("analytics_tasks")
+    op.drop_index(
+        op.f("ix_analytics_snapshots_workspace_id"), table_name="analytics_snapshots"
+    )
+    op.drop_index(
+        op.f("ix_analytics_snapshots_project_id"), table_name="analytics_snapshots"
+    )
+    op.drop_table("analytics_snapshots")
+    op.drop_index(
+        op.f("ix_workspace_site_health_entitlements_workspace_id"),
+        table_name="workspace_site_health_entitlements",
+    )
+    op.drop_table("workspace_site_health_entitlements")
+    op.drop_index(
+        op.f("ix_workspace_members_workspace_id"), table_name="workspace_members"
+    )
+    op.drop_index(op.f("ix_workspace_members_user_id"), table_name="workspace_members")
+    op.drop_table("workspace_members")
+    op.drop_index("ix_queue_workspace_turn_order", table_name="queue_workspace_turns")
+    op.drop_table("queue_workspace_turns")
+    op.drop_index(
+        op.f("ix_provider_connections_workspace_id"), table_name="provider_connections"
+    )
+    op.drop_table("provider_connections")
+    op.drop_index(op.f("ix_projects_workspace_id"), table_name="projects")
+    op.drop_table("projects")
+    op.drop_index(
+        op.f("ix_integration_oauth_states_workspace_id"),
+        table_name="integration_oauth_states",
+    )
+    op.drop_index(
+        op.f("ix_integration_oauth_states_user_id"),
+        table_name="integration_oauth_states",
+    )
+    op.drop_table("integration_oauth_states")
+    op.drop_index(
+        op.f("ix_integration_oauth_grants_workspace_id"),
+        table_name="integration_oauth_grants",
+    )
+    op.drop_index(
+        op.f("ix_integration_oauth_grants_status"),
+        table_name="integration_oauth_grants",
+    )
+    op.drop_table("integration_oauth_grants")
+    op.drop_index(
+        op.f("ix_billing_accounts_owner_user_id"), table_name="billing_accounts"
+    )
+    op.drop_table("billing_accounts")
+    op.drop_table("workspaces")
+    op.drop_index(op.f("ix_users_email"), table_name="users")
+    op.drop_table("users")
+    op.drop_index("ix_usage_windows_expires_at", table_name="usage_windows")
+    op.drop_table("usage_windows")
+    op.drop_table("billing_webhook_events")
+    # ### end Alembic commands ###

@@ -25,9 +25,11 @@ from app.core.config.provider_catalog import (
     PROBE_PROMPT,
     TEST_STATUS_FAILED,
     TEST_STATUS_OK,
+    configured_endpoint,
     default_model,
     default_probe_engine,
     is_active_transport,
+    is_endpoint_approved,
     is_route_approved,
     provider_catalog_settings,
 )
@@ -52,6 +54,17 @@ class ProviderConnectionNotFoundError(LookupError):
 
 class InvalidRouteError(ValueError):
     """Raised when a requested (engine, transport) route is not approved."""
+
+
+class InvalidProviderEndpointError(ValueError):
+    """Raised when a tenant endpoint is not the operator-approved destination."""
+
+
+def _require_approved_endpoint(transport_provider: str, base_url: str) -> None:
+    if not is_endpoint_approved(transport_provider, base_url):
+        raise InvalidProviderEndpointError(
+            "Provider endpoint is not approved for this transport"
+        )
 
 
 class RetiredConnectionReadOnlyError(RuntimeError):
@@ -147,6 +160,7 @@ async def create_connection(
     workspace_id: uuid.UUID,
     payload: ProviderConnectionCreate,
 ) -> ProviderConnection:
+    _require_approved_endpoint(payload.transport_provider, payload.base_url)
     routes = _build_routes(
         workspace_id=workspace_id,
         transport_provider=payload.transport_provider,
@@ -187,6 +201,20 @@ async def update_connection(
     if payload.label is not None:
         connection.label = payload.label
     if payload.base_url is not None:
+        _require_approved_endpoint(connection.transport_provider, payload.base_url)
+        old_destination = connection.base_url or configured_endpoint(
+            connection.transport_provider
+        )
+        new_destination = payload.base_url or configured_endpoint(
+            connection.transport_provider
+        )
+        if (
+            new_destination != old_destination
+            and not (payload.api_key and payload.api_key.strip())
+        ):
+            raise InvalidProviderEndpointError(
+                "Changing a provider endpoint requires a fresh API key"
+            )
         connection.base_url = payload.base_url
     if payload.active is not None:
         connection.active = payload.active
@@ -242,6 +270,7 @@ async def run_connection_test(
             "This connection uses a retired transport and is historical and "
             "read-only; create a new direct connection instead."
         )
+    _require_approved_endpoint(transport, connection.base_url)
     # Prefer a configured route's engine/model; else fall back to a catalog
     # default engine for the transport.
     logical_engine = default_probe_engine(transport)

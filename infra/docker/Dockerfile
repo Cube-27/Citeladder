@@ -1,29 +1,49 @@
-FROM python:3.12-slim
+ARG PYTHON_IMAGE=python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
+FROM ${PYTHON_IMAGE} AS dependencies
+
+ARG UV_VERSION=0.11.28
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /app/backend
+
+# Native toolchains exist only in the dependency stage; the runtime image does
+# not contain a compiler or development headers.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install "uv==${UV_VERSION}"
+
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+FROM ${PYTHON_IMAGE} AS runtime
+
+ARG BUILD_REVISION=unknown
+LABEL org.opencontainers.image.title="searchify-backend" \
+      org.opencontainers.image.revision="${BUILD_REVISION}"
+
+ENV PATH="/app/backend/.venv/bin:${PATH}" \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /app/backend
 
-# hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN groupadd --gid 10001 appuser \
+    && useradd --no-create-home --uid 10001 --gid 10001 --shell /usr/sbin/nologin appuser
 
-# Install dependencies from backend project metadata.
-COPY backend/pyproject.toml ./
-RUN pip install --upgrade pip && pip install .
+# Dependencies and source remain root-owned/read-only to the runtime identity.
+COPY --from=dependencies --chown=0:0 /app/backend/.venv ./.venv
+COPY --chown=0:0 backend/app ./app
+COPY --chown=0:0 backend/alembic.ini ./alembic.ini
+COPY --chown=0:0 migrations /app/migrations
 
-# App source + migrations (alembic.ini points script_location at ../migrations).
-COPY backend/ ./
-COPY migrations/ ../migrations/
-
-# Run as an unprivileged user; the app needs no write access to its own tree.
-RUN useradd --create-home --uid 10001 appuser \
-    && chown -R appuser:appuser /app
-USER appuser
+USER 10001:10001
 
 EXPOSE 8000
 

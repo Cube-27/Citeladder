@@ -230,11 +230,11 @@ uv run alembic upgrade head          # create the full schema
 uv run alembic downgrade base        # drop everything
 ```
 
-> **Single bootstrap revision (greenfield policy).** The history is squashed to one
-> revision, `0001_initial`, which builds the schema directly from `Base.metadata`. Until
-> production, schema changes are made by editing the models and recreating the DB — no new
-> revision files. Alembic autogenerate is disabled in this repo (the `script_location`
-> layout breaks the mako template path). See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+> **Frozen production baseline.** `0001_initial` contains explicit Alembic
+> operations and must never be edited. Every later schema change requires an
+> additive, reviewed revision plus fresh-install, upgrade, and `alembic check`
+> verification on disposable databases. See
+> [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Testing
 

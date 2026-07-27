@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 # backend/app/core/config/__init__.py -> parents[3] == backend/
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -57,7 +59,9 @@ class Settings(BaseSettings):
         default="change-me-32-bytes-minimum-change-me",
         validation_alias=AliasChoices("JWT_SECRET_KEY", "jwt_secret_key"),
     )
-    jwt_algorithm: str = Field(
+    # Pinned to the sole reviewed symmetric algorithm. Environment overrides
+    # can no longer silently select another JWT algorithm.
+    jwt_algorithm: Literal["HS256"] = Field(
         default="HS256",
         validation_alias=AliasChoices("JWT_ALGORITHM", "jwt_algorithm"),
     )
@@ -138,15 +142,21 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/searchify",
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
-    # Sized so one audit worker at AUDIT_WORKER_CONCURRENCY=10 can cover its
-    # peak of ~2 sessions per in-flight task (20) without queueing on checkout.
-    # Postgres ``max_connections`` is the shared ceiling across every service, so
-    # raise these together with it rather than in isolation.
+    # Conservative shared defaults keep a multi-service deployment from
+    # multiplying into hundreds of possible RDS connections. ECS task families
+    # must override these independently from a tested connection budget; the
+    # audit worker warns when its concurrency exceeds its assigned capacity.
     db_pool_size: int = Field(
-        default=8, validation_alias=AliasChoices("DB_POOL_SIZE", "db_pool_size")
+        default=4,
+        ge=1,
+        le=50,
+        validation_alias=AliasChoices("DB_POOL_SIZE", "db_pool_size"),
     )
     db_max_overflow: int = Field(
-        default=12, validation_alias=AliasChoices("DB_MAX_OVERFLOW", "db_max_overflow")
+        default=2,
+        ge=0,
+        le=50,
+        validation_alias=AliasChoices("DB_MAX_OVERFLOW", "db_max_overflow"),
     )
     db_pool_recycle_seconds: int = Field(
         default=600,
@@ -163,6 +173,48 @@ class Settings(BaseSettings):
     db_pool_pre_ping: bool = Field(
         default=True,
         validation_alias=AliasChoices("DB_POOL_PRE_PING", "db_pool_pre_ping"),
+    )
+    db_connect_timeout_seconds: int = Field(
+        default=10,
+        ge=1,
+        le=60,
+        validation_alias=AliasChoices(
+            "DB_CONNECT_TIMEOUT_SECONDS", "db_connect_timeout_seconds"
+        ),
+    )
+    db_command_timeout_seconds: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        validation_alias=AliasChoices(
+            "DB_COMMAND_TIMEOUT_SECONDS", "db_command_timeout_seconds"
+        ),
+    )
+    db_statement_timeout_ms: int = Field(
+        default=30_000,
+        ge=1_000,
+        le=300_000,
+        validation_alias=AliasChoices(
+            "DB_STATEMENT_TIMEOUT_MS", "db_statement_timeout_ms"
+        ),
+    )
+    db_lock_timeout_ms: int = Field(
+        default=5_000,
+        ge=100,
+        le=60_000,
+        validation_alias=AliasChoices("DB_LOCK_TIMEOUT_MS", "db_lock_timeout_ms"),
+    )
+    db_idle_transaction_timeout_ms: int = Field(
+        default=30_000,
+        ge=1_000,
+        le=300_000,
+        validation_alias=AliasChoices(
+            "DB_IDLE_TRANSACTION_TIMEOUT_MS", "db_idle_transaction_timeout_ms"
+        ),
+    )
+    db_ssl_mode: Literal["disable", "require"] = Field(
+        default="disable",
+        validation_alias=AliasChoices("DB_SSL_MODE", "db_ssl_mode"),
     )
 
     request_id_header: str = Field(
@@ -203,20 +255,61 @@ def _load_settings() -> Settings:
 settings = _load_settings()
 
 
+_SECRET_FIELDS = (
+    "jwt_secret_key",
+    "encryption_key",
+    "referral_hash_salt",
+    "order_hash_salt",
+)
+
+
+def _secret_is_weak(value: str) -> bool:
+    normalized = value.strip().casefold()
+    return (
+        len(value.encode("utf-8")) < 32
+        or len(set(value)) < 12
+        or value in _INSECURE_DEFAULTS
+        or normalized in {"password", "secret", "searchify", "changeme"}
+    )
+
+
+def validate_production_security(candidate: Settings) -> list[str]:
+    """Return non-secret deployment-policy violations for ``candidate``."""
+    issues: list[str] = []
+    values = {name: getattr(candidate, name) for name in _SECRET_FIELDS}
+    for name, value in values.items():
+        if _secret_is_weak(value):
+            issues.append(f"{name} does not meet the production strength policy")
+    if len(set(values.values())) != len(values):
+        issues.append("application secrets must be independent")
+
+    try:
+        database_password = make_url(candidate.database_url).password or ""
+    except Exception:  # noqa: BLE001 - invalid URL is reported without its value
+        database_password = ""
+    if _secret_is_weak(database_password):
+        issues.append("database password does not meet the production strength policy")
+    if database_password and database_password in values.values():
+        issues.append("database password must be independent of application secrets")
+    if candidate.db_ssl_mode != "require":
+        issues.append("db_ssl_mode must be require in production")
+    return issues
+
+
 def _check_secret_defaults() -> None:
-    """Warn (or crash outside dev/test) if default secrets are still set."""
+    """Warn in development and refuse weak production deployment secrets."""
     logger = logging.getLogger("app.core.config")
     env = str(settings.app_env or "development").strip().lower()
     is_non_dev = env not in {"", "development", "dev", "local", "test", "testing"}
-    issues: list[str] = []
-    if settings.jwt_secret_key in _INSECURE_DEFAULTS:
-        issues.append("jwt_secret_key is set to a default value")
-    if settings.encryption_key in _INSECURE_DEFAULTS:
-        issues.append("encryption_key is set to a default value")
-    if settings.referral_hash_salt in _INSECURE_DEFAULTS:
-        issues.append("referral_hash_salt is set to a default value")
-    if settings.order_hash_salt in _INSECURE_DEFAULTS:
-        issues.append("order_hash_salt is set to a default value")
+    issues = (
+        validate_production_security(settings)
+        if is_non_dev
+        else [
+            f"{name} is set to a default value"
+            for name in _SECRET_FIELDS
+            if getattr(settings, name) in _INSECURE_DEFAULTS
+        ]
+    )
     if not issues:
         return
     msg = (

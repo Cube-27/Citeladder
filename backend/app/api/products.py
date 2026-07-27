@@ -28,6 +28,9 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.request_bodies import read_limited_body, read_limited_upload
+from app.api.usage_limits import enforce_workspace_request
+from app.core.config.abuse import abuse_settings
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.products import (
     PRODUCT_EVIDENCE_DEFAULT_LIMIT,
@@ -200,7 +203,9 @@ async def _resolve_import_rows(
     ``api/prompts.py``). Malformed CSV (e.g. headerless) is a 422, not a 500.
     """
     if file is not None:
-        raw = (await file.read()).decode("utf-8-sig", errors="replace")
+        raw = (await read_limited_upload(file)).decode(
+            "utf-8-sig", errors="replace"
+        )
         return parse_product_csv(raw)
 
     content_type = request.headers.get("content-type", "")
@@ -208,16 +213,18 @@ async def _resolve_import_rows(
         # Malformed JSON / schema violations are client errors: surface them as
         # 422 like the CSV path, never as an unhandled 500.
         try:
-            body = await request.json()
+            raw_body = await read_limited_body(request)
         except ValueError as exc:
             raise _unprocessable("Request body is not valid JSON") from exc
         try:
-            return ProductImport.model_validate(body).products
+            return ProductImport.model_validate_json(raw_body).products
         except ValidationError as exc:
             raise _unprocessable(f"Invalid product import payload: {exc}") from exc
 
     # Raw CSV posted as text/csv (no multipart wrapper).
-    raw_body = (await request.body()).decode("utf-8-sig", errors="replace")
+    raw_body = (await read_limited_body(request)).decode(
+        "utf-8-sig", errors="replace"
+    )
     return parse_product_csv(raw_body)
 
 
@@ -233,6 +240,13 @@ async def import_products_endpoint(
     session: _SessionDep,
     file: UploadFile | None = None,
 ) -> list[ProductResponse]:
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="bulk_import",
+        limit=abuse_settings.bulk_import_limit,
+        window_seconds=abuse_settings.bulk_import_window_seconds,
+    )
     try:
         rows = await _resolve_import_rows(request, file)
     except ProductCsvError as exc:

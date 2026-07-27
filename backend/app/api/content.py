@@ -30,6 +30,7 @@ from app.core.config.content import (
     ERROR_IDEMPOTENCY_CONFLICT,
     ERROR_PROVIDER_NOT_CONFIGURED,
 )
+from app.domain.abuse.service import UsageLimitExceededError
 from app.domain.content.schemas import (
     ContentGenerationCreate,
     ContentGenerationDetail,
@@ -58,6 +59,14 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 def _not_found(exc: Exception) -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+def _usage_limited(exc: UsageLimitExceededError) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail="Workspace usage limit exceeded",
+        headers={"Retry-After": str(exc.retry_after_seconds)},
+    )
 
 
 @router.get("/generations", response_model=list[ContentGenerationListItem])
@@ -119,6 +128,8 @@ async def enqueue_generation_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=ERROR_IDEMPOTENCY_CONFLICT,
         ) from exc
+    except UsageLimitExceededError as exc:
+        raise _usage_limited(exc) from exc
     return to_detail(row)
 
 
@@ -158,6 +169,8 @@ async def regenerate_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=ERROR_PROVIDER_NOT_CONFIGURED,
         ) from exc
+    except UsageLimitExceededError as exc:
+        raise _usage_limited(exc) from exc
     return to_detail(row)
 
 
@@ -182,6 +195,8 @@ async def try_again_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=ERROR_PROVIDER_NOT_CONFIGURED,
         ) from exc
+    except UsageLimitExceededError as exc:
+        raise _usage_limited(exc) from exc
     return to_detail(row)
 
 

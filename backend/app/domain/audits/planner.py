@@ -23,6 +23,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config.abuse import abuse_settings
 from app.core.config.audits import (
     AUDIT_ACTIVE_STATUSES,
     AUDIT_STATUS_CANCELLED,
@@ -50,8 +51,10 @@ from app.core.config.projects import (
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.core.config.provider_catalog import (
     LOGICAL_ENGINES,
+    is_endpoint_approved,
     is_route_approved,
 )
+from app.domain.abuse.service import reserve_workspace_capacity
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.products.shim import project_product_identity
 from app.domain.projects.shim import project_scoring_identity
@@ -222,6 +225,10 @@ async def _resolve_routes(
     for route, connection in result.all():
         if not is_route_approved(route.logical_engine, route.transport_provider):
             continue
+        if not is_endpoint_approved(
+            connection.transport_provider, connection.base_url or ""
+        ):
+            continue
         routes.setdefault(route.logical_engine, (route, connection))
 
     resolved: dict[str, tuple[ProviderRoute, ProviderConnection]] = {}
@@ -287,6 +294,20 @@ async def create_audit(
             f"Audit would create {total} tasks, exceeding the limit of "
             f"{audit_settings.max_tasks_per_audit}"
         )
+
+    await reserve_workspace_capacity(
+        session,
+        workspace_id=workspace_id,
+        lock_namespace="audit-enqueue",
+        model=Audit,
+        active_statuses=AUDIT_ACTIVE_STATUSES,
+        active_limit=abuse_settings.active_audits_per_workspace,
+        active_operation="audit.active_jobs",
+        usage_operation="audit.provider_tasks",
+        usage_limit=abuse_settings.audit_tasks_per_workspace_daily,
+        amount=total,
+        retry_after_seconds=abuse_settings.active_job_retry_after_seconds,
+    )
 
     mode = _resolve_benchmark_mode(benchmark_mode, project)
     seed = _normalize_seed(random_seed)

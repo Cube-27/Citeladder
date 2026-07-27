@@ -21,7 +21,8 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.task_queue import (
@@ -34,6 +35,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
     PostgresQueueSpec,
 )
+from app.models.abuse import QueueWorkspaceTurn
 
 if TYPE_CHECKING:
     # Type-only: the queue is generic over the concrete queue-row models (the
@@ -102,24 +104,53 @@ class PostgresTaskQueue[
         now = _utcnow()
         lease_expires = self._lease_expiry(now)
         async with self._session_factory() as session:
+            queue_name = model.__tablename__
             # Lock eligible rows and skip any another worker already holds. The
-            # ORDER BY (spec-supplied) makes claim order deterministic.
-            stmt = (
-                select(model)
-                .where(model.status.in_([TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT]))
-                .where(model.available_at <= now)
+            # ORDER BY (spec-supplied) makes claim order deterministic. No
+            # queue-wide advisory lock is needed: task-row locks make claims
+            # disjoint, while the cursor upsert below is conflict-safe and
+            # monotonic across concurrent claim transactions.
+            base_order = tuple(self._spec.claim_order(model))
+            eligible_filter = (
+                model.status.in_([TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT]),
+                model.available_at <= now,
             )
+            eligible = select(
+                model.id.label("task_id"),
+                func.row_number()
+                .over(
+                    partition_by=model.workspace_id,
+                    order_by=base_order,
+                )
+                .label("workspace_position"),
+            ).where(*eligible_filter)
             if kinds is not None:
                 # Only queue-row models with a ``task_kind`` column (SiteCrawlTask)
                 # accept a kind filter; audit rows have no such column, and the
                 # audit worker never passes ``kinds``.
                 task_kind = getattr(model, "task_kind", None)
                 if task_kind is not None:
-                    stmt = stmt.where(task_kind.in_(list(kinds)))
+                    eligible = eligible.where(task_kind.in_(list(kinds)))
+
+            ranked = eligible.subquery("fair_queue_candidates")
             stmt = (
-                stmt.order_by(*self._spec.claim_order(model))
+                select(model)
+                .join(ranked, ranked.c.task_id == model.id)
+                .outerjoin(
+                    QueueWorkspaceTurn,
+                    (QueueWorkspaceTurn.queue_name == queue_name)
+                    & (QueueWorkspaceTurn.workspace_id == model.workspace_id),
+                )
+                # One task per workspace before any workspace receives its
+                # second, then third, and so on. This keeps large tenant
+                # backlogs from filling a worker's whole claim batch.
+                .order_by(
+                    ranked.c.workspace_position.asc(),
+                    QueueWorkspaceTurn.last_claimed_at.asc().nulls_first(),
+                    *base_order,
+                )
                 .limit(limit)
-                .with_for_update(skip_locked=True)
+                .with_for_update(of=model, skip_locked=True)
             )
             tasks = list((await session.scalars(stmt)).all())
             for task in tasks:
@@ -127,6 +158,29 @@ class PostgresTaskQueue[
                 task.lease_owner = owner
                 task.lease_expires_at = lease_expires
                 task.heartbeat_at = now
+            claimed_workspaces = {task.workspace_id for task in tasks}
+            if claimed_workspaces:
+                turn_rows = [
+                    {
+                        "id": uuid.uuid4(),
+                        "queue_name": queue_name,
+                        "workspace_id": workspace_id,
+                        "last_claimed_at": now,
+                    }
+                    for workspace_id in sorted(claimed_workspaces, key=str)
+                ]
+                await session.execute(
+                    insert(QueueWorkspaceTurn)
+                    .values(turn_rows)
+                    .on_conflict_do_update(
+                        constraint="uq_queue_workspace_turn",
+                        set_={
+                            "last_claimed_at": func.greatest(
+                                QueueWorkspaceTurn.last_claimed_at, now
+                            )
+                        },
+                    )
+                )
             # COMMIT the claim before returning — the caller does network I/O
             # only after this returns (invariant 8).
             await session.commit()
