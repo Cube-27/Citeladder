@@ -75,6 +75,11 @@ jobs:
       - name: Architecture / token policy
         run: pnpm check:policy
       - name: Build
+        env:
+          # next.config.ts fails closed for production builds. CI verifies the
+          # bundle only, so use an RFC-reserved, unreachable origin here; real
+          # deployments must provide the backend service origin themselves.
+          BACKEND_ORIGIN: https://backend.ci.invalid
         run: pnpm build
 
   security:
