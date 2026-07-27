@@ -229,7 +229,7 @@ function ConnectionRow({
       </div>
 
       {runActive && activeRun ? (
-        <div className="flex items-center gap-2 px-4 pb-3 ps-15">
+        <div className="flex items-center gap-2 px-4 ps-15 pb-3">
           <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
             {activeRun.status.replace('_', ' ')}
           </Badge>
@@ -241,7 +241,7 @@ function ConnectionRow({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2 px-4 pb-3 ps-15">
+      <div className="flex items-center gap-2 px-4 ps-15 pb-3">
         <span className={eyebrowClasses}>Last synced</span>
         <span className="text-secondary font-mono text-xs tabular-nums">
           {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
@@ -249,12 +249,12 @@ function ConnectionRow({
       </div>
 
       {testState ? (
-        <div className="px-4 pb-3 ps-15">
+        <div className="px-4 ps-15 pb-3">
           <Alert tone={testState.ok ? 'success' : 'danger'}>{testState.message}</Alert>
         </div>
       ) : null}
       {syncMutation.isError ? (
-        <div className="px-4 pb-3 ps-15">
+        <div className="px-4 ps-15 pb-3">
           <Alert tone="danger">{errorMessage(syncMutation.error)}</Alert>
         </div>
       ) : null}

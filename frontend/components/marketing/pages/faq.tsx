@@ -75,10 +75,12 @@ export function FaqGroups() {
             <a
               key={group.heading}
               href={`#${groupAnchor(group)}`}
-              className="text-mkt-sm text-mkt-ink-soft hover:bg-mkt-surface hover:text-mkt-ink rounded-sm flex items-center justify-between gap-3 px-3 py-2 transition-colors duration-200"
+              className="text-mkt-sm text-mkt-ink-soft hover:bg-mkt-surface hover:text-mkt-ink flex items-center justify-between gap-3 rounded-sm px-3 py-2 transition-colors duration-200"
             >
               {group.heading}
-              <span className="text-mkt-ink-muted font-mono tabular-nums text-mkt-meta">{group.items.length}</span>
+              <span className="text-mkt-ink-muted text-mkt-meta font-mono tabular-nums">
+                {group.items.length}
+              </span>
             </a>
           ))}
         </div>

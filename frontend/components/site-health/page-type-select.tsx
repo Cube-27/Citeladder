@@ -32,7 +32,7 @@ export function PageTypeSelect({
         ))}
       </select>
       <ChevronDown
-        className="text-muted pointer-events-none absolute top-1/2 end-2 size-4 -translate-y-1/2"
+        className="text-muted pointer-events-none absolute end-2 top-1/2 size-4 -translate-y-1/2"
         aria-hidden
       />
     </div>

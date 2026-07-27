@@ -44,7 +44,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
                 panel's proof points, kept to one flat strip so the form column
                 stops reading as a void. Shown only where the brand panel is
                 hidden (below 900px), so the two columns never repeat the list. */}
-            <ul className="border-mkt-line text-mkt-ink-muted mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-5 text-mkt-sm min-[900px]:hidden">
+            <ul className="border-mkt-line text-mkt-ink-muted text-mkt-sm mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-5 min-[900px]:hidden">
               <li className="flex items-center gap-1.5">
                 <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
                 Deterministic scoring

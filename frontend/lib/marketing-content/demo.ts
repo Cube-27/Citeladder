@@ -23,10 +23,7 @@ export const DEMO_HERO = {
 /** "What to expect" cards — grounded in the enterprise limit dials. */
 export const DEMO_CARDS = [
   ['Your measurement plan', 'Prompts, engines, repetitions, evidence, and reporting.'],
-  [
-    'Your operating model',
-    'Seats, projects, cadence, retention, and support expectations.',
-  ],
+  ['Your operating model', 'Seats, projects, cadence, retention, and support expectations.'],
   ['Your rollout path', 'Projects, seats, retention, and the security review your team runs.'],
 ] as const;
 

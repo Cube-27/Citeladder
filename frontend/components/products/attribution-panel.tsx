@@ -336,9 +336,7 @@ function CurrencyBlockSection({
   if (!showHeading) return <>{children}</>;
   return (
     <section className="grid gap-3" aria-label={currency ?? 'Unavailable methods'}>
-      <h3 className="text-muted text-xs font-semibold">
-        {currency ?? 'Unavailable methods'}
-      </h3>
+      <h3 className="text-muted text-xs font-semibold">{currency ?? 'Unavailable methods'}</h3>
       {children}
     </section>
   );

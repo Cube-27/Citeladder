@@ -33,7 +33,7 @@ export function Stance() {
             key={title}
             className="border-mkt-line rounded-mkt-lg bg-mkt-surface border p-8 md:p-9"
           >
-            <h3 className="font-mkt-display text-mkt-ink mb-6 text-heading-sm font-semibold">
+            <h3 className="font-mkt-display text-mkt-ink text-heading-sm mb-6 font-semibold">
               {title}
             </h3>
             <ul className="grid gap-3.5">

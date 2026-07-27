@@ -39,6 +39,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         <BrandLogo
           name={label}
           logoUrl={activeProject?.brand.logo_url}
+          websiteUrl={activeProject?.website_url}
           size="sm"
           className="bg-foreground text-background size-[26px] rounded-md"
         />
@@ -61,6 +62,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
               <BrandLogo
                 name={project.brand_name || project.name}
                 logoUrl={project.brand.logo_url}
+                websiteUrl={project.website_url}
                 size="sm"
               />
               <span className="min-w-0 flex-1 truncate">{project.brand_name || project.name}</span>

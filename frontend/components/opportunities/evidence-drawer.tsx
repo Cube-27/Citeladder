@@ -71,9 +71,7 @@ export function OpportunityTypeBadge({ type }: Readonly<{ type: OpportunityType 
 function KvRow({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex items-start justify-between gap-3 py-1">
-      <span className="text-2xs text-muted shrink-0 font-mono uppercase">
-        {label}
-      </span>
+      <span className="text-2xs text-muted shrink-0 font-mono uppercase">{label}</span>
       <span className="text-secondary text-right text-sm break-words">{value}</span>
     </div>
   );
@@ -292,7 +290,7 @@ export function EvidenceDrawer({
         <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
         <DialogPrimitive.Content className="border-border bg-elevated shadow-modal-value fixed top-0 right-0 z-[101] flex h-full w-[448px] max-w-full flex-col border-l focus:outline-none">
           <header className="border-border-subtle flex items-center justify-between gap-2 border-b px-4 py-3">
-            <DialogPrimitive.Title className="text-foreground truncate text-heading-sm">
+            <DialogPrimitive.Title className="text-foreground text-heading-sm truncate">
               Opportunity detail
             </DialogPrimitive.Title>
             <DialogPrimitive.Close asChild>

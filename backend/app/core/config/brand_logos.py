@@ -8,7 +8,13 @@ BRAND_LOGO_STATUS_FAILED: Final = "failed"
 BRAND_LOGO_USER_AGENT: Final = "SearchifyBrandLogoBot/1.0"
 BRAND_LOGO_REQUEST_TIMEOUT_SECONDS: Final = 4.0
 BRAND_LOGO_MAX_REDIRECTS: Final = 3
-BRAND_LOGO_MAX_HTML_BYTES: Final = 262_144
+# Big-brand homepages routinely exceed a few hundred KB of HTML. The icon
+# <link> tags live in <head>, but the fetcher caps the WHOLE response — so a cap
+# smaller than the page means the fetch fails outright and discovery falls back
+# to /favicon.ico, which many large sites do not serve (samsung.com 404s it and
+# declares its icon on a CDN host instead). Budget for a large homepage rather
+# than lose the logo for exactly the biggest brands.
+BRAND_LOGO_MAX_HTML_BYTES: Final = 2_097_152
 BRAND_LOGO_MAX_IMAGE_BYTES: Final = 262_144
 BRAND_LOGO_MAX_CANDIDATES: Final = 6
 BRAND_LOGO_FETCH_CONCURRENCY: Final = 4

@@ -45,14 +45,13 @@ describe('Blog index (public marketing `/blog`)', () => {
     }
 
     const featured = screen.getByRole('region', { name: 'Featured post' });
-    expect(
-      within(featured).getByRole('link', { name: POSTS[0].title }),
-    ).toHaveAttribute('href', '/blog/how-we-measure-ai-visibility-deterministically');
+    expect(within(featured).getByRole('link', { name: POSTS[0].title })).toHaveAttribute(
+      'href',
+      '/blog/how-we-measure-ai-visibility-deterministically',
+    );
 
     // The empty state is gone now that a real post is live.
-    expect(
-      screen.queryByRole('heading', { name: BLOG_EMPTY_STATE.heading }),
-    ).toBeNull();
+    expect(screen.queryByRole('heading', { name: BLOG_EMPTY_STATE.heading })).toBeNull();
     expect(screen.queryByText(BLOG_EMPTY_STATE.body)).toBeNull();
   });
 
@@ -126,9 +125,7 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     const renderedH2s = within(article).getAllByRole('heading', { level: 2 });
     expect(renderedH2s).toHaveLength(headingTexts.length);
     for (const text of headingTexts) {
-      expect(
-        within(article).getByRole('heading', { level: 2, name: text }),
-      ).toBeInTheDocument();
+      expect(within(article).getByRole('heading', { level: 2, name: text })).toBeInTheDocument();
     }
     const listCount = post.body.filter((block) => block.type === 'list').length;
     const listItems = post.body.flatMap((block) => (block.type === 'list' ? block.items : []));

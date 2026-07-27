@@ -17,6 +17,7 @@ from app.core.database import get_session
 from app.core.http_errors import raise_not_found
 from app.core.security import decode_access_token
 from app.domain.workspaces.service import get_membership
+from app.models.project import Project
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 
@@ -95,6 +96,33 @@ async def require_workspace_member(
     member = await get_membership(session, workspace_id, user.id)
     if member is None:
         raise_not_found("Workspace")
+    return WorkspaceContext(user=user, member=member)
+
+
+async def require_project_member(
+    project_id: uuid.UUID = Path(...),  # noqa: B008 - FastAPI injects.
+    user: User = Depends(get_current_user),  # noqa: B008 - FastAPI injects.
+    session: AsyncSession = Depends(get_db),  # noqa: B008 - FastAPI injects.
+) -> WorkspaceContext:
+    """Authorize via the project in the PATH, not the ``X-Workspace-Id`` header.
+
+    For routes the browser fetches directly rather than through the API client —
+    ``<img src>`` for the brand-logo assets — no custom header can be attached,
+    so ``require_active_workspace`` would silently resolve the caller's
+    *earliest-joined* workspace and 404 every logo belonging to any other one.
+
+    Deriving the workspace from the project id keeps invariant 5 intact: the
+    membership row is still verified, and a project in a workspace the user does
+    not belong to is indistinguishable from a missing one (404).
+    """
+    workspace_id = await session.scalar(
+        select(Project.workspace_id).where(Project.id == project_id)
+    )
+    if workspace_id is None:
+        raise_not_found("Project")
+    member = await get_membership(session, workspace_id, user.id)
+    if member is None:
+        raise_not_found("Project")
     return WorkspaceContext(user=user, member=member)
 
 

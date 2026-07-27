@@ -78,10 +78,7 @@ export function RankingRowsTable({
               <TableCell>
                 <span className="flex items-center gap-2">
                   <BrandLogo name={row.name} logoUrl={row.logo_url} size="sm" />
-                  <span
-                    aria-hidden
-                    className={cn('size-2 shrink-0 rounded-xs', seriesBg(slot))}
-                  />
+                  <span aria-hidden className={cn('size-2 shrink-0 rounded-xs', seriesBg(slot))} />
                   <span className="text-foreground font-medium">{row.name}</span>
                   {row.is_brand ? (
                     <span className="bg-well text-secondary text-2xs inline-flex items-center rounded-sm px-1.5 py-0.5 font-medium">

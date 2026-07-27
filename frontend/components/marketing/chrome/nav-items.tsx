@@ -12,7 +12,7 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
   return (
     <>
       {'num' in item && (
-        <span className="text-mkt-meta text-mkt-proof font-mono tabular-nums pt-1">{item.num}</span>
+        <span className="text-mkt-meta text-mkt-proof pt-1 font-mono tabular-nums">{item.num}</span>
       )}
       <span className="min-w-0">
         <span className="text-mkt-sm text-mkt-ink block leading-snug font-semibold">

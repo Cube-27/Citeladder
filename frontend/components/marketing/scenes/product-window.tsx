@@ -62,7 +62,7 @@ export function ProductWindow() {
       </div>
 
       <div aria-hidden className="grid lg:grid-cols-[13.75rem_minmax(0,1fr)]">
-        <aside className="border-mkt-line bg-mkt-surface rounded-lg hidden border p-5 lg:block lg:rounded-r-none lg:border-r-0">
+        <aside className="border-mkt-line bg-mkt-surface hidden rounded-lg border p-5 lg:block lg:rounded-r-none lg:border-r-0">
           {SIDEBAR.map(({ group, items }) => (
             <div key={group} className="mb-5 last:mb-0">
               <Meta as="p" className="text-mkt-ink-muted mb-2 px-2">
@@ -72,7 +72,7 @@ export function ProductWindow() {
                 <div
                   key={label}
                   className={cn(
-                    'rounded-sm text-mkt-sm flex items-center gap-2.5 px-2.5 py-2',
+                    'text-mkt-sm flex items-center gap-2.5 rounded-sm px-2.5 py-2',
                     group === 'Analyze' && index === 0
                       ? 'bg-mkt-proof-soft text-mkt-proof font-semibold'
                       : 'text-mkt-ink-muted',
@@ -91,9 +91,7 @@ export function ProductWindow() {
             <p className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
               Market overview
             </p>
-            <Meta className="border-mkt-line rounded-sm border px-2 py-1">
-              Apr 01 — Jun 30
-            </Meta>
+            <Meta className="border-mkt-line rounded-sm border px-2 py-1">Apr 01 — Jun 30</Meta>
           </div>
 
           <div className="border-mkt-line rounded-mkt-sm grid grid-cols-2 border md:grid-cols-4">
@@ -112,10 +110,10 @@ export function ProductWindow() {
                 <Meta as="p" className="text-mkt-ink-muted">
                   {metric.label}
                 </Meta>
-                <b className="text-mkt-ink font-mono tabular-nums mt-2 block text-xl leading-none font-medium">
+                <b className="text-mkt-ink mt-2 block font-mono text-xl leading-none font-medium tabular-nums">
                   {metric.value}
                   {metric.delta && (
-                    <small className="text-mkt-evidence-text font-mono tabular-nums text-mkt-meta ml-1.5 font-medium">
+                    <small className="text-mkt-evidence-text text-mkt-meta ml-1.5 font-mono font-medium tabular-nums">
                       {metric.delta}
                     </small>
                   )}
@@ -130,7 +128,11 @@ export function ProductWindow() {
                 <span>Category visibility</span>
                 <Meta>12 weeks</Meta>
               </div>
-              <svg viewBox="0 0 620 230" preserveAspectRatio="none" className="mt-3 h-36 w-full sm:h-44">
+              <svg
+                viewBox="0 0 620 230"
+                preserveAspectRatio="none"
+                className="mt-3 h-36 w-full sm:h-44"
+              >
                 <path d="M0 45H620M0 90H620M0 135H620M0 180H620" className="stroke-mkt-line" />
                 <path
                   className="mkt-chart-line stroke-mkt-proof animate-mkt-draw"
@@ -153,17 +155,19 @@ export function ProductWindow() {
                   key={engine}
                   className="border-mkt-line text-mkt-ink-soft text-mkt-sm grid grid-cols-[1.125rem_1fr_auto] items-center gap-2 border-b py-2 last:border-b-0"
                 >
-                  <b className="bg-mkt-proof-soft text-mkt-proof font-mono tabular-nums text-mkt-meta grid size-4.5 place-items-center rounded-sm">
+                  <b className="bg-mkt-proof-soft text-mkt-proof text-mkt-meta grid size-4.5 place-items-center rounded-sm font-mono tabular-nums">
                     {index + 1}
                   </b>
                   <span>{engine}</span>
-                  <strong className="text-mkt-ink font-mono tabular-nums font-medium">{score}</strong>
+                  <strong className="text-mkt-ink font-mono font-medium tabular-nums">
+                    {score}
+                  </strong>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="border-mkt-evidence-line bg-mkt-evidence-soft rounded-sm mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1.5 border px-4 py-2.5">
+          <div className="border-mkt-evidence-line bg-mkt-evidence-soft mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1.5 rounded-sm border px-4 py-2.5">
             <Meta className="text-mkt-evidence-text">Raw artifacts preserved / 1,248</Meta>
             <Meta className="text-mkt-evidence-text">Analyzer / visibility-v4.2</Meta>
             <Meta className="text-mkt-evidence-text">Reproducible / yes</Meta>

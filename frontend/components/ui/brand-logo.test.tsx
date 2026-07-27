@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BrandLogo, brandInitials } from './brand-logo';
 
@@ -27,5 +27,66 @@ describe('BrandLogo', () => {
     const { container } = render(<BrandLogo name="Globex" logoUrl={null} />);
     expect(container.querySelector('img')).toBeNull();
     expect(container).toHaveTextContent('GL');
+  });
+
+  describe('with a Logo.dev token configured', () => {
+    // The module reads the token at import time, so set it before importing.
+    async function renderWithToken(ui: (mod: typeof import('./brand-logo')) => React.ReactElement) {
+      process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN = 'pk_test';
+      vi.resetModules();
+      const mod = await import('./brand-logo');
+      const result = render(ui(mod));
+      return result;
+    }
+
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+      vi.resetModules();
+    });
+
+    it('falls back to the CDN when the cached asset fails, then to initials', async () => {
+      const { container } = await renderWithToken(({ BrandLogo: Logo }) => (
+        <Logo
+          name="Acme Corporation"
+          logoUrl="/api/v1/projects/acme/logo"
+          websiteUrl="https://www.acme.com/store"
+        />
+      ));
+
+      // 1. our own cached asset first — no third-party request for a working logo
+      const cached = container.querySelector('img');
+      expect(cached?.getAttribute('src')).toMatch(/\/api\/v1\/projects\/acme\/logo$/);
+
+      fireEvent.error(cached!);
+
+      // 2. Logo.dev, keyed by the site's host, asking for a 404 (not a monogram)
+      const remote = container.querySelector('img');
+      const src = remote?.getAttribute('src') ?? '';
+      expect(src).toContain('https://img.logo.dev/www.acme.com?');
+      expect(src).toContain('fallback=404');
+
+      fireEvent.error(remote!);
+
+      // 3. our own initials
+      expect(container.querySelector('img')).toBeNull();
+      expect(container).toHaveTextContent('AC');
+    });
+
+    it('uses the CDN directly when there is no cached asset', async () => {
+      const { container } = await renderWithToken(({ BrandLogo: Logo }) => (
+        <Logo name="Myntra" logoUrl={null} websiteUrl="https://www.myntra.com" />
+      ));
+      expect(container.querySelector('img')?.getAttribute('src')).toContain(
+        'https://img.logo.dev/www.myntra.com?',
+      );
+    });
+
+    it('shows initials when the website URL cannot yield a domain', async () => {
+      const { container } = await renderWithToken(({ BrandLogo: Logo }) => (
+        <Logo name="No Site" logoUrl={null} websiteUrl="not a url" />
+      ));
+      expect(container.querySelector('img')).toBeNull();
+      expect(container).toHaveTextContent('NS');
+    });
   });
 });

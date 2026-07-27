@@ -145,6 +145,54 @@ async def test_project_logo_assets_are_workspace_scoped(
 
 
 @pytest.mark.asyncio
+async def test_logo_is_served_without_the_active_workspace_header(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    """A browser <img> cannot send X-Workspace-Id, so the path must be enough.
+
+    The logo URLs are fetched directly by the browser, not through the API
+    client, so no active-workspace header rides along. Scoping those routes to
+    the caller's *earliest-joined* workspace 404s every logo in any other one —
+    the "brand logos never appear" bug.
+    """
+    await _register(client, "logo-second-ws@example.com")
+    # A second workspace, which is NOT the fallback the header-less request
+    # would otherwise resolve to.
+    second = (
+        await client.post("/api/v1/workspaces", json={"name": "Second workspace"})
+    ).json()
+    project = (
+        await client.post(
+            "/api/v1/projects",
+            json=_project_payload(),
+            headers={"X-Workspace-Id": second["id"]},
+        )
+    ).json()
+    project_id = uuid.UUID(project["id"])
+    brand = await db_session.scalar(select(Brand).where(Brand.project_id == project_id))
+    assert brand is not None
+    png = b"\x89PNG\r\n\x1a\nsecond"
+    asset = BrandLogoAsset(
+        domain="acme.com",
+        status=BRAND_LOGO_STATUS_READY,
+        source_url="https://acme.com/favicon.png",
+        content_type="image/png",
+        image_data=png,
+        byte_size=len(png),
+        sha256=hashlib.sha256(png).hexdigest(),
+    )
+    db_session.add(asset)
+    await db_session.flush()
+    brand.logo_asset_id = asset.id
+    await db_session.commit()
+
+    # No X-Workspace-Id — exactly what the <img> request looks like.
+    served = await client.get(f"/api/v1/projects/{project['id']}/logo")
+    assert served.status_code == 200
+    assert served.content == png
+
+
+@pytest.mark.asyncio
 async def test_project_list_and_update_and_delete(
     client: httpx.AsyncClient,
 ) -> None:

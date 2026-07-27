@@ -16,7 +16,12 @@ export function Meta({
   as: Tag = 'span',
 }: Readonly<{ children: ReactNode; className?: string; as?: 'span' | 'p' | 'div' }>) {
   return (
-    <Tag className={cn('text-mkt-meta text-mkt-ink-muted font-mono tabular-nums font-semibold', className)}>
+    <Tag
+      className={cn(
+        'text-mkt-meta text-mkt-ink-muted font-mono font-semibold tabular-nums',
+        className,
+      )}
+    >
       {children}
     </Tag>
   );
@@ -50,7 +55,7 @@ export function Eyebrow({
  */
 export function LiveDot({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <span className="text-mkt-meta text-mkt-ink-soft font-mono tabular-nums inline-flex items-center gap-2 uppercase">
+    <span className="text-mkt-meta text-mkt-ink-soft inline-flex items-center gap-2 font-mono uppercase tabular-nums">
       <span className="bg-mkt-evidence animate-mkt-pulse size-1.5 shrink-0 rounded-full" />
       {children}
     </span>

@@ -216,7 +216,7 @@ export function YourPrompts() {
 
       <div className="relative max-w-sm">
         <Search
-          className="text-muted pointer-events-none absolute top-1/2 start-2 size-4 -translate-y-1/2"
+          className="text-muted pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2"
           aria-hidden
         />
         <Input

@@ -28,7 +28,7 @@ export function Hero() {
         <Container>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Eyebrow>{hero.eyebrow}</Eyebrow>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink font-medium mx-auto mt-5 mb-5 max-w-[18ch]">
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-5 mb-5 max-w-[18ch] font-medium">
               {hero.title} <em className="text-mkt-proof not-italic">{hero.accent}</em>
             </h1>
             <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[46ch]">{hero.body}</p>

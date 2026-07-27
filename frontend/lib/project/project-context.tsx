@@ -1,12 +1,13 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -52,22 +53,40 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
  * empty (the shell shows the Getting-Started card / setup flow).
  */
 export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const queryClient = useQueryClient();
   const { data: projects = [], isLoading } = useQuery({
     queryKey: queryKeys.projects.list(),
     queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(() => readStoredActiveProjectId());
+  // An explicit selection (onboarding's just-created project, the switcher) is
+  // authoritative even before the list refetch catches up. Without this, a
+  // selection whose project is not yet in `projects` fails the membership check
+  // below and gets reset to `projects[0]` — the "I added a project and landed on
+  // the first one" bug. Only a selection the user never made (a stale
+  // localStorage id for a deleted project) may fall back.
+  //
+  // State rather than a ref because `activeProjectId` is derived from it during
+  // render: clearing the pin has to re-run that memo. It is released purely by
+  // derivation below (never by an effect) once the list catches up.
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  // The pin stops applying the moment the list actually contains it — from then
+  // on the ordinary membership check governs, so a project deleted later still
+  // falls back to the first one instead of stranding the context on a dead id.
+  const pinApplies =
+    pinnedId !== null && selectedId === pinnedId && !projects.some((p) => p.id === pinnedId);
 
   // Resolve the effective active id: keep a valid selection, else default to
   // the first project, else null.
   const activeProjectId = useMemo(() => {
+    if (pinApplies) return selectedId;
     if (projects.length === 0) return null;
     if (selectedId && projects.some((project) => project.id === selectedId)) {
       return selectedId;
     }
     return projects[0].id;
-  }, [projects, selectedId]);
+  }, [projects, selectedId, pinApplies]);
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? null,
@@ -75,6 +94,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   );
 
   const setActiveProjectId = useCallback((projectId: string) => {
+    setPinnedId(projectId);
     setSelectedId(projectId);
     writeStoredActiveProjectId(projectId);
   }, []);
@@ -92,8 +112,49 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   }, [activeProjectId, selectedId]);
 
   useEffect(() => {
+    // While a just-selected project is pinned it is not in `projects` yet, so
+    // `activeProject` is momentarily null. Keep the current header rather than
+    // clearing it: dropping it mid-flight would send the refetch to the user's
+    // default workspace, which is the wrong one for a multi-workspace account.
+    if (activeProject === null && pinApplies) return;
     setActiveWorkspaceId(activeProject?.workspace_id ?? null);
-  }, [activeProject]);
+  }, [activeProject, pinApplies]);
+
+  // Backfill missing brand logos. Onboarding kicks off a refresh for the project
+  // it creates, but that is the ONLY trigger: a project created before logos
+  // existed, or one whose crawl lost a race or failed transiently, would show
+  // initials forever. Hydrating from the provider covers every project on every
+  // authed screen instead of depending on how the project came to exist.
+  //
+  // Bounded and idempotent: one attempt per project per session (the ref), only
+  // for projects with no `logo_url`, and the backend answers from its own
+  // database cache — including a negative cache — so a domain with no findable
+  // icon is not re-crawled on the next mount.
+  const hydratedLogos = useRef(new Set<string>());
+  useEffect(() => {
+    const pending = projects.filter(
+      (project) => !project.brand.logo_url && !hydratedLogos.current.has(project.id),
+    );
+    if (pending.length === 0) return;
+    for (const project of pending) hydratedLogos.current.add(project.id);
+
+    let cancelled = false;
+    void Promise.allSettled(
+      pending.map((project) => projectsApi.refreshProjectLogos(project.id)),
+    ).then((results) => {
+      // Only re-read the list if something actually attached, so a workspace
+      // where every domain lacks an icon settles instead of refetching forever.
+      const attached = results.some(
+        (result) => result.status === 'fulfilled' && result.value.brand.logo_url,
+      );
+      if (!cancelled && attached) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projects, queryClient]);
 
   const value = useMemo<ProjectContextValue>(
     () => ({

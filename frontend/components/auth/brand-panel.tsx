@@ -68,7 +68,7 @@ export function AuthBrandPanel() {
                 >
                   <span
                     aria-hidden
-                    className="border-mkt-proof-line bg-mkt-wash text-mkt-proof rounded-sm flex size-8 shrink-0 items-center justify-center border"
+                    className="border-mkt-proof-line bg-mkt-wash text-mkt-proof flex size-8 shrink-0 items-center justify-center rounded-sm border"
                   >
                     <proof.icon className="size-4" strokeWidth={1.75} />
                   </span>

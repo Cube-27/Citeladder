@@ -95,6 +95,12 @@ const nextConfig: NextConfig = {
   // `**.vorflux.com` covers the Vorflux preview tunnels (multi-level
   // subdomains) so the shared public preview URL hydrates the same way.
   allowedDevOrigins: ['127.0.0.1', '**.vorflux.com'],
+  // Brand-avatar fallback for sites that block our own crawler. `<BrandLogo>`
+  // renders these `unoptimized`, so nothing is proxied through the Next image
+  // optimizer — but the host must still be allowlisted for `next/image`.
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: 'img.logo.dev' }],
+  },
   async rewrites() {
     return [
       {

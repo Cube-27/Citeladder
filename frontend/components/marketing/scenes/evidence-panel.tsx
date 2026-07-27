@@ -51,7 +51,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
           {['Mentions (CSV)', 'Evidence (Markdown)'].map((label) => (
             <span
               key={label}
-              className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-soft rounded-sm text-mkt-sm inline-flex items-center gap-2 border px-2.5 py-1.5"
+              className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-soft text-mkt-sm inline-flex items-center gap-2 rounded-sm border px-2.5 py-1.5"
             >
               <Download aria-hidden strokeWidth={2} className="size-3.5" />
               {label}
@@ -70,7 +70,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
             <div key={name} className="flex items-center gap-3">
               <span className="text-mkt-sm text-mkt-ink-soft w-20 shrink-0">{name}</span>
               <Bar width={value} own={name === 'Technical'} />
-              <span className="text-mkt-sm text-mkt-ink font-mono tabular-nums w-6 text-right font-medium">
+              <span className="text-mkt-sm text-mkt-ink w-6 text-right font-mono font-medium tabular-nums">
                 {value}
               </span>
             </div>

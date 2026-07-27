@@ -94,11 +94,10 @@ export default function DemoPage() {
       <Section tone="surface" rhythm="tight" aria-label="What to expect">
         <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-3">
           {DEMO_CARDS.map(([title, description]) => (
-            <section
-              key={title}
-              className="border-mkt-line bg-mkt-paper rounded-mkt-lg border p-6"
-            >
-              <h2 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">{title}</h2>
+            <section key={title} className="border-mkt-line bg-mkt-paper rounded-mkt-lg border p-6">
+              <h2 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
+                {title}
+              </h2>
               <p className="text-mkt-sm text-mkt-ink-soft mt-2">{description}</p>
             </section>
           ))}

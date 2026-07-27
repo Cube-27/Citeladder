@@ -157,7 +157,7 @@
 .sidebar-scroll:focus-within,
 .content-scroll:hover,
 .content-scroll:focus-within {
-  scrollbar-color: rgba(100, 110, 100, 0.20) transparent;
+  scrollbar-color: rgba(100, 110, 100, 0.2) transparent;
 }
 
 .sidebar-scroll::-webkit-scrollbar,
@@ -187,7 +187,7 @@
 
 .sidebar-scroll::-webkit-scrollbar-thumb:hover,
 .content-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 110, 100, 0.40);
+  background-color: rgba(100, 110, 100, 0.4);
 }
 
 html[data-theme='dark'] .sidebar-scroll:hover,
@@ -206,5 +206,5 @@ html[data-theme='dark'] .content-scroll:focus-within::-webkit-scrollbar-thumb {
 
 html[data-theme='dark'] .sidebar-scroll::-webkit-scrollbar-thumb:hover,
 html[data-theme='dark'] .content-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(180, 200, 180, 0.30);
+  background-color: rgba(180, 200, 180, 0.3);
 }

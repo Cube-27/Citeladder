@@ -49,7 +49,9 @@ export function PageHeader({
         <h1 className="text-foreground min-w-0 flex-1 text-xl [overflow-wrap:break-word]">
           {resolved}
         </h1>
-        {actions ? <div className="ms-auto flex shrink-0 items-center gap-2 ps-8">{actions}</div> : null}
+        {actions ? (
+          <div className="ms-auto flex shrink-0 items-center gap-2 ps-8">{actions}</div>
+        ) : null}
       </div>
       {summary ? <p className="text-secondary max-w-[70ch] text-sm">{summary}</p> : null}
     </div>

@@ -69,12 +69,7 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn(
-        TONE[tone],
-        RHYTHM[rhythm],
-        divided && 'border-mkt-line border-t',
-        className,
-      )}
+      className={cn(TONE[tone], RHYTHM[rhythm], divided && 'border-mkt-line border-t', className)}
       {...aria}
     >
       {bleed ? children : <Container>{children}</Container>}
@@ -128,13 +123,13 @@ export function SectionHeader({
   return (
     <Reveal className="mb-12 grid items-start gap-x-8 gap-y-5 lg:mb-16 lg:grid-cols-[7.5rem_minmax(0,1fr)_20rem]">
       {(index ?? kicker) && (
-        <p className="text-mkt-meta text-mkt-ink-soft font-mono tabular-nums pt-2 uppercase lg:pt-3">
+        <p className="text-mkt-meta text-mkt-ink-soft pt-2 font-mono uppercase tabular-nums lg:pt-3">
           {[index, kicker].filter(Boolean).join(' / ')}
         </p>
       )}
       <Heading
         id={headingId}
-        className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium max-w-[18ch]"
+        className="font-mkt-display text-mkt-d2 text-mkt-ink max-w-[18ch] font-medium"
       >
         {title}
       </Heading>

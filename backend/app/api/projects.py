@@ -13,7 +13,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_project_member,
+)
 from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
@@ -83,6 +88,9 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 _RES_PROJECT = "Project"
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+# For routes the browser hits directly (no X-Workspace-Id header can ride on an
+# <img src>), authorize through the project id already in the path.
+_ProjectMemberDep = Annotated[WorkspaceContext, Depends(require_project_member)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -393,7 +401,7 @@ async def refresh_project_logos_endpoint(
 async def get_brand_logo_endpoint(
     project_id: uuid.UUID,
     request: Request,
-    ctx: _WorkspaceDep,
+    ctx: _ProjectMemberDep,
     session: _SessionDep,
 ) -> Response:
     try:
@@ -420,7 +428,7 @@ async def get_competitor_logo_endpoint(
     project_id: uuid.UUID,
     competitor_id: uuid.UUID,
     request: Request,
-    ctx: _WorkspaceDep,
+    ctx: _ProjectMemberDep,
     session: _SessionDep,
 ) -> Response:
     try:

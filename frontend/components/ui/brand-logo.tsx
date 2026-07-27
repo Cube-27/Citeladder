@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { logoDevUrl } from '@/lib/brand/logo-dev';
 import { cn } from '@/lib/utils';
 
 const SIZE = {
@@ -19,24 +20,38 @@ export function brandInitials(name: string) {
 }
 
 /**
- * One brand-avatar treatment everywhere: cached favicon when available,
- * deterministic initials when absent or broken. It is decorative because the
- * adjacent brand name carries the accessible label.
+ * One brand-avatar treatment everywhere, with a three-step fallback:
+ * our own cached favicon → Logo.dev's CDN → deterministic initials.
+ *
+ * The cached asset comes first because it is the real icon, served same-origin
+ * from our database. Logo.dev covers the sites that refuse *our* crawler
+ * (bot-blocking WAFs), which is a gap no crawler improvement can close. Each
+ * step is entered only when the previous image actually fails to load, so a
+ * working logo never costs a third-party request.
+ *
+ * Decorative: the adjacent brand name carries the accessible label.
  */
 export function BrandLogo({
   name,
   logoUrl,
+  websiteUrl,
   size = 'sm',
   className,
 }: Readonly<{
   name: string;
   logoUrl?: string | null;
+  /** Brand site, used to derive the Logo.dev fallback. */
+  websiteUrl?: string | null;
   size?: keyof typeof SIZE;
   className?: string;
 }>) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState<Record<string, true>>({});
   const spec = SIZE[size];
-  const showImage = Boolean(logoUrl && failedUrl !== logoUrl);
+
+  const cached = logoUrl && !failed[logoUrl] ? logoUrl : null;
+  const remote = logoDevUrl(websiteUrl, spec.pixels);
+  // Only reach for the CDN once the cached asset is gone or has failed.
+  const src = cached ?? (remote && !failed[remote] ? remote : null);
 
   return (
     <span
@@ -47,15 +62,19 @@ export function BrandLogo({
         className,
       )}
     >
-      {showImage && logoUrl ? (
+      {src ? (
         <Image
-          src={logoUrl}
+          // Keyed by src so swapping sources remounts the element; without it
+          // React reuses the <img> and a cached error state can suppress the
+          // load event for the replacement.
+          key={src}
+          src={src}
           alt=""
           width={spec.pixels}
           height={spec.pixels}
           unoptimized
           className="bg-panel size-full object-contain p-[2px]"
-          onError={() => setFailedUrl(logoUrl)}
+          onError={() => setFailed((prev) => ({ ...prev, [src]: true }))}
         />
       ) : (
         brandInitials(name)

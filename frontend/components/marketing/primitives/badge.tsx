@@ -24,7 +24,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'text-mkt-meta rounded-full inline-flex min-h-6 items-center gap-1.5 border px-2.5 uppercase',
+        'text-mkt-meta inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2.5 uppercase',
         TONE[tone],
         className,
       )}
@@ -44,7 +44,7 @@ export function VerifiedMark({ children = 'Verified' }: Readonly<{ children?: Re
     <span className="text-mkt-meta text-mkt-evidence-text inline-flex items-center gap-1.5 uppercase">
       <span
         aria-hidden
-        className="border-mkt-evidence-line grid size-4 place-items-center rounded-full border text-2xs leading-none"
+        className="border-mkt-evidence-line text-2xs grid size-4 place-items-center rounded-full border leading-none"
       >
         ✓
       </span>

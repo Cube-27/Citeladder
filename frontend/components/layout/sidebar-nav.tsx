@@ -54,7 +54,7 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.count !== undefined ? (
-        <span className="bg-neutral-bg text-secondary text-2xs mono rounded-xs min-w-6 px-1 py-0 text-center">
+        <span className="bg-neutral-bg text-secondary text-2xs mono min-w-6 rounded-xs px-1 py-0 text-center">
           {item.count}
         </span>
       ) : null}

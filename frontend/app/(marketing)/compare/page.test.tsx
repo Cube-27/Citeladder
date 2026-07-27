@@ -102,9 +102,7 @@ describe('CompareDetailView (/compare/[competitor])', () => {
     render(<CompareDetailView competitor={competitor} />);
 
     expect(screen.getByText(/maintained by the Searchify team/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/have not independently verified this vendor/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/have not independently verified this vendor/i)).toBeInTheDocument();
     expect(screen.getByText(/rather show a gap than a guess/i)).toBeInTheDocument();
   });
 

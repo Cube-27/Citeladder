@@ -332,6 +332,7 @@ export function SettingsScreen() {
                       <BrandLogo
                         name={activeProject.brand_name}
                         logoUrl={activeProject.brand?.logo_url}
+                        websiteUrl={activeProject.website_url}
                         size="md"
                       />
                       <div className="min-w-0">

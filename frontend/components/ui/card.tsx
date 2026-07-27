@@ -86,10 +86,7 @@ export function CardTitle({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h3'>>) {
   return (
-    <h3
-      {...props}
-      className={cn('text-foreground text-heading-sm', className)}
-    >
+    <h3 {...props} className={cn('text-foreground text-heading-sm', className)}>
       {children}
     </h3>
   );

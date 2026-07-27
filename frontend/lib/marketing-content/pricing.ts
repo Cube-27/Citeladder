@@ -46,7 +46,8 @@ export const PRICING_TIERS: readonly PricingTier[] = [
     name: 'Paid',
     price: '$49',
     cadence: 'per month',
-    blurb: 'Recurring site monitoring, web-search-grounded audits, and the full Site Health inventory.',
+    blurb:
+      'Recurring site monitoring, web-search-grounded audits, and the full Site Health inventory.',
     cta: { label: 'Choose Paid', href: '/register' },
     highlighted: true,
     primaryCta: true,

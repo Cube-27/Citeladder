@@ -39,10 +39,7 @@ describe('Demo page', () => {
     delete process.env.PUBLIC_SALES_EMAIL;
     render(<Page />);
     expect(screen.queryByRole('link', { name: /schedule demo|email sales/i })).toBeNull();
-    expect(screen.getByRole('link', { name: /start free/i })).toHaveAttribute(
-      'href',
-      '/register',
-    );
+    expect(screen.getByRole('link', { name: /start free/i })).toHaveAttribute('href', '/register');
     expect(screen.getByRole('link', { name: /compare plans/i })).toHaveAttribute(
       'href',
       '/pricing',

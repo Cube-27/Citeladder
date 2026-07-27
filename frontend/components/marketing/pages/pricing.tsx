@@ -47,28 +47,22 @@ function TierCard({ tier }: Readonly<{ tier: PricingTier }>) {
       data-highlighted={tier.highlighted ? 'true' : undefined}
       className={cn(
         'rounded-mkt-lg flex h-full flex-col border p-7',
-        tier.highlighted
-          ? 'border-mkt-proof-line bg-mkt-wash'
-          : 'border-mkt-line bg-mkt-paper',
+        tier.highlighted ? 'border-mkt-proof-line bg-mkt-wash' : 'border-mkt-line bg-mkt-paper',
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
-          {tier.name}
-        </h3>
+        <h3 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">{tier.name}</h3>
         {tier.highlighted && <Badge tone="proof">Recommended</Badge>}
       </div>
       <p className="text-mkt-sm text-mkt-ink-soft mt-2 min-h-[3rem]">{tier.blurb}</p>
 
       <p
         data-price
-        className="text-mkt-ink font-mono tabular-nums mt-4 flex items-baseline gap-1.5 text-hero leading-none font-medium"
+        className="text-mkt-ink text-hero mt-4 flex items-baseline gap-1.5 font-mono leading-none font-medium tabular-nums"
       >
         {tier.price}
         {!isCustom && (
-          <span className="text-mkt-ink-muted text-mkt-sm font-normal">
-            {tier.cadence}
-          </span>
+          <span className="text-mkt-ink-muted text-mkt-sm font-normal">{tier.cadence}</span>
         )}
       </p>
       {isCustom && (
@@ -200,7 +194,7 @@ export function PricingCta() {
   return (
     <Section tone="sunken" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[18ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[18ch] font-medium">
           Start from the evidence, not the invoice.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">

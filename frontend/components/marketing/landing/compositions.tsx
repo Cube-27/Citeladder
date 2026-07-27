@@ -44,7 +44,7 @@ export function Compositions() {
                 01 / Buyer question
               </Meta>
               <div className="mt-5">
-                <h3 className="font-mkt-display text-mkt-ink text-lg sm:text-mkt-d4 font-medium">
+                <h3 className="font-mkt-display text-mkt-ink sm:text-mkt-d4 text-lg font-medium">
                   “{query.cards[0]}”
                 </h3>
                 <div className="mt-5 flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ export function Compositions() {
                 03 / Next action
               </Meta>
               <div className="mt-5">
-                <h3 className="font-mkt-display text-mkt-ink text-lg sm:text-mkt-d4 font-medium">
+                <h3 className="font-mkt-display text-mkt-ink sm:text-mkt-d4 text-lg font-medium">
                   Publish an enterprise comparison page.
                 </h3>
                 <Badge tone="good" className="mt-4">

@@ -103,12 +103,10 @@ function CheckList({ points }: Readonly<{ points: readonly string[] }>) {
 function CapabilityCard({ icon: Icon, title, blurb, points }: Capability) {
   return (
     <div className="border-mkt-line rounded-mkt-lg bg-mkt-paper h-full border p-7">
-      <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof rounded-sm grid size-9 place-items-center border">
+      <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof grid size-9 place-items-center rounded-sm border">
         <Icon aria-hidden strokeWidth={1.8} className="size-4.5" />
       </span>
-      <h3 className="font-mkt-display text-mkt-ink mt-5 text-heading-sm font-semibold">
-        {title}
-      </h3>
+      <h3 className="font-mkt-display text-mkt-ink text-heading-sm mt-5 font-semibold">{title}</h3>
       <p className="text-mkt-sm text-mkt-ink-soft mt-2">{blurb}</p>
       <CheckList points={points} />
     </div>
@@ -161,7 +159,7 @@ export function EnterpriseOps() {
         <Reveal className="border-mkt-line bg-mkt-paper rounded-mkt-lg mt-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 border p-6">
           {ARCH_FLOW.map((step) => (
             <Fragment key={step.node}>
-              <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft rounded-sm text-mkt-sm border px-2.5 py-1.5">
+              <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft text-mkt-sm rounded-sm border px-2.5 py-1.5">
                 {step.node}
               </span>
               <span aria-hidden className="text-mkt-line-strong">
@@ -169,7 +167,7 @@ export function EnterpriseOps() {
               </span>
             </Fragment>
           ))}
-          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof rounded-sm text-mkt-sm border px-2.5 py-1.5">
+          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-sm rounded-sm border px-2.5 py-1.5">
             AI providers · BYOK
           </span>
         </Reveal>
@@ -194,9 +192,7 @@ export function EnterpriseLimits() {
             className="border-mkt-line rounded-mkt-lg bg-mkt-surface h-full border p-6"
           >
             <Meta as="p">{cell.label}</Meta>
-            <p className="font-mkt-display text-mkt-ink mt-4 text-mkt-d4 font-medium">
-              Custom
-            </p>
+            <p className="font-mkt-display text-mkt-ink text-mkt-d4 mt-4 font-medium">Custom</p>
             <p className="text-mkt-sm text-mkt-ink-muted mt-2">{cell.desc}</p>
           </StaggerItem>
         ))}
@@ -219,7 +215,7 @@ export function EnterpriseContactCta() {
   return (
     <Section id="contact" tone="surface" rhythm="loose" aria-label="Contact sales">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
           Bring AI visibility in-house.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">

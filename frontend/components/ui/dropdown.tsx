@@ -69,7 +69,7 @@ export function DropdownCheckboxItem({
         // `relative` makes each row the containing block for its own absolutely
         // positioned indicator below — without it every checkmark resolves
         // against a distant ancestor and they all stack in one spot.
-        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 pe-2 ps-7 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 ps-7 pe-2 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,
       )}
       {...props}
@@ -89,9 +89,7 @@ export function DropdownLabel({
   children,
 }: Readonly<{ className?: string; children: ReactNode }>) {
   return (
-    <DropdownPrimitive.Label
-      className={cn(eyebrowClasses, 'px-2 py-1', className)}
-    >
+    <DropdownPrimitive.Label className={cn(eyebrowClasses, 'px-2 py-1', className)}>
       {children}
     </DropdownPrimitive.Label>
   );

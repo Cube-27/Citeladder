@@ -55,9 +55,6 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
 
 export function JsonLd({ data }: Readonly<{ data: JsonLdObject }>) {
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
   );
 }

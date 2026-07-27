@@ -213,7 +213,7 @@ export function CommandPalette() {
       >
         <Search className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
         <span className="text-xs">Search or jump to…</span>
-        <kbd className="text-subtle ms-auto font-mono text-2xs">⌘K</kbd>
+        <kbd className="text-subtle text-2xs ms-auto font-mono">⌘K</kbd>
       </button>
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
@@ -249,7 +249,7 @@ export function CommandPalette() {
                 // that rule is unlayered and would otherwise beat a utility.
                 className="text-foreground placeholder:text-muted h-10 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border text-subtle shrink-0 rounded-sm border px-1.5 py-0.5 font-mono text-2xs">
+              <kbd className="border-border text-subtle text-2xs shrink-0 rounded-sm border px-1.5 py-0.5 font-mono">
                 esc
               </kbd>
             </div>
@@ -266,9 +266,7 @@ export function CommandPalette() {
               ) : (
                 toSections(results).map((section) => (
                   <div key={section.group} className="mb-1 last:mb-0">
-                    <p className={cn(eyebrowClasses, 'px-2 pt-2 pb-1')}>
-                      {section.group}
-                    </p>
+                    <p className={cn(eyebrowClasses, 'px-2 pt-2 pb-1')}>{section.group}</p>
                     {section.rows.map(({ command, index }) => {
                       const isActive = index === activeIndex;
                       const Icon = command.icon;
@@ -325,7 +323,7 @@ export function CommandPalette() {
 
             {/* Keyboard legend — the palette is a keyboard surface first, so
                 it states its own controls rather than assuming they are known. */}
-            <div className="border-border-subtle text-subtle flex shrink-0 items-center gap-4 border-t px-4 py-2 text-2xs">
+            <div className="border-border-subtle text-subtle text-2xs flex shrink-0 items-center gap-4 border-t px-4 py-2">
               <span className="flex items-center gap-1.5">
                 <kbd className="border-border rounded-sm border px-1 font-mono">↑</kbd>
                 <kbd className="border-border rounded-sm border px-1 font-mono">↓</kbd>

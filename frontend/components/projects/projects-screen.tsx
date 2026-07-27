@@ -87,7 +87,12 @@ export function ProjectsScreen() {
                       aria-current={isActive ? 'true' : undefined}
                       className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
                     >
-                      <BrandLogo name={label} logoUrl={project.brand.logo_url} size="md" />
+                      <BrandLogo
+                        name={label}
+                        logoUrl={project.brand.logo_url}
+                        websiteUrl={project.website_url}
+                        size="md"
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="text-foreground block truncate text-sm font-medium">
                           {label}

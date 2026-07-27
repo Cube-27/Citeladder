@@ -129,7 +129,7 @@ export function Evidence() {
                   {/* Desktop: the table row. */}
                   <div className={DESKTOP_GRID}>
                     <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
-                      <span className="bg-mkt-paper-raised text-mkt-ink-muted font-mono tabular-nums text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
+                      <span className="bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full font-mono tabular-nums">
                         {String(index + 1).padStart(2, '0')}
                       </span>
                       <strong className="text-mkt-ink text-mkt-body block max-w-[34ch] leading-snug font-semibold">
@@ -148,7 +148,7 @@ export function Evidence() {
             <Panel className="flex flex-col p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-mkt-ink text-mkt-sm font-semibold">Visibility index</p>
-                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta rounded-full inline-flex items-center gap-1.5 border px-2 py-1 uppercase">
+                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta inline-flex items-center gap-1.5 rounded-full border px-2 py-1 uppercase">
                   Formula v4.2
                   <ArrowUpRight className="size-3" strokeWidth={1.8} />
                 </span>
@@ -158,10 +158,12 @@ export function Evidence() {
               </div>
 
               <div className="my-5 flex items-end gap-3">
-                <strong className="text-mkt-ink font-mono tabular-nums text-5xl sm:text-6xl leading-none font-medium">
+                <strong className="text-mkt-ink font-mono text-5xl leading-none font-medium tabular-nums sm:text-6xl">
                   72.4
                 </strong>
-                <span className="text-mkt-sm text-mkt-ink-soft font-mono tabular-nums pb-1">/ 100</span>
+                <span className="text-mkt-sm text-mkt-ink-soft pb-1 font-mono tabular-nums">
+                  / 100
+                </span>
               </div>
 
               <div>
@@ -185,7 +187,7 @@ export function Evidence() {
                     key={label}
                     className={`px-3 first:pl-0 last:pr-0 ${index > 0 ? 'border-mkt-line border-l' : ''}`}
                   >
-                    <strong className="text-mkt-ink font-mono tabular-nums block text-base font-medium">
+                    <strong className="text-mkt-ink block font-mono text-base font-medium tabular-nums">
                       {value}
                     </strong>
                     <Meta className="mt-1 block">{label}</Meta>

@@ -50,10 +50,32 @@ function Harness() {
   );
 }
 
+/** Selects an id that is not in the currently-loaded list (the onboarding case). */
+function SelectUnknownHarness() {
+  const { activeProject, activeProjectId, projects, setActiveProjectId } = useProjectContext();
+  return (
+    <div>
+      <div data-testid="active">{activeProject?.name ?? 'none'}</div>
+      <div data-testid="active-id">{activeProjectId ?? 'none'}</div>
+      <div data-testid="count">{projects.length}</div>
+      <button type="button" onClick={() => setActiveProjectId(PROJECT_2)}>
+        select unknown
+      </button>
+    </div>
+  );
+}
+
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   window.localStorage.clear();
   setActiveWorkspaceId(null);
+  // The provider backfills logos for any project without one, which every
+  // fixture here is. Tests that assert on the backfill override this.
+  mswServer.use(
+    http.post('/api/v1/projects/:id/logos/refresh', ({ params }) =>
+      HttpResponse.json(project(String(params.id), 'Acme')),
+    ),
+  );
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -114,6 +136,98 @@ describe('ProjectProvider', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
+  });
+
+  it('keeps a selection made before the new project appears in the list', async () => {
+    // Onboarding calls setActiveProjectId(newId) while the provider is still
+    // holding the pre-create list, then invalidates. The selection must survive
+    // that gap instead of being reset to projects[0].
+    let includeNew = false;
+    mswServer.use(
+      http.get('/api/v1/projects', () =>
+        HttpResponse.json(
+          includeNew
+            ? [project(PROJECT_1, 'Acme'), project(PROJECT_2, 'Globex')]
+            : [project(PROJECT_1, 'Acme')],
+        ),
+      ),
+    );
+
+    renderWithProviders(
+      <ProjectProvider>
+        <SelectUnknownHarness />
+      </ProjectProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
+
+    // Select the not-yet-listed project. The provider must not stomp it back to
+    // projects[0] just because the list has not caught up yet.
+    await userEvent.click(screen.getByRole('button', { name: 'select unknown' }));
+    includeNew = true;
+
+    await waitFor(() =>
+      expect(window.localStorage.getItem('searchify.active-project-id')).toBe(PROJECT_2),
+    );
+  });
+
+  it('backfills logos for projects that have none, then re-reads the list once', async () => {
+    const refreshed: string[] = [];
+    let listCalls = 0;
+    mswServer.use(
+      http.get('/api/v1/projects', () => {
+        listCalls += 1;
+        const withLogo = {
+          ...project(PROJECT_1, 'Acme'),
+          brand: { aliases: [], logo_url: `/api/v1/projects/${PROJECT_1}/logo` },
+        };
+        // First read has no logo; once the refresh lands, the list carries one.
+        return HttpResponse.json([refreshed.length > 0 ? withLogo : project(PROJECT_1, 'Acme')]);
+      }),
+      http.post('/api/v1/projects/:id/logos/refresh', ({ params }) => {
+        refreshed.push(String(params.id));
+        return HttpResponse.json({
+          ...project(PROJECT_1, 'Acme'),
+          brand: { aliases: [], logo_url: `/api/v1/projects/${PROJECT_1}/logo` },
+        });
+      }),
+    );
+
+    renderWithProviders(
+      <ProjectProvider>
+        <Harness />
+      </ProjectProvider>,
+    );
+
+    await waitFor(() => expect(refreshed).toEqual([PROJECT_1]));
+    // The list is re-read so every BrandLogo picks up the new URL together.
+    await waitFor(() => expect(listCalls).toBeGreaterThan(1));
+    // Idempotent: the now-hydrated project is not refreshed a second time.
+    expect(refreshed).toEqual([PROJECT_1]);
+  });
+
+  it('does not retry a logo refresh that found no icon', async () => {
+    const refreshed: string[] = [];
+    mswServer.use(
+      http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
+      http.post('/api/v1/projects/:id/logos/refresh', ({ params }) => {
+        refreshed.push(String(params.id));
+        // No icon found — logo_url stays null.
+        return HttpResponse.json(project(PROJECT_1, 'Acme'));
+      }),
+    );
+
+    const { queryClient } = renderWithProviders(
+      <ProjectProvider>
+        <Harness />
+      </ProjectProvider>,
+    );
+
+    await waitFor(() => expect(refreshed).toEqual([PROJECT_1]));
+    // A refetch must not re-trigger the crawl: one attempt per project, period.
+    await queryClient.invalidateQueries({ queryKey: ['projects', 'list'] });
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
+    expect(refreshed).toEqual([PROJECT_1]);
   });
 
   it('is empty (no active project) when the workspace has none', async () => {

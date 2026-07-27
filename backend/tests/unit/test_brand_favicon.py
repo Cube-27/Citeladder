@@ -6,6 +6,7 @@ from app.connectors.web_evidence.favicon import (
     discover_icon_urls,
     fetch_brand_logo,
 )
+from app.core.config.brand_logos import BRAND_LOGO_MAX_HTML_BYTES
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"logo"
 
@@ -34,6 +35,28 @@ class _FakeFetcher:
     async def fetch(self, request: FetchRequest, **_kwargs) -> FetchResult:
         self.calls.append(request)
         return self.results[request.url]
+
+
+def test_html_budget_covers_a_large_brand_homepage() -> None:
+    """The HTML cap must fit a real big-brand homepage.
+
+    The fetcher caps the WHOLE response, so a cap below the page size fails the
+    fetch outright; discovery then sees an empty body and falls back to
+    /favicon.ico. Large sites (samsung.com) 404 that path and declare their icon
+    on a CDN host, so a too-small cap loses the logo for the biggest brands.
+    """
+    # samsung.com's homepage measured ~1.4 MB of decoded HTML.
+    assert BRAND_LOGO_MAX_HTML_BYTES >= 1_500_000
+
+
+def test_discover_icon_urls_accepts_a_protocol_relative_cdn_href() -> None:
+    """Icons are routinely hosted off-domain via a `//host/path` href."""
+    urls = discover_icon_urls(
+        b'<html><head><link rel="icon" href="//cdn.example-cdn.net/i/Favicon.png"/>'
+        b"</head></html>",
+        base_url="https://www.example.com/",
+    )
+    assert urls[0] == "https://cdn.example-cdn.net/i/Favicon.png"
 
 
 def test_detect_logo_content_type_uses_magic_bytes() -> None:

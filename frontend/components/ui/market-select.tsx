@@ -171,7 +171,7 @@ export function MarketSelect({
               )}
             >
               <span>{option.label}</span>
-              <span className="mono text-xs text-muted">{option.value}</span>
+              <span className="mono text-muted text-xs">{option.value}</span>
             </li>
           ))}
         </ul>

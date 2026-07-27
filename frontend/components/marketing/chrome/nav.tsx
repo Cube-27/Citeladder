@@ -226,7 +226,7 @@ export function MarketingNav() {
               style={{ left: lens.left, width: lens.width }}
               transition={{ layout: { duration: 0.18, ease: EASE_OUT } }}
               className={cn(
-                'border-mkt-line bg-mkt-surface shadow-modal-value rounded-sm pointer-events-none',
+                'border-mkt-line bg-mkt-surface shadow-modal-value pointer-events-none rounded-sm',
                 'absolute inset-y-0 border',
               )}
             />
@@ -257,7 +257,7 @@ export function MarketingNav() {
               </Link>
               <button
                 type="button"
-                className="text-mkt-ink-soft hover:text-mkt-ink rounded-sm relative z-1 grid size-7 place-items-center"
+                className="text-mkt-ink-soft hover:text-mkt-ink relative z-1 grid size-7 place-items-center rounded-sm"
                 aria-label={`Open ${label} menu`}
                 aria-expanded={openDrop === key}
                 aria-haspopup="true"
@@ -380,7 +380,7 @@ export function MarketingNav() {
           )}
           <button
             type="button"
-            className="border-mkt-line rounded-sm text-mkt-ink grid size-9 place-items-center border lg:hidden"
+            className="border-mkt-line text-mkt-ink grid size-9 place-items-center rounded-sm border lg:hidden"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"

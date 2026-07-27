@@ -39,7 +39,7 @@ const SCENES = {
         <div
           key={label}
           style={{ animationDelay: `${index * 0.8}s` }}
-          className="border-mkt-line bg-mkt-paper-raised animate-mkt-verify rounded-sm grid grid-cols-[1fr_auto] items-center gap-3 border px-2.5 py-2.5"
+          className="border-mkt-line bg-mkt-paper-raised animate-mkt-verify grid grid-cols-[1fr_auto] items-center gap-3 rounded-sm border px-2.5 py-2.5"
         >
           <span className="bg-mkt-ink/10 h-1 rounded-full" />
           <b className="text-mkt-meta text-mkt-evidence-text uppercase">{label}</b>
@@ -73,7 +73,7 @@ export function HowItWorks() {
           </Meta>
           <ExampleDataNote />
         </div>
-        <StaggerGroup className="border-mkt-line bg-mkt-surface rounded-lg grid overflow-hidden border md:grid-cols-3">
+        <StaggerGroup className="border-mkt-line bg-mkt-surface grid overflow-hidden rounded-lg border md:grid-cols-3">
           {howItWorks.steps.map((step, index) => (
             <StaggerItem
               key={step.num}
@@ -82,7 +82,7 @@ export function HowItWorks() {
               <Meta as="p" className="text-mkt-ink-muted">
                 {step.num} / {step.kicker}
               </Meta>
-              <h3 className="font-mkt-display text-mkt-ink mt-3 mb-1.5 text-heading-sm font-semibold">
+              <h3 className="font-mkt-display text-mkt-ink text-heading-sm mt-3 mb-1.5 font-semibold">
                 {step.title}
               </h3>
               <p className="text-mkt-sm text-mkt-ink-soft">{step.body}</p>

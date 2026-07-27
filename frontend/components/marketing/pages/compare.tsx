@@ -50,7 +50,7 @@ export function CompareIndex() {
                   <span className="flex items-center gap-3">
                     <span
                       aria-hidden
-                      className="border-mkt-line bg-mkt-surface text-mkt-ink rounded-sm font-mkt-display text-mkt-body grid size-9 place-items-center border font-bold"
+                      className="border-mkt-line bg-mkt-surface text-mkt-ink font-mkt-display text-mkt-body grid size-9 place-items-center rounded-sm border font-bold"
                     >
                       {competitor.name.charAt(0)}
                     </span>
@@ -123,7 +123,7 @@ export function CompareIndex() {
 
       <Section tone="paper" rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
             Don’t compare pages. Compare evidence.
           </h2>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

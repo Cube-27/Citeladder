@@ -26,7 +26,7 @@ import { Reveal } from '../primitives/reveal';
 /** The fixed unverified state — takes no string from the content module. */
 function UnverifiedCell() {
   return (
-    <span className="border-mkt-line text-mkt-ink-muted rounded-sm text-mkt-sm inline-block border border-dashed px-2 py-1">
+    <span className="border-mkt-line text-mkt-ink-muted text-mkt-sm inline-block rounded-sm border border-dashed px-2 py-1">
       Not verified by us
     </span>
   );
@@ -48,9 +48,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <div>
               <Eyebrow>Comparison</Eyebrow>
             </div>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink font-medium mt-6 mb-6 max-w-[18ch]">
-              Searchify vs{' '}
-              <em className="text-mkt-proof not-italic">{competitor.name}.</em>
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[18ch] font-medium">
+              Searchify vs <em className="text-mkt-proof not-italic">{competitor.name}.</em>
             </h1>
             <p className="text-mkt-lead text-mkt-ink-soft max-w-[56ch]">
               Two ways to measure brand presence in AI answers. The Searchify column comes straight
@@ -123,9 +122,9 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           ) : (
             <span>
               This comparison is maintained by the Searchify team. We have not independently
-              verified this vendor’s current capabilities. The Searchify column is grounded in
-              our own source code; the {competitor.name} column stays blank until we check each
-              row first-party — we would rather show a gap than a guess.
+              verified this vendor’s current capabilities. The Searchify column is grounded in our
+              own source code; the {competitor.name} column stays blank until we check each row
+              first-party — we would rather show a gap than a guess.
             </span>
           )}
         </p>
@@ -136,9 +135,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       {competitor.verdict && (
         <Section tone="paper" aria-label="Our verdict">
           <div className="max-w-[70ch]">
-            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">
-              Our verdict.
-            </h2>
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">Our verdict.</h2>
             <p className="text-mkt-body text-mkt-ink-soft mt-4">{competitor.verdict}</p>
           </div>
         </Section>
@@ -146,7 +143,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
 
       <Section tone="sunken" rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
             See your own numbers instead.
           </h2>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

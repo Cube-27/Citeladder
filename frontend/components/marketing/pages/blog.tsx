@@ -54,7 +54,7 @@ function BlogCta({
   return (
     <Section tone="sunken" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
           {title}
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
@@ -96,7 +96,7 @@ export function BlogIndex() {
                 <p
                   role="heading"
                   aria-level={2}
-                  className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium max-w-[20ch]"
+                  className="font-mkt-display text-mkt-d3 text-mkt-ink max-w-[20ch] font-medium"
                 >
                   <Link href={`/blog/${featured.slug}`}>{featured.title}</Link>
                 </p>
@@ -148,7 +148,7 @@ export function BlogIndex() {
             <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft mx-auto grid size-11 place-items-center rounded-full border">
               <PenLine aria-hidden strokeWidth={1.8} className="size-5" />
             </span>
-            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium mt-6">
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-6 font-medium">
               {BLOG_EMPTY_STATE.heading}
             </h2>
             <p className="text-mkt-body text-mkt-ink-soft mx-auto mt-3 max-w-[52ch]">
@@ -191,7 +191,7 @@ function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
   switch (block.type) {
     case 'heading':
       return (
-        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium mt-10 mb-4">
+        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-10 mb-4 font-medium">
           {block.text}
         </h2>
       );
@@ -228,7 +228,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               <Eyebrow>Field notes</Eyebrow>
             </div>
             <TagRow tags={post.tags} />
-            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mt-4">
+            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink mt-4 font-medium">
               {post.title}
             </h1>
             {/* The byline is owner-supplied: the row renders only once at

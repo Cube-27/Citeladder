@@ -52,9 +52,8 @@ export function Shift() {
           <Meta as="p" className="mb-6">
             {voice.kicker}
           </Meta>
-          <p className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium max-w-[16ch]">
-            {voice.quote}{' '}
-            <em className="text-mkt-proof not-italic">{voice.quoteAccent}</em>{' '}
+          <p className="font-mkt-display text-mkt-d2 text-mkt-ink max-w-[16ch] font-medium">
+            {voice.quote} <em className="text-mkt-proof not-italic">{voice.quoteAccent}</em>{' '}
             {voice.quoteTail}
           </p>
         </div>
@@ -70,7 +69,7 @@ export function Shift() {
                   key={rule.num}
                   className="border-mkt-line text-mkt-ink-soft text-mkt-sm flex gap-3.5 border-b pb-4 last:border-b-0 last:pb-0"
                 >
-                  <b className="text-mkt-meta text-mkt-proof font-mono tabular-nums shrink-0 pt-0.5">
+                  <b className="text-mkt-meta text-mkt-proof shrink-0 pt-0.5 font-mono tabular-nums">
                     {rule.num}
                   </b>
                   <span>{rule.text}</span>

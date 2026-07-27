@@ -94,11 +94,24 @@ export function SessionGuard({
 
   useEffect(() => {
     const cache = queryClient.getQueryCache();
+    let disposed = false;
     const unsubscribe = cache.subscribe((event) => {
       if (event.type !== 'updated') return;
-      onCacheEvent(event.query.state.error);
+      const { error: queryError } = event.query.state;
+      if (!queryError) return;
+      // React Query notifies subscribers synchronously, and some of those
+      // notifications land *during* a render (e.g. a query being observed for
+      // the first time). Effect Events may not be called while rendering, so
+      // hop to a microtask — by then the render has committed.
+      void Promise.resolve().then(() => {
+        if (disposed) return;
+        onCacheEvent(queryError);
+      });
     });
-    return unsubscribe;
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
   }, [queryClient]);
 
   const value = useMemo<SessionContextValue | null>(
