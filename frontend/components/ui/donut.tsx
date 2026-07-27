@@ -116,17 +116,17 @@ export function Donut({
             aria-hidden
             className="absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           >
-            <span className="mono text-foreground text-2xl leading-none font-semibold">
+            <span className="mono text-foreground text-xl font-semibold">
               {centerLabel}
             </span>
             {centerCaption ? (
-              <span className="text-muted text-2xs leading-none">{centerCaption}</span>
+              <span className="text-muted text-xs">{centerCaption}</span>
             ) : null}
           </span>
         ) : null}
       </div>
       {showLegend ? (
-        <ul className="flex flex-1 flex-col gap-1.5">
+        <ul className="flex flex-1 flex-col gap-2">
           {segments.map((segment) => (
             <li key={segment.label} className="flex items-center gap-2 text-xs">
               <svg aria-hidden width={8} height={8} viewBox="0 0 8 8" className="shrink-0">

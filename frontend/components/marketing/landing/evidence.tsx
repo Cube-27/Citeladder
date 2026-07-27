@@ -7,7 +7,7 @@ import { EngineDot, type EngineKey } from '../primitives/engine-chip';
 import { Meta } from '../primitives/label';
 import { Reveal } from '../primitives/reveal';
 import { Section, SectionHeader } from '../primitives/section';
-import { ExampleDataNote, GlassPanel, WallpaperPanel } from '../scenes/wallpaper-panel';
+import { ExampleDataNote, Panel, WallpaperPanel } from '../scenes/wallpaper-panel';
 
 /**
  * The evidence chapter: what a traced result actually looks like. A table of
@@ -22,40 +22,41 @@ import { ExampleDataNote, GlassPanel, WallpaperPanel } from '../scenes/wallpaper
 const ROWS: readonly {
   answer: string;
   engine: EngineKey;
-  artifact: string;
   finding: string;
   tone: 'good' | 'proof' | 'warn';
 }[] = [
   {
     answer: 'Best analytics platforms for enterprise teams',
     engine: 'openai',
-    artifact: '09F3C21E',
     finding: 'Mentioned',
     tone: 'good',
   },
   {
     answer: 'How to measure brand visibility in AI answers',
     engine: 'claude',
-    artifact: '1A64D0BC',
     finding: 'Cited',
     tone: 'proof',
   },
   {
     answer: 'Searchify alternatives for global agencies',
     engine: 'gemini',
-    artifact: '3E92BA71',
     finding: 'Review',
     tone: 'warn',
   },
 ];
 
-const TABLE_GRID =
-  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 lg:grid-cols-[minmax(0,1fr)_8.5rem_7rem_8rem] lg:gap-x-4';
+/**
+ * Desktop renders an actual table; mobile renders a stacked card list — the
+ * two share nothing but the row data, so each gets a layout that fits its
+ * width instead of one squeezed grid pretending to be both.
+ */
+const DESKTOP_GRID =
+  'hidden lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem_8rem] lg:items-center lg:gap-x-4';
 
 export function Evidence() {
   const { evidence } = LANDING_CONTENT;
   return (
-    <Section id="evidence" rhythm="loose" divided aria-labelledby="evidence-title">
+    <Section id="evidence" tone="surface" rhythm="loose" aria-labelledby="evidence-title">
       <SectionHeader
         index={evidence.index}
         kicker={evidence.kicker}
@@ -65,13 +66,13 @@ export function Evidence() {
       />
 
       <Reveal>
-        <WallpaperPanel className="p-3 sm:p-5 lg:p-7">
-          <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 px-1 sm:px-2">
+        <WallpaperPanel className="p-2 sm:p-5 lg:p-7">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1 sm:px-2">
             <div className="flex items-center gap-3">
-              <span className="border-mkt-glass-line bg-mkt-glass text-mkt-proof-text grid size-8 place-items-center rounded-full border backdrop-blur-md">
+              <span className="border-mkt-line bg-mkt-surface text-mkt-proof grid size-8 place-items-center rounded-full border">
                 <FileCheck2 aria-hidden className="size-4" strokeWidth={1.8} />
               </span>
-              <Meta as="p" className="text-mkt-slate-soft">
+              <Meta as="p" className="text-mkt-ink-muted">
                 Audit evidence / selected run
               </Meta>
             </div>
@@ -80,79 +81,93 @@ export function Evidence() {
 
           <div
             aria-hidden
-            className="grid gap-3.5 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.75fr)]"
+            className="grid gap-2.5 sm:gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.75fr)]"
           >
-            <GlassPanel className="overflow-hidden">
+            <Panel className="overflow-hidden">
+              {/* Mobile: one honest card header. Desktop: the table header. */}
+              <div className="border-mkt-line bg-mkt-paper-raised flex items-center justify-between gap-3 border-b px-4 py-2.5 lg:hidden">
+                <Meta as="p" className="text-mkt-ink-muted">
+                  Observed answers
+                </Meta>
+                <Meta as="p" className="text-mkt-ink-muted">
+                  3 persisted
+                </Meta>
+              </div>
               <div
-                className={`${TABLE_GRID} border-mkt-glass-line bg-mkt-glass-soft border-b px-5 py-4 sm:px-6`}
+                className={`${DESKTOP_GRID} border-mkt-line bg-mkt-paper-raised border-b px-5 py-3 sm:px-6`}
               >
                 <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-3">
                   <span aria-hidden className="size-7" />
                   <div>
-                    <Meta as="p" className="text-mkt-slate-soft">
+                    <Meta as="p" className="text-mkt-ink-muted">
                       Observed answer
                     </Meta>
-                    <p className="text-mkt-sm text-mkt-slate mt-1">3 persisted responses</p>
+                    <p className="text-mkt-sm text-mkt-ink-soft mt-1">3 persisted responses</p>
                   </div>
                 </div>
-                <Meta className="text-mkt-slate-soft hidden lg:block">Provider</Meta>
-                <Meta className="text-mkt-slate-soft hidden lg:block">Artifact</Meta>
-                <Meta className="text-mkt-slate-soft justify-self-start">Finding</Meta>
+                <Meta className="text-mkt-ink-muted">Provider</Meta>
+                <Meta className="text-mkt-ink-muted justify-self-start">Finding</Meta>
               </div>
 
-              {ROWS.map(({ answer, engine, artifact, finding, tone }, index) => (
+              {ROWS.map(({ answer, engine, finding, tone }, index) => (
                 <div
-                  key={artifact}
-                  className={`${TABLE_GRID} border-mkt-glass-line group min-h-[6.25rem] border-b px-5 py-4 last:border-b-0 sm:px-6`}
+                  key={answer}
+                  className="border-mkt-line group border-b px-4 py-3 last:border-b-0 sm:px-6 lg:px-5"
                 >
-                  <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
-                    <span className="bg-mkt-paper-raised text-mkt-ink-muted mkt-num text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <div>
+                  {/* Mobile: answer full width, one meta line, badge pinned right. */}
+                  <div className="lg:hidden">
+                    <strong className="text-mkt-ink text-mkt-body block leading-snug font-semibold">
+                      {answer}
+                    </strong>
+                    <div className="mt-2 flex items-center gap-3">
+                      <EngineDot engine={engine} />
+                      <Badge tone={tone} className="ml-auto shrink-0">
+                        {finding}
+                      </Badge>
+                    </div>
+                  </div>
+                  {/* Desktop: the table row. */}
+                  <div className={DESKTOP_GRID}>
+                    <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
+                      <span className="bg-mkt-paper-raised text-mkt-ink-muted font-mono tabular-nums text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
                       <strong className="text-mkt-ink text-mkt-body block max-w-[34ch] leading-snug font-semibold">
                         {answer}
                       </strong>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 lg:hidden">
-                        <EngineDot engine={engine} />
-                        <Meta>{artifact}</Meta>
-                      </div>
                     </div>
+                    <EngineDot engine={engine} />
+                    <Badge tone={tone} className="justify-self-start">
+                      {finding}
+                    </Badge>
                   </div>
-                  <EngineDot engine={engine} className="hidden lg:inline-flex" />
-                  <Meta className="text-mkt-slate hidden lg:block">{artifact}</Meta>
-                  <Badge tone={tone} className="justify-self-end lg:justify-self-start">
-                    {finding}
-                  </Badge>
                 </div>
               ))}
-            </GlassPanel>
+            </Panel>
 
-            <GlassPanel className="flex min-h-[25rem] flex-col p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Meta as="p" className="text-mkt-slate-soft">
-                    Visibility index
-                  </Meta>
-                  <VerifiedMark>Reproducible</VerifiedMark>
-                </div>
-                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta rounded-mkt-pill inline-flex items-center gap-1.5 border px-2.5 py-1.5 uppercase">
+            <Panel className="flex flex-col p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-mkt-ink text-mkt-sm font-semibold">Visibility index</p>
+                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta rounded-full inline-flex items-center gap-1.5 border px-2 py-1 uppercase">
                   Formula v4.2
                   <ArrowUpRight className="size-3" strokeWidth={1.8} />
                 </span>
               </div>
+              <div className="mt-1.5">
+                <VerifiedMark>Reproducible</VerifiedMark>
+              </div>
 
-              <div className="my-8 flex items-end gap-3 sm:my-10">
-                <strong className="font-mkt-display text-mkt-ink mkt-num text-[5.25rem] leading-[0.8] font-medium tracking-[-0.075em]">
+              <div className="my-5 flex items-end gap-3">
+                <strong className="text-mkt-ink font-mono tabular-nums text-5xl sm:text-6xl leading-none font-medium">
                   72.4
                 </strong>
-                <span className="text-mkt-sm text-mkt-slate mkt-num pb-1.5">/ 100</span>
+                <span className="text-mkt-sm text-mkt-ink-soft font-mono tabular-nums pb-1">/ 100</span>
               </div>
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <Meta className="text-mkt-proof-text">Strong visibility</Meta>
-                  <Meta className="text-mkt-slate-soft">+4.8 this run</Meta>
+                  <Meta className="text-mkt-proof">Strong visibility</Meta>
+                  <Meta className="text-mkt-ink-muted">+4.8 this run</Meta>
                 </div>
                 <div className="bg-mkt-surface-sunk relative h-2 overflow-hidden rounded-full">
                   <span className="bg-mkt-proof block h-full w-[72.4%] rounded-full" />
@@ -160,7 +175,7 @@ export function Evidence() {
                 </div>
               </div>
 
-              <div className="border-mkt-line mt-6 grid grid-cols-3 border-y py-4">
+              <div className="border-mkt-line mt-5 grid grid-cols-3 border-y py-3">
                 {[
                   ['3 / 3', 'Artifacts'],
                   ['2', 'Signals'],
@@ -170,7 +185,7 @@ export function Evidence() {
                     key={label}
                     className={`px-3 first:pl-0 last:pr-0 ${index > 0 ? 'border-mkt-line border-l' : ''}`}
                   >
-                    <strong className="text-mkt-ink mkt-num block text-lg font-medium">
+                    <strong className="text-mkt-ink font-mono tabular-nums block text-base font-medium">
                       {value}
                     </strong>
                     <Meta className="mt-1 block">{label}</Meta>
@@ -178,10 +193,10 @@ export function Evidence() {
                 ))}
               </div>
 
-              <p className="text-mkt-sm text-mkt-ink-soft mt-auto pt-6">
+              <p className="text-mkt-sm text-mkt-ink-soft mt-auto pt-5">
                 Computed from persisted answers, with every point traceable to its source artifact.
               </p>
-            </GlassPanel>
+            </Panel>
           </div>
         </WallpaperPanel>
       </Reveal>

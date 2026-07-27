@@ -29,7 +29,8 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
     expect(within(ops).getAllByRole('heading', { level: 3 })).toHaveLength(4);
     // README "Built for trustworthy operations" bullets, rendered verbatim-ish.
     expect(within(ops).getByText(/UUID identifiers throughout/i)).toBeInTheDocument();
-    expect(within(ops).getByText(/Immutable artifacts/i)).toBeInTheDocument();
+    // Claimed twice on purpose — the evidence card and the traceability card.
+    expect(within(ops).getAllByText(/Immutable artifacts/i).length).toBeGreaterThan(0);
     expect(within(ops).getByText(/FOR UPDATE SKIP LOCKED/i)).toBeInTheDocument();
     expect(
       within(ops).getByText(/backend topology never reaches the client bundle/i),
@@ -37,15 +38,20 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
     expect(within(ops).getByText(/Zod \+ Pydantic/i)).toBeInTheDocument();
   });
 
-  it('renders no GitHub/MIT links, keeps the self-host card, and points the hero ghost at /pricing', () => {
-    render(<Page />);
+  it('renders no GitHub/MIT links, no self-host copy, and points the hero ghost at /pricing', () => {
+    const { container } = render(<Page />);
 
     // The repo is private — no GitHub or MIT-license links anywhere.
     expect(screen.queryByRole('link', { name: /github|MIT license/i })).toBeNull();
 
-    // The self-host deployment card still renders.
-    const deploy = screen.getByRole('region', { name: 'Deployment options' });
-    expect(within(deploy).getByRole('heading', { name: 'Self-hosted' })).toBeInTheDocument();
+    // The self-host deployment section is gone — Searchify ships as managed
+    // cloud only, so no self-host copy may reach the page.
+    expect(screen.queryByRole('region', { name: 'Deployment options' })).toBeNull();
+    expect(container.textContent).not.toMatch(/self-host|Docker Compose/i);
+
+    // The architecture proof survives inside the capabilities section.
+    const flow = screen.getByRole('region', { name: 'Platform data flow' });
+    expect(within(flow).getByText('PostgreSQL')).toBeInTheDocument();
 
     // The hero ghost CTA now routes to the pricing page.
     expect(screen.getByRole('link', { name: /compare plans/i })).toHaveAttribute(

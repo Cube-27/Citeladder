@@ -4,11 +4,29 @@ import type { Metadata } from 'next';
 import { ButtonLink } from '@/components/marketing/primitives/button';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section } from '@/components/marketing/primitives/section';
+import {
+  DEMO_CARDS,
+  DEMO_HERO,
+  DEMO_META,
+  DEMO_SELF_SERVE_FALLBACK,
+} from '@/lib/marketing-content/demo';
 
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Book an enterprise demo — Searchify',
-  description:
-    'Discuss Searchify Enterprise volumes, deployment, security review, and support with the team.',
+  title: DEMO_META.title,
+  description: DEMO_META.description,
+  alternates: { canonical: '/demo' },
+  openGraph: {
+    title: DEMO_META.title,
+    description: DEMO_META.description,
+    type: 'website',
+    siteName: 'Searchify',
+  },
+  twitter: {
+    card: 'summary',
+    title: DEMO_META.title,
+    description: DEMO_META.description,
+  },
 };
 
 function safeBookingUrl(value: string | undefined): string | null {
@@ -21,6 +39,12 @@ function safeBookingUrl(value: string | undefined): string | null {
   }
 }
 
+/**
+ * Public `/demo` — every primary CTA on the surface lands here, so all three
+ * configuration states convert: an approved booking URL, a public sales
+ * address, or neither (self-serve with a plain explanation). No contact
+ * details are collected on this page in any state.
+ */
 export default function DemoPage() {
   const bookingUrl = safeBookingUrl(process.env.DEMO_BOOKING_URL);
   const salesEmail = process.env.PUBLIC_SALES_EMAIL?.trim();
@@ -30,12 +54,12 @@ export default function DemoPage() {
     <main>
       <PageHero
         centered
-        eyebrow="Enterprise demo"
-        title="Bring your category."
-        accent="Leave with a concrete rollout path."
-        lead="We’ll cover your answer-engine measurement goals, workspace volume, deployment constraints, security review, and the evidence your team needs to trust the output."
+        eyebrow={DEMO_HERO.eyebrow}
+        title={DEMO_HERO.title}
+        accent={DEMO_HERO.accent}
+        lead={DEMO_HERO.lead}
       >
-        <div className="mt-9 flex justify-center">
+        <div className="mt-9 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
           {actionHref ? (
             <ButtonLink
               href={actionHref}
@@ -51,32 +75,30 @@ export default function DemoPage() {
               <ArrowRight className="size-3.5" aria-hidden />
             </ButtonLink>
           ) : (
-            <p className="text-mkt-sm text-mkt-ink-muted max-w-[52ch]">
-              Demo scheduling is being configured. No contact details are collected on this page;
-              please check back after the public sales address is published.
-            </p>
+            <ButtonLink href="/register">
+              Start free
+              <ArrowRight className="size-3.5" aria-hidden />
+            </ButtonLink>
           )}
+          <ButtonLink href={actionHref ? '/register' : '/pricing'} intent="secondary">
+            {actionHref ? 'Start free' : 'Compare plans'}
+          </ButtonLink>
         </div>
+        {!actionHref && (
+          <p className="text-mkt-sm text-mkt-ink-muted mx-auto mt-6 max-w-[58ch]">
+            {DEMO_SELF_SERVE_FALLBACK}
+          </p>
+        )}
       </PageHero>
 
-      <Section divided rhythm="tight" aria-label="What to expect">
+      <Section tone="surface" rhythm="tight" aria-label="What to expect">
         <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-3">
-          {[
-            ['Your measurement plan', 'Prompts, engines, repetitions, evidence, and reporting.'],
-            [
-              'Your operating model',
-              'Seats, projects, cadence, retention, and support expectations.',
-            ],
-            [
-              'Your deployment path',
-              'Managed cloud or self-hosted, including security review needs.',
-            ],
-          ].map(([title, description]) => (
+          {DEMO_CARDS.map(([title, description]) => (
             <section
               key={title}
-              className="border-mkt-line bg-mkt-surface rounded-mkt-lg border p-6"
+              className="border-mkt-line bg-mkt-paper rounded-mkt-lg border p-6"
             >
-              <h2 className="font-mkt-display text-mkt-ink font-semibold">{title}</h2>
+              <h2 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">{title}</h2>
               <p className="text-mkt-sm text-mkt-ink-soft mt-2">{description}</p>
             </section>
           ))}

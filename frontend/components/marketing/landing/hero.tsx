@@ -4,8 +4,8 @@ import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
-import { ALL_ENGINES, EngineWordmark } from '../primitives/engine-chip';
-import { Eyebrow, Meta } from '../primitives/label';
+import { ENGINE_KEYS, EngineWordmark } from '../primitives/engine-chip';
+import { Eyebrow } from '../primitives/label';
 import { Marquee } from '../primitives/marquee';
 import { Container } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
@@ -28,8 +28,8 @@ export function Hero() {
         <Container>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Eyebrow>{hero.eyebrow}</Eyebrow>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mkt-display-w mx-auto mt-5 mb-5 max-w-[18ch]">
-              {hero.title} <em className="text-mkt-accent-display not-italic">{hero.accent}</em>
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink font-medium mx-auto mt-5 mb-5 max-w-[18ch]">
+              {hero.title} <em className="text-mkt-proof not-italic">{hero.accent}</em>
             </h1>
             <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[46ch]">{hero.body}</p>
             <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
@@ -41,23 +41,20 @@ export function Hero() {
                 {hero.secondaryCta}
               </ButtonLink>
             </div>
-            <Meta as="p" className="mt-4">
-              {hero.note}
-            </Meta>
           </Reveal>
         </Container>
       </div>
 
       {/* Both strips sit directly on the paper — no cards, no borders, no
-          fills. The generous per-item spacing is deliberate: with only six
-          providers, tight gaps would fit two repeats on a wide screen and the
-          loop would be obvious. */}
+          fills. The generous per-item spacing is deliberate: with only three
+          engines, tight gaps would fit several repeats on a wide screen and
+          the loop would be obvious. */}
       <div className="shrink-0 pb-12">
         <div className="grid gap-7">
-          {/* Six wide-spaced items are a short list, so this needs more copies
-              than the prompts to stay overflowed on a large display. */}
-          <Marquee direction="right" speed={52} copies={8} label="Answer engines Searchify covers">
-            {ALL_ENGINES.map((engine) => (
+          {/* Three wide-spaced items are a short list, so this needs more
+              copies than the prompts to stay overflowed on a large display. */}
+          <Marquee direction="right" speed={52} copies={14} label="Answer engines Searchify covers">
+            {ENGINE_KEYS.map((engine) => (
               <EngineWordmark key={engine} engine={engine} className="me-24 shrink-0" />
             ))}
           </Marquee>

@@ -126,7 +126,7 @@ CATALOG_ENTRIES: Final[tuple[CatalogEntry, ...]] = (
         features=(
             "Everything in Free",
             "Full Site Health inventory and monitored URLs",
-            "Web search and scheduled audits",
+            "Web-search-grounded audits",
             "Authenticated exports",
         ),
     ),

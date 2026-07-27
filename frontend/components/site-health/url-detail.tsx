@@ -428,9 +428,9 @@ function PageTypeEvidencePanel({
                     {signal.weight.toFixed(2)}
                   </span>
                   <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="bg-border h-[3px] w-14 shrink-0 rounded-full">
+                    <span className="bg-border h-1 w-16 shrink-0 rounded-full">
                       <span
-                        className="bg-accent block h-[3px] rounded-full opacity-60"
+                        className="bg-accent block h-1 rounded-full opacity-60"
                         style={{
                           width: `${Math.min(100, Math.max(0, signal.weight * 100))}%`,
                         }}
@@ -463,7 +463,7 @@ function ScoreTile({ label, value }: Readonly<{ label: string; value: number | n
     <Card>
       <CardContent className="flex flex-col items-center gap-2 py-6">
         {value === null ? (
-          <div className="mono border-border-subtle text-muted flex size-[64px] items-center justify-center rounded-full border text-lg">
+          <div className="mono border-border-subtle text-muted flex size-[64px] items-center justify-center rounded-full border text-base">
             {PLACEHOLDER}
           </div>
         ) : (
@@ -503,7 +503,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     <Card>
       <CardContent className="grid gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-base font-semibold">Delivery Metrics</h2>
+          <h2 className="text-foreground text-heading-sm">Delivery Metrics</h2>
           <span className="text-2xs text-muted">
             Static HTTP-level measurements (not browser-rendered Core Web Vitals)
           </span>
@@ -528,7 +528,7 @@ function IssuesList({ issues }: Readonly<{ issues: SiteIssue[] }>) {
     <Card>
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-base font-semibold">All Issues ({issues.length})</h2>
+          <h2 className="text-foreground text-heading-sm">All Issues ({issues.length})</h2>
           <span className="text-2xs text-muted">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (
@@ -536,7 +536,7 @@ function IssuesList({ issues }: Readonly<{ issues: SiteIssue[] }>) {
         ) : (
           <ol className="divide-border-subtle divide-y">
             {ordered.map((issue, index) => (
-              <li key={issue.id} className="flex items-center justify-between gap-3 py-2.5">
+              <li key={issue.id} className="flex items-center justify-between gap-3 py-2">
                 <span className="flex min-w-0 items-center gap-3">
                   <span className="mono text-muted w-6 shrink-0 text-xs">{index + 1}</span>
                   <span className="text-foreground truncate text-sm">{issueTitle(issue)}</span>
@@ -576,7 +576,7 @@ function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUr
   return (
     <Card>
       <CardContent className="grid gap-3">
-        <h2 className="text-foreground text-base font-semibold">Issue History</h2>
+        <h2 className="text-foreground text-heading-sm">Issue History</h2>
         {historyQuery.isError ? (
           <Alert tone="danger">Could not load issue history.</Alert>
         ) : historyQuery.isLoading ? (
@@ -589,7 +589,7 @@ function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUr
         ) : (
           <ul className="divide-border-subtle divide-y">
             {rows.map((row) => (
-              <li key={row.id} className="flex items-center justify-between gap-3 py-2.5">
+              <li key={row.id} className="flex items-center justify-between gap-3 py-2">
                 <span className="flex min-w-0 flex-col">
                   <span className="text-foreground truncate text-sm">{issueTitle(row)}</span>
                   <span className="text-2xs text-muted font-mono">

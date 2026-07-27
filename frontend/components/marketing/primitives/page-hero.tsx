@@ -28,13 +28,13 @@ export function PageHero({
   centered?: boolean;
 }>) {
   return (
-    <header className="pt-16 pb-14 md:pt-24 md:pb-16">
+    <header className="pt-16 pb-12 md:pt-24 md:pb-16">
       <Container>
         <Reveal className={cn('max-w-3xl', centered && 'mx-auto text-center')}>
           <Eyebrow>{eyebrow}</Eyebrow>
           <h1
             className={cn(
-              'font-mkt-display text-mkt-d1 text-mkt-ink mkt-display-w mt-6 mb-6 max-w-[18ch]',
+              'font-mkt-display text-mkt-d1 text-mkt-ink font-medium mt-6 mb-6 max-w-[18ch]',
               centered && 'mx-auto',
             )}
           >
@@ -42,7 +42,7 @@ export function PageHero({
             {accent && (
               <>
                 {' '}
-                <em className="text-mkt-accent-display not-italic">{accent}</em>
+                <em className="text-mkt-proof not-italic">{accent}</em>
               </>
             )}
           </h1>

@@ -112,8 +112,8 @@ function NeverComputed({ projectId }: Readonly<{ projectId: string }>) {
 function SummaryTile({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div className="grid gap-0.5">
-      <span className="text-2xs text-muted font-mono tracking-[0.08em] uppercase">{label}</span>
-      <span className="mono text-foreground text-xl font-semibold">{value}</span>
+      <span className="text-2xs text-muted font-mono uppercase">{label}</span>
+      <span className="mono text-foreground text-lg font-semibold">{value}</span>
     </div>
   );
 }

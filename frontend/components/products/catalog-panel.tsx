@@ -108,9 +108,7 @@ export function CatalogPanel({
         queryKey: queryKeys.integrations.sync(connection.connection_id, syncRunId),
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           integrationsApi.getSync(connection.connection_id, syncRunId, { signal }),
-        refetchInterval: (query: {
-          state: { data?: IntegrationSyncRun; status: string };
-        }) => {
+        refetchInterval: (query: { state: { data?: IntegrationSyncRun; status: string } }) => {
           if (query.state.status === 'error') return false;
           const polled = query.state.data;
           if (!polled) return SYNC_RUN_POLL_MS;
@@ -171,7 +169,7 @@ export function CatalogPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-secondary text-sm">
           {products.length} product{products.length === 1 ? '' : 's'} in the catalog
         </p>

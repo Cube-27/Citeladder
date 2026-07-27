@@ -1,17 +1,28 @@
 /**
  * Design-token guard (F1).
  *
- * Asserts that app/globals.css declares every token name documented in
- * docs/design.md. This is the machine check for the F1 acceptance
- * criterion "the globals.css token set matches docs/design.md". If a token
- * is renamed/removed in design.md, update this list to match — globals.css
- * is the source of truth for VALUES, design.md for the NAME SET.
+ * Asserts that the token files declare every name documented in
+ * docs/design.md. If a token is renamed/removed in design.md, update the lists
+ * below to match — the CSS is the source of truth for VALUES, design.md for the
+ * NAME SET.
  *
- * v2 redesign (P1 — Figma token port): the guard now also scans
- * app/(marketing)/marketing-theme.css — the independent marketing creative
- * system's `--mkt-*` namespace (docs/design.md §"Marketing creative
- * system"). App tokens are checked against globals.css; marketing tokens
- * against marketing-theme.css.
+ * Five files, four namespaces:
+ *   · app/ds-tokens.css              the Atlassian primitive layer (`--ds-*`),
+ *                                    ported verbatim from @atlaskit/tokens
+ *   · app/globals.css                the app COLOUR semantic layer, every
+ *                                    value of which resolves to a `var(--ds-*)`
+ *   · app/ds-type.css                the type layer (--text-* ladder, weights,
+ *                                    leading) — split out of globals.css
+ *   · app/ds-space.css               the space layer (--space-* ladder,
+ *                                    density, geometry, radii) — same split
+ *   · app/(marketing)/marketing-theme.css
+ *                                    the independent marketing creative system
+ *                                    (`--mkt-*`, docs/design.md §"Marketing
+ *                                    creative system")
+ *
+ * The `--ds-*` list is checked first and hard-fails on its own: a missing
+ * primitive makes every semantic token that references it resolve to nothing,
+ * which is a more confusing failure than a missing semantic name.
  *
  * Run: node scripts/check-design-tokens.mjs
  */
@@ -20,43 +31,151 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 const cssPath = join(root, 'app', 'globals.css');
+const dsCssPath = join(root, 'app', 'ds-tokens.css');
+const dsTypeCssPath = join(root, 'app', 'ds-type.css');
+const dsSpaceCssPath = join(root, 'app', 'ds-space.css');
+const appChromeCssPath = join(root, 'app', 'app-chrome.css');
 const mktCssPath = join(root, 'app', '(marketing)', 'marketing-theme.css');
 
-if (!existsSync(cssPath)) {
-  console.error('check-design-tokens: app/globals.css is missing.');
-  process.exit(1);
+for (const [label, path] of [
+  ['app/globals.css', cssPath],
+  ['app/ds-tokens.css (the ADS primitive layer)', dsCssPath],
+  ['app/ds-type.css (the type layer)', dsTypeCssPath],
+  ['app/ds-space.css (the space layer)', dsSpaceCssPath],
+  ['app/app-chrome.css (the chrome rules)', appChromeCssPath],
+  ['app/(marketing)/marketing-theme.css', mktCssPath],
+]) {
+  if (!existsSync(path)) {
+    console.error(`check-design-tokens: ${label} is missing.`);
+    process.exit(1);
+  }
 }
-if (!existsSync(mktCssPath)) {
-  console.error('check-design-tokens: app/(marketing)/marketing-theme.css is missing.');
-  process.exit(1);
-}
-const css = readFileSync(cssPath, 'utf8');
+// The app-token loops match against the three app token owners together: the
+// type and space layers were split out of globals.css, so a token that moved
+// files must not read as missing.
+const css = [
+  readFileSync(cssPath, 'utf8'),
+  readFileSync(dsTypeCssPath, 'utf8'),
+  readFileSync(dsSpaceCssPath, 'utf8'),
+  readFileSync(appChromeCssPath, 'utf8'),
+].join('\n');
+const dsCss = readFileSync(dsCssPath, 'utf8');
 const mktCss = readFileSync(mktCssPath, 'utf8');
 
-// Raw CSS variables that MUST be declared (`--name:`) in globals.css.
+/**
+ * Atlassian primitives that MUST be declared in app/ds-tokens.css. globals.css
+ * resolves every semantic token through one of these, so a missing name here
+ * makes a semantic token silently resolve to nothing — the failure mode this
+ * list exists to catch. The nine accent hues are generated rather than listed:
+ * the whole point of the ramp is that it is uniform.
+ */
+const ACCENT_HUES = [
+  'blue',
+  'green',
+  'red',
+  'orange',
+  'yellow',
+  'teal',
+  'purple',
+  'magenta',
+  'gray',
+];
+const ACCENT_STEPS = ['subtlest', 'subtler', 'subtle', 'bolder', 'text'];
+
+const requiredDsVars = [
+  // Elevation surfaces — the tint ladder that replaced shadow
+  'ds-surface',
+  'ds-surface-hovered',
+  'ds-surface-pressed',
+  'ds-surface-sunken',
+  'ds-surface-raised',
+  'ds-surface-overlay',
+  'ds-surface-canvas',
+  // Neutral + input backgrounds
+  'ds-background-neutral',
+  'ds-background-neutral-hovered',
+  'ds-background-neutral-pressed',
+  'ds-background-neutral-bold',
+  'ds-background-disabled',
+  'ds-background-input',
+  'ds-background-selected',
+  // Text
+  'ds-text',
+  'ds-text-subtle',
+  'ds-text-subtlest',
+  'ds-text-disabled',
+  'ds-text-inverse',
+  // Borders
+  'ds-border',
+  'ds-border-subtle',
+  'ds-border-bold',
+  'ds-border-input',
+  'ds-border-focused',
+  'ds-border-selected',
+  // Brand + link
+  'ds-background-brand-bold',
+  'ds-background-brand-bold-hovered',
+  'ds-background-brand-bold-pressed',
+  'ds-background-brand-subtlest',
+  'ds-background-brand-subtler',
+  'ds-link',
+  // Danger solids (destructive button fill)
+  'ds-background-danger-bold',
+  'ds-background-danger-bold-hovered',
+  // Elevation + shape + scrim
+  'ds-shadow-overlay',
+  'ds-radius-xsmall',
+  'ds-radius-small',
+  'ds-radius-medium',
+  'ds-radius-large',
+  'ds-radius-xlarge',
+  'ds-border-width-focused',
+  'ds-blanket',
+  // Type primitives (consumed by ds-type.css)
+  'ds-font-size-050',
+  'ds-font-size-075',
+  'ds-font-size-100',
+  'ds-font-size-200',
+  'ds-font-size-300',
+  'ds-font-size-400',
+  'ds-font-size-500',
+  'ds-font-size-600',
+  'ds-font-lineHeight-100',
+  'ds-font-lineHeight-200',
+  'ds-font-lineHeight-300',
+  'ds-font-lineHeight-400',
+  'ds-font-lineHeight-500',
+  'ds-font-lineHeight-600',
+  'ds-font-weight-regular',
+  'ds-font-weight-medium',
+  'ds-font-weight-semibold',
+  'ds-font-weight-bold',
+  // Space primitives (consumed by ds-space.css)
+  'ds-space-0',
+  'ds-space-025',
+  'ds-space-050',
+  'ds-space-075',
+  'ds-space-100',
+  'ds-space-150',
+  'ds-space-200',
+  'ds-space-250',
+  'ds-space-300',
+  'ds-space-400',
+  'ds-space-500',
+  'ds-space-600',
+  'ds-space-800',
+  'ds-space-1000',
+  ...ACCENT_HUES.flatMap((hue) => ACCENT_STEPS.map((step) => `ds-accent-${hue}-${step}`)),
+];
+
+// Raw CSS variables that MUST be declared (`--name:`) across the three app
+// token owners (globals.css for colour, ds-type.css for type, ds-space.css
+// for space — matched against the concatenation of the three).
+//
+// The Figma primitive ramps (--blue-50..900, --neutral-0..900) are GONE: the
+// primitive layer is now app/ds-tokens.css and its --ds-* names are checked
+// separately below. globals.css owns semantics only.
 const requiredVars = [
-  // Primitive ramps (Figma port — globals.css-only layer)
-  'blue-50',
-  'blue-100',
-  'blue-200',
-  'blue-300',
-  'blue-400',
-  'blue-500',
-  'blue-600',
-  'blue-700',
-  'blue-800',
-  'blue-900',
-  'neutral-0',
-  'neutral-50',
-  'neutral-100',
-  'neutral-200',
-  'neutral-300',
-  'neutral-400',
-  'neutral-500',
-  'neutral-600',
-  'neutral-700',
-  'neutral-800',
-  'neutral-900',
   // Fonts
   'font-primary-family',
   'font-mono-family',
@@ -67,7 +186,10 @@ const requiredVars = [
   'bg-panel',
   'bg-elevated',
   'bg-well',
+  'bg-active',
+  'bg-input',
   'bg-sidebar',
+  'bg-inverse',
   'surface-overlay',
   // Borders
   'border-subtle',
@@ -80,6 +202,7 @@ const requiredVars = [
   'text-muted',
   'text-subtle',
   'text-inverse',
+  'text-on-inverse',
   'text-link',
   // Accent
   'accent',
@@ -122,7 +245,7 @@ const requiredVars = [
   'sentiment-negative-bg',
   'sentiment-negative-text',
   'value-placeholder',
-  // Citation classification (+ Figma borders)
+  // Citation classification (+ borders)
   'citation-owned',
   'citation-owned-bg',
   'citation-owned-border',
@@ -152,7 +275,7 @@ const requiredVars = [
   'run-failed-bg',
   'run-cancelled',
   'run-cancelled-bg',
-  // Score bands (+ Figma text/ring/border)
+  // Score bands (+ text/ring/border)
   'score-low',
   'score-low-bg',
   'score-low-border',
@@ -173,7 +296,7 @@ const requiredVars = [
   'score-high-border',
   'score-high-text',
   'score-high-ring',
-  // Chart palette (Figma --chart-1..8) + series aliases
+  // Chart palette (--chart-1..8, from the ADS accent ramp) + series aliases
   'chart-1',
   'chart-2',
   'chart-3',
@@ -189,7 +312,8 @@ const requiredVars = [
   'series-5',
   'series-other',
   'chart-tooltip-bg',
-  // Shadows / elevation — Figma levels + semantic aliases
+  'chart-tooltip-fg',
+  // Shadows / elevation — rungs + semantic aliases (all but the overlay are `none`)
   'shadow-1',
   'shadow-2',
   'shadow-3',
@@ -210,32 +334,34 @@ const requiredVars = [
   'weight-medium',
   'weight-semibold',
   'weight-bold',
-  // Tracking
-  'tracking-tight',
-  'tracking-normal',
-  'tracking-wide',
-  'tracking-wider',
   // Line heights
   'leading-none',
   'leading-tight',
   'leading-snug',
   'leading-normal',
-  // Spacing 4px grid
-  'space-1',
-  'space-2',
-  'space-3',
-  'space-4',
-  'space-5',
-  'space-6',
-  'space-7',
-  'space-8',
-  'space-10',
-  'space-12',
-  'space-14',
-  'space-16',
-  'space-20',
+  // Spacing — the ADS space.* ladder (no 28px/56px rungs; 2px/6px exist)
+  'space-0',
+  'space-025',
+  'space-050',
+  'space-075',
+  'space-100',
+  'space-150',
+  'space-200',
+  'space-250',
+  'space-300',
+  'space-400',
+  'space-500',
+  'space-600',
+  'space-800',
+  'space-1000',
+  // Density + shell geometry
   'card-padding',
+  'card-gap',
   'content-gutter',
+  'sidebar-width',
+  'topbar-height',
+  'nav-item-height',
+  'content-max-width',
   // Radii
   'radius-xs',
   'radius-sm',
@@ -252,6 +378,8 @@ const requiredVars = [
   // Table
   'table-row-height',
   'table-header-height',
+  'table-cell-padding-x',
+  'table-cell-padding-y',
   'table-font-size',
   'table-header-font-size',
   // Segmented
@@ -263,25 +391,35 @@ const requiredVars = [
 ];
 
 // Type-scale sizes live in the @theme inline bridge (Tailwind --text-* namespace).
+// The ADS ladder (docs/design.md §7): 13px/15px rungs do not exist, the two
+// heading composites carry their own names, and text-data-lg is retired.
 const requiredTypeScale = [
   'text-2xs',
   'text-xs',
   'text-sm',
   'text-base',
+  'text-heading-xs',
+  'text-heading-sm',
   'text-lg',
   'text-xl',
   'text-2xl',
   'text-hero',
-  'text-data-lg',
+  'text-display-1',
+  'text-display-2',
 ];
 
 // Bridged @theme colors that MUST exist so components can reference them.
 const requiredBridged = [
   'color-background',
   'color-panel',
+  'color-active',
+  'color-input',
+  'color-surface-inverse',
+  'color-chart-tooltip-fg',
   'color-foreground',
   'color-secondary',
   'color-muted',
+  'color-on-inverse',
   'color-border',
   'color-accent',
   'color-success',
@@ -317,9 +455,8 @@ const requiredBridged = [
 // them silently drops classes across the whole marketing surface, which is
 // exactly the failure this guard exists to catch.
 const requiredMktVars = [
-  // Type — two faces, eight steps
+  // Type — one face (Inter alias), eight steps
   'font-mkt-display',
-  'font-mkt-sans',
   'text-mkt-d1',
   'text-mkt-d2',
   'text-mkt-d3',
@@ -331,23 +468,23 @@ const requiredMktVars = [
   // Canvas + ink
   'color-mkt-paper',
   'color-mkt-surface',
+  'color-mkt-wash',
   'color-mkt-ink',
   'color-mkt-ink-soft',
   'color-mkt-ink-muted',
   'color-mkt-line',
-  // State hues, each with its AA-safe text form
+  // State hues, each with its AA-safe text form — except proof: the single
+  // blue clears AA as both mark and text, so a -text sibling would be a
+  // duplicate token, not a safety net (globals.test.ts "Proof contract").
   'color-mkt-proof',
-  'color-mkt-proof-text',
   'color-mkt-evidence',
   'color-mkt-evidence-text',
   'color-mkt-signal',
   'color-mkt-signal-text',
   'color-mkt-amber',
   'color-mkt-amber-text',
-  // Scene surface (the wallpaper and the glass windows on it)
+  // Scene surface (the wallpaper display art)
   'color-mkt-sky',
-  'color-mkt-glass',
-  'color-mkt-slate',
   // Shape, layout, motion
   'radius-mkt-sm',
   'radius-mkt-lg',
@@ -358,6 +495,20 @@ const requiredMktVars = [
 ];
 
 const missing = [];
+
+const missingDs = [];
+for (const name of requiredDsVars) {
+  const re = new RegExp(`--${name}\\s*:`);
+  if (!re.test(dsCss)) missingDs.push(`--${name}`);
+}
+
+if (missingDs.length) {
+  console.error(
+    `Design-token guard failed: ${missingDs.length} Atlassian primitive(s) are missing from app/ds-tokens.css:`,
+  );
+  for (const m of missingDs) console.error(`- ${m}`);
+  process.exit(1);
+}
 
 for (const name of requiredVars) {
   const re = new RegExp(`--${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:`);
@@ -374,7 +525,7 @@ for (const name of requiredBridged) {
 
 if (missing.length) {
   console.error(
-    `Design-token guard failed: ${missing.length} token(s) documented in docs/design.md are missing from app/globals.css:`,
+    `Design-token guard failed: ${missing.length} token(s) documented in docs/design.md are missing from app/globals.css + app/ds-type.css + app/ds-space.css + app/app-chrome.css:`,
   );
   for (const m of missing) console.error(`- ${m}`);
   process.exit(1);
@@ -395,7 +546,7 @@ if (missingMkt.length) {
 }
 
 console.log(
-  `design-token guard: OK (${
+  `design-token guard: OK (${requiredDsVars.length} ADS primitives in ds-tokens.css, ${
     requiredVars.length + requiredTypeScale.length + requiredBridged.length
-  } app tokens in globals.css, ${requiredMktVars.length} marketing tokens in marketing-theme.css)`,
+  } app tokens across globals/ds-type/ds-space/app-chrome.css, ${requiredMktVars.length} marketing tokens in marketing-theme.css)`,
 );

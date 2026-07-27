@@ -11,6 +11,19 @@ describe('cn', () => {
     const isHidden = false;
     expect(cn('text-sm', isHidden && 'hidden', 'font-bold')).toBe('text-sm font-bold');
   });
+
+  it('keeps the custom size rungs independent of text colours', () => {
+    // tailwind-merge classifies an unrecognised `text-*` class as a colour, so
+    // the ADS ladder's named rungs must be registered as sizes — otherwise the
+    // colour utility silently eats the size (the text-hero score-ring defect).
+    expect(cn('font-semibold', 'text-heading-sm', 'text-score-high-text')).toBe(
+      'font-semibold text-heading-sm text-score-high-text',
+    );
+    expect(cn('text-hero', 'text-score-good-text')).toBe('text-hero text-score-good-text');
+    expect(cn('text-mkt-d2', 'text-mkt-ink')).toBe('text-mkt-d2 text-mkt-ink');
+    // …while two sizes still conflict normally (later wins).
+    expect(cn('text-heading-sm', 'text-lg')).toBe('text-lg');
+  });
 });
 
 describe('emailInitials', () => {

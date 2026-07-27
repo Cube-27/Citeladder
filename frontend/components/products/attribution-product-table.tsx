@@ -52,9 +52,7 @@ function pairProductRows(block: AttributionCurrencyBlock): PairedProductRow[] {
  * GA4 fallback, the source column reads `Item grouping` and carries the
  * persisted channel label verbatim (never relabelled as per-AI-source data).
  */
-export function AttributionProductTable({
-  block,
-}: Readonly<{ block: AttributionCurrencyBlock }>) {
+export function AttributionProductTable({ block }: Readonly<{ block: AttributionCurrencyBlock }>) {
   const rows = pairProductRows(block);
   const { page, setPage, pageCount, from, to } = useTablePage(rows.length, PAGE_SIZE);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

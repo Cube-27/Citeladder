@@ -32,7 +32,7 @@ export function ProjectsStatCard() {
         <FolderOpen className="text-muted size-4 shrink-0" strokeWidth={1.75} aria-hidden />
         <div className="min-w-0 flex-1">
           <p className={eyebrowClasses}>Projects</p>
-          <p className="text-foreground mt-0.5 text-base">
+          <p className="text-foreground mt-0.5 text-sm">
             <span className="mono font-semibold">{projects.length}</span> tracked
             {activeLabel ? <span className="text-muted"> · {activeLabel} active</span> : null}
           </p>
@@ -42,7 +42,7 @@ export function ProjectsStatCard() {
           className="focus-ring text-accent-text inline-flex shrink-0 items-center gap-1 rounded-sm text-xs"
         >
           Manage
-          <ArrowRight className="size-3.5" aria-hidden />
+          <ArrowRight className="size-4" aria-hidden />
         </Link>
       </CardContent>
     </Card>

@@ -2,19 +2,18 @@
 
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
-import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
-import { cn } from '@/lib/utils';
+import { tabItemClasses, tabListClasses } from '@/components/ui/tabs';
 
 /**
- * Accessible segmented tablist (WAI-ARIA tabs) shared by the Products
+ * Accessible underline tablist (WAI-ARIA tabs) shared by the Products
  * workspace's top-level tabs and every NESTED sub-tablist (Visibility,
  * Attribution, and the drill-down evidence kinds). Roving tabindex,
  * `aria-selected`, Arrow/Home/End keyboard navigation with focus transfer +
  * automatic activation and wraparound, exactly one rendered `tabpanel`, and
- * horizontal scrolling at narrow widths. Built on the existing
- * `segmented.tsx` class recipes — no new primitive. Controlled view: the
- * parent owns the selection state (URL-synced at the top level, local React
- * state for nested levels).
+ * horizontal scrolling at narrow widths. Built on the shared ADS underline
+ * recipes in `components/ui/tabs.tsx`. Controlled view: the parent owns the
+ * selection state (URL-synced at the top level, local React state for
+ * nested levels).
  */
 export function NestedTabs<T extends string>({
   tabs,
@@ -79,10 +78,7 @@ export function NestedTabs<T extends string>({
         role="tablist"
         aria-label={ariaLabel}
         aria-orientation="horizontal"
-        className={cn(
-          segmentedTrackClasses,
-          'flex w-fit max-w-full [scrollbar-width:none] flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden',
-        )}
+        className={tabListClasses}
       >
         {tabs.map((tab) => {
           const selected = tab.id === activeTab;
@@ -100,7 +96,7 @@ export function NestedTabs<T extends string>({
               tabIndex={selected ? 0 : -1}
               onClick={() => onSelectTab(tab.id)}
               onKeyDown={onKeyDown}
-              className={cn(segmentedItemClasses(selected), 'shrink-0')}
+              className={tabItemClasses(selected)}
             >
               {tab.label}
             </button>

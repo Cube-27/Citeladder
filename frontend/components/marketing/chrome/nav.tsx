@@ -36,7 +36,7 @@ function hasStoredActiveProject(): boolean {
 
 const NAV_LINK =
   'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink relative z-1 inline-flex items-center gap-1.5 ' +
-  'rounded-mkt-xs px-3.5 py-2.5 font-semibold transition-colors duration-200';
+  'rounded-sm px-3.5 py-2.5 font-semibold transition-colors duration-200';
 
 /**
  * Panel geometry per menu. A drop with a labelled group renders two columns —
@@ -191,7 +191,7 @@ export function MarketingNav() {
       data-scrolled={scrolled ? 'true' : undefined}
       className={cn(
         'fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300',
-        'bg-mkt-paper-raised/95 supports-[backdrop-filter]:bg-mkt-paper-raised/80 backdrop-blur-xl',
+        'bg-mkt-paper-raised',
         scrolled ? 'border-mkt-line' : 'border-transparent',
       )}
     >
@@ -226,7 +226,7 @@ export function MarketingNav() {
               style={{ left: lens.left, width: lens.width }}
               transition={{ layout: { duration: 0.18, ease: EASE_OUT } }}
               className={cn(
-                'border-mkt-line bg-mkt-surface shadow-mkt-raised rounded-mkt-xs pointer-events-none',
+                'border-mkt-line bg-mkt-surface shadow-modal-value rounded-sm pointer-events-none',
                 'absolute inset-y-0 border',
               )}
             />
@@ -257,7 +257,7 @@ export function MarketingNav() {
               </Link>
               <button
                 type="button"
-                className="text-mkt-ink-soft hover:text-mkt-ink rounded-mkt-xs relative z-1 grid size-7 place-items-center"
+                className="text-mkt-ink-soft hover:text-mkt-ink rounded-sm relative z-1 grid size-7 place-items-center"
                 aria-label={`Open ${label} menu`}
                 aria-expanded={openDrop === key}
                 aria-haspopup="true"
@@ -325,7 +325,7 @@ export function MarketingNav() {
                   maxWidth: 'calc(100vw - 2rem)',
                 }}
                 className={cn(
-                  'border-mkt-line bg-mkt-surface shadow-mkt-raised rounded-mkt-sm absolute top-full',
+                  'border-mkt-line bg-mkt-surface shadow-modal-value rounded-mkt-sm absolute top-full',
                   'mt-1.5 overflow-hidden border',
                 )}
               >
@@ -380,7 +380,7 @@ export function MarketingNav() {
           )}
           <button
             type="button"
-            className="border-mkt-line rounded-mkt-xs text-mkt-ink grid size-9.5 place-items-center border lg:hidden"
+            className="border-mkt-line rounded-sm text-mkt-ink grid size-9 place-items-center border lg:hidden"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"

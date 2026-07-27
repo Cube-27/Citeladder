@@ -111,7 +111,7 @@ export function SiteFactsPanel({
               key={bot}
               data-testid={`site-facts-stance-${bot.toLowerCase()}`}
               className={cn(
-                'grid gap-2 rounded-md border px-3 py-2.5',
+                'grid gap-2 rounded-md border px-3 py-2',
                 stance === 'block'
                   ? 'border-danger-border bg-danger-bg'
                   : 'border-border-subtle bg-background-alt',

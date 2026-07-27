@@ -1,19 +1,26 @@
 import type { HTMLAttributes, ReactNode, Ref, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Dense analytics table (§8) — the flat/hairline grid look:
- *  - sticky 30px header (--table-header-height) on bg-panel, ruled top and
- *    bottom, cells separated by a left hairline (all but the first)
- *  - 42px rows (--table-row-height), --text-sm cells, subtle cell hairlines
+ * Dense analytics table (§8) — the ADS `DynamicTable` look:
+ *  - sticky header (--table-header-height) on bg-panel, ruled top and with
+ *    the ADS 2px under-rule (border-b-2); NO vertical column-separator
+ *    hairlines — ADS ships none, and they are what made the tables read as
+ *    spreadsheets rather than designed surfaces
+ *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
  *  - everything left-aligned (including numeric columns — the mock aligns the
  *    column edge, not the digits); `numeric` still applies tabular numerals
  *  - hover tints the row with background-alt; `highlight` marks the user's
  *    own row with the same tint permanently
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
+ *
+ * The header label recipe (`tableHeadClasses`) is deliberately NOT the shared
+ * `eyebrowClasses` micro-label: it matches ADS's own table-header composite
+ * (12/16 @600, text-subtle, sentence case), and keeping the strings separate
+ * stops a future eyebrow change from silently restyling every table.
  */
+const tableHeadClasses = 'text-xs text-secondary font-semibold';
 export function Table({
   children,
   className,
@@ -90,10 +97,8 @@ export function TableHead({
     <th
       {...props}
       className={cn(
-        eyebrowClasses,
-        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-y px-3 text-left align-middle',
-        // Column separators: every cell but the first carries a left hairline.
-        'first:border-l-0 [&:not(:first-child)]:border-l',
+        tableHeadClasses,
+        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b-2 border-t px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums',
         className,
       )}
@@ -113,10 +118,9 @@ export function TableCell({
     <td
       {...props}
       className={cn(
-        'text-foreground border-border-subtle px-3 py-0 text-left align-middle text-sm',
-        // Row rule, dropped on the last row; column separators as in the head.
+        'text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle text-sm',
+        // Row rule, dropped on the last row.
         'border-b [tr:last-child>&]:border-b-0',
-        'first:border-l-0 [&:not(:first-child)]:border-l',
         numeric && 'tabular-nums',
         className,
       )}

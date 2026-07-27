@@ -131,10 +131,7 @@ describe('ProductEvidenceTable kind sub-tabs', () => {
     await waitFor(() => expect(screen.getByText('prompt for product_mention')).toBeInTheDocument());
 
     // The nested tablist defaults to Mentions; only its panel renders.
-    expect(screen.getByRole('tab', { name: 'Mentions' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'Mentions' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('#2')).toBeInTheDocument();
     expect(screen.getByText('$2,499.00')).toBeInTheDocument();
     expect(screen.getByText('Match')).toBeInTheDocument();
@@ -193,7 +190,9 @@ describe('ProductEvidenceTable kind sub-tabs', () => {
     expect(screen.getByText(/older mentions are truncated/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'Destinations' }));
-    expect(screen.getByText(/buyer destinations for this product; the rest are truncated/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/buyer destinations for this product; the rest are truncated/),
+    ).toBeInTheDocument();
   });
 
   it('renders the empty copy per kind when nothing persisted', async () => {

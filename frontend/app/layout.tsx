@@ -1,18 +1,21 @@
 import type { Metadata } from 'next';
-import { Geist_Mono, Inter, Manrope } from 'next/font/google';
+import { Geist_Mono, Inter } from 'next/font/google';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
+import { SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
 
 import './globals.css';
 
-// Figma type system: Inter is the one sans family everywhere — there is no
-// separate display face (`--font-display-family` resolves to Inter), so
-// headings differ from body by size/tracking, not by family. Geist Mono
-// stays for numeric/data contexts.
+// ADS type system: Inter is the one sans family everywhere — there is no
+// separate display face (`--font-display-family` resolves to Inter, and the
+// marketing `--font-mkt-display` aliases it too), so headings differ from
+// body by size and weight, not by family. The 700 cut is loaded because
+// `--weight-bold` is a true 700 on the ADS ladder. Geist Mono stays for
+// numeric/data contexts.
 const sans = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
   display: 'swap',
 });
@@ -24,32 +27,17 @@ const mono = Geist_Mono({
   display: 'swap',
 });
 
-// Display face for the marketing/auth "Proof" system ONLY — consumed via
-// --font-mkt-display in app/(marketing)/marketing-theme.css. The app's own
-// --font-display-family still resolves to Inter; nothing inside (app)
-// renders Manrope.
-//
-// Loaded as the VARIABLE font (no `weight` array) rather than four static
-// cuts. That unlocks the off-axis weight stops the display scale uses — 460
-// for marketing body, 540 for display — which sit deliberately between
-// Regular and Medium. Static instances can only land on 400/500/600/700, and
-// the whole point of the stop is that it is not one of those.
-//
-// PAYLOAD UNVERIFIED: a variable face may be larger than the four cuts it
-// replaces. This could not be measured where it was written (both configs
-// produced byte-identical build output, so next/font was serving Manrope from
-// cache). Check the transferred size of the Manrope woff2 on a marketing route
-// in a real deploy; if the variable file is materially heavier, revert to
-// `weight: ['400','500','600','700']` and drop the 460/540 stops with it.
-const display = Manrope({
-  subsets: ['latin'],
-  variable: '--font-manrope',
-  display: 'swap',
-});
-
 export const metadata: Metadata = {
-  title: 'Searchify',
+  // metadataBase is omitted until a canonical origin is configured (B3);
+  // relative OG/canonical URLs are tolerated by Next in that state.
+  metadataBase: siteOrigin() ?? undefined,
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s · ${SITE_NAME}`,
+  },
   description: 'AI visibility analytics — see how LLMs represent your brand.',
+  applicationName: SITE_NAME,
+  icons: { icon: '/icon.svg' },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -57,7 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} ${display.variable}`}
+      className={`${sans.variable} ${mono.variable}`}
     >
       <head>
         {/* Pre-hydration theme bootstrap — sets data-theme before first paint

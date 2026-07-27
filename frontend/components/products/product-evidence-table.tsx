@@ -8,7 +8,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -200,8 +207,8 @@ function EvidenceCardShell({
           <>
             {children}
             {truncated ? (
-              <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2.5 text-xs">
-                <Info className="size-3.5 shrink-0" aria-hidden />
+              <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2 text-xs">
+                <Info className="size-4 shrink-0" aria-hidden />
                 <span>{notice}</span>
               </div>
             ) : null}
@@ -372,9 +379,7 @@ function AttributeEvidenceCard({ items, truncated, engineParam }: EvidenceKindCa
                   #{item.prompt_index} · rep {item.repetition}
                 </span>
               </TableCell>
-              <TableCell className="text-secondary">
-                {item.attribute_dimension ?? '—'}
-              </TableCell>
+              <TableCell className="text-secondary">{item.attribute_dimension ?? '—'}</TableCell>
               <TableCell className="text-secondary">{item.attribute_group ?? '—'}</TableCell>
               <TableCell className="max-w-[320px]">
                 {item.attribute_text !== null ? (

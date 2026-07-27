@@ -2,8 +2,7 @@
 
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
-import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
-import { cn } from '@/lib/utils';
+import { tabItemClasses, tabListClasses } from '@/components/ui/tabs';
 import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
 
 const TAB_ID = (tab: VisibilityTab) => `visibility-tab-${tab}`;
@@ -23,6 +22,8 @@ const PANEL_ID = (tab: VisibilityTab) => `visibility-panel-${tab}`;
  *
  * On narrow viewports the tablist becomes a horizontally scrollable single row
  * (`overflow-x-auto` + `flex-nowrap`) with visible focus/selection states.
+ * Rendered as the ADS underline tablist (components/ui/tabs.tsx), not the
+ * segmented pill — the pill recipe remains only for non-tablist switches.
  */
 export function VisibilityTabs({
   activeTab,
@@ -78,10 +79,7 @@ export function VisibilityTabs({
         role="tablist"
         aria-label="Visibility views"
         aria-orientation="horizontal"
-        className={cn(
-          segmentedTrackClasses,
-          'flex w-fit max-w-full [scrollbar-width:none] flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden',
-        )}
+        className={tabListClasses}
       >
         {VISIBILITY_TABS.map((tab) => {
           const selected = tab.id === activeTab;
@@ -99,7 +97,7 @@ export function VisibilityTabs({
               tabIndex={selected ? 0 : -1}
               onClick={() => onSelectTab(tab.id)}
               onKeyDown={onKeyDown}
-              className={cn(segmentedItemClasses(selected), 'shrink-0')}
+              className={tabItemClasses(selected)}
             >
               {tab.label}
             </button>

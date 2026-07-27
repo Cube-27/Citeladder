@@ -2,26 +2,27 @@ import type { Metadata } from 'next';
 
 import { FaqGroups } from '@/components/marketing/pages/faq';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
+import { faqPageJsonLd, JsonLd } from '@/components/marketing/seo/json-ld';
+import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
 
 const DESCRIPTION =
   'The short version of how Searchify works — engines, scoring, keys, site health, ' +
-  'billing, and self-hosting.';
+  'integrations, and billing.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'FAQ — Searchify',
+  title: 'FAQ',
   description: DESCRIPTION,
+  alternates: { canonical: '/faq' },
   openGraph: {
-    title: 'FAQ — Searchify',
+    title: 'FAQ',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'FAQ — Searchify',
+    title: 'FAQ',
     description: DESCRIPTION,
   },
 };
@@ -36,11 +37,13 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   return (
     <main>
+      <JsonLd data={faqPageJsonLd(FAQ_GROUPS)} />
       <PageHero
+        centered
         eyebrow="FAQ"
         title="Frequently asked"
         accent="questions."
-        lead="The short version of how Searchify works — engines, scoring, keys, site health, billing, and self-hosting."
+        lead="The short version of how Searchify works — engines, scoring, keys, site health, integrations, and billing."
       />
       <FaqGroups />
     </main>

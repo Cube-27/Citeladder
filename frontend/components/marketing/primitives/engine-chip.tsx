@@ -3,10 +3,12 @@ import { cn } from '@/lib/utils';
 import { EngineLogo } from './engine-logo';
 
 /**
- * Provider identity. The engines Searchify actually audits come first; the
- * rest appear only in coverage scenes. Keeping the roster in one place stops
- * pages from inventing providers to fill a row — the deck's "never fabricate
- * scale" rule, made structural.
+ * Provider identity. Exactly the engines Searchify audits — one approved
+ * transport per engine (backend/app/core/config/provider_catalog.py). Keeping
+ * the roster in one place stops pages from inventing providers to fill a
+ * row — the deck's "never fabricate scale" rule, made structural. Referral
+ * sources the analytics surface can detect (Perplexity, Microsoft Copilot,
+ * Google AI Overview) are NOT engines and never appear here.
  */
 export const ENGINES = {
   openai: {
@@ -27,48 +29,12 @@ export const ENGINES = {
     dot: 'bg-mkt-engine-gemini',
     mark: 'text-mkt-engine-gemini',
   },
-  perplexity: {
-    label: 'Perplexity',
-    tile: 'bg-mkt-engine-perplexity',
-    dot: 'bg-mkt-engine-perplexity',
-    mark: 'text-mkt-engine-perplexity',
-  },
-  grok: {
-    label: 'Grok',
-    tile: 'bg-mkt-engine-grok',
-    dot: 'bg-mkt-engine-grok',
-    mark: 'text-mkt-engine-grok',
-  },
-  copilot: {
-    label: 'Microsoft Copilot',
-    tile: 'bg-mkt-engine-copilot',
-    dot: 'bg-mkt-engine-copilot',
-    mark: 'text-mkt-engine-copilot',
-  },
 } as const;
 
 export type EngineKey = keyof typeof ENGINES;
 
-/** Audited today — the only set any factual claim may be made about. */
-export const AUDITED_ENGINES: readonly EngineKey[] = ['openai', 'gemini', 'claude'];
-
-/**
- * The full supported roster, in display order. Providers are a UI-level
- * addition and paid workspaces can connect any provider they hold keys for,
- * so coverage surfaces may show all of these unqualified.
- *
- * AUDITED_ENGINES stays a separate, narrower list: it is the set the DEFAULT
- * workspace audits out of the box, and remains the only set a specific
- * measured claim ("we observed X across…") may be made about.
- */
-export const ALL_ENGINES: readonly EngineKey[] = [
-  'openai',
-  'gemini',
-  'claude',
-  'perplexity',
-  'grok',
-  'copilot',
-];
+/** The complete audited roster. One approved transport per engine (provider_catalog.py). */
+export const ENGINE_KEYS: readonly EngineKey[] = ['openai', 'gemini', 'claude'];
 
 export function EngineChip({
   engine,
@@ -86,8 +52,8 @@ export function EngineChip({
       <span
         aria-hidden
         className={cn(
-          'text-mkt-surface grid size-5 shrink-0 place-items-center rounded-[0.375rem]',
-          'text-[0.5625rem] font-medium',
+          'text-mkt-surface grid size-5 shrink-0 place-items-center rounded-md',
+          'text-2xs font-medium',
           tile,
         )}
       >
@@ -102,10 +68,10 @@ export function EngineChip({
  * Bare form for the hero strip — the official brand mark plus the name, set
  * directly on the paper with no card, border or tile behind either. The strip
  * is a passing roster, not a set of tappable objects, so chip chrome would add
- * six competing rectangles to the first screen for no meaning.
+ * competing rectangles to the first screen for no meaning.
  *
- * Every provider in the roster has a vendored mark, so there is no initial
- * fallback here; the mark takes the provider's own colour.
+ * Every engine in the roster has a vendored mark, so there is no initial
+ * fallback here; the mark takes the engine's own colour.
  */
 export function EngineWordmark({
   engine,
@@ -115,7 +81,7 @@ export function EngineWordmark({
   return (
     <span
       className={cn(
-        'text-mkt-ink-soft inline-flex items-center gap-2.5 text-[1.0625rem] font-semibold',
+        'text-mkt-ink-soft inline-flex items-center gap-2.5 text-heading-sm font-semibold',
         className,
       )}
     >
@@ -132,8 +98,8 @@ export function EngineDot({
 }: Readonly<{ engine: EngineKey; className?: string }>) {
   const { label, dot } = ENGINES[engine];
   return (
-    <span className={cn('text-mkt-slate text-mkt-sm inline-flex items-center gap-2', className)}>
-      <span aria-hidden className={cn('size-1.75 shrink-0 rounded-full', dot)} />
+    <span className={cn('text-mkt-ink-soft text-mkt-sm inline-flex items-center gap-2', className)}>
+      <span aria-hidden className={cn('size-2 shrink-0 rounded-full', dot)} />
       {label}
     </span>
   );

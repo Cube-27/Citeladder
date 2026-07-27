@@ -103,10 +103,10 @@ export function PromptTable({
                   aria-label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
                   disabled={busyId === prompt.id}
                   onClick={() => onToggleEnabled(prompt)}
-                  className="focus-ring border-border-strong bg-background-alt aria-checked:border-accent aria-checked:bg-accent group inline-flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors disabled:opacity-50 aria-checked:justify-end"
+                  className="focus-ring border-border-strong bg-background-alt aria-checked:border-accent aria-checked:bg-accent group inline-flex h-5 w-10 items-center rounded-full border px-0.5 transition-colors disabled:opacity-50 aria-checked:justify-end"
                 >
                   <span
-                    className="bg-muted group-aria-checked:bg-accent-fg size-4 rounded-full shadow-sm"
+                    className="bg-muted group-aria-checked:bg-accent-fg size-4 rounded-full"
                     aria-hidden
                   />
                 </button>

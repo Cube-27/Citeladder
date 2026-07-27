@@ -54,7 +54,7 @@ function Chip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'focus-ring inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors',
+        'focus-ring inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors',
         selected
           ? 'border-accent-border bg-accent-subtle text-accent-text'
           : 'border-border text-muted hover:text-foreground',
@@ -114,7 +114,7 @@ export function ReviewStep({
         count={`${competitors.filter((c) => c.selected).length} of ${competitors.length}`}
         action={
           <Button variant="ghost" size="sm" onClick={onAddCompetitor}>
-            <Plus className="size-3.5" aria-hidden />
+            <Plus className="size-4" aria-hidden />
             Add
           </Button>
         }

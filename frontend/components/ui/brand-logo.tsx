@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const SIZE = {
-  xs: { pixels: 16, className: 'size-4 rounded-[3px] text-[8px]' },
+  xs: { pixels: 16, className: 'size-4 rounded-xs text-2xs' },
   sm: { pixels: 24, className: 'size-6 rounded text-2xs' },
   md: { pixels: 32, className: 'size-8 rounded-md text-xs' },
 } as const;

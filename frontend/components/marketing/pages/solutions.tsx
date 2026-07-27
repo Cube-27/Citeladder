@@ -1,4 +1,12 @@
-import { ArrowRight, Briefcase, Building2, Check, Megaphone, Rocket } from 'lucide-react';
+import {
+  ArrowRight,
+  Briefcase,
+  Building2,
+  Check,
+  Megaphone,
+  Rocket,
+  ShoppingBag,
+} from 'lucide-react';
 
 import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
@@ -21,18 +29,20 @@ const SEGMENT_ICONS = {
   agencies: Briefcase,
   'in-house': Building2,
   founders: Rocket,
+  commerce: ShoppingBag,
   pr: Megaphone,
 } as const;
 
 export function SolutionsHero() {
   return (
     <PageHero
+      centered
       eyebrow={SOLUTIONS_HERO.eyebrow}
       title={SOLUTIONS_HERO.title}
       accent={SOLUTIONS_HERO.accent}
       lead={SOLUTIONS_HERO.lead}
     >
-      <nav aria-label="Solutions by team" className="mt-8 flex flex-wrap gap-2.5">
+      <nav aria-label="Solutions by team" className="mt-8 flex flex-wrap justify-center gap-2.5">
         {SOLUTION_SEGMENTS.map(({ id, label }) => {
           const Icon = SEGMENT_ICONS[id as keyof typeof SEGMENT_ICONS];
           return (
@@ -55,7 +65,13 @@ export function SolutionSegments() {
   return (
     <>
       {SOLUTION_SEGMENTS.map((segment, index) => (
-        <Section key={segment.id} id={segment.id} divided rhythm="loose" aria-label={segment.label}>
+        <Section
+          key={segment.id}
+          id={segment.id}
+          tone={index % 2 ? 'sunken' : 'surface'}
+          rhythm="loose"
+          aria-label={segment.label}
+        >
           <Reveal
             className={cn(
               'grid items-center gap-10 lg:grid-cols-2 lg:gap-16',
@@ -66,7 +82,7 @@ export function SolutionSegments() {
           >
             <div>
               <Meta as="p">{segment.eyebrow}</Meta>
-              <h2 className="font-mkt-display text-mkt-d3 text-mkt-ink mkt-display-w mt-4 max-w-[20ch]">
+              <h2 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium mt-4 max-w-[20ch]">
                 {segment.title}
               </h2>
 
@@ -118,9 +134,9 @@ export function SolutionSegments() {
 
 export function SolutionsCta() {
   return (
-    <Section divided rhythm="loose" aria-label="Get started">
+    <Section tone="paper" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[18ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[18ch]">
           Bring your team the version of the truth it reports in.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

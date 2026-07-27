@@ -6,21 +6,20 @@ const DESCRIPTION =
   'Essays, release notes, and field reports on answer-engine optimization — ' +
   'evidence-first, and straight from the team building Searchify.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Searchify Blog — Notes on AI visibility',
+  title: 'Blog — notes on AI visibility',
   description: DESCRIPTION,
+  alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'Searchify Blog — Notes on AI visibility',
+    title: 'Blog — notes on AI visibility',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'Searchify Blog — Notes on AI visibility',
+    title: 'Blog — notes on AI visibility',
     description: DESCRIPTION,
   },
 };

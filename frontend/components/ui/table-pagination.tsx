@@ -44,8 +44,8 @@ export function TablePagination({
   onPageChange: (page: number) => void;
 }>) {
   return (
-    <div className="border-border-subtle flex items-center justify-between gap-3 border-t px-3 py-2">
-      <span className="text-muted text-2xs">
+    <div className="border-border-subtle flex items-center justify-between gap-2 border-t px-2 py-2">
+      <span className="text-muted text-xs">
         <span className="mono">
           {from}–{to}
         </span>{' '}
@@ -59,7 +59,7 @@ export function TablePagination({
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          <ChevronLeft className="size-3.5" aria-hidden />
+          <ChevronLeft className="size-4" aria-hidden />
           Prev
         </Button>
         <Button
@@ -70,7 +70,7 @@ export function TablePagination({
           onClick={() => onPageChange(page + 1)}
         >
           Next
-          <ChevronRight className="size-3.5" aria-hidden />
+          <ChevronRight className="size-4" aria-hidden />
         </Button>
       </div>
     </div>

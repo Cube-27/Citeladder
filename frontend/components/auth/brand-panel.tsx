@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import { Meta } from '@/components/marketing/primitives/label';
 import { Wordmark } from '@/components/marketing/primitives/wordmark';
-import { GlassPanel, WallpaperPanel } from '@/components/marketing/scenes/wallpaper-panel';
+import { WallpaperPanel } from '@/components/marketing/scenes/wallpaper-panel';
 import { cn } from '@/lib/utils';
 
 /**
@@ -42,38 +42,44 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
 
 export function AuthBrandPanel() {
   return (
-    <WallpaperPanel className="relative col-span-5 flex flex-col rounded-none border-0 border-r px-10 py-8 shadow-none max-[900px]:hidden">
+    <WallpaperPanel className="relative col-span-5 flex flex-col rounded-none border-0 border-r px-10 py-8 max-[900px]:hidden xl:px-12">
       <div className="relative z-1 flex min-h-full flex-1 flex-col">
         <AuthWordmark />
 
         {/* Centred body — the same three-band rhythm as the form column, so
-            the headline sits on the form's optical centre line. */}
+            the headline sits on the form's optical centre line. No floating
+            card: the panel IS the surface, so the statement sets directly on
+            the wallpaper at display scale and the proof points hang as a flat
+            ruled list underneath. */}
         <div className="flex flex-1 items-center py-12">
-          <GlassPanel className="max-w-[26rem] p-8">
-            <p className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w">
+          <div className="max-w-[30rem]">
+            <p className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium">
               See how AI answers talk about your brand.
             </p>
-            <p className="text-mkt-body text-mkt-slate mt-3">
+            <p className="text-mkt-lead text-mkt-ink-soft mt-4 max-w-[26rem]">
               Audits ChatGPT, Gemini and Claude with the prompts your buyers ask.
             </p>
 
-            <ul className="border-mkt-glass-line mt-8 grid list-none gap-3 border-t p-0 pt-6">
+            <ul className="border-mkt-line mt-10 grid list-none gap-0 border-t p-0">
               {PROOF_POINTS.map((proof) => (
-                <li key={proof.lead} className="flex items-center gap-3">
+                <li
+                  key={proof.lead}
+                  className="border-mkt-line flex items-center gap-3 border-b py-3"
+                >
                   <span
                     aria-hidden
-                    className="border-mkt-proof-line bg-mkt-proof-wash text-mkt-proof-text rounded-mkt-xs flex size-7 shrink-0 items-center justify-center border"
+                    className="border-mkt-proof-line bg-mkt-wash text-mkt-proof rounded-sm flex size-8 shrink-0 items-center justify-center border"
                   >
-                    <proof.icon className="size-3.5" strokeWidth={1.75} />
+                    <proof.icon className="size-4" strokeWidth={1.75} />
                   </span>
-                  <span className="text-mkt-sm text-mkt-slate">{proof.lead}</span>
+                  <span className="text-mkt-body text-mkt-ink">{proof.lead}</span>
                 </li>
               ))}
             </ul>
-          </GlassPanel>
+          </div>
         </div>
 
-        <Meta as="p" className="text-mkt-slate-soft">
+        <Meta as="p" className="text-mkt-ink-muted">
           © {new Date().getFullYear()} CUBE27
         </Meta>
       </div>

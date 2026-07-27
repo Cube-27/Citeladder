@@ -11,11 +11,7 @@
  * All paths are relative `/api/v1` (same-origin proxy, invariant 12).
  */
 import { apiClient, type ApiRequestOptions } from './client';
-import {
-  attributionRecomputeSchema,
-  attributionSnapshotSchema,
-  strictValidate,
-} from './schemas';
+import { attributionRecomputeSchema, attributionSnapshotSchema, strictValidate } from './schemas';
 import { definedQuery, withQuery } from './shared';
 import type { AttributionRecompute, AttributionSnapshot } from './types';
 import type { SnapshotGranularity } from './traffic';
@@ -38,10 +34,7 @@ export const attributionApi = {
     params?: AttributionSnapshotParams,
     options?: ApiRequestOptions,
   ) => {
-    const path = withQuery(
-      `/projects/${projectId}/commerce/attribution`,
-      definedQuery(params),
-    );
+    const path = withQuery(`/projects/${projectId}/commerce/attribution`, definedQuery(params));
     const res = await apiClient.get<AttributionSnapshot>(path, options);
     return strictValidate(attributionSnapshotSchema, res, 'attribution.getSnapshot');
   },

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import { NAV_GROUPS } from '@/components/layout/nav-items';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +40,7 @@ type Command = {
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
-const ROW = 'flex w-full items-center gap-2.5 rounded-md px-2.5 text-left text-base h-[34px]';
+const ROW = 'flex w-full items-center gap-2 rounded-sm px-2 text-left text-sm h-8';
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
@@ -98,7 +99,12 @@ export function CommandPalette() {
   // browser's own find-in-page on the platforms that map ⌘K.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+      // Modifier first, then `key`. This handler runs on EVERY keystroke in the
+      // app, so the cheap test should gate the string work — and `event.key` is
+      // optional on a programmatically constructed KeyboardEvent (browser
+      // extensions and IMEs dispatch these), where reading `.toLowerCase()` off
+      // it threw "Cannot read properties of undefined".
+      if (!(event.metaKey || event.ctrlKey) || event.key?.toLowerCase() !== 'k') return;
       event.preventDefault();
       setOpen((wasOpen) => {
         if (wasOpen) {
@@ -203,11 +209,11 @@ export function CommandPalette() {
         }}
         aria-label="Search or jump to"
         aria-keyshortcuts="Meta+K Control+K"
-        className="border-border bg-panel text-muted focus-ring hover:border-border-strong flex h-8 w-full items-center gap-2 rounded-md border px-2 text-left transition-colors"
+        className="border-border bg-panel text-muted focus-ring hover:border-border-strong flex h-8 w-full items-center gap-2 rounded-sm border px-2 text-left transition-colors"
       >
-        <Search className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
+        <Search className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
         <span className="text-xs">Search or jump to…</span>
-        <kbd className="text-subtle ms-auto font-mono text-[10px]">⌘K</kbd>
+        <kbd className="text-subtle ms-auto font-mono text-2xs">⌘K</kbd>
       </button>
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
@@ -220,7 +226,7 @@ export function CommandPalette() {
             // `aria-describedby={undefined}` opts out of the description Radix
             // otherwise looks for, which this dialog deliberately lacks.
             aria-describedby={undefined}
-            className="border-border bg-elevated shadow-modal-value fixed top-[18%] left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-xl border focus:outline-none"
+            className="border-border bg-elevated shadow-modal-value fixed top-24 left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border-subtle flex items-center gap-3 border-b px-4">
@@ -241,9 +247,9 @@ export function CommandPalette() {
                 // `:focus-visible` outline would draw a permanent blue ring
                 // around the header for no information. `!` is needed because
                 // that rule is unlayered and would otherwise beat a utility.
-                className="text-foreground placeholder:text-muted h-12 min-w-0 flex-1 bg-transparent text-base outline-none focus-visible:outline-none!"
+                className="text-foreground placeholder:text-muted h-10 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border text-subtle shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px]">
+              <kbd className="border-border text-subtle shrink-0 rounded-sm border px-1.5 py-0.5 font-mono text-2xs">
                 esc
               </kbd>
             </div>
@@ -253,14 +259,14 @@ export function CommandPalette() {
               id={listboxId}
               role="listbox"
               aria-label="Commands"
-              className="content-scroll min-h-0 flex-1 overflow-y-auto p-1.5"
+              className="content-scroll min-h-0 flex-1 overflow-y-auto p-1"
             >
               {results.length === 0 ? (
                 <p className={cn(ROW, 'text-muted')}>No matches for “{query}”</p>
               ) : (
                 toSections(results).map((section) => (
                   <div key={section.group} className="mb-1 last:mb-0">
-                    <p className="text-subtle px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-[0.06em] uppercase">
+                    <p className={cn(eyebrowClasses, 'px-2 pt-2 pb-1')}>
                       {section.group}
                     </p>
                     {section.rows.map(({ command, index }) => {
@@ -304,7 +310,7 @@ export function CommandPalette() {
                           ) : null}
                           {isActive ? (
                             <CornerDownLeft
-                              className="text-muted size-3.5 shrink-0"
+                              className="text-muted size-4 shrink-0"
                               aria-hidden
                               strokeWidth={1.75}
                             />
@@ -319,14 +325,14 @@ export function CommandPalette() {
 
             {/* Keyboard legend — the palette is a keyboard surface first, so
                 it states its own controls rather than assuming they are known. */}
-            <div className="border-border-subtle text-subtle flex shrink-0 items-center gap-4 border-t px-4 py-2 text-[11px]">
+            <div className="border-border-subtle text-subtle flex shrink-0 items-center gap-4 border-t px-4 py-2 text-2xs">
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border rounded border px-1 font-mono">↑</kbd>
-                <kbd className="border-border rounded border px-1 font-mono">↓</kbd>
+                <kbd className="border-border rounded-sm border px-1 font-mono">↑</kbd>
+                <kbd className="border-border rounded-sm border px-1 font-mono">↓</kbd>
                 navigate
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border rounded border px-1 font-mono">↵</kbd>
+                <kbd className="border-border rounded-sm border px-1 font-mono">↵</kbd>
                 select
               </span>
             </div>

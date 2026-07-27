@@ -21,7 +21,7 @@ const TIERS_BY_KEY = new Map(PRICING_TIERS.map((tier) => [tier.key, tier]));
 
 export function PricingTiers() {
   return (
-    <Section rhythm="tight" aria-label="Plans">
+    <Section tone="surface" rhythm="tight" aria-label="Plans">
       <StaggerGroup className="grid gap-4 md:grid-cols-3">
         {PRICING_TIERS.map((tier) => (
           <StaggerItem key={tier.key} className="h-full">
@@ -48,12 +48,12 @@ function TierCard({ tier }: Readonly<{ tier: PricingTier }>) {
       className={cn(
         'rounded-mkt-lg flex h-full flex-col border p-7',
         tier.highlighted
-          ? 'border-mkt-proof-line bg-mkt-proof-wash'
-          : 'border-mkt-line bg-mkt-surface',
+          ? 'border-mkt-proof-line bg-mkt-wash'
+          : 'border-mkt-line bg-mkt-paper',
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-mkt-display text-mkt-ink text-[1.0625rem] font-semibold tracking-[-0.03em]">
+        <h3 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
           {tier.name}
         </h3>
         {tier.highlighted && <Badge tone="proof">Recommended</Badge>}
@@ -62,11 +62,11 @@ function TierCard({ tier }: Readonly<{ tier: PricingTier }>) {
 
       <p
         data-price
-        className="text-mkt-ink mkt-num mt-4 flex items-baseline gap-1.5 text-[2.5rem] leading-none font-medium tracking-[-0.05em]"
+        className="text-mkt-ink font-mono tabular-nums mt-4 flex items-baseline gap-1.5 text-hero leading-none font-medium"
       >
         {tier.price}
         {!isCustom && (
-          <span className="text-mkt-ink-muted text-mkt-sm font-normal tracking-normal">
+          <span className="text-mkt-ink-muted text-mkt-sm font-normal">
             {tier.cadence}
           </span>
         )}
@@ -112,11 +112,11 @@ function TierCard({ tier }: Readonly<{ tier: PricingTier }>) {
 
 export function PricingTable() {
   return (
-    <Section divided aria-labelledby="pricing-compare-title">
+    <Section tone="paper" aria-labelledby="pricing-compare-title">
       <SectionHeader
         kicker="Compare plans"
         title="Same evidence engine. Different dials."
-        intro="Capabilities ship to everyone; the tiers differ on volumes, monitoring scope and support."
+        intro="Every plan runs the same deterministic engine. Tiers differ on monitoring scope, web-search grounding, exports and support."
         headingId="pricing-compare-title"
       />
       <Reveal className="border-mkt-line rounded-mkt-lg bg-mkt-surface overflow-hidden border">
@@ -136,7 +136,7 @@ export function PricingTable() {
                     data-highlighted={tier.highlighted ? 'true' : undefined}
                     className={cn(
                       'text-mkt-sm text-mkt-ink p-4 text-center font-semibold',
-                      tier.highlighted && 'bg-mkt-proof-wash text-mkt-proof-text',
+                      tier.highlighted && 'bg-mkt-wash text-mkt-proof',
                     )}
                   >
                     {tier.name}
@@ -173,7 +173,7 @@ export function PricingTable() {
  * value by glyph alone.
  */
 function TableCell({ value, highlighted }: Readonly<{ value: string; highlighted: boolean }>) {
-  const base = cn('p-4 text-center text-mkt-sm', highlighted && 'bg-mkt-proof-wash');
+  const base = cn('p-4 text-center text-mkt-sm', highlighted && 'bg-mkt-wash');
 
   if (value === '✓' || value === '—') {
     const included = value === '✓';
@@ -198,9 +198,9 @@ function TableCell({ value, highlighted }: Readonly<{ value: string; highlighted
 /** Closing band — evaluation first, then the workspace. */
 export function PricingCta() {
   return (
-    <Section divided rhythm="loose" aria-label="Get started">
+    <Section tone="sunken" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[18ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[18ch]">
           Start from the evidence, not the invoice.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">

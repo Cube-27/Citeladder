@@ -1,7 +1,14 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -49,8 +56,8 @@ export function StatisticalAllocationCard({
           <CardEyebrow>Statistical · not deterministic</CardEyebrow>
           <CardTitle>{STATISTICAL_CARD_TITLE}</CardTitle>
           <CardDescription>
-            Modelled allocation of unattributed orders. Not a measured value and never part of
-            the A1, A2, or delta figures above.
+            Modelled allocation of unattributed orders. Not a measured value and never part of the
+            A1, A2, or delta figures above.
           </CardDescription>
         </div>
         {insufficient ? (

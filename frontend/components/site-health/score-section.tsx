@@ -108,7 +108,7 @@ function ScoreCard({
     <Card>
       <CardContent className="flex items-center gap-4">
         {value === null ? (
-          <div className="border-border-subtle text-muted mono flex size-[72px] items-center justify-center rounded-full border text-lg">
+          <div className="border-border-subtle text-muted mono flex size-[72px] items-center justify-center rounded-full border text-base">
             {PLACEHOLDER}
           </div>
         ) : (
@@ -116,7 +116,7 @@ function ScoreCard({
         )}
         <div className="grid gap-0.5">
           <Label>{label}</Label>
-          <span className="mono text-foreground text-lg font-semibold">
+          <span className="mono text-foreground text-base font-semibold">
             {value === null ? PLACEHOLDER : `${formatScore(value)} / 100`}
           </span>
           <span className="text-muted text-xs">{sub}</span>

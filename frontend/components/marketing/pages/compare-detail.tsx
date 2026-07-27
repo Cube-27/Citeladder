@@ -16,16 +16,18 @@ import { Reveal } from '../primitives/reveal';
  * content-module entry here, so this view stays sync and tests render it
  * directly.
  *
- * Honest framing: the Searchify column is real copy grounded in the repo
- * docs; the competitor column stays '[TODO(user)]' — rendered as a visibly
- * marked pill — until each row is verified first-party, and the page says so
- * under the table. h2–h6 may not contain the product name (heading-query
- * convention), so the narrative slots use compliant headings.
+ * Honest framing: the Searchify column is real copy grounded in this repo's
+ * source code; a competitor cell renders only owner-verified facts, and every
+ * unverified cell says so explicitly via <UnverifiedCell /> — the page would
+ * rather show a gap than a guess. h2–h6 may not contain the product name
+ * (heading-query convention).
  */
-function TodoPill({ children }: Readonly<{ children: string }>) {
+
+/** The fixed unverified state — takes no string from the content module. */
+function UnverifiedCell() {
   return (
-    <span className="border-mkt-line text-mkt-ink-muted rounded-mkt-xs text-mkt-sm inline-block border border-dashed px-2 py-1">
-      {children}
+    <span className="border-mkt-line text-mkt-ink-muted rounded-sm text-mkt-sm inline-block border border-dashed px-2 py-1">
+      Not verified by us
     </span>
   );
 }
@@ -33,7 +35,7 @@ function TodoPill({ children }: Readonly<{ children: string }>) {
 export function CompareDetailView({ competitor }: Readonly<{ competitor: Competitor }>) {
   return (
     <>
-      <header className="pt-16 pb-14 md:pt-24 md:pb-16">
+      <header className="pt-16 pb-12 md:pt-24 md:pb-16">
         <Container>
           <Reveal className="max-w-3xl">
             <Link
@@ -46,9 +48,9 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <div>
               <Eyebrow>Comparison</Eyebrow>
             </div>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mkt-display-w mt-6 mb-6 max-w-[18ch]">
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink font-medium mt-6 mb-6 max-w-[18ch]">
               Searchify vs{' '}
-              <em className="text-mkt-accent-display not-italic">{competitor.name}.</em>
+              <em className="text-mkt-proof not-italic">{competitor.name}.</em>
             </h1>
             <p className="text-mkt-lead text-mkt-ink-soft max-w-[56ch]">
               Two ways to measure brand presence in AI answers. The Searchify column comes straight
@@ -56,19 +58,23 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
               verify each row.
             </p>
             <div className="mt-8 flex flex-wrap gap-2.5">
-              <Badge>{competitor.tagline}</Badge>
-              <Badge tone="warn">Last reviewed · [TODO(user): date]</Badge>
+              {competitor.tagline && <Badge>{competitor.tagline}</Badge>}
+              {competitor.lastReviewed ? (
+                <Badge>Last reviewed · {competitor.lastReviewed}</Badge>
+              ) : (
+                <Badge tone="warn">Not independently verified</Badge>
+              )}
             </div>
           </Reveal>
         </Container>
       </header>
 
-      <Section rhythm="tight" aria-label="Quick facts">
+      <Section tone="surface" rhythm="tight" aria-label="Quick facts">
         <div className="border-mkt-line mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
           <Meta as="p">Quick facts</Meta>
-          <Meta>Searchify column sourced from our docs</Meta>
+          <Meta>Searchify column sourced from our source code</Meta>
         </div>
-        <Reveal className="border-mkt-line rounded-mkt-lg bg-mkt-surface overflow-hidden border">
+        <Reveal className="border-mkt-line rounded-mkt-lg bg-mkt-paper overflow-hidden border">
           {/* Wider than a phone: scrolls inside its own box so the page body
               never scrolls sideways. */}
           <div className="overflow-x-auto">
@@ -78,7 +84,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                   <th scope="col" className="text-mkt-meta text-mkt-ink-muted p-4 uppercase">
                     Dimension
                   </th>
-                  <th scope="col" className="text-mkt-meta text-mkt-proof-text p-4 uppercase">
+                  <th scope="col" className="text-mkt-meta text-mkt-proof p-4 uppercase">
                     Searchify
                   </th>
                   <th scope="col" className="text-mkt-meta text-mkt-ink-muted p-4 uppercase">
@@ -94,11 +100,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     </td>
                     <td className="text-mkt-sm text-mkt-ink-soft p-4 align-top">{row.searchify}</td>
                     <td className="text-mkt-sm text-mkt-ink-soft p-4 align-top">
-                      {row.competitor.startsWith('[TODO') ? (
-                        <TodoPill>{row.competitor}</TodoPill>
-                      ) : (
-                        row.competitor
-                      )}
+                      {row.competitor ? row.competitor : <UnverifiedCell />}
                     </td>
                   </tr>
                 ))}
@@ -113,50 +115,38 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             strokeWidth={1.9}
             className="text-mkt-amber-text mt-0.5 size-4 shrink-0"
           />
-          <span>
-            This comparison is maintained by the Searchify team. The {competitor.name} column is
-            pending first-party research — verify current competitor features before quoting. Last
-            reviewed [TODO(user): date].
-          </span>
+          {competitor.verified ? (
+            <span>
+              This comparison is maintained by the Searchify team. Last reviewed{' '}
+              {competitor.lastReviewed}. Vendor capabilities change; re-check before quoting.
+            </span>
+          ) : (
+            <span>
+              This comparison is maintained by the Searchify team. We have not independently
+              verified this vendor’s current capabilities. The Searchify column is grounded in
+              our own source code; the {competitor.name} column stays blank until we check each
+              row first-party — we would rather show a gap than a guess.
+            </span>
+          )}
         </p>
       </Section>
 
-      <Section divided aria-label="Narrative comparison">
-        <div className="grid max-w-[70ch] gap-4">
-          {[
-            {
-              tag: '[TODO(user): narrative]',
-              heading: 'Where we’re different.',
-              hint: '// 2–3 paragraphs: deterministic scoring, evidence drill-down, BYOK privacy. Link back to the quick-facts rows above.',
-            },
-            {
-              tag: '[TODO(user): narrative]',
-              heading: `Where ${competitor.name} may fit better.`,
-              hint: '// 1–2 paragraphs, honest trade-offs only — verified capabilities, no speculation. Mark anything unverified before publishing.',
-            },
-            {
-              tag: '[TODO(user): verdict]',
-              heading: 'Our verdict.',
-              hint: competitor.verdict,
-            },
-          ].map((block) => (
-            <div
-              key={block.heading}
-              className="border-mkt-line rounded-mkt-lg border border-dashed p-7"
-            >
-              <TodoPill>{block.tag}</TodoPill>
-              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mkt-display-w mt-4">
-                {block.heading}
-              </h2>
-              <p className="text-mkt-sm text-mkt-ink-muted mt-3">{block.hint}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
+      {/* The verdict block renders only from an owner-supplied verdict — no
+          narrative slots, no instruction text. */}
+      {competitor.verdict && (
+        <Section tone="paper" aria-label="Our verdict">
+          <div className="max-w-[70ch]">
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">
+              Our verdict.
+            </h2>
+            <p className="text-mkt-body text-mkt-ink-soft mt-4">{competitor.verdict}</p>
+          </div>
+        </Section>
+      )}
 
-      <Section divided rhythm="loose" aria-label="Get started">
+      <Section tone="sunken" rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[16ch]">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
             See your own numbers instead.
           </h2>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

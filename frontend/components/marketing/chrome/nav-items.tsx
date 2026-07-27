@@ -5,14 +5,14 @@ import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 const ROW =
-  'group rounded-mkt-xs flex items-start gap-2.5 px-2.5 py-2 transition-colors duration-150 ' +
+  'group rounded-sm flex items-start gap-2.5 px-2.5 py-2 transition-colors duration-150 ' +
   'hover:bg-mkt-paper focus-visible:bg-mkt-paper';
 
 function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
   return (
     <>
       {'num' in item && (
-        <span className="text-mkt-meta text-mkt-proof-text mkt-num pt-1">{item.num}</span>
+        <span className="text-mkt-meta text-mkt-proof font-mono tabular-nums pt-1">{item.num}</span>
       )}
       <span className="min-w-0">
         <span className="text-mkt-sm text-mkt-ink block leading-snug font-semibold">

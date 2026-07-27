@@ -186,7 +186,7 @@ function TopicSelect({
           aria-labelledby={labelId}
           value={selectedTopicId ?? ''}
           onChange={(event) => onSelect(event.target.value === '' ? null : event.target.value)}
-          className={cn(inputClasses, 'appearance-none pr-9')}
+          className={cn(inputClasses, 'appearance-none pe-8')}
         >
           <option value="">All topics</option>
           {topics.map((topic) => (
@@ -196,7 +196,7 @@ function TopicSelect({
           ))}
         </select>
         <ChevronDown
-          className="text-muted pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2"
+          className="text-muted pointer-events-none absolute top-1/2 end-2 size-4 -translate-y-1/2"
           aria-hidden
         />
       </div>
@@ -258,9 +258,9 @@ function TopicItem({
           type="button"
           aria-label={`Delete topic ${label}`}
           onClick={onDelete}
-          className="focus-ring text-muted hover:text-danger-text shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          className="focus-ring text-muted hover:text-danger-text shrink-0 rounded-sm p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
         >
-          <Trash2 className="size-3.5" aria-hidden />
+          <Trash2 className="size-4" aria-hidden />
         </button>
       ) : null}
     </div>

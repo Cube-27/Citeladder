@@ -1,13 +1,4 @@
-import {
-  ArrowRight,
-  Check,
-  Cloud,
-  Layers,
-  Server,
-  Shield,
-  Sigma,
-  type LucideIcon,
-} from 'lucide-react';
+import { ArrowRight, Check, Layers, Shield, Sigma, type LucideIcon } from 'lucide-react';
 import { Fragment } from 'react';
 
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
@@ -62,38 +53,13 @@ const OPS_CARDS: readonly Capability[] = [
     ],
   },
   {
-    icon: Server,
-    title: 'Self-host & control',
-    blurb: 'The whole platform, inside your network.',
+    icon: Sigma,
+    title: 'Traceable by design',
+    blurb: 'Every derived number carries the version of the code that produced it.',
     points: [
-      'Versioned scoring rules — every projection traces to persisted evidence',
-      'Docker Compose topology — frontend, API, workers, PostgreSQL',
+      'Provenance stamps on every projection — scoring-v1, sh-rules-2, opp-formula-1',
+      'Immutable artifacts — a score is recomputable from the persisted run',
       'Typed contracts validated at runtime — Zod + Pydantic',
-    ],
-  },
-];
-
-const DEPLOY_CARDS: readonly Capability[] = [
-  {
-    icon: Cloud,
-    title: 'Managed cloud',
-    blurb: 'Managed by CUBE27 — you bring the keys.',
-    points: [
-      'Managed workers, queues and upgrades',
-      'Workspace isolation with UUID scoping throughout',
-      'Custom volumes, seats and retention',
-      'Support options tailored to your review process',
-    ],
-  },
-  {
-    icon: Server,
-    title: 'Self-hosted',
-    blurb: 'The same platform, inside your network.',
-    points: [
-      'Docker Compose quickstart — web, workers, PostgreSQL',
-      'Your ENCRYPTION_KEY wraps every BYOK secret',
-      'Crawler + provider traffic stays inside your egress rules',
-      'Typed /api/v1 contracts for internal integrations',
     ],
   },
 ];
@@ -136,11 +102,11 @@ function CheckList({ points }: Readonly<{ points: readonly string[] }>) {
 
 function CapabilityCard({ icon: Icon, title, blurb, points }: Capability) {
   return (
-    <div className="border-mkt-line rounded-mkt-lg bg-mkt-surface h-full border p-7">
-      <span className="border-mkt-proof-line bg-mkt-proof-wash text-mkt-proof-text rounded-mkt-xs grid size-9 place-items-center border">
+    <div className="border-mkt-line rounded-mkt-lg bg-mkt-paper h-full border p-7">
+      <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof rounded-sm grid size-9 place-items-center border">
         <Icon aria-hidden strokeWidth={1.8} className="size-4.5" />
       </span>
-      <h3 className="font-mkt-display text-mkt-ink mt-5 text-[1.0625rem] font-semibold tracking-[-0.03em]">
+      <h3 className="font-mkt-display text-mkt-ink mt-5 text-heading-sm font-semibold">
         {title}
       </h3>
       <p className="text-mkt-sm text-mkt-ink-soft mt-2">{blurb}</p>
@@ -156,7 +122,7 @@ export function EnterpriseHero() {
       eyebrow="Enterprise"
       title="AI visibility, with"
       accent="enterprise-grade evidence."
-      lead="The platform security teams can verify: deterministic scoring over immutable, provenance-carrying evidence — deployed in our cloud, or self-hosted inside your network."
+      lead="The platform security teams can verify: deterministic scoring over immutable, provenance-carrying evidence — deployed and operated in our cloud, with the evidence trail your review process needs."
     >
       <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row">
         <ButtonLink href={DEMO_HREF}>
@@ -174,7 +140,7 @@ export function EnterpriseHero() {
 
 export function EnterpriseOps() {
   return (
-    <Section id="capabilities" divided rhythm="loose" aria-label="Enterprise capabilities">
+    <Section id="capabilities" tone="surface" rhythm="loose" aria-label="Enterprise capabilities">
       <SectionHeader
         kicker="Capabilities"
         title="Built for teams that audit their tools."
@@ -188,52 +154,33 @@ export function EnterpriseOps() {
           </StaggerItem>
         ))}
       </StaggerGroup>
-    </Section>
-  );
-}
 
-export function EnterpriseSelfHost() {
-  return (
-    <Section id="deployment" divided rhythm="loose" aria-label="Deployment options">
-      <SectionHeader
-        kicker="Deployment"
-        title="Our cloud, or your infrastructure."
-        intro="Same codebase, same deterministic pipeline — pick where it runs."
-        headingId="enterprise-deploy-title"
-      />
-      <StaggerGroup className="grid gap-4 md:grid-cols-2">
-        {DEPLOY_CARDS.map((card) => (
-          <StaggerItem key={card.title} className="h-full">
-            <CapabilityCard {...card} />
-          </StaggerItem>
-        ))}
-      </StaggerGroup>
-
-      <Reveal
-        aria-label="Platform data flow"
-        className="border-mkt-line bg-mkt-paper-raised rounded-mkt-lg mt-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 border p-6"
-      >
-        {ARCH_FLOW.map((step) => (
-          <Fragment key={step.node}>
-            <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft rounded-mkt-xs text-mkt-sm border px-2.5 py-1.5">
-              {step.node}
-            </span>
-            <span aria-hidden className="text-mkt-line-strong">
-              {step.arrow}
-            </span>
-          </Fragment>
-        ))}
-        <span className="border-mkt-proof-line bg-mkt-proof-wash text-mkt-proof-text rounded-mkt-xs text-mkt-sm border px-2.5 py-1.5">
-          AI providers · BYOK
-        </span>
-      </Reveal>
+      {/* `Reveal` forwards only children/className, so the landmark wrapper
+          carries the label — the architecture proof stays queryable. */}
+      <div role="region" aria-label="Platform data flow">
+        <Reveal className="border-mkt-line bg-mkt-paper rounded-mkt-lg mt-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 border p-6">
+          {ARCH_FLOW.map((step) => (
+            <Fragment key={step.node}>
+              <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft rounded-sm text-mkt-sm border px-2.5 py-1.5">
+                {step.node}
+              </span>
+              <span aria-hidden className="text-mkt-line-strong">
+                {step.arrow}
+              </span>
+            </Fragment>
+          ))}
+          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof rounded-sm text-mkt-sm border px-2.5 py-1.5">
+            AI providers · BYOK
+          </span>
+        </Reveal>
+      </div>
     </Section>
   );
 }
 
 export function EnterpriseLimits() {
   return (
-    <Section id="limits" divided rhythm="loose" aria-label="Custom limits">
+    <Section id="limits" tone="sunken" rhythm="loose" aria-label="Custom limits">
       <SectionHeader
         kicker="Custom limits"
         title="Shaped around your requirements."
@@ -247,7 +194,7 @@ export function EnterpriseLimits() {
             className="border-mkt-line rounded-mkt-lg bg-mkt-surface h-full border p-6"
           >
             <Meta as="p">{cell.label}</Meta>
-            <p className="font-mkt-display text-mkt-ink mt-4 text-[1.5rem] font-medium tracking-[-0.03em]">
+            <p className="font-mkt-display text-mkt-ink mt-4 text-mkt-d4 font-medium">
               Custom
             </p>
             <p className="text-mkt-sm text-mkt-ink-muted mt-2">{cell.desc}</p>
@@ -256,8 +203,9 @@ export function EnterpriseLimits() {
       </StaggerGroup>
       <p className="text-mkt-sm text-mkt-ink-soft mt-8 max-w-[78ch]">
         Searchify does not claim SOC 2 or ISO certifications today.{' '}
-        <b className="text-mkt-ink font-semibold">What it offers is verifiable:</b> a self-hostable
-        platform, deterministic scoring, and evidence your team can audit line by line.
+        <b className="text-mkt-ink font-semibold">What it offers is verifiable:</b> deterministic
+        scoring, immutable evidence, and a provenance stamp on every derived number your team can
+        audit line by line.
       </p>
     </Section>
   );
@@ -269,9 +217,9 @@ export function EnterpriseLimits() {
  */
 export function EnterpriseContactCta() {
   return (
-    <Section id="contact" divided rhythm="loose" aria-label="Contact sales">
+    <Section id="contact" tone="surface" rhythm="loose" aria-label="Contact sales">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w mx-auto mb-5 max-w-[16ch]">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium mx-auto mb-5 max-w-[16ch]">
           Bring AI visibility in-house.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">

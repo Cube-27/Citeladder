@@ -38,7 +38,7 @@ export default function AppLayout({ children }: Readonly<{ children: ReactNode }
 function ShellFallback() {
   return (
     <div className="bg-background flex min-h-dvh items-center justify-center p-6">
-      <div className="grid w-full max-w-[280px] gap-3" aria-hidden>
+      <div className="grid w-full max-w-72 gap-4" aria-hidden>
         <Skeleton className="h-6 w-32" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />

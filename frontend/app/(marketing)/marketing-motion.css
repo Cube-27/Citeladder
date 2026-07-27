@@ -8,9 +8,9 @@
 
    Two kinds of motion live here and nothing else:
 
-     1. Scene choreography — the ambient loops (float / pulse / travel / draw /
-        breathe / verify) and the flow-stage timeline that explain the
-        question → evidence → action story.
+     1. Scene choreography — the ambient loops (pulse / draw / verify) and
+        the flow-stage timeline that explain the question → evidence →
+        action story.
      2. Page choreography — the `[data-mkt-reveal]` scroll reveal used by
         components/marketing/primitives/reveal.tsx.
 
@@ -27,25 +27,13 @@
 
 /* ─── Ambient scene loops ─────────────────────────────────────────────── */
 
-@keyframes mkt-float {
-  50% {
-    transform: translateY(-11px);
-  }
-}
-
 @keyframes mkt-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(10 143 106 / 0.28);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-mkt-evidence) 28%, transparent);
   }
   55% {
-    box-shadow: 0 0 0 9px rgb(10 143 106 / 0);
-  }
-}
-
-@keyframes mkt-travel {
-  to {
-    stroke-dashoffset: -220;
+    box-shadow: 0 0 0 9px transparent;
   }
 }
 
@@ -57,12 +45,6 @@
   58%,
   100% {
     stroke-dashoffset: 0;
-  }
-}
-
-@keyframes mkt-breathe {
-  50% {
-    transform: translateY(-8px);
   }
 }
 

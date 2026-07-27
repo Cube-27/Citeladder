@@ -126,9 +126,7 @@ function renderPanel(queries: VisibilityQueries) {
 }
 
 function renderWithData(data: ProductVisibility = makeVisibility()) {
-  return renderPanel(
-    makeQueries({ visibilityQuery: { isLoading: false, isError: false, data } }),
-  );
+  return renderPanel(makeQueries({ visibilityQuery: { isLoading: false, isError: false, data } }));
 }
 
 describe('ProductVisibilityPanel states', () => {
@@ -326,7 +324,9 @@ describe('ProductVisibilityPanel sub-tabs', () => {
     expect(screen.getByText('Buyer destinations')).toBeInTheDocument();
     // The donut ARIA summary names every segment and percentage.
     expect(
-      screen.getByRole('img', { name: 'Buyer destinations by kind: Brand site 67%, Marketplace 33%' }),
+      screen.getByRole('img', {
+        name: 'Buyer destinations by kind: Brand site 67%, Marketplace 33%',
+      }),
     ).toBeInTheDocument();
     // The domain legend table states name, kind, count, and share (the kind
     // label appears both in the donut legend and the table badge).
@@ -343,9 +343,7 @@ describe('ProductVisibilityPanel sub-tabs', () => {
     expect(screen.getByRole('heading', { name: 'Co-placement' })).toBeInTheDocument();
     expect(screen.getByText('Truncated')).toBeInTheDocument();
     // Row + column headers, numeric cell, and the truncation notice.
-    expect(
-      screen.getByRole('columnheader', { name: /Globex CityBike 450/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /Globex CityBike 450/ })).toBeInTheDocument();
     expect(screen.getByRole('rowheader', { name: /Acme VoltBike 500/ })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: '4' })).toBeInTheDocument();
     expect(screen.getByText(/less frequent pairs are truncated/)).toBeInTheDocument();
@@ -370,8 +368,13 @@ describe('product visibility query key', () => {
       'gemini',
       'measurement',
     ]);
-    expect(
-      queryKeys.products.visibility(PROJECT, 'abc', 'gemini', 'chatgpt-shopping'),
-    ).toEqual(['products', 'visibility', PROJECT, 'abc', 'gemini', 'chatgpt-shopping']);
+    expect(queryKeys.products.visibility(PROJECT, 'abc', 'gemini', 'chatgpt-shopping')).toEqual([
+      'products',
+      'visibility',
+      PROJECT,
+      'abc',
+      'gemini',
+      'chatgpt-shopping',
+    ]);
   });
 });

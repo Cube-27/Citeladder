@@ -216,7 +216,7 @@ export function YourPrompts() {
 
       <div className="relative max-w-sm">
         <Search
-          className="text-muted pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+          className="text-muted pointer-events-none absolute top-1/2 start-2 size-4 -translate-y-1/2"
           aria-hidden
         />
         <Input
@@ -276,7 +276,7 @@ export function YourPrompts() {
                           aria-expanded={!isCollapsed}
                           aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} topic ${label}`}
                           onClick={() => toggleGroup(group.key)}
-                          className="focus-ring text-muted hover:text-foreground grid size-6 place-items-center rounded"
+                          className="focus-ring text-muted hover:text-foreground grid size-6 place-items-center rounded-sm"
                         >
                           {isCollapsed ? (
                             <ChevronRight className="size-4" aria-hidden />

@@ -70,6 +70,11 @@ describe('Pricing page (public marketing `/pricing`)', () => {
     expect(within(inventoryRow).getByText('Full progressive inventory')).toBeInTheDocument();
     const monitoredRow = screen.getByRole('row', { name: /User-selected monitored URLs/ });
     expect(within(monitoredRow).getByText('Included')).toBeInTheDocument();
+
+    // Removed claims stay removed: no self-host row, and the unbacked
+    // "scheduled audits" phrasing appears nowhere in the table.
+    expect(screen.queryByRole('rowheader', { name: /Self-hosted/i })).toBeNull();
+    expect(screen.queryByRole('rowheader', { name: /scheduled audits/i })).toBeNull();
   });
 
   it('states the BYOK trust claims in the hero', () => {

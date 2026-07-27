@@ -10,11 +10,11 @@ export function BrandMark({ className }: Readonly<{ className?: string }>) {
     <span
       aria-hidden
       className={cn(
-        'bg-mkt-ink text-mkt-surface grid size-7.5 shrink-0 place-items-center rounded-[0.5625rem]',
+        'bg-mkt-ink text-mkt-surface grid size-8 shrink-0 place-items-center rounded-md',
         className,
       )}
     >
-      <svg viewBox="0 0 18 18" fill="none" className="size-[1.0625rem]">
+      <svg viewBox="0 0 18 18" fill="none" className="size-4">
         <circle cx="7" cy="7" r="4" stroke="currentColor" strokeWidth="1.6" />
         <path
           d="m10.1 10.1 4.7 4.7"
@@ -33,7 +33,7 @@ export function Wordmark({ className }: Readonly<{ className?: string }>) {
   return (
     <span
       className={cn(
-        'font-mkt-display text-mkt-ink inline-flex items-center gap-2.5 text-[1.1875rem] font-bold tracking-[-0.04em]',
+        'font-mkt-display text-mkt-ink inline-flex items-center gap-2.5 text-lg font-bold',
         className,
       )}
     >

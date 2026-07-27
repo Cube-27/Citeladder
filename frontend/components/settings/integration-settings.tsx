@@ -170,7 +170,7 @@ export function IntegrationSettings() {
               <CardContent className="grid gap-3">
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-8 w-full" />
               </CardContent>
             </Card>
           ))}

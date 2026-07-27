@@ -37,7 +37,14 @@ export default function RegisterPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">Create your account</h1>
+      <div className="grid gap-1.5">
+        <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">
+          Create your account
+        </h1>
+        <p className="text-mkt-body text-mkt-ink-soft">
+          Start measuring how AI answers describe your brand.
+        </p>
+      </div>
 
       {mutation.isError ? <MktAlert>{authErrorMessage(mutation.error)}</MktAlert> : null}
 
@@ -85,7 +92,7 @@ export default function RegisterPage() {
 
       <p className="border-mkt-line text-mkt-sm text-mkt-ink-soft border-t pt-5">
         Already have an account?{' '}
-        <Link href="/login" className="text-mkt-proof-text font-semibold">
+        <Link href="/login" className="text-mkt-proof font-semibold">
           Sign in
         </Link>
       </p>

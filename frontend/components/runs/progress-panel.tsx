@@ -86,15 +86,15 @@ export function ProgressPanel({
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="grid gap-1">
             <Label>Requested</Label>
-            <Metric className="text-xl">{audit.requested_count}</Metric>
+            <Metric className="text-lg">{audit.requested_count}</Metric>
           </div>
           <div className="grid gap-1">
             <Label>Completed</Label>
-            <Metric className="text-run-completed text-xl">{audit.completed_count}</Metric>
+            <Metric className="text-run-completed text-lg">{audit.completed_count}</Metric>
           </div>
           <div className="grid gap-1">
             <Label>Failed</Label>
-            <Metric className="text-run-failed text-xl">{audit.failed_count}</Metric>
+            <Metric className="text-run-failed text-lg">{audit.failed_count}</Metric>
           </div>
           <div className="grid gap-1">
             <Label>Created</Label>

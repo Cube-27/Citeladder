@@ -5,29 +5,28 @@ import {
   EnterpriseHero,
   EnterpriseLimits,
   EnterpriseOps,
-  EnterpriseSelfHost,
 } from '@/components/marketing/pages/enterprise';
 
 const DESCRIPTION =
   'Enterprise Searchify: deterministic, auditable AI-visibility scoring over immutable, ' +
   'provenance-carrying evidence. BYOK with Fernet-encrypted write-only keys, UUID workspace ' +
-  'isolation, PostgreSQL-durable queues — cloud or self-hosted inside your network.';
+  'isolation, PostgreSQL-durable queues — operated as managed cloud with a security review ' +
+  'and a named contact.';
 
-// NOTE: no openGraph.images / metadataBase yet — there is no canonical public
-// domain for the app, and OG image URLs must be absolute. Add both once the
-// production domain exists.
+// OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Searchify Enterprise — AI visibility with enterprise-grade evidence',
+  title: 'Enterprise — AI visibility with enterprise-grade evidence',
   description: DESCRIPTION,
+  alternates: { canonical: '/enterprise' },
   openGraph: {
-    title: 'Searchify Enterprise — AI visibility with enterprise-grade evidence',
+    title: 'Enterprise — AI visibility with enterprise-grade evidence',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'Searchify',
   },
   twitter: {
     card: 'summary',
-    title: 'Searchify Enterprise — AI visibility with enterprise-grade evidence',
+    title: 'Enterprise — AI visibility with enterprise-grade evidence',
     description: DESCRIPTION,
   },
 };
@@ -46,7 +45,6 @@ export default function EnterprisePage() {
     <main>
       <EnterpriseHero />
       <EnterpriseOps />
-      <EnterpriseSelfHost />
       <EnterpriseLimits />
       <EnterpriseContactCta />
     </main>

@@ -295,7 +295,12 @@ export function aggregateBuyerDestinationMix(
   const byKind = new Map<BuyerDestinationKind, number>();
   const byDomain = new Map<
     string,
-    { merchant_domain: string; merchant_name: string; merchant_kind: BuyerDestinationKind; count: number }
+    {
+      merchant_domain: string;
+      merchant_name: string;
+      merchant_kind: BuyerDestinationKind;
+      count: number;
+    }
   >();
   let total = 0;
   for (const entry of entries) {
@@ -346,7 +351,10 @@ export function buildCoPlacementMatrix(
     'product_id' | 'sku' | 'name' | 'competitor_co_placement'
   >[],
 ): CoPlacementMatrix {
-  const columnTotals = new Map<string, { productName: string; competitorName: string; total: number }>();
+  const columnTotals = new Map<
+    string,
+    { productName: string; competitorName: string; total: number }
+  >();
   const rowCells = entries.map((entry) => {
     const cells = new Map<string, number>();
     for (const item of entry.competitor_co_placement.items) {

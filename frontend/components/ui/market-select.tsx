@@ -152,7 +152,7 @@ export function MarketSelect({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="border-border bg-elevated shadow-elevated absolute z-[300] mt-1 max-h-56 w-full overflow-auto rounded-md border p-1"
+          className="border-border bg-elevated shadow-modal-value absolute z-[300] mt-1 max-h-56 w-full overflow-auto rounded-sm border p-1"
         >
           {filtered.map((option, index) => (
             <li
@@ -166,12 +166,12 @@ export function MarketSelect({
               }}
               onMouseEnter={() => setHighlight(index)}
               className={cn(
-                'text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2.5 py-1.5 text-sm',
+                'text-foreground flex min-h-8 cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1 text-sm',
                 index === highlight && 'bg-background-alt',
               )}
             >
               <span>{option.label}</span>
-              <span className="mono text-2xs text-muted">{option.value}</span>
+              <span className="mono text-xs text-muted">{option.value}</span>
             </li>
           ))}
         </ul>

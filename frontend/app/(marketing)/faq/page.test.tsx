@@ -87,8 +87,9 @@ describe('FAQ page (public marketing `/faq`)', () => {
     const { container } = render(<Page />);
 
     const billing = screen.getByRole('region', { name: 'Account & billing' });
-    // Prices match lib/marketing-content/pricing.ts, the single source.
-    expect(within(billing).getByText(/\$49\/month.*Paid/)).toBeInTheDocument();
+    // Prices match lib/marketing-content/pricing.ts, the single source. The
+    // $49 figure appears in both the cost answer and the no-markup answer.
+    expect(within(billing).getAllByText(/\$49\/month.*Paid/).length).toBeGreaterThan(0);
     expect(within(billing).getByText(/India.*INR.*GST/)).toBeInTheDocument();
     // The BYOK-therefore-flat-fee reasoning is stated, not implied.
     expect(within(billing).getByText(/never marked up by/i)).toBeInTheDocument();
@@ -96,11 +97,39 @@ describe('FAQ page (public marketing `/faq`)', () => {
     expect(container.textContent).not.toMatch(/TODO\(user\)/);
   });
 
-  it('answers the self-host question under Account & billing', () => {
+  it('states the no-markup billing rule under Account & billing', () => {
     render(<Page />);
 
     const billing = screen.getByRole('region', { name: 'Account & billing' });
-    expect(within(billing).getByText('Can I self-host Searchify?')).toBeInTheDocument();
-    expect(within(billing).getByText(/Docker Compose brings up Postgres/i)).toBeInTheDocument();
+    expect(within(billing).getByText('Do you mark up model usage?')).toBeInTheDocument();
+    expect(within(billing).getByText(/never passes through us/i)).toBeInTheDocument();
+  });
+
+  it('names Perplexity, Copilot and AI Overview only as referral sources', () => {
+    render(<Page />);
+
+    // The one allowed mention of non-audited engines: the AI-referral
+    // classification answer, framed as detected referral traffic sources.
+    const product = screen.getByRole('region', { name: 'Product' });
+    const answer = within(product).getByText(/not audited engines/i);
+    expect(answer).toHaveTextContent(/Perplexity/);
+    expect(answer).toHaveTextContent(/Microsoft Copilot/);
+    expect(answer).toHaveTextContent(/Google AI Overview/);
+    expect(answer).toHaveTextContent(/referral/);
+  });
+
+  it('emits FAQPage JSON-LD that parses and covers every module item', () => {
+    const { container } = render(<Page />);
+
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+    const data = JSON.parse(script?.textContent ?? '') as Record<string, unknown>;
+    expect(data['@context']).toBe('https://schema.org');
+    expect(data['@type']).toBe('FAQPage');
+
+    const mainEntity = data.mainEntity as { '@type': string; name: string }[];
+    expect(mainEntity).toHaveLength(TOTAL_ITEMS);
+    expect(mainEntity[0]?.['@type']).toBe('Question');
+    expect(mainEntity[0]?.name).toBe(FAQ_GROUPS[0]?.items[0]?.q);
   });
 });

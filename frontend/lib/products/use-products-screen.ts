@@ -180,7 +180,8 @@ export function useAttributionQueries(projectId: string | null, enabled = true) 
   });
 
   const recomputeStatus = recomputeTaskQuery.data?.status;
-  const recomputeTerminal = recomputeStatus !== undefined && !isActiveAttributionTask(recomputeStatus);
+  const recomputeTerminal =
+    recomputeStatus !== undefined && !isActiveAttributionTask(recomputeStatus);
 
   // Succeeded → the refreshed snapshot is (being) persisted: invalidate only
   // the current window/granularity namespace. Failed/cancelled persists no

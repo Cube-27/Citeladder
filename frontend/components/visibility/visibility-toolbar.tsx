@@ -34,14 +34,15 @@ import {
 /** Engine filter value shared across every tab. */
 export type EngineFilter = LogicalEngine | 'all';
 
-/** Docs destination for the metric-definitions help button. */
-const METRICS_HELP_URL = 'https://docs.searchify.example/metrics';
+/** Help destination for the metric-definitions button — the public FAQ carries
+ *  the deterministic-scoring answers until a real docs surface exists. */
+const METRICS_HELP_URL = '/faq';
 
 // Flat filter-chip language: a 30px hairline pill showing the VALUE alone (no
 // "Label:" prefix — the value reads as a sentence: "Last 30 days", "All
 // models"). A non-default value flips the chip to the accent-soft active state
 // (blue reserved for active states, never the default surface).
-const CHIP_CLASS = 'h-[30px] rounded-full border-border bg-panel px-3 text-xs';
+const CHIP_CLASS = 'h-[var(--control-height-sm)] rounded-full border-border bg-panel px-3 text-xs';
 const CHIP_ACTIVE_CLASS =
   'border-accent-border bg-accent-soft text-accent-text hover:border-accent-border hover:bg-accent-soft hover:text-accent-text';
 
@@ -107,7 +108,7 @@ export function VisibilityToolbar({
         <Dropdown>
           <DropdownTrigger asChild>
             <Button variant="secondary" size="sm" aria-label="Select run" className={CHIP_CLASS}>
-              <ICONS.runs className="text-muted size-[13px]" aria-hidden strokeWidth={1.75} />
+              <ICONS.runs className="text-muted size-3" aria-hidden strokeWidth={2} />
               <span className="font-medium">{activeRun?.label ?? 'Latest'}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -135,7 +136,7 @@ export function VisibilityToolbar({
             aria-label="Filter by model"
             className={cn(CHIP_CLASS, engine !== 'all' && CHIP_ACTIVE_CLASS)}
           >
-            <ICONS.analytics className="size-[13px]" aria-hidden strokeWidth={1.75} />
+            <ICONS.analytics className="size-3" aria-hidden strokeWidth={2} />
             <span className="font-medium">{engineText}</span>
             <ChevronDown className="text-muted size-3" aria-hidden />
           </Button>
@@ -166,7 +167,7 @@ export function VisibilityToolbar({
               aria-label="Select date range"
               className={cn(CHIP_CLASS, range !== '90d' && CHIP_ACTIVE_CLASS)}
             >
-              <CalendarRange className="size-[13px]" aria-hidden strokeWidth={1.75} />
+              <CalendarRange className="size-3" aria-hidden strokeWidth={2} />
               <span className="font-medium">{rangeLabel(range)}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -223,7 +224,7 @@ export function VisibilityToolbar({
               aria-label="Filter by prompt"
               className={cn(CHIP_CLASS, promptId !== null && CHIP_ACTIVE_CLASS)}
             >
-              <ICONS.prompts className="size-[13px]" aria-hidden strokeWidth={1.75} />
+              <ICONS.prompts className="size-3" aria-hidden strokeWidth={2} />
               <span className="max-w-[16ch] truncate font-medium">{promptText}</span>
               <ChevronDown className="text-muted size-3" aria-hidden />
             </Button>
@@ -256,13 +257,8 @@ export function VisibilityToolbar({
                 Slot does forward it, but this is the element a screen reader
                 actually announces, and the icon-only link has no text of its
                 own. Static a11y checks read it here too. */}
-            <a
-              href={METRICS_HELP_URL}
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="About these metrics"
-            >
-              <CircleHelp className="size-[13px]" aria-hidden strokeWidth={1.75} />
+            <a href={METRICS_HELP_URL} aria-label="About these metrics">
+              <CircleHelp className="size-3" aria-hidden strokeWidth={2} />
             </a>
           </Button>
         </Tooltip>
@@ -275,7 +271,7 @@ export function VisibilityToolbar({
               disabled
               aria-disabled="true"
             >
-              <Download className="size-[13px]" aria-hidden strokeWidth={1.75} />
+              <Download className="size-3" aria-hidden strokeWidth={2} />
               Export
             </Button>
           </span>

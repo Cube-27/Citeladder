@@ -13,21 +13,40 @@ import { Reveal } from './reveal';
  *
  *   loose   128 / 80   — chapter openers, the hero's neighbours
  *   base     96 / 64   — the default
- *   tight    72 / 56   — bands that sit directly against another band
+ *   tight    80 / 48   — bands that sit directly against another band
  */
 const RHYTHM = {
   loose: 'py-20 md:py-32',
   base: 'py-16 md:py-24',
-  tight: 'py-14 md:py-[4.5rem]',
+  tight: 'py-12 md:py-20',
 } as const;
 
 type Rhythm = keyof typeof RHYTHM;
+
+/**
+ * Band fills. Pages read as a rhythm of alternating bands rather than one
+ * long sheet; the steps are deliberately small (ΔE2000 vs paper noted per
+ * tone) so a band change registers without reading as a new page. The rule
+ * is NO TWO ADJACENT BANDS SHARE A TONE — and where the tone changes, the
+ * fill edge is the separator, so `divided` is only kept on same-tone
+ * adjacency (a hairline on a fill edge reads as a double rule).
+ */
+const TONE = {
+  paper: '', // the .mkt-root canvas, inherited
+  surface: 'bg-mkt-surface', // ΔE 3.32 vs paper
+  sunken: 'bg-mkt-surface-sunk', // ΔE 3.21 vs paper
+  wash: 'bg-mkt-wash', // ΔE 7.12 vs paper, the accent beat
+} as const;
+
+type Tone = keyof typeof TONE;
 
 type SectionProps = Readonly<{
   children: ReactNode;
   /** Vertical density (default `base`). */
   rhythm?: Rhythm;
-  /** Hairline rule above the section — the deck's chapter separator. */
+  /** Band fill (default `paper` — the bare canvas). */
+  tone?: Tone;
+  /** Hairline rule above the section — only for same-tone adjacency. */
   divided?: boolean;
   /** Full-bleed content: skips the container so the child owns its width. */
   bleed?: boolean;
@@ -40,6 +59,7 @@ type SectionProps = Readonly<{
 export function Section({
   children,
   rhythm = 'base',
+  tone = 'paper',
   divided = false,
   bleed = false,
   id,
@@ -49,7 +69,12 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn(RHYTHM[rhythm], divided && 'border-mkt-line border-t', className)}
+      className={cn(
+        TONE[tone],
+        RHYTHM[rhythm],
+        divided && 'border-mkt-line border-t',
+        className,
+      )}
       {...aria}
     >
       {bleed ? children : <Container>{children}</Container>}
@@ -101,15 +126,15 @@ export function SectionHeader({
   as?: 'h1' | 'h2' | 'h3';
 }>) {
   return (
-    <Reveal className="mb-14 grid items-start gap-x-8 gap-y-5 lg:mb-16 lg:grid-cols-[7.5rem_minmax(0,1fr)_20rem]">
+    <Reveal className="mb-12 grid items-start gap-x-8 gap-y-5 lg:mb-16 lg:grid-cols-[7.5rem_minmax(0,1fr)_20rem]">
       {(index ?? kicker) && (
-        <p className="text-mkt-meta text-mkt-ink-muted mkt-num pt-2 uppercase lg:pt-3">
+        <p className="text-mkt-meta text-mkt-ink-soft font-mono tabular-nums pt-2 uppercase lg:pt-3">
           {[index, kicker].filter(Boolean).join(' / ')}
         </p>
       )}
       <Heading
         id={headingId}
-        className="font-mkt-display text-mkt-d2 text-mkt-ink mkt-display-w max-w-[18ch]"
+        className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium max-w-[18ch]"
       >
         {title}
       </Heading>

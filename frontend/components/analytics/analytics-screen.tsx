@@ -213,7 +213,7 @@ export function AnalyticsScreen() {
 export function AnalyticsSkeleton() {
   return (
     <div className="grid gap-6" aria-hidden>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap gap-2">
         <Skeleton className="h-[30px] w-36 rounded-full" />
         <Skeleton className="h-[38px] w-56 rounded-full" />
       </div>
@@ -249,7 +249,7 @@ function AnalyticsToolbar({
   onChangeGranularity: (granularity: AnalyticsGranularity) => void;
 }>) {
   return (
-    <div className="flex flex-wrap items-center gap-2.5" data-testid="analytics-toolbar">
+    <div className="flex flex-wrap items-center gap-2" data-testid="analytics-toolbar">
       <Dropdown>
         <DropdownTrigger asChild>
           <Button
@@ -416,7 +416,7 @@ function CorrelationCard({
       <CardContent className="grid gap-3">
         <span
           className={cn(
-            'mono text-2xl font-semibold tracking-tight',
+            'mono text-xl font-semibold',
             display.insufficient ? 'text-subtle' : 'text-foreground',
           )}
         >
@@ -465,7 +465,7 @@ function EngineTile({ engine }: Readonly<{ engine: LlmAnalytics['engine_visibili
   const firstLabel = points[0]?.label ?? '';
   const lastLabel = points[points.length - 1]?.label ?? '';
   return (
-    <div className="border-border-subtle bg-background-alt grid gap-2.5 rounded-lg border p-4">
+    <div className="border-border-subtle bg-background-alt grid gap-2 rounded-lg border p-4">
       <div className="flex items-center gap-2">
         <span
           className={cn(
@@ -479,7 +479,7 @@ function EngineTile({ engine }: Readonly<{ engine: LlmAnalytics['engine_visibili
         </span>
         <span
           className={cn(
-            'mono ml-auto text-lg font-semibold',
+            'mono ms-auto text-base font-semibold',
             latest === null ? 'text-subtle' : 'text-foreground',
           )}
         >

@@ -17,13 +17,31 @@ const root = process.cwd();
 // Line budgets — split any owner that exceeds its limit.
 const lineBudgets = [
   { file: 'app/layout.tsx', maxLines: 120 },
-  // globals.css is the single token source — the v2 redesign (Figma token
-  // port, plan Task P1) adds the primitive --blue-*/--neutral-* ramps, the
-  // Figma --chart-1..8 palette, --score-*-text/-ring/-border, --shadow-1..4,
-  // and the authored soft-charcoal dark set on top of the existing semantic
-  // tokens (marketing tokens stay out — they live in
-  // app/(marketing)/marketing.css), so the budget is raised to 1000.
-  { file: 'app/globals.css', maxLines: 1020 },
+  // The Atlassian primitive layer: --ds-* values ported verbatim from
+  // @atlaskit/tokens, light + dark. Values only — it declares no semantics and
+  // nothing consumes it directly. Growth here should mean "we started using
+  // another ADS token", which is cheap and legitimate; what it may not hold is
+  // a semantic name or a component rule.
+  { file: 'app/ds-tokens.css', maxLines: 400 },
+  // globals.css owns the COLOUR semantic layer that maps onto ds-tokens.css
+  // (plus the @theme colour bridge and the element base). The budget dropped
+  // from 1020 to 900 with the ADS port, and 900 → 700 with the file split
+  // that gave the type ladder (ds-type.css), the spacing/density/radii
+  // ladder (ds-space.css) and the chrome rules (app-chrome.css) their own
+  // owners. Do not raise this to accommodate restated dark values — if a
+  // token needs a dark override here, that is a signal the primitive layer
+  // is missing one.
+  { file: 'app/globals.css', maxLines: 700 },
+  // The type layer: the --text-* ladder with baked line-height/weight, the
+  // four weights and the leading overrides — both the @theme inline bridge
+  // half and the :root semantic half.
+  { file: 'app/ds-type.css', maxLines: 200 },
+  // The space layer: the ADS spacing ladder, density tokens (card, gutter,
+  // table, controls), shell geometry and radii. Both halves.
+  { file: 'app/ds-space.css', maxLines: 160 },
+  // Chrome rules: focus rings, ::selection, the logo mark, scrollbars, the
+  // reduced-motion / forced-colors / print fallbacks. No tokens.
+  { file: 'app/app-chrome.css', maxLines: 260 },
   // The marketing/auth "Proof" system. This budget is the whole point of the
   // rewrite: the previous marketing stylesheet reached 6,846 lines of global
   // cascade because nothing stopped it growing. Sections here are built from
@@ -42,6 +60,7 @@ const lineBudgets = [
   // to hold motion and each new kind of motion legitimately costs lines (260 →
   // 300 for the hero marquee). What it may not hold is anything that is not
   // motion. If it starts accumulating layout or colour, split it instead.
+  // (ADS Phase A considered 300 → 320 and left it: that phase adds no motion.)
   { file: 'app/(marketing)/marketing-motion.css', maxLines: 300 },
   { file: 'components/ui/theme-toggle.tsx', maxLines: 120 },
   { file: 'lib/theme.ts', maxLines: 160 },

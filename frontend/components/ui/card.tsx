@@ -4,44 +4,35 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Card (§8) — bg-panel, hairline border, --radius-lg, --card-padding.
+ * Card (§8) — bg-panel, hairline border, --radius-md (8px, the ADS surface
+ * rung; 12px is reserved for modals), --card-padding.
  * Composed from header / title / description / content slots.
  *
- * v2 restores elevation. The flat phase separated surfaces with the 1px border
- * alone; the v2 language pairs the hairline with `shadow-card` (--shadow-2) so
- * panels lift off the page, which is what makes the light theme read as
- * layered rather than drawn — its panels and base differ by very little fill.
- * Pass `elevation="raised"` for surfaces that genuinely float above other
- * cards (the hero metric card, a popover-like panel); it steps to
- * `shadow-elevated` (--shadow-3). `elevation="flat"` opts out entirely for
- * cards nested inside another card, where a second shadow just muddies the
- * edge.
+ * FLAT 2.0: a card is a plain --bg-panel fill on the canvas with one 1px
+ * alpha hairline. It casts NO shadow, and there is no elevation prop — the
+ * previous `default: shadow-card` / `raised: shadow-elevated` ladder is
+ * gone, along with the reasoning that panel and base "differ by very little
+ * fill". They no longer do: the canvas is --ds-surface-canvas and the card
+ * is white, a ΔE76 of 4.66, so the tint step does the work the shadow used
+ * to fake — measurably, this time (the Phase 1 canvas managed only 2.54,
+ * below the 2.67 the shadow it deleted had provided).
+ *
+ * If a surface genuinely needs to float, it is an overlay — use Dialog,
+ * Dropdown, Tooltip or the command palette, which own the one live shadow
+ * rung. scripts/check-flat-elevation.mjs fails the build if a shadow lands
+ * here again.
  *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the
  * micro-label — e.g.
  *   <CardHeader><CardEyebrow>Visibility score</CardEyebrow><CardTitle>…
  */
-const cardElevation = {
-  flat: '',
-  default: 'shadow-card',
-  raised: 'shadow-elevated',
-} as const;
-
 export function Card({
   children,
   className,
-  elevation = 'default',
   ...props
-}: Readonly<ComponentPropsWithoutRef<'section'> & { elevation?: keyof typeof cardElevation }>) {
+}: Readonly<ComponentPropsWithoutRef<'section'>>) {
   return (
-    <section
-      {...props}
-      className={cn(
-        'border-border bg-panel rounded-lg border',
-        cardElevation[elevation],
-        className,
-      )}
-    >
+    <section {...props} className={cn('border-border bg-panel rounded-md border', className)}>
       {children}
     </section>
   );
@@ -63,8 +54,8 @@ export function CardHeader({
     <header
       {...props}
       className={cn(
-        'flex flex-col gap-0.5 p-[var(--card-padding)]',
-        bordered && 'border-border-subtle border-b',
+        'flex flex-col gap-1 p-[var(--card-padding)] pb-2',
+        bordered && 'border-border-subtle border-b pb-3',
         className,
       )}
     >
@@ -97,7 +88,7 @@ export function CardTitle({
   return (
     <h3
       {...props}
-      className={cn('text-foreground text-lg font-semibold tracking-[-0.01em]', className)}
+      className={cn('text-foreground text-heading-sm', className)}
     >
       {children}
     </h3>
@@ -110,7 +101,7 @@ export function CardDescription({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'p'>>) {
   return (
-    <p {...props} className={cn('text-muted text-xs', className)}>
+    <p {...props} className={cn('text-muted text-sm', className)}>
       {children}
     </p>
   );

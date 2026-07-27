@@ -6,8 +6,11 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Tooltip (§8) — Radix. Surface = bg-well inverse-ish, --text-xs. Wrap the app
- * (or a subtree) once in <TooltipProvider>; each Tooltip pairs a trigger with
+ * Tooltip (§8) — Radix. The ADS inverse chip: a dark `bg-surface-inverse`
+ * fill with `text-on-inverse` copy and NO border (an inverse chip needs
+ * none), so it reads against every surface including a white card (the
+ * Phase 1 `bg-elevated` version was ΔE 0.00 against one). Wrap the app (or a
+ * subtree) once in <TooltipProvider>; each Tooltip pairs a trigger with
  * short text `content`.
  */
 export const TooltipProvider = TooltipPrimitive.Provider;
@@ -36,12 +39,12 @@ export function Tooltip({
           align={align}
           sideOffset={6}
           className={cn(
-            'border-border-strong bg-well text-foreground z-[200] max-w-[min(320px,calc(100vw-24px))] rounded-md border px-2 py-1 text-xs leading-normal font-medium shadow-sm',
+            'bg-surface-inverse text-on-inverse shadow-modal-value z-[200] max-w-[min(320px,calc(100vw-24px))] rounded-sm px-1.5 py-1 text-xs font-normal',
             className,
           )}
         >
           {content}
-          <TooltipPrimitive.Arrow className="fill-well" />
+          <TooltipPrimitive.Arrow className="fill-surface-inverse" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

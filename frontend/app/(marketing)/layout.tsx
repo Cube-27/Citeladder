@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNav } from '@/components/marketing/chrome/nav';
+import { JsonLd, organizationJsonLd } from '@/components/marketing/seo/json-ld';
 
 /**
  * Marketing route-group layout — the public "Proof" surface.
@@ -10,17 +11,20 @@ import { MarketingNav } from '@/components/marketing/chrome/nav';
  * server-rendered for anonymous visitors.
  *
  * `.mkt-root` is the one hook the creative system needs (see
- * app/(marketing)/marketing-theme.css): it scopes the light-only canvas, the
- * focus ring, and the reset that lets Tailwind utilities beat the app's
- * unlayered element base. Everything else is built from mkt-namespaced
- * utilities — there is no marketing stylesheet to keep in sync.
+ * app/(marketing)/marketing-theme.css): it scopes the light-only canvas and
+ * the focus ring. Everything else is built from mkt-namespaced utilities —
+ * there is no marketing stylesheet to keep in sync.
  *
- * No fonts are loaded here: the root layout puts Inter, Geist Mono and Manrope
- * on <html>, so --font-mkt-display / --font-mkt-sans are already in scope.
+ * No fonts are loaded here: the root layout puts Inter and Geist Mono on
+ * <html>, so --font-mkt-display (an Inter alias) is already in scope.
  */
 export default function MarketingLayout({ children }: Readonly<{ children: ReactNode }>) {
+  // Omitted while no canonical origin exists (B3) — Organization without url
+  // is not worth emitting.
+  const organization = organizationJsonLd();
   return (
     <div className="mkt-root bg-mkt-paper text-mkt-ink min-h-dvh">
+      {organization ? <JsonLd data={organization} /> : null}
       <MarketingNav />
       {/* Clears the fixed nav strip. Every page starts from the same line. */}
       <div className="pt-mkt-nav">{children}</div>

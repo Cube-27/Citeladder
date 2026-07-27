@@ -80,12 +80,12 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
 
   return (
     <section
-      className={cn('border-border bg-panel rounded-lg border p-3', className)}
+      className={cn('border-border bg-panel rounded-md border p-4', className)}
       aria-label="Getting started progress"
     >
       <div className="flex items-center justify-between">
         <span className={eyebrowClasses}>Getting Started</span>
-        <span className="text-2xs text-secondary font-mono font-semibold">
+        <span className="text-2xs text-secondary mono font-semibold">
           {completed} of {total}
         </span>
       </div>
@@ -107,7 +107,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
       {nextStep.id === 'connect-provider' ? (
         // The connect-provider step opens the guided dialog inline; the full
         // 3-engine management surface stays one click away in Settings.
-        <div className="mt-2.5 grid gap-1">
+        <div className="mt-3 grid gap-1">
           <button
             type="button"
             onClick={() => setConnectOpen(true)}
@@ -125,7 +125,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
       ) : (
         <Link
           href={nextStep.href}
-          className="focus-ring text-accent-text mt-2.5 flex items-center gap-2 rounded-sm text-sm font-medium hover:underline"
+          className="focus-ring text-accent-text mt-3 flex items-center gap-2 rounded-sm text-sm font-medium hover:underline"
         >
           {completed === total ? (
             <>

@@ -125,7 +125,7 @@ export default function RunsPage() {
       ) : (
         <Card className="overflow-hidden">
           <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2 border-b-0 pb-3">
-            <CardTitle className="text-base">All runs</CardTitle>
+            <CardTitle>All runs</CardTitle>
             {anyActive ? (
               <span className="mono text-muted text-2xs inline-flex items-center gap-1.5">
                 <span
