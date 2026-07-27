@@ -84,7 +84,7 @@ export function Evidence() {
           >
             <Panel className="overflow-hidden">
               <div
-                className={`${TABLE_GRID} border-mkt-line bg-mkt-paper-raised border-b px-5 py-4 sm:px-6`}
+                className={`${TABLE_GRID} border-mkt-line bg-mkt-paper-raised border-b px-5 py-3 sm:px-6`}
               >
                 <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-3">
                   <span aria-hidden className="size-7" />
@@ -97,13 +97,13 @@ export function Evidence() {
                 </div>
                 <Meta className="text-mkt-ink-muted hidden lg:block">Provider</Meta>
                 <Meta className="text-mkt-ink-muted hidden lg:block">Artifact</Meta>
-                <Meta className="text-mkt-ink-muted justify-self-start">Finding</Meta>
+                <Meta className="text-mkt-ink-muted hidden justify-self-start lg:block">Finding</Meta>
               </div>
 
               {ROWS.map(({ answer, engine, artifact, finding, tone }, index) => (
                 <div
                   key={artifact}
-                  className={`${TABLE_GRID} border-mkt-line group min-h-[6.25rem] border-b px-5 py-4 last:border-b-0 sm:px-6`}
+                  className={`${TABLE_GRID} border-mkt-line group border-b px-5 py-3 last:border-b-0 sm:px-6`}
                 >
                   <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
                     <span className="bg-mkt-paper-raised text-mkt-ink-muted font-mono tabular-nums text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
@@ -116,19 +116,20 @@ export function Evidence() {
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 lg:hidden">
                         <EngineDot engine={engine} />
                         <Meta>{artifact}</Meta>
+                        <Badge tone={tone}>{finding}</Badge>
                       </div>
                     </div>
                   </div>
                   <EngineDot engine={engine} className="hidden lg:inline-flex" />
                   <Meta className="text-mkt-ink-soft hidden lg:block">{artifact}</Meta>
-                  <Badge tone={tone} className="justify-self-end lg:justify-self-start">
+                  <Badge tone={tone} className="hidden lg:inline-flex lg:justify-self-start">
                     {finding}
                   </Badge>
                 </div>
               ))}
             </Panel>
 
-            <Panel className="flex min-h-[25rem] flex-col p-5 sm:p-6">
+            <Panel className="flex flex-col p-4 sm:p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <Meta as="p" className="text-mkt-ink-muted">
@@ -142,11 +143,11 @@ export function Evidence() {
                 </span>
               </div>
 
-              <div className="my-8 flex items-end gap-3 sm:my-10">
-                <strong className="text-mkt-ink font-mono tabular-nums text-[5.25rem] leading-[0.8] font-medium">
+              <div className="my-6 flex items-end gap-3">
+                <strong className="text-mkt-ink font-mono tabular-nums text-5xl sm:text-6xl leading-none font-medium">
                   72.4
                 </strong>
-                <span className="text-mkt-sm text-mkt-ink-soft font-mono tabular-nums pb-1.5">/ 100</span>
+                <span className="text-mkt-sm text-mkt-ink-soft font-mono tabular-nums pb-1">/ 100</span>
               </div>
 
               <div>
@@ -160,7 +161,7 @@ export function Evidence() {
                 </div>
               </div>
 
-              <div className="border-mkt-line mt-6 grid grid-cols-3 border-y py-4">
+              <div className="border-mkt-line mt-5 grid grid-cols-3 border-y py-3">
                 {[
                   ['3 / 3', 'Artifacts'],
                   ['2', 'Signals'],
@@ -178,7 +179,7 @@ export function Evidence() {
                 ))}
               </div>
 
-              <p className="text-mkt-sm text-mkt-ink-soft mt-auto pt-6">
+              <p className="text-mkt-sm text-mkt-ink-soft mt-auto pt-5">
                 Computed from persisted answers, with every point traceable to its source artifact.
               </p>
             </Panel>

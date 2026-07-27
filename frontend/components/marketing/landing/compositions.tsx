@@ -27,8 +27,8 @@ export function Compositions() {
       />
 
       <Reveal>
-        <WallpaperPanel className="min-w-0 p-4 sm:p-6 lg:p-8">
-          <div className="mb-4 flex items-center justify-between gap-3 px-1">
+        <WallpaperPanel className="min-w-0 p-3 sm:p-5 lg:p-6">
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
             <Meta as="p" className="text-mkt-ink-muted">
               Example workflow / one observed pattern
             </Meta>
@@ -37,17 +37,17 @@ export function Compositions() {
 
           <Panel className="lg:divide-mkt-line relative grid min-w-0 overflow-hidden lg:grid-cols-3 lg:divide-x">
             <article
-              className="mkt-flow-stage flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8"
+              className="mkt-flow-stage flex min-w-0 flex-col p-5 sm:p-6"
               data-flow-stage="1"
             >
               <Meta as="p" className="text-mkt-ink-muted whitespace-nowrap">
                 01 / Buyer question
               </Meta>
-              <div className="mt-10">
-                <h3 className="font-mkt-display text-mkt-ink text-mkt-d4 font-medium">
+              <div className="mt-5">
+                <h3 className="font-mkt-display text-mkt-ink text-lg sm:text-mkt-d4 font-medium">
                   “{query.cards[0]}”
                 </h3>
-                <div className="mt-8 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-wrap gap-2">
                   <Badge tone="neutral">Comparison</Badge>
                   <Badge tone="neutral">Enterprise</Badge>
                 </div>
@@ -64,13 +64,13 @@ export function Compositions() {
             <MobileArrow />
 
             <article
-              className="mkt-flow-stage flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8"
+              className="mkt-flow-stage flex min-w-0 flex-col p-5 sm:p-6"
               data-flow-stage="2"
             >
               <Meta as="p" className="text-mkt-ink-muted whitespace-nowrap">
                 02 / Observed pattern
               </Meta>
-              <div className="mt-10">
+              <div className="mt-5">
                 <div className="grid gap-3">
                   <div className="flex items-center justify-between gap-3">
                     <EngineDot engine="openai" />
@@ -85,7 +85,7 @@ export function Compositions() {
                     <Badge tone="warn">Brand missing</Badge>
                   </div>
                 </div>
-                <p className="text-mkt-sm text-mkt-ink-soft mt-8">
+                <p className="text-mkt-sm text-mkt-ink-soft mt-5">
                   Your category is visible, but your proof is not reaching the answer.
                 </p>
               </div>
@@ -101,20 +101,20 @@ export function Compositions() {
             <MobileArrow />
 
             <article
-              className="mkt-flow-stage bg-mkt-paper-raised flex min-h-[24rem] min-w-0 flex-col p-6 sm:p-8"
+              className="mkt-flow-stage bg-mkt-paper-raised flex min-w-0 flex-col p-5 sm:p-6"
               data-flow-stage="3"
             >
               <Meta as="p" className="text-mkt-ink-muted whitespace-nowrap">
                 03 / Next action
               </Meta>
-              <div className="mt-10">
-                <h3 className="font-mkt-display text-mkt-ink text-mkt-d4 font-medium">
+              <div className="mt-5">
+                <h3 className="font-mkt-display text-mkt-ink text-lg sm:text-mkt-d4 font-medium">
                   Publish an enterprise comparison page.
                 </h3>
-                <Badge tone="good" className="mt-5">
+                <Badge tone="good" className="mt-4">
                   High priority
                 </Badge>
-                <ul className="text-mkt-sm text-mkt-ink-soft mt-8 grid gap-2.5">
+                <ul className="text-mkt-sm text-mkt-ink-soft mt-5 grid gap-2">
                   <li>Answer the decision criteria buyers compare.</li>
                   <li>Add evidence engines can cite directly.</li>
                   <li>Re-run the same question and measure the change.</li>
@@ -130,7 +130,7 @@ export function Compositions() {
 
 function MobileArrow() {
   return (
-    <div className="border-mkt-line grid place-items-center border-y py-3 lg:hidden">
+    <div className="border-mkt-line grid place-items-center border-y py-2 lg:hidden">
       <ArrowRight className="text-mkt-ink-muted size-4 rotate-90" aria-hidden />
     </div>
   );

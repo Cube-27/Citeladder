@@ -53,8 +53,8 @@ const PANEL = 'border-mkt-line rounded-mkt-sm bg-mkt-paper-raised border p-4';
 
 export function ProductWindow() {
   return (
-    <WallpaperPanel className="p-4 sm:p-8 lg:p-10">
-      <div className="mb-3.5 flex items-center justify-between gap-3">
+    <WallpaperPanel className="p-3 sm:p-6 lg:p-8">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <Meta as="p" className="text-mkt-ink-muted">
           Workspace / market overview
         </Meta>
@@ -86,12 +86,12 @@ export function ProductWindow() {
           ))}
         </aside>
 
-        <div className="border-mkt-line bg-mkt-surface rounded-lg border p-5 lg:rounded-l-none">
-          <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="border-mkt-line bg-mkt-surface rounded-lg border p-4 sm:p-5 lg:rounded-l-none">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <p className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
               Market overview
             </p>
-            <Meta className="border-mkt-line rounded-sm border px-2.5 py-1.5">
+            <Meta className="border-mkt-line rounded-sm border px-2 py-1">
               Apr 01 — Jun 30
             </Meta>
           </div>
@@ -101,7 +101,7 @@ export function ProductWindow() {
               <div
                 key={metric.label}
                 className={cn(
-                  'border-mkt-line min-h-[6.5rem] p-4',
+                  'border-mkt-line p-3 sm:p-4',
                   // Two columns below md, four above: the middle divider only
                   // exists once the strip is a single row.
                   index % 2 === 0 && 'border-r',
@@ -112,7 +112,7 @@ export function ProductWindow() {
                 <Meta as="p" className="text-mkt-ink-muted">
                   {metric.label}
                 </Meta>
-                <b className="text-mkt-ink font-mono tabular-nums mt-5 block text-2xl leading-none font-medium">
+                <b className="text-mkt-ink font-mono tabular-nums mt-2 block text-xl leading-none font-medium">
                   {metric.value}
                   {metric.delta && (
                     <small className="text-mkt-evidence-text font-mono tabular-nums text-mkt-meta ml-1.5 font-medium">
@@ -124,13 +124,13 @@ export function ProductWindow() {
             ))}
           </div>
 
-          <div className="mt-3.5 grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_13.75rem]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_13.75rem]">
             <div className={PANEL}>
               <div className="text-mkt-ink-muted text-mkt-sm flex justify-between">
                 <span>Category visibility</span>
                 <Meta>12 weeks</Meta>
               </div>
-              <svg viewBox="0 0 620 230" preserveAspectRatio="none" className="mt-5 h-52 w-full">
+              <svg viewBox="0 0 620 230" preserveAspectRatio="none" className="mt-3 h-36 w-full sm:h-44">
                 <path d="M0 45H620M0 90H620M0 135H620M0 180H620" className="stroke-mkt-line" />
                 <path
                   className="mkt-chart-line stroke-mkt-proof animate-mkt-draw"
@@ -151,7 +151,7 @@ export function ProductWindow() {
               {RANKING.map(([engine, score], index) => (
                 <div
                   key={engine}
-                  className="border-mkt-line text-mkt-ink-soft text-mkt-sm grid grid-cols-[1.125rem_1fr_auto] items-center gap-2 border-b py-2.5 last:border-b-0"
+                  className="border-mkt-line text-mkt-ink-soft text-mkt-sm grid grid-cols-[1.125rem_1fr_auto] items-center gap-2 border-b py-2 last:border-b-0"
                 >
                   <b className="bg-mkt-proof-soft text-mkt-proof font-mono tabular-nums text-mkt-meta grid size-4.5 place-items-center rounded-sm">
                     {index + 1}
@@ -163,7 +163,7 @@ export function ProductWindow() {
             </div>
           </div>
 
-          <div className="border-mkt-evidence-line bg-mkt-evidence-soft rounded-sm mt-3.5 flex flex-wrap justify-between gap-x-6 gap-y-1.5 border px-4 py-3">
+          <div className="border-mkt-evidence-line bg-mkt-evidence-soft rounded-sm mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1.5 border px-4 py-2.5">
             <Meta className="text-mkt-evidence-text">Raw artifacts preserved / 1,248</Meta>
             <Meta className="text-mkt-evidence-text">Analyzer / visibility-v4.2</Meta>
             <Meta className="text-mkt-evidence-text">Reproducible / yes</Meta>
