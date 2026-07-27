@@ -22,6 +22,7 @@ export function CompareIndex() {
   return (
     <>
       <PageHero
+        centered
         eyebrow="Comparisons"
         title="How Searchify"
         accent="compares."

@@ -39,6 +39,7 @@ export default function FaqPage() {
     <main>
       <JsonLd data={faqPageJsonLd(FAQ_GROUPS)} />
       <PageHero
+        centered
         eyebrow="FAQ"
         title="Frequently asked"
         accent="questions."
