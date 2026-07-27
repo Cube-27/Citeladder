@@ -22,28 +22,24 @@ import { ExampleDataNote, Panel, WallpaperPanel } from '../scenes/wallpaper-pane
 const ROWS: readonly {
   answer: string;
   engine: EngineKey;
-  artifact: string;
   finding: string;
   tone: 'good' | 'proof' | 'warn';
 }[] = [
   {
     answer: 'Best analytics platforms for enterprise teams',
     engine: 'openai',
-    artifact: '09F3C21E',
     finding: 'Mentioned',
     tone: 'good',
   },
   {
     answer: 'How to measure brand visibility in AI answers',
     engine: 'claude',
-    artifact: '1A64D0BC',
     finding: 'Cited',
     tone: 'proof',
   },
   {
     answer: 'Searchify alternatives for global agencies',
     engine: 'gemini',
-    artifact: '3E92BA71',
     finding: 'Review',
     tone: 'warn',
   },
@@ -55,7 +51,7 @@ const ROWS: readonly {
  * width instead of one squeezed grid pretending to be both.
  */
 const DESKTOP_GRID =
-  'hidden lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem_7rem_8rem] lg:items-center lg:gap-x-4';
+  'hidden lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem_8rem] lg:items-center lg:gap-x-4';
 
 export function Evidence() {
   const { evidence } = LANDING_CONTENT;
@@ -110,13 +106,12 @@ export function Evidence() {
                   </div>
                 </div>
                 <Meta className="text-mkt-ink-muted">Provider</Meta>
-                <Meta className="text-mkt-ink-muted">Artifact</Meta>
                 <Meta className="text-mkt-ink-muted justify-self-start">Finding</Meta>
               </div>
 
-              {ROWS.map(({ answer, engine, artifact, finding, tone }, index) => (
+              {ROWS.map(({ answer, engine, finding, tone }, index) => (
                 <div
-                  key={artifact}
+                  key={answer}
                   className="border-mkt-line group border-b px-4 py-3 last:border-b-0 sm:px-6 lg:px-5"
                 >
                   {/* Mobile: answer full width, one meta line, badge pinned right. */}
@@ -126,7 +121,6 @@ export function Evidence() {
                     </strong>
                     <div className="mt-2 flex items-center gap-3">
                       <EngineDot engine={engine} />
-                      <Meta className="text-mkt-ink-muted">{artifact}</Meta>
                       <Badge tone={tone} className="ml-auto shrink-0">
                         {finding}
                       </Badge>
@@ -143,7 +137,6 @@ export function Evidence() {
                       </strong>
                     </div>
                     <EngineDot engine={engine} />
-                    <Meta className="text-mkt-ink-soft">{artifact}</Meta>
                     <Badge tone={tone} className="justify-self-start">
                       {finding}
                     </Badge>

@@ -80,6 +80,7 @@ export function BlogIndex() {
   return (
     <>
       <PageHero
+        centered
         eyebrow="The Searchify blog"
         title="Notes on"
         accent="AI visibility."
