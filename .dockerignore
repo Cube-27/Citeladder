@@ -1,0 +1,37 @@
+# Docker builds use the repository root as context. Never send local credentials,
+# VCS history, dependency trees, or generated output to the daemon/remote builder.
+.git
+.github
+.agents
+.codex
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+**/*.env
+!**/.env.example
+.secrets.baseline
+
+**/.venv
+**/venv
+**/node_modules
+**/.next
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
+**/*.py[cod]
+**/*.tsbuildinfo
+**/coverage
+**/test-results
+**/playwright-report
+
+docs
+frontend/e2e
+frontend/test
+frontend/**/*.test.ts
+frontend/**/*.test.tsx
+backend/tests
+backend/scripts
+
+infra/docker/.env

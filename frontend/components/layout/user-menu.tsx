@@ -20,17 +20,16 @@ import { cn, emailInitials } from '@/lib/utils';
 
 /**
  * UserMenu (F5) — shows the current user (from F4's `useSession`) and a logout
- * action. Logout posts `/auth/logout`, then clears the session cache and
- * redirects to `/login` via the guard's `clearSession` (regardless of the
- * network result — the cookie is cleared server-side and a stale client cache
- * must never strand the user).
+ * action. Logout clears account-scoped client state only after the backend has
+ * confirmed cookie revocation. A failed request keeps the authenticated UI and
+ * offers a retry instead of pretending the session ended.
  */
 export function UserMenu({ className }: Readonly<{ className?: string }>) {
   const { user, clearSession } = useSession();
 
   const logout = useMutation({
     mutationFn: () => authApi.logout(),
-    onSettled: () => clearSession(),
+    onSuccess: () => clearSession(),
   });
 
   return (
@@ -64,6 +63,11 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
             <LogOut className="size-4 shrink-0" aria-hidden />
             <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
           </DropdownItem>
+          {logout.isError ? (
+            <p role="alert" className="text-danger px-2 py-1.5 text-xs">
+              Sign out failed. Your session is still active; please try again.
+            </p>
+          ) : null}
         </DropdownContent>
       </Dropdown>
       <ThemeToggle className="size-[26px] shrink-0" />

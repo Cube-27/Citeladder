@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from app.core.database import Base
+from app.models.abuse import QueueWorkspaceTurn, UsageWindow
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -156,6 +157,7 @@ __all__ = [
     "ProviderConnectionTest",
     "ProviderRoute",
     "RawResponseArtifact",
+    "QueueWorkspaceTurn",
     "ReferralClassification",
     "ReferralEvent",
     "ResponseAnalysis",
@@ -179,6 +181,7 @@ __all__ = [
     "TrafficQueryStat",
     "TrafficSnapshot",
     "UnintendedDomain",
+    "UsageWindow",
     "User",
     "Workspace",
     "WorkspaceBillingLink",

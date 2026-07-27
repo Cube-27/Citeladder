@@ -31,6 +31,7 @@ from app.core.config.audits import AUDIT_TERMINAL_STATUSES
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.database import SessionLocal
 from app.core.http_errors import raise_not_found
+from app.domain.abuse.service import UsageLimitExceededError
 from app.domain.analysis.schemas import MetricsResponse
 from app.domain.analysis.service import (
     AnalysisNotFoundError,
@@ -86,6 +87,12 @@ async def create_audit_endpoint(
     except AuditValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except UsageLimitExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Workspace usage limit exceeded",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
     return AuditResponse.model_validate(audit)
 

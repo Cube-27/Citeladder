@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -9,7 +9,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/visibility',
 }));
 
-const clearSession = vi.fn();
+const { clearSession, logoutMock } = vi.hoisted(() => ({
+  clearSession: vi.fn().mockResolvedValue(undefined),
+  logoutMock: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/lib/auth/session-guard', () => ({
   useSession: () => ({
     user: {
@@ -25,7 +28,7 @@ vi.mock('@/lib/auth/session-guard', () => ({
 }));
 
 vi.mock('@/lib/api/auth', () => ({
-  authApi: { logout: vi.fn().mockResolvedValue(undefined) },
+  authApi: { logout: logoutMock },
 }));
 
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -46,6 +49,11 @@ function renderMenu() {
 }
 
 describe('UserMenu', () => {
+  afterEach(() => {
+    clearSession.mockClear();
+    logoutMock.mockReset().mockResolvedValue(undefined);
+  });
+
   it('shows a Settings item directly above Sign out, linking to /settings', async () => {
     const user = userEvent.setup();
     renderMenu();
@@ -64,5 +72,30 @@ describe('UserMenu', () => {
 
     // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', '/settings');
+  });
+
+  it('clears the client session only after the server confirms logout', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: /test\.user@example\.test/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /sign out/i }));
+
+    expect(logoutMock).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(clearSession).toHaveBeenCalledOnce());
+  });
+
+  it('keeps the authenticated UI visible and offers a retry when logout fails', async () => {
+    logoutMock.mockRejectedValueOnce(new Error('network down'));
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: /test\.user@example\.test/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /sign out/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/session is still active/i);
+    expect(clearSession).not.toHaveBeenCalled();
+    expect(screen.getAllByText('test.user@example.test')).not.toHaveLength(0);
+    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeEnabled();
   });
 });

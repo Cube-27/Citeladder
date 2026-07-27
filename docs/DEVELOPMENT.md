@@ -90,25 +90,26 @@ pnpm build            # next build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
-## Migrations (single bootstrap revision)
+## Migrations (frozen bootstrap plus additive revisions)
 
-**GREENFIELD POLICY:** the project is pre-production, so the migration history is a single
-squashed bootstrap revision, `0001_initial`, which creates the full schema directly from
-`Base.metadata` (the same mechanism the test suite uses — it always matches the current ORM
-models). Until there is a production database to preserve:
+`0001_initial` is the explicit, immutable production baseline. Never edit an
+applied revision. Change the ORM model and add a reviewed forward revision for
+every later schema change; use expand/migrate/contract sequencing when old and
+new application versions overlap.
 
-- Make schema changes by **editing the models**, not by adding revision files.
-- Recreate the database to pick up model changes:
+Verify the bootstrap only against a disposable database:
 
 ```bash
 cd backend
-uv run alembic downgrade base   # drops all tables (CASCADE)
-uv run alembic upgrade head     # recreates the current schema
+uv run alembic upgrade head
+uv run alembic check            # explicit revisions match Base.metadata
+uv run alembic downgrade base   # destructive; disposable database only
+uv run alembic upgrade head
 ```
 
-**Alembic autogenerate is disabled in this repo.** The `script_location` layout makes the
-mako template path "relative outside root", so autogenerate fails. When production arrives
-and real migrations are needed, they must be written by hand from `0001_initial`; keep
+If `alembic revision --autogenerate` is unavailable because of the repository
+`script_location` layout, write the additive revision by hand and use
+`alembic check` to prove it converges with `Base.metadata`. Keep
 `alembic_version` revision ids short — the column is `varchar(32)`.
 
 ---

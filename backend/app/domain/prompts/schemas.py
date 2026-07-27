@@ -11,6 +11,11 @@ from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.config.http import (
+    PROMPT_IMPORT_MAX_ROWS,
+    PROMPT_INTENT_MAX_CHARS,
+    PROMPT_TEXT_MAX_CHARS,
+)
 from app.core.config.prompts import PROMPT_STATUSES, prompt_generation_settings
 
 PromptIntent = Literal["", "discovery", "comparison", "purchase", "service", "local"]
@@ -35,9 +40,9 @@ class PromptInput(BaseModel):
     update path does; ``None`` leaves the prompt untopiced.
     """
 
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=PROMPT_TEXT_MAX_CHARS)
     theme: str = Field(default="", max_length=255)
-    intent: str = Field(default="")
+    intent: str = Field(default="", max_length=PROMPT_INTENT_MAX_CHARS)
     branded: bool = False
     enabled: bool = True
     topic_id: uuid.UUID | None = None
@@ -48,9 +53,11 @@ class PromptCreate(PromptInput):
 
 
 class PromptUpdate(BaseModel):
-    text: str | None = Field(default=None, min_length=1)
+    text: str | None = Field(
+        default=None, min_length=1, max_length=PROMPT_TEXT_MAX_CHARS
+    )
     theme: str | None = Field(default=None, max_length=255)
-    intent: str | None = None
+    intent: str | None = Field(default=None, max_length=PROMPT_INTENT_MAX_CHARS)
     branded: bool | None = None
     enabled: bool | None = None
     status: PromptStatus | None = None
@@ -65,7 +72,9 @@ class PromptImport(BaseModel):
     ``origin='imported'``.
     """
 
-    prompts: list[PromptInput] = Field(default_factory=list)
+    prompts: list[PromptInput] = Field(
+        default_factory=list, max_length=PROMPT_IMPORT_MAX_ROWS
+    )
 
 
 class PromptResponse(BaseModel):

@@ -15,6 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.usage_limits import enforce_workspace_request
+from app.core.config.abuse import abuse_settings
 from app.core.config.provider_catalog import (
     ACTIVE_TRANSPORTS,
     APPROVED_ROUTES,
@@ -29,6 +31,7 @@ from app.domain.providers.schemas import (
     ProviderConnectionUpdate,
 )
 from app.domain.providers.service import (
+    InvalidProviderEndpointError,
     InvalidRouteError,
     ProviderConnectionNotFoundError,
     RetiredConnectionReadOnlyError,
@@ -71,7 +74,7 @@ async def create_connection_endpoint(
         connection = await create_connection(
             session, workspace_id=ctx.workspace_id, payload=payload
         )
-    except InvalidRouteError as exc:
+    except (InvalidRouteError, InvalidProviderEndpointError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
@@ -100,7 +103,7 @@ async def update_connection_endpoint(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
-    except InvalidRouteError as exc:
+    except (InvalidRouteError, InvalidProviderEndpointError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
@@ -142,6 +145,13 @@ async def test_connection_endpoint(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND
         ) from exc
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="provider.connection_test",
+        limit=abuse_settings.provider_test_limit,
+        window_seconds=abuse_settings.provider_test_window_seconds,
+    )
     try:
         return await run_connection_test(
             session, workspace_id=ctx.workspace_id, connection_id=connection_id
@@ -149,6 +159,10 @@ async def test_connection_endpoint(
     except RetiredConnectionReadOnlyError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except InvalidProviderEndpointError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
 
 

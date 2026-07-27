@@ -18,11 +18,12 @@ import { authApi } from '@/lib/api/auth';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
+import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
 
 type SessionContextValue = {
   user: SessionUser;
   /** Clear all cached session state and send the user back to `/login`. */
-  clearSession: () => void;
+  clearSession: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -61,14 +62,14 @@ export function SessionGuard({
     enabled: !isRedirecting,
   });
 
-  const clearSession = useCallback(() => {
+  const clearSession = useCallback(async () => {
     // Clearing the cache removes the active `me` query. Without this latch,
     // the still-mounted guard immediately recreates it and can hammer the
     // backend with 401s until the router finishes navigating.
     if (redirectingRef.current) return;
     redirectingRef.current = true;
     setIsRedirecting(true);
-    queryClient.clear();
+    await clearAccountScopedClientState(queryClient);
     router.replace('/login');
   }, [queryClient, router]);
 
@@ -77,7 +78,7 @@ export function SessionGuard({
   // blip, 5xx) must NOT log the user out — React Query keeps the last state and
   // retries, so we leave rendering as-is rather than stranding them at /login.
   useEffect(() => {
-    if (isError && httpErrorStatus(error) === 401) clearSession();
+    if (isError && httpErrorStatus(error) === 401) void clearSession();
   }, [isError, error, clearSession]);
 
   // Global 401 watchdog: a 401 from any in-flight/finished query means the
@@ -88,7 +89,7 @@ export function SessionGuard({
   // subscription is installed once per query client instead of being torn down
   // and reinstalled every time the callback identity changes.
   const onCacheEvent = useEffectEvent((error: unknown) => {
-    if (error && httpErrorStatus(error) === 401) clearSession();
+    if (error && httpErrorStatus(error) === 401) void clearSession();
   });
 
   useEffect(() => {

@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.config.products import PRODUCT_IMPORT_MAX_ROWS
 from app.domain.products.completeness import product_completeness
 from app.models.product import CompetitorProduct, Product
 
@@ -69,12 +70,14 @@ class ProductInput(BaseModel):
 
     sku: str = Field(min_length=1, max_length=128)
     name: str = Field(min_length=1, max_length=255)
-    aliases: list[str] = Field(default_factory=list)
-    variants: list[ProductVariant] = Field(default_factory=list)
+    aliases: list[Annotated[str, Field(max_length=255)]] = Field(
+        default_factory=list, max_length=50
+    )
+    variants: list[ProductVariant] = Field(default_factory=list, max_length=50)
     price: float | None = Field(default=None, ge=0)
     currency: str = Field(default="", max_length=3)
     url: str = Field(default="", max_length=2048)
-    attributes: dict[str, Any] = Field(default_factory=dict)
+    attributes: dict[str, Any] = Field(default_factory=dict, max_length=100)
 
     _aliases_clean = field_validator("aliases", mode="before")(_clean_aliases)
     _currency_upper = field_validator("currency", mode="before")(_clean_currency)
@@ -83,12 +86,14 @@ class ProductInput(BaseModel):
 class ProductUpdate(BaseModel):
     sku: str | None = Field(default=None, min_length=1, max_length=128)
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    aliases: list[str] | None = None
-    variants: list[ProductVariant] | None = None
+    aliases: list[Annotated[str, Field(max_length=255)]] | None = Field(
+        default=None, max_length=50
+    )
+    variants: list[ProductVariant] | None = Field(default=None, max_length=50)
     price: float | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, max_length=3)
     url: str | None = Field(default=None, max_length=2048)
-    attributes: dict[str, Any] | None = None
+    attributes: dict[str, Any] | None = Field(default=None, max_length=100)
 
     _aliases_clean = field_validator("aliases", mode="before")(_clean_optional_aliases)
     _currency_upper = field_validator("currency", mode="before")(_clean_currency)
@@ -97,7 +102,9 @@ class ProductUpdate(BaseModel):
 class ProductImport(BaseModel):
     """CSV bulk-create payload: already-parsed product rows (JSON import)."""
 
-    products: list[ProductInput] = Field(default_factory=list)
+    products: list[ProductInput] = Field(
+        default_factory=list, max_length=PRODUCT_IMPORT_MAX_ROWS
+    )
 
 
 class ProductResponse(BaseModel):
@@ -138,7 +145,9 @@ class ProductResponse(BaseModel):
 class CompetitorProductInput(BaseModel):
     competitor_id: uuid.UUID
     name: str = Field(min_length=1, max_length=255)
-    aliases: list[str] = Field(default_factory=list)
+    aliases: list[Annotated[str, Field(max_length=255)]] = Field(
+        default_factory=list, max_length=50
+    )
     price: float | None = Field(default=None, ge=0)
     currency: str = Field(default="", max_length=3)
     url: str = Field(default="", max_length=2048)
@@ -149,7 +158,9 @@ class CompetitorProductInput(BaseModel):
 
 class CompetitorProductUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    aliases: list[str] | None = None
+    aliases: list[Annotated[str, Field(max_length=255)]] | None = Field(
+        default=None, max_length=50
+    )
     price: float | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, max_length=3)
     url: str | None = Field(default=None, max_length=2048)

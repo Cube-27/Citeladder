@@ -33,6 +33,7 @@ from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.connectors.billing.http_client import aclose_shared_billing_clients
 from app.core.config import get_frontend_origins, settings
 from app.core.database import dispose_engine
+from app.core.http_security import ApiNoStoreMiddleware, RequestBodyLimitMiddleware
 from app.core.telemetry import (
     configure_logging,
     generate_correlation_id,
@@ -112,6 +113,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Applied at ASGI level so limits cover multipart parsing and cache headers
+    # cover JSON, downloads, validation errors, and unhandled API errors alike.
+    app.add_middleware(RequestBodyLimitMiddleware)
+    app.add_middleware(ApiNoStoreMiddleware)
 
     @app.middleware("http")
     async def correlation_middleware(request: Request, call_next) -> Response:

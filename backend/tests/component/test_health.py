@@ -31,6 +31,52 @@ async def test_health_echoes_request_id_header() -> None:
     assert response.headers.get("X-Request-ID") == "abc123"
 
 
+@pytest.mark.asyncio
+async def test_api_responses_and_errors_are_authoritatively_no_store() -> None:
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
+        public_response = await client.get("/api/v1/provider-catalog")
+        error_response = await client.get("/api/v1/workspaces")
+    for response in (public_response, error_response):
+        assert response.headers["cache-control"] == "private, no-store, max-age=0"
+        assert response.headers["pragma"] == "no-cache"
+
+
+@pytest.mark.asyncio
+async def test_declared_oversized_api_body_is_rejected_before_parsing() -> None:
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
+        response = await client.post(
+            "/api/v1/auth/login",
+            content=b"{}",
+            headers={"Content-Length": str(3 * 1024 * 1024)},
+        )
+    assert response.status_code == 413
+    assert response.headers["cache-control"] == "private, no-store, max-age=0"
+
+
+@pytest.mark.asyncio
+async def test_chunked_oversized_api_body_is_stopped_while_streaming() -> None:
+    async def chunks():
+        for _ in range(33):
+            yield b"x" * (64 * 1024)
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
+        response = await client.post(
+            "/api/v1/auth/login",
+            content=chunks(),
+            headers={"Content-Type": "application/json"},
+        )
+    assert response.status_code == 413
+
+
 def test_health_route_and_router_stubs_registered() -> None:
     # /health is registered, and all mounted routers are included so B2-B6
     # fill them in place. B4 adds the provider-catalog router alongside the six

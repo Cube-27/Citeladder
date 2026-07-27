@@ -22,11 +22,15 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.request_bodies import read_limited_body, read_limited_upload
+from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.abuse import abuse_settings
 from app.core.http_errors import raise_not_found
 from app.domain.prompts.csv_import import parse_prompt_csv
 from app.domain.prompts.generation import (
@@ -272,16 +276,16 @@ async def _resolve_import_rows(
     converge to a list of ``PromptInput`` for the service.
     """
     if file is not None:
-        raw = (await file.read()).decode("utf-8-sig", errors="replace")
+        raw = (await read_limited_upload(file)).decode("utf-8-sig", errors="replace")
         return parse_prompt_csv(raw)
 
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
-        body = await request.json()
-        return PromptImport.model_validate(body).prompts
+        raw_body = await read_limited_body(request)
+        return PromptImport.model_validate_json(raw_body).prompts
 
     # Raw CSV posted as text/csv (no multipart wrapper).
-    raw_body = (await request.body()).decode("utf-8-sig", errors="replace")
+    raw_body = (await read_limited_body(request)).decode("utf-8-sig", errors="replace")
     return parse_prompt_csv(raw_body)
 
 
@@ -297,7 +301,20 @@ async def import_prompts_endpoint(
     session: _SessionDep,
     file: UploadFile | None = None,
 ) -> PromptSetResponse:
-    rows = await _resolve_import_rows(request, file)
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="bulk_import",
+        limit=abuse_settings.bulk_import_limit,
+        window_seconds=abuse_settings.bulk_import_window_seconds,
+    )
+    try:
+        rows = await _resolve_import_rows(request, file)
+    except (ValueError, ValidationError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid prompt import payload: {exc}",
+        ) from exc
     try:
         prompt_set = await import_prompts(
             session,
@@ -357,6 +374,13 @@ async def generate_prompts_endpoint(
                 ),
             },
         ) from exc
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="agent.provider_call",
+        limit=abuse_settings.agent_call_limit,
+        window_seconds=abuse_settings.agent_call_window_seconds,
+    )
     try:
         generated, topics, dropped = await generate_prompts(
             session,

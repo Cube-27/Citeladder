@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import pytest
+
+from app.core.config.http import (
+    IMPORT_MAX_CELL_CHARS,
+    IMPORT_MAX_COLUMNS,
+    PROMPT_IMPORT_MAX_ROWS,
+)
 from app.domain.prompts.csv_import import parse_prompt_csv
 
 
@@ -45,3 +52,14 @@ def test_parse_skips_blank_rows_and_bom() -> None:
 def test_parse_empty_returns_empty() -> None:
     assert parse_prompt_csv("") == []
     assert parse_prompt_csv("   \n  ") == []
+
+
+def test_prompt_csv_rejects_excess_rows_columns_and_cell_length() -> None:
+    with pytest.raises(ValueError, match="too many rows"):
+        parse_prompt_csv(
+            "text\n" + "\n".join("prompt" for _ in range(PROMPT_IMPORT_MAX_ROWS + 1))
+        )
+    with pytest.raises(ValueError, match="too many columns"):
+        parse_prompt_csv(",".join("x" for _ in range(IMPORT_MAX_COLUMNS + 1)))
+    with pytest.raises(ValueError, match="cell is too long"):
+        parse_prompt_csv("text\n" + "x" * (IMPORT_MAX_CELL_CHARS + 1))

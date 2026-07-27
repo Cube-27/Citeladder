@@ -202,6 +202,20 @@ async def test_product_import_malformed_json_is_422_not_500(
 
 
 @pytest.mark.asyncio
+async def test_product_import_rejects_oversized_file_before_csv_parsing(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "prod-import-limit@example.com")
+    project = await _project(client)
+    oversized = b"sku,name\n1," + (b"x" * (1024 * 1024))
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/products/import",
+        files={"file": ("catalog.csv", oversized, "text/csv")},
+    )
+    assert response.status_code == 413
+
+
+@pytest.mark.asyncio
 async def test_competitor_product_crud(client: httpx.AsyncClient) -> None:
     await _register(client, "comp-prod@example.com")
     project = await _project(client)

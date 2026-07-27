@@ -5,7 +5,9 @@ import { screen, waitFor } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 
 import { runsApi } from '@/lib/api/runs';
+import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-keys';
+import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -34,6 +36,8 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
   replace.mockReset();
+  window.localStorage.clear();
+  setActiveWorkspaceId(null);
 });
 afterAll(() => mswServer.close());
 
@@ -115,6 +119,10 @@ describe('SessionGuard', () => {
       return <Protected />;
     }
 
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, 'old-project');
+    window.localStorage.setItem('searchify-theme', 'dark');
+    setActiveWorkspaceId('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+
     const { queryClient } = renderWithProviders(
       <SessionGuard fallback={<div>loading</div>}>
         <ChildQuery />
@@ -124,5 +132,8 @@ describe('SessionGuard', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/login'));
     // Session cache was cleared.
     expect(queryClient.getQueryData(queryKeys.auth.me())).toBeUndefined();
+    expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem('searchify-theme')).toBe('dark');
+    expect(getActiveWorkspaceId()).toBeNull();
   });
 });

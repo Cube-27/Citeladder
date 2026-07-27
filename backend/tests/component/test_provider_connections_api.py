@@ -183,6 +183,42 @@ async def test_update_without_key_leaves_secret_unchanged(
 
 
 @pytest.mark.asyncio
+async def test_arbitrary_endpoint_is_rejected_and_change_requires_fresh_key(
+    client: httpx.AsyncClient, monkeypatch
+) -> None:
+    from app.core.config.provider_catalog import provider_catalog_settings
+
+    await _register(client, "prov-endpoint@example.com")
+    rejected = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(base_url="https://attacker.example/v1"),
+    )
+    assert rejected.status_code == 400
+
+    created = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(base_url="https://api.openai.com/v1/responses"),
+    )
+    conn_id = created.json()["id"]
+    operator_gateway = "https://gateway.operator.example/v1/responses"
+    monkeypatch.setattr(
+        provider_catalog_settings, "openai_responses_url", operator_gateway
+    )
+    endpoint_change = await client.patch(
+        f"/api/v1/provider-connections/{conn_id}",
+        json={"base_url": operator_gateway},
+    )
+    assert endpoint_change.status_code == 400
+    assert "fresh API key" in endpoint_change.json()["detail"]
+
+    rotated = await client.patch(
+        f"/api/v1/provider-connections/{conn_id}",
+        json={"base_url": operator_gateway, "api_key": "fresh-key"},
+    )
+    assert rotated.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_delete_connection(client: httpx.AsyncClient) -> None:
     await _register(client, "prov6@example.com")
     created = await client.post(

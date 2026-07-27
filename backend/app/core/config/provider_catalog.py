@@ -89,6 +89,29 @@ def default_probe_engine(transport_provider: str) -> str:
     return engines[0] if engines else ""
 
 
+def configured_endpoint(transport_provider: str) -> str:
+    """Return the sole operator-configured credential destination."""
+    endpoint = {
+        TRANSPORT_OPENAI: provider_catalog_settings.openai_responses_url,
+        TRANSPORT_ANTHROPIC: provider_catalog_settings.anthropic_messages_url,
+        TRANSPORT_GOOGLE: provider_catalog_settings.google_interactions_url,
+    }.get(transport_provider, "")
+    return endpoint.strip().rstrip("/")
+
+
+def is_endpoint_approved(transport_provider: str, base_url: str) -> bool:
+    """Allow provider defaults or the exact operator-configured endpoint only.
+
+    A tenant-supplied URL must never choose where a stored BYOK credential is
+    sent. Operators may still configure a gateway through deployment config.
+    """
+    approved = configured_endpoint(transport_provider)
+    if not approved:
+        return False
+    supplied = base_url.strip().rstrip("/")
+    return not supplied or supplied == approved
+
+
 # --- Retry / error classification tokens (recorded on tests + attempts) ---
 ERROR_TIMEOUT: Final = "timeout"
 ERROR_CONNECTION: Final = "connection"

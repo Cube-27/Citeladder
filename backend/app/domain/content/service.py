@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.abuse import abuse_settings
 from app.core.config.content import (
     CONTENT_GENERATOR_VERSION,
     CONTENT_KNOWN_PROVIDERS,
@@ -26,9 +27,11 @@ from app.core.config.content import (
     content_settings,
 )
 from app.core.config.task_queue import (
+    TASK_ACTIVE_STATUSES,
     TASK_STATUS_CANCELLED,
     TASK_TERMINAL_STATUSES,
 )
+from app.domain.abuse.service import reserve_workspace_capacity
 from app.domain.content.message_builder import build_messages
 from app.domain.content.schemas import (
     ContentGenerationDetail,
@@ -58,6 +61,23 @@ class IdempotencyConflictError(RuntimeError):
 
 class CancelNotAllowedError(RuntimeError):
     """Cancel requested on a terminal record (-> 409)."""
+
+
+async def _reserve_content_capacity(
+    session: AsyncSession, *, workspace_id: uuid.UUID
+) -> None:
+    await reserve_workspace_capacity(
+        session,
+        workspace_id=workspace_id,
+        lock_namespace="content-enqueue",
+        model=ContentGeneration,
+        active_statuses=TASK_ACTIVE_STATUSES,
+        active_limit=abuse_settings.active_content_jobs_per_workspace,
+        active_operation="content.active_jobs",
+        usage_operation="content.provider_jobs",
+        usage_limit=abuse_settings.content_jobs_per_workspace_daily,
+        retry_after_seconds=abuse_settings.active_job_retry_after_seconds,
+    )
 
 
 def request_fingerprint(
@@ -227,6 +247,7 @@ async def enqueue_generation(
             )
 
     _require_provider_configured()
+    await _reserve_content_capacity(session, workspace_id=workspace_id)
 
     if website_context_enabled:
         website_context = await build_website_context(
@@ -381,6 +402,7 @@ async def try_again(
         session, workspace_id=workspace_id, generation_id=generation_id
     )
     _require_provider_configured()
+    await _reserve_content_capacity(session, workspace_id=workspace_id)
     snapshot = source.website_context_snapshot or {}
     frozen = WebsiteContext(
         status=source.website_context_status,

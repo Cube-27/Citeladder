@@ -41,6 +41,14 @@ TASK_STATUS_CANCELLED: Final = "cancelled"
 TASK_TERMINAL_STATUSES: Final[frozenset[str]] = frozenset(
     {TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED}
 )
+TASK_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
+    {
+        TASK_STATUS_QUEUED,
+        TASK_STATUS_LEASED,
+        TASK_STATUS_RUNNING,
+        TASK_STATUS_RETRY_WAIT,
+    }
+)
 # Statuses a ``claim()`` may pick up (queued or ready-to-retry).
 TASK_CLAIMABLE_STATUSES: Final[frozenset[str]] = frozenset(
     {TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT}

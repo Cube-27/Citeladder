@@ -9,6 +9,11 @@ from __future__ import annotations
 import csv
 import io
 
+from app.core.config.http import (
+    IMPORT_MAX_CELL_CHARS,
+    IMPORT_MAX_COLUMNS,
+    PROMPT_IMPORT_MAX_ROWS,
+)
 from app.domain.prompts.schemas import PromptInput
 
 # Accepted header aliases -> canonical field. Case/space-insensitive.
@@ -41,12 +46,25 @@ def parse_prompt_csv(content: str) -> list[PromptInput]:
     if not text.strip():
         return []
     reader = csv.reader(io.StringIO(text))
-    rows = [row for row in reader if any(cell.strip() for cell in row)]
+    rows: list[list[str]] = []
+    for row in reader:
+        if len(row) > IMPORT_MAX_COLUMNS:
+            raise ValueError("Prompt CSV has too many columns")
+        if any(len(cell) > IMPORT_MAX_CELL_CHARS for cell in row):
+            raise ValueError("Prompt CSV cell is too long")
+        if any(cell.strip() for cell in row):
+            rows.append(row)
+            # Include one header row without counting it against the data cap.
+            if len(rows) > PROMPT_IMPORT_MAX_ROWS + 1:
+                raise ValueError("Prompt CSV has too many rows")
     if not rows:
         return []
 
     header = [cell.strip().lower() for cell in rows[0]]
     has_header = any(cell in _TEXT_KEYS for cell in header)
+    data_row_count = len(rows) - (1 if has_header else 0)
+    if data_row_count > PROMPT_IMPORT_MAX_ROWS:
+        raise ValueError("Prompt CSV has too many rows")
     if not has_header:
         # Headerless: treat the first column of each row as the prompt text.
         return [

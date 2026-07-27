@@ -210,6 +210,26 @@ async def test_csv_import_accepts_json_rows(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_prompt_import_stops_oversized_file_before_csv_parsing(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "p5-limit@example.com")
+    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    prompt_set_id = (
+        await client.post(
+            "/api/v1/prompt-sets",
+            json={"project_id": project["id"], "name": "Bounded import"},
+        )
+    ).json()["id"]
+    oversized = b"text\n" + (b"x" * (1024 * 1024))
+    response = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/import",
+        files={"file": ("prompts.csv", io.BytesIO(oversized), "text/csv")},
+    )
+    assert response.status_code == 413
+
+
+@pytest.mark.asyncio
 async def test_projects_require_auth(client: httpx.AsyncClient) -> None:
     assert (await client.get("/api/v1/projects")).status_code == 401
 
