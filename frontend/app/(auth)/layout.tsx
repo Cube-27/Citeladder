@@ -63,7 +63,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
 
         {/* Footer band — balances the brand panel's copyright row. */}
         <footer className="text-mkt-sm text-mkt-ink-muted">
-          <span className="min-[900px]:hidden">Your own API keys, encrypted at rest</span>
+          <span className="min-[900px]:hidden">© {new Date().getFullYear()} CUBE27</span>
         </footer>
       </main>
     </div>
