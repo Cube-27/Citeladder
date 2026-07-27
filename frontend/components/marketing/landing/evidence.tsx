@@ -49,8 +49,13 @@ const ROWS: readonly {
   },
 ];
 
-const TABLE_GRID =
-  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 lg:grid-cols-[minmax(0,1fr)_8.5rem_7rem_8rem] lg:gap-x-4';
+/**
+ * Desktop renders an actual table; mobile renders a stacked card list — the
+ * two share nothing but the row data, so each gets a layout that fits its
+ * width instead of one squeezed grid pretending to be both.
+ */
+const DESKTOP_GRID =
+  'hidden lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem_7rem_8rem] lg:items-center lg:gap-x-4';
 
 export function Evidence() {
   const { evidence } = LANDING_CONTENT;
@@ -65,8 +70,8 @@ export function Evidence() {
       />
 
       <Reveal>
-        <WallpaperPanel className="p-3 sm:p-5 lg:p-7">
-          <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 px-1 sm:px-2">
+        <WallpaperPanel className="p-2 sm:p-5 lg:p-7">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1 sm:px-2">
             <div className="flex items-center gap-3">
               <span className="border-mkt-line bg-mkt-surface text-mkt-proof grid size-8 place-items-center rounded-full border">
                 <FileCheck2 aria-hidden className="size-4" strokeWidth={1.8} />
@@ -80,11 +85,20 @@ export function Evidence() {
 
           <div
             aria-hidden
-            className="grid gap-3.5 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.75fr)]"
+            className="grid gap-2.5 sm:gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.75fr)]"
           >
             <Panel className="overflow-hidden">
+              {/* Mobile: one honest card header. Desktop: the table header. */}
+              <div className="border-mkt-line bg-mkt-paper-raised flex items-center justify-between gap-3 border-b px-4 py-2.5 lg:hidden">
+                <Meta as="p" className="text-mkt-ink-muted">
+                  Observed answers
+                </Meta>
+                <Meta as="p" className="text-mkt-ink-muted">
+                  3 persisted
+                </Meta>
+              </div>
               <div
-                className={`${TABLE_GRID} border-mkt-line bg-mkt-paper-raised border-b px-5 py-3 sm:px-6`}
+                className={`${DESKTOP_GRID} border-mkt-line bg-mkt-paper-raised border-b px-5 py-3 sm:px-6`}
               >
                 <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-3">
                   <span aria-hidden className="size-7" />
@@ -95,55 +109,62 @@ export function Evidence() {
                     <p className="text-mkt-sm text-mkt-ink-soft mt-1">3 persisted responses</p>
                   </div>
                 </div>
-                <Meta className="text-mkt-ink-muted hidden lg:block">Provider</Meta>
-                <Meta className="text-mkt-ink-muted hidden lg:block">Artifact</Meta>
-                <Meta className="text-mkt-ink-muted hidden justify-self-start lg:block">Finding</Meta>
+                <Meta className="text-mkt-ink-muted">Provider</Meta>
+                <Meta className="text-mkt-ink-muted">Artifact</Meta>
+                <Meta className="text-mkt-ink-muted justify-self-start">Finding</Meta>
               </div>
 
               {ROWS.map(({ answer, engine, artifact, finding, tone }, index) => (
                 <div
                   key={artifact}
-                  className={`${TABLE_GRID} border-mkt-line group border-b px-5 py-3 last:border-b-0 sm:px-6`}
+                  className="border-mkt-line group border-b px-4 py-3 last:border-b-0 sm:px-6 lg:px-5"
                 >
-                  <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
-                    <span className="bg-mkt-paper-raised text-mkt-ink-muted font-mono tabular-nums text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <div>
+                  {/* Mobile: answer full width, one meta line, badge pinned right. */}
+                  <div className="lg:hidden">
+                    <strong className="text-mkt-ink text-mkt-body block leading-snug font-semibold">
+                      {answer}
+                    </strong>
+                    <div className="mt-2 flex items-center gap-3">
+                      <EngineDot engine={engine} />
+                      <Meta className="text-mkt-ink-muted">{artifact}</Meta>
+                      <Badge tone={tone} className="ml-auto shrink-0">
+                        {finding}
+                      </Badge>
+                    </div>
+                  </div>
+                  {/* Desktop: the table row. */}
+                  <div className={DESKTOP_GRID}>
+                    <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-3">
+                      <span className="bg-mkt-paper-raised text-mkt-ink-muted font-mono tabular-nums text-mkt-meta mt-0.5 grid size-7 place-items-center rounded-full">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
                       <strong className="text-mkt-ink text-mkt-body block max-w-[34ch] leading-snug font-semibold">
                         {answer}
                       </strong>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 lg:hidden">
-                        <EngineDot engine={engine} />
-                        <Meta>{artifact}</Meta>
-                        <Badge tone={tone}>{finding}</Badge>
-                      </div>
                     </div>
+                    <EngineDot engine={engine} />
+                    <Meta className="text-mkt-ink-soft">{artifact}</Meta>
+                    <Badge tone={tone} className="justify-self-start">
+                      {finding}
+                    </Badge>
                   </div>
-                  <EngineDot engine={engine} className="hidden lg:inline-flex" />
-                  <Meta className="text-mkt-ink-soft hidden lg:block">{artifact}</Meta>
-                  <Badge tone={tone} className="hidden lg:inline-flex lg:justify-self-start">
-                    {finding}
-                  </Badge>
                 </div>
               ))}
             </Panel>
 
             <Panel className="flex flex-col p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Meta as="p" className="text-mkt-ink-muted">
-                    Visibility index
-                  </Meta>
-                  <VerifiedMark>Reproducible</VerifiedMark>
-                </div>
-                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta rounded-full inline-flex items-center gap-1.5 border px-2.5 py-1.5 uppercase">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-mkt-ink text-mkt-sm font-semibold">Visibility index</p>
+                <span className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted text-mkt-meta rounded-full inline-flex items-center gap-1.5 border px-2 py-1 uppercase">
                   Formula v4.2
                   <ArrowUpRight className="size-3" strokeWidth={1.8} />
                 </span>
               </div>
+              <div className="mt-1.5">
+                <VerifiedMark>Reproducible</VerifiedMark>
+              </div>
 
-              <div className="my-6 flex items-end gap-3">
+              <div className="my-5 flex items-end gap-3">
                 <strong className="text-mkt-ink font-mono tabular-nums text-5xl sm:text-6xl leading-none font-medium">
                   72.4
                 </strong>
