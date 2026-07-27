@@ -63,9 +63,7 @@ async def reserve_workspace_capacity(
     retry_after_seconds: int,
 ) -> None:
     """Atomically reserve one workspace's active and windowed capacity."""
-    await lock_subject(
-        session, namespace=lock_namespace, subject=workspace_id
-    )
+    await lock_subject(session, namespace=lock_namespace, subject=workspace_id)
     active_count = await session.scalar(
         select(func.count())
         .select_from(model)

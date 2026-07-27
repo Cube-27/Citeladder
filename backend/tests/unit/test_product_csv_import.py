@@ -106,8 +106,7 @@ def test_product_csv_rejects_excess_rows_columns_and_cell_length() -> None:
         parse_product_csv(
             "sku,name\n"
             + "\n".join(
-                f"sku-{index},Product"
-                for index in range(PRODUCT_IMPORT_MAX_ROWS + 1)
+                f"sku-{index},Product" for index in range(PRODUCT_IMPORT_MAX_ROWS + 1)
             )
         )
     with pytest.raises(ProductCsvError, match="too many columns"):

@@ -74,9 +74,7 @@ class RequestBodyLimitMiddleware:
 
     @staticmethod
     async def _reject(scope: dict, receive: Callable, send: Callable) -> None:
-        response = JSONResponse(
-            {"detail": "Request body too large"}, status_code=413
-        )
+        response = JSONResponse({"detail": "Request body too large"}, status_code=413)
         await response(scope, receive, send)
 
 
@@ -97,9 +95,7 @@ class ApiNoStoreMiddleware:
                 headers = list(message.get("headers", []))
                 blocked = {b"cache-control", b"pragma", b"expires"}
                 headers = [
-                    (key, value)
-                    for key, value in headers
-                    if key.lower() not in blocked
+                    (key, value) for key, value in headers if key.lower() not in blocked
                 ]
                 headers.extend(
                     [

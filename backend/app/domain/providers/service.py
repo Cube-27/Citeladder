@@ -208,9 +208,8 @@ async def update_connection(
         new_destination = payload.base_url or configured_endpoint(
             connection.transport_provider
         )
-        if (
-            new_destination != old_destination
-            and not (payload.api_key and payload.api_key.strip())
+        if new_destination != old_destination and not (
+            payload.api_key and payload.api_key.strip()
         ):
             raise InvalidProviderEndpointError(
                 "Changing a provider endpoint requires a fresh API key"

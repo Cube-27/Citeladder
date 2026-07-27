@@ -197,9 +197,7 @@ async def test_arbitrary_endpoint_is_rejected_and_change_requires_fresh_key(
 
     created = await client.post(
         "/api/v1/provider-connections",
-        json=_connection_payload(
-            base_url="https://api.openai.com/v1/responses"
-        ),
+        json=_connection_payload(base_url="https://api.openai.com/v1/responses"),
     )
     conn_id = created.json()["id"]
     operator_gateway = "https://gateway.operator.example/v1/responses"
@@ -218,7 +216,6 @@ async def test_arbitrary_endpoint_is_rejected_and_change_requires_fresh_key(
         json={"base_url": operator_gateway, "api_key": "fresh-key"},
     )
     assert rotated.status_code == 200
-
 
 
 @pytest.mark.asyncio

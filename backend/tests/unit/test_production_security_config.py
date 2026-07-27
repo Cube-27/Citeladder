@@ -7,9 +7,7 @@ from pydantic import ValidationError
 
 from app.core.config import Settings, settings, validate_production_security
 
-_VALID = (
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
-)
+_VALID = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
 
 
 def _production_settings(**updates: object) -> Settings:
@@ -20,8 +18,7 @@ def _production_settings(**updates: object) -> Settings:
         "referral_hash_salt": _VALID + "ref",
         "order_hash_salt": _VALID + "order",
         "database_url": (
-            "postgresql+asyncpg://searchify:"
-            f"{_VALID}db@database.example.com/searchify"
+            f"postgresql+asyncpg://searchify:{_VALID}db@database.example.com/searchify"
         ),
         "db_ssl_mode": "require",
     }
@@ -37,9 +34,7 @@ def test_valid_independent_production_secrets_pass() -> None:
 def test_weak_application_secrets_are_rejected_without_echoing_value(
     weak: str,
 ) -> None:
-    issues = validate_production_security(
-        _production_settings(jwt_secret_key=weak)
-    )
+    issues = validate_production_security(_production_settings(jwt_secret_key=weak))
     assert any("jwt_secret_key" in issue for issue in issues)
     assert all(weak not in issue for issue in issues) if weak else True
 

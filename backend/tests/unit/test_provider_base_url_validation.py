@@ -58,16 +58,11 @@ def test_unsafe_base_url_is_rejected(url: str) -> None:
 
 def test_only_operator_configured_credential_destination_is_approved() -> None:
     assert is_endpoint_approved("openai", "") is True
-    assert (
-        is_endpoint_approved("openai", "https://api.openai.com/v1/responses")
-        is True
-    )
+    assert is_endpoint_approved("openai", "https://api.openai.com/v1/responses") is True
     assert is_endpoint_approved("openai", "https://attacker.example/v1") is False
     assert is_endpoint_approved("openai", "http://127.0.0.1/v1") is False
     assert (
-        is_endpoint_approved(
-            "openai", "  https://api.openai.com/v1/responses///  "
-        )
+        is_endpoint_approved("openai", "  https://api.openai.com/v1/responses///  ")
         is True
     )
     assert is_endpoint_approved("unknown", "") is False

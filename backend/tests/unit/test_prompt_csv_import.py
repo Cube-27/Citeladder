@@ -57,8 +57,7 @@ def test_parse_empty_returns_empty() -> None:
 def test_prompt_csv_rejects_excess_rows_columns_and_cell_length() -> None:
     with pytest.raises(ValueError, match="too many rows"):
         parse_prompt_csv(
-            "text\n"
-            + "\n".join("prompt" for _ in range(PROMPT_IMPORT_MAX_ROWS + 1))
+            "text\n" + "\n".join("prompt" for _ in range(PROMPT_IMPORT_MAX_ROWS + 1))
         )
     with pytest.raises(ValueError, match="too many columns"):
         parse_prompt_csv(",".join("x" for _ in range(IMPORT_MAX_COLUMNS + 1)))
