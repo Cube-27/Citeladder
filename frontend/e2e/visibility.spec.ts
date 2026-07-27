@@ -279,6 +279,19 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   const evidenceUrls: URL[] = [];
   page.on('request', (request) => requests.push(request));
 
+  // 404 catch-all FIRST (Playwright matches in reverse registration order, so
+  // the specific stubs below still win). Without it, an unstubbed downstream
+  // query (entitlements, GettingStartedCard's audits) falls through to a live
+  // backend, 401s, and the session guard bounces to /login. 4xx never retries
+  // (lib/api/query-client.ts), so unstubbed queries settle in one attempt.
+  await page.route('**/api/v1/**', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
+    }),
+  );
+
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
   // The visibility dashboard lists audits via the flat `/audits?project_id=` route.

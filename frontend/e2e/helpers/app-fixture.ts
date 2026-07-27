@@ -44,11 +44,21 @@ export const FIXTURE_PROJECT = {
  * under `/api/v1/`. The catch-all is what makes screenshots deterministic:
  * 4xx never retries (lib/api/query-client.ts), so every unstubbed data query
  * settles into its empty/error state in ONE attempt instead of flapping
- * between skeleton and error across the two-retry window. Playwright matches
- * routes in reverse registration order, so the specific stubs below win over
- * the catch-all.
+ * between skeleton and error across the two-retry window. It is also what
+ * keeps an unstubbed downstream call (GettingStartedCard's audits query, the
+ * shell EntitlementProvider's entitlements query) from falling through to a
+ * live backend, 401-ing, and tripping the session guard's "any 401 → logout"
+ * path — which is how a spec that only stubs auth/me + projects ends up
+ * bounced to /login.
+ *
+ * Playwright matches routes in reverse registration order, so register the
+ * catch-all FIRST and the specific stubs after it; the last-registered
+ * matching route wins. `stubs` lets a spec layer its own endpoints on top.
  */
-export async function stubAuthedShell(page: Page): Promise<void> {
+export async function stubAuthedShell(
+  page: Page,
+  stubs: ReadonlyArray<readonly [string | RegExp, unknown]> = [],
+): Promise<void> {
   await page.route('**/api/v1/**', (route) =>
     route.fulfill({
       status: 404,
@@ -56,6 +66,9 @@ export async function stubAuthedShell(page: Page): Promise<void> {
       body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
     }),
   );
+  for (const [pattern, body] of stubs) {
+    await page.route(pattern, (route) => route.fulfill({ json: body }));
+  }
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [FIXTURE_PROJECT] }));
 }

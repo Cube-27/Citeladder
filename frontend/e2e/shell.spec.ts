@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { stubAuthedShell } from './helpers/app-fixture';
+
 /**
  * F5 shell smoke: with an authenticated session the `(app)` shell renders its
  * chrome — sidebar nav groups, the top-bar page title, and the theme
@@ -10,35 +12,10 @@ import { expect, test } from '@playwright/test';
  * It is skipped automatically when no browser/dev server is available.
  */
 test('authenticated shell renders sidebar groups and top bar', async ({ page }) => {
-  const user = {
-    id: '22222222-2222-4222-8222-222222222222',
-    email: 'shell@example.com',
-    role: 'owner',
-    is_active: true,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-  };
-  const project = {
-    id: '11111111-1111-4111-8111-111111111111',
-    workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    name: 'Acme',
-    brand_name: 'Acme',
-    website_url: 'https://acme.example',
-    country_code: 'US',
-    language_code: 'en',
-    benchmark_mode: 'consumer_like',
-    default_repetitions: 3,
-    brand: { aliases: [] },
-    owned_domains: [],
-    unintended_domains: [],
-    competitors: [],
-    prompt_sets: [],
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-  };
-
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  // stubAuthedShell supplies the canonical user/project AND the 404 catch-all
+  // that keeps unstubbed downstream queries (audits, entitlements) from 401-ing
+  // the live backend and bouncing the session to /login.
+  await stubAuthedShell(page);
 
   await page.goto('/visibility');
 

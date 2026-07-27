@@ -127,6 +127,17 @@ const evidence = {
 };
 
 test('shell → open run → open execution evidence', async ({ page }) => {
+  // 404 catch-all FIRST (reverse registration order means the specific stubs
+  // below still win) — keeps unstubbed downstream queries from 401-ing a live
+  // backend and tripping the session guard's any-401 → /login redirect.
+  await page.route('**/api/v1/**', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
+    }),
+  );
+
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
   await page.route(/\/api\/v1\/audits(\?.*)?$/, (route) => route.fulfill({ json: [audit] }));
