@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
   pathname: '/projects',
+  search: '',
   tour: {
     workspace_id: '00000000-0000-4000-8000-000000000002',
     version: 'dashboard-v1',
@@ -11,7 +12,7 @@ const state = vi.hoisted(() => ({
     started_at: '2026-07-28T00:00:00Z',
     completed_at: null,
   },
-  replace: vi.fn(),
+  push: vi.fn(),
   updates: [] as Array<{ status: string; step_id?: string | null }>,
   driverCalls: [] as Array<{
     config: Record<string, unknown>;
@@ -22,7 +23,8 @@ const state = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => state.pathname,
-  useRouter: () => ({ replace: state.replace }),
+  useRouter: () => ({ push: state.push }),
+  useSearchParams: () => new URLSearchParams(state.search),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
@@ -82,6 +84,7 @@ function renderTour(target = true) {
 describe('ProductTourProvider', () => {
   afterEach(() => {
     state.pathname = '/projects';
+    state.search = '';
     state.tour = {
       workspace_id: '00000000-0000-4000-8000-000000000002',
       version: 'dashboard-v1',
@@ -90,7 +93,7 @@ describe('ProductTourProvider', () => {
       started_at: '2026-07-28T00:00:00Z',
       completed_at: null,
     };
-    state.replace.mockReset();
+    state.push.mockReset();
     state.updates.length = 0;
     state.driverCalls.length = 0;
     state.reducedMotion = false;
@@ -144,7 +147,7 @@ describe('ProductTourProvider', () => {
     vi.unstubAllGlobals();
   });
 
-  it('allows navigation while a cross-route step target is still retrying', async () => {
+  it('navigates to a cross-route step before looking for its target', async () => {
     state.tour = { ...state.tour, step_id: 'provider-settings' };
     vi.stubGlobal(
       'matchMedia',
@@ -152,9 +155,9 @@ describe('ProductTourProvider', () => {
     );
 
     renderTour();
-    await waitFor(() => expect(state.driverCalls).toHaveLength(0));
+    await waitFor(() => expect(state.push).toHaveBeenCalledWith('/settings?tab=providers'));
 
-    expect(state.replace).not.toHaveBeenCalled();
+    expect(state.driverCalls).toHaveLength(0);
     expect(PRODUCT_TOUR_STEPS.find((step) => step.id === 'provider-settings')?.path).toBe(
       '/settings?tab=providers',
     );
@@ -176,6 +179,7 @@ describe('ProductTourProvider', () => {
 
     state.tour = { ...state.tour, step_id: 'provider-settings' };
     state.pathname = '/settings';
+    state.search = 'tab=providers';
     render(
       <ProductTourProvider>
         <div data-tour="provider-settings" />

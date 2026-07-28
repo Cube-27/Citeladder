@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Download, ExternalLink, LoaderCircle, Plus } from 'lucide-react';
+import { ArrowRight, Download, ExternalLink, LoaderCircle, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -22,11 +22,17 @@ function displayValue(value: unknown): string {
   return 'Available';
 }
 
-function sectionSummary(section: DashboardSection): string {
+function sectionSummary(section: DashboardSection): string | null {
   const entries = Object.entries(section.metrics).filter(([, value]) => value !== null);
-  if (entries.length === 0) return section.state.replaceAll('_', ' ');
+  if (entries.length === 0) return null;
   const [name, value] = entries[0];
   return `${name.replaceAll('_', ' ')}: ${displayValue(value)}`;
+}
+
+function hasDashboardSignal(section: DashboardSection) {
+  return (
+    section.state === 'ready' || section.state === 'running' || sectionSummary(section) !== null
+  );
 }
 
 function SectionCard({ section }: Readonly<{ section: DashboardSection }>) {
@@ -48,7 +54,9 @@ function SectionCard({ section }: Readonly<{ section: DashboardSection }>) {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          <p className="text-secondary text-sm capitalize">{sectionSummary(section)}</p>
+          {sectionSummary(section) ? (
+            <p className="text-secondary text-sm capitalize">{sectionSummary(section)}</p>
+          ) : null}
         </CardContent>
       </Card>
     </Link>
@@ -128,6 +136,14 @@ export function DashboardScreen() {
   }
 
   const { data } = dashboard;
+  const visibility = data.analyze.find((section) => section.id === 'visibility');
+  const analyzeSections = data.analyze.filter(
+    (section) =>
+      !(section.id === 'visibility' && section.state === 'empty') && hasDashboardSignal(section),
+  );
+  const improveSections = data.improve.filter(
+    (section) => section.id !== 'projects' && hasDashboardSignal(section),
+  );
   return (
     <div className="grid gap-6" data-tour="dashboard-overview">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -167,33 +183,57 @@ export function DashboardScreen() {
         </CardContent>
       </Card>
 
+      {visibility?.state === 'empty' ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div className="grid gap-1">
+              <h2 className="text-foreground text-heading-sm">Start measuring visibility</h2>
+              <p className="text-secondary text-sm">
+                Connect an answer-engine provider, then launch your first audit to populate this
+                dashboard.
+              </p>
+            </div>
+            <Button asChild variant="secondary" className="shrink-0">
+              <Link href="/settings?tab=providers">
+                Connect providers
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {data.active_work.length > 0 ? (
         <Alert tone="info">
           Active work: {data.active_work.map((item) => item.replaceAll('_', ' ')).join(', ')}.
         </Alert>
       ) : null}
 
-      <section aria-labelledby="dashboard-analyze">
-        <h2 id="dashboard-analyze" className="text-foreground text-heading-sm mb-3">
-          Analyze
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {data.analyze.map((section) => (
-            <SectionCard key={section.id} section={section} />
-          ))}
-        </div>
-      </section>
+      {analyzeSections.length > 0 ? (
+        <section aria-labelledby="dashboard-analyze">
+          <h2 id="dashboard-analyze" className="text-foreground text-heading-sm mb-3">
+            Analyze
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {analyzeSections.map((section) => (
+              <SectionCard key={section.id} section={section} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <section aria-labelledby="dashboard-improve">
-        <h2 id="dashboard-improve" className="text-foreground text-heading-sm mb-3">
-          Improve
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {data.improve.map((section) => (
-            <SectionCard key={section.id} section={section} />
-          ))}
-        </div>
-      </section>
+      {improveSections.length > 0 ? (
+        <section aria-labelledby="dashboard-improve">
+          <h2 id="dashboard-improve" className="text-foreground text-heading-sm mb-3">
+            Improve
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {improveSections.map((section) => (
+              <SectionCard key={section.id} section={section} />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -53,10 +53,17 @@ function stepAt(id: string | null | undefined) {
   return PRODUCT_TOUR_STEPS.find((step) => step.id === id) ?? PRODUCT_TOUR_STEPS[0];
 }
 
+function isCurrentStepLocation(pathname: string, search: string, stepPath: string) {
+  const expected = new URL(stepPath, 'https://searchify.local');
+  return pathname === expected.pathname && search === expected.search.slice(1);
+}
+
 /** Persists product-tour progress and resumes it after each App Router transition. */
 export function ProductTourProvider({ children }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
   const pathname = usePathname() ?? '';
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const queryClient = useQueryClient();
   const { activeProject } = useProjectContext();
   const workspaceId = activeProject?.workspace_id ?? null;
@@ -123,16 +130,18 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     if (tour.status !== 'in_progress') return cleanup;
 
     const step = stepAt(tour.step_id);
+    // Navigate before looking for the hook. The previous ordering searched the
+    // current page first; after step two the provider-settings hook was absent,
+    // so the tour only retried and then silently disappeared.
+    if (!isCurrentStepLocation(pathname, search, step.path)) {
+      router.push(step.path);
+      return cleanup;
+    }
     const target = document.querySelector<HTMLElement>(step.selector);
     if (!target) {
       if (targetRetry < 12) {
         retryTimeout = window.setTimeout(() => setTargetRetry((value) => value + 1), 100);
       }
-      return cleanup;
-    }
-    const stepPathname = step.path.split('?', 1)[0];
-    if (pathname !== stepPathname) {
-      router.replace(step.path);
       return cleanup;
     }
     if (renderedStep.current === step.id) return cleanup;
@@ -172,7 +181,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       },
     });
     return cleanup;
-  }, [pathname, persist, router, targetRetry, tourQuery.data, update.isPending]);
+  }, [pathname, persist, router, search, targetRetry, tourQuery.data, update.isPending]);
 
   return children;
 }
