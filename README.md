@@ -1,6 +1,12 @@
+<div align="center">
+
 # Searchify
 
 <strong>Own how your brand appears in AI answers — and strengthen the pages those answers rely on.</strong>
+
+[Architecture](docs/architecture.md) · [Backend](docs/backend-architecture.md) · [Frontend](docs/frontend-architecture.md) · [Site Health](docs/site-health.md) · [Development](docs/DEVELOPMENT.md)
+
+</div>
 
 Searchify is an open-source AI visibility and site intelligence platform for measuring brand presence across answer engines, inspecting the evidence behind every result, and improving on-page AEO readiness.
 
@@ -8,7 +14,7 @@ Searchify is an open-source AI visibility and site intelligence platform for mea
 <a href="https://github.com/abhij1306/Searchify/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/abhij1306/Searchify?style=flat-square"></a>
 <a href="https://github.com/abhij1306/Searchify/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/abhij1306/Searchify?style=flat-square"></a>
 <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white&style=flat-square">
-<img alt="Next.js 15" src="https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white&style=flat-square">
+<img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white&style=flat-square">
 <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&logoColor=white&style=flat-square">
 <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white&style=flat-square">
 
@@ -56,7 +62,7 @@ Every report is built from persisted, versioned evidence. Searchify does not sil
 - Typed API contracts validated at runtime with Zod and Pydantic.
 - Light and dark themes, responsive application shell, and reusable design tokens.
 
-> Searchify currently ships Visibility Intelligence, audit evidence, provider management, Site Health, grouped Issues, and per-URL diagnostics. Additional content, traffic, topic, integration, agent, and MCP capabilities remain documented in the [roadmap](docs/roadmap/README.md).
+> Searchify currently ships an active-project Dashboard with authenticated PDF reporting, Visibility Intelligence, audit evidence, provider management, Site Health, grouped Issues, and per-URL diagnostics. New projects attempt to queue a Free Site Health crawl on a best-effort basis; project creation remains successful if crawl queueing fails. Each workspace member can replay the guided product tour from the user menu.
 
 ---
 
@@ -132,7 +138,7 @@ Searchify/
 ├── frontend/                 # Next.js App Router app
 │   ├── app/                  # Routes (auth, app shell, screens)
 │   └── lib/api/             # Typed API-contract layer (zod schemas)
-├── migrations/               # Alembic (frozen 0001_initial baseline + additive revisions)
+├── migrations/               # Alembic (single greenfield 0001_initial baseline)
 ├── infra/docker/             # docker-compose.yml + env template
 └── docs/                     # Architecture, invariants, design, plans
     ├── DEVELOPMENT.md        # Environment setup + full gotchas runbook
@@ -235,11 +241,10 @@ uv run alembic check                 # assert no ORM-vs-migration drift
 > disposable local or CI database that you are willing to lose — never against a
 > shared, staging, or production database.
 
-> **Frozen production baseline.** `0001_initial` contains explicit Alembic
-> operations and must never be edited. Every later schema change requires an
-> additive, reviewed revision plus fresh-install, upgrade, and `alembic check`
-> verification on disposable databases. See
-> [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+> **Greenfield migration policy.** Searchify maintains one complete
+> `0001_initial` baseline. Schema work is folded into that revision, then
+> verified with a fresh disposable database (`alembic upgrade head` and
+> `alembic check`).
 
 ## Testing
 

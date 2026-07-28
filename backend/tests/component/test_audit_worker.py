@@ -46,6 +46,7 @@ from app.models.analysis import MetricSnapshot, ResponseAnalysis
 from app.models.audit import (
     Audit,
     AuditTask,
+    ExecutionCostProjection,
     ProviderAttempt,
     RawResponseArtifact,
 )
@@ -149,8 +150,25 @@ async def test_worker_runs_all_tasks_and_finalizes(
             .select_from(ProviderAttempt)
             .where(ProviderAttempt.audit_id == audit.id)
         )
+        cost_projections = await session.scalar(
+            select(func.count())
+            .select_from(ExecutionCostProjection)
+            .where(ExecutionCostProjection.audit_id == audit.id)
+        )
         assert artifacts == 6
         assert attempts == 6
+        assert cost_projections == 6
+
+        cost_projection = await session.scalar(
+            select(ExecutionCostProjection).where(
+                ExecutionCostProjection.audit_id == audit.id
+            )
+        )
+        assert cost_projection is not None
+        assert cost_projection.input_tokens == 10
+        assert cost_projection.output_tokens == 20
+        assert cost_projection.total_tokens == 30
+        assert cost_projection.provider_reported_cost_microusd == 0
 
         # Each succeeded task was scored on persist (B6, invariant 4).
         assert all(t.score is not None for t in tasks)

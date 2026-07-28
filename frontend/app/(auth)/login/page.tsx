@@ -13,7 +13,7 @@ import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 /**
  * Login page. react-hook-form + zod client validation; on success the `me`
  * cache is primed and the user is routed directly to `/onboarding` (no
- * projects yet) or `/visibility` — no marketing-landing bounce. Email is the
+ * projects yet) or `/projects` — no marketing-landing bounce. Email is the
  * only sign-in path for now; the OAuth buttons stay in
  * `components/auth/oauth-buttons.tsx` until the backend providers are
  * configured. Any `ApiError` surfaces inline above the form.

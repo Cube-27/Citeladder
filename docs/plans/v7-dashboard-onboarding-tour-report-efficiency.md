@@ -18,60 +18,60 @@ and a research-gated audit cost/latency improvement track.
 ### T0 - Tracker and architecture lock
 
 - [x] Create this tracker before implementation.
-- [ ] Record discovered implementation deviations in the decision log.
-- [ ] Update companion architecture/design/site-health documentation.
+- [x] Record discovered implementation deviations in the decision log.
+- [x] Update companion architecture/design/site-health documentation.
 
 ### T1 - Greenfield schema baseline
 
-- [ ] Add product-tour state to `WorkspaceMember`.
-- [ ] Add execution-cost projection persistence.
-- [ ] Fold the brand-logo revision and all new schema into `0001_initial.py`.
-- [ ] Delete every migration revision except `0001_initial.py`.
-- [ ] Update migration-policy documentation.
-- [ ] Verify a fresh upgrade and `alembic check`.
+- [x] Add product-tour state to `WorkspaceMember`.
+- [x] Add execution-cost projection persistence.
+- [x] Fold the brand-logo revision and all new schema into `0001_initial.py`.
+- [x] Delete every migration revision except `0001_initial.py`.
+- [x] Update migration-policy documentation.
+- [x] Verify a fresh upgrade and `alembic check`.
 
 ### T2 - Dashboard projection and PDF
 
-- [ ] Add the workspace-scoped Dashboard read service and strict response DTO.
-- [ ] Add `GET /api/v1/projects/{project_id}/dashboard`.
-- [ ] Add `GET /api/v1/projects/{project_id}/dashboard/report.pdf`.
-- [ ] Add ReportLab PDF rendering from persisted projections only.
-- [ ] Add backend component/unit coverage.
+- [x] Add the workspace-scoped Dashboard read service and strict response DTO.
+- [x] Add `GET /api/v1/projects/{project_id}/dashboard`.
+- [x] Add `GET /api/v1/projects/{project_id}/dashboard/report.pdf`.
+- [x] Add ReportLab PDF rendering from persisted projections only.
+- [x] Add backend component/unit coverage.
 
 ### T3 - Dashboard frontend and routing
 
-- [ ] Transform `/projects` into Dashboard while retaining project management.
-- [ ] Add all Analyze/Improve summaries and direct links.
-- [ ] Add authenticated PDF blob download.
-- [ ] Route authenticated users with projects to `/projects`.
-- [ ] Add focused frontend coverage.
+- [x] Transform `/projects` into Dashboard while retaining project management.
+- [x] Add all Analyze/Improve summaries and direct links.
+- [x] Add authenticated PDF blob download.
+- [x] Route authenticated users with projects to `/projects`.
+- [x] Add focused frontend coverage.
 
 ### T4 - Onboarding Site Health
 
-- [ ] Add the Finish phase.
-- [ ] Queue `POST /site-crawls` automatically after project creation.
-- [ ] Preserve project success when crawl creation fails.
-- [ ] Show crawl success/failure state on Dashboard.
-- [ ] Add focused onboarding coverage.
+- [x] Add the Finish phase.
+- [x] Queue `POST /site-crawls` automatically after project creation.
+- [x] Preserve project success when crawl creation fails.
+- [x] Show crawl success/failure state on Dashboard.
+- [x] Add focused onboarding coverage.
 
 ### T5 - Interactive product tour
 
-- [ ] Add workspace-member product-tour GET/PATCH API.
-- [ ] Install and configure Driver.js.
-- [ ] Add the versioned cross-route step catalog and stable targets.
-- [ ] Persist/resume step progress and terminal Skip/Done state.
-- [ ] Add user-menu replay.
-- [ ] Add keyboard, reduced-motion, missing-target, and route-transition tests.
+- [x] Add workspace-member product-tour GET/PATCH API.
+- [x] Install and configure Driver.js.
+- [x] Add the versioned cross-route step catalog and stable targets.
+- [x] Persist/resume step progress and terminal Skip/Done state.
+- [x] Add user-menu replay.
+- [x] Add keyboard, reduced-motion, missing-target, and route-transition tests.
 
 ### T6 - README and documentation
 
-- [ ] Center the README header and simplify section links.
-- [ ] Correct stale feature, worker, route, and migration documentation.
-- [ ] Update backend/frontend/Site Health architecture docs.
+- [x] Center the README header and simplify section links.
+- [x] Correct stale feature, worker, route, and migration documentation.
+- [x] Update backend/frontend/Site Health architecture docs.
 
 ### T7 - Cost and latency workstream
 
-- [ ] Default new projects and first-run launch selection to one repetition.
+- [x] Default new projects and first-run launch selection to one repetition.
 - [ ] Add versioned provider pricing and immutable execution-cost estimates.
 - [ ] Add `POST /api/v1/audits/estimate`.
 - [ ] Show estimates in the launch dialog.
@@ -81,9 +81,9 @@ and a research-gated audit cost/latency improvement track.
 
 ### T8 - Verification
 
-- [ ] Run focused backend tests and Ruff.
-- [ ] Run focused frontend tests, lint, policy checks, and build.
-- [ ] Run fresh-database Alembic upgrade/check.
+- [x] Run focused backend tests and Ruff.
+- [x] Run focused frontend tests, lint, policy checks, and build.
+- [x] Run fresh-database Alembic upgrade/check.
 - [ ] Run the first-run Dashboard/tour/report Playwright flow.
 - [ ] Record residual risks and final results.
 
@@ -138,6 +138,8 @@ pnpm exec playwright test e2e/dashboard-onboarding-tour.spec.ts
 | 2026-07-28 | Generate reports from persisted projections only. | Preserves provenance and prevents provider/crawler calls from read paths. |
 | 2026-07-28 | Use a cross-route, per-workspace-member tour with replay. | The experience must survive devices and guide users through real product surfaces. |
 | 2026-07-28 | Keep provider batch APIs research-only. | Compatibility and measured economics are not yet proven. |
+| 2026-07-28 | Resume the tour through `/settings?tab=providers`, not the retired `/providers` route. | Provider configuration is a Settings tab; the old route is a redirect. |
+| 2026-07-28 | Keep crawl queueing best-effort in the project API. | A valid project must survive a malformed root, entitlement rejection, or transient crawl-planning failure. |
 
 ## Definition Of Done
 

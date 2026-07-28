@@ -439,7 +439,7 @@ theme toggle top-right. The pages own the single h1.
 ### 11.3 Onboarding (`/onboarding`) — Figma-styled, AI auto-discovery (OnboardingScreen.tsx)
 
 First-run route group **without** the app shell (SessionGuard + ProjectProvider; the layout
-redirects to `/visibility` when projects exist). **Full-screen split**: left panel = logo
+redirects to `/projects` when projects exist). **Full-screen split**: left panel = logo
 header + sign-out, a top progress stepper, the step form, and a footer pager (Back/Continue
 + "Step N of M"); right panel = a **live preview** that summarizes the brand, then populates
 discovered competitors/domains/prompts as they arrive, then mirrors the review selection.
@@ -447,11 +447,21 @@ Flow: **Brand** (name + website URL + derived-domain preview + explicit AI conse
 checkbox) → **Discovery** (competitor + owned-domain + prompt suggestions fire in parallel;
 animated staged progress; per-section status + retry) → **Review** (pre-filled **editable**
 competitor rows, domain chips, prompt rows with theme/intent; market defaults US/en with
-inline change) → **Confirm** (create project + prompt set + prompts, refetch the projects
-query, then land on `/visibility`). When the agent is unconfigured (503) the flow degrades
+inline change) → **Finish** (create project + prompt set + prompts, refetch the projects query,
+then confirm that the Free Site Health crawl is queued before the user opens `/projects`). When
+the agent is unconfigured (503) the flow degrades
 to a manual-entry fallback with an inline notice — onboarding never requires the agent.
 
-### 11.4 Visibility workspace (`/visibility`) — Figma dashboard (VisibilityDashboard.tsx)
+### 11.4 Active-project Dashboard and product tour (`/projects`)
+
+The Dashboard leads with four compact executive metrics and source-linked Analyze/Improve cards;
+only persisted projections are displayed, and the report action downloads the authenticated PDF
+blob. Project management follows as a secondary section. The Driver.js tour uses stable
+`data-tour` targets, honors reduced-motion preferences, keeps keyboard controls enabled, and
+persists its current route-aware step for each workspace member. A missing target quietly stops
+after bounded retries rather than obscuring the application.
+
+### 11.5 Visibility workspace (`/visibility`) — Figma dashboard (VisibilityDashboard.tsx)
 
 One workspace: filter bar (run selector defaulting to the latest completed run, engine pill
 filters) above the accessible four-tab underline tablist — **Overview** (default), Trends,
@@ -463,7 +473,7 @@ run info. Below: the competitors **rankings table** with per-row sparklines (whe
 exist), the **Share of Voice donut** (hover-thicken, mono center value), and the per-engine
 by-model card. Empty state (no completed runs): shared `empty-state` linking to `/runs`.
 
-### 11.5 Prompts (`/prompts`, `/prompt-research`)
+### 11.6 Prompts (`/prompts`, `/prompt-research`)
 
 **Your Prompts** — read-only, score-annotated: summary banner, search, dense table grouped
 by topic with expandable group rows; Visibility Score as a score-band badge (derived from
@@ -474,7 +484,7 @@ Archived underline tabs with mono counts, dense table (Prompt, Theme badge, Inte
 badge, Enabled toggle, row actions), shared pagination, CSV preview dialog, shared
 empty-state.
 
-### 11.6 Runs (`/runs`, `/runs/[runId]`, executions)
+### 11.7 Runs (`/runs`, `/runs/[runId]`, executions)
 
 Pill status filter chips (mono counts) above the audits table (run-status badge, mono
 counts, timestamp) + Launch dialog (prompt-set + engine chips + repetitions). Run detail:
@@ -483,7 +493,7 @@ executions table. Execution detail: evidence card — answer text, `search_used`
 citations with owned/competitor/third-party badges (owned = Figma blue), mention chips,
 mono score dict; Sentiment `—`.
 
-### 11.7 Measurement + action surfaces
+### 11.8 Measurement + action surfaces
 
 **Site Health** (`/site-health`) — crawl/page detail: score presentation
 (score-band tokens), issue grouping layout, page table. **Issues**, **Content**,

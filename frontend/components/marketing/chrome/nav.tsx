@@ -96,7 +96,7 @@ export function MarketingNav() {
 
   const isAuthenticated = me.isSuccess;
   const dashboardHref =
-    (projects && projects.length > 0) || hasStoredActiveProject() ? '/visibility' : '/onboarding';
+    (projects && projects.length > 0) || hasStoredActiveProject() ? '/projects' : '/onboarding';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);

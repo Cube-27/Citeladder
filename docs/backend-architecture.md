@@ -73,7 +73,7 @@ services.
 | `app/api/auth.py` | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
 | `app/api/workspaces.py` | `GET /workspaces`, `POST /workspaces` |
 | `app/api/billing.py` | Public `GET /billing/catalog`; authenticated billing summary/profile/checkout/manage/cancel; membership-authorized workspace entitlements; signed Razorpay webhook |
-| `app/api/projects.py` | `GET/POST /projects`, `GET/PATCH/DELETE /projects/{id}`, `GET/PUT /projects/{id}/brand-profile`, `POST /projects/{id}/brand-profile/suggest`, `POST /projects/{id}/brand-profile/suggestions/{suggestion_id}/accept`, `GET /projects/{id}/visibility?audit_id=`, `GET /projects/{id}/visibility/trends`, `GET /projects/{id}/visibility/evidence` |
+| `app/api/projects.py` | `GET/POST /projects` (create also best-effort queues the initial Site Health crawl), `GET/PATCH/DELETE /projects/{id}`, project/brand-profile endpoints, `GET /projects/{id}/dashboard`, authenticated `GET /projects/{id}/dashboard/report.pdf`, and Visibility projections |
 | `app/api/prompts.py` | `GET/POST /prompt-sets`, prompt CRUD (`PATCH/DELETE /prompts/{id}`), `POST /prompt-sets/{id}/import` (MVP CSV bulk-create), `POST /prompt-sets/{id}/generate` (AI topic+prompt generation via default agent), `POST /prompt-sets/{id}/prompts/bulk-status`, topics CRUD (`GET/POST /projects/{id}/topics`, `PATCH/DELETE /topics/{id}`) |
 | `app/api/provider_connections.py` | `GET/POST /provider-connections`, `PATCH/DELETE /provider-connections/{id}`, `POST /provider-connections/{id}/test`; `GET /provider-catalog` |
 | `app/api/audits.py` | `POST /audits`, `GET /audits`, `GET /audits/{id}`, `POST /audits/{id}/cancel`, `GET /audits/{id}/events` (SSE), `GET /audits/{id}/executions` |
@@ -82,9 +82,15 @@ services.
 | `app/api/products.py` | `GET/POST /projects/{id}/products`, `GET/PATCH/DELETE /products/{id}`, `POST /projects/{id}/products/import` (CSV upload **or** `{ products: [...] }` JSON rows), `GET/POST /projects/{id}/competitor-products`, `PATCH/DELETE /competitor-products/{id}`, `GET /projects/{id}/products/visibility?audit_id=&engine=`, `GET /products/{id}/visibility/evidence?audit_id=&engine=&limit=`, `GET /projects/{id}/products/visibility/export.csv` |
 | `app/api/opportunities.py` | `GET /projects/{id}/opportunities`, `GET /projects/{id}/opportunities/summary`, `POST /projects/{id}/opportunities/recompute`, `GET /projects/{id}/opportunities/export.csv`, `GET /projects/{id}/opportunities/export.md`, `GET /opportunities/{id}`, `PATCH /opportunities/{id}` (status only; a superseded row is a coded 409) |
 
-> The `brands/analyze`, `audits/estimate`,
-> `audits/{id}/reports`, `reports/{id}/download` endpoints from [architecture.md](architecture.md) §14 are **roadmap** — the
-> The current coded surface is exactly the table above.
+> The `brands/analyze`, `audits/estimate`, `audits/{id}/reports`, and
+> `reports/{id}/download` endpoints from [architecture.md](architecture.md) §14 remain
+> roadmap. The Dashboard PDF is served directly from the persisted project
+> projection at `/projects/{id}/dashboard/report.pdf`.
+
+Each successful audit execution also writes one immutable `ExecutionCostProjection` sourced from
+its `RawResponseArtifact`: normalized token counts and any provider-reported cost in micro-USD,
+stamped `provider-usage-v1`. This records evidence without claiming an estimate; versioned price
+cards and user-facing estimates remain the T7 workstream.
 
 ## 4. Audit request + settings contract
 

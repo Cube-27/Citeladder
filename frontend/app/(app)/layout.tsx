@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SessionGuard } from '@/lib/auth/session-guard';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
+import { ProductTourProvider } from '@/components/tour/product-tour-provider';
 
 /**
  * Authed-area layout (F5).
@@ -19,17 +20,19 @@ import { ProjectProvider } from '@/lib/project/project-context';
  * `/onboarding` rather than into an empty workspace), then the `<AppShell>`
  * chrome (sidebar + top bar). `/` is now the public marketing page (see
  * `app/(marketing)/`); its LandingSessionRedirect island forwards signed-in
- * visitors here (`/visibility`, or `/onboarding` pre-project).
+ * visitors here (`/projects`, or `/onboarding` pre-project).
  */
 export default function AppLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SessionGuard fallback={<ShellFallback />}>
       <ProjectProvider>
-        <EntitlementProvider>
-          <OnboardingGate>
-            <AppShell>{children}</AppShell>
-          </OnboardingGate>
-        </EntitlementProvider>
+        <ProductTourProvider>
+          <EntitlementProvider>
+            <OnboardingGate>
+              <AppShell>{children}</AppShell>
+            </OnboardingGate>
+          </EntitlementProvider>
+        </ProductTourProvider>
       </ProjectProvider>
     </SessionGuard>
   );

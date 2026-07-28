@@ -17,6 +17,9 @@ export const DropdownTrigger = DropdownPrimitive.Trigger;
 export const DropdownSeparator = DropdownPrimitive.Separator;
 export const DropdownRadioGroup = DropdownPrimitive.RadioGroup;
 
+const dropdownSelectableItemClasses =
+  'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 ps-7 pe-2 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50';
+
 export function DropdownContent({
   className,
   align = 'start',
@@ -70,7 +73,7 @@ export function DropdownCheckboxItem({
         // `relative` makes each row the containing block for its own absolutely
         // positioned indicator below — without it every checkmark resolves
         // against a distant ancestor and they all stack in one spot.
-        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 ps-7 pe-2 text-sm transition-colors outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        dropdownSelectableItemClasses,
         className,
       )}
       {...props}
@@ -92,10 +95,7 @@ export function DropdownRadioItem({
 }: Readonly<ComponentPropsWithoutRef<typeof DropdownPrimitive.RadioItem>>) {
   return (
     <DropdownPrimitive.RadioItem
-      className={cn(
-        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 ps-7 pe-2 text-sm transition-colors outline-none',
-        className,
-      )}
+      className={cn(dropdownSelectableItemClasses, className)}
       {...props}
     >
       <span className="absolute start-2 flex size-4 items-center justify-center">

@@ -57,6 +57,6 @@ DEFAULT_PROMPT_ORIGIN: Final = PROMPT_ORIGIN_MANUAL
 
 # --- Repetition bounds ----------------------------------------------------
 # Default + allowed range for a project's per-audit repetition count.
-DEFAULT_REPETITIONS: Final = 3
+DEFAULT_REPETITIONS: Final = 1
 MIN_REPETITIONS: Final = 1
 MAX_REPETITIONS: Final = 10

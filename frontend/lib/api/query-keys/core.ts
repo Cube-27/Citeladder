@@ -8,12 +8,14 @@ export const authKeys = {
 export const workspaceKeys = {
   all: ['workspaces'] as const,
   list: () => ['workspaces', 'list'] as const,
+  productTour: (workspaceId: string) => ['workspaces', 'product-tour', workspaceId] as const,
 };
 
 export const projectKeys = {
   all: ['projects'] as const,
   list: () => ['projects', 'list'] as const,
   detail: (projectId: string) => ['projects', 'detail', projectId] as const,
+  dashboard: (projectId: string) => ['projects', 'dashboard', projectId] as const,
   brandProfile: (projectId: string) => ['projects', 'brand-profile', projectId] as const,
 };
 

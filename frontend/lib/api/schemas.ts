@@ -57,6 +57,24 @@ export const workspaceSchema = z.strictObject({
   updated_at: z.string(),
 });
 
+// Cross-route onboarding tour state belongs to the caller's workspace
+// membership, never a project or user id.
+export const productTourStatusSchema = z.enum([
+  'not_started',
+  'in_progress',
+  'completed',
+  'skipped',
+]);
+
+export const productTourSchema = z.strictObject({
+  workspace_id: uuid(),
+  version: z.string(),
+  status: productTourStatusSchema,
+  step_id: z.string().nullable(),
+  started_at: z.string().nullable(),
+  completed_at: z.string().nullable(),
+});
+
 // ---------------------------------------------------------------------------
 // Brand / project / prompts
 // ---------------------------------------------------------------------------
@@ -268,6 +286,61 @@ export const projectSchema = z.strictObject({
   prompt_sets: z.array(promptSetSchema),
   created_at: z.string(),
   updated_at: z.string(),
+});
+
+// The active-project Dashboard is a read-only projection over persisted
+// product-area rows. Metric shapes remain owned by their source subsystems,
+// so the dashboard carries them as a strict record rather than duplicating
+// each source DTO here.
+export const dashboardSectionStateSchema = z.enum([
+  'ready',
+  'running',
+  'empty',
+  'not_setup',
+  'failed',
+]);
+
+export const dashboardSourceSchema = z.strictObject({
+  id: uuid(),
+  kind: z.string(),
+  timestamp: z.string(),
+});
+
+export const dashboardSectionSchema = z.strictObject({
+  id: z.enum([
+    'visibility',
+    'answers',
+    'traffic',
+    'prompts',
+    'commerce',
+    'runs',
+    'content',
+    'site_health',
+    'issues',
+    'opportunities',
+    'brand_knowledge',
+    'projects',
+  ]),
+  title: z.string(),
+  href: z.string(),
+  state: dashboardSectionStateSchema,
+  metrics: z.record(z.string(), z.unknown()),
+  source: dashboardSourceSchema.nullable(),
+});
+
+export const dashboardSchema = z.strictObject({
+  project: z.strictObject({
+    id: uuid(),
+    workspace_id: uuid(),
+    name: z.string(),
+    brand_name: z.string(),
+    website_url: z.string(),
+  }),
+  generated_at: z.string(),
+  executive_metrics: z.record(z.string(), z.unknown()),
+  analyze: z.array(dashboardSectionSchema),
+  improve: z.array(dashboardSectionSchema),
+  active_work: z.array(z.string()),
 });
 
 // ---------------------------------------------------------------------------

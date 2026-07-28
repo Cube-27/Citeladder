@@ -40,7 +40,7 @@ export function ProviderSettings() {
   const isError = catalogQuery.isError || connectionsQuery.isError;
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6" data-tour="provider-settings">
       <p className="text-secondary max-w-2xl text-sm">
         Bring your own API keys. Configure a route per engine, save a key, then run a connection
         test. Keys are write-only — Searchify never displays a stored secret.

@@ -4,7 +4,6 @@ import {
   buildLaunchPayload,
   canLaunch,
   clampRepetitions,
-  DEFAULT_REPETITIONS,
   MAX_REPETITIONS,
   MIN_REPETITIONS,
   toggleEngine,
@@ -25,14 +24,14 @@ function selection(overrides: Partial<LaunchSelection> = {}): LaunchSelection {
 }
 
 describe('clampRepetitions', () => {
+  it('defaults a first run to one repetition', () => {
+    expect(clampRepetitions(Number.NaN)).toBe(1);
+  });
+
   it('clamps below/above the accepted range', () => {
     expect(clampRepetitions(0)).toBe(MIN_REPETITIONS);
     expect(clampRepetitions(99)).toBe(MAX_REPETITIONS);
     expect(clampRepetitions(4)).toBe(4);
-  });
-
-  it('falls back to the default for a non-finite value', () => {
-    expect(clampRepetitions(Number.NaN)).toBe(DEFAULT_REPETITIONS);
   });
 });
 

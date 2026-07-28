@@ -66,7 +66,7 @@ async def test_product_tour_progress_resume_skip_and_replay(
 
 
 @pytest.mark.asyncio
-async def test_product_tour_version_change_is_not_started(
+async def test_product_tour_rejects_stale_version(
     client: httpx.AsyncClient,
 ) -> None:
     workspace_id = await _register(client, "tour-version@example.com")
@@ -75,7 +75,7 @@ async def test_product_tour_version_change_is_not_started(
         url,
         json={"version": "older-tour", "status": "completed"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 422
 
     current = (await client.get(url)).json()
     assert current["version"] == PRODUCT_TOUR_VERSION

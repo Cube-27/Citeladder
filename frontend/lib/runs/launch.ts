@@ -11,7 +11,7 @@ import type { LogicalEngine } from '@/lib/api/types';
 
 export const MIN_REPETITIONS = 1;
 export const MAX_REPETITIONS = 10;
-export const DEFAULT_REPETITIONS = 3;
+export const DEFAULT_REPETITIONS = 1;
 
 /** The dialog's local, still-being-edited selection. */
 export type LaunchSelection = {

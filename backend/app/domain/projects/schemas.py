@@ -22,6 +22,7 @@ from app.core.config.brand_profile import (
 )
 from app.core.config.projects import (
     DEFAULT_BENCHMARK_MODE,
+    DEFAULT_REPETITIONS,
     MAX_REPETITIONS,
     MIN_REPETITIONS,
 )
@@ -177,7 +178,9 @@ class ProjectCreate(BaseModel):
     country_code: str = Field(default="", max_length=8)
     language_code: str = Field(default="", max_length=16)
     benchmark_mode: BenchmarkMode = DEFAULT_BENCHMARK_MODE
-    default_repetitions: int = Field(default=3, ge=MIN_REPETITIONS, le=MAX_REPETITIONS)
+    default_repetitions: int = Field(
+        default=DEFAULT_REPETITIONS, ge=MIN_REPETITIONS, le=MAX_REPETITIONS
+    )
 
     @property
     def brand_aliases(self) -> list[str]:

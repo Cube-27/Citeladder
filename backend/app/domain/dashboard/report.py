@@ -3,16 +3,29 @@ from __future__ import annotations
 from io import BytesIO
 from xml.sax.saxutils import escape
 
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+from reportlab.lib.pagesizes import A4  # type: ignore[import-untyped]
+from reportlab.lib.styles import getSampleStyleSheet  # type: ignore[import-untyped]
+from reportlab.lib.units import mm  # type: ignore[import-untyped]
+from reportlab.platypus import (  # type: ignore[import-untyped]
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+)
 
 from app.domain.dashboard.schemas import DashboardResponse
 
 
 def _paragraph_text(value: object) -> str:
     return escape(str(value))
+
+
+def _metric_paragraph(name: str, value: object, body_style: object) -> Paragraph:
+    display = value if value is not None else "Not set up"
+    return Paragraph(
+        f"{_paragraph_text(name.replace('_', ' ').title())}: "
+        f"{_paragraph_text(display)}",
+        body_style,
+    )
 
 
 def render_dashboard_pdf(dashboard: DashboardResponse) -> bytes:
@@ -41,14 +54,7 @@ def render_dashboard_pdf(dashboard: DashboardResponse) -> bytes:
         Paragraph("Executive summary", styles["Heading2"]),
     ]
     for name, value in dashboard.executive_metrics.items():
-        display = value if value is not None else "Not set up"
-        story.append(
-            Paragraph(
-                f"{_paragraph_text(name.replace('_', ' ').title())}: "
-                f"{_paragraph_text(display)}",
-                styles["BodyText"],
-            )
-        )
+        story.append(_metric_paragraph(name, value, styles["BodyText"]))
     groups = (("Analyze", dashboard.analyze), ("Improve", dashboard.improve))
     for heading, sections in groups:
         story.extend([Spacer(1, 6 * mm), Paragraph(heading, styles["Heading2"])])
@@ -61,14 +67,7 @@ def render_dashboard_pdf(dashboard: DashboardResponse) -> bytes:
                 )
             )
             for name, value in section.metrics.items():
-                display = value if value is not None else "Not set up"
-                story.append(
-                    Paragraph(
-                        f"{_paragraph_text(name.replace('_', ' ').title())}: "
-                        f"{_paragraph_text(display)}",
-                        styles["BodyText"],
-                    )
-                )
+                story.append(_metric_paragraph(name, value, styles["BodyText"]))
             if section.source:
                 source = section.source
                 story.append(

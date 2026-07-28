@@ -143,7 +143,7 @@ describe('useAuthMutation', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('routes to /visibility when the workspace already has a project', async () => {
+  it('routes to /projects when the workspace already has a project', async () => {
     mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
     const { result } = setup();
 
@@ -151,7 +151,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/visibility'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
   });
 
   it('falls back to /onboarding when the projects lookup fails', async () => {

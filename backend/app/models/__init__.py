@@ -29,6 +29,7 @@ from app.models.audit import (
     AuditPromptSnapshot,
     AuditShoppingSurfaceSnapshot,
     AuditTask,
+    ExecutionCostProjection,
     ProviderAttempt,
     RawResponseArtifact,
 )
@@ -132,6 +133,7 @@ __all__ = [
     "ContentGeneration",
     "ContentGenerationAttempt",
     "DiscoveryModelConfig",
+    "ExecutionCostProjection",
     "FeedIssue",
     "IntegrationConnection",
     "IntegrationEvent",

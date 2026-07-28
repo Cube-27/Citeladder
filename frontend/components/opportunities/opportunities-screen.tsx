@@ -6,12 +6,7 @@ import { ChevronDown, Download, RefreshCw } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
-  DropdownTrigger,
-} from '@/components/ui/dropdown';
+import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
@@ -152,10 +147,14 @@ function SummaryStrip({
             </DropdownTrigger>
             <DropdownContent align="end">
               <DropdownItem asChild>
-                <a href={opportunitiesApi.exportUrl(projectId, 'csv')}>Download CSV</a>
+                <a href={opportunitiesApi.exportUrl(projectId, 'csv')} download>
+                  Download CSV
+                </a>
               </DropdownItem>
               <DropdownItem asChild>
-                <a href={opportunitiesApi.exportUrl(projectId, 'md')}>Download Markdown</a>
+                <a href={opportunitiesApi.exportUrl(projectId, 'md')} download>
+                  Download Markdown
+                </a>
               </DropdownItem>
             </DropdownContent>
           </Dropdown>

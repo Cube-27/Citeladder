@@ -90,12 +90,12 @@ pnpm build            # next build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
-## Migrations (frozen bootstrap plus additive revisions)
+## Migrations (single greenfield baseline)
 
-`0001_initial` is the explicit, immutable production baseline. Never edit an
-applied revision. Change the ORM model and add a reviewed forward revision for
-every later schema change; use expand/migrate/contract sequencing when old and
-new application versions overlap.
+Searchify is greenfield and keeps one complete `0001_initial` revision. Fold
+every schema change into that baseline, reset only disposable databases, and
+verify the complete schema from scratch. Do not introduce additive revision
+files while this policy is in effect.
 
 Verify the bootstrap only against a disposable database:
 
@@ -107,10 +107,7 @@ uv run alembic downgrade base   # destructive; disposable database only
 uv run alembic upgrade head
 ```
 
-If `alembic revision --autogenerate` is unavailable because of the repository
-`script_location` layout, write the additive revision by hand and use
-`alembic check` to prove it converges with `Base.metadata`. Keep
-`alembic_version` revision ids short — the column is `varchar(32)`.
+`alembic check` must converge with `Base.metadata` after every baseline edit.
 
 ---
 

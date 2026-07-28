@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
+import { LogOut, Map } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -51,6 +51,15 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
               <ICONS.settings className="size-4 shrink-0" aria-hidden />
               <span>Settings</span>
             </Link>
+          </DropdownItem>
+          <DropdownItem
+            onSelect={(event) => {
+              event.preventDefault();
+              window.dispatchEvent(new Event('searchify:replay-product-tour'));
+            }}
+          >
+            <Map className="size-4 shrink-0" aria-hidden />
+            <span>Replay product tour</span>
           </DropdownItem>
           <DropdownItem
             onSelect={(event) => {

@@ -15,7 +15,7 @@ import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
  * client (so it lands in the `projects.list` cache for the app shell) and
  * awaited, which keeps the mutation pending — and the submit button spinning —
  * until the redirect fires: no projects yet → `/onboarding`, otherwise
- * `/visibility`. A failed lookup falls back to `/onboarding` rather than stranding
+ * `/projects`. A failed lookup falls back to `/onboarding` rather than stranding
  * the user on the auth screen. The submit handler swallows the rejection —
  * the error surfaces via `mutation.isError` in the page's inline alert.
  */
@@ -37,7 +37,7 @@ export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promis
           queryKey: queryKeys.projects.list(),
           queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
         });
-        if (projects.length > 0) destination = '/visibility';
+        if (projects.length > 0) destination = '/projects';
       } catch {
         // Projects lookup failed — `/onboarding` is the safe default.
       }

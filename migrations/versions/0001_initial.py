@@ -2728,6 +2728,43 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "execution_cost_projections",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("raw_response_artifact_id", sa.UUID(), nullable=False),
+        sa.Column("projection_version", sa.String(length=32), nullable=False),
+        sa.Column("input_tokens", sa.Integer(), nullable=False),
+        sa.Column("output_tokens", sa.Integer(), nullable=False),
+        sa.Column("total_tokens", sa.Integer(), nullable=False),
+        sa.Column("provider_reported_cost_microusd", sa.BigInteger(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["raw_response_artifact_id"], ["raw_response_artifacts.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("raw_response_artifact_id", name="uq_execution_cost_projection_artifact"),
+        sa.UniqueConstraint("task_id", name="uq_execution_cost_projection_task"),
+    )
+    op.create_index(
+        op.f("ix_execution_cost_projections_audit_id"),
+        "execution_cost_projections",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_execution_cost_projections_raw_response_artifact_id"),
+        "execution_cost_projections",
+        ["raw_response_artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_execution_cost_projections_task_id"),
+        "execution_cost_projections",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_table(
         "referral_events",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -3825,6 +3862,19 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_referral_events_project_id"), table_name="referral_events")
     op.drop_index(op.f("ix_referral_events_import_id"), table_name="referral_events")
     op.drop_table("referral_events")
+    op.drop_index(
+        op.f("ix_execution_cost_projections_task_id"),
+        table_name="execution_cost_projections",
+    )
+    op.drop_index(
+        op.f("ix_execution_cost_projections_raw_response_artifact_id"),
+        table_name="execution_cost_projections",
+    )
+    op.drop_index(
+        op.f("ix_execution_cost_projections_audit_id"),
+        table_name="execution_cost_projections",
+    )
+    op.drop_table("execution_cost_projections")
     op.drop_index(
         op.f("ix_raw_response_artifacts_task_id"), table_name="raw_response_artifacts"
     )

@@ -15,12 +15,14 @@ import {
   promptSuggestResponseSchema,
   strictValidate,
   workspaceSchema,
+  dashboardSchema,
 } from './schemas';
 import type {
   BrandProfile,
   BrandProfileAcceptResponse,
   BrandProfileDraft,
   BrandProfileSuggestion,
+  Dashboard,
   Project,
   Workspace,
 } from './types';
@@ -98,6 +100,12 @@ export const projectsApi = {
     const res = await apiClient.get<Project>(`/projects/${projectId}`, options);
     return strictValidate(projectSchema, res, 'projects.getProject');
   },
+  getDashboard: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<Dashboard>(`/projects/${projectId}/dashboard`, options);
+    return strictValidate(dashboardSchema, res, 'projects.getDashboard');
+  },
+  downloadDashboardReport: (projectId: string, options?: ApiRequestOptions) =>
+    apiClient.getBlob(`/projects/${projectId}/dashboard/report.pdf`, options),
   createProject: async (input: ProjectInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Project>('/projects', input, options);
     return strictValidate(projectSchema, res, 'projects.createProject');

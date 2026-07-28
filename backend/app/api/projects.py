@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import uuid
 from datetime import datetime
@@ -87,8 +88,15 @@ from app.domain.projects.service import (
     project_to_response,
     update_project,
 )
+from app.domain.site_health.planner import (
+    CrawlAlreadyActiveError,
+    CrawlPlanError,
+    create_crawl,
+)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+logger = logging.getLogger(__name__)
 
 _RES_PROJECT = "Project"
 
@@ -140,9 +148,46 @@ async def list_projects_endpoint(
 async def create_project_endpoint(
     payload: ProjectCreate, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ProjectResponse:
-    project = await create_project(
-        session, workspace_id=ctx.workspace_id, payload=payload
-    )
+    # Keep scalar identities before an optional crawl rollback expires ORM rows
+    # held by the request context.
+    workspace_id = ctx.workspace_id
+    project = await create_project(session, workspace_id=workspace_id, payload=payload)
+    project_id = project.id
+
+    # A Free Site Health crawl is part of the first-run experience. The project
+    # was committed by `create_project` before this independent queue operation,
+    # so a bad root, entitlement problem, or transient queue failure cannot undo
+    # the user's newly-created project. The Dashboard exposes a queued crawl as
+    # running and a worker-finalized one as ready/failed.
+    async def reload_project_after_crawl_failure(
+        skipped_crawl_error: BaseException | None = None,
+    ) -> None:
+        nonlocal project
+        await session.rollback()
+        if skipped_crawl_error is not None:
+            logger.info(
+                "onboarding_site_health_queue_skipped",
+                exc_info=skipped_crawl_error,
+            )
+        else:
+            logger.exception(
+                "onboarding_site_health_queue_failed",
+                extra={"project_id": str(project_id)},
+            )
+        project = await get_project(
+            session, workspace_id=workspace_id, project_id=project_id
+        )
+
+    try:
+        await create_crawl(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+        )
+    except (CrawlAlreadyActiveError, CrawlPlanError) as exc:
+        await reload_project_after_crawl_failure(exc)
+    except Exception:
+        await reload_project_after_crawl_failure()
     return project_to_response(project)
 
 

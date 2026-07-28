@@ -79,6 +79,7 @@ from app.core.config.provider_catalog import (
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret
 from app.core.telemetry import configure_logging
+from app.domain.audits.cost_projection import build_execution_cost_projection
 from app.domain.audits.state_events import apply_transition, record_event
 from app.models.audit import (
     Audit,
@@ -864,6 +865,7 @@ class AuditWorker:
             session.add(artifact)
             await session.flush()
             artifact_id = artifact.id
+            session.add(build_execution_cost_projection(artifact))
 
             task.answer_text = response.answer_text
             task.search_used = response.search_used

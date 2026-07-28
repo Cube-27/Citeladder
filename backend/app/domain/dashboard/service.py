@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import UTC, datetime
 
@@ -8,7 +7,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.audits import AUDIT_TERMINAL_STATUSES
-from app.core.database import SessionLocal
 from app.domain.dashboard.schemas import (
     DashboardProject,
     DashboardResponse,
@@ -59,72 +57,71 @@ async def get_dashboard(
 ) -> DashboardResponse:
     project_id = project.id
 
-    async def latest(model, timestamp):
-        async with SessionLocal() as read_session:
-            return await _latest(
-                read_session, model, workspace_id, project_id, timestamp
-            )
-
-    async def profile():
-        async with SessionLocal() as read_session:
-            return await read_session.scalar(
-                select(BrandProfile).where(
-                    BrandProfile.workspace_id == workspace_id,
-                    BrandProfile.project_id == project_id,
-                )
-            )
-
-    async def prompt_count():
-        async with SessionLocal() as read_session:
-            return await read_session.scalar(
-                select(func.count(Prompt.id))
-                .join(PromptSet, Prompt.prompt_set_id == PromptSet.id)
-                .where(
-                    PromptSet.workspace_id == workspace_id,
-                    PromptSet.project_id == project_id,
-                    Prompt.status == "active",
-                )
-            )
-
-    async def opportunity_count():
-        async with SessionLocal() as read_session:
-            return await read_session.scalar(
-                select(func.count(Opportunity.id)).where(
-                    Opportunity.workspace_id == workspace_id,
-                    Opportunity.project_id == project_id,
-                    Opportunity.superseded_at.is_(None),
-                    Opportunity.status == "open",
-                )
-            )
-
-    (
-        metric,
-        analytics,
-        traffic,
-        audit,
-        commerce,
-        content,
-        crawl,
-        health,
-        profile_row,
-        prompt_count_value,
-        opportunity_count_value,
-    ) = await asyncio.gather(
-        latest(MetricSnapshot, MetricSnapshot.created_at),
-        latest(AnalyticsSnapshot, AnalyticsSnapshot.created_at),
-        latest(TrafficSnapshot, TrafficSnapshot.created_at),
-        latest(Audit, Audit.created_at),
-        latest(ProductMetricSnapshot, ProductMetricSnapshot.created_at),
-        latest(ContentGeneration, ContentGeneration.created_at),
-        latest(SiteCrawl, SiteCrawl.created_at),
-        latest(SiteHealthSnapshot, SiteHealthSnapshot.created_at),
-        profile(),
-        prompt_count(),
-        opportunity_count(),
+    # Every query stays on the request session. Opening independent sessions
+    # here would make the projection observe a different transaction (and can
+    # miss freshly committed request-scoped rows in tests or integrations).
+    metric = await _latest(
+        session, MetricSnapshot, workspace_id, project_id, MetricSnapshot.created_at
     )
-    profile = profile_row
-    prompt_count = prompt_count_value
-    opportunity_count = opportunity_count_value
+    analytics = await _latest(
+        session,
+        AnalyticsSnapshot,
+        workspace_id,
+        project_id,
+        AnalyticsSnapshot.created_at,
+    )
+    traffic = await _latest(
+        session, TrafficSnapshot, workspace_id, project_id, TrafficSnapshot.created_at
+    )
+    audit = await _latest(session, Audit, workspace_id, project_id, Audit.created_at)
+    commerce = await _latest(
+        session,
+        ProductMetricSnapshot,
+        workspace_id,
+        project_id,
+        ProductMetricSnapshot.created_at,
+    )
+    content = await _latest(
+        session,
+        ContentGeneration,
+        workspace_id,
+        project_id,
+        ContentGeneration.created_at,
+    )
+    crawl = await _latest(
+        session, SiteCrawl, workspace_id, project_id, SiteCrawl.created_at
+    )
+    health = await _latest(
+        session,
+        SiteHealthSnapshot,
+        workspace_id,
+        project_id,
+        SiteHealthSnapshot.created_at,
+    )
+    profile = await session.scalar(
+        select(BrandProfile).where(
+            BrandProfile.workspace_id == workspace_id,
+            BrandProfile.project_id == project_id,
+        )
+    )
+    prompt_count = await session.scalar(
+        select(func.count(Prompt.id))
+        .join(PromptSet, Prompt.prompt_set_id == PromptSet.id)
+        .join(Project, PromptSet.project_id == Project.id)
+        .where(
+            Project.workspace_id == workspace_id,
+            PromptSet.project_id == project_id,
+            Prompt.status == "active",
+        )
+    )
+    opportunity_count = await session.scalar(
+        select(func.count(Opportunity.id)).where(
+            Opportunity.workspace_id == workspace_id,
+            Opportunity.project_id == project_id,
+            Opportunity.superseded_at.is_(None),
+            Opportunity.status == "open",
+        )
+    )
 
     audit_running = audit is not None and audit.status not in AUDIT_TERMINAL_STATUSES
     crawl_running = (
@@ -164,7 +161,7 @@ async def get_dashboard(
         _section(
             "answers",
             "Answers",
-            "/llm-analytics",
+            "/analytics",
             "ready" if analytics else "not_setup",
             analytics.metrics if analytics else {},
             _source(analytics, "analytics_snapshot"),
@@ -237,7 +234,7 @@ async def get_dashboard(
         _section(
             "issues",
             "Issues",
-            "/site-health?view=issues",
+            "/issues",
             "ready" if health else "not_setup",
             {"count": health.issue_count if health else None},
             _source(health, "site_health_snapshot"),
@@ -252,7 +249,7 @@ async def get_dashboard(
         _section(
             "brand_knowledge",
             "Brand knowledge",
-            "/settings/brand",
+            "/knowledge-base",
             "ready" if profile else "not_setup",
             {"configured": profile is not None},
             _source(profile, "brand_profile", "updated_at"),

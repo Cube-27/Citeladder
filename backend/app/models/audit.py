@@ -18,6 +18,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -424,6 +425,50 @@ class RawResponseArtifact(Base):
     provider_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     usage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
+class ExecutionCostProjection(Base):
+    """Immutable normalized provider usage for one successful execution.
+
+    This preserves raw-artifact provenance without coupling completed audits to
+    mutable provider price cards. A later pricing version can derive estimates
+    from this row, but cannot alter what the provider reported at execution.
+    """
+
+    __tablename__ = "execution_cost_projections"
+    __table_args__ = (
+        UniqueConstraint("task_id", name="uq_execution_cost_projection_task"),
+        UniqueConstraint(
+            "raw_response_artifact_id", name="uq_execution_cost_projection_artifact"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(FK_AUDITS_ID, ondelete="CASCADE"),
+        index=True,
+    )
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("audit_tasks.id", ondelete="CASCADE"),
+        index=True,
+    )
+    raw_response_artifact_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("raw_response_artifacts.id", ondelete="CASCADE"),
+        index=True,
+    )
+    projection_version: Mapped[str] = mapped_column(String(32))
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    provider_reported_cost_microusd: Mapped[int] = mapped_column(BigInteger, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

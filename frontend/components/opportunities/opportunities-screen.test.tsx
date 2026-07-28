@@ -163,9 +163,7 @@ describe('OpportunitiesScreen', () => {
 
     expect(await screen.findByText('No recommendations yet')).toBeInTheDocument();
     expect(screen.getByText(/Run a visibility audit/)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Refresh recommendations' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh recommendations' })).toBeInTheDocument();
   });
 
   it('renders the compact summary strip + prioritized recommendations when computed', async () => {
@@ -200,13 +198,13 @@ describe('OpportunitiesScreen', () => {
     expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
 
     // Catalog rows: title, target line, impact/area badges.
-    expect(
-      await screen.findByText('Brand absent from high-value prompt'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Thin content on an owned page')).toBeInTheDocument();
-    expect(screen.getByText('acme.com/blog')).toBeInTheDocument();
-    expect(screen.getByText('HIGH')).toBeInTheDocument();
-    expect(screen.getByText('Visibility')).toBeInTheDocument();
+    await screen.findByText('Brand absent from high-value prompt');
+    const catalog = screen.getByRole('table');
+    expect(within(catalog).getByText('Brand absent from high-value prompt')).toBeInTheDocument();
+    expect(within(catalog).getByText('Thin content on an owned page')).toBeInTheDocument();
+    expect(within(catalog).getByText('acme.com/blog')).toBeInTheDocument();
+    expect(within(catalog).getByText('HIGH')).toBeInTheDocument();
+    expect(within(catalog).getByText('Visibility')).toBeInTheDocument();
     // No priority score exposed in the table.
     expect(screen.queryByText('120.0')).not.toBeInTheDocument();
   });
@@ -231,15 +229,11 @@ describe('OpportunitiesScreen', () => {
     // Open the Area dropdown and select "Site".
     await user.click(screen.getByRole('button', { name: /Area:/ }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Site' }));
-    await waitFor(() =>
-      expect(seen.some((params) => params.get('type') === 'site')).toBe(true),
-    );
+    await waitFor(() => expect(seen.some((params) => params.get('type') === 'site')).toBe(true));
 
     // Open the Status dropdown and select "Dismissed".
     await user.click(screen.getByRole('button', { name: /Status:/ }));
-    await user.click(
-      await screen.findByRole('menuitemradio', { name: 'Dismissed' }),
-    );
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Dismissed' }));
     await waitFor(() =>
       expect(seen.some((params) => params.get('status') === 'dismissed')).toBe(true),
     );
@@ -247,9 +241,7 @@ describe('OpportunitiesScreen', () => {
     // Open the Impact dropdown and select "Low".
     await user.click(screen.getByRole('button', { name: /Impact:/ }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Low' }));
-    await waitFor(() =>
-      expect(seen.some((params) => params.get('severity') === 'low')).toBe(true),
-    );
+    await waitFor(() => expect(seen.some((params) => params.get('severity') === 'low')).toBe(true));
   });
 
   it('recompute posts and invalidates (summary + list refetch)', async () => {
@@ -275,9 +267,7 @@ describe('OpportunitiesScreen', () => {
     await screen.findByText('Brand absent from high-value prompt');
     const before = summaryCalls;
 
-    await user.click(
-      screen.getByRole('button', { name: 'Refresh recommendations' }),
-    );
+    await user.click(screen.getByRole('button', { name: 'Refresh recommendations' }));
     await waitFor(() => expect(recomputeCalls).toBe(1));
     await waitFor(() => expect(summaryCalls).toBeGreaterThan(before));
   });
@@ -310,15 +300,13 @@ describe('OpportunitiesScreen', () => {
         name: 'Change status for Brand absent from high-value prompt',
       }),
     );
-    await user.click(
-      await screen.findByRole('menuitem', { name: 'Dismissed' }),
-    );
+    await user.click(await screen.findByRole('menuitem', { name: 'Dismissed' }));
 
     await waitFor(() => expect(patches).toEqual([{ status: 'dismissed' }]));
     await waitFor(() => expect(listCalls).toBeGreaterThan(before));
   });
 
-  it('row click opens the recommendation detail drawer with evidence + footer actions', async () => {
+  it('Review opens the recommendation detail drawer with evidence + footer actions', async () => {
     mockBase();
     const patches: unknown[] = [];
     mswServer.use(
@@ -345,9 +333,10 @@ describe('OpportunitiesScreen', () => {
 
     // Drawer: prompt quote, competitor chip, remediation (what to do).
     expect(await screen.findByText('Opportunity detail')).toBeInTheDocument();
-    expect(screen.getByText('“best crm for small teams”')).toBeInTheDocument();
-    expect(screen.getByText('Globex')).toBeInTheDocument();
-    expect(screen.getByText('Publish a comparison page.')).toBeInTheDocument();
+    const drawer = screen.getByRole('dialog', { name: 'Opportunity detail' });
+    expect(within(drawer).getByText('“best crm for small teams”')).toBeInTheDocument();
+    expect(within(drawer).getByText('Globex')).toBeInTheDocument();
+    expect(within(drawer).getByText('Publish a comparison page.')).toBeInTheDocument();
     // Internal provenance (rule_id, versions, source ids) must NOT be rendered.
     expect(screen.queryByText('brand_absent_high_value_prompt')).not.toBeInTheDocument();
     expect(screen.queryByText('opp-analyzer-1')).not.toBeInTheDocument();
@@ -363,8 +352,6 @@ describe('OpportunitiesScreen', () => {
 
     // Close returns to the catalog.
     await user.click(screen.getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() =>
-      expect(screen.queryByText('Opportunity detail')).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText('Opportunity detail')).not.toBeInTheDocument());
   });
 });

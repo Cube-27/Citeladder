@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { Alert } from '@/components/ui/alert';
@@ -40,7 +40,7 @@ import { ReviewStep } from './review-step';
  * Onboarding — the only way a project gets created (plan.md §10, decision 11;
  * `/setup` is retired).
  *
- * Three steps: Brand → Discovery → Review. Discovery fires all three suggestion
+ * Four steps: Brand → Discovery → Review → Finish. Discovery fires all three suggestion
  * calls automatically on entry; there is no Generate button, because discovery
  * is the reason the screen exists.
  *
@@ -49,8 +49,8 @@ import { ReviewStep } from './review-step';
  * the welcome framing, and Cancel returns to `/projects` instead of leaving the
  * user nowhere.
  */
-const STEPS = ['Brand', 'Discovery', 'Review'] as const;
-type StepIndex = 0 | 1 | 2;
+const STEPS = ['Brand', 'Discovery', 'Review', 'Finish'] as const;
+type StepIndex = 0 | 1 | 2 | 3;
 
 export function OnboardingScreen() {
   const router = useRouter();
@@ -64,6 +64,8 @@ export function OnboardingScreen() {
   const [domains, setDomains] = useState<ReviewDomain[]>([]);
   const [competitors, setCompetitors] = useState<ReviewCompetitor[]>([]);
   const [prompts, setPrompts] = useState<ReviewPrompt[]>([]);
+  const [createdProjectName, setCreatedProjectName] = useState<string | null>(null);
+  const [createdProgress, setCreatedProgress] = useState<OnboardingProgress>({});
 
   const form = useForm<BrandStepValues>({
     resolver: zodResolver(brandStepSchema),
@@ -79,6 +81,7 @@ export function OnboardingScreen() {
   const { state: discoveryState } = discovery;
   useEffect(() => {
     if (discoveryState.domains.status === 'done') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setDomains((prev) =>
         prev.length > 0
           ? prev
@@ -89,6 +92,7 @@ export function OnboardingScreen() {
 
   useEffect(() => {
     if (discoveryState.competitors.status === 'done') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setCompetitors((prev) =>
         prev.length > 0
           ? prev
@@ -99,6 +103,7 @@ export function OnboardingScreen() {
 
   useEffect(() => {
     if (discoveryState.prompts.status === 'done') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setPrompts((prev) =>
         prev.length > 0 ? prev : discoveryState.prompts.data.map((p) => ({ ...p, selected: true })),
       );
@@ -108,8 +113,6 @@ export function OnboardingScreen() {
   // Survives a failed confirm so "Create project" retries the writes that failed
   // instead of creating a second project. Cleared only when the brand changes
   // (see submitBrand) — that is a different project, not a retry.
-  const createdProgress = useRef<OnboardingProgress>({});
-
   const confirm = useMutation({
     mutationFn: () => {
       if (!brand) throw new Error('Brand details are missing.');
@@ -118,7 +121,7 @@ export function OnboardingScreen() {
         competitors,
         domains,
         prompts,
-        progress: createdProgress.current,
+        progress: createdProgress,
       });
     },
     onSuccess: async (project) => {
@@ -130,11 +133,11 @@ export function OnboardingScreen() {
         .refreshProjectLogos(project.id)
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
         .catch(() => undefined);
-      // Await the refetch before navigating. The gate reads the projects query;
-      // if it is still holding the stale empty list when /visibility mounts, it
-      // bounces the user straight back here.
+      // Refresh before showing the completion screen, so the dashboard is ready
+      // as soon as the user leaves onboarding.
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      router.replace('/visibility');
+      setCreatedProjectName(project.name);
+      setStep(3);
     },
   });
 
@@ -153,7 +156,7 @@ export function OnboardingScreen() {
       setCompetitors([]);
       setPrompts([]);
       // A different brand is a fresh creation, not a retry of the last confirm.
-      createdProgress.current = {};
+      setCreatedProgress({});
     }
     setBrand(values);
     setStep(1);
@@ -190,7 +193,7 @@ export function OnboardingScreen() {
             saying what, so the user could not tell what was coming — which is
             most of what a stepper is for. `aria-current` marks the active step
             rather than relying on colour. */}
-        <ol className="mb-6 grid list-none grid-cols-3 gap-2 p-0">
+        <ol className="mb-6 grid list-none grid-cols-4 gap-2 p-0">
           {STEPS.map((label, index) => {
             const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
             return (
@@ -362,6 +365,22 @@ export function OnboardingScreen() {
               <Button variant="ghost" onClick={() => setStep(1)} disabled={confirm.isPending}>
                 Back
               </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 3 ? (
+          <div className="grid max-w-xl gap-5">
+            <div className="grid gap-2">
+              <h1 className="text-foreground text-2xl">Your workspace is ready</h1>
+              <p className="text-muted text-sm">
+                {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a free Site
+                Health crawl in the background; its status and results will appear on your
+                dashboard.
+              </p>
+            </div>
+            <div>
+              <Button onClick={() => router.replace('/projects')}>Open dashboard</Button>
             </div>
           </div>
         ) : null}

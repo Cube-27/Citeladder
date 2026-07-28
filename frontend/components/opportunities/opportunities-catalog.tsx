@@ -171,9 +171,7 @@ function FeaturedRecommendation({
             <ChevronRight className="size-4" aria-hidden />
           </Button>
         </div>
-        <p className="text-secondary max-w-3xl text-sm whitespace-pre-line">
-          {detail.remediation}
-        </p>
+        <p className="text-secondary max-w-3xl text-sm whitespace-pre-line">{detail.remediation}</p>
         {target ? <p className="text-muted text-xs">Applies to {target}</p> : null}
       </CardContent>
     </Card>
@@ -232,7 +230,8 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   const listQuery = useQuery(opportunitiesQueries.list(projectId, params));
   const rows = listQuery.data?.items ?? [];
   const nextCursor = listQuery.data?.next_cursor ?? null;
-  const featuredId = statusFilter === 'active' && pager.cursor === null ? (rows[0]?.id ?? null) : null;
+  const featuredId =
+    statusFilter === 'active' && pager.cursor === null ? (rows[0]?.id ?? null) : null;
   const featuredQuery = useQuery({
     ...opportunitiesQueries.detail(featuredId ?? ''),
     enabled: featuredId !== null,
@@ -244,10 +243,7 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
       {featuredQuery.isLoading && featuredId ? (
         <Skeleton className="h-44 w-full" />
       ) : featured ? (
-        <FeaturedRecommendation
-          detail={featured}
-          onOpen={() => setSelectedId(featured.id)}
-        />
+        <FeaturedRecommendation detail={featured} onOpen={() => setSelectedId(featured.id)} />
       ) : null}
 
       <section className="grid gap-3" aria-labelledby="recommendations-heading">
@@ -260,7 +256,11 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
               Ordered by expected impact using your latest visibility and site evidence.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2" aria-label="Recommendation filters">
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="group"
+            aria-label="Recommendation filters"
+          >
             <FilterMenu
               label="Area"
               value={typeFilter}
@@ -292,91 +292,86 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
         </div>
 
         {listQuery.isError ? (
-        <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>
-      ) : listQuery.isLoading ? (
-        <div className="grid gap-3">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
-      ) : rows.length === 0 ? (
-        <Card>
-          <CardContent className="text-secondary text-sm">
-            No recommendations match these filters. Try broadening the area, impact, or status.
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Recommendation</TableHead>
-                <TableHead>Impact</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Detected</TableHead>
-                <TableHead className="w-24" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="hover:bg-background-alt cursor-pointer"
-                  onClick={() => setSelectedId(row.id)}
-                >
-                  <TableCell>
-                    <div className="grid gap-0.5">
-                      <span className="text-foreground text-sm font-medium">{row.title}</span>
-                      {targetLine(row) ? (
-                        <span className="text-2xs text-muted break-all">{targetLine(row)}</span>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="status" value={severityBadgeValue(row.severity)}>
-                      {severityLabel(row.severity)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <OpportunityTypeBadge type={row.opportunity_type} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusControl row={row} projectId={projectId} />
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-secondary text-xs whitespace-nowrap">
-                      {formatAudited(row.created_at)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelectedId(row.id);
-                      }}
-                    >
-                      Review
-                      <ChevronRight className="size-4" aria-hidden />
-                    </Button>
-                  </TableCell>
+          <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>
+        ) : listQuery.isLoading ? (
+          <div className="grid gap-3">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : rows.length === 0 ? (
+          <Card>
+            <CardContent className="text-secondary text-sm">
+              No recommendations match these filters. Try broadening the area, impact, or status.
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Recommendation</TableHead>
+                  <TableHead>Impact</TableHead>
+                  <TableHead>Area</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Detected</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.id} className="hover:bg-background-alt">
+                    <TableCell>
+                      <div className="grid gap-0.5">
+                        <span className="text-foreground text-sm font-medium">{row.title}</span>
+                        {targetLine(row) ? (
+                          <span className="text-2xs text-muted break-all">{targetLine(row)}</span>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="status" value={severityBadgeValue(row.severity)}>
+                        {severityLabel(row.severity)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <OpportunityTypeBadge type={row.opportunity_type} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusControl row={row} projectId={projectId} />
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-secondary text-xs whitespace-nowrap">
+                        {formatAudited(row.created_at)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedId(row.id);
+                        }}
+                      >
+                        Review
+                        <ChevronRight className="size-4" aria-hidden />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
 
         {rows.length > 0 ? (
-        <div className="flex items-center justify-end gap-2">
-          <CursorPager
-            canPrev={pager.canPrev}
-            canNext={Boolean(nextCursor)}
-            onPrev={pager.pop}
-            onNext={() => pager.push(nextCursor)}
-          />
-        </div>
+          <div className="flex items-center justify-end gap-2">
+            <CursorPager
+              canPrev={pager.canPrev}
+              canNext={Boolean(nextCursor)}
+              onPrev={pager.pop}
+              onNext={() => pager.push(nextCursor)}
+            />
+          </div>
         ) : null}
       </section>
 

@@ -39,7 +39,7 @@ export const metadata: Metadata = {
  * Public marketing landing page (`/`) on the Proof surface. Server-rendered so
  * the full page is in the initial HTML (SEO + first paint); the only client
  * island the page renders is the invisible LandingSessionRedirect, which
- * forwards signed-in visitors to their dashboard (`/visibility`) or to
+ * forwards signed-in visitors to their dashboard (`/projects`) or to
  * first-run `/onboarding` — the contract `/` had before this page existed.
  *
  * Chapter order follows the deck: the observation field, then who we ask,

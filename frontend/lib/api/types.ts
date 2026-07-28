@@ -42,6 +42,11 @@ import type {
   visibilityTrendPointSchema,
   visibilityTrendRankingRowSchema,
   workspaceSchema,
+  productTourSchema,
+  productTourStatusSchema,
+  dashboardSchema,
+  dashboardSectionSchema,
+  dashboardSectionStateSchema,
   // Site Health
   crawlAnalysisStatusSchema,
   crawlDiscoveryStatusSchema,
@@ -137,6 +142,11 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
 export type OAuthProvider = 'google' | 'github' | 'apple';
 export type OAuthStartResponse = z.infer<typeof oauthStartResponseSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;
+export type ProductTourStatus = z.infer<typeof productTourStatusSchema>;
+export type ProductTour = z.infer<typeof productTourSchema>;
+export type Dashboard = z.infer<typeof dashboardSchema>;
+export type DashboardSection = z.infer<typeof dashboardSectionSchema>;
+export type DashboardSectionState = z.infer<typeof dashboardSectionStateSchema>;
 export type BrandProfileSource = z.infer<typeof brandProfileSourceSchema>;
 export type BrandProfileDraft = z.infer<typeof brandProfileDraftSchema>;
 export type BrandProfile = z.infer<typeof brandProfileSchema>;

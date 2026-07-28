@@ -154,7 +154,7 @@ typed `400`, never a `500`.
 | Method & path | Purpose |
 |---|---|
 | `GET /entitlements` | Workspace Site Health entitlement (seeds fail-closed Free on first use). |
-| `POST /site-crawls` | Create + queue a crawl for a project. `seed` must be an integer string; optional `fetch_mode` selects the fetch ladder (`auto` default / `http_only`; the P4-reserved browser modes are `422` `invalid_fetch_mode`). `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
+| `POST /site-crawls` | Create + queue a crawl for a project. New project creation also makes this best-effort queue attempt automatically; a crawl failure never rolls back the project. `seed` must be an integer string; optional `fetch_mode` selects the fetch ladder (`auto` default / `http_only`; the P4-reserved browser modes are `422` `invalid_fetch_mode`). `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
 | `GET /site-crawls?project_id=&limit=&cursor=` | List crawls (created-at keyset). |
 | `GET /site-crawls/{crawl_id}` | Crawl summary/projection (redacted for Free). |
 | `POST /site-crawls/{crawl_id}/cancel` | Cancel a crawl → `cancelled`. |

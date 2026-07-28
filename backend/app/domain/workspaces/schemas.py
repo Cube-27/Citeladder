@@ -6,6 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.core.config.product_tour import PRODUCT_TOUR_VERSION
 from app.models.workspace import ProductTourStatus
 
 
@@ -39,6 +40,8 @@ class ProductTourUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_step(self) -> ProductTourUpdate:
+        if self.version != PRODUCT_TOUR_VERSION:
+            raise ValueError("version must match the current product tour")
         if self.status == ProductTourStatus.IN_PROGRESS and not self.step_id:
             raise ValueError("step_id is required while a tour is in progress")
         if self.status in {ProductTourStatus.COMPLETED, ProductTourStatus.SKIPPED}:

@@ -114,7 +114,7 @@ export function onboardingToProjectInput(
     // repetition steps are gone (decision 14). Both take the same defaults the
     // create form used, and both are editable later.
     benchmark_mode: 'consumer_like',
-    default_repetitions: 3,
+    default_repetitions: 1,
     brand: { aliases: [] },
     owned_domains: domains.filter((d) => d.selected).map((d) => d.domain),
     unintended_domains: [],
