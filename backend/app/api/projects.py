@@ -6,6 +6,8 @@
 # filters by that workspace. ``/projects/{id}/visibility`` is added in B6.
 from __future__ import annotations
 
+import asyncio
+import re
 import uuid
 from datetime import datetime
 from typing import Annotated
@@ -42,6 +44,9 @@ from app.domain.analysis.service import (
     get_visibility_evidence,
     get_visibility_trends,
 )
+from app.domain.dashboard.report import render_dashboard_pdf
+from app.domain.dashboard.schemas import DashboardResponse
+from app.domain.dashboard.service import get_dashboard
 from app.domain.projects.brand_profile import (
     BrandProfileNotFoundError,
     brand_profile_to_response,
@@ -454,6 +459,33 @@ async def get_project_endpoint(
 ) -> ProjectResponse:
     project = await _get_project_or_404(session, ctx.workspace_id, project_id)
     return project_to_response(project)
+
+
+@router.get("/{project_id}/dashboard", response_model=DashboardResponse)
+async def get_dashboard_endpoint(
+    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> DashboardResponse:
+    project = await _get_project_or_404(session, ctx.workspace_id, project_id)
+    return await get_dashboard(session, workspace_id=ctx.workspace_id, project=project)
+
+
+@router.get("/{project_id}/dashboard/report.pdf", response_class=Response)
+async def get_dashboard_report_endpoint(
+    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> Response:
+    project = await _get_project_or_404(session, ctx.workspace_id, project_id)
+    dashboard = await get_dashboard(
+        session, workspace_id=ctx.workspace_id, project=project
+    )
+    slug = re.sub(r"[^a-z0-9]+", "-", project.brand_name.lower()).strip("-")
+    date = dashboard.generated_at.date().isoformat()
+    filename = f"searchify-{slug or 'report'}-{date}.pdf"
+    pdf = await asyncio.to_thread(render_dashboard_pdf, dashboard)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/{project_id}/visibility", response_model=VisibilityResponse)

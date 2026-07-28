@@ -29,7 +29,7 @@ function PromptsScreen() {
   const [override, setOverride] = useState<boolean | null>(null);
   const managing = override ?? modeParam === 'manage';
 
-  // Exiting manage mode clears both the override and the URL param, so the
+  // Exiting manage mode selects the read view and clears the URL param, so the
   // read view's `/prompts?mode=manage` links keep working (they would
   // otherwise self-reference the current URL and no-op). Shallow URL
   // bookkeeping only — `router.replace` sent this through the App Router and
@@ -54,16 +54,7 @@ function PromptsScreen() {
     );
   }
 
-  return (
-    <div className="grid gap-6">
-      <div className="flex justify-end">
-        <Button variant="secondary" size="sm" onClick={() => setOverride(true)}>
-          Manage prompts
-        </Button>
-      </div>
-      <YourPrompts />
-    </div>
-  );
+  return <YourPrompts />;
 }
 
 export default function PromptsPage() {

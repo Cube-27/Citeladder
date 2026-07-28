@@ -1,12 +1,12 @@
-"""Frozen production bootstrap schema.
+"""Complete greenfield bootstrap schema.
 
 Revision ID: 0001_initial
 Revises: None
 Create Date: 2026-07-17
 
-This revision is an immutable production baseline. It contains explicit
-Alembic operations and deliberately does not import live ORM metadata. Future
-schema changes require additive revision files.
+This revision is the complete greenfield baseline. It contains explicit
+Alembic operations and deliberately does not import live ORM metadata. Rebuild
+it directly while Searchify has no data-retention requirement.
 """
 
 from __future__ import annotations
@@ -245,6 +245,15 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("role", sa.String(length=20), nullable=False),
+        sa.Column("product_tour_version", sa.String(length=32), nullable=True),
+        sa.Column("product_tour_status", sa.String(length=20), nullable=False),
+        sa.Column("product_tour_step_id", sa.String(length=64), nullable=True),
+        sa.Column(
+            "product_tour_started_at", sa.DateTime(timezone=True), nullable=True
+        ),
+        sa.Column(
+            "product_tour_completed_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
@@ -544,15 +553,42 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "brand_logo_assets",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("domain", sa.String(length=255), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("source_url", sa.String(length=2048), nullable=False),
+        sa.Column("content_type", sa.String(length=100), nullable=False),
+        sa.Column("image_data", sa.LargeBinary(), nullable=True),
+        sa.Column("byte_size", sa.Integer(), nullable=False),
+        sa.Column("sha256", sa.String(length=64), nullable=False),
+        sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("retry_after", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("domain", name="uq_brand_logo_asset_domain"),
+    )
+    op.create_table(
         "brands",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("logo_asset_id", sa.UUID(), nullable=True),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["logo_asset_id"],
+            ["brand_logo_assets.id"],
+            name="fk_brands_logo_asset_id_brand_logo_assets",
+            ondelete="SET NULL",
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("project_id", name="uq_brand_project"),
+    )
+    op.create_index(
+        op.f("ix_brands_logo_asset_id"), "brands", ["logo_asset_id"], unique=False
     )
     op.create_index(
         op.f("ix_brands_project_id"), "brands", ["project_id"], unique=False
@@ -561,13 +597,26 @@ def upgrade() -> None:
         "competitors",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("logo_asset_id", sa.UUID(), nullable=True),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("aliases", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("domains", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["logo_asset_id"],
+            ["brand_logo_assets.id"],
+            name="fk_competitors_logo_asset_id_brand_logo_assets",
+            ondelete="SET NULL",
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_competitors_logo_asset_id"),
+        "competitors",
+        ["logo_asset_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_competitors_project_id"), "competitors", ["project_id"], unique=False
@@ -4172,9 +4221,12 @@ def downgrade() -> None:
     )
     op.drop_table("content_generations")
     op.drop_index(op.f("ix_competitors_project_id"), table_name="competitors")
+    op.drop_index(op.f("ix_competitors_logo_asset_id"), table_name="competitors")
     op.drop_table("competitors")
     op.drop_index(op.f("ix_brands_project_id"), table_name="brands")
+    op.drop_index(op.f("ix_brands_logo_asset_id"), table_name="brands")
     op.drop_table("brands")
+    op.drop_table("brand_logo_assets")
     op.drop_index(
         op.f("ix_billing_customers_billing_account_id"), table_name="billing_customers"
     )

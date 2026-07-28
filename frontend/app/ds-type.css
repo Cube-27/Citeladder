@@ -24,8 +24,8 @@
 @theme inline {
   /* Type scale (§7) — ADS font.body.* / font.heading.*, plus two fluid
      display steps above the ADS ceiling that the marketing surface aliases
-     as --text-mkt-d1/-d2. `--text-heading-xs` (14/16 @600) and
-     `--text-heading-sm` (16/20 @600) exist as separate names because ADS's
+     as --text-mkt-d1/-d2. `--text-heading-xs` (14/16 @500) and
+     `--text-heading-sm` (16/20 @500) exist as separate names because ADS's
      14px and 16px headings collide on SIZE with --text-sm/--text-base but
      not on line-height or weight, and Tailwind cannot express two
      line-heights for one size token. */
@@ -41,10 +41,10 @@
   /* Headings — weight baked, per the ADS composite text styles. */
   --text-heading-xs: 0.875rem; /* 14px — card titles, panel h3 */
   --text-heading-xs--line-height: 1rem; /* 16px */
-  --text-heading-xs--font-weight: 600;
+  --text-heading-xs--font-weight: 500;
   --text-heading-sm: 1rem; /* 16px — section h2, dialog titles, wordmark */
   --text-heading-sm--line-height: 1.25rem; /* 20px */
-  --text-heading-sm--font-weight: 600;
+  --text-heading-sm--font-weight: 500;
   --text-lg: 1.25rem; /* 20px — page <h1> (ADS font.heading.medium) */
   --text-lg--line-height: 1.5rem; /* 24px */
   --text-lg--font-weight: 500;
@@ -53,7 +53,7 @@
   --text-xl--font-weight: 500;
   --text-2xl: 1.8125rem; /* 29px — rare, hero numerals */
   --text-2xl--line-height: 2rem; /* 32px */
-  --text-2xl--font-weight: 600;
+  --text-2xl--font-weight: 500;
   --text-hero: 2.1875rem; /* 35px — app display ceiling; name kept, was 48px */
   --text-hero--line-height: 2.5rem; /* 40px */
   --text-hero--font-weight: 500;

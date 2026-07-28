@@ -16,12 +16,12 @@ import { UserMenu } from './user-menu';
  * AppShell — the authed-area chrome in the ADS shell language.
  *
  * Geometry: a 240px left sidebar (`bg-sidebar`, `--sidebar-width`) stacked as
- * logo row → project switcher + command row → grouped nav → user card, each
+ * logo row → project switcher → grouped nav → user card, each
  * band separated by a hairline; and a 48px top bar (`--topbar-height`) over
- * the content column carrying pure chrome (the theme toggle, right-aligned).
+ * the content column carrying the centered command palette and theme toggle.
  *
- * The command row is the ⌘K palette (components/ui/command-palette.tsx), which
- * owns both the global key binding and its own sidebar trigger.
+ * The top-bar search is the ⌘K palette (components/ui/command-palette.tsx),
+ * which owns both the global key binding and its pointer trigger.
  *
  * The page header no longer lives in the top bar: `<PageHeader />` renders as
  * the first block of the content column (page-header.tsx), where it has room
@@ -47,11 +47,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             <span className="text-foreground text-heading-sm">Searchify</span>
           </div>
 
-          <div className="border-border-subtle flex flex-col gap-2 border-b p-2">
+          <div className="border-border-subtle border-b p-2">
             <ProjectSwitcher />
-
-            {/* Command row — owns both the ⌘K binding and its own trigger. */}
-            <CommandPalette />
           </div>
 
           <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3">
@@ -64,10 +61,16 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Top bar: pure chrome — just the right-aligned theme toggle. The
-              page <h1> lives in the content column below (PageHeader). */}
-          <header className="border-border bg-panel flex h-[var(--topbar-height)] shrink-0 items-center justify-end gap-2 border-b px-6">
-            <ThemeToggle />
+          {/* Top bar: centered command search with utility chrome on the right.
+              The page <h1> lives in the content column below (PageHeader). */}
+          <header className="border-border bg-panel grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,420px)_minmax(0,1fr)] items-center border-b px-6">
+            <div aria-hidden />
+            <div className="w-full max-w-[420px] min-w-0 justify-self-center">
+              <CommandPalette />
+            </div>
+            <div className="justify-self-end">
+              <ThemeToggle />
+            </div>
           </header>
 
           <main className="content-scroll min-h-0 flex-1 overflow-y-auto">

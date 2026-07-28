@@ -50,10 +50,7 @@ export function logoDomain(websiteUrl: string | null | undefined): string | null
  * `size` is doubled for crisp rendering on high-DPI screens, matching how the
  * avatar is displayed at 16–32 CSS px.
  */
-export function logoDevUrl(
-  websiteUrl: string | null | undefined,
-  size: number,
-): string | null {
+export function logoDevUrl(websiteUrl: string | null | undefined, size: number): string | null {
   if (!TOKEN) return null;
   const domain = logoDomain(websiteUrl);
   if (!domain) return null;

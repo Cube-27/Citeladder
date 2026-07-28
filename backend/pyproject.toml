@@ -18,6 +18,7 @@ dependencies = [
   "protego>=0.3.1,<1",
   "pydantic-settings>=2.10.0,<3",
   "python-multipart>=0.0.31,<1",
+  "reportlab>=5.0.0",
   "sqlalchemy[asyncio]>=2.0.43,<3",
   "structlog>=25.4.0,<27",
   "tldextract>=5.1.0,<6",

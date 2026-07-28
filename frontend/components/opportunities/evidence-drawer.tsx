@@ -18,18 +18,18 @@ import { formatAudited } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 
 /**
- * Opportunity evidence drawer (approved mockup: drilldown side drawer).
+ * Recommendation detail drawer (drilldown side drawer).
  *
- * NEW purpose-built component on the shared right-side Radix DialogPrimitive
- * shell pattern (bg-elevated panel, hairline left border, shadow-modal,
- * scrim — 448px per the mockup). It is NOT the HistoryDrawer: that contract
- * is `HistoryItem[]` run-history rows and cannot render an evidence bundle.
+ * Right-side Radix DialogPrimitive shell (bg-elevated, hairline left border,
+ * shadow-modal, scrim — 448px). Body sections, all rendered from the
+ * persisted detail projection:
+ *   1. Title + badges (severity, area, status)
+ *   2. What to do (actionable remediation)
+ *   3. Why (evidence: context the user can understand)
+ *   4. Summary footer (detected date + status workflow)
  *
- * Body sections (all rendered from the persisted detail projection — nothing
- * is recomputed client-side): title + badges, priority + formula, the
- * evidence bundle (prompt quote / target URL + kv rows + offending-value
- * chips), provenance (rule + versions + source row ids + detected-at),
- * remediation, and a status-workflow footer (the one mutation).
+ * Internal provenance (rule_id, versions, source row ids) is not rendered —
+ * it is available in the API export for debugging.
  */
 
 const TYPE_LABEL: Record<OpportunityType, string> = {
@@ -67,11 +67,11 @@ export function OpportunityTypeBadge({ type }: Readonly<{ type: OpportunityType 
   );
 }
 
-/** One labeled evidence/provenance row (mono label + wrapped value). */
+/** One labeled row. */
 function KvRow({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex items-start justify-between gap-3 py-1">
-      <span className="text-2xs text-muted shrink-0 font-mono uppercase">{label}</span>
+      <span className="text-2xs text-muted shrink-0">{label}</span>
       <span className="text-secondary text-right text-sm break-words">{value}</span>
     </div>
   );
@@ -85,29 +85,17 @@ function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 }
 
-function shortId(id: string): string {
-  return id.length > 13 ? `${id.slice(0, 4)}…${id.slice(-4)}` : id;
-}
-
-/** Evidence bundle section — prompt quote / target URL + kv rows + chips. */
+/** Evidence section — context the user can understand: quote, URL, competitors. */
 function EvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   const evidence = detail.evidence;
   const promptText = asString(evidence.prompt_text);
   const url = asString(evidence.url) ?? detail.target_url;
   const theme = asString(evidence.prompt_theme) ?? detail.target_theme;
-  const intent = asString(evidence.prompt_intent);
-  const engines = asStringList(evidence.engines);
   const competitors = asStringList(evidence.competitor_names);
-  const ownedDomains = asStringList(evidence.owned_domains);
-  const repetitions = typeof evidence.repetitions === 'number' ? evidence.repetitions : null;
-  const ownedCitationCount =
-    typeof evidence.owned_citation_count === 'number' ? evidence.owned_citation_count : null;
-  const issueRuleId = asString(evidence.issue_rule_id);
-  const category = asString(evidence.category);
 
   return (
     <section className="grid gap-2">
-      <Label className="font-mono">Evidence</Label>
+      <Label>Evidence</Label>
       {promptText ? (
         <blockquote className="border-accent-border bg-accent-subtle rounded-lg border-l-2 px-3 py-2">
           <p className="text-foreground text-sm">“{promptText}”</p>
@@ -118,70 +106,29 @@ function EvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
           {url}
         </p>
       ) : null}
-      <div className="divide-border-subtle divide-y">
-        {theme ? <KvRow label="Theme" value={theme} /> : null}
-        {intent ? <KvRow label="Intent" value={intent} /> : null}
-        {engines.length > 0 ? (
-          <KvRow
-            label="Engines × reps"
-            value={`${engines.join(' · ')}${repetitions !== null ? ` × ${repetitions}` : ''}`}
-          />
-        ) : null}
-        {ownedCitationCount !== null ? (
-          <KvRow label="Owned citations" value={`${ownedCitationCount}`} />
-        ) : null}
-        {issueRuleId ? <KvRow label="Site rule" value={issueRuleId} /> : null}
-        {category ? <KvRow label="Category" value={category} /> : null}
-      </div>
+      {theme ? <KvRow label="Topic" value={theme} /> : null}
       {competitors.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {competitors.map((name) => (
-            <Badge key={name} variant="classification" value="competitor">
-              {name}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-      {ownedDomains.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {ownedDomains.map((domain) => (
-            <Badge key={domain} variant="classification" value="owned">
-              {domain}
-            </Badge>
-          ))}
+        <div className="grid gap-1">
+          <span className="text-2xs text-muted">Competitors mentioned</span>
+          <div className="flex flex-wrap gap-1.5">
+            {competitors.map((name) => (
+              <Badge key={name} variant="classification" value="competitor">
+                {name}
+              </Badge>
+            ))}
+          </div>
         </div>
       ) : null}
     </section>
   );
 }
 
-/** Provenance section — rule + versions + source rows + detected-at. */
-function ProvenanceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
-  const sourceCounts = [
-    detail.source_analysis_ids.length > 0 ? `${detail.source_analysis_ids.length} analyses` : null,
-    detail.source_issue_ids.length > 0 ? `${detail.source_issue_ids.length} issues` : null,
-    detail.source_metric_ids.length > 0 ? `${detail.source_metric_ids.length} snapshot` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-  const sourceIds = [
-    ...detail.source_analysis_ids,
-    ...detail.source_issue_ids,
-    ...detail.source_metric_ids,
-  ];
-
+/** Summary section — user-facing "where this came from" without internals. */
+function SummarySection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   return (
     <section className="grid gap-2">
-      <Label className="font-mono">Provenance</Label>
+      <Label>Source</Label>
       <div className="divide-border-subtle divide-y">
-        <KvRow label="Rule" value={detail.rule_id} />
-        <KvRow label="Rule version" value={detail.rule_version} />
-        <KvRow label="Analyzer" value={detail.analyzer_version} />
-        <KvRow label="Formula" value={detail.formula_version} />
-        {sourceCounts ? <KvRow label="Source rows" value={sourceCounts} /> : null}
-        {sourceIds.length > 0 ? (
-          <KvRow label="Source ids" value={sourceIds.map(shortId).join(' · ')} />
-        ) : null}
         <KvRow label="Detected" value={formatAudited(detail.created_at)} />
       </div>
     </section>
@@ -209,7 +156,7 @@ function StatusFooter({
       ) : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xs text-muted font-mono uppercase">Status</span>
+          <span className="text-2xs text-muted">Status</span>
           <OpportunityStatusBadge status={detail.status} />
         </div>
         <div className="flex items-center gap-2">
@@ -314,30 +261,24 @@ export function EvidenceDrawer({
                   <h2 className="text-foreground text-lg">{detail.title}</h2>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant="status" value={severityBadgeValue(detail.severity)}>
-                      {severityLabel(detail.severity)}
+                      {severityLabel(detail.severity)} impact
                     </Badge>
                     <OpportunityTypeBadge type={detail.opportunity_type} />
                     <OpportunityStatusBadge status={detail.status} />
                   </div>
-                  <p className="text-secondary text-sm">
-                    <span className="mono text-foreground text-sm font-semibold">
-                      {detail.priority_score.toFixed(1)}
-                    </span>{' '}
-                    priority · deterministic formula {detail.formula_version}
-                  </p>
                 </div>
-                <EvidenceSection detail={detail} />
-                <ProvenanceSection detail={detail} />
                 {detail.remediation ? (
                   <section className="grid gap-2">
-                    <Label className="font-mono">Remediation</Label>
+                    <Label>What to do</Label>
                     <div className="border-border-subtle bg-background-alt rounded-lg border p-3">
-                      <p className="text-secondary text-sm whitespace-pre-line">
+                      <p className="text-foreground text-sm whitespace-pre-line">
                         {detail.remediation}
                       </p>
                     </div>
                   </section>
                 ) : null}
+                <EvidenceSection detail={detail} />
+                <SummarySection detail={detail} />
               </div>
             )}
           </div>

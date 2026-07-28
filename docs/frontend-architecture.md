@@ -85,7 +85,7 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 | Opportunities | `/opportunities` + `lib/api/opportunities.ts` + `components/opportunities/{opportunities-screen,opportunities-catalog,evidence-drawer}.tsx` | Snapshot strip (API-owned counts + Recompute + exports), server-filtered priority catalog (keyset), status PATCH, evidence/provenance drawer (new 448px shell — not the HistoryDrawer) |
 | UI + token policy | `components/ui/*`, `app/globals.css` | CVA primitives, bridged tokens only (no raw hex) |
 | Marketing CSS | `app/(marketing)/marketing-theme.css` (≤400 lines), `app/(marketing)/marketing-motion.css` (≤260) | Tokens + scene rules in one owner, keyframes + scroll timelines in the other; both budgets machine-enforced |
-| Command palette | `components/ui/command-palette.tsx` | ⌘K/Ctrl+K over `NAV_GROUPS` + workspace projects; owns its own sidebar trigger |
+| Command palette | `components/ui/command-palette.tsx` | ⌘K/Ctrl+K over `NAV_GROUPS` + workspace projects; owns its centered top-bar trigger |
 
 ## 5. Live backend API usage
 

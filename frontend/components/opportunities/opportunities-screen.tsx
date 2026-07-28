@@ -1,10 +1,17 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, Download, RefreshCw } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
@@ -17,15 +24,14 @@ import {
 import { queryKeys } from '@/lib/api/query-keys';
 import type { OpportunitySummary } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
-import { severityCount } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 
 /**
- * Opportunities screen container (approved mockup: summary strip + catalog).
+ * Opportunities screen container: compact recommendation queue + catalog.
  *
  * Resolves the active project, renders the latest recompute snapshot as the
- * summary strip (API-owned counts — never a client re-count) with the
- * Recompute action + export links, then the priority-sorted catalog. A
+ * queue summary (API-owned counts — never a client re-count) with refresh and
+ * export actions, then the priority-sorted recommendation catalog. A
  * project that has never been recomputed gets the empty state with a
  * Recompute CTA (and copy pointing at running an audit/crawl first).
  */
@@ -88,7 +94,8 @@ function RecomputeButton({
       disabled={recompute.isPending}
       onClick={() => recompute.mutate({ projectId })}
     >
-      {recompute.isPending ? 'Recomputing…' : 'Recompute'}
+      <RefreshCw className="size-4" aria-hidden />
+      {recompute.isPending ? 'Refreshing…' : 'Refresh recommendations'}
     </Button>
   );
 }
@@ -97,11 +104,11 @@ function NeverComputed({ projectId }: Readonly<{ projectId: string }>) {
   return (
     <Card>
       <CardContent className="grid justify-items-center gap-3 py-10 text-center">
-        <AccentEyebrow>Opportunities</AccentEyebrow>
-        <h2 className={displayHeadingLgClasses}>No opportunities computed yet</h2>
+        <AccentEyebrow>Recommendations</AccentEyebrow>
+        <h2 className={displayHeadingLgClasses}>No recommendations yet</h2>
         <p className="text-secondary max-w-md text-sm">
-          Opportunities are derived from your latest visibility audit and Site Health crawl. Run
-          those first, then recompute to surface the highest-priority actions here.
+          Run a visibility audit or Site Health crawl first, then refresh this page to turn the
+          latest findings into prioritized actions.
         </p>
         <RecomputeButton projectId={projectId} variant="secondary" />
       </CardContent>
@@ -109,51 +116,50 @@ function NeverComputed({ projectId }: Readonly<{ projectId: string }>) {
   );
 }
 
-function SummaryTile({ label, value }: Readonly<{ label: string; value: number }>) {
-  return (
-    <div className="grid gap-0.5">
-      <span className="text-2xs text-muted font-mono uppercase">{label}</span>
-      <span className="mono text-foreground text-lg font-semibold">{value}</span>
-    </div>
-  );
-}
-
 function SummaryStrip({
   projectId,
   summary,
 }: Readonly<{ projectId: string; summary: OpportunitySummary }>) {
-  const severityCounts = summary.counts_by_severity;
-  const typeCounts = summary.counts_by_type;
+  const openCount = summary.counts_by_status.open ?? 0;
+  const inProgressCount = summary.counts_by_status.in_progress ?? 0;
+  const highImpactCount =
+    (summary.counts_by_severity.critical ?? 0) + (summary.counts_by_severity.high ?? 0);
+
   return (
     <Card>
-      <CardContent className="grid gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1">
-            <AccentEyebrow>Opportunity snapshot</AccentEyebrow>
-            <p className="text-muted text-xs">
-              Computed {formatAudited(summary.computed_at)} · analyzer {summary.analyzer_version} ·
-              formula {summary.formula_version}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <a href={opportunitiesApi.exportUrl(projectId, 'csv')}>Export CSV</a>
-            </Button>
-            <Button variant="secondary" size="sm" asChild>
-              <a href={opportunitiesApi.exportUrl(projectId, 'md')}>Export MD</a>
-            </Button>
-            <RecomputeButton projectId={projectId} />
-          </div>
+      <CardContent className="flex flex-wrap items-center justify-between gap-4 py-3">
+        <div className="grid gap-1">
+          <AccentEyebrow>Recommendation queue</AccentEyebrow>
+          <p className="text-foreground text-sm">
+            <span className="mono font-semibold">{openCount}</span> open recommendations
+            <span className="text-muted"> · </span>
+            <span className="mono font-semibold">{highImpactCount}</span> high impact
+            <span className="text-muted"> · </span>
+            <span className="mono font-semibold">{inProgressCount}</span> in progress
+          </p>
+          <p className="text-muted text-xs">
+            Updated {formatAudited(summary.computed_at)} from your latest available evidence.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-3">
-          <SummaryTile label="Total" value={summary.total_count} />
-          <SummaryTile label="Open" value={summary.counts_by_status.open ?? 0} />
-          <SummaryTile label="High" value={severityCount(severityCounts, 'high')} />
-          <SummaryTile label="Medium" value={severityCount(severityCounts, 'medium')} />
-          <SummaryTile label="Low" value={severityCount(severityCounts, 'low')} />
-          <SummaryTile label="Visibility" value={typeCounts.visibility ?? 0} />
-          <SummaryTile label="Site" value={typeCounts.site ?? 0} />
-          <SummaryTile label="Topic" value={typeCounts.topic ?? 0} />
+        <div className="flex items-center gap-2">
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="secondary" size="sm">
+                <Download className="size-4" aria-hidden />
+                Export
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent align="end">
+              <DropdownItem asChild>
+                <a href={opportunitiesApi.exportUrl(projectId, 'csv')}>Download CSV</a>
+              </DropdownItem>
+              <DropdownItem asChild>
+                <a href={opportunitiesApi.exportUrl(projectId, 'md')}>Download Markdown</a>
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+          <RecomputeButton projectId={projectId} />
         </div>
       </CardContent>
     </Card>

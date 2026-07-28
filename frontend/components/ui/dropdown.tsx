@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 export const Dropdown = DropdownPrimitive.Root;
 export const DropdownTrigger = DropdownPrimitive.Trigger;
 export const DropdownSeparator = DropdownPrimitive.Separator;
+export const DropdownRadioGroup = DropdownPrimitive.RadioGroup;
 
 export function DropdownContent({
   className,
@@ -81,6 +82,29 @@ export function DropdownCheckboxItem({
       </span>
       {children}
     </DropdownPrimitive.CheckboxItem>
+  );
+}
+
+export function DropdownRadioItem({
+  className,
+  children,
+  ...props
+}: Readonly<ComponentPropsWithoutRef<typeof DropdownPrimitive.RadioItem>>) {
+  return (
+    <DropdownPrimitive.RadioItem
+      className={cn(
+        'text-foreground data-[highlighted]:bg-background-alt relative flex cursor-pointer items-center gap-2 rounded-sm py-1 ps-7 pe-2 text-sm transition-colors outline-none',
+        className,
+      )}
+      {...props}
+    >
+      <span className="absolute start-2 flex size-4 items-center justify-center">
+        <DropdownPrimitive.ItemIndicator>
+          <Check className="text-accent size-4" aria-hidden />
+        </DropdownPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownPrimitive.RadioItem>
   );
 }
 

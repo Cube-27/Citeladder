@@ -1,0 +1,1 @@
+"""Persisted executive Dashboard projections."""

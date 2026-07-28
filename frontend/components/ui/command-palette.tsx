@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
  *
  * Keyboard-first velocity is the point: every nav destination and every
  * project in the workspace is reachable without leaving the home row. The
- * sidebar's command row is the pointer affordance for the same thing.
+ * top-bar search is the pointer affordance for the same thing.
  *
  * Deliberately NOT built on components/ui/dialog.tsx — that wrapper owns a
  * title/description/close header, which a palette must not have (the input is
@@ -198,7 +198,7 @@ export function CommandPalette() {
 
   return (
     <>
-      {/* The sidebar's pointer affordance for the same palette. It records
+      {/* The top bar's pointer affordance for the same palette. It records
           itself as the focus target for the same reason the ⌘K path does —
           this button is not a Radix Trigger, so nothing else would. */}
       <button

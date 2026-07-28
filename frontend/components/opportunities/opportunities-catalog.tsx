@@ -2,13 +2,23 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CursorPager } from '@/components/ui/cursor-pager';
-import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownLabel,
+  DropdownRadioGroup,
+  DropdownRadioItem,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
+import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -26,39 +36,47 @@ import {
 import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-status-meta';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
-import type { Opportunity, OpportunityStatus } from '@/lib/api/types';
+import type {
+  Opportunity,
+  OpportunityDetail,
+  OpportunitySeverity,
+  OpportunityStatus,
+  OpportunityType,
+} from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
-import { cn } from '@/lib/utils';
 
 const PAGE_LIMIT = 25;
 
 /**
- * Opportunities catalog (approved mockup: dense priority table + side drawer).
+ * Recommendation catalog: next best action + ranked action table + drawer.
  *
- * Server-backed severity/type/status filter chips (never a client-side filter
- * over the current page), the priority-sorted keyset table (ordering is
- * server-owned: priority desc), a per-row status dropdown (the one mutation),
- * and row-click drill-down into the evidence drawer.
+ * Server-backed severity/type/status filter menus (never a client-side filter
+ * over the current page), a recommendation-first view of the top result, the
+ * server-owned priority order without exposing its formula score, a per-row
+ * status dropdown, and drill-down into the evidence drawer.
  */
 
-type TypeFilter = 'all' | 'visibility' | 'site' | 'topic';
-type SeverityFilter = 'all' | 'high' | 'medium' | 'low';
+type TypeFilter = 'all' | OpportunityType;
+type SeverityFilter = 'all' | OpportunitySeverity;
 type StatusFilter = 'active' | OpportunityStatus;
 
 const TYPE_FILTERS: ReadonlyArray<{ key: TypeFilter; label: string }> = [
   { key: 'all', label: 'All types' },
   { key: 'visibility', label: 'Visibility' },
   { key: 'site', label: 'Site' },
+  { key: 'traffic', label: 'Traffic' },
   { key: 'topic', label: 'Topic' },
 ];
 
 const SEVERITY_FILTERS: ReadonlyArray<{ key: SeverityFilter; label: string }> = [
-  { key: 'all', label: 'All severities' },
+  { key: 'all', label: 'All impact levels' },
+  { key: 'critical', label: 'Critical' },
   { key: 'high', label: 'High' },
   { key: 'medium', label: 'Medium' },
   { key: 'low', label: 'Low' },
+  { key: 'info', label: 'Informational' },
 ];
 
 // Status labels come from the single source (evidence-drawer's meta record,
@@ -74,45 +92,91 @@ const STATUS_FILTERS: ReadonlyArray<{ key: StatusFilter; label: string }> = [
   ...STATUS_CHOICES.map(({ value, label }) => ({ key: value, label })),
 ];
 
-function FilterChip({
+function FilterMenu<T extends string>({
   label,
-  selected,
-  onSelect,
-}: Readonly<{ label: string; selected: boolean; onSelect: () => void }>) {
+  value,
+  options,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: T;
+  options: ReadonlyArray<{ key: T; label: string }>;
+  onChange: (value: T) => void;
+}>) {
+  const selectedLabel = options.find((option) => option.key === value)?.label ?? value;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={cn(
-        'focus-ring rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-        selected
-          ? 'border-accent-border bg-accent-subtle text-accent-text'
-          : 'border-border bg-panel text-secondary hover:border-border-strong hover:text-foreground',
-      )}
-    >
-      {label}
-    </button>
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <Button variant="secondary" size="sm" aria-label={`${label}: ${selectedLabel}`}>
+          <span className="text-muted">{label}</span>
+          <span>{selectedLabel}</span>
+          <ChevronDown className="size-4" aria-hidden />
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent>
+        <DropdownLabel>{label}</DropdownLabel>
+        <DropdownRadioGroup value={value} onValueChange={(nextValue) => onChange(nextValue as T)}>
+          {options.map((option) => (
+            <DropdownRadioItem key={option.key} value={option.key}>
+              {option.label}
+            </DropdownRadioItem>
+          ))}
+        </DropdownRadioGroup>
+      </DropdownContent>
+    </Dropdown>
   );
 }
 
-/** The sub-title target line: URL for site rows, theme / target key otherwise. */
-function targetLine(row: Opportunity): string {
-  if (row.target_url) return row.target_url;
-  if (row.target_theme) return `theme: ${row.target_theme}`;
-  return row.target_key;
+function humanize(value: string): string {
+  const words = value.replaceAll(/[-_]+/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** Priority cell: mono score + a token-colored bar (capped at 100 for width). */
-function PriorityCell({ score }: Readonly<{ score: number }>) {
-  const width = Math.max(2, Math.min(100, score));
+/** User-facing context only; never fall back to deterministic target keys. */
+function targetLine(row: Opportunity): string | null {
+  if (row.target_url) {
+    try {
+      const url = new URL(row.target_url);
+      return `${url.hostname}${url.pathname === '/' ? '' : url.pathname}`;
+    } catch {
+      return row.target_url;
+    }
+  }
+  if (row.target_theme) return `${humanize(row.target_theme)} theme`;
+  return null;
+}
+
+function FeaturedRecommendation({
+  detail,
+  onOpen,
+}: Readonly<{ detail: OpportunityDetail; onOpen: () => void }>) {
+  const target = targetLine(detail);
   return (
-    <div className="grid min-w-24 gap-1">
-      <span className="mono text-foreground text-sm font-semibold">{score.toFixed(1)}</span>
-      <span className="bg-border-subtle block h-1 w-24 rounded-full">
-        <span className="bg-accent block h-1 rounded-full" style={{ width: `${width}%` }} />
-      </span>
-    </div>
+    <Card className="border-accent-border">
+      <CardContent className="grid gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="grid gap-2">
+            <AccentEyebrow>Next best action</AccentEyebrow>
+            <h2 className="text-foreground text-xl">{detail.title}</h2>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="status" value={severityBadgeValue(detail.severity)}>
+                {severityLabel(detail.severity)} impact
+              </Badge>
+              <OpportunityTypeBadge type={detail.opportunity_type} />
+              <OpportunityStatusBadge status={detail.status} />
+            </div>
+          </div>
+          <Button size="sm" onClick={onOpen}>
+            Review recommendation
+            <ChevronRight className="size-4" aria-hidden />
+          </Button>
+        </div>
+        <p className="text-secondary max-w-3xl text-sm whitespace-pre-line">
+          {detail.remediation}
+        </p>
+        {target ? <p className="text-muted text-xs">Applies to {target}</p> : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -168,52 +232,66 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   const listQuery = useQuery(opportunitiesQueries.list(projectId, params));
   const rows = listQuery.data?.items ?? [];
   const nextCursor = listQuery.data?.next_cursor ?? null;
+  const featuredId = statusFilter === 'active' && pager.cursor === null ? (rows[0]?.id ?? null) : null;
+  const featuredQuery = useQuery({
+    ...opportunitiesQueries.detail(featuredId ?? ''),
+    enabled: featuredId !== null,
+  });
+  const featured = featuredQuery.data;
 
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {TYPE_FILTERS.map((filter) => (
-            <FilterChip
-              key={filter.key}
-              label={filter.label}
-              selected={filter.key === typeFilter}
-              onSelect={() => {
-                setTypeFilter(filter.key);
-                pager.reset();
-              }}
-            />
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {SEVERITY_FILTERS.map((filter) => (
-            <FilterChip
-              key={filter.key}
-              label={filter.label}
-              selected={filter.key === severityFilter}
-              onSelect={() => {
-                setSeverityFilter(filter.key);
-                pager.reset();
-              }}
-            />
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {STATUS_FILTERS.map((filter) => (
-            <FilterChip
-              key={filter.key}
-              label={filter.label}
-              selected={filter.key === statusFilter}
-              onSelect={() => {
-                setStatusFilter(filter.key);
-                pager.reset();
-              }}
-            />
-          ))}
-        </div>
-      </div>
+    <div className="grid gap-6">
+      {featuredQuery.isLoading && featuredId ? (
+        <Skeleton className="h-44 w-full" />
+      ) : featured ? (
+        <FeaturedRecommendation
+          detail={featured}
+          onOpen={() => setSelectedId(featured.id)}
+        />
+      ) : null}
 
-      {listQuery.isError ? (
+      <section className="grid gap-3" aria-labelledby="recommendations-heading">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="grid gap-1">
+            <h2 id="recommendations-heading" className="text-foreground text-lg">
+              Prioritized recommendations
+            </h2>
+            <p className="text-muted text-xs">
+              Ordered by expected impact using your latest visibility and site evidence.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2" aria-label="Recommendation filters">
+            <FilterMenu
+              label="Area"
+              value={typeFilter}
+              options={TYPE_FILTERS}
+              onChange={(value) => {
+                setTypeFilter(value);
+                pager.reset();
+              }}
+            />
+            <FilterMenu
+              label="Impact"
+              value={severityFilter}
+              options={SEVERITY_FILTERS}
+              onChange={(value) => {
+                setSeverityFilter(value);
+                pager.reset();
+              }}
+            />
+            <FilterMenu
+              label="Status"
+              value={statusFilter}
+              options={STATUS_FILTERS}
+              onChange={(value) => {
+                setStatusFilter(value);
+                pager.reset();
+              }}
+            />
+          </div>
+        </div>
+
+        {listQuery.isError ? (
         <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>
       ) : listQuery.isLoading ? (
         <div className="grid gap-3">
@@ -223,7 +301,7 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
       ) : rows.length === 0 ? (
         <Card>
           <CardContent className="text-secondary text-sm">
-            No opportunities match this view.
+            No recommendations match these filters. Try broadening the area, impact, or status.
           </CardContent>
         </Card>
       ) : (
@@ -231,13 +309,12 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Priority</TableHead>
-                <TableHead>Opportunity</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Severity</TableHead>
+                <TableHead>Recommendation</TableHead>
+                <TableHead>Impact</TableHead>
+                <TableHead>Area</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Detected</TableHead>
-                <TableHead className="w-8" />
+                <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -248,21 +325,20 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
                   onClick={() => setSelectedId(row.id)}
                 >
                   <TableCell>
-                    <PriorityCell score={row.priority_score} />
-                  </TableCell>
-                  <TableCell>
                     <div className="grid gap-0.5">
                       <span className="text-foreground text-sm font-medium">{row.title}</span>
-                      <span className="mono text-2xs text-muted break-all">{targetLine(row)}</span>
+                      {targetLine(row) ? (
+                        <span className="text-2xs text-muted break-all">{targetLine(row)}</span>
+                      ) : null}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <OpportunityTypeBadge type={row.opportunity_type} />
                   </TableCell>
                   <TableCell>
                     <Badge variant="status" value={severityBadgeValue(row.severity)}>
                       {severityLabel(row.severity)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <OpportunityTypeBadge type={row.opportunity_type} />
                   </TableCell>
                   <TableCell>
                     <StatusControl row={row} projectId={projectId} />
@@ -273,16 +349,26 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
                     </span>
                   </TableCell>
                   <TableCell>
-                    <ChevronRight className="text-muted size-4" aria-hidden />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedId(row.id);
+                      }}
+                    >
+                      Review
+                      <ChevronRight className="size-4" aria-hidden />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
-      )}
+        )}
 
-      {rows.length > 0 ? (
+        {rows.length > 0 ? (
         <div className="flex items-center justify-end gap-2">
           <CursorPager
             canPrev={pager.canPrev}
@@ -291,7 +377,8 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
             onNext={() => pager.push(nextCursor)}
           />
         </div>
-      ) : null}
+        ) : null}
+      </section>
 
       <EvidenceDrawer
         opportunityId={selectedId}

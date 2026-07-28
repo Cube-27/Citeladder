@@ -6,9 +6,24 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
-from app.domain.workspaces.schemas import WorkspaceCreate, WorkspaceResponse
-from app.domain.workspaces.service import create_workspace, list_workspaces_for_user
+from app.api.deps import (
+    WorkspaceContext,
+    get_current_user,
+    get_db,
+    require_workspace_member,
+)
+from app.domain.workspaces.schemas import (
+    ProductTourResponse,
+    ProductTourUpdate,
+    WorkspaceCreate,
+    WorkspaceResponse,
+)
+from app.domain.workspaces.service import (
+    create_workspace,
+    list_workspaces_for_user,
+    product_tour_response,
+    update_product_tour,
+)
 from app.models.user import User
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
@@ -46,3 +61,19 @@ async def create_workspace_endpoint(
         created_at=workspace.created_at,
         updated_at=workspace.updated_at,
     )
+
+
+@router.get("/{workspace_id}/product-tour", response_model=ProductTourResponse)
+async def get_product_tour(
+    ctx: Annotated[WorkspaceContext, Depends(require_workspace_member)],
+) -> ProductTourResponse:
+    return product_tour_response(ctx.member)
+
+
+@router.patch("/{workspace_id}/product-tour", response_model=ProductTourResponse)
+async def patch_product_tour(
+    payload: ProductTourUpdate,
+    ctx: Annotated[WorkspaceContext, Depends(require_workspace_member)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProductTourResponse:
+    return await update_product_tour(session, ctx.member, payload)

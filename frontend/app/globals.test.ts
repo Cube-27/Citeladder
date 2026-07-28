@@ -9,6 +9,7 @@ const dsCss = readFileSync(join(here, 'ds-tokens.css'), 'utf8');
 const dsTypeCss = readFileSync(join(here, 'ds-type.css'), 'utf8');
 const dsSpaceCss = readFileSync(join(here, 'ds-space.css'), 'utf8');
 const appChromeCss = readFileSync(join(here, 'app-chrome.css'), 'utf8');
+const layoutTsx = readFileSync(join(here, 'layout.tsx'), 'utf8');
 const design = readFileSync(join(here, '..', '..', 'docs', 'design.md'), 'utf8');
 const marketingCss = readFileSync(join(here, '(marketing)', 'marketing-theme.css'), 'utf8');
 // The token source spans the owners: ds-tokens.css holds ADS values,
@@ -340,23 +341,23 @@ describe('globals.css token set matches docs/design.md', () => {
 /* ═══════════════════════════════════════════════════════════════════════
    2. Atlassian palette — ported VERBATIM into ds-tokens.css
 ═══════════════════════════════════════════════════════════════════════ */
-describe('Atlassian palette (verbatim port)', () => {
+describe('Atlassian-based palette', () => {
   it('anchors the accent on ADS brand blue #0C66E4', () => {
     expect(lightTokens.get('--accent')).toBe('var(--ds-background-brand-bold)');
     expect(dsLight.get('--ds-background-brand-bold')).toBe('#0c66e4');
     expect(dsDark.get('--ds-background-brand-bold')).toBe('#579dff');
   });
 
-  it('declares the ADS surface ladder verbatim, both themes', () => {
+  it('declares the ADS light ladder and neutral editor dark ladder', () => {
     const expected: Array<[string, string, string]> = [
       // token, light, dark
-      ['--ds-surface-sunken', '#f7f8f9', '#101214'],
-      ['--ds-surface', '#ffffff', '#161a1d'],
-      ['--ds-surface-raised', '#ffffff', '#1d2125'],
-      ['--ds-surface-overlay', '#ffffff', '#22272b'],
+      ['--ds-surface-sunken', '#f7f8f9', '#111111'],
+      ['--ds-surface', '#ffffff', '#181818'],
+      ['--ds-surface-raised', '#ffffff', '#202020'],
+      ['--ds-surface-overlay', '#ffffff', '#282828'],
       // The one addition: the app canvas (documented departure — ADS's only
       // sunken surface sits 2.54 ΔE76 from a white card, below threshold).
-      ['--ds-surface-canvas', '#f1f2f4', '#101214'],
+      ['--ds-surface-canvas', '#f1f2f4', '#111111'],
     ];
     for (const [name, light, dark] of expected) {
       expect(dsLight.get(name), `${name} (light)`).toBe(light);
@@ -366,11 +367,11 @@ describe('Atlassian palette (verbatim port)', () => {
 
   it('keeps borders ALPHA so a hairline composes over any tint', () => {
     // The flat language leans entirely on 1px edges. An opaque border only
-    // ever matches one surface; these are #091E42 at 14% / #A6C5E2 at 16%.
+    // ever matches one surface; dark uses neutral-white alpha to avoid a blue cast.
     expect(dsLight.get('--ds-border')).toBe('#091e4224');
-    expect(dsDark.get('--ds-border')).toBe('#a6c5e229');
+    expect(dsDark.get('--ds-border')).toBe('#ffffff1f');
     expect(dsLight.get('--ds-border-subtle')).toBe('#091e420f');
-    expect(dsDark.get('--ds-border-subtle')).toBe('#a1bdd914');
+    expect(dsDark.get('--ds-border-subtle')).toBe('#ffffff12');
     for (const tokens of [dsLight, dsDark]) {
       const border = resolveValue(tokens.get('--ds-border') ?? '', tokens, 0);
       expect(border?.a, 'ds-border must be translucent').toBeLessThan(1);
@@ -462,6 +463,14 @@ describe('Atlassian palette (verbatim port)', () => {
     expect(allCss).toMatch(/--text-hero:\s*2\.1875rem/); // 35px hero metric
     expect(allCss).toMatch(/--text-hero--line-height:\s*2\.5rem/); // 40px
     expect(allCss).toMatch(/--weight-bold:\s*700/);
+    expect(allCss).toMatch(/--text-heading-xs--font-weight:\s*500/);
+    expect(allCss).toMatch(/--text-heading-sm--font-weight:\s*500/);
+    expect(css).toMatch(/--font-display-family:\s*var\(--font-geist\)/);
+    expect(marketingCss).toMatch(/--font-mkt-display:\s*var\(--font-display-family\)/);
+    expect(layoutTsx).toMatch(/const display = Geist\([\s\S]*?variable:\s*'--font-geist'/);
+    expect(layoutTsx).toMatch(
+      /className=\{`\$\{sans\.variable\} \$\{display\.variable\} \$\{mono\.variable\}`\}/,
+    );
   });
 
   it('declares NO letter-spacing tokens anywhere — ADS tracking is 0 at every step', () => {
@@ -542,6 +551,7 @@ describe('flat 2.0 elevation', () => {
     // ladder separates its four steps by fill, so the ring has no job left.
     const overlay = dsDark.get('--ds-shadow-overlay') ?? '';
     expect(overlay, 'dark overlay shadow should exist').not.toBe('');
+    expect(overlay).not.toContain('inset');
     expect(overlay).not.toMatch(/rgba\(\s*255\s*,\s*250\s*,\s*240/);
   });
 });

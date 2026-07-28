@@ -19,7 +19,9 @@ let currentSearch = new URLSearchParams();
 // Leaving manage mode strips `?mode=manage` with `history.replaceState` —
 // shallow URL bookkeeping, not an App Router navigation — so the spy stands in
 // for that.
-const replaceStateSpy = vi.fn();
+const replaceStateSpy = vi.fn((_data: unknown, _unused: string, url?: string | URL | null) => {
+  currentSearch = new URL(url?.toString() ?? '/prompts', 'http://localhost').searchParams;
+});
 vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
@@ -158,7 +160,7 @@ beforeEach(() => {
   window.localStorage.clear();
   setActiveWorkspaceId(null);
   currentSearch = new URLSearchParams();
-  replaceStateSpy.mockReset();
+  replaceStateSpy.mockClear();
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -255,27 +257,41 @@ describe('PromptsPage (Your Prompts)', () => {
     expect(screen.getByText('Nike vs Adidas')).toBeInTheDocument();
   });
 
-  it('toggles between the read view and manage mode via the in-page controls', async () => {
+  it('enters manage mode from the deep link and exits via the in-page control', async () => {
     const user = userEvent.setup();
+    currentSearch = new URLSearchParams('mode=manage');
     baseHandlers([makePrompt({ topic_id: TOPIC_ID })], [makeTopic()]);
-    renderPage();
+    const { rerender } = renderPage();
 
-    // Read view first: the summary banner and the manage control are visible.
-    await screen.findByText(/configuration includes/, undefined, { timeout: 5000 });
-    await user.click(screen.getByRole('button', { name: 'Manage prompts' }));
-
-    // Manage mode swaps in the prompt library workspace.
     expect(
       await screen.findByRole('button', { name: /Generate prompts & topics/ }, { timeout: 5000 }),
     ).toBeInTheDocument();
 
-    // Exiting returns to the read view without a navigation.
     await user.click(screen.getByRole('button', { name: 'Done managing' }));
+    rerender(
+      <ProjectProvider>
+        <PromptsPage />
+      </ProjectProvider>,
+    );
     expect(
       await screen.findByText(/configuration includes/, undefined, { timeout: 5000 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage prompts' })).toBeInTheDocument();
-    expect(replaceStateSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Manage prompts' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage prompts' })).toHaveAttribute(
+      'href',
+      '/prompts?mode=manage',
+    );
+
+    const manageLink = screen.getByRole('link', { name: 'Manage prompts' });
+    manageLink.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    await user.click(manageLink);
+    currentSearch = new URLSearchParams('mode=manage');
+    rerender(
+      <ProjectProvider>
+        <PromptsPage />
+      </ProjectProvider>,
+    );
+    expect(await screen.findByRole('button', { name: 'Done managing' })).toBeInTheDocument();
   });
 
   it('clears the ?mode=manage param when leaving manage mode so manage links stay live', async () => {

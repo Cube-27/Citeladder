@@ -247,10 +247,10 @@
 :root {
   color-scheme: light;
 
-  /* Fonts — Inter (sans) + Geist Mono; no separate display face. */
+  /* Fonts — Inter for UI/body, Geist Medium for headings, Geist Mono for data. */
   --font-primary-family: var(--font-sans), system-ui, sans-serif;
   --font-mono-family: var(--font-mono), ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  --font-display-family: var(--font-sans), system-ui, sans-serif;
+  --font-display-family: var(--font-geist), var(--font-sans), system-ui, sans-serif;
 
   /* ── Surfaces — the flat tint ladder ──────────────────────────────────
      The app canvas is SUNKEN and panels sit on it as plain white fills.
@@ -554,7 +554,9 @@ body {
   h5,
   h6 {
     margin: 0;
+    font-family: var(--font-display-family);
     font-weight: var(--weight-medium);
+    font-synthesis: none;
     color: var(--text-primary);
   }
 

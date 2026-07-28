@@ -2,7 +2,7 @@
 
 > The **written form** of the Searchify design system, and its authority. The app runs on the
 > **Atlassian Design System**, flat 2.0: **`frontend/app/ds-tokens.css`** holds the ADS
-> primitives (`--ds-*`, ported verbatim from `@atlaskit/tokens`, light + dark) and
+> primitives (`--ds-*`; ADS light/semantic ramps plus neutral dark overrides) and
 > **`frontend/app/globals.css`** holds the semantic layer that maps onto them. The previous
 > Figma port — royal blue `#2756FF` and the authored warm-charcoal "dusk" dark deck — is fully
 > replaced. The public surface (marketing routes **and** the logged-out auth screens) still
@@ -28,8 +28,8 @@
 - **Aesthetic**: dense, confident **B2B analytics** in the Atlassian visual language — a
   `#F7F8F9` sunken canvas, white panels separated by **a tint step and a 1px alpha hairline**,
   one **ADS blue accent `#0C66E4`** reserved for data, links, active states and focus rings,
-  the ADS accent ramp for every semantic hue, **Inter** for UI text and **Geist Mono** tabular
-  numerals for every metric, 4px grid, WCAG 2.1 AA.
+  the ADS accent ramp for every semantic hue, **Inter** for UI text, **Geist Medium** for
+  headings/display, and **Geist Mono** tabular numerals for every metric, 4px grid, WCAG 2.1 AA.
 - **Flat 2.0 is a hard rule, not a preference** — see §4a. Shadow means "this floats above the
   page" and appears only on overlays. Every previous pass drifted back to soft-shadow cards
   because nothing enforced it; `check-flat-elevation.mjs` now does.
@@ -50,8 +50,9 @@ stored `dark` choice (from any ThemeToggle) opts into dark.
 `--bg-panel #FFFFFF` (`surface`) → `--bg-elevated #FFFFFF` (`surface-raised`) → overlays
 `#FFFFFF`. Sidebar = panel `#FFFFFF`.
 
-**Dark surface ladder:** canvas `#101214` → panel `#161A1D` → elevated `#1D2125` → overlay
-`#22272B` (strictly ascending luminance). Sidebar = panel.
+**Dark surface ladder:** canvas `#111111` → panel `#181818` → elevated `#202020` → overlay
+`#282828` (strictly ascending luminance). Sidebar = panel. Neutral surfaces, text and borders
+use an achromatic editor-style ramp; semantic accent/status colors remain ADS.
 
 Note the inversion: **the canvas is recessed and cards sit on it.** That tint step is what
 carries hierarchy now that nothing casts a shadow. `--bg-alt` (6%) and `--bg-well` (14%) are the
@@ -74,7 +75,7 @@ value layer restyled the whole app without touching component code.
 
 | ADS primitive | Searchify token(s) | Notes |
 |---|---|---|
-| `accent.gray.subtlest` (as `--ds-surface-canvas`) | `--bg-base` | the app canvas is **recessed** — `#F1F2F4` / `#101214`; a measured departure from ADS `surface.sunken` (§4) |
+| `accent.gray.subtlest` / neutral dark override (as `--ds-surface-canvas`) | `--bg-base` | the app canvas is **recessed** — `#F1F2F4` / `#111111`; a measured departure from ADS `surface.sunken` (§4) |
 | `elevation.surface` | `--bg-panel`, `--bg-sidebar` | cards, tables, and the sidebar+topbar chrome frame |
 | `elevation.surface.raised` | `--bg-elevated` | dropdowns, drawers, tooltips; in light it equals `surface` (ADS separates them with the raised shadow, which flat 2.0 bans) |
 | `elevation.surface.overlay` | `--surface-overlay` | modal/palette surface |
@@ -92,12 +93,13 @@ value layer restyled the whole app without touching component code.
 | `elevation.shadow.overlay` | `--shadow-4`, `--shadow-lg-value`, `--shadow-modal` | **the only live shadow rung.** `--shadow-1..3` and `--shadow-xs/sm/card/elevated` are `none` |
 | `radius.{xsmall,small,medium,large,xlarge}` (2/4/8/12/16) | `--radius-xs/sm/md/lg/xl`; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills**; badges are `rounded-sm` (4px) |
 | `space.025…1000` | existing `--space-1..20` 4px grid, **unchanged** | the two scales already agree; renaming would churn ~40 contract entries for no visual gain |
-| Inter, Geist Mono | `--font-primary-family` = Inter stack; `--font-mono-family` = Geist Mono stack; `--font-display-family` → Inter | next/font in `app/layout.tsx`; the variable name `--font-sans` is kept |
+| Inter, Geist, Geist Mono | `--font-primary-family` = Inter stack; `--font-display-family` = Geist Medium stack; `--font-mono-family` = Geist Mono stack | next/font in `app/layout.tsx`; `--font-sans` remains the body/UI variable |
 
 ## 4. Token values
 
-**`ds-tokens.css`** declares ~150 ADS primitives under `:root` and `html[data-theme='dark']`,
-values verbatim from `@atlaskit/tokens` (`css/atlassian-light.css`, `css/atlassian-dark.css`).
+**`ds-tokens.css`** declares ~150 ADS-based primitives under `:root` and
+`html[data-theme='dark']`. Light values and semantic ramps come from `@atlaskit/tokens`;
+dark surfaces, neutral text, borders and the gray ramp use a deliberate achromatic override.
 The package is deliberately **not** a dependency: it ships ~1600 variables we do not use, and
 its theming runtime applies its own `data-color-mode` / `data-theme` attributes, which would
 collide with the hand-rolled bootstrap in `lib/theme.ts`. Read the file for the values; the
@@ -121,13 +123,13 @@ And two deliberate departures from the literal ADS token set, both measured:
 1. **The app canvas is `--ds-surface-canvas` (`#F1F2F4`, ADS `accent.gray.subtlest`), not the
    sunken surface.** ADS ships a single sunken (`#F7F8F9`), which sits only 2.54 ΔE76 from a
    white card — below perceptual threshold, which is exactly why the first flat pass was
-   invisible. The canvas step takes card↔canvas separation to 4.66. Dark keeps `#101214`:
-   ADS dark `gray.subtlest` (`#22272B`) is *lighter* than `--ds-surface` there and would
-   invert the ladder. `--bg-input` shares the canvas, so a field reads as an inset well on a
+   invisible. The canvas step takes card↔canvas separation to 4.66. Dark uses neutral
+   editor charcoal `#111111`; `--bg-input` shares the canvas, so a field reads as an inset well on a
    white card (4.66) instead of disappearing into it (0.00).
-2. **Borders are two real tiers.** `--ds-border-subtle` (`#091e420f` light / `#a1bdd914`
-   dark — the 6% neutral alpha; ADS ships no `border.subtle`) for in-card separators and
-   table rules, `--ds-border` (14%) for card edges and fields: 4.66 vs 11.61 ΔE76 on white.
+2. **Borders are two real tiers.** `--ds-border-subtle` (`#091e420f` light / `#ffffff12`
+   dark — the neutral 7% white alpha; ADS ships no `border.subtle`) for in-card separators and
+   table rules, `--ds-border` (`#091e4224` light / `#ffffff1f` dark) for card edges and fields:
+   4.66 vs 11.61 ΔE76 on white.
    `globals.test.ts` asserts the subtle alpha stays strictly weaker. The inverse pair
    `--bg-inverse` / `--text-on-inverse` (7.65:1 both themes) backs the tooltip.
 
@@ -180,7 +182,7 @@ html[data-theme='dark'] {
 
 Every semantic token resolves through a `var(--ds-*)` indirection, and `ds-tokens.css` already
 flips all ~150 primitives under the same selector. `--bg-panel` is `var(--ds-surface)` in both
-themes and simply resolves to `#FFFFFF` or `#161A1D`. The old dark block restated 120
+themes and simply resolves to `#FFFFFF` or `#181818`. The old dark block restated 120
 hand-authored values and could drift out of step with light; this one cannot. **If a token
 appears to need a dark override here, that is a signal the primitive layer is missing one** —
 add it to `ds-tokens.css` instead. The architecture guard's 900-line budget on `globals.css`
@@ -211,18 +213,18 @@ exists partly to keep restated dark values from creeping back.
 in `globals.test.ts` rather than silently deleted:
 
 - **The "never near-black" luminance floor.** It was an aesthetic rule for the warm-charcoal
-  deck (base `#262522` ≈ 0.0185). ADS dark genuinely is near-black (`surface-sunken #101214`
-  ≈ 0.0054) and we follow it.
+  deck (base `#262522` ≈ 0.0185). The neutral dark canvas remains near-black
+  (`surface-sunken #111111`) and intentionally follows editor-style contrast.
 - **The soft-shadow-stack assertion.** There is no dark shadow stack left to be soft.
 
 ## 7. Type scale — Figma verbatim
 
-Sans = **Inter** 400/500/600/700 (`--font-sans` → `--font-primary-family`); mono =
+Body/UI sans = **Inter** 400/500/600/700 (`--font-sans` → `--font-primary-family`);
+headings/display = **Geist Medium** 500 (`--font-geist` → `--font-display-family`); mono =
 **Geist Mono** (`--font-mono` → `--font-mono-family`) with **tabular numerals**
 (`font-variant-numeric: tabular-nums`) — mono is reserved for **metric values, percentages,
 counts, positions, timestamps, code and keyboard hints** so columns align; it is never used
-for labels. There is **no separate display face**: `--font-display-family` resolves to Inter,
-so headings differ from body by size and weight only.
+for labels. Semantic `h1`–`h6` elements and marketing display utilities resolve to Geist Medium.
 
 The ladder is the ADS `font.*` composite scale. **13px and 15px do not exist.** Every step
 carries its own line-height, and the heading steps bake their weight into the token, so call
@@ -238,11 +240,11 @@ token.
 | `--text-xs` | 12px / 16px | 400 | `font.body.UNSAFE_small` | captions, timestamps, the eyebrow recipe |
 | `--text-sm` | 14px / 20px | 400 | `font.body` | **the body default** — table cells, secondary lines |
 | `--text-base` | 16px / 24px | 400 | `font.body.large` | lead paragraphs only |
-| `--text-heading-xs` | 14px / 16px | 600 | `font.heading.xsmall` | card titles, panel h3 |
-| `--text-heading-sm` | 16px / 20px | 600 | `font.heading.small` | section h2, dialog titles, wordmark |
+| `--text-heading-xs` | 14px / 16px | 500 | `font.heading.xsmall` | card titles, panel h3 |
+| `--text-heading-sm` | 16px / 20px | 500 | `font.heading.small` | section h2, dialog titles, wordmark |
 | `--text-lg` | 20px / 24px | 500 | `font.heading.medium` | page `<h1>` |
 | `--text-xl` | 24px / 28px | 500 | `font.heading.large` | onboarding / empty-page titles |
-| `--text-2xl` | 29px / 32px | 600 | `font.heading.xlarge` | rare, hero numerals |
+| `--text-2xl` | 29px / 32px | 500 | `font.heading.xlarge` | rare, hero numerals |
 | `--text-hero` | 35px / 40px | 500 | `font.heading.xxlarge` | app display ceiling — name kept, was 48px |
 | `--text-display-1` | clamp, 35 → 64px / 1.04 | 500 | above the ADS ceiling | marketing hero (aliased as `--text-mkt-d1`) |
 | `--text-display-2` | clamp, 29 → 48px / 1.08 | 500 | above the ADS ceiling | marketing section head (aliased as `--text-mkt-d2`) |
@@ -251,8 +253,9 @@ token.
   tracking** — composed at the call site as `text-xs font-semibold` (`eyebrowClasses`); there
   is no dedicated eyebrow token.
 - Weights: `--weight-normal: 400`, `--weight-medium: 500`, `--weight-semibold: 600`,
-  `--weight-bold: 700` — headings run at 500/600 and `bold` is a true 700 (the Inter 700 cut
-  is loaded).
+  `--weight-bold: 700` — heading tokens run at 500. Intentional 600-weight call sites use
+  explicit `font-semibold`, including the eyebrow recipe above, table headers, and form labels;
+  `bold` is a true 700 (the Inter 700 cut is loaded).
 - **There is no letter-spacing anywhere.** ADS defines no tracking rungs, so the
   `--tracking-*` namespace is removed from the bridge (`--tracking-*: initial`), every
   `tracking-*` utility class is deleted (zero-ceiling guard in `check-ads-scale.mjs`), and no
@@ -308,7 +311,7 @@ bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
 @theme inline {
   --font-sans: var(--font-primary-family);
   --font-mono: var(--font-mono-family);
-  --font-display: var(--font-display-family); /* Inter — no display face */
+  --font-display: var(--font-display-family); /* Geist Medium */
   --color-background: var(--bg-base);
   --color-panel: var(--bg-panel);
   --color-foreground: var(--text-primary);
@@ -567,8 +570,9 @@ passing there passes on white too. Machine-enforced in `frontend/app/globals.tes
 ("the Proof contract"), which also asserts the system is light-only and that every state hue
 except proof has a `-text` sibling.
 
-**Type.** One face, one ladder: **Inter** everywhere — `--font-mkt-display` aliases the app
-sans, and every `--text-mkt-*` step aliases the shared ADS ladder in `ds-type.css` (§7), so
+**Type.** Marketing body copy remains **Inter** while display copy uses the same **Geist
+Medium** face as the app — `--font-mkt-display` aliases `--font-display-family`, and every
+`--text-mkt-*` step aliases the shared ADS ladder in `ds-type.css` (§7), so
 13px and 15px do not exist here either and there is no letter-spacing at any step. Figures
 and "meta" labels render in **Geist Mono** (`font-mono tabular-nums`) — the deck faked
 tabular figures with a font-feature hack (`.mkt-num`), and the fix is the real mono face the
@@ -683,8 +687,8 @@ are quoted and italic so they read as things buyers ask rather than as claims we
 
 ## 14. Implementation checklist
 
-1. Author `app/ds-tokens.css` — the ADS primitives, `:root` + `html[data-theme='dark']`,
-   values verbatim from `@atlaskit/tokens`. Only the tokens actually consumed.
+1. Author `app/ds-tokens.css` — the ADS-based primitives, `:root` +
+   `html[data-theme='dark']`, including the documented neutral dark overrides.
 2. Author the semantic layer in `globals.css` on top of it (§3–§4). Every value is a
    `var(--ds-*)`; the dark block is `color-scheme: dark` and nothing else (§5).
 3. Add the `@theme inline` bridge (§9) — components use bridged tokens only.
@@ -696,12 +700,10 @@ are quoted and italic so they read as things buyers ask rather than as claims we
    (stored choice → light; the OS preference is not consulted).
 7. Mono font gets `font-variant-numeric: tabular-nums`; all metrics use mono.
 8. Ship `prefers-reduced-motion`, `forced-colors`, `print`, and theme-swap suppression rules.
-9. Load **Inter** (weights 400/500/600/700 — the 700 cut backs `--weight-bold`) + **Geist
-   Mono** via next/font in `app/layout.tsx` (`--font-sans`, `--font-mono`).
-   `--font-display-family` resolves to Inter → bridged `font-display` utility; **there is no
-   separate display face anywhere** — the marketing `--font-mkt-display` aliases the same
-   sans. Never name a next/font variable `--font-display`: that name is the bridged `@theme`
-   token.
+9. Load **Inter** (weights 400/500/600/700), **Geist Medium** (500), and **Geist Mono** via
+   next/font in `app/layout.tsx` (`--font-sans`, `--font-geist`, `--font-mono`).
+   `--font-display-family` resolves to Geist Medium and marketing `--font-mkt-display` aliases
+   it. Never name a next/font variable `--font-display`: that name is the bridged `@theme` token.
 10. **Marketing is still a separate system, for now.** Folding `--mkt-*` onto the ADS layer is
     Phase 2 of the ADS adoption; until then marketing and the logged-out auth screens stay
     light-only, and `check-flat-elevation.mjs` carries a documented, self-expiring exemption

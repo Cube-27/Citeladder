@@ -38,10 +38,8 @@
 
 @theme {
   /* ─── Type ────────────────────────────────────────────────────────────
-     One face, one ladder: Inter everywhere. The display name survives
-     because the guard requires it and call sites carry `font-mkt-display`;
-     it resolves to the same family as `font-sans`, which is the point. */
-  --font-mkt-display: var(--font-sans), 'Inter', 'Helvetica Neue', Arial, sans-serif;
+     Marketing display copy shares the product's Geist Medium heading face. */
+  --font-mkt-display: var(--font-display-family);
 
   /* Eight names, no ad-hoc sizes: d1/d2 ride the two fluid display steps
      above the ADS ceiling; everything else is a rung of the app ladder.

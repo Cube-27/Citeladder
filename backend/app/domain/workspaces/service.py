@@ -2,16 +2,71 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.product_tour import PRODUCT_TOUR_VERSION
 from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.workspaces.schemas import ProductTourResponse, ProductTourUpdate
 from app.models.user import User
-from app.models.workspace import Workspace, WorkspaceMember
+from app.models.workspace import ProductTourStatus, Workspace, WorkspaceMember
 
 # Roles a member can hold within a workspace. The creator is the owner.
 WORKSPACE_ROLE_OWNER = "owner"
+
+
+def product_tour_response(member: WorkspaceMember) -> ProductTourResponse:
+    version = member.product_tour_version or PRODUCT_TOUR_VERSION
+    status = ProductTourStatus(member.product_tour_status)
+    started_at = member.product_tour_started_at
+    completed_at = member.product_tour_completed_at
+    if member.product_tour_version != PRODUCT_TOUR_VERSION:
+        version = PRODUCT_TOUR_VERSION
+        status = ProductTourStatus.NOT_STARTED
+        started_at = None
+        completed_at = None
+    return ProductTourResponse(
+        workspace_id=member.workspace_id,
+        version=version,
+        status=status,
+        step_id=(
+            member.product_tour_step_id
+            if status == ProductTourStatus.IN_PROGRESS
+            else None
+        ),
+        started_at=started_at,
+        completed_at=completed_at,
+    )
+
+
+async def update_product_tour(
+    session: AsyncSession,
+    member: WorkspaceMember,
+    payload: ProductTourUpdate,
+) -> ProductTourResponse:
+    now = datetime.now(UTC)
+    is_new_version = member.product_tour_version != payload.version
+    member.product_tour_version = payload.version
+    member.product_tour_status = payload.status.value
+    member.product_tour_step_id = payload.step_id
+
+    if payload.status == ProductTourStatus.NOT_STARTED:
+        member.product_tour_started_at = None
+        member.product_tour_completed_at = None
+    elif payload.status == ProductTourStatus.IN_PROGRESS:
+        if is_new_version or member.product_tour_started_at is None:
+            member.product_tour_started_at = now
+        member.product_tour_completed_at = None
+    else:
+        if is_new_version or member.product_tour_started_at is None:
+            member.product_tour_started_at = now
+        member.product_tour_completed_at = now
+
+    await session.commit()
+    await session.refresh(member)
+    return product_tour_response(member)
 
 
 def _default_workspace_name(user: User) -> str:
