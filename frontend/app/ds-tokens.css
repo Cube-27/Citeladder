@@ -20,15 +20,14 @@
      ds-tokens.css  →  globals.css  →  @theme inline  →  components
      (ADS values)      (semantics)     (utilities)       (classes)
 
-   FLAT 2.0 ELEVATION POLICY. Two shadow rungs only:
+   ELEVATION POLICY (docs/design.md §4a). Two live shadow rungs:
+     · --ds-shadow-raised — cards rest on it (borderless: light, not an
+       outline, separates the card from the canvas).
      · --ds-shadow-overlay — things that genuinely float (modal, dropdown,
-       tooltip, popover, command palette).
-     · nothing else. Cards, panels, tables, sidebars, inputs and page
-       headers are FLAT: a tint step plus a 1px alpha hairline.
-   `--ds-shadow-raised` is ported for completeness but is deliberately
-   UNUSED — scripts/check-flat-elevation.mjs fails the build if an
-   in-flow surface acquires a shadow. Depth comes from the surface ladder
-   (sunken → surface → raised), never from light.
+       tooltip, popover, command palette), plus the hover lift of an
+       interactive card.
+   Nothing else casts a shadow — tables, sidebars, inputs and page headers
+   stay flat. scripts/check-elevation.mjs enforces the rung assignments.
 
    Borders are ALPHA on purpose (#091E4224, not an opaque grey): a
    hairline has to compose correctly over white, over the sunken canvas,
@@ -175,10 +174,10 @@
   --ds-accent-gray-bolder: #626f86;
   --ds-accent-gray-text: #44546f;
 
-  /* ─── Elevation shadows — ONE live rung (see the flat policy above) ─── */
+  /* ─── Elevation shadows — TWO live rungs (see the policy above) ────── */
   --ds-shadow-overlay: 0px 8px 12px #091e4226, 0px 0px 1px #091e424f;
-  /* Ported for reference; intentionally unused. Applying this to an in-flow
-     surface is what check-flat-elevation.mjs exists to prevent. */
+  /* The card rung. ADS specifies the surface.raised/shadow.raised pairing
+     for exactly this: a card lifted one step off the canvas. */
   --ds-shadow-raised: 0px 1px 1px #091e4240, 0px 0px 1px #091e424f;
 
   /* ─── Shape — ADS radius scale ──────────────────────────────────────── */

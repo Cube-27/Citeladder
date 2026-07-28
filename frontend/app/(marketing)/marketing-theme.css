@@ -120,7 +120,7 @@
 
   /* ─── Elevation ── none. Surfaces separate by a tint step and a 1px
      hairline; the only shadow on the surface is `shadow-modal-value` on the
-     nav's two floating overlays (flat 2.0, docs/design.md). */
+     nav's two floating overlays (docs/design.md §4a). */
 
   /* ─── Layout ── one container and one gutter for the whole surface. */
   --container-mkt: 1240px;

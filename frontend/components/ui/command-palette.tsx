@@ -209,7 +209,7 @@ export function CommandPalette() {
         }}
         aria-label="Search or jump to"
         aria-keyshortcuts="Meta+K Control+K"
-        className="border-border bg-panel text-muted focus-ring hover:border-border-strong flex h-8 w-full items-center gap-2 rounded-sm border px-2 text-left transition-colors"
+        className="bg-input text-muted focus-ring hover:bg-panel hover:shadow-card flex h-8 w-full items-center gap-2 rounded-md px-2 text-left transition-[background-color,box-shadow]"
       >
         <Search className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
         <span className="text-xs">Search or jump to…</span>
@@ -226,7 +226,7 @@ export function CommandPalette() {
             // `aria-describedby={undefined}` opts out of the description Radix
             // otherwise looks for, which this dialog deliberately lacks.
             aria-describedby={undefined}
-            className="border-border bg-elevated shadow-modal-value fixed top-24 left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
+            className="border-border-subtle bg-elevated shadow-modal-value fixed top-24 left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border-subtle flex items-center gap-3 border-b px-4">
@@ -249,7 +249,7 @@ export function CommandPalette() {
                 // that rule is unlayered and would otherwise beat a utility.
                 className="text-foreground placeholder:text-muted h-10 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border text-subtle text-2xs shrink-0 rounded-sm border px-1.5 py-0.5 font-mono">
+              <kbd className="border-border-subtle text-subtle text-2xs shrink-0 rounded-sm border px-1.5 py-0.5 font-mono">
                 esc
               </kbd>
             </div>
@@ -325,12 +325,12 @@ export function CommandPalette() {
                 it states its own controls rather than assuming they are known. */}
             <div className="border-border-subtle text-subtle text-2xs flex shrink-0 items-center gap-4 border-t px-4 py-2">
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border rounded-sm border px-1 font-mono">↑</kbd>
-                <kbd className="border-border rounded-sm border px-1 font-mono">↓</kbd>
+                <kbd className="border-border-subtle rounded-sm border px-1 font-mono">↑</kbd>
+                <kbd className="border-border-subtle rounded-sm border px-1 font-mono">↓</kbd>
                 navigate
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border rounded-sm border px-1 font-mono">↵</kbd>
+                <kbd className="border-border-subtle rounded-sm border px-1 font-mono">↵</kbd>
                 select
               </span>
             </div>

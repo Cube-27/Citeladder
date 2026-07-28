@@ -19,6 +19,9 @@ type TourStep = {
   selector: string;
   title: string;
   description: string;
+  /** Preferred popover placement relative to the highlighted target. */
+  side?: 'top' | 'right' | 'bottom' | 'left';
+  align?: 'start' | 'center' | 'end';
 };
 
 /** Versioned, route-aware catalog. Targets are stable `data-tour` hooks, never CSS layout classes. */
@@ -30,6 +33,8 @@ export const PRODUCT_TOUR_STEPS: readonly TourStep[] = [
     title: 'Your Dashboard',
     description:
       'This is the active project summary. Each card links to persisted evidence and the source surface.',
+    side: 'bottom',
+    align: 'start',
   },
   {
     id: 'dashboard-report',
@@ -38,6 +43,8 @@ export const PRODUCT_TOUR_STEPS: readonly TourStep[] = [
     title: 'Share an executive report',
     description:
       'Download a PDF generated only from persisted projections. It never starts a provider or crawl request.',
+    side: 'bottom',
+    align: 'end',
   },
   {
     id: 'provider-settings',
@@ -46,6 +53,8 @@ export const PRODUCT_TOUR_STEPS: readonly TourStep[] = [
     title: 'Connect answer engines',
     description:
       'Add your own provider keys here before launching an audit. Keys are write-only after saving.',
+    side: 'top',
+    align: 'center',
   },
 ] as const;
 
@@ -152,7 +161,24 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       allowClose: true,
       allowKeyboardControl: true,
-      overlayOpacity: 0.45,
+      // The scrim token carries its own alpha (light 49% / dark 60%), so the
+      // library's additional opacity multiply stays at 1. Applied as the
+      // overlay SVG's inline fill, the var() resolves per active theme.
+      overlayColor: 'var(--overlay-scrim)',
+      overlayOpacity: 1,
+      // Themed via app/tour.css (.driver-popover.searchify-tour).
+      popoverClass: 'searchify-tour',
+      popoverOffset: 12,
+      stagePadding: 6,
+      stageRadius: 12,
+      showProgress: true,
+      progressText: '{{current}} of {{total}}',
+      // We drive step-by-step with highlight() rather than a steps array, so
+      // the library cannot compute {{current}}/{{total}} itself — stamp the
+      // progress readout when the popover renders.
+      onPopoverRender: (popover) => {
+        popover.progress.textContent = `${stepIndex + 1} of ${PRODUCT_TOUR_STEPS.length}`;
+      },
       onNextClick: () => {
         transitioning.current = true;
         destroyInstance();
@@ -176,6 +202,8 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       popover: {
         title: step.title,
         description: step.description,
+        side: step.side,
+        align: step.align,
         showButtons: ['previous', 'next', 'close'],
         nextBtnText: stepIndex === PRODUCT_TOUR_STEPS.length - 1 ? 'Done' : 'Next',
       },

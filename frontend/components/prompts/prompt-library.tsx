@@ -335,7 +335,7 @@ export function PromptLibrary() {
           {!hasPrompts ? (
             <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />
           ) : visible.length === 0 ? (
-            <div className="border-border bg-panel text-secondary rounded-lg border border-dashed px-6 py-12 text-center text-sm">
+            <div className="border-border-subtle bg-panel text-secondary rounded-lg border border-dashed px-6 py-12 text-center text-sm">
               {statusTab === 'proposed'
                 ? 'No proposed prompts. Use "Generate prompts & topics" to draft suggestions.'
                 : 'No prompts match your search or filters.'}

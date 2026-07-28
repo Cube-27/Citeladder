@@ -84,7 +84,7 @@ export function CatalogTable({
   );
 
   return (
-    <div className="border-border bg-panel overflow-hidden rounded-lg border">
+    <div className="border-border-subtle bg-panel overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>

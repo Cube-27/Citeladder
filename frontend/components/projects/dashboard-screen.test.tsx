@@ -68,7 +68,9 @@ describe('DashboardScreen', () => {
     render(<DashboardScreen />);
 
     expect(screen.getByRole('heading', { name: 'Acme' })).toBeInTheDocument();
-    expect(screen.getByText('72.5')).toBeInTheDocument();
+    // 72.5 renders twice: the executive metric tile and the Visibility
+    // section card's primary metric both carry the persisted score.
+    expect(screen.getAllByText('72.5')).toHaveLength(2);
     expect(screen.getByText(/active work: site health/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open visibility/i })).toHaveAttribute(
       'href',

@@ -152,7 +152,7 @@ export function MarketSelect({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="border-border bg-elevated shadow-modal-value absolute z-[300] mt-1 max-h-56 w-full overflow-auto rounded-sm border p-1"
+          className="border-border-subtle bg-elevated shadow-modal-value absolute z-[300] mt-1 max-h-56 w-full overflow-auto rounded-sm border p-1"
         >
           {filtered.map((option, index) => (
             <li

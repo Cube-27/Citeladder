@@ -515,33 +515,35 @@ describe('Atlassian-based palette', () => {
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   3. Flat 2.0 elevation — the token half of the policy
-   The component half lives in scripts/check-flat-elevation.mjs.
+   3. Elevation — the token half of the policy (docs/design.md §4a)
+   The component half lives in scripts/check-elevation.mjs.
+   The model: cards rest on the ADS raised rung (borderless — light, not an
+   outline, separates the card), interactive cards lift to the overlay rung
+   on hover, and true overlays hold the overlay rung. Nothing else casts.
 ═══════════════════════════════════════════════════════════════════════ */
-describe('flat 2.0 elevation', () => {
-  const IN_FLOW_RUNGS = [
-    'shadow-xs-value',
-    'shadow-sm-value',
-    'shadow-card-value',
-    'shadow-elevated-value',
-  ];
+describe('elevation (ADS raised + overlay)', () => {
+  const RETIRED_RUNGS = ['shadow-xs-value', 'shadow-sm-value', 'shadow-elevated-value'];
 
-  it.each(IN_FLOW_RUNGS)('--%s resolves to none', (rung) => {
-    // If these come back, every card silently lifts off the page again — which
-    // is exactly how every previous design pass regressed.
+  it.each(RETIRED_RUNGS)('--%s stays none — no third in-flow rung creeps back', (rung) => {
     expect(lightTokens.get(`--${rung}`)).toBe('none');
     expect(darkTokens.get(`--${rung}`)).toBe('none');
   });
 
-  it('leaves exactly one live shadow rung, for overlays', () => {
+  it('puts cards on the raised rung and the hover lift on the overlay rung', () => {
     for (const tokens of [lightTokens, darkTokens]) {
+      expect(tokens.get('--shadow-card-value')).toBe('var(--ds-shadow-raised)');
+      expect(tokens.get('--shadow-card-hover-value')).toBe('var(--ds-shadow-overlay)');
+    }
+  });
+
+  it('keeps the raw ladder ordered: 1 flat, 2 raised, 3/4 overlay', () => {
+    for (const tokens of [lightTokens, darkTokens]) {
+      expect(tokens.get('--shadow-1')).toBe('none');
+      expect(tokens.get('--shadow-2')).toBe('var(--ds-shadow-raised)');
+      expect(tokens.get('--shadow-3')).toBe('var(--ds-shadow-overlay)');
+      expect(tokens.get('--shadow-4')).toBe('var(--ds-shadow-overlay)');
       expect(tokens.get('--shadow-modal')).toBe('var(--ds-shadow-overlay)');
       expect(tokens.get('--shadow-lg-value')).toBe('var(--ds-shadow-overlay)');
-      // --shadow-1..3 are the in-flow rungs; only --shadow-4 casts.
-      for (const level of ['1', '2', '3']) {
-        expect(tokens.get(`--shadow-${level}`), `--shadow-${level}`).toBe('none');
-      }
-      expect(tokens.get('--shadow-4')).toBe('var(--ds-shadow-overlay)');
     }
   });
 
@@ -566,8 +568,8 @@ describe('dark theme (ADS, hard constraints)', () => {
   ] as const)(
     'orders %s surfaces by luminance: bg-base < bg-panel ≤ bg-elevated',
     (_name, tokens) => {
-      // The invariant flat design actually depends on: with no shadows, the
-      // tint step is the ONLY thing distinguishing these surfaces.
+      // The invariant the elevation model depends on: the tint ladder and
+      // the shadow rungs always agree about which surface sits higher.
       const base = relativeLuminance(opaqueColor('bg-base', tokens));
       const panel = relativeLuminance(opaqueColor('bg-panel', tokens));
       const elevated = relativeLuminance(opaqueColor('bg-elevated', tokens));
@@ -622,8 +624,9 @@ describe('dark theme (ADS, hard constraints)', () => {
     //    genuinely is near-black and we follow it.
     const base = relativeLuminance(opaqueColor('bg-base', darkTokens));
     expect(base, 'ADS dark canvas is intentionally near-black').toBeLessThan(0.007);
-    // 2. The soft-shadow-stack rule — there is no dark shadow stack left.
-    expect(darkTokens.get('--shadow-2')).toBe('none');
+    // 2. The soft-shadow-stack rule — the dusk deck's bespoke four-rung stack
+    //    is gone; dark uses the same two ADS rungs as light (raised + overlay).
+    expect(darkTokens.get('--shadow-2')).toBe('var(--ds-shadow-raised)');
   });
 });
 

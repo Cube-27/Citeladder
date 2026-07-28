@@ -49,7 +49,7 @@ export function DiscoveryProgress({
         return (
           <li
             key={row.key}
-            className="border-border bg-panel flex items-center gap-3 rounded-lg border px-3 py-2"
+            className="border-border-subtle bg-panel flex items-center gap-3 rounded-lg border px-3 py-2"
           >
             <row.icon
               className={cn('size-4 shrink-0', done ? 'text-foreground' : 'text-muted')}

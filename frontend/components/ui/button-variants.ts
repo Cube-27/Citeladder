@@ -32,8 +32,11 @@ export const buttonVariants = cva(
       variant: {
         primary:
           'border-transparent bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-active',
+        // Secondary is the borderless raised option: a white fill lifted by
+        // the card shadow rung (the Gmail/ADS default-button model — light,
+        // not an outline, separates it). Hover walks the tint ladder.
         secondary:
-          'border-border bg-panel text-foreground hover:bg-background-alt hover:border-border-strong active:bg-well',
+          'border-transparent bg-panel text-foreground shadow-card hover:bg-background-alt active:bg-well',
         neutral:
           'border-transparent bg-background-alt text-foreground hover:bg-well active:bg-active',
         ghost:

@@ -98,7 +98,7 @@ export function TableHead({
       {...props}
       className={cn(
         tableHeadClasses,
-        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-t border-b-2 px-[var(--table-cell-padding-x)] text-left align-middle',
+        'border-border-subtle bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-t border-b-2 px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums',
         className,
       )}

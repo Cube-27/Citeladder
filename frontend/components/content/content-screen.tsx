@@ -317,7 +317,7 @@ function ProjectContentScreen({
             </p>
             <div
               data-component-id="content-result-provenance"
-              className="border-border text-muted text-2xs flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 font-mono"
+              className="border-border-subtle text-muted text-2xs flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 font-mono"
             >
               <span>Requested model: {detail.requested_model}</span>
               {detail.returned_model ? <span>Returned model: {detail.returned_model}</span> : null}

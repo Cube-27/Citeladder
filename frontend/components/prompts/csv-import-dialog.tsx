@@ -136,7 +136,7 @@ export function CsvImportDialog({
               ) : null}
             </div>
 
-            <div className="border-border max-h-[340px] overflow-auto rounded-md border">
+            <div className="border-border-subtle max-h-[340px] overflow-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>

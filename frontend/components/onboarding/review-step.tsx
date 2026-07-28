@@ -154,7 +154,7 @@ export function ReviewStep({
         {prompts.length === 0 ? (
           <p className="text-muted text-sm">None found — you can write your own after setup.</p>
         ) : (
-          <ul className="border-border divide-border-subtle grid list-none divide-y rounded-lg border p-0">
+          <ul className="border-border-subtle divide-border-subtle grid list-none divide-y rounded-lg border p-0">
             {prompts.map((prompt, index) => (
               <li key={`prompt-${index}`} className="flex items-start gap-3 px-3 py-2">
                 <input

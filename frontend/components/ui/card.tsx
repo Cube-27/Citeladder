@@ -4,23 +4,22 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Card (§8) — bg-panel, hairline border, --radius-md (8px, the ADS surface
- * rung; 12px is reserved for modals), --card-padding.
+ * Card (§8) — bg-panel, BORDERLESS, --radius-lg (12px), --card-padding,
+ * resting on the ADS raised shadow rung (`shadow-card`).
  * Composed from header / title / description / content slots.
  *
- * FLAT 2.0: a card is a plain --bg-panel fill on the canvas with one 1px
- * alpha hairline. It casts NO shadow, and there is no elevation prop — the
- * previous `default: shadow-card` / `raised: shadow-elevated` ladder is
- * gone, along with the reasoning that panel and base "differ by very little
- * fill". They no longer do: the canvas is --ds-surface-canvas and the card
- * is white, a ΔE76 of 4.66, so the tint step does the work the shadow used
- * to fake — measurably, this time (the Phase 1 canvas managed only 2.54,
- * below the 2.67 the shadow it deleted had provided).
+ * Elevation model (docs/design.md §4a): a card is a --bg-panel fill lifted
+ * off the sunken canvas by `--ds-shadow-raised` — the same surface/shadow
+ * pairing atlassian.design specifies for raised surfaces. Separation comes
+ * from light (the shadow) and the canvas tint step, never from a drawn
+ * border: like Gmail/Trello, cards carry no outline at all. Interactive
+ * cards lift on hover — `hover:shadow-card-hover` (the overlay rung) plus
+ * a 2px rise — which is why the base transition includes box-shadow.
  *
- * If a surface genuinely needs to float, it is an overlay — use Dialog,
- * Dropdown, Tooltip or the command palette, which own the one live shadow
- * rung. scripts/check-flat-elevation.mjs fails the build if a shadow lands
- * here again.
+ * If a surface genuinely needs to float persistently, it is an overlay —
+ * use Dialog, Dropdown, Tooltip or the command palette, which own the
+ * `shadow-modal-value` rung. scripts/check-elevation.mjs enforces the
+ * rung assignments.
  *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the
  * micro-label — e.g.
@@ -32,7 +31,13 @@ export function Card({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'section'>>) {
   return (
-    <section {...props} className={cn('border-border bg-panel rounded-md border', className)}>
+    <section
+      {...props}
+      className={cn(
+        'bg-panel rounded-lg shadow-card transition-shadow duration-200',
+        className,
+      )}
+    >
       {children}
     </section>
   );

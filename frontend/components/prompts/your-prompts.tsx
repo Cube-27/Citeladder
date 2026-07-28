@@ -198,7 +198,7 @@ export function YourPrompts() {
         <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
       ) : null}
 
-      <div className="border-border bg-panel flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
+      <div className="border-border-subtle bg-panel flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
         <p className="text-secondary text-sm">
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
           <span className="text-foreground font-semibold">{activePrompts.length}</span> visibility{' '}
@@ -231,7 +231,7 @@ export function YourPrompts() {
       </div>
 
       {activePrompts.length === 0 ? (
-        <div className="border-border bg-panel grid place-items-center gap-3 rounded-lg border border-dashed px-6 py-16 text-center">
+        <div className="border-border-subtle bg-panel grid place-items-center gap-3 rounded-lg border border-dashed px-6 py-16 text-center">
           <p className={eyebrowClasses}>Your prompts</p>
           <h2 className={displayHeadingXlClasses}>No active prompts yet</h2>
           <p className="text-secondary max-w-md text-sm">
@@ -246,11 +246,11 @@ export function YourPrompts() {
           </Link>
         </div>
       ) : visiblePrompts.length === 0 ? (
-        <div className="border-border bg-panel text-secondary rounded-lg border border-dashed px-6 py-12 text-center text-sm">
+        <div className="border-border-subtle bg-panel text-secondary rounded-lg border border-dashed px-6 py-12 text-center text-sm">
           No prompts match your search.
         </div>
       ) : (
-        <div className="border-border bg-panel overflow-hidden rounded-lg border">
+        <div className="border-border-subtle bg-panel overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

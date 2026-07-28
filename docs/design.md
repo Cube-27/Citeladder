@@ -10,7 +10,7 @@
 > `frontend/app/(marketing)/marketing-theme.css`; folding it onto the ADS layer is Phase 2.
 > Machine guards keep this document, the token files, elevation, and WCAG AA in sync
 > (`frontend/app/globals.test.ts`, `frontend/scripts/check-design-tokens.mjs`,
-> `frontend/scripts/check-flat-elevation.mjs`).
+> `frontend/scripts/check-elevation.mjs`).
 > Companion docs: [`../Agents.md`](../Agents.md), [`invariants.md`](invariants.md),
 > [`backend-architecture.md`](backend-architecture.md), [`frontend-architecture.md`](frontend-architecture.md).
 
@@ -30,9 +30,13 @@
   one **ADS blue accent `#0C66E4`** reserved for data, links, active states and focus rings,
   the ADS accent ramp for every semantic hue, **Inter** for UI text, **Geist Medium** for
   headings/display, and **Geist Mono** tabular numerals for every metric, 4px grid, WCAG 2.1 AA.
-- **Flat 2.0 is a hard rule, not a preference** — see §4a. Shadow means "this floats above the
-  page" and appears only on overlays. Every previous pass drifted back to soft-shadow cards
-  because nothing enforced it; `check-flat-elevation.mjs` now does.
+- **Elevation is the ADS surface/shadow pairing, and it is a hard rule** — see §4a. Cards
+  rest on the raised rung and carry **no border** (light, not an outline, separates the
+  card); interactive cards lift to the overlay rung on hover; true overlays own the overlay
+  rung. Nothing else casts a shadow, and `check-elevation.mjs` enforces the rung
+  assignments. This replaced the short-lived "flat 2.0" experiment: an all-flat UI read as
+  dull and unfinished, and the borderless-elevated model is what atlassian.design, Gmail,
+  and Trello actually ship.
 - **Light is the default theme.** Dark is a full sibling and costs almost nothing to maintain:
   every semantic token resolves through a `var(--ds-*)` that already flips, so the dark block
   in `globals.css` is a single `color-scheme: dark` line. Every documented text/surface pair in
@@ -54,8 +58,9 @@ stored `dark` choice (from any ThemeToggle) opts into dark.
 `#282828` (strictly ascending luminance). Sidebar = panel. Neutral surfaces, text and borders
 use an achromatic editor-style ramp; semantic accent/status colors remain ADS.
 
-Note the inversion: **the canvas is recessed and cards sit on it.** That tint step is what
-carries hierarchy now that nothing casts a shadow. `--bg-alt` (6%) and `--bg-well` (14%) are the
+Note the inversion: **the canvas is recessed and cards sit on it.** The tint step plus the
+raised shadow carry the hierarchy — the card is borderless, so the two together do all of
+the separation. `--bg-alt` (6%) and `--bg-well` (14%) are the
 ADS **alpha** neutral at two depths, and `--bg-active` (31%) is the pressed step — because they
 are alpha, a quiet button or a well looks correct on a white card, on the sunken canvas, and
 inside a tinted panel. An opaque grey only ever matched one of the three.
@@ -90,7 +95,8 @@ value layer restyled the whole app without touching component code.
 | `color.background.danger.bold` + `-hovered` | `--danger-solid` / `--danger-solid-hover` | ADS states this pair for exactly this case and both already clear AA against white (5.2:1 / 6.7:1), so unlike the Figma port **no hand-deepening is needed** |
 | `color.background.accent.<hue>.bolder` | `--chart-1..8`; `--series-1..5` alias `--chart-1..5` | one hue per slot: blue, green, orange, red, purple, teal, yellow, magenta. Keeps the "fold into Other" rule in `series-palette.ts` |
 | `color.background.neutral.bold` | `--chart-tooltip-bg`, with NEW `--chart-tooltip-fg` | the tooltip foreground used to be a literal `text-white` — the one genuine token gap in the old system |
-| `elevation.shadow.overlay` | `--shadow-4`, `--shadow-lg-value`, `--shadow-modal` | **the only live shadow rung.** `--shadow-1..3` and `--shadow-xs/sm/card/elevated` are `none` |
+| `elevation.shadow.raised` | `--shadow-2`, `--shadow-card-value` | the card rung — every Card rests on it, borderless |
+| `elevation.shadow.overlay` | `--shadow-3`, `--shadow-4`, `--shadow-card-hover-value`, `--shadow-lg-value`, `--shadow-modal` | overlays, plus the hover lift of interactive cards. `--shadow-1` and `--shadow-xs/sm/elevated` are `none` |
 | `radius.{xsmall,small,medium,large,xlarge}` (2/4/8/12/16) | `--radius-xs/sm/md/lg/xl`; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills**; badges are `rounded-sm` (4px) |
 | `space.025…1000` | existing `--space-1..20` 4px grid, **unchanged** | the two scales already agree; renaming would churn ~40 contract entries for no visual gain |
 | Inter, Geist, Geist Mono | `--font-primary-family` = Inter stack; `--font-display-family` = Geist Medium stack; `--font-mono-family` = Geist Mono stack | next/font in `app/layout.tsx`; `--font-sans` remains the body/UI variable |
@@ -127,48 +133,58 @@ And two deliberate departures from the literal ADS token set, both measured:
    editor charcoal `#111111`; `--bg-input` shares the canvas, so a field reads as an inset well on a
    white card (4.66) instead of disappearing into it (0.00).
 2. **Borders are two real tiers.** `--ds-border-subtle` (`#091e420f` light / `#ffffff12`
-   dark — the neutral 7% white alpha; ADS ships no `border.subtle`) for in-card separators and
-   table rules, `--ds-border` (`#091e4224` light / `#ffffff1f` dark) for card edges and fields:
+   dark — the neutral 7% white alpha; ADS ships no `border.subtle`) for chrome frames,
+   overlay edges, structural panels, in-card separators and
+   table rules, `--ds-border` (`#091e4224` light / `#ffffff1f` dark) for form fields and the
+   interactive chips whose affordance is an outline (card edges are gone — §4a):
    4.66 vs 11.61 ΔE76 on white.
    `globals.test.ts` asserts the subtle alpha stays strictly weaker. The inverse pair
    `--bg-inverse` / `--text-on-inverse` (7.65:1 both themes) backs the tooltip.
 
-### 4a. Flat 2.0 — the five rules
+### 4a. Elevation — the five rules
 
-Machine-enforced by `scripts/check-flat-elevation.mjs`, wired into `pnpm check:policy`.
+Machine-enforced by `scripts/check-elevation.mjs`, wired into `pnpm check:policy`.
 
-1. **No shadow on anything in normal document flow.** Cards, panels, tables, sidebars, page
-   headers, stat tiles, inputs, tabs, badges.
-2. **Shadow only on true overlays** — modal, dropdown, popover, tooltip, toast, command
-   palette — through the single `shadow-modal-value` rung. The guard holds an explicit
-   allowlist of the files permitted to apply it; adding one is a design decision.
-3. **Depth is a 3-step tint ladder, not light.** Canvas (`#F1F2F4`) → surface panel → raised
-   hover — the canvas step alone separates a white card by 4.66 ΔE76.
-4. **Every surface boundary is a 1px alpha hairline, in two tiers.** Alpha, not opaque, so it
-   composes over any tint: `--border-subtle` (6%) inside, `--border` (14%) at the edge.
+The model is the **borderless, elevation-driven surface** — the Gmail/Trello/
+atlassian.design arrangement. A surface is separated by *light* (its shadow rung) and the
+canvas tint step, not by a drawn outline. Borders survive only where they carry structure:
+table rules, in-card separators, and form fields, all at the 6% subtle tier.
+
+1. **Cards rest on the raised rung and carry no border.** `Card` is `bg-panel` +
+   `shadow-card` (`--ds-shadow-raised`) + `--radius-lg`, edge-free. The shadow is the
+   separator; the canvas tint step (4.66 ΔE76) backs it up.
+2. **Interactive cards lift on hover.** A clickable card rises to `shadow-card-hover` (the
+   overlay rung) with a 2px translate — the same affordance as a Trello card.
+3. **Shadow only on cards and true overlays** — modal, dropdown, popover, tooltip, toast,
+   command palette — through the single `shadow-modal-value` rung. The guard holds an
+   explicit allowlist of the files permitted to apply it; adding one is a design decision.
+   Tables, sidebars, inputs, tabs, badges and page headers cast nothing.
+4. **Borders are structural, not decorative, and live at the subtle tier.** Card edges are
+   gone entirely; chrome frames, overlay edges, table rules and fields keep a 1px alpha
+   hairline at `--border-subtle` (6%). The 14% `--border` tier remains for the few edges
+   that must read on any tint (form fields).
 5. **No gradients on UI chrome, no glass/blur, no inner catchlight rings.** Gradients are
    display art only (`components/marketing/`), never a control or container.
 
-The guard also asserts the token half of the policy: `--shadow-xs-value`, `--shadow-sm-value`,
-`--shadow-card-value` and `--shadow-elevated-value` must literally resolve to `none`. A
-component scan alone cannot see that — if those values come back, every card silently lifts
-again.
+The guard also asserts the token half of the policy: `--shadow-card-value` must resolve to
+`var(--ds-shadow-raised)`, `--shadow-card-hover-value` to `var(--ds-shadow-overlay)`, and
+`--shadow-xs-value` / `--shadow-sm-value` / `--shadow-elevated-value` to `none`. A component
+scan alone cannot see that — if those values move, every surface silently re-depths itself.
 
-**What this replaced.** The previous revision argued that light-mode panel `#FFFFFF` and base
-`#F7F8FA` "differ by so little that the shadow is the only thing making surfaces read as
-layered". That was true of *those* values. It is measurably not true now: the canvas is
-`--ds-surface-canvas` (`#F1F2F4`) and the card is white, so the tint step (4.66 ΔE76) does
-the work the shadow was faking — Phase 1's `#F7F8F9` canvas managed only 2.54, weaker than
-the 2.67 shadow it deleted, which is why that pass shipped invisibly. The dark theme's
-`0 0 0 1px` warm catchlight ring is gone with it — ADS dark separates its four surface steps
-by fill alone, and the ring was compensating for a ladder that did not.
+**What this replaced.** The "flat 2.0" revision banned every in-flow shadow and leaned on a
+1px hairline for all separation. It measured correctly (the canvas/card tint step is real)
+but read dull: a wall of hairline-outlined white boxes on gray. The elevated model keeps the
+measured tint step, drops the card border outright, and puts the ADS raised shadow back —
+which is what `elevation.surface.raised` / `elevation.shadow.raised` exist for. The dark
+theme's `0 0 0 1px` warm catchlight ring stays gone — ADS dark separates its four surface
+steps by fill alone, and the ring was compensating for a ladder that did not.
 
-Consequences already applied: `Card` lost its `elevation` prop outright rather than keeping a
-no-op API; the segmented control's active pill lost `shadow-xs` (white on a tinted track
-already separates them); the tooltip rides the inverse pair (`bg-surface-inverse` /
-`text-on-inverse`, a bold surface that needs no hairline); and `.logo-mark` lost its
-violet → orchid → ember gradient for a flat `--accent` fill — a three-stop gradient on the
-one mark present on every screen was the loudest possible exception to rule 5.
+Consequences already applied: the secondary button lost its hairline and rides the raised
+rung instead (a borderless white button); the segmented control's active pill stays
+shadowless (white on a tinted track already separates them); the tooltip rides the inverse
+pair (`bg-surface-inverse` / `text-on-inverse`, a bold surface that needs no hairline); and
+`.logo-mark` keeps its flat `--accent` fill — a three-stop gradient on the one mark present
+on every screen was the loudest possible exception to rule 5.
 
 ## 5. Dark theme
 
@@ -328,8 +344,8 @@ bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
   --color-run-completed: var(--run-completed); /* + every run-status */
   --color-score-high: var(--score-high); /* + low/mid/good + *-bg/*-border/*-text/*-ring */
   --color-chart-1: var(--chart-1); /* + chart-2..8 + series-1..5/series-other aliases */
-  --shadow-card: var(--shadow-card-value); /* + xs/sm/elevated — all `none` (flat 2.0, §4a) */
-  --shadow-modal-value: var(--shadow-modal); /* the only live rung — overlays only */
+  --shadow-card: var(--shadow-card-value); /* the card rung (raised); + card-hover — xs/sm/elevated stay `none` (§4a) */
+  --shadow-modal-value: var(--shadow-modal); /* the overlay rung — allowlisted overlays only */
   /* type sizes (incl. --text-hero/--text-display-1/-2), radii,
      line-heights bridged here too (§7–§8) — no tracking namespace */
 }
@@ -352,7 +368,7 @@ All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Fi
 |---|---|
 | `button` | **rounded-md (8px) — pill variants retired.** Primary = accent fill + `--accent-fg` (white) text + accent-tinted shadow, 14px/500; hover/active walk `--accent-hover`/`--accent-active`. Secondary = panel bg + `--border` hairline; ghost = transparent + accent-subtle hover; destructive = danger tokens. Sizes sm/md/lg/icon; `asChild`; icon slot. |
 | `badge` | pill (`--radius-full`) 11.5px/500 with token bg/border/text. Variants map to tokens: `status` (success/warning/danger/info), `sentiment`, `classification` (**owned = Figma blue**, competitor, third-party), `run-status` (all 8), `score-band` (low/mid/good/high). |
-| `card` | `bg-panel` + `--shadow-2` + `--radius-lg`; elevated = `bg-elevated` + `--shadow-3`; header/title/description/content slots + optional mono eyebrow panel label. |
+| `card` | `bg-panel` + `shadow-card` (raised rung) + `--radius-lg`, **borderless**; interactive cards lift to `shadow-card-hover` + 2px rise on hover; header/title/description/content slots + optional mono eyebrow panel label. |
 | `table` (dense) | 32px sticky header (the `--text-xs` @600 eyebrow recipe, muted), 40px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation). |
 | `score-ring` | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-heading-sm`, `lg` = `--text-xl`, `hero` = `--text-hero`); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.** |
 | `sparkline` | trend-colored 1.5px polyline + end dot (Sparkline.tsx). |
@@ -454,12 +470,24 @@ to a manual-entry fallback with an inline notice — onboarding never requires t
 
 ### 11.4 Active-project Dashboard and product tour (`/projects`)
 
-The Dashboard leads with four compact executive metrics and source-linked Analyze/Improve cards;
-only persisted projections are displayed, and the report action downloads the authenticated PDF
-blob. Project management follows as a secondary section. The Driver.js tour uses stable
-`data-tour` targets, honors reduced-motion preferences, keeps keyboard controls enabled, and
-persists its current route-aware step for each workspace member. A missing target quietly stops
-after bounded retries rather than obscuring the application.
+The Dashboard leads with a brand header (BrandLogo + snapshot timestamp from `generated_at`)
+and the report action, then four executive **metric tiles** — borderless raised cards, each
+pairing an `IconChip` glyph with a large mono numeral; the two scores (visibility, site
+health) take their score-band text colour, counts stay neutral, and missing values render the
+muted `—`. Analyze/Improve follow as grids of source-linked **section cards**: section icon
+chip, state badge (ready = success, running = info, not_setup = warning, failed = danger,
+empty = neutral), the section's primary metric, and a hover lift (`shadow-card-hover` + 2px
+rise + arrow slide). Only persisted projections are displayed, and the report action
+downloads the authenticated PDF blob. Project management follows as a secondary section.
+
+The Driver.js tour is themed as a first-class surface (`app/tour.css`, scoped by the
+`searchify-tour` popover class): the popover rides the elevated/overlay tokens with the
+display face for titles and the app's own primary/quiet button pair, the stage uses a 12px
+cutout radius, and the scrim resolves `var(--overlay-scrim)` per theme. Steps carry explicit
+`side`/`align` placement, a mono `n of total` progress readout, stable `data-tour` targets,
+honors reduced-motion preferences, keeps keyboard controls enabled, and persists its current
+route-aware step for each workspace member. A missing target quietly stops after bounded
+retries rather than obscuring the application.
 
 ### 11.5 Visibility workspace (`/visibility`) — Figma dashboard (VisibilityDashboard.tsx)
 
@@ -704,8 +732,9 @@ are quoted and italic so they read as things buyers ask rather than as claims we
 3. Add the `@theme inline` bridge (§9) — components use bridged tokens only.
 4. **No raw hex outside `ds-tokens.css`** (app) and `app/(marketing)/marketing-theme.css`
    (marketing + auth). `globals.css` authors none.
-5. **Keep elevation flat (§4a)** — the four in-flow shadow rungs resolve to `none`; only
-   overlays carry `shadow-modal-value`, from an explicit allowlist.
+5. **Keep the elevation rungs as assigned (§4a)** — cards rest on `shadow-card` (raised) and
+   carry no border; interactive cards lift to `shadow-card-hover`; only allowlisted overlays
+   carry `shadow-modal-value`. Nothing else casts a shadow.
 6. **Both themes always defined**; `data-theme` set pre-hydration; **light is the default**
    (stored choice → light; the OS preference is not consulted).
 7. Mono font gets `font-variant-numeric: tabular-nums`; all metrics use mono.
@@ -716,11 +745,11 @@ are quoted and italic so they read as things buyers ask rather than as claims we
    it. Never name a next/font variable `--font-display`: that name is the bridged `@theme` token.
 10. **Marketing is still a separate system, for now.** Folding `--mkt-*` onto the ADS layer is
     Phase 2 of the ADS adoption; until then marketing and the logged-out auth screens stay
-    light-only, and `check-flat-elevation.mjs` carries a documented, self-expiring exemption
-    for the `--shadow-mkt-*` family.
-11. Keep all four guards green: `app/globals.test.ts` (palette + name-set sync + WCAG suite +
+    light-only.
+11. Keep the guards green: `app/globals.test.ts` (palette + name-set sync + WCAG suite +
     §6 dark assertions + the Proof contract), `scripts/check-design-tokens.mjs` (required vars
     across `ds-tokens.css`, `globals.css` and `marketing-theme.css`),
-    `scripts/check-flat-elevation.mjs` (§4a), and
+    `scripts/check-elevation.mjs` (§4a), `scripts/check-token-escapes.mjs` (no raw hex, no
+    token escapes), `scripts/check-ads-scale.mjs` (the type/spacing ladders), and
     `scripts/check-frontend-architecture.mjs` (line budgets, including the 400-line ceiling on
-    `marketing-theme.css` and 900 on `globals.css`).
+    `marketing-theme.css` and 700 on `globals.css`).

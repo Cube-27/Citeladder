@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════
    Searchify — Design System (single token source of truth)
-   v3: the Atlassian Design System, flat 2.0.
+   v3.1: the Atlassian Design System, elevated — borderless cards resting
+   on the ADS raised shadow rung (§4a).
 
    LIGHT/DARK are both ADS verbatim, ported into app/ds-tokens.css and
    consumed here. This file owns the SEMANTIC layer only — it names the
@@ -12,13 +13,15 @@
      ds-tokens.css  →  THIS FILE     →  @theme inline  →  components
      (ADS values)      (semantics)      (utilities)       (classes)
 
-   FLAT 2.0. Surfaces are flat fills separated by a tint step and a 1px
-   alpha hairline. Shadow means "this floats above the page" and appears
-   ONLY on modal/dropdown/tooltip/popover/palette — every in-flow surface
-   (card, panel, table, sidebar, input, page header) is flat. Depth comes
-   from the surface ladder sunken → surface → raised, never from light.
+   ELEVATION (ADS, §4a). Cards rest on the ADS raised rung — a soft
+   `--ds-shadow-raised` lift over the sunken canvas, edged by the SUBTLE
+   6% hairline (the shadow, not the border, separates the card). The
+   overlay rung (`--ds-shadow-overlay`) is reserved for surfaces that
+   genuinely float — modal/dropdown/tooltip/popover/palette — and for the
+   hover lift of interactive cards, which temporarily float. Every other
+   in-flow surface (table, sidebar, input, page header, badge) stays flat.
    No gradients on chrome, no glass, no catchlight rings. Machine-enforced
-   in scripts/check-flat-elevation.mjs — a shadow on a card fails the build.
+   in scripts/check-elevation.mjs.
 
    Components consume ONLY the bridged Tailwind semantic tokens below —
    never raw hex (no-raw-hex guard), never a bare --ds-* name.
@@ -56,6 +59,11 @@
 /* Chrome rules (focus rings, selection, the logo mark, scrollbars, a11y
    media queries) — no tokens, so it comes last. */
 @import './app-chrome.css';
+
+/* Product-tour chrome (driver.js popover + stage) — token-only rules that
+   override the library's default theme. Imported here so the specificity
+   beats driver.css regardless of bundle order. */
+@import './tour.css';
 
 /* The `dark:` variant, scoped to the hand-rolled theme attribute (the same
    selector lib/theme.ts drives). Deleted in the ADS port and restored here:
@@ -218,13 +226,15 @@
   --color-chart-tooltip: var(--chart-tooltip-bg);
   --color-chart-tooltip-fg: var(--chart-tooltip-fg);
 
-  /* Shadows / elevation — FLAT 2.0: the in-flow rungs are `none` and only
-     the overlay rung carries a shadow. The aliases are kept so the four
-     overlay components need no edit, but xs/sm/card/elevated now resolve
-     to nothing on purpose. See scripts/check-flat-elevation.mjs. */
+  /* Shadows / elevation — the ADS raised/overlay model (§4a): cards rest
+     on the raised rung (`shadow-card`), interactive cards lift to the
+     overlay rung on hover (`shadow-card-hover`), and true overlays carry
+     `shadow-modal-value`. xs/sm/elevated stay `none` on purpose. See
+     scripts/check-elevation.mjs. */
   --shadow-xs: var(--shadow-xs-value);
   --shadow-sm: var(--shadow-sm-value);
   --shadow-card: var(--shadow-card-value);
+  --shadow-card-hover: var(--shadow-card-hover-value);
   --shadow-elevated: var(--shadow-elevated-value);
   --shadow-lg: var(--shadow-lg-value);
   --shadow-modal-value: var(--shadow-modal);
@@ -284,11 +294,12 @@
   --bg-sidebar: var(--ds-surface);
   --surface-overlay: var(--ds-surface-overlay);
 
-  /* Borders — ADS alpha hairlines, two real tiers. --border-subtle is the
-     6% alpha (4.66 ΔE76 on white) for in-card separators and table rules;
-     --border is the 14% alpha (11.61) for card edges and fields. globals.test
-     asserts the subtle alpha stays strictly weaker so the tiers cannot
-     re-collapse. */
+  /* Borders — ADS alpha hairlines, two real tiers, STRUCTURAL only (§4a):
+     cards and buttons carry no border at all. --border-subtle is the 6%
+     alpha (4.66 ΔE76 on white) for chrome frames, overlay edges, in-card
+     separators and table rules; --border is the 14% alpha (11.61) for form
+     fields and outline-affordance chips. globals.test asserts the subtle
+     alpha stays strictly weaker so the tiers cannot re-collapse. */
   --border-subtle: var(--ds-border-subtle);
   --border: var(--ds-border);
   --border-strong: var(--ds-border-bold);
@@ -448,21 +459,23 @@
   --chart-tooltip-bg: var(--ds-background-neutral-bold); /* inverse chip */
   --chart-tooltip-fg: var(--ds-text-inverse);
 
-  /* ─── Elevation — FLAT 2.0 ────────────────────────────────────────────
-     Four of these are `none`, and that is the whole design. A card is a
-     white fill on a sunken canvas with a 1px alpha hairline; that reads as
-     a distinct surface without pretending to hover. Only --shadow-lg and
-     --shadow-modal carry a real shadow, for the four overlay components
-     that genuinely float. --shadow-1..4 survive as the two live rungs so
-     the token contract keeps its shape.
-     Enforced by scripts/check-flat-elevation.mjs. */
+  /* ─── Elevation — ADS raised + overlay (§4a) ──────────────────────────
+     A card is a white fill on the sunken canvas carrying the ADS raised
+     shadow, edged by the subtle 6% hairline — depth AND the tint step now
+     separate it from the canvas, so the border no longer has to. The
+     overlay rung belongs to surfaces that genuinely float (modal,
+     dropdown, tooltip, palette) and to the hover lift of an interactive
+     card, which floats for as long as the pointer is over it. xs/sm and
+     the legacy elevated alias stay `none` so no third rung creeps in.
+     Enforced by scripts/check-elevation.mjs. */
   --shadow-1: none;
-  --shadow-2: none;
-  --shadow-3: none;
+  --shadow-2: var(--ds-shadow-raised);
+  --shadow-3: var(--ds-shadow-overlay);
   --shadow-4: var(--ds-shadow-overlay);
   --shadow-xs-value: none;
   --shadow-sm-value: none;
-  --shadow-card-value: none;
+  --shadow-card-value: var(--ds-shadow-raised);
+  --shadow-card-hover-value: var(--ds-shadow-overlay);
   --shadow-elevated-value: none;
   --shadow-lg-value: var(--ds-shadow-overlay);
   --shadow-modal: var(--ds-shadow-overlay);

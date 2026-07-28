@@ -235,7 +235,7 @@ export function EvidenceDrawer({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
-        <DialogPrimitive.Content className="border-border bg-elevated shadow-modal-value fixed top-0 right-0 z-[101] flex h-full w-[448px] max-w-full flex-col border-l focus:outline-none">
+        <DialogPrimitive.Content className="border-border-subtle bg-elevated shadow-modal-value fixed top-0 right-0 z-[101] flex h-full w-[448px] max-w-full flex-col border-l focus:outline-none">
           <header className="border-border-subtle flex items-center justify-between gap-2 border-b px-4 py-3">
             <DialogPrimitive.Title className="text-foreground text-heading-sm truncate">
               Opportunity detail

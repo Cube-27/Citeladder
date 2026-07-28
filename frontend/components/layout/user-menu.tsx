@@ -53,8 +53,7 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
             </Link>
           </DropdownItem>
           <DropdownItem
-            onSelect={(event) => {
-              event.preventDefault();
+            onSelect={() => {
               window.dispatchEvent(new Event('searchify:replay-product-tour'));
             }}
           >

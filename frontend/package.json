@@ -17,7 +17,7 @@
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:visual": "playwright test --config e2e/visual/visual.config.ts",
     "test:visual:update": "playwright test --config e2e/visual/visual.config.ts --update-snapshots",
-    "check:policy": "node scripts/check-token-escapes.mjs && node scripts/check-frontend-architecture.mjs && node scripts/check-design-tokens.mjs && node scripts/check-flat-elevation.mjs && node scripts/check-ads-scale.mjs"
+    "check:policy": "node scripts/check-token-escapes.mjs && node scripts/check-frontend-architecture.mjs && node scripts/check-design-tokens.mjs && node scripts/check-elevation.mjs && node scripts/check-ads-scale.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

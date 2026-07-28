@@ -313,7 +313,8 @@ const requiredVars = [
   'series-other',
   'chart-tooltip-bg',
   'chart-tooltip-fg',
-  // Shadows / elevation — rungs + semantic aliases (all but the overlay are `none`)
+  // Shadows / elevation — rungs + semantic aliases (cards rest on the raised
+  // rung; only overlays and the interactive-card hover lift use the overlay rung)
   'shadow-1',
   'shadow-2',
   'shadow-3',
@@ -321,6 +322,7 @@ const requiredVars = [
   'shadow-xs-value',
   'shadow-sm-value',
   'shadow-card-value',
+  'shadow-card-hover-value',
   'shadow-elevated-value',
   'shadow-lg-value',
   'shadow-modal',
