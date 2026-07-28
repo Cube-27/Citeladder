@@ -186,7 +186,7 @@ describe('RunsPage', () => {
       project_id: PROJECT_ID,
       prompt_set_id: SET_ID,
       engines: ['gemini'],
-      repetitions: 3,
+      repetitions: 1,
     });
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${AUDIT_ID}`));
   });

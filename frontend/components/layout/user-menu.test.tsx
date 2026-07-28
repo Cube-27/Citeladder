@@ -54,7 +54,7 @@ describe('UserMenu', () => {
     logoutMock.mockReset().mockResolvedValue(undefined);
   });
 
-  it('shows a Settings item directly above Sign out, linking to /settings', async () => {
+  it('shows Settings and the tour replay above Sign out, linking to /settings', async () => {
     const user = userEvent.setup();
     renderMenu();
 
@@ -65,10 +65,13 @@ describe('UserMenu', () => {
     const labels = items.map((item) => item.textContent ?? '');
 
     const settingsIndex = labels.findIndex((label) => /settings/i.test(label));
+    const replayIndex = labels.findIndex((label) => /replay product tour/i.test(label));
     const signOutIndex = labels.findIndex((label) => /sign out/i.test(label));
 
+    // Order: Settings → Replay product tour → Sign out.
     expect(settingsIndex).toBeGreaterThanOrEqual(0);
-    expect(signOutIndex).toBe(settingsIndex + 1);
+    expect(replayIndex).toBe(settingsIndex + 1);
+    expect(signOutIndex).toBe(replayIndex + 1);
 
     // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', '/settings');

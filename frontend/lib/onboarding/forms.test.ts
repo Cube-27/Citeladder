@@ -100,7 +100,7 @@ describe('onboardingToProjectInput', () => {
   it('sends the defaults onboarding never asks about', () => {
     const input = onboardingToProjectInput(brand, [], []);
     expect(input.benchmark_mode).toBe('consumer_like');
-    expect(input.default_repetitions).toBe(3);
+    expect(input.default_repetitions).toBe(1);
     expect(input.brand).toEqual({ aliases: [] });
     expect(input.unintended_domains).toEqual([]);
   });
