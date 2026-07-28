@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Inter } from 'next/font/google';
+import { Google_Sans, Plus_Jakarta_Sans } from 'next/font/google';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
 import { SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
@@ -7,27 +7,21 @@ import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
 
 import './globals.css';
 
-// Inter remains the UI/body face. Geist Medium is the shared display face
-// for headings across the product and marketing surfaces. Geist Mono stays
-// reserved for numeric/data contexts.
-const sans = Inter({
+// Two faces total: Google Sans for UI, body, and data (no monospace is
+// shipped; numeric contexts use Google Sans with tabular-nums), and Plus
+// Jakarta Sans for headings/display across both the app and the marketing
+// site. No other family is loaded anywhere.
+const sans = Google_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-sans',
+  variable: '--font-google-sans',
   display: 'swap',
 });
 
-const display = Geist({
+const display = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['500'],
-  variable: '--font-geist',
-  display: 'swap',
-});
-
-const mono = Geist_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-mono',
+  weight: ['500', '600'],
+  variable: '--font-jakarta',
   display: 'swap',
 });
 
@@ -46,11 +40,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${sans.variable} ${display.variable} ${mono.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${display.variable}`}>
       <head>
         {/* Pre-hydration theme bootstrap — sets data-theme before first paint
             to avoid a flash (see lib/theme.ts). Must run before hydration. */}

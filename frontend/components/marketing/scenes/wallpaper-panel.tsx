@@ -11,12 +11,20 @@ import { cn } from '@/lib/utils';
 export function WallpaperPanel({
   children,
   className,
+  rounded = true,
   ...rest
-}: Readonly<{ children: ReactNode; className?: string; id?: string; 'aria-hidden'?: boolean }>) {
+}: Readonly<{
+  children: ReactNode;
+  className?: string;
+  rounded?: boolean;
+  id?: string;
+  'aria-hidden'?: boolean;
+}>) {
   return (
     <div
       className={cn(
-        'mkt-wallpaper border-mkt-line rounded-mkt-lg relative overflow-hidden border',
+        'mkt-wallpaper shadow-card relative overflow-hidden',
+        rounded && 'rounded-mkt-lg',
         className,
       )}
       {...rest}
@@ -32,25 +40,23 @@ export function WallpaperPanel({
  */
 export function SceneStrip({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="border-mkt-line bg-mkt-paper-raised flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
+    <div className="border-mkt-line-soft bg-mkt-paper-raised flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
       {children}
     </div>
   );
 }
 
 /**
- * Scene window — the white panel that sits on the wallpaper. Flat by rule
- * (docs/design.md "Flat 2.0"): an opaque surface and a 1px hairline, no
- * glass, no blur, no shadow.
+ * Scene window — the white panel that sits on the wallpaper. Borderless by
+ * rule (docs/design.md §4a): an opaque surface carried by the `shadow-card`
+ * rung, no border, no glass, no blur.
  */
 export function Panel({
   children,
   className,
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <div className={cn('border-mkt-line bg-mkt-surface rounded-mkt-sm border', className)}>
-      {children}
-    </div>
+    <div className={cn('bg-mkt-surface rounded-mkt-sm shadow-card', className)}>{children}</div>
   );
 }
 
