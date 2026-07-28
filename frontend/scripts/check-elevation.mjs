@@ -58,8 +58,7 @@ const ALLOWED_OVERLAY_UTILITY = 'shadow-modal-value';
  * three are caught — matching only the named form would leave the escape
  * hatches open. `shadow-none` is fine: an explicit opt-out, not elevation.
  */
-const SHADOW_UTILITY =
-  /(?<![\w-])shadow-(?!none\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
+const SHADOW_UTILITY = /(?<![\w-])shadow-(?!none\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
 const GRADIENT_UTILITY =
   /(?<![\w-])(?:bg-gradient-to-[a-z]+|bg-linear-|bg-radial-|bg-conic-|backdrop-blur)/g;
 

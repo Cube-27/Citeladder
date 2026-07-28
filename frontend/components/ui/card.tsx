@@ -33,10 +33,7 @@ export function Card({
   return (
     <section
       {...props}
-      className={cn(
-        'bg-panel rounded-lg shadow-card transition-shadow duration-200',
-        className,
-      )}
+      className={cn('bg-panel shadow-card rounded-lg transition-shadow duration-200', className)}
     >
       {children}
     </section>

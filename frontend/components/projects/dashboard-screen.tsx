@@ -54,7 +54,9 @@ function primaryMetric(section: DashboardSection): { label: string; value: unkno
 }
 
 function hasDashboardSignal(section: DashboardSection) {
-  return section.state === 'ready' || section.state === 'running' || primaryMetric(section) !== null;
+  return (
+    section.state === 'ready' || section.state === 'running' || primaryMetric(section) !== null
+  );
 }
 
 /** Every dashboard section owns a glyph; the chip tint comes from the accent. */
@@ -76,8 +78,7 @@ const SECTION_ICONS: Record<DashboardSection['id'], LucideIcon> = {
 /** State → badge tone. Colour carries meaning only (WCAG 1.4.1: the label always renders). */
 const SECTION_STATE_BADGE: Record<
   DashboardSectionState,
-  | { variant: 'status'; value: 'success' | 'info' | 'warning' | 'danger' }
-  | { variant: 'neutral' }
+  { variant: 'status'; value: 'success' | 'info' | 'warning' | 'danger' } | { variant: 'neutral' }
 > = {
   ready: { variant: 'status', value: 'success' },
   running: { variant: 'status', value: 'info' },
@@ -99,7 +100,7 @@ function SectionCard({ section }: Readonly<{ section: DashboardSection }>) {
     >
       {/* Interactive card: rests on the raised rung, lifts to the overlay
           rung and rises 2px on hover — the ADS surface/shadow pairing. */}
-      <Card className="h-full transition-[box-shadow,transform] duration-200 group-hover:-translate-y-0.5 group-hover:shadow-card-hover">
+      <Card className="group-hover:shadow-card-hover h-full transition-[box-shadow,transform] duration-200 group-hover:-translate-y-0.5">
         <CardHeader className="gap-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3">
@@ -137,7 +138,7 @@ function SectionCard({ section }: Readonly<{ section: DashboardSection }>) {
           )}
           <ArrowRight
             aria-hidden
-            className="text-muted size-4 shrink-0 transition-[color,transform] duration-200 group-hover:text-accent-text group-hover:translate-x-0.5"
+            className="text-muted group-hover:text-accent-text size-4 shrink-0 transition-[color,transform] duration-200 group-hover:translate-x-0.5"
           />
         </CardContent>
       </Card>
