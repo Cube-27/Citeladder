@@ -4,7 +4,6 @@ import { Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 import type { ReviewCompetitor, ReviewDomain, ReviewPrompt } from '@/lib/onboarding/forms';
 
@@ -32,11 +31,15 @@ function Section({
   action?: React.ReactNode;
 }>) {
   return (
-    <section className="grid gap-2">
-      <div className="flex items-center gap-2">
-        <p className={eyebrowClasses}>{label}</p>
-        <span className="text-subtle text-2xs">{count}</span>
-        {action ? <div className="ms-auto">{action}</div> : null}
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-3">
+          <p className="text-xs font-bold text-slate-700 uppercase">{label}</p>
+          <span className="text-3xs rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+            {count}
+          </span>
+        </div>
+        {action ? <div>{action}</div> : null}
       </div>
       {children}
     </section>
@@ -54,14 +57,17 @@ function Chip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'focus-ring inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors',
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200',
         selected
-          ? 'border-accent-border bg-accent-subtle text-accent-text'
-          : 'border-border text-muted hover:text-foreground',
+          ? 'border-indigo-200 bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100/80'
+          : 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700',
       )}
     >
-      {label}
-      <X className={cn('size-3 shrink-0', selected ? 'opacity-70' : 'opacity-40')} aria-hidden />
+      <span>{label}</span>
+      <X
+        className={cn('size-4 shrink-0 transition-opacity', selected ? 'opacity-70' : 'opacity-40')}
+        aria-hidden
+      />
     </button>
   );
 }
@@ -88,15 +94,15 @@ export function ReviewStep({
   const selectedPrompts = prompts.filter((p) => p.selected).length;
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-5">
       <Section
         label="Your domains"
         count={`${domains.filter((d) => d.selected).length} of ${domains.length}`}
       >
         {domains.length === 0 ? (
-          <p className="text-muted text-sm">None found — you can add these later.</p>
+          <p className="text-sm text-slate-500 italic">None found — you can add these later.</p>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2 pt-1">
             {domains.map((entry, index) => (
               <Chip
                 key={entry.domain}
@@ -113,23 +119,31 @@ export function ReviewStep({
         label="Competitors"
         count={`${competitors.filter((c) => c.selected).length} of ${competitors.length}`}
         action={
-          <Button variant="ghost" size="sm" onClick={onAddCompetitor}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onAddCompetitor}
+            className="text-indigo-600 hover:bg-indigo-50"
+          >
             <Plus className="size-4" aria-hidden />
             Add
           </Button>
         }
       >
         {competitors.length === 0 ? (
-          <p className="text-muted text-sm">None found — add any you want to track.</p>
+          <p className="text-sm text-slate-500 italic">None found — add any you want to track.</p>
         ) : (
-          <ul className="grid list-none gap-1.5 p-0">
+          <ul className="grid list-none gap-2 p-0">
             {competitors.map((competitor, index) => (
-              <li key={`competitor-${index}`} className="flex items-center gap-2">
+              <li key={competitor.id} className="flex items-center gap-2">
                 <Input
                   value={competitor.name}
                   onChange={(event) => onRenameCompetitor(index, event.target.value)}
                   aria-label={`Competitor ${index + 1} name`}
-                  className={cn(!competitor.selected && 'opacity-50')}
+                  className={cn(
+                    'border-slate-200 bg-slate-50/80 text-slate-900 focus:bg-white',
+                    !competitor.selected && 'line-through opacity-50',
+                  )}
                 />
                 <Button
                   variant="ghost"
@@ -141,6 +155,11 @@ export function ReviewStep({
                   }
                   aria-pressed={competitor.selected}
                   onClick={() => onToggleCompetitor(index)}
+                  className={cn(
+                    competitor.selected
+                      ? 'text-slate-400 hover:text-slate-700'
+                      : 'bg-indigo-50 text-indigo-600 hover:text-indigo-700',
+                  )}
                 >
                   <X className={cn('size-4', !competitor.selected && 'opacity-40')} aria-hidden />
                 </Button>
@@ -152,29 +171,41 @@ export function ReviewStep({
 
       <Section label="Starting prompts" count={`${selectedPrompts} of ${prompts.length}`}>
         {prompts.length === 0 ? (
-          <p className="text-muted text-sm">None found — you can write your own after setup.</p>
+          <p className="text-sm text-slate-500 italic">
+            None found — you can write your own after setup.
+          </p>
         ) : (
-          <ul className="border-border-subtle divide-border-subtle grid list-none divide-y rounded-lg border p-0">
+          <ul className="grid list-none divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/50 p-0">
             {prompts.map((prompt, index) => (
-              <li key={`prompt-${index}`} className="flex items-start gap-3 px-3 py-2">
+              <li
+                key={prompt.id}
+                className={cn(
+                  'flex items-start gap-4 px-4 py-3 transition-colors hover:bg-white',
+                  prompt.selected ? 'bg-white/80' : 'bg-slate-50/40',
+                )}
+              >
                 <input
                   type="checkbox"
                   checked={prompt.selected}
                   onChange={() => onTogglePrompt(index)}
                   aria-label={prompt.text}
-                  className="focus-ring accent-accent mt-0.5 size-4 shrink-0"
+                  className="mt-0.5 size-4 shrink-0 cursor-pointer rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
                 />
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 space-y-1">
                   <span
                     className={cn(
-                      'text-foreground block text-sm',
-                      !prompt.selected && 'text-muted line-through',
+                      'block text-sm leading-relaxed transition-colors',
+                      prompt.selected
+                        ? 'font-medium text-slate-800'
+                        : 'text-slate-400 line-through',
                     )}
                   >
                     {prompt.text}
                   </span>
                   {prompt.theme ? (
-                    <span className="text-subtle text-2xs">{prompt.theme}</span>
+                    <span className="text-3xs inline-block rounded-full bg-slate-200/60 px-2 py-0.5 font-medium text-slate-600">
+                      {prompt.theme}
+                    </span>
                   ) : null}
                 </span>
               </li>

@@ -28,12 +28,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  EvidenceDrawer,
-  OpportunityStatusBadge,
-  OpportunityTypeBadge,
-} from '@/components/opportunities/evidence-drawer';
+import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-status-meta';
+import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
+import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
 import type {
@@ -240,7 +238,7 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
 
   return (
     <div className="grid gap-6">
-      {featuredQuery.isLoading && featuredId ? (
+      {featuredQuery.isPending && !featured && featuredId ? (
         <Skeleton className="h-44 w-full" />
       ) : featured ? (
         <FeaturedRecommendation detail={featured} onOpen={() => setSelectedId(featured.id)} />
@@ -291,9 +289,9 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
           </div>
         </div>
 
-        {listQuery.isError ? (
+        {listQuery.isError && !listQuery.data ? (
           <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>
-        ) : listQuery.isLoading ? (
+        ) : listQuery.isPending && !listQuery.data ? (
           <div className="grid gap-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-40 w-full" />

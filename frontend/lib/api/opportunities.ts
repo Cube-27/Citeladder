@@ -97,6 +97,21 @@ export const opportunitiesApi = {
     ),
 };
 
+function extractProjectId(queryKey: readonly unknown[] | undefined): string | undefined {
+  if (!queryKey || queryKey[0] !== 'opportunities') return undefined;
+  if (queryKey[1] === 'list' || queryKey[1] === 'summary') {
+    return typeof queryKey[2] === 'string' ? queryKey[2] : undefined;
+  }
+  return undefined;
+}
+
+function isSameProjectQuery(
+  previousQuery: { queryKey: readonly unknown[] } | undefined,
+  projectId: string,
+): boolean {
+  return extractProjectId(previousQuery?.queryKey) === projectId;
+}
+
 /**
  * React Query option factories. The query key ↔ endpoint pairing lives here
  * so screens pass these straight to `useQuery` / `useMutation`. Every
@@ -115,6 +130,8 @@ export const opportunitiesQueries = {
         min_priority: params?.min_priority ?? null,
       }),
       queryFn: ({ signal }) => opportunitiesApi.list(projectId, params, { signal }),
+      placeholderData: (previousData, previousQuery) =>
+        isSameProjectQuery(previousQuery, projectId) ? previousData : undefined,
     }),
   detail: (opportunityId: string) =>
     queryOptions({
@@ -125,6 +142,8 @@ export const opportunitiesQueries = {
     queryOptions({
       queryKey: queryKeys.opportunities.summary(projectId),
       queryFn: ({ signal }) => opportunitiesApi.summary(projectId, { signal }),
+      placeholderData: (previousData, previousQuery) =>
+        isSameProjectQuery(previousQuery, projectId) ? previousData : undefined,
     }),
 };
 

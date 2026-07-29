@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Check } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,14 @@ import { ReviewStep } from './review-step';
 const STEPS = ['Brand', 'Discovery', 'Review', 'Finish'] as const;
 type StepIndex = 0 | 1 | 2 | 3;
 
+function manualCompetitorId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `fallback-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
+}
+
+// react-doctor-disable-next-line react-doctor/no-giant-component -- this is the wizard transaction owner; discovery, review, and field controls are already extracted components.
 export function OnboardingScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -85,7 +94,11 @@ export function OnboardingScreen() {
       setDomains((prev) =>
         prev.length > 0
           ? prev
-          : discoveryState.domains.data.map((domain) => ({ domain, selected: true })),
+          : discoveryState.domains.data.map((domain, index) => ({
+              id: `domain:${index}:${domain}`,
+              domain,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState.domains]);
@@ -96,7 +109,11 @@ export function OnboardingScreen() {
       setCompetitors((prev) =>
         prev.length > 0
           ? prev
-          : discoveryState.competitors.data.map((c) => ({ ...c, selected: true })),
+          : discoveryState.competitors.data.map((competitor, index) => ({
+              ...competitor,
+              id: `competitor:${index}:${competitor.name}`,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState.competitors]);
@@ -105,7 +122,13 @@ export function OnboardingScreen() {
     if (discoveryState.prompts.status === 'done') {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setPrompts((prev) =>
-        prev.length > 0 ? prev : discoveryState.prompts.data.map((p) => ({ ...p, selected: true })),
+        prev.length > 0
+          ? prev
+          : discoveryState.prompts.data.map((prompt, index) => ({
+              ...prompt,
+              id: `prompt:${index}:${prompt.text}`,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState.prompts]);
@@ -172,218 +195,276 @@ export function OnboardingScreen() {
   );
 
   return (
-    <div className="bg-background flex min-h-dvh flex-col">
-      <header className="border-border-subtle flex items-center justify-between gap-3 border-b px-6 py-4 sm:px-10">
-        <span className="flex items-center gap-2">
-          <LogoMark size={24} />
-          <span className="text-foreground text-heading-sm">Searchify</span>
-        </span>
-        <span className="text-subtle text-xs">
-          Step {step + 1} of {STEPS.length}
-        </span>
+    <div className="relative flex min-h-dvh flex-col bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
+      {/* Background ambient lighting */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-indigo-200/40 blur-[120px]" />
+        <div className="absolute -right-40 -bottom-40 size-[500px] rounded-full bg-sky-200/40 blur-[120px]" />
+      </div>
+
+      <header className="border-b border-slate-200 bg-white px-6 py-4 sm:px-10">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
+          <span className="flex items-center gap-3">
+            <LogoMark size={26} />
+            <span className="font-mkt-display text-lg font-bold text-slate-900">Searchify</span>
+          </span>
+          <span className="rounded-full border border-slate-200/60 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            Step {step + 1} of {STEPS.length}
+          </span>
+        </div>
       </header>
 
-      {/* Top-aligned, full-width content. The old shell centred a `max-w-lg`
-          island with `justify-center`, which left dead bands above and below
-          and pushed the review lists into a vertical scroll. `justify-start`
-          and a wider column keep everything in the viewport; a sticky footer
-          bar holds the actions so they never scroll away. */}
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-8 pb-24 sm:px-10">
-        {/* Labelled stepper. The bars alone said "three of something" without
-            saying what, so the user could not tell what was coming — which is
-            most of what a stepper is for. `aria-current` marks the active step
-            rather than relying on colour. */}
-        <ol className="mb-6 grid list-none grid-cols-4 gap-2 p-0">
-          {STEPS.map((label, index) => {
-            const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
-            return (
-              <li
-                key={label}
-                aria-current={state === 'current' ? 'step' : undefined}
-                className="grid gap-1.5"
-              >
-                <span
-                  className={cn(
-                    'h-0.5 rounded-full',
-                    state === 'upcoming' ? 'bg-border' : 'bg-accent',
-                  )}
-                />
-                <span
-                  className={cn(
-                    'text-2xs font-medium',
-                    state === 'current' ? 'text-foreground' : 'text-subtle',
-                  )}
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-8 pb-20 sm:px-10">
+        {/* Labelled stepper with smooth progress bar */}
+        <div className="shadow-card mb-8 rounded-2xl border border-slate-200 bg-white p-5">
+          <ol className="grid list-none grid-cols-4 gap-3 p-0">
+            {STEPS.map((label, index) => {
+              const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
+              return (
+                <li
+                  key={label}
+                  aria-current={state === 'current' ? 'step' : undefined}
+                  className="grid gap-2"
                 >
-                  {label}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-
-        {step === 0 ? (
-          <form noValidate onSubmit={submitBrand} className="grid gap-5">
-            <div className="grid gap-1">
-              <h1 className="text-foreground text-2xl">
-                {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
-              </h1>
-              <p className="text-muted text-sm">
-                We&apos;ll discover your domains, competitors and starting prompts from this.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Brand name" required error={form.formState.errors.brand_name?.message}>
-                {(props) => (
-                  <Input {...props} {...form.register('brand_name')} placeholder="Acme" />
-                )}
-              </Field>
-
-              <Field
-                label="Website"
-                required
-                error={form.formState.errors.website_url?.message}
-                hint={derivedDomain ? `We'll track ${derivedDomain}` : undefined}
-              >
-                {(props) => (
-                  <Input {...props} {...form.register('website_url')} placeholder="acme.com" />
-                )}
-              </Field>
-
-              <Field label="Country" error={form.formState.errors.country_code?.message}>
-                {(props) => (
-                  <Controller
-                    control={form.control}
-                    name="country_code"
-                    render={({ field }) => (
-                      <MarketSelect
-                        {...props}
-                        ariaLabel="Country"
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        options={COUNTRY_OPTIONS}
-                      />
+                  <div
+                    className={cn(
+                      'h-1.5 rounded-full transition-colors duration-300',
+                      state === 'done'
+                        ? 'bg-emerald-500'
+                        : state === 'current'
+                          ? 'bg-indigo-600'
+                          : 'bg-slate-200',
                     )}
                   />
-                )}
-              </Field>
-              <Field label="Language" error={form.formState.errors.language_code?.message}>
-                {(props) => (
-                  <Controller
-                    control={form.control}
-                    name="language_code"
-                    render={({ field }) => (
-                      <MarketSelect
-                        {...props}
-                        ariaLabel="Language"
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        options={LANGUAGE_OPTIONS}
-                      />
-                    )}
-                  />
-                )}
-              </Field>
-            </div>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        'text-2xs font-bold uppercase',
+                        state === 'current'
+                          ? 'text-indigo-600'
+                          : state === 'done'
+                            ? 'text-emerald-600'
+                            : 'text-slate-400',
+                      )}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <Button type="submit">Continue</Button>
-              {isAdditional ? (
-                <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
-                  Cancel
+        {/* Step Content Container */}
+        <div className="shadow-card relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10">
+          {step === 0 ? (
+            <form noValidate onSubmit={submitBrand} className="grid gap-6">
+              <div className="grid gap-1.5">
+                <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
+                  {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
+                </h1>
+                <p className="text-sm text-slate-500">
+                  We&apos;ll discover your domains, competitors and starting prompts from this.
+                </p>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field
+                  label="Brand name"
+                  required
+                  error={form.formState.errors.brand_name?.message}
+                >
+                  {(props) => (
+                    <Input
+                      {...props}
+                      {...form.register('brand_name')}
+                      placeholder="Acme"
+                      className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                    />
+                  )}
+                </Field>
+
+                <Field
+                  label="Website"
+                  required
+                  error={form.formState.errors.website_url?.message}
+                  hint={derivedDomain ? `We'll track ${derivedDomain}` : undefined}
+                >
+                  {(props) => (
+                    <Input
+                      {...props}
+                      {...form.register('website_url')}
+                      placeholder="acme.com"
+                      className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                    />
+                  )}
+                </Field>
+
+                <Field label="Country" error={form.formState.errors.country_code?.message}>
+                  {(props) => (
+                    <Controller
+                      control={form.control}
+                      name="country_code"
+                      render={({ field }) => (
+                        <MarketSelect
+                          {...props}
+                          ariaLabel="Country"
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          options={COUNTRY_OPTIONS}
+                        />
+                      )}
+                    />
+                  )}
+                </Field>
+                <Field label="Language" error={form.formState.errors.language_code?.message}>
+                  {(props) => (
+                    <Controller
+                      control={form.control}
+                      name="language_code"
+                      render={({ field }) => (
+                        <MarketSelect
+                          {...props}
+                          ariaLabel="Language"
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          options={LANGUAGE_OPTIONS}
+                        />
+                      )}
+                    />
+                  )}
+                </Field>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <Button type="submit" className="font-semibold">
+                  Continue
                 </Button>
+                {isAdditional ? (
+                  <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          ) : null}
+
+          {step === 1 ? (
+            <div className="grid gap-6">
+              <div className="grid gap-1.5">
+                <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
+                  Finding what to track
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Three searches run in parallel for {brand?.brand_name || 'your brand'}.
+                </p>
+              </div>
+
+              <DiscoveryProgress state={discovery.state} onRetry={discovery.retry} />
+
+              {discovery.agentUnconfigured ? (
+                <Alert tone="warning">
+                  AI discovery is unavailable. You can continue and add competitors and prompts
+                  yourself.
+                </Alert>
               ) : null}
+
+              <div className="flex items-center gap-3 pt-2">
+                <Button
+                  onClick={() => setStep(2)}
+                  disabled={discovery.isRunning}
+                  className="font-semibold"
+                >
+                  {discovery.isRunning ? 'Searching…' : 'Review'}
+                </Button>
+                <Button variant="ghost" onClick={() => setStep(0)}>
+                  Back
+                </Button>
+              </div>
             </div>
-          </form>
-        ) : null}
+          ) : null}
 
-        {step === 1 ? (
-          <div className="grid gap-5">
-            <div className="grid gap-1">
-              <h1 className="text-foreground text-2xl">Finding what to track</h1>
-              <p className="text-muted text-sm">
-                Three searches run in parallel for {brand?.brand_name || 'your brand'}.
-              </p>
+          {step === 2 ? (
+            <div className="grid gap-6">
+              <div className="grid gap-1.5">
+                <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
+                  Does this look right?
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Deselect anything you don&apos;t want — you can change all of it after setup.
+                </p>
+              </div>
+
+              <ReviewStep
+                domains={domains}
+                competitors={competitors}
+                prompts={prompts}
+                onToggleDomain={toggle(setDomains)}
+                onToggleCompetitor={toggle(setCompetitors)}
+                onTogglePrompt={toggle(setPrompts)}
+                onRenameCompetitor={(index, name) =>
+                  setCompetitors((prev) =>
+                    prev.map((item, i) => (i === index ? { ...item, name } : item)),
+                  )
+                }
+                onAddCompetitor={() =>
+                  setCompetitors((prev) => [
+                    ...prev,
+                    {
+                      id: `competitor:manual:${manualCompetitorId()}`,
+                      name: '',
+                      domains: [],
+                      selected: true,
+                    },
+                  ])
+                }
+              />
+
+              {confirm.isError ? (
+                <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
+              ) : null}
+
+              <div className="flex items-center gap-3 pt-2">
+                <Button
+                  onClick={() => confirm.mutate()}
+                  disabled={confirm.isPending}
+                  className="font-semibold"
+                >
+                  {confirm.isPending ? 'Creating…' : 'Create project'}
+                </Button>
+                <Button variant="ghost" onClick={() => setStep(1)} disabled={confirm.isPending}>
+                  Back
+                </Button>
+              </div>
             </div>
+          ) : null}
 
-            <DiscoveryProgress state={discovery.state} onRetry={discovery.retry} />
-
-            {discovery.agentUnconfigured ? (
-              <Alert tone="warning">
-                AI discovery is unavailable. You can continue and add competitors and prompts
-                yourself.
-              </Alert>
-            ) : null}
-
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setStep(2)} disabled={discovery.isRunning}>
-                {discovery.isRunning ? 'Searching…' : 'Review'}
-              </Button>
-              <Button variant="ghost" onClick={() => setStep(0)}>
-                Back
-              </Button>
+          {step === 3 ? (
+            <div className="grid max-w-xl gap-6">
+              <div className="grid gap-2">
+                <div className="mb-2 inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                  <Check className="size-6" strokeWidth={2.5} aria-hidden />
+                </div>
+                <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
+                  Your workspace is ready
+                </h1>
+                <p className="text-sm leading-relaxed text-slate-500">
+                  {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a free Site
+                  Health crawl in the background; its status and results will appear on your
+                  dashboard.
+                </p>
+              </div>
+              <div className="pt-2">
+                <Button onClick={() => router.replace('/projects')} className="font-semibold">
+                  Open dashboard
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : null}
-
-        {step === 2 ? (
-          <div className="grid gap-5">
-            <div className="grid gap-1">
-              <h1 className="text-foreground text-2xl">Does this look right?</h1>
-              <p className="text-muted text-sm">
-                Deselect anything you don&apos;t want — you can change all of it after setup.
-              </p>
-            </div>
-
-            <ReviewStep
-              domains={domains}
-              competitors={competitors}
-              prompts={prompts}
-              onToggleDomain={toggle(setDomains)}
-              onToggleCompetitor={toggle(setCompetitors)}
-              onTogglePrompt={toggle(setPrompts)}
-              onRenameCompetitor={(index, name) =>
-                setCompetitors((prev) =>
-                  prev.map((item, i) => (i === index ? { ...item, name } : item)),
-                )
-              }
-              onAddCompetitor={() =>
-                setCompetitors((prev) => [...prev, { name: '', domains: [], selected: true }])
-              }
-            />
-
-            {confirm.isError ? (
-              <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
-            ) : null}
-
-            <div className="flex items-center gap-2">
-              <Button onClick={() => confirm.mutate()} disabled={confirm.isPending}>
-                {confirm.isPending ? 'Creating…' : 'Create project'}
-              </Button>
-              <Button variant="ghost" onClick={() => setStep(1)} disabled={confirm.isPending}>
-                Back
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        {step === 3 ? (
-          <div className="grid max-w-xl gap-5">
-            <div className="grid gap-2">
-              <h1 className="text-foreground text-2xl">Your workspace is ready</h1>
-              <p className="text-muted text-sm">
-                {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a free Site
-                Health crawl in the background; its status and results will appear on your
-                dashboard.
-              </p>
-            </div>
-            <div>
-              <Button onClick={() => router.replace('/projects')}>Open dashboard</Button>
-            </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </main>
     </div>
   );

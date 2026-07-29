@@ -56,9 +56,10 @@ export type QuotaStatus = {
 
 /** Build a `CommittedSelection` from the monitored-urls response. */
 export function committedFromResponse(response: MonitoredUrlsResponse): CommittedSelection {
-  const siteUrlIds = new Set(
-    response.monitored_urls.filter((row) => row.active).map((row) => row.site_url_id),
-  );
+  const siteUrlIds = new Set<string>();
+  for (const row of response.monitored_urls) {
+    if (row.active) siteUrlIds.add(row.site_url_id);
+  }
   return { siteUrlIds, version: response.selection_version };
 }
 

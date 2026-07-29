@@ -129,6 +129,54 @@ if (fs.existsSync(indexPath)) {
   failures.push('lib/api/index.ts is missing (compat facade spreading the domain modules).');
 }
 
+// ── Marketing type ladder ─────────────────────────────────────────────────
+// Marketing headings must sit on a `text-mkt-*` rung, and the rung must be the
+// whole decision: every step in marketing-theme.css carries its own font-weight,
+// so a `font-medium`/`font-semibold` beside it is drift waiting to happen (this
+// is exactly how the surface ended up with three different card-heading sizes).
+// Two bans, both cheap to check on the class list:
+//   1. raw Tailwind size utilities (text-lg, text-3xl, text-[28px]) in marketing
+//   2. a weight utility on the same element as a display rung
+const MKT_GLOBS = ['components/marketing', 'app/(marketing)'];
+const MKT_RUNGS = /\btext-mkt-(?:d[1-5]|figure)\b/;
+const RAW_SIZE =
+  /(?:^|[\s'"`])(?:sm:|md:|lg:|xl:)?text-(?:xs|sm|base|lg|[2-9]xl|\[[^\]]+\])(?=[\s'"`]|$)/;
+const WEIGHT = /\bfont-(?:medium|semibold|bold)\b/;
+/** App-side type names that must not leak onto the marketing surface. */
+const APP_TYPE_LEAK = /\btext-heading-(?:sm|md|lg)\b/;
+
+function walk(dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full, out);
+    else if (/\.tsx$/.test(entry.name) && !entry.name.includes('.test.')) out.push(full);
+  }
+  return out;
+}
+
+for (const glob of MKT_GLOBS) {
+  const dir = path.join(root, glob);
+  if (!fs.existsSync(dir)) continue;
+  for (const file of walk(dir)) {
+    const rel = path.relative(root, file).replace(/\\/g, '/');
+    const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    lines.forEach((line, i) => {
+      const at = `${rel}:${i + 1}`;
+      if (APP_TYPE_LEAK.test(line)) {
+        failures.push(`${at} uses an app heading token; marketing headings ride text-mkt-* rungs.`);
+      }
+      if (RAW_SIZE.test(line)) {
+        failures.push(`${at} sets a raw Tailwind text size; use a text-mkt-* rung.`);
+      }
+      if (MKT_RUNGS.test(line) && WEIGHT.test(line)) {
+        failures.push(
+          `${at} overrides font-weight on a text-mkt-* rung; the rung owns the weight.`,
+        );
+      }
+    });
+  }
+}
+
 for (const w of warnings) console.warn(`warning: ${w}`);
 
 if (failures.length) {

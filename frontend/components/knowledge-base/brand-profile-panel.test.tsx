@@ -43,7 +43,7 @@ afterAll(() => mswServer.close());
 
 describe('BrandProfilePanel', () => {
   it('saves direct edits as manual knowledge', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let requestBody: unknown;
     mswServer.use(
       http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
@@ -69,8 +69,32 @@ describe('BrandProfilePanel', () => {
     });
   });
 
+  it('locks profile fields while a save is pending', async () => {
+    const user = userEvent.setup({ delay: null });
+    let finishSave: (() => void) | undefined;
+    mswServer.use(
+      http.put(`/api/v1/projects/${projectId}/brand-profile`, async () => {
+        await new Promise<void>((resolve) => {
+          finishSave = resolve;
+        });
+        return HttpResponse.json({ ...profile, description: 'Submitted description.' });
+      }),
+    );
+
+    renderWithProviders(<BrandProfilePanel projectId={projectId} profile={profile} />);
+    const description = screen.getByLabelText('Description');
+    await user.type(description, 'Submitted description.');
+    await user.click(screen.getByRole('button', { name: /save brand knowledge/i }));
+
+    await waitFor(() => expect(description).toBeDisabled());
+    expect(screen.getByLabelText('Positioning')).toBeDisabled();
+    expect(screen.getByLabelText('Products and services')).toBeDisabled();
+    finishSave?.();
+    expect(await screen.findByText(/brand knowledge saved/i)).toBeInTheDocument();
+  });
+
   it('loads an AI draft for review and separates edited fields on acceptance', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let acceptBody: Record<string, unknown> | null = null;
     const draft = {
       description: 'Australian family retailer.',
@@ -138,7 +162,7 @@ describe('BrandProfilePanel', () => {
   });
 
   it('preserves existing values for empty suggestions and can discard the draft', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const existingProfile: BrandProfile = {
       ...profile,
       description: 'Existing description.',

@@ -153,6 +153,7 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
 
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).not.toBeNull();
+    expect(script).not.toHaveAttribute('id');
     const data = JSON.parse(script?.textContent ?? '') as Record<string, unknown>;
     expect(data['@context']).toBe('https://schema.org');
     expect(data['@type']).toBe('BlogPosting');

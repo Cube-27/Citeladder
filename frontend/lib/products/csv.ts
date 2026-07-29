@@ -56,7 +56,10 @@ function splitAliases(value: string): string[] {
   for (const separator of ALIAS_SEPARATORS) {
     parts = parts.flatMap((part) => part.split(separator));
   }
-  return parts.map((part) => part.trim()).filter(Boolean);
+  return parts.flatMap((part) => {
+    const trimmed = part.trim();
+    return trimmed ? [trimmed] : [];
+  });
 }
 
 // Currency markers the price column may carry (longest-first so `US$`/`AU$`/
@@ -164,5 +167,5 @@ export function parseProductCsv(raw: string): ParsedProductCsv {
 
 /** The importable subset (rows without fatal errors). */
 export function validProductRows(parsed: ParsedProductCsv): ProductInput[] {
-  return parsed.rows.filter((row) => row.errors.length === 0).map((row) => row.input);
+  return parsed.rows.flatMap((row) => (row.errors.length === 0 ? [row.input] : []));
 }

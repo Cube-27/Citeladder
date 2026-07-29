@@ -40,13 +40,13 @@ must respect.
 - Keep commits scoped to one subsystem where possible; when multiple agents/people work the
   same tree, stage explicit pathspecs rather than `git add -A`.
 
-## Configuration rule (invariant 1)
+## Configuration rule (invariant 1 — Zero Tolerance)
 
-Tokens, thresholds, model ids, transport catalogs, guardrail knobs, timeouts, and rate
-limits live **only** in `backend/app/core/config/*`. Service / domain / worker / analysis /
-API code *reads* config — it never hard-codes these values inline. On the frontend, no magic
-endpoints or feature flags scattered in components; they belong in the API-contract layer or
-env.
+Configuration MUST NOT live in business logic or presentation code. Tokens, thresholds, model
+ids, transport catalogs, guardrail knobs, timeouts, batch sizes, retry counts, and rate
+limits live **only** in `backend/app/core/config/*` (backend) or `process.env` / `lib/config/*`
+(frontend). Service / domain / worker / analysis / API / UI code *reads* config — it never
+hard-codes these values inline. Hardcoding configuration values is an **automatic review failure**.
 
 ## Database migrations
 
@@ -92,6 +92,7 @@ with zod schemas. **The backend is the source of truth.** When you change a DTO:
 A change that violates any invariant in [`docs/invariants.md`](docs/invariants.md) is a
 review failure regardless of whether it "works". The most commonly hit:
 
+- **Config zero-tolerance** (1) — configuration must NEVER live in code; use `app/core/config/*` or `env`.
 - **Workspace auth on every query** (5) — every project-owned read/write goes through
   `require_workspace_member`; never scope by `user_id`; all ids are string UUIDs.
 - **BYOK secrets never returned/logged** (6) — Fernet-encrypted at rest; never in a DTO,

@@ -71,6 +71,7 @@ async function createTopics(
   const ids = new Map<string, string>();
   for (const name of distinctTopicNames(prompts)) {
     try {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- topic writes are deliberately rate-limited and ordered.
       const topic = await promptsApi.createTopic(projectId, { name });
       ids.set(name.toLowerCase(), topic.id);
     } catch {
@@ -123,6 +124,7 @@ export async function createProjectFromOnboarding({
   // on a list this size.
   for (const prompt of chosen) {
     const topicId = topicIds.get(prompt.theme.trim().toLowerCase());
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop -- prompt writes are deliberately rate-limited and ordered.
     await promptsApi.createPrompt(setId, {
       text: prompt.text,
       // Backend theme is a non-null `str = ""` — send empty, never null.

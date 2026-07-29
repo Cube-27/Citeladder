@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNav } from '@/components/marketing/chrome/nav';
-import { JsonLd, organizationJsonLd } from '@/components/marketing/seo/json-ld';
+import { MarketingMotionProvider } from '@/components/marketing/motion-provider';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
+import { organizationJsonLd } from '@/lib/seo/json-ld';
 
 /**
  * Marketing route-group layout — the public "Proof" surface.
@@ -24,12 +26,14 @@ export default function MarketingLayout({ children }: Readonly<{ children: React
   // is not worth emitting.
   const organization = organizationJsonLd();
   return (
-    <div className="mkt-root bg-mkt-paper text-mkt-ink min-h-dvh">
-      {organization ? <JsonLd data={organization} /> : null}
-      <MarketingNav />
-      {/* Clears the fixed nav strip. Every page starts from the same line. */}
-      <div className="pt-mkt-nav">{children}</div>
-      <MarketingFooter />
-    </div>
+    <MarketingMotionProvider>
+      <div className="mkt-root bg-mkt-paper text-mkt-ink min-h-dvh">
+        {organization ? <JsonLd data={organization} /> : null}
+        <MarketingNav />
+        {/* Clears the fixed nav strip. Every page starts from the same line. */}
+        <div className="pt-mkt-nav">{children}</div>
+        <MarketingFooter />
+      </div>
+    </MarketingMotionProvider>
   );
 }

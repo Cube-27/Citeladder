@@ -16,6 +16,7 @@ const sans = Google_Sans({
   weight: ['400', '500', '600', '700'],
   variable: '--font-google-sans',
   display: 'swap',
+  adjustFontFallback: false,
 });
 
 const display = Plus_Jakarta_Sans({
@@ -44,7 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         {/* Pre-hydration theme bootstrap — sets data-theme before first paint
             to avoid a flash (see lib/theme.ts). Must run before hydration. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+        <script id="theme-bootstrap" dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
       <body>
         <QueryProvider>{children}</QueryProvider>

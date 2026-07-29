@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { ProjectProvider } from '@/lib/project/project-context';
+import { ProjectProvider, useProjectContext } from '@/lib/project/project-context';
 import { OpportunitiesScreen } from './opportunities-screen';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -135,7 +135,13 @@ function renderScreen() {
 }
 
 function mockBase() {
-  mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
+  const PROJECT_2 = '55555555-5555-4555-8555-555555555555';
+  const project2 = { ...project, id: PROJECT_2, name: 'Beta', brand_name: 'Beta' };
+  mswServer.use(
+    http.get('/api/v1/projects', () => HttpResponse.json([project, project2])),
+    http.post(`/api/v1/projects/${PROJECT}/logos/refresh`, () => HttpResponse.json({})),
+    http.post(`/api/v1/projects/${PROJECT_2}/logos/refresh`, () => HttpResponse.json({})),
+  );
 }
 
 describe('OpportunitiesScreen', () => {
@@ -353,5 +359,71 @@ describe('OpportunitiesScreen', () => {
     // Close returns to the catalog.
     await user.click(screen.getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByText('Opportunity detail')).not.toBeInTheDocument());
+  });
+
+  it('clears prior project data and selections during project switch', async () => {
+    const PROJECT_2 = '55555555-5555-4555-8555-555555555555';
+    const OPP_BETA = '66666666-6666-4666-8666-666666666666';
+    const project2 = { ...project, id: PROJECT_2, name: 'Beta', brand_name: 'Beta' };
+
+    function SwitcherTest() {
+      const { setActiveProjectId } = useProjectContext();
+      return (
+        <div>
+          <button onClick={() => setActiveProjectId(PROJECT_2)}>Switch Project</button>
+          <OpportunitiesScreen />
+        </div>
+      );
+    }
+
+    mswServer.use(
+      http.get('/api/v1/projects', () => HttpResponse.json([project, project2])),
+      http.post(`/api/v1/projects/${PROJECT}/logos/refresh`, () => HttpResponse.json({})),
+      http.post(`/api/v1/projects/${PROJECT_2}/logos/refresh`, () => HttpResponse.json({})),
+      http.get(`/api/v1/opportunities/${OPP_BETA}`, () =>
+        HttpResponse.json({
+          ...detail,
+          id: OPP_BETA,
+          project_id: PROJECT_2,
+          title: 'Beta recommendation',
+        }),
+      ),
+      http.get('/api/v1/projects/:projectId/opportunities/summary', ({ params }) => {
+        if (params.projectId === PROJECT_2) {
+          return HttpResponse.json({ ...summary, counts_by_status: { open: 10 } });
+        }
+        return HttpResponse.json(summary);
+      }),
+      http.get('/api/v1/projects/:projectId/opportunities', ({ params }) => {
+        if (params.projectId === PROJECT_2) {
+          return HttpResponse.json({
+            items: [
+              opportunity({ id: OPP_BETA, project_id: PROJECT_2, title: 'Beta recommendation' }),
+            ],
+            next_cursor: null,
+          });
+        }
+        return HttpResponse.json({ items: [opportunity()], next_cursor: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ProjectProvider>
+        <SwitcherTest />
+      </ProjectProvider>,
+    );
+
+    // Initial render shows Project 1 recommendation
+    expect(await screen.findByText('Brand absent from high-value prompt')).toBeInTheDocument();
+
+    // Click to switch active project to Project 2
+    await user.click(screen.getByRole('button', { name: 'Switch Project' }));
+
+    // Verify Project 2 recommendation loads and Project 1 recommendation is no longer present
+    expect(
+      await screen.findByText('Beta recommendation', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Brand absent from high-value prompt')).not.toBeInTheDocument();
   });
 });

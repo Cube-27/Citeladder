@@ -82,7 +82,7 @@ export function SolutionSegments() {
           >
             <div>
               <Meta as="p">{segment.eyebrow}</Meta>
-              <h2 className="font-mkt-display text-mkt-d3 text-mkt-ink mt-4 max-w-[20ch] font-medium">
+              <h2 className="font-mkt-display text-mkt-d3 text-mkt-ink mt-4 max-w-[20ch]">
                 {segment.title}
               </h2>
 
@@ -134,9 +134,9 @@ export function SolutionSegments() {
 
 export function SolutionsCta() {
   return (
-    <Section tone="paper" rhythm="loose" aria-label="Get started">
+    <Section tone="field" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[18ch] font-medium">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[18ch]">
           Bring your team the version of the truth it reports in.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

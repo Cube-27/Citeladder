@@ -26,7 +26,7 @@ import { cva } from 'class-variance-authority';
  * that reads as the raised option without needing a shadow.
  */
 export const buttonVariants = cva(
-  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[background-color,color,border-color] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[background-color,color,border-color,opacity] duration-150 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
   {
     variants: {
       variant: {

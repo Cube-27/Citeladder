@@ -20,6 +20,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { OpportunitySummary } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { formatAudited } from '@/lib/site-health/status';
+import { cn } from '@/lib/utils';
 
 /**
  * Opportunities screen container: compact recommendation queue + catalog.
@@ -39,7 +40,7 @@ export function OpportunitiesScreen() {
     enabled: Boolean(projectId),
   });
   const summary = summaryQuery.data ?? null;
-  const loading = projectLoading || (Boolean(projectId) && summaryQuery.isLoading);
+  const loading = projectLoading || (Boolean(projectId) && summaryQuery.isPending && !summary);
 
   return (
     <div className="grid gap-6">
@@ -50,14 +51,14 @@ export function OpportunitiesScreen() {
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-40 w-full" />
         </div>
-      ) : summaryQuery.isError ? (
+      ) : summaryQuery.isError && !summary ? (
         <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>
       ) : projectId && summary && !summary.computed ? (
         <NeverComputed projectId={projectId} />
       ) : projectId && summary ? (
         <>
           <SummaryStrip projectId={projectId} summary={summary} />
-          <OpportunitiesCatalog projectId={projectId} />
+          <OpportunitiesCatalog key={projectId} projectId={projectId} />
         </>
       ) : null}
     </div>
@@ -87,10 +88,11 @@ function RecomputeButton({
       variant={variant}
       size="sm"
       disabled={recompute.isPending}
+      className={cn(recompute.isPending && 'cursor-wait opacity-90')}
       onClick={() => recompute.mutate({ projectId })}
     >
-      <RefreshCw className="size-4" aria-hidden />
-      {recompute.isPending ? 'Refreshing…' : 'Refresh recommendations'}
+      <RefreshCw className={cn('size-4', recompute.isPending && 'animate-spin')} aria-hidden />
+      Refresh recommendations
     </Button>
   );
 }

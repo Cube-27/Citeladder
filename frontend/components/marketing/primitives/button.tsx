@@ -7,25 +7,32 @@ import { cn } from '@/lib/utils';
  * The one button on the Proof surface. Four intents, two sizes — the deck's
  * `.btn-primary / -secondary / -blue / -night` collapsed onto tokens.
  *
+ * Every button is a ROUNDED PILL in the slate accent family — the surface has
+ * exactly one action colour, and it is the brand's own slate, not the app's
+ * blue and never ink-black. `proof` blue is a STATE (a cited answer), so it is
+ * no longer a button intent; the old blue CTA collapsed onto `primary`.
+ *
  * Fine pointers get a responsive 2px hover lift; every pointer gets a short
  * press settle so the control stays physically connected to the interaction.
  */
 const INTENT = {
-  /** Default page action — exact ink on paper. */
-  primary: 'bg-mkt-ink text-mkt-surface hover:bg-mkt-ink/90',
-  /** Companion action — borderless, elevated; hover shifts toward the canvas. */
-  secondary: 'bg-mkt-surface text-mkt-ink shadow-card hover:bg-mkt-paper',
-  /** In-product / active-state action. */
-  proof: 'bg-mkt-proof text-mkt-surface hover:bg-mkt-proof-hover',
+  /** Default page action — the slate accent pill. */
+  primary: 'bg-mkt-accent text-mkt-surface hover:bg-mkt-accent-hover',
+  /** Companion action — quiet slate on the soft accent tint, hairline ring. */
+  secondary:
+    'bg-mkt-accent-soft text-mkt-accent ring-mkt-accent-line/60 ring-1 ring-inset hover:bg-mkt-surface',
+  /** Retained alias so `intent="proof"` call sites keep the one action colour. */
+  proof: 'bg-mkt-accent text-mkt-surface hover:bg-mkt-accent-hover',
   /** For use ON the wallpaper, where a white button would disappear. */
-  scene: 'bg-mkt-ink-soft text-mkt-surface hover:bg-mkt-ink',
+  scene: 'bg-mkt-accent text-mkt-surface hover:bg-mkt-accent-hover',
 } as const;
 
 // Both sizes carry the same 14px label — they differ in height and padding,
 // not in type size. Shrinking the text too would drop it below the ramp.
+// Rounded-full is the shape decision: the surface's actions are pills.
 const SIZE = {
-  md: 'min-h-12 rounded-mkt-sm px-5 text-mkt-sm',
-  sm: 'min-h-9 rounded-sm px-3.5 text-mkt-sm',
+  md: 'min-h-12 rounded-full px-6 text-mkt-sm',
+  sm: 'min-h-9 rounded-full px-4 text-mkt-sm',
 } as const;
 
 const BASE =

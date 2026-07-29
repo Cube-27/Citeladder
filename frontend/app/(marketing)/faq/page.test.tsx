@@ -58,7 +58,7 @@ describe('FAQ page (public marketing `/faq`)', () => {
       const href = links[index].getAttribute('href');
       expect(href).toMatch(/^#faq-/);
       if (!href) throw new Error('rail link missing href');
-      expect(container.querySelector(href)).not.toBeNull();
+      expect(container.ownerDocument.getElementById(href.slice(1))).not.toBeNull();
     }
   });
 
@@ -123,6 +123,7 @@ describe('FAQ page (public marketing `/faq`)', () => {
 
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).not.toBeNull();
+    expect(script).not.toHaveAttribute('id');
     const data = JSON.parse(script?.textContent ?? '') as Record<string, unknown>;
     expect(data['@context']).toBe('https://schema.org');
     expect(data['@type']).toBe('FAQPage');

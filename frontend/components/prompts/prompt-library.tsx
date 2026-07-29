@@ -47,6 +47,7 @@ const STATUS_TABS: { id: PromptStatus; label: string }[] = [
  * Active / Proposed / Archived status tabs over the prompt table on the
  * right; "Generate prompts & topics" opens the consent-gated AI dialog.
  */
+// react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
 export function PromptLibrary() {
   const queryClient = useQueryClient();
   const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet } = usePromptSet();

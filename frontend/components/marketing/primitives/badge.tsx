@@ -34,21 +34,3 @@ export function Badge({
     </span>
   );
 }
-
-/**
- * The evidence mark — a ticked ring plus a word. Deliberately quieter than a
- * badge: it annotates a claim rather than labelling a row.
- */
-export function VerifiedMark({ children = 'Verified' }: Readonly<{ children?: ReactNode }>) {
-  return (
-    <span className="text-mkt-meta text-mkt-evidence-text inline-flex items-center gap-1.5 uppercase">
-      <span
-        aria-hidden
-        className="border-mkt-evidence-line text-2xs grid size-4 place-items-center rounded-full border leading-none"
-      >
-        ✓
-      </span>
-      {children}
-    </span>
-  );
-}

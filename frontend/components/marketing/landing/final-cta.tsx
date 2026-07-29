@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
@@ -9,26 +9,25 @@ import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
 /**
- * Closing band. Named as a landmark region so the CTA is reachable directly
- * from a screen-reader landmark list rather than only by scrolling the page.
+ * The close. One big line and a single primary action, full width. Named as a
+ * landmark region so the CTA is reachable directly from a screen-reader
+ * landmark list rather than only by scrolling the page.
  */
 export function FinalCta() {
-  const { finalCta } = LANDING_CONTENT;
+  const { cta } = LANDING_CONTENT;
   return (
-    <Section tone="surface" rhythm="loose" aria-label="Get started">
-      <Reveal className="mx-auto max-w-3xl text-center">
-        <Eyebrow>{finalCta.kicker}</Eyebrow>
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mt-6 mb-5 max-w-[18ch] font-medium">
-          {finalCta.title}
-        </h2>
-        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">{finalCta.body}</p>
-        <div className="mt-9 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-          <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
-            {DEMO_CTA}
-            <ArrowRight className="size-3.5" aria-hidden />
+    <Section id="get-started" tone="field" rhythm="loose" aria-label="Get started">
+      <Reveal className="mx-auto max-w-4xl">
+        <Eyebrow>{cta.kicker}</Eyebrow>
+        <h2 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 max-w-[16ch]">{cta.title}</h2>
+        <p className="text-mkt-lead text-mkt-ink-soft mt-6 max-w-[50ch]">{cta.body}</p>
+        <div className="mt-9 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <ButtonLink href={DEMO_HREF} intent="primary" className="w-full sm:w-auto">
+            {cta.primaryCta}
+            <ArrowRight className="size-4" aria-hidden />
           </ButtonLink>
           <ButtonLink href="/pricing" intent="secondary" className="w-full sm:w-auto">
-            See pricing
+            {cta.secondaryCta}
           </ButtonLink>
         </div>
       </Reveal>

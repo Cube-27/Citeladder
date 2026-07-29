@@ -15,22 +15,6 @@
  * Class strings are written out in full (never interpolated) so Tailwind's
  * scanner can see them.
  */
-const SERIES_STROKE = [
-  'stroke-series-1',
-  'stroke-series-2',
-  'stroke-series-3',
-  'stroke-series-4',
-  'stroke-series-5',
-] as const;
-
-const SERIES_FILL = [
-  'fill-series-1',
-  'fill-series-2',
-  'fill-series-3',
-  'fill-series-4',
-  'fill-series-5',
-] as const;
-
 /** `bg-*` form, for legend/tooltip swatches that are HTML rather than SVG. */
 const SERIES_BG = [
   'bg-series-1',
@@ -41,8 +25,6 @@ const SERIES_BG = [
 ] as const;
 
 /** Number of distinct series slots before everything folds into "Other". */
-export const SERIES_SLOT_COUNT = SERIES_STROKE.length;
+const SERIES_SLOT_COUNT = SERIES_BG.length;
 
-export const seriesStroke = (i: number) => SERIES_STROKE[Math.min(i, SERIES_SLOT_COUNT - 1)];
-export const seriesFill = (i: number) => SERIES_FILL[Math.min(i, SERIES_SLOT_COUNT - 1)];
 export const seriesBg = (i: number) => SERIES_BG[Math.min(i, SERIES_SLOT_COUNT - 1)];

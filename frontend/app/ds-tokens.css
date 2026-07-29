@@ -98,13 +98,13 @@
   --ds-border-success: #22a06b;
 
   /* ─── Brand ─────────────────────────────────────────────────────────── */
-  --ds-background-brand-bold: #0c66e4;
-  --ds-background-brand-bold-hovered: #0055cc;
-  --ds-background-brand-bold-pressed: #09326c;
-  --ds-background-brand-subtlest: #e9f2ff;
-  --ds-background-brand-subtler: #cce0ff;
-  --ds-link: #0c66e4;
-  --ds-link-pressed: #09326c;
+  --ds-background-brand-bold: #27455c;
+  --ds-background-brand-bold-hovered: #1c3345;
+  --ds-background-brand-bold-pressed: #152738;
+  --ds-background-brand-subtlest: #e7edf1;
+  --ds-background-brand-subtler: #c3d2dc;
+  --ds-link: #27455c;
+  --ds-link-pressed: #152738;
 
   /* ─── Status fills ──────────────────────────────────────────────────── */
   --ds-background-danger: #ffedeb;

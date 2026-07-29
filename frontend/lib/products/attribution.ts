@@ -172,11 +172,18 @@ export function buildAttributionBlocks(snapshot: AttributionSnapshot): Attributi
 /** Union of `ai_source` values across A1/A2 source rows (first-seen order). */
 export function sourceRowKeys(block: AttributionCurrencyBlock): string[] {
   const keys: string[] = [];
+  const seen = new Set<string>();
   for (const row of block.a1?.by_ai_source ?? []) {
-    if (!keys.includes(row.ai_source)) keys.push(row.ai_source);
+    if (!seen.has(row.ai_source)) {
+      seen.add(row.ai_source);
+      keys.push(row.ai_source);
+    }
   }
   for (const row of block.a2?.by_ai_source ?? []) {
-    if (!keys.includes(row.ai_source)) keys.push(row.ai_source);
+    if (!seen.has(row.ai_source)) {
+      seen.add(row.ai_source);
+      keys.push(row.ai_source);
+    }
   }
   return keys;
 }

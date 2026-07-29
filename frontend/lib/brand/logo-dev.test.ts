@@ -23,7 +23,7 @@ describe('logoDomain', () => {
 
 describe('logoDevUrl', () => {
   afterEach(() => {
-    delete process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+    delete process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE;
     vi.resetModules();
   });
 
@@ -38,7 +38,7 @@ describe('logoDevUrl', () => {
   });
 
   it('builds a 404-fallback CDN URL at 2x the rendered size', async () => {
-    process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN = 'pk_test';
+    process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = 'pk_test';
     const { logoDevUrl } = await load();
     const url = new URL(logoDevUrl('https://www.acme.com', 24)!);
 
@@ -51,7 +51,7 @@ describe('logoDevUrl', () => {
   });
 
   it('clamps the size to the CDN maximum', async () => {
-    process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN = 'pk_test';
+    process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = 'pk_test';
     const { logoDevUrl } = await load();
     const url = new URL(logoDevUrl('acme.com', 600)!);
     expect(url.searchParams.get('size')).toBe('800');

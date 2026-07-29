@@ -565,30 +565,37 @@ semantic name that would flip under `html[data-theme='dark']`: Proof is light-on
 file, it needs a **primitive** instead — that is the rule the budget exists to force. When a
 genuinely new *concern* arrives (as motion did), give it an owner; do not raise the ceiling.
 
-**Palette.** Warm paper and exact ink carry the page; colour is rationed to states, provider
-identity and evidence marks — never to headlines.
+**Palette.** Warm paper and warm ink carry the page; colour is rationed to states, provider
+identity and evidence marks — plus **one** headline word (see *Signature keyword*).
 
 | Role | Value | Token |
 |---|---|---|
-| page canvas | `#F5F5F0` | `--color-mkt-paper` |
-| raised / inset fields | `#FBFBF8` | `--color-mkt-paper-raised` |
-| panels | `#FFFFFF` | `--color-mkt-surface` |
-| band tint (sunken) | `#E9E9E0` | `--color-mkt-surface-sunk` |
-| band tint (wash) | `#EAF1FA` | `--color-mkt-wash` |
-| primary ink | `#172B4D` (12.9:1) | `--color-mkt-ink` |
-| body copy | `#44546F` (7.0:1) | `--color-mkt-ink-soft` |
-| meta / captions (paper/surface only) | `#626F86` (4.6:1) | `--color-mkt-ink-muted` |
-| structural hairline | `#091E420F` | `--color-mkt-line-soft` |
-| chip / field outline | `#091E4224` | `--color-mkt-line` |
-| wallpaper base | `#CBDAF1` | `--color-mkt-sky` |
+| page canvas | `#faf8f0` | `--color-mkt-paper` |
+| raised / inset fields | `#fdfbf5` | `--color-mkt-paper-raised` |
+| panels | `#ffffff` | `--color-mkt-surface` |
+| band tint (sunken) | `#efece3` | `--color-mkt-surface-sunk` |
+| band tint (wash) | `#eaf1fa` | `--color-mkt-wash` |
+| primary ink | `#2b2926` (13.6:1) | `--color-mkt-ink` |
+| body copy | `#57534e` (7.2:1) | `--color-mkt-ink-soft` |
+| meta / captions | `#6b6560` (5.4:1) | `--color-mkt-ink-muted` |
+| structural hairline | `#29252012` | `--color-mkt-line-soft` |
+| chip / field outline | `#29252026` | `--color-mkt-line` |
+| wallpaper base | `#cbdaf1` | `--color-mkt-sky` |
 
-The paper is the brand; the ink ramp and the hairline are the **same ADS values the app
-ships** (`#172B4D` / `#44546F` / `#626F86`, `#091E4224`), so marketing and app read as one
-product. `#626F86` at 4.64:1 is the tightest pair in the system — it passes AA, but the
-margin is 0.14, so any future darkening of the paper must re-derive this token first. That
-tightness also caps where the token may sit: on the darker band fills it falls below AA
-(4.16:1 on sunken, 4.46:1 on wash), so **ink-muted is legal on paper and surface only** —
-meta text on a sunken or wash band steps up to `--color-mkt-ink-soft` (6.27 / 6.73:1).
+The paper is the brand. Marketing runs a **warm neutral ramp of its own** — the app's cool ADS
+navy ink (`#172B4D`) on a warm cream canvas is the specific mismatch that made the site read
+grey and dull, so the ink here is a warm charcoal mixed for this paper. The app keeps ADS
+untouched (§4); the two systems now share type, shape, elevation and state hues, and diverge
+only on the neutral ramp. Every ramp step clears AA on all three text-bearing fills — the
+tightest is `ink-muted` at **4.86:1 on sunken**, so unlike the previous cool ramp there is no
+paper-only carve-out and band meta text does not have to step up.
+
+**Signature keyword.** One word per page — the hero accent word — carries a slate→sage
+gradient (`--color-mkt-keyword-from: #27455c` → `--color-mkt-keyword-to: #62957c`), painted
+via `background-clip: text` in `.mkt-keyword` with the slate anchor as the non-clipping
+fallback. Both stops are held to the WCAG **large-text** floor (3:1 — 9.44:1 and 3.23:1),
+because the tail is a real letterform, not a fill. This is the single exemption to "colour is
+never in headlines"; a second gradient word on a page is a bug.
 
 **Mark vs text — the rule that governs every state hue.** A hue that works as a *fill* is not
 automatically legible as *text*. Each state therefore ships in two forms: the **mark**
@@ -597,20 +604,23 @@ deck's own values all failed as text, which is why the split exists.
 
 | State | Mark (≥ 3:1) | Text (≥ 4.5:1) |
 |---|---|---|
-| proof / active + linked | `#0C66E4` | `#0C66E4` (4.76:1) |
-| evidence / verified | `#1F845A` | `#216E4E` (5.64:1) |
-| signal / decline + refusal | `#CA3521` | `#AE2A19` (6.11:1) |
-| review / needs attention | `#B65C02` | `#974F0C` (5.58:1) |
+| proof / active + linked | `#0C66E4` | `#0C66E4` (4.89:1) |
+| evidence / verified | `#1F845A` | `#216E4E` (5.80:1) |
+| signal / decline + refusal | `#CA3521` | `#AE2A19` (6.28:1) |
+| review / needs attention | `#B65C02` | `#974F0C` (5.74:1) |
 
 Blue is the one hue that needs no split: `#0C66E4` clears AA on paper as both mark and text,
-so proof ships a single token plus a `#0055CC` (6.05:1) hover step. The other three hues keep
-their `-text` siblings, and all four mark values are the ADS `*-bolder` steps — "needs
-review" is ADS **orange**, not yellow, which reads sickly on warm paper.
+so proof ships a single token plus a `#0055CC` (6.23:1) hover step. It is still mark/link-only
+on the sunken band (4.40:1). The other three hues keep their `-text` siblings, and all four
+mark values are the ADS `*-bolder` steps — "needs review" is ADS **orange**, not yellow,
+which reads sickly on warm paper.
 
-Ratios are computed against `#F5F5F0` — the lightest surface the system paints text on, so
-passing there passes on white too. Machine-enforced in `frontend/app/globals.test.ts`
-("the Proof contract"), which also asserts the system is light-only and that every state hue
-except proof has a `-text` sibling.
+**The gate, not the values.** `frontend/app/globals.test.ts` §5 enforces the *ratios* and the
+*structure* — every text role clears AA on paper and on each band fill, every mark clears 3:1,
+every state hue except proof has a `-text` sibling, and both keyword stops clear 3:1. It
+resolves each colour from whatever `marketing-theme.css` currently declares and asserts no hex
+literal, so retuning the brand needs no test edit. The hex values in the tables above are
+documentation of the current tuning, not a contract.
 
 **Type.** Marketing body copy is **Google Sans** and display copy **Plus Jakarta Sans**,
 the same two faces the app uses — `--font-mkt-display`
@@ -620,10 +630,28 @@ aliases `--font-display-family`, and every
 and "meta" labels use the shared `font-mono tabular-nums` recipe (Google Sans with tabular
 numerals — no monospace is shipped) — the deck faked
 tabular figures with a font-feature hack (`.mkt-num`), and the fix is the real tabular
-recipe the app already uses, the same way every number in the app aligns. Eight names
+recipe the app already uses, the same way every number in the app aligns. Eleven names
 (`text-mkt-d1 … text-mkt-meta`) — d1/d2 ride the two fluid display steps, d3 = `--text-2xl`,
-d4 = `--text-xl`, lead/body = `--text-base` (marketing body stays one step above the app's
-14px), sm = `--text-sm`, meta = `--text-xs`.
+d4 = `--text-xl`, **d5 = `--text-lg` (20px), the one card-heading rung**, body = `--text-base`
+(marketing body stays one step above the app's 14px), sm = `--text-sm`, meta = `--text-xs`,
+plus two single-purpose names: `mark` (the wordmark, 20px/700) and `figure` (48 → 60px mono
+numerals). **`lead` is its own fluid step (17 → 20px), not an alias of body** — a standfirst
+set at body size is a large part of why the page read flat, because the eye had nothing
+between the display line and the paragraph under it.
+
+**The rung owns the weight.** Every `--text-mkt-*` step declares its own `--font-weight`, so
+marketing markup never writes `font-medium` beside a type token. This is enforced:
+`check-frontend-architecture.mjs` fails on a weight utility sharing an element with a
+`text-mkt-d*`/`figure` rung, on any raw Tailwind size utility (`text-lg`, `text-3xl`,
+`text-[28px]`) under `components/marketing/` or `app/(marketing)/`, and on app heading tokens
+(`text-heading-sm`) leaking onto the surface. That last one is why d5 exists — card titles
+were split between the app's 16px dashboard rung and a raw `text-lg`, so a single three-up of
+cards could carry three different heading sizes.
+
+**One heading component.** Every section head goes through `SectionHeader`, which takes a
+`size`: `chapter` (d2, the openers) or `band` (d4, a beat that sits tight against its
+neighbour). Both keep the same 7.5rem numbered rail, which is the whole point — `EngineBand`
+used to hand-roll its heading block and sat half a step off the rail above it.
 
 **Display ladder.** `d1`/`d2` resolve to **35 → 64px** and **29 → 48px** fluid
 (`--text-display-1`/`-2`, line-heights 1.04/1.08, weight 500 baked). The earlier scale capped
@@ -631,8 +659,9 @@ at 72px and floored at **44px**, which wrapped an 18ch headline into four or fiv
 lines on a phone — so headlines read as oversized and cramped at once.
 
 **Weights.** Google Sans static cuts only — display runs at `font-medium` (500), body at 400,
-meta at 600. The off-axis 460/540 stops are gone with Manrope: they required the variable
-face, and the ADS ladder has no rungs between Regular and Medium.
+meta at 600, and the wordmark is the single 700 on the surface. The off-axis 460/540 stops are
+gone with Manrope: they required the variable face, and the ADS ladder has no rungs between
+Regular and Medium.
 
 **Shape and rhythm.** Marketing shares the ADS shape scale (`2 / 4 / 8 / 12 / 16 / full`)
 with the app — the deck's fifteen-radius sprawl and the six-name marketing alias set are
@@ -656,21 +685,20 @@ Illustrative figures live inside `aria-hidden` scenes and always carry a visible
 
 **Band rhythm.** Sections alternate background **tone** so pages read as a rhythm of bands
 rather than one long sheet. `<Section>` takes a `tone` prop with four fills — `paper`
-(`#F5F5F0`, the canvas), `surface` (`#FFFFFF`), `sunken` (`#E9E9E0`), and `wash`
-(`#EAF1FA`, the cool accent beat). The steps are deliberately small — ΔE2000 against paper
-is 3.32 for surface, 3.21 for sunken, 7.12 for wash — enough to register as a band change,
-never enough to read as a new page. The rule is **no two adjacent bands share a tone**;
+(`#faf8f0`, the canvas), `surface` (`#ffffff`), `sunken` (`#efece3`), and `wash`
+(`#eaf1fa`, the cool accent beat). The steps are deliberately small — enough to register as a
+band change, never enough to read as a new page. The rule is **no two adjacent bands share a tone**;
 wherever the tone changes, the `divided` hairline is dropped because the tint step already
 draws the boundary. Panels sitting on a band keep their `border-mkt-line` hairline
 regardless of the fill beneath them, and a card never matches its band: cards on `paper`
-are `bg-mkt-surface` (ΔE 3.32), cards on `surface` are `bg-mkt-paper` (3.32), cards on
-`sunken` or `wash` are `bg-mkt-surface` (6.46 / 5.56) — tint step plus hairline, never
-the hairline alone. Scenes inside `WallpaperPanel` frames are display art and exempt.
-Text follows the same per-fill discipline: `--color-mkt-ink-muted` is paper/surface-only
-(4.16 on sunken, 4.46 on wash — both below AA), so band meta text uses
-`--color-mkt-ink-soft`; proof keeps its text role on paper (4.76) and wash (4.57) but is
-mark/link-only on sunken (4.26). The Proof contract in `globals.test.ts` gates every
-text colour against each band fill, not just paper.
+are `bg-mkt-surface`, cards on `surface` are `bg-mkt-paper`, cards on `sunken` or `wash`
+are `bg-mkt-surface` — tint step plus hairline, never the hairline alone. Scenes inside
+`WallpaperPanel` frames are display art and exempt.
+Text is simpler than it used to be: the warm ink ramp clears AA on **every** fill, down to
+`--color-mkt-ink-muted` (5.40 paper / 4.86 sunken / 5.05 wash), so there is no longer a
+paper-only carve-out for meta text. The one role that still splits is proof — text-legal on
+paper (4.89) and wash (4.57), mark/link-only on sunken (4.40). The legibility gate in
+`globals.test.ts` checks every text colour against each band fill, not just paper.
 
 **Motion** is 5/10: one easing pair, 140–220ms interaction feedback plus longer explanatory
 beats, transform and opacity only, scroll reveals that settle rather than bounce, and everything gated on

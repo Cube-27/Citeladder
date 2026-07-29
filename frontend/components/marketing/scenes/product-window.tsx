@@ -1,179 +1,537 @@
-import { ICONS } from '@/lib/icons';
-import { cn } from '@/lib/utils';
+'use client';
 
+import { useRef, useState } from 'react';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
+import {
+  BarChart3,
+  Bot,
+  Eye,
+  FileSearch,
+  Search,
+  ShieldCheck,
+  Zap,
+  TrendingUp,
+} from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import { ICONS } from '@/lib/icons';
+import { useTourAutoplay } from '@/lib/hooks/use-tour-autoplay';
 import { Meta } from '../primitives/label';
-import { ExampleDataNote, WallpaperPanel } from './wallpaper-panel';
+import { TourStepper } from '../primitives/tour-stepper';
+import { ExampleDataNote } from './wallpaper-panel';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 /**
- * The product canvas: the real workspace shell on the wallpaper. The sidebar
- * mirrors the app's actual Analyze / Improve groups and their real labels
- * (components/layout/nav-items.ts) rather than inventing a friendlier
- * information architecture for the marketing site — a visitor who books a
- * demo should recognise the screen they were shown.
- *
- * The figures are illustrative, so the whole canvas is aria-hidden and the
- * "Example data" mark stays visible.
+ * Animated number component powered by GSAP ScrollTrigger.
  */
-// Real labels AND real glyphs, straight off the canonical icon map, so the
-// scene is the product rather than a drawing of it.
-const SIDEBAR = [
+function AnimatedNumber({ value }: { value: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [displayValue, setDisplayValue] = useState(value);
+  const reduceMotion = useReducedMotion();
+
+  useGSAP(
+    () => {
+      const numericTarget = parseFloat(value.replace(/,/g, ''));
+      if (isNaN(numericTarget) || reduceMotion) {
+        setDisplayValue(value);
+        return;
+      }
+
+      const obj = { val: 0 };
+      const isDecimal = value.includes('.');
+      const isComma = value.includes(',');
+
+      gsap.to(obj, {
+        val: numericTarget,
+        duration: 1.8,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: ref.current,
+          start: 'top 85%',
+          once: true,
+        },
+        onUpdate: () => {
+          if (isDecimal) {
+            setDisplayValue(obj.val.toFixed(1));
+          } else if (isComma) {
+            setDisplayValue(Math.floor(obj.val).toLocaleString('en-US'));
+          } else {
+            setDisplayValue(Math.floor(obj.val).toString());
+          }
+        },
+      });
+    },
+    { scope: ref, dependencies: [value, reduceMotion] },
+  );
+
+  return <span ref={ref}>{displayValue}</span>;
+}
+
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const STEP_DURATION = 6000;
+
+// Compact relevant sidebar items to reduce overall height
+const COMPACT_NAV_GROUPS = [
   {
-    group: 'Analyze',
+    title: 'Analyze',
     items: [
-      { label: 'Visibility', Icon: ICONS.visibility },
-      { label: 'Answers', Icon: ICONS.analytics },
-      { label: 'Traffic', Icon: ICONS.traffic },
-      { label: 'Commerce', Icon: ICONS.products },
+      { label: 'Visibility', icon: ICONS.visibility },
+      { label: 'Answers', icon: ICONS.analytics },
+      { label: 'Traffic', icon: ICONS.traffic },
+      { label: 'Prompts', icon: ICONS.prompts },
     ],
   },
   {
-    group: 'Improve',
+    title: 'Improve',
     items: [
-      { label: 'Content', Icon: ICONS.content },
-      { label: 'Site health', Icon: ICONS.siteHealth },
-      { label: 'Opportunities', Icon: ICONS.opportunities },
+      { label: 'Content', icon: ICONS.content },
+      { label: 'Site health', icon: ICONS.siteHealth },
+      { label: 'Opportunities', icon: ICONS.opportunities },
     ],
   },
 ] as const;
 
-const METRICS: readonly { label: string; value: string; delta?: string }[] = [
+const STORY_STEPS = [
+  {
+    id: 'observe',
+    num: '01',
+    label: '1. Observe',
+    navLabel: 'Visibility',
+    shiftTitle: 'Shift Fact #1: Buyers ask AI before browsing',
+    productSolution:
+      'Track real buyer prompts across ChatGPT, Gemini, Claude & Perplexity with trend graphs',
+    icon: Eye,
+  },
+  {
+    id: 'trace',
+    num: '02',
+    label: '2. Trace',
+    navLabel: 'Answers',
+    shiftTitle: 'Shift Fact #2: AI answers cite, they don’t rank',
+    productSolution:
+      'Trace every score back to exact LLM answer text & 100% reproducible source citations',
+    icon: FileSearch,
+  },
+  {
+    id: 'benchmark',
+    num: '03',
+    label: '3. Benchmark',
+    navLabel: 'Prompts',
+    shiftTitle: 'Shift Fact #3: You can’t fix what you can’t see',
+    productSolution:
+      'Benchmark your brand’s Share of Voice & citation graphs against market competitors',
+    icon: BarChart3,
+  },
+  {
+    id: 'optimize',
+    num: '04',
+    label: '4. Optimize',
+    navLabel: 'Opportunities',
+    shiftTitle: 'Navigating The Shift',
+    productSolution: 'Turn visibility gaps into prioritized, high-ROI content & schema updates',
+    icon: Zap,
+  },
+] as const;
+
+interface MetricItem {
+  label: string;
+  value: string;
+  delta?: string;
+}
+
+const METRICS: readonly MetricItem[] = [
   { label: 'Visibility index', value: '72.4', delta: '+4.8' },
   { label: 'Share of voice', value: '18.6', delta: '+2.1' },
   { label: 'Answers observed', value: '1,248' },
-  { label: 'Citations traced', value: '3,091' },
 ];
 
-const RANKING = [
-  ['ChatGPT', '81'],
-  ['Gemini', '76'],
-  ['Claude', '68'],
-] as const;
+const EVIDENCE = {
+  answer:
+    '“For enterprise analytics, teams most often cite Searchify alongside market leaders for its verifiable citation tracking…”',
+  chain: [
+    ['Provider', 'ChatGPT 4.5'],
+    ['Artifact', 'a3f9c1'],
+    ['Analyzer', 'visibility-v4.2'],
+    ['Reproducible', 'yes'],
+  ],
+} as const;
 
-const PANEL = 'rounded-mkt-sm bg-mkt-paper-raised shadow-card p-4';
+/**
+ * Compact, Authentic Searchify Product Showcase Canvas with Real Trend Graphs.
+ * Fits comfortably on screen with streamlined sidebar, real-time SVG charts,
+ * and a narrative tour connecting "The Shift" to "How Searchify Helps You Win".
+ */
+const GRID_COLS_MAP: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+};
 
+// react-doctor-disable-next-line react-doctor/no-giant-component -- one synchronized GSAP/stepper scene owns all four mutually exclusive frames and their shared transition state.
 export function ProductWindow() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  const { activeStep, isPlaying, selectStep, togglePlay } = useTourAutoplay(
+    STORY_STEPS.length,
+    STEP_DURATION,
+  );
+
+  const currentStep = STORY_STEPS[activeStep];
+
   return (
-    <WallpaperPanel className="p-3 sm:p-6 lg:p-8">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <Meta as="p" className="text-mkt-ink-muted">
-          Workspace / market overview
-        </Meta>
-        <ExampleDataNote />
+    <div
+      ref={containerRef}
+      className="bg-mkt-surface border-mkt-line-soft shadow-card mx-auto max-w-5xl rounded-xl border p-3 sm:p-5"
+    >
+      {/* Top Header Bar */}
+      <div className="border-mkt-line-soft mb-3.5 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 pr-2">
+            <span className="size-2.5 rounded-full bg-rose-400/80" />
+            <span className="size-2.5 rounded-full bg-amber-400/80" />
+            <span className="size-2.5 rounded-full bg-emerald-400/80" />
+          </div>
+          <Meta as="p" className="text-mkt-meta text-mkt-ink flex items-center gap-2 font-semibold">
+            <span className="bg-mkt-proof size-2 animate-pulse rounded-full" />
+            Acme Corp / AI Visibility Workspace
+          </Meta>
+        </div>
+        <div className="flex items-center gap-2">
+          <Meta className="text-mkt-meta border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted rounded-md border px-2 py-0.5 font-mono">
+            Apr 01 — Jun 30
+          </Meta>
+          <ExampleDataNote />
+        </div>
       </div>
 
-      <div aria-hidden className="grid lg:grid-cols-[13.75rem_minmax(0,1fr)]">
-        <aside className="bg-mkt-surface shadow-card hidden rounded-lg p-5 lg:block lg:rounded-r-none">
-          {SIDEBAR.map(({ group, items }) => (
-            <div key={group} className="mb-5 last:mb-0">
-              <Meta as="p" className="text-mkt-ink-muted mb-2 px-2">
-                {group}
-              </Meta>
-              {items.map(({ label, Icon }, index) => (
-                <div
-                  key={label}
-                  className={cn(
-                    'text-mkt-sm flex items-center gap-2.5 rounded-sm px-2.5 py-2',
-                    group === 'Analyze' && index === 0
-                      ? 'bg-mkt-proof-soft text-mkt-proof font-semibold'
-                      : 'text-mkt-ink-muted',
-                  )}
-                >
-                  <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
-                  {label}
-                </div>
-              ))}
-            </div>
-          ))}
-        </aside>
+      {/* Storytelling Tour Stepper */}
+      <div className="bg-mkt-paper-raised border-mkt-line-soft mb-4 rounded-lg border p-2.5">
+        <TourStepper
+          steps={STORY_STEPS}
+          activeStep={activeStep}
+          isPlaying={isPlaying}
+          onSelectStep={selectStep}
+          onTogglePlay={togglePlay}
+          compact
+        />
 
-        <div className="bg-mkt-surface shadow-card rounded-lg p-4 sm:p-5 lg:rounded-l-none">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <p className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
-              Market overview
-            </p>
-            <Meta className="border-mkt-line rounded-sm border px-2 py-1">Apr 01 — Jun 30</Meta>
-          </div>
+        <div className="text-mkt-meta bg-mkt-proof-soft/40 border-mkt-proof-line/30 mt-2 rounded-md border px-2.5 py-1.5">
+          <span className="text-mkt-proof mb-0.5 block font-mono font-bold uppercase">
+            {currentStep.shiftTitle}
+          </span>
+          <span className="text-mkt-ink block leading-tight font-medium">
+            <strong className="text-mkt-proof">Searchify Solution:</strong>{' '}
+            {currentStep.productSolution}
+          </span>
+        </div>
+      </div>
 
-          <div className="border-mkt-line-soft rounded-mkt-sm grid grid-cols-2 border md:grid-cols-4">
-            {METRICS.map((metric, index) => (
-              <div
-                key={metric.label}
-                className={cn(
-                  'border-mkt-line-soft p-3 sm:p-4',
-                  // Two columns below md, four above: the middle divider only
-                  // exists once the strip is a single row.
-                  index % 2 === 0 && 'border-r',
-                  index === 1 && 'md:border-r',
-                  index < 2 && 'border-b md:border-b-0',
-                )}
-              >
-                <Meta as="p" className="text-mkt-ink-muted">
-                  {metric.label}
-                </Meta>
-                <b className="text-mkt-ink mt-2 block font-mono text-xl leading-none font-medium tabular-nums">
-                  {metric.value}
-                  {metric.delta && (
-                    <small className="text-mkt-evidence-text text-mkt-meta ml-1.5 font-mono font-medium tabular-nums">
-                      {metric.delta}
-                    </small>
-                  )}
-                </b>
+      {/* Compact Product Layout Canvas */}
+      <div
+        aria-hidden
+        className="border-mkt-line-soft bg-mkt-paper-raised grid min-h-[280px] items-stretch gap-0 overflow-hidden rounded-lg border lg:grid-cols-[12rem_minmax(0,1fr)]"
+      >
+        {/* Streamlined Authentic Sidebar */}
+        <aside className="bg-mkt-surface border-mkt-line-soft hidden flex-col justify-between border-r p-3 lg:flex">
+          <div className="space-y-4">
+            {COMPACT_NAV_GROUPS.map((group) => (
+              <div key={group.title} className="space-y-0.5">
+                <p className="text-mkt-meta text-mkt-ink-muted mb-1 px-2 font-mono font-bold uppercase">
+                  {group.title}
+                </p>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = item.label === currentStep.navLabel;
+
+                  return (
+                    <div
+                      key={item.label}
+                      className={`text-mkt-meta relative flex items-center gap-2 rounded-md px-2 py-1.5 font-medium transition-colors ${
+                        isActive
+                          ? 'bg-mkt-proof-soft text-mkt-proof font-semibold'
+                          : 'text-mkt-ink-muted'
+                      }`}
+                    >
+                      {isActive && (
+                        <span className="bg-mkt-proof absolute top-1 bottom-1 left-0 w-0.5 rounded-r-xs" />
+                      )}
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
+        </aside>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_13.75rem]">
-            <div className={PANEL}>
-              <div className="text-mkt-ink-muted text-mkt-sm flex justify-between">
-                <span>Category visibility</span>
-                <Meta>12 weeks</Meta>
-              </div>
-              <svg
-                viewBox="0 0 620 230"
-                preserveAspectRatio="none"
-                className="mt-3 h-36 w-full sm:h-44"
+        {/* Compact Main Workspace Area with Real Graphs */}
+        <div className="bg-mkt-surface flex flex-col justify-between p-4 sm:p-5">
+          <AnimatePresence mode="wait">
+            {activeStep === 0 && (
+              <m.div
+                key="observe-view"
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: EASE_OUT }}
+                className="space-y-3.5"
               >
-                <path d="M0 45H620M0 90H620M0 135H620M0 180H620" className="stroke-mkt-line" />
-                <path
-                  className="mkt-chart-line stroke-mkt-proof animate-mkt-draw"
-                  pathLength={440}
-                  d="M0 186 C55 170 72 178 120 146 S185 154 235 119 S310 137 360 88 S430 110 485 65 S555 73 620 35"
-                />
-                <path
-                  className="mkt-chart-line stroke-mkt-evidence animate-mkt-draw"
-                  pathLength={440}
-                  style={{ animationDelay: '0.45s' }}
-                  d="M0 202 C60 190 98 158 150 171 S238 142 290 151 S365 119 415 127 S515 99 620 88"
-                />
-              </svg>
-            </div>
-
-            <div className={PANEL}>
-              <div className="text-mkt-ink-muted text-mkt-sm mb-1">Provider view</div>
-              {RANKING.map(([engine, score], index) => (
-                <div
-                  key={engine}
-                  className="border-mkt-line-soft text-mkt-ink-soft text-mkt-sm grid grid-cols-[1.125rem_1fr_auto] items-center gap-2 border-b py-2 last:border-b-0"
-                >
-                  <b className="bg-mkt-proof-soft text-mkt-proof text-mkt-meta grid size-4.5 place-items-center rounded-sm font-mono tabular-nums">
-                    {index + 1}
-                  </b>
-                  <span>{engine}</span>
-                  <strong className="text-mkt-ink font-mono font-medium tabular-nums">
-                    {score}
-                  </strong>
+                <div className="flex items-center justify-between">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
+                    Visibility Overview & Trend Graph
+                  </p>
+                  <span className="text-mkt-meta text-mkt-proof flex items-center gap-1 font-mono font-semibold">
+                    <TrendingUp className="size-3" /> Cross-Run Trend
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="border-mkt-evidence-line bg-mkt-evidence-soft mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1.5 rounded-sm border px-4 py-2.5">
-            <Meta className="text-mkt-evidence-text">Raw artifacts preserved / 1,248</Meta>
-            <Meta className="text-mkt-evidence-text">Analyzer / visibility-v4.2</Meta>
-            <Meta className="text-mkt-evidence-text">Reproducible / yes</Meta>
-          </div>
+                {/* Metrics Row */}
+                <div
+                  className={cn(
+                    'border-mkt-line-soft bg-mkt-surface grid rounded-md border',
+                    GRID_COLS_MAP[METRICS.length] ?? 'grid-cols-3',
+                  )}
+                >
+                  {METRICS.map((metric, index) => (
+                    <div
+                      key={metric.label}
+                      className={`p-2.5 sm:p-3 ${
+                        index < METRICS.length - 1 ? 'border-mkt-line-soft border-r' : ''
+                      }`}
+                    >
+                      <Meta as="p" className="text-mkt-meta text-mkt-ink-muted">
+                        {metric.label}
+                      </Meta>
+                      <b className="text-mkt-body text-mkt-ink mt-0.5 block font-mono leading-none font-bold tabular-nums">
+                        <AnimatedNumber value={metric.value} />
+                        {'delta' in metric && metric.delta && (
+                          <small className="text-mkt-meta text-mkt-evidence-text ml-1 font-mono font-semibold tabular-nums">
+                            {metric.delta}
+                          </small>
+                        )}
+                      </b>
+                    </div>
+                  ))}
+                </div>
+
+                {/* SVG Trend Graph (Real Product Chart) */}
+                <div className="bg-mkt-paper-raised border-mkt-line-soft rounded-md border p-3">
+                  <div className="text-mkt-meta text-mkt-ink-muted mb-2 flex items-center justify-between font-mono">
+                    <span>Visibility Score Trend (Last 8 Audits)</span>
+                    <span className="text-mkt-evidence-text font-semibold">72.4% Peak</span>
+                  </div>
+                  <div className="relative flex h-20 w-full items-end pt-2">
+                    {/* SVG Curve Line */}
+                    <svg
+                      className="h-full w-full overflow-visible"
+                      viewBox="0 0 300 60"
+                      preserveAspectRatio="none"
+                    >
+                      <defs>
+                        <linearGradient id="visibilityGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop
+                            offset="0%"
+                            stopColor="var(--color-mkt-accent)"
+                            stopOpacity="0.25"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--color-mkt-accent)"
+                            stopOpacity="0.0"
+                          />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M 0,45 Q 40,38 80,32 T 160,22 T 240,15 T 300,8 L 300,60 L 0,60 Z"
+                        fill="url(#visibilityGradient)"
+                      />
+                      <path
+                        d="M 0,45 Q 40,38 80,32 T 160,22 T 240,15 T 300,8"
+                        fill="none"
+                        stroke="var(--color-mkt-accent)"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="300" cy="8" r="3.5" fill="var(--color-mkt-accent)" />
+                    </svg>
+                  </div>
+                  <div className="text-mkt-meta text-mkt-ink-muted border-mkt-line-soft mt-1.5 flex justify-between border-t pt-1 font-mono">
+                    <span>Apr 01</span>
+                    <span>May 15</span>
+                    <span>Jun 30 (Latest Run)</span>
+                  </div>
+                </div>
+              </m.div>
+            )}
+
+            {activeStep === 1 && (
+              <m.div
+                key="trace-view"
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: EASE_OUT }}
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
+                    Answers & Evidence Trace
+                  </p>
+                  <span className="text-mkt-meta text-mkt-proof flex items-center gap-1 font-mono font-semibold">
+                    <ShieldCheck className="text-mkt-evidence-text size-3" /> 100% Verifiable
+                  </span>
+                </div>
+
+                <div className="bg-mkt-paper-raised border-mkt-line-soft rounded-md border p-3">
+                  <div className="text-mkt-meta text-mkt-ink-muted flex items-center justify-between">
+                    <span className="text-mkt-ink flex items-center gap-1 font-semibold">
+                      <Search className="text-mkt-proof size-3" />
+                      Observed Answer Text
+                    </span>
+                    <span className="text-mkt-proof font-mono font-semibold tabular-nums">
+                      Visibility score: <AnimatedNumber value="72.4" />
+                    </span>
+                  </div>
+
+                  <p className="text-mkt-meta text-mkt-ink mt-2 leading-relaxed font-medium">
+                    {EVIDENCE.answer}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {EVIDENCE.chain.map(([label, value]) => (
+                      <span
+                        key={label}
+                        className="text-mkt-meta bg-mkt-surface border-mkt-line text-mkt-evidence-text rounded-full border px-2 py-0.5 font-mono"
+                      >
+                        <span className="text-mkt-ink-muted uppercase">{label}:</span>{' '}
+                        <span className="font-semibold">{value}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </m.div>
+            )}
+
+            {activeStep === 2 && (
+              <m.div
+                key="benchmark-view"
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: EASE_OUT }}
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
+                    Share of Voice & Competitive Chart
+                  </p>
+                  <span className="text-mkt-meta text-mkt-proof font-mono font-semibold">
+                    Market Share Comparison
+                  </span>
+                </div>
+
+                <div className="bg-mkt-paper-raised border-mkt-line-soft space-y-2.5 rounded-md border p-3">
+                  <div>
+                    <div className="text-mkt-meta mb-1 flex justify-between font-semibold">
+                      <span className="text-mkt-ink">Acme Corp (Your Brand)</span>
+                      <span className="text-mkt-accent font-mono">38.4% Share (#1 Lead)</span>
+                    </div>
+                    <div className="bg-mkt-line-soft h-2 w-full overflow-hidden rounded-full">
+                      <div className="bg-mkt-accent h-full w-[38.4%] rounded-full" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-mkt-meta text-mkt-ink-soft mb-1 flex justify-between">
+                      <span>Competitor A</span>
+                      <span className="font-mono">28.1%</span>
+                    </div>
+                    <div className="bg-mkt-line-soft h-2 w-full overflow-hidden rounded-full">
+                      <div className="bg-mkt-line-strong h-full w-[28.1%] rounded-full opacity-60" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-mkt-meta text-mkt-ink-soft mb-1 flex justify-between">
+                      <span>Competitor B</span>
+                      <span className="font-mono">19.5%</span>
+                    </div>
+                    <div className="bg-mkt-line-soft h-2 w-full overflow-hidden rounded-full">
+                      <div className="bg-mkt-line-strong h-full w-[19.5%] rounded-full opacity-40" />
+                    </div>
+                  </div>
+                </div>
+              </m.div>
+            )}
+
+            {activeStep === 3 && (
+              <m.div
+                key="optimize-view"
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: EASE_OUT }}
+                className="space-y-2.5"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
+                    Opportunities & Action Recommendations
+                  </p>
+                  <span className="text-mkt-meta text-mkt-proof font-mono font-semibold">
+                    High-Impact Moves
+                  </span>
+                </div>
+
+                <div className="bg-mkt-paper-raised border-mkt-line-soft flex items-center justify-between rounded-md border p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-mkt-amber-soft text-mkt-amber-text border-mkt-amber-line/50 rounded-md border p-1">
+                      <Zap className="size-3" />
+                    </span>
+                    <div>
+                      <span className="text-mkt-meta text-mkt-ink block font-semibold">
+                        Update Deprecated Docs Cited by ChatGPT
+                      </span>
+                      <span className="text-mkt-meta text-mkt-ink-muted">
+                        Increases ChatGPT recommendation score by +14%
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-mkt-meta bg-mkt-accent rounded-md px-2 py-0.5 font-semibold text-white">
+                    Fix Now
+                  </span>
+                </div>
+
+                <div className="bg-mkt-paper-raised border-mkt-line-soft flex items-center justify-between rounded-md border p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-mkt-proof-soft text-mkt-proof border-mkt-proof-line/50 rounded-md border p-1">
+                      <Bot className="size-3" />
+                    </span>
+                    <div>
+                      <span className="text-mkt-meta text-mkt-ink block font-semibold">
+                        Publish Enterprise Comparison Table for Gemini
+                      </span>
+                      <span className="text-mkt-meta text-mkt-ink-muted">
+                        Captures missing citations in enterprise buyer queries
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-mkt-meta bg-mkt-surface border-mkt-line text-mkt-ink rounded-md border px-2 py-0.5 font-semibold">
+                    View Draft
+                  </span>
+                </div>
+              </m.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </WallpaperPanel>
+    </div>
   );
 }

@@ -35,18 +35,6 @@ export function WallpaperPanel({
 }
 
 /**
- * Header strip across the top of a scene: what is being observed on the left,
- * live status on the right.
- */
-export function SceneStrip({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="border-mkt-line-soft bg-mkt-paper-raised flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
-      {children}
-    </div>
-  );
-}
-
-/**
  * Scene window — the white panel that sits on the wallpaper. Borderless by
  * rule (docs/design.md §4a): an opaque surface carried by the `shadow-card`
  * rung, no border, no glass, no blur.

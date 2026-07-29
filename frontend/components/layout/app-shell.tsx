@@ -39,10 +39,9 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <TooltipProvider>
       <div className="bg-background flex h-dvh overflow-hidden">
-        <aside className="border-border-subtle bg-sidebar flex w-[var(--sidebar-width)] shrink-0 flex-col border-r">
-          {/* Logo row — matches the top bar's height so the two align across
-              the sidebar hairline. */}
-          <div className="border-border-subtle flex h-[var(--topbar-height)] shrink-0 items-center gap-2 border-b px-4">
+        <aside className="border-border-subtle bg-sidebar flex w-[var(--sidebar-width)] shrink-0 flex-col border-r transition-[width]">
+          {/* Logo row — matches topbar height */}
+          <div className="border-border-subtle flex h-[var(--topbar-height)] shrink-0 items-center gap-3 border-b px-4">
             <LogoMark size={24} />
             <span className="text-foreground text-heading-sm">Searchify</span>
           </div>
@@ -61,9 +60,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Top bar: centered command search with utility chrome on the right.
-              The page <h1> lives in the content column below (PageHeader). */}
-          <header className="border-border-subtle bg-panel grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,420px)_minmax(0,1fr)] items-center border-b px-6">
+          {/* Top bar with opaque utility chrome. */}
+          <header className="border-border-subtle bg-panel sticky top-0 z-20 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,420px)_minmax(0,1fr)] items-center border-b px-6">
             <div aria-hidden />
             <div className="w-full max-w-[420px] min-w-0 justify-self-center">
               <CommandPalette />

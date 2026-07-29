@@ -55,6 +55,8 @@ export function saveBlob(blob: Blob, filename: string): void {
   if (typeof document === 'undefined' || typeof URL.createObjectURL !== 'function') {
     return;
   }
+  // The matching revoke is guaranteed by the finally block below.
+  // react-doctor-disable-next-line
   const objectUrl = URL.createObjectURL(blob);
   try {
     const anchor = document.createElement('a');

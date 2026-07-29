@@ -31,9 +31,7 @@ export function IntegrationsEmptyState() {
         <div className="grid gap-1">
           <h2 className={displayHeadingLgClasses}>No integrations connected</h2>
           <p className="text-secondary max-w-md text-sm">
-            Connect Google to sync Search Console and Analytics 4 on one shared OAuth grant, or
-            connect Microsoft for Bing Webmaster Tools. Synced data powers Traffic and LLM
-            Analytics.
+            Sync your Google or Microsoft accounts to power Traffic and LLM Analytics.
           </p>
         </div>
         <div className="flex items-center gap-2">

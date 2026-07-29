@@ -26,6 +26,8 @@ import { cn, emailInitials } from '@/lib/utils';
 export function UserMenu({ className }: Readonly<{ className?: string }>) {
   const { user, clearSession } = useSession();
 
+  // clearSession removes account-scoped cache only after cookie revocation succeeds.
+  // react-doctor-disable-next-line
   const logout = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => clearSession(),

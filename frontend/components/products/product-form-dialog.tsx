@@ -86,14 +86,7 @@ export function ProductFormDialog({
         </>
       }
     >
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-        className="grid gap-4"
-      >
+      <form noValidate onSubmit={submit} className="grid gap-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <div className="grid gap-4 sm:grid-cols-2">

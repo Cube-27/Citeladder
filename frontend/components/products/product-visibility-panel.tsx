@@ -314,7 +314,7 @@ function RankingsCard({
             </TableHeader>
             <TableBody>
               {normalized.map((row, index) => (
-                <RankingTableRow key={rowKey(row) ?? index} row={row} position={index + 1} />
+                <RankingTableRow key={rowKey(row)} row={row} position={index + 1} />
               ))}
             </TableBody>
           </Table>
@@ -324,13 +324,17 @@ function RankingsCard({
   );
 }
 
-function rowKey(row: RankingRow): string | null {
-  return row.kind === 'own' ? row.entry.product_id : row.entry.competitor_product_id;
+function rowKey(row: RankingRow): string {
+  if (row.kind === 'own') {
+    return row.entry.product_id ?? `own:${row.entry.sku}:${row.entry.name}`;
+  }
+  return (
+    row.entry.competitor_product_id ?? `competitor:${row.entry.competitor_name}:${row.entry.name}`
+  );
 }
 
 function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position: number }>) {
   const { entry } = row;
-  const id = rowKey(row);
   const subtitle = row.kind === 'own' ? row.entry.sku : row.entry.competitor_name;
   return (
     <TableRow>
@@ -340,9 +344,9 @@ function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position
       <TableCell className="max-w-[280px] min-w-[180px]">
         <div className="grid gap-0.5">
           <span className="flex items-center gap-2">
-            {row.kind === 'own' && id ? (
+            {row.kind === 'own' && row.entry.product_id ? (
               <Link
-                href={`/products/${id}`}
+                href={`/products/${row.entry.product_id}`}
                 className="text-foreground hover:text-accent-text truncate font-medium transition-colors"
               >
                 {entry.name}

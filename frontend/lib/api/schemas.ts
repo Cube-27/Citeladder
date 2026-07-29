@@ -1639,58 +1639,49 @@ export const buyerDestinationKindSchema = z.enum([
 // Persisted buyer-destination aggregate for one visibility entry: the total
 // destination count, per-kind tallies, and per-domain rows (sanitized —
 // domain + display name only, never a raw URL).
-export const buyerDestinationMixSchema = z
-  .object({
-    total: z.number().int().nonnegative(),
-    by_kind: z
-      .object({
-        merchant_kind: buyerDestinationKindSchema,
-        count: z.number().int().nonnegative(),
-      })
-      .strict()
-      .array(),
-    by_domain: z
-      .object({
-        merchant_domain: z.string(),
-        merchant_name: z.string(),
-        merchant_kind: buyerDestinationKindSchema,
-        count: z.number().int().nonnegative(),
-      })
-      .strict()
-      .array(),
-  })
-  .strict();
+export const buyerDestinationMixSchema = z.strictObject({
+  total: z.number().int().nonnegative(),
+  by_kind: z
+    .strictObject({
+      merchant_kind: buyerDestinationKindSchema,
+      count: z.number().int().nonnegative(),
+    })
+    .array(),
+  by_domain: z
+    .strictObject({
+      merchant_domain: z.string(),
+      merchant_name: z.string(),
+      merchant_kind: buyerDestinationKindSchema,
+      count: z.number().int().nonnegative(),
+    })
+    .array(),
+});
 
 // Persisted competitor co-placement rows for one visibility entry (answer
 // executions listing the entry beside a competitor product), with the
 // backend's truncation flag preserved verbatim.
-export const competitorCoPlacementSchema = z
-  .object({
-    items: z
-      .object({
-        competitor_product_id: uuid().nullable(),
-        competitor_name: z.string(),
-        product_name: z.string(),
-        count: z.number().int().nonnegative(),
-      })
-      .strict()
-      .array(),
-    truncated: z.boolean(),
-  })
-  .strict();
+export const competitorCoPlacementSchema = z.strictObject({
+  items: z
+    .strictObject({
+      competitor_product_id: uuid().nullable(),
+      competitor_name: z.string(),
+      product_name: z.string(),
+      count: z.number().int().nonnegative(),
+    })
+    .array(),
+  truncated: z.boolean(),
+});
 
 // Price-relation tallies (backend `price_relation` vocabulary). Strict
 // partial: v2 rows count every key, v1 rows count only `match`/`mismatch`,
 // and `{}` is valid (a v1 entry with nothing verifiable). Direction is NEVER
 // inferred for v1 data — the UI renders `Direction unavailable` there.
-export const priceRelationCountsSchema = z
-  .object({
-    match: z.number().int().nonnegative().optional(),
-    higher: z.number().int().nonnegative().optional(),
-    lower: z.number().int().nonnegative().optional(),
-    mismatch: z.number().int().nonnegative().optional(),
-  })
-  .strict();
+export const priceRelationCountsSchema = z.strictObject({
+  match: z.number().int().nonnegative().optional(),
+  higher: z.number().int().nonnegative().optional(),
+  lower: z.number().int().nonnegative().optional(),
+  mismatch: z.number().int().nonnegative().optional(),
+});
 
 // Attribute-dimension mention frequency: `{group: {dimension: count}}`.
 export const attributeDimensionFrequencySchema = z.record(
@@ -1713,58 +1704,52 @@ const productVisibilityEntryV2Fields = {
   competitor_co_placement: competitorCoPlacementSchema,
 } as const;
 
-export const productVisibilityEntrySchema = z
-  .object({
-    // Nullable: the aggregate survives the catalog row's delete (SET NULL).
-    product_id: uuid().nullable(),
-    sku: z.string(),
-    name: z.string(),
-    mention_count: z.number().int(),
-    sov_share: z.number(),
-    avg_rank: z.number().nullable(),
-    rank_distribution: z.record(z.string(), z.number().int()),
-    price_mention_count: z.number().int(),
-    // null = no verifiable price mentions (never a fabricated 0).
-    price_accuracy_rate: z.number().nullable(),
-    ...productVisibilityEntryV2Fields,
-  })
-  .strict();
+export const productVisibilityEntrySchema = z.strictObject({
+  // Nullable: the aggregate survives the catalog row's delete (SET NULL).
+  product_id: uuid().nullable(),
+  sku: z.string(),
+  name: z.string(),
+  mention_count: z.number().int(),
+  sov_share: z.number(),
+  avg_rank: z.number().nullable(),
+  rank_distribution: z.record(z.string(), z.number().int()),
+  price_mention_count: z.number().int(),
+  // null = no verifiable price mentions (never a fabricated 0).
+  price_accuracy_rate: z.number().nullable(),
+  ...productVisibilityEntryV2Fields,
+});
 
-export const competitorProductVisibilityEntrySchema = z
-  .object({
-    competitor_product_id: uuid().nullable(),
-    competitor_name: z.string(),
-    name: z.string(),
-    mention_count: z.number().int(),
-    sov_share: z.number(),
-    avg_rank: z.number().nullable(),
-    rank_distribution: z.record(z.string(), z.number().int()),
-    price_mention_count: z.number().int(),
-    price_accuracy_rate: z.number().nullable(),
-    ...productVisibilityEntryV2Fields,
-  })
-  .strict();
+export const competitorProductVisibilityEntrySchema = z.strictObject({
+  competitor_product_id: uuid().nullable(),
+  competitor_name: z.string(),
+  name: z.string(),
+  mention_count: z.number().int(),
+  sov_share: z.number(),
+  avg_rank: z.number().nullable(),
+  rank_distribution: z.record(z.string(), z.number().int()),
+  price_mention_count: z.number().int(),
+  price_accuracy_rate: z.number().nullable(),
+  ...productVisibilityEntryV2Fields,
+});
 
 // Selected-audit product dashboard projection (persisted rows only). Identity
 // (sku/name/competitor_name) comes from the audit's frozen configuration.
-export const productVisibilitySchema = z
-  .object({
-    project_id: uuid(),
-    audit_id: uuid(),
-    audit_status: auditStatusSchema,
-    product_analyzer_version: z.string(),
-    product_scoring_rule_version: z.string(),
-    total_mentions: z.number().int(),
-    total_analyses: z.number().int(),
-    products: z.array(productVisibilityEntrySchema),
-    competitor_products: z.array(competitorProductVisibilityEntrySchema),
-    // Distinct persisted analysis surfaces for the audit: the measurement
-    // surface is `''` (UI label "Answer-engine APIs"); configured surface
-    // ids follow verbatim. There is deliberately no "All surfaces" option.
-    available_surfaces: z.array(z.string()),
-    created_at: z.string(),
-  })
-  .strict();
+export const productVisibilitySchema = z.strictObject({
+  project_id: uuid(),
+  audit_id: uuid(),
+  audit_status: auditStatusSchema,
+  product_analyzer_version: z.string(),
+  product_scoring_rule_version: z.string(),
+  total_mentions: z.number().int(),
+  total_analyses: z.number().int(),
+  products: z.array(productVisibilityEntrySchema),
+  competitor_products: z.array(competitorProductVisibilityEntrySchema),
+  // Distinct persisted analysis surfaces for the audit: the measurement
+  // surface is `''` (UI label "Answer-engine APIs"); configured surface
+  // ids follow verbatim. There is deliberately no "All surfaces" option.
+  available_surfaces: z.array(z.string()),
+  created_at: z.string(),
+});
 
 // Evidence kind vocabulary (backend projection): one stable `evidence_id`
 // per persisted row (ProductMention.id / MerchantMention.id / a
@@ -1784,49 +1769,47 @@ export const priceRelationSchema = z.enum(['match', 'higher', 'lower']);
 // Generalized evidence row: one pinned key set for every kind, with the
 // kind-specific field groups present on every row and null for the other
 // kinds (the backend emits exactly this shape).
-export const productEvidenceItemSchema = z
-  .object({
-    evidence_id: uuid(),
-    analysis_id: uuid(),
-    evidence_kind: productEvidenceKindSchema,
-    audit_id: uuid(),
-    // Execution id — links to `/runs/[runId]/executions/[executionId]`.
-    task_id: uuid(),
-    artifact_id: uuid().nullable(),
-    logical_engine: z.string(),
-    transport_model: z.string(),
-    // Frozen prompt text (AuditPromptSnapshot) — survives prompt edits.
-    prompt_text: z.string(),
-    prompt_index: z.number().int(),
-    repetition: z.number().int(),
-    product_analyzer_version: z.string(),
-    // Analysis surface this row was projected from ('' = measurement).
-    shopping_surface: z.string(),
-    matched_name: z.string(),
-    matched_sku: z.string(),
-    created_at: z.string(),
-    // Product-mention fields (null for the other kinds).
-    first_offset: z.number().int().nullable(),
-    rank_position: z.number().int().nullable(),
-    price_value: z.number().nullable(),
-    // null = not verifiable (no catalog price / currency mismatch).
-    price_matches_catalog: z.boolean().nullable(),
-    price_relation: priceRelationSchema.nullable(),
-    price_text: z.string(),
-    price_currency: z.string(),
-    // Attribute-mention fields (null for the other kinds).
-    attribute_dimension: z.string().nullable(),
-    attribute_group: z.string().nullable(),
-    attribute_text: z.string().nullable(),
-    attribute_offset: z.number().int().nullable(),
-    // Buyer-destination fields (null for the other kinds; the URL arrives
-    // already sanitized by the backend).
-    merchant_name: z.string().nullable(),
-    merchant_domain: z.string().nullable(),
-    merchant_kind: buyerDestinationKindSchema.nullable(),
-    destination_url: z.string().nullable(),
-  })
-  .strict();
+export const productEvidenceItemSchema = z.strictObject({
+  evidence_id: uuid(),
+  analysis_id: uuid(),
+  evidence_kind: productEvidenceKindSchema,
+  audit_id: uuid(),
+  // Execution id — links to `/runs/[runId]/executions/[executionId]`.
+  task_id: uuid(),
+  artifact_id: uuid().nullable(),
+  logical_engine: z.string(),
+  transport_model: z.string(),
+  // Frozen prompt text (AuditPromptSnapshot) — survives prompt edits.
+  prompt_text: z.string(),
+  prompt_index: z.number().int(),
+  repetition: z.number().int(),
+  product_analyzer_version: z.string(),
+  // Analysis surface this row was projected from ('' = measurement).
+  shopping_surface: z.string(),
+  matched_name: z.string(),
+  matched_sku: z.string(),
+  created_at: z.string(),
+  // Product-mention fields (null for the other kinds).
+  first_offset: z.number().int().nullable(),
+  rank_position: z.number().int().nullable(),
+  price_value: z.number().nullable(),
+  // null = not verifiable (no catalog price / currency mismatch).
+  price_matches_catalog: z.boolean().nullable(),
+  price_relation: priceRelationSchema.nullable(),
+  price_text: z.string(),
+  price_currency: z.string(),
+  // Attribute-mention fields (null for the other kinds).
+  attribute_dimension: z.string().nullable(),
+  attribute_group: z.string().nullable(),
+  attribute_text: z.string().nullable(),
+  attribute_offset: z.number().int().nullable(),
+  // Buyer-destination fields (null for the other kinds; the URL arrives
+  // already sanitized by the backend).
+  merchant_name: z.string().nullable(),
+  merchant_domain: z.string().nullable(),
+  merchant_kind: buyerDestinationKindSchema.nullable(),
+  destination_url: z.string().nullable(),
+});
 
 export const productEvidenceResponseSchema = z.strictObject({
   items: z.array(productEvidenceItemSchema),
@@ -1845,59 +1828,51 @@ export const feedIssueSeveritySchema = z.enum(['info', 'warning', 'error']);
 
 // One connection's current-or-latest sync summary (a read-only projection of
 // the sync queue row — same status vocabulary as integrationSyncRunSchema).
-export const commerceSyncSummarySchema = z
-  .object({
-    sync_run_id: uuid(),
-    connection_id: uuid(),
-    status: integrationSyncRunStatusSchema,
-    window_start: z.string(),
-    window_end: z.string(),
-    row_count: z.number().int(),
-    // '' when there is no error (non-secret code only, never a payload).
-    error_code: z.string(),
-    completed_at: z.string().nullable(),
-  })
-  .strict();
+export const commerceSyncSummarySchema = z.strictObject({
+  sync_run_id: uuid(),
+  connection_id: uuid(),
+  status: integrationSyncRunStatusSchema,
+  window_start: z.string(),
+  window_end: z.string(),
+  row_count: z.number().int(),
+  // '' when there is no error (non-secret code only, never a payload).
+  error_code: z.string(),
+  completed_at: z.string().nullable(),
+});
 
 // A catalog feed connection (Shopify) with its grant status and latest sync.
-export const commerceConnectionSummarySchema = z
-  .object({
-    connection_id: uuid(),
-    provider: z.literal('shopify'),
-    label: z.string(),
-    account_ref: z.string(),
-    grant_status: integrationGrantStatusSchema,
-    last_synced_at: z.string().nullable(),
-    latest_sync: commerceSyncSummarySchema.nullable(),
-  })
-  .strict();
+export const commerceConnectionSummarySchema = z.strictObject({
+  connection_id: uuid(),
+  provider: z.literal('shopify'),
+  label: z.string(),
+  account_ref: z.string(),
+  grant_status: integrationGrantStatusSchema,
+  last_synced_at: z.string().nullable(),
+  latest_sync: commerceSyncSummarySchema.nullable(),
+});
 
 // One SKU's feed-health row. `product_id` is null when the feed item no
 // longer resolves to a catalog row; `rule_ids` are non-secret rule codes.
-export const productFeedHealthSchema = z
-  .object({
-    product_id: uuid().nullable(),
-    connection_id: uuid(),
-    external_item_ref: z.string(),
-    sync_run_id: uuid(),
-    status: feedHealthStatusSchema,
-    highest_severity: feedIssueSeveritySchema.nullable(),
-    issue_count: z.number().int().nonnegative(),
-    rule_ids: z.array(z.string()),
-    last_seen_in_feed: z.boolean(),
-  })
-  .strict();
+export const productFeedHealthSchema = z.strictObject({
+  product_id: uuid().nullable(),
+  connection_id: uuid(),
+  external_item_ref: z.string(),
+  sync_run_id: uuid(),
+  status: feedHealthStatusSchema,
+  highest_severity: feedIssueSeveritySchema.nullable(),
+  issue_count: z.number().int().nonnegative(),
+  rule_ids: z.array(z.string()),
+  last_seen_in_feed: z.boolean(),
+});
 
 // `GET /projects/{id}/commerce/catalog-health`. Connections + products are
 // arrays because catalog rows can be bound to different connection ids.
-export const commerceCatalogHealthSchema = z
-  .object({
-    project_id: uuid(),
-    connections: z.array(commerceConnectionSummarySchema),
-    products: z.array(productFeedHealthSchema),
-    generated_at: z.string().nullable(),
-  })
-  .strict();
+export const commerceCatalogHealthSchema = z.strictObject({
+  project_id: uuid(),
+  connections: z.array(commerceConnectionSummarySchema),
+  products: z.array(productFeedHealthSchema),
+  generated_at: z.string().nullable(),
+});
 
 // ---------------------------------------------------------------------------
 // Commerce attribution (A1 GA4 platform-attributed vs A2 order referrer —
@@ -1923,7 +1898,7 @@ const isoCurrencyCode = () => z.string().length(3);
 // (the refine mirrors the backend producer contract); null metrics mean
 // unavailable — never a fabricated zero.
 export const attributionMetricSetSchema = z
-  .object({
+  .strictObject({
     currency: isoCurrencyCode().nullable(),
     revenue: z.number().nullable(),
     orders: z.number().int().nullable(),
@@ -1931,7 +1906,6 @@ export const attributionMetricSetSchema = z
     sessions: z.number().int().nullable(),
     conversion_rate: z.number().nullable(),
   })
-  .strict()
   .refine(
     (value) =>
       (value.revenue !== null || value.average_order_value !== null) && value.currency === null
@@ -1941,36 +1915,32 @@ export const attributionMetricSetSchema = z
   );
 
 // Per-`ai_source` deterministic row within one method/currency partition.
-export const attributionSourceRowSchema = z
-  .object({
-    ai_source: aiSourceSchema,
-    currency: isoCurrencyCode(),
-    metrics: attributionMetricSetSchema,
-  })
-  .strict();
+export const attributionSourceRowSchema = z.strictObject({
+  ai_source: aiSourceSchema,
+  currency: isoCurrencyCode(),
+  metrics: attributionMetricSetSchema,
+});
 
 // Per-SKU row. `ai_source` is null and `source_label` carries the
 // default-channel label when GA4 item granularity is reduced — those rows
 // must never be relabelled as per-AI-source data.
-export const attributionProductRowSchema = z
-  .object({
-    product_id: uuid().nullable(),
-    sku: z.string(),
-    name: z.string(),
-    ai_source: aiSourceSchema.nullable(),
-    source_label: z.string(),
-    currency: isoCurrencyCode(),
-    revenue: z.number().nullable(),
-    orders: z.number().int().nullable(),
-  })
-  .strict();
+export const attributionProductRowSchema = z.strictObject({
+  product_id: uuid().nullable(),
+  sku: z.string(),
+  name: z.string(),
+  ai_source: aiSourceSchema.nullable(),
+  source_label: z.string(),
+  currency: isoCurrencyCode(),
+  revenue: z.number().nullable(),
+  orders: z.number().int().nullable(),
+});
 
 // One method/currency partition. `source_granularity` is non-null on
 // available A1 rows and null everywhere else; `currency` is non-null on
 // every available row (an unavailable method reports no_data/not_connected
 // with null metrics rather than a fabricated zero).
 export const attributionMethodMetricsSchema = z
-  .object({
+  .strictObject({
     method: attributionMethodSchema,
     state: attributionDataStateSchema,
     source_granularity: attributionSourceGranularitySchema.nullable(),
@@ -1981,7 +1951,6 @@ export const attributionMethodMetricsSchema = z
     by_ai_source: z.array(attributionSourceRowSchema),
     by_product: z.array(attributionProductRowSchema),
   })
-  .strict()
   .superRefine((value, ctx) => {
     if (
       value.method === 'ga4_platform_attributed' &&
@@ -2011,49 +1980,42 @@ export const attributionDeltaStateSchema = z.enum([
 
 // Backend-projected A1 − A2 for one currency (may be negative; non-comparable
 // rows carry null values). The browser NEVER computes this delta itself.
-export const attributionDeltaSchema = z
-  .object({
-    currency: isoCurrencyCode(),
-    state: attributionDeltaStateSchema,
-    revenue: z.number().nullable(),
-    orders: z.number().int().nullable(),
-    average_order_value: z.number().nullable(),
-    conversion_rate: z.number().nullable(),
-  })
-  .strict();
+export const attributionDeltaSchema = z.strictObject({
+  currency: isoCurrencyCode(),
+  state: attributionDeltaStateSchema,
+  revenue: z.number().nullable(),
+  orders: z.number().int().nullable(),
+  average_order_value: z.number().nullable(),
+  conversion_rate: z.number().nullable(),
+});
 
 // Orders with no referrer evidence (no session join key exists — they stay
 // unattributed). A null share is unavailable, never 0%.
-export const unattributedMetricsSchema = z
-  .object({
-    currency: isoCurrencyCode(),
-    orders: z.number().int(),
-    order_share: z.number().nullable(),
-    revenue: z.number().nullable(),
-  })
-  .strict();
+export const unattributedMetricsSchema = z.strictObject({
+  currency: isoCurrencyCode(),
+  orders: z.number().int(),
+  order_share: z.number().nullable(),
+  revenue: z.number().nullable(),
+});
 
 // Layer B statistical allocation of unattributed orders — model output,
 // excluded from every deterministic total/delta/trend. `ai_source` is a
 // plain string (the allocation can carry an unassigned bucket outside the
 // deterministic AI-source vocabulary).
-export const statisticalAllocationRowSchema = z
-  .object({
-    ai_source: z.string(),
-    currency: isoCurrencyCode(),
-    estimated_revenue: z.number().nullable(),
-    estimated_orders: z.number().nullable(),
-    estimated_share: z.number().nullable(),
-  })
-  .strict();
+export const statisticalAllocationRowSchema = z.strictObject({
+  ai_source: z.string(),
+  currency: isoCurrencyCode(),
+  estimated_revenue: z.number().nullable(),
+  estimated_orders: z.number().nullable(),
+  estimated_share: z.number().nullable(),
+});
 
 export const attributionStatisticalSchema = z
-  .object({
+  .strictObject({
     state: z.enum(['not_offered', 'available', 'insufficient_data']),
     sample_size: z.number().int().nullable(),
     allocations: z.array(statisticalAllocationRowSchema),
   })
-  .strict()
   .superRefine((value, ctx) => {
     if (value.state === 'not_offered' && value.allocations.length > 0) {
       ctx.addIssue({
@@ -2079,53 +2041,45 @@ export const attributionStatisticalSchema = z
     }
   });
 
-export const attributionDeterministicSchema = z
-  .object({
-    a1: z.array(attributionMethodMetricsSchema),
-    a2: z.array(attributionMethodMetricsSchema),
-    delta: z.array(attributionDeltaSchema),
-    unattributed: z.array(unattributedMetricsSchema),
-    coverage: z
-      .object({
-        total_latest_orders: z.number().int(),
-        orders_with_evidence: z.number().int(),
-        linked_ai_orders: z.number().int(),
-        unattributed_orders: z.number().int(),
-        evidence_coverage_rate: z.number().nullable(),
-        attributed_share: z.number().nullable(),
-        window_start: z.string(),
-        window_end: z.string(),
-      })
-      .strict(),
-  })
-  .strict();
+export const attributionDeterministicSchema = z.strictObject({
+  a1: z.array(attributionMethodMetricsSchema),
+  a2: z.array(attributionMethodMetricsSchema),
+  delta: z.array(attributionDeltaSchema),
+  unattributed: z.array(unattributedMetricsSchema),
+  coverage: z.strictObject({
+    total_latest_orders: z.number().int(),
+    orders_with_evidence: z.number().int(),
+    linked_ai_orders: z.number().int(),
+    unattributed_orders: z.number().int(),
+    evidence_coverage_rate: z.number().nullable(),
+    attributed_share: z.number().nullable(),
+    window_start: z.string(),
+    window_end: z.string(),
+  }),
+});
 
-export const attributionMetricsSchema = z
-  .object({
-    deterministic: attributionDeterministicSchema,
-    statistical: attributionStatisticalSchema,
-  })
-  .strict();
+export const attributionMetricsSchema = z.strictObject({
+  deterministic: attributionDeterministicSchema,
+  statistical: attributionStatisticalSchema,
+});
 
 // `GET /projects/{id}/commerce/attribution` — the persisted snapshot
 // projection (an absent snapshot yields the empty contract, not a 404).
-export const attributionSnapshotSchema = z
-  .object({
-    project_id: uuid(),
-    window_start: z.string(),
-    window_end: z.string(),
-    granularity: snapshotGranularitySchema,
-    metrics: attributionMetricsSchema,
-    // Provenance: the persisted rows this snapshot was projected from.
-    source_link_ids: z.array(uuid()),
-    source_order_fact_ids: z.array(uuid()),
-    source_metric_row_ids: z.array(uuid()),
-    source_snapshot_ids: z.array(uuid()),
-    formula_version: z.string(),
-    analyzer_version: z.string(),
-    created_at: z.string().nullable(),
-  })
-  .strict();
+export const attributionSnapshotSchema = z.strictObject({
+  project_id: uuid(),
+  window_start: z.string(),
+  window_end: z.string(),
+  granularity: snapshotGranularitySchema,
+  metrics: attributionMetricsSchema,
+  // Provenance: the persisted rows this snapshot was projected from.
+  source_link_ids: z.array(uuid()),
+  source_order_fact_ids: z.array(uuid()),
+  source_metric_row_ids: z.array(uuid()),
+  source_snapshot_ids: z.array(uuid()),
+  formula_version: z.string(),
+  analyzer_version: z.string(),
+  created_at: z.string().nullable(),
+});
 
 // Attribution recompute task (queue-row vocabulary — same statuses as the
 // integration sync run queue).
@@ -2141,17 +2095,15 @@ export const attributionTaskStatusSchema = z.enum([
 
 // `POST /projects/{id}/commerce/attribution/recompute` (202) and
 // `GET /projects/{id}/commerce/attribution/recompute/{task_id}` responses.
-export const attributionRecomputeSchema = z
-  .object({
-    task_id: uuid(),
-    project_id: uuid(),
-    status: attributionTaskStatusSchema,
-    // '' when there is no error (non-secret code only).
-    error_code: z.string(),
-    updated_at: z.string(),
-    completed_at: z.string().nullable(),
-  })
-  .strict();
+export const attributionRecomputeSchema = z.strictObject({
+  task_id: uuid(),
+  project_id: uuid(),
+  status: attributionTaskStatusSchema,
+  // '' when there is no error (non-secret code only).
+  error_code: z.string(),
+  updated_at: z.string(),
+  completed_at: z.string().nullable(),
+});
 
 // ---------------------------------------------------------------------------
 // Opportunities (deterministic priority catalog — backend owns the contract)

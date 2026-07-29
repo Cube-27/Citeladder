@@ -48,16 +48,3 @@ export function Eyebrow({
     </span>
   );
 }
-
-/**
- * "Evidence capture active" — a live indicator with a slow pulse. Used only
- * where something genuinely is running in the depicted scene.
- */
-export function LiveDot({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <span className="text-mkt-meta text-mkt-ink-soft inline-flex items-center gap-2 font-mono uppercase tabular-nums">
-      <span className="bg-mkt-evidence animate-mkt-pulse size-1.5 shrink-0 rounded-full" />
-      {children}
-    </span>
-  );
-}

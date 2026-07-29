@@ -48,8 +48,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <div>
               <Eyebrow>Comparison</Eyebrow>
             </div>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[18ch] font-medium">
-              Searchify vs <em className="text-mkt-proof not-italic">{competitor.name}.</em>
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[18ch]">
+              Searchify vs <em className="mkt-keyword not-italic">{competitor.name}.</em>
             </h1>
             <p className="text-mkt-lead text-mkt-ink-soft max-w-[56ch]">
               Two ways to measure brand presence in AI answers. The Searchify column comes straight
@@ -135,15 +135,15 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       {competitor.verdict && (
         <Section tone="paper" aria-label="Our verdict">
           <div className="max-w-[70ch]">
-            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">Our verdict.</h2>
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink">Our verdict.</h2>
             <p className="text-mkt-body text-mkt-ink-soft mt-4">{competitor.verdict}</p>
           </div>
         </Section>
       )}
 
-      <Section tone="sunken" rhythm="loose" aria-label="Get started">
+      <Section tone="field" rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
             See your own numbers instead.
           </h2>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">

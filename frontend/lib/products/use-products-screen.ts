@@ -163,6 +163,7 @@ export function useAttributionQueries(projectId: string | null, enabled = true) 
   });
 
   const [recomputeTaskId, setRecomputeTaskId] = useState<string | null>(null);
+  // The succeeded task poll below invalidates the exact snapshot key.
   const recomputeMutation = useMutation({
     mutationFn: () => attributionApi.recompute(projectId!),
     onSuccess: (task) => setRecomputeTaskId(task.task_id),

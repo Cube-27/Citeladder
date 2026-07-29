@@ -289,6 +289,8 @@ export function TrafficScreen() {
     enabled: Boolean(workspaceId),
   });
 
+  // Traffic and integration caches are invalidated after every enqueued run is terminal.
+  // react-doctor-disable-next-line
   const syncMutation = useMutation({
     mutationFn: () => trafficApi.syncNow(projectId ?? ''),
     onSuccess: (runs) => {

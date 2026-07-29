@@ -24,45 +24,48 @@ import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
  */
 export default function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mkt-root bg-mkt-paper text-mkt-ink min-h-dvh min-[900px]:grid min-[900px]:grid-cols-12">
+    <div className="mkt-root relative min-h-dvh w-full overflow-hidden bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white min-[900px]:grid min-[900px]:grid-cols-12">
+      {/* Subtle light ambient background lighting */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-indigo-200/50 blur-[120px]" />
+        <div className="absolute -right-40 -bottom-40 size-[500px] rounded-full bg-sky-200/50 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/30 blur-[100px]" />
+      </div>
+
       <AuthBrandPanel />
 
-      <main className="relative flex min-h-dvh flex-col px-6 py-8 min-[900px]:col-span-7 sm:px-10">
-        {/* Header band — mirrors the brand panel's wordmark row so the two
-            columns start on the same line. */}
+      <main className="relative flex min-h-dvh flex-col justify-between px-6 py-8 min-[900px]:col-span-7 sm:px-10 lg:px-16">
+        {/* Header band — mobile wordmark */}
         <header className="flex items-center justify-between gap-3">
           <div className="min-[900px]:invisible">
             <AuthWordmark compact />
           </div>
         </header>
 
-        <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-[24rem]">
+        <div className="flex flex-1 items-center justify-center py-8">
+          <div className="w-full max-w-md">
             {children}
 
-            {/* Quiet reassurance under the form — the same claims as the brand
-                panel's proof points, kept to one flat strip so the form column
-                stops reading as a void. Shown only where the brand panel is
-                hidden (below 900px), so the two columns never repeat the list. */}
-            <ul className="border-mkt-line text-mkt-ink-muted text-mkt-sm mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-5 min-[900px]:hidden">
-              <li className="flex items-center gap-1.5">
-                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
+            {/* Mobile reassurance pills - No separating border lines */}
+            <ul className="mt-8 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-600 min-[900px]:hidden">
+              <li className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
+                <span aria-hidden className="size-1.5 rounded-full bg-indigo-500" />
                 Deterministic scoring
               </li>
-              <li className="flex items-center gap-1.5">
-                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
-                Evidence for every number
+              <li className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
+                <span aria-hidden className="size-1.5 rounded-full bg-emerald-500" />
+                Verified evidence
               </li>
-              <li className="flex items-center gap-1.5">
-                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
-                Your own API keys
+              <li className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
+                <span aria-hidden className="size-1.5 rounded-full bg-sky-500" />
+                Encrypted keys
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Footer band — balances the brand panel's copyright row. */}
-        <footer className="text-mkt-sm text-mkt-ink-muted">
+        {/* Footer band */}
+        <footer className="text-xs text-slate-500">
           <span className="min-[900px]:hidden">© {new Date().getFullYear()} CUBE27</span>
         </footer>
       </main>

@@ -40,7 +40,7 @@ export function RankingRowsTable({
   rows,
   history,
 }: Readonly<{ rows: readonly RankingRow[]; history?: ReadonlyMap<string, number[]> }>) {
-  // Slot assignment mirrors MultiTrendChart: the brand takes slot 1, others
+  // Slot assignment mirrors the visibility chart palette: the brand takes slot 1, others
   // follow in row order and are never cycled past the last slot.
   let nextSlot = 1;
   const showTrend = Boolean(

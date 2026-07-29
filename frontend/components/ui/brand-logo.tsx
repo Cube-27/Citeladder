@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import { logoDevUrl } from '@/lib/brand/logo-dev';
+import { brandInitials } from '@/lib/brand/initials';
 import { cn } from '@/lib/utils';
 
 const SIZE = {
@@ -11,13 +12,6 @@ const SIZE = {
   sm: { pixels: 24, className: 'size-6 rounded text-2xs' },
   md: { pixels: 32, className: 'size-8 rounded-md text-xs' },
 } as const;
-
-export function brandInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
 
 /**
  * One brand-avatar treatment everywhere, with a three-step fallback:

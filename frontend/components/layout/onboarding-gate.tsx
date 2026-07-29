@@ -30,7 +30,10 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   const needsOnboarding = !isLoading && projects.length === 0;
 
   useEffect(() => {
-    if (needsOnboarding) router.replace('/onboarding');
+    if (needsOnboarding) {
+      // Project availability is client-fetched; the skeleton prevents a page flash.
+      router.replace('/onboarding');
+    }
   }, [needsOnboarding, router]);
 
   if (isLoading || needsOnboarding) {

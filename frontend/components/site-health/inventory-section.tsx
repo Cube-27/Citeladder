@@ -254,12 +254,10 @@ function ScoredInventory({
   // with whichever tab is active — never a client filter over the page window.
   const [pageType, setPageType] = useState('');
   // Per-tab cursor stack so Prev/Next walk keyset pages without offsets.
-  const pagers = {
-    monitored: useCursorStack(),
-    all: useCursorStack(),
-    errors: useCursorStack(),
-  };
-  const pager = pagers[tab];
+  const monitoredPager = useCursorStack();
+  const allPager = useCursorStack();
+  const errorsPager = useCursorStack();
+  const pager = tab === 'monitored' ? monitoredPager : tab === 'all' ? allPager : errorsPager;
 
   const activeTab = TABS.find((t) => t.key === tab)!;
 
@@ -267,9 +265,9 @@ function ScoredInventory({
   // filter-bound server-side, so a stale cursor under a new page type 400s.
   const selectPageType = (next: string) => {
     setPageType(next);
-    pagers.monitored.reset();
-    pagers.all.reset();
-    pagers.errors.reset();
+    monitoredPager.reset();
+    allPager.reset();
+    errorsPager.reset();
   };
 
   const pagesQuery = useQuery({

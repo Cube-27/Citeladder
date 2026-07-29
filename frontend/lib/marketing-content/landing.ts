@@ -8,187 +8,179 @@
  *   3. Lead with the decision; keep the proof one step away.
  *   4. Never fabricate customer results, scale, or certainty.
  *
- * Rule 4 is why there are no numbers here. The figures in the product scenes
- * (visibility 72.4, 1,248 answers, the provider ranking) are illustrative, so
- * they live inside the aria-hidden scene components with a visible "Example
- * data" mark — never in page copy, where they would read as a real result.
- *
- * NOTE: this is visitor-facing copy, not the design system's own vocabulary.
- * Words like "choreography", "restraint" and "motion 5/10" describe how the
- * site is BUILT; they belong in docs/design.md, never on the page.
+ * Rule 4 is why there are no invented numbers in page copy. The demo moment is
+ * illustrative — it shows the SHAPE of what buyers ask and how engines answer —
+ * and it says so on its face, rather than dressing a mock up as a real result.
  */
 
-export type ShiftPoint = { num: string; title: string; body: string };
-export type Step = { num: string; kicker: string; title: string; body: string };
+export type EngineAnswer = {
+  engine: 'openai' | 'gemini' | 'claude';
+  /** What the engine did with the brand: named it, cited it, or left it out. */
+  outcome: 'named' | 'cited' | 'missing';
+  /** The one-line observed answer, quoted. */
+  answer: string;
+};
+
+export type DemoQuestion = {
+  /** The buyer question, as a buyer would type it. */
+  question: string;
+  /** The category it probes, shown as the working context. */
+  category: string;
+  answers: readonly EngineAnswer[];
+  /** The takeaway once the three answers are in. */
+  verdict: string;
+};
 
 export const LANDING_CONTENT = {
-  hero: {
+  hook: {
     eyebrow: 'Verifiable market intelligence',
-    title: 'See your market through',
-    accent: 'AI’s eyes.',
-    body: 'Understand how the world’s answer engines describe your brand, products and competitors — then turn observed evidence into a sharper strategy.',
-    secondaryCta: 'Explore the platform',
-  },
-
-  engines: {
-    kicker: 'Coverage',
-    title: 'The engines your buyers actually ask.',
-    body: 'ChatGPT, Gemini and Claude are audited out of the box on your own provider keys. Each engine runs through exactly one approved transport, and every run records all three identities — logical engine, transport provider, and the exact transport model.',
-    /**
-     * Buyer questions for the hero strip, rendered quoted and italic so they
-     * read as things people ask rather than as claims we are making.
-     *
-     * Rule 4 still governs: these name generic software categories, never a
-     * real company, and carry no numbers or outcomes. They illustrate the
-     * SHAPE of what buyers ask an answer engine — comparisons, alternatives,
-     * best-of lists — not anything Searchify has measured.
-     */
-    promptSamples: [
-      'best analytics tools for enterprise teams',
-      'top rated CRM software this year',
-      'alternatives to the market leader in project management',
-      'which help desk platform has the best support',
-      'cheapest email marketing tool for small teams',
-      'most reliable cloud hosting provider',
-      'what do reviewers say about self-serve BI tools',
-      'is an SEO platform worth it for a small business',
-      'compare the leading data warehouse options',
-      'which password manager do security teams recommend',
-    ],
+    title: 'Your buyers stopped Googling you.',
+    /* The accent clause carries the signature slate→sage sweep, so the hero
+       headline turns over to colour on its closing line. */
+    titleAccent: 'They ask AI instead.',
+    body: 'ChatGPT, Gemini and Claude are telling your market what to buy — and buyers act on the answer. Searchify shows you what those answers say about your brand, and proves every claim back to the answer it came from.',
+    primaryCta: 'See it on your category',
+    secondaryCta: 'How it works',
   },
 
   shift: {
-    index: '01',
     kicker: 'The shift',
     title: 'The first page of search is now a conversation.',
-    intro:
-      'Buyers no longer compare ten blue links. They ask once, and act on the answer they get back. Your rank tracker did not come with them.',
-    items: [
+    facts: [
       {
         num: '01',
-        title: 'Buyers ask before they browse',
-        body: 'Comparisons, shortlists and “best tool for…” questions increasingly start inside an answer engine — and end there too.',
+        title: 'Buyers ask before they browse.',
+        body: 'Comparisons, shortlists and “best tool for…” questions start inside an answer engine — and increasingly end there too.',
       },
       {
         num: '02',
-        title: 'Answers cite, they do not rank',
+        title: 'Answers cite, they don’t rank.',
         body: 'There is no position ten to climb from. Either the engine names you and cites a page, or your category conversation happens without you.',
       },
       {
         num: '03',
-        title: 'You cannot fix what you cannot see',
-        body: 'Every engine answers differently, and re-asking by hand is not a measurement. Knowing where you stand means running the same questions the same way, on a schedule.',
+        title: 'You can’t fix what you can’t see.',
+        body: 'Every engine answers differently, and re-asking by hand is not a measurement. You have to run the same questions the same way, on a schedule.',
       },
-    ] satisfies readonly ShiftPoint[],
-  },
-
-  voice: {
-    kicker: 'How we report',
-    quote: 'We do not predict the market. We',
-    quoteAccent: 'observe',
-    quoteTail: 'it carefully.',
-    rulesLabel: 'What that commits us to',
-    rules: [
-      { num: '01', text: 'State what was measured, where, and when.' },
-      { num: '02', text: 'Prefer “shows” and “observed” over “guarantees”.' },
-      { num: '03', text: 'Lead with the decision; keep the proof one step away.' },
-      { num: '04', text: 'Never fabricate customer results, scale, or certainty.' },
     ],
   },
 
-  howItWorks: {
-    index: '02',
-    kicker: 'Method',
-    title: 'Observe. Verify. Decide.',
+  seeIt: {
+    kicker: 'The solution',
+    title: 'How teams turn AI search conversations into strategy.',
     intro:
-      'One run asks your buyers’ questions across every engine you cover, persists the raw answers, and scores them with versioned rules — so the same evidence always produces the same number.',
+      'When buyer preferences shifted from search results to AI answers, traditional SEO stopped working. Searchify gives your team the exact workspace to observe, trace, and optimize your brand’s presence — where every score opens to the answer behind it.',
+    cta: 'Run this on your market',
+    questions: [
+      {
+        question: 'What are the best analytics tools for enterprise teams?',
+        category: 'Enterprise analytics',
+        answers: [
+          {
+            engine: 'openai',
+            outcome: 'missing',
+            answer: 'names three competitors — you’re not one of them',
+          },
+          {
+            /* `missing`, not `cited`: the citation here goes to a RIVAL's page,
+               so the brand is absent from the answer. Marking it `cited` made
+               the chips contradict the verdict below ("two of three answer
+               without you") — `cited` means the engine cited YOU. */
+            engine: 'gemini',
+            outcome: 'missing',
+            answer: 'cites a rival’s comparison page as its source',
+          },
+          {
+            engine: 'claude',
+            outcome: 'missing',
+            answer: 'recommends the category leader by name',
+          },
+        ],
+        verdict:
+          'All three engines answer without you. That’s the visibility gap — and it’s measurable.',
+      },
+      {
+        question: 'Which help desk platform has the best customer support?',
+        category: 'Customer support',
+        answers: [
+          {
+            engine: 'openai',
+            outcome: 'named',
+            answer: 'names you — but credits a feature you deprecated',
+          },
+          {
+            engine: 'gemini',
+            outcome: 'cited',
+            answer: 'cites your docs, alongside two competitors',
+          },
+          {
+            engine: 'claude',
+            outcome: 'named',
+            answer: 'recommends you for mid-market, not enterprise',
+          },
+        ],
+        verdict: 'You show up — but the story is stale. Now you know what to correct, and where.',
+      },
+      {
+        question: 'What do reviewers say about self-serve BI tools?',
+        category: 'Self-serve BI',
+        answers: [
+          {
+            engine: 'openai',
+            outcome: 'cited',
+            answer: 'quotes a G2 thread that ranks you second',
+          },
+          {
+            engine: 'gemini',
+            outcome: 'missing',
+            answer: 'summarises the category without naming you',
+          },
+          {
+            engine: 'claude',
+            outcome: 'cited',
+            answer: 'cites your site for one criterion, a rival for the rest',
+          },
+        ],
+        verdict: 'You’re in the conversation, not leading it. The gap is specific — and closable.',
+      },
+    ] satisfies readonly DemoQuestion[],
+  },
+
+  proof: {
+    kicker: 'Proof',
+    title: 'Every number opens to the answer it came from.',
+    intro:
+      'Scores are derived, not asserted. Open one and you get the answer, the engine, the persisted artifact and the rule version behind it — so the same evidence always yields the same number.',
+    /** The closing pull-quote: the verification standard, stated as a rule. */
+    standard:
+      'Persist the raw answer behind every score. Version the rules that produced it. Never let one model silently judge another.',
     steps: [
       {
         num: '01',
         kicker: 'Observe',
         title: 'Ask what your buyers ask',
-        body: 'Type your brand and its website. Searchify proposes the competitors, the domains you own and a starting prompt library — comparisons, best-of lists, alternatives — and every suggestion arrives editable before anything runs.',
+        body: 'One run asks your real buyer questions across every engine, on your own provider keys.',
       },
       {
         num: '02',
         kicker: 'Verify',
         title: 'Trace every answer to its source',
-        body: 'Each response is persisted as an artifact. Mentions, citations and share of voice are computed from that text by versioned analyzers, never by one model judging another.',
+        body: 'Each response is persisted. Mentions, citations and share of voice are computed from that text by versioned rules — never one model judging another.',
       },
       {
         num: '03',
         kicker: 'Decide',
         title: 'Turn the pattern into strategy',
-        body: 'Visibility gaps, competitor patterns and site evidence resolve into a prioritised set of moves — each one still linked to the answers behind it.',
+        body: 'Visibility gaps and competitor patterns resolve into prioritised moves, each still linked to the answers behind it.',
       },
-    ] satisfies readonly Step[],
+    ],
   },
 
-  platform: {
-    index: '03',
-    kicker: 'Product',
-    title: 'One workspace for the whole market picture.',
-    intro:
-      'Visibility, Answers, Traffic, Commerce, Content and Site health share one observation field, so a number you question is always one click from the answer that produced it.',
-  },
-
-  evidence: {
-    index: '04',
-    kicker: 'Evidence',
-    title: 'Every metric opens to the answer it came from.',
-    intro:
-      'Scores are derived, not asserted. Open one and you get the observed answer, the provider that produced it, the persisted artifact and the rule version that scored it.',
-  },
-
-  stance: {
-    index: '05',
-    kicker: 'Stance',
-    title: 'What we will and will not do.',
-    intro:
-      'Reporting on AI visibility is easy to fake. These are the commitments that make the difference legible from outside.',
-    always: {
-      title: 'Always',
-      items: [
-        'Attach every derived claim to inspectable evidence.',
-        'Persist the raw answer behind each score.',
-        'Version the rules, so a number can be reproduced.',
-        'Run on your own provider keys, encrypted at rest.',
-        'Keep workspace data isolated end to end.',
-      ],
-    },
-    never: {
-      title: 'Never',
-      items: [
-        'Score with one model silently judging another.',
-        'Report a metric that cannot be traced to a source.',
-        'Present estimates as observations.',
-        'Return your provider keys, to you or to anyone else.',
-        'Claim coverage of engines we do not audit.',
-      ],
-    },
-  },
-
-  compositions: {
-    query: {
-      tag: 'Query intelligence',
-      title: 'See the questions shaping your category.',
-      body: 'Group real buyer prompts by intent, market, product and provider — then trace the answers they produce.',
-      cards: [
-        'Which platform is trusted by enterprise teams?',
-        'Best AI visibility tools for global agencies',
-        'Which vendor publishes how its scores are calculated?',
-      ],
-    },
-    strategy: {
-      tag: 'Strategic intelligence',
-      title: 'Move from observation to your next best action.',
-      body: 'Searchify connects visibility gaps, competitor patterns, site evidence and product presence into a prioritised strategy.',
-    },
-  },
-
-  finalCta: {
+  cta: {
     kicker: 'Get started',
     title: 'Bring evidence to the conversation about your market.',
     body: 'A working session on your category, your competitors and the questions your buyers are already asking answer engines.',
+    primaryCta: 'Book a working session',
+    secondaryCta: 'See pricing',
   },
 } as const;

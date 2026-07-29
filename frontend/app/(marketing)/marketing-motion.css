@@ -37,17 +37,6 @@
   }
 }
 
-@keyframes mkt-draw {
-  0%,
-  10% {
-    stroke-dashoffset: 440;
-  }
-  58%,
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-
 @keyframes mkt-verify {
   0%,
   12% {
@@ -123,28 +112,44 @@
    its entry range at load, so the hero never animates. Stagger children key
    off their own scroll position rather than a fixed delay, which keeps the
    cascade tied to the scroll instead of running ahead of it. */
+/* Scroll reveals are delegated to GSAP ScrollTrigger (useGsapReveal hook)
+   to ensure cross-browser compatibility and prevent CSS/JS animation race conditions. */
+
+/* A clean rise. No blur: blurring the entry made text look out-of-focus
+   rather than in-motion, which reads as a rendering fault, not choreography. */
+@keyframes mkt-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+}
+
+/* Directional entrances. The default reveal rises; these slide in from an
+   edge, used for paired columns that should CONVERGE on the section (Stance)
+   and for the closing beat. Same finished state, same view() timeline, same
+   reduced-motion pin — only the starting offset differs. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    /* A stagger container is excluded from the generic rule: it delegates
-       motion to its children, and animating both would fade every item twice
-       — once with the group, once on its own. */
-    [data-mkt-reveal]:not([data-mkt-reveal='stagger']),
-    [data-mkt-reveal='stagger'] > * {
-      animation: mkt-reveal-in linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 60%;
+    [data-mkt-reveal-from='left'] {
+      animation-name: mkt-reveal-in-left;
     }
-
-    [data-mkt-reveal='stagger'] > * {
-      animation-range: entry 5% entry 65%;
+    [data-mkt-reveal-from='right'] {
+      animation-name: mkt-reveal-in-right;
     }
   }
 }
 
-@keyframes mkt-reveal-in {
+@keyframes mkt-reveal-in-left {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateX(-48px);
+  }
+}
+
+@keyframes mkt-reveal-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
   }
 }
 
@@ -217,10 +222,6 @@
     transition-duration: 1ms !important;
   }
 
-  .mkt-chart-line {
-    stroke-dashoffset: 0;
-  }
-
   /* Both of these spend part of their cycle dimmed, so collapsing the
      duration would otherwise freeze them on whichever keyframe happened to
      be last. Pin them to the finished, fully legible state instead. */
@@ -236,6 +237,9 @@
     animation: none !important;
     opacity: 1;
     transform: none;
+    /* The reveal now animates filter too, so the pin has to clear it — a
+       reduced-motion reader must never be left looking at blurred copy. */
+    filter: none;
   }
 
   /* The marquee stops at its START, not wherever a 1ms run happened to land
