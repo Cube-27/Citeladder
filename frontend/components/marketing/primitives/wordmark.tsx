@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
  */
 export function BrandMark({ className }: Readonly<{ className?: string }>) {
   return (
-    <span className={cn('inline-flex shrink-0', className)}>
+    <span aria-hidden="true" className={cn('inline-flex shrink-0', className)}>
       <LogoMark size={32} />
     </span>
   );

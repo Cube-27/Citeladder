@@ -112,30 +112,8 @@
    its entry range at load, so the hero never animates. Stagger children key
    off their own scroll position rather than a fixed delay, which keeps the
    cascade tied to the scroll instead of running ahead of it. */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    /* A stagger container is excluded from the generic rule: it delegates
-       motion to its children, and animating both would fade every item twice
-       — once with the group, once on its own. */
-    [data-mkt-reveal]:not([data-mkt-reveal='stagger']),
-    [data-mkt-reveal='stagger'] > * {
-      animation: mkt-reveal-in linear both;
-      animation-timeline: view();
-      /* Starts at 15%, not 0%. A range beginning at `entry 0%` is already
-         part-spent the moment an element's top edge touches the viewport, so
-         on a tall section the reveal finished BEFORE the reader could see it —
-         which is why the surface read static despite every section carrying a
-         reveal. Ending at 85% keeps the settle inside the entry window. */
-      animation-range: entry 15% entry 85%;
-    }
-
-    /* Wider and later than the group, so a grid resolves as a visible cascade
-       rather than all cards landing on the same frame. */
-    [data-mkt-reveal='stagger'] > * {
-      animation-range: entry 20% entry 100%;
-    }
-  }
-}
+/* Scroll reveals are delegated to GSAP ScrollTrigger (useGsapReveal hook)
+   to ensure cross-browser compatibility and prevent CSS/JS animation race conditions. */
 
 /* A clean rise. No blur: blurring the entry made text look out-of-focus
    rather than in-motion, which reads as a rendering fault, not choreography. */

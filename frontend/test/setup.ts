@@ -14,6 +14,19 @@ const nativeAbortController = transferableAbortController();
 globalThis.AbortController = nativeAbortController.constructor as typeof AbortController;
 globalThis.AbortSignal = nativeAbortController.signal.constructor as typeof AbortSignal;
 
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
+
 afterEach(() => {
   cleanup();
 });

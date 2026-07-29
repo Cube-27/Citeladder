@@ -77,9 +77,9 @@ export function ProjectsScreen() {
           <span className="text-muted text-xs">Choose the active brand for this Dashboard.</span>
         </div>
 
-        <Card className="border-slate-200/80 shadow-xs overflow-hidden">
+        <Card className="border-border overflow-hidden shadow-xs">
           <CardContent className="p-0">
-            <ul className="divide-slate-100 grid list-none divide-y p-0">
+            <ul className="divide-border grid list-none divide-y p-0">
               {projects.map((project) => {
                 const isActive = project.id === activeProjectId;
                 const label = project.brand_name || project.name;
@@ -88,7 +88,7 @@ export function ProjectsScreen() {
                     <div
                       className={cn(
                         'flex items-center gap-3 pe-4 transition-colors',
-                        isActive ? 'bg-indigo-50/40' : 'hover:bg-slate-50/60',
+                        isActive ? 'bg-indigo-50/40' : 'hover:bg-accent/60',
                       )}
                     >
                       <button
@@ -104,11 +104,11 @@ export function ProjectsScreen() {
                           size="md"
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="text-slate-900 block truncate text-sm font-semibold">
+                          <span className="text-foreground block truncate text-sm font-semibold">
                             {label}
                           </span>
                           {project.website_url ? (
-                            <span className="text-slate-500 block truncate text-xs">
+                            <span className="text-muted-foreground block truncate text-xs">
                               {project.website_url}
                             </span>
                           ) : null}
@@ -125,7 +125,7 @@ export function ProjectsScreen() {
                         size="sm"
                         onClick={() => setEditing(project)}
                         aria-label={`Edit ${label}`}
-                        className="text-slate-600 hover:text-slate-900"
+                        className="text-muted-foreground hover:text-foreground"
                       >
                         Edit
                       </Button>

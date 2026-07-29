@@ -43,7 +43,7 @@ afterAll(() => mswServer.close());
 
 describe('BrandProfilePanel', () => {
   it('saves direct edits as manual knowledge', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let requestBody: unknown;
     mswServer.use(
       http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
@@ -70,7 +70,7 @@ describe('BrandProfilePanel', () => {
   });
 
   it('loads an AI draft for review and separates edited fields on acceptance', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let acceptBody: Record<string, unknown> | null = null;
     const draft = {
       description: 'Australian family retailer.',
@@ -138,7 +138,7 @@ describe('BrandProfilePanel', () => {
   });
 
   it('preserves existing values for empty suggestions and can discard the draft', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const existingProfile: BrandProfile = {
       ...profile,
       description: 'Existing description.',

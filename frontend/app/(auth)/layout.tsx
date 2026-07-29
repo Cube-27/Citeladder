@@ -28,8 +28,8 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
       {/* Subtle light ambient background lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-indigo-200/50 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 size-[500px] rounded-full bg-sky-200/50 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[600px] rounded-full bg-blue-100/30 blur-[100px]" />
+        <div className="absolute -right-40 -bottom-40 size-[500px] rounded-full bg-sky-200/50 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/30 blur-[100px]" />
       </div>
 
       <AuthBrandPanel />

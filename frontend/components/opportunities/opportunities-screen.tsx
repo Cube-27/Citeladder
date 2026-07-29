@@ -58,7 +58,7 @@ export function OpportunitiesScreen() {
       ) : projectId && summary ? (
         <>
           <SummaryStrip projectId={projectId} summary={summary} />
-          <OpportunitiesCatalog projectId={projectId} />
+          <OpportunitiesCatalog key={projectId} projectId={projectId} />
         </>
       ) : null}
     </div>
@@ -88,13 +88,10 @@ function RecomputeButton({
       variant={variant}
       size="sm"
       disabled={recompute.isPending}
-      className={cn(recompute.isPending && 'opacity-90 cursor-wait')}
+      className={cn(recompute.isPending && 'cursor-wait opacity-90')}
       onClick={() => recompute.mutate({ projectId })}
     >
-      <RefreshCw
-        className={cn('size-4', recompute.isPending && 'animate-spin')}
-        aria-hidden
-      />
+      <RefreshCw className={cn('size-4', recompute.isPending && 'animate-spin')} aria-hidden />
       Refresh recommendations
     </Button>
   );

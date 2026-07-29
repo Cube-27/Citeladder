@@ -8,7 +8,6 @@ import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { TrustStrip } from '../primitives/trust-strip';
 import { HeroEntrance } from './hero-entrance';
-import { HeroVisual } from './hero-visual';
 
 /**
  * The hook — a centred opener standing on the atmospheric field.
@@ -51,10 +50,6 @@ export function Hero() {
           </div>
           <TrustStrip className="mt-8 justify-center" />
         </HeroEntrance>
-
-        <div className="mx-auto mt-14 w-full max-w-2xl">
-          <HeroVisual />
-        </div>
       </Container>
     </header>
   );

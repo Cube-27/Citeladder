@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Check } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -176,18 +177,16 @@ export function OnboardingScreen() {
       {/* Background ambient lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-indigo-200/40 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 size-[500px] rounded-full bg-sky-200/40 blur-[120px]" />
+        <div className="absolute -right-40 -bottom-40 size-[500px] rounded-full bg-sky-200/40 blur-[120px]" />
       </div>
 
       <header className="border-b border-slate-200 bg-white px-6 py-4 sm:px-10">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
           <span className="flex items-center gap-2.5">
             <LogoMark size={26} />
-            <span className="font-mkt-display text-lg font-bold text-slate-900">
-              Searchify
-            </span>
+            <span className="font-mkt-display text-lg font-bold text-slate-900">Searchify</span>
           </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 border border-slate-200/60">
+          <span className="rounded-full border border-slate-200/60 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
@@ -195,7 +194,7 @@ export function OnboardingScreen() {
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-8 pb-20 sm:px-10">
         {/* Labelled stepper with smooth progress bar */}
-        <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+        <div className="shadow-card mb-8 rounded-2xl border border-slate-200 bg-white p-5">
           <ol className="grid list-none grid-cols-4 gap-3 p-0">
             {STEPS.map((label, index) => {
               const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
@@ -236,7 +235,7 @@ export function OnboardingScreen() {
         </div>
 
         {/* Step Content Container */}
-        <div className="relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10 shadow-card transition-all">
+        <div className="shadow-card relative rounded-2xl border border-slate-200 bg-white p-8 transition-all sm:p-10">
           {step === 0 ? (
             <form noValidate onSubmit={submitBrand} className="grid gap-6">
               <div className="grid gap-1.5">
@@ -249,13 +248,17 @@ export function OnboardingScreen() {
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Brand name" required error={form.formState.errors.brand_name?.message}>
+                <Field
+                  label="Brand name"
+                  required
+                  error={form.formState.errors.brand_name?.message}
+                >
                   {(props) => (
                     <Input
                       {...props}
                       {...form.register('brand_name')}
                       placeholder="Acme"
-                      className="bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                      className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
                     />
                   )}
                 </Field>
@@ -271,7 +274,7 @@ export function OnboardingScreen() {
                       {...props}
                       {...form.register('website_url')}
                       placeholder="acme.com"
-                      className="bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                      className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
                     />
                   )}
                 </Field>
@@ -412,23 +415,20 @@ export function OnboardingScreen() {
           {step === 3 ? (
             <div className="grid max-w-xl gap-6">
               <div className="grid gap-2">
-                <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 mb-2">
-                  <span className="text-xl">✨</span>
+                <div className="mb-2 inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                  <Check className="size-6" strokeWidth={2.5} aria-hidden />
                 </div>
                 <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
                   Your workspace is ready
                 </h1>
-                <p className="text-sm text-slate-500 leading-relaxed">
+                <p className="text-sm leading-relaxed text-slate-500">
                   {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a free Site
                   Health crawl in the background; its status and results will appear on your
                   dashboard.
                 </p>
               </div>
               <div className="pt-2">
-                <Button
-                  onClick={() => router.replace('/projects')}
-                  className="font-semibold"
-                >
+                <Button onClick={() => router.replace('/projects')} className="font-semibold">
                   Open dashboard
                 </Button>
               </div>

@@ -53,7 +53,9 @@ export function PageHeader({
           <div className="ms-auto flex shrink-0 items-center gap-2 ps-8">{actions}</div>
         ) : null}
       </div>
-      {summary ? <p className="text-muted max-w-[70ch] text-sm leading-relaxed">{summary}</p> : null}
+      {summary ? (
+        <p className="text-muted max-w-[70ch] text-sm leading-relaxed">{summary}</p>
+      ) : null}
     </div>
   );
 }

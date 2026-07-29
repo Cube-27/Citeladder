@@ -38,9 +38,9 @@ export default function RegisterPage() {
 
   return (
     <div className="relative">
-      <div className="relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10 shadow-card">
+      <div className="shadow-card relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10">
         <div className="mb-8 space-y-2 text-center sm:text-left">
-          <div className="inline-flex size-10 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 mb-2">
+          <div className="mb-2 inline-flex size-10 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
             <UserPlus className="size-5" />
           </div>
           <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -67,9 +67,9 @@ export default function RegisterPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="you@company.com"
-                  className="pl-10 bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20 focus:bg-white"
+                  className="border-slate-200 bg-slate-50/80 pl-10 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-indigo-500/20"
                 />
-                <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
               </div>
             )}
           </MktField>
@@ -83,13 +83,13 @@ export default function RegisterPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="At least 8 characters"
-                  className="pl-10 pr-10 bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20 focus:bg-white"
+                  className="border-slate-200 bg-slate-50/80 pr-10 pl-10 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-indigo-500/20"
                 />
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 p-1 text-slate-400 transition-colors hover:text-slate-600"
                   aria-label={showPassword ? 'Hide value' : 'Show value'}
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -107,13 +107,13 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="Re-enter your password"
-                  className="pl-10 pr-10 bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20 focus:bg-white"
+                  className="border-slate-200 bg-slate-50/80 pr-10 pl-10 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-indigo-500/20"
                 />
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 p-1 text-slate-400 transition-colors hover:text-slate-600"
                   aria-label={showConfirmPassword ? 'Hide confirm value' : 'Show confirm value'}
                 >
                   {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -122,19 +122,18 @@ export default function RegisterPage() {
             )}
           </MktField>
 
-          <Button
-            type="submit"
-            className="mt-2 w-full font-semibold"
-            disabled={pending}
-          >
+          <Button type="submit" className="mt-2 w-full font-semibold" disabled={pending}>
             {pending ? 'Creating account…' : 'Create account'}
           </Button>
         </form>
 
         {/* Footer link - No separating line */}
-        <p className="mt-8 text-center text-sm text-slate-600 font-medium">
+        <p className="mt-8 text-center text-sm font-medium text-slate-600">
           Already have an account?{' '}
-          <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+          <Link
+            href="/login"
+            className="font-semibold text-indigo-600 transition-colors hover:text-indigo-700"
+          >
             Sign in
           </Link>
         </p>

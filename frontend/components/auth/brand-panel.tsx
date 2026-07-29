@@ -3,7 +3,6 @@ import Link from 'next/link';
 
 import { Meta } from '@/components/marketing/primitives/label';
 import { Wordmark } from '@/components/marketing/primitives/wordmark';
-import { WallpaperPanel } from '@/components/marketing/scenes/wallpaper-panel';
 import { cn } from '@/lib/utils';
 
 /**
@@ -46,7 +45,11 @@ const PROOF_POINTS = [
 
 export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }>) {
   return (
-    <Link href="/" aria-label="Searchify home" className="inline-flex items-center gap-2.5 no-underline group">
+    <Link
+      href="/"
+      aria-label="Searchify home"
+      className="group inline-flex items-center gap-2.5 no-underline"
+    >
       <Wordmark className={cn(compact && 'text-mkt-body')} />
     </Link>
   );
@@ -67,7 +70,7 @@ export function AuthBrandPanel() {
         </div>
 
         {/* Feature showcase */}
-        <div className="my-auto space-y-8 max-w-lg">
+        <div className="my-auto max-w-lg space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
@@ -77,11 +80,12 @@ export function AuthBrandPanel() {
           </div>
 
           <div className="space-y-3">
-            <h2 className="font-mkt-display text-3xl font-bold text-slate-900 sm:text-4xl leading-tight">
+            <h2 className="font-mkt-display text-3xl leading-tight font-bold text-slate-900 sm:text-4xl">
               See how AI models talk about your brand.
             </h2>
-            <p className="text-slate-600 text-base leading-relaxed">
-              Continuous, automated audits across ChatGPT, Gemini, and Claude with the real prompts your buyers ask.
+            <p className="text-base leading-relaxed text-slate-600">
+              Continuous, automated audits across ChatGPT, Gemini, and Claude with the real prompts
+              your buyers ask.
             </p>
           </div>
 
@@ -90,7 +94,7 @@ export function AuthBrandPanel() {
             {PROOF_POINTS.map((proof) => (
               <div
                 key={proof.lead}
-                className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-all duration-200 hover:border-indigo-300"
+                className="group shadow-card flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-indigo-300"
               >
                 <div
                   aria-hidden
@@ -109,12 +113,12 @@ export function AuthBrandPanel() {
       </div>
 
       {/* Footer info & active engine status */}
-      <div className="pt-6 flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between pt-6 text-xs text-slate-500">
         <Meta as="p" className="text-slate-500">
           © {new Date().getFullYear()} CUBE27
         </Meta>
-        <div className="flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-slate-600">
-          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
+          <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
           <span>ChatGPT • Gemini • Claude Active</span>
         </div>
       </div>

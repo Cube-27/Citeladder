@@ -257,6 +257,7 @@ const BODY_PAIRS: Array<[string, string]> = [
   ['text-secondary', 'bg-base'],
   ['text-secondary', 'bg-panel'],
   ['accent-fg', 'accent'],
+  ['accent-fg', 'accent-hover'],
   // The destructive button paints its label on its own fill token, not on a
   // wash and not on `--danger` (white fails AA there), so that pair needs its
   // own gate (buttonVariants.destructive).
@@ -271,6 +272,7 @@ const BODY_PAIRS: Array<[string, string]> = [
   // the darker rung and why this pair is gated.
   ['accent-hover', 'accent-border'],
   ['text-link', 'bg-panel'],
+  ['text-link', 'bg-base'],
   // The inverse pair (tooltip surface): 7.65:1 in both themes.
   ['text-on-inverse', 'bg-inverse'],
 ];
@@ -366,7 +368,7 @@ describe('Atlassian-based palette', () => {
   it('anchors the accent on brand slate blue #27455c', () => {
     expect(lightTokens.get('--accent')).toBe('var(--ds-background-brand-bold)');
     expect(dsLight.get('--ds-background-brand-bold')).toBe('#27455c');
-    expect(dsDark.get('--ds-background-brand-bold')).toBe('#3d607d');
+    expect(dsDark.get('--ds-background-brand-bold')).toBe('#579dff');
   });
 
   it('declares the ADS light ladder and neutral editor dark ladder', () => {

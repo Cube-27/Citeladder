@@ -31,7 +31,7 @@ export function SeeIt() {
       <Reveal>
         <ProductWindow />
       </Reveal>
-      <div className="mt-10">
+      <div className="mt-10 flex justify-center">
         <ButtonLink href={DEMO_HREF} intent="proof" className="w-full sm:w-auto">
           {seeIt.cta}
           <ArrowRight className="size-4" aria-hidden />

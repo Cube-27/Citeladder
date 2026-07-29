@@ -86,22 +86,26 @@ export function DiscoveryProgress({
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-slate-900">{row.label}</span>
                   {searching && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-3xs font-medium text-indigo-600">
-                      <Sparkles className="size-2.5 animate-spin" /> AI Active
+                    <span className="text-3xs inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-600">
+                      <Sparkles
+                        className="size-2.5 animate-spin motion-reduce:animate-none"
+                        aria-hidden
+                      />{' '}
+                      AI Active
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-slate-500">{row.subLabel}</p>
               </div>
 
-              <div className="flex items-center gap-2.5 shrink-0">
+              <div className="flex shrink-0 items-center gap-2.5">
                 <span
                   className={cn(
                     'text-xs font-medium',
                     failed
                       ? 'text-red-600'
                       : done
-                        ? 'text-emerald-700 font-semibold'
+                        ? 'font-semibold text-emerald-700'
                         : 'text-indigo-600',
                   )}
                   role="status"
@@ -114,7 +118,7 @@ export function DiscoveryProgress({
                     <AlertTriangle className="size-3.5" aria-hidden />
                   </div>
                 ) : done ? (
-                  <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white animate-in zoom-in-50 duration-200">
+                  <div className="animate-in zoom-in-50 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white duration-200">
                     <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
                   </div>
                 ) : (

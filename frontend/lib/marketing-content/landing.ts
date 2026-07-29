@@ -66,10 +66,10 @@ export const LANDING_CONTENT = {
   },
 
   seeIt: {
-    kicker: 'The product',
-    title: 'Every score opens to the answer behind it.',
+    kicker: 'The solution',
+    title: 'How teams turn AI search conversations into strategy.',
     intro:
-      'This is the workspace, with one metric opened to its evidence: the answer an engine actually gave, the artifact it was persisted as, and the analyzer version that scored it. Illustrative figures — the structure is real.',
+      'When buyer preferences shifted from search results to AI answers, traditional SEO stopped working. Searchify gives your team the exact workspace to observe, trace, and optimize your brand’s presence — where every score opens to the answer behind it.',
     cta: 'Run this on your market',
     questions: [
       {
