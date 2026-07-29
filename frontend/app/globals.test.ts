@@ -363,10 +363,10 @@ describe('globals.css token set matches docs/design.md', () => {
    2. Atlassian palette — ported VERBATIM into ds-tokens.css
 ═══════════════════════════════════════════════════════════════════════ */
 describe('Atlassian-based palette', () => {
-  it('anchors the accent on ADS brand blue #0C66E4', () => {
+  it('anchors the accent on brand slate blue #27455c', () => {
     expect(lightTokens.get('--accent')).toBe('var(--ds-background-brand-bold)');
-    expect(dsLight.get('--ds-background-brand-bold')).toBe('#0c66e4');
-    expect(dsDark.get('--ds-background-brand-bold')).toBe('#579dff');
+    expect(dsLight.get('--ds-background-brand-bold')).toBe('#27455c');
+    expect(dsDark.get('--ds-background-brand-bold')).toBe('#3d607d');
   });
 
   it('declares the ADS light ladder and neutral editor dark ladder', () => {
@@ -420,8 +420,8 @@ describe('Atlassian-based palette', () => {
     expect(opaqueColor('text-secondary', lightTokens)).toMatchObject(hexToRgb('#44546F'));
     expect(opaqueColor('text-muted', lightTokens)).toMatchObject(hexToRgb('#626F86'));
     expect(opaqueColor('text-inverse', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
-    expect(opaqueColor('accent', lightTokens)).toMatchObject(hexToRgb('#0C66E4'));
-    expect(opaqueColor('accent-text', lightTokens)).toMatchObject(hexToRgb('#0C66E4'));
+    expect(opaqueColor('accent', lightTokens)).toMatchObject(hexToRgb('#27455c'));
+    expect(opaqueColor('accent-text', lightTokens)).toMatchObject(hexToRgb('#27455c'));
     expect(opaqueColor('accent-fg', lightTokens)).toMatchObject(hexToRgb('#FFFFFF'));
   });
 

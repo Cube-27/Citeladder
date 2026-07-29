@@ -150,9 +150,7 @@ export function IntegrationSettings() {
   return (
     <div className="grid gap-5">
       <p className="text-secondary max-w-2xl text-sm">
-        Connect first-party data to ground Traffic and LLM Analytics in real search performance.
-        Search Console and Analytics 4 share one Google OAuth grant; Bing Webmaster Tools connects
-        through Microsoft. Searchify requests read-only scopes and never displays credentials.
+        Connect Google Search Console, Analytics 4, and Bing Webmaster Tools with read-only access.
       </p>
 
       <CallbackNotice notice={notice} />

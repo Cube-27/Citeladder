@@ -1,7 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/marketing/primitives/button';
@@ -13,15 +15,11 @@ import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 /**
  * Login page. react-hook-form + zod client validation; on success the `me`
  * cache is primed and the user is routed directly to `/onboarding` (no
- * projects yet) or `/projects` — no marketing-landing bounce. Email is the
- * only sign-in path for now; the OAuth buttons stay in
- * `components/auth/oauth-buttons.tsx` until the backend providers are
- * configured. Any `ApiError` surfaces inline above the form.
- *
- * No card wrapper: on a split screen the form column IS the surface, so
- * boxing the form would put a border around a border.
+ * projects yet) or `/projects`. Email is the only sign-in path.
  */
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -39,50 +37,82 @@ export default function LoginPage() {
   const pending = isSubmitting || mutation.isPending;
 
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-1.5">
-        <h1 className="font-mkt-display text-mkt-d3 text-mkt-ink font-medium">Sign in</h1>
-        <p className="text-mkt-body text-mkt-ink-soft">Pick up where your brand left off.</p>
+    <div className="relative">
+      <div className="relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10 shadow-card">
+        <div className="mb-8 space-y-2 text-center sm:text-left">
+          <div className="inline-flex size-10 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 mb-2">
+            <Lock className="size-5" />
+          </div>
+          <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
+            Sign in
+          </h1>
+          <p className="text-sm text-slate-500">Pick up where your brand left off.</p>
+        </div>
+
+        {mutation.isError ? (
+          <div className="mb-6">
+            <MktAlert>{authErrorMessage(mutation.error)}</MktAlert>
+          </div>
+        ) : null}
+
+        <form noValidate onSubmit={onSubmit} className="grid gap-5">
+          <MktField label="Email" required error={errors.email?.message}>
+            {(props) => (
+              <div className="relative">
+                <MktInput
+                  {...props}
+                  {...register('email')}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  className="pl-10 bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20 focus:bg-white"
+                />
+                <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+              </div>
+            )}
+          </MktField>
+
+          <MktField label="Password" required error={errors.password?.message}>
+            {(props) => (
+              <div className="relative">
+                <MktInput
+                  {...props}
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="pl-10 pr-10 bg-slate-50/80 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20 focus:bg-white"
+                />
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  aria-label={showPassword ? 'Hide value' : 'Show value'}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            )}
+          </MktField>
+
+          <Button
+            type="submit"
+            className="mt-2 w-full font-semibold"
+            disabled={pending}
+          >
+            {pending ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </form>
+
+        {/* Footer link - No separating line */}
+        <p className="mt-8 text-center text-sm text-slate-600 font-medium">
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+            Create one
+          </Link>
+        </p>
       </div>
-
-      {mutation.isError ? <MktAlert>{authErrorMessage(mutation.error)}</MktAlert> : null}
-
-      <form noValidate onSubmit={onSubmit} className="grid gap-4">
-        <MktField label="Email" required error={errors.email?.message}>
-          {(props) => (
-            <MktInput
-              {...props}
-              {...register('email')}
-              type="email"
-              autoComplete="email"
-              placeholder="you@company.com"
-            />
-          )}
-        </MktField>
-
-        <MktField label="Password" required error={errors.password?.message}>
-          {(props) => (
-            <MktInput
-              {...props}
-              {...register('password')}
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-            />
-          )}
-        </MktField>
-
-        <Button type="submit" className="mt-1 w-full" disabled={pending}>
-          {pending ? 'Signing in…' : 'Sign in'}
-        </Button>
-      </form>
-
-      <p className="border-mkt-line text-mkt-sm text-mkt-ink-soft border-t pt-5">
-        Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-mkt-proof font-semibold">
-          Create one
-        </Link>
-      </p>
     </div>
   );
 }

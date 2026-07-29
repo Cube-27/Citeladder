@@ -27,14 +27,26 @@ import { cn } from '@/lib/utils';
  * spans, and the brand headline is a `<p>`.
  */
 const PROOF_POINTS = [
-  { icon: Target, lead: 'Deterministic scoring' },
-  { icon: FileSearch, lead: 'Evidence for every number' },
-  { icon: Lock, lead: 'Your own API keys, encrypted' },
+  {
+    icon: Target,
+    lead: 'Deterministic Scoring',
+    description: 'Repeatable, objective AI search performance evaluation',
+  },
+  {
+    icon: FileSearch,
+    lead: 'Evidence For Every Metric',
+    description: 'Trace ratings directly back to verified model outputs',
+  },
+  {
+    icon: Lock,
+    lead: 'Encrypted Key Vault',
+    description: 'Your own API keys, fully encrypted with zero retention',
+  },
 ] as const;
 
 export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }>) {
   return (
-    <Link href="/" aria-label="Searchify home" className="inline-flex no-underline">
+    <Link href="/" aria-label="Searchify home" className="inline-flex items-center gap-2.5 no-underline group">
       <Wordmark className={cn(compact && 'text-mkt-body')} />
     </Link>
   );
@@ -42,50 +54,70 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
 
 export function AuthBrandPanel() {
   return (
-    <WallpaperPanel
-      rounded={false}
-      className="relative col-span-5 flex flex-col border-0 border-r px-10 py-8 max-[900px]:hidden xl:px-12"
-    >
-      <div className="relative z-1 flex min-h-full flex-1 flex-col">
-        <AuthWordmark />
+    <div className="relative col-span-5 flex min-h-full flex-col justify-between px-10 py-10 max-[900px]:hidden xl:px-14">
+      {/* Subtle light ambient glow */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-24 -left-24 size-96 rounded-full bg-indigo-200/40 blur-[100px]" />
+        <div className="absolute top-1/2 -right-24 size-80 rounded-full bg-sky-200/40 blur-[90px]" />
+      </div>
 
-        {/* Centred body — the same three-band rhythm as the form column, so
-            the headline sits on the form's optical centre line. No floating
-            card: the panel IS the surface, so the statement sets directly on
-            the wallpaper at display scale and the proof points hang as a flat
-            ruled list underneath. */}
-        <div className="flex flex-1 items-center py-12">
-          <div className="max-w-[30rem]">
-            <p className="font-mkt-display text-mkt-d2 text-mkt-ink font-medium">
-              See how AI answers talk about your brand.
-            </p>
-            <p className="text-mkt-lead text-mkt-ink-soft mt-4 max-w-[26rem]">
-              Audits ChatGPT, Gemini and Claude with the prompts your buyers ask.
-            </p>
-
-            <ul className="border-mkt-line mt-10 grid list-none gap-0 border-t p-0">
-              {PROOF_POINTS.map((proof) => (
-                <li
-                  key={proof.lead}
-                  className="border-mkt-line flex items-center gap-3 border-b py-3"
-                >
-                  <span
-                    aria-hidden
-                    className="border-mkt-proof-line bg-mkt-wash text-mkt-proof flex size-8 shrink-0 items-center justify-center rounded-sm border"
-                  >
-                    <proof.icon className="size-4" strokeWidth={1.75} />
-                  </span>
-                  <span className="text-mkt-body text-mkt-ink">{proof.lead}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div className="flex flex-col gap-10">
+        <div>
+          <AuthWordmark />
         </div>
 
-        <Meta as="p" className="text-mkt-ink-muted">
+        {/* Feature showcase */}
+        <div className="my-auto space-y-8 max-w-lg">
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex size-2 rounded-full bg-indigo-600"></span>
+            </span>
+            Enterprise AI Search Intelligence
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="font-mkt-display text-3xl font-bold text-slate-900 sm:text-4xl leading-tight">
+              See how AI models talk about your brand.
+            </h2>
+            <p className="text-slate-600 text-base leading-relaxed">
+              Continuous, automated audits across ChatGPT, Gemini, and Claude with the real prompts your buyers ask.
+            </p>
+          </div>
+
+          {/* Feature Cards - No separating lines */}
+          <div className="grid gap-3 pt-2">
+            {PROOF_POINTS.map((proof) => (
+              <div
+                key={proof.lead}
+                className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-all duration-200 hover:border-indigo-300"
+              >
+                <div
+                  aria-hidden
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-600 transition-transform duration-200 group-hover:scale-105"
+                >
+                  <proof.icon className="size-5" strokeWidth={1.75} />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-slate-900">{proof.lead}</p>
+                  <p className="text-xs text-slate-500">{proof.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer info & active engine status */}
+      <div className="pt-6 flex items-center justify-between text-xs text-slate-500">
+        <Meta as="p" className="text-slate-500">
           © {new Date().getFullYear()} CUBE27
         </Meta>
+        <div className="flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-slate-600">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>ChatGPT • Gemini • Claude Active</span>
+        </div>
       </div>
-    </WallpaperPanel>
+    </div>
   );
 }

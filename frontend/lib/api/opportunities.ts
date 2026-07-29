@@ -9,7 +9,7 @@
  * `/api/v1` (same-origin proxy, invariant 12) and every read accepts an
  * `AbortSignal` via `ApiRequestOptions`.
  */
-import { mutationOptions, queryOptions } from '@tanstack/react-query';
+import { keepPreviousData, mutationOptions, queryOptions } from '@tanstack/react-query';
 
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
@@ -115,6 +115,7 @@ export const opportunitiesQueries = {
         min_priority: params?.min_priority ?? null,
       }),
       queryFn: ({ signal }) => opportunitiesApi.list(projectId, params, { signal }),
+      placeholderData: keepPreviousData,
     }),
   detail: (opportunityId: string) =>
     queryOptions({
@@ -125,6 +126,7 @@ export const opportunitiesQueries = {
     queryOptions({
       queryKey: queryKeys.opportunities.summary(projectId),
       queryFn: ({ signal }) => opportunitiesApi.summary(projectId, { signal }),
+      placeholderData: keepPreviousData,
     }),
 };
 

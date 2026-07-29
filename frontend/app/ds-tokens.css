@@ -98,13 +98,13 @@
   --ds-border-success: #22a06b;
 
   /* ─── Brand ─────────────────────────────────────────────────────────── */
-  --ds-background-brand-bold: #0c66e4;
-  --ds-background-brand-bold-hovered: #0055cc;
-  --ds-background-brand-bold-pressed: #09326c;
-  --ds-background-brand-subtlest: #e9f2ff;
-  --ds-background-brand-subtler: #cce0ff;
-  --ds-link: #0c66e4;
-  --ds-link-pressed: #09326c;
+  --ds-background-brand-bold: #27455c;
+  --ds-background-brand-bold-hovered: #1c3345;
+  --ds-background-brand-bold-pressed: #152738;
+  --ds-background-brand-subtlest: #e7edf1;
+  --ds-background-brand-subtler: #c3d2dc;
+  --ds-link: #27455c;
+  --ds-link-pressed: #152738;
 
   /* ─── Status fills ──────────────────────────────────────────────────── */
   --ds-background-danger: #ffedeb;
@@ -296,13 +296,13 @@ html[data-theme='dark'] {
   --ds-border-success: #4bce97;
 
   /* Brand */
-  --ds-background-brand-bold: #579dff;
-  --ds-background-brand-bold-hovered: #85b8ff;
-  --ds-background-brand-bold-pressed: #cce0ff;
-  --ds-background-brand-subtlest: #082145;
-  --ds-background-brand-subtler: #09326c;
-  --ds-link: #579dff;
-  --ds-link-pressed: #cce0ff;
+  --ds-background-brand-bold: #3d607d;
+  --ds-background-brand-bold-hovered: #4e7497;
+  --ds-background-brand-bold-pressed: #6288aa;
+  --ds-background-brand-subtlest: #112231;
+  --ds-background-brand-subtler: #1c3345;
+  --ds-link: #5a82a6;
+  --ds-link-pressed: #7da5cc;
 
   /* Status fills.
 

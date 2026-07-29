@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Check, Globe, Loader2, MessageSquare, Users } from 'lucide-react';
+import { AlertTriangle, Check, Globe, Loader2, MessageSquare, Sparkles, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,24 +11,33 @@ import type { DiscoveryState, SectionStatus } from '@/lib/onboarding/use-discove
  *
  * Three rows, one per parallel call, each resolving independently — the point
  * of the animation is to make "we are doing three things for you" legible while
- * the calls are in flight, and to let a single failure sit next to two
- * successes instead of replacing them.
- *
- * Motion is a spinner and a colour/opacity change only. No layout animates, so
- * rows do not jump as they land, and `motion-reduce` drops the spin — the icon
- * still changes shape on completion, so state is never conveyed by motion alone
- * (nor by colour alone: each row has an icon and a text status).
+ * the calls are in flight.
  */
 const ROWS = [
-  { key: 'domains', icon: Globe, label: 'Your domains' },
-  { key: 'competitors', icon: Users, label: 'Competitors' },
-  { key: 'prompts', icon: MessageSquare, label: 'Starting prompts' },
+  {
+    key: 'domains',
+    icon: Globe,
+    label: 'Your domains',
+    subLabel: 'Auto-detecting web presence and brand aliases',
+  },
+  {
+    key: 'competitors',
+    icon: Users,
+    label: 'Competitors',
+    subLabel: 'Identifying direct category rivals in AI responses',
+  },
+  {
+    key: 'prompts',
+    icon: MessageSquare,
+    label: 'Starting prompts',
+    subLabel: 'Generating high-intent buyer search prompts',
+  },
 ] as const;
 
 function statusText(status: SectionStatus, count: number, unconfigured: boolean) {
   if (status === 'error') return unconfigured ? 'Not available' : 'Failed';
-  if (status === 'done') return count === 0 ? 'Nothing found' : `${count} found`;
-  return 'Searching…';
+  if (status === 'done') return count === 0 ? 'Nothing found' : `${count} discovered`;
+  return 'AI Searching…';
 }
 
 export function DiscoveryProgress({
@@ -39,53 +48,91 @@ export function DiscoveryProgress({
   onRetry: (key: 'domains' | 'competitors' | 'prompts') => void;
 }>) {
   return (
-    <ul className="grid list-none gap-2 p-0">
+    <ul className="grid list-none gap-3.5 p-0">
       {ROWS.map((row) => {
         const section = state[row.key];
         const count = section.data.length;
         const done = section.status === 'done';
         const failed = section.status === 'error';
+        const searching = section.status === 'loading' || section.status === 'idle';
 
         return (
           <li
             key={row.key}
-            className="border-border-subtle bg-panel flex items-center gap-3 rounded-lg border px-3 py-2"
-          >
-            <row.icon
-              className={cn('size-4 shrink-0', done ? 'text-foreground' : 'text-muted')}
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.label}</span>
-
-            <span
-              className={cn(
-                'text-xs',
-                failed ? 'text-danger-text' : done ? 'text-secondary' : 'text-muted',
-              )}
-              // The row's status is announced as one string rather than as a
-              // spinner the screen reader would narrate as a graphic.
-              role="status"
-            >
-              {statusText(section.status, count, section.unconfigured)}
-            </span>
-
-            {failed ? (
-              <AlertTriangle className="text-danger-text size-4 shrink-0" aria-hidden />
-            ) : done ? (
-              <Check className="text-success size-4 shrink-0" aria-hidden />
-            ) : (
-              <Loader2
-                className="text-muted size-4 shrink-0 animate-spin motion-reduce:animate-none"
-                aria-hidden
-              />
+            className={cn(
+              'relative overflow-hidden rounded-xl border p-4 transition-all duration-300',
+              done
+                ? 'border-emerald-200 bg-emerald-50/30'
+                : failed
+                  ? 'border-red-200 bg-red-50/30'
+                  : 'border-indigo-100 bg-white',
             )}
+          >
+            <div className="flex items-center gap-4">
+              <div
+                className={cn(
+                  'flex size-10 shrink-0 items-center justify-center rounded-lg border transition-all duration-300',
+                  done
+                    ? 'border-emerald-200 bg-emerald-100/80 text-emerald-600'
+                    : failed
+                      ? 'border-red-200 bg-red-100/80 text-red-600'
+                      : 'border-indigo-200/80 bg-indigo-50 text-indigo-600',
+                )}
+              >
+                <row.icon className="size-5" strokeWidth={1.75} aria-hidden />
+              </div>
 
-            {failed && !section.unconfigured ? (
-              <Button variant="ghost" size="sm" onClick={() => onRetry(row.key)}>
-                Retry
-              </Button>
-            ) : null}
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-900">{row.label}</span>
+                  {searching && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-3xs font-medium text-indigo-600">
+                      <Sparkles className="size-2.5 animate-spin" /> AI Active
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">{row.subLabel}</p>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span
+                  className={cn(
+                    'text-xs font-medium',
+                    failed
+                      ? 'text-red-600'
+                      : done
+                        ? 'text-emerald-700 font-semibold'
+                        : 'text-indigo-600',
+                  )}
+                  role="status"
+                >
+                  {statusText(section.status, count, section.unconfigured)}
+                </span>
+
+                {failed ? (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <AlertTriangle className="size-3.5" aria-hidden />
+                  </div>
+                ) : done ? (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white animate-in zoom-in-50 duration-200">
+                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                  </div>
+                ) : (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                    <Loader2
+                      className="size-3.5 animate-spin motion-reduce:animate-none"
+                      aria-hidden
+                    />
+                  </div>
+                )}
+
+                {failed && !section.unconfigured ? (
+                  <Button variant="ghost" size="sm" onClick={() => onRetry(row.key)}>
+                    Retry
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           </li>
         );
       })}

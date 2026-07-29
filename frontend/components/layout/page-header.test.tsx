@@ -21,6 +21,7 @@ describe('PageHeader', () => {
     ['/analytics', 'Answers'],
     ['/traffic', 'Traffic'],
     ['/prompts', 'Prompts'],
+    ['/opportunities', 'Opportunities'],
     ['/site-health', 'Site health'],
     ['/knowledge-base', 'Brand knowledge'],
   ])('resolves %s to the page title %s', (route, title) => {
