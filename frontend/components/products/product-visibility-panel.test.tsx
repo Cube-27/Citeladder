@@ -231,6 +231,13 @@ describe('ProductVisibilityPanel states', () => {
     expect(screen.getByRole('img', { name: /Top 1: 2, Top 2–3: 0/ })).toBeInTheDocument();
   });
 
+  it('does not turn a fallback row key into a product detail link', () => {
+    renderWithData(makeVisibility({ products: [ownEntry({ product_id: null })] }));
+
+    expect(screen.getByText('Acme VoltBike 500')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Acme VoltBike 500' })).not.toBeInTheDocument();
+  });
+
   it('renders win rate and price relation columns; nulls stay —', () => {
     renderWithData();
 

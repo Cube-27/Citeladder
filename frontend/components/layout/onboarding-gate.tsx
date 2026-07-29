@@ -32,7 +32,6 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   useEffect(() => {
     if (needsOnboarding) {
       // Project availability is client-fetched; the skeleton prevents a page flash.
-      // react-doctor-disable-next-line
       router.replace('/onboarding');
     }
   }, [needsOnboarding, router]);

@@ -68,21 +68,15 @@ async function createTopics(
   projectId: string,
   prompts: ReviewPrompt[],
 ): Promise<Map<string, string>> {
-  const created = await Promise.all(
-    distinctTopicNames(prompts).map(async (name) => {
-      try {
-        const topic = await promptsApi.createTopic(projectId, { name });
-        return [name.toLowerCase(), topic.id] as const;
-      } catch {
-        // Intentionally swallowed — see the note above.
-        return null;
-      }
-    }),
-  );
-
   const ids = new Map<string, string>();
-  for (const entry of created) {
-    if (entry) ids.set(...entry);
+  for (const name of distinctTopicNames(prompts)) {
+    try {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- topic writes are deliberately rate-limited and ordered.
+      const topic = await promptsApi.createTopic(projectId, { name });
+      ids.set(name.toLowerCase(), topic.id);
+    } catch {
+      // Intentionally swallowed — see the note above.
+    }
   }
   return ids;
 }

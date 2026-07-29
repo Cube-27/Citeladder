@@ -91,6 +91,10 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       transitioning.current = false;
       setTargetRetry(0);
     },
+    onError: () => {
+      renderedStep.current = null;
+      transitioning.current = false;
+    },
   });
 
   const persist = useCallback(

@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
     instance: { destroy: ReturnType<typeof vi.fn>; highlight: ReturnType<typeof vi.fn> };
   }>,
   reducedMotion: false,
+  failUpdate: false,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -33,15 +34,21 @@ vi.mock('@tanstack/react-query', () => ({
   useMutation: ({
     mutationFn,
     onSuccess,
+    onError,
   }: {
     mutationFn: (payload: { status: string; step_id?: string | null }) => Promise<unknown>;
     onSuccess: (tour: unknown) => void;
+    onError?: () => void;
   }) => ({
     isPending: false,
     mutate: async (payload: { status: string; step_id?: string | null }) => {
       state.updates.push(payload);
-      const result = await mutationFn(payload);
-      onSuccess(result);
+      try {
+        const result = await mutationFn(payload);
+        onSuccess(result);
+      } catch {
+        onError?.();
+      }
     },
   }),
 }));
@@ -55,10 +62,10 @@ vi.mock('@/lib/project/project-context', () => ({
 vi.mock('@/lib/api/workspaces', () => ({
   workspacesApi: {
     getProductTour: vi.fn(),
-    updateProductTour: vi.fn(async (_workspaceId: string, payload: Record<string, unknown>) => ({
-      ...state.tour,
-      ...payload,
-    })),
+    updateProductTour: vi.fn(async (_workspaceId: string, payload: Record<string, unknown>) => {
+      if (state.failUpdate) throw new Error('persist failed');
+      return { ...state.tour, ...payload };
+    }),
   },
 }));
 
@@ -96,6 +103,7 @@ describe('ProductTourProvider', () => {
     state.updates.length = 0;
     state.driverCalls.length = 0;
     state.reducedMotion = false;
+    state.failUpdate = false;
     vi.useRealTimers();
   });
 
@@ -168,13 +176,15 @@ describe('ProductTourProvider', () => {
       'matchMedia',
       vi.fn(() => ({ matches: false })),
     );
-    renderTour();
+    const { unmount } = renderTour();
     await waitFor(() => expect(state.driverCalls).toHaveLength(1));
 
     await act(async () => {
       await (state.driverCalls[0].config.onNextClick as () => void)();
     });
     expect(state.updates).toContainEqual({ status: 'in_progress', step_id: 'dashboard-report' });
+
+    unmount();
 
     state.tour = { ...state.tour, step_id: 'provider-settings' };
     state.pathname = '/settings';
@@ -189,6 +199,26 @@ describe('ProductTourProvider', () => {
       await (state.driverCalls[1].config.onNextClick as () => void)();
     });
     expect(state.updates).toContainEqual({ status: 'completed', step_id: null });
+    vi.unstubAllGlobals();
+  });
+
+  it('clears transition state when persisting a step fails', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    );
+    state.failUpdate = true;
+    renderTour();
+    await waitFor(() => expect(state.driverCalls).toHaveLength(1));
+
+    await act(async () => {
+      await (state.driverCalls[0].config.onNextClick as () => void)();
+    });
+    await act(async () => {
+      await (state.driverCalls[0].config.onDestroyStarted as () => void)();
+    });
+
+    expect(state.updates).toContainEqual({ status: 'skipped', step_id: undefined });
     vi.unstubAllGlobals();
   });
 });

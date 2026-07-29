@@ -35,7 +35,7 @@ export function HeroEntrance({
   return (
     <m.div
       className={className}
-      initial={false}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: EASE_OUT }}
     >

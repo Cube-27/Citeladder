@@ -35,7 +35,7 @@ export function TourStepper({
         className,
       )}
     >
-      <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2" role="tablist">
+      <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2">
         {steps.map((step, idx) => {
           const Icon = step.icon;
           const isActive = idx === activeStep;
@@ -43,8 +43,7 @@ export function TourStepper({
             <button
               key={step.id}
               type="button"
-              role="tab"
-              aria-selected={isActive}
+              aria-pressed={isActive}
               onClick={() => onSelectStep(idx)}
               className={cn(
                 'text-mkt-meta flex items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold transition-colors',

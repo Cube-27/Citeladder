@@ -39,9 +39,9 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
+import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 
 const HISTORY_LIMIT = 25;
-const RERUN_POLL_INTERVAL_MS = 3_000;
 
 /**
  * Per-URL Site Health detail (Slice 8, mockup 711).
@@ -83,6 +83,7 @@ export function UrlDetail({
   // since the rerun was requested. A ref (not state): it is never rendered,
   // so updating it must not trigger a re-render.
   const hasObservedActiveRerunRef = useRef(false);
+  const preActivePollCountRef = useRef(0);
   const [rerunError, setRerunError] = useState<string | null>(null);
   const detailQuery = useQuery({
     ...siteHealthQueries.page(crawlId, siteUrlId),
@@ -94,9 +95,12 @@ export function UrlDetail({
       const status = query.state.data?.analysis_status;
       if (status === 'pending' || status === 'running') {
         hasObservedActiveRerunRef.current = true;
+        preActivePollCountRef.current = 0;
         return RERUN_POLL_INTERVAL_MS;
       }
       if (status === undefined || !hasObservedActiveRerunRef.current) {
+        if (preActivePollCountRef.current >= RERUN_MAX_PRE_ACTIVE_POLLS) return false;
+        preActivePollCountRef.current += 1;
         return RERUN_POLL_INTERVAL_MS;
       }
       return false;
@@ -152,6 +156,7 @@ export function UrlDetail({
             // Same crawl: poll in place. Reset the guard so the terminal-check
             // effect can't stop polling on the stale pre-rerun snapshot.
             hasObservedActiveRerunRef.current = false;
+            preActivePollCountRef.current = 0;
             setRerunPolling(true);
             return;
           }

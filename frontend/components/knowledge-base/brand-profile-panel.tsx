@@ -195,6 +195,7 @@ export function BrandProfilePanel({
   });
 
   const pendingError = saveMutation.error ?? acceptMutation.error;
+  const profileMutationPending = saveMutation.isPending || acceptMutation.isPending;
 
   return (
     <Card aria-labelledby="brand-knowledge-title">
@@ -209,6 +210,7 @@ export function BrandProfilePanel({
         <Button
           variant="secondary"
           onClick={() => dispatch({ type: 'patch', patch: { suggestOpen: true } })}
+          disabled={profileMutationPending}
         >
           <Sparkles className="size-4" aria-hidden />
           Draft with AI
@@ -232,6 +234,7 @@ export function BrandProfilePanel({
             {(field) => (
               <Textarea
                 {...field}
+                disabled={profileMutationPending}
                 value={draft.description}
                 onChange={(event) =>
                   dispatch({
@@ -249,6 +252,7 @@ export function BrandProfilePanel({
             {(field) => (
               <Textarea
                 {...field}
+                disabled={profileMutationPending}
                 value={draft.positioning}
                 onChange={(event) =>
                   dispatch({
@@ -263,6 +267,7 @@ export function BrandProfilePanel({
             {(field) => (
               <Textarea
                 {...field}
+                disabled={profileMutationPending}
                 value={draft.target_audience}
                 onChange={(event) =>
                   dispatch({
@@ -279,6 +284,7 @@ export function BrandProfilePanel({
             {(field) => (
               <Input
                 {...field}
+                disabled={profileMutationPending}
                 value={productsInput}
                 onChange={(event) =>
                   dispatch({ type: 'patch', patch: { productsInput: event.target.value } })
@@ -291,13 +297,17 @@ export function BrandProfilePanel({
         <div className="flex justify-end gap-2">
           {suggestion ? (
             <>
-              <Button variant="ghost" onClick={() => dispatch({ type: 'discard', profile })}>
+              <Button
+                variant="ghost"
+                onClick={() => dispatch({ type: 'discard', profile })}
+                disabled={profileMutationPending}
+              >
                 Discard draft
               </Button>
               <Button
                 variant="primary"
                 onClick={() => acceptMutation.mutate()}
-                disabled={acceptMutation.isPending}
+                disabled={profileMutationPending}
               >
                 <Sparkles className="size-4" aria-hidden />
                 {acceptMutation.isPending ? 'Applying…' : 'Apply reviewed draft'}
@@ -307,7 +317,7 @@ export function BrandProfilePanel({
             <Button
               variant="primary"
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
+              disabled={profileMutationPending}
             >
               <Save className="size-4" aria-hidden />
               {saveMutation.isPending ? 'Saving…' : 'Save brand knowledge'}

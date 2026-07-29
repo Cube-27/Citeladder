@@ -202,6 +202,16 @@ function withOccurrenceKeys<T>(
   });
 }
 
+function blockIdentity(block: BlogBlock): string {
+  switch (block.type) {
+    case 'heading':
+    case 'paragraph':
+      return `${block.type}:${block.text}`;
+    case 'list':
+      return `list:${block.items.join('\u001f')}`;
+  }
+}
+
 function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
   switch (block.type) {
     case 'heading':
@@ -266,7 +276,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           <p className="text-mkt-lead text-mkt-ink border-mkt-line border-l-2 pl-5">
             {post.excerpt}
           </p>
-          {withOccurrenceKeys(post.body, (block) => JSON.stringify(block)).map(({ key, value }) => (
+          {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (
             <PostBlock key={key} block={value} />
           ))}
         </article>

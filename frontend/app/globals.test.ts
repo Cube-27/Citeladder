@@ -49,11 +49,8 @@ function buildEmittedCss(): string {
 
 type Rgba = { r: number; g: number; b: number; a: number };
 
-/** Extract the brace-matched body of the first block whose opener matches. */
-function extractBlock(source: string, opener: RegExp): string {
-  const m = opener.exec(source);
-  if (!m) throw new Error(`block not found: ${opener}`);
-  let i = m.index + m[0].length; // just past the opening brace
+function extractBlockBody(source: string, bodyStart: number): string {
+  let i = bodyStart;
   let depth = 1;
   const start = i;
   while (i < source.length && depth > 0) {
@@ -62,6 +59,26 @@ function extractBlock(source: string, opener: RegExp): string {
     i += 1;
   }
   return source.slice(start, i - 1);
+}
+
+/** Extract the brace-matched body of the first block whose opener matches. */
+function extractBlock(source: string, opener: RegExp): string {
+  const match = opener.exec(source);
+  if (!match) throw new Error(`block not found: ${opener}`);
+  return extractBlockBody(source, match.index + match[0].length);
+}
+
+/** Extract every matching block so token declarations may be split safely. */
+function extractBlocks(source: string, opener: RegExp): string[] {
+  const matcher = new RegExp(
+    opener.source,
+    opener.flags.includes('g') ? opener.flags : `${opener.flags}g`,
+  );
+  const blocks = Array.from(source.matchAll(matcher), (match) =>
+    extractBlockBody(source, (match.index ?? 0) + match[0].length),
+  );
+  if (blocks.length === 0) throw new Error(`block not found: ${opener}`);
+  return blocks;
 }
 
 /** Parse `--name: value;` declarations from a CSS block body. */
@@ -738,7 +755,7 @@ describe.each([
    easiest thing in the system to make accidentally illegible.
 ═══════════════════════════════════════════════════════════════════════ */
 /** Live token map for the marketing theme — values are read, never asserted. */
-const mktTokens = parseDeclarations(extractBlock(marketingCss, /@theme\s*\{/));
+const mktTokens = parseDeclarations(extractBlocks(marketingCss, /@theme\s*\{/).join('\n'));
 
 function mktColor(role: string): Rgba {
   const resolved = resolveColor(`--color-mkt-${role}`, mktTokens);

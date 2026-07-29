@@ -24,7 +24,7 @@ import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
  */
 export default function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="relative min-h-dvh w-full overflow-hidden bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white min-[900px]:grid min-[900px]:grid-cols-12">
+    <div className="mkt-root relative min-h-dvh w-full overflow-hidden bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white min-[900px]:grid min-[900px]:grid-cols-12">
       {/* Subtle light ambient background lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-indigo-200/50 blur-[120px]" />

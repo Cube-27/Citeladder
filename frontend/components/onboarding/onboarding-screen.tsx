@@ -53,6 +53,13 @@ import { ReviewStep } from './review-step';
 const STEPS = ['Brand', 'Discovery', 'Review', 'Finish'] as const;
 type StepIndex = 0 | 1 | 2 | 3;
 
+function manualCompetitorId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `fallback-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
+}
+
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this is the wizard transaction owner; discovery, review, and field controls are already extracted components.
 export function OnboardingScreen() {
   const router = useRouter();
@@ -407,7 +414,7 @@ export function OnboardingScreen() {
                   setCompetitors((prev) => [
                     ...prev,
                     {
-                      id: `competitor:manual:${crypto.randomUUID()}`,
+                      id: `competitor:manual:${manualCompetitorId()}`,
                       name: '',
                       domains: [],
                       selected: true,

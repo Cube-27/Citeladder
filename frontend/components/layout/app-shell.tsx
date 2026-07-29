@@ -43,9 +43,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           {/* Logo row — matches topbar height */}
           <div className="border-border-subtle flex h-[var(--topbar-height)] shrink-0 items-center gap-3 border-b px-4">
             <LogoMark size={24} />
-            <span className="font-mkt-display text-foreground text-heading-sm font-bold">
-              Searchify
-            </span>
+            <span className="text-foreground text-heading-sm">Searchify</span>
           </div>
 
           <div className="border-border-subtle border-b p-2">

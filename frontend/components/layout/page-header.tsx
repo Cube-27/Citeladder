@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { displayHeadingXlClasses } from '@/components/ui/typography';
 
 import { resolveTitle } from './page-titles';
 
@@ -46,7 +47,7 @@ export function PageHeader({
     <div className={cn('flex flex-col gap-1 pb-1', className)}>
       {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
       <div className="flex flex-nowrap items-start gap-2">
-        <h1 className="font-mkt-display text-foreground min-w-0 flex-1 text-2xl font-bold [overflow-wrap:break-word]">
+        <h1 className={cn(displayHeadingXlClasses, 'min-w-0 flex-1 [overflow-wrap:break-word]')}>
           {resolved}
         </h1>
         {actions ? (

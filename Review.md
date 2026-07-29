@@ -8,11 +8,11 @@ It is synthesized directly from historical Pull Request reviews, automated CodeR
 
 ## ⛔ CRITICAL ZERO-TOLERANCE INVARIANT: Configuration Must NOT Live in Code
 
-**Rule 0 / Invariant 1:** Configuration, magic numbers, model names, thresholds, timeouts, rate limits, page sizes, retry counts, API endpoints, feature flags, or guardrail knobs MUST NEVER be hardcoded inline inside service, domain, worker, analysis, API, or UI component code.
+**Rule 0 / Invariant 1:** Externally tunable operational configuration—model names, scoring thresholds, timeouts, rate limits, page sizes, retry counts, API endpoints, feature flags, and guardrail knobs—MUST NEVER be hardcoded inline inside service, domain, worker, analysis, API, or UI component code. Fixed validation rules and structural values that define a local contract (for example, form field length bounds, enum cardinality, grid spans, or RFC-mandated constants) are not operational configuration and may remain beside the schema or component they govern.
 
 * **Backend Rule:** All config values MUST be declared in and loaded from `backend/app/core/config/*` (e.g., `config/__init__.py` `Settings`, `config/provider_catalog.py`, `config/billing.py`, `config/site_health.py`). Service and worker code reads settings objects injected or imported from `app.core.config`.
 * **Frontend Rule:** All environment variables, feature flags, API base paths, and tunable UI thresholds MUST live in `process.env`, `lib/config/*`, or the API-contract layer. Components and hooks must NEVER hardcode API endpoints or magic limits.
-* **Review Action:** Code reviewing agents MUST **REJECT** any PR or diff that introduces hardcoded configuration values, inline magic numbers, or inline model/endpoint strings into business or presentation logic.
+* **Review Action:** Code reviewing agents MUST **REJECT** diffs that introduce tunable operational configuration or model/endpoint strings into business or presentation logic. Do not flag self-explanatory static validation bounds or structural constants merely because they are numeric; require centralization only when changing the value is an operational tuning decision.
 
 ---
 

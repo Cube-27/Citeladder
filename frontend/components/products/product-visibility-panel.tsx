@@ -335,7 +335,6 @@ function rowKey(row: RankingRow): string {
 
 function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position: number }>) {
   const { entry } = row;
-  const id = rowKey(row);
   const subtitle = row.kind === 'own' ? row.entry.sku : row.entry.competitor_name;
   return (
     <TableRow>
@@ -345,9 +344,9 @@ function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position
       <TableCell className="max-w-[280px] min-w-[180px]">
         <div className="grid gap-0.5">
           <span className="flex items-center gap-2">
-            {row.kind === 'own' && id ? (
+            {row.kind === 'own' && row.entry.product_id ? (
               <Link
-                href={`/products/${id}`}
+                href={`/products/${row.entry.product_id}`}
                 className="text-foreground hover:text-accent-text truncate font-medium transition-colors"
               >
                 {entry.name}

@@ -73,7 +73,7 @@ export function AuthBrandPanel() {
         <div className="my-auto max-w-lg space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
             <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-indigo-400 opacity-75 motion-reduce:animate-none"></span>
               <span className="relative inline-flex size-2 rounded-full bg-indigo-600"></span>
             </span>
             Enterprise AI Search Intelligence
@@ -118,7 +118,7 @@ export function AuthBrandPanel() {
           © {new Date().getFullYear()} CUBE27
         </Meta>
         <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
-          <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+          <span className="size-1.5 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none" />
           <span>ChatGPT • Gemini • Claude Active</span>
         </div>
       </div>

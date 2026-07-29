@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -32,13 +32,14 @@ if (typeof window !== 'undefined') {
  */
 function AnimatedNumber({ value }: { value: string }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const [displayValue, setDisplayValue] = useState(value);
   const reduceMotion = useReducedMotion();
 
   useGSAP(
     () => {
       const numericTarget = parseFloat(value.replace(/,/g, ''));
       if (isNaN(numericTarget) || reduceMotion) {
-        if (ref.current) ref.current.textContent = value;
+        setDisplayValue(value);
         return;
       }
 
@@ -56,13 +57,12 @@ function AnimatedNumber({ value }: { value: string }) {
           once: true,
         },
         onUpdate: () => {
-          if (!ref.current) return;
           if (isDecimal) {
-            ref.current.textContent = obj.val.toFixed(1);
+            setDisplayValue(obj.val.toFixed(1));
           } else if (isComma) {
-            ref.current.textContent = Math.floor(obj.val).toLocaleString('en-US');
+            setDisplayValue(Math.floor(obj.val).toLocaleString('en-US'));
           } else {
-            ref.current.textContent = Math.floor(obj.val).toString();
+            setDisplayValue(Math.floor(obj.val).toString());
           }
         },
       });
@@ -70,7 +70,7 @@ function AnimatedNumber({ value }: { value: string }) {
     { scope: ref, dependencies: [value, reduceMotion] },
   );
 
-  return <span ref={ref}>{value}</span>;
+  return <span ref={ref}>{displayValue}</span>;
 }
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;

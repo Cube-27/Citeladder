@@ -164,7 +164,6 @@ export function useAttributionQueries(projectId: string | null, enabled = true) 
 
   const [recomputeTaskId, setRecomputeTaskId] = useState<string | null>(null);
   // The succeeded task poll below invalidates the exact snapshot key.
-  // react-doctor-disable-next-line
   const recomputeMutation = useMutation({
     mutationFn: () => attributionApi.recompute(projectId!),
     onSuccess: (task) => setRecomputeTaskId(task.task_id),
