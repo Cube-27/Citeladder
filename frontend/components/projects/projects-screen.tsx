@@ -77,9 +77,9 @@ export function ProjectsScreen() {
           <span className="text-muted text-xs">Choose the active brand for this Dashboard.</span>
         </div>
 
-        <Card>
+        <Card className="border-slate-200/80 shadow-xs overflow-hidden">
           <CardContent className="p-0">
-            <ul className="divide-border-subtle grid list-none divide-y p-0">
+            <ul className="divide-slate-100 grid list-none divide-y p-0">
               {projects.map((project) => {
                 const isActive = project.id === activeProjectId;
                 const label = project.brand_name || project.name;
@@ -87,15 +87,15 @@ export function ProjectsScreen() {
                   <li key={project.id}>
                     <div
                       className={cn(
-                        'flex items-center gap-3 pe-3 transition-colors',
-                        isActive && 'bg-accent-subtle',
+                        'flex items-center gap-3 pe-4 transition-colors',
+                        isActive ? 'bg-indigo-50/40' : 'hover:bg-slate-50/60',
                       )}
                     >
                       <button
                         type="button"
                         onClick={() => setActiveProjectId(project.id)}
                         aria-current={isActive ? 'true' : undefined}
-                        className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
+                        className="focus-ring flex min-w-0 flex-1 items-center gap-3.5 px-4 py-3.5 text-left"
                       >
                         <BrandLogo
                           name={label}
@@ -104,18 +104,18 @@ export function ProjectsScreen() {
                           size="md"
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="text-foreground block truncate text-sm font-medium">
+                          <span className="text-slate-900 block truncate text-sm font-semibold">
                             {label}
                           </span>
                           {project.website_url ? (
-                            <span className="text-muted block truncate text-xs">
+                            <span className="text-slate-500 block truncate text-xs">
                               {project.website_url}
                             </span>
                           ) : null}
                         </span>
                         {isActive ? (
-                          <span className="text-accent-text inline-flex shrink-0 items-center gap-1.5 text-xs">
-                            <Check className="size-4" aria-hidden />
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                            <Check className="size-3.5" aria-hidden />
                             Active
                           </span>
                         ) : null}
@@ -125,6 +125,7 @@ export function ProjectsScreen() {
                         size="sm"
                         onClick={() => setEditing(project)}
                         aria-label={`Edit ${label}`}
+                        className="text-slate-600 hover:text-slate-900"
                       >
                         Edit
                       </Button>

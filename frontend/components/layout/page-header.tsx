@@ -43,17 +43,17 @@ export function PageHeader({
   const resolved = title ?? resolveTitle(pathname);
 
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
+    <div className={cn('flex flex-col gap-1 pb-1', className)}>
       {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
       <div className="flex flex-nowrap items-start gap-2">
-        <h1 className="text-foreground min-w-0 flex-1 text-xl [overflow-wrap:break-word]">
+        <h1 className="font-mkt-display text-foreground min-w-0 flex-1 text-2xl font-bold tracking-tight [overflow-wrap:break-word]">
           {resolved}
         </h1>
         {actions ? (
           <div className="ms-auto flex shrink-0 items-center gap-2 ps-8">{actions}</div>
         ) : null}
       </div>
-      {summary ? <p className="text-secondary max-w-[70ch] text-sm">{summary}</p> : null}
+      {summary ? <p className="text-muted max-w-[70ch] text-sm leading-relaxed">{summary}</p> : null}
     </div>
   );
 }
