@@ -93,8 +93,9 @@ create or regenerate a `package-lock.json`.
 
 ## Always-on rules (full list in `docs/invariants.md`)
 
-- **Config never lives in service code.** Tokens, thresholds, model ids, transport catalogs,
-  guardrail knobs live in `app/core/config/*`. (invariant 1)
+- **Config never lives in service code (Zero-Tolerance).** Tokens, thresholds, model ids,
+  timeouts, limits, transport catalogs, and guardrail knobs live in `app/core/config/*`
+  (backend) or `process.env` / `lib/config/*` (frontend). Never hardcode config inline. (invariant 1)
 - **Workspace auth on every query.** Every project-owned read/write goes through the
   `require_workspace_member` dependency. Never scope by `user_id` or an admin shortcut.
   (invariant 5)

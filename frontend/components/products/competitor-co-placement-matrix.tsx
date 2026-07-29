@@ -77,13 +77,13 @@ export function CompetitorCoPlacementMatrix({ matrix }: Readonly<{ matrix: CoPla
                         {row.sku}
                       </span>
                     </TableHead>
-                    {row.cells.map((count, index) => (
-                      <TableCell
-                        key={matrix.columns[index]?.key ?? index}
-                        numeric
-                        className="text-secondary"
-                      >
-                        {count === null ? <span className="text-subtle">—</span> : count}
+                    {matrix.columns.map((column, index) => (
+                      <TableCell key={column.key} numeric className="text-secondary">
+                        {row.cells[index] === null ? (
+                          <span className="text-subtle">—</span>
+                        ) : (
+                          row.cells[index]
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>

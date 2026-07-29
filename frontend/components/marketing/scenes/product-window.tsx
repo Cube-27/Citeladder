@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   BarChart3,
   Bot,
@@ -31,7 +31,6 @@ if (typeof window !== 'undefined') {
  * Animated number component powered by GSAP ScrollTrigger.
  */
 function AnimatedNumber({ value }: { value: string }) {
-  const [displayValue, setDisplayValue] = useState(value);
   const ref = useRef<HTMLSpanElement>(null);
   const reduceMotion = useReducedMotion();
 
@@ -39,7 +38,7 @@ function AnimatedNumber({ value }: { value: string }) {
     () => {
       const numericTarget = parseFloat(value.replace(/,/g, ''));
       if (isNaN(numericTarget) || reduceMotion) {
-        setDisplayValue(value);
+        if (ref.current) ref.current.textContent = value;
         return;
       }
 
@@ -57,12 +56,13 @@ function AnimatedNumber({ value }: { value: string }) {
           once: true,
         },
         onUpdate: () => {
+          if (!ref.current) return;
           if (isDecimal) {
-            setDisplayValue(obj.val.toFixed(1));
+            ref.current.textContent = obj.val.toFixed(1);
           } else if (isComma) {
-            setDisplayValue(Math.floor(obj.val).toLocaleString('en-US'));
+            ref.current.textContent = Math.floor(obj.val).toLocaleString('en-US');
           } else {
-            setDisplayValue(Math.floor(obj.val).toString());
+            ref.current.textContent = Math.floor(obj.val).toString();
           }
         },
       });
@@ -70,7 +70,7 @@ function AnimatedNumber({ value }: { value: string }) {
     { scope: ref, dependencies: [value, reduceMotion] },
   );
 
-  return <span ref={ref}>{displayValue}</span>;
+  return <span ref={ref}>{value}</span>;
 }
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -174,8 +174,10 @@ const GRID_COLS_MAP: Record<number, string> = {
   4: 'grid-cols-4',
 };
 
+// react-doctor-disable-next-line react-doctor/no-giant-component -- one synchronized GSAP/stepper scene owns all four mutually exclusive frames and their shared transition state.
 export function ProductWindow() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const { activeStep, isPlaying, selectStep, togglePlay } = useTourAutoplay(
     STORY_STEPS.length,
     STEP_DURATION,
@@ -196,13 +198,13 @@ export function ProductWindow() {
             <span className="size-2.5 rounded-full bg-amber-400/80" />
             <span className="size-2.5 rounded-full bg-emerald-400/80" />
           </div>
-          <Meta as="p" className="text-mkt-ink flex items-center gap-2 text-xs font-semibold">
+          <Meta as="p" className="text-mkt-meta text-mkt-ink flex items-center gap-2 font-semibold">
             <span className="bg-mkt-proof size-2 animate-pulse rounded-full" />
             Acme Corp / AI Visibility Workspace
           </Meta>
         </div>
         <div className="flex items-center gap-2">
-          <Meta className="border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted rounded-md border px-2 py-0.5 font-mono text-[11px]">
+          <Meta className="text-mkt-meta border-mkt-line bg-mkt-paper-raised text-mkt-ink-muted rounded-md border px-2 py-0.5 font-mono">
             Apr 01 — Jun 30
           </Meta>
           <ExampleDataNote />
@@ -220,7 +222,7 @@ export function ProductWindow() {
           compact
         />
 
-        <div className="bg-mkt-proof-soft/40 border-mkt-proof-line/30 mt-2 rounded-md border px-2.5 py-1.5 text-[11px]">
+        <div className="text-mkt-meta bg-mkt-proof-soft/40 border-mkt-proof-line/30 mt-2 rounded-md border px-2.5 py-1.5">
           <span className="text-mkt-proof mb-0.5 block font-mono font-bold uppercase">
             {currentStep.shiftTitle}
           </span>
@@ -237,11 +239,11 @@ export function ProductWindow() {
         className="border-mkt-line-soft bg-mkt-paper-raised grid min-h-[280px] items-stretch gap-0 overflow-hidden rounded-lg border lg:grid-cols-[12rem_minmax(0,1fr)]"
       >
         {/* Streamlined Authentic Sidebar */}
-        <aside className="bg-mkt-surface border-mkt-line-soft hidden flex-col justify-between border-r p-3 shadow-xs lg:flex">
+        <aside className="bg-mkt-surface border-mkt-line-soft hidden flex-col justify-between border-r p-3 lg:flex">
           <div className="space-y-4">
             {COMPACT_NAV_GROUPS.map((group) => (
               <div key={group.title} className="space-y-0.5">
-                <p className="text-mkt-ink-muted mb-1 px-2 font-mono text-[10px] font-bold tracking-wider uppercase">
+                <p className="text-mkt-meta text-mkt-ink-muted mb-1 px-2 font-mono font-bold uppercase">
                   {group.title}
                 </p>
                 {group.items.map((item) => {
@@ -251,7 +253,7 @@ export function ProductWindow() {
                   return (
                     <div
                       key={item.label}
-                      className={`relative flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                      className={`text-mkt-meta relative flex items-center gap-2 rounded-md px-2 py-1.5 font-medium transition-colors ${
                         isActive
                           ? 'bg-mkt-proof-soft text-mkt-proof font-semibold'
                           : 'text-mkt-ink-muted'
@@ -274,7 +276,7 @@ export function ProductWindow() {
         <div className="bg-mkt-surface flex flex-col justify-between p-4 sm:p-5">
           <AnimatePresence mode="wait">
             {activeStep === 0 && (
-              <motion.div
+              <m.div
                 key="observe-view"
                 initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -283,10 +285,10 @@ export function ProductWindow() {
                 className="space-y-3.5"
               >
                 <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-ink text-sm font-semibold">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
                     Visibility Overview & Trend Graph
                   </p>
-                  <span className="text-mkt-proof flex items-center gap-1 font-mono text-[11px] font-semibold">
+                  <span className="text-mkt-meta text-mkt-proof flex items-center gap-1 font-mono font-semibold">
                     <TrendingUp className="size-3" /> Cross-Run Trend
                   </span>
                 </div>
@@ -305,13 +307,13 @@ export function ProductWindow() {
                         index < METRICS.length - 1 ? 'border-mkt-line-soft border-r' : ''
                       }`}
                     >
-                      <Meta as="p" className="text-mkt-ink-muted text-[10px]">
+                      <Meta as="p" className="text-mkt-meta text-mkt-ink-muted">
                         {metric.label}
                       </Meta>
-                      <b className="text-mkt-ink mt-0.5 block font-mono text-base leading-none font-bold tabular-nums">
+                      <b className="text-mkt-body text-mkt-ink mt-0.5 block font-mono leading-none font-bold tabular-nums">
                         <AnimatedNumber value={metric.value} />
                         {'delta' in metric && metric.delta && (
-                          <small className="text-mkt-evidence-text ml-1 font-mono text-[10px] font-semibold tabular-nums">
+                          <small className="text-mkt-meta text-mkt-evidence-text ml-1 font-mono font-semibold tabular-nums">
                             {metric.delta}
                           </small>
                         )}
@@ -322,7 +324,7 @@ export function ProductWindow() {
 
                 {/* SVG Trend Graph (Real Product Chart) */}
                 <div className="bg-mkt-paper-raised border-mkt-line-soft rounded-md border p-3">
-                  <div className="text-mkt-ink-muted mb-2 flex items-center justify-between font-mono text-[11px]">
+                  <div className="text-mkt-meta text-mkt-ink-muted mb-2 flex items-center justify-between font-mono">
                     <span>Visibility Score Trend (Last 8 Audits)</span>
                     <span className="text-mkt-evidence-text font-semibold">72.4% Peak</span>
                   </div>
@@ -335,8 +337,16 @@ export function ProductWindow() {
                     >
                       <defs>
                         <linearGradient id="visibilityGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#0c66e4" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#0c66e4" stopOpacity="0.0" />
+                          <stop
+                            offset="0%"
+                            stopColor="var(--color-mkt-accent)"
+                            stopOpacity="0.25"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--color-mkt-accent)"
+                            stopOpacity="0.0"
+                          />
                         </linearGradient>
                       </defs>
                       <path
@@ -346,24 +356,24 @@ export function ProductWindow() {
                       <path
                         d="M 0,45 Q 40,38 80,32 T 160,22 T 240,15 T 300,8"
                         fill="none"
-                        stroke="#0c66e4"
+                        stroke="var(--color-mkt-accent)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                       />
-                      <circle cx="300" cy="8" r="3.5" fill="#0c66e4" />
+                      <circle cx="300" cy="8" r="3.5" fill="var(--color-mkt-accent)" />
                     </svg>
                   </div>
-                  <div className="text-mkt-ink-muted border-mkt-line-soft mt-1.5 flex justify-between border-t pt-1 font-mono text-[9px]">
+                  <div className="text-mkt-meta text-mkt-ink-muted border-mkt-line-soft mt-1.5 flex justify-between border-t pt-1 font-mono">
                     <span>Apr 01</span>
                     <span>May 15</span>
                     <span>Jun 30 (Latest Run)</span>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {activeStep === 1 && (
-              <motion.div
+              <m.div
                 key="trace-view"
                 initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -372,16 +382,16 @@ export function ProductWindow() {
                 className="space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-ink text-sm font-semibold">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
                     Answers & Evidence Trace
                   </p>
-                  <span className="text-mkt-proof flex items-center gap-1 font-mono text-[11px] font-semibold">
+                  <span className="text-mkt-meta text-mkt-proof flex items-center gap-1 font-mono font-semibold">
                     <ShieldCheck className="text-mkt-evidence-text size-3" /> 100% Verifiable
                   </span>
                 </div>
 
                 <div className="bg-mkt-paper-raised border-mkt-line-soft rounded-md border p-3">
-                  <div className="text-mkt-ink-muted flex items-center justify-between text-[11px]">
+                  <div className="text-mkt-meta text-mkt-ink-muted flex items-center justify-between">
                     <span className="text-mkt-ink flex items-center gap-1 font-semibold">
                       <Search className="text-mkt-proof size-3" />
                       Observed Answer Text
@@ -391,7 +401,7 @@ export function ProductWindow() {
                     </span>
                   </div>
 
-                  <p className="text-mkt-ink mt-2 text-xs leading-relaxed font-medium">
+                  <p className="text-mkt-meta text-mkt-ink mt-2 leading-relaxed font-medium">
                     {EVIDENCE.answer}
                   </p>
 
@@ -399,7 +409,7 @@ export function ProductWindow() {
                     {EVIDENCE.chain.map(([label, value]) => (
                       <span
                         key={label}
-                        className="bg-mkt-surface border-mkt-line text-mkt-evidence-text rounded-full border px-2 py-0.5 font-mono text-[10px] shadow-xs"
+                        className="text-mkt-meta bg-mkt-surface border-mkt-line text-mkt-evidence-text rounded-full border px-2 py-0.5 font-mono"
                       >
                         <span className="text-mkt-ink-muted uppercase">{label}:</span>{' '}
                         <span className="font-semibold">{value}</span>
@@ -407,11 +417,11 @@ export function ProductWindow() {
                     ))}
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {activeStep === 2 && (
-              <motion.div
+              <m.div
                 key="benchmark-view"
                 initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -420,17 +430,17 @@ export function ProductWindow() {
                 className="space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-ink text-sm font-semibold">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
                     Share of Voice & Competitive Chart
                   </p>
-                  <span className="text-mkt-proof font-mono text-[11px] font-semibold">
+                  <span className="text-mkt-meta text-mkt-proof font-mono font-semibold">
                     Market Share Comparison
                   </span>
                 </div>
 
                 <div className="bg-mkt-paper-raised border-mkt-line-soft space-y-2.5 rounded-md border p-3">
                   <div>
-                    <div className="mb-1 flex justify-between text-[11px] font-semibold">
+                    <div className="text-mkt-meta mb-1 flex justify-between font-semibold">
                       <span className="text-mkt-ink">Acme Corp (Your Brand)</span>
                       <span className="text-mkt-accent font-mono">38.4% Share (#1 Lead)</span>
                     </div>
@@ -440,7 +450,7 @@ export function ProductWindow() {
                   </div>
 
                   <div>
-                    <div className="text-mkt-ink-soft mb-1 flex justify-between text-[11px]">
+                    <div className="text-mkt-meta text-mkt-ink-soft mb-1 flex justify-between">
                       <span>Competitor A</span>
                       <span className="font-mono">28.1%</span>
                     </div>
@@ -450,7 +460,7 @@ export function ProductWindow() {
                   </div>
 
                   <div>
-                    <div className="text-mkt-ink-soft mb-1 flex justify-between text-[11px]">
+                    <div className="text-mkt-meta text-mkt-ink-soft mb-1 flex justify-between">
                       <span>Competitor B</span>
                       <span className="font-mono">19.5%</span>
                     </div>
@@ -459,11 +469,11 @@ export function ProductWindow() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
 
             {activeStep === 3 && (
-              <motion.div
+              <m.div
                 key="optimize-view"
                 initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -472,10 +482,10 @@ export function ProductWindow() {
                 className="space-y-2.5"
               >
                 <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-ink text-sm font-semibold">
+                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
                     Opportunities & Action Recommendations
                   </p>
-                  <span className="text-mkt-proof font-mono text-[11px] font-semibold">
+                  <span className="text-mkt-meta text-mkt-proof font-mono font-semibold">
                     High-Impact Moves
                   </span>
                 </div>
@@ -486,15 +496,15 @@ export function ProductWindow() {
                       <Zap className="size-3" />
                     </span>
                     <div>
-                      <span className="text-mkt-ink block text-[11px] font-semibold">
+                      <span className="text-mkt-meta text-mkt-ink block font-semibold">
                         Update Deprecated Docs Cited by ChatGPT
                       </span>
-                      <span className="text-mkt-ink-muted text-[10px]">
+                      <span className="text-mkt-meta text-mkt-ink-muted">
                         Increases ChatGPT recommendation score by +14%
                       </span>
                     </div>
                   </div>
-                  <span className="bg-mkt-accent rounded-md px-2 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="text-mkt-meta bg-mkt-accent rounded-md px-2 py-0.5 font-semibold text-white">
                     Fix Now
                   </span>
                 </div>
@@ -505,19 +515,19 @@ export function ProductWindow() {
                       <Bot className="size-3" />
                     </span>
                     <div>
-                      <span className="text-mkt-ink block text-[11px] font-semibold">
+                      <span className="text-mkt-meta text-mkt-ink block font-semibold">
                         Publish Enterprise Comparison Table for Gemini
                       </span>
-                      <span className="text-mkt-ink-muted text-[10px]">
+                      <span className="text-mkt-meta text-mkt-ink-muted">
                         Captures missing citations in enterprise buyer queries
                       </span>
                     </div>
                   </div>
-                  <span className="bg-mkt-surface border-mkt-line text-mkt-ink rounded-md border px-2 py-0.5 text-[10px] font-semibold">
+                  <span className="text-mkt-meta bg-mkt-surface border-mkt-line text-mkt-ink rounded-md border px-2 py-0.5 font-semibold">
                     View Draft
                   </span>
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>

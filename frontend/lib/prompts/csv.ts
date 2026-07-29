@@ -189,5 +189,5 @@ export function parsePromptCsv(raw: string): ParsedCsv {
 
 /** The importable subset (rows without fatal errors). */
 export function validRows(parsed: ParsedCsv): PromptInput[] {
-  return parsed.rows.filter((row) => row.errors.length === 0).map((row) => row.input);
+  return parsed.rows.flatMap((row) => (row.errors.length === 0 ? [row.input] : []));
 }

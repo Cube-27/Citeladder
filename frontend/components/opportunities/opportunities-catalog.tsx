@@ -28,12 +28,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  EvidenceDrawer,
-  OpportunityStatusBadge,
-  OpportunityTypeBadge,
-} from '@/components/opportunities/evidence-drawer';
+import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-status-meta';
+import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
+import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
 import type {

@@ -66,7 +66,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
 ];
 
 const LINK =
-  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink inline-flex items-center gap-1 transition-all duration-200 hover:translate-x-0.5';
+  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink inline-flex items-center gap-1 transition-[color,transform] duration-200 hover:translate-x-0.5';
 
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
@@ -97,7 +97,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={social.label}
-      className="border-mkt-line bg-mkt-surface text-mkt-ink-soft hover:border-mkt-proof hover:text-mkt-proof grid size-9 place-items-center rounded-md border shadow-xs transition-all duration-200"
+      className="border-mkt-line bg-mkt-surface text-mkt-ink-soft hover:border-mkt-proof hover:text-mkt-proof grid size-9 place-items-center rounded-md border transition-colors duration-200"
     >
       <Icon aria-hidden className="size-4" />
     </a>

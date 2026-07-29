@@ -15,7 +15,9 @@ import { Eyebrow, Meta } from '../primitives/label';
 import { PageHero } from '../primitives/page-hero';
 import { Container, Section } from '../primitives/section';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
-import { blogPostingJsonLd, JsonLd } from '../seo/json-ld';
+import { blogPostingJsonLd } from '@/lib/seo/json-ld';
+
+import { JsonLd } from '../seo/json-ld';
 
 /**
  * `/blog` and `/blog/[slug]`.
@@ -187,6 +189,19 @@ function PostMetaByline({ post }: Readonly<{ post: BlogPost }>) {
   return <Meta>{parts.join(' · ')}</Meta>;
 }
 
+function withOccurrenceKeys<T>(
+  values: readonly T[],
+  identity: (value: T) => string,
+): Array<{ key: string; value: T }> {
+  const occurrences = new Map<string, number>();
+  return values.map((value) => {
+    const base = identity(value);
+    const occurrence = occurrences.get(base) ?? 0;
+    occurrences.set(base, occurrence + 1);
+    return { key: `${base}:${occurrence}`, value };
+  });
+}
+
 function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
   switch (block.type) {
     case 'heading':
@@ -194,9 +209,8 @@ function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
     case 'list':
       return (
         <ul className="text-mkt-body text-mkt-ink-soft my-5 grid list-disc gap-2 pl-5">
-          {/* Keyed by index — items in one list may repeat verbatim. */}
-          {block.items.map((item, index) => (
-            <li key={index}>{item}</li>
+          {withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
+            <li key={key}>{value}</li>
           ))}
         </ul>
       );
@@ -252,8 +266,8 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           <p className="text-mkt-lead text-mkt-ink border-mkt-line border-l-2 pl-5">
             {post.excerpt}
           </p>
-          {post.body.map((block, index) => (
-            <PostBlock key={index} block={block} />
+          {withOccurrenceKeys(post.body, (block) => JSON.stringify(block)).map(({ key, value }) => (
+            <PostBlock key={key} block={value} />
           ))}
         </article>
       </Container>

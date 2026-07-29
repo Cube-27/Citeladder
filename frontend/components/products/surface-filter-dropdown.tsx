@@ -13,7 +13,7 @@ import {
 import { MEASUREMENT_SURFACE_LABEL } from '@/lib/products/catalog';
 
 /** Display label for one analysis surface id (`''` = measurement). */
-export function surfaceLabel(surface: string): string {
+function surfaceLabel(surface: string): string {
   return surface === '' ? MEASUREMENT_SURFACE_LABEL : surface;
 }
 

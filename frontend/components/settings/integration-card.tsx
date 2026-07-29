@@ -132,6 +132,8 @@ function ConnectionRow({
     onError: (error) => setTestState({ ok: false, message: errorMessage(error) }),
   });
 
+  // The terminal sync poll invalidates integrations; enqueueing alone persists no projection.
+  // react-doctor-disable-next-line
   const syncMutation = useMutation({
     mutationFn: () => integrationsApi.sync(connection.id),
     onSuccess: (enqueued) => {

@@ -38,11 +38,10 @@ vi.mock('@tanstack/react-query', () => ({
     onSuccess: (tour: unknown) => void;
   }) => ({
     isPending: false,
-    mutateAsync: async (payload: { status: string; step_id?: string | null }) => {
+    mutate: async (payload: { status: string; step_id?: string | null }) => {
       state.updates.push(payload);
       const result = await mutationFn(payload);
       onSuccess(result);
-      return result;
     },
   }),
 }));

@@ -94,15 +94,15 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
   });
 
   const persist = useCallback(
-    async (status: ProductTourStatus, stepId?: string | null) => {
+    (status: ProductTourStatus, stepId?: string | null) => {
       if (!workspaceId || update.isPending) return;
-      await update.mutateAsync({ status, step_id: stepId });
+      update.mutate({ status, step_id: stepId });
     },
     [update, workspaceId],
   );
 
   const replay = useCallback(() => {
-    void persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
+    persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
   }, [persist]);
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     const tour = tourQuery.data;
     if (!tour || update.isPending) return cleanup;
     if (tour.status === 'not_started') {
-      void persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
+      persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
       return cleanup;
     }
     if (tour.status !== 'in_progress') return cleanup;
@@ -140,6 +140,8 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     // current page first; after step two the provider-settings hook was absent,
     // so the tour only retried and then silently disappeared.
     if (!isCurrentStepLocation(pathname, search, step.path)) {
+      // A tour step can target another client-routed screen; no content is shown meanwhile.
+      // react-doctor-disable-next-line
       router.push(step.path);
       return cleanup;
     }
@@ -180,17 +182,17 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
         transitioning.current = true;
         destroyInstance();
         const next = PRODUCT_TOUR_STEPS[stepIndex + 1];
-        void persist(next ? 'in_progress' : 'completed', next?.id ?? null);
+        persist(next ? 'in_progress' : 'completed', next?.id ?? null);
       },
       onPrevClick: () => {
         const previous = PRODUCT_TOUR_STEPS[Math.max(0, stepIndex - 1)];
         if (previous.id === step.id) return;
         transitioning.current = true;
         destroyInstance();
-        void persist('in_progress', previous.id);
+        persist('in_progress', previous.id);
       },
       onDestroyStarted: () => {
-        if (!transitioning.current) void persist('skipped');
+        if (!transitioning.current) persist('skipped');
         destroyInstance();
       },
     });

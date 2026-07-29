@@ -51,7 +51,10 @@ export function groupByPrompt(items: readonly VisibilityExecutionEvidence[]): Pr
 
 /** The distinct non-blank search-query strings for one execution, in order. */
 export function queryTexts(item: VisibilityExecutionEvidence): string[] {
-  return item.search_events.map((event) => event.query).filter((query) => query.trim().length > 0);
+  return item.search_events.flatMap((event) => {
+    const query = event.query.trim();
+    return query ? [query] : [];
+  });
 }
 
 /** Human explanation for a count-only execution ("provider reported N searches"). */

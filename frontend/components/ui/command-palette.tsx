@@ -65,6 +65,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listboxId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Where focus goes when the palette closes. Radix restores focus to its own
@@ -82,18 +83,13 @@ export function CommandPalette() {
 
   // Opening resets the palette. Done in the handler, not an effect — the reset
   // is caused by the interaction, not by state outside React.
-  const setOpenState = useCallback(
-    (next: boolean) => {
-      setOpen(next);
-      if (next) {
-        setQuery('');
-        setActive(0);
-      } else {
-        restoreFocus();
-      }
-    },
-    [restoreFocus],
-  );
+  const setOpenState = useCallback((next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setQuery('');
+      setActive(0);
+    }
+  }, []);
 
   // ⌘K / Ctrl+K toggles from anywhere. Bound on keydown so it beats the
   // browser's own find-in-page on the platforms that map ⌘K.
@@ -106,22 +102,21 @@ export function CommandPalette() {
       // it threw "Cannot read properties of undefined".
       if (!(event.metaKey || event.ctrlKey) || event.key?.toLowerCase() !== 'k') return;
       event.preventDefault();
-      setOpen((wasOpen) => {
-        if (wasOpen) {
-          restoreFocus();
-        } else {
-          // Capture the caller's position before the dialog steals focus.
-          const activeEl = document.activeElement;
-          returnFocusTo.current = activeEl instanceof HTMLElement ? activeEl : null;
-          setQuery('');
-          setActive(0);
-        }
-        return !wasOpen;
-      });
+      if (open) {
+        setOpen(false);
+        return;
+      }
+
+      // Capture the caller's position before the dialog steals focus.
+      const activeEl = document.activeElement;
+      returnFocusTo.current = activeEl instanceof HTMLElement ? activeEl : null;
+      setQuery('');
+      setActive(0);
+      setOpen(true);
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [restoreFocus]);
+  }, [open]);
 
   const commands = useMemo<Command[]>(() => {
     const navigation = NAV_GROUPS.flatMap((group) =>
@@ -226,13 +221,21 @@ export function CommandPalette() {
             // `aria-describedby={undefined}` opts out of the description Radix
             // otherwise looks for, which this dialog deliberately lacks.
             aria-describedby={undefined}
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              inputRef.current?.focus();
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              restoreFocus();
+            }}
             className="border-border-subtle bg-elevated shadow-modal-value fixed top-24 left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border-subtle flex items-center gap-3 border-b px-4">
               <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
               <input
-                autoFocus
+                ref={inputRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={onInputKeyDown}

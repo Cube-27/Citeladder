@@ -1,7 +1,8 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { ENGINE_KEYS, EngineChip } from './engine-chip';
+import { EngineChip } from './engine-chip';
+import { ENGINE_KEYS } from './engine-data';
 
 describe('EngineChip', () => {
   it('uses official marks for every audited engine', () => {

@@ -77,7 +77,7 @@ export function ProjectsScreen() {
           <span className="text-muted text-xs">Choose the active brand for this Dashboard.</span>
         </div>
 
-        <Card className="border-border overflow-hidden shadow-xs">
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
             <ul className="divide-border grid list-none divide-y p-0">
               {projects.map((project) => {
@@ -95,7 +95,7 @@ export function ProjectsScreen() {
                         type="button"
                         onClick={() => setActiveProjectId(project.id)}
                         aria-current={isActive ? 'true' : undefined}
-                        className="focus-ring flex min-w-0 flex-1 items-center gap-3.5 px-4 py-3.5 text-left"
+                        className="focus-ring flex min-w-0 flex-1 items-center gap-4 px-4 py-4 text-left"
                       >
                         <BrandLogo
                           name={label}
@@ -114,8 +114,8 @@ export function ProjectsScreen() {
                           ) : null}
                         </span>
                         {isActive ? (
-                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                            <Check className="size-3.5" aria-hidden />
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-0.5 text-xs font-semibold text-indigo-700">
+                            <Check className="size-4" aria-hidden />
                             Active
                           </span>
                         ) : null}

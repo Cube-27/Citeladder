@@ -1,62 +1,20 @@
-'use client';
-
-import { useId, useState } from 'react';
-
-import {
-  SERIES_SLOT_COUNT,
-  seriesBg,
-  seriesFill,
-  seriesStroke,
-} from '@/components/ui/series-palette';
 import { cn } from '@/lib/utils';
 
 export type TrendPoint = {
-  /** X-axis label (e.g. a run date). */
   label: string;
-  /**
-   * Y value 0–100, or `null` when the metric is UNAVAILABLE for this point. A
-   * null value produces a chart GAP (no dot, no line segment through it) and is
-   * announced as "unavailable" — never coerced to a misleading zero.
-   */
+  /** Null is unavailable and renders as a gap, never as zero. */
   value: number | null;
-  /**
-   * Marker metadata for an analyzer/scoring version change AT this point: when
-   * set, a dashed version-boundary marker is drawn and announced. Kept optional
-   * so the primitive still renders a plain series when omitted.
-   */
-  versionChange?: {
-    /** Short human note, e.g. "Scoring rule v2 applied". */
-    note: string;
-  } | null;
+  versionChange?: { note: string } | null;
 };
 
-const toLinePath = (seg: { x: number; y: number }[]) =>
-  seg.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+const toLinePath = (segment: { x: number; y: number }[]) =>
+  segment
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+    .join(' ');
 
-const valueText = (v: number | null) => (v === null ? 'unavailable' : `${v}`);
+const valueText = (value: number | null) => (value === null ? 'unavailable' : `${value}`);
 
-/**
- * TrendChart — line/area chart for the cross-run Visibility trend.
- *
- * The single chart owner for the `/visibility` Trends tab (do not add another).
- * It reuses the design-system visual language (accent fill-soft area + accent
- * stroke line + accent data dots) and stays token-only (bridged semantic
- * utilities, no raw hex) so reduced-motion and forced-color behavior come from
- * the design system.
- *
- * Behavior:
- *   - Deterministic fixed-domain Y scaling (default 0–100: a Visibility Score /
- *     percentage is already on that scale), independent of the data's own max,
- *     so two charts are comparable. Pass `domainMax` to scale count metrics
- *     (impressions, clicks, sessions) truthfully instead of clamping them.
- *   - Valid empty rendering (no points) and single-point rendering (a lone dot,
- *     no misleading slope).
- *   - UNAVAILABLE points (`value: null`) become gaps: the line/area path splits
- *     across them, no numeric dot is drawn, and they are announced as
- *     "unavailable" (WCAG 1.4.1 — not conveyed by absence alone).
- *   - Accessible: an `img` role with a summary ARIA label describing the
- *     endpoints, plus `<title>` markers for each version-change boundary.
- */
+/** Token-only chart for cross-run visibility trends. */
 export function TrendChart({
   data,
   width = 320,
@@ -70,57 +28,44 @@ export function TrendChart({
   height?: number;
   label?: string;
   className?: string;
-  /**
-   * Top of the Y domain (default 100 — the percentage / Visibility Score
-   * scale). Values above it are clamped; must be positive (a non-positive
-   * value falls back to the default so the chart can never divide by zero).
-   */
   domainMax?: number;
 }>) {
   const padding = 8;
   const innerWidth = width - padding * 2;
   const innerHeight = height - padding * 2;
-
-  // Deterministic fixed domain: we never rescale to the data's own max (keeps
-  // charts comparable and single points positioned truthfully). The default
-  // 0–100 scale fits percentages / Visibility Scores; count metrics pass a
-  // larger `domainMax`.
   const effectiveDomainMax = domainMax > 0 ? domainMax : 100;
-  const clamp = (v: number) => Math.max(0, Math.min(effectiveDomainMax, v));
+  const clamp = (value: number) => Math.max(0, Math.min(effectiveDomainMax, value));
   const stepX = data.length > 1 ? innerWidth / (data.length - 1) : 0;
 
-  // Geometry per point. A null value has no y (it is a gap): its x is still
-  // reserved so the axis stays evenly spaced.
-  const points = data.map((d, i) => {
-    const x = data.length > 1 ? padding + i * stepX : width / 2;
-    const y =
-      d.value === null ? null : padding + innerHeight * (1 - clamp(d.value) / effectiveDomainMax);
-    return { x, y, value: d.value };
-  });
+  const points = data.map((entry, index) => ({
+    x: data.length > 1 ? padding + index * stepX : width / 2,
+    y:
+      entry.value === null
+        ? null
+        : padding + innerHeight * (1 - clamp(entry.value) / effectiveDomainMax),
+  }));
 
-  // Split the series into contiguous runs of available points; each run is its
-  // own line/area sub-path so the line breaks across unavailable gaps.
   const segments: { x: number; y: number }[][] = [];
   let current: { x: number; y: number }[] = [];
-  for (const p of points) {
-    if (p.y === null) {
+  for (const point of points) {
+    if (point.y === null) {
       if (current.length) segments.push(current);
       current = [];
     } else {
-      current.push({ x: p.x, y: p.y });
+      current.push({ x: point.x, y: point.y });
     }
   }
   if (current.length) segments.push(current);
-
-  const lineSegments = segments.filter((seg) => seg.length > 1);
+  const lineSegments = segments.filter((segment) => segment.length > 1);
 
   const summary = !data.length
     ? 'No trend data'
     : data.length === 1
       ? `Single point ${data[0].label} (${valueText(data[0].value)})`
-      : `Trend from ${data[0].label} (${valueText(data[0].value)}) to ${data[data.length - 1].label} (${valueText(data[data.length - 1].value)})`;
-  const hasGap = data.some((d) => d.value === null);
-  const gapNote = hasGap ? ' Some points are unavailable and shown as gaps.' : '';
+      : `Trend from ${data[0].label} (${valueText(data[0].value)}) to ${data.at(-1)?.label} (${valueText(data.at(-1)?.value ?? null)})`;
+  const gapNote = data.some((entry) => entry.value === null)
+    ? ' Some points are unavailable and shown as gaps.'
+    : '';
   const ariaLabel = label ? `${label}: ${summary}${gapNote}` : `${summary}${gapNote}`;
 
   return (
@@ -133,10 +78,10 @@ export function TrendChart({
       className={cn('overflow-visible', className)}
     >
       <title>{ariaLabel}</title>
-      {lineSegments.map((seg, i) => (
+      {lineSegments.map((segment, index) => (
         <path
-          key={`line-${i}`}
-          d={toLinePath(seg)}
+          key={`line-${index}`}
+          d={toLinePath(segment)}
           fill="none"
           strokeWidth={2}
           strokeLinecap="round"
@@ -144,246 +89,32 @@ export function TrendChart({
           className="stroke-accent"
         />
       ))}
-      {/* Version-boundary markers: a dashed vertical line + a warning dot, with
-          a <title> so the change is announced (not conveyed by color alone). */}
-      {points.map((p, i) =>
-        data[i].versionChange ? (
-          <g key={`marker-${data[i].label}`} data-version-marker="">
+      {points.map((point, index) =>
+        data[index].versionChange ? (
+          <g key={`marker-${data[index].label}`} data-version-marker="">
             <line
-              x1={p.x}
+              x1={point.x}
               y1={padding}
-              x2={p.x}
+              x2={point.x}
               y2={height - padding}
               strokeWidth={1}
               strokeDasharray="4 3"
               className="stroke-warning opacity-60"
               aria-hidden
             />
-            <circle cx={p.x} cy={padding} r={3} className="fill-warning">
-              <title>{`Version change at ${data[i].label}: ${data[i].versionChange?.note}`}</title>
+            <circle cx={point.x} cy={padding} r={3} className="fill-warning">
+              <title>{`Version change at ${data[index].label}: ${data[index].versionChange?.note}`}</title>
             </circle>
           </g>
         ) : null,
       )}
-      {/* Data dots: only for AVAILABLE points — a null value draws no dot. */}
-      {points.map((p, i) =>
-        p.y === null ? null : (
-          <circle key={data[i].label} cx={p.x} cy={p.y} r={2.5} className="fill-accent">
-            <title>{`${data[i].label}: ${data[i].value}`}</title>
+      {points.map((point, index) =>
+        point.y === null ? null : (
+          <circle key={data[index].label} cx={point.x} cy={point.y} r={2.5} className="fill-accent">
+            <title>{`${data[index].label}: ${data[index].value}`}</title>
           </circle>
         ),
       )}
     </svg>
-  );
-}
-
-export type TrendSeries = {
-  /** Series name, shown in the legend and the hover tooltip. */
-  name: string;
-  /** Points, one per x tick — same length and order across every series. */
-  values: (number | null)[];
-  /**
-   * Marks the user's own brand: drawn slightly heavier and pinned to series
-   * slot 1 (the accent) regardless of its position in the array.
-   */
-  brand?: boolean;
-};
-
-/**
- * MultiTrendChart — the Overview trend card: several brands on one axis.
- *
- * Flat language: no y-gridlines, no area fills, 2px lines (2.5px for the
- * brand's own series), month labels only. Hovering reveals a 1px dashed
- * vertical guide with a dot on each series and a dark tooltip listing every
- * value at that x.
- *
- * Accessibility: identity is never colour-alone — the tooltip and the legend
- * both name each series, and the whole chart carries a text summary. A `null`
- * value is a genuine gap (no segment drawn through it), never a zero.
- */
-export function MultiTrendChart({
-  series,
-  labels,
-  height = 200,
-  domainMax = 100,
-  valueSuffix = '%',
-  className,
-  label,
-}: Readonly<{
-  series: TrendSeries[];
-  /** X tick labels (e.g. months); only these are rendered on the axis. */
-  labels: string[];
-  height?: number;
-  domainMax?: number;
-  valueSuffix?: string;
-  className?: string;
-  label?: string;
-}>) {
-  const [hover, setHover] = useState<number | null>(null);
-  const clipId = useId();
-
-  // A percentage viewBox keeps the chart fluid inside its card while the SVG
-  // geometry stays in simple integer user units.
-  const width = 640;
-  const padX = 4;
-  const padTop = 8;
-  const axisH = 18;
-  const plotH = height - padTop - axisH;
-
-  const effectiveMax = domainMax > 0 ? domainMax : 100;
-  const count = labels.length;
-  const stepX = count > 1 ? (width - padX * 2) / (count - 1) : 0;
-  const xAt = (i: number) => (count > 1 ? padX + i * stepX : width / 2);
-  const yAt = (v: number) =>
-    padTop + plotH * (1 - Math.max(0, Math.min(effectiveMax, v)) / effectiveMax);
-
-  // Slot assignment: the brand always takes slot 1 (accent); everyone else
-  // fills the remaining slots in fixed order, never cycled.
-  let next = 1;
-  const slots = series.map((s) => (s.brand ? 0 : Math.min(next++, SERIES_SLOT_COUNT - 1)));
-
-  const pathFor = (s: TrendSeries) => {
-    const runs: string[] = [];
-    let current: string[] = [];
-    s.values.forEach((v, i) => {
-      if (v === null || v === undefined || !Number.isFinite(v)) {
-        if (current.length > 1) runs.push(current.join(' '));
-        current = [];
-        return;
-      }
-      current.push(`${current.length === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`);
-    });
-    if (current.length > 1) runs.push(current.join(' '));
-    return runs;
-  };
-
-  const summary = series.length
-    ? `${series.length} series across ${count} points: ${series.map((s) => s.name).join(', ')}`
-    : 'No trend data';
-
-  return (
-    <div className={cn('relative', className)}>
-      <svg
-        role="img"
-        aria-label={label ? `${label}: ${summary}` : summary}
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        className="block h-[var(--chart-height)] w-full"
-        style={{ ['--chart-height' as string]: `${height}px` }}
-        onMouseLeave={() => setHover(null)}
-      >
-        <title>{label ? `${label}: ${summary}` : summary}</title>
-        <defs>
-          <clipPath id={clipId}>
-            <rect x={0} y={0} width={width} height={padTop + plotH} />
-          </clipPath>
-        </defs>
-
-        {/* Hover guide — a 1px dashed vertical at the active x. */}
-        {hover !== null ? (
-          <line
-            x1={xAt(hover)}
-            y1={padTop}
-            x2={xAt(hover)}
-            y2={padTop + plotH}
-            strokeWidth={1}
-            strokeDasharray="3 3"
-            className="stroke-border-strong"
-            aria-hidden
-          />
-        ) : null}
-
-        <g clipPath={`url(#${clipId})`}>
-          {series.map((s, si) =>
-            pathFor(s).map((d, ri) => (
-              <path
-                key={`${s.name}-${ri}`}
-                d={d}
-                fill="none"
-                strokeWidth={s.brand ? 2.5 : 2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-                className={seriesStroke(slots[si])}
-              />
-            )),
-          )}
-        </g>
-
-        {/* Dots at the guide — only for series with a value at that x. */}
-        {hover !== null
-          ? series.map((s, si) => {
-              const v = s.values[hover];
-              if (v === null || v === undefined || !Number.isFinite(v)) return null;
-              return (
-                <circle
-                  key={`dot-${s.name}`}
-                  cx={xAt(hover)}
-                  cy={yAt(v)}
-                  r={3.5}
-                  className={seriesFill(slots[si])}
-                  aria-hidden
-                />
-              );
-            })
-          : null}
-
-        {/* Month labels only — no y-gridlines, no y-axis ticks. */}
-        {labels.map((l, i) => (
-          <text
-            key={l}
-            x={xAt(i)}
-            y={height - 4}
-            textAnchor={i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle'}
-            className="fill-muted text-2xs"
-          >
-            {l}
-          </text>
-        ))}
-
-        {/* Invisible hit bands — a wider target than the line itself. */}
-        {labels.map((l, i) => (
-          <rect
-            key={`hit-${l}`}
-            x={xAt(i) - stepX / 2}
-            y={0}
-            width={stepX || width}
-            height={height}
-            fill="transparent"
-            onMouseEnter={() => setHover(i)}
-          />
-        ))}
-      </svg>
-
-      {/* Tooltip — dark inverse card, muted micro title, one row per series. */}
-      {hover !== null ? (
-        <div
-          className="bg-chart-tooltip pointer-events-none absolute top-2 z-10 min-w-[168px] rounded-sm p-2"
-          style={{ left: `${(xAt(hover) / width) * 100}%`, transform: 'translateX(-50%)' }}
-          role="status"
-        >
-          <p className="text-chart-tooltip-fg/60 text-2xs mb-1">{labels[hover]}</p>
-          <ul className="grid gap-1">
-            {series.map((s, si) => {
-              const v = s.values[hover];
-              return (
-                <li key={s.name} className="text-2xs flex items-center gap-2">
-                  <span
-                    className={cn('size-2 shrink-0 rounded-xs', seriesBg(slots[si]))}
-                    aria-hidden
-                  />
-                  <span className="text-chart-tooltip-fg/80 flex-1 truncate">{s.name}</span>
-                  <span className="mono text-chart-tooltip-fg font-medium">
-                    {v === null || v === undefined || !Number.isFinite(v)
-                      ? '—'
-                      : `${v}${valueSuffix}`}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-    </div>
   );
 }

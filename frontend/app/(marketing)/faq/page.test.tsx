@@ -58,7 +58,7 @@ describe('FAQ page (public marketing `/faq`)', () => {
       const href = links[index].getAttribute('href');
       expect(href).toMatch(/^#faq-/);
       if (!href) throw new Error('rail link missing href');
-      expect(container.querySelector(href)).not.toBeNull();
+      expect(container.ownerDocument.getElementById(href.slice(1))).not.toBeNull();
     }
   });
 

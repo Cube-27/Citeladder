@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
@@ -26,13 +26,15 @@ export default function AppLayout({ children }: Readonly<{ children: ReactNode }
   return (
     <SessionGuard fallback={<ShellFallback />}>
       <ProjectProvider>
-        <ProductTourProvider>
-          <EntitlementProvider>
-            <OnboardingGate>
-              <AppShell>{children}</AppShell>
-            </OnboardingGate>
-          </EntitlementProvider>
-        </ProductTourProvider>
+        <Suspense fallback={<ShellFallback />}>
+          <ProductTourProvider>
+            <EntitlementProvider>
+              <OnboardingGate>
+                <AppShell>{children}</AppShell>
+              </OnboardingGate>
+            </EntitlementProvider>
+          </ProductTourProvider>
+        </Suspense>
       </ProjectProvider>
     </SessionGuard>
   );

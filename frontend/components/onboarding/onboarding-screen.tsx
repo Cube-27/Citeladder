@@ -53,6 +53,7 @@ import { ReviewStep } from './review-step';
 const STEPS = ['Brand', 'Discovery', 'Review', 'Finish'] as const;
 type StepIndex = 0 | 1 | 2 | 3;
 
+// react-doctor-disable-next-line react-doctor/no-giant-component -- this is the wizard transaction owner; discovery, review, and field controls are already extracted components.
 export function OnboardingScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -86,7 +87,11 @@ export function OnboardingScreen() {
       setDomains((prev) =>
         prev.length > 0
           ? prev
-          : discoveryState.domains.data.map((domain) => ({ domain, selected: true })),
+          : discoveryState.domains.data.map((domain, index) => ({
+              id: `domain:${index}:${domain}`,
+              domain,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState.domains]);
@@ -97,7 +102,11 @@ export function OnboardingScreen() {
       setCompetitors((prev) =>
         prev.length > 0
           ? prev
-          : discoveryState.competitors.data.map((c) => ({ ...c, selected: true })),
+          : discoveryState.competitors.data.map((competitor, index) => ({
+              ...competitor,
+              id: `competitor:${index}:${competitor.name}`,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState.competitors]);
@@ -106,7 +115,13 @@ export function OnboardingScreen() {
     if (discoveryState.prompts.status === 'done') {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setPrompts((prev) =>
-        prev.length > 0 ? prev : discoveryState.prompts.data.map((p) => ({ ...p, selected: true })),
+        prev.length > 0
+          ? prev
+          : discoveryState.prompts.data.map((prompt, index) => ({
+              ...prompt,
+              id: `prompt:${index}:${prompt.text}`,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState.prompts]);
@@ -182,7 +197,7 @@ export function OnboardingScreen() {
 
       <header className="border-b border-slate-200 bg-white px-6 py-4 sm:px-10">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-          <span className="flex items-center gap-2.5">
+          <span className="flex items-center gap-3">
             <LogoMark size={26} />
             <span className="font-mkt-display text-lg font-bold text-slate-900">Searchify</span>
           </span>
@@ -206,7 +221,7 @@ export function OnboardingScreen() {
                 >
                   <div
                     className={cn(
-                      'h-1.5 rounded-full transition-all duration-300',
+                      'h-1.5 rounded-full transition-colors duration-300',
                       state === 'done'
                         ? 'bg-emerald-500'
                         : state === 'current'
@@ -235,7 +250,7 @@ export function OnboardingScreen() {
         </div>
 
         {/* Step Content Container */}
-        <div className="shadow-card relative rounded-2xl border border-slate-200 bg-white p-8 transition-all sm:p-10">
+        <div className="shadow-card relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10">
           {step === 0 ? (
             <form noValidate onSubmit={submitBrand} className="grid gap-6">
               <div className="grid gap-1.5">
@@ -389,7 +404,15 @@ export function OnboardingScreen() {
                   )
                 }
                 onAddCompetitor={() =>
-                  setCompetitors((prev) => [...prev, { name: '', domains: [], selected: true }])
+                  setCompetitors((prev) => [
+                    ...prev,
+                    {
+                      id: `competitor:manual:${crypto.randomUUID()}`,
+                      name: '',
+                      domains: [],
+                      selected: true,
+                    },
+                  ])
                 }
               />
 

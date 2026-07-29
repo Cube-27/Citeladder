@@ -93,6 +93,7 @@ const PANEL_ID = (tab: SettingsTab) => `settings-panel-${tab}`;
  * - **Danger Zone**: deletes the active project (backend cascades to all child
  *   data) behind a confirmation dialog — the one mutation on this screen.
  */
+// react-doctor-disable-next-line react-doctor/no-giant-component -- this owns tab focus and project deletion state; billing, providers, integrations, and theme controls are extracted.
 export function SettingsScreen() {
   const user = useSessionUser();
   const router = useRouter();

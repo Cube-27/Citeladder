@@ -314,7 +314,7 @@ function RankingsCard({
             </TableHeader>
             <TableBody>
               {normalized.map((row, index) => (
-                <RankingTableRow key={rowKey(row) ?? index} row={row} position={index + 1} />
+                <RankingTableRow key={rowKey(row)} row={row} position={index + 1} />
               ))}
             </TableBody>
           </Table>
@@ -324,8 +324,13 @@ function RankingsCard({
   );
 }
 
-function rowKey(row: RankingRow): string | null {
-  return row.kind === 'own' ? row.entry.product_id : row.entry.competitor_product_id;
+function rowKey(row: RankingRow): string {
+  if (row.kind === 'own') {
+    return row.entry.product_id ?? `own:${row.entry.sku}:${row.entry.name}`;
+  }
+  return (
+    row.entry.competitor_product_id ?? `competitor:${row.entry.competitor_name}:${row.entry.name}`
+  );
 }
 
 function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position: number }>) {

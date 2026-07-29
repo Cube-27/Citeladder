@@ -48,7 +48,7 @@ export function DiscoveryProgress({
   onRetry: (key: 'domains' | 'competitors' | 'prompts') => void;
 }>) {
   return (
-    <ul className="grid list-none gap-3.5 p-0">
+    <ul className="grid list-none gap-4 p-0">
       {ROWS.map((row) => {
         const section = state[row.key];
         const count = section.data.length;
@@ -60,7 +60,7 @@ export function DiscoveryProgress({
           <li
             key={row.key}
             className={cn(
-              'relative overflow-hidden rounded-xl border p-4 transition-all duration-300',
+              'relative overflow-hidden rounded-xl border p-4 transition-colors duration-300',
               done
                 ? 'border-emerald-200 bg-emerald-50/30'
                 : failed
@@ -71,7 +71,7 @@ export function DiscoveryProgress({
             <div className="flex items-center gap-4">
               <div
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-lg border transition-all duration-300',
+                  'flex size-10 shrink-0 items-center justify-center rounded-lg border transition-colors duration-300',
                   done
                     ? 'border-emerald-200 bg-emerald-100/80 text-emerald-600'
                     : failed
@@ -88,7 +88,7 @@ export function DiscoveryProgress({
                   {searching && (
                     <span className="text-3xs inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-600">
                       <Sparkles
-                        className="size-2.5 animate-spin motion-reduce:animate-none"
+                        className="size-3 animate-spin motion-reduce:animate-none"
                         aria-hidden
                       />{' '}
                       AI Active
@@ -98,7 +98,7 @@ export function DiscoveryProgress({
                 <p className="text-xs text-slate-500">{row.subLabel}</p>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2.5">
+              <div className="flex shrink-0 items-center gap-3">
                 <span
                   className={cn(
                     'text-xs font-medium',
@@ -115,16 +115,16 @@ export function DiscoveryProgress({
 
                 {failed ? (
                   <div className="flex size-6 items-center justify-center rounded-full bg-red-100 text-red-600">
-                    <AlertTriangle className="size-3.5" aria-hidden />
+                    <AlertTriangle className="size-4" aria-hidden />
                   </div>
                 ) : done ? (
-                  <div className="animate-in zoom-in-50 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white duration-200">
-                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                  <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+                    <Check className="size-4" strokeWidth={2.5} aria-hidden />
                   </div>
                 ) : (
                   <div className="flex size-6 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                     <Loader2
-                      className="size-3.5 animate-spin motion-reduce:animate-none"
+                      className="size-4 animate-spin motion-reduce:animate-none"
                       aria-hidden
                     />
                   </div>

@@ -1,7 +1,9 @@
 import { fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { BrandLogo, brandInitials } from './brand-logo';
+import { brandInitials } from '@/lib/brand/initials';
+
+import { BrandLogo } from './brand-logo';
 
 describe('BrandLogo', () => {
   it('derives stable one- and two-word initials', () => {
@@ -32,7 +34,7 @@ describe('BrandLogo', () => {
   describe('with a Logo.dev token configured', () => {
     // The module reads the token at import time, so set it before importing.
     async function renderWithToken(ui: (mod: typeof import('./brand-logo')) => React.ReactElement) {
-      process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN = 'pk_test';
+      process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = 'pk_test';
       vi.resetModules();
       const mod = await import('./brand-logo');
       const result = render(ui(mod));
@@ -40,7 +42,7 @@ describe('BrandLogo', () => {
     }
 
     afterEach(() => {
-      delete process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+      delete process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE;
       vi.resetModules();
     });
 

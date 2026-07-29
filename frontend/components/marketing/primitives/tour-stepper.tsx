@@ -9,7 +9,7 @@ export interface TourStepItem {
 }
 
 /**
- * Shared tour stepper component rendered in HeroVisual and ProductWindow.
+ * Shared tour stepper component rendered in ProductWindow.
  */
 export function TourStepper({
   steps,
@@ -47,10 +47,10 @@ export function TourStepper({
               aria-selected={isActive}
               onClick={() => onSelectStep(idx)}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors',
+                'text-mkt-meta flex items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold transition-colors',
                 compact && 'gap-1.5 rounded-md px-2.5 py-1.5',
                 isActive
-                  ? 'bg-mkt-accent text-white shadow-xs'
+                  ? 'bg-mkt-accent text-white'
                   : 'bg-mkt-surface text-mkt-ink-soft hover:text-mkt-ink',
               )}
             >
@@ -69,7 +69,7 @@ export function TourStepper({
       </div>
 
       <div className="border-mkt-line-soft flex items-center justify-between gap-2 border-t pt-1.5 sm:justify-end sm:border-t-0 sm:pt-0">
-        <span className="text-mkt-ink-muted font-mono text-[11px] font-medium">
+        <span className="text-mkt-meta text-mkt-ink-muted font-mono font-medium">
           {activeStep + 1} / {steps.length}
         </span>
         <button

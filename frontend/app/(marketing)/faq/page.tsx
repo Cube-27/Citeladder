@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 
 import { FaqGroups } from '@/components/marketing/pages/faq';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
-import { faqPageJsonLd, JsonLd } from '@/components/marketing/seo/json-ld';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
+import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
 
 const DESCRIPTION =

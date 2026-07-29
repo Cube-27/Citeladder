@@ -80,12 +80,12 @@ describe('onboardingToProjectInput', () => {
     const input = onboardingToProjectInput(
       brand,
       [
-        { name: ' Globex ', domains: ['globex.com'], selected: true },
-        { name: 'Initech', domains: [], selected: false },
+        { id: 'globex', name: ' Globex ', domains: ['globex.com'], selected: true },
+        { id: 'initech', name: 'Initech', domains: [], selected: false },
       ],
       [
-        { domain: 'acme.com', selected: true },
-        { domain: 'acme.dev', selected: false },
+        { id: 'acme-com', domain: 'acme.com', selected: true },
+        { id: 'acme-dev', domain: 'acme.dev', selected: false },
       ],
     );
 

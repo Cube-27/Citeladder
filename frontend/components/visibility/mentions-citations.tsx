@@ -120,9 +120,9 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
         <div className="grid gap-1.5">
           <p className={eyebrowClasses}>Mentions</p>
           <div className="flex flex-wrap gap-1.5">
-            {item.mentions.map((mention, index) => (
+            {item.mentions.map((mention) => (
               <Badge
-                key={`${mention.kind}-${mention.name}-${mention.first_offset ?? 'na'}-${index}`}
+                key={`${mention.artifact_id ?? item.analysis_id}:${mention.analyzer_version}:${mention.kind}:${mention.name}:${mention.first_offset ?? 'na'}`}
                 variant="classification"
                 value={mention.kind === 'brand' ? 'owned' : 'competitor'}
               >

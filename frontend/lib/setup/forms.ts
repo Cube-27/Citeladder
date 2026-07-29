@@ -40,13 +40,6 @@ export const benchmarkModeValues = [
   'forced_grounded',
 ] as const satisfies readonly BenchmarkMode[];
 
-/** Human labels for the `benchmark_mode` segmented select. */
-export const benchmarkModeLabels: Record<BenchmarkMode, string> = {
-  consumer_like: 'Consumer-like',
-  controlled_localized: 'Controlled / localized',
-  forced_grounded: 'Forced grounded',
-};
-
 export const setupFormSchema = z.object({
   brand_name: z.string().trim().min(1, 'Brand name is required.'),
   // Optional at validation: create mode never asks for it and the mapper
@@ -103,7 +96,10 @@ export const emptySetupForm: SetupFormValues = {
 const toEntries = (values: string[]): { value: string }[] => values.map((value) => ({ value }));
 
 const fromEntries = (entries: { value: string }[]): string[] =>
-  entries.map((entry) => entry.value.trim()).filter((value) => value.length > 0);
+  entries.flatMap((entry) => {
+    const value = entry.value.trim();
+    return value ? [value] : [];
+  });
 
 /** Hydrate the form from an existing project (edit mode prefill). */
 export function projectToFormValues(project: Project): SetupFormValues {

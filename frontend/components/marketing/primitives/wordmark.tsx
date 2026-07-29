@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * proof". Geometry is shared verbatim with the app wordmark so the two
  * surfaces stay one brand even though they run different design systems.
  */
-export function BrandMark({ className }: Readonly<{ className?: string }>) {
+function BrandMark({ className }: Readonly<{ className?: string }>) {
   return (
     <span aria-hidden="true" className={cn('inline-flex shrink-0', className)}>
       <LogoMark size={32} />

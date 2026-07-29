@@ -17,6 +17,7 @@ import type { ProjectInput } from '@/lib/api/projects';
 
 /** A competitor as it appears in the review step — always editable. */
 export type ReviewCompetitor = {
+  id: string;
   name: string;
   domains: string[];
   /** False when the user has deselected it; kept in the list so it can return. */
@@ -24,6 +25,7 @@ export type ReviewCompetitor = {
 };
 
 export type ReviewPrompt = {
+  id: string;
   text: string;
   /**
    * The topic the agent filed this prompt under. Carried through review so the
@@ -37,6 +39,7 @@ export type ReviewPrompt = {
 };
 
 export type ReviewDomain = {
+  id: string;
   domain: string;
   selected: boolean;
 };
@@ -116,11 +119,13 @@ export function onboardingToProjectInput(
     benchmark_mode: 'consumer_like',
     default_repetitions: 1,
     brand: { aliases: [] },
-    owned_domains: domains.filter((d) => d.selected).map((d) => d.domain),
+    owned_domains: domains.flatMap((domain) => (domain.selected ? [domain.domain] : [])),
     unintended_domains: [],
-    competitors: competitors
-      .filter((c) => c.selected)
-      .map((c) => ({ name: c.name.trim(), aliases: [], domains: c.domains })),
+    competitors: competitors.flatMap((competitor) =>
+      competitor.selected
+        ? [{ name: competitor.name.trim(), aliases: [], domains: competitor.domains }]
+        : [],
+    ),
   };
 }
 

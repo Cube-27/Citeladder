@@ -77,14 +77,7 @@ export function PromptFormDialog({
         </>
       }
     >
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-        className="grid gap-4"
-      >
+      <form noValidate onSubmit={submit} className="grid gap-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <Field label="Prompt text" required error={errors.text?.message}>

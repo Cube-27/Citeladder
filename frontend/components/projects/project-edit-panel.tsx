@@ -90,17 +90,22 @@ export function ProjectEditPanel({
         brand: { aliases: splitList(aliases) },
         owned_domains: splitList(ownedDomains),
         unintended_domains: splitList(unintendedDomains),
-        competitors: competitors
-          .filter((competitor) => competitor.name.trim())
-          .map((competitor) => ({
-            name: competitor.name.trim(),
-            // Aliases are not edited here — preserve whatever the project
-            // already had rather than silently clearing them on every save.
-            aliases:
-              project.competitors.find((existing) => existing.name === competitor.name)?.aliases ??
-              [],
-            domains: splitList(competitor.domains),
-          })),
+        competitors: competitors.flatMap((competitor) => {
+          const name = competitor.name.trim();
+          return name
+            ? [
+                {
+                  name,
+                  // Aliases are not edited here — preserve whatever the project
+                  // already had rather than silently clearing them on every save.
+                  aliases:
+                    project.competitors.find((existing) => existing.name === competitor.name)
+                      ?.aliases ?? [],
+                  domains: splitList(competitor.domains),
+                },
+              ]
+            : [];
+        }),
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });

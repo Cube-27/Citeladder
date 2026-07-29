@@ -282,9 +282,10 @@ export function DashboardScreen() {
             </h2>
             <p className="text-muted mt-1 text-sm">
               A live summary of your Searchify results · Snapshot{' '}
-              {generatedAt.toLocaleString(undefined, {
+              {generatedAt.toLocaleString('en-US', {
                 dateStyle: 'medium',
                 timeStyle: 'short',
+                timeZone: 'UTC',
               })}
             </p>
           </div>

@@ -31,9 +31,9 @@ function Section({
   action?: React.ReactNode;
 }>) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 transition-all">
-      <div className="mb-3.5 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
-        <div className="flex items-center gap-2.5">
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-3">
           <p className="text-xs font-bold text-slate-700 uppercase">{label}</p>
           <span className="text-3xs rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
             {count}
@@ -57,7 +57,7 @@ function Chip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200',
         selected
           ? 'border-indigo-200 bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100/80'
           : 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700',
@@ -65,10 +65,7 @@ function Chip({
     >
       <span>{label}</span>
       <X
-        className={cn(
-          'size-3.5 shrink-0 transition-opacity',
-          selected ? 'opacity-70' : 'opacity-40',
-        )}
+        className={cn('size-4 shrink-0 transition-opacity', selected ? 'opacity-70' : 'opacity-40')}
         aria-hidden
       />
     </button>
@@ -138,7 +135,7 @@ export function ReviewStep({
         ) : (
           <ul className="grid list-none gap-2 p-0">
             {competitors.map((competitor, index) => (
-              <li key={`competitor-${index}`} className="flex items-center gap-2">
+              <li key={competitor.id} className="flex items-center gap-2">
                 <Input
                   value={competitor.name}
                   onChange={(event) => onRenameCompetitor(index, event.target.value)}
@@ -181,9 +178,9 @@ export function ReviewStep({
           <ul className="grid list-none divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/50 p-0">
             {prompts.map((prompt, index) => (
               <li
-                key={`prompt-${index}`}
+                key={prompt.id}
                 className={cn(
-                  'flex items-start gap-3.5 px-4 py-3 transition-colors hover:bg-white',
+                  'flex items-start gap-4 px-4 py-3 transition-colors hover:bg-white',
                   prompt.selected ? 'bg-white/80' : 'bg-slate-50/40',
                 )}
               >
@@ -197,7 +194,7 @@ export function ReviewStep({
                 <span className="min-w-0 flex-1 space-y-1">
                   <span
                     className={cn(
-                      'block text-sm leading-relaxed transition-all',
+                      'block text-sm leading-relaxed transition-colors',
                       prompt.selected
                         ? 'font-medium text-slate-800'
                         : 'text-slate-400 line-through',

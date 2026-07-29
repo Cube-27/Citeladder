@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducedMotion, motion } from 'motion/react';
+import { m, useReducedMotion } from 'motion/react';
 import { useSyncExternalStore, type ReactNode } from 'react';
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -33,13 +33,13 @@ export function HeroEntrance({
   }
 
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: EASE_OUT }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

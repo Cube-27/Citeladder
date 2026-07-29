@@ -4,6 +4,7 @@ import { distinctTopicNames } from './create-project';
 import type { ReviewPrompt } from './forms';
 
 const prompt = (text: string, theme: string): ReviewPrompt => ({
+  id: `prompt:${text}`,
   text,
   theme,
   intent: '',

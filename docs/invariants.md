@@ -7,13 +7,14 @@
 
 ## The 12 hard rules
 
-### 1. Config zero-tolerance
+### 1. Config zero-tolerance (Configuration MUST NOT live in code)
 Tokens, thresholds, model ids, transport catalogs, guardrail knobs, timeouts, rate limits,
-and any tunable magic number live **only** in `backend/app/core/config/*` (e.g.
-`config/__init__.py` `Settings`, `config/provider_catalog.py`). Service, domain, worker,
-analysis, and API code **reads** config; it never hard-codes these values inline. Frontend:
-no magic endpoints or feature flags scattered in components — they belong in the API-contract
-layer / env.
+batch page sizes, retry limits, and any tunable magic numbers/strings live **only** in
+`backend/app/core/config/*` (e.g. `config/__init__.py` `Settings`, `config/provider_catalog.py`).
+Service, domain, worker, analysis, and API code **reads** config; it never hard-codes these
+values inline. Frontend: no magic endpoints, feature flags, or hardcoded limits scattered in
+components — they belong in `process.env`, `lib/config/*`, or the API-contract layer. Any PR or
+commit that hardcodes configuration values directly in business logic is an **automatic review failure**.
 
 ### 2. Grep before add / no duplication
 Before adding a resource, function, schema, endpoint, token, or component, **grep for it

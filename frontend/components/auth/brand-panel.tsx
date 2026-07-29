@@ -48,7 +48,7 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
     <Link
       href="/"
       aria-label="Searchify home"
-      className="group inline-flex items-center gap-2.5 no-underline"
+      className="group inline-flex items-center gap-3 no-underline"
     >
       <Wordmark className={cn(compact && 'text-mkt-body')} />
     </Link>
@@ -57,7 +57,7 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
 
 export function AuthBrandPanel() {
   return (
-    <div className="relative col-span-5 flex min-h-full flex-col justify-between px-10 py-10 max-[900px]:hidden xl:px-14">
+    <div className="relative col-span-5 flex min-h-full flex-col justify-between px-12 py-12 max-[900px]:hidden xl:px-16">
       {/* Subtle light ambient glow */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-24 -left-24 size-96 rounded-full bg-indigo-200/40 blur-[100px]" />
@@ -94,7 +94,7 @@ export function AuthBrandPanel() {
             {PROOF_POINTS.map((proof) => (
               <div
                 key={proof.lead}
-                className="group shadow-card flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-indigo-300"
+                className="group shadow-card flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-colors duration-200 hover:border-indigo-300"
               >
                 <div
                   aria-hidden

@@ -16,11 +16,19 @@ import { BILLING_CONFIRM_MAX_POLLS, BILLING_CONFIRM_POLL_MS, billingApi } from '
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 
-function money(amountMinor: number, currency: 'INR' | 'USD') {
-  return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
+const MONEY_FORMATTERS = {
+  INR: new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency,
-  }).format(amountMinor / 100);
+    currency: 'INR',
+  }),
+  USD: new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }),
+} as const;
+
+function money(amountMinor: number, currency: 'INR' | 'USD') {
+  return MONEY_FORMATTERS[currency].format(amountMinor / 100);
 }
 
 function message(error: unknown) {
@@ -160,7 +168,11 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
           {summary.current_period_end ? (
             <p className="text-secondary text-sm">
               {summary.cancel_at_period_end ? 'Access scheduled to end' : 'Current period ends'}{' '}
-              {new Date(summary.current_period_end).toLocaleDateString()}.
+              {new Date(summary.current_period_end).toLocaleDateString('en-US', {
+                dateStyle: 'medium',
+                timeZone: 'UTC',
+              })}
+              .
             </p>
           ) : null}
           {summary.subscription_status && !summary.cancel_at_period_end ? (

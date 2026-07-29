@@ -1,6 +1,4 @@
-import type { BlogPost } from '@/lib/marketing-content/blog';
-import type { FaqGroup } from '@/lib/marketing-content/faq';
-import { absoluteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
+import { serializeJsonLd, type JsonLdObject } from '@/lib/seo/json-ld';
 
 /**
  * JSON-LD for the public marketing surface. The helpers build plain typed
@@ -13,48 +11,12 @@ import { absoluteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
  * `author` only once the owner supplies them (B5).
  */
 
-type JsonLdObject = Record<string, unknown>;
-
-export function organizationJsonLd(): JsonLdObject | null {
-  const url = absoluteUrl('/');
-  if (!url) return null;
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: SITE_NAME,
-    description: SITE_TAGLINE,
-    url,
-  };
-}
-
-export function faqPageJsonLd(groups: readonly FaqGroup[]): JsonLdObject {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: groups.flatMap((group) =>
-      group.items.map((item) => ({
-        '@type': 'Question',
-        name: item.q,
-        acceptedAnswer: { '@type': 'Answer', text: item.a },
-      })),
-    ),
-  };
-}
-
-export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.title,
-    description: post.excerpt,
-    // Owner-supplied byline fields (B5) — absent keys are omitted, not guessed.
-    ...(post.date ? { datePublished: post.date } : {}),
-    ...(post.author ? { author: { '@type': 'Person', name: post.author } } : {}),
-  };
-}
-
-export function JsonLd({ data }: Readonly<{ data: JsonLdObject }>) {
+export function JsonLd({ data, id }: Readonly<{ data: JsonLdObject; id?: string }>) {
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+    <script
+      id={id ?? 'json-ld'}
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
+    />
   );
 }

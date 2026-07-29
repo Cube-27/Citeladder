@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -92,28 +92,17 @@ export function UrlDetail({
     refetchInterval: (query) => {
       if (!rerunPolling) return false;
       const status = query.state.data?.analysis_status;
-      if (status === 'pending' || status === 'running' || status === undefined) {
+      if (status === 'pending' || status === 'running') {
+        hasObservedActiveRerunRef.current = true;
+        return RERUN_POLL_INTERVAL_MS;
+      }
+      if (status === undefined || !hasObservedActiveRerunRef.current) {
         return RERUN_POLL_INTERVAL_MS;
       }
       return false;
     },
   });
   const detail = detailQuery.data ?? null;
-
-  useEffect(() => {
-    if (!rerunPolling || !detail) return;
-    if (detail.analysis_status === 'pending' || detail.analysis_status === 'running') {
-      hasObservedActiveRerunRef.current = true;
-      return;
-    }
-    // Terminal status observed. Only stop polling once we've actually seen
-    // the rerun take effect (a pending/running snapshot); otherwise this is
-    // just the stale pre-rerun cache and we must keep polling for it to
-    // update.
-    if (hasObservedActiveRerunRef.current) {
-      setRerunPolling(false);
-    }
-  }, [rerunPolling, detail]);
 
   if (detailQuery.isLoading) {
     return (

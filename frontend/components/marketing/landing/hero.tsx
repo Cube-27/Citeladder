@@ -21,10 +21,9 @@ import { HeroEntrance } from './hero-entrance';
  *
  * The ambient panel now sits BELOW the claim rather than beside it, where it
  * reads as the product moment the headline just promised. It stays
- * decorative-by-construction (see hero-visual); the labelled product canvas is
- * further down the page. No fake screenshots: the panel shows the same
- * illustrative questions the rest of the page uses and never claims to be a
- * real result.
+ * decorative-by-construction; the labelled product canvas is further down the
+ * page. No fake screenshots: the panel shows the same illustrative questions
+ * the rest of the page uses and never claims to be a real result.
  */
 export function Hero() {
   const { hook } = LANDING_CONTENT;

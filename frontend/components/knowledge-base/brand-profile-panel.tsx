@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useReducer } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -50,10 +50,65 @@ function hasValue(value: BrandProfileDraft[BrandProfileField]) {
 }
 
 function parseProductsInput(value: string): string[] {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return value.split(',').flatMap((item) => {
+    const trimmed = item.trim();
+    return trimmed ? [trimmed] : [];
+  });
+}
+
+type EditorState = {
+  draft: BrandProfileDraft;
+  productsInput: string;
+  suggestion: BrandProfileSuggestion | null;
+  suggestOpen: boolean;
+  notice: string | null;
+};
+
+type EditorAction =
+  | { type: 'patch'; patch: Partial<EditorState> }
+  | { type: 'stored'; profile: BrandProfile; notice: string }
+  | {
+      type: 'suggested';
+      suggestion: BrandProfileSuggestion;
+      draft: BrandProfileDraft;
+      notice: string;
+    }
+  | { type: 'discard'; profile: BrandProfile };
+
+function initialEditorState(profile: BrandProfile): EditorState {
+  return {
+    draft: profileDraft(profile),
+    productsInput: profile.products_services.join(', '),
+    suggestion: null,
+    suggestOpen: false,
+    notice: null,
+  };
+}
+
+function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  switch (action.type) {
+    case 'patch':
+      return { ...state, ...action.patch };
+    case 'stored':
+      return {
+        ...state,
+        draft: profileDraft(action.profile),
+        productsInput: action.profile.products_services.join(', '),
+        suggestion: null,
+        notice: action.notice,
+      };
+    case 'suggested':
+      return {
+        ...state,
+        draft: action.draft,
+        productsInput: action.draft.products_services.join(', '),
+        suggestion: action.suggestion,
+        suggestOpen: false,
+        notice: action.notice,
+      };
+    case 'discard':
+      return initialEditorState(action.profile);
+  }
 }
 
 export function BrandProfilePanel({
@@ -64,16 +119,12 @@ export function BrandProfilePanel({
   profile: BrandProfile;
 }>) {
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<BrandProfileDraft>(() => profileDraft(profile));
-  const [productsInput, setProductsInput] = useState(() => profile.products_services.join(', '));
-  const [suggestion, setSuggestion] = useState<BrandProfileSuggestion | null>(null);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(editorReducer, profile, initialEditorState);
+  const { draft, productsInput, suggestion, suggestOpen, notice } = state;
 
-  const storeProfile = (next: BrandProfile) => {
+  const storeProfile = (next: BrandProfile, notice: string) => {
     queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
-    setDraft(profileDraft(next));
-    setProductsInput(next.products_services.join(', '));
+    dispatch({ type: 'stored', profile: next, notice });
   };
 
   const saveMutation = useMutation({
@@ -83,12 +134,12 @@ export function BrandProfilePanel({
         products_services: parseProductsInput(productsInput),
       }),
     onSuccess: (next) => {
-      storeProfile(next);
-      setSuggestion(null);
-      setNotice('Brand knowledge saved. These details now inform assisted features.');
+      storeProfile(next, 'Brand knowledge saved. These details now inform assisted features.');
     },
   });
 
+  // Suggestions are review-only transient state; no server query is replaced.
+  // react-doctor-disable-next-line
   const suggestMutation = useMutation({
     mutationFn: () => projectsApi.suggestBrandProfile(projectId),
     onSuccess: (next) => {
@@ -101,11 +152,12 @@ export function BrandProfilePanel({
             : parseProductsInput(productsInput),
         target_audience: next.draft.target_audience || draft.target_audience,
       };
-      setSuggestion(next);
-      setDraft(mergedDraft);
-      setProductsInput(mergedDraft.products_services.join(', '));
-      setSuggestOpen(false);
-      setNotice('AI draft loaded for review. Edit anything before applying it.');
+      dispatch({
+        type: 'suggested',
+        suggestion: next,
+        draft: mergedDraft,
+        notice: 'AI draft loaded for review. Edit anything before applying it.',
+      });
     },
   });
 
@@ -133,9 +185,8 @@ export function BrandProfilePanel({
       });
     },
     onSuccess: (result) => {
-      storeProfile(result.profile);
-      setSuggestion(null);
-      setNotice(
+      storeProfile(
+        result.profile,
         result.skipped_manual_fields.length > 0
           ? `Applied the draft; preserved manual fields: ${result.skipped_manual_fields.join(', ')}.`
           : 'Reviewed AI draft applied to the brand knowledge base.',
@@ -155,7 +206,10 @@ export function BrandProfilePanel({
             Curated positioning and audience context used by competitor and prompt generation.
           </p>
         </div>
-        <Button variant="secondary" onClick={() => setSuggestOpen(true)}>
+        <Button
+          variant="secondary"
+          onClick={() => dispatch({ type: 'patch', patch: { suggestOpen: true } })}
+        >
           <Sparkles className="size-4" aria-hidden />
           Draft with AI
         </Button>
@@ -180,7 +234,10 @@ export function BrandProfilePanel({
                 {...field}
                 value={draft.description}
                 onChange={(event) =>
-                  setDraft((value) => ({ ...value, description: event.target.value }))
+                  dispatch({
+                    type: 'patch',
+                    patch: { draft: { ...draft, description: event.target.value } },
+                  })
                 }
               />
             )}
@@ -194,7 +251,10 @@ export function BrandProfilePanel({
                 {...field}
                 value={draft.positioning}
                 onChange={(event) =>
-                  setDraft((value) => ({ ...value, positioning: event.target.value }))
+                  dispatch({
+                    type: 'patch',
+                    patch: { draft: { ...draft, positioning: event.target.value } },
+                  })
                 }
               />
             )}
@@ -205,7 +265,10 @@ export function BrandProfilePanel({
                 {...field}
                 value={draft.target_audience}
                 onChange={(event) =>
-                  setDraft((value) => ({ ...value, target_audience: event.target.value }))
+                  dispatch({
+                    type: 'patch',
+                    patch: { draft: { ...draft, target_audience: event.target.value } },
+                  })
                 }
               />
             )}
@@ -217,7 +280,9 @@ export function BrandProfilePanel({
               <Input
                 {...field}
                 value={productsInput}
-                onChange={(event) => setProductsInput(event.target.value)}
+                onChange={(event) =>
+                  dispatch({ type: 'patch', patch: { productsInput: event.target.value } })
+                }
               />
             )}
           </Field>
@@ -226,15 +291,7 @@ export function BrandProfilePanel({
         <div className="flex justify-end gap-2">
           {suggestion ? (
             <>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setSuggestion(null);
-                  setDraft(profileDraft(profile));
-                  setProductsInput(profile.products_services.join(', '));
-                  setNotice(null);
-                }}
-              >
+              <Button variant="ghost" onClick={() => dispatch({ type: 'discard', profile })}>
                 Discard draft
               </Button>
               <Button
@@ -261,7 +318,7 @@ export function BrandProfilePanel({
 
       <GenerateBrandDialog
         open={suggestOpen}
-        onOpenChange={setSuggestOpen}
+        onOpenChange={(open) => dispatch({ type: 'patch', patch: { suggestOpen: open } })}
         title="Draft brand knowledge with AI"
         description="The default agent will draft positioning, products, and audience context for you to review. Nothing is applied automatically."
         onGenerate={async () => {

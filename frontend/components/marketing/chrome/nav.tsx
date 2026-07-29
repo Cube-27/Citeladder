@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Menu, X } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { Fragment, useEffect, useRef, useState } from 'react';
 
@@ -69,6 +69,7 @@ const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
  * ≤1024px the links collapse into a hamburger + slide-down accordions. Open
  * state is React-driven so `aria-expanded` is always truthful.
  */
+// react-doctor-disable-next-line react-doctor/no-giant-component -- desktop and mobile navigation intentionally share focus, hover, session, and geometry state in one accessibility owner.
 export function MarketingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [openDrop, setOpenDrop] = useState<NavDropKey | null>(null);
@@ -220,7 +221,7 @@ export function MarketingNav() {
           onKeyDown={escapeToClose}
         >
           {lens && (
-            <motion.span
+            <m.span
               layout={!reduceMotion}
               aria-hidden
               style={{ left: lens.left, width: lens.width }}
