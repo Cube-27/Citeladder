@@ -52,9 +52,9 @@ function BlogCta({
   secondary,
 }: Readonly<{ title: string; secondary: { href: string; label: string } }>) {
   return (
-    <Section tone="sunken" rhythm="loose" aria-label="Get started">
+    <Section tone="field" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
           {title}
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
@@ -96,7 +96,7 @@ export function BlogIndex() {
                 <p
                   role="heading"
                   aria-level={2}
-                  className="font-mkt-display text-mkt-d3 text-mkt-ink max-w-[20ch] font-medium"
+                  className="font-mkt-display text-mkt-d3 text-mkt-ink max-w-[20ch]"
                 >
                   <Link href={`/blog/${featured.slug}`}>{featured.title}</Link>
                 </p>
@@ -130,7 +130,7 @@ export function BlogIndex() {
                     <p
                       role="heading"
                       aria-level={3}
-                      className="font-mkt-display text-mkt-ink text-heading-sm font-semibold"
+                      className="font-mkt-display text-mkt-ink text-mkt-d5"
                     >
                       <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                     </p>
@@ -148,7 +148,7 @@ export function BlogIndex() {
             <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft mx-auto grid size-11 place-items-center rounded-full border">
               <PenLine aria-hidden strokeWidth={1.8} className="size-5" />
             </span>
-            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-6 font-medium">
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-6">
               {BLOG_EMPTY_STATE.heading}
             </h2>
             <p className="text-mkt-body text-mkt-ink-soft mx-auto mt-3 max-w-[52ch]">
@@ -190,11 +190,7 @@ function PostMetaByline({ post }: Readonly<{ post: BlogPost }>) {
 function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
   switch (block.type) {
     case 'heading':
-      return (
-        <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-10 mb-4 font-medium">
-          {block.text}
-        </h2>
-      );
+      return <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-10 mb-4">{block.text}</h2>;
     case 'list':
       return (
         <ul className="text-mkt-body text-mkt-ink-soft my-5 grid list-disc gap-2 pl-5">
@@ -228,9 +224,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               <Eyebrow>Field notes</Eyebrow>
             </div>
             <TagRow tags={post.tags} />
-            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink mt-4 font-medium">
-              {post.title}
-            </h1>
+            <h1 className="font-mkt-display text-mkt-d2 text-mkt-ink mt-4">{post.title}</h1>
             {/* The byline is owner-supplied: the row renders only once at
                 least one of author/date/readTime exists. */}
             {(post.author ?? post.date ?? post.readTime) && (

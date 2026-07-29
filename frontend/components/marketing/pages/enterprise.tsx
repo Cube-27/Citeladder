@@ -4,7 +4,6 @@ import { Fragment } from 'react';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
-import { Meta } from '../primitives/label';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
@@ -38,7 +37,7 @@ const OPS_CARDS: readonly Capability[] = [
     blurb: 'Numbers your compliance team can re-derive, not just read.',
     points: [
       'Deterministic scoring — analyzer + rule versions on every projection',
-      'Immutable artifacts + provenance-carrying analyses, written once',
+      'Immutable artifacts — a score is recomputable from the persisted run',
       'Unsupported metrics render as —, never fabricated zeros',
     ],
   },
@@ -49,16 +48,6 @@ const OPS_CARDS: readonly Capability[] = [
     points: [
       'PostgreSQL durable queues — FOR UPDATE SKIP LOCKED, no Redis dependency',
       'Leases, heartbeats, retries and idempotency on every task',
-      'Custom audit + crawl volumes tailored to your team',
-    ],
-  },
-  {
-    icon: Sigma,
-    title: 'Traceable by design',
-    blurb: 'Every derived number carries the version of the code that produced it.',
-    points: [
-      'Provenance stamps on every projection — scoring-v1, sh-rules-2, opp-formula-1',
-      'Immutable artifacts — a score is recomputable from the persisted run',
       'Typed contracts validated at runtime — Zod + Pydantic',
     ],
   },
@@ -73,14 +62,41 @@ const ARCH_FLOW = [
   { node: 'Workers', arrow: '→' },
 ] as const;
 
-/** The dials an enterprise agreement is sized on. Values are per-agreement. */
+/**
+ * The dials an enterprise agreement is sized on.
+ *
+ * These used to render as six cards whose figure was the literal word
+ * "Custom" — six identical answers presented as six separate facts, which read
+ * as a page with nothing to say. The dial IS the information: naming what moves
+ * (and what it is measured in) tells a buyer how the plan is shaped, where
+ * repeating "Custom" told them only that we would not say.
+ */
 const LIMIT_CELLS = [
-  { label: 'Monthly audit runs', desc: 'prompt × engine × repetition, aggregated across projects' },
-  { label: 'Monitored URLs', desc: 'total monitored set across all projects' },
-  { label: 'Projects', desc: 'per workspace, each with its own prompts + competitors' },
-  { label: 'Seats', desc: 'workspace members with access to audits + evidence' },
-  { label: 'Evidence retention', desc: 'immutable artifacts, runs and derived projections' },
-  { label: 'Support & SLA', desc: 'response targets, channels and escalation path' },
+  {
+    label: 'Monthly audit runs',
+    unit: 'prompt × engine × repetition',
+    desc: 'aggregated across every project in the workspace',
+  },
+  {
+    label: 'Monitored URLs',
+    unit: 'total monitored set',
+    desc: 'the pages we crawl and re-check on your schedule',
+  },
+  {
+    label: 'Projects & seats',
+    unit: 'per workspace',
+    desc: 'each project carries its own prompts, competitors and evidence',
+  },
+  {
+    label: 'Evidence retention',
+    unit: 'months of history',
+    desc: 'immutable artifacts, runs and every derived projection',
+  },
+  {
+    label: 'Support & SLA',
+    unit: 'response target',
+    desc: 'channels, escalation path and named contacts',
+  },
 ] as const;
 
 function CheckList({ points }: Readonly<{ points: readonly string[] }>) {
@@ -106,7 +122,7 @@ function CapabilityCard({ icon: Icon, title, blurb, points }: Capability) {
       <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof grid size-9 place-items-center rounded-sm border">
         <Icon aria-hidden strokeWidth={1.8} className="size-4.5" />
       </span>
-      <h3 className="font-mkt-display text-mkt-ink text-heading-sm mt-5 font-semibold">{title}</h3>
+      <h3 className="font-mkt-display text-mkt-ink text-mkt-d5 mt-5">{title}</h3>
       <p className="text-mkt-sm text-mkt-ink-soft mt-2">{blurb}</p>
       <CheckList points={points} />
     </div>
@@ -145,7 +161,7 @@ export function EnterpriseOps() {
         intro="Every claim below maps to the running platform — bring your security review."
         headingId="enterprise-caps-title"
       />
-      <StaggerGroup className="grid gap-4 md:grid-cols-2">
+      <StaggerGroup className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {OPS_CARDS.map((card) => (
           <StaggerItem key={card.title} className="h-full">
             <CapabilityCard {...card} />
@@ -185,18 +201,26 @@ export function EnterpriseLimits() {
         intro="Every enterprise agreement starts from these dials — tell us the volumes and we size the plan."
         headingId="enterprise-limits-title"
       />
-      <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {LIMIT_CELLS.map((cell) => (
-          <StaggerItem
-            key={cell.label}
-            className="rounded-mkt-lg bg-mkt-surface shadow-card h-full p-6"
-          >
-            <Meta as="p">{cell.label}</Meta>
-            <p className="font-mkt-display text-mkt-ink text-mkt-d4 mt-4 font-medium">Custom</p>
-            <p className="text-mkt-sm text-mkt-ink-muted mt-2">{cell.desc}</p>
-          </StaggerItem>
-        ))}
-      </StaggerGroup>
+      {/* One statement of the answer, then the dials it applies to — rather
+          than repeating that answer once per row. */}
+      <Reveal className="rounded-mkt-lg bg-mkt-surface shadow-card overflow-hidden">
+        <p className="text-mkt-lead text-mkt-ink border-mkt-line-soft border-b p-6 md:p-7">
+          Every dial below is <em className="mkt-keyword not-italic">sized to your volumes</em> — we
+          quote against the numbers you bring, not a tier you have to grow into.
+        </p>
+        <StaggerGroup className="grid sm:grid-cols-2 lg:grid-cols-3">
+          {LIMIT_CELLS.map((cell) => (
+            <StaggerItem
+              key={cell.label}
+              className="border-mkt-line-soft border-b p-6 sm:not-last:border-r"
+            >
+              <p className="font-mkt-display text-mkt-ink text-mkt-d5">{cell.label}</p>
+              <p className="text-mkt-meta text-mkt-proof mt-1.5 font-mono uppercase">{cell.unit}</p>
+              <p className="text-mkt-sm text-mkt-ink-muted mt-2.5">{cell.desc}</p>
+            </StaggerItem>
+          ))}
+        </StaggerGroup>
+      </Reveal>
       <p className="text-mkt-sm text-mkt-ink-soft mt-8 max-w-[78ch]">
         Searchify does not claim SOC 2 or ISO certifications today.{' '}
         <b className="text-mkt-ink font-semibold">What it offers is verifiable:</b> deterministic
@@ -213,9 +237,9 @@ export function EnterpriseLimits() {
  */
 export function EnterpriseContactCta() {
   return (
-    <Section id="contact" tone="surface" rhythm="loose" aria-label="Contact sales">
+    <Section id="contact" tone="field" rhythm="loose" aria-label="Contact sales">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch] font-medium">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
           Bring AI visibility in-house.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">

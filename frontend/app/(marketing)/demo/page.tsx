@@ -95,9 +95,7 @@ export default function DemoPage() {
         <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-3">
           {DEMO_CARDS.map(([title, description]) => (
             <section key={title} className="border-mkt-line bg-mkt-paper rounded-mkt-lg border p-6">
-              <h2 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">
-                {title}
-              </h2>
+              <h2 className="font-mkt-display text-mkt-ink text-mkt-d5">{title}</h2>
               <p className="text-mkt-sm text-mkt-ink-soft mt-2">{description}</p>
             </section>
           ))}

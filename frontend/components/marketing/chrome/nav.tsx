@@ -198,7 +198,7 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="h-mkt-nav max-w-mkt px-mkt-gutter mx-auto flex w-full items-center gap-4"
+        className="h-mkt-nav max-w-mkt-wide px-mkt-gutter mx-auto flex w-full items-center gap-4"
       >
         <Link href="/" aria-label="Searchify home" className="shrink-0">
           <Wordmark />

@@ -19,9 +19,22 @@ import type { ReactNode } from 'react';
  */
 type MotionChildren = Readonly<{ children: ReactNode; className?: string }>;
 
-export function Reveal({ children, className }: MotionChildren) {
+/**
+ * Entrance direction for a reveal. `up` (the default) rises into place;
+ * `left`/`right` slide in from that edge — used for paired columns that should
+ * converge on the section (the Stance Always/Never cards) and for the closing
+ * beat. All resolve to the same finished state; the direction only changes
+ * where the motion starts.
+ */
+type Direction = 'up' | 'left' | 'right';
+
+export function Reveal({
+  children,
+  className,
+  from = 'up',
+}: MotionChildren & { from?: Direction }) {
   return (
-    <div data-mkt-reveal="" className={className}>
+    <div data-mkt-reveal="" data-mkt-reveal-from={from} className={className}>
       {children}
     </div>
   );
@@ -35,6 +48,10 @@ export function StaggerGroup({ children, className }: MotionChildren) {
   );
 }
 
-export function StaggerItem({ children, className }: MotionChildren) {
-  return <div className={className}>{children}</div>;
+export function StaggerItem({ children, className, from }: MotionChildren & { from?: Direction }) {
+  return (
+    <div data-mkt-reveal-from={from} className={className}>
+      {children}
+    </div>
+  );
 }

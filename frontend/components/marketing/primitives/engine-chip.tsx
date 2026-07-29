@@ -81,7 +81,7 @@ export function EngineWordmark({
   return (
     <span
       className={cn(
-        'text-mkt-ink-soft text-heading-sm inline-flex items-center gap-2.5 font-semibold',
+        'text-mkt-ink-soft text-mkt-body inline-flex items-center gap-2.5 font-semibold',
         className,
       )}
     >

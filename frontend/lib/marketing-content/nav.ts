@@ -22,14 +22,19 @@ export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'platform',
     label: 'Platform',
-    href: '/#platform',
+    href: '/#see-it',
     groups: [
       {
         items: [
           {
-            title: 'Visibility workspace',
-            desc: 'See the complete market picture',
-            href: '/#platform',
+            title: 'The shift',
+            desc: 'Why the first page is now a conversation',
+            href: '/#why',
+          },
+          {
+            title: 'See it live',
+            desc: 'Watch one question decide a category',
+            href: '/#see-it',
           },
           {
             title: 'How it works',
@@ -37,14 +42,9 @@ export const NAV_DROPS: readonly NavDrop[] = [
             href: '/#how-it-works',
           },
           {
-            title: 'Evidence explorer',
-            desc: 'Open the answer behind every metric',
-            href: '/#evidence',
-          },
-          {
-            title: 'Why Searchify',
-            desc: 'The standards behind every result',
-            href: '/#why',
+            title: 'Get started',
+            desc: 'A working session on your market',
+            href: '/#get-started',
           },
         ],
       },

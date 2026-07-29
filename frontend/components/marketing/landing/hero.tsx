@@ -1,76 +1,61 @@
 import { ArrowRight } from 'lucide-react';
 
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
-import { ENGINE_KEYS, EngineWordmark } from '../primitives/engine-chip';
 import { Eyebrow } from '../primitives/label';
-import { Marquee } from '../primitives/marquee';
 import { Container } from '../primitives/section';
-import { Reveal } from '../primitives/reveal';
+import { TrustStrip } from '../primitives/trust-strip';
+import { HeroEntrance } from './hero-entrance';
+import { HeroVisual } from './hero-visual';
 
 /**
- * A centred text opener that deliberately stops short of the fold: the copy
- * takes the upper band, and the two counter-moving strips fill the space that
- * was previously empty at the bottom of the first screen.
+ * The hook — a centred opener standing on the atmospheric field.
  *
- * The strips run in OPPOSITE directions on purpose — engines travelling right,
- * buyer prompts travelling left. They are the two axes the product crosses, so
- * sharing one direction would read as a single list. Being full-bleed, they
- * sit outside `Container`, which is why the copy carries its own.
+ * This was a two-column split: copy left, panel right, on flat cream. It read
+ * as dull for a structural reason, not a motion one — the first screen had no
+ * colour, no depth and a hard 26rem ceiling on the headline, so the biggest
+ * type on the site was boxed into half the viewport while the other half held
+ * a single white card. Centring the claim lets the display step actually be a
+ * display step, and the field behind it gives the screen light to sit in.
+ *
+ * The ambient panel now sits BELOW the claim rather than beside it, where it
+ * reads as the product moment the headline just promised. It stays
+ * decorative-by-construction (see hero-visual); the labelled product canvas is
+ * further down the page. No fake screenshots: the panel shows the same
+ * illustrative questions the rest of the page uses and never claims to be a
+ * real result.
  */
 export function Hero() {
-  const { hero, engines } = LANDING_CONTENT;
+  const { hook } = LANDING_CONTENT;
   return (
-    <header className="flex min-h-[calc(100svh-var(--spacing-mkt-nav))] flex-col">
-      <div className="flex flex-1 items-center py-12">
-        <Container>
-          <Reveal className="mx-auto max-w-4xl text-center">
-            <Eyebrow>{hero.eyebrow}</Eyebrow>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-5 mb-5 max-w-[18ch] font-medium">
-              {hero.title} <em className="text-mkt-proof not-italic">{hero.accent}</em>
-            </h1>
-            <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[46ch]">{hero.body}</p>
-            <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-              <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
-                {DEMO_CTA}
-                <ArrowRight className="size-3.5" aria-hidden />
-              </ButtonLink>
-              <ButtonLink href="#platform" intent="secondary" className="w-full sm:w-auto">
-                {hero.secondaryCta}
-              </ButtonLink>
-            </div>
-          </Reveal>
-        </Container>
-      </div>
+    <header className="mkt-field-hero mkt-grid-field relative overflow-hidden">
+      <Container className="relative z-1 py-20 md:py-28">
+        <HeroEntrance className="mx-auto max-w-4xl text-center">
+          <div className="flex justify-center">
+            <Eyebrow>{hook.eyebrow}</Eyebrow>
+          </div>
+          <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-6 max-w-[19ch] text-balance">
+            {hook.title} <em className="mkt-keyword not-italic">{hook.titleAccent}</em>
+          </h1>
+          <p className="text-mkt-lead text-mkt-ink-soft mx-auto mt-6 max-w-[58ch]">{hook.body}</p>
+          <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row sm:items-center">
+            <ButtonLink href={DEMO_HREF} intent="primary" className="w-full sm:w-auto">
+              {hook.primaryCta}
+              <ArrowRight className="size-4" aria-hidden />
+            </ButtonLink>
+            <ButtonLink href="#how-it-works" intent="secondary" className="w-full sm:w-auto">
+              {hook.secondaryCta}
+            </ButtonLink>
+          </div>
+          <TrustStrip className="mt-8 justify-center" />
+        </HeroEntrance>
 
-      {/* Both strips sit directly on the paper — no cards, no borders, no
-          fills. The generous per-item spacing is deliberate: with only three
-          engines, tight gaps would fit several repeats on a wide screen and
-          the loop would be obvious. */}
-      <div className="shrink-0 pb-12">
-        <div className="grid gap-7">
-          {/* Three wide-spaced items are a short list, so this needs more
-              copies than the prompts to stay overflowed on a large display. */}
-          <Marquee direction="right" speed={52} copies={14} label="Answer engines Searchify covers">
-            {ENGINE_KEYS.map((engine) => (
-              <EngineWordmark key={engine} engine={engine} className="me-24 shrink-0" />
-            ))}
-          </Marquee>
-
-          <Marquee direction="left" speed={64} label="Example buyer questions">
-            {engines.promptSamples.map((prompt) => (
-              <span
-                key={prompt}
-                className="text-mkt-ink-muted text-mkt-sm me-12 inline-flex shrink-0 items-center italic"
-              >
-                “{prompt}”
-              </span>
-            ))}
-          </Marquee>
+        <div className="mx-auto mt-14 w-full max-w-2xl">
+          <HeroVisual />
         </div>
-      </div>
+      </Container>
     </header>
   );
 }

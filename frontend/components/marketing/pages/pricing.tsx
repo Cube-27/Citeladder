@@ -51,7 +51,7 @@ function TierCard({ tier }: Readonly<{ tier: PricingTier }>) {
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-mkt-display text-mkt-ink text-heading-sm font-semibold">{tier.name}</h3>
+        <h3 className="font-mkt-display text-mkt-ink text-mkt-d5">{tier.name}</h3>
         {tier.highlighted && <Badge tone="proof">Recommended</Badge>}
       </div>
       <p className="text-mkt-sm text-mkt-ink-soft mt-2 min-h-[3rem]">{tier.blurb}</p>
@@ -192,9 +192,9 @@ function TableCell({ value, highlighted }: Readonly<{ value: string; highlighted
 /** Closing band — evaluation first, then the workspace. */
 export function PricingCta() {
   return (
-    <Section tone="sunken" rhythm="loose" aria-label="Get started">
+    <Section tone="field" rhythm="loose" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[18ch] font-medium">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[18ch]">
           Start from the evidence, not the invoice.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">

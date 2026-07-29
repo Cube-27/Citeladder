@@ -33,7 +33,7 @@ export function Wordmark({ className }: Readonly<{ className?: string }>) {
   return (
     <span
       className={cn(
-        'font-mkt-display text-mkt-ink inline-flex items-center gap-2.5 text-lg font-bold',
+        'font-mkt-display text-mkt-ink text-mkt-mark inline-flex items-center gap-2.5',
         className,
       )}
     >

@@ -26,10 +26,11 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
     render(<Page />);
 
     const ops = screen.getByRole('region', { name: 'Enterprise capabilities' });
-    expect(within(ops).getAllByRole('heading', { level: 3 })).toHaveLength(4);
+    // Three cards, not four: the old "Traceable by design" card restated the
+    // evidence card's provenance claim, so the page argued the same point twice.
+    expect(within(ops).getAllByRole('heading', { level: 3 })).toHaveLength(3);
     // README "Built for trustworthy operations" bullets, rendered verbatim-ish.
     expect(within(ops).getByText(/UUID identifiers throughout/i)).toBeInTheDocument();
-    // Claimed twice on purpose — the evidence card and the traceability card.
     expect(within(ops).getAllByText(/Immutable artifacts/i).length).toBeGreaterThan(0);
     expect(within(ops).getByText(/FOR UPDATE SKIP LOCKED/i)).toBeInTheDocument();
     expect(
@@ -60,14 +61,25 @@ describe('Enterprise page (public marketing `/enterprise`)', () => {
     );
   });
 
-  it('shows custom values for every enterprise limit', () => {
+  it('names what each enterprise dial measures instead of repeating "Custom"', () => {
     render(<Page />);
 
     const limits = screen.getByRole('region', { name: 'Custom limits' });
-    for (const label of ['Monthly audit runs', 'Monitored URLs', 'Seats', 'Evidence retention']) {
+    for (const label of [
+      'Monthly audit runs',
+      'Monitored URLs',
+      'Projects & seats',
+      'Evidence retention',
+    ]) {
       expect(within(limits).getByText(label)).toBeInTheDocument();
     }
-    expect(within(limits).getAllByText('Custom')).toHaveLength(6);
+
+    // Each dial carries its own UNIT — the information a buyer needs to size a
+    // plan. The page previously answered all six with the bare word "Custom",
+    // which read as six identical facts; sizing is now stated once, up front.
+    expect(within(limits).getByText('prompt × engine × repetition')).toBeInTheDocument();
+    expect(within(limits).getByText(/sized to your volumes/i)).toBeInTheDocument();
+    expect(within(limits).queryByText('Custom')).not.toBeInTheDocument();
   });
 
   it('renders the contact CTA with a real destination, never href="#"', () => {

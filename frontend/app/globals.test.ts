@@ -707,131 +707,116 @@ describe.each([
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   5. Marketing + auth creative system — the "Proof" contract
+   5. Marketing creative system — the "Proof" legibility gate
    (app/(marketing)/marketing-theme.css)
 
-   Proof is light-only and independent of the app tokens: a warm paper
-   canvas, exact ink, and four state hues that are rationed to states,
-   provider identity and evidence marks.
+   This suite deliberately does NOT freeze brand values. Hue choices are a
+   design decision that changes freely, and a test hardcoding the paper hex
+   only turns a redesign into a chore. Every colour below is resolved from
+   whatever the token file currently declares, so retuning paper, ink or a
+   state hue needs no edit here — only the ratios have to hold.
 
-   The rule this suite enforces is the one the deck itself kept breaking:
+   The rule it does enforce is the one the deck itself kept breaking:
    a hue used as a FILL is not automatically legible as TEXT. Every state
    hue therefore ships in two forms — the mark (≥ 3:1, decorative) and the
-   `-text` variant (≥ 4.5:1, safe for body copy). The deck's own values
-   (#0A8F6A 3.7:1, #E95D39 3.2:1, #C98616 2.8:1, muted #737973 4.1:1) all
-   failed as text, which is why the `-text` forms exist at all.
+   `-text` variant (≥ 4.5:1, safe for body copy).
 
-   Blue is the one exemption: the ADS `#0C66E4` clears 4.5:1 on paper as
-   both mark and text, so proof ships a single token (plus a hover step)
-   and appears in BOTH arrays below. That is intentional, not a copy-paste
-   error — a `-text` sibling would be a duplicate token, not a safety net.
+   Blue is the one exemption: proof clears AA on paper as both mark and text,
+   so it ships a single token and appears in BOTH role lists below. That is
+   intentional — a `-text` sibling would be a duplicate, not a safety net.
 
-   Ratios are computed against the paper canvas — the lightest surface the
+   Ratios are measured against the paper canvas — the lightest surface the
    system paints text on, so passing there passes on white too — AND against
-   the two darker band fills (sunken, wash), which have taken text since the
-   band rhythm landed. The paper gate alone once let ink-muted (4.16:1) and
-   proof (4.26:1) ship as text on sunken; the per-fill lists below encode
-   which text colours are legal on which band.
+   the darker band fills (sunken, wash), which also take text. The paper gate
+   alone once let muted ink ship as text on sunken, so the per-band lists
+   below encode which text roles are legal on which fill.
+
+   The gradient keyword is gated at the WCAG large-text threshold (3:1): it
+   only ever paints display-scale headline words, and its light tail is the
+   easiest thing in the system to make accidentally illegible.
 ═══════════════════════════════════════════════════════════════════════ */
-const PROOF_PAPER = '#F5F5F0';
+/** Live token map for the marketing theme — values are read, never asserted. */
+const mktTokens = parseDeclarations(extractBlock(marketingCss, /@theme\s*\{/));
+
+function mktColor(role: string): Rgba {
+  const resolved = resolveColor(`--color-mkt-${role}`, mktTokens);
+  if (!resolved) throw new Error(`--color-mkt-${role} is missing or not a colour`);
+  return resolved;
+}
+
+/** The canvas every text role must stay legible on. */
+const PAPER_ROLE = 'paper';
 
 /** Text roles: must clear AA (4.5:1) on paper. */
-const PROOF_TEXT_COLORS = [
-  '#172B4D', // ink — 12.89:1
-  '#44546F', // ink-soft — 7.00:1, body copy
-  '#626F86', // ink-muted — 4.64:1, meta (tightest pair; paper/surface-only, see band gates)
-  '#0C66E4', // proof — 4.76:1, links and active labels (no -text split; sunken is mark-only)
-  '#216E4E', // evidence-text — 5.64:1, "verified"
-  '#AE2A19', // signal-text — 6.11:1, decline, refusals
-  '#974F0C', // amber-text — 5.58:1, "needs review"
+const PROOF_TEXT_ROLES = [
+  'ink', // primary
+  'ink-soft', // body copy
+  'ink-muted', // meta (tightest pair; paper/surface-only, see band gates)
+  'proof', // links and active labels (no -text split)
+  'evidence-text', // "verified"
+  'signal-text', // decline, refusals
+  'amber-text', // "needs review"
 ];
 
 /**
  * Band fills darker than paper that sections paint via `tone`. Every text
  * colour used on these fills must clear AA against the fill itself.
  */
-const BAND_FILLS = {
-  sunken: '#E9E9E0',
-  wash: '#EAF1FA',
-} as const;
+const BAND_FILL_ROLES = ['surface-sunk', 'wash'] as const;
 
 /**
- * Text colours legal on each band fill. ink-muted (#626F86) drops to
- * 4.16:1 on sunken and 4.46:1 on wash, so band meta text steps up to
- * ink-soft (#44546F — 6.27/6.73:1). proof (#0C66E4) stays a text colour on
- * wash (4.57:1) but falls to 4.26:1 on sunken, where it is mark/link-only.
+ * Text roles legal on each band fill. The whole ink ramp clears AA on both
+ * fills; proof is the one role that splits — it holds as text on the cool wash
+ * but drops below AA on the sunken band, where it is mark/link-only.
  */
-const BAND_TEXT_COLORS = {
-  sunken: ['#172B4D', '#44546F', '#216E4E', '#AE2A19', '#974F0C'],
-  wash: ['#172B4D', '#44546F', '#0C66E4', '#216E4E', '#AE2A19', '#974F0C'],
-} as const;
+const BAND_TEXT_ROLES: Record<(typeof BAND_FILL_ROLES)[number], string[]> = {
+  'surface-sunk': ['ink', 'ink-soft', 'ink-muted', 'evidence-text', 'signal-text', 'amber-text'],
+  wash: ['ink', 'ink-soft', 'ink-muted', 'proof', 'evidence-text', 'signal-text', 'amber-text'],
+};
 
 /**
  * Mark/fill roles: ≥ 3:1 so a 2px dot or bar stays visible, but explicitly
  * NEVER body text. Each one except proof has a `-text` sibling above.
  */
-const PROOF_MARK_COLORS = [
-  '#0C66E4', // proof — 4.76:1: the one mark that also clears AA as text
-  '#1F845A', // evidence — 4.26:1
-  '#CA3521', // signal — 4.75:1
-  '#B65C02', // amber — 4.25:1
-];
+const PROOF_MARK_ROLES = ['proof', 'evidence', 'signal', 'amber'];
 
-describe('marketing + auth creative system (the Proof contract)', () => {
-  it('design.md documents the paper canvas and the mark/text split', () => {
-    const marketingSection = design
-      .split(/^## /m)
-      .find((s) => /^(?:\d+[.:]?\s+)?marketing creative system/i.test(s.trim()));
+/** Gradient keyword stops — display-scale only, so the 3:1 large-text gate. */
+const KEYWORD_ROLES = ['keyword-from', 'keyword-to'];
+
+describe('marketing creative system (the Proof legibility gate)', () => {
+  const canvas = mktColor(PAPER_ROLE);
+
+  it.each(PROOF_TEXT_ROLES)('text role --color-mkt-%s on paper ≥ 4.5:1', (role) => {
+    const ratio = contrastRatio(mktColor(role), canvas);
     expect(
-      marketingSection,
-      'design.md is missing the marketing creative-system section',
-    ).toBeTruthy();
-    expect(marketingSection).toContain(PROOF_PAPER);
-    for (const color of PROOF_MARK_COLORS) {
-      expect(marketingSection, `${color} mark role undocumented`).toContain(color);
+      ratio,
+      `--color-mkt-${role} on paper = ${FMT(ratio)}:1 (< 4.5:1)`,
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(BAND_FILL_ROLES)('text roles on the --color-mkt-%s band fill ≥ 4.5:1', (band) => {
+    const bandCanvas = mktColor(band);
+    for (const role of BAND_TEXT_ROLES[band]) {
+      const ratio = contrastRatio(mktColor(role), bandCanvas);
+      expect(
+        ratio,
+        `--color-mkt-${role} on ${band} = ${FMT(ratio)}:1 (< 4.5:1)`,
+      ).toBeGreaterThanOrEqual(4.5);
     }
-    expect(marketingSection?.toLowerCase()).toMatch(/mark|fill/);
   });
 
-  it('is light-only: the retired dusk canvas is gone from the token file', () => {
-    // Proof replaced the dark Signal/Dusk marketing identity outright. A dusk
-    // value reappearing here means the two systems are being mixed again.
-    expect(marketingCss.toLowerCase()).not.toContain('#1f1e1b');
-    expect(marketingCss.toLowerCase()).not.toContain('#262522');
-  });
-
-  const canvas = { ...hexToRgb(PROOF_PAPER), a: 1 };
-
-  it.each(PROOF_TEXT_COLORS)('text color %s on paper ≥ 4.5:1', (color) => {
-    expect(marketingCss.toLowerCase(), `${color} is not declared`).toContain(color.toLowerCase());
-    const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
-    expect(ratio, `${color} on ${PROOF_PAPER} = ${FMT(ratio)}:1 (< 4.5:1)`).toBeGreaterThanOrEqual(
-      4.5,
+  it.each(PROOF_MARK_ROLES)('mark role --color-mkt-%s on paper ≥ 3:1 (never body text)', (role) => {
+    const ratio = contrastRatio(mktColor(role), canvas);
+    expect(ratio, `--color-mkt-${role} on paper = ${FMT(ratio)}:1 (< 3:1)`).toBeGreaterThanOrEqual(
+      3,
     );
   });
 
-  it.each(Object.entries(BAND_TEXT_COLORS))(
-    'text colors on the %s band fill ≥ 4.5:1',
-    (band, colors) => {
-      const fill = BAND_FILLS[band as keyof typeof BAND_FILLS];
-      expect(marketingCss.toLowerCase(), `${fill} band fill is not declared`).toContain(
-        fill.toLowerCase(),
-      );
-      const bandCanvas = { ...hexToRgb(fill), a: 1 };
-      for (const color of colors) {
-        const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, bandCanvas);
-        expect(
-          ratio,
-          `${color} on ${band} ${fill} = ${FMT(ratio)}:1 (< 4.5:1)`,
-        ).toBeGreaterThanOrEqual(4.5);
-      }
-    },
-  );
-
-  it.each(PROOF_MARK_COLORS)('mark/fill %s on paper ≥ 3:1 (never body text)', (color) => {
-    expect(marketingCss.toLowerCase(), `${color} is not declared`).toContain(color.toLowerCase());
-    const ratio = contrastRatio({ ...hexToRgb(color), a: 1 }, canvas);
-    expect(ratio, `${color} on ${PROOF_PAPER} = ${FMT(ratio)}:1 (< 3:1)`).toBeGreaterThanOrEqual(3);
+  it.each(KEYWORD_ROLES)('gradient stop --color-mkt-%s on paper ≥ 3:1 (display scale)', (role) => {
+    const ratio = contrastRatio(mktColor(role), canvas);
+    expect(ratio, `--color-mkt-${role} on paper = ${FMT(ratio)}:1 (< 3:1)`).toBeGreaterThanOrEqual(
+      3,
+    );
   });
 
   it('gives every state hue an AA-safe text sibling', () => {

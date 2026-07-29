@@ -43,7 +43,7 @@ describe('Landing page (public marketing `/`)', () => {
 
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
-    expect(h1s[0]).toHaveTextContent(/see your market through/i);
+    expect(h1s[0]).toHaveTextContent(/your buyers stopped googling you/i);
 
     // No h2-h6 may contain the product name (keeps heading queries unambiguous).
     const headings = screen.getAllByRole('heading');
@@ -66,7 +66,9 @@ describe('Landing page (public marketing `/`)', () => {
     const { container } = renderWithProviders(<Page />);
 
     // The nav/footer (rendered by the layout) target these ids — pin them.
-    for (const hash of ['#how-it-works', '#platform', '#evidence', '#why']) {
+    // `#platform` / `#evidence` are gone with the sections that owned them;
+    // the page is now hook → shift → product → proof → close.
+    for (const hash of ['#why', '#see-it', '#how-it-works', '#get-started']) {
       expect(container.querySelector(hash)).not.toBeNull();
     }
   });
@@ -76,7 +78,10 @@ describe('Landing page (public marketing `/`)', () => {
     renderWithProviders(<Page />);
 
     const finalCta = screen.getByRole('region', { name: 'Get started' });
-    const cta = within(finalCta).getByRole('link', { name: /book a demo/i });
+    // Asserted by DESTINATION, not by label: the funnel is the contract here,
+    // and the landing close says "Book a working session" while the subpages
+    // say "Book a demo" — pinning the wording made this test fail on copy.
+    const cta = within(finalCta).getByRole('link', { name: /book a working session/i });
     expect(cta).toHaveAttribute('href', DEMO_HREF);
   });
 
@@ -118,17 +123,20 @@ describe('Landing page (public marketing `/`)', () => {
     expect(hero).not.toBeNull();
     expect(hero).not.toHaveTextContent(/your ai visibility|tracking your brand/i);
     expect(main?.children[0]).toBe(hero);
-    expect(main?.children[1]).toHaveAttribute('id', 'platform');
+    // The shift chapter follows the hook; the product canvas comes after it.
+    expect(main?.children[1]).toHaveAttribute('id', 'why');
   });
 
-  it('presents strategy as one question-to-action workflow', () => {
+  it('shows the product canvas once, after the hero states the problem', () => {
     stubAnonymous();
-    renderWithProviders(<Page />);
+    const { container } = renderWithProviders(<Page />);
 
-    expect(screen.getByText('From buyer question to next best action.')).toBeInTheDocument();
-    expect(screen.getByText('01 / Buyer question')).toBeInTheDocument();
-    expect(screen.getByText('02 / Observed pattern')).toBeInTheDocument();
-    expect(screen.getByText('03 / Next action')).toBeInTheDocument();
-    expect(screen.queryByText(/less like a dashboard making claims/i)).toBeNull();
+    // The page used to run the question→verdicts demo TWICE — ambient in the
+    // hero and again as the "see it" beat — so the scroll repeated itself.
+    // The second beat is now the workspace, opened to its evidence.
+    const product = container.querySelector('#see-it');
+    expect(product).not.toBeNull();
+    expect(product).toHaveTextContent(/every score opens to the answer behind it/i);
+    expect(product).toHaveTextContent(/example data/i);
   });
 });

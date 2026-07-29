@@ -90,9 +90,7 @@ export function FaqGroups() {
         {FAQ_GROUPS.map((group) => (
           <section key={group.heading} id={groupAnchor(group)} aria-label={group.heading}>
             <div className="border-mkt-line-soft mb-2 flex items-baseline justify-between gap-4 border-b pb-4">
-              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink font-medium">
-                {group.heading}
-              </h2>
+              <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink">{group.heading}</h2>
               <Meta>{group.items.length} answers</Meta>
             </div>
             {group.items.map((item) => (
