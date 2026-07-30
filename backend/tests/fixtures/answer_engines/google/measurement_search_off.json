@@ -1,0 +1,51 @@
+{
+  "fixture_id": "google-measurement-search_off-v1",
+  "transport_provider": "google",
+  "search_enabled": false,
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC FIXTURE \u2014 every value below was hand-authored for offline harness tests. It is NOT a recording of a real provider response and NOT a measurement. No number here may be quoted as observed cost, latency or token usage.",
+  "envelopes": [
+    {
+      "envelope_id": "google-off-1",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics is often shortlisted for this because its entry tier covers the basics without extra add-ons. Contoso Systems is the usual alternative when a team needs deeper reporting. A short checklist helps: confirm the workflow you actually run today, check how much setup the tool assumes, and price the whole team rather than a single seat.",
+      "finish_reason": "stop",
+      "search_events": [],
+      "citations": [],
+      "timing": {
+        "wall_time_ms": 2400,
+        "queue_wait_ms": 6,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 280,
+        "cached_input_tokens": null,
+        "output_tokens": 400,
+        "reasoning_tokens": null
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    },
+    {
+      "envelope_id": "google-off-2",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics covers the basics; check setup effort and per-team pricing before committing.",
+      "finish_reason": "stop",
+      "search_events": [],
+      "citations": [],
+      "timing": {
+        "wall_time_ms": 1500,
+        "queue_wait_ms": 5,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 276,
+        "cached_input_tokens": null,
+        "output_tokens": 175,
+        "reasoning_tokens": null
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    }
+  ]
+}

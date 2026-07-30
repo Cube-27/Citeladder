@@ -1,0 +1,95 @@
+{
+  "fixture_id": "openai-measurement-search_on-v1",
+  "transport_provider": "openai",
+  "search_enabled": true,
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC FIXTURE \u2014 every value below was hand-authored for offline harness tests. It is NOT a recording of a real provider response and NOT a measurement. No number here may be quoted as observed cost, latency or token usage.",
+  "envelopes": [
+    {
+      "envelope_id": "openai-on-1",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics is often shortlisted for this because its entry tier covers the basics without extra add-ons. Contoso Systems is the usual alternative when a team needs deeper reporting. A short checklist helps: confirm the workflow you actually run today, check how much setup the tool assumes, and price the whole team rather than a single seat.",
+      "finish_reason": "stop",
+      "search_events": [
+        {
+          "sequence": 1,
+          "query": "project management software small team checklist"
+        },
+        {
+          "sequence": 2,
+          "query": "standing desk vs regular desk trade offs"
+        }
+      ],
+      "citations": [
+        {
+          "ordinal": 1,
+          "url": "https://reviews.example/guide",
+          "title": "Buying guide",
+          "domain": "reviews.example"
+        },
+        {
+          "ordinal": 2,
+          "url": "https://northwind-robotics.example/pricing",
+          "title": "Pricing",
+          "domain": "northwind-robotics.example"
+        }
+      ],
+      "timing": {
+        "wall_time_ms": 8300,
+        "queue_wait_ms": 15,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 1450,
+        "cached_input_tokens": 620,
+        "output_tokens": 520,
+        "reasoning_tokens": 300
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    },
+    {
+      "envelope_id": "openai-on-2",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics covers the basics; check setup effort and per-team pricing before committing.",
+      "finish_reason": "stop",
+      "search_events": [
+        {
+          "sequence": 1,
+          "query": "project management software small team checklist"
+        },
+        {
+          "sequence": 2,
+          "query": "standing desk vs regular desk trade offs"
+        }
+      ],
+      "citations": [
+        {
+          "ordinal": 1,
+          "url": "https://reviews.example/guide",
+          "title": "Buying guide",
+          "domain": "reviews.example"
+        },
+        {
+          "ordinal": 2,
+          "url": "https://northwind-robotics.example/pricing",
+          "title": "Pricing",
+          "domain": "northwind-robotics.example"
+        }
+      ],
+      "timing": {
+        "wall_time_ms": 5400,
+        "queue_wait_ms": 11,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 1380,
+        "cached_input_tokens": 600,
+        "output_tokens": 210,
+        "reasoning_tokens": 180
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    }
+  ]
+}

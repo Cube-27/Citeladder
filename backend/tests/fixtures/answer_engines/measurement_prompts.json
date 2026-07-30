@@ -1,0 +1,66 @@
+{
+  "prompt_set_id": "measurement-generic-v1",
+  "description": "Fixed, brand-neutral measurement prompt set for the offline answer-engine sweep. Deliberately generic: no project or customer brand, no domain, no email address, no URL and no credential may ever appear here (invariant 6). The set is fixed so cost/latency comparisons across routes and output treatments are apples-to-apples.",
+  "prompts": [
+    {
+      "prompt_id": "p01",
+      "intent": "discovery",
+      "text": "What should a small team look for when choosing project management software?"
+    },
+    {
+      "prompt_id": "p02",
+      "intent": "discovery",
+      "text": "How do noise cancelling headphones actually reduce background sound?"
+    },
+    {
+      "prompt_id": "p03",
+      "intent": "comparison",
+      "text": "Compare electric kettles with stovetop kettles for daily home use."
+    },
+    {
+      "prompt_id": "p04",
+      "intent": "comparison",
+      "text": "What are the trade offs between a standing desk and a regular desk?"
+    },
+    {
+      "prompt_id": "p05",
+      "intent": "purchase",
+      "text": "Which features matter most when buying a first road bicycle on a budget?"
+    },
+    {
+      "prompt_id": "p06",
+      "intent": "purchase",
+      "text": "What size air fryer suits a household of four people?"
+    },
+    {
+      "prompt_id": "p07",
+      "intent": "service",
+      "text": "How often should a home heat pump be serviced and why?"
+    },
+    {
+      "prompt_id": "p08",
+      "intent": "service",
+      "text": "What does a typical bicycle tune up include?"
+    },
+    {
+      "prompt_id": "p09",
+      "intent": "local",
+      "text": "How can someone tell whether a local repair shop is trustworthy?"
+    },
+    {
+      "prompt_id": "p10",
+      "intent": "local",
+      "text": "What questions should a renter ask before signing a lease?"
+    },
+    {
+      "prompt_id": "p11",
+      "intent": "discovery",
+      "text": "Explain how a dishwasher uses less water than washing by hand."
+    },
+    {
+      "prompt_id": "p12",
+      "intent": "comparison",
+      "text": "Compare cold brew and drip coffee on taste, cost and preparation time."
+    }
+  ]
+}

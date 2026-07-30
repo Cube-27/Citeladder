@@ -1,0 +1,822 @@
+{
+  "WARNING": "SYNTHETIC \u2014 NOT A MEASUREMENT. Every number in this file is derived from the hand-authored fixtures under backend/tests/fixtures/answer_engines/{openai,anthropic,google}/. No provider was called. Do not quote any value here as observed cost, latency or token usage, and do not use this run to satisfy any promotion gate (gate_eligible is false by construction).",
+  "live_measurement_status": "NOT PERFORMED. No live answer-engine measurement exists for v8 slice 1. The cost/latency and output-length figures quoted in the planning documents are UNVERIFIED and are not evidenced by this artifact.",
+  "schema_version": "measurement-artifact-v1",
+  "script_version": "measure-answer-engine-matrix-v1",
+  "run_id": "slice1-fixture-run",
+  "source": "fixtures",
+  "fixture_derived": true,
+  "gate_eligible": false,
+  "generated_at": "fixture-derived (no wall clock)",
+  "prompt_fixture_sha256": "6722e54938accac44b9c4794a3ec47ee5008f1d0dc47bdb843d29290bde9b829",
+  "fixture_sha256": {
+    "anthropic/measurement_search_off.json": "36597daeb6f98bcae4b79b5727dc8f3eaed636aca27aec8662c5f59d498c936d",
+    "anthropic/measurement_search_on.json": "cf36505252ad03c40b15a4719c7ad5c9348746a228ae84f8ca79440eda9de949",
+    "google/measurement_search_off.json": "94586bbaab71881eeb61bae7c75b459edb2ab92ca2f0b4522530a119e2f47115",
+    "google/measurement_search_on.json": "a88a1bdd836b8e8d0e3daa53f1287eadbab7d6a482ba216ded922aca36f34dab",
+    "openai/measurement_search_off.json": "be1f9ab3e8ed0bac056212c8c5e273b0804cb399338217fb98d27fa6720fb88f",
+    "openai/measurement_search_on.json": "1fc32df6208ac976174a23f8e882ebf2138cdde1dd8fee15106b5563f50f5181"
+  },
+  "unset_pricing": [
+    "openai",
+    "google",
+    "all_per_search_fees"
+  ],
+  "case_count": 72,
+  "prompt_count": 12,
+  "observation_count": 864,
+  "unsupported_observation_count": 432,
+  "notes": [
+    "SYNTHETIC: every value in this run is replayed from committed fixtures. It is NOT a measurement of any provider and cannot satisfy a promotion gate."
+  ],
+  "route_costs": {
+    "schema_version": "measurement-artifact-v1",
+    "run_id": "slice1-fixture-run",
+    "source": "fixtures",
+    "fixture_derived": true,
+    "unset_pricing": [
+      "openai",
+      "google",
+      "all_per_search_fees"
+    ],
+    "cells": [
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "high",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "high",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "high",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "low",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "low",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "low",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "medium",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "medium",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "medium",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "high",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 16980,
+          "cached_input_tokens": 7320,
+          "output_tokens": 4380,
+          "reasoning_tokens": 2880,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "high",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 16840,
+          "cached_input_tokens": 7280,
+          "output_tokens": 3760,
+          "reasoning_tokens": 2640,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "high",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 17120,
+          "cached_input_tokens": 7360,
+          "output_tokens": 5000,
+          "reasoning_tokens": 3120,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "low",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 16910,
+          "cached_input_tokens": 7300,
+          "output_tokens": 4070,
+          "reasoning_tokens": 2760,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "low",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 17120,
+          "cached_input_tokens": 7360,
+          "output_tokens": 5000,
+          "reasoning_tokens": 3120,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "low",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 16910,
+          "cached_input_tokens": 7300,
+          "output_tokens": 4070,
+          "reasoning_tokens": 2760,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "medium",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 17120,
+          "cached_input_tokens": 7360,
+          "output_tokens": 5000,
+          "reasoning_tokens": 3120,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "medium",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 17120,
+          "cached_input_tokens": 7360,
+          "output_tokens": 5000,
+          "reasoning_tokens": 3120,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "medium",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 17050,
+          "cached_input_tokens": 7340,
+          "output_tokens": 4690,
+          "reasoning_tokens": 3000,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 16910,
+          "cached_input_tokens": 7300,
+          "output_tokens": 4070,
+          "reasoning_tokens": 2760,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 17190,
+          "cached_input_tokens": 7380,
+          "output_tokens": 5310,
+          "reasoning_tokens": 3240,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "chatgpt",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 16980,
+          "cached_input_tokens": 7320,
+          "output_tokens": 4380,
+          "reasoning_tokens": 2880,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "claude",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": 3586,
+          "cached_input_tokens": 0,
+          "output_tokens": 3460,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": 32219,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "claude",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": 3596,
+          "cached_input_tokens": 0,
+          "output_tokens": 4760,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": 37774,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "claude",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": 3590,
+          "cached_input_tokens": 0,
+          "output_tokens": 3980,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": 34441,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "claude",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 24720,
+          "cached_input_tokens": 0,
+          "output_tokens": 6440,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": 102212,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "claude",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 24240,
+          "cached_input_tokens": 0,
+          "output_tokens": 6820,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": 97768,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "claude",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": 24720,
+          "cached_input_tokens": 0,
+          "output_tokens": 6440,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": 102212,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "gemini",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": 3336,
+          "cached_input_tokens": null,
+          "output_tokens": 3450,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "gemini",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": 3340,
+          "cached_input_tokens": null,
+          "output_tokens": 3675,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "gemini",
+        "search_enabled": false,
+        "reasoning_effort": "unset",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 0,
+        "lines": {
+          "uncached_input_tokens": 3340,
+          "cached_input_tokens": null,
+          "output_tokens": 3675,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "partial",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "gemini",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "baseline",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "gemini",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "capped_600",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      },
+      {
+        "route_key": "gemini",
+        "search_enabled": true,
+        "reasoning_effort": "unset",
+        "output_treatment": "concise",
+        "observation_count": 12,
+        "search_call_count": 24,
+        "lines": {
+          "uncached_input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "reasoning_tokens": null,
+          "provider_reported_cost_microusd": null,
+          "search_fee_microusd": null
+        },
+        "cost_status": "unknown",
+        "total_cost_microusd": null
+      }
+    ],
+    "unsupported_cells": [
+      "claude:high",
+      "claude:low",
+      "claude:medium",
+      "gemini:high",
+      "gemini:low",
+      "gemini:medium"
+    ]
+  },
+  "output_length_distribution": {
+    "schema_version": "measurement-artifact-v1",
+    "run_id": "slice1-fixture-run",
+    "source": "fixtures",
+    "fixture_derived": true,
+    "quantiles": [
+      0.5,
+      0.9,
+      0.95
+    ],
+    "buckets": [
+      {
+        "route_key": "chatgpt",
+        "output_treatment": "baseline",
+        "observation_count": 96,
+        "known_output_token_count": 85,
+        "unknown_output_token_count": 11,
+        "quantiles": {
+          "p50": 480,
+          "p90": 520,
+          "p95": 520
+        }
+      },
+      {
+        "route_key": "chatgpt",
+        "output_treatment": "capped_600",
+        "observation_count": 96,
+        "known_output_token_count": 79,
+        "unknown_output_token_count": 17,
+        "quantiles": {
+          "p50": 480,
+          "p90": 520,
+          "p95": 520
+        }
+      },
+      {
+        "route_key": "chatgpt",
+        "output_treatment": "concise",
+        "observation_count": 96,
+        "known_output_token_count": 80,
+        "unknown_output_token_count": 16,
+        "quantiles": {
+          "p50": 210,
+          "p90": 520,
+          "p95": 520
+        }
+      },
+      {
+        "route_key": "claude",
+        "output_treatment": "baseline",
+        "observation_count": 24,
+        "known_output_token_count": 24,
+        "unknown_output_token_count": 0,
+        "quantiles": {
+          "p50": 505,
+          "p90": 600,
+          "p95": 600
+        }
+      },
+      {
+        "route_key": "claude",
+        "output_treatment": "capped_600",
+        "observation_count": 24,
+        "known_output_token_count": 24,
+        "unknown_output_token_count": 0,
+        "quantiles": {
+          "p50": 505,
+          "p90": 600,
+          "p95": 600
+        }
+      },
+      {
+        "route_key": "claude",
+        "output_treatment": "concise",
+        "observation_count": 24,
+        "known_output_token_count": 24,
+        "unknown_output_token_count": 0,
+        "quantiles": {
+          "p50": 505,
+          "p90": 600,
+          "p95": 600
+        }
+      },
+      {
+        "route_key": "gemini",
+        "output_treatment": "baseline",
+        "observation_count": 24,
+        "known_output_token_count": 20,
+        "unknown_output_token_count": 4,
+        "quantiles": {
+          "p50": 400,
+          "p90": 430,
+          "p95": 430
+        }
+      },
+      {
+        "route_key": "gemini",
+        "output_treatment": "capped_600",
+        "observation_count": 24,
+        "known_output_token_count": 18,
+        "unknown_output_token_count": 6,
+        "quantiles": {
+          "p50": 400,
+          "p90": 430,
+          "p95": 430
+        }
+      },
+      {
+        "route_key": "gemini",
+        "output_treatment": "concise",
+        "observation_count": 24,
+        "known_output_token_count": 19,
+        "unknown_output_token_count": 5,
+        "quantiles": {
+          "p50": 400,
+          "p90": 430,
+          "p95": 430
+        }
+      }
+    ]
+  }
+}

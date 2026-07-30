@@ -18,6 +18,10 @@ infra/docker/.env
 node_modules/
 .next/
 
+# Local measurement sweep output (committed artifacts live in
+# backend/docs/measurements/ instead)
+backend/var/measurements/
+
 # OS
 .DS_Store
 

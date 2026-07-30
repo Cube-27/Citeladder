@@ -1,0 +1,95 @@
+{
+  "fixture_id": "google-measurement-search_on-v1",
+  "transport_provider": "google",
+  "search_enabled": true,
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC FIXTURE \u2014 every value below was hand-authored for offline harness tests. It is NOT a recording of a real provider response and NOT a measurement. No number here may be quoted as observed cost, latency or token usage.",
+  "envelopes": [
+    {
+      "envelope_id": "google-on-1",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics is often shortlisted for this because its entry tier covers the basics without extra add-ons. Contoso Systems is the usual alternative when a team needs deeper reporting. A short checklist helps: confirm the workflow you actually run today, check how much setup the tool assumes, and price the whole team rather than a single seat.",
+      "finish_reason": "stop",
+      "search_events": [
+        {
+          "sequence": 1,
+          "query": "project management software small team checklist"
+        },
+        {
+          "sequence": 2,
+          "query": "standing desk vs regular desk trade offs"
+        }
+      ],
+      "citations": [
+        {
+          "ordinal": 1,
+          "url": "https://reviews.example/guide",
+          "title": "Buying guide",
+          "domain": "reviews.example"
+        },
+        {
+          "ordinal": 2,
+          "url": "https://northwind-robotics.example/pricing",
+          "title": "Pricing",
+          "domain": "northwind-robotics.example"
+        }
+      ],
+      "timing": {
+        "wall_time_ms": 5200,
+        "queue_wait_ms": 9,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 1220,
+        "cached_input_tokens": null,
+        "output_tokens": 430,
+        "reasoning_tokens": null
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    },
+    {
+      "envelope_id": "google-on-2-invalid-usage",
+      "synthetic": true,
+      "answer_text": "Start from the workflow you already run, then compare setup effort, reporting depth and total price for the whole team.",
+      "finish_reason": "stop",
+      "search_events": [
+        {
+          "sequence": 1,
+          "query": "project management software small team checklist"
+        },
+        {
+          "sequence": 2,
+          "query": "standing desk vs regular desk trade offs"
+        }
+      ],
+      "citations": [
+        {
+          "ordinal": 1,
+          "url": "https://reviews.example/guide",
+          "title": "Buying guide",
+          "domain": "reviews.example"
+        },
+        {
+          "ordinal": 2,
+          "url": "https://northwind-robotics.example/pricing",
+          "title": "Pricing",
+          "domain": "northwind-robotics.example"
+        }
+      ],
+      "timing": {
+        "wall_time_ms": 4800,
+        "queue_wait_ms": 9,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": -1,
+        "cached_input_tokens": null,
+        "output_tokens": "n/a",
+        "reasoning_tokens": null
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    }
+  ]
+}
