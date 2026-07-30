@@ -2,8 +2,6 @@ import {
   ArrowRight,
   Check,
   Layers,
-  Lock,
-  Server,
   Shield,
   Sigma,
   type LucideIcon,
@@ -28,10 +26,10 @@ const CAPABILITIES: readonly Capability[] = [
   {
     icon: Shield,
     title: 'Security & BYOK Privacy',
-    tagline: 'Provider credentials stay secret, and backend topology stays server-side.',
+    tagline: 'Provider credentials stay secret; backend topology never reaches the client bundle.',
     highlights: [
       'Fernet-encrypted BYOK keys at rest',
-      'Strict UUID workspace isolation',
+      'UUID identifiers throughout every workspace',
       'Same-origin API proxying',
     ],
   },
@@ -41,7 +39,7 @@ const CAPABILITIES: readonly Capability[] = [
     tagline: 'Numbers your compliance and security teams can re-derive, not just read.',
     highlights: [
       'Deterministic scoring rules',
-      'Immutable run artifacts',
+      'Immutable artifacts and run logs',
       'No fabricated fallback zeros',
     ],
   },
@@ -52,7 +50,7 @@ const CAPABILITIES: readonly Capability[] = [
     highlights: [
       'PostgreSQL FOR UPDATE SKIP LOCKED queues',
       'Leases, heartbeats & retries',
-      'Runtime Zod & Pydantic contracts',
+      'Runtime Zod + Pydantic contracts',
     ],
   },
 ];
@@ -61,7 +59,7 @@ const DATA_FLOW_STEPS = [
   { step: '01', title: 'Browser Client', detail: 'Authenticated HTTPS request' },
   { step: '02', title: 'Next.js Proxy', detail: 'Same-origin edge route' },
   { step: '03', title: 'FastAPI Backend', detail: 'Schema & bearer check' },
-  { step: '04', title: 'PostgreSQL DB', detail: 'Durable queue & runs' },
+  { step: '04', title: 'PostgreSQL', detail: 'Durable queue & runs' },
   { step: '05', title: 'Workers', detail: 'Async task execution' },
   { step: '06', title: 'AI Providers', detail: 'Fernet-encrypted BYOK' },
 ] as const;
@@ -71,7 +69,7 @@ const CUSTOM_LIMITS = [
     title: 'Monthly audit runs',
     badge: 'Custom Volume',
     unit: 'prompt × engine × repetition',
-    desc: 'Sized for high-concurrency evaluation across all your active brand topics.',
+    desc: 'Sized to your volumes for high-concurrency evaluation across all your active brand topics.',
   },
   {
     title: 'Monitored URLs',
@@ -137,25 +135,30 @@ export function EnterpriseOps() {
         intro="Every claim below maps directly to the running platform architecture — bring your security and compliance team."
         headingId="enterprise-caps-title"
       />
-      
+
       {/* 3 Spacious Pillar Cards */}
       <StaggerGroup className="grid gap-6 md:grid-cols-3">
         {CAPABILITIES.map(({ icon: Icon, title, tagline, highlights }) => (
           <StaggerItem key={title} className="h-full">
-            <div className="rounded-mkt-lg bg-mkt-paper border-mkt-line hover:border-mkt-proof/40 shadow-card transition-all duration-200 h-full p-8 flex flex-col justify-between border">
+            <div className="rounded-mkt-lg bg-mkt-paper border-mkt-line hover:border-mkt-proof/40 shadow-card flex h-full flex-col justify-between border p-8 transition-all duration-200">
               <div>
                 <div className="flex items-center gap-3">
-                  <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof grid size-10 place-items-center rounded-md border shrink-0">
+                  <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof grid size-10 shrink-0 place-items-center rounded-md border">
                     <Icon aria-hidden strokeWidth={1.8} className="size-5" />
                   </span>
-                  <h3 className="font-mkt-display text-mkt-d4 text-mkt-ink leading-snug">{title}</h3>
+                  <h3 className="font-mkt-display text-mkt-d4 text-mkt-ink leading-snug">
+                    {title}
+                  </h3>
                 </div>
                 <p className="text-mkt-body text-mkt-ink-soft mt-4 leading-relaxed">{tagline}</p>
               </div>
 
-              <ul className="mt-8 border-mkt-line-soft space-y-3 border-t pt-6">
+              <ul className="border-mkt-line-soft mt-8 space-y-3 border-t pt-6">
                 {highlights.map((item) => (
-                  <li key={item} className="text-mkt-sm text-mkt-ink flex items-center gap-2.5 font-medium">
+                  <li
+                    key={item}
+                    className="text-mkt-sm text-mkt-ink flex items-center gap-2.5 font-medium"
+                  >
                     <Check
                       aria-hidden
                       strokeWidth={2.5}
@@ -171,17 +174,19 @@ export function EnterpriseOps() {
       </StaggerGroup>
 
       {/* Clean Horizontal Data Flow */}
-      <div className="mt-12">
+      <section aria-label="Platform data flow" className="mt-12">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-mkt-meta text-mkt-ink-muted font-mono uppercase">
             Platform Data Flow & Security Boundaries
           </p>
-          <span className="text-mkt-meta text-mkt-proof font-mono uppercase">docs/architecture.md</span>
+          <span className="text-mkt-meta text-mkt-proof font-mono uppercase">
+            docs/architecture.md
+          </span>
         </div>
         <Reveal className="rounded-mkt-lg bg-mkt-paper border-mkt-line shadow-card border p-6 md:p-8">
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             {DATA_FLOW_STEPS.map((s) => (
-              <div key={s.step} className="border-mkt-line-soft border-l-2 pl-4 py-1">
+              <div key={s.step} className="border-mkt-line-soft border-l-2 py-1 pl-4">
                 <p className="text-mkt-meta text-mkt-proof font-mono font-bold">{s.step}</p>
                 <p className="text-mkt-body text-mkt-ink mt-1 font-semibold">{s.title}</p>
                 <p className="text-mkt-sm text-mkt-ink-muted mt-1 leading-snug">{s.detail}</p>
@@ -189,7 +194,7 @@ export function EnterpriseOps() {
             ))}
           </div>
         </Reveal>
-      </div>
+      </section>
     </Section>
   );
 }
@@ -206,7 +211,7 @@ export function EnterpriseLimits() {
 
       {/* Spacious 2-Column Limits Grid */}
       <Reveal className="rounded-mkt-lg bg-mkt-paper border-mkt-line shadow-card overflow-hidden border">
-        <div className="border-mkt-line-soft border-b p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-mkt-wash/30">
+        <div className="border-mkt-line-soft bg-mkt-wash/30 flex flex-col justify-between gap-4 border-b p-6 md:flex-row md:items-center md:p-8">
           <div>
             <h3 className="font-mkt-display text-mkt-d3 text-mkt-ink">
               Tailored Enterprise Sizing
@@ -215,20 +220,20 @@ export function EnterpriseLimits() {
               We quote directly against your operational numbers — not arbitrary tier buckets.
             </p>
           </div>
-          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-sm font-semibold rounded-sm border px-4 py-2 shrink-0 self-start md:self-auto">
+          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-sm shrink-0 self-start rounded-sm border px-4 py-2 font-semibold md:self-auto">
             Custom Agreement
           </span>
         </div>
 
-        <StaggerGroup className="grid gap-px bg-mkt-line-soft md:grid-cols-2">
+        <StaggerGroup className="bg-mkt-line-soft grid gap-px md:grid-cols-2">
           {CUSTOM_LIMITS.map((item) => (
             <StaggerItem
               key={item.title}
-              className="bg-mkt-paper p-8 transition-colors hover:bg-mkt-surface"
+              className="bg-mkt-paper hover:bg-mkt-surface p-8 transition-colors"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h4 className="font-mkt-display text-mkt-d4 text-mkt-ink">{item.title}</h4>
-                <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-meta font-mono uppercase rounded-sm border px-2.5 py-1">
+                <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-meta rounded-sm border px-2.5 py-1 font-mono uppercase">
                   {item.badge}
                 </span>
               </div>
@@ -240,11 +245,14 @@ export function EnterpriseLimits() {
       </Reveal>
 
       {/* Bottom Quote CTA Strip */}
-      <div className="mt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 rounded-mkt-lg bg-mkt-paper p-8 shadow-card border border-mkt-line">
+      <div className="rounded-mkt-lg bg-mkt-paper shadow-card border-mkt-line mt-8 flex flex-col items-start justify-between gap-6 border p-8 md:flex-row md:items-center">
         <div>
-          <p className="font-mkt-display text-mkt-d4 text-mkt-ink">Verifiable Operations & Audit Trail</p>
-          <p className="text-mkt-body text-mkt-ink-soft mt-1 leading-relaxed max-w-[80ch]">
-            Deterministic scoring rules, immutable run logs, and provenance stamps on every derived metric.
+          <p className="font-mkt-display text-mkt-d4 text-mkt-ink">
+            Verifiable Operations & Audit Trail
+          </p>
+          <p className="text-mkt-body text-mkt-ink-soft mt-1 max-w-[80ch] leading-relaxed">
+            Deterministic scoring rules, immutable run logs, and provenance stamps on every derived
+            metric.
           </p>
         </div>
         <ButtonLink href={DEMO_HREF} className="shrink-0">

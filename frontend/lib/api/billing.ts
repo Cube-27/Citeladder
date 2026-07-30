@@ -14,8 +14,7 @@ export type BillingCatalog = z.infer<typeof billingCatalogSchema>;
 export type BillingSummary = z.infer<typeof billingSummarySchema>;
 export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
 
-export const BILLING_CONFIRM_POLL_MS = 3_000;
-export const BILLING_CONFIRM_MAX_POLLS = 20;
+export { BILLING_CONFIRM_MAX_POLLS, BILLING_CONFIRM_POLL_MS } from '@/lib/config/operational';
 
 export const billingApi = {
   catalog: async (countryCode?: string, options?: ApiRequestOptions) => {

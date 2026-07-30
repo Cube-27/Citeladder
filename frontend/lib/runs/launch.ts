@@ -8,10 +8,9 @@
  */
 import type { LaunchAuditInput } from '@/lib/api/runs';
 import type { LogicalEngine } from '@/lib/api/types';
+import { DEFAULT_REPETITIONS, MAX_REPETITIONS, MIN_REPETITIONS } from '@/lib/config/operational';
 
-export const MIN_REPETITIONS = 1;
-export const MAX_REPETITIONS = 10;
-export const DEFAULT_REPETITIONS = 1;
+export { DEFAULT_REPETITIONS, MAX_REPETITIONS, MIN_REPETITIONS } from '@/lib/config/operational';
 
 /** The dialog's local, still-being-edited selection. */
 export type LaunchSelection = {

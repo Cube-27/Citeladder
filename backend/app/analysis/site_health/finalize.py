@@ -20,20 +20,22 @@
 from __future__ import annotations
 
 from app.analysis.site_health.rules import RuleEvaluation, rule_for
+from app.core.config import site_health as site_health_config
 from app.core.config.site_health import (
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_PASS,
+    SITE_HEALTH_MAX_URL_CHARS,
     SiteHealthRule,
 )
 
 # Evidence lists are bounded so a pathological crawl can never bloat a row.
-_MAX_EVIDENCE_URLS = 10
+_MAX_EVIDENCE_URLS = site_health_config.SITE_HEALTH_MAX_EVIDENCE_URLS
 
 
 def _bounded_urls(urls: list[str]) -> list[str]:
     """The bounded, JSON-safe evidence form of a URL list."""
-    return [str(url)[:2048] for url in urls[:_MAX_EVIDENCE_URLS]]
+    return [str(url)[:SITE_HEALTH_MAX_URL_CHARS] for url in urls[:_MAX_EVIDENCE_URLS]]
 
 
 def _catalog_rule(rule_id: str) -> SiteHealthRule:

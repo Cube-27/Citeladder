@@ -1,3 +1,5 @@
+import { getSiteUrl } from '@/lib/config/env';
+
 /**
  * Canonical public origin, e.g. 'https://app.searchify.com'. Unset in dev and
  * until the production domain is approved (owner blocker B3) — every consumer
@@ -12,7 +14,7 @@ export const SITE_TAGLINE = 'AI visibility analytics';
 
 /** Parses NEXT_PUBLIC_SITE_URL. Returns null when unset or not a clean https origin. */
 export function siteOrigin(): URL | null {
-  const value = process.env.NEXT_PUBLIC_SITE_URL;
+  const value = getSiteUrl();
   if (!value) return null;
   try {
     const url = new URL(value);

@@ -56,34 +56,38 @@ describe('Solutions page (public marketing `/solutions`)', () => {
 
     const agencies = screen.getByRole('region', { name: 'Agencies' });
     expect(within(agencies).getByText(/isolated multi-project workspaces/i)).toBeInTheDocument();
-    expect(within(agencies).getByText(/authenticated client evidence exports/i)).toBeInTheDocument();
     expect(
-      within(agencies).getByRole('link', { name: /see agency workflow/i }),
-    ).toHaveAttribute('href', DEMO_HREF);
+      within(agencies).getByText(/authenticated client evidence exports/i),
+    ).toBeInTheDocument();
+    expect(within(agencies).getByRole('link', { name: /see agency workflow/i })).toHaveAttribute(
+      'href',
+      DEMO_HREF,
+    );
 
     const inHouse = screen.getByRole('region', { name: 'In-house teams' });
     expect(within(inHouse).getByText(/multi-engine cross-run trend analysis/i)).toBeInTheDocument();
     expect(within(inHouse).getByText(/33 deterministic site-health rules/i)).toBeInTheDocument();
     expect(within(inHouse).getByText(/Search Console and GA4 syncs/i)).toBeInTheDocument();
-    expect(
-      within(inHouse).getByRole('link', { name: /see reporting surfaces/i }),
-    ).toHaveAttribute('href', DEMO_HREF);
+    expect(within(inHouse).getByRole('link', { name: /see reporting surfaces/i })).toHaveAttribute(
+      'href',
+      DEMO_HREF,
+    );
 
     const founders = screen.getByRole('region', { name: 'Founders' });
     expect(within(founders).getByText(/sample site health crawl/i)).toBeInTheDocument();
-    expect(
-      within(founders).getByText(/complete data provenance/i),
-    ).toBeInTheDocument();
-    expect(
-      within(founders).getByRole('link', { name: /see first audit sample/i }),
-    ).toHaveAttribute('href', DEMO_HREF);
+    expect(within(founders).getByText(/complete data provenance/i)).toBeInTheDocument();
+    expect(within(founders).getByRole('link', { name: /see first audit sample/i })).toHaveAttribute(
+      'href',
+      DEMO_HREF,
+    );
 
     const commerce = screen.getByRole('region', { name: 'Ecommerce' });
     expect(within(commerce).getAllByText(/price accuracy/i).length).toBeGreaterThan(0);
     expect(within(commerce).getAllByText(/competitor co-placement/i).length).toBeGreaterThan(0);
-    expect(
-      within(commerce).getByRole('link', { name: /see commerce workflow/i }),
-    ).toHaveAttribute('href', DEMO_HREF);
+    expect(within(commerce).getByRole('link', { name: /see commerce workflow/i })).toHaveAttribute(
+      'href',
+      DEMO_HREF,
+    );
 
     const pr = screen.getByRole('region', { name: 'PR & communications' });
     expect(within(pr).getByText(/real-time mention and citation tracking/i)).toBeInTheDocument();

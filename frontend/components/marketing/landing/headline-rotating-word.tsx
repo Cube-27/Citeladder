@@ -26,7 +26,7 @@ export function HeadlineRotatingWord() {
   return (
     <span
       style={{ perspective: '800px' }}
-      className="relative inline-grid items-center justify-items-center overflow-hidden px-1 align-baseline text-center"
+      className="relative inline-grid items-center justify-items-center overflow-hidden px-1 text-center align-baseline"
     >
       {/* Invisible spacer locking width permanently to max word size so layout shifting is impossible */}
       <span className="font-mkt-display invisible col-start-1 row-start-1 select-none">

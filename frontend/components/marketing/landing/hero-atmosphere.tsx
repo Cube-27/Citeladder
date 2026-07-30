@@ -55,10 +55,7 @@ export function HeroAtmosphere() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 select-none overflow-hidden"
-    >
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none">
       {FIELDS.map((field, i) => (
         <m.span
           key={i}

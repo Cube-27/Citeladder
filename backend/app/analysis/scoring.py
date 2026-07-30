@@ -27,53 +27,13 @@ from app.analysis.normalization import (
 )
 from app.core.config.analysis import (
     AMBIGUOUS_ALIASES,
+    FANOUT_FEATURE_RULES,
     GEMINI_25_FLASH_INPUT_PER_MILLION_USD,
     GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD,
     GEMINI_25_GROUNDED_PROMPT_USD,
+    TOKENS_PER_MILLION,
+    uses_gemini_flash_pricing,
 )
-
-# Transparent keyword rules for search-query fanout classification. Each entry:
-# feature -> tuple of substrings (matched on the normalized, lowercased query).
-FANOUT_FEATURE_RULES: dict[str, tuple[str, ...]] = {
-    "community": ("reddit", "forum", "discussion", "experiences"),
-    "review": ("review", "reviews", "rating", "ratings", "customer feedback"),
-    "comparison": (
-        "vs",
-        "versus",
-        "alternative",
-        "alternatives",
-        "compare",
-        "best",
-    ),
-    "commercial": (
-        "price",
-        "prices",
-        "cheap",
-        "affordable",
-        "budget",
-        "sale",
-        "under",
-    ),
-    "local": (
-        "near me",
-        "nearby",
-        "store",
-        "sydney",
-        "melbourne",
-        "brisbane",
-        "perth",
-    ),
-    "service": ("click and collect", "delivery", "returns", "shipping"),
-    "freshness": ("latest", "current", "today", "2026"),
-    "product_evidence": (
-        "material",
-        "fabric",
-        "size",
-        "multipack",
-        "availability",
-        "stock",
-    ),
-}
 
 
 @dataclass(frozen=True)
@@ -610,17 +570,14 @@ def _aggregate_cost(
     grounding_if_billable = 0.0
     # ``gemini-flash-latest`` is an alias that currently resolves to the 2.5-flash
     # generation, so it shares the same public paid-list pricing.
-    if config.provider == "gemini" and config.model in (
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
-    ):
+    if uses_gemini_flash_pricing(config.provider, config.model):
         token_estimate = (
             token_usage["input_tokens"]
             * GEMINI_25_FLASH_INPUT_PER_MILLION_USD
-            / 1_000_000
+            / TOKENS_PER_MILLION
             + token_usage["output_tokens"]
             * GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD
-            / 1_000_000
+            / TOKENS_PER_MILLION
         )
         grounding_if_billable = grounded_requests * GEMINI_25_GROUNDED_PROMPT_USD
     return {

@@ -12,8 +12,8 @@
 import type { IntegrationSyncRun } from '@/lib/api/integrations';
 import type { RunStatusValue } from '@/components/ui/badge-variants';
 
-/** Poll cadence for an in-flight sync run (mirrors ACTIVE_RUN_POLL_MS). */
-export const SYNC_RUN_POLL_MS = 3_000;
+/** Compatibility export for existing feature consumers. */
+export { SYNC_RUN_POLL_MS } from '@/lib/config/operational';
 
 type SyncRunStatus = IntegrationSyncRun['status'];
 

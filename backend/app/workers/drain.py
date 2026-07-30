@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from app.core.config.task_queue import DEFAULT_MAX_DRAIN_BATCHES
+
 
 class _RunsOnce(Protocol):
     async def run_once(self) -> int: ...
@@ -23,7 +25,9 @@ class _RunsOnce(Protocol):
 class DrainableWorkerMixin:
     """Adds ``run_until_idle`` to a worker exposing ``run_once``."""
 
-    async def run_until_idle(self: _RunsOnce, *, max_batches: int = 1000) -> int:
+    async def run_until_idle(
+        self, *, max_batches: int = DEFAULT_MAX_DRAIN_BATCHES
+    ) -> int:
         """Drain the queue until a claim returns nothing (test/one-shot).
 
         ``max_batches`` bounds the degenerate case where new work keeps

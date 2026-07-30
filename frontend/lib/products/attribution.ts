@@ -16,7 +16,10 @@ import type {
   AttributionTaskStatus,
   UnattributedMetrics,
 } from '@/lib/api/types';
+import { ATTRIBUTION_RECOMPUTE_POLL_MS } from '@/lib/config/operational';
 import { formatPercent, formatPrice } from '@/lib/products/catalog';
+
+export { ATTRIBUTION_RECOMPUTE_POLL_MS };
 
 // The range presets + granularity vocabulary are OWNED by the shared
 // analytics options module (the same framework-free options the `/analytics`
@@ -202,8 +205,6 @@ export function productRowKey(row: {
 // ---------------------------------------------------------------------------
 
 /** Poll cadence for an in-flight attribution recompute (mirrors SYNC_RUN_POLL_MS). */
-export const ATTRIBUTION_RECOMPUTE_POLL_MS = 3_000;
-
 /** Non-terminal queue statuses — the recompute task keeps polling. */
 export function isActiveAttributionTask(status: AttributionTaskStatus): boolean {
   return (

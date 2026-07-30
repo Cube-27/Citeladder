@@ -18,8 +18,7 @@
  * those carry our accent colour and match the rest of the UI.
  */
 
-/** Publishable credential; absent in tests/CI, which simply disables the fallback. */
-const PUBLISHABLE = process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE;
+import { getLogoDevPublishable } from '@/lib/config/env';
 
 /**
  * Registrable-ish domain for a site URL, or null when it is not usable.
@@ -51,11 +50,12 @@ export function logoDomain(websiteUrl: string | null | undefined): string | null
  * avatar is displayed at 16–32 CSS px.
  */
 export function logoDevUrl(websiteUrl: string | null | undefined, size: number): string | null {
-  if (!PUBLISHABLE) return null;
+  const publishable = getLogoDevPublishable();
+  if (!publishable) return null;
   const domain = logoDomain(websiteUrl);
   if (!domain) return null;
   const params = new URLSearchParams({
-    token: PUBLISHABLE,
+    token: publishable,
     size: String(Math.min(size * 2, 800)),
     format: 'png',
     // Let the CDN pick a background that suits the viewer's colour scheme.

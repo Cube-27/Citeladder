@@ -103,7 +103,7 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
                 )}
               >
                 <ProviderLogo logo={face.key} />
-                <span className="text-mkt-body text-mkt-ink font-semibold hidden sm:inline">
+                <span className="text-mkt-body text-mkt-ink hidden font-semibold sm:inline">
                   {face.label}
                 </span>
               </span>

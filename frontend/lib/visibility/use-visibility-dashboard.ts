@@ -18,22 +18,16 @@ import {
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
 import { shouldPollAudit } from '@/lib/runs/status';
+import { ACTIVE_RUN_POLL_MS, EVIDENCE_LIMIT } from '@/lib/config/operational';
+
+/** Compatibility exports for existing visibility consumers and tests. */
+export { ACTIVE_RUN_POLL_MS, EVIDENCE_LIMIT } from '@/lib/config/operational';
 import {
   brandVisibilityHistory,
   rangeToFrom,
   type TrendGranularity,
   type TrendRange,
 } from '@/lib/visibility/trends';
-
-/** Newest-window size for the shared execution-evidence request (backend max 500). */
-export const EVIDENCE_LIMIT = 100;
-
-/**
- * Poll interval (ms) for the audits list while a run is in progress, matching
- * the run-detail page's cadence. Polling stops once every run is terminal, so
- * a finished run's snapshot appears here without a remount.
- */
-export const ACTIVE_RUN_POLL_MS = 3_000;
 
 /**
  * The Visibility workspace's URL-synced tab + shared filter state.

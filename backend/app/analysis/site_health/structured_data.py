@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.core.config import site_health as site_health_config
 from app.core.config.site_health import (
     SCHEMA_PROPERTY_PATHS,
     STRUCTURED_DATA_RECOGNIZED_TYPES,
@@ -36,15 +37,14 @@ from app.core.config.site_health import (
 
 # Absolute ceiling on how deep we descend into a JSON-LD object graph so a
 # deeply-nested (or self-referential) payload can never blow the stack.
-_MAX_JSONLD_DEPTH = 12
+_MAX_JSONLD_DEPTH = site_health_config.SITE_HEALTH_MAX_JSONLD_DEPTH
 
-# Bounded per-field caps for the P2 enrichment fields (same convention as
-# parser.py: a single hostile attribute can never bloat the facts dict).
-_MAX_NAME_CHARS = 256
-_MAX_AUTHOR_CHARS = 256
-_MAX_DATE_CHARS = 64
-_MAX_SAME_AS_ENTRIES = 8
-_MAX_SAME_AS_CHARS = 256
+# Bounded enrichment fields (compatibility aliases for existing tests).
+_MAX_NAME_CHARS = site_health_config.SITE_HEALTH_MAX_NAME_CHARS
+_MAX_AUTHOR_CHARS = site_health_config.SITE_HEALTH_MAX_AUTHOR_CHARS
+_MAX_DATE_CHARS = site_health_config.SITE_HEALTH_MAX_DATE_CHARS
+_MAX_SAME_AS_ENTRIES = site_health_config.SITE_HEALTH_MAX_SAME_AS_ENTRIES
+_MAX_SAME_AS_CHARS = site_health_config.SITE_HEALTH_MAX_SAME_AS_CHARS
 
 
 def _clean_type(value: Any) -> str:

@@ -26,6 +26,7 @@ from app.analysis.site_health.structured_data import (
     validate_microdata_types,
 )
 from app.connectors.web_evidence.url_policy import registrable_domain
+from app.core.config import site_health as site_health_config
 from app.core.config.site_health import (
     ANSWER_FIRST_MAX_HOPS,
     EXTRACTOR_VERSION,
@@ -39,22 +40,20 @@ from app.core.config.site_health import (
 
 # Bounded per-field caps so a single hostile attribute can never bloat the
 # persisted facts dict.
-_MAX_TITLE_CHARS = 2048
-_MAX_META_CHARS = 4096
-_MAX_HEADING_CHARS = 512
-_MAX_HEADINGS_KEPT = 50
-_MAX_URL_CHARS = 2048
-_MAX_ANCHOR_TEXT_CHARS = 512
-# v2 P2 (sh-extractor-2) field caps.
-_MAX_AUTHOR_CHARS = 256
-_MAX_DATE_CHARS = 64
-_MAX_OUTBOUND_DOMAINS = 100
-_MAX_DOMAIN_CHARS = 255
-_MAX_HREFLANG_ALTERNATES = 50
-_MAX_HREFLANG_CHARS = 35
-_MAX_FIRST_ANSWER_CHARS = 512
-_MAX_INLINE_SCRIPT_CHARS = 500_000
-
+_MAX_TITLE_CHARS = site_health_config.SITE_HEALTH_MAX_TITLE_CHARS
+_MAX_META_CHARS = site_health_config.SITE_HEALTH_MAX_META_CHARS
+_MAX_HEADING_CHARS = site_health_config.SITE_HEALTH_MAX_HEADING_CHARS
+_MAX_HEADINGS_KEPT = site_health_config.SITE_HEALTH_MAX_HEADINGS_KEPT
+_MAX_URL_CHARS = site_health_config.SITE_HEALTH_MAX_URL_CHARS
+_MAX_ANCHOR_TEXT_CHARS = site_health_config.SITE_HEALTH_MAX_ANCHOR_TEXT_CHARS
+_MAX_AUTHOR_CHARS = site_health_config.SITE_HEALTH_MAX_AUTHOR_CHARS
+_MAX_DATE_CHARS = site_health_config.SITE_HEALTH_MAX_DATE_CHARS
+_MAX_OUTBOUND_DOMAINS = site_health_config.SITE_HEALTH_MAX_OUTBOUND_DOMAINS
+_MAX_DOMAIN_CHARS = site_health_config.SITE_HEALTH_MAX_DOMAIN_CHARS
+_MAX_HREFLANG_ALTERNATES = site_health_config.SITE_HEALTH_MAX_HREFLANG_ALTERNATES
+_MAX_HREFLANG_CHARS = site_health_config.SITE_HEALTH_MAX_HREFLANG_CHARS
+_MAX_FIRST_ANSWER_CHARS = site_health_config.SITE_HEALTH_MAX_FIRST_ANSWER_CHARS
+_MAX_INLINE_SCRIPT_CHARS = site_health_config.SITE_HEALTH_MAX_INLINE_SCRIPT_CHARS
 # The security response headers whose mere presence the delivery facts record.
 _SECURITY_HEADERS = (
     "strict-transport-security",

@@ -26,6 +26,32 @@ from app.core.config.task_queue import (
     PostgresQueueSpec,
 )
 
+# Pure extractor/classifier bounds.  Keep these alongside the other Site
+# Health knobs so parser code has no embedded operational limits.
+SITE_HEALTH_MAX_TITLE_CHARS: Final = 2048
+SITE_HEALTH_MAX_META_CHARS: Final = 4096
+SITE_HEALTH_MAX_HEADING_CHARS: Final = 512
+SITE_HEALTH_MAX_HEADINGS_KEPT: Final = 50
+SITE_HEALTH_MAX_URL_CHARS: Final = 2048
+SITE_HEALTH_MAX_ANCHOR_TEXT_CHARS: Final = 512
+SITE_HEALTH_MAX_AUTHOR_CHARS: Final = 256
+SITE_HEALTH_MAX_DATE_CHARS: Final = 64
+SITE_HEALTH_MAX_OUTBOUND_DOMAINS: Final = 100
+SITE_HEALTH_MAX_DOMAIN_CHARS: Final = 255
+SITE_HEALTH_MAX_HREFLANG_ALTERNATES: Final = 50
+SITE_HEALTH_MAX_HREFLANG_CHARS: Final = 35
+SITE_HEALTH_MAX_FIRST_ANSWER_CHARS: Final = 512
+SITE_HEALTH_MAX_INLINE_SCRIPT_CHARS: Final = 500_000
+SITE_HEALTH_MAX_PATH_CHARS: Final = 512
+SITE_HEALTH_MAX_SIGNAL_DETAIL_CHARS: Final = 256
+SITE_HEALTH_MAX_EVIDENCE_URLS: Final = 10
+
+# JSON-LD enrichment bounds.
+SITE_HEALTH_MAX_JSONLD_DEPTH: Final = 12
+SITE_HEALTH_MAX_NAME_CHARS: Final = 256
+SITE_HEALTH_MAX_SAME_AS_ENTRIES: Final = 8
+SITE_HEALTH_MAX_SAME_AS_CHARS: Final = 256
+
 # backend/app/core/config/site_health.py -> parents[3] == backend/
 _BASE_DIR = Path(__file__).resolve().parents[3]
 # Repo root (Searchify/) holds the shared .env used by docker + local dev.

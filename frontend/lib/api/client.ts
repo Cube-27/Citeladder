@@ -15,10 +15,11 @@
  *     only — never for ordinary mutations.
  *   - JSON enforcement: a 2xx response that is not JSON is a contract violation.
  */
+import { API_BASE_URL } from '@/lib/config/operational';
 import { ApiError, isAbortError } from './errors';
 
-/** Relative API base. Same-origin; proxied to BACKEND_ORIGIN by next.config rewrites. */
-export const API_BASE_URL = '/api/v1';
+/** Relative API base. Same-origin; proxied to BACKEND_ORIGIN by Next rewrites. */
+export { API_BASE_URL } from '@/lib/config/operational';
 
 /**
  * Active workspace id, stamped as `X-Workspace-Id` on every request when set.

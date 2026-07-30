@@ -62,6 +62,9 @@ TASK_LEASED_STATUSES: Final[frozenset[str]] = frozenset(
 # spent. Queue-neutral (shared by audit + Site Health task rows).
 ERROR_MAX_ATTEMPTS: Final = "max_attempts_exceeded"
 
+# Safety bound for one-shot/test queue drains.
+DEFAULT_MAX_DRAIN_BATCHES: Final = 1000
+
 
 @dataclass(frozen=True)
 class PostgresQueueSpec[

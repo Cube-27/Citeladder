@@ -34,9 +34,8 @@ from app.core.config import site_health as _config
 
 # Bounded per-input caps so a hostile URL/body can never bloat the evidence
 # or the classification work (same bounding convention as parser.py).
-_MAX_PATH_CHARS = 512
-_MAX_SIGNAL_DETAIL_CHARS = 256
-
+_MAX_PATH_CHARS = _config.SITE_HEALTH_MAX_PATH_CHARS
+_MAX_SIGNAL_DETAIL_CHARS = _config.SITE_HEALTH_MAX_SIGNAL_DETAIL_CHARS
 # Compiled once from the config tables (deterministic; the tables are frozen
 # config, so compilation at import is exact).
 _PATH_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = tuple(

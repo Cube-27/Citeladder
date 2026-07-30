@@ -85,56 +85,45 @@ In the frontend, `frontend/lib/config/` is currently incomplete (only contains `
 
 ### Frontend Configuration Centralization Layer
 
-#### [NEW] [analytics.ts](file:///c:/Projects/Searchify/frontend/lib/config/analytics.ts)
-* Define and export `REFERRALS_PAGE_SIZE = 50` and `CORRELATION_MIN_SAMPLE = 8`.
-
-#### [NEW] [billing.ts](file:///c:/Projects/Searchify/frontend/lib/config/billing.ts)
-* Define and export `BILLING_CONFIRM_POLL_MS = 3_000` and `BILLING_CONFIRM_MAX_POLLS = 20`.
-
-#### [NEW] [content.ts](file:///c:/Projects/Searchify/frontend/lib/config/content.ts)
-* Define and export `CONTENT_PROMPT_MAX_LEN = 4000`, `CONTENT_LIST_DEFAULT_LIMIT = 50`, `CONTENT_LIST_POLL_MS = 3000`, and `CONTENT_DETAIL_POLL_MS = 2000`.
-
-#### [NEW] [integrations.ts](file:///c:/Projects/Searchify/frontend/lib/config/integrations.ts)
-* Define and export `SYNC_RUN_POLL_MS = 3_000`.
-
-#### [NEW] [products.ts](file:///c:/Projects/Searchify/frontend/lib/config/products.ts)
-* Define and export `ATTRIBUTION_RECOMPUTE_POLL_MS = 3_000`.
-
-#### [NEW] [runs.ts](file:///c:/Projects/Searchify/frontend/lib/config/runs.ts)
-* Define and export `MAX_REPETITIONS = 10`, `MIN_REPETITIONS = 1`, and `ACTIVE_RUN_POLL_MS = 3_000`.
-
-#### [NEW] [api.ts](file:///c:/Projects/Searchify/frontend/lib/config/api.ts)
-* Define and export `API_BASE_URL = '/api/v1'`.
+#### [NEW] [operational.ts](file:///c:/Projects/Searchify/frontend/lib/config/operational.ts)
+* Define the single frontend owner for tunable limits, request bounds, polling
+  cadences, retry ceilings, and the relative `API_BASE_URL` (including the
+  analytics, billing, content, integrations, products, runs, and visibility
+  values listed above). Feature modules may re-export these values for
+  compatibility, but never redefine them.
 
 #### [NEW] [env.ts](file:///c:/Projects/Searchify/frontend/lib/config/env.ts)
-* Centralized accessor module for frontend environment variables (`NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`, `NEXT_PUBLIC_SITE_URL`, etc.).
-
-#### [NEW] [index.ts](file:///c:/Projects/Searchify/frontend/lib/config/index.ts)
-* Re-export all modular frontend configs.
+* Provide lazy accessors for public environment variables
+  (`NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`, `NEXT_PUBLIC_SITE_URL`, etc.) so values
+  are read centrally without eager build-time validation or test-module churn.
 
 #### [MODIFY] [series.ts](file:///c:/Projects/Searchify/frontend/lib/analytics/series.ts)
-* Import constants from `@/lib/config/analytics`.
+* Import constants from `@/lib/config/operational`.
 
 #### [MODIFY] [billing.ts](file:///c:/Projects/Searchify/frontend/lib/api/billing.ts)
-* Import constants from `@/lib/config/billing`.
+* Import constants from `@/lib/config/operational`.
 
 #### [MODIFY] [content.ts](file:///c:/Projects/Searchify/frontend/lib/api/content.ts)
-* Import constants from `@/lib/config/content`.
+* Import constants from `@/lib/config/operational`.
 
 #### [MODIFY] [client.ts](file:///c:/Projects/Searchify/frontend/lib/api/client.ts)
-* Import `API_BASE_URL` from `@/lib/config/api`.
+* Import `API_BASE_URL` from `@/lib/config/operational`.
 
 #### [MODIFY] [sync-runs.ts](file:///c:/Projects/Searchify/frontend/lib/integrations/sync-runs.ts)
-* Import `SYNC_RUN_POLL_MS` from `@/lib/config/integrations`.
+* Re-export `SYNC_RUN_POLL_MS` from `@/lib/config/operational`.
 
 #### [MODIFY] [attribution.ts](file:///c:/Projects/Searchify/frontend/lib/products/attribution.ts)
-* Import `ATTRIBUTION_RECOMPUTE_POLL_MS` from `@/lib/config/products`.
+* Re-export `ATTRIBUTION_RECOMPUTE_POLL_MS` from `@/lib/config/operational`.
 
-#### [MODIFY] [launch.ts](file:///c:/Projects/Searchify/frontend/lib/runs/launch.ts) & [runs.ts](file:///c:/Projects/Searchify/frontend/lib/runs/runs.ts)
-* Import `MAX_REPETITIONS` and `ACTIVE_RUN_POLL_MS` from `@/lib/config/runs`.
+#### [MODIFY] [launch.ts](file:///c:/Projects/Searchify/frontend/lib/runs/launch.ts) & [use-visibility-dashboard.ts](file:///c:/Projects/Searchify/frontend/lib/visibility/use-visibility-dashboard.ts)
+* Import launch bounds and active-run/evidence polling values from
+  `@/lib/config/operational`.
 
 #### [MODIFY] [logo-dev.ts](file:///c:/Projects/Searchify/frontend/lib/brand/logo-dev.ts)
 * Access `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE` via `@/lib/config/env`.
+
+#### [MODIFY] [site.ts](file:///c:/Projects/Searchify/frontend/lib/seo/site.ts)
+* Access `NEXT_PUBLIC_SITE_URL` via `@/lib/config/env`.
 
 ---
 

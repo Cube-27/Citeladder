@@ -15,6 +15,12 @@ import type { AiSource, AnalyticsCorrelation, LlmAnalytics } from '@/lib/api/ana
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { formatShortDate } from '@/lib/format';
 import { bucketAdjective, type AnalyticsGranularity } from './options';
+import {
+  CORRELATION_MIN_SAMPLE,
+  REFERRALS_PAGE_SIZE,
+} from '@/lib/config/operational';
+
+export { CORRELATION_MIN_SAMPLE, REFERRALS_PAGE_SIZE };
 
 // The bucket-date / grouped-count / URL-split formatters are OWNED by
 // `@/lib/format` (shared with the traffic surface, invariant 2) —
@@ -27,12 +33,6 @@ export {
 
 // Mirrors backend `app/core/config/analytics.py` CORRELATION_MIN_SAMPLE — the
 // minimum aligned bucket count before a Pearson coefficient is reported.
-export const CORRELATION_MIN_SAMPLE = 8;
-
-// Mirrors backend `app/core/config/analytics.py` ANALYTICS_REFERRALS_PAGE_SIZE
-// — the fixed referrals page size named in the table footer note.
-export const REFERRALS_PAGE_SIZE = 50;
-
 type SeriesPoint = { date: string; value: number | null };
 
 /**

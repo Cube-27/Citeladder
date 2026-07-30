@@ -76,6 +76,7 @@ from app.core.config.provider_catalog import (
     is_active_transport,
     is_endpoint_approved,
 )
+from app.core.config.task_queue import DEFAULT_MAX_DRAIN_BATCHES
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret
 from app.core.telemetry import configure_logging
@@ -462,7 +463,9 @@ class AuditWorker(DrainableWorkerMixin):
         )
         return completed
 
-    async def run_until_idle(self, *, max_batches: int = 1000) -> int:
+    async def run_until_idle(
+        self, *, max_batches: int = DEFAULT_MAX_DRAIN_BATCHES
+    ) -> int:
         """Drain via the PIPELINED pump, overriding the shared mixin loop.
 
         Same contract as ``DrainableWorkerMixin.run_until_idle`` (drain until a
