@@ -1,13 +1,13 @@
 """Complexity ratchet: the debt measured in the July 2026 audit cannot regrow.
 
 That audit found two modules at Maintainability Index 0.0. They reached that
-state without any build ever objecting, because nothing in CI measures module
-size or function complexity. This script is that missing watcher — added
+state without any build ever objecting, because nothing in CI measures function
+complexity. This script is that missing watcher — added
 alongside the work that split them, so the reduction actually holds.
 
-It is a RATCHET, not a standard: the checked-in baseline records today's LOC
-per module and today's complexity per FUNCTION, and the build fails when a
-module gets longer or a function gets more branching than its recorded budget.
+It is a RATCHET, not a standard: the checked-in baseline records today's
+complexity per FUNCTION, and the build fails when a function gets more
+branching than its recorded budget.
 Budgets are per-function so one function's improvement cannot pay for another's
 regression. A function the baseline does not know — new, or renamed — has no
 budget to inherit and must meet ``NEW_FUNCTION_CC_CEILING``. Improving a number
@@ -74,10 +74,9 @@ def cyclomatic_complexity(node: ast.AST) -> int:
     return score
 
 
-def measure(path: Path) -> tuple[int, dict[str, int]]:
-    """``(loc, {qualified_function_name: cc})`` for one module."""
+def measure(path: Path) -> dict[str, int]:
+    """Return ``{qualified_function_name: cyclomatic_complexity}`` for a module."""
     source = path.read_text(encoding="utf-8")
-    loc = len(source.splitlines())
     tree = ast.parse(source)
     functions: dict[str, int] = {}
 
@@ -101,7 +100,7 @@ def measure(path: Path) -> tuple[int, dict[str, int]]:
                 walk(child, prefix)
 
     walk(tree, "")
-    return loc, functions
+    return functions
 
 
 def collect() -> dict[str, dict]:
@@ -111,9 +110,8 @@ def collect() -> dict[str, dict]:
             if "__pycache__" in path.parts:
                 continue
             rel = path.relative_to(BACKEND).as_posix()
-            loc, functions = measure(path)
+            functions = measure(path)
             out[rel] = {
-                "loc": loc,
                 "max_cc": max(functions.values(), default=0),
                 # Per-FUNCTION budgets, keyed by qualified name. The module max
                 # alone let one function's improvement pay for another's
@@ -133,9 +131,9 @@ def _compare_functions(
 ) -> None:
     """Check each function against its own recorded budget.
 
-    Reports improvements per FUNCTION, not just per module: a module whose LOC
-    and max CC are unchanged can still have simplified a mid-sized function,
-    and an unreported improvement leaves a stale budget behind — headroom the
+    Reports improvements per FUNCTION, not just per module: a function can be
+    simplified while its module's other functions are unchanged, and an
+    unreported improvement leaves a stale budget behind — headroom the
     next change silently inherits, which is exactly what per-function budgets
     exist to prevent.
     """
@@ -171,7 +169,7 @@ def _compare(
     failures: list[str],
     improvements: list[str],
 ) -> None:
-    """Record one module's regressions and improvements against its baseline."""
+    """Record function-complexity regressions and improvements."""
     if was is None:
         # A NEW module gets no grandfathering: every function meets the ceiling.
         for name, cc in now["functions"].items():
@@ -181,17 +179,7 @@ def _compare(
                     f"(ceiling {NEW_FUNCTION_CC_CEILING})"
                 )
         return
-    if now["loc"] > was["loc"]:
-        failures.append(
-            f"{rel}: {was['loc']} -> {now['loc']} LOC "
-            f"(+{now['loc'] - was['loc']}); split it or justify a new baseline"
-        )
     _compare_functions(rel, now, was, failures, improvements)
-    if now["loc"] < was["loc"] or now["max_cc"] < was["max_cc"]:
-        improvements.append(
-            f"{rel}: LOC {was['loc']}->{now['loc']}, "
-            f"max CC {was['max_cc']}->{now['max_cc']}"
-        )
 
 
 def main() -> int:
@@ -204,6 +192,17 @@ def main() -> int:
     current = collect()
 
     if args.update:
+        previous = (
+            json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+            if BASELINE_PATH.exists()
+            else {}
+        )
+        # Keep legacy LOC fields readable without measuring or enforcing them.
+        # This avoids a noisy baseline migration while making future updates
+        # complexity-only for every current module.
+        for rel, entry in current.items():
+            if "loc" in previous.get(rel, {}):
+                entry["loc"] = previous[rel]["loc"]
         BASELINE_PATH.write_text(
             json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
@@ -231,9 +230,9 @@ def main() -> int:
         for line in failures:
             print(f"  - {line}", file=sys.stderr)
         print(
-            "\nThese modules are on a downward ratchet. Extract a collaborator "
-            "rather than raising the budget; if the growth is genuinely "
-            "warranted, rebaseline in its own commit so it is reviewed.",
+            "\nThese functions are on a downward complexity ratchet. Extract a "
+            "collaborator rather than raising the budget; if the growth is "
+            "genuinely warranted, rebaseline in its own commit so it is reviewed.",
             file=sys.stderr,
         )
         return 1

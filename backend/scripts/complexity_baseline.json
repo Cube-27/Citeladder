@@ -141,7 +141,7 @@
   "app/analysis/scoring.py": {
     "functions": {
       "ScoringConfig.from_project": 12,
-      "_aggregate_cost": 9,
+      "_aggregate_cost": 8,
       "_aggregate_token_usage": 7,
       "_brand_injected": 3,
       "_citation_aggregates": 6,
@@ -1111,9 +1111,11 @@
     "max_cc": 1
   },
   "app/core/config/analysis.py": {
-    "functions": {},
+    "functions": {
+      "uses_gemini_flash_pricing": 2
+    },
     "loc": 71,
-    "max_cc": 0
+    "max_cc": 2
   },
   "app/core/config/analytics.py": {
     "functions": {

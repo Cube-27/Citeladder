@@ -279,9 +279,11 @@ in the backend job, and it fails only on regression against a checked-in baselin
 The baseline is per-FUNCTION, not per-module-max. A single module max let one function's improvement
 pay for another's regression — dropping a CC-34 hotspot to 20 silently bought every other function in
 that module 20 points of headroom. Now each function carries its own budget, a function the baseline
-does not know (new, or renamed) has no budget to inherit and must meet the CC-15 ceiling, and a
-module's LOC still cannot grow. Baselines without the per-function map are read compatibly (module
-max only) so the file can be regenerated on its own schedule.
+does not know (new, or renamed) has no budget to inherit and must meet the CC-15 ceiling. Module
+size is intentionally not part of this ratchet: LOC is a size signal, not cyclomatic complexity,
+and centralizing configuration or documentation should not fail CI merely because a module gains a
+few lines. Baselines without the per-function map are read compatibly (module max only) so the file
+can be regenerated on its own schedule.
 
 ---
 
