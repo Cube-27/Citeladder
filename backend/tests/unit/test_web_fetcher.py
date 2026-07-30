@@ -11,6 +11,7 @@ the decoded-byte (gzip compression bomb) cap.
 from __future__ import annotations
 
 import gzip
+import zlib
 
 import httpx
 import pytest
@@ -123,26 +124,53 @@ async def test_fetch_rejects_unsupported_content_type():
     assert exc.value.error_code == "unsupported_content_type"
 
 
+async def test_fetch_returns_error_status_despite_disallowed_content_type():
+    """A 429 served as ``text/plain`` is a rate limit, not a content-type error.
+
+    The allowlist guards CONTENT. Applying it to an error response hid the
+    status: a WAF rate limit (``429`` + ``text/plain`` + a few bytes, the shape
+    real sites return) surfaced as a TERMINAL ``unsupported_content_type``, so
+    the discover task never retried and the whole crawl failed on a transient
+    block.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(429, body=b"Too Many Requests", content_type="text/plain")
+
+    resolver = _FakeResolver({})
+    async with _fetcher(handler, resolver) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(
+                url="https://example.com/",
+                purpose="discover",
+                allowed_content_types=frozenset({"text/html"}),
+            )
+        )
+    assert result.status_code == 429
+    assert result.content_type == "text/plain"
+
+
+async def test_fetch_still_rejects_disallowed_content_type_on_200():
+    """The gate is unchanged for the success path it exists to guard."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(body=b"%PDF-1.4", content_type="application/pdf")
+
+    resolver = _FakeResolver({})
+    async with _fetcher(handler, resolver) as fetcher:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(
+                    url="https://example.com/doc",
+                    purpose="discover",
+                    allowed_content_types=frozenset({"text/html"}),
+                )
+            )
+    assert exc.value.error_code == "unsupported_content_type"
+    assert exc.value.status_code == 200
+
+
 # --- 4xx / 5xx are returned, not raised -----------------------------------
-
-
-class _StubCurlSession:
-    """Offline rung-2 stand-in replaying one status (T7 escalation seam)."""
-
-    def __init__(self, status: int) -> None:
-        self._status = status
-
-    async def __aenter__(self) -> _StubCurlSession:
-        return self
-
-    async def __aexit__(self, *exc) -> None:
-        return None
-
-    async def request(self, method, url, **kwargs):
-        callback = kwargs.get("content_callback")
-        if callback is not None:
-            callback(b"x")
-        return httpx.Response(self._status, headers={"content-type": "text/html"})
 
 
 @pytest.mark.parametrize("status", [404, 410, 429, 500, 503])
@@ -151,12 +179,9 @@ async def test_fetch_returns_http_error_statuses(status):
         return _html_response(status, body=b"x")
 
     resolver = _FakeResolver({})
-    # 503 is a bot-block signature (T7): the curl_cffi escalation rung fires
-    # for it — keep that retry offline with a stub replaying the status.
     fetcher = SecureFetcher(
         resolver=resolver,
         transport=httpx.MockTransport(handler),
-        curl_session_factory=lambda **kwargs: _StubCurlSession(status),
     )
     async with fetcher:
         result = await fetcher.fetch(
@@ -167,8 +192,8 @@ async def test_fetch_returns_http_error_statuses(status):
             )
         )
     assert result.status_code == status
-    # Escalation ran exactly once for the signature status, never otherwise.
-    assert len(result.attempts) == (2 if status == 503 else 1)
+    # Exactly one network call: an error status is returned, never retried.
+    assert len(result.attempts) == 1
 
 
 # --- redirects ------------------------------------------------------------
@@ -260,6 +285,88 @@ async def test_fetch_redirect_to_private_ip_blocked():
                 enforce_scope=True,
             )
     assert exc.value.error_code == "ssrf_blocked"
+
+
+# --- transport failure ----------------------------------------------------
+
+
+async def test_fetch_send_transport_failure_is_connection_failed():
+    """A send-phase transport error is ``connection_failed``, NOT ``ssrf_blocked``.
+
+    ``ssrf_blocked`` is in ``POLICY_BLOCKING_ERROR_CODES``, so labelling a
+    refused connection with it made a transient network error present the page
+    as ``blocked`` (a policy denial) instead of ``error``. Only real policy
+    denials — raised from ``_resolve`` — may use that token.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=request)
+
+    resolver = _FakeResolver({})
+    async with _fetcher(handler, resolver) as fetcher:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(url="https://example.com/", purpose="discover")
+            )
+    assert exc.value.error_code == "connection_failed"
+    assert exc.value.retryable is True
+    # The failed call is still traced (one entry, carrying the same token).
+    assert [e.error_code for e in exc.value.attempts] == ["connection_failed"]
+
+
+# --- deflate variants -----------------------------------------------------
+
+
+@pytest.mark.parametrize("raw", [False, True])
+async def test_fetch_decodes_zlib_wrapped_and_raw_deflate(raw: bool):
+    """``Content-Encoding: deflate`` decodes whether or not it is zlib-wrapped.
+
+    The spec says zlib-wrapped, but plenty of servers send bare DEFLATE. That
+    used to raise ``zlib.error`` on the first chunk and surface as
+    ``malformed_response``, losing a perfectly healthy page.
+    """
+    html = b"<html><body>hello deflate</body></html>"
+    if raw:
+        obj = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+        payload = obj.compress(html) + obj.flush()
+    else:
+        payload = zlib.compress(html)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(body=payload, content_encoding="deflate")
+
+    resolver = _FakeResolver({})
+    async with _fetcher(handler, resolver) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(
+                url="https://example.com/",
+                purpose="discover",
+                allowed_content_types=frozenset({"text/html"}),
+            )
+        )
+    assert result.body == html
+    assert result.decoded_bytes == len(html)
+
+
+async def test_fetch_corrupt_deflate_still_fails():
+    """The raw fallback is scoped to the header — corrupt bodies still fail."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(
+            body=b"\x00\x01not-deflate-at-all\xff\xfe", content_encoding="deflate"
+        )
+
+    resolver = _FakeResolver({})
+    async with _fetcher(handler, resolver) as fetcher:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(
+                    url="https://example.com/",
+                    purpose="discover",
+                    allowed_content_types=frozenset({"text/html"}),
+                )
+            )
+    assert exc.value.error_code == "malformed_response"
 
 
 # --- timeout --------------------------------------------------------------

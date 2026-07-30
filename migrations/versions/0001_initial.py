@@ -248,9 +248,7 @@ def upgrade() -> None:
         sa.Column("product_tour_version", sa.String(length=32), nullable=True),
         sa.Column("product_tour_status", sa.String(length=20), nullable=False),
         sa.Column("product_tour_step_id", sa.String(length=64), nullable=True),
-        sa.Column(
-            "product_tour_started_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("product_tour_started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "product_tour_completed_at", sa.DateTime(timezone=True), nullable=True
         ),
@@ -2740,10 +2738,16 @@ def upgrade() -> None:
         sa.Column("provider_reported_cost_microusd", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["raw_response_artifact_id"], ["raw_response_artifacts.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["raw_response_artifact_id"],
+            ["raw_response_artifacts.id"],
+            ondelete="CASCADE",
+        ),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("raw_response_artifact_id", name="uq_execution_cost_projection_artifact"),
+        sa.UniqueConstraint(
+            "raw_response_artifact_id", name="uq_execution_cost_projection_artifact"
+        ),
         sa.UniqueConstraint("task_id", name="uq_execution_cost_projection_task"),
     )
     op.create_index(
@@ -2840,7 +2844,6 @@ def upgrade() -> None:
         sa.Column("crawl_id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("fetch_purpose", sa.String(length=16), nullable=False),
-        sa.Column("fetch_engine", sa.String(length=16), nullable=False),
         sa.Column("requested_url", sa.String(length=2048), nullable=False),
         sa.Column("final_url", sa.String(length=2048), nullable=False),
         sa.Column(
@@ -3092,8 +3095,6 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("attempt_number", sa.Integer(), nullable=False),
         sa.Column("request_ordinal", sa.Integer(), nullable=False),
-        sa.Column("rung_number", sa.Integer(), nullable=True),
-        sa.Column("fetch_engine", sa.String(length=16), nullable=False),
         sa.Column("method", sa.String(length=8), nullable=False),
         sa.Column("target_host", sa.String(length=255), nullable=False),
         sa.Column("outcome", sa.String(length=16), nullable=False),

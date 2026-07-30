@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PLACEHOLDER,
+  POLL_INTERVAL_MS,
+  STALL_TIMEOUT_MS,
   canShowDiscoveredTotal,
   crawlBadgeValue,
   dashboardRunNotice,
@@ -12,13 +14,16 @@ import {
   hasScoreData,
   inventoryModeForPhase,
   isAnalysisTerminal,
+  crawlPollInterval,
   isCrawlCancelable,
+  isCrawlStalled,
   isDiscoveryProvisional,
   isDiscoveryTerminal,
   isErrorRow,
   isSampleMode,
   pageStatusBadgeValue,
   primaryActionForPhase,
+  crawlProgressVersion,
   resolveSiteHealthPhase,
   shouldPollCrawl,
   statusLabel,
@@ -31,6 +36,101 @@ describe('polling / cancel / terminal predicates', () => {
     expect(shouldPollCrawl({ status: 'completed' })).toBe(false);
     expect(shouldPollCrawl({ status: 'partially_completed' })).toBe(false);
     expect(shouldPollCrawl({ status: 'cancelled' })).toBe(false);
+  });
+
+  it('backs the poll cadence off as an active crawl ages', () => {
+    const now = Date.parse('2026-07-29T12:00:00Z');
+    const at = (msAgo: number) => ({
+      status: 'running' as const,
+      started_at: new Date(now - msAgo).toISOString(),
+      created_at: new Date(now - msAgo).toISOString(),
+      // Progressing: last write was just now, so it is never "silent".
+      updated_at: new Date(now - 1_000).toISOString(),
+    });
+
+    expect(crawlPollInterval(at(5_000), now)).toBe(POLL_INTERVAL_MS);
+    expect(crawlPollInterval(at(90_000), now)).toBe(10_000);
+    expect(crawlPollInterval(at(6 * 60_000), now)).toBe(30_000);
+  });
+
+  it('never polls a terminal crawl regardless of age', () => {
+    const now = Date.parse('2026-07-29T12:00:00Z');
+    const iso = new Date(now - 1_000).toISOString();
+    expect(
+      crawlPollInterval(
+        { status: 'completed', started_at: iso, created_at: iso, updated_at: iso },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps polling a long crawl that is still writing progress', () => {
+    // The stall cutoff is about SILENCE, not duration: an hour-long crawl that
+    // updated a second ago is healthy and must not be abandoned.
+    const now = Date.parse('2026-07-29T12:00:00Z');
+    const crawl = {
+      status: 'running' as const,
+      started_at: new Date(now - 3600_000).toISOString(),
+      created_at: new Date(now - 3600_000).toISOString(),
+      updated_at: new Date(now - 1_000).toISOString(),
+    };
+    expect(crawlPollInterval(crawl, now)).toBe(30_000);
+    expect(isCrawlStalled(crawl, now)).toBe(false);
+  });
+
+  it('gives up on an active crawl that has gone silent', () => {
+    // The stuck-crawl symptom: active forever, no writes. The client stops
+    // polling instead of pinning the tab to an endless refetch loop.
+    const now = Date.parse('2026-07-29T12:00:00Z');
+    const silent = new Date(now - (STALL_TIMEOUT_MS + 60_000)).toISOString();
+    const crawl = {
+      status: 'running' as const,
+      started_at: silent,
+      created_at: silent,
+      updated_at: silent,
+    };
+    expect(crawlPollInterval(crawl, now)).toBe(false);
+    expect(isCrawlStalled(crawl, now)).toBe(true);
+  });
+
+  it('is not stalled when the crawl is terminal or absent', () => {
+    const now = Date.parse('2026-07-29T12:00:00Z');
+    const silent = new Date(now - (STALL_TIMEOUT_MS + 60_000)).toISOString();
+    expect(isCrawlStalled(null, now)).toBe(false);
+    expect(
+      isCrawlStalled(
+        { status: 'completed', started_at: silent, created_at: silent, updated_at: silent },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps polling when timestamps are unusable rather than giving up', () => {
+    // Clock skew / a bad timestamp must degrade to the baseline cadence — the
+    // one thing it must never do is silently stop progress.
+    const now = Date.parse('2026-07-29T12:00:00Z');
+    expect(
+      crawlPollInterval(
+        {
+          status: 'running',
+          started_at: null,
+          created_at: 'not-a-date',
+          updated_at: 'not-a-date',
+        },
+        now,
+      ),
+    ).toBe(POLL_INTERVAL_MS);
+    expect(
+      crawlPollInterval(
+        {
+          status: 'running',
+          started_at: new Date(now + 60_000).toISOString(),
+          created_at: new Date(now + 60_000).toISOString(),
+          updated_at: new Date(now + 60_000).toISOString(),
+        },
+        now,
+      ),
+    ).toBe(POLL_INTERVAL_MS);
   });
 
   it('is cancelable only before terminal', () => {
@@ -358,6 +458,47 @@ describe('resolveSiteHealthPhase', () => {
     expect(
       resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'starter', false),
     ).toBe('selection');
+  });
+
+  it('is TOTAL over loading state: any unsettled input resolves to "resolving"', () => {
+    // The three inputs come from three independently-resolving queries. Guessing
+    // from whichever landed first and correcting afterwards is what made the
+    // phase visibly flip (e.g. selection → analyzing once the monitored set
+    // arrived), which the `crawlStarting` flag existed to hide.
+    expect(resolveSiteHealthPhase(undefined, 'starter', true)).toBe('resolving');
+    expect(resolveSiteHealthPhase(base, null, true)).toBe('resolving');
+    expect(
+      resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'starter', null),
+    ).toBe('resolving');
+    // A settled "no crawl" (null, not undefined) is still the empty state.
+    expect(resolveSiteHealthPhase(null, 'starter', false)).toBe('empty');
+  });
+});
+
+describe('crawlProgressVersion (single-subscription fan-out key)', () => {
+  const base = {
+    status: 'running' as const,
+    discovery_status: 'running' as const,
+    analysis_status: 'pending' as const,
+    visible_url_count: 10,
+    analyzed_count: 2,
+    failed_count: 0,
+    updated_at: '2026-07-16T00:00:00Z',
+  };
+
+  it('is stable for an unchanged crawl (a no-op poll refreshes nothing)', () => {
+    expect(crawlProgressVersion(base)).toBe(crawlProgressVersion({ ...base }));
+  });
+
+  it('changes on every kind of progress the screen must react to', () => {
+    const version = crawlProgressVersion(base);
+    expect(crawlProgressVersion({ ...base, status: 'completed' })).not.toBe(version);
+    expect(crawlProgressVersion({ ...base, discovery_status: 'completed' })).not.toBe(version);
+    expect(crawlProgressVersion({ ...base, analysis_status: 'running' })).not.toBe(version);
+    expect(crawlProgressVersion({ ...base, visible_url_count: 11 })).not.toBe(version);
+    expect(crawlProgressVersion({ ...base, analyzed_count: 3 })).not.toBe(version);
+    expect(crawlProgressVersion({ ...base, failed_count: 1 })).not.toBe(version);
+    expect(crawlProgressVersion({ ...base, updated_at: '2026-07-16T00:00:05Z' })).not.toBe(version);
   });
 });
 
