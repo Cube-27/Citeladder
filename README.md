@@ -29,7 +29,7 @@
 ---
 
 <a id="what-searchify-does"></a>
-## 🔗 What Searchify does
+## What Searchify does
 
 Searchify connects two workflows that are usually fragmented across separate tools:
 
@@ -39,10 +39,10 @@ Searchify connects two workflows that are usually fragmented across separate too
 Every report is built from persisted, versioned evidence. Searchify does not silently re-run providers, re-fetch pages, or invent missing metrics while rendering a dashboard.
 
 <a id="product-highlights"></a>
-## 🔗 Product highlights
+## Product highlights
 
 <a id="visibility-intelligence"></a>
-### 🔗 Visibility Intelligence
+### Visibility Intelligence
 
 - **Multi-engine audits** across ChatGPT/OpenAI, Claude/Anthropic, and Gemini/Google.
 - **Bring your own keys** with encrypted provider credentials and explicit transport routes.
@@ -53,7 +53,7 @@ Every report is built from persisted, versioned evidence. Searchify does not sil
 - **Deterministic headline scoring** with analyzer and scoring-rule versions attached to every projection.
 
 <a id="site-health--aeo-auditing"></a>
-### 🔗 Site Health & AEO Auditing
+### Site Health & AEO Auditing
 
 - **Progressive URL discovery** through an in-house HTTP crawler with SSRF and resource-bound protections.
 - **Free sample and Starter monitoring modes** with privacy-aware count disclosure and quota-controlled URL selection.
@@ -64,7 +64,7 @@ Every report is built from persisted, versioned evidence. Searchify does not sil
 - **Authenticated CSV and Markdown exports** scoped to the active workspace.
 
 <a id="built-for-trustworthy-operations"></a>
-### 🔗 Built for trustworthy operations
+### Built for trustworthy operations
 
 - Strict workspace isolation with UUID identifiers throughout.
 - Immutable artifacts and provenance-carrying analyses.
@@ -78,7 +78,7 @@ Every report is built from persisted, versioned evidence. Searchify does not sil
 ---
 
 <a id="table-of-contents"></a>
-## 🔗 Table of contents
+## Table of contents
 
 - [What Searchify does](#what-searchify-does)
 - [Product highlights](#product-highlights)
@@ -100,7 +100,7 @@ Every report is built from persisted, versioned evidence. Searchify does not sil
 ---
 
 <a id="architecture"></a>
-## 🔗 Architecture
+## Architecture
 
 Searchify is engineered as a modular monolith with strict security boundaries, immutable evidence persistence, and durable background worker orchestration.
 
@@ -123,7 +123,7 @@ Searchify is engineered as a modular monolith with strict security boundaries, i
 - **Strict Workspace Isolation**: All domain queries and persistence models enforce workspace UUID scoping server-side for complete multi-tenant isolation.
 
 <a id="tech-stack"></a>
-## 🔗 Tech stack
+## Tech stack
 
 | Layer     | Technology |
 |-----------|------------|
@@ -133,7 +133,7 @@ Searchify is engineered as a modular monolith with strict security boundaries, i
 | Tooling   | `uv` (backend deps), `pnpm` (frontend), Docker Compose, Ruff, pytest / pytest-asyncio, Vitest + Testing Library + MSW, Playwright |
 
 <a id="repository-layout"></a>
-## 🔗 Repository layout
+## Repository layout
 
 ```
 Searchify/
@@ -167,7 +167,7 @@ Searchify/
 ```
 
 <a id="prerequisites"></a>
-## 🔗 Prerequisites
+## Prerequisites
 
 - **Docker + Docker Compose** (for the quick start), or for bare-metal dev:
 - **Python 3.12** and [`uv`](https://docs.astral.sh/uv/)
@@ -175,7 +175,7 @@ Searchify/
 - **PostgreSQL 15+** (only if running the backend outside Docker)
 
 <a id="quick-start-docker-compose"></a>
-## 🔗 Quick start (Docker Compose)
+## Quick start (Docker Compose)
 
 > **Important:** this machine (and CI-like shells) may export `POSTGRES_*` and
 > `DATABASE_URL` into every shell, which Compose resolves *before* `.env`. Use the
@@ -206,7 +206,7 @@ create a project. Connect a BYOK provider to run Visibility audits, or open Site
 discover and analyze the project website.
 
 <a id="local-development-without-docker"></a>
-## 🔗 Local development (without Docker)
+## Local development (without Docker)
 
 ```bash
 # Backend
@@ -227,7 +227,7 @@ pnpm dev
 ```
 
 <a id="configuration"></a>
-## 🔗 Configuration
+## Configuration
 
 Backend settings are read from the environment (see `infra/docker/.env.example`):
 
@@ -248,7 +248,7 @@ Frontend: `BACKEND_ORIGIN` (server-only) is the backend the Next.js `rewrites()`
 forwards `/api/*` to. Never expose it to the browser.
 
 <a id="database-migrations"></a>
-## 🔗 Database migrations
+## Database migrations
 
 Migrations live in `migrations/` and are applied with Alembic:
 
@@ -269,7 +269,7 @@ uv run alembic check                 # assert no ORM-vs-migration drift
 > `alembic check`).
 
 <a id="testing"></a>
-## 🔗 Testing
+## Testing
 
 ```bash
 # Backend (from backend/) — needs only a running local Postgres; server creds
@@ -289,7 +289,7 @@ pnpm test:e2e         # Playwright (requires a browser + running stack)
 ```
 
 <a id="key-concepts"></a>
-## 🔗 Key concepts
+## Key concepts
 
 - **Unified contract.** All ids are string UUIDs, workspace-scoped (no `user_id` scoping, no
   integer PKs). API prefix is `/api/v1`.
@@ -310,7 +310,7 @@ pnpm test:e2e         # Playwright (requires a browser + running stack)
   See [`docs/site-health.md`](docs/site-health.md).
 
 <a id="documentation-map"></a>
-## 🔗 Documentation map
+## Documentation map
 
 | Doc | What it covers |
 |-----|----------------|
@@ -326,7 +326,7 @@ pnpm test:e2e         # Playwright (requires a browser + running stack)
 | [`docs/roadmap/`](docs/roadmap/) | Shipped design records and specifications for future product surfaces |
 
 <a id="known-gotchas"></a>
-## 🔗 Known gotchas
+## Known gotchas
 
 Two environment-specific gotchas will bite you if you don't know them (full runbooks in
 [`docs/invariants.md`](docs/invariants.md) §11–12 and [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)):
@@ -342,13 +342,13 @@ Two environment-specific gotchas will bite you if you don't know them (full runb
    browser, not curl.**
 
 <a id="contributing"></a>
-## 🔗 Contributing
+## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the branch/commit conventions, the review
 checklist, and how the 12 invariants gate a change.
 
 <a id="license"></a>
-## 🔗 License
+## License
 
 Released under the [MIT License](LICENSE).
 
