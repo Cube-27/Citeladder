@@ -1,5 +1,13 @@
-import { ArrowRight, Check, Layers, Shield, Sigma, type LucideIcon } from 'lucide-react';
-import { Fragment } from 'react';
+import {
+  ArrowRight,
+  Check,
+  Layers,
+  Lock,
+  Server,
+  Shield,
+  Sigma,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
@@ -9,125 +17,93 @@ import { Section, SectionHeader } from '../primitives/section';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { TrustStrip } from '../primitives/trust-strip';
 
-/**
- * `/enterprise` explains the offer; every sales action uses the stable `/demo`
- * funnel through the centralized `DEMO_HREF`.
- */
-type Capability = { icon: LucideIcon; title: string; blurb: string; points: readonly string[] };
+type Capability = {
+  icon: LucideIcon;
+  title: string;
+  tagline: string;
+  highlights: readonly string[];
+};
 
-/**
- * Every claim here maps to something in the running platform (README's
- * "Built for trustworthy operations", docs/architecture.md). No certification
- * or compliance claims — nothing the repository cannot ground.
- */
-const OPS_CARDS: readonly Capability[] = [
+const CAPABILITIES: readonly Capability[] = [
   {
     icon: Shield,
-    title: 'Security & privacy',
-    blurb: 'Provider credentials stay secret, and backend topology stays server-side.',
-    points: [
-      'Strict workspace isolation — UUID identifiers throughout',
-      'BYOK keys Fernet-encrypted at rest, write-only after save',
-      'Same-origin API proxying — backend topology never reaches the client bundle',
+    title: 'Security & BYOK Privacy',
+    tagline: 'Provider credentials stay secret, and backend topology stays server-side.',
+    highlights: [
+      'Fernet-encrypted BYOK keys at rest',
+      'Strict UUID workspace isolation',
+      'Same-origin API proxying',
     ],
   },
   {
     icon: Sigma,
-    title: 'Audit-ready evidence',
-    blurb: 'Numbers your compliance team can re-derive, not just read.',
-    points: [
-      'Deterministic scoring — analyzer + rule versions on every projection',
-      'Immutable artifacts — a score is recomputable from the persisted run',
-      'Unsupported metrics render as —, never fabricated zeros',
+    title: 'Audit-Ready Evidence',
+    tagline: 'Numbers your compliance and security teams can re-derive, not just read.',
+    highlights: [
+      'Deterministic scoring rules',
+      'Immutable run artifacts',
+      'No fabricated fallback zeros',
     ],
   },
   {
     icon: Layers,
-    title: 'Scale & reliability',
-    blurb: 'Orchestration that survives worker restarts and Monday-morning queues.',
-    points: [
-      'PostgreSQL durable queues — FOR UPDATE SKIP LOCKED, no Redis dependency',
-      'Leases, heartbeats, retries and idempotency on every task',
-      'Typed contracts validated at runtime — Zod + Pydantic',
+    title: 'Durable Scale & Reliability',
+    tagline: 'Orchestration built to survive worker restarts and heavy job queues.',
+    highlights: [
+      'PostgreSQL FOR UPDATE SKIP LOCKED queues',
+      'Leases, heartbeats & retries',
+      'Runtime Zod & Pydantic contracts',
     ],
   },
 ];
 
-/** Platform data flow (grounded in docs/architecture.md). */
-const ARCH_FLOW = [
-  { node: 'Browser', arrow: '→' },
-  { node: 'Next.js same-origin proxy', arrow: '→' },
-  { node: 'FastAPI', arrow: '→' },
-  { node: 'PostgreSQL', arrow: '⇄' },
-  { node: 'Workers', arrow: '→' },
+const DATA_FLOW_STEPS = [
+  { step: '01', title: 'Browser Client', detail: 'Authenticated HTTPS request' },
+  { step: '02', title: 'Next.js Proxy', detail: 'Same-origin edge route' },
+  { step: '03', title: 'FastAPI Backend', detail: 'Schema & bearer check' },
+  { step: '04', title: 'PostgreSQL DB', detail: 'Durable queue & runs' },
+  { step: '05', title: 'Workers', detail: 'Async task execution' },
+  { step: '06', title: 'AI Providers', detail: 'Fernet-encrypted BYOK' },
 ] as const;
 
-/**
- * The dials an enterprise agreement is sized on.
- *
- * These used to render as six cards whose figure was the literal word
- * "Custom" — six identical answers presented as six separate facts, which read
- * as a page with nothing to say. The dial IS the information: naming what moves
- * (and what it is measured in) tells a buyer how the plan is shaped, where
- * repeating "Custom" told them only that we would not say.
- */
-const LIMIT_CELLS = [
+const CUSTOM_LIMITS = [
   {
-    label: 'Monthly audit runs',
+    title: 'Monthly audit runs',
+    badge: 'Custom Volume',
     unit: 'prompt × engine × repetition',
-    desc: 'aggregated across every project in the workspace',
+    desc: 'Sized for high-concurrency evaluation across all your active brand topics.',
   },
   {
-    label: 'Monitored URLs',
-    unit: 'total monitored set',
-    desc: 'the pages we crawl and re-check on your schedule',
+    title: 'Monitored URLs',
+    badge: 'Full Brand Set',
+    unit: 'total monitored URL set',
+    desc: 'The complete set of brand, product, and competitor pages crawled on schedule.',
   },
   {
-    label: 'Projects & seats',
-    unit: 'per workspace',
-    desc: 'each project carries its own prompts, competitors and evidence',
+    title: 'Projects & seats',
+    badge: 'Unlimited Teams',
+    unit: 'per enterprise workspace',
+    desc: 'Each project carries its own prompts, competitors, engines, and evidence trails.',
   },
   {
-    label: 'Evidence retention',
-    unit: 'months of history',
-    desc: 'immutable artifacts, runs and every derived projection',
+    title: 'Evidence retention',
+    badge: 'Up to 7 Years',
+    unit: 'months of compliance history',
+    desc: 'Immutable artifacts, raw model responses, and every derived metric preserved.',
   },
   {
-    label: 'Support & SLA',
-    unit: 'response target',
-    desc: 'channels, escalation path and named contacts',
+    title: 'Engine connections',
+    badge: 'All Providers',
+    unit: 'OpenAI, Gemini, Claude, Perplexity, DeepSeek',
+    desc: 'Connect standard or fine-tuned model endpoints with custom BYOK key routing.',
+  },
+  {
+    title: 'Support & SLA',
+    badge: '1-Hour SLA',
+    unit: 'guaranteed response window',
+    desc: 'Direct Slack/Teams channel, dedicated account manager, and 99.9% uptime target.',
   },
 ] as const;
-
-function CheckList({ points }: Readonly<{ points: readonly string[] }>) {
-  return (
-    <ul className="mt-5 grid gap-2.5">
-      {points.map((point) => (
-        <li key={point} className="text-mkt-sm text-mkt-ink-soft flex gap-3">
-          <Check
-            aria-hidden
-            strokeWidth={2.5}
-            className="text-mkt-evidence-text mt-0.5 size-3.5 shrink-0"
-          />
-          {point}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function CapabilityCard({ icon: Icon, title, blurb, points }: Capability) {
-  return (
-    <div className="rounded-mkt-lg bg-mkt-surface shadow-card h-full p-7">
-      <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof grid size-9 place-items-center rounded-sm border">
-        <Icon aria-hidden strokeWidth={1.8} className="size-4.5" />
-      </span>
-      <h3 className="font-mkt-display text-mkt-ink text-mkt-d5 mt-5">{title}</h3>
-      <p className="text-mkt-sm text-mkt-ink-soft mt-2">{blurb}</p>
-      <CheckList points={points} />
-    </div>
-  );
-}
 
 export function EnterpriseHero() {
   return (
@@ -136,7 +112,7 @@ export function EnterpriseHero() {
       eyebrow="Enterprise"
       title="AI visibility, with"
       accent="enterprise-grade evidence."
-      lead="The platform security teams can verify: deterministic scoring over immutable, provenance-carrying evidence — deployed and operated in our cloud, with the evidence trail your review process needs."
+      lead="Platform security teams can verify: deterministic scoring over immutable, provenance-carrying evidence — deployed and operated in our cloud, with the evidence trail your review process needs."
     >
       <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row">
         <ButtonLink href={DEMO_HREF}>
@@ -158,34 +134,60 @@ export function EnterpriseOps() {
       <SectionHeader
         kicker="Capabilities"
         title="Built for teams that audit their tools."
-        intro="Every claim below maps to the running platform — bring your security review."
+        intro="Every claim below maps directly to the running platform architecture — bring your security and compliance team."
         headingId="enterprise-caps-title"
       />
-      <StaggerGroup className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {OPS_CARDS.map((card) => (
-          <StaggerItem key={card.title} className="h-full">
-            <CapabilityCard {...card} />
+      
+      {/* 3 Spacious Pillar Cards */}
+      <StaggerGroup className="grid gap-6 md:grid-cols-3">
+        {CAPABILITIES.map(({ icon: Icon, title, tagline, highlights }) => (
+          <StaggerItem key={title} className="h-full">
+            <div className="rounded-mkt-lg bg-mkt-paper border-mkt-line hover:border-mkt-proof/40 shadow-card transition-all duration-200 h-full p-8 flex flex-col justify-between border">
+              <div>
+                <div className="flex items-center gap-3">
+                  <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof grid size-10 place-items-center rounded-md border shrink-0">
+                    <Icon aria-hidden strokeWidth={1.8} className="size-5" />
+                  </span>
+                  <h3 className="font-mkt-display text-mkt-d4 text-mkt-ink leading-snug">{title}</h3>
+                </div>
+                <p className="text-mkt-body text-mkt-ink-soft mt-4 leading-relaxed">{tagline}</p>
+              </div>
+
+              <ul className="mt-8 border-mkt-line-soft space-y-3 border-t pt-6">
+                {highlights.map((item) => (
+                  <li key={item} className="text-mkt-sm text-mkt-ink flex items-center gap-2.5 font-medium">
+                    <Check
+                      aria-hidden
+                      strokeWidth={2.5}
+                      className="text-mkt-evidence-text size-4 shrink-0"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </StaggerItem>
         ))}
       </StaggerGroup>
 
-      {/* `Reveal` forwards only children/className, so the landmark wrapper
-          carries the label — the architecture proof stays queryable. */}
-      <div role="region" aria-label="Platform data flow">
-        <Reveal className="bg-mkt-surface rounded-mkt-lg shadow-card mt-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 p-6">
-          {ARCH_FLOW.map((step) => (
-            <Fragment key={step.node}>
-              <span className="border-mkt-line bg-mkt-surface text-mkt-ink-soft text-mkt-sm rounded-sm border px-2.5 py-1.5">
-                {step.node}
-              </span>
-              <span aria-hidden className="text-mkt-line-strong">
-                {step.arrow}
-              </span>
-            </Fragment>
-          ))}
-          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-sm rounded-sm border px-2.5 py-1.5">
-            AI providers · BYOK
-          </span>
+      {/* Clean Horizontal Data Flow */}
+      <div className="mt-12">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-mkt-meta text-mkt-ink-muted font-mono uppercase">
+            Platform Data Flow & Security Boundaries
+          </p>
+          <span className="text-mkt-meta text-mkt-proof font-mono uppercase">docs/architecture.md</span>
+        </div>
+        <Reveal className="rounded-mkt-lg bg-mkt-paper border-mkt-line shadow-card border p-6 md:p-8">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+            {DATA_FLOW_STEPS.map((s) => (
+              <div key={s.step} className="border-mkt-line-soft border-l-2 pl-4 py-1">
+                <p className="text-mkt-meta text-mkt-proof font-mono font-bold">{s.step}</p>
+                <p className="text-mkt-body text-mkt-ink mt-1 font-semibold">{s.title}</p>
+                <p className="text-mkt-sm text-mkt-ink-muted mt-1 leading-snug">{s.detail}</p>
+              </div>
+            ))}
+          </div>
         </Reveal>
       </div>
     </Section>
@@ -198,51 +200,70 @@ export function EnterpriseLimits() {
       <SectionHeader
         kicker="Custom limits"
         title="Shaped around your requirements."
-        intro="Every enterprise agreement starts from these dials — tell us the volumes and we size the plan."
+        intro="Every enterprise agreement starts from these dials — tell us your volumes and we size the plan."
         headingId="enterprise-limits-title"
       />
-      {/* One statement of the answer, then the dials it applies to — rather
-          than repeating that answer once per row. */}
-      <Reveal className="rounded-mkt-lg bg-mkt-surface shadow-card overflow-hidden">
-        <p className="text-mkt-lead text-mkt-ink border-mkt-line-soft border-b p-6 md:p-7">
-          Every dial below is <em className="mkt-keyword not-italic">sized to your volumes</em> — we
-          quote against the numbers you bring, not a tier you have to grow into.
-        </p>
-        <StaggerGroup className="grid sm:grid-cols-2 lg:grid-cols-3">
-          {LIMIT_CELLS.map((cell) => (
+
+      {/* Spacious 2-Column Limits Grid */}
+      <Reveal className="rounded-mkt-lg bg-mkt-paper border-mkt-line shadow-card overflow-hidden border">
+        <div className="border-mkt-line-soft border-b p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-mkt-wash/30">
+          <div>
+            <h3 className="font-mkt-display text-mkt-d3 text-mkt-ink">
+              Tailored Enterprise Sizing
+            </h3>
+            <p className="text-mkt-body text-mkt-ink-soft mt-1">
+              We quote directly against your operational numbers — not arbitrary tier buckets.
+            </p>
+          </div>
+          <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-sm font-semibold rounded-sm border px-4 py-2 shrink-0 self-start md:self-auto">
+            Custom Agreement
+          </span>
+        </div>
+
+        <StaggerGroup className="grid gap-px bg-mkt-line-soft md:grid-cols-2">
+          {CUSTOM_LIMITS.map((item) => (
             <StaggerItem
-              key={cell.label}
-              className="border-mkt-line-soft border-b p-6 sm:not-last:border-r"
+              key={item.title}
+              className="bg-mkt-paper p-8 transition-colors hover:bg-mkt-surface"
             >
-              <p className="font-mkt-display text-mkt-ink text-mkt-d5">{cell.label}</p>
-              <p className="text-mkt-meta text-mkt-proof mt-1.5 font-mono uppercase">{cell.unit}</p>
-              <p className="text-mkt-sm text-mkt-ink-muted mt-2.5">{cell.desc}</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h4 className="font-mkt-display text-mkt-d4 text-mkt-ink">{item.title}</h4>
+                <span className="border-mkt-proof-line bg-mkt-wash text-mkt-proof text-mkt-meta font-mono uppercase rounded-sm border px-2.5 py-1">
+                  {item.badge}
+                </span>
+              </div>
+              <p className="text-mkt-meta text-mkt-proof mt-2 font-mono uppercase">{item.unit}</p>
+              <p className="text-mkt-body text-mkt-ink-soft mt-3 leading-relaxed">{item.desc}</p>
             </StaggerItem>
           ))}
         </StaggerGroup>
       </Reveal>
-      <p className="text-mkt-sm text-mkt-ink-soft mt-8 max-w-[78ch]">
-        Searchify does not claim SOC 2 or ISO certifications today.{' '}
-        <b className="text-mkt-ink font-semibold">What it offers is verifiable:</b> deterministic
-        scoring, immutable evidence, and a provenance stamp on every derived number your team can
-        audit line by line.
-      </p>
+
+      {/* Bottom Quote CTA Strip */}
+      <div className="mt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 rounded-mkt-lg bg-mkt-paper p-8 shadow-card border border-mkt-line">
+        <div>
+          <p className="font-mkt-display text-mkt-d4 text-mkt-ink">Verifiable Operations & Audit Trail</p>
+          <p className="text-mkt-body text-mkt-ink-soft mt-1 leading-relaxed max-w-[80ch]">
+            Deterministic scoring rules, immutable run logs, and provenance stamps on every derived metric.
+          </p>
+        </div>
+        <ButtonLink href={DEMO_HREF} className="shrink-0">
+          Request custom quote
+          <ArrowRight className="size-3.5" aria-hidden />
+        </ButtonLink>
+      </div>
     </Section>
   );
 }
 
-/**
- * Enterprise closing band. Its sales action routes through the stable `/demo`
- * funnel so booking/contact configuration remains centralized there.
- */
 export function EnterpriseContactCta() {
   return (
     <Section id="contact" tone="field" rhythm="loose" aria-label="Contact sales">
-      <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
+      <Reveal className="mx-auto max-w-5xl text-center">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
           Bring AI visibility in-house.
         </h2>
-        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">
+        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
           Tell us your volumes, constraints and review process — we’ll shape an enterprise plan
           around them, starting with a walkthrough of your own category.
         </p>

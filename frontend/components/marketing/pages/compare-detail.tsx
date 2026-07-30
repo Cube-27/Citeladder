@@ -37,7 +37,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
     <>
       <header className="pt-16 pb-12 md:pt-24 md:pb-16">
         <Container>
-          <Reveal className="max-w-3xl">
+          <Reveal className="max-w-5xl">
             <Link
               href="/compare"
               className="text-mkt-sm text-mkt-ink-muted hover:text-mkt-ink mb-8 inline-flex items-center gap-2 font-semibold transition-colors"
@@ -48,10 +48,10 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <div>
               <Eyebrow>Comparison</Eyebrow>
             </div>
-            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[18ch]">
+            <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[32ch]">
               Searchify vs <em className="mkt-keyword not-italic">{competitor.name}.</em>
             </h1>
-            <p className="text-mkt-lead text-mkt-ink-soft max-w-[56ch]">
+            <p className="text-mkt-lead text-mkt-ink-soft max-w-[80ch]">
               Two ways to measure brand presence in AI answers. The Searchify column comes straight
               from our docs and source code; the {competitor.name} column stays marked until we
               verify each row.
@@ -134,7 +134,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           narrative slots, no instruction text. */}
       {competitor.verdict && (
         <Section tone="paper" aria-label="Our verdict">
-          <div className="max-w-[70ch]">
+          <div className="max-w-[90ch]">
             <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink">Our verdict.</h2>
             <p className="text-mkt-body text-mkt-ink-soft mt-4">{competitor.verdict}</p>
           </div>
@@ -142,11 +142,11 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       )}
 
       <Section tone="field" rhythm="loose" aria-label="Get started">
-        <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
+        <Reveal className="mx-auto max-w-5xl text-center">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
             See your own numbers instead.
           </h2>
-          <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
+          <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
             Walk through your category with us — your prompts, your competitors, the raw answers
             behind every score.
           </p>

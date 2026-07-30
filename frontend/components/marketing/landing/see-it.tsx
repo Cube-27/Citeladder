@@ -22,7 +22,7 @@ export function SeeIt() {
   const { seeIt } = LANDING_CONTENT;
   return (
     <Section id="see-it" tone="field" rhythm="loose" aria-labelledby="see-it-title">
-      <Reveal className="mx-auto mb-8 max-w-3xl text-center md:mb-10">
+      <Reveal className="mx-auto mb-8 max-w-5xl text-center md:mb-10">
         <p className="text-mkt-meta text-mkt-proof font-mono uppercase">{seeIt.kicker}</p>
         {/* No weight or tracking class here: the `text-mkt-d2` rung owns both,
             and check-frontend-architecture fails the build if markup overrides

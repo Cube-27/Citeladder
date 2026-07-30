@@ -85,7 +85,7 @@ export default function DemoPage() {
           </ButtonLink>
         </div>
         {!actionHref && (
-          <p className="text-mkt-sm text-mkt-ink-muted mx-auto mt-6 max-w-[58ch]">
+          <p className="text-mkt-sm text-mkt-ink-muted mx-auto mt-6 max-w-[80ch]">
             {DEMO_SELF_SERVE_FALLBACK}
           </p>
         )}
@@ -100,7 +100,7 @@ export default function DemoPage() {
             </section>
           ))}
         </div>
-        <p className="text-mkt-sm text-mkt-ink-muted mx-auto mt-8 max-w-3xl text-center">
+        <p className="text-mkt-sm text-mkt-ink-muted mx-auto mt-8 max-w-5xl text-center">
           Searchify does not store demo-lead details on this page. If scheduling is enabled, the
           approved booking provider’s privacy terms apply at the external destination.
         </p>

@@ -102,7 +102,7 @@ export function FaqGroups() {
                     className="text-mkt-ink-muted size-4 shrink-0 transition-transform duration-300 group-open:rotate-45"
                   />
                 </summary>
-                <p className="text-mkt-body text-mkt-ink-soft max-w-[70ch] pb-6">
+                <p className="text-mkt-body text-mkt-ink-soft max-w-[90ch] pb-6">
                   <AnswerText text={item.a} />
                 </p>
               </details>

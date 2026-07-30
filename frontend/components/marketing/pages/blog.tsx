@@ -55,11 +55,11 @@ function BlogCta({
 }: Readonly<{ title: string; secondary: { href: string; label: string } }>) {
   return (
     <Section tone="field" rhythm="loose" aria-label="Get started">
-      <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
+      <Reveal className="mx-auto max-w-5xl text-center">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
           {title}
         </h2>
-        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
+        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
           Walk through your own category — your prompts, your competitors, and the raw answers
           behind every score.
         </p>
@@ -98,11 +98,11 @@ export function BlogIndex() {
                 <p
                   role="heading"
                   aria-level={2}
-                  className="font-mkt-display text-mkt-d3 text-mkt-ink max-w-[20ch]"
+                  className="font-mkt-display text-mkt-d3 text-mkt-ink max-w-[32ch]"
                 >
                   <Link href={`/blog/${featured.slug}`}>{featured.title}</Link>
                 </p>
-                <p className="text-mkt-body text-mkt-ink-soft mt-4 max-w-[60ch]">
+                <p className="text-mkt-body text-mkt-ink-soft mt-4 max-w-[80ch]">
                   {featured.excerpt}
                 </p>
                 <PostMeta post={featured} />
@@ -153,7 +153,7 @@ export function BlogIndex() {
             <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink mt-6">
               {BLOG_EMPTY_STATE.heading}
             </h2>
-            <p className="text-mkt-body text-mkt-ink-soft mx-auto mt-3 max-w-[52ch]">
+            <p className="text-mkt-body text-mkt-ink-soft mx-auto mt-3 max-w-[80ch]">
               {BLOG_EMPTY_STATE.body}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
@@ -236,7 +236,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
       <JsonLd data={blogPostingJsonLd(post)} />
       <header className="pt-16 pb-10 md:pt-24 md:pb-12">
         <Container>
-          <Reveal className="max-w-[70ch]">
+          <Reveal className="max-w-[90ch]">
             <Link
               href="/blog"
               className="text-mkt-sm text-mkt-ink-muted hover:text-mkt-ink mb-8 inline-flex items-center gap-2 font-semibold transition-colors"
@@ -272,7 +272,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
       </header>
 
       <Container>
-        <article aria-label="Post content" className="max-w-[70ch] pb-16">
+        <article aria-label="Post content" className="max-w-[90ch] pb-16">
           <p className="text-mkt-lead text-mkt-ink border-mkt-line border-l-2 pl-5">
             {post.excerpt}
           </p>

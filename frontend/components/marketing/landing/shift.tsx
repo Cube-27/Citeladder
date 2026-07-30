@@ -18,10 +18,10 @@ export function Shift() {
         {shift.facts.map((fact) => (
           <StaggerItem key={fact.num}>
             <p className="text-mkt-proof text-mkt-meta font-mono tabular-nums">{fact.num}</p>
-            <h3 className="font-mkt-display text-mkt-ink text-mkt-d4 mt-4 max-w-[16ch]">
+            <h3 className="font-mkt-display text-mkt-ink text-mkt-d4 mt-4 max-w-[28ch]">
               {fact.title}
             </h3>
-            <p className="text-mkt-body text-mkt-ink-soft mt-4 max-w-[38ch]">{fact.body}</p>
+            <p className="text-mkt-body text-mkt-ink-soft mt-4 max-w-[56ch]">{fact.body}</p>
           </StaggerItem>
         ))}
       </StaggerGroup>

@@ -29,7 +29,7 @@ export function PricingTiers() {
           </StaggerItem>
         ))}
       </StaggerGroup>
-      <p className="text-mkt-sm text-mkt-ink-muted mt-8 max-w-[80ch]">{PRICING_NOTE}</p>
+      <p className="text-mkt-sm text-mkt-ink-muted mt-8 max-w-[90ch]">{PRICING_NOTE}</p>
     </Section>
   );
 }
@@ -193,11 +193,11 @@ function TableCell({ value, highlighted }: Readonly<{ value: string; highlighted
 export function PricingCta() {
   return (
     <Section tone="field" rhythm="loose" aria-label="Get started">
-      <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[18ch]">
+      <Reveal className="mx-auto max-w-5xl text-center">
+        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
           Start from the evidence, not the invoice.
         </h2>
-        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[54ch]">
+        <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
           Walk through your own category with us, then pick the plan that matches the volume you
           actually need.
         </p>

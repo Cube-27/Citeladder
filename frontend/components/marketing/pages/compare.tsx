@@ -83,7 +83,7 @@ export function CompareIndex() {
         />
         <Reveal className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-mkt-lg bg-mkt-surface shadow-card p-8">
-            <p className="text-mkt-body text-mkt-ink-soft max-w-[62ch]">
+            <p className="text-mkt-body text-mkt-ink-soft max-w-[80ch]">
               Searchify scores deterministically — explicit analyzer and scoring-rule versions ride
               with every projection, so every claim on these pages can be traced back to persisted
               evidence.
@@ -122,11 +122,11 @@ export function CompareIndex() {
       </Section>
 
       <Section tone="field" rhythm="loose" aria-label="Get started">
-        <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[16ch]">
+        <Reveal className="mx-auto max-w-5xl text-center">
+          <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
             Don’t compare pages. Compare evidence.
           </h2>
-          <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[52ch]">
+          <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
             Run the same prompts across ChatGPT, Gemini and Claude — and read the raw responses
             yourself.
           </p>

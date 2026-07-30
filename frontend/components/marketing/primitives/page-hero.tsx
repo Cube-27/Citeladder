@@ -30,11 +30,11 @@ export function PageHero({
   return (
     <header className="mkt-field-hero mkt-grid-field relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20">
       <Container className="relative z-1">
-        <Reveal className={cn('max-w-3xl', centered && 'mx-auto text-center')}>
+        <Reveal className={cn('max-w-5xl', centered && 'mx-auto text-center')}>
           <Eyebrow>{eyebrow}</Eyebrow>
           <h1
             className={cn(
-              'font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[18ch]',
+              'font-mkt-display text-mkt-d1 text-mkt-ink mt-6 mb-6 max-w-[32ch]',
               centered && 'mx-auto',
             )}
           >
@@ -48,7 +48,7 @@ export function PageHero({
           </h1>
           {lead && (
             <p
-              className={cn('text-mkt-lead text-mkt-ink-soft max-w-[56ch]', centered && 'mx-auto')}
+              className={cn('text-mkt-lead text-mkt-ink-soft max-w-[80ch]', centered && 'mx-auto')}
             >
               {lead}
             </p>

@@ -6,8 +6,9 @@ import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { ButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
-import { HeroEntrance } from './hero-entrance';
 import { HeroAtmosphere } from './hero-atmosphere';
+import { HeroEntrance } from './hero-entrance';
+import { HeadlineRotatingWord } from './headline-rotating-word';
 import { RotatingEngineLogos } from './rotating-engine-logos';
 
 /**
@@ -32,14 +33,17 @@ export function Hero() {
     <header className="mkt-field-hero mkt-grid-field -mt-mkt-nav pt-mkt-nav relative overflow-hidden">
       <HeroAtmosphere />
       <Container className="relative z-1 pt-12 pb-16 md:pt-16 md:pb-20">
-        <HeroEntrance className="mx-auto max-w-4xl text-center">
+        <HeroEntrance className="mx-auto max-w-5xl text-center">
           <div className="flex justify-center">
             <Eyebrow>{hook.eyebrow}</Eyebrow>
           </div>
-          <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-6 max-w-[19ch] text-balance">
-            {hook.title} <em className="mkt-keyword not-italic">{hook.titleAccent}</em>
+          <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-6 max-w-[32ch] text-balance">
+            {hook.title}{' '}
+            <em className="mkt-keyword not-italic">
+              They ask <HeadlineRotatingWord /> instead.
+            </em>
           </h1>
-          <p className="text-mkt-lead text-mkt-ink-soft mx-auto mt-6 max-w-[58ch]">{hook.body}</p>
+          <p className="text-mkt-lead text-mkt-ink-soft mx-auto mt-6 max-w-[80ch]">{hook.body}</p>
           <div className="mt-9 flex flex-col justify-center gap-2.5 sm:flex-row sm:items-center">
             <ButtonLink href={DEMO_HREF} intent="primary" className="w-full sm:w-auto">
               {hook.primaryCta}

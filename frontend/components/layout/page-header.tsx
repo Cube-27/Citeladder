@@ -55,7 +55,7 @@ export function PageHeader({
         ) : null}
       </div>
       {summary ? (
-        <p className="text-muted max-w-[70ch] text-sm leading-relaxed">{summary}</p>
+        <p className="text-muted max-w-[90ch] text-sm leading-relaxed">{summary}</p>
       ) : null}
     </div>
   );

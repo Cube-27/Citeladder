@@ -73,13 +73,13 @@ export function Proof() {
                 {step.num} / {step.kicker}
               </p>
               <h3 className="font-mkt-display text-mkt-ink text-mkt-d5 mt-3">{step.title}</h3>
-              <p className="text-mkt-sm text-mkt-ink-soft mt-3 max-w-[36ch]">{step.body}</p>
+              <p className="text-mkt-sm text-mkt-ink-soft mt-3 max-w-[50ch]">{step.body}</p>
             </SpotlightCard>
           </StaggerItem>
         ))}
       </StaggerGroup>
       <Reveal className="mt-12">
-        <p className="text-mkt-body text-mkt-ink border-mkt-proof max-w-[52ch] border-l-2 pl-5 font-semibold">
+        <p className="text-mkt-body text-mkt-ink border-mkt-proof max-w-[80ch] border-l-2 pl-5 font-semibold">
           {proof.standard}
         </p>
       </Reveal>

@@ -171,8 +171,8 @@ export function SectionHeader({
       <Heading
         id={headingId}
         className={cn(
-          'font-mkt-display text-mkt-ink max-w-[18ch]',
-          size === 'chapter' ? 'text-mkt-d2' : 'text-mkt-d4 max-w-[22ch]',
+          'font-mkt-display text-mkt-ink max-w-[32ch]',
+          size === 'chapter' ? 'text-mkt-d2' : 'text-mkt-d4 max-w-[36ch]',
         )}
       >
         {title}

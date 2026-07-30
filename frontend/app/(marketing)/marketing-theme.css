@@ -48,7 +48,7 @@
      Every step carries its own weight, so marketing markup never writes a
      `font-medium`/`font-semibold` class next to a type token — the rung is
      the whole decision. This is what keeps heading weight uniform. */
-  --text-mkt-d1: var(--text-display-1); /* 31 → 60px fluid */
+  --text-mkt-d1: clamp(1.875rem, 4.8vw, 3.625rem); /* 30 → 58px fluid (2px tighter) */
   --text-mkt-d1--line-height: var(--text-display-1--line-height);
   --text-mkt-d1--font-weight: var(--text-display-1--font-weight);
   --text-mkt-d2: var(--text-display-2); /* 25 → 44px fluid */
@@ -315,10 +315,6 @@ html:has(.mkt-root) body {
 
 /* The one recurring atmosphere: sky/coral/mint field behind product scenes,
    auth brand panels and dark feature cards. */
-/* Stretched, not cropped: `cover` on a short wide band lands inside a single
-   blurred blob and the field reads as flat pale blue. Stretching keeps the
-   whole sky/coral/mint composition visible at every panel aspect — safe here
-   because the art is soft-edged by construction. */
 .mkt-wallpaper {
   background-color: var(--color-mkt-sky);
   background-image: url('/brand/wallpaper.svg');
