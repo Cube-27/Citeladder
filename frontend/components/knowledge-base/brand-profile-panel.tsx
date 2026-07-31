@@ -230,10 +230,11 @@ export function BrandProfilePanel({
             scrolling to see fields that comfortably fit side by side once the
             screen stopped being a narrow centred column. */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <Field label="Description">
+          <Field label="Description" hint="Core mission, value proposition, and brand summary.">
             {(field) => (
               <Textarea
                 {...field}
+                rows={3}
                 disabled={profileMutationPending}
                 value={draft.description}
                 onChange={(event) =>
@@ -252,6 +253,7 @@ export function BrandProfilePanel({
             {(field) => (
               <Textarea
                 {...field}
+                rows={3}
                 disabled={profileMutationPending}
                 value={draft.positioning}
                 onChange={(event) =>
@@ -263,10 +265,14 @@ export function BrandProfilePanel({
               />
             )}
           </Field>
-          <Field label="Target audience">
+          <Field
+            label="Target audience"
+            hint="Key demographics, customer personas, and ideal buyers."
+          >
             {(field) => (
               <Textarea
                 {...field}
+                rows={3}
                 disabled={profileMutationPending}
                 value={draft.target_audience}
                 onChange={(event) =>
@@ -278,12 +284,11 @@ export function BrandProfilePanel({
               />
             )}
           </Field>
-          {/* Single-line input, so it sits with the textareas rather than
-              stretching across both columns. */}
           <Field label="Products and services" hint="Comma-separated category labels.">
             {(field) => (
-              <Input
+              <Textarea
                 {...field}
+                rows={3}
                 disabled={profileMutationPending}
                 value={productsInput}
                 onChange={(event) =>

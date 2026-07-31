@@ -82,7 +82,7 @@ const COMPACT_NAV_GROUPS = [
     title: 'Analyze',
     items: [
       { label: 'Visibility', icon: ICONS.visibility },
-      { label: 'Answers', icon: ICONS.analytics },
+      { label: 'AI Referrals', icon: ICONS.analytics },
       { label: 'Traffic', icon: ICONS.traffic },
       { label: 'Prompts', icon: ICONS.prompts },
     ],
@@ -112,7 +112,7 @@ const STORY_STEPS = [
     id: 'trace',
     num: '02',
     label: '2. Trace',
-    navLabel: 'Answers',
+    navLabel: 'AI Referrals',
     shiftTitle: 'Shift Fact #2: AI answers cite, they don’t rank',
     productSolution:
       'Trace every score back to exact LLM answer text & 100% reproducible source citations',

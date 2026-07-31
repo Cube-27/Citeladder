@@ -271,6 +271,8 @@ html[data-theme='dark'] {
   --ds-background-selected-hovered: #09326c;
 
   /* Text */
+  /* Primary text stays clearly brighter than subtle: at #b8b8b8 the two sat
+     5 points apart and the dark-theme text hierarchy read as one flat tone. */
   --ds-text: #e6e6e6;
   --ds-text-subtle: #b3b3b3;
   --ds-text-subtlest: #8f8f8f;

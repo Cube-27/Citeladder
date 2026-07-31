@@ -42,7 +42,7 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
         'relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-sm px-2 text-sm transition-colors',
         active
           ? 'bg-accent-border text-accent-hover font-semibold'
-          : 'text-foreground hover:bg-background-alt font-medium',
+          : 'text-secondary hover:text-foreground hover:bg-background-alt font-medium',
       )}
     >
       {active ? (
@@ -69,8 +69,8 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
   return (
     <nav aria-label="Primary" className={cn('flex flex-col gap-6', className)}>
       {NAV_GROUPS.map((group) => (
-        <div key={group.title} className="flex flex-col gap-1">
-          <p className={cn(eyebrowClasses, 'px-2 pb-1')}>{group.title}</p>
+        <div key={group.title} className="flex flex-col gap-0">
+          <p className={cn(eyebrowClasses, 'px-1 py-0')}>{group.title}</p>
           <ul className="flex flex-col gap-1">
             {group.items.map((item) => (
               <li key={item.href}>

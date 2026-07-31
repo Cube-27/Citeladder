@@ -3,39 +3,46 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
+  Check,
+  ChevronDown,
   Download,
   Gauge,
   HeartPulse,
   Lightbulb,
   ListChecks,
   LoaderCircle,
-  MessageSquareText,
+  Pencil,
   Plus,
-  ShoppingBag,
-  BookOpen,
-  CircleAlert,
   FolderOpen,
-  PenLine,
-  Play,
-  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownLabel,
+  DropdownSeparator,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
 import { IconChip } from '@/components/ui/icon-chip';
 import { scoreTextClass } from '@/components/ui/score-band';
 import { Skeleton } from '@/components/ui/skeleton';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { DashboardSection, DashboardSectionState } from '@/lib/api/types';
+import type { DashboardSection, DashboardSectionState, Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
+
+import { ICONS } from '@/lib/icons';
 
 function displayValue(value: unknown): string {
   if (value === null || value === undefined) return '—';
@@ -59,20 +66,20 @@ function hasDashboardSignal(section: DashboardSection) {
   );
 }
 
-/** Every dashboard section owns a glyph; the chip tint comes from the accent. */
+/** Every dashboard section owns a glyph; matched 1-to-1 with canonical sidebar nav icons. */
 const SECTION_ICONS: Record<DashboardSection['id'], LucideIcon> = {
-  visibility: Gauge,
-  answers: MessageSquareText,
-  traffic: TrendingUp,
-  prompts: ListChecks,
-  commerce: ShoppingBag,
-  runs: Play,
-  content: PenLine,
-  site_health: HeartPulse,
-  issues: CircleAlert,
-  opportunities: Lightbulb,
-  brand_knowledge: BookOpen,
-  projects: FolderOpen,
+  visibility: ICONS.visibility,
+  answers: ICONS.analytics,
+  traffic: ICONS.traffic,
+  prompts: ICONS.prompts,
+  commerce: ICONS.products,
+  runs: ICONS.runs,
+  content: ICONS.content,
+  site_health: ICONS.siteHealth,
+  issues: ICONS.issues,
+  opportunities: ICONS.opportunities,
+  brand_knowledge: ICONS.knowledgeBase,
+  projects: ICONS.setup,
 };
 
 /** State → badge tone. Colour carries meaning only (WCAG 1.4.1: the label always renders). */
@@ -87,61 +94,57 @@ const SECTION_STATE_BADGE: Record<
   empty: { variant: 'neutral' },
 };
 
-function SectionCard({ section }: Readonly<{ section: DashboardSection }>) {
+function SectionRow({ section }: Readonly<{ section: DashboardSection }>) {
   const Icon = SECTION_ICONS[section.id];
   const metric = primaryMetric(section);
   const badge = SECTION_STATE_BADGE[section.state];
+  const stateLabel = section.state.replaceAll('_', ' ');
   return (
     <Link
       href={section.href}
       data-tour={`dashboard-${section.id}`}
-      className="focus-ring group block rounded-lg"
+      className="focus-ring hover:bg-background-alt group flex items-center justify-between gap-3 px-4 py-3 transition-colors"
       aria-label={`Open ${section.title}`}
     >
-      {/* Interactive card: rests on the raised rung, lifts to the overlay
-          rung and rises 2px on hover — the ADS surface/shadow pairing. */}
-      <Card className="group-hover:shadow-card-hover h-full transition-[box-shadow,transform] duration-200 group-hover:-translate-y-0.5">
-        <CardHeader className="gap-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <IconChip className="shrink-0">
-                <Icon className="size-6" />
-              </IconChip>
-              <CardTitle>{section.title}</CardTitle>
-            </div>
-            {badge.variant === 'status' ? (
-              <Badge variant="status" value={badge.value} className="capitalize">
-                {section.state.replaceAll('_', ' ')}
-              </Badge>
-            ) : (
-              <Badge className="capitalize">{section.state.replaceAll('_', ' ')}</Badge>
-            )}
+      <div className="flex min-w-0 items-center gap-3">
+        <IconChip className="size-8 shrink-0">
+          <Icon className="size-4" />
+        </IconChip>
+        <span className="text-foreground truncate text-sm font-semibold">{section.title}</span>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3">
+        {/* No plain-text state fallback: the badge below always renders the
+            state, so a metric-less section showed it twice side by side. */}
+        {metric ? (
+          <div className="text-right">
+            <span
+              className={cn(
+                'mono text-sm font-semibold',
+                typeof metric.value === 'number' && metric.label.includes('score')
+                  ? scoreTextClass(metric.value)
+                  : 'text-foreground',
+              )}
+            >
+              {displayValue(metric.value)}
+            </span>
+            <span className="text-muted ms-1.5 text-xs capitalize">{metric.label}</span>
           </div>
-        </CardHeader>
-        <CardContent className="flex items-end justify-between gap-2 pt-0">
-          {metric ? (
-            <p className="grid gap-0.5">
-              <span
-                className={cn(
-                  'mono text-lg',
-                  typeof metric.value === 'number' && metric.label.includes('score')
-                    ? scoreTextClass(metric.value)
-                    : 'text-foreground',
-                )}
-              >
-                {displayValue(metric.value)}
-              </span>
-              <span className="text-muted text-xs capitalize">{metric.label}</span>
-            </p>
-          ) : (
-            <p className="text-muted text-sm capitalize">{section.state.replaceAll('_', ' ')}</p>
-          )}
-          <ArrowRight
-            aria-hidden
-            className="text-muted group-hover:text-accent-text size-4 shrink-0 transition-[color,transform] duration-200 group-hover:translate-x-0.5"
-          />
-        </CardContent>
-      </Card>
+        ) : null}
+
+        {badge.variant === 'status' ? (
+          <Badge variant="status" value={badge.value} className="text-2xs px-2 py-0.5 capitalize">
+            {stateLabel}
+          </Badge>
+        ) : (
+          <Badge className="text-2xs px-2 py-0.5 capitalize">{stateLabel}</Badge>
+        )}
+
+        <ArrowRight
+          aria-hidden
+          className="text-muted group-hover:text-accent-text size-4 shrink-0 transition-[color,transform] duration-200 group-hover:translate-x-0.5"
+        />
+      </div>
     </Link>
   );
 }
@@ -195,8 +198,21 @@ function DashboardSkeleton() {
 }
 
 /** Active-project landing view backed exclusively by the persisted Dashboard projection. */
-export function DashboardScreen() {
-  const { activeProject, isLoading } = useProjectContext();
+export function DashboardScreen({
+  onEditProject,
+  // The callback only ever receives `activeProject` straight from the project
+  // context, so it carries the whole `Project`. Narrowing it to a structural
+  // subset here dropped the fields the edit panel needs and made the caller's
+  // `setEditing` unassignable.
+}: Readonly<{ onEditProject?: (project: Project) => void }> = {}) {
+  const router = useRouter();
+  const {
+    projects = [],
+    activeProject,
+    activeProjectId,
+    setActiveProjectId,
+    isLoading,
+  } = useProjectContext();
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
   const dashboard = useQuery({
@@ -290,19 +306,68 @@ export function DashboardScreen() {
             </p>
           </div>
         </div>
-        <Button
-          variant="secondary"
-          onClick={downloadReport}
-          disabled={downloading}
-          data-tour="dashboard-report"
-        >
-          {downloading ? (
-            <LoaderCircle className="size-4 animate-spin" aria-hidden />
-          ) : (
-            <Download className="size-4" aria-hidden />
-          )}
-          {downloading ? 'Preparing…' : 'Download report'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="secondary" size="sm">
+                <FolderOpen className="size-4" aria-hidden />
+                Manage projects
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent align="end" className="w-56">
+              <DropdownLabel>Workspace Brands</DropdownLabel>
+              {(projects ?? []).map((project) => {
+                const selected = project.id === activeProjectId;
+                const label = project.brand_name || project.name;
+                return (
+                  <DropdownItem
+                    key={project.id}
+                    onSelect={() => setActiveProjectId(project.id)}
+                    className={selected ? 'text-accent-text font-medium' : undefined}
+                  >
+                    <BrandLogo
+                      name={label}
+                      logoUrl={project.brand?.logo_url}
+                      websiteUrl={project.website_url}
+                      size="sm"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{label}</span>
+                    {selected ? (
+                      <Check className="text-accent size-4 shrink-0" aria-hidden />
+                    ) : null}
+                  </DropdownItem>
+                );
+              })}
+              <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+              {onEditProject && activeProject ? (
+                <DropdownItem onSelect={() => onEditProject(activeProject)}>
+                  <Pencil className="size-4 shrink-0" aria-hidden />
+                  <span>Edit active brand</span>
+                </DropdownItem>
+              ) : null}
+              <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
+                <Plus className="size-4 shrink-0" aria-hidden />
+                <span>Add new project</span>
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={downloadReport}
+            disabled={downloading}
+            data-tour="dashboard-report"
+          >
+            {downloading ? (
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Download className="size-4" aria-hidden />
+            )}
+            {downloading ? 'Preparing…' : 'Download report'}
+          </Button>
+        </div>
       </div>
 
       {downloadError ? (
@@ -360,31 +425,37 @@ export function DashboardScreen() {
         </Alert>
       ) : null}
 
-      {analyzeSections.length > 0 ? (
-        <section aria-labelledby="dashboard-analyze">
-          <h2 id="dashboard-analyze" className="text-foreground text-heading-sm mb-3">
-            Analyze
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {analyzeSections.map((section) => (
-              <SectionCard key={section.id} section={section} />
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        {analyzeSections.length > 0 ? (
+          <section aria-labelledby="dashboard-analyze" className="flex flex-col gap-2">
+            <h2 id="dashboard-analyze" className="text-foreground text-heading-sm">
+              Analyze
+            </h2>
+            <Card className="overflow-hidden">
+              <div className="divide-border grid content-start divide-y">
+                {analyzeSections.map((section) => (
+                  <SectionRow key={section.id} section={section} />
+                ))}
+              </div>
+            </Card>
+          </section>
+        ) : null}
 
-      {improveSections.length > 0 ? (
-        <section aria-labelledby="dashboard-improve">
-          <h2 id="dashboard-improve" className="text-foreground text-heading-sm mb-3">
-            Improve
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {improveSections.map((section) => (
-              <SectionCard key={section.id} section={section} />
-            ))}
-          </div>
-        </section>
-      ) : null}
+        {improveSections.length > 0 ? (
+          <section aria-labelledby="dashboard-improve" className="flex flex-col gap-2">
+            <h2 id="dashboard-improve" className="text-foreground text-heading-sm">
+              Improve
+            </h2>
+            <Card className="overflow-hidden">
+              <div className="divide-border grid content-start divide-y">
+                {improveSections.map((section) => (
+                  <SectionRow key={section.id} section={section} />
+                ))}
+              </div>
+            </Card>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

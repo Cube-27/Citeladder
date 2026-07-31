@@ -27,7 +27,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Analyze',
     items: [
       { label: 'Visibility', href: '/visibility', icon: ICONS.visibility },
-      { label: 'Answers', href: '/analytics', icon: ICONS.analytics },
+      { label: 'AI Referrals', href: '/analytics', icon: ICONS.analytics },
       { label: 'Traffic', href: '/traffic', icon: ICONS.traffic },
       // Single prompts surface: read view by default, manage mode in-page.
       { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
