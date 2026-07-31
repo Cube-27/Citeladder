@@ -68,6 +68,7 @@ documented in the architecture and roadmap references as they are designed and d
 | backend API/models/queue/state machine/analysis | `docs/backend-architecture.md` |
 | the hard rules you must never break + the two ops gotchas | `docs/invariants.md` |
 | any frontend route, API contract layer, data flow | `docs/frontend-architecture.md` |
+| raising/handling an API error, error codes, the error envelope | `docs/api-error-contract.md` |
 | tokens, theme, per-screen layout, component primitives | `docs/design.md` |
 | the approved plan / task graph | `docs/plans/` |
 | whole-product architecture rationale | `docs/architecture.md` |

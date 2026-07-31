@@ -336,6 +336,7 @@ pnpm test:e2e         # Playwright (requires a browser + running stack)
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Environment setup + full gotchas runbook |
 | [`docs/backend-architecture.md`](docs/backend-architecture.md) | API, models, queue, state machine, analysis |
 | [`docs/frontend-architecture.md`](docs/frontend-architecture.md) | Routes, API-contract layer, data flow |
+| [`docs/api-error-contract.md`](docs/api-error-contract.md) | The API error envelope end-to-end: wire shape, backend handlers, frontend consumption |
 | [`docs/invariants.md`](docs/invariants.md) | The 12 hard rules (review-blocking) |
 | [`docs/design.md`](docs/design.md) | Design tokens, theme, per-screen layout |
 | [`docs/site-health.md`](docs/site-health.md) | Site Health: entitlements, statuses, API endpoints, routes, exports |

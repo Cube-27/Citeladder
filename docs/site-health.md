@@ -229,6 +229,14 @@ Site Health and Issues are live MVP nav items.
 |---|---|
 | `/site-health` | The Site Health screen: discovery-in-progress, inventory selection, live analysis, and the completed dashboard (mockups 708 / 709 / 712 / 713). The phase is derived from the crawl + pages queries. |
 | `/site-health/crawls/[crawlId]/pages/[siteUrlId]` | Per-URL detail: metadata, Technical/AEO/overall score rings (`—` for null), delivery metrics, all issues by severity, and crawl-bounded issue history (mockup 711). |
+
+**Unmeasured delivery timings render `—` (SH-6).** The fetcher records whole
+milliseconds, so a `0` TTFB (or a `0 ms` root-error latency) means the hop was
+never measured — a redirect/no-body hop, a DNS failure that never reached the
+wire, or a legacy row — not a sub-millisecond response. Rendering it as `0ms`
+would advertise impossibly fast delivery, so `0` and `null` both collapse to the
+placeholder. **Byte counts do not share this rule**: `0 B` is a real, measured
+empty body and still renders as a number.
 | `/issues` | Grouped Issues catalog: severity/occurrence/affected-page summary tiles, grouped cards with remediation, server-backed search/filter/pagination, and affected-URL navigation (mockup 710). |
 
 Data flow notes:
