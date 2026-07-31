@@ -231,11 +231,15 @@ describe('TrafficScreen — populated dashboard', () => {
     expect(within(stats).getByTestId('stat-sessions')).toHaveTextContent('41,208');
     expect(within(stats).getByTestId('stat-conversions')).toHaveTextContent('1,386');
 
-    // Four trend cards: CTR stays on the fixed 0–100% scale; impressions get a
-    // truthful count domain (51,800 max → 60K ceiling).
+    // Four small-multiple panels, each on its OWN zero-based labelled axis.
+    // CTR takes a nice ceiling above its max rather than a fixed 0–100%: at
+    // 3.17% a full-percentage axis pins the line to the baseline and the
+    // series reads as flat. Impressions get a truthful count domain
+    // (51,800 max → 60K ceiling).
     const ctrCard = await screen.findByTestId('trend-chart-ctr');
-    expect(within(ctrCard).getByText('Click-through rate · 0–100% scale')).toBeInTheDocument();
-    expect(within(ctrCard).getByText('100%')).toBeInTheDocument();
+    expect(within(ctrCard).getByText('Click-through rate')).toBeInTheDocument();
+    expect(within(ctrCard).getByText('5%')).toBeInTheDocument();
+    expect(within(ctrCard).getByText('0%')).toBeInTheDocument();
     const impressionsCard = screen.getByTestId('trend-chart-impressions');
     expect(within(impressionsCard).getByText('Google Search Console · daily')).toBeInTheDocument();
     expect(within(impressionsCard).getByText('60K')).toBeInTheDocument();

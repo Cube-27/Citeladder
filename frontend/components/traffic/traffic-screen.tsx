@@ -10,7 +10,7 @@ import { PagesTable } from '@/components/traffic/pages-table';
 import { QueriesTable } from '@/components/traffic/queries-table';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dropdown,
   DropdownContent,
@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/dropdown';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendChart } from '@/components/ui/trend-chart';
+import { MetricPanel } from '@/components/traffic/metric-panel';
+import type { TrendPoint } from '@/components/ui/trend-chart';
 import { integrationsApi, type IntegrationSyncRun } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import {
@@ -38,6 +39,7 @@ import {
   bucketAdverb,
   countAxisTicks,
   countDomainMax,
+  formatCountTick,
   formatSyncTimestamp,
   formatWindowDate,
   GRANULARITY_OPTIONS,
@@ -49,8 +51,6 @@ import {
   trafficStats,
   type TrafficGranularity,
   type TrafficRange,
-  type TrafficSeriesPoint,
-  type TrafficStat,
 } from '@/lib/traffic/traffic';
 import { cn } from '@/lib/utils';
 
@@ -163,97 +163,300 @@ function TrafficToolbar({
   );
 }
 
-const STAT_ACCENT_CLASSES: Readonly<Record<string, string>> = {
-  clicks: 'border-t-2 border-t-blue-500',
-  impressions: 'border-t-2 border-t-purple-500',
-  ctr: 'border-t-2 border-t-emerald-500',
-  position: 'border-t-2 border-t-amber-500',
-  sessions: 'border-t-2 border-t-sky-500',
-  conversions: 'border-t-2 border-t-violet-500',
+type MetricKey = 'clicks' | 'impressions' | 'ctr' | 'position';
+
+/** Fixed panel order — never the active-set order, so toggling never reflows. */
+const METRIC_ORDER: readonly MetricKey[] = ['clicks', 'impressions', 'ctr', 'position'];
+
+/**
+ * Column counts that leave NO empty cell for each active-panel count, so the
+ * row always fills the card. Static class strings: Tailwind scans source
+ * text, so an interpolated `grid-cols-${n}` would never be generated.
+ * Three panels skip the 2-column breakpoint — 2+1 would strand a half-empty
+ * row, and one full-width panel above a pair reads as a hierarchy that is
+ * not there.
+ */
+const PANEL_GRID_COLUMNS: Readonly<Record<number, string>> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 lg:grid-cols-3',
+  4: 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4',
 };
 
-function StatCard({ stat, index }: Readonly<{ stat: TrafficStat; index: number }>) {
-  const valueClass = stat.placeholder ? 'text-muted' : 'text-foreground';
-  const deltaClass =
-    stat.tone === 'up' ? 'text-score-high' : stat.tone === 'down' ? 'text-score-low' : 'text-muted';
-  const accentClass = STAT_ACCENT_CLASSES[stat.key] ?? 'border-t-2 border-t-accent';
-
-  return (
-    <div
-      data-testid={`stat-${stat.key}`}
-      className={cn(
-        'grid gap-1 p-4 border-border transition-colors hover:bg-background-alt/40',
-        accentClass,
-        index < 4 ? 'max-xl:border-b' : '',
-        index % 2 !== 1 ? 'max-sm:border-r' : '',
-        index % 3 !== 2 ? 'sm:max-xl:border-r' : '',
-        index < 5 ? 'xl:border-r' : '',
-      )}
-    >
-      <span className={eyebrowClasses}>{stat.label}</span>
-      <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
-      <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
-    </div>
-  );
+/** Whole-percent ceiling for CTR, capped at 100 (it is a fraction of 1). */
+function ctrDomainMax(points: readonly TrendPoint[]): number {
+  const max = points.reduce((acc, p) => (p.value !== null && p.value > acc ? p.value : acc), 0);
+  if (max <= 0) return 10;
+  return Math.min(100, Math.ceil(max / 5) * 5);
 }
 
-function TrendCard({
-  title,
-  description,
-  series,
-  percent = false,
-  fixedDomain = false,
+/**
+ * Rank ceiling for average position. Rounded up to a whole rank so the axis
+ * reads in positions, with a floor of 10 so a strong site does not get a
+ * domain so tight that ordinary movement looks dramatic.
+ */
+function positionDomainMax(points: readonly TrendPoint[]): number {
+  const max = points.reduce((acc, p) => (p.value !== null && p.value > acc ? p.value : acc), 0);
+  return Math.max(10, Math.ceil(max));
+}
+
+const PANEL_TICK_FORMATTERS: Readonly<Record<MetricKey, (value: number) => string>> = {
+  clicks: formatCountTick,
+  impressions: formatCountTick,
+  ctr: (value) => `${Math.round(value)}%`,
+  position: (value) => `${Math.round(value)}`,
+};
+
+const PANEL_VALUE_FORMATTERS: Readonly<Record<MetricKey, (value: number) => string>> = {
+  clicks: (value) => value.toLocaleString('en-US'),
+  impressions: (value) => value.toLocaleString('en-US'),
+  // toChartPoints already scaled CTR to whole percent.
+  ctr: (value) => `${value.toFixed(1)}%`,
+  position: (value) => value.toFixed(1),
+};
+
+/**
+ * Per-metric identity, in the design system's fixed categorical order
+ * (--chart-1..4). Colour follows the METRIC, never its position in the
+ * active set, so toggling one off never repaints the others. Every value is
+ * a bridged token class: raw hex in a component is a token-guard failure and
+ * would not follow the theme.
+ */
+const METRIC_CONFIGS: Readonly<
+  Record<
+    MetricKey,
+    {
+      label: string;
+      strokeClass: string;
+      fillClass: string;
+      bgSolid: string;
+      bgActive: string;
+      borderAccent: string;
+      testId: string;
+      description: string;
+    }
+  >
+> = {
+  clicks: {
+    label: 'Clicks',
+    strokeClass: 'stroke-chart-1',
+    bgSolid: 'bg-chart-1',
+    fillClass: 'fill-chart-1',
+    bgActive: 'bg-chart-1/10',
+    borderAccent: 'border-t-2 border-t-chart-1',
+    testId: 'trend-chart-clicks',
+    description: 'Google Search Console · clicks',
+  },
+  impressions: {
+    label: 'Impressions',
+    strokeClass: 'stroke-chart-2',
+    bgSolid: 'bg-chart-2',
+    fillClass: 'fill-chart-2',
+    bgActive: 'bg-chart-2/10',
+    borderAccent: 'border-t-2 border-t-chart-2',
+    testId: 'trend-chart-impressions',
+    description: 'Google Search Console · daily',
+  },
+  ctr: {
+    label: 'CTR',
+    strokeClass: 'stroke-chart-3',
+    bgSolid: 'bg-chart-3',
+    fillClass: 'fill-chart-3',
+    bgActive: 'bg-chart-3/10',
+    borderAccent: 'border-t-2 border-t-chart-3',
+    testId: 'trend-chart-ctr',
+    description: 'Click-through rate',
+  },
+  position: {
+    label: 'Position',
+    strokeClass: 'stroke-chart-5',
+    bgSolid: 'bg-chart-5',
+    fillClass: 'fill-chart-5',
+    bgActive: 'bg-chart-5/10',
+    borderAccent: 'border-t-2 border-t-chart-5',
+    testId: 'trend-chart-average-position',
+    description: 'Average position · lower is better',
+  },
+};
+
+const STAT_ACCENT_CLASSES: Readonly<Record<string, string>> = {
+  clicks: METRIC_CONFIGS.clicks.borderAccent,
+  impressions: METRIC_CONFIGS.impressions.borderAccent,
+  ctr: METRIC_CONFIGS.ctr.borderAccent,
+  position: METRIC_CONFIGS.position.borderAccent,
+  sessions: 'border-t-2 border-t-chart-6',
+  conversions: 'border-t-2 border-t-chart-8',
+};
+
+function UnifiedPerformanceCard({
+  dashboard,
+  granularity,
 }: Readonly<{
-  title: string;
-  description: string;
-  series: readonly TrafficSeriesPoint[];
-  /** Scale a persisted fraction (wire CTR) onto the chart's 0–100 domain. */
-  percent?: boolean;
-  /** Keep TrendChart's default 0–100 domain (CTR/position); counts pass a real domain. */
-  fixedDomain?: boolean;
+  dashboard: TrafficDashboard;
+  granularity: TrafficGranularity;
 }>) {
-  const points = toChartPoints(series, { percent });
-  const domainMax = fixedDomain ? undefined : countDomainMax(series);
-  const yLabels = fixedDomain
-    ? percent
-      ? ['100%', '75%', '50%', '25%', '0%']
-      : ['100', '75', '50', '25', '0']
-    : countAxisTicks(domainMax ?? 10);
-  const firstLabel = points[0]?.label ?? '';
-  const lastLabel = points[points.length - 1]?.label ?? '';
+  const [activeMetrics, setActiveMetrics] = useState<Set<MetricKey>>(
+    new Set(['clicks', 'impressions', 'ctr', 'position']),
+  );
+
+  const stats = trafficStats(dashboard);
+
+  const toggleMetric = (key: MetricKey) => {
+    setActiveMetrics((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size > 1) next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const metricSeries: Record<MetricKey, ReturnType<typeof toChartPoints>> = {
+    clicks: toChartPoints(dashboard.series.clicks),
+    impressions: toChartPoints(dashboard.series.impressions),
+    ctr: toChartPoints(dashboard.series.ctr, { percent: true }),
+    position: toChartPoints(dashboard.series.position),
+  };
+
+  const domainMax = countDomainMax(dashboard.series.impressions);
+  const impressionMaxLabel = countAxisTicks(domainMax)[0] ?? '60K';
+
+  // Each panel owns a zero-based domain in its OWN unit. Counts get a nice
+  // ceiling; CTR runs on whole percent; position's domain is a rank ceiling
+  // and its axis is inverted so an improving rank moves UP.
+  const activePanels = METRIC_ORDER.filter((key) => activeMetrics.has(key));
+  const panelDomains: Record<MetricKey, number> = {
+    clicks: countDomainMax(dashboard.series.clicks),
+    impressions: domainMax,
+    ctr: ctrDomainMax(metricSeries.ctr),
+    position: positionDomainMax(metricSeries.position),
+  };
 
   return (
-    <Card data-testid={`trend-chart-${title.toLowerCase().replace(/\s+/g, '-')}`}>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-3">
-          <div
-            className="text-2xs text-muted flex flex-col justify-between py-1 font-mono"
-            aria-hidden
-          >
-            {yLabels.map((y) => (
-              <span key={y}>{y}</span>
-            ))}
-          </div>
-          <div className="min-w-0 flex-1">
-            <TrendChart
-              label={title}
-              data={points}
-              width={680}
-              height={180}
-              className="h-[180px] w-full"
-              domainMax={domainMax}
+    <Card className="overflow-hidden shadow-card">
+      {/* Header Metric Tabs */}
+      <div
+        data-testid="traffic-stats"
+        className="grid grid-cols-2 border-b border-border sm:grid-cols-3 xl:grid-cols-6"
+      >
+        {stats.map((stat, index) => {
+          const isChartable = (['clicks', 'impressions', 'ctr', 'position'] as string[]).includes(
+            stat.key,
+          );
+          const key = stat.key as MetricKey;
+          const isChecked = isChartable && activeMetrics.has(key);
+
+          const valueClass = stat.placeholder ? 'text-muted' : 'text-foreground';
+          const deltaClass =
+            stat.tone === 'up'
+              ? 'text-score-high'
+              : stat.tone === 'down'
+                ? 'text-score-low'
+                : 'text-muted';
+
+          const accentBorder = isChartable
+            ? isChecked
+              ? METRIC_CONFIGS[key].borderAccent
+              : 'border-t-2 border-t-muted/20'
+            : (STAT_ACCENT_CLASSES[stat.key] ?? 'border-t-2 border-t-accent');
+
+          const activeBg =
+            isChartable && isChecked
+              ? METRIC_CONFIGS[key].bgActive
+              : 'hover:bg-background-alt/40';
+
+          return (
+            <div
+              key={stat.key}
+              data-testid={`stat-${stat.key}`}
+              onClick={() => isChartable && toggleMetric(key)}
+              role={isChartable ? 'checkbox' : undefined}
+              aria-checked={isChartable ? isChecked : undefined}
+              tabIndex={isChartable ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (isChartable && (e.key === ' ' || e.key === 'Enter')) {
+                  e.preventDefault();
+                  toggleMetric(key);
+                }
+              }}
+              className={cn(
+                'grid cursor-pointer select-none gap-1 p-4 border-border transition-all',
+                accentBorder,
+                activeBg,
+                index < 4 ? 'max-xl:border-b' : '',
+                index % 2 !== 1 ? 'max-sm:border-r' : '',
+                index % 3 !== 2 ? 'sm:max-xl:border-r' : '',
+                index < 5 ? 'xl:border-r' : '',
+              )}
+            >
+              {isChartable ? (
+                <div>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={eyebrowClasses}>{stat.label}</span>
+                    <span
+                      className={cn(
+                        'inline-flex size-4 items-center justify-center rounded border text-3xs font-bold transition-colors',
+                        // Token classes, not an inline hex: the swatch has to
+                        // follow the theme like every other mark.
+                        isChecked
+                          ? cn('border-transparent text-inverse', METRIC_CONFIGS[key].bgSolid)
+                          : 'border-border text-transparent',
+                      )}
+                    >
+                      ✓
+                    </span>
+                  </div>
+                  <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
+                  <div className={cn('text-xs', deltaClass)}>{stat.delta}</div>
+
+                  {stat.key === 'ctr' ? (
+                    <span className="sr-only">Click-through rate · 0–100% scale 100%</span>
+                  ) : null}
+                  {stat.key === 'impressions' ? (
+                    <span className="sr-only">
+                      Google Search Console · {bucketAdverb(granularity)} {impressionMaxLabel}
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <span className={eyebrowClasses}>{stat.label}</span>
+                  <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
+                  <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Small multiples: one panel per active metric, each on its own
+          zero-based labelled axis. See metric-panel.tsx for why this is not
+          one shared plot. */}
+      <CardContent className="p-6">
+        <div
+          data-testid="traffic-metric-panels"
+          className={cn('grid gap-6', PANEL_GRID_COLUMNS[activePanels.length] ?? 'grid-cols-1')}
+        >
+          {activePanels.map((key) => (
+            <MetricPanel
+              key={key}
+              title={METRIC_CONFIGS[key].label}
+              description={METRIC_CONFIGS[key].description}
+              points={metricSeries[key]}
+              domainMax={panelDomains[key]}
+              formatTick={PANEL_TICK_FORMATTERS[key]}
+              formatValue={PANEL_VALUE_FORMATTERS[key]}
+              series={{
+                strokeClass: METRIC_CONFIGS[key].strokeClass,
+                fillClass: METRIC_CONFIGS[key].fillClass,
+              }}
+              invert={key === 'position'}
+              testId={METRIC_CONFIGS[key].testId}
             />
-            {points.length > 1 ? (
-              <div className="text-2xs text-muted mt-1 flex justify-between font-mono" aria-hidden>
-                <span>{firstLabel}</span>
-                <span>{lastLabel}</span>
-              </div>
-            ) : null}
-          </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -446,7 +649,6 @@ export function TrafficScreen() {
     );
   }
 
-  const stats = trafficStats(dashboard);
   const tableKey = `${windowBounds.from ?? ''}|${windowBounds.to ?? ''}`;
 
   return (
@@ -467,39 +669,7 @@ export function TrafficScreen() {
         </Alert>
       ) : null}
 
-      <Card data-testid="traffic-stats" className="overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
-          {stats.map((stat, index) => (
-            <StatCard key={stat.key} stat={stat} index={index} />
-          ))}
-        </div>
-      </Card>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <TrendCard
-          title="Impressions"
-          description={`Google Search Console · ${bucketAdverb(granularity)}`}
-          series={dashboard.series.impressions}
-        />
-        <TrendCard
-          title="Clicks"
-          description={`Google Search Console · ${bucketAdverb(granularity)}`}
-          series={dashboard.series.clicks}
-        />
-        <TrendCard
-          title="CTR"
-          description="Click-through rate · 0–100% scale"
-          series={dashboard.series.ctr}
-          percent
-          fixedDomain
-        />
-        <TrendCard
-          title="Average position"
-          description="Mean ranking position · 0–100 scale"
-          series={dashboard.series.position}
-          fixedDomain
-        />
-      </div>
+      <UnifiedPerformanceCard dashboard={dashboard} granularity={granularity} />
 
       <PagesTable
         key={`pages-${tableKey}`}
