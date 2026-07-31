@@ -58,12 +58,17 @@
   },
   "app/analysis/opportunities/detectors.py": {
     "functions": {
+      "_commerce_hit": 3,
       "_group_by_prompt_index": 2,
       "_prompt_target": 5,
-      "_site_opportunity_rule_id": 3,
+      "_site_opportunity_rule_id": 4,
+      "_sorted_commerce_hits": 1,
       "_visibility_gap_hits": 14,
       "detect_brand_absent_high_value_prompt": 4,
+      "detect_competitor_product_dominates": 5,
       "detect_owned_page_not_cited": 3,
+      "detect_price_mention_mismatch": 6,
+      "detect_product_not_mentioned": 5,
       "detect_site_issue_opportunities": 7
     },
     "loc": 316,
@@ -513,7 +518,7 @@
       "_conflict": 1,
       "_decode_csv": 2,
       "_not_found": 1,
-      "_resolve_import_rows": 5,
+      "_resolve_import_rows": 6,
       "_unprocessable": 1,
       "create_competitor_product_endpoint": 4,
       "create_product_endpoint": 3,
@@ -523,6 +528,7 @@
       "import_products_endpoint": 5,
       "list_competitor_products_endpoint": 3,
       "list_products_endpoint": 3,
+      "product_audit_references_endpoint": 2,
       "product_evidence_endpoint": 4,
       "product_visibility_endpoint": 3,
       "product_visibility_export_endpoint": 3,
@@ -530,7 +536,7 @@
       "update_product_endpoint": 3
     },
     "loc": 457,
-    "max_cc": 5
+    "max_cc": 6
   },
   "app/api/projects.py": {
     "functions": {
@@ -1188,6 +1194,12 @@
     "loc": 9,
     "max_cc": 0
   },
+  "app/core/config/errors.py": {
+    "functions": {
+      "is_retryable_status": 2
+    },
+    "max_cc": 2
+  },
   "app/core/config/http.py": {
     "functions": {},
     "loc": 18,
@@ -1275,6 +1287,7 @@
       "SiteHealthCapability.__init__": 1,
       "SiteHealthRule.__init__": 3,
       "SiteHealthSettings._validate_capability_limits": 4,
+      "SiteHealthSettings._validate_discovery_cap": 2,
       "SiteHealthSettings._validate_lease_and_heartbeat": 12,
       "SiteHealthSettings.retry_delay": 2,
       "_build_capability_profiles": 1,
@@ -1314,6 +1327,24 @@
     },
     "loc": 71,
     "max_cc": 4
+  },
+  "app/core/errors.py": {
+    "functions": {
+      "ApiException.__init__": 2,
+      "ApiException.coded": 2,
+      "ApiException.is_retryable": 2,
+      "_parse_legacy_detail": 15,
+      "_status_phrase": 2,
+      "api_exception_handler": 1,
+      "error_envelope": 3,
+      "http_exception_shim_handler": 2,
+      "request_id_for": 4,
+      "request_validation_error_handler": 1,
+      "sanitize_validation_errors": 8,
+      "unhandled_exception_handler": 2,
+      "validation_error_summary": 3
+    },
+    "max_cc": 15
   },
   "app/core/http_errors.py": {
     "functions": {
@@ -1988,8 +2019,11 @@
       "_clamp_limit": 2,
       "_cursor_filters": 5,
       "_filter_clauses": 6,
+      "_humanize_theme": 2,
       "_iso": 2,
+      "_latest_evidence_at": 8,
       "_latest_snapshot": 1,
+      "_load_commerce_evidence": 14,
       "_load_site_evidence": 8,
       "_load_visibility_evidence": 14,
       "_project_detail": 7,
@@ -1998,10 +2032,11 @@
       "_project_snapshot": 4,
       "_require_project": 2,
       "_resolve_source": 3,
+      "_target_label": 9,
       "_utcnow": 1,
       "_validate_filters": 9,
       "get_opportunity": 2,
-      "get_summary": 5,
+      "get_summary": 7,
       "list_opportunities": 5,
       "load_export_rows": 2,
       "recompute": 20,
@@ -2027,10 +2062,10 @@
     "functions": {
       "_parse_price": 4,
       "_split_list": 6,
-      "parse_product_csv": 25
+      "parse_product_csv": 26
     },
     "loc": 146,
-    "max_cc": 25
+    "max_cc": 26
   },
   "app/domain/products/schemas.py": {
     "functions": {
@@ -2052,19 +2087,20 @@
       "_competitor_in_project": 2,
       "_get_competitor_product": 2,
       "_project_in_workspace": 2,
+      "count_product_audit_references": 2,
       "create_competitor_product": 2,
       "create_product": 2,
       "delete_competitor_product": 1,
       "delete_product": 1,
       "get_product": 2,
-      "import_products": 15,
+      "import_products": 17,
       "list_competitor_products": 1,
       "list_products": 1,
       "update_competitor_product": 2,
       "update_product": 2
     },
     "loc": 369,
-    "max_cc": 15
+    "max_cc": 17
   },
   "app/domain/products/shim.py": {
     "functions": {
@@ -2353,18 +2389,19 @@
   "app/domain/site_health/discovery.py": {
     "functions": {
       "_active_free_sample_count": 2,
-      "_add_free_sample": 1,
+      "_add_free_sample": 3,
       "_enqueue_task": 2,
       "_safe_parser_encoding": 4,
       "_task_idempotency_key": 1,
+      "_upsert_free_sample_membership": 1,
       "_upsert_site_url": 4,
       "_utcnow": 1,
-      "admit_candidates": 21,
+      "admit_candidates": 20,
       "build_frontier_candidates": 2,
       "extract_discovery_links": 16
     },
     "loc": 605,
-    "max_cc": 21
+    "max_cc": 20
   },
   "app/domain/site_health/entitlements.py": {
     "functions": {
@@ -2378,6 +2415,15 @@
     },
     "loc": 227,
     "max_cc": 7
+  },
+  "app/domain/site_health/failure.py": {
+    "functions": {
+      "_root_discover_task": 1,
+      "humanize_crawl_failure": 8,
+      "load_root_errors": 7,
+      "load_root_failure_summary": 11
+    },
+    "max_cc": 11
   },
   "app/domain/site_health/inventory_scope.py": {
     "functions": {
@@ -2485,13 +2531,13 @@
   },
   "app/domain/site_health/service/lifecycle.py": {
     "functions": {
-      "cancel_crawl": 5,
-      "get_dashboard": 6,
+      "cancel_crawl": 7,
+      "get_dashboard": 7,
       "load_crawl_for_stream": 1,
       "load_events": 2
     },
     "loc": 267,
-    "max_cc": 6
+    "max_cc": 7
   },
   "app/domain/site_health/service/presentation.py": {
     "functions": {
@@ -2515,10 +2561,12 @@
   },
   "app/domain/site_health/service/queries.py": {
     "functions": {
+      "_failure_summary_for": 2,
       "_issue_counts_by_site_url": 3,
       "_latest_analysis_by_site_url": 3,
       "_latest_analyze_task_by_site_url": 4,
       "_monitored_site_url_ids": 2,
+      "_root_errors_for": 2,
       "_scan_window": 2,
       "_site_url_page_stmt": 7,
       "get_crawl_summary": 1,
@@ -2869,12 +2917,13 @@
       "AuditWorker._ensure_running": 2,
       "AuditWorker._execute_task": 8,
       "AuditWorker._fail_terminal": 4,
-      "AuditWorker._finalize_analysis": 5,
+      "AuditWorker._finalize_analysis": 6,
       "AuditWorker._finalize_audit": 12,
       "AuditWorker._handle_failure": 11,
       "AuditWorker._heartbeat_loop": 4,
       "AuditWorker._lock_owned_running_task": 7,
       "AuditWorker._persist_success": 6,
+      "AuditWorker._recompute_opportunities": 3,
       "AuditWorker._record_attempts": 5,
       "AuditWorker._record_crash": 1,
       "AuditWorker._run_provider_call": 17,
@@ -3012,12 +3061,11 @@
   "app/workers/site_health/lifecycle.py": {
     "functions": {
       "CrawlLifecycle.__init__": 1,
-      "CrawlLifecycle._failure_reason": 4,
       "CrawlLifecycle._persist_snapshot": 1,
       "CrawlLifecycle._recompute_opportunities": 3,
       "CrawlLifecycle._run_crawl_finalize_pass": 50,
       "CrawlLifecycle._task_counts": 3,
-      "CrawlLifecycle.reconcile": 30,
+      "CrawlLifecycle.reconcile": 36,
       "CrawlLifecycle.reconcile_stalled": 4,
       "_canonical_or_empty": 2,
       "_count_disclosure": 1,
@@ -3065,12 +3113,12 @@
       "DiscoverPhaseMixin._persisted_discover_artifact_id": 2,
       "DiscoverPhaseMixin._prune_robots_cache": 7,
       "DiscoverPhaseMixin._run_discover": 9,
-      "DiscoverPhaseMixin._site_setup": 18,
+      "DiscoverPhaseMixin._site_setup": 20,
       "DiscoverPhaseMixin._sitemap_candidates": 3,
       "DiscoverPhaseMixin._write_sitemap_observations": 3
     },
     "loc": 864,
-    "max_cc": 19
+    "max_cc": 20
   },
   "app/workers/site_health/phases/link_check.py": {
     "functions": {
@@ -3078,7 +3126,8 @@
       "LinkCheckPhaseMixin._load_link_check_source": 6,
       "LinkCheckPhaseMixin._persisted_link_check_done": 2,
       "LinkCheckPhaseMixin._probe_link": 8,
-      "LinkCheckPhaseMixin._run_link_check": 11,
+      "LinkCheckPhaseMixin._probe_targets": 7,
+      "LinkCheckPhaseMixin._run_link_check": 10,
       "LinkCheckPhaseMixin._write_link_reference": 4
     },
     "loc": 306,
