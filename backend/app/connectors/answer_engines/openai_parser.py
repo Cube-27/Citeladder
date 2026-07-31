@@ -42,23 +42,117 @@ Key facts used here:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
 from app.connectors.answer_engines.contracts import (
     AnswerEngineResponse,
     CitationResult,
+    FinishReason,
+    NormalizedUsage,
     SearchEventResult,
 )
 from app.connectors.answer_engines.normalization import (
     annotation_offset,
-    coerce_int,
     normalize_domain,
+    normalized_usage_dict,
+    sum_optional,
+    usage_count,
+    usage_mapping,
 )
 
 # Output item types we never carry into sanitized metadata (could echo the
-# model's private chain-of-thought / secrets).
+# model's private chain-of-thought / secrets). Reasoning CONTENT stays dropped
+# forever; only the reasoning token COUNT is read, from ``usage`` details.
 _DROP_ITEM_TYPES = frozenset({"reasoning"})
+
+# Responses API ``incomplete_details.reason`` -> canonical finish reason.
+_OPENAI_INCOMPLETE_REASONS: dict[str, FinishReason] = {
+    "max_output_tokens": FinishReason.LENGTH,
+    "max_tokens": FinishReason.LENGTH,
+    "content_filter": FinishReason.CONTENT_FILTER,
+}
+
+# Responses API top-level ``status`` -> canonical finish reason, used only when
+# no ``incomplete_details.reason`` was supplied.
+_OPENAI_STATUSES: dict[str, FinishReason] = {
+    "completed": FinishReason.STOP,
+    "failed": FinishReason.ERROR,
+    "cancelled": FinishReason.CANCELLED,
+    "canceled": FinishReason.CANCELLED,
+}
+
+
+def openai_raw_finish_reason(payload: Mapping[str, Any]) -> str:
+    """The raw provider finish token: the incomplete reason, else the status.
+
+    Preserved verbatim on the response and in sanitized metadata so no
+    provider-specific spelling has to be reconstructed later.
+    """
+    details = usage_mapping(payload.get("incomplete_details"))
+    reason = str(details.get("reason") or "").strip()
+    return reason or str(payload.get("status") or "").strip()
+
+
+def map_openai_finish_reason(payload: Mapping[str, Any]) -> FinishReason:
+    """Map an OpenAI Responses payload to the canonical vocabulary.
+
+    ``incomplete_details.reason`` WINS where supplied (it is the specific
+    truncation/filter cause); otherwise the top-level ``status`` is mapped.
+    Anything unrecognized — including an ``incomplete`` status with no reason —
+    maps to ``FinishReason.UNKNOWN`` rather than being guessed at.
+    """
+    details = usage_mapping(payload.get("incomplete_details"))
+    reason = str(details.get("reason") or "").strip()
+    if reason:
+        return _OPENAI_INCOMPLETE_REASONS.get(reason, FinishReason.UNKNOWN)
+    status = str(payload.get("status") or "").strip()
+    return _OPENAI_STATUSES.get(status, FinishReason.UNKNOWN)
+
+
+def normalize_openai_usage(
+    payload: Mapping[str, Any], *, web_search_requests: int | None
+) -> NormalizedUsage:
+    """Normalize OpenAI Responses usage aliases into the typed counters.
+
+    ``input_tokens`` INCLUDES cache reads on the Responses API, so the uncached
+    line is ``input_tokens - cached_tokens`` when a cache split is reported.
+    Reasoning tokens come from ``output_tokens_details.reasoning_tokens`` — the
+    COUNT only; reasoning content stays dropped (``_DROP_ITEM_TYPES``). OpenAI
+    reports no per-request cost, so ``provider_cost_microusd`` stays null.
+    """
+    usage = usage_mapping(payload.get("usage"))
+    input_tokens = usage_count(usage, "input_tokens")
+    cached = usage_count(
+        usage_mapping(usage.get("input_tokens_details")),
+        "cached_tokens",
+        "cached_input_tokens",
+    )
+    uncached = input_tokens
+    if input_tokens is not None and cached is not None:
+        uncached = max(input_tokens - cached, 0)
+    reported_output = usage_count(usage, "output_tokens")
+    reasoning = usage_count(
+        usage_mapping(usage.get("output_tokens_details")), "reasoning_tokens"
+    )
+    output = reported_output
+    if reported_output is not None and reasoning is not None:
+        # ``output_tokens`` INCLUDES reasoning tokens; the canonical fields are
+        # disjoint cost lines, so the reported reasoning count is split out of
+        # the plain output line instead of being counted twice.
+        output = max(reported_output - reasoning, 0)
+    total = usage_count(usage, "total_tokens")
+    if total is None:
+        total = sum_optional(input_tokens, reported_output)
+    return NormalizedUsage(
+        uncached_input_tokens=uncached,
+        cached_input_tokens=cached,
+        output_tokens=output,
+        reasoning_tokens=reasoning,
+        total_tokens=total,
+        web_search_requests=web_search_requests,
+    )
 
 
 def _item_type(item: dict[str, Any]) -> str:
@@ -195,7 +289,9 @@ def _citations(blocks: list[dict[str, Any]]) -> tuple[CitationResult, ...]:
 
 
 def _sanitize_metadata(
-    payload: dict[str, Any], items: list[dict[str, Any]]
+    payload: dict[str, Any],
+    items: list[dict[str, Any]],
+    usage: NormalizedUsage,
 ) -> dict[str, Any]:
     """Keep observable, non-sensitive provider fields only.
 
@@ -241,7 +337,11 @@ def _sanitize_metadata(
         "object": payload.get("object"),
         "status": payload.get("status"),
         "model": payload.get("model"),
-        "usage": _normalized_usage(payload),
+        "usage": normalized_usage_dict(usage),
+        "incomplete_details": payload.get("incomplete_details"),
+        # Raw provider finish token preserved verbatim next to the canonical
+        # mapping on the response.
+        "raw_finish_reason": openai_raw_finish_reason(payload),
         "native_search_requested": True,
         "query_text_available": any(
             _item_type(item) == "web_search_call" and _action_queries(_action_of(item))
@@ -249,22 +349,6 @@ def _sanitize_metadata(
         ),
         "item_types": item_types,
         "evidence_items": evidence_items,
-    }
-
-
-def _normalized_usage(payload: dict[str, Any]) -> dict[str, Any]:
-    usage = payload.get("usage")
-    usage = usage if isinstance(usage, dict) else {}
-    input_tokens = coerce_int(usage.get("input_tokens"))
-    output_tokens = coerce_int(usage.get("output_tokens"))
-    total_tokens = coerce_int(usage.get("total_tokens"), input_tokens + output_tokens)
-    return {
-        "total_input_tokens": input_tokens,
-        "total_output_tokens": output_tokens,
-        "total_tokens": total_tokens,
-        # OpenAI returns no per-request dollar cost, so no provider_cost_usd
-        # key is emitted: an absent key projects as "unknown" — a fabricated
-        # zero would be indistinguishable from a real zero-cost report.
     }
 
 
@@ -290,8 +374,8 @@ def parse_openai_response(
     # Search is proven by a search-call item or a grounded citation.
     search_used = call_count > 0 or bool(citations)
 
-    normalized_usage = _normalized_usage(payload)
-    normalized_usage["web_search_requests"] = call_count
+    usage = normalize_openai_usage(payload, web_search_requests=call_count)
+    raw_finish_reason = openai_raw_finish_reason(payload)
 
     return AnswerEngineResponse(
         # Preserve chatgpt/openai/gpt-5.4 provenance; use the provider-returned
@@ -303,7 +387,12 @@ def parse_openai_response(
         search_used=search_used,
         search_events=events,
         citations=citations,
-        provider_metadata=_sanitize_metadata(payload, items),
-        usage=normalized_usage,
+        provider_metadata=_sanitize_metadata(payload, items, usage),
+        finish_reason=map_openai_finish_reason(payload),
+        raw_finish_reason=raw_finish_reason,
+        normalized_usage=usage,
+        # Legacy untyped bag, populated from the SAME normalized counters for
+        # the readers outside this layer not yet migrated to the typed usage.
+        usage=normalized_usage_dict(usage),
         latency_ms=latency_ms,
     )

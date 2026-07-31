@@ -31,6 +31,7 @@ from app.connectors.answer_engines.errors import (
     raise_provider_http_error,
 )
 from app.connectors.answer_engines.http_client import shared_client
+from app.connectors.answer_engines.normalization import output_token_cap
 from app.core.config.provider_catalog import (
     ENGINE_CLAUDE,
     ERROR_AUTH,
@@ -39,6 +40,7 @@ from app.core.config.provider_catalog import (
     ERROR_SERVER,
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
+    REASONING_EFFORT_OFF,
     TRANSPORT_ANTHROPIC,
     provider_catalog_settings,
 )
@@ -57,6 +59,51 @@ _RETRYABLE_SEARCH_ERRORS = {
 
 
 def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, Any]:
+    """Build the Messages API body from the FROZEN request policy only.
+
+    ``retrieval_enabled`` decides whether the native ``web_search`` server tool
+    is attached at all (a pulse call omits it entirely, which is what makes it
+    cheap); ``max_output_tokens`` is the output cap. Nothing is re-read from
+    live settings that the request already froze (invariant 9); the tool's
+    ``max_uses`` and the cap fallback stay config-owned (invariant 1).
+
+    The ``claude``/``anthropic`` route pins reasoning OFF (``ROUTE_POLICIES``),
+    so ``thinking`` is explicitly DISABLED whenever the frozen effort says off.
+    """
+    payload: dict[str, Any] = {
+        "model": request.model,
+        "max_tokens": output_token_cap(request),
+        "messages": [{"role": "user", "content": request.prompt}],
+        **_policy_fields(request, country_code=country_code),
+    }
+    # Anthropic takes the system prompt as a top-level field, not a message.
+    if request.system_instruction:
+        payload["system"] = request.system_instruction
+    return payload
+
+
+def _policy_fields(
+    request: AnswerEngineRequest, *, country_code: str
+) -> dict[str, Any]:
+    """The body fields the FROZEN request policy decides, or none of them.
+
+    A key is OMITTED rather than sent empty when the policy does not ask for
+    it: no ``tools`` key at all when retrieval is disabled (a pulse call must
+    not attach a search tool), and no ``thinking`` key unless the route pins
+    reasoning explicitly off.
+    """
+    fields: dict[str, Any] = {}
+    if request.retrieval_enabled:
+        fields["tools"] = [_web_search_tool(country_code)]
+    if request.reasoning_effort == REASONING_EFFORT_OFF:
+        # Extended thinking is off by default, but stating it explicitly makes
+        # the pinned policy visible in the persisted request snapshot.
+        fields["thinking"] = {"type": "disabled"}
+    return fields
+
+
+def _web_search_tool(country_code: str) -> dict[str, Any]:
+    """The native ``web_search`` server-tool spec with an optional country hint."""
     tool: dict[str, Any] = {
         "type": _WEB_SEARCH_TOOL_TYPE,
         "name": "web_search",
@@ -64,16 +111,7 @@ def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, An
     }
     if country_code:
         tool["user_location"] = {"type": "approximate", "country": country_code}
-    payload: dict[str, Any] = {
-        "model": request.model,
-        "max_tokens": provider_catalog_settings.max_output_tokens,
-        "messages": [{"role": "user", "content": request.prompt}],
-        "tools": [tool],
-    }
-    # Anthropic takes the system prompt as a top-level field, not a message.
-    if request.system_instruction:
-        payload["system"] = request.system_instruction
-    return payload
+    return tool
 
 
 def _raise_for_search_error(payload: dict[str, Any]) -> None:

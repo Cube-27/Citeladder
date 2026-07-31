@@ -11,26 +11,32 @@ Usage-key vocabulary (pinned by tests — do not widen silently):
   ``cached_input_tokens``, ``output_tokens``, ``reasoning_tokens``,
   ``search_requests`` (the measurement-envelope shape; also the T3 parser
   shape). A present-but-null/malformed granular key suppresses its fallback.
-- Legacy normalized-parser fallbacks: ``total_input_tokens`` maps to
+- Legacy parser-shape fallbacks: ``total_input_tokens`` maps to
   ``uncached_input_tokens`` and ``total_output_tokens`` maps to
-  ``output_tokens``. Semantic claim: Searchify requests never enable provider
-  prompt caching, and reasoning is pinned off (or unverified → ineligible) on
+  ``output_tokens``. Since T3 the parsers emit the granular keys as well, so
+  these two only decide pre-T3 artifacts. Semantic claim: Searchify requests
+  never enable provider prompt caching, and reasoning is pinned off (or
+  unverified → ineligible) on
   every approved route, so a provider response without an explicit
   cache/reasoning split bills ALL input at the uncached rate and ALL output at
   the non-reasoning output rate. When a split IS reported the granular keys
   are present and take precedence.
-- ``cached_input_tokens`` and ``reasoning_tokens`` have NO fallback: no
-  provider response today reports them, so they project as null. Unknown never
-  becomes zero.
+- ``cached_input_tokens`` and ``reasoning_tokens`` have NO fallback: the T3
+  parsers read them from the provider's usage detail fields where the provider
+  reports a split, and project null when it does not. Unknown never becomes
+  zero.
 - ``search_requests`` falls back to the legacy ``web_search_requests`` key and
   is never inferred from ``search_used``: a known zero count is meaningful, a
   missing count is unknown.
-- Gemini artifacts carry provider-native pass-through keys
-  (``promptTokenCount`` …) which this builder deliberately does NOT map; those
-  fields project as null until the parser normalizes them (T3). Unknown never
-  becomes zero.
-- ``provider_cost_usd`` is a provider-REPORTED per-request dollar cost. The
-  live parsers emit no such key (no provider returns one), so
+- LEGACY pre-T3 Gemini artifacts carried provider-native pass-through keys
+  (``promptTokenCount`` …) which this builder deliberately does NOT map; on
+  those older artifacts the fields project as null. Since T3 the Gemini parser
+  normalizes the native aliases into the canonical keys above, so new artifacts
+  carry mapped usage. Unknown never becomes zero either way.
+- Provider-REPORTED per-request cost: ``provider_cost_microusd`` (ALREADY
+  micro-USD, the T3 typed-usage spelling) WINS, and ``provider_cost_usd`` (a
+  DOLLAR amount, converted here) is the legacy fallback for artifacts persisted
+  before T3. The live parsers emit neither key (no provider returns a cost), so
   ``provider_reported_cost_microusd`` stays null unless a provider actually
   reported a cost — a fabricated placeholder zero would be indistinguishable
   from a real zero-cost report and would overstate completeness.
@@ -142,6 +148,21 @@ def _usage_int(usage: Mapping[str, object], *keys: str) -> int | None:
     return None
 
 
+def _reported_cost_microusd(usage: Mapping[str, object]) -> int | None:
+    """Provider-reported cost in micro-USD; null when nothing was reported.
+
+    ``provider_cost_microusd`` is ALREADY micro-USD (the T3 typed-usage
+    spelling) and takes precedence with NO dollar conversion; a present key —
+    even malformed — suppresses the legacy dollar fallback so the two spellings
+    can never be mixed. ``provider_cost_usd`` is the pre-T3 artifact spelling
+    and is converted from dollars.
+    """
+
+    if "provider_cost_microusd" in usage:
+        return normalize_optional_non_negative_int(usage.get("provider_cost_microusd"))
+    return normalize_optional_microusd(usage.get("provider_cost_usd"))
+
+
 def _extract_usage(usage: Mapping[str, object]) -> _UsageObservation:
     uncached = _usage_int(usage, "uncached_input_tokens", "total_input_tokens")
     cached = _usage_int(usage, "cached_input_tokens")
@@ -165,9 +186,7 @@ def _extract_usage(usage: Mapping[str, object]) -> _UsageObservation:
         reasoning_tokens=reasoning,
         total_tokens=total,
         search_requests=search_requests,
-        provider_reported_cost_microusd=normalize_optional_microusd(
-            usage.get("provider_cost_usd")
-        ),
+        provider_reported_cost_microusd=_reported_cost_microusd(usage),
     )
 
 

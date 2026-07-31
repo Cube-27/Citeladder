@@ -35,6 +35,7 @@ from app.connectors.answer_engines.errors import (
     raise_provider_http_error,
 )
 from app.connectors.answer_engines.http_client import shared_client
+from app.connectors.answer_engines.normalization import output_token_cap
 from app.connectors.answer_engines.openai_parser import parse_openai_response
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -52,31 +53,43 @@ logger = logging.getLogger(__name__)
 def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, Any]:
     """Build a stateless, brand-free Responses API request body.
 
-    Only the user prompt, a neutral instruction, the built-in web-search tool,
-    and the global output-token cap are sent. An optional approximate country
-    hint is attached to the web-search tool. No brand/competitor/domain list,
-    no credentials.
+    Driven ONLY by the frozen request policy (invariant 9 — no live re-read of
+    anything the request already froze): ``retrieval_enabled`` decides whether
+    the built-in web-search tool is attached at all, and ``max_output_tokens``
+    is the output cap (falling back to the configured catalog cap when the
+    caller supplied no value — the literal never lives here, invariant 1).
+    An optional approximate country hint is attached to the web-search tool.
+    No brand/competitor/domain list, no credentials.
+
+    No reasoning control is sent: the ``chatgpt``/``openai`` route policy pins
+    reasoning ``unverified`` (see ``ROUTE_POLICIES``), so nothing may be pinned
+    yet and this adapter must not invent a value.
     """
-    web_search_tool: dict[str, Any] = {"type": "web_search"}
-    if country_code:
-        web_search_tool["user_location"] = {
-            "type": "approximate",
-            "country": country_code,
-        }
     payload: dict[str, Any] = {
         "model": request.model,
         "input": request.prompt,
-        "tools": [web_search_tool],
         # No response chaining / server-side retention.
         "store": False,
-        # Global per-call output cap so one generation cannot run away.
-        "max_output_tokens": provider_catalog_settings.max_output_tokens,
+        # Frozen per-call output cap so one generation cannot run away.
+        "max_output_tokens": output_token_cap(request),
     }
+    if request.retrieval_enabled:
+        payload["tools"] = [_web_search_tool(country_code)]
     # Responses API takes the system prompt as a top-level ``instructions``
     # field, not a message role.
     if request.system_instruction:
         payload["instructions"] = request.system_instruction
     return payload
+
+
+def _web_search_tool(country_code: str) -> dict[str, Any]:
+    """The built-in ``web_search`` tool spec, with an optional country hint."""
+    tool: dict[str, Any] = {"type": "web_search"}
+    if country_code:
+        tool["user_location"] = {"type": "approximate", "country": country_code}
+    return tool
+
+
 
 
 class OpenAIAnswerEngineAdapter:

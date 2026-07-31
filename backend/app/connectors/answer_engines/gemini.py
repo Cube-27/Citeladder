@@ -31,6 +31,7 @@ from app.connectors.answer_engines.errors import (
 )
 from app.connectors.answer_engines.gemini_parser import parse_interaction
 from app.connectors.answer_engines.http_client import shared_client
+from app.connectors.answer_engines.normalization import output_token_cap
 from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
     ERROR_AUTH,
@@ -67,15 +68,38 @@ def safe_quota_detail(payload: dict[str, Any]) -> str:
 
 
 def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
+    """Build the Interactions body from the FROZEN request policy only.
+
+    ``retrieval_enabled`` decides whether the ``google_search`` grounding tool
+    is attached at all (a pulse call omits it entirely, which is what makes it
+    cheap); ``max_output_tokens`` is the output cap, falling back to the
+    configured catalog cap when unsupplied (invariant 1). Nothing is re-read
+    from live settings that the request already froze (invariant 9).
+
+    No thinking control is sent: the ``gemini``/``google`` route policy pins
+    reasoning ``unverified`` (see ``ROUTE_POLICIES``), so nothing may be pinned
+    yet and this adapter must not invent a value.
+    """
     return {
         "model": request.model,
         "input": request.prompt,
         "system_instruction": request.system_instruction,
-        "tools": [{"type": "google_search"}],
         "store": False,
-        # Global per-call output cap so one generation cannot run away.
-        "max_output_tokens": provider_catalog_settings.max_output_tokens,
+        # Frozen per-call output cap so one generation cannot run away.
+        "max_output_tokens": output_token_cap(request),
+        **_grounding_fields(request),
     }
+
+
+def _grounding_fields(request: AnswerEngineRequest) -> dict[str, Any]:
+    """The grounding-tool field, or no field at all when retrieval is off.
+
+    A pulse call must OMIT the tool key entirely rather than send an empty
+    list — that omission is what keeps it cheap.
+    """
+    if not request.retrieval_enabled:
+        return {}
+    return {"tools": [{"type": "google_search"}]}
 
 
 class GeminiAnswerEngineAdapter:

@@ -264,8 +264,13 @@ def test_search_requests_falls_back_to_web_search_requests() -> None:
 
 
 def test_gemini_native_keys_are_not_mapped() -> None:
-    # Gemini artifacts carry provider-native pass-through keys until the T3
-    # parser normalization; they project as unknown, never zero.
+    """A LEGACY pre-T3 artifact's provider-native keys stay unmapped.
+
+    Since T3 the Gemini parser normalizes these aliases into the canonical
+    keys, so new artifacts arrive already mapped. This pin covers the older
+    artifacts that were persisted raw: the projection itself never learned the
+    native spellings, so they still project as unknown, never zero.
+    """
     projection = _build({"promptTokenCount": 1_000, "candidatesTokenCount": 500})
     assert projection.uncached_input_tokens is None
     assert projection.output_tokens is None
@@ -278,6 +283,27 @@ def test_provider_reported_cost_absent_stays_null() -> None:
     assert reported.provider_reported_cost_microusd == 250_000
     # A literal zero is a real provider report and stays zero.
     assert _build({"provider_cost_usd": 0.0}).provider_reported_cost_microusd == 0
+
+
+def test_provider_cost_microusd_wins_over_legacy_dollar_key() -> None:
+    # The T3 typed usage carries micro-USD already; it takes precedence with NO
+    # dollar conversion, and the legacy dollar key is ignored when both appear.
+    both = _build({"provider_cost_microusd": 1_234, "provider_cost_usd": 9.99})
+    assert both.provider_reported_cost_microusd == 1_234
+    # Micro key alone: passed through verbatim, never multiplied.
+    assert _build(
+        {"provider_cost_microusd": 250_000}
+    ).provider_reported_cost_microusd == (250_000)
+    # A literal zero is a real provider report and stays zero.
+    assert _build({"provider_cost_microusd": 0}).provider_reported_cost_microusd == 0
+    # A present-but-malformed micro key suppresses the legacy fallback rather
+    # than silently reading the other (differently scaled) key.
+    mixed = _build({"provider_cost_microusd": "oops", "provider_cost_usd": 9.99})
+    assert mixed.provider_reported_cost_microusd is None
+    # Legacy-only artifacts still convert from dollars.
+    assert (
+        _build({"provider_cost_usd": 0.25}).provider_reported_cost_microusd == 250_000
+    )
 
 
 def test_provider_reported_does_not_count_toward_projected_total() -> None:

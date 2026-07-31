@@ -105,9 +105,12 @@ class AnswerEngineResponse:
     search_events: tuple[SearchEventResult, ...]
     citations: tuple[CitationResult, ...]
     provider_metadata: dict = field(default_factory=dict)
-    # Legacy untyped usage bag. Still read by the cost-projection builder and
-    # the existing parsers; the adapter migration replaces those readers with
-    # ``normalized_usage`` and then removes this field.
+    # Legacy untyped usage bag, now DERIVED from ``normalized_usage`` by every
+    # parser (single source of truth — the parsers no longer compute it
+    # separately). It survives only for the one remaining reader outside the
+    # adapter layer, ``app/workers/audit_worker.py`` (persists it onto
+    # ``RawResponseArtifact.usage``, which the cost projection then reads); the
+    # field goes away with that reader. Prefer ``normalized_usage``.
     usage: dict = field(default_factory=dict)
     # Canonical finish reason (never null) plus the raw provider token it was
     # mapped from. Only the canonical value is used by gates.
