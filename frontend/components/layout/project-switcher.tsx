@@ -31,7 +31,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <Dropdown>
       <DropdownTrigger
         className={cn(
-          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
+          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-sm px-1.5 py-0.5 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
           className,
         )}
         disabled={isLoading}
@@ -43,9 +43,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           size="sm"
           className="bg-foreground text-background size-[26px] rounded-md"
         />
-        <span className="text-foreground min-w-0 flex-1 truncate text-base font-medium">
-          {label}
-        </span>
+        <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
         <ChevronsUpDown className="text-muted size-4 shrink-0" aria-hidden strokeWidth={2} />
       </DropdownTrigger>
       <DropdownContent align="start" className="w-56">

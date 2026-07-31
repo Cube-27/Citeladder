@@ -26,6 +26,8 @@ from app.api.deps import (
     get_db,
     require_active_workspace,
 )
+from app.connectors.integrations import IntegrationApiError
+from app.core.config.abuse import abuse_settings
 from app.core.config.integrations import (
     ERROR_MAPPING_ACTIVE_OWNER_CONFLICT,
     ERROR_MAPPING_PROPERTY_NOT_OWNED,
@@ -34,6 +36,7 @@ from app.core.config.integrations import (
     ERROR_OAUTH_NOT_CONFIGURED,
     ERROR_OAUTH_SHOP_INVALID,
     ERROR_OAUTH_STATE_INVALID,
+    ERROR_PROPERTY_DISCOVERY_UNSUPPORTED,
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
     ERROR_SYNC_WINDOW_INVALID,
     INTEGRATION_PROVIDER_SHOPIFY,
@@ -43,7 +46,9 @@ from app.core.config.integrations import (
     integration_oauth_redirect_uri,
     normalize_shopify_shop_domain,
 )
+from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
+from app.domain.abuse.service import UsageLimitExceededError, enforce_and_commit
 from app.domain.integrations.mappings import (
     MappingActiveOwnerConflictError,
     MappingNotFoundError,
@@ -57,6 +62,7 @@ from app.domain.integrations.schemas import (
     IntegrationConnectionResponse,
     IntegrationPropertyMappingCreate,
     IntegrationPropertyMappingResponse,
+    IntegrationPropertyResponse,
     IntegrationSyncEnqueueResponse,
     IntegrationSyncRunResponse,
     IntegrationTestResponse,
@@ -67,8 +73,10 @@ from app.domain.integrations.service import (
     IntegrationExchangeError,
     IntegrationNotConfiguredError,
     IntegrationStateError,
+    PropertyDiscoveryUnsupportedError,
     complete_connect,
     delete_connection,
+    list_available_properties,
     list_connections,
     run_connection_test,
     start_connect,
@@ -101,6 +109,32 @@ def _require_known_provider(provider: str) -> None:
     """404 when ``provider`` is not a cataloged integration provider."""
     if provider not in INTEGRATION_PROVIDERS:
         raise_not_found(_RES_PROVIDER)
+
+
+async def _enforce_discovery_limit(
+    session: AsyncSession, *, ctx: WorkspaceContext, connection_id: uuid.UUID
+) -> None:
+    """Meter property discovery per (workspace, connection) — 429 when spent.
+
+    Keyed on the connection rather than the caller: the quota being
+    protected is the PROVIDER's, which is shared by everyone in the
+    workspace, so two members reopening the same picker draw on one budget.
+    """
+    try:
+        await enforce_and_commit(
+            session,
+            subject_kind="workspace",
+            subject=f"{ctx.workspace_id}:{connection_id}",
+            operation="integrations.properties",
+            limit=abuse_settings.property_discovery_limit,
+            window_seconds=abuse_settings.property_discovery_window_seconds,
+        )
+    except UsageLimitExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many property lookups",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        ) from exc
 
 
 def _landing_redirect(params: dict[str, str]) -> RedirectResponse:
@@ -230,6 +264,56 @@ async def test_integration_endpoint(
         )
     except IntegrationConnectionNotFoundError as exc:
         raise_not_found(_RES_CONNECTION, cause=exc)
+
+
+@router.get(
+    "/{connection_id}/properties",
+    response_model=list[IntegrationPropertyResponse],
+)
+async def list_properties_endpoint(
+    connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> list[IntegrationPropertyResponse]:
+    """List the provider properties this connection's grant can read.
+
+    The picker's source of truth: the user chooses a site/property the
+    provider confirms they own instead of typing a ref. 422 for a provider
+    with no discoverable property list; 502 when the provider call itself
+    fails, so a broken upstream is never rendered as "you own nothing".
+
+    Every call spends provider API quota, so it is metered per
+    (workspace, connection) — a reopened or stuck picker cannot drain the
+    workspace's Google quota.
+    """
+    await _enforce_discovery_limit(session, ctx=ctx, connection_id=connection_id)
+    try:
+        return await list_available_properties(
+            session, workspace_id=ctx.workspace_id, connection_id=connection_id
+        )
+    except IntegrationConnectionNotFoundError as exc:
+        raise_not_found(_RES_CONNECTION, cause=exc)
+    except PropertyDiscoveryUnsupportedError as exc:
+        # Same canonical envelope as the 502 below: the caller reads one
+        # machine-usable ``error.code`` for every failure of this endpoint.
+        raise ApiException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ERROR_PROPERTY_DISCOVERY_UNSUPPORTED,
+            f"{exc} exposes no discoverable property list",
+            retryable=False,
+            detail=ERROR_PROPERTY_DISCOVERY_UNSUPPORTED,
+        ) from exc
+    except IntegrationApiError as exc:
+        # The connector already classified the failure, so carry ITS
+        # retryability into the envelope instead of letting the status
+        # decide. A 502 is retryable by default, but a revoked or expired
+        # grant (``grant_auth_failed``) is terminal until the user
+        # reconnects — leaving it to classify by status makes the client
+        # re-hammer a call that cannot start succeeding on its own.
+        raise ApiException(
+            status.HTTP_502_BAD_GATEWAY,
+            exc.error_code,
+            str(exc)[:512],
+            retryable=exc.retryable,
+        ) from exc
 
 
 @router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)

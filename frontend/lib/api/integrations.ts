@@ -15,12 +15,16 @@ import type { z } from 'zod';
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
 import {
   integrationConnectionListSchema,
+  integrationPropertyListSchema,
+  integrationPropertyMappingListSchema,
+  integrationPropertyMappingSchema,
   integrationSyncEnqueueSchema,
   integrationSyncRunListSchema,
   integrationSyncRunSchema,
   integrationTestResultSchema,
   strictValidate,
   type integrationConnectionSchema,
+  type integrationPropertySchema,
   type integrationProviderSchema,
 } from './schemas';
 
@@ -29,6 +33,15 @@ export type IntegrationConnection = z.infer<typeof integrationConnectionSchema>;
 export type IntegrationTestResult = z.infer<typeof integrationTestResultSchema>;
 export type IntegrationSyncEnqueue = z.infer<typeof integrationSyncEnqueueSchema>;
 export type IntegrationSyncRun = z.infer<typeof integrationSyncRunSchema>;
+export type IntegrationProperty = z.infer<typeof integrationPropertySchema>;
+export type IntegrationPropertyMapping = z.infer<typeof integrationPropertyMappingSchema>;
+
+/** Body for `POST /integrations/{id}/mappings`. */
+export type PropertyMappingInput = {
+  provider: IntegrationProvider;
+  property_ref: string;
+  project_id: string;
+};
 
 /** Optional window body for `POST /integrations/{id}/sync` (ISO dates). */
 export type SyncWindowInput = {
@@ -73,6 +86,39 @@ export const integrationsApi = {
   },
   delete: (connectionId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/integrations/${connectionId}`, options),
+  /**
+   * Provider properties this connection's grant can read — the picker's
+   * options. A live provider call, so it is slower than the other reads and
+   * can fail with a 502 when the upstream is down.
+   */
+  listProperties: async (connectionId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<IntegrationProperty[]>(
+      `/integrations/${connectionId}/properties`,
+      options,
+    );
+    return strictValidate(integrationPropertyListSchema, res, 'integrations.listProperties');
+  },
+  listMappings: async (connectionId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<IntegrationPropertyMapping[]>(
+      `/integrations/${connectionId}/mappings`,
+      options,
+    );
+    return strictValidate(integrationPropertyMappingListSchema, res, 'integrations.listMappings');
+  },
+  createMapping: async (
+    connectionId: string,
+    input: PropertyMappingInput,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<IntegrationPropertyMapping>(
+      `/integrations/${connectionId}/mappings`,
+      input,
+      options,
+    );
+    return strictValidate(integrationPropertyMappingSchema, res, 'integrations.createMapping');
+  },
+  deleteMapping: (mappingId: string, options?: ApiRequestOptions) =>
+    apiClient.delete<void>(`/integrations/mappings/${mappingId}`, options),
   /**
    * Same-origin OAuth start URL (a 302 endpoint). Used with a full-page
    * navigation (`assignLocation`), NEVER through `apiClient` — the browser

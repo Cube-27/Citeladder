@@ -44,6 +44,7 @@ from app.core.config.integrations import (
     ERROR_PROVIDER_API,
     ERROR_RATE_LIMITED,
     ERROR_TOKEN_REFRESH_FAILED,
+    ERROR_UNMAPPED_PROPERTY,
     EVENT_INTEGRATION_REAUTH_REQUIRED,
     EVENT_INTEGRATION_SYNC_FINISHED,
     EVENT_INTEGRATION_SYNC_STARTED,
@@ -204,6 +205,7 @@ async def _seed_graph(
     grant_status: str = GRANT_STATUS_CONNECTED,
     with_mapping: bool = True,
     token_expires_at: datetime | None = None,
+    account_ref: str = _PROPERTY_REF,
 ) -> _Seed:
     workspace = Workspace(name="Acme")
     db_session.add(workspace)
@@ -228,7 +230,7 @@ async def _seed_graph(
         grant_id=grant.id,
         provider=provider,
         label=f"{provider} connection",
-        account_ref=_PROPERTY_REF,
+        account_ref=account_ref,
     )
     db_session.add(connection)
     await db_session.flush()
@@ -315,6 +317,37 @@ def _canonical_hash(payload: dict) -> str:
 
 
 # --- Happy path -------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_without_a_selected_property_fails_fast(
+    session_factory, db_session
+) -> None:
+    """No property selected ⇒ terminal ``unmapped_property``, no provider call.
+
+    Regression guard: an empty ``account_ref`` was interpolated straight into
+    the provider URL (``/webmasters/v3/sites//searchAnalytics/query``), so a
+    connection that had simply never been pointed at a property failed with
+    the provider's confusing 400 surfaced as a generic ``provider_api_error``
+    — and burned the retry budget re-issuing a request that could never
+    succeed. The derivation-time guard cannot catch this: it only runs after
+    a SUCCESSFUL fetch.
+    """
+    seed = await _seed_graph(db_session, with_mapping=False, account_ref="")
+    run = await _enqueue_run(db_session, seed)
+    fake = _ProviderFake()
+
+    assert await _worker(session_factory, fake.mock_transport()).run_until_idle() == 1
+
+    await db_session.refresh(run)
+    assert run.status == TASK_STATUS_FAILED
+    assert run.error_code == ERROR_UNMAPPED_PROPERTY
+    assert run.completed_at is not None
+    # Terminal on the FIRST attempt — an unset property is not retryable.
+    assert run.attempt_count == 1
+    # Nothing was fetched: no provider page was requested, no artifact landed.
+    assert fake.gsc_pages == []
+    assert await _artifacts(db_session, run.id) == []
 
 
 @pytest.mark.asyncio

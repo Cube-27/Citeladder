@@ -25,6 +25,12 @@ class AbuseSettings(BaseSettings):
     bulk_import_window_seconds: int = Field(default=3600, ge=1)
     provider_test_limit: int = Field(default=20, ge=1)
     provider_test_window_seconds: int = Field(default=3600, ge=1)
+    # Property discovery calls the provider live on every request, so a
+    # reopened picker spends the workspace's Google API quota. Generous
+    # enough for real reselection, low enough that a stuck client cannot
+    # drain the quota.
+    property_discovery_limit: int = Field(default=60, ge=1)
+    property_discovery_window_seconds: int = Field(default=3600, ge=1)
     crawl_create_limit: int = Field(default=10, ge=1)
     crawl_create_window_seconds: int = Field(default=86400, ge=1)
     brand_logo_refresh_limit: int = Field(default=10, ge=1)

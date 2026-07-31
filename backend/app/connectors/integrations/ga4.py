@@ -53,9 +53,11 @@ import httpx
 
 from app.connectors.integrations._http import (
     IntegrationApiError,
+    ProviderProperty,
     RequestPacer,
     assert_approved_url,
     classify_status,
+    json_object_or_raise,
     nested_error_detail,
     parse_retry_after,
 )
@@ -64,8 +66,13 @@ from app.core.config.integrations import (
     DATASET_GA4_ITEM_SOURCE_MEDIUM_DAILY,
     ERROR_GA4_DIMENSION_INCOMPATIBLE,
     ERROR_PROVIDER_API,
+    GA4_ACCOUNT_SUMMARIES_MAX_PAGES,
+    GA4_ACCOUNT_SUMMARIES_PAGE_SIZE,
+    GA4_ACCOUNT_SUMMARIES_PATH,
+    GA4_ADMIN_API_BASE_URL,
     GA4_API_BASE_URL,
     GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS,
+    GA4_PROPERTY_RESOURCE_PREFIX,
     GA4_RUN_REPORT_PATH,
     INTEGRATION_DATASET_TEMPLATES,
     INTEGRATION_PROVIDER_GA4,
@@ -133,6 +140,31 @@ def _ga4_template(
             error_code=ERROR_PROVIDER_API,
         )
     return template
+
+
+def _iter_ga4_properties(summaries: list) -> list[ProviderProperty]:
+    """Flatten ``accountSummaries`` into selectable properties.
+
+    Malformed entries are SKIPPED, never guessed: a summary without a
+    usable ``property`` resource name cannot be selected safely. Labels
+    fall back to the bare id when the provider omits a display name.
+    """
+    properties: list[ProviderProperty] = []
+    for summary in summaries:
+        if not isinstance(summary, dict):
+            continue
+        account_label = str(summary.get("displayName") or "").strip()
+        for entry in summary.get("propertySummaries") or []:
+            if not isinstance(entry, dict):
+                continue
+            resource = str(entry.get("property") or "").strip()
+            property_ref = resource.removeprefix(GA4_PROPERTY_RESOURCE_PREFIX)
+            if not property_ref.isdigit():
+                continue
+            name = str(entry.get("displayName") or "").strip() or property_ref
+            label = f"{name} ({account_label})" if account_label else name
+            properties.append(ProviderProperty(property_ref=property_ref, label=label))
+    return properties
 
 
 def _report_currency_code(report: dict) -> str | None:
@@ -221,6 +253,83 @@ class Ga4Client:
     def __init__(self, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._transport = transport
         self._pacer = RequestPacer()
+
+    async def list_properties(
+        self, *, access_token: str
+    ) -> tuple[ProviderProperty, ...]:
+        """List the GA4 properties this grant can read (property discovery).
+
+        Rides the Admin API's ``accountSummaries``, which returns every
+        readable property grouped by account. Property refs are normalized
+        to the CANONICAL bare numeric id (the Admin API returns the
+        ``properties/123`` resource name) so a selection can never split
+        owner identity against the bare spelling stored elsewhere. The
+        label carries the account name for disambiguation — GA4 display
+        names are not unique across accounts.
+
+        FOLLOWS ``nextPageToken`` to completion: an agency grant can read
+        more accounts than one page carries, and a truncated list silently
+        hides properties the user owns — they would simply never appear in
+        the picker. Paging is bounded by
+        ``GA4_ACCOUNT_SUMMARIES_MAX_PAGES``; exhausting it raises rather
+        than returning a partial list, because a partial list is
+        indistinguishable from "that is all you have".
+        """
+        properties: list[ProviderProperty] = []
+        page_token = ""
+        for _page in range(GA4_ACCOUNT_SUMMARIES_MAX_PAGES):
+            payload = await self._fetch_account_summaries(
+                access_token=access_token, page_token=page_token
+            )
+            summaries = payload.get("accountSummaries") or []
+            if not isinstance(summaries, list):
+                raise Ga4ApiError(
+                    "GA4 property list returned malformed account summaries",
+                    error_code=ERROR_PROVIDER_API,
+                )
+            properties.extend(_iter_ga4_properties(summaries))
+            page_token = str(payload.get("nextPageToken") or "")
+            if not page_token:
+                return tuple(properties)
+        raise Ga4ApiError(
+            "GA4 property list exceeded "
+            f"{GA4_ACCOUNT_SUMMARIES_MAX_PAGES} pages",
+            error_code=ERROR_PROVIDER_API,
+        )
+
+    async def _fetch_account_summaries(
+        self, *, access_token: str, page_token: str
+    ) -> dict:
+        """Fetch ONE ``accountSummaries`` page (paced, guarded, validated)."""
+        url = (
+            f"{GA4_ADMIN_API_BASE_URL}{GA4_ACCOUNT_SUMMARIES_PATH}"
+            f"?pageSize={GA4_ACCOUNT_SUMMARIES_PAGE_SIZE}"
+        )
+        if page_token:
+            url = f"{url}&pageToken={quote(page_token, safe='')}"
+        assert_approved_url(url, label="GA4", error_type=Ga4ApiError)
+        await self._pacer.wait(
+            integration_settings.requests_per_minute(INTEGRATION_PROVIDER_GA4)
+        )
+        try:
+            async with httpx.AsyncClient(
+                transport=self._transport,
+                timeout=integration_settings.sync_request_timeout_seconds,
+            ) as client:
+                response = await client.get(
+                    url,
+                    # Set per-request and never logged (invariant 6).
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+        except httpx.HTTPError as exc:
+            raise Ga4ApiError(
+                f"GA4 property list request failed: {type(exc).__name__}",
+                error_code=ERROR_PROVIDER_API,
+                retryable=True,
+            ) from exc
+        return json_object_or_raise(
+            response, label="GA4 property list", error_type=Ga4ApiError
+        )
 
     async def query_search_analytics(
         self,

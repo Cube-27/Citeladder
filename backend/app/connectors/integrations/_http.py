@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 import httpx
@@ -36,6 +37,22 @@ from app.core.config.integrations import (
 # Cap on provider-supplied error text surfaced in exceptions (defensive:
 # keeps messages short even if the provider returns a huge error body).
 ERROR_DETAIL_MAX_LEN = 240
+
+
+@dataclass(frozen=True)
+class ProviderProperty:
+    """One selectable provider property (discovery, not data).
+
+    Provider-neutral and owned HERE rather than by any one connector, so the
+    GA4 client does not have to import from the GSC client to describe its
+    own results. ``property_ref`` is the CANONICAL ref the rest of the
+    system stores — a GSC ``siteUrl`` verbatim ("sc-domain:example.com" or
+    a URL-prefix URL), a bare GA4 numeric property id. ``label`` is
+    display-only.
+    """
+
+    property_ref: str
+    label: str
 
 
 class IntegrationApiError(RuntimeError):
@@ -101,6 +118,43 @@ def parse_retry_after(response: httpx.Response) -> float | None:
     except ValueError:
         return None
     return seconds if seconds >= 0 else None
+
+
+def json_object_or_raise(
+    response: httpx.Response, *, label: str, error_type: type[IntegrationApiError]
+) -> dict:
+    """Validate a Google JSON response and return its object body.
+
+    The status-classification → error-detail → JSON-object sequence every
+    Google-shaped call repeats (invariant 2). ``label`` names the call in
+    the raised message ("GSC query", "GA4 property list"). Callers that
+    need to classify a specific status themselves (the GA4 report's narrow
+    incompatible-dimension 400) inspect the response BEFORE delegating here.
+    """
+    if response.status_code != 200:
+        error_code, retryable = classify_status(response.status_code)
+        try:
+            detail = nested_error_detail(response.json())
+        except ValueError:
+            detail = ""
+        suffix = f" ({detail})" if detail else ""
+        raise error_type(
+            f"{label} returned HTTP {response.status_code}{suffix}",
+            error_code=error_code,
+            retryable=retryable,
+            retry_after_seconds=parse_retry_after(response),
+        )
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise error_type(
+            f"{label} returned a non-JSON body", error_code=ERROR_PROVIDER_API
+        ) from exc
+    if not isinstance(payload, dict):
+        raise error_type(
+            f"{label} returned an unexpected body", error_code=ERROR_PROVIDER_API
+        )
+    return payload
 
 
 def capped_error_text(text: object) -> str:

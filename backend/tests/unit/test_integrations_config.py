@@ -206,7 +206,7 @@ def test_dataset_templates_match_pinned_c1() -> None:
         ),
         DATASET_GA4_REFERRER_DAILY: (
             INTEGRATION_PROVIDER_GA4,
-            ("fullReferrer", "date"),
+            ("pageReferrer", "date"),
         ),
         DATASET_GA4_LANDING_DAILY: (
             INTEGRATION_PROVIDER_GA4,

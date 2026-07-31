@@ -14,6 +14,10 @@ const { project, getDashboard, downloadDashboardReport } = vi.hoisted(() => ({
   downloadDashboardReport: vi.fn().mockResolvedValue(new Blob(['pdf'])),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: {

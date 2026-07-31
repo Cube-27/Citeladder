@@ -60,96 +60,19 @@ export function ProjectsScreen() {
   }
 
   return (
-    <div className="grid gap-8">
-      <DashboardScreen />
+    <div className="grid gap-6">
+      <DashboardScreen onEditProject={(project) => setEditing(project)} />
 
-      <section aria-labelledby="manage-projects">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 id="manage-projects" className="text-foreground text-heading-sm">
-            Manage projects
-          </h2>
-          <Button onClick={() => router.push('/onboarding?new=1')}>
-            <Plus className="size-4" aria-hidden />
-            Add project
-          </Button>
-        </div>
-        <div className="flex items-center justify-end">
-          <span className="text-muted text-xs">Choose the active brand for this Dashboard.</span>
-        </div>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            <ul className="divide-border grid list-none divide-y p-0">
-              {projects.map((project) => {
-                const isActive = project.id === activeProjectId;
-                const label = project.brand_name || project.name;
-                return (
-                  <li key={project.id}>
-                    <div
-                      className={cn(
-                        'flex items-center gap-3 pe-4 transition-colors',
-                        isActive ? 'bg-indigo-50/40' : 'hover:bg-accent/60',
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setActiveProjectId(project.id)}
-                        aria-current={isActive ? 'true' : undefined}
-                        className="focus-ring flex min-w-0 flex-1 items-center gap-4 px-4 py-4 text-left"
-                      >
-                        <BrandLogo
-                          name={label}
-                          logoUrl={project.brand.logo_url}
-                          websiteUrl={project.website_url}
-                          size="md"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="text-foreground block truncate text-sm font-semibold">
-                            {label}
-                          </span>
-                          {project.website_url ? (
-                            <span className="text-muted-foreground block truncate text-xs">
-                              {project.website_url}
-                            </span>
-                          ) : null}
-                        </span>
-                        {isActive ? (
-                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-0.5 text-xs font-semibold text-indigo-700">
-                            <Check className="size-4" aria-hidden />
-                            Active
-                          </span>
-                        ) : null}
-                      </button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditing(project)}
-                        aria-label={`Edit ${label}`}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        Edit
-                      </Button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Keyed so switching rows remounts the panel with that project's values
-          — the fields seed from props in useState, which only reads once. */}
-        {editing ? (
-          <ProjectEditPanel
-            key={editing.id}
-            project={editing}
-            open
-            onOpenChange={(next) => {
-              if (!next) setEditing(null);
-            }}
-          />
-        ) : null}
-      </section>
+      {editing ? (
+        <ProjectEditPanel
+          key={editing.id}
+          project={editing}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditing(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

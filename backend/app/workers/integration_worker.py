@@ -114,8 +114,25 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class _UnsupportedProviderError(RuntimeError):
+class _RunPreflightError(RuntimeError):
+    """The run cannot be attempted at all; carries its terminal error token.
+
+    Raised by ``_preflight`` for the conditions that make a fetch impossible
+    before any provider I/O — no data client, or no property to fetch from.
+    Both are deterministic, so the run fails terminally instead of burning
+    the retry budget on a request that cannot start succeeding.
+    """
+
+    def __init__(self, error_code: str, message: str) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class _UnsupportedProviderError(_RunPreflightError):
     """The run's provider has no data-API client in the config registry."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(ERROR_PROVIDER_API, message)
 
 
 class _PayloadTooLargeError(RuntimeError):
@@ -407,12 +424,12 @@ class IntegrationWorker(DrainableWorkerMixin):
             )
             return
         try:
-            client = self._build_client(ctx.provider)
-        except _UnsupportedProviderError as exc:
+            client = self._preflight(ctx)
+        except _RunPreflightError as exc:
             await self._queue.fail(
                 task_id=ctx.run_id,
                 owner=self.owner,
-                error_code=ERROR_PROVIDER_API,
+                error_code=exc.error_code,
                 error_detail=str(exc),
             )
             return
@@ -483,6 +500,29 @@ class IntegrationWorker(DrainableWorkerMixin):
                 f"no data-API client for provider {provider!r}"
             )
         return builder(transport=self._transport)
+
+    def _preflight(self, ctx: _RunContext) -> _DataClient:
+        """Resolve the data client, asserting the run CAN be attempted.
+
+        Both failures here are deterministic, so they raise
+        ``_RunPreflightError`` and the caller fails the run terminally
+        rather than retrying. The property check in particular must happen
+        BEFORE any provider I/O: an empty ``property_ref`` interpolates into
+        ``/webmasters/v3/sites//searchAnalytics/query`` (or
+        ``/properties/:runReport``) and the provider's confusing 400/404
+        would surface as a generic ``provider_api_error``, hiding the fact
+        that the connection was simply never pointed at a property. The
+        derivation-time ``unmapped_property`` guard cannot cover it — that
+        runs only after a SUCCESSFUL fetch.
+        """
+        client = self._build_client(ctx.provider)
+        if not ctx.property_ref:
+            raise _RunPreflightError(
+                ERROR_UNMAPPED_PROPERTY,
+                f"connection has no {ctx.provider} property selected; "
+                "choose one in Settings → Integrations",
+            )
+        return client
 
     # --- Token refresh (serialized per grant, spec section 2) --------------
 

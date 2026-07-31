@@ -157,7 +157,7 @@ async def _seed_artifacts(
             connection_id=connection.id,
             provider="ga4",
             dataset=artifact_dataset,
-            query_snapshot={"dimensions": ["fullReferrer", "date"]},
+            query_snapshot={"dimensions": ["pageReferrer", "date"]},
             payload_hash=f"{index}" * 64,
             row_count=1,
             payload={"rows": []},

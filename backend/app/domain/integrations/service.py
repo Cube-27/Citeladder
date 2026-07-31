@@ -45,9 +45,11 @@ from app.core.config.integrations import (
     GRANT_STATUS_CONNECTED,
     GRANT_STATUS_PENDING_REVOCATION,
     GRANT_STATUS_REVOKED,
+    INTEGRATION_CLIENT_BUILDERS,
     INTEGRATION_OAUTH_AUTHORIZE_URLS,
     INTEGRATION_OAUTH_REVOKE_URLS,
     INTEGRATION_OAUTH_SCOPES,
+    INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS,
     INTEGRATION_PROVIDER_TRANSPORT,
     INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_TRANSPORT_SHOPIFY,
@@ -64,8 +66,10 @@ from app.core.security import (
 )
 from app.domain.integrations.schemas import (
     IntegrationConnectionResponse,
+    IntegrationPropertyResponse,
     IntegrationTestResponse,
 )
+from app.domain.integrations.tokens import fresh_access_token
 from app.domain.workspaces.service import get_membership
 from app.models.integrations import (
     IntegrationConnection,
@@ -90,6 +94,10 @@ class IntegrationExchangeError(RuntimeError):
 
 class IntegrationConnectionNotFoundError(LookupError):
     """Raised when a connection is missing or not in the caller's workspace."""
+
+
+class PropertyDiscoveryUnsupportedError(RuntimeError):
+    """Raised when a provider exposes no property listing to discover."""
 
 
 def _utcnow() -> datetime:
@@ -574,6 +582,46 @@ async def run_connection_test(
         detail=detail,
         tested_at=tested_at,
     )
+
+
+async def list_available_properties(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    connection_id: uuid.UUID,
+) -> list[IntegrationPropertyResponse]:
+    """List the provider properties this connection's grant can read.
+
+    Backs the property picker: the user selects a site/property that Google
+    confirms they own, so ``account_ref`` is never typed or guessed. The
+    token is refreshed when near expiry (a grant connected an hour ago must
+    not make the picker fail) and is used for exactly one read-only listing
+    call — never logged or returned (invariant 6).
+
+    Only the providers whose property is DISCOVERABLE are supported: a
+    Shopify connection's property is the shop it was authorized for, which
+    the connect flow already pinned onto ``account_ref``, and Bing exposes
+    no property listing in this pass. Both raise
+    ``PropertyDiscoveryUnsupportedError`` rather than returning an empty
+    list, which would read as "you own nothing".
+    """
+    connection = await get_connection(
+        session, workspace_id=workspace_id, connection_id=connection_id
+    )
+    if connection.provider not in INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS:
+        raise PropertyDiscoveryUnsupportedError(connection.provider)
+    grant = await _get_grant(
+        session, workspace_id=workspace_id, grant_id=connection.grant_id
+    )
+    access_token = await fresh_access_token(session, grant=grant)
+    # The same config-owned dispatch the sync worker resolves its data
+    # client through (invariant 1) — discovery is one more call on it.
+    client = INTEGRATION_CLIENT_BUILDERS[connection.provider]()
+    properties = await client.list_properties(access_token=access_token)
+    return [
+        IntegrationPropertyResponse(property_ref=prop.property_ref, label=prop.label)
+        for prop in properties
+    ]
 
 
 async def delete_connection(

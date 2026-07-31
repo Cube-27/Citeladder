@@ -32,7 +32,7 @@ export function Hero() {
   return (
     <header className="mkt-field-hero mkt-grid-field -mt-mkt-nav pt-mkt-nav relative overflow-hidden">
       <HeroAtmosphere />
-      <Container className="relative z-1 pt-12 pb-16 md:pt-16 md:pb-20">
+      <Container className="relative z-1 pt-20 pb-16 md:pt-28 md:pb-20">
         <HeroEntrance className="mx-auto max-w-5xl text-center">
           <div className="flex justify-center">
             <Eyebrow>{hook.eyebrow}</Eyebrow>

@@ -10,3 +10,14 @@
 # package-private single owner of the shared plumbing (SSRF guard, status
 # classification, error-detail capping, Retry-After parsing, pacing) and
 # the ``IntegrationApiError`` base the per-module error classes alias.
+#
+# ``IntegrationApiError`` + ``ProviderProperty`` are re-exported here as the
+# PACKAGE's public surface so callers outside the package (the API layer
+# catching a provider failure, the domain layer reading a discovery result)
+# never reach into the private ``_http`` module.
+from app.connectors.integrations._http import (
+    IntegrationApiError,
+    ProviderProperty,
+)
+
+__all__ = ["IntegrationApiError", "ProviderProperty"]

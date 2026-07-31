@@ -1,6 +1,6 @@
 {
   "dimensionHeaders": [
-    {"name": "fullReferrer"},
+    {"name": "pageReferrer"},
     {"name": "date"}
   ],
   "metricHeaders": [

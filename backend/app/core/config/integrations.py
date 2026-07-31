@@ -196,12 +196,34 @@ GSC_API_BASE_URL: Final = "https://www.googleapis.com"
 GSC_SEARCH_ANALYTICS_PATH: Final = (
     "/webmasters/v3/sites/{property_ref}/searchAnalytics/query"
 )
+# The caller's verified-site list. Serves BOTH the property-discovery
+# listing (which sites may be selected for a connection) and the cheap
+# authenticated grant probe behind ``POST /integrations/{id}/test`` — one
+# config-owned path, read by both (invariant 1 + 2).
+GSC_SITES_PATH: Final = "/webmasters/v3/sites"
+# ``siteEntry[].permissionLevel`` for a site the caller has NOT verified.
+# Such sites cannot serve searchAnalytics, so discovery filters them out
+# rather than offering a selection that would 403 at the first sync.
+GSC_PERMISSION_UNVERIFIED: Final = "siteUnverifiedUser"
 # GSC domain-wide property refs carry this provider literal prefix
 # ("sc-domain:example.com"); URL-prefix properties are plain URLs. Used by
 # the mapping service to resolve a property ref to its bare host.
 GSC_DOMAIN_PROPERTY_PREFIX: Final = "sc-domain:"
 GA4_API_BASE_URL: Final = "https://analyticsdata.googleapis.com"
 GA4_RUN_REPORT_PATH: Final = "/v1beta/properties/{property_ref}:runReport"
+# GA4 property DISCOVERY rides the Admin API, a different host from the
+# Data API above. ``accountSummaries`` is the one call that returns every
+# property the grant can read, already grouped by account, so property
+# discovery costs a single request. Covered by the grant's existing
+# ``analytics.readonly`` scope — no extra consent.
+GA4_ADMIN_API_BASE_URL: Final = "https://analyticsadmin.googleapis.com"
+GA4_ACCOUNT_SUMMARIES_PATH: Final = "/v1beta/accountSummaries"
+# Admin API page size for the summaries listing (its documented maximum) and
+# the bound on how many pages discovery will follow. The cap keeps a
+# misbehaving ``nextPageToken`` from looping forever; reaching it is a
+# provider error, never a silently truncated list.
+GA4_ACCOUNT_SUMMARIES_PAGE_SIZE: Final = 200
+GA4_ACCOUNT_SUMMARIES_MAX_PAGES: Final = 25
 # GA4 property refs are NUMERIC property ids, optionally carrying the
 # provider's ``properties/`` resource prefix (``123456789`` or
 # ``properties/123456789``) — never domain-shaped, so the owned-domain
@@ -330,6 +352,8 @@ INTEGRATION_APPROVED_ENDPOINT_HOSTS: Final[frozenset[str]] = frozenset(
         "oauth2.googleapis.com",
         "www.googleapis.com",
         "analyticsdata.googleapis.com",
+        # GA4 Admin API — property discovery only (see GA4_ADMIN_API_BASE_URL).
+        "analyticsadmin.googleapis.com",
         "login.microsoftonline.com",
         "ssl.bing.com",
     }
@@ -413,6 +437,11 @@ ERROR_PAYLOAD_TOO_LARGE: Final = "payload_too_large"
 ERROR_MAPPING_PROVIDER_MISMATCH: Final = "mapping_provider_mismatch"
 ERROR_MAPPING_PROPERTY_NOT_OWNED: Final = "mapping_property_not_owned"
 ERROR_MAPPING_ACTIVE_OWNER_CONFLICT: Final = "mapping_active_owner_conflict"
+# Property discovery (the picker): the connection's provider exposes no
+# listable property set (Shopify's property is its shop; Bing has no
+# listing this pass) — a 422, never an empty list that reads as "you own
+# nothing".
+ERROR_PROPERTY_DISCOVERY_UNSUPPORTED: Final = "property_discovery_unsupported"
 # GA4 item-attribution fallback (WS-B A1): the property rejected the primary
 # item source/medium dimension mix with an HTTP 400 whose capped detail
 # explicitly names an incompatible dimension/metric combination. Raised as
@@ -610,7 +639,11 @@ INTEGRATION_DATASET_TEMPLATES: Final[dict[str, IntegrationDatasetTemplate]] = {
         dataset=DATASET_GA4_REFERRER_DAILY,
         provider=INTEGRATION_PROVIDER_GA4,
         api_method="runReport",
-        dimensions=("fullReferrer", "date"),
+        # ``pageReferrer``, NOT ``fullReferrer``: the latter is a Universal
+        # Analytics name the GA4 Data API rejects outright ("Field
+        # fullReferrer is not a valid dimension. Did you mean pageReferrer?"),
+        # which failed EVERY ga4 sync at the first report.
+        dimensions=("pageReferrer", "date"),
         metrics=_GA4_SESSION_METRICS,
     ),
     DATASET_GA4_LANDING_DAILY: IntegrationDatasetTemplate(
@@ -877,6 +910,15 @@ INTEGRATION_CLIENT_BUILDERS: Final[dict[str, Callable[..., Any]]] = {
     INTEGRATION_PROVIDER_SHOPIFY: _shopify_client_builder,
 }
 
+# Providers whose client also implements ``list_properties(access_token=)``
+# — the property picker's discovery seam. Shopify is absent by design: its
+# property IS the shop the grant was authorized for, already pinned onto
+# ``account_ref`` by the connect flow. Bing is absent this pass (no
+# property listing implemented against the Webmaster API).
+INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {INTEGRATION_PROVIDER_GSC, INTEGRATION_PROVIDER_GA4}
+)
+
 
 def unpack_dimension_key(dataset: str, dimension_key: str) -> tuple[str, ...] | None:
     """Inverse of ``pack_dimension_key`` for one dataset's declared template.
@@ -885,7 +927,7 @@ def unpack_dimension_key(dataset: str, dimension_key: str) -> tuple[str, ...] | 
     invariant 2), so the UNPACK lives here too. The key is split from the
     RIGHT against the template's declared arity, peeling the always-trailing
     ``date`` value without breaking on a ``" | "`` inside a free-form
-    leading value (e.g. a ``fullReferrer``/page URL). Returns the FULL
+    leading value (e.g. a ``pageReferrer``/page URL). Returns the FULL
     tuple in declared dimension order (the trailing element is the
     provider's date value; the parsed date already lives on the metric
     row), or ``None`` when the dataset is unknown or the key does not

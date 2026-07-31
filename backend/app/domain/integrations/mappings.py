@@ -35,13 +35,14 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.normalization import normalize_domain
 from app.core.config.integrations import (
     GSC_DOMAIN_PROPERTY_PREFIX,
+    INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS,
     INTEGRATION_PROVIDER_GA4,
     INTEGRATION_PROVIDER_SHOPIFY,
     MAPPING_STATUS_ACTIVE,
@@ -54,7 +55,8 @@ from app.domain.integrations.schemas import IntegrationPropertyMappingResponse
 from app.domain.integrations.service import get_connection
 from app.domain.integrations.sync import integrity_constraint_name
 from app.domain.projects.service import get_project
-from app.models.integrations import IntegrationPropertyMapping
+from app.models.integrations import IntegrationConnection, IntegrationPropertyMapping
+from app.models.project import Project
 
 # Schema-object name pinned in ``models/integrations.py`` — the partial
 # one-active-owner unique index.
@@ -126,6 +128,72 @@ async def list_mappings(
     return [_to_mapping_response(mapping) for mapping in result.scalars()]
 
 
+def _canonical_property_ref(
+    *,
+    provider: str,
+    property_ref: str,
+    connection: IntegrationConnection,
+    project: Project,
+) -> str:
+    """Validate ``property_ref`` for ``provider`` and return its stored form.
+
+    One branch per provider vocabulary; every rejection is a
+    ``MappingPropertyNotOwnedError`` (API: 422) and nothing is ever guessed
+    into a fallback ref.
+    """
+    if provider == INTEGRATION_PROVIDER_GA4:
+        # GA4 property refs are numeric ids, never domains: the owned-domain
+        # rule cannot apply — validate the id shape only and rely on the
+        # connection test for reachability. Persist the CANONICAL bare
+        # numeric id so the ``properties/``-prefixed and bare spellings
+        # cannot split the one-active-owner slot for the same property.
+        if not is_ga4_property_ref(property_ref):
+            raise MappingPropertyNotOwnedError(
+                f"GA4 property {property_ref!r} is not a numeric property id"
+            )
+        return normalize_ga4_property_ref(property_ref)
+    if provider == INTEGRATION_PROVIDER_SHOPIFY:
+        # A Shopify "property" is the connection's shop itself: the
+        # canonicalized property_ref must EQUAL the connection's
+        # account_ref exactly. The ``myshopify.com`` host is deliberately
+        # NOT compared against the project's custom OwnedDomain rows.
+        try:
+            canonical_ref = normalize_shopify_shop_domain(property_ref)
+        except ValueError as exc:
+            raise MappingPropertyNotOwnedError(
+                f"Shopify property {property_ref!r} is not a canonical shop host"
+            ) from exc
+        if canonical_ref != connection.account_ref:
+            raise MappingPropertyNotOwnedError(
+                f"Shopify property {property_ref!r} does not match the "
+                f"connection's shop {connection.account_ref!r}"
+            )
+        return canonical_ref
+    host = property_ref_host(property_ref)
+    owned_hosts = _project_owned_hosts(project)
+    if not host or host not in owned_hosts:
+        raise MappingPropertyNotOwnedError(
+            f"property {property_ref!r} does not resolve to an owned domain "
+            f"of project {project.id}"
+        )
+    return property_ref.strip()
+
+
+def _project_owned_hosts(project: Project) -> set[str]:
+    """Hosts a project may claim a provider property for.
+
+    The project's OWN ``website_url`` counts, not just its ``OwnedDomain``
+    rows: those rows are populated by onboarding discovery, so a project
+    created without them (or whose discovery has not finished) had an EMPTY
+    ownership set — which rejected every property, including the site the
+    project is literally for.
+    """
+    hosts = {normalize_domain(owned.domain) for owned in project.owned_domains}
+    hosts.add(normalize_domain(project.website_url))
+    hosts.discard("")
+    return hosts
+
+
 async def create_mapping(
     session: AsyncSession,
     *,
@@ -159,45 +227,39 @@ async def create_mapping(
     project = await get_project(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    if provider == INTEGRATION_PROVIDER_GA4:
-        # GA4 property refs are numeric ids, never domains: the owned-domain
-        # rule cannot apply — validate the id shape only and rely on the
-        # connection test for reachability. Persist the CANONICAL bare
-        # numeric id so the ``properties/``-prefixed and bare spellings
-        # cannot split the one-active-owner slot for the same property.
-        if not is_ga4_property_ref(property_ref):
-            raise MappingPropertyNotOwnedError(
-                f"GA4 property {property_ref!r} is not a numeric property id"
+    canonical_ref = _canonical_property_ref(
+        provider=provider,
+        property_ref=property_ref,
+        connection=connection,
+        project=project,
+    )
+    if provider in INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS:
+        # Point the connection at the property this mapping selects. The
+        # sync worker fetches from ``connection.account_ref`` and derivation
+        # then resolves THAT ref back through this mapping, so the two must
+        # agree or the run either fetches nothing (an empty ref — the
+        # provider 400s) or lands rows derivation cannot attribute.
+        # Discoverable providers only: Shopify's account_ref is the shop the
+        # grant was issued for and is validated against, never overwritten.
+        #
+        # Because the worker resolves exactly ONE property per connection,
+        # selecting a property REPLACES the previous one: any other active
+        # mapping on this connection is retired in the same transaction.
+        # The active-owner index is keyed on
+        # (workspace, provider, property_ref), so it does not enforce this
+        # cardinality — without the retirement a "Change" would leave the
+        # old mapping active while account_ref moved on, and that stale row
+        # claims to own a property nothing will ever sync again.
+        await session.execute(
+            update(IntegrationPropertyMapping)
+            .where(
+                IntegrationPropertyMapping.connection_id == connection.id,
+                IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
+                IntegrationPropertyMapping.property_ref != canonical_ref,
             )
-        canonical_ref = normalize_ga4_property_ref(property_ref)
-    elif provider == INTEGRATION_PROVIDER_SHOPIFY:
-        # A Shopify "property" is the connection's shop itself: the
-        # canonicalized property_ref must EQUAL the connection's
-        # account_ref exactly. The ``myshopify.com`` host is deliberately
-        # NOT compared against the project's custom OwnedDomain rows.
-        try:
-            canonical_ref = normalize_shopify_shop_domain(property_ref)
-        except ValueError as exc:
-            raise MappingPropertyNotOwnedError(
-                f"Shopify property {property_ref!r} is not a canonical shop host"
-            ) from exc
-        if canonical_ref != connection.account_ref:
-            raise MappingPropertyNotOwnedError(
-                f"Shopify property {property_ref!r} does not match the "
-                f"connection's shop {connection.account_ref!r}"
-            )
-    else:
-        host = property_ref_host(property_ref)
-        owned_hosts = {
-            normalize_domain(owned.domain) for owned in project.owned_domains
-        }
-        owned_hosts.discard("")
-        if not host or host not in owned_hosts:
-            raise MappingPropertyNotOwnedError(
-                f"property {property_ref!r} does not resolve to an owned domain "
-                f"of project {project_id}"
-            )
-        canonical_ref = property_ref.strip()
+            .values(status=MAPPING_STATUS_DISABLED)
+        )
+        connection.account_ref = canonical_ref
     mapping = IntegrationPropertyMapping(
         workspace_id=workspace_id,
         connection_id=connection.id,

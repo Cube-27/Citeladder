@@ -55,7 +55,7 @@ describe('SidebarNav', () => {
     const labels = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.label));
     expect(labels).toEqual([
       'Visibility',
-      'Answers',
+      'AI Referrals',
       'Traffic',
       'Prompts',
       'Commerce',

@@ -65,6 +65,31 @@
    beats driver.css regardless of bundle order. */
 @import './tour.css';
 
+@font-face {
+  font-family: 'Apfel Grotezk';
+  src: url('/fonts/ApfelGrotezk-Mittel.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+/* Apfel Grotezk has no native 600 cut; Fett serves semibold and bold display. */
+@font-face {
+  font-family: 'Apfel Grotezk';
+  src: url('/fonts/ApfelGrotezk-Fett.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Apfel Grotezk';
+  src: url('/fonts/ApfelGrotezk-Fett.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 /* The `dark:` variant, scoped to the hand-rolled theme attribute (the same
    selector lib/theme.ts drives). Deleted in the ADS port and restored here:
    without it every `dark:` utility is a silent no-op. */
@@ -257,13 +282,13 @@
 :root {
   color-scheme: light;
 
-  /* Fonts — two faces total: Google Sans for UI/body/data (no monospace is
-     shipped; the "mono" family aliases Google Sans so numeric contexts keep
-     their tabular-nums recipe), Plus Jakarta Sans for headings/display.
+  /* Fonts — two faces total: Inter for UI/body/data (no monospace is
+     shipped; the "mono" family aliases Inter so numeric contexts keep
+     their tabular-nums recipe), Apfel Grotezk for headings/display.
      Marketing aliases the same display family (marketing-theme.css). */
-  --font-primary-family: var(--font-google-sans), system-ui, sans-serif;
-  --font-mono-family: var(--font-google-sans), system-ui, sans-serif;
-  --font-display-family: var(--font-jakarta), var(--font-google-sans), system-ui, sans-serif;
+  --font-primary-family: var(--font-inter), system-ui, sans-serif;
+  --font-mono-family: var(--font-inter), system-ui, sans-serif;
+  --font-display-family: 'Apfel Grotezk', var(--font-inter), system-ui, sans-serif;
 
   /* ── Surfaces — the flat tint ladder ──────────────────────────────────
      The app canvas is SUNKEN and panels sit on it as plain white fills.
@@ -406,16 +431,7 @@
   /* Score bands (visibility %) — thresholds stay 25/50/75 (score-band.ts
      unchanged). Four rungs red → orange → TEAL → green. Ring takes the
      `bolder` step so the arc reads at 2px stroke; text takes the AA-safe
-     `text` step.
-
-     `good` is teal, not yellow. Yellow is the obvious third rung, but the only
-     AA-safe ADS yellow is #946F00 — a dark mustard, and a 72/100 visibility
-     score rendered as a large mustard ring reads as a warning rather than a
-     healthy number. The brighter #E2B203 would look right but only reaches
-     ~1.8:1 on white, below the 3:1 floor for a graphical object. Teal is
-     attractive, unambiguously "not a warning", and 32° clear of green so the
-     top two bands stay distinguishable — which was the actual defect in the
-     old ramp, where `good` and `high` were two greens 7° apart. */
+     `text` step. */
   --score-low: var(--ds-accent-red-bolder);
   --score-low-bg: var(--ds-accent-red-subtlest); /* 0–24%   */
   --score-low-border: var(--ds-accent-red-subtler);
@@ -595,7 +611,7 @@ html[data-theme-transition] *::after {
 }
 
 /* ─── Numeric utility — tabular numerals for every metric (§5). No
-   monospace face is shipped: --font-mono-family aliases Google Sans, so
+   monospace face is shipped: --font-mono-family aliases Inter, so
    .mono/font-mono/code/kbd keep their tabular alignment without a second font. ─── */
 .mono,
 .font-mono,

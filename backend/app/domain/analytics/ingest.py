@@ -78,11 +78,11 @@ def _signals_for_row(row: IntegrationMetricRow) -> ReferralSignals | None:
         return None
     *dimension_values, _date_value = values
     if row.dataset == DATASET_GA4_REFERRER_DAILY:
-        # Dimensions: (fullReferrer, date) — the full referring URL.
-        (full_referrer,) = dimension_values
+        # Dimensions: (pageReferrer, date) — the full referring URL.
+        (page_referrer,) = dimension_values
         return ReferralSignals(
             landing_url="",
-            referrer_url=_clean(full_referrer),
+            referrer_url=_clean(page_referrer),
             utm_source="",
             utm_medium="",
             utm_campaign="",

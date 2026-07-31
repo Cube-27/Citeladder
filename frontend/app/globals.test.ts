@@ -505,28 +505,41 @@ describe('Atlassian-based palette', () => {
     expect(allCss).toMatch(/--weight-bold:\s*700/);
     expect(allCss).toMatch(/--text-heading-xs--font-weight:\s*500/);
     expect(allCss).toMatch(/--text-heading-sm--font-weight:\s*500/);
-    // Typography policy: exactly two faces — Google Sans for UI/body/data
-    // (no monospace is shipped; the mono family aliases Google Sans) and
-    // Plus Jakarta Sans for display across the app AND the marketing site.
-    expect(css).toMatch(/--font-mono-family:\s*var\(--font-google-sans\)/);
-    expect(css).toMatch(/--font-display-family:\s*var\(--font-jakarta\)/);
+  });
+
+  it('declares the two-face typography policy: Inter UI + self-hosted Apfel display', () => {
+    // Exactly two faces — Inter for UI/body/data (no monospace is shipped;
+    // the mono family aliases Inter) and self-hosted Apfel Grotezk for
+    // display across the app AND the marketing site.
+    expect(css).toMatch(/--font-mono-family:\s*var\(--font-inter\)/);
+    expect(css).toMatch(/--font-display-family:\s*'Apfel Grotezk'/);
     expect(marketingCss).toMatch(/--font-mkt-display:\s*var\(--font-display-family\)/);
-    expect(layoutTsx).toMatch(/const sans = Google_Sans\([\s\S]*?variable:\s*'--font-google-sans'/);
-    expect(layoutTsx).toMatch(
-      /const display = Plus_Jakarta_Sans\([\s\S]*?variable:\s*'--font-jakarta'/,
+    expect(layoutTsx).toMatch(/const inter = Inter\([\s\S]*?variable:\s*'--font-inter'/);
+    expect(layoutTsx).not.toMatch(/Google_Sans|Plus_Jakarta_Sans|Geist|Space_Grotesk|Lora/);
+    expect(layoutTsx).toMatch(/className=\{inter\.variable\}/);
+    expect(css).toMatch(
+      /@font-face\s*\{[\s\S]*?font-family:\s*'Apfel Grotezk';[\s\S]*?ApfelGrotezk-Mittel\.woff2[\s\S]*?font-weight:\s*500/,
     );
-    expect(layoutTsx).not.toMatch(/Geist|Space_Grotesk|Inter/);
-    expect(layoutTsx).toMatch(/className=\{`\$\{sans\.variable\} \$\{display\.variable\}`\}/);
+    expect(css).toMatch(
+      /@font-face\s*\{[\s\S]*?ApfelGrotezk-Fett\.woff2[\s\S]*?font-weight:\s*600/,
+    );
+    expect(css).toMatch(
+      /@font-face\s*\{[\s\S]*?ApfelGrotezk-Fett\.woff2[\s\S]*?font-weight:\s*700/,
+    );
   });
 
   it('emits the intended font families and applies tabular numerals to font-mono at runtime', () => {
+    // Runs a real Next build: the authored tokens above are only half the
+    // contract — what ships has to resolve the same way, and `font-mono` has
+    // to actually compute tabular numerals on an element.
     const emittedCss = buildEmittedCss();
 
     expect(emittedCss).toMatch(
-      /--font-primary-family:var\(--font-google-sans\),\s*system-ui,\s*sans-serif/,
+      /--font-primary-family:var\(--font-inter\),\s*system-ui,\s*sans-serif/,
     );
+    // The build normalizes the authored single quotes to double quotes.
     expect(emittedCss).toMatch(
-      /--font-display-family:var\(--font-jakarta\),\s*var\(--font-google-sans\),\s*system-ui,\s*sans-serif/,
+      /--font-display-family:["']Apfel Grotezk["'],\s*var\(--font-inter\),\s*system-ui,\s*sans-serif/,
     );
     expect(emittedCss).not.toMatch(/--font-sans:var\(--font-sans\)/);
     expect(emittedCss).toMatch(

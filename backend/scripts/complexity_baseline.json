@@ -469,7 +469,6 @@
   "app/api/integrations.py": {
     "functions": {
       "_landing_redirect": 1,
-      "_redirect_uri": 1,
       "_require_known_provider": 2,
       "create_mapping_endpoint": 6,
       "delete_integration_endpoint": 2,
@@ -480,6 +479,7 @@
       "integration_oauth_start": 6,
       "list_integrations_endpoint": 1,
       "list_mappings_endpoint": 2,
+      "list_properties_endpoint": 4,
       "list_syncs_endpoint": 2,
       "test_integration_endpoint": 2
     },
@@ -896,12 +896,13 @@
       "classify_status": 3,
       "flat_error_detail": 4,
       "is_approved_integration_host": 2,
+      "json_object_or_raise": 6,
       "nested_error_detail": 3,
       "oauth_error_detail": 4,
       "parse_retry_after": 4
     },
     "loc": 173,
-    "max_cc": 4
+    "max_cc": 6
   },
   "app/connectors/integrations/bing.py": {
     "functions": {
@@ -921,9 +922,11 @@
   "app/connectors/integrations/ga4.py": {
     "functions": {
       "Ga4Client.__init__": 1,
+      "Ga4Client.list_properties": 5,
       "Ga4Client.query_search_analytics": 23,
       "_coerce_metric_value": 3,
       "_ga4_template": 4,
+      "_iter_ga4_properties": 12,
       "_normalize_row": 13,
       "_report_currency_code": 6,
       "build_ga4_client": 1
@@ -934,11 +937,12 @@
   "app/connectors/integrations/gsc.py": {
     "functions": {
       "GscClient.__init__": 1,
-      "GscClient.query_search_analytics": 10,
+      "GscClient.list_properties": 11,
+      "GscClient.query_search_analytics": 5,
       "build_gsc_client": 1
     },
     "loc": 178,
-    "max_cc": 10
+    "max_cc": 11
   },
   "app/connectors/integrations/oauth.py": {
     "functions": {
@@ -1220,6 +1224,7 @@
       "_shopify_client_builder": 1,
       "_shopify_shop_url": 1,
       "integration_oauth_landing_url": 1,
+      "integration_oauth_redirect_uri": 1,
       "is_ga4_property_ref": 1,
       "is_shopify_shop_domain": 1,
       "normalize_ga4_property_ref": 1,
@@ -1954,14 +1959,15 @@
   },
   "app/domain/integrations/mappings.py": {
     "functions": {
+      "_canonical_property_ref": 9,
       "_to_mapping_response": 1,
-      "create_mapping": 12,
+      "create_mapping": 5,
       "disable_mapping": 2,
       "list_mappings": 2,
       "property_ref_host": 2
     },
     "loc": 241,
-    "max_cc": 12
+    "max_cc": 9
   },
   "app/domain/integrations/schemas.py": {
     "functions": {},
@@ -1980,6 +1986,7 @@
       "complete_connect": 18,
       "delete_connection": 8,
       "get_connection": 2,
+      "list_available_properties": 3,
       "list_connections": 3,
       "run_connection_test": 5,
       "start_connect": 5
@@ -2005,6 +2012,12 @@
     },
     "loc": 383,
     "max_cc": 8
+  },
+  "app/domain/integrations/tokens.py": {
+    "functions": {
+      "fresh_access_token": 9
+    },
+    "max_cc": 9
   },
   "app/domain/opportunities/__init__.py": {
     "functions": {},
@@ -3010,6 +3023,7 @@
       "IntegrationWorker._heartbeat_loop": 4,
       "IntegrationWorker._mark_grant_needs_reauth": 4,
       "IntegrationWorker._persist_item_fallback_capability": 5,
+      "IntegrationWorker._preflight": 2,
       "IntegrationWorker._run": 10,
       "IntegrationWorker._sanitize_orders_page": 6,
       "IntegrationWorker._still_owned": 4,
@@ -3023,6 +3037,8 @@
       "_ClientPage.raw_row_count": 1,
       "_ClientPage.rows": 1,
       "_DataClient.query_search_analytics": 1,
+      "_RunPreflightError.__init__": 1,
+      "_UnsupportedProviderError.__init__": 1,
       "_provider_datasets": 8,
       "_selected_item_dataset": 4,
       "_utcnow": 1,

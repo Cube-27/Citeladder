@@ -387,14 +387,19 @@ async def test_list_and_disable_mapping(client: httpx.AsyncClient, db_session) -
     assert len(body) == 2
     for row in body:
         _assert_mapping_contract_shape(row)
-        assert row["status"] == "active"
     assert [row["property_ref"] for row in body] == [
         "sc-domain:acme.com",
         "https://acme.com/docs",
     ]
+    # Selecting a second property REPLACES the first: the worker syncs the
+    # one property on ``connection.account_ref``, so leaving both active
+    # would keep a row claiming to own a property nothing ever fetches.
+    assert [row["status"] for row in body] == ["disabled", "active"]
+    await db_session.refresh(gsc)
+    assert gsc.account_ref == "https://acme.com/docs"
 
     # Disable is a STATUS FLIP, never a row delete: the mapping stays listed.
-    mapping_id = body[0]["id"]
+    mapping_id = body[1]["id"]
     deleted = await client.delete(f"{_BASE}/mappings/{mapping_id}")
     assert deleted.status_code == 204
     relisted = await client.get(f"{_BASE}/{gsc.id}/mappings")

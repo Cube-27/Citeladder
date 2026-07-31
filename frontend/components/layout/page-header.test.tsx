@@ -18,7 +18,7 @@ function renderTitle(route: string) {
 describe('PageHeader', () => {
   it.each([
     ['/visibility', 'Overview'],
-    ['/analytics', 'Answers'],
+    ['/analytics', 'AI Referrals'],
     ['/traffic', 'Traffic'],
     ['/prompts', 'Prompts'],
     ['/opportunities', 'Opportunities'],

@@ -28,8 +28,8 @@
 - **Aesthetic**: dense, confident **B2B analytics** in the Atlassian visual language — a
   `#F7F8F9` sunken canvas, white panels separated by **a tint step and a 1px alpha hairline**,
   one **ADS blue accent `#0C66E4`** reserved for data, links, active states and focus rings,
-  the ADS accent ramp for every semantic hue, **Google Sans** for UI text and data
-  (tabular numerals — no monospace is shipped), and **Plus Jakarta Sans** for
+  the ADS accent ramp for every semantic hue, **Inter** for UI text and data
+  (tabular numerals — no monospace is shipped), and **Apfel Grotezk** for
   headings/display across the app and the site, 4px grid, WCAG 2.1 AA.
 - **Elevation is the ADS surface/shadow pairing, and it is a hard rule** — see §4a. Cards
   rest on the raised rung and carry **no border** (light, not an outline, separates the
@@ -100,7 +100,7 @@ value layer restyled the whole app without touching component code.
 | `elevation.shadow.overlay` | `--shadow-3`, `--shadow-4`, `--shadow-card-hover-value`, `--shadow-lg-value`, `--shadow-modal` | overlays, plus the hover lift of interactive cards. `--shadow-1` and `--shadow-xs/sm/elevated` are `none` |
 | `radius.{xsmall,small,medium,large,xlarge}` (2/4/8/12/16) | `--radius-xs/sm/md/lg/xl`; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills**; badges are `rounded-sm` (4px) |
 | `space.025…1000` | existing `--space-1..20` 4px grid, **unchanged** | the two scales already agree; renaming would churn ~40 contract entries for no visual gain |
-| Google Sans, Plus Jakarta Sans | `--font-primary-family` = Google Sans stack; `--font-display-family` = Plus Jakarta Sans stack; `--font-mono-family` aliases the Google Sans stack (no monospace shipped) | next/font in `app/layout.tsx` loads `--font-google-sans`; `--font-sans` remains the Tailwind body/UI bridge; marketing `--font-mkt-display` aliases the same display family |
+| Inter, Apfel Grotezk | `--font-primary-family` = Inter stack; `--font-display-family` = Apfel Grotezk stack; `--font-mono-family` aliases the Inter stack (no monospace shipped) | next/font in `app/layout.tsx` loads `--font-inter`; `globals.css` self-hosts Apfel Grotezk from `public/fonts`; `--font-sans` remains the Tailwind body/UI bridge; marketing `--font-mkt-display` aliases the same display family |
 
 ## 4. Token values
 
@@ -236,14 +236,14 @@ in `globals.test.ts` rather than silently deleted:
 
 ## 7. Type scale — Figma verbatim
 
-Body/UI sans = **Google Sans** 400/500/600/700 (`--font-google-sans` → `--font-primary-family`);
-headings/display = **Plus Jakarta Sans** 500/600 (`--font-jakarta` → `--font-display-family`).
-**No monospace is shipped** — `--font-mono-family` aliases the Google Sans stack, and the
+Body/UI sans = **Inter** 400/500/600/700 (`--font-inter` → `--font-primary-family`);
+headings/display = **Apfel Grotezk** 500/600 (`--font-display-family`; the Fett cut serves 600/700).
+**No monospace is shipped** — `--font-mono-family` aliases the Inter stack, and the
 `.mono` / `font-mono` recipe keeps **tabular numerals**
 (`font-variant-numeric: tabular-nums`) for **metric values, percentages,
 counts, positions, timestamps, code and keyboard hints** so columns align; it is never used
 for labels. Semantic `h1`–`h6` elements and marketing display utilities all resolve to
-Plus Jakarta Sans (§11).
+Apfel Grotezk (§11).
 
 The ladder is the ADS `font.*` composite scale. **13px and 15px do not exist.** Every step
 carries its own line-height, and the heading steps bake their weight into the token, so call
@@ -274,7 +274,7 @@ token.
 - Weights: `--weight-normal: 400`, `--weight-medium: 500`, `--weight-semibold: 600`,
   `--weight-bold: 700` — heading tokens run at 500. Intentional 600-weight call sites use
   explicit `font-semibold`, including the eyebrow recipe above, table headers, and form labels;
-  `bold` is a true 700 (the Google Sans 700 cut is loaded).
+  `bold` is a true 700 (the Inter 700 cut is loaded).
 - **There is no letter-spacing anywhere.** ADS defines no tracking rungs, so the
   `--tracking-*` namespace is removed from the bridge (`--tracking-*: initial`), every
   `tracking-*` utility class is deleted (zero-ceiling guard in `check-ads-scale.mjs`), and no
@@ -330,7 +330,7 @@ bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
 @theme inline {
   --font-sans: var(--font-primary-family);
   --font-mono: var(--font-mono-family);
-  --font-display: var(--font-display-family); /* Plus Jakarta Sans */
+  --font-display: var(--font-display-family); /* Apfel Grotezk */
   --color-background: var(--bg-base);
   --color-panel: var(--bg-panel);
   --color-foreground: var(--text-primary);
@@ -622,12 +622,12 @@ resolves each colour from whatever `marketing-theme.css` currently declares and 
 literal, so retuning the brand needs no test edit. The hex values in the tables above are
 documentation of the current tuning, not a contract.
 
-**Type.** Marketing body copy is **Google Sans** and display copy **Plus Jakarta Sans**,
+**Type.** Marketing body copy is **Inter** and display copy **Apfel Grotezk**,
 the same two faces the app uses — `--font-mkt-display`
 aliases `--font-display-family`, and every
 `--text-mkt-*` step aliases the shared ADS ladder in `ds-type.css` (§7), so
 13px and 15px do not exist here either and there is no letter-spacing at any step. Figures
-and "meta" labels use the shared `font-mono tabular-nums` recipe (Google Sans with tabular
+and "meta" labels use the shared `font-mono tabular-nums` recipe (Inter with tabular
 numerals — no monospace is shipped) — the deck faked
 tabular figures with a font-feature hack (`.mkt-num`), and the fix is the real tabular
 recipe the app already uses, the same way every number in the app aligns. Eleven names
@@ -658,7 +658,7 @@ used to hand-roll its heading block and sat half a step off the rail above it.
 at 72px and floored at **44px**, which wrapped an 18ch headline into four or five stubby
 lines on a phone — so headlines read as oversized and cramped at once.
 
-**Weights.** Google Sans static cuts only — display runs at `font-medium` (500), body at 400,
+**Weights.** Inter static cuts only — display runs at `font-medium` (500), body at 400,
 meta at 600, and the wordmark is the single 700 on the surface. The off-axis 460/540 stops are
 gone with Manrope: they required the variable face, and the ADS ladder has no rungs between
 Regular and Medium.
@@ -776,11 +776,11 @@ are quoted and italic so they read as things buyers ask rather than as claims we
 7. The numeric recipe (`.mono` / `font-mono`) gets `font-variant-numeric: tabular-nums`;
    all metrics use it. No monospace face is loaded.
 8. Ship `prefers-reduced-motion`, `forced-colors`, `print`, and theme-swap suppression rules.
-9. Load exactly two faces — **Google Sans** (400/500/600/700) and **Plus Jakarta Sans**
-   (500/600) — via
-   next/font in `app/layout.tsx` (`--font-google-sans`, `--font-jakarta`).
-   `--font-display-family` resolves to Plus Jakarta Sans and marketing `--font-mkt-display`
-   aliases it. Never name a next/font variable `--font-display`: that name is the bridged `@theme` token.
+9. Load exactly two faces — **Inter** (400/500/600/700) via next/font in
+   `app/layout.tsx` (`--font-inter`) and self-hosted **Apfel Grotezk** from
+   `public/fonts` (Mittel 500; Fett serves 600/700). `--font-display-family` resolves to
+   Apfel Grotezk and marketing `--font-mkt-display` aliases it. Never name a next/font
+   variable `--font-display`: that name is the bridged `@theme` token.
 10. **Marketing is still a separate system, for now.** Folding `--mkt-*` onto the ADS layer is
     Phase 2 of the ADS adoption; until then marketing and the logged-out auth screens stay
     light-only.
