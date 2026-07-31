@@ -34,6 +34,7 @@ Design mockups for the UI changes: `/code/.plans/designs/` (3 HTML files +
 | `1073227` | feat(backend): deterministic product-mentioning seed fixtures | **D3.** md5-based prompt bucketing (was salted `hash()`); fixture answers mention Summit 40L $189.99 / Voyager 25L $129.99 / TrailBlaze Alpine 45 $174.99 → 96 ProductMentions, non-zero snapshots, byte-identical across reseeds |
 | `fe01c54` | feat(opportunities): target labels, provenance drawer, commerce rules, freshness | **WS-C (C1–C4).** Backend `target_label` from frozen evidence (survives prompt deletion; client `targetLine` deleted); drawer renders provenance deep-links + priority + versions; new rules `schema_type_mismatch`, `product_not_mentioned`, `competitor_product_dominates`, `price_mention_mismatch` (`RULE_VERSION=opp-rules-2`); audit-finalize recompute hook after `_finalize_analysis` commit; read-time staleness badge. Also fixed a pre-existing featured-card gate bug |
 | `571879e` | feat(commerce): import feedback, run-aware empty states, catalog robustness | **WS-D (D1+D2+D4).** Import returns `{items, summary:{created,updated,skipped,errors[]}}` (coordinated breaking change, both frontend callers updated); three run-aware Visibility-tab states; drill-down copy fix; completeness hover; audit-reference delete guard |
+| `0301f83` | feat(site-health): surface failed-crawl reasons across API and UI | **WS-B (B1–B3).** See §3 — verification pending |
 
 ### Key approved decisions (do not relitigate)
 - **A5 validation policy:** tolerant `.strip()` on unknown response keys +
@@ -47,26 +48,20 @@ Design mockups for the UI changes: `/code/.plans/designs/` (3 HTML files +
   in one commit).
 - Opportunity staleness is **read-time** (no persisted marker, no migration).
 
-## 3. In-flight work (may be uncommitted in the working tree)
+## 3. Committed late, verification pending — RUN THE SUITES FIRST
 
-**B1+B2+B3 — Site Health failed-crawl surfacing** (build task
-`build-ws-b-surfacing` was still running at handoff; ~25 files, +1037 lines
-already present): `backend/app/domain/site_health/failure.py` (new),
-`backend/app/workers/site_health/lifecycle.py`, `domain/site_health/service/*`,
-`core/config/site_health.py`, `backend/app/domain/site_health/api_schemas.py`,
-frontend `lib/site-health/status.ts` (phase clause), `components/site-health/*`
-(terminal card, `root-errors-block.tsx` new, site-facts panel copy), tests in
-both suites, `docs/site-health.md` precedence table.
-
-**If these changes are still uncommitted when you read this:** do NOT commit
-them piecemeal or mix them into your own commits — either wait for the
-orchestrating session to land the `feat(site-health)` commit, or review the
-full diff yourself and commit it as one scoped commit after running the
-site-health test suites (§5). Plan items B1/B2/B3 in the detailed plan define
-the exact acceptance criteria (phase-clause placement between clause 2 and 3,
-`crawl.failed` instead of `crawl.completed`, humanized `error_message` +
-`failure_summary`, `analysis_status=failed` on fully-failed discovery,
-robots.txt `not_found` vs `fetch_failed`, `root_errors` projection).
+**B1+B2+B3 — Site Health failed-crawl surfacing** landed as commit `0301f83`
+(31 files, +1572) but was committed at the user's direction **before its
+in-session verification completed**. Before building B4–B6 or opening the PR:
+1. `cd backend && uv run pytest tests/unit tests/component -q -k "site_health or crawl or failure" && uv run ruff check app tests`
+2. `cd frontend && pnpm test -- site-health && pnpm lint && pnpm build`
+3. Fix anything red in place; the implementation approach is documented in
+   `docs/site-health.md` (commit `0301f83` diff) and plan items B1/B2/B3
+   define the acceptance criteria (phase-clause placement between clause 2 and
+   3, `crawl.failed` instead of `crawl.completed`, humanized `error_message` +
+   `failure_summary`, `analysis_status=failed` on fully-failed discovery,
+   robots.txt `not_found` vs `fetch_failed`, `root_errors` projection separate
+   from the cursored pages contract).
 
 ## 4. Pending work (not started)
 
