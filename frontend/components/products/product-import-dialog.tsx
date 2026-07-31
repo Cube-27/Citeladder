@@ -264,8 +264,8 @@ function ImportResultSummary({ result }: Readonly<{ result: ProductImportSummary
       ) : (
         <div className="grid gap-2">
           <p className="text-secondary text-sm">
-            {result.errors.length} row{result.errors.length === 1 ? ' was' : 's were'} skipped.
-            Fix them in the file and import again — already-imported SKUs are left unchanged.
+            {result.errors.length} row{result.errors.length === 1 ? ' was' : 's were'} skipped. Fix
+            them in the file and import again — already-imported SKUs are left unchanged.
           </p>
           <div className="border-border-subtle max-h-[300px] overflow-auto rounded-md border">
             <Table>

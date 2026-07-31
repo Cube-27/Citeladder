@@ -52,7 +52,9 @@ export function OpportunitySummarySection({ detail }: Readonly<{ detail: Opportu
     sourceCounts.push(pluralize(detail.source_issue_ids.length, 'site issue', 'site issues'));
   }
   if (detail.source_metric_ids.length > 0) {
-    sourceCounts.push(pluralize(detail.source_metric_ids.length, 'metric snapshot', 'metric snapshots'));
+    sourceCounts.push(
+      pluralize(detail.source_metric_ids.length, 'metric snapshot', 'metric snapshots'),
+    );
   }
   if (detail.source_traffic_ids.length > 0) {
     sourceCounts.push(pluralize(detail.source_traffic_ids.length, 'traffic row', 'traffic rows'));
@@ -89,9 +91,9 @@ export function OpportunitySummarySection({ detail }: Readonly<{ detail: Opportu
             Priority score <span className="mono font-semibold">{detail.priority_score}</span>
           </p>
           <p className="text-muted mt-1 text-xs">
-            Set by a deterministic formula: impact weight × target value (prompt intent) ×
-            evidence gap (competitor pressure and missing owned citations), scaled ×10. The same
-            evidence and the same formula version always produce the same score.
+            Set by a deterministic formula: impact weight × target value (prompt intent) × evidence
+            gap (competitor pressure and missing owned citations), scaled ×10. The same evidence and
+            the same formula version always produce the same score.
           </p>
         </div>
       </section>

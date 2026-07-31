@@ -102,9 +102,7 @@ async def get_entitlement_view(
 # =========================================================================
 # Crawl summary / list
 # =========================================================================
-async def _failure_summary_for(
-    session: AsyncSession, crawl: SiteCrawl
-) -> dict | None:
+async def _failure_summary_for(session: AsyncSession, crawl: SiteCrawl) -> dict | None:
     """B1 failure summary for the single-crawl read paths.
 
     Only a FAILED crawl can have one (a terminally failed root fetch is what

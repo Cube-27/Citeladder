@@ -259,9 +259,7 @@ def test_sanitize_validation_errors_strips_internals() -> None:
 
 
 def test_sanitize_validation_errors_tolerates_sparse_entries() -> None:
-    assert sanitize_validation_errors([{}]) == [
-        {"loc": [], "message": "Invalid value"}
-    ]
+    assert sanitize_validation_errors([{}]) == [{"loc": [], "message": "Invalid value"}]
 
 
 def test_validation_error_summary_first_error() -> None:
@@ -269,9 +267,7 @@ def test_validation_error_summary_first_error() -> None:
         {"loc": ["products", "0", "sku"], "message": "Field required"},
         {"loc": ["name"], "message": "Input should be a valid string"},
     ]
-    assert (
-        validation_error_summary(errors) == "products.0.sku: Field required"
-    )
+    assert validation_error_summary(errors) == "products.0.sku: Field required"
     assert validation_error_summary([{"loc": [], "message": "boom"}]) == "boom"
     assert validation_error_summary([]) == "Request validation failed"
 

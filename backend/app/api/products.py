@@ -261,8 +261,7 @@ async def _resolve_import_rows(
             raise ApiException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
                 CODE_VALIDATION_ERROR,
-                "Invalid product import payload: "
-                + validation_error_summary(errors),
+                "Invalid product import payload: " + validation_error_summary(errors),
                 details={"errors": errors},
             ) from exc
         return [(index + 1, row) for index, row in enumerate(products)], []

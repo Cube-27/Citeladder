@@ -48,9 +48,9 @@ describe('shouldRetryQuery', () => {
       shouldRetryQuery(0, new ApiError('down', 503, '', undefined, { retryable: false })),
     ).toBe(false);
     // Server-classified retryable → retry even without a transient status.
-    expect(
-      shouldRetryQuery(0, new ApiError('busy', 400, '', undefined, { retryable: true })),
-    ).toBe(true);
+    expect(shouldRetryQuery(0, new ApiError('busy', 400, '', undefined, { retryable: true }))).toBe(
+      true,
+    );
   });
 });
 

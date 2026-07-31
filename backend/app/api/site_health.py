@@ -473,14 +473,10 @@ async def rerun_page_endpoint(
         await session.commit()
     except StarterRequiredError as exc:
         await session.rollback()
-        raise ApiException.coded(
-            status.HTTP_403_FORBIDDEN, exc.code, str(exc)
-        ) from exc
+        raise ApiException.coded(status.HTTP_403_FORBIDDEN, exc.code, str(exc)) from exc
     except RerunNotAllowedError as exc:
         await session.rollback()
-        raise ApiException.coded(
-            status.HTTP_409_CONFLICT, exc.code, str(exc)
-        ) from exc
+        raise ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc)) from exc
     except SelectionValidationError as exc:
         await session.rollback()
         raise ApiException.coded(

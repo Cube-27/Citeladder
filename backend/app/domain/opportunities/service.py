@@ -70,6 +70,7 @@ from app.core.config.opportunities import (
     validate_rule_id,
 )
 from app.core.config.site_health import (
+    CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
 )
@@ -109,7 +110,19 @@ __all__ = [
 # ``domain/analysis/service.py``; the constants themselves are config-owned).
 _DASHBOARD_READY_STATUSES = (AUDIT_STATUS_COMPLETED, AUDIT_STATUS_PARTIALLY_COMPLETED)
 # A crawl whose issue rows are usable evidence (terminal, with analysis).
-_EVIDENCE_CRAWL_STATUSES = (CRAWL_STATUS_COMPLETED, CRAWL_STATUS_PARTIALLY_COMPLETED)
+#
+# CANCELLED belongs here: a cancelled run still fully analyzed every page that
+# finished before the stop, and ``cancel_crawl`` rolls exactly those pages into
+# the same canonical snapshot a clean terminalization writes. Excluding it meant
+# the cancel-path recompute resolved no crawl and wrote an EMPTY snapshot over
+# real findings — the dashboard showed partial scores while Opportunities sat
+# blank. The issue rows are immutable evidence; how the run ended does not make
+# the pages that did complete any less true.
+_EVIDENCE_CRAWL_STATUSES = (
+    CRAWL_STATUS_COMPLETED,
+    CRAWL_STATUS_PARTIALLY_COMPLETED,
+    CRAWL_STATUS_CANCELLED,
+)
 
 _PROJECT_NOT_FOUND = "Project not found"
 _OPPORTUNITY_NOT_FOUND = "Opportunity not found"

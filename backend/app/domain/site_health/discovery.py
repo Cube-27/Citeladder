@@ -352,6 +352,45 @@ async def _enqueue_task(
     return await session.scalar(stmt)
 
 
+async def _upsert_free_sample_membership(
+    session: AsyncSession,
+    *,
+    crawl: SiteCrawl,
+    site_url_id: uuid.UUID,
+    now: datetime,
+) -> uuid.UUID | None:
+    """Insert/reactivate the system-managed sample membership for a URL.
+
+    Returns the row id when THIS call created or reactivated the membership
+    (the caller's signal to consume one unit of the workspace sample
+    allowance), or ``None`` when it was already active — the conflict guard
+    below makes that case a no-op.
+    """
+    return await session.scalar(
+        pg_insert(MonitoredSiteUrl)
+        .values(
+            workspace_id=crawl.workspace_id,
+            project_id=crawl.project_id,
+            profile_id=crawl.profile_id,
+            site_url_id=site_url_id,
+            active=True,
+            selection_source=SELECTION_SOURCE_FREE_SAMPLE,
+            selected_at=now,
+        )
+        .on_conflict_do_update(
+            index_elements=["project_id", "site_url_id"],
+            set_={
+                "active": True,
+                "selection_source": SELECTION_SOURCE_FREE_SAMPLE,
+                "selected_at": now,
+                "deselected_at": None,
+            },
+            where=(MonitoredSiteUrl.active.is_(False)),
+        )
+        .returning(MonitoredSiteUrl.id)
+    )
+
+
 async def _add_free_sample(
     session: AsyncSession,
     *,
@@ -361,8 +400,17 @@ async def _add_free_sample(
     url_hash_value: str,
     depth: int,
     source_kind: str = OBSERVATION_SOURCE_LINK,
+    analyze: bool = True,
 ) -> tuple[bool, bool]:
-    """Add/reactivate a system-managed sample monitored row + auto-enqueue.
+    """Admit a Free URL into the inventory; optionally monitor + analyze it.
+
+    ``analyze`` splits the two budgets this function used to conflate. With
+    ``analyze=False`` (the workspace sample allowance is spent) the URL is still
+    given its identity and its per-crawl ``SiteUrlObservation`` — it appears in
+    the inventory like any other discovered URL — but gets NO monitored
+    membership and NO analyze task, so it costs a row rather than a fetch. That
+    is what lets a Free crawl map up to the discovery cap while deep-analyzing
+    only ``sample_url_limit`` pages.
 
     Conflict-safe on ``(project_id, site_url_id)`` so re-admission never
     duplicates the membership. Three cases on conflict:
@@ -395,28 +443,12 @@ async def _add_free_sample(
       at most once but is observed once — the two are not interchangeable.
     """
     now = _utcnow()
-    activated_id = await session.scalar(
-        pg_insert(MonitoredSiteUrl)
-        .values(
-            workspace_id=crawl.workspace_id,
-            project_id=crawl.project_id,
-            profile_id=crawl.profile_id,
-            site_url_id=site_url_id,
-            active=True,
-            selection_source=SELECTION_SOURCE_FREE_SAMPLE,
-            selected_at=now,
+    activated_id = (
+        await _upsert_free_sample_membership(
+            session, crawl=crawl, site_url_id=site_url_id, now=now
         )
-        .on_conflict_do_update(
-            index_elements=["project_id", "site_url_id"],
-            set_={
-                "active": True,
-                "selection_source": SELECTION_SOURCE_FREE_SAMPLE,
-                "selected_at": now,
-                "deselected_at": None,
-            },
-            where=(MonitoredSiteUrl.active.is_(False)),
-        )
-        .returning(MonitoredSiteUrl.id)
+        if analyze
+        else None
     )
     newly_activated = activated_id is not None
     # Record per-crawl admission provenance for the sampled URL. The pages /
@@ -442,16 +474,19 @@ async def _add_free_sample(
         .on_conflict_do_nothing(index_elements=["crawl_id", "site_url_id"])
         .returning(SiteUrlObservation.id)
     )
-    await _enqueue_task(
-        session,
-        crawl=crawl,
-        site_url_id=site_url_id,
-        url=url,
-        url_hash_value=url_hash_value,
-        task_kind=TASK_KIND_ANALYZE,
-        depth=depth,
-        priority=1,
-    )
+    # Inventory-only admissions stop here: no analyze task, so an over-cap URL
+    # costs two rows and zero network I/O.
+    if analyze:
+        await _enqueue_task(
+            session,
+            crawl=crawl,
+            site_url_id=site_url_id,
+            url=url,
+            url_hash_value=url_hash_value,
+            task_kind=TASK_KIND_ANALYZE,
+            depth=depth,
+            priority=1,
+        )
     return newly_activated, observation_id is not None
 
 
@@ -509,22 +544,24 @@ async def admit_candidates(
         sample_limit = entitlement.sample_url_limit if entitlement is not None else 0
         used = await _active_free_sample_count(session, crawl.workspace_id)
         remaining = max(0, int(sample_limit) - used)
-        if remaining <= 0:
-            result = AdmissionResult(admitted=0, sample_capped=True)
-            return result
+        # NOTE: an exhausted ANALYSIS allowance no longer ends admission. The
+        # sample budget governs how many URLs get a monitored membership + an
+        # analyze task; the inventory keeps growing to the discovery cap so the
+        # user sees the real shape of their site instead of the first 10 URLs.
+        # ``remaining <= 0`` now simply means "admit as inventory only".
 
     site_url_ids: dict[str, str] = {}
     for position, candidate in enumerate(ordered):
         if candidate.depth > settings.max_crawl_depth:
             continue
-        if crawl.sample_mode and remaining is not None and remaining <= 0:
-            crawl.admitted_url_count += admitted
-            return AdmissionResult(
-                admitted=admitted,
-                sample_capped=True,
-                site_url_ids=site_url_ids,
-                observed=observed,
-            )
+        # Free INVENTORY ceiling (not the analysis budget — see below). This is
+        # what actually stops a Free crawl now: it keeps mapping the site until
+        # the discovery cap is reached, analyzing only the sample allowance.
+        if (
+            crawl.sample_mode
+            and crawl.admitted_url_count + admitted >= settings.free_discovery_url_cap
+        ):
+            break
         # Starter frontier ceiling.
         if (
             not crawl.sample_mode
@@ -556,6 +593,12 @@ async def admit_candidates(
         # Uniqueness is per CRAWL, so a recrawl still counts every URL; the old
         # per-PROJECT-identity counting is what reported zero on a recrawl.
         if crawl.sample_mode:
+            # Two independent budgets. Every candidate is admitted into the
+            # INVENTORY (identity + per-crawl observation) so the user sees the
+            # real site map; only the first ``sample_url_limit`` URLs also get a
+            # monitored membership + an analyze task. Past that the URL is
+            # recorded and left unanalyzed rather than dropped.
+            analyze = remaining is not None and remaining > 0
             newly_activated, newly_observed = await _add_free_sample(
                 session,
                 crawl=crawl,
@@ -564,6 +607,7 @@ async def admit_candidates(
                 url_hash_value=candidate.url_hash,
                 depth=candidate.depth,
                 source_kind=candidate.source_kind,
+                analyze=analyze,
             )
             if newly_activated and remaining is not None:
                 remaining -= 1

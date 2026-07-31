@@ -870,9 +870,7 @@ async def test_completed_audit_fires_opportunities_recompute_hook(
         assert refreshed.status == AUDIT_STATUS_COMPLETED
     # The hook fired exactly once, after terminalization, with the audit's
     # workspace/project identity.
-    assert calls == [
-        {"workspace_id": seed.workspace_id, "project_id": seed.project_id}
-    ]
+    assert calls == [{"workspace_id": seed.workspace_id, "project_id": seed.project_id}]
 
 
 @pytest.mark.asyncio

@@ -435,8 +435,6 @@ export function completenessHoverDetail(completeness: ProductCompleteness): stri
   return `Feed completeness ${score} — missing ${completeness.missing.length} of ${completeness.total}: ${missing}`;
 }
 
-
-
 /**
  * Feed-health cell model: an unbound product (null `connection_id`) is
  * `Not feed-bound`; a bound product with no projected health row is

@@ -264,9 +264,7 @@ describe('readErrorBody extraction (A2)', () => {
     expect((error as InstanceType<typeof ApiError>).message).toBe('limit reached');
     expect((error as InstanceType<typeof ApiError>).code).toBe('site_health_quota_exceeded');
     // The raw body stays parseable for structured-detail consumers.
-    expect(
-      JSON.parse((error as InstanceType<typeof ApiError>).body).detail.limit,
-    ).toBe(50);
+    expect(JSON.parse((error as InstanceType<typeof ApiError>).body).detail.limit).toBe(50);
   });
 
   it('humanizes the first FastAPI validation item (loc + msg, body prefix dropped)', async () => {
@@ -354,7 +352,10 @@ describe('request timeout (A3)', () => {
     const fetchMock = vi.fn().mockImplementation(
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
-          init.signal?.addEventListener('abort', () => reject(init.signal.reason));
+          // Bind the signal once: inside the listener TS cannot re-narrow
+          // `init.signal`, so reading `.reason` off it there fails the build.
+          const signal = init.signal;
+          signal?.addEventListener('abort', () => reject(signal.reason));
         }),
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -375,15 +376,19 @@ describe('request timeout (A3)', () => {
     const fetchMock = vi.fn().mockImplementation(
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
-          init.signal?.addEventListener('abort', () => reject(init.signal.reason));
+          // Bind the signal once: inside the listener TS cannot re-narrow
+          // `init.signal`, so reading `.reason` off it there fails the build.
+          const signal = init.signal;
+          signal?.addEventListener('abort', () => reject(signal.reason));
         }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
     const { apiClient } = await import('./client');
-    await expect(
-      apiClient.get('/hang', { retryNetworkFailures: true }),
-    ).rejects.toMatchObject({ code: 'request_timeout', retryable: true });
+    await expect(apiClient.get('/hang', { retryNetworkFailures: true })).rejects.toMatchObject({
+      code: 'request_timeout',
+      retryable: true,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -392,7 +397,8 @@ describe('request timeout (A3)', () => {
     const fetchMock = vi.fn().mockImplementation(
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
-          init.signal?.addEventListener('abort', () => reject(init.signal.reason));
+          const signal = init.signal;
+          signal?.addEventListener('abort', () => reject(signal.reason));
           controller.abort();
         }),
     );

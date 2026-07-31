@@ -225,9 +225,9 @@ describe('productsApi', () => {
   });
 
   it('reads the frozen-audit delete-guard check for one product (D4)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ product_id: UUID, referenced: true, audit_count: 2 }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ product_id: UUID, referenced: true, audit_count: 2 }));
     vi.stubGlobal('fetch', fetchMock);
 
     const { productsApi } = await import('./products');

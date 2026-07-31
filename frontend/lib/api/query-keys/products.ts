@@ -26,6 +26,5 @@ export const productKeys = {
   evidence: (productId: string, filters: ListFilters = {}) =>
     ['products', 'evidence', productId, filters] as const,
   // D4 delete guard: the frozen-audit usage check for one product.
-  auditReferences: (productId: string) =>
-    ['products', 'audit-references', productId] as const,
+  auditReferences: (productId: string) => ['products', 'audit-references', productId] as const,
 };

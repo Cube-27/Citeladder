@@ -225,9 +225,11 @@ export function OnboardingScreen() {
         <div className="absolute -right-40 -bottom-40 size-[500px] rounded-full bg-sky-200/40 blur-[120px]" />
       </div>
 
-      <header className="border-b border-slate-200/80 bg-white/90 py-3 backdrop-blur">
+      {/* Opaque surface, no blur: the elevation guard (design.md §4a) keeps
+          gradients and blur to display art, never a control container. */}
+      <header className="border-b border-slate-200/80 bg-white py-3">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 sm:gap-6 sm:px-6 lg:px-8">
-          <span className="flex shrink-0 items-center gap-2.5">
+          <span className="flex shrink-0 items-center gap-2">
             <LogoMark size={24} />
             <span className="font-mkt-display text-base font-bold text-slate-900">Searchify</span>
           </span>
@@ -285,7 +287,7 @@ export function OnboardingScreen() {
             })}
           </ol>
 
-          <span className="text-3xs ml-auto shrink-0 rounded-full border border-slate-200/60 bg-slate-100 px-2.5 py-1 font-semibold text-slate-500 sm:ml-0">
+          <span className="text-3xs ml-auto shrink-0 rounded-full border border-slate-200/60 bg-slate-100 px-2 py-1 font-semibold text-slate-500 sm:ml-0">
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
@@ -361,10 +363,10 @@ export function OnboardingScreen() {
                       dead air next to the two inputs; the subtle slate keeps it
                       clearly non-interactive while balancing the height. */}
                   <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-5 py-5">
-                    <p className="text-2xs font-bold tracking-wide text-slate-500 uppercase">
+                    <p className="text-2xs font-bold text-slate-500 uppercase">
                       Here&apos;s what we&apos;ll set up
                     </p>
-                    <ul className="mt-3 grid gap-2.5">
+                    <ul className="mt-3 grid gap-2">
                       {[
                         'Crawl your site to discover owned domains',
                         'Identify the competitors AI engines compare you to',

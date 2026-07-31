@@ -101,6 +101,18 @@ INVENTORY_SOURCE_CRAWL_IDS_KEY: Final = "inventory_source_crawl_ids"
 FREE_SAMPLE_URL_LIMIT: Final = 10
 FREE_MONITORED_URL_LIMIT: Final = 10
 
+# Free INVENTORY cap — deliberately decoupled from the analysis budget above.
+#
+# These used to be the same number, which made "how many URLs do we know about"
+# and "how many URLs do we deep-analyze" one decision: discovery stopped dead at
+# 10 because admitting a URL and monitoring it for analysis were the same act.
+# The inventory is cheap (an identity row + an observation row, no fetch), the
+# analysis is not, so the crawl now keeps mapping the site up to this soft cap
+# while only ``free_sample_url_limit`` URLs are ever analyzed. "Soft" is
+# accurate: admission happens in batches, so a batch that straddles the cap
+# lands slightly over it rather than being split mid-batch.
+FREE_DISCOVERY_URL_CAP: Final = 200
+
 # Starter: progressive inventory; up to N active monitored URLs workspace-wide.
 STARTER_MONITORED_URL_LIMIT: Final = 50
 
@@ -159,7 +171,8 @@ def _build_capability_profiles() -> dict[str, SiteHealthCapability]:
         CAPABILITY_FREE: SiteHealthCapability(
             capability=CAPABILITY_FREE,
             discovery_mode=DISCOVERY_MODE_SAMPLE,
-            discovery_url_cap=s.free_sample_url_limit,
+            # Inventory cap, NOT the analysis budget — see FREE_DISCOVERY_URL_CAP.
+            discovery_url_cap=s.free_discovery_url_cap,
             sample_url_limit=s.free_sample_url_limit,
             monitored_url_limit=s.free_monitored_url_limit,
             allows_user_selection=False,
@@ -1705,6 +1718,8 @@ class SiteHealthSettings(BaseSettings):
     # Free: deterministic automatic sample size / monitored allowance.
     free_sample_url_limit: int = FREE_SAMPLE_URL_LIMIT
     free_monitored_url_limit: int = FREE_MONITORED_URL_LIMIT
+    # Free: how far discovery maps the site (inventory only — NOT analyzed).
+    free_discovery_url_cap: int = FREE_DISCOVERY_URL_CAP
     # Starter: workspace-wide active monitored-URL quota.
     starter_monitored_url_limit: int = STARTER_MONITORED_URL_LIMIT
 
@@ -1805,6 +1820,13 @@ class SiteHealthSettings(BaseSettings):
     # --- Link checking ---
     max_link_checks_per_page: int = 200
     link_check_timeout_seconds: float = 10.0
+    # How many of ONE page's link probes may be in flight at once. Probes used
+    # to run strictly serially, so a page's links cost (links x host delay) and
+    # the crawl sat visibly "finished" for ~10s per page while they drained.
+    # The per-host gate + crawl-delay still serialize same-host requests
+    # underneath this; the ceiling keeps a 200-link page from queueing 200
+    # simultaneous probes.
+    link_check_concurrency: int = 8
 
     # --- Export ---
     # Bounds how many rows ``_export_items`` materializes into memory for a
@@ -1827,12 +1849,28 @@ class SiteHealthSettings(BaseSettings):
         for name in (
             "free_sample_url_limit",
             "free_monitored_url_limit",
+            "free_discovery_url_cap",
             "starter_monitored_url_limit",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
         if self.inventory_history_crawl_limit <= 0:
             raise ValueError("inventory_history_crawl_limit must be positive")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_discovery_cap(self) -> SiteHealthSettings:
+        """Discovery must map a superset of what it analyzes.
+
+        A cap below the sample budget would starve analysis of candidates it is
+        entitled to fetch. Its own validator (rather than a branch bolted onto
+        ``_validate_capability_limits``) keeps that method on its downward
+        complexity ratchet.
+        """
+        if self.free_discovery_url_cap < self.free_sample_url_limit:
+            raise ValueError(
+                "free_discovery_url_cap must not be less than free_sample_url_limit"
+            )
         return self
 
     @model_validator(mode="after")
@@ -1872,6 +1910,7 @@ class SiteHealthSettings(BaseSettings):
             "global_concurrency",
             "per_host_concurrency",
             "worker_concurrency",
+            "link_check_concurrency",
         ):
             if getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be positive")

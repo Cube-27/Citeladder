@@ -188,16 +188,16 @@ async def api_exception_handler(request: Request, exc: ApiException) -> JSONResp
     )
 
 
-async def http_exception_shim_handler(
-    request: Request, exc: HTTPException
-) -> JSONResponse:
-    """Compatibility shim: a legacy raw ``HTTPException`` -> the same envelope.
+def _parse_legacy_detail(
+    exc: HTTPException,
+) -> tuple[str | None, str, dict[str, Any] | None, str | dict[str, Any]]:
+    """Split a legacy ``HTTPException.detail`` into envelope parts.
 
-    A string detail maps to the status-derived default code. A coded dict
-    detail (``{"code", "message", ...}``) keeps its code verbatim and lifts
-    any extra keys into ``error.details``; the legacy detail itself (string or
-    dict) is echoed in ``detail`` unchanged so existing readers keep working.
-    Also covers Starlette's own routing errors (unknown path 404, 405).
+    Extracted from ``http_exception_shim_handler`` so the handler reads as
+    "parse, then build the response": all the shape-sniffing a legacy detail
+    needs (string / coded dict / absent) lives here, and the handler stays at
+    one job. Returns ``(code, message, details, detail)`` where ``message`` is
+    always resolved and ``detail`` is always JSON-safe.
     """
     code: str | None = None
     message: str | None = None
@@ -222,6 +222,21 @@ async def http_exception_shim_handler(
         # A missing/non-text legacy detail (e.g. None) becomes the human
         # message so ``detail`` is always present and JSON-safe.
         detail = message
+    return code, message, details, detail
+
+
+async def http_exception_shim_handler(
+    request: Request, exc: HTTPException
+) -> JSONResponse:
+    """Compatibility shim: a legacy raw ``HTTPException`` -> the same envelope.
+
+    A string detail maps to the status-derived default code. A coded dict
+    detail (``{"code", "message", ...}``) keeps its code verbatim and lifts
+    any extra keys into ``error.details``; the legacy detail itself (string or
+    dict) is echoed in ``detail`` unchanged so existing readers keep working.
+    Also covers Starlette's own routing errors (unknown path 404, 405).
+    """
+    code, message, details, detail = _parse_legacy_detail(exc)
     return JSONResponse(
         status_code=exc.status_code,
         content=error_envelope(
@@ -308,7 +323,16 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     request_id = request_id_for(request)
     logger.exception(
         "unhandled_api_exception",
-        extra={"method": request.method, "path": request.url.path},
+        # ``request_id`` is logged EXPLICITLY rather than left to the structlog
+        # pipeline: that enrichment reads the correlation contextvar, which
+        # ``request_id_for`` notes may already be unwound on this path. Without
+        # it the id handed to the user could appear nowhere in the logs — the
+        # one path where correlation matters most.
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "request_id": request_id,
+        },
     )
     response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -110,9 +110,7 @@ async def test_products_404_and_409_envelopes(client: httpx.AsyncClient) -> None
         f"/api/v1/projects/{project['id']}/products", json=payload
     )
     assert created.status_code == 201
-    dupe = await client.post(
-        f"/api/v1/projects/{project['id']}/products", json=payload
-    )
+    dupe = await client.post(f"/api/v1/projects/{project['id']}/products", json=payload)
     assert dupe.status_code == 409
     dupe_body = dupe.json()
     assert isinstance(dupe_body["detail"], str)
@@ -178,9 +176,7 @@ async def test_site_health_coded_422_envelope(client: httpx.AsyncClient) -> None
     await _register(client, "env-site@example.com")
     project = await _project(client, "Envelope Site")
     # A project without a website_url fails planning with a coded 422.
-    resp = await client.post(
-        "/api/v1/site-crawls", json={"project_id": project["id"]}
-    )
+    resp = await client.post("/api/v1/site-crawls", json={"project_id": project["id"]})
     assert resp.status_code == 422
     body = resp.json()
     assert body["detail"]["code"] == "invalid_root"  # legacy dict preserved

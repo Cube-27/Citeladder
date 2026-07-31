@@ -67,7 +67,9 @@ describe('diffContract', () => {
   it('passes when declared fields match the component properties exactly', () => {
     const auditKeys = declaredKeysFor('auditSchema');
     const properties = Object.fromEntries((auditKeys?.declared ?? []).map((k) => [k, {}]));
-    const result = diffContract(specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }));
+    const result = diffContract(
+      specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }),
+    );
     expect(result.failures).toEqual([]);
     expect(result.warnings).toEqual([]);
     expect(result.drifts).toEqual([]);

@@ -65,13 +65,21 @@ describe('auth + workspace contract', () => {
   it('strips an additive key on the auth wrapper (tolerant-on-unknown, ERR-5)', () => {
     // Additive backend fields must never break the UI — they are stripped
     // from the parsed output, so a leaked key never enters app state either.
-    const parsed = strictValidate(authResponseSchema, { user: sessionUser, token: 'leaked' }, 'auth');
+    const parsed = strictValidate(
+      authResponseSchema,
+      { user: sessionUser, token: 'leaked' },
+      'auth',
+    );
     expect(parsed.user.email).toBe('user@example.com');
     expect('token' in parsed).toBe(false);
   });
 
   it('strips an additive key on a SessionUser (tolerant-on-unknown)', () => {
-    const parsed = strictValidate(sessionUserSchema, { ...sessionUser, password_hash: 'x' }, 'user');
+    const parsed = strictValidate(
+      sessionUserSchema,
+      { ...sessionUser, password_hash: 'x' },
+      'user',
+    );
     expect(parsed.email).toBe('user@example.com');
     expect('password_hash' in parsed).toBe(false);
   });
@@ -156,7 +164,11 @@ describe('contract schemas', () => {
     };
     expect(strictValidate(providerConnectionSchema, base, 'conn').active).toBe(true);
     // Invariant 6 holds in the parsed output: a secret never enters app state.
-    const parsed = strictValidate(providerConnectionSchema, { ...base, api_key: 'sk-test-fake' }, 'conn');
+    const parsed = strictValidate(
+      providerConnectionSchema,
+      { ...base, api_key: 'sk-test-fake' },
+      'conn',
+    );
     expect('api_key' in parsed).toBe(false);
   });
 

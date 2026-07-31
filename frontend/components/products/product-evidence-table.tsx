@@ -88,9 +88,7 @@ export function ProductEvidenceTable({
     queryKey: queryKeys.runs.list({ project_id: product.project_id }),
     queryFn: ({ signal }) => runsApi.listAudits({ project_id: product.project_id }, { signal }),
   });
-  const hasCompletedRun = (auditsQuery.data ?? []).some((audit) =>
-    isDashboardStatus(audit.status),
-  );
+  const hasCompletedRun = (auditsQuery.data ?? []).some((audit) => isDashboardStatus(audit.status));
 
   const items = evidenceQuery.data?.items ?? [];
   const truncated = evidenceQuery.data?.truncated ?? false;

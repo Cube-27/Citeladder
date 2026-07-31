@@ -212,8 +212,7 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   const nextCursor = listQuery.data?.next_cursor ?? null;
   // First page of the triage queue only: the top-priority row is featured.
   // (useCursorStack yields `undefined` on the empty stack, never null.)
-  const featuredId =
-    statusFilter === 'active' && !pager.cursor ? (rows[0]?.id ?? null) : null;
+  const featuredId = statusFilter === 'active' && !pager.cursor ? (rows[0]?.id ?? null) : null;
   const featuredQuery = useQuery({
     ...opportunitiesQueries.detail(featuredId ?? ''),
     enabled: featuredId !== null,

@@ -827,10 +827,14 @@ async def seed() -> None:
     await worker3.run_until_idle()
     logger.info("Completed site health analysis crawl %s", crawl2_id)
 
+    # The password is deliberately NOT logged (CodeQL: clear-text logging of
+    # sensitive information). It is a fixed dev-seed constant defined at the top
+    # of this module, so anyone who can run the seeder can already read it —
+    # writing it into log output only risks it leaking into captured CI logs.
     logger.info(
-        "Seed complete. Demo login: %s / %s (workspace=%s, agency_workspace=%s)",
+        "Seed complete. Demo login: %s / see DEMO_PASSWORD in "
+        "scripts/seed_dev_data.py (workspace=%s, agency_workspace=%s)",
         DEMO_EMAIL,
-        DEMO_PASSWORD,
         workspace_id,
         agency_workspace_id,
     )

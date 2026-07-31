@@ -36,7 +36,15 @@ export const API_RETRY_BACKOFF_MS = 150;
  * the live backend only as a last resort, so its origin and timeout are
  * tunable here rather than inline in the guard (invariant 1).
  */
-export const CONTRACT_BACKEND_ORIGIN = 'http://localhost:8000';
+/**
+ * Overridable via `CONTRACT_BACKEND_ORIGIN` so a non-default dev setup or a CI
+ * job can point the guard at its own backend without editing code. The
+ * localhost default keeps the common case zero-config. Read from `process.env`
+ * directly (not `NEXT_PUBLIC_*`): this is a build-time/CLI tool that never runs
+ * in the browser, so the value must not be inlined into the client bundle.
+ */
+export const CONTRACT_BACKEND_ORIGIN =
+  process.env.CONTRACT_BACKEND_ORIGIN?.trim() || 'http://localhost:8000';
 export const CONTRACT_LIVE_FETCH_TIMEOUT_MS = 2_000;
 export const CONTRACT_CODEGEN_TIMEOUT_MS = 120_000;
 

@@ -117,9 +117,7 @@ describe('ProductDeleteDialog audit-reference guard (D4)', () => {
     mswServer.use(http.get(REFERENCES_URL, () => new HttpResponse(null, { status: 404 })));
     renderDialog();
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled());
     await screen.findByText('AC-VB500');
     expect(screen.queryByText(/frozen into/)).not.toBeInTheDocument();
   });

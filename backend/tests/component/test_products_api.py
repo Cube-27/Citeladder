@@ -211,10 +211,7 @@ async def test_product_import_summary_reports_missing_sku_rows(
     await _register(client, "prod-import-skips@example.com")
     project = await _project(client)
     csv_text = (
-        "sku,name\n"
-        "VC-500,VoltCity 500\n"
-        ",No SKU row\n"
-        "SF-200W,SolarFold Panel 200W\n"
+        "sku,name\nVC-500,VoltCity 500\n,No SKU row\nSF-200W,SolarFold Panel 200W\n"
     )
     resp = await client.post(
         f"/api/v1/projects/{project['id']}/products/import",
@@ -369,7 +366,8 @@ async def test_product_audit_references_delete_guard(
     url = f"/api/v1/projects/{seed.project_id}/products"
 
     referenced = await client.post(
-        url, json=_product_payload(sku="REF-1", name="Frozen Into Audits"),
+        url,
+        json=_product_payload(sku="REF-1", name="Frozen Into Audits"),
         headers=headers,
     )
     assert referenced.status_code == 201
@@ -410,7 +408,8 @@ async def test_product_audit_references_delete_guard(
 
     # A product created AFTER the audit is not part of its frozen catalog.
     unreferenced = await client.post(
-        url, json=_product_payload(sku="REF-2", name="Added After The Audit"),
+        url,
+        json=_product_payload(sku="REF-2", name="Added After The Audit"),
         headers=headers,
     )
     assert unreferenced.status_code == 201

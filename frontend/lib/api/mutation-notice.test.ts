@@ -73,8 +73,8 @@ describe('isTransientMutationError', () => {
     expect(isTransientMutationError(new ApiError('x', 400, '{}'))).toBe(false);
     expect(isTransientMutationError(new ApiError('x', 503, '{}'))).toBe(true);
     expect(isTransientMutationError(new Error('offline'))).toBe(true);
-    expect(isTransientMutationError(new ApiError('x', 503, '', undefined, { retryable: false }))).toBe(
-      false,
-    );
+    expect(
+      isTransientMutationError(new ApiError('x', 503, '', undefined, { retryable: false })),
+    ).toBe(false);
   });
 });

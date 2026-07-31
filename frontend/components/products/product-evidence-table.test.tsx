@@ -239,7 +239,9 @@ describe('ProductEvidenceTable kind sub-tabs', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText('No mentions of this product yet — they appear here once a run completes.'),
+        screen.getByText(
+          'No mentions of this product yet — they appear here once a run completes.',
+        ),
       ).toBeInTheDocument(),
     );
     expect(screen.queryByText(/Completed runs recorded no mentions/)).not.toBeInTheDocument();
@@ -256,9 +258,7 @@ describe('ProductEvidenceTable kind sub-tabs', () => {
     await waitFor(() =>
       expect(screen.getByText(/Completed runs recorded no mentions/)).toBeInTheDocument(),
     );
-    expect(
-      screen.queryByText(/they appear here once a run completes/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/they appear here once a run completes/)).not.toBeInTheDocument();
   });
 
   it('sends engine + surface + limit on the evidence request', async () => {

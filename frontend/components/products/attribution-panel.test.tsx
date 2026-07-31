@@ -630,10 +630,7 @@ describe('AttributionPanel recompute', () => {
     useSnapshot(makeSnapshot());
     mswServer.use(
       http.post(RECOMPUTE_URL, () =>
-        HttpResponse.json(
-          { detail: 'no completed sync window is available' },
-          { status: 422 },
-        ),
+        HttpResponse.json({ detail: 'no completed sync window is available' }, { status: 422 }),
       ),
     );
     const user = userEvent.setup();
