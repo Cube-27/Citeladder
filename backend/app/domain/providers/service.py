@@ -257,6 +257,11 @@ async def run_connection_test(
     neutral, brand-free probe prompt. Records an append-only
     ``ProviderConnectionTest`` row and denormalizes the outcome onto the
     connection. The key is never logged or persisted (invariant 6).
+
+    The probe request carries its OWN config-owned policy
+    (``PROVIDER_TEST_RETRIEVAL_ENABLED`` / ``PROVIDER_TEST_MAX_OUTPUT_TOKENS`` /
+    ``PROVIDER_TEST_TIMEOUT_SECONDS``): retrieval OFF so a connectivity test
+    never performs a billable grounded search, and a tiny output cap.
     """
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
@@ -300,6 +305,14 @@ async def run_connection_test(
                 system_instruction="",
                 model=model,
                 timeout_seconds=provider_catalog_settings.test_timeout_seconds,
+                # A connectivity probe is a LIVENESS check, not a measurement:
+                # retrieval is disabled so testing a key never triggers (or
+                # pays for) a billable grounded search, and the cap is the tiny
+                # probe cap — both config-owned (invariant 1), never the
+                # measurement caps. No reasoning pin: the probe carries no
+                # measurement policy, so it must not invent one.
+                retrieval_enabled=provider_catalog_settings.test_retrieval_enabled,
+                max_output_tokens=provider_catalog_settings.test_max_output_tokens,
             )
         )
         latency_ms = response.latency_ms

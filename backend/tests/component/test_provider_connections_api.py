@@ -12,12 +12,14 @@ Covers the v2 acceptance:
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 import httpx
 import pytest
 
+from app.core.config.provider_catalog import PROBE_PROMPT, provider_catalog_settings
 from app.core.security import decrypt_secret
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -294,6 +296,66 @@ async def test_test_endpoint_returns_status_success(
     assert body["transport_provider"] == "openai"
     assert body["logical_engine"] == "chatgpt"
     _assert_no_secret(body)
+
+
+@pytest.mark.asyncio
+async def test_test_endpoint_probe_is_a_liveness_check_not_a_measurement(
+    client: httpx.AsyncClient, monkeypatch
+) -> None:
+    """The ``/test`` probe never buys a grounded search and stays tiny.
+
+    A connectivity probe proves the key reaches the provider. It must not attach
+    the billable web-search tool and must cap output at the config-owned probe
+    cap (invariant 1 — no inline caps), which is independent of the measurement
+    caps a real audit freezes.
+    """
+    await _register(client, "prov8probe@example.com")
+    created = await client.post(
+        "/api/v1/provider-connections", json=_connection_payload()
+    )
+    conn_id = created.json()["id"]
+
+    from app.connectors.answer_engines import openai as openai_mod
+
+    sent: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "resp-probe",
+                "object": "response",
+                "status": "completed",
+                "model": "gpt-5.4",
+                "output": [
+                    {
+                        "type": "message",
+                        "id": "m",
+                        "content": [{"type": "output_text", "text": "ok"}],
+                    }
+                ],
+                "usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+            },
+        )
+
+    # Patch the pooled-client accessor — see the note in the success-path test.
+    mock_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(openai_mod, "shared_client", lambda: mock_client)
+
+    resp = await client.post(f"/api/v1/provider-connections/{conn_id}/test")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+    assert len(sent) == 1
+    body = sent[0]
+    # Retrieval off -> the built-in web-search tool is never attached.
+    assert "tools" not in body
+    assert body["max_output_tokens"] == (
+        provider_catalog_settings.test_max_output_tokens
+    )
+    assert body["input"]
+    assert PROBE_PROMPT in json.dumps(body["input"])
 
 
 @pytest.mark.asyncio

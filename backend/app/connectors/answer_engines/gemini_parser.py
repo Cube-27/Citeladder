@@ -354,8 +354,5 @@ def parse_interaction(
         finish_reason=map_gemini_finish_reason(raw_finish_reason),
         raw_finish_reason=raw_finish_reason,
         normalized_usage=usage,
-        # Legacy untyped bag, populated from the SAME normalized counters for
-        # the readers outside this layer not yet migrated to the typed usage.
-        usage=normalized_usage_dict(usage),
         latency_ms=latency_ms,
     )

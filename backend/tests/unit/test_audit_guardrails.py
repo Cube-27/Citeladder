@@ -19,12 +19,17 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineResponse,
 )
 from app.connectors.answer_engines.errors import ProviderError
-from app.core.config.audits import audit_settings
+from app.core.config.audits import (
+    MEASUREMENT_MODE_PULSE,
+    audit_settings,
+    measurement_policy_for_mode,
+)
 from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
     ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
     TRANSPORT_GOOGLE,
+    route_policy,
 )
 from app.workers import audit_worker
 
@@ -174,3 +179,76 @@ async def test_call_records_one_attempt_per_call_then_succeeds(
     assert attempts[0].error is not None
     assert attempts[0].error.error_code == ERROR_RATE_LIMIT
     assert attempts[-1].response is not None
+
+
+def test_build_request_passes_every_frozen_policy_field_explicitly() -> None:
+    """The adapter request is driven by the frozen policy, not by defaults.
+
+    The contract defaults exist so pre-T3 construction sites keep compiling;
+    relying on them here would silently un-freeze the planned policy (invariant
+    9), so each field is asserted against the policy value.
+    """
+    policy = measurement_policy_for_mode(MEASUREMENT_MODE_PULSE)
+    request = audit_worker._build_request(
+        prompt_text="cheap baby clothes",
+        system_instruction="Answer for Australia.",
+        transport_model="gemini-3-pro",
+        logical_engine=ENGINE_GEMINI,
+        transport_provider=TRANSPORT_GOOGLE,
+        policy=policy,
+    )
+
+    assert request.timeout_seconds == policy.timeout_seconds
+    assert request.retrieval_enabled == policy.retrieval_enabled
+    assert request.max_output_tokens == policy.max_output_tokens
+    assert request.reasoning_effort == (
+        route_policy(ENGINE_GEMINI, TRANSPORT_GOOGLE).reasoning_effort
+    )
+    # A pulse run freezes retrieval OFF, so the request never buys a search.
+    assert request.retrieval_enabled is False
+
+
+def test_build_request_snapshot_records_policy_and_omits_the_brand_list() -> None:
+    """The snapshot reproduces the call; it never carries a secret or the brand.
+
+    Invariant 6: the API key and the brand/competitor list are excluded from
+    every snapshot.
+    """
+    policy = measurement_policy_for_mode(MEASUREMENT_MODE_PULSE)
+    request = audit_worker._build_request(
+        prompt_text="cheap baby clothes",
+        system_instruction="Answer for Australia. " + policy.answer_instruction,
+        transport_model="gemini-3-pro",
+        logical_engine=ENGINE_GEMINI,
+        transport_provider=TRANSPORT_GOOGLE,
+        policy=policy,
+    )
+    snapshot = audit_worker._build_request_snapshot(
+        logical_engine=ENGINE_GEMINI,
+        transport_provider=TRANSPORT_GOOGLE,
+        transport_model="gemini-3-pro",
+        request=request,
+        configuration={
+            "measurement_mode": MEASUREMENT_MODE_PULSE,
+            "benchmark_mode": "solo_brand",
+            "country_code": "AU",
+            "language_code": "en",
+            # A planner-frozen configuration also carries the brand identity;
+            # it must NOT be copied into the request snapshot.
+            "brand_names": ["Acme"],
+        },
+        answer_instruction=policy.answer_instruction,
+    )
+
+    assert snapshot["measurement_mode"] == MEASUREMENT_MODE_PULSE
+    assert snapshot["retrieval_enabled"] == policy.retrieval_enabled
+    assert snapshot["max_output_tokens"] == policy.max_output_tokens
+    assert snapshot["timeout_seconds"] == policy.timeout_seconds
+    assert snapshot["answer_instruction"] == policy.answer_instruction
+    assert snapshot["reasoning_effort"] == (
+        route_policy(ENGINE_GEMINI, TRANSPORT_GOOGLE).reasoning_effort
+    )
+    assert snapshot["stateless"] is True
+    assert "brand_names" not in snapshot
+    assert "api_key" not in snapshot
+    assert "Acme" not in str(snapshot)

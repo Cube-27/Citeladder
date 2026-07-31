@@ -105,17 +105,15 @@ class AnswerEngineResponse:
     search_events: tuple[SearchEventResult, ...]
     citations: tuple[CitationResult, ...]
     provider_metadata: dict = field(default_factory=dict)
-    # Legacy untyped usage bag, now DERIVED from ``normalized_usage`` by every
-    # parser (single source of truth — the parsers no longer compute it
-    # separately). It survives only for the one remaining reader outside the
-    # adapter layer, ``app/workers/audit_worker.py`` (persists it onto
-    # ``RawResponseArtifact.usage``, which the cost projection then reads); the
-    # field goes away with that reader. Prefer ``normalized_usage``.
-    usage: dict = field(default_factory=dict)
     # Canonical finish reason (never null) plus the raw provider token it was
     # mapped from. Only the canonical value is used by gates.
     finish_reason: FinishReason = FinishReason.UNKNOWN
     raw_finish_reason: str = ""
-    # Typed, all-nullable usage counters (unknown never becomes zero).
+    # Typed, all-nullable usage counters and the ONLY usage contract on this
+    # response (unknown never becomes zero). The legacy untyped ``usage`` bag is
+    # gone: persistence serializes THIS through ``normalized_usage_dict``, so
+    # there is exactly one in-memory source of truth. ``RawResponseArtifact.usage``
+    # remains the persisted JSON column (it still holds pre-T3 rows, which the
+    # cost projection reads through its legacy-key fallbacks).
     normalized_usage: NormalizedUsage = field(default_factory=NormalizedUsage)
     latency_ms: int = 0

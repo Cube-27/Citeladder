@@ -9,9 +9,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.config.audits import (
+    MEASUREMENT_MODE_BENCHMARK,
+    MEASUREMENT_MODE_PULSE,
+)
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.projects import MAX_REPETITIONS, MIN_REPETITIONS
 
@@ -32,6 +37,14 @@ class AuditCreate(BaseModel):
         default=None, ge=MIN_REPETITIONS, le=MAX_REPETITIONS
     )
     benchmark_mode: BenchmarkModeStr | None = None
+    # Measurement mode — an axis INDEPENDENT of ``benchmark_mode`` (prompt
+    # framing): it selects the frozen route/output policy (retrieval, output
+    # cap, timeout, repetitions, answer instruction). Defaults to ``benchmark``
+    # so an explicit manual run keeps its full-run shape; a later PR3
+    # schedule/trial caller passes its own mode explicitly.
+    measurement_mode: Literal[
+        MEASUREMENT_MODE_PULSE, MEASUREMENT_MODE_BENCHMARK
+    ] = MEASUREMENT_MODE_BENCHMARK
     # Optional explicit 64-bit seed (decimal string). Generated + stored when
     # omitted so the slot shuffle is reproducible (invariant 9).
     random_seed: str | None = None

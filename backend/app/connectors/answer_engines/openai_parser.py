@@ -391,8 +391,5 @@ def parse_openai_response(
         finish_reason=map_openai_finish_reason(payload),
         raw_finish_reason=raw_finish_reason,
         normalized_usage=usage,
-        # Legacy untyped bag, populated from the SAME normalized counters for
-        # the readers outside this layer not yet migrated to the typed usage.
-        usage=normalized_usage_dict(usage),
         latency_ms=latency_ms,
     )

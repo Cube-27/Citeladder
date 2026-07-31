@@ -23,6 +23,8 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     AnswerEngineResponse,
     CitationResult,
+    FinishReason,
+    NormalizedUsage,
     SearchEventResult,
 )
 from app.connectors.answer_engines.errors import ProviderError
@@ -31,6 +33,9 @@ from app.core.config.audits import (
     ATTEMPT_STATUS_SUCCEEDED,
     AUDIT_STATUS_CANCELLED,
     AUDIT_STATUS_COMPLETED,
+    MEASUREMENT_MODE_PULSE,
+    MEASUREMENT_POLICY_KEY,
+    PULSE_ANSWER_INSTRUCTION,
     audit_settings,
 )
 from app.core.config.costs import (
@@ -45,6 +50,7 @@ from app.core.config.provider_catalog import (
     ERROR_RATE_LIMIT,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
+    route_policy,
 )
 from app.domain.audits.planner import cancel_audit, create_audit, list_tasks
 from app.models.analysis import MetricSnapshot, ResponseAnalysis
@@ -90,13 +96,15 @@ class _StubAdapter:
                 ),
             ),
             provider_metadata={"query_text_available": True},
-            # The normalized parser shape (what all three live parsers emit).
-            usage={
-                "total_input_tokens": 10,
-                "total_output_tokens": 20,
-                "total_tokens": 30,
-                "web_search_requests": 1,
-            },
+            # The typed usage contract (what all three live parsers emit).
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=10,
+                output_tokens=20,
+                total_tokens=30,
+                web_search_requests=1,
+            ),
+            finish_reason=FinishReason.STOP,
+            raw_finish_reason="end_turn",
             latency_ms=5,
         )
 
@@ -116,6 +124,7 @@ async def _make_audit(
     *,
     prompts: int,
     reps: int,
+    measurement_mode: str | None = None,
 ):
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=prompts)
@@ -128,6 +137,7 @@ async def _make_audit(
             prompt_set_id=seed.prompt_set_id,
             repetitions=reps,
             random_seed="1",
+            measurement_mode=measurement_mode,
         )
         return seed, audit
 
@@ -964,3 +974,116 @@ async def test_opportunities_hook_failure_never_blocks_terminalization(
         refreshed = await session.get(Audit, audit.id)
         assert refreshed is not None
         assert refreshed.status == AUDIT_STATUS_COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_worker_persists_canonical_and_raw_finish_reasons(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+) -> None:
+    """The canonical finish reason lands on BOTH the task and the artifact.
+
+    Gates read only the canonical enum value; the provider's own spelling is
+    kept alongside it for debugging and stays nullable so an absent value is
+    never invented.
+    """
+    _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
+    worker = AuditWorker(session_factory=session_factory, owner="w-finish")
+
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+        assert task.status == ATTEMPT_STATUS_SUCCEEDED
+        assert task.finish_reason == FinishReason.STOP
+        assert task.raw_finish_reason == "end_turn"
+
+        artifact = await session.get(RawResponseArtifact, task.result_artifact_id)
+        assert artifact is not None
+        assert artifact.finish_reason == FinishReason.STOP
+        assert artifact.raw_finish_reason == "end_turn"
+        # The artifact persists the TYPED usage contract (unknown counters stay
+        # absent/null, never a fabricated zero).
+        assert artifact.usage["uncached_input_tokens"] == 10
+        assert artifact.usage["output_tokens"] == 20
+        assert artifact.usage["total_tokens"] == 30
+        assert artifact.usage["cached_input_tokens"] is None
+        assert artifact.usage["reasoning_tokens"] is None
+        assert artifact.usage["provider_cost_microusd"] is None
+
+
+@pytest.mark.asyncio
+async def test_request_snapshot_records_the_frozen_policy_and_no_secret(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+) -> None:
+    """The snapshot reproduces the call from the FROZEN policy (invariants 6, 9).
+
+    Every field the adapter was driven by is recorded, and the BYOK key (and the
+    brand/competitor list) never reaches a snapshot.
+    """
+    _seed, audit = await _make_audit(
+        session_factory, prompts=1, reps=1, measurement_mode=MEASUREMENT_MODE_PULSE
+    )
+    worker = AuditWorker(session_factory=session_factory, owner="w-snapshot")
+
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        frozen = refreshed.configuration[MEASUREMENT_POLICY_KEY]
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+
+    snapshot = task.request_snapshot
+    assert snapshot["measurement_mode"] == MEASUREMENT_MODE_PULSE
+    assert snapshot["stateless"] is True
+    # Driven by the frozen block, NOT by whatever the live settings say now.
+    assert snapshot["retrieval_enabled"] == frozen["retrieval_enabled"]
+    assert snapshot["max_output_tokens"] == frozen["max_output_tokens"]
+    assert snapshot["timeout_seconds"] == frozen["timeout_seconds"]
+    assert snapshot["answer_instruction"] == frozen["answer_instruction"]
+    assert snapshot["answer_instruction"] == PULSE_ANSWER_INSTRUCTION
+    assert snapshot["reasoning_effort"] == (
+        route_policy(task.logical_engine, task.transport_provider).reasoning_effort
+    )
+    # Invariant 6: no credential, in any field, at any depth.
+    assert "api_key" not in snapshot
+    assert "secret-test-key" not in str(snapshot)
+
+
+@pytest.mark.asyncio
+async def test_frozen_policy_survives_a_live_settings_change(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A settings change after planning never leaks into a running audit.
+
+    Invariant 9: the worker executes the policy frozen at plan time, so the
+    snapshot keeps the planned cap/timeout even though the live values moved.
+    """
+    _seed, audit = await _make_audit(
+        session_factory, prompts=1, reps=1, measurement_mode=MEASUREMENT_MODE_PULSE
+    )
+    planned_cap = audit_settings.pulse_max_output_tokens
+    planned_timeout = audit_settings.pulse_timeout_seconds
+    monkeypatch.setattr(audit_settings, "pulse_max_output_tokens", 1)
+    monkeypatch.setattr(audit_settings, "pulse_timeout_seconds", 999.0)
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-frozen")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+    assert task.request_snapshot["max_output_tokens"] == planned_cap
+    assert task.request_snapshot["timeout_seconds"] == planned_timeout

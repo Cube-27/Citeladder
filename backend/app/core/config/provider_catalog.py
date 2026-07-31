@@ -248,6 +248,15 @@ class ProviderCatalogSettings(BaseSettings):
     request_timeout_seconds: float = 60.0
     # Shorter timeout for the lightweight connectivity probe.
     test_timeout_seconds: float = 20.0
+    # --- Connectivity-probe request policy (invariant 1) -----------------
+    # The ``/test`` probe is a LIVENESS check, not a measurement: it proves the
+    # credential + endpoint + model answer at all. Retrieval is DISABLED so a
+    # connectivity test never triggers (and never pays for) a billable grounded
+    # search, and the output cap is a handful of tokens because the expected
+    # answer is the single word in ``PROBE_PROMPT``. Neither value is ever read
+    # from the measurement caps above — a probe must not scale with them.
+    test_retrieval_enabled: bool = False
+    test_max_output_tokens: int = 32
 
 
 provider_catalog_settings = ProviderCatalogSettings()

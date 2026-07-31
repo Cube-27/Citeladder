@@ -33,6 +33,7 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     AnswerEngineResponse,
     CitationResult,
+    NormalizedUsage,
     SearchEventResult,
 )
 from app.core.config.audits import audit_settings
@@ -87,7 +88,9 @@ class _ProductStubAdapter:
                 ),
             ),
             provider_metadata={},
-            usage={"input_tokens": 10, "output_tokens": 20},
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=10, output_tokens=20, total_tokens=30
+            ),
             latency_ms=5,
         )
 

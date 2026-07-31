@@ -54,6 +54,8 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     AnswerEngineResponse,
     CitationResult,
+    FinishReason,
+    NormalizedUsage,
     SearchEventResult,
 )
 from app.core.config import settings
@@ -351,7 +353,16 @@ class _SeedStubAdapter:
             search_events=(SearchEventResult(sequence=0, query=prompt),),
             citations=citations,
             provider_metadata={"query_text_available": True},
-            usage={"input_tokens": 12, "output_tokens": 48},
+            # The typed usage contract (what the live parsers emit); the
+            # cache/reasoning splits and provider cost are unknown for a
+            # fixture, so they stay null rather than a fabricated zero.
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=12,
+                output_tokens=48,
+                total_tokens=60,
+                web_search_requests=1,
+            ),
+            finish_reason=FinishReason.STOP,
             latency_ms=850,
         )
 

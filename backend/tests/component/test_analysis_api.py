@@ -27,6 +27,7 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     AnswerEngineResponse,
     CitationResult,
+    NormalizedUsage,
     SearchEventResult,
 )
 from app.core.config.audits import (
@@ -141,7 +142,9 @@ class _StubAdapter:
                 ),
             ),
             provider_metadata={"query_text_available": True},
-            usage={"input_tokens": 10, "output_tokens": 20},
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=10, output_tokens=20, total_tokens=30
+            ),
             latency_ms=5,
         )
 
@@ -444,7 +447,6 @@ class _UsageStubAdapter(_StubAdapter):
                 **dict(response.provider_metadata),
                 "usage": usage,
             },
-            usage=usage,
             latency_ms=response.latency_ms,
         )
 

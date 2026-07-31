@@ -82,6 +82,7 @@ async def create_audit_endpoint(
             prompt_ids=payload.prompt_ids,
             repetitions=payload.repetitions,
             benchmark_mode=payload.benchmark_mode,
+            measurement_mode=payload.measurement_mode,
             random_seed=payload.random_seed,
         )
     except AuditValidationError as exc:

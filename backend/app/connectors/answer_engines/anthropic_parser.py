@@ -195,9 +195,5 @@ def parse_anthropic_message(
         finish_reason=map_anthropic_finish_reason(raw_finish_reason),
         raw_finish_reason=raw_finish_reason,
         normalized_usage=usage,
-        # Legacy untyped bag, now populated from the SAME normalized counters
-        # (single source of truth) for the readers outside this layer that have
-        # not migrated to ``normalized_usage`` yet.
-        usage=normalized_usage_dict(usage),
         latency_ms=latency_ms,
     )

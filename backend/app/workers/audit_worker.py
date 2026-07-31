@@ -45,6 +45,7 @@ from app.connectors.answer_engines.contracts import (
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
 from app.connectors.answer_engines.http_client import aclose_shared_clients
+from app.connectors.answer_engines.normalization import normalized_usage_dict
 from app.core.config import settings
 from app.core.config.audits import (
     ATTEMPT_STATUS_FAILED,
@@ -65,7 +66,9 @@ from app.core.config.audits import (
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
+    MeasurementModePolicy,
     audit_settings,
+    measurement_policy_from_configuration,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.costs import (
@@ -81,6 +84,7 @@ from app.core.config.provider_catalog import (
     RETRYABLE_ERRORS,
     is_active_transport,
     is_endpoint_approved,
+    route_policy,
 )
 from app.core.config.task_queue import DEFAULT_MAX_DRAIN_BATCHES
 from app.core.database import SessionLocal
@@ -202,13 +206,16 @@ def _build_request_snapshot(
     transport_model: str,
     request: AnswerEngineRequest,
     configuration: dict,
+    answer_instruction: str,
 ) -> dict:
     """What determined the request. Proves statelessness; never the key/brand.
 
     Records the visible prompt, the resolved model + provenance triple, the
-    neutral system instruction, and locale — enough to reproduce the call. The
+    neutral system instruction, locale, and the FROZEN measurement policy the
+    call executed under (output cap, timeout, retrieval, reasoning pin, and the
+    answer-shaping addendum) — enough to reproduce the call exactly. The
     brand/competitor list and the API key are intentionally excluded
-    (invariant 6).
+    (invariant 6): no credential ever reaches a snapshot.
     """
     return {
         "logical_engine": logical_engine,
@@ -219,9 +226,44 @@ def _build_request_snapshot(
         "system_instruction": request.system_instruction,
         "stateless": True,
         "benchmark_mode": configuration.get("benchmark_mode", ""),
+        "measurement_mode": configuration.get("measurement_mode", ""),
         "country_code": configuration.get("country_code", ""),
         "language_code": configuration.get("language_code", ""),
+        "retrieval_enabled": request.retrieval_enabled,
+        "max_output_tokens": request.max_output_tokens,
+        "timeout_seconds": request.timeout_seconds,
+        "reasoning_effort": request.reasoning_effort,
+        "answer_instruction": answer_instruction,
     }
+
+
+def _build_request(
+    *,
+    prompt_text: str,
+    system_instruction: str,
+    transport_model: str,
+    logical_engine: str,
+    transport_provider: str,
+    policy: MeasurementModePolicy,
+) -> AnswerEngineRequest:
+    """Build the adapter request from the FROZEN policy only (invariant 9).
+
+    Every policy field is passed EXPLICITLY. The contract defaults exist only so
+    pre-T3 construction sites keep compiling — relying on them here would
+    silently un-freeze the planned policy (a benchmark default cap on a pulse
+    run, retrieval on a run that froze it off).
+    """
+    return AnswerEngineRequest(
+        prompt=prompt_text,
+        system_instruction=system_instruction,
+        model=transport_model,
+        timeout_seconds=policy.timeout_seconds,
+        retrieval_enabled=policy.retrieval_enabled,
+        max_output_tokens=policy.max_output_tokens,
+        reasoning_effort=route_policy(
+            logical_engine, transport_provider
+        ).reasoning_effort,
+    )
 
 
 def _serialize_search_events(response: AnswerEngineResponse) -> list[dict]:
@@ -265,6 +307,76 @@ def _serialize_citations(response: AnswerEngineResponse) -> list[dict]:
             }
         )
     return deduped
+
+
+def _raw_finish_reason(response: AnswerEngineResponse) -> str | None:
+    """The provider's own finish token, or NULL when it sent none.
+
+    Never a fabricated spelling: an absent/empty provider token stays null so a
+    reader can tell "the provider said nothing" apart from a real value. The
+    canonical mapped enum lives alongside it and is what gates read.
+    """
+    return response.raw_finish_reason or None
+
+
+def _build_artifact(
+    *,
+    audit_id: uuid.UUID,
+    task_id: uuid.UUID,
+    response: AnswerEngineResponse,
+    search_events: list[dict],
+    citations: list[dict],
+) -> RawResponseArtifact:
+    """The immutable evidence row for one provider call (invariant 3).
+
+    Written once and never mutated. Usage is serialized from the TYPED contract,
+    so an unknown counter persists as null rather than a measured zero.
+    """
+    return RawResponseArtifact(
+        audit_id=audit_id,
+        task_id=task_id,
+        logical_engine=response.logical_engine,
+        transport_provider=response.transport_provider,
+        transport_model=response.transport_model,
+        answer_text=response.answer_text,
+        search_used=response.search_used,
+        search_events=search_events,
+        citations=citations,
+        provider_metadata=dict(response.provider_metadata),
+        usage=normalized_usage_dict(response.normalized_usage),
+        finish_reason=response.finish_reason,
+        raw_finish_reason=_raw_finish_reason(response),
+        latency_ms=response.latency_ms,
+    )
+
+
+def _apply_response_to_task(
+    task: AuditTask,
+    *,
+    response: AnswerEngineResponse,
+    request_snapshot: dict,
+    search_events: list[dict],
+    citations: list[dict],
+    artifact_id: uuid.UUID,
+) -> None:
+    """Project the just-persisted artifact onto the queue row (invariant 4).
+
+    A convenience denormalization pointing at ``artifact_id`` as its source; the
+    canonical finish reason is copied verbatim because gates read ONLY that
+    value, never the provider's raw token.
+    """
+    task.answer_text = response.answer_text
+    task.search_used = response.search_used
+    task.search_events = search_events
+    task.citations = citations
+    task.result_artifact_id = artifact_id
+    task.request_snapshot = request_snapshot
+    task.provider_metadata = dict(response.provider_metadata)
+    task.finish_reason = response.finish_reason
+    task.raw_finish_reason = _raw_finish_reason(response)
+    task.latency_ms = response.latency_ms
+    task.error_code = ""
+    task.error_detail = ""
 
 
 def _warn_if_pool_undersized() -> None:
@@ -611,6 +723,10 @@ class AuditWorker(DrainableWorkerMixin):
                     ProviderConnection, snapshot.connection_id
                 )
             configuration = dict(audit.configuration or {})
+            # The FROZEN measurement policy this run was planned with. Never the
+            # live settings: an env change must not alter an in-flight run
+            # (invariant 9).
+            policy = measurement_policy_from_configuration(configuration)
             system_instruction = audit.system_instruction or ""
             logical_engine = task.logical_engine
             transport_provider = task.transport_provider
@@ -663,11 +779,13 @@ class AuditWorker(DrainableWorkerMixin):
 
         # Resolve the BYOK key at execution time. Never logged/persisted.
         api_key = decrypt_secret(connection.api_key_encrypted)
-        request = AnswerEngineRequest(
-            prompt=prompt_text,
+        request = _build_request(
+            prompt_text=prompt_text,
             system_instruction=system_instruction,
-            model=transport_model,
-            timeout_seconds=audit_settings.request_timeout_seconds,
+            transport_model=transport_model,
+            logical_engine=logical_engine,
+            transport_provider=transport_provider,
+            policy=policy,
         )
         request_snapshot = _build_request_snapshot(
             logical_engine=logical_engine,
@@ -675,6 +793,7 @@ class AuditWorker(DrainableWorkerMixin):
             transport_model=transport_model,
             request=request,
             configuration=configuration,
+            answer_instruction=policy.answer_instruction,
         )
 
         try:
@@ -887,34 +1006,24 @@ class AuditWorker(DrainableWorkerMixin):
                 return
             task, audit = locked
             # Immutable raw artifact (invariant 3): written once, never mutated.
-            artifact = RawResponseArtifact(
+            artifact = _build_artifact(
                 audit_id=audit_id,
                 task_id=task_id,
-                logical_engine=response.logical_engine,
-                transport_provider=response.transport_provider,
-                transport_model=response.transport_model,
-                answer_text=response.answer_text,
-                search_used=response.search_used,
+                response=response,
                 search_events=search_events,
                 citations=citations,
-                provider_metadata=dict(response.provider_metadata),
-                usage=dict(response.usage),
-                latency_ms=response.latency_ms,
             )
             session.add(artifact)
             await session.flush()
             artifact_id = artifact.id
-
-            task.answer_text = response.answer_text
-            task.search_used = response.search_used
-            task.search_events = search_events
-            task.citations = citations
-            task.result_artifact_id = artifact_id
-            task.request_snapshot = request_snapshot
-            task.provider_metadata = dict(response.provider_metadata)
-            task.latency_ms = response.latency_ms
-            task.error_code = ""
-            task.error_detail = ""
+            _apply_response_to_task(
+                task,
+                response=response,
+                request_snapshot=request_snapshot,
+                search_events=search_events,
+                citations=citations,
+                artifact_id=artifact_id,
+            )
 
             # Score on persist (invariants 4/9): the deterministic analyzer runs
             # against the just-persisted answer + citations (no provider call)

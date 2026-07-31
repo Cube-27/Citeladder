@@ -96,6 +96,10 @@ AUDIT_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
 # catalogue (``config/costs.py``) now; the route/output policy, planner
 # freezing, and ``Audit.measurement_mode`` column arrive with T3 and must use
 # these same constants (invariant 2 — never re-literal the mode strings).
+# What initiated a run. ``manual`` is the only trigger PR1 produces (there is
+# no schedule caller yet); a later schedule/trial caller passes its own token.
+AUDIT_TRIGGER_MANUAL: Final = "manual"
+
 MEASUREMENT_MODE_PULSE: Final = "pulse"
 MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"
 MEASUREMENT_MODES: Final[frozenset[str]] = frozenset(
@@ -337,6 +341,51 @@ def measurement_policy_for_mode(mode: str) -> MeasurementModePolicy:
     raise ValueError(
         f"unknown measurement mode {mode!r}; expected one of "
         f"{sorted(MEASUREMENT_MODES)}"
+    )
+
+
+# Key of the frozen measurement-policy block inside ``Audit.configuration``.
+# One owner for the spelling: the planner writes it through
+# ``frozen_policy_configuration`` and the worker reads it back through
+# ``measurement_policy_from_configuration`` (invariant 2).
+MEASUREMENT_POLICY_KEY: Final = "measurement_policy"
+
+
+def frozen_policy_configuration(policy: MeasurementModePolicy) -> dict:
+    """Serialize a resolved policy for ``Audit.configuration`` (invariant 9).
+
+    This is the FROZEN copy the worker executes from; nothing re-reads the live
+    settings once it is written.
+    """
+    return {
+        "retrieval_enabled": policy.retrieval_enabled,
+        "max_output_tokens": policy.max_output_tokens,
+        "timeout_seconds": policy.timeout_seconds,
+        "repetitions": policy.repetitions,
+        "answer_instruction": policy.answer_instruction,
+    }
+
+
+def measurement_policy_from_configuration(
+    configuration: dict,
+) -> MeasurementModePolicy:
+    """Read the frozen policy back out of an audit's ``configuration``.
+
+    Pre-T3 audits carry no frozen block at all; for those (and only those) the
+    mode defaults are the closest available approximation, resolved from the
+    frozen ``measurement_mode`` (``benchmark`` when even that is absent). Every
+    audit planned from T3 onward returns exactly what the planner froze.
+    """
+    frozen = configuration.get(MEASUREMENT_POLICY_KEY)
+    if not frozen:
+        mode = str(configuration.get("measurement_mode") or MEASUREMENT_MODE_BENCHMARK)
+        return measurement_policy_for_mode(mode)
+    return MeasurementModePolicy(
+        retrieval_enabled=bool(frozen["retrieval_enabled"]),
+        max_output_tokens=int(frozen["max_output_tokens"]),
+        timeout_seconds=float(frozen["timeout_seconds"]),
+        repetitions=int(frozen["repetitions"]),
+        answer_instruction=str(frozen["answer_instruction"]),
     )
 
 

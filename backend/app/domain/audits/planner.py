@@ -17,6 +17,7 @@ import hashlib
 import random
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update
@@ -30,12 +31,18 @@ from app.core.config.audits import (
     AUDIT_STATUS_DRAFT,
     AUDIT_STATUS_QUEUED,
     AUDIT_STATUS_VALIDATING,
+    AUDIT_TRIGGER_MANUAL,
     EVENT_AUDIT_CANCELLED,
     EVENT_AUDIT_CREATED,
     EVENT_AUDIT_QUEUED,
+    MEASUREMENT_MODE_BENCHMARK,
+    MEASUREMENT_POLICY_KEY,
     TASK_STATUS_CANCELLED,
     TASK_TERMINAL_STATUSES,
+    MeasurementModePolicy,
     audit_settings,
+    frozen_policy_configuration,
+    measurement_policy_for_mode,
     system_instruction_for_mode,
 )
 from app.core.config.commerce import (
@@ -53,6 +60,7 @@ from app.core.config.provider_catalog import (
     LOGICAL_ENGINES,
     is_endpoint_approved,
     is_route_approved,
+    route_policy,
 )
 from app.domain.abuse.service import reserve_workspace_capacity
 from app.domain.audits.state_events import apply_transition, record_event
@@ -253,6 +261,199 @@ def _resolve_benchmark_mode(value: str | None, project: Project) -> str:
     return mode
 
 
+@dataclass(frozen=True, slots=True)
+class _FrozenPlan:
+    """Everything the planner decided BEFORE it touches the audit row.
+
+    ``create_audit`` is an orchestration shell: it consumes this precomputed
+    result instead of branching on policy itself. Every field here is frozen
+    onto the audit and never re-read from live settings afterwards
+    (invariant 9).
+    """
+
+    benchmark_mode: str
+    measurement_mode: str
+    policy: MeasurementModePolicy
+    repetitions: int
+    system_instruction: str
+    route_policies: dict[str, dict]
+
+
+def _resolve_measurement_policy(value: str | None) -> tuple[str, MeasurementModePolicy]:
+    """Resolve + FREEZE the measurement-mode policy exactly once.
+
+    Reads live settings here and nowhere else; the returned policy is what the
+    audit stores and the worker executes. Fails closed on an unknown mode —
+    ``measurement_policy_for_mode`` raises rather than defaulting to a cheaper
+    or costlier shape.
+    """
+    mode = str(value or MEASUREMENT_MODE_BENCHMARK).strip().lower()
+    try:
+        return mode, measurement_policy_for_mode(mode)
+    except ValueError as exc:
+        raise AuditValidationError(f"Unsupported measurement_mode: {mode}") from exc
+
+
+def _compose_system_instruction(
+    *, framing: str, policy: MeasurementModePolicy
+) -> str:
+    """Compose the neutral prompt-framing instruction with the mode's addendum.
+
+    The two axes are INDEPENDENT: ``framing`` comes from ``benchmark_mode``
+    (consumer_like | controlled_localized | forced_grounded) and the addendum
+    from ``measurement_mode``. Neither constrains the other, so any of the six
+    combinations composes. The pulse addendum is an UNMEASURED CANDIDATE (see
+    ``config/audits.PULSE_ANSWER_INSTRUCTION``); benchmark contributes "".
+    Never carries brand/competitor identity (invariant 6).
+    """
+    return " ".join(part for part in (framing, policy.answer_instruction) if part)
+
+
+def _resolve_repetitions(requested: int | None, policy: MeasurementModePolicy) -> int:
+    """Repetitions for the run: an explicit request, else the mode default.
+
+    The mode policy owns the default (pulse 1, benchmark 3) — the project's
+    ``default_repetitions`` is a project-level preference that an explicit
+    request still overrides, and neither may exceed the configured bounds.
+    """
+    reps = int(requested or policy.repetitions)
+    if reps < MIN_REPETITIONS or reps > MAX_REPETITIONS:
+        raise AuditValidationError(
+            f"repetitions must be between {MIN_REPETITIONS} and {MAX_REPETITIONS}"
+        )
+    return reps
+
+
+def _validate_prompt_lengths(prompts: list[Prompt]) -> None:
+    """Reject any prompt longer than the config-owned ceiling (invariant 1)."""
+    limit = audit_settings.max_prompt_chars
+    too_long = [prompt for prompt in prompts if len(prompt.text or "") > limit]
+    if too_long:
+        raise AuditValidationError(
+            f"Prompt(s) exceed the maximum length of {limit} characters"
+        )
+
+
+def _route_policy_snapshot(logical_engine: str, transport_provider: str) -> dict:
+    """The frozen execution-time route policy for one approved route."""
+    policy = route_policy(logical_engine, transport_provider)
+    return {
+        "reasoning_effort": policy.reasoning_effort,
+        "reasoning_pinnable": policy.reasoning_pinnable,
+        "representative_status": policy.representative_status,
+        "batch_enabled": policy.batch_enabled,
+    }
+
+
+def _freeze_plan(
+    *,
+    project: Project,
+    prompts: list[Prompt],
+    routes: dict[str, tuple[ProviderRoute, ProviderConnection]],
+    benchmark_mode: str | None,
+    measurement_mode: str | None,
+    repetitions: int | None,
+) -> _FrozenPlan:
+    """Precompute every policy decision for a run, before any row is written.
+
+    Resolves both mode axes, validates prompt length, resolves repetitions from
+    the frozen mode policy, composes the system instruction, and snapshots the
+    per-route execution policy.
+    """
+    framing_mode = _resolve_benchmark_mode(benchmark_mode, project)
+    mode, policy = _resolve_measurement_policy(measurement_mode)
+    _validate_prompt_lengths(prompts)
+    framing = system_instruction_for_mode(
+        mode=framing_mode,
+        country_code=project.country_code,
+        language_code=project.language_code,
+    )
+    return _FrozenPlan(
+        benchmark_mode=framing_mode,
+        measurement_mode=mode,
+        policy=policy,
+        repetitions=_resolve_repetitions(repetitions, policy),
+        system_instruction=_compose_system_instruction(
+            framing=framing, policy=policy
+        ),
+        route_policies={
+            engine: _route_policy_snapshot(engine, route.transport_provider)
+            for engine, (route, _connection) in routes.items()
+        },
+    )
+
+
+def _frozen_configuration(
+    *,
+    project: Project,
+    plan: _FrozenPlan,
+    routes: dict[str, tuple[ProviderRoute, ProviderConnection]],
+    prompt_rows: list[dict],
+) -> dict:
+    """Assemble the immutable ``Audit.configuration`` snapshot (invariant 9).
+
+    ``engine_routes`` mirrors each ``AuditEngineSnapshot`` and additionally
+    carries that route's frozen execution policy (the snapshot table itself has
+    no policy column, so this mirror is the frozen home for it).
+    """
+    return {
+        **project_scoring_identity(project),
+        # Frozen product catalog (Agentic Commerce): the deterministic
+        # product analyzer scores against this copy, so later catalog edits
+        # never alter the audit (invariant 9).
+        **project_product_identity(project),
+        "trigger": AUDIT_TRIGGER_MANUAL,
+        "benchmark_mode": plan.benchmark_mode,
+        "measurement_mode": plan.measurement_mode,
+        MEASUREMENT_POLICY_KEY: frozen_policy_configuration(plan.policy),
+        "system_instruction": plan.system_instruction,
+        "engines": list(routes.keys()),
+        # Frozen shopping-surface gate (§7.1): ``[]`` while the gate is
+        # disabled — no probe slots are generated and ``total`` is not
+        # multiplied.
+        "shopping_surfaces": list(SHOPPING_SURFACES),
+        "repetitions": plan.repetitions,
+        "max_attempts": audit_settings.max_attempts,
+        "max_call_seconds": audit_settings.max_call_seconds,
+        "max_run_seconds": audit_settings.max_run_seconds,
+        # The frozen per-call timeout is the MODE's, not the generic live
+        # ``request_timeout_seconds``: an env change mid-run must never alter an
+        # in-flight audit (invariant 9).
+        "request_timeout_seconds": plan.policy.timeout_seconds,
+        "engine_routes": {
+            engine: {
+                "logical_engine": engine,
+                "transport_provider": route.transport_provider,
+                "transport_model": route.transport_model,
+                "connection_id": str(connection.id),
+                **plan.route_policies[engine],
+            }
+            for engine, (route, connection) in routes.items()
+        },
+        **_prompt_panel_snapshot(prompt_rows),
+    }
+
+
+def _task_route_snapshot(
+    *,
+    engine: str,
+    route: ProviderRoute,
+    connection: ProviderConnection,
+    plan: _FrozenPlan,
+) -> dict:
+    """Per-task frozen route + policy snapshot (never a key — invariant 6)."""
+    return {
+        "logical_engine": engine,
+        "transport_provider": route.transport_provider,
+        "transport_model": route.transport_model,
+        "connection_id": str(connection.id),
+        "base_url": connection.base_url or "",
+        "measurement_mode": plan.measurement_mode,
+        **plan.route_policies[engine],
+        **frozen_policy_configuration(plan.policy),
+    }
+
+
 async def create_audit(
     session: AsyncSession,
     *,
@@ -263,11 +464,17 @@ async def create_audit(
     prompt_ids: list[uuid.UUID] | None = None,
     repetitions: int | None = None,
     benchmark_mode: str | None = None,
+    measurement_mode: str | None = None,
     random_seed: str | None = None,
 ) -> Audit:
     """Create + enqueue an audit (freeze snapshots, deterministic slot shuffle).
 
     Commits with all tasks ``queued`` so the worker can claim them.
+
+    An orchestration SHELL: every policy decision (both mode axes, the frozen
+    measurement policy, repetitions, the composed system instruction, the route
+    policies) is precomputed by ``_freeze_plan`` and assembled by
+    ``_frozen_configuration`` so this function adds no branching of its own.
     """
     project = await _load_project(
         session, workspace_id=workspace_id, project_id=project_id
@@ -281,12 +488,15 @@ async def create_audit(
     )
     routes = await _resolve_routes(session, workspace_id=workspace_id, engines=engines)
 
-    reps = int(repetitions or project.default_repetitions or 1)
-    if reps < MIN_REPETITIONS or reps > MAX_REPETITIONS:
-        raise AuditValidationError(
-            f"repetitions must be between {MIN_REPETITIONS} and {MAX_REPETITIONS}"
-        )
-
+    plan = _freeze_plan(
+        project=project,
+        prompts=prompts,
+        routes=routes,
+        benchmark_mode=benchmark_mode,
+        measurement_mode=measurement_mode,
+        repetitions=repetitions,
+    )
+    reps = plan.repetitions
     engine_list = list(routes.keys())
     total = len(prompts) * len(engine_list) * reps
     if total > audit_settings.max_tasks_per_audit:
@@ -309,14 +519,7 @@ async def create_audit(
         retry_after_seconds=abuse_settings.active_job_retry_after_seconds,
     )
 
-    mode = _resolve_benchmark_mode(benchmark_mode, project)
     seed = _normalize_seed(random_seed)
-    system_instruction = system_instruction_for_mode(
-        mode=mode,
-        country_code=project.country_code,
-        language_code=project.language_code,
-    )
-
     prompt_rows = [
         {
             "text": prompt.text or "",
@@ -325,42 +528,18 @@ async def create_audit(
         }
         for prompt in prompts
     ]
-    scoring_identity = project_scoring_identity(project)
-    configuration = {
-        **scoring_identity,
-        # Frozen product catalog (Agentic Commerce): the deterministic
-        # product analyzer scores against this copy, so later catalog edits
-        # never alter the audit (invariant 9).
-        **project_product_identity(project),
-        "benchmark_mode": mode,
-        "engines": engine_list,
-        # Frozen shopping-surface gate (§7.1): ``[]`` while the gate is
-        # disabled — no probe slots are generated and ``total`` is not
-        # multiplied.
-        "shopping_surfaces": list(SHOPPING_SURFACES),
-        "repetitions": reps,
-        "max_attempts": audit_settings.max_attempts,
-        "max_call_seconds": audit_settings.max_call_seconds,
-        "max_run_seconds": audit_settings.max_run_seconds,
-        "request_timeout_seconds": audit_settings.request_timeout_seconds,
-        "engine_routes": {
-            engine: {
-                "logical_engine": engine,
-                "transport_provider": route.transport_provider,
-                "transport_model": route.transport_model,
-                "connection_id": str(connection.id),
-            }
-            for engine, (route, connection) in routes.items()
-        },
-        **_prompt_panel_snapshot(prompt_rows),
-    }
+    configuration = _frozen_configuration(
+        project=project, plan=plan, routes=routes, prompt_rows=prompt_rows
+    )
 
     audit = Audit(
         workspace_id=workspace_id,
         project_id=project.id,
         status=AUDIT_STATUS_DRAFT,
-        benchmark_mode=mode,
-        system_instruction=system_instruction,
+        trigger=AUDIT_TRIGGER_MANUAL,
+        benchmark_mode=plan.benchmark_mode,
+        measurement_mode=plan.measurement_mode,
+        system_instruction=plan.system_instruction,
         repetitions=reps,
         random_seed=seed,
         configuration=configuration,
@@ -434,13 +613,9 @@ async def create_audit(
                 transport_model=route.transport_model,
                 shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
                 prompt_text=prompt_snapshot.text,
-                provider_route_snapshot={
-                    "logical_engine": engine,
-                    "transport_provider": route.transport_provider,
-                    "transport_model": route.transport_model,
-                    "connection_id": str(connection.id),
-                    "base_url": connection.base_url or "",
-                },
+                provider_route_snapshot=_task_route_snapshot(
+                    engine=engine, route=route, connection=connection, plan=plan
+                ),
                 idempotency_key=idempotency_key,
                 max_attempts=audit_settings.max_attempts,
             )
