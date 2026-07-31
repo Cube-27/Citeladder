@@ -33,6 +33,7 @@ from app.core.config.audits import (
     ATTEMPT_STATUS_SUCCEEDED,
     AUDIT_STATUS_CANCELLED,
     AUDIT_STATUS_COMPLETED,
+    AUDIT_TRIGGER_MANUAL,
     MEASUREMENT_MODE_PULSE,
     MEASUREMENT_POLICY_KEY,
     PULSE_ANSWER_INSTRUCTION,
@@ -131,6 +132,7 @@ async def _make_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -387,6 +389,7 @@ async def test_worker_persists_openai_provenance(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

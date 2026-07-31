@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.audits import (
     AUDIT_QUEUE_SPEC,
+    AUDIT_TRIGGER_MANUAL,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_RETRY_WAIT,
@@ -34,6 +35,7 @@ async def _make_queued_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

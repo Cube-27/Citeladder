@@ -404,3 +404,17 @@ CODE_OCCUPANCY_UNRESOLVED: Final = "occupancy_unresolved"
 # capability keys, and integer counts — never user data (invariant 6).
 EVENT_OCCUPANCY_LIMIT_EXCEEDED: Final = "billing.occupancy_limit_exceeded"
 EVENT_OCCUPANCY_UNRESOLVED: Final = "billing.occupancy_unresolved"
+
+# ---------------------------------------------------------------------------
+# Funded + manual-rate admission (slice23 Task 4 Part B; config-owned)
+# ---------------------------------------------------------------------------
+# API error codes for the audit-admission refusals (api-error-contract section
+# 5: codes live in config, raised via ``ApiException.coded``). The resolver
+# status vocabulary owns ``entitlement_unresolved`` (see
+# ``domain/entitlements/types.STATUS_ENTITLEMENT_UNRESOLVED``) — it is reused,
+# never re-literalled here (invariant 2). The matching telemetry event names
+# (``billing.funded_budget_exhausted`` etc.) live in ``config/billing.py``.
+CODE_MANUAL_RUN_RATE_EXCEEDED: Final = "manual_run_rate_exceeded"
+CODE_FUNDED_BUDGET_EXHAUSTED: Final = "funded_budget_exhausted"
+CODE_FUNDED_CREDITS_EXHAUSTED: Final = "funded_credits_exhausted"
+CODE_FUNDED_COST_UNRESOLVED: Final = "funded_cost_unresolved"

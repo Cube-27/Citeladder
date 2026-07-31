@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.audits import AUDIT_QUEUE_SPEC
+from app.core.config.audits import AUDIT_QUEUE_SPEC, AUDIT_TRIGGER_MANUAL
 from app.core.config.site_health import SITE_CRAWL_QUEUE_SPEC
 from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
@@ -100,6 +100,7 @@ async def test_audit_and_site_queues_never_cross_claim(
     async with session_factory() as session:
         await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=audit_seed.workspace_id,
             project_id=audit_seed.project_id,
             engines=audit_seed.engines,

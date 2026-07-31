@@ -96,9 +96,29 @@ AUDIT_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
 # catalogue (``config/costs.py``) now; the route/output policy, planner
 # freezing, and ``Audit.measurement_mode`` column arrive with T3 and must use
 # these same constants (invariant 2 — never re-literal the mode strings).
-# What initiated a run. ``manual`` is the only trigger PR1 produces (there is
-# no schedule caller yet); a later schedule/trial caller passes its own token.
+# What initiated a run (closed vocabulary; ``Audit.trigger`` is String(16)).
+# PR1 produces only ``manual`` (API) and ``system`` (dev seed) runs; a later
+# schedule/trial caller passes its own token. The manual-run rolling rate
+# (``manual_runs_per_day``) counts ONLY ``manual`` rows.
 AUDIT_TRIGGER_MANUAL: Final = "manual"
+AUDIT_TRIGGER_TRIAL: Final = "trial"
+AUDIT_TRIGGER_SCHEDULED: Final = "scheduled"
+AUDIT_TRIGGER_SYSTEM: Final = "system"
+AUDIT_TRIGGERS: Final[frozenset[str]] = frozenset(
+    {
+        AUDIT_TRIGGER_MANUAL,
+        AUDIT_TRIGGER_TRIAL,
+        AUDIT_TRIGGER_SCHEDULED,
+        AUDIT_TRIGGER_SYSTEM,
+    }
+)
+
+# Pre-claim queue status for funded tasks (slice23 Task 4 Part B): the planner
+# writes each funded task in this NON-claimable state, reserves its credits in
+# the same transaction, and only then flips it to ``TASK_STATUS_QUEUED``, so a
+# worker can never claim an unreserved funded task. Never a member of
+# ``TASK_CLAIMABLE_STATUSES``.
+TASK_STATUS_PENDING_RESERVATION: Final = "pending_reservation"
 
 MEASUREMENT_MODE_PULSE: Final = "pulse"
 MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"

@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.abuse import abuse_settings
-from app.core.config.audits import AUDIT_QUEUE_SPEC
+from app.core.config.audits import AUDIT_QUEUE_SPEC, AUDIT_TRIGGER_MANUAL
 from app.domain.abuse.service import UsageLimitExceededError, consume_usage
 from app.domain.audits.planner import create_audit
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
@@ -81,6 +81,7 @@ async def test_active_audit_limit_is_workspace_scoped_and_durable(
     async with session_factory() as session:
         await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -91,6 +92,7 @@ async def test_active_audit_limit_is_workspace_scoped_and_durable(
         with pytest.raises(UsageLimitExceededError) as exc_info:
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -114,6 +116,7 @@ async def test_concurrent_audit_enqueues_cannot_bypass_active_cap(
             try:
                 await create_audit(
                     session,
+                    trigger=AUDIT_TRIGGER_MANUAL,
                     workspace_id=seed.workspace_id,
                     project_id=seed.project_id,
                     engines=seed.engines,
@@ -140,6 +143,7 @@ async def test_audit_claim_batch_round_robins_workspaces(
         async with session_factory() as session:
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -167,6 +171,7 @@ async def test_parallel_claims_are_disjoint_and_preserve_workspace_balance(
         async with session_factory() as session:
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -198,6 +203,7 @@ async def test_new_workspace_is_not_starved_by_older_backlog(
     async with session_factory() as session:
         await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=first.workspace_id,
             project_id=first.project_id,
             engines=first.engines,
@@ -214,6 +220,7 @@ async def test_new_workspace_is_not_starved_by_older_backlog(
     async with session_factory() as session:
         await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=newcomer.workspace_id,
             project_id=newcomer.project_id,
             engines=newcomer.engines,

@@ -34,23 +34,32 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.core.config.entitlements import (
+    CAPABILITY_REGISTRY,
+    CODE_MANUAL_RUN_RATE_EXCEEDED,
     CODE_OCCUPANCY_LIMIT_EXCEEDED,
     CODE_OCCUPANCY_UNRESOLVED,
     EVENT_OCCUPANCY_LIMIT_EXCEEDED,
     EVENT_OCCUPANCY_UNRESOLVED,
+    KEY_MANUAL_RUNS_PER_DAY,
     KEY_PROJECT_SLOTS,
     KEY_PROMPT_SLOTS,
+    MANUAL_RUNS_ROLLING_WINDOW_SECONDS,
     OCCUPANCY_LOCK_NAMESPACE,
 )
 from app.domain.entitlements.service import resolve_account_entitlement
-from app.domain.entitlements.types import STATUS_RESOLVED
+from app.domain.entitlements.types import (
+    STATUS_ENTITLEMENT_UNRESOLVED,
+    STATUS_RESOLVED,
+)
+from app.models.audit import Audit
 from app.models.billing import WorkspaceBillingLink
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
@@ -282,3 +291,157 @@ async def enforce_occupancy(
             snapshot=snapshot,
         )
     return snapshot
+
+
+# =========================================================================
+# Rolling manual-run rate admission (slice23 Task 4 Part B)
+# =========================================================================
+# The ``manual_runs_per_day`` rate counts PERSISTED ``Audit`` rows with the
+# manual trigger created within a rolling window (the registry-owned
+# ``rolling_window_seconds``, 24h) across EVERY workspace linked to the
+# account — never UsageWindow rows, fixed UTC days, or the existing
+# task-count abuse limit, which stays a separate operational protection.
+# The evaluation runs under the account-capacity advisory lock (reentrant
+# when the caller already holds it) in the same transaction as the audit
+# insert it guards; ``create_audit`` only APPLIES the returned decision.
+
+
+@dataclass(frozen=True, slots=True)
+class RateAdmissionDecision:
+    """The frozen, typed outcome of one manual-run rate evaluation.
+
+    ``allowance``/``remaining``/``reset_at`` are safe metadata (integers and
+    one timestamp — invariant 6). ``allowance`` is None when the capability
+    does not gate this evaluation: a non-manual trigger, a workspace with no
+    billing link, or an account with no active ``manual_runs_per_day`` grant
+    (the pre-commercial contract is preserved until any grant exists).
+    ``reset_at`` is when the oldest in-window run ages out.
+    """
+
+    key: str
+    trigger: str
+    allowed: bool
+    # "" when allowed; a config-owned denial code otherwise.
+    code: str
+    allowance: int | None
+    used: int
+    remaining: int | None
+    reset_at: datetime | None
+
+
+class RateAdmissionDeniedError(RuntimeError):
+    """A rejected manual-run admission (mapped at the API layer)."""
+
+    def __init__(self, message: str, *, decision: RateAdmissionDecision) -> None:
+        super().__init__(message)
+        self.message = message
+        self.decision = decision
+        self.code = decision.code
+        # Safe fields only: capability key + integer counts + reset instant.
+        self.details = {
+            "key": decision.key,
+            "allowance": decision.allowance,
+            "used": decision.used,
+            "remaining": decision.remaining,
+            "reset_at": (
+                decision.reset_at.isoformat() if decision.reset_at is not None else None
+            ),
+        }
+
+
+def _rate_decision(
+    *,
+    trigger: str,
+    allowed: bool,
+    code: str = "",
+    allowance: int | None = None,
+    used: int = 0,
+    remaining: int | None = None,
+    reset_at: datetime | None = None,
+) -> RateAdmissionDecision:
+    return RateAdmissionDecision(
+        key=KEY_MANUAL_RUNS_PER_DAY,
+        trigger=trigger,
+        allowed=allowed,
+        code=code,
+        allowance=allowance,
+        used=used,
+        remaining=remaining,
+        reset_at=reset_at,
+    )
+
+
+async def evaluate_manual_run_admission(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    trigger: str,
+    at: datetime,
+) -> RateAdmissionDecision:
+    """Evaluate the rolling manual-run rate for one workspace's account.
+
+    Pure query over persisted rows at the caller's ``at`` (no writes, no
+    clock reads). Only the ``manual`` trigger is gated. Fails closed when a
+    linked account's entitlement cannot resolve; an unlinked workspace or an
+    account without an active grant is unprovisioned and not rate-gated.
+    """
+    if trigger != AUDIT_TRIGGER_MANUAL:
+        return _rate_decision(trigger=trigger, allowed=True)
+    account_id = await session.scalar(
+        select(WorkspaceBillingLink.billing_account_id).where(
+            WorkspaceBillingLink.workspace_id == workspace_id
+        )
+    )
+    if account_id is None:
+        return _rate_decision(trigger=trigger, allowed=True)
+    await lock_billing_account_capacity(session, account_id)
+    entitlement = await resolve_account_entitlement(
+        session, account_id=account_id, at=at
+    )
+    if entitlement.status != STATUS_RESOLVED:
+        return _rate_decision(
+            trigger=trigger, allowed=False, code=STATUS_ENTITLEMENT_UNRESOLVED
+        )
+    capability = entitlement.capability(KEY_MANUAL_RUNS_PER_DAY)
+    if capability is None:
+        return _rate_decision(trigger=trigger, allowed=True)
+    definition = CAPABILITY_REGISTRY.get(KEY_MANUAL_RUNS_PER_DAY)
+    window = timedelta(
+        seconds=(
+            definition.rolling_window_seconds
+            if definition is not None and definition.rolling_window_seconds
+            else MANUAL_RUNS_ROLLING_WINDOW_SECONDS
+        )
+    )
+    in_window = (
+        select(Audit.created_at)
+        .join(
+            WorkspaceBillingLink,
+            WorkspaceBillingLink.workspace_id == Audit.workspace_id,
+        )
+        .where(
+            WorkspaceBillingLink.billing_account_id == account_id,
+            Audit.trigger == AUDIT_TRIGGER_MANUAL,
+            Audit.created_at > at - window,
+        )
+        .subquery()
+    )
+    used, oldest = (
+        await session.execute(
+            select(func.count(), func.min(in_window.c.created_at)).select_from(
+                in_window
+            )
+        )
+    ).one()
+    used = int(used)
+    allowance = capability.value
+    allowed = used < allowance
+    return _rate_decision(
+        trigger=trigger,
+        allowed=allowed,
+        code="" if allowed else CODE_MANUAL_RUN_RATE_EXCEEDED,
+        allowance=allowance,
+        used=used,
+        remaining=max(allowance - used, 0),
+        reset_at=(oldest + window) if oldest is not None else None,
+    )

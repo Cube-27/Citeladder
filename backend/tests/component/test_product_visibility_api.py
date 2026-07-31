@@ -36,7 +36,7 @@ from app.connectors.answer_engines.contracts import (
     NormalizedUsage,
     SearchEventResult,
 )
-from app.core.config.audits import audit_settings
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL, audit_settings
 from app.core.config.products import PRODUCT_EVIDENCE_MAX_LIMIT
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -160,6 +160,7 @@ async def _run_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

@@ -27,7 +27,11 @@ from app.connectors.answer_engines.contracts import (
     NormalizedUsage,
     SearchEventResult,
 )
-from app.core.config.audits import AUDIT_STATUS_COMPLETED, audit_settings
+from app.core.config.audits import (
+    AUDIT_STATUS_COMPLETED,
+    AUDIT_TRIGGER_MANUAL,
+    audit_settings,
+)
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.provider_catalog import ENGINE_GEMINI, TRANSPORT_GOOGLE
 from app.domain.audits.planner import create_audit
@@ -113,6 +117,7 @@ async def test_endpoints_serve_projections_over_http(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

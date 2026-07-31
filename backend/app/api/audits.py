@@ -18,6 +18,8 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -27,9 +29,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.exports import audit_to_csv, audit_to_markdown
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
-from app.core.config.audits import AUDIT_TERMINAL_STATUSES
+from app.core.config.audits import AUDIT_TERMINAL_STATUSES, AUDIT_TRIGGER_MANUAL
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
+from app.core.config.entitlements import (
+    CODE_FUNDED_BUDGET_EXHAUSTED,
+    CODE_FUNDED_COST_UNRESOLVED,
+    CODE_FUNDED_CREDITS_EXHAUSTED,
+    CODE_MANUAL_RUN_RATE_EXCEEDED,
+)
 from app.core.database import SessionLocal
+from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
 from app.domain.abuse.service import UsageLimitExceededError
 from app.domain.analysis.schemas import MetricsResponse
@@ -43,6 +52,7 @@ from app.domain.analysis.service import (
 from app.domain.audits.planner import (
     AuditNotFoundError,
     AuditValidationError,
+    FundedAdmissionError,
     cancel_audit,
     create_audit,
     get_audit,
@@ -55,6 +65,8 @@ from app.domain.audits.schemas import (
     AuditResponse,
     AuditTaskResponse,
 )
+from app.domain.entitlements.enforcement import RateAdmissionDeniedError
+from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
 from app.models.audit import Audit, AuditEvent
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -68,23 +80,29 @@ _SSE_POLL_SECONDS = 1.0
 _SSE_TERMINAL_GRACE_POLLS = 2
 
 
-@router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
-async def create_audit_endpoint(
-    payload: AuditCreate, ctx: _WorkspaceDep, session: _SessionDep
-) -> AuditResponse:
+# Admission denial code -> HTTP status. Codes are config-owned; only the
+# status mapping lives here. Rate denials are 429; an unresolvable
+# entitlement is 403 (never data); commercial budget/credit exhaustion is a
+# graceful 403; an unresolvable funded cost estimate is a 422 fail-closed.
+_ADMISSION_STATUS: dict[str, int] = {
+    CODE_MANUAL_RUN_RATE_EXCEEDED: status.HTTP_429_TOO_MANY_REQUESTS,
+    STATUS_ENTITLEMENT_UNRESOLVED: status.HTTP_403_FORBIDDEN,
+    CODE_FUNDED_COST_UNRESOLVED: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_FUNDED_BUDGET_EXHAUSTED: status.HTTP_403_FORBIDDEN,
+    CODE_FUNDED_CREDITS_EXHAUSTED: status.HTTP_403_FORBIDDEN,
+}
+
+
+@contextmanager
+def _translate_create_audit_errors() -> Iterator[None]:
+    """Map ``create_audit`` domain errors to HTTP responses.
+
+    One collaborator keeps the endpoint on its complexity budget while
+    admission denials (rate + funded) render through the unified
+    ``ApiException`` envelope.
+    """
     try:
-        audit = await create_audit(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=payload.project_id,
-            engines=payload.engines,
-            prompt_set_id=payload.prompt_set_id,
-            prompt_ids=payload.prompt_ids,
-            repetitions=payload.repetitions,
-            benchmark_mode=payload.benchmark_mode,
-            measurement_mode=payload.measurement_mode,
-            random_seed=payload.random_seed,
-        )
+        yield
     except AuditValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
@@ -95,6 +113,34 @@ async def create_audit_endpoint(
             detail="Workspace usage limit exceeded",
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
+    except (RateAdmissionDeniedError, FundedAdmissionError) as exc:
+        raise ApiException.coded(
+            _ADMISSION_STATUS.get(exc.code, status.HTTP_403_FORBIDDEN),
+            exc.code,
+            str(exc),
+            details=exc.details,
+        ) from exc
+
+
+@router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
+async def create_audit_endpoint(
+    payload: AuditCreate, ctx: _WorkspaceDep, session: _SessionDep
+) -> AuditResponse:
+    with _translate_create_audit_errors():
+        audit = await create_audit(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=payload.project_id,
+            engines=payload.engines,
+            # API-created runs are user-initiated: the manual trigger.
+            trigger=AUDIT_TRIGGER_MANUAL,
+            prompt_set_id=payload.prompt_set_id,
+            prompt_ids=payload.prompt_ids,
+            repetitions=payload.repetitions,
+            benchmark_mode=payload.benchmark_mode,
+            measurement_mode=payload.measurement_mode,
+            random_seed=payload.random_seed,
+        )
     return AuditResponse.model_validate(audit)
 
 

@@ -33,6 +33,7 @@ from app.connectors.answer_engines.contracts import (
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
+    AUDIT_TRIGGER_MANUAL,
     audit_settings,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
@@ -167,6 +168,7 @@ async def _run_completed_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -359,6 +361,7 @@ async def test_metrics_not_found_for_unanalyzed_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

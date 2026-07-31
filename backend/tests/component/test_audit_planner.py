@@ -51,6 +51,7 @@ async def _create(
 ):
     return await create_audit(
         session,
+        trigger=AUDIT_TRIGGER_MANUAL,
         workspace_id=seed.workspace_id,
         project_id=seed.project_id,
         engines=seed.engines,
@@ -198,6 +199,7 @@ async def test_create_audit_rejects_engine_without_route(
         with pytest.raises(AuditValidationError):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=["claude"],  # no route configured
@@ -248,6 +250,7 @@ async def test_create_audit_ignores_inactive_legacy_route(
         with pytest.raises(AuditValidationError):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=["chatgpt"],  # only a retired route exists
@@ -281,6 +284,7 @@ async def test_create_audit_rejects_unknown_or_disabled_prompt_ids(
         with pytest.raises(AuditValidationError):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -293,6 +297,7 @@ async def test_create_audit_rejects_unknown_or_disabled_prompt_ids(
         with pytest.raises(AuditValidationError):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -311,6 +316,7 @@ async def test_create_audit_rejects_unknown_or_disabled_prompt_ids(
         ).all()
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -459,6 +465,7 @@ async def test_prompt_framing_and_measurement_modes_are_independent(
         async with session_factory() as session:
             audit = await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -506,6 +513,7 @@ async def test_full_frozen_configuration_for_pulse_mode(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -567,6 +575,7 @@ async def test_frozen_policy_is_never_reread_from_live_settings(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -609,6 +618,7 @@ async def test_default_repetitions_come_from_the_measurement_mode(
         async with session_factory() as session:
             audit = await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -623,6 +633,7 @@ async def test_default_repetitions_come_from_the_measurement_mode(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -650,6 +661,7 @@ async def test_create_audit_rejects_a_prompt_over_the_max_length(
         with pytest.raises(AuditValidationError, match="maximum length"):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -670,6 +682,7 @@ async def test_create_audit_rejects_an_unknown_measurement_mode(
         with pytest.raises(AuditValidationError, match="measurement_mode"):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,

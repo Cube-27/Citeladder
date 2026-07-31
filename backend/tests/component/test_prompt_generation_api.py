@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.domain.audits.planner import AuditValidationError, create_audit, list_tasks
 from app.domain.entitlements.types import GrantSpec
@@ -1352,6 +1353,7 @@ async def test_planner_excludes_proposed_and_archived_prompts(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -1369,6 +1371,7 @@ async def test_planner_excludes_proposed_and_archived_prompts(
         with pytest.raises(AuditValidationError):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,

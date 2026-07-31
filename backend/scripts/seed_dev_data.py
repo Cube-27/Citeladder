@@ -59,7 +59,7 @@ from app.connectors.answer_engines.contracts import (
     SearchEventResult,
 )
 from app.core.config import settings
-from app.core.config.audits import audit_settings
+from app.core.config.audits import AUDIT_TRIGGER_SYSTEM, audit_settings
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -853,6 +853,7 @@ async def seed() -> None:
         async with SessionLocal() as session:
             audit1 = await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_SYSTEM,
                 workspace_id=workspace_id,
                 project_id=project_id,
                 engines=[ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI],
@@ -869,6 +870,7 @@ async def seed() -> None:
         async with SessionLocal() as session:
             audit2 = await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_SYSTEM,
                 workspace_id=agency_workspace_id,
                 project_id=project2_id,
                 engines=[ENGINE_GEMINI],

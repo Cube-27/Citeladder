@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.core.config.costs as costs_config
 import scripts.reprice_execution_costs as reprice_cli
-from app.core.config.audits import ATTEMPT_STATUS_SUCCEEDED
+from app.core.config.audits import ATTEMPT_STATUS_SUCCEEDED, AUDIT_TRIGGER_MANUAL
 from app.core.config.costs import (
     EXECUTION_COST_FORMULA_VERSION,
     PRICING_CATALOG_VERSION,
@@ -67,6 +67,7 @@ async def seeded_artifact(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

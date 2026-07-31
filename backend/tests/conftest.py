@@ -76,6 +76,15 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     _DELETE_ORDER = list(reversed(Base.metadata.sorted_tables))
 
+# ``consumable_ledger`` RESTRICT-references ``audit_tasks`` / ``audits``, and
+# the audit snapshot/audit tables CASCADE into ``audit_tasks`` (the task row
+# sits late in the order, entangled in the artifact cycle). Deleting a
+# snapshot/audit row therefore cascades into tasks while ledger history still
+# exists and trips the RESTRICT guard — so immutable ledger history must be
+# emptied BEFORE any table whose delete can cascade into the task cycle.
+# Stable sort: only the named tables move, everything else keeps its order.
+_DELETE_ORDER.sort(key=lambda table: table.name != "consumable_ledger")
+
 _CLEANUP_SQL = "DO $$ BEGIN SET CONSTRAINTS ALL DEFERRED; {deletes} END $$;".format(
     deletes="".join(
         f'DELETE FROM "{_TEST_SCHEMA}"."{table.name}";' for table in _DELETE_ORDER

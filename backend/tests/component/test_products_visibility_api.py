@@ -27,6 +27,7 @@ from app.analysis.product_service import (
 )
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
+    AUDIT_TRIGGER_MANUAL,
     TASK_STATUS_FAILED,
     TASK_STATUS_SUCCEEDED,
 )
@@ -107,6 +108,7 @@ async def _seed_catalog_user_and_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=[ENGINE_GEMINI],
