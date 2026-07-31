@@ -31,6 +31,27 @@ describe('shouldRetryQuery', () => {
   it('caps retries at 2 regardless of error kind', () => {
     expect(shouldRetryQuery(2, new ApiError('down', 503, ''))).toBe(false);
   });
+
+  it('retries the A3 timeout surface (retryable network-class ApiError)', () => {
+    const timeout = new ApiError('timed out', 0, '', 'req-t', {
+      code: 'request_timeout',
+      retryable: true,
+    });
+    expect(shouldRetryQuery(0, timeout)).toBe(true);
+    expect(shouldRetryQuery(1, timeout)).toBe(true);
+    expect(shouldRetryQuery(2, timeout)).toBe(false);
+  });
+
+  it('honors an explicit retryable classification over the status heuristic', () => {
+    // Server-classified non-retryable 5xx → no futile retry.
+    expect(
+      shouldRetryQuery(0, new ApiError('down', 503, '', undefined, { retryable: false })),
+    ).toBe(false);
+    // Server-classified retryable → retry even without a transient status.
+    expect(
+      shouldRetryQuery(0, new ApiError('busy', 400, '', undefined, { retryable: true })),
+    ).toBe(true);
+  });
 });
 
 describe('createAppQueryClient', () => {

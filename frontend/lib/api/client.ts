@@ -7,16 +7,22 @@
  * no CORS preflight and no cross-origin cookie handling.
  *
  * Guarantees:
- *   - `ApiError` on any non-2xx response, carrying status + body + request id.
+ *   - `ApiError` on any non-2xx response, carrying status + body + request id
+ *     (+ the envelope's machine `code` / `retryable` classification when the
+ *     backend sends them — see `readErrorBody`).
  *   - `X-Request-ID` header on mutations (and GETs that opt in) for tracing.
  *   - `AbortSignal` forwarding.
+ *   - a bounded default timeout per attempt (`getApiRequestTimeoutMs`, A3) —
+ *     an expiry surfaces as a RETRYABLE network-class `ApiError`
+ *     (`code: 'request_timeout'`), never an endless spinner; a caller's own
+ *     abort stays a plain abort (never retried).
  *   - `credentials: 'include'` (HttpOnly JWT cookie) and `cache: 'no-store'`.
  *   - bounded network-failure retry (max 2 attempts) for GET / idempotent calls
  *     only — never for ordinary mutations.
  *   - JSON enforcement: a 2xx response that is not JSON is a contract violation.
  */
-import { API_BASE_URL } from '@/lib/config/operational';
-import { ApiError, isAbortError } from './errors';
+import { API_BASE_URL, getApiRequestTimeoutMs } from '@/lib/config/operational';
+import { ApiError, isAbortError, isTimeoutError } from './errors';
 
 /** Relative API base. Same-origin; proxied to BACKEND_ORIGIN by Next rewrites. */
 export { API_BASE_URL } from '@/lib/config/operational';
@@ -85,11 +91,22 @@ function buildHeaders(options: InternalRequestOptions, requestId: string) {
   return headers;
 }
 
+/**
+ * Per-attempt signal: the caller's abort composed with the bounded default
+ * timeout (A3). An expiry aborts with a `TimeoutError` DOMException, which the
+ * request loop converts into a retryable network-class `ApiError`; the
+ * caller's own abort reason passes through untouched.
+ */
+function attemptSignal(signal?: AbortSignal) {
+  const timeout = AbortSignal.timeout(getApiRequestTimeoutMs());
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 async function fetchResponse(path: string, options: InternalRequestOptions, requestId: string) {
   return fetch(`${API_BASE_URL}${path}`, {
     method: options.method,
     body: options.body,
-    signal: options.signal,
+    signal: attemptSignal(options.signal),
     cache: 'no-store',
     credentials: 'include',
     headers: buildHeaders(options, requestId),
@@ -112,12 +129,13 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
     try {
       const response = await fetchResponse(path, options, requestId);
       if (response.ok) return { response, requestId };
-      const body = await readErrorBody(response);
+      const parsed = await readErrorBody(response);
       throw new ApiError(
-        body || response.statusText || 'Request failed',
+        parsed.message,
         response.status,
-        body,
-        response.headers.get('x-request-id') ?? requestId,
+        parsed.raw,
+        response.headers.get('x-request-id') ?? parsed.requestId ?? requestId,
+        { code: parsed.code, retryable: parsed.retryable },
       );
     } catch (error) {
       lastError = error;
@@ -127,13 +145,27 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
         attempt >= maxAttempts ||
         !canRetryNetworkFailure(options)
       ) {
-        throw error;
+        // A timeout expiry is converted here (not at catch time) so a GET /
+        // idempotent call with attempts left retries it like any other
+        // network-class failure; the final surface is the retryable ApiError.
+        throw isTimeoutError(error) ? timeoutApiError(requestId) : error;
       }
       await delay(150 * attempt, options.signal);
     }
   }
 
   throw lastError instanceof Error ? lastError : new Error('Failed to reach API.');
+}
+
+/** The A3 surface: a timeout is a transient network-class failure (retryable). */
+function timeoutApiError(requestId: string) {
+  return new ApiError(
+    'The request timed out before the API responded. Please try again.',
+    0,
+    '',
+    requestId,
+    { code: 'request_timeout', retryable: true },
+  );
 }
 
 async function parseResponse<T>(response: Response, kind: ResponseKind): Promise<T> {
@@ -183,25 +215,116 @@ export const apiClient = {
     request<T>('DELETE', path, 'json', undefined, options),
 };
 
-async function readErrorBody(response: Response) {
+/** The extracted, display-safe projection of an error response body (A2). */
+type ErrorPayload = {
+  /** Human message — never a raw JSON blob. */
+  message: string;
+  /** Stable machine code from the error envelope / structured detail. */
+  code?: string;
+  /** Server retryability classification (canonical envelope only). */
+  retryable?: boolean;
+  /** Envelope-carried correlation id (backstop for the response header). */
+  requestId?: string;
+  /** The exact raw body text, kept on `ApiError.body` for debugging. */
+  raw: string;
+};
+
+/**
+ * Extract a human message (+ machine code) from an error response, in
+ * priority order (A2):
+ *   1. canonical envelope `error.message` / `error.code` / `error.retryable`
+ *      / `error.request_id` (A1);
+ *   2. string `detail` (classic FastAPI `HTTPException`);
+ *   3. object `detail.message` / `detail.code` (legacy structured detail);
+ *   4. FastAPI validation array — the first item's `loc` + `msg`, humanized;
+ *   5. the response status text.
+ * A raw JSON blob is NEVER surfaced as the message.
+ */
+async function readErrorBody(response: Response): Promise<ErrorPayload> {
+  const fallback = response.statusText || 'Request failed';
   const contentType = response.headers.get('content-type') ?? '';
-  if (contentType.includes('application/json')) {
-    try {
-      const payload = await response.json();
-      if (payload && typeof payload === 'object') {
-        const detail = (payload as Record<string, unknown>).detail;
-        if (typeof detail === 'string') return detail;
-      }
-      return JSON.stringify(payload);
-    } catch {
-      return response.statusText;
-    }
+  let raw = '';
+  try {
+    raw = await response.text();
+  } catch {
+    return { message: fallback, raw };
+  }
+  if (!contentType.includes('application/json')) {
+    // Plain-text bodies (e.g. Starlette's unhandled-500 page) are shown as-is.
+    return { message: raw.trim() || fallback, raw };
   }
   try {
-    return (await response.text()).trim();
+    return { ...extractFromPayload(JSON.parse(raw), fallback), raw };
   } catch {
-    return response.statusText;
+    // An unparseable "JSON" body must not leak a blob into the message either.
+    return { message: fallback, raw };
   }
+}
+
+function extractFromPayload(payload: unknown, fallback: string): Omit<ErrorPayload, 'raw'> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { message: fallback };
+  }
+  const record = payload as Record<string, unknown>;
+
+  // 1. Canonical envelope (A1): { detail, error: { code, message, … } }.
+  const envelope = record.error;
+  if (envelope && typeof envelope === 'object' && !Array.isArray(envelope)) {
+    const block = envelope as Record<string, unknown>;
+    const message = stringField(block.message);
+    if (message) {
+      return {
+        message,
+        code: stringField(block.code),
+        retryable: typeof block.retryable === 'boolean' ? block.retryable : undefined,
+        requestId: stringField(block.request_id),
+      };
+    }
+  }
+
+  const detail = record.detail;
+  // 2. String detail.
+  if (typeof detail === 'string' && detail.trim()) return { message: detail };
+  // 3. Object detail: { code, message, … }.
+  if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+    const block = detail as Record<string, unknown>;
+    const message = stringField(block.message);
+    if (message) return { message, code: stringField(block.code) };
+  }
+  // 4. FastAPI validation array: first item humanized as `loc: msg`.
+  if (Array.isArray(detail)) {
+    const message = humanizeValidationItem(detail[0]);
+    if (message) return { message };
+  }
+  // 5. Status text — the payload is never stringified into the message.
+  return { message: fallback };
+}
+
+/** A non-empty trimmed string field, or undefined. */
+function stringField(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+/**
+ * Humanize one FastAPI validation error item (`{ loc, msg, … }`) as
+ * `field.path: message`. The leading `body` loc segment is dropped (it names
+ * the transport slot, not a user field); `query`/`path` are kept.
+ */
+function humanizeValidationItem(item: unknown): string | undefined {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return undefined;
+  const record = item as Record<string, unknown>;
+  const msg = stringField(record.msg);
+  if (!msg) return undefined;
+  const segments = Array.isArray(record.loc)
+    ? record.loc.filter((part): part is string | number =>
+        Boolean(
+          (typeof part === 'string' && part) || (typeof part === 'number' && Number.isFinite(part)),
+        ),
+      )
+    : [];
+  if (segments[0] === 'body') segments.shift();
+  const loc = segments.map(String).join('.');
+  return loc ? `${loc}: ${msg}` : msg;
 }
 
 function delay(ms: number, signal?: AbortSignal) {

@@ -196,10 +196,9 @@ describe('analytics schemas (drift policy)', () => {
     ).toThrow(/test/);
   });
 
-  it('rejects an extra key on the headline projection', () => {
-    expect(() =>
-      strictValidate(llmAnalyticsSchema, { ...headline, prediction: 'up' }, 'test'),
-    ).toThrow(/test/);
+  it('strips an additive key on the headline projection (tolerant-on-unknown)', () => {
+    const parsed = strictValidate(llmAnalyticsSchema, { ...headline, prediction: 'up' }, 'test');
+    expect('prediction' in parsed).toBe(false);
   });
 });
 

@@ -11,6 +11,7 @@ import { IconChip } from '@/components/ui/icon-chip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { integrationsApi, type IntegrationSyncRun } from '@/lib/api/integrations';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { productsApi, type ProductInput } from '@/lib/api/products';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Product } from '@/lib/api/types';
@@ -263,7 +264,15 @@ export function CatalogPanel({
         open={importOpen}
         onOpenChange={setImportOpen}
         isImporting={importMutation.isPending}
-        error={importMutation.isError ? errorMessage(importMutation.error) : undefined}
+        error={
+          importMutation.isError
+            ? mutationNoticeForError(importMutation.error, { action: 'import the products' })
+            : undefined
+        }
+        onRetry={() => {
+          // Re-post the exact failed row set (the import upserts by SKU).
+          if (importMutation.variables) importMutation.mutate(importMutation.variables);
+        }}
         onImport={async (rows) => {
           await importMutation.mutateAsync(rows);
         }}

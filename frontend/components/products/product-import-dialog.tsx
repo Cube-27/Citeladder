@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import {
   Table,
   TableBody,
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { ProductInput } from '@/lib/api/products';
 import { parseProductCsv, validProductRows, type ParsedProductCsv } from '@/lib/products/csv';
 
@@ -42,12 +44,16 @@ export function ProductImportDialog({
   onImport,
   isImporting,
   error,
+  onRetry,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImport: (rows: ProductInput[]) => Promise<void> | void;
   isImporting?: boolean;
-  error?: string;
+  /** The A4 mutation notice for a failed import (verbatim 4xx, transient retry). */
+  error?: MutationNoticeData;
+  /** Retry affordance for a transient import failure (re-posts the same rows). */
+  onRetry?: () => void;
 }>) {
   const [parsed, setParsed] = useState<ParsedProductCsv | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -104,7 +110,7 @@ export function ProductImportDialog({
       }
     >
       <div className="grid gap-4">
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+        {error ? <MutationNotice notice={error} onRetry={onRetry} /> : null}
 
         <label className="grid gap-1.5">
           <span className="text-secondary text-xs font-medium">CSV file</span>

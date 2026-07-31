@@ -169,9 +169,30 @@ reuses the cached dataset rather than refetching.
 
 ## 6. Drift policy
 
-- Every response is validated with **zod `strictValidate`** — it **fails loud** on any field
-  mismatch, extra key, or type drift rather than silently coercing. A validation failure is a
-  bug to fix, not to swallow.
+- Every response is validated with **zod `strictValidate`** — it **fails loud** on any
+  mismatch of a **declared field** (a missing required field, a wrong type, an unknown enum
+  value) rather than silently coercing. A validation failure is a bug to fix, not to swallow.
+- **Tolerant-on-unknown (ERR-5).** Response objects are built with the `responseObject`
+  helper in `lib/api/schemas.ts` (zod `.strip()` semantics): **unknown keys are dropped**
+  from the parsed output, so an additive backend field can never break a screen. (The old
+  `z.strictObject` policy rejected any undeclared key — one additive `AuditResponse` field
+  took down `/visibility`.) Stripping also keeps accidentally leaked keys (e.g. a secret)
+  out of app state.
+- **Contract-drift guard.** Tolerance must not become silent divergence, so a guard diffs
+  the backend OpenAPI response-model field sets against the zod schemas' declared keys
+  (`lib/api/contract-drift.ts`, run by the `lib/api/contract-drift.test.ts` vitest wrapper
+  inside `pnpm test`, or standalone via `pnpm check:contract`). It **FAILS on missing
+  declared fields** (the frontend declares a field the backend model no longer has — drift
+  the UI needs) and **WARNS on additive-only diffs** (backend fields not yet declared —
+  update `schemas.ts` promptly). The OpenAPI document is obtained deterministically: from
+  `SEARCHIFY_OPENAPI_JSON` (path to a schema export) when set, else generated offline from
+  the checked-in backend code (`backend/.venv` — no server, database, or network), else
+  fetched from the live backend at `SEARCHIFY_BACKEND_ORIGIN` (default
+  `http://localhost:8000`). When no source is available the vitest wrapper logs and skips;
+  `pnpm check:contract` fails.
+- **Requests stay strict.** Outgoing payloads are built from typed TypeScript DTOs at the
+  call site — they are never parsed with a tolerant schema, so a request-side drift fails
+  at compile time, not at runtime.
 - **The backend is the source of truth.** The frontend never invents fields, never keeps a
   parallel schema, and never falls back to mock data in production paths. If the contract
   changes, update `schemas.ts` to match the backend, not the other way around.

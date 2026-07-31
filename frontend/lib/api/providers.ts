@@ -19,7 +19,9 @@ const connectionListSchema = z.array(providerConnectionSchema);
 
 // Mirrors B4's `ProviderConnectionTestResponse`. `status` is a free string on
 // the wire ('ok' | 'failed'); the extra provenance fields are surfaced inline.
-const connectionTestResultSchema = z.object({
+// Exported for the contract-drift guard (`contract-drift.ts`) — the only
+// response schema owned outside `schemas.ts`.
+export const connectionTestResultSchema = z.object({
   connection_id: z.uuid(),
   status: z.string(),
   error_code: z.string().optional().default(''),

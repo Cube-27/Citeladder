@@ -625,4 +625,64 @@ describe('AttributionPanel recompute', () => {
     });
     expect(counters.snapshot).toBe(1);
   });
+
+  it('shows the backend precondition verbatim on a 422 — no "try again" (COM-6)', async () => {
+    useSnapshot(makeSnapshot());
+    mswServer.use(
+      http.post(RECOMPUTE_URL, () =>
+        HttpResponse.json(
+          { detail: 'no completed sync window is available' },
+          { status: 422 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<Harness />);
+
+    await screen.findByText('A1 · GA4 platform-attributed');
+    await user.click(screen.getByRole('button', { name: 'Recompute' }));
+
+    // The exact backend message, and NO futile retry copy or retry control.
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('no completed sync window is available');
+    expect(alert).not.toHaveTextContent(/try again/i);
+    expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+  });
+
+  it('shows transient copy WITH a retry affordance on a 5xx, and retry re-posts', async () => {
+    const counters = { post: 0 };
+    useSnapshot(makeSnapshot());
+    mswServer.use(
+      http.post(RECOMPUTE_URL, () => {
+        counters.post += 1;
+        return HttpResponse.json(
+          {
+            detail: 'Internal error',
+            error: {
+              code: 'internal_error',
+              message: 'Internal error',
+              request_id: 'srv-req-42',
+              retryable: true,
+            },
+          },
+          { status: 500 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<Harness />);
+
+    await screen.findByText('A1 · GA4 platform-attributed');
+    await user.click(screen.getByRole('button', { name: 'Recompute' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/usually temporary; try again/);
+    // A6: the support correlation line carries the envelope code + request id.
+    expect(alert).toHaveTextContent(/code internal_error/);
+    expect(alert).toHaveTextContent(/ref srv-req-42/);
+
+    // The retry affordance re-fires the same mutation.
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+    await waitFor(() => expect(counters.post).toBe(2));
+  });
 });

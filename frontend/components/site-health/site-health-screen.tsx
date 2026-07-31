@@ -2,8 +2,10 @@
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { ScreenHeader, ScreenSkeleton } from '@/components/site-health/screen-states';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 
@@ -32,7 +34,9 @@ export function SiteHealthScreen() {
     stalled,
     startPending,
     createMutation,
+    cancelMutation,
     startCrawl,
+    cancelCrawl,
     runExport,
     exporting,
     exportError,
@@ -117,7 +121,18 @@ export function SiteHealthScreen() {
 
       {exportError ? <Alert tone="danger">{exportError}</Alert> : null}
       {createMutation.isError ? (
-        <Alert tone="danger">Could not start a crawl. It may already be running.</Alert>
+        // A4: recrawl/start — 4xx verbatim (e.g. a crawl is already running),
+        // transient failures get the retry affordance.
+        <MutationNotice
+          notice={mutationNoticeForError(createMutation.error, { action: 'start a crawl' })}
+          onRetry={startCrawl}
+        />
+      ) : null}
+      {cancelMutation.isError ? (
+        <MutationNotice
+          notice={mutationNoticeForError(cancelMutation.error, { action: 'cancel the crawl' })}
+          onRetry={cancelCrawl}
+        />
       ) : null}
       {stalled ? (
         // We have stopped polling this crawl, so say so rather than leaving a
