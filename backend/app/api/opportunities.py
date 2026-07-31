@@ -14,13 +14,19 @@ import uuid
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.opportunities.exports import rows_to_csv, rows_to_markdown
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.core.config.errors import (
+    CODE_INVALID_CURSOR,
+    CODE_NOT_FOUND,
+    CODE_VALIDATION_ERROR,
+)
 from app.core.config.opportunities import LIST_DEFAULT_LIMIT, LIST_MAX_LIMIT
+from app.core.errors import ApiException
 from app.domain.opportunities import service
 from app.domain.opportunities.schemas import (
     OpportunitiesPage,
@@ -44,25 +50,23 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-def _not_found(exc: OpportunityNotFoundError) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+def _not_found(exc: OpportunityNotFoundError) -> ApiException:
+    return ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, str(exc))
 
 
-def _validation(exc: OpportunityValidationError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+def _validation(exc: OpportunityValidationError) -> ApiException:
+    return ApiException(
+        status.HTTP_422_UNPROCESSABLE_ENTITY, CODE_VALIDATION_ERROR, str(exc)
     )
 
 
-def _bad_cursor(exc: InvalidCursorError) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+def _bad_cursor(exc: InvalidCursorError) -> ApiException:
+    return ApiException(status.HTTP_400_BAD_REQUEST, CODE_INVALID_CURSOR, str(exc))
 
 
-def _superseded(exc: OpportunitySupersededError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail={"code": exc.code, "message": str(exc)},
-    )
+def _superseded(exc: OpportunitySupersededError) -> ApiException:
+    # Coded dialect: the legacy ``detail`` dict keeps its exact shape (WS-A A1).
+    return ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc))
 
 
 # =========================================================================

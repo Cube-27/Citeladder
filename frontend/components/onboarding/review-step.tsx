@@ -38,10 +38,7 @@ function SectionHead({
   return (
     <div className="flex items-baseline gap-2">
       <p
-        className={cn(
-          'text-2xs font-bold tracking-wide uppercase',
-          muted ? 'text-slate-500' : 'text-slate-700',
-        )}
+        className={cn('text-2xs font-bold uppercase', muted ? 'text-slate-500' : 'text-slate-700')}
       >
         {label}
       </p>
@@ -71,10 +68,7 @@ function Chip({
     >
       <span className="truncate">{label}</span>
       <X
-        className={cn(
-          'size-3.5 shrink-0 transition-opacity',
-          selected ? 'opacity-70' : 'opacity-40',
-        )}
+        className={cn('size-4 shrink-0 transition-opacity', selected ? 'opacity-70' : 'opacity-40')}
         aria-hidden
       />
     </button>
@@ -196,7 +190,7 @@ export function ReviewStep({
 
       {/* Prompts fill the width in a 2-column grid instead of one long list. */}
       <section>
-        <div className="mb-2.5 px-1">
+        <div className="mb-2 px-1">
           <SectionHead label="Starting prompts" count={`${selectedPrompts} selected`} />
         </div>
         {prompts.length === 0 ? (
@@ -209,7 +203,7 @@ export function ReviewStep({
               <li key={prompt.id}>
                 <label
                   className={cn(
-                    'flex h-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors duration-200',
+                    'flex h-full cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors duration-200',
                     prompt.selected
                       ? 'border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50/70'
                       : 'border-slate-200 bg-white hover:bg-slate-50',

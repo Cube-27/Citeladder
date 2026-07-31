@@ -60,5 +60,13 @@ export { visibilityApi } from './visibility';
 
 export { queryKeys } from './query-keys';
 export { createAppQueryClient, shouldRetryQuery } from './query-client';
-export { ApiError, httpErrorStatus, isAbortError } from './errors';
+export {
+  ApiError,
+  humanizeApiError,
+  httpErrorStatus,
+  isAbortError,
+  isTimeoutError,
+} from './errors';
+export { isTransientMutationError, mutationNoticeForError } from './mutation-notice';
+export type { MutationNotice } from './mutation-notice';
 export * from './types';

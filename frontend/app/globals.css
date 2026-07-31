@@ -637,3 +637,34 @@ samp {
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
+
+/* ─── Live activity pulse — "work is still happening" ────────────────────
+   A small breathing dot for phases whose progress is real but not
+   countable (link checking, background discovery). The counters can sit
+   unchanged for a while there, and a frozen row reads as a hung run — this
+   is the signal that the crawl is alive. Deliberately opacity/scale only:
+   it composites on the GPU and never reflows the status row. */
+@keyframes activity-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+.activity-dot {
+  border-radius: var(--radius-full, 9999px);
+  animation: activity-pulse 1.4s ease-in-out infinite;
+}
+
+/* Honor the OS setting: the dot still marks the phase, it just stops moving. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .activity-dot {
+    animation: none;
+  }
+}

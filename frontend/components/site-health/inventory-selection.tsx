@@ -14,6 +14,7 @@ import { InventoryTable } from '@/components/site-health/inventory-table';
 import { PageTypeSelect } from '@/components/site-health/page-type-select';
 import { QuickSelectBar } from '@/components/site-health/quick-select-bar';
 import { SelectionNotices } from '@/components/site-health/selection-notices';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
@@ -211,11 +212,31 @@ export function InventorySelection({
         ) : null}
 
         <SelectionNotices
-          bulkError={bulkSelectMutation.isError}
-          bulkErrorMessage={bulkSelectError}
+          bulkNotice={
+            bulkSelectMutation.isError
+              ? (() => {
+                  const notice = mutationNoticeForError(bulkSelectMutation.error, {
+                    action: 'apply the bulk selection',
+                  });
+                  // The quota-specific guidance (from the 403 detail) wins over
+                  // the generic verbatim message when it applies.
+                  return bulkSelectError ? { ...notice, message: bulkSelectError } : notice;
+                })()
+              : null
+          }
+          onBulkRetry={() => {
+            if (bulkSelectMutation.variables) {
+              bulkSelectMutation.mutate(bulkSelectMutation.variables);
+            }
+          }}
           quota={quota}
           staleNotice={staleNotice}
-          replaceError={replaceMutation.isError}
+          replaceNotice={
+            replaceMutation.isError
+              ? mutationNoticeForError(replaceMutation.error, { action: 'save your selection' })
+              : null
+          }
+          onReplaceRetry={commit}
         />
 
         <InventoryTable

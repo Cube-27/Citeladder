@@ -6,6 +6,8 @@ import {
   aggregateAttributeFrequency,
   aggregateBuyerDestinationMix,
   buildCoPlacementMatrix,
+  completenessHoverDetail,
+  feedAttributeLabel,
   feedHealthDisplay,
   feedHealthLabel,
   formatAvgRank,
@@ -411,6 +413,27 @@ describe('parseProductCsv', () => {
       const parsed = parseProductCsv(`sku,price\nSKU-1,"${raw}"\n`);
       expect(parsed.rows[0]!.input.price).toBe(100);
     }
+  });
+});
+
+describe('completenessHoverDetail (D4)', () => {
+  it('names every present attribute count for a complete row', () => {
+    expect(completenessHoverDetail({ score: 1, present: 12, total: 12, missing: [] })).toBe(
+      'Feed completeness 100% — all 12 required attributes present',
+    );
+  });
+
+  it('labels the missing feed attributes for an incomplete row', () => {
+    expect(
+      completenessHoverDetail({ score: 0.75, present: 9, total: 12, missing: ['gtin', 'mpn'] }),
+    ).toBe('Feed completeness 75% — missing 2 of 12: GTIN, MPN');
+  });
+
+  it('falls back to the raw key for an unknown attribute', () => {
+    expect(feedAttributeLabel('seller_rating')).toBe('seller_rating');
+    expect(
+      completenessHoverDetail({ score: 0.5, present: 1, total: 2, missing: ['seller_rating'] }),
+    ).toBe('Feed completeness 50% — missing 1 of 2: seller_rating');
   });
 });
 

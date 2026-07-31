@@ -4,11 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { ConnectProviderDialog } from '@/components/providers/connect-provider-dialog';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, inputClasses } from '@/components/ui/input';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -26,11 +27,6 @@ import {
 } from '@/lib/runs/launch';
 
 import { filterChipClasses } from './filter-chip-variants';
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return 'Could not launch the run. Please try again.';
-}
 
 /**
  * Launch-audit dialog (F10, design.md §9.7).
@@ -138,7 +134,14 @@ export function LaunchDialog({
       >
         <div className="grid gap-5">
           {launchMutation.isError ? (
-            <Alert tone="danger">{errorMessage(launchMutation.error)}</Alert>
+            // A4: a 4xx (validation/precondition) renders the backend message
+            // verbatim; transient failures get the retry affordance.
+            <MutationNotice
+              notice={mutationNoticeForError(launchMutation.error, {
+                action: 'launch the audit',
+              })}
+              onRetry={() => launchMutation.mutate()}
+            />
           ) : null}
 
           <Field label="Prompt set" required>

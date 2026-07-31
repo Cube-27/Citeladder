@@ -13,8 +13,11 @@ import {
   PLACEHOLDER,
   canShowDiscoveredTotal,
   crawlBadgeValue,
+  crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
+  endSentence,
+  isAnalysisTerminal,
   isDiscoveryProvisional,
   isDiscoveryTerminal,
   statusLabel,
@@ -152,6 +155,9 @@ function StripContent({
   }
 
   if (phase === 'terminal') {
+    // B1: a failed crawl names its reason (the API-projected failure summary /
+    // humanized error_message, never a bare code) plus what to do next.
+    const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
     return (
       <Alert tone={crawl.status === 'failed' ? 'danger' : 'info'}>
         <div className="flex flex-wrap items-center gap-2">
@@ -161,7 +167,7 @@ function StripContent({
           <span>
             {crawl.status === 'cancelled'
               ? 'This crawl was cancelled before it produced results.'
-              : crawl.error_message || 'This crawl failed before it produced results.'}
+              : `${endSentence(failure?.reason ?? '')} ${failure?.guidance}`}
           </span>
         </div>
       </Alert>
@@ -192,11 +198,14 @@ function ProgressRow({
   crawl,
   narration,
   counts,
+  active,
   children,
 }: Readonly<{
   crawl: SiteCrawl;
   narration: string;
   counts: ReadonlyArray<{ label: string; value: number | null; className?: string }>;
+  /** Show the live pulse — work is ongoing but not reflected in the counters. */
+  active?: boolean;
   children?: ReactNode;
 }>) {
   return (
@@ -207,8 +216,19 @@ function ProgressRow({
             <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
               {statusLabel(crawl.status)}
             </Badge>
-            <span className="text-secondary truncate text-sm" aria-live="polite">
-              {narration}
+            <span className="text-secondary flex min-w-0 items-center gap-2 text-sm">
+              {active ? (
+                <span
+                  aria-hidden
+                  data-testid="activity-pulse"
+                  className="activity-dot bg-run-running size-1.5 shrink-0"
+                />
+              ) : null}
+              {/* The live region is the TEXT, not the row: announcing the whole
+                  row would re-read every counter on each poll. */}
+              <span className="truncate" aria-live="polite">
+                {narration}
+              </span>
             </span>
           </div>
           <dl className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
@@ -257,7 +277,7 @@ function DiscoveryStrip({
   }
 
   return (
-    <ProgressRow crawl={crawl} narration={narration} counts={counts}>
+    <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
       {isFree ? (
         <p className="text-warning-text text-sm">
           Free plan — we&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample
@@ -302,9 +322,16 @@ function AnalysisStrip({
   // say so, instead of pretending only one sub-process exists. Never for a
   // sample crawl: Free copy must not imply continued full-site scanning.
   const discovering = !crawl.sample_mode && !isDiscoveryTerminal(crawl.discovery_status);
+  // Once analysis terminalizes but the crawl is still active, the remaining
+  // work is the link-check phase: every page shows "Completed" while the crawl
+  // keeps running. That gap read as a hung crawl (and got cancelled), so the
+  // phase now narrates itself instead of leaving the audit copy up.
+  const linkChecking = !cancelPending && isAnalysisTerminal(crawl.analysis_status);
   let narration: string;
   if (cancelPending) {
     narration = 'Cancelling — finishing the page in flight and stopping';
+  } else if (linkChecking) {
+    narration = 'Pages analyzed — checking their links for broken destinations';
   } else if (discovering) {
     narration = 'Auditing selected pages while discovery re-scans the site in the background';
   } else {
@@ -315,6 +342,9 @@ function AnalysisStrip({
     <ProgressRow
       crawl={crawl}
       narration={narration}
+      // Link checking and background re-discovery both leave the counters
+      // still — the pulse is what distinguishes "working" from "stuck".
+      active={linkChecking || discovering}
       counts={[
         { label: 'Total pages', value: countsKnown ? selected : null },
         { label: 'Completed', value: completed, className: 'text-run-completed' },

@@ -252,31 +252,42 @@ export function hasScoreData(crawl: Pick<SiteCrawl, 'score_summary'>): boolean {
  *   0. any input not yet settled      → 'resolving'
  *   1. no crawl                       → 'empty'
  *   2. completed / partially_completed → 'dashboard'
- *   3. cancelled WITH score data       → 'dashboard' (labelled Cancelled, keeps
+ *   3. failed with NOTHING analyzed and no overall score → 'terminal' (SH-2/B1:
+ *      a fully-failed crawl persists a PRESENT-but-null-score summary via
+ *      persist_empty=True, so the score-data probe at 5 alone misroutes it to
+ *      the dashboard — this clause must precede it. Placement AFTER 2 protects
+ *      a legitimately completed empty-plan crawl, which persists the same
+ *      null-score summary shape, from regressing to terminal.)
+ *   4. cancelled WITH score data       → 'dashboard' (labelled Cancelled, keeps
  *      partial scores + inventory, offers Recrawl)
- *   4. any other crawl WITH score data → 'dashboard' (results already exist)
- *   5. failed WITHOUT data             → 'terminal'
- *   6. cancelled WITHOUT data:
+ *   5. any other crawl WITH score data → 'dashboard' (results already exist)
+ *   6. failed WITHOUT data             → 'terminal'
+ *   7. cancelled WITHOUT data:
  *        - Starter + discovered URLs   → 'selection' (inventory persists through
  *          a cancel; the user stages a monitored set and re-crawls)
  *        - otherwise                   → 'terminal' (nothing to show)
- *   7. ACTIVE Starter crawl + committed monitored set → 'analyzing'. Every
+ *   8. ACTIVE Starter crawl + committed monitored set → 'analyzing'. Every
  *      crawl created while a monitored set exists is seeded with its analyze
  *      tasks at creation, and a selection commit enqueues into the active
  *      crawl — so this crawl IS an analysis run even while re-discovery
  *      streams. Resolving it to 'discovering'/'selection' is what bounced the
  *      screen back to the URL list after "Start analysis" / "Re-crawl".
- *   8. discovery still running         → 'discovering'
- *   9. analysis running                → 'analyzing'
- *  10. Starter + analysis pending      → 'selection'
- *  11. otherwise (Free auto-analysis)  → 'analyzing'
+ *   9. discovery still running         → 'discovering'
+ *  10. analysis running                → 'analyzing'
+ *  11. Starter + analysis pending      → 'selection'
+ *  12. otherwise (Free auto-analysis)  → 'analyzing'
  */
 export function resolveSiteHealthPhase(
   /** The crawl, `null` for "settled: no crawl", `undefined` for "not settled". */
   crawl:
     | Pick<
         SiteCrawl,
-        'status' | 'discovery_status' | 'analysis_status' | 'score_summary' | 'visible_url_count'
+        | 'status'
+        | 'discovery_status'
+        | 'analysis_status'
+        | 'score_summary'
+        | 'visible_url_count'
+        | 'analyzed_count'
       >
     | null
     | undefined,
@@ -300,22 +311,38 @@ export function resolveSiteHealthPhase(
   // 1. Nothing yet.
   if (!crawl) return 'empty';
 
-  // 2–4. Any crawl that produced score data renders the dashboard — including a
+  // 2–5. Any crawl that produced score data renders the dashboard — including a
   // cancelled-with-data run (labelled Cancelled by the dashboard itself) and a
   // still-running crawl once a projection lands. Completed always qualifies.
   if (crawl.status === 'completed' || crawl.status === 'partially_completed') return 'dashboard';
+
+  // 3. SH-2 (B1): a fully-failed crawl persists a PRESENT-but-null-score
+  // summary (persist_empty=True), which hasScoreData reads as dashboard-worthy
+  // — that is the production shape that hid every failed crawl behind an empty
+  // dashboard. Probe the failure shape explicitly: nothing analyzed AND no
+  // overall score means there is nothing to dashboard. A failed crawl WITH
+  // real partial scores (analyzed pages / an overall score) falls through to
+  // the score-data clause and keeps its dashboard.
+  if (
+    crawl.status === 'failed' &&
+    crawl.analyzed_count === 0 &&
+    (crawl.score_summary?.overall_score ?? null) === null
+  ) {
+    return 'terminal';
+  }
+
   if (hasScoreData(crawl)) return 'dashboard';
 
-  // 5. Failed with no data — explicit stopped card, never an active-looking view.
+  // 6. Failed with no data — explicit stopped card, never an active-looking view.
   if (crawl.status === 'failed') return 'terminal';
 
-  // 6. Cancelled with no data: Starter keeps the discovered inventory (selection
+  // 7. Cancelled with no data: Starter keeps the discovered inventory (selection
   // survives a cancel and re-seeds the next crawl); everyone else dead-ends.
   if (crawl.status === 'cancelled') {
     return plan === 'starter' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
   }
 
-  // 7. Every remaining status is ACTIVE (draft/validating/queued/running). An
+  // 8. Every remaining status is ACTIVE (draft/validating/queued/running). An
   // active crawl for a project with a committed monitored set is an analysis
   // run from the moment it is created: the planner seeds the monitored set's
   // analyze tasks at crawl creation, and a selection commit enqueues analyze
@@ -325,10 +352,10 @@ export function resolveSiteHealthPhase(
   // right after "Start analysis" / "Re-crawl".
   if (hasMonitoredSelection) return 'analyzing';
 
-  // 8. Discovery still running.
+  // 9. Discovery still running.
   if (!TERMINAL_DISCOVERY.has(crawl.discovery_status)) return 'discovering';
 
-  // 9–11. Discovery done. Free auto-analyzes its sample (no manual selection);
+  // 10–12. Discovery done. Free auto-analyzes its sample (no manual selection);
   // Starter stages a monitored set unless analysis has already started.
   if (crawl.analysis_status === 'running') return 'analyzing';
   if (plan === 'starter' && crawl.analysis_status === 'pending') return 'selection';
@@ -380,7 +407,10 @@ export function primaryActionForPhase(phase: SiteHealthPhase, active: boolean): 
  */
 export type InventoryMode = 'none' | 'discovering' | 'selectable' | 'scored';
 
-export function inventoryModeForPhase(phase: SiteHealthPhase): InventoryMode {
+export function inventoryModeForPhase(
+  phase: SiteHealthPhase,
+  crawl?: Pick<SiteCrawl, 'status'> | null,
+): InventoryMode {
   switch (phase) {
     case 'discovering':
       return 'discovering';
@@ -392,10 +422,69 @@ export function inventoryModeForPhase(phase: SiteHealthPhase): InventoryMode {
       // the same tabbed browser as the finished dashboard, so finishing a run
       // changes NOTHING structurally — statuses and scores update in place.
       return 'scored';
+    case 'terminal':
+      // B3: a FAILED crawl's terminal view keeps the tabbed page browser so
+      // the Errors & Blocked tab stays reachable — it renders the root-failure
+      // block (root_errors) even though no page rows exist. Any other
+      // terminal shape (cancelled-with-nothing) lists nothing.
+      return crawl?.status === 'failed' ? 'scored' : 'none';
     default:
-      // 'resolving' | 'empty' | 'terminal'
+      // 'resolving' | 'empty'
       return 'none';
   }
+}
+
+/**
+ * Reason + what-to-do copy for a failed crawl (SH-2/SH-5 — B1), shared by the
+ * terminal card and the dashboard run notice. The reason prefers the
+ * API-projected `failure_summary.message` (humanized by the worker from the
+ * terminal fetch evidence), falls back to the crawl row's `error_message`,
+ * then to a neutral sentence — never a bare machine code.
+ */
+export type CrawlFailureCopy = { reason: string; guidance: string };
+
+/** What-to-do next per stable failure code (default: plain re-crawl). */
+function failureGuidanceFor(code: string | undefined): string {
+  switch (code) {
+    case 'dns_resolution_failed':
+      return 'Check that the domain is spelled correctly and publicly reachable, then re-crawl.';
+    case 'connection_failed':
+    case 'timeout':
+      return 'The site may be down or blocking automated traffic — re-crawl to try again.';
+    case 'robots_denied':
+      return "Allow the crawler in the site's robots.txt, then re-crawl.";
+    case 'robots_unavailable':
+      return 'This is usually temporary — re-crawl to try again.';
+    case 'bot_blocked':
+      return 'Allowlist the crawler with the site’s bot protection, then re-crawl.';
+    case 'http_4xx':
+      return 'Check that the start URL is correct and publicly reachable, then re-crawl.';
+    case 'http_5xx':
+      return 'The site is having server trouble — this is often temporary; re-crawl to try again.';
+    case 'ssrf_blocked':
+      return 'Choose a publicly reachable start URL, then re-crawl.';
+    default:
+      return 'Re-crawl to try again.';
+  }
+}
+
+export function crawlFailureCopy(
+  crawl: Pick<SiteCrawl, 'error_message' | 'failure_summary'>,
+): CrawlFailureCopy {
+  const reason =
+    crawl.failure_summary?.message ||
+    crawl.error_message ||
+    'This crawl failed before it produced results.';
+  return { reason, guidance: failureGuidanceFor(crawl.failure_summary?.code) };
+}
+
+/**
+ * Failure reasons arrive WITHOUT terminal punctuation (the worker's humanized
+ * sentences and legacy `error_message` rows alike); renderers join reason +
+ * guidance as consecutive sentences, so normalize the join once here.
+ */
+export function endSentence(text: string): string {
+  return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 /**
@@ -411,7 +500,9 @@ export type DashboardRunNotice = {
   message: string;
 } | null;
 
-export function dashboardRunNotice(crawl: Pick<SiteCrawl, 'status'>): DashboardRunNotice {
+export function dashboardRunNotice(
+  crawl: Pick<SiteCrawl, 'status' | 'analyzed_count' | 'error_message' | 'failure_summary'>,
+): DashboardRunNotice {
   switch (crawl.status) {
     case 'cancelled':
       return {
@@ -427,13 +518,20 @@ export function dashboardRunNotice(crawl: Pick<SiteCrawl, 'status'>): DashboardR
         message:
           'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.',
       };
-    case 'failed':
+    case 'failed': {
+      const { reason, guidance } = crawlFailureCopy(crawl);
+      // SH-2: with zero pages analyzed there is no "so far" to show — lead
+      // with the failure reason instead of promising partial results.
+      const headline =
+        crawl.analyzed_count === 0
+          ? 'The run failed before any page was analyzed.'
+          : 'The run failed before finishing — showing the pages analyzed so far.';
       return {
         badge: 'failed',
         tone: 'warning',
-        message:
-          'The run failed before finishing — showing the pages analyzed so far. Re-crawl to try again.',
+        message: `${headline} ${endSentence(reason)} ${guidance}`,
       };
+    }
     default:
       return null;
   }

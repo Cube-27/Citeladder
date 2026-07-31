@@ -41,6 +41,10 @@ from app.domain.site_health.service.presentation import (
     _score_summary,
     project_crawl,
 )
+from app.domain.site_health.service.queries import (
+    _failure_summary_for,
+    _root_errors_for,
+)
 from app.domain.site_health.snapshot import persist_crawl_snapshot
 from app.domain.site_health.state_events import (
     InvalidSiteCrawlTransition,
@@ -86,7 +90,12 @@ async def cancel_crawl(
         raise SiteHealthNotFoundError(_CRAWL_NOT_FOUND)
 
     if crawl.status in CRAWL_TERMINAL_STATUSES:
-        return project_crawl(crawl)
+        # Idempotent cancel of an already-terminal crawl still answers with
+        # the full single-crawl projection — including the B1 failure summary
+        # when the terminal state is FAILED.
+        return project_crawl(
+            crawl, failure_summary=await _failure_summary_for(session, crawl)
+        )
 
     apply_crawl_status(crawl, CRAWL_STATUS_CANCELLED)
     # Discovery / analysis sub-states are cancelled only from a non-terminal
@@ -172,7 +181,9 @@ async def cancel_crawl(
             )
 
     refreshed = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
-    return project_crawl(refreshed)
+    return project_crawl(
+        refreshed, failure_summary=await _failure_summary_for(session, refreshed)
+    )
 
 
 # =========================================================================
@@ -224,14 +235,27 @@ async def get_dashboard(
             MonitoredSiteUrl.active.is_(True),
         )
     )
+    failure_summary = None
+    root_errors: list[dict] = []
+    if crawl is not None:
+        # B1/B3: a FAILED crawl carries its humanized failure summary (inside
+        # the crawl projection) and its root-target failed calls (top level)
+        # so the failed dashboard needs no second fetch to explain itself.
+        failure_summary = await _failure_summary_for(session, crawl)
+        root_errors = await _root_errors_for(session, crawl)
     return {
         "project_id": project_id,
-        "crawl": project_crawl(crawl) if crawl is not None else None,
+        "crawl": (
+            project_crawl(crawl, failure_summary=failure_summary)
+            if crawl is not None
+            else None
+        ),
         "score_summary": _score_summary(crawl) if crawl is not None else None,
         "quota": {
             "used": int(used or 0),
             "limit": int(entitlement.monitored_url_limit),
         },
+        "root_errors": root_errors,
     }
 
 

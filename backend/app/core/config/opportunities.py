@@ -29,7 +29,7 @@ from app.core.config.projects import (
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
 ANALYZER_VERSION: Final = "opp-analyzer-1"
-RULE_VERSION: Final = "opp-rules-1"
+RULE_VERSION: Final = "opp-rules-2"
 FORMULA_VERSION: Final = "opp-formula-1"
 
 # =========================================================================
@@ -135,10 +135,13 @@ class OpportunityRule:
         self.enabled = enabled
 
 
-# The v1 catalog. The two visibility rules + the two site-sourced rules are
-# enabled; ``low_share_of_voice_theme`` (no persisted per-topic SOV aggregate)
-# and ``high_traffic_low_visibility`` (no Traffic surface) ship disabled as
-# documented config-only entries.
+# The v2 catalog. The two visibility rules + the three site-sourced rules +
+# the three commerce-derived rules are enabled; ``low_share_of_voice_theme``
+# (no persisted per-topic SOV aggregate) and ``high_traffic_low_visibility``
+# (no Traffic surface) ship disabled as documented config-only entries. The
+# commerce rules are typed ``visibility``: their evidence is the same audit's
+# persisted product-analysis slice (ProductMetricSnapshot/ProductMention), so
+# no new opportunity-type token is introduced.
 OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
     OpportunityRule(
         rule_id="brand_absent_high_value_prompt",
@@ -181,6 +184,58 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
         remediation=(
             "Add substantive, answer-oriented body content to the page so"
             " answer engines have enough text to quote and cite."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="schema_type_mismatch",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_HIGH,
+        title="Structured data missing the expected schema type",
+        # Own copy, NOT missing_structured_data's: this rule fires when
+        # structured data EXISTS but lacks the page-type-expected type, so
+        # "add structured data" would give wrong guidance.
+        remediation=(
+            "The page already ships structured data, but not the schema.org"
+            " type expected for its page type (e.g. Product on a product"
+            " page, FAQPage on an FAQ page). Add the expected type to the"
+            " existing JSON-LD so answer engines can classify and cite the"
+            " page correctly."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="product_not_mentioned",
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_HIGH,
+        title="Catalog product never mentioned by answer engines",
+        remediation=(
+            "No answer engine mentioned this product anywhere in the latest"
+            " audit. Add product-named prompts that mirror how buyers ask,"
+            " and strengthen the product's owned pages with quotable specs,"
+            " pricing, and comparisons so engines have a citable source."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="competitor_product_dominates",
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_HIGH,
+        title="Competitor product dominates product share of voice",
+        remediation=(
+            "A competing product takes the majority of product mentions in"
+            " the latest audit. Publish comparison content that positions"
+            " your product against it (pricing, specs, use cases) so answer"
+            " engines have owned material to cite instead."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="price_mention_mismatch",
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_MEDIUM,
+        title="Quoted prices disagree with the catalog",
+        remediation=(
+            "Answer engines quote prices that do not match your catalog for"
+            " this product. Make the current price prominent and"
+            " machine-readable on the product page (visible price plus"
+            " schema.org Offer markup) so engines stop citing stale figures."
         ),
     ),
     OpportunityRule(
@@ -236,6 +291,13 @@ def validate_rule_id(rule_id: str) -> str:
 SITE_STRUCTURED_DATA_RULE_IDS: Final[frozenset[str]] = frozenset(
     {"aeo.structured_data_present"}
 )
+# ``aeo.schema_expected_for_type`` fires when structured data EXISTS but the
+# page-type-expected type is absent — a distinct failure mode from "no
+# structured data at all", so it maps to its own opportunity rule with its
+# own remediation copy.
+SITE_SCHEMA_TYPE_RULE_IDS: Final[frozenset[str]] = frozenset(
+    {"aeo.schema_expected_for_type"}
+)
 # ``technical.thin_content`` is the v2 (sh-rules-2) id; it was renamed from the
 # v1 ``aeo.sufficient_text`` (see site_health.py — the per-type-minimum
 # word-count check moved dimension). Using the retired id here would make the
@@ -280,6 +342,18 @@ GAP_OWNED_CITATION_WEIGHT: Final = 1.0
 SITE_VALUE_FACTOR: Final = 1.0
 SITE_GAP_FACTOR: Final = 1.0
 
+# Commerce-derived rules (ProductMetricSnapshot/ProductMention evidence):
+# same neutral-base treatment as the site rules — the severity weight already
+# encodes importance, and the thresholds below are the firing conditions.
+COMMERCE_VALUE_FACTOR: Final = 1.0
+COMMERCE_GAP_FACTOR: Final = 1.0
+# ``competitor_product_dominates`` fires when one competitor product's
+# persisted SOV share (0-1) exceeds this threshold.
+COMMERCE_COMPETITOR_SOV_THRESHOLD: Final = 0.5
+# ``price_mention_mismatch`` fires when a product's persisted price-relation
+# mismatch rate (0-1, over verifiable price mentions) exceeds this threshold.
+COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD: Final = 0.25
+
 PRIORITY_SCALE: Final = 10.0
 PRIORITY_ROUNDING_DECIMALS: Final = 1
 # Write-time floor: hits below this score are never persisted. Set so a
@@ -294,6 +368,8 @@ MIN_PRIORITY_TO_SURFACE: Final = 10.0
 # Bounded recompute reads (deterministic truncation order: prompt_index, id).
 RECOMPUTE_MAX_ANALYSES: Final = 5000
 RECOMPUTE_MAX_ISSUES: Final = 5000
+# Bounded commerce evidence read (per-audit ProductMetricSnapshot rows).
+RECOMPUTE_MAX_PRODUCT_SNAPSHOTS: Final = 5000
 # List pagination bounds.
 LIST_DEFAULT_LIMIT: Final = 50
 LIST_MAX_LIMIT: Final = 200

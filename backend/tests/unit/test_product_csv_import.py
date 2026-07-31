@@ -1,8 +1,10 @@
 """Unit tests for the product-catalog CSV parser.
 
 Covers header aliases + column reordering, BOM stripping, blank-row skip,
-attribute-column folding, and the deliberate deviation from prompts:
-headerless files are REJECTED (sku/name mapping would be ambiguous).
+attribute-column folding, the deliberate deviation from prompts (headerless
+files are REJECTED — sku/name mapping would be ambiguous), and the D1
+row-level skip feedback (empty sku / field-validation failures are numbered
+row errors, never silent drops or 500s).
 """
 
 from __future__ import annotations
@@ -20,8 +22,10 @@ def test_parse_headered_csv() -> None:
         "VC-EB500-GR,VoltCity Commuter 500,2499.00,usd,https://acme.com/p/vc500\n"
         "TP-MTB29-PRO,TrailPeak MTB Pro 29,3899,AUD,\n"
     )
-    rows = parse_product_csv(csv_text)
-    assert len(rows) == 2
+    result = parse_product_csv(csv_text)
+    assert result.errors == []
+    assert [row_number for row_number, _ in result.rows] == [1, 2]
+    rows = [row for _, row in result.rows]
     assert rows[0].sku == "VC-EB500-GR"
     assert rows[0].name == "VoltCity Commuter 500"
     assert rows[0].price == 2499.00
@@ -36,13 +40,16 @@ def test_parse_header_aliases_and_reordered_columns() -> None:
         "Product Title,Link,Amount,Currency Code,Product SKU\n"
         "SolarFold Panel 200W,https://acme.com/p/sf200,499.00,USD,SF-200W\n"
     )
-    rows = parse_product_csv(csv_text)
-    assert len(rows) == 1
-    assert rows[0].sku == "SF-200W"
-    assert rows[0].name == "SolarFold Panel 200W"
-    assert rows[0].price == 499.00
-    assert rows[0].currency == "USD"
-    assert rows[0].url == "https://acme.com/p/sf200"
+    result = parse_product_csv(csv_text)
+    assert result.errors == []
+    assert len(result.rows) == 1
+    row_number, row = result.rows[0]
+    assert row_number == 1
+    assert row.sku == "SF-200W"
+    assert row.name == "SolarFold Panel 200W"
+    assert row.price == 499.00
+    assert row.currency == "USD"
+    assert row.url == "https://acme.com/p/sf200"
 
 
 def test_parse_attribute_columns_fold_into_attributes() -> None:
@@ -51,15 +58,17 @@ def test_parse_attribute_columns_fold_into_attributes() -> None:
         "VoltCity 500,VC-500,Graphite / Standard,E-Bikes,"
         "0123456789012,Voltaic,In stock\n"
     )
-    rows = parse_product_csv(csv_text)
-    assert len(rows) == 1
-    assert rows[0].attributes == {
+    result = parse_product_csv(csv_text)
+    assert result.errors == []
+    assert len(result.rows) == 1
+    _, row = result.rows[0]
+    assert row.attributes == {
         "brand": "Voltaic",
         "category": "E-Bikes",
         "gtin": "0123456789012",
         "availability": "In stock",
     }
-    assert rows[0].variants[0].name == "Graphite / Standard"
+    assert row.variants[0].name == "Graphite / Standard"
 
 
 def test_parse_aliases_and_price_tolerances() -> None:
@@ -67,19 +76,45 @@ def test_parse_aliases_and_price_tolerances() -> None:
         "sku,name,aliases,price\n"
         'VC-500,VoltCity 500,"VoltCity|VC500|Commuter 500","$2,499.00"\n'
     )
-    rows = parse_product_csv(csv_text)
-    assert rows[0].aliases == ["VoltCity", "VC500", "Commuter 500"]
-    assert rows[0].price == 2499.00
+    result = parse_product_csv(csv_text)
+    _, row = result.rows[0]
+    assert row.aliases == ["VoltCity", "VC500", "Commuter 500"]
+    assert row.price == 2499.00
 
 
 def test_parse_skips_blank_rows_bom_and_missing_sku() -> None:
     csv_text = "\ufeffsku,name\n\n   \n,No SKU row\nVC-500,\n"
-    rows = parse_product_csv(csv_text)
-    # Blank rows skipped; the sku-less row is skipped (sku is the identity);
-    # a missing name falls back to the sku.
-    assert len(rows) == 1
-    assert rows[0].sku == "VC-500"
-    assert rows[0].name == "VC-500"
+    result = parse_product_csv(csv_text)
+    # Blank rows skipped; the sku-less row is skipped WITH a numbered reason
+    # (sku is the identity); a missing name falls back to the sku.
+    assert len(result.rows) == 1
+    row_number, row = result.rows[0]
+    # Row numbering counts DATA rows after blank-row removal: the sku-less
+    # row is data row 1, the kept row is data row 2.
+    assert row_number == 2
+    assert row.sku == "VC-500"
+    assert row.name == "VC-500"
+    assert len(result.errors) == 1
+    error = result.errors[0]
+    assert error.row == 1
+    assert error.field == "sku"
+    assert "Missing sku" in error.message
+
+
+def test_parse_reports_row_validation_failures_instead_of_raising() -> None:
+    # An over-long name (under the cell cap, over the field max) fails
+    # ProductInput validation — a skipped row with a sanitized reason (D1),
+    # never an unhandled 500.
+    csv_text = "sku,name\nVC-500," + "x" * 256 + "\nOK-1,Keep me\n"
+    result = parse_product_csv(csv_text)
+    assert [row.sku for _, row in result.rows] == ["OK-1"]
+    assert len(result.errors) == 1
+    error = result.errors[0]
+    assert error.row == 1
+    assert error.field == "name"
+    assert error.message
+    # COM-5: no Pydantic internals leak into the row reason.
+    assert "pydantic" not in error.message
 
 
 def test_parse_headerless_rejected() -> None:
@@ -97,8 +132,8 @@ def test_parse_rejects_header_missing_either_required_column() -> None:
 
 
 def test_parse_empty_returns_empty() -> None:
-    assert parse_product_csv("") == []
-    assert parse_product_csv("   \n  ") == []
+    assert parse_product_csv("") == ([], [])
+    assert parse_product_csv("   \n  ") == ([], [])
 
 
 def test_product_csv_rejects_excess_rows_columns_and_cell_length() -> None:

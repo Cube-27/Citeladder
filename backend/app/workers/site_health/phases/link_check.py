@@ -11,7 +11,9 @@ docstring; this is a mixin on the one worker class, not a separate process.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import logging
 import uuid
 from urllib.parse import urljoin
 
@@ -20,6 +22,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.web_evidence.fetcher import FetchError, FetchRequest
+from app.connectors.web_evidence.url_policy import UrlPolicyError
 from app.core.config.site_health import (
     ANALYZER_VERSION,
     FETCH_PURPOSE_LINK_CHECK,
@@ -37,6 +40,8 @@ from app.models.site_health import (
 from app.workers.site_health.outcomes import LinkProbeOutcome as _LinkProbeOutcome
 from app.workers.site_health.phases.support import PhaseSupport
 from app.workers.site_health.urls import authority_key as _authority_key
+
+logger = logging.getLogger("app.workers.site_health.phases.link_check")
 
 
 class LinkCheckPhaseMixin(PhaseSupport):
@@ -84,8 +89,7 @@ class LinkCheckPhaseMixin(PhaseSupport):
 
         # One heartbeat across the probes + the write (see ``_leased``).
         async with self._leased(task_id):
-            for target in targets:
-                target["probe"] = await self._probe_link(target["url"])
+            await self._probe_targets(targets)
 
             async with self._session_factory() as session:
                 locked = await self._lock_owned_running_task(
@@ -108,6 +112,57 @@ class LinkCheckPhaseMixin(PhaseSupport):
 
             await self._queue.succeed(task_id=task_id, owner=self.owner)
 
+    async def _probe_targets(self, targets: list[dict]) -> None:
+        """Probe a page's link targets concurrently, in place.
+
+        These probes used to run one at a time. Each one pays a host-gate slot
+        acquisition plus ``per_host_delay_seconds``, and a typical page carries
+        ~15 links, so a single link_check task cost ~10s and a 10-page crawl
+        spent ~100s here — entirely after the UI had already shown every page
+        analyzed. That gap is what made a finished crawl look hung.
+
+        Concurrency is bounded by ``link_check_concurrency`` rather than
+        unbounded ``gather``: ``max_link_checks_per_page`` allows up to 200
+        targets, and firing 200 simultaneous probes at one host is exactly the
+        behavior the politeness gate exists to prevent. The per-host gate and
+        crawl-delay still serialize same-host probes underneath this — the win
+        comes from overlapping the WAIT, and from cross-host targets no longer
+        queueing behind each other.
+
+        Order is irrelevant to correctness (each result is written back onto its
+        own target dict, and the caller iterates ``targets`` in its original
+        deterministic order afterwards), so results are placed by index rather
+        than by completion.
+        """
+        if not targets:
+            return
+        limit = max(1, site_health_settings.link_check_concurrency)
+        semaphore = asyncio.Semaphore(limit)
+
+        async def probe(target: dict) -> None:
+            async with semaphore:
+                target["probe"] = await self._probe_link(target["url"])
+
+        # ``_probe_link`` is already total — it converts fetch/policy failures
+        # into an unreachable outcome — but gather defensively so one unexpected
+        # crash cannot abandon the siblings mid-probe and strand the lease.
+        results = await asyncio.gather(
+            *(probe(target) for target in targets), return_exceptions=True
+        )
+        for target, result in zip(targets, results, strict=True):
+            if isinstance(result, BaseException):
+                if isinstance(result, asyncio.CancelledError):
+                    raise result
+                logger.warning(
+                    "link probe failed unexpectedly",
+                    exc_info=result,
+                    extra={"target_url": target.get("url", "")},
+                )
+                target.setdefault(
+                    "probe",
+                    _LinkProbeOutcome(reachable=False, method="GET", status_code=None),
+                )
+
     async def _load_link_check_source(
         self,
         session: AsyncSession,
@@ -118,7 +173,15 @@ class LinkCheckPhaseMixin(PhaseSupport):
         """Find the latest analyze artifact + analysis + facts for the URL."""
         try:
             _canonical, url_hash_value = canonical_identity(requested_url)
-        except Exception:
+        except UrlPolicyError as exc:
+            # The task URL was canonicalized at admission, so a policy
+            # rejection here is a defensive can't-happen — but never swallow
+            # it silently into a misleading "nothing to do" success (ERR-6).
+            logger.debug(
+                "link-check source lookup skipped: task URL failed canonicalization",
+                exc_info=True,
+                extra={"error_type": type(exc).__name__},
+            )
             return None
         site_url_id = await session.scalar(
             select(SiteUrl.id).where(

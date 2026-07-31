@@ -50,6 +50,7 @@ import type {
   // Site Health
   crawlAnalysisStatusSchema,
   crawlDiscoveryStatusSchema,
+  crawlFailureSummarySchema,
   crawlOverallStatusSchema,
   deliveryFactsSchema,
   inventoryPageSchema,
@@ -67,6 +68,7 @@ import type {
   pageTypeSchema,
   pageTypeScoreSummarySchema,
   rerunPageResponseSchema,
+  rootErrorSchema,
   siteCrawlListPageSchema,
   siteCrawlSchema,
   siteHealthDashboardSchema,
@@ -90,10 +92,14 @@ import type {
   competitorProductVisibilityEntrySchema,
   priceRelationCountsSchema,
   priceRelationSchema,
+  productAuditReferencesSchema,
   productCompletenessSchema,
   productEvidenceItemSchema,
   productEvidenceKindSchema,
   productEvidenceResponseSchema,
+  productImportResponseSchema,
+  productImportRowErrorSchema,
+  productImportSummarySchema,
   productOriginSchema,
   productSchema,
   productVariantSchema,
@@ -183,6 +189,8 @@ export type PageAnalysisStatus = z.infer<typeof pageAnalysisStatusSchema>;
 export type PageType = z.infer<typeof pageTypeSchema>;
 export type PageTypeScoreSummary = z.infer<typeof pageTypeScoreSummarySchema>;
 export type SiteScoreSummary = z.infer<typeof siteScoreSummarySchema>;
+export type CrawlFailureSummary = z.infer<typeof crawlFailureSummarySchema>;
+export type RootError = z.infer<typeof rootErrorSchema>;
 export type SiteCrawl = z.infer<typeof siteCrawlSchema>;
 export type InventoryRow = z.infer<typeof inventoryRowSchema>;
 export type InventoryPage = z.infer<typeof inventoryPageSchema>;
@@ -221,6 +229,10 @@ export type ProductCompleteness = z.infer<typeof productCompletenessSchema>;
 export type ProductOrigin = z.infer<typeof productOriginSchema>;
 export type Product = z.infer<typeof productSchema>;
 export type CompetitorProduct = z.infer<typeof competitorProductSchema>;
+export type ProductImportRowError = z.infer<typeof productImportRowErrorSchema>;
+export type ProductImportSummary = z.infer<typeof productImportSummarySchema>;
+export type ProductImportResponse = z.infer<typeof productImportResponseSchema>;
+export type ProductAuditReferences = z.infer<typeof productAuditReferencesSchema>;
 export type BuyerDestinationKind = z.infer<typeof buyerDestinationKindSchema>;
 export type BuyerDestinationMix = z.infer<typeof buyerDestinationMixSchema>;
 export type CompetitorCoPlacement = z.infer<typeof competitorCoPlacementSchema>;

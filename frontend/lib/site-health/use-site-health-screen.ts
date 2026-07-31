@@ -140,7 +140,9 @@ export function useSiteHealthScreen(projectId: string | null) {
   // all that changes (which header control shows, what the inventory section
   // renders). Derived, never stored — the crawl shape is the single source.
   const primaryAction: PrimaryAction = primaryActionForPhase(phase, active);
-  const inventoryMode: InventoryMode = inventoryModeForPhase(phase);
+  // The crawl rides along so a FAILED terminal phase keeps the scored page
+  // browser (B3 — the Errors & Blocked tab renders the root-failure block).
+  const inventoryMode: InventoryMode = inventoryModeForPhase(phase, crawl);
   // Surface a failed monitored-count fetch rather than silently disabling the
   // analysis view: the count query is best-effort (the counters degrade to the
   // visible window), but the error is exposed so the screen can note it.

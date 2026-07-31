@@ -40,11 +40,14 @@ describe('billing API contract', () => {
     expect(new Headers(init.headers).get('Idempotency-Key')).toBe('checkout-idempotency-key');
   });
 
-  it('rejects leaked provider fields in a billing summary', async () => {
+  it('strips leaked provider fields from a billing summary (tolerant-on-unknown)', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(json({ ...SUMMARY, razorpay_plan_id: 'plan' })),
     );
-    await expect(billingApi.me()).rejects.toThrow('API validation failure in billing.me');
+    // Additive provider fields must never break the UI — they are stripped
+    // from the parsed output, so the leak never reaches app state.
+    const summary = await billingApi.me();
+    expect('razorpay_plan_id' in summary).toBe(false);
   });
 });

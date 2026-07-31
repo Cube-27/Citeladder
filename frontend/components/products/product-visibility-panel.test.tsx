@@ -204,6 +204,63 @@ describe('ProductVisibilityPanel states', () => {
     expect(screen.queryByRole('button', { name: 'Select run' })).not.toBeInTheDocument();
   });
 
+  it('renders the zero-mentions empty state with concrete actions instead of zeros', () => {
+    // D2 state (b): a completed run with 0 product mentions in the slice —
+    // never the wall of zeros (COM-1/COM-2).
+    const onGoToCatalog = vi.fn();
+    render(
+      <ProductVisibilityPanel
+        projectId={PROJECT}
+        queries={makeQueries({
+          visibilityQuery: {
+            isLoading: false,
+            isError: false,
+            data: makeVisibility({
+              total_mentions: 0,
+              products: [ownEntry({ mention_count: 0, sov_share: 0 })],
+              competitor_products: [],
+            }),
+          },
+        })}
+        onGoToCatalog={onGoToCatalog}
+      />,
+    );
+
+    expect(screen.getByText('This run recorded no product mentions')).toBeInTheDocument();
+    expect(
+      screen.getByText(/none of its answers mentioned a product from your catalog/),
+    ).toBeInTheDocument();
+    // The two concrete fixes: product-named prompts + catalog aliases.
+    expect(screen.getByRole('link', { name: 'Add product-named prompts' })).toHaveAttribute(
+      'href',
+      '/prompts',
+    );
+    screen.getByRole('button', { name: 'Check catalog aliases' }).click();
+    expect(onGoToCatalog).toHaveBeenCalled();
+    // The wall of zeros is gone; the toolbar stays so the slice is editable.
+    expect(screen.queryByText('Product SOV')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-visibility-toolbar')).toBeInTheDocument();
+  });
+
+  it('names the engine slice in the zero-mentions copy when filtered', () => {
+    render(
+      <ProductVisibilityPanel
+        projectId={PROJECT}
+        queries={makeQueries({
+          engine: 'gemini',
+          engineParam: 'gemini',
+          visibilityQuery: {
+            isLoading: false,
+            isError: false,
+            data: makeVisibility({ total_mentions: 0, products: [], competitor_products: [] }),
+          },
+        })}
+        onGoToCatalog={() => {}}
+      />,
+    );
+    expect(screen.getByText(/none of its answers on Gemini mentioned/)).toBeInTheDocument();
+  });
+
   it('renders the summary strip and both rankings tables with data', () => {
     renderWithData();
 

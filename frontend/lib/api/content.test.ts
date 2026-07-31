@@ -91,13 +91,17 @@ describe('contentApi.listGenerations', () => {
     expect(new URL(seenUrl).searchParams.get('limit')).toBe('10');
   });
 
-  it('fails loud when a list item carries output_text (bounded-list drift)', async () => {
+  it('strips output_text from a list item (bounded-list drift, tolerant-on-unknown)', async () => {
     mswServer.use(
       http.get('/api/v1/content/generations', () =>
         HttpResponse.json([{ ...listItem, output_text: 'leaked' }]),
       ),
     );
-    await expect(contentApi.listGenerations(UUID2)).rejects.toThrow(/content.listGenerations/);
+    // The list projection must never carry the full body — stripped on parse
+    // so the leaked field never reaches app state.
+    const items = await contentApi.listGenerations(UUID2);
+    expect(items).toHaveLength(1);
+    expect('output_text' in items[0]).toBe(false);
   });
 });
 
@@ -192,10 +196,13 @@ describe('content schemas (drift policy)', () => {
     expect(() => strictValidate(contentGenerationDetailSchema, noModel, 'test')).toThrow();
   });
 
-  it('rejects a generic model field (provenance is requested/returned only)', () => {
-    expect(() =>
-      strictValidate(contentGenerationDetailSchema, { ...detail, model: 'gpt-4o' }, 'test'),
-    ).toThrow();
+  it('strips a generic model field (provenance is requested/returned only)', () => {
+    const parsed = strictValidate(
+      contentGenerationDetailSchema,
+      { ...detail, model: 'gpt-4o' },
+      'test',
+    );
+    expect('model' in parsed).toBe(false);
   });
 });
 

@@ -15,6 +15,7 @@ import {
   DropdownLabel,
   DropdownTrigger,
 } from '@/components/ui/dropdown';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -28,6 +29,7 @@ import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { ApiError } from '@/lib/api/errors';
 import { productsApi } from '@/lib/api/products';
 import type { CompetitorProductVisibilityEntry, ProductVisibilityEntry } from '@/lib/api/types';
+import { engineLabel } from '@/lib/providers/catalog';
 import {
   RANK_BUCKET_LABELS,
   RANK_BUCKET_ORDER,
@@ -152,6 +154,34 @@ export function ProductVisibilityPanel({
   const visibility = visibilityQuery.data;
   if (!visibility) return <VisibilitySkeleton />;
 
+  // D2 state (b): the selected run COMPLETED but recorded zero product
+  // mentions in this slice — explain why and what to do, never the wall of
+  // zeros (COM-1/COM-2). The toolbar stays so the run/engine/surface slice
+  // can be changed in place.
+  if (visibility.total_mentions === 0) {
+    return (
+      <div className="grid gap-4">
+        <VisibilityToolbar
+          projectId={projectId}
+          runOptions={runOptions}
+          activeRunId={activeRunId}
+          selectRun={selectRun}
+          engine={engine}
+          setEngine={setEngine}
+          engineParam={engineParam}
+          surfaces={visibility.available_surfaces}
+          surface={surface}
+          setSurface={setSurface}
+        />
+        <NoMentionsEmpty
+          engineParam={engineParam}
+          surface={surface}
+          onGoToCatalog={onGoToCatalog}
+        />
+      </div>
+    );
+  }
+
   const summary = summarizeProductVisibility(visibility);
   const showV1Alert = hasDirectionUnavailableRows([
     ...visibility.products,
@@ -207,37 +237,18 @@ export function ProductVisibilityPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-2" data-testid="product-visibility-toolbar">
-        <RunSelectorDropdown
-          runOptions={runOptions}
-          activeRunId={activeRunId}
-          selectRun={selectRun}
-        />
-
-        <EngineFilterDropdown engine={engine} onChange={setEngine} />
-
-        <SurfaceFilterDropdown
-          surfaces={visibility.available_surfaces}
-          surface={surface}
-          onChange={setSurface}
-        />
-
-        <div className="ml-auto">
-          <Button asChild variant="ghost" size="sm">
-            <a
-              href={productsApi.exportCsvUrl(projectId, {
-                audit_id: activeRunId ?? undefined,
-                engine: engineParam,
-                surface,
-              })}
-              download
-            >
-              <Download className="size-4" aria-hidden />
-              Export CSV
-            </a>
-          </Button>
-        </div>
-      </div>
+      <VisibilityToolbar
+        projectId={projectId}
+        runOptions={runOptions}
+        activeRunId={activeRunId}
+        selectRun={selectRun}
+        engine={engine}
+        setEngine={setEngine}
+        engineParam={engineParam}
+        surfaces={visibility.available_surfaces}
+        surface={surface}
+        setSurface={setSurface}
+      />
 
       {showV1Alert ? <Alert tone="info">{V1_DIRECTION_ALERT}</Alert> : null}
 
@@ -249,6 +260,62 @@ export function ProductVisibilityPanel({
         idPrefix="product-visibility"
         panel={panel}
       />
+    </div>
+  );
+}
+
+/** The Run/Engine/Surface/Export toolbar — shared by the data view and the
+ * zero-mentions empty state so the slice stays editable in place (D2). */
+function VisibilityToolbar({
+  projectId,
+  runOptions,
+  activeRunId,
+  selectRun,
+  engine,
+  setEngine,
+  engineParam,
+  surfaces,
+  surface,
+  setSurface,
+}: Readonly<{
+  projectId: string;
+  runOptions: VisibilityQueries['runOptions'];
+  activeRunId: string | null;
+  selectRun: (id: string | null) => void;
+  engine: VisibilityQueries['engine'];
+  setEngine: VisibilityQueries['setEngine'];
+  engineParam: string | undefined;
+  surfaces: string[];
+  surface: string;
+  setSurface: (surface: string) => void;
+}>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2" data-testid="product-visibility-toolbar">
+      <RunSelectorDropdown
+        runOptions={runOptions}
+        activeRunId={activeRunId}
+        selectRun={selectRun}
+      />
+
+      <EngineFilterDropdown engine={engine} onChange={setEngine} />
+
+      <SurfaceFilterDropdown surfaces={surfaces} surface={surface} onChange={setSurface} />
+
+      <div className="ml-auto">
+        <Button asChild variant="ghost" size="sm">
+          <a
+            href={productsApi.exportCsvUrl(projectId, {
+              audit_id: activeRunId ?? undefined,
+              engine: engineParam,
+              surface,
+            })}
+            download
+          >
+            <Download className="size-4" aria-hidden />
+            Export CSV
+          </a>
+        </Button>
+      </div>
     </div>
   );
 }
@@ -515,28 +582,22 @@ function RunSelectorDropdown({
   );
 }
 
-/** No completed run has product metrics yet — guide to runs and the catalog. */
+/** D2 state (a): no completed run has product metrics yet — guide to runs. */
 function NoAuditEmpty({
   onGoToCatalog,
   selectedRun = false,
 }: Readonly<{ onGoToCatalog: () => void; selectedRun?: boolean }>) {
   return (
-    <Card>
-      <CardContent className="grid justify-items-center gap-4 py-12 text-center">
-        <CardEyebrow>Product visibility</CardEyebrow>
-        <span className="bg-neutral-bg text-muted flex size-10 items-center justify-center rounded-full">
-          <Inbox className="size-5" aria-hidden />
-        </span>
-        <div className="grid gap-1">
-          <h2 className={displayHeadingLgClasses}>No product visibility yet</h2>
-          <p className="text-secondary max-w-md text-sm">
-            {selectedRun
-              ? 'No product metrics in this run — pick another run, or launch one that scores your catalog.'
-              : `Once a run completes with products in your catalog, share of voice, rank
-            distribution, and price accuracy appear here.`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <EmptyState
+      icon={Inbox}
+      heading="No product visibility yet"
+      description={
+        selectedRun
+          ? 'No product metrics in this run — pick another run, or launch one that scores your catalog.'
+          : 'Run an audit to measure how answer engines rank and price your products — share of voice, rank distribution, and price accuracy appear here when it completes.'
+      }
+      action={
+        <>
           <Button variant="ghost" size="md" onClick={onGoToCatalog}>
             <Package className="size-4" aria-hidden />
             Go to Catalog
@@ -544,8 +605,52 @@ function NoAuditEmpty({
           <Button asChild variant="primary" size="md">
             <Link href="/runs">View runs</Link>
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </>
+      }
+    />
+  );
+}
+
+/**
+ * D2 state (b): the selected run completed but recorded ZERO product
+ * mentions in this slice (COM-1/COM-2). Explain why (the answers never
+ * named a catalog product) and give the two concrete fixes — prompts that
+ * name the products, and catalog aliases that match how people ask —
+ * instead of the old wall of zeros.
+ */
+function NoMentionsEmpty({
+  engineParam,
+  surface,
+  onGoToCatalog,
+}: Readonly<{
+  engineParam: string | undefined;
+  surface: string;
+  onGoToCatalog: () => void;
+}>) {
+  // Name the active slice so a filtered-to-zero view never reads as "the
+  // whole run had nothing". BOTH filters are named when both are set — the
+  // engine-only fallback silently dropped the surface, so a doubly-filtered
+  // empty view under-reported why it was empty.
+  const filters = [
+    engineParam ? engineLabel(engineParam) : null,
+    surface ? `the ${surface} surface` : null,
+  ].filter((part): part is string => part !== null);
+  const slice = filters.length > 0 ? ` on ${filters.join(' and ')}` : '';
+  return (
+    <EmptyState
+      icon={Package}
+      heading="This run recorded no product mentions"
+      description={`The selected run completed, but none of its answers${slice} mentioned a product from your catalog.`}
+      action={
+        <>
+          <Button asChild variant="primary" size="md">
+            <Link href="/prompts">Add product-named prompts</Link>
+          </Button>
+          <Button variant="ghost" size="md" onClick={onGoToCatalog}>
+            Check catalog aliases
+          </Button>
+        </>
+      }
+    />
   );
 }

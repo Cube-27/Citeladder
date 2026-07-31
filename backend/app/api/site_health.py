@@ -14,7 +14,7 @@ import json
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import (
     JSONResponse,
     PlainTextResponse,
@@ -31,12 +31,18 @@ from app.analysis.site_health.exports import (
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
+from app.core.config.errors import (
+    CODE_INVALID_CURSOR,
+    CODE_NOT_FOUND,
+    CODE_VALIDATION_ERROR,
+)
 from app.core.config.site_health import (
     CODE_CRAWL_ALREADY_ACTIVE,
     CRAWL_TERMINAL_STATUSES,
     site_health_settings,
 )
 from app.core.database import SessionLocal
+from app.core.errors import ApiException
 from app.domain.site_health import service
 from app.domain.site_health.api_schemas import (
     BulkSelectMonitoredRequest,
@@ -84,53 +90,43 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 _SSE_TERMINAL_GRACE_POLLS = 2
 
 
-def _not_found(detail: str = "Not found") -> HTTPException:
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+def _not_found(detail: str = "Not found") -> ApiException:
+    return ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, detail)
 
 
-def _bad_cursor(exc: InvalidCursorError) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+def _bad_cursor(exc: InvalidCursorError) -> ApiException:
+    return ApiException(status.HTTP_400_BAD_REQUEST, CODE_INVALID_CURSOR, str(exc))
 
 
-def _selection_error_response(exc: Exception) -> HTTPException:
+def _selection_error_response(exc: Exception) -> ApiException:
     """Map a coded selection error onto the Task 2 HTTP contract.
 
     ``starter_required`` -> 403, ``site_health_quota_exceeded`` -> 403 (with
     ``limit``/``currently_used``), ``stale_selection_version`` -> 409 (with
     ``current_selection_version``), ``invalid_selection`` -> 422. Shared by
     the PUT replacement and the bulk-select endpoints so both speak the same
-    coded-error dialect.
+    coded-error dialect. ``ApiException.coded`` keeps the legacy ``detail``
+    dict byte-identical while adding the canonical ``error`` block (WS-A A1).
     """
     if isinstance(exc, QuotaExceededError):
-        return HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "code": exc.code,
-                "message": str(exc),
-                "limit": exc.limit,
-                "currently_used": exc.currently_used,
-            },
+        return ApiException.coded(
+            status.HTTP_403_FORBIDDEN,
+            exc.code,
+            str(exc),
+            details={"limit": exc.limit, "currently_used": exc.currently_used},
         )
     if isinstance(exc, StaleSelectionVersionError):
-        return HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": exc.code,
-                "message": str(exc),
-                "current_selection_version": exc.current_version,
-            },
+        return ApiException.coded(
+            status.HTTP_409_CONFLICT,
+            exc.code,
+            str(exc),
+            details={"current_selection_version": exc.current_version},
         )
     if isinstance(exc, StarterRequiredError):
-        return HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": exc.code, "message": str(exc)},
-        )
+        return ApiException.coded(status.HTTP_403_FORBIDDEN, exc.code, str(exc))
     # SelectionValidationError (and any other coded selection error) -> 422.
     code = getattr(exc, "code", "invalid_selection")
-    return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail={"code": code, "message": str(exc)},
-    )
+    return ApiException.coded(status.HTTP_422_UNPROCESSABLE_ENTITY, code, str(exc))
 
 
 # =========================================================================
@@ -173,16 +169,14 @@ async def create_crawl_endpoint(
             random_seed=payload.seed,
         )
     except CrawlAlreadyActiveError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": CODE_CRAWL_ALREADY_ACTIVE, "message": str(exc)},
+        raise ApiException.coded(
+            status.HTTP_409_CONFLICT, CODE_CRAWL_ALREADY_ACTIVE, str(exc)
         ) from exc
     except CrawlPlanError as exc:
         if exc.code == "project_not_found":
             raise _not_found("Project not found") from exc
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"code": exc.code, "message": str(exc)},
+        raise ApiException.coded(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, exc.code, str(exc)
         ) from exc
     return CrawlResponse.model_validate(service.project_crawl(crawl))
 
@@ -479,21 +473,14 @@ async def rerun_page_endpoint(
         await session.commit()
     except StarterRequiredError as exc:
         await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": exc.code, "message": str(exc)},
-        ) from exc
+        raise ApiException.coded(status.HTTP_403_FORBIDDEN, exc.code, str(exc)) from exc
     except RerunNotAllowedError as exc:
         await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": exc.code, "message": str(exc)},
-        ) from exc
+        raise ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc)) from exc
     except SelectionValidationError as exc:
         await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"code": exc.code, "message": str(exc)},
+        raise ApiException.coded(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, exc.code, str(exc)
         ) from exc
 
     return RerunPageResponse(
@@ -800,9 +787,10 @@ async def _export_items(
 
 def _validate_view(view: str) -> str:
     if view not in EXPORT_VIEWS:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"unknown export view: {view}",
+        raise ApiException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            CODE_VALIDATION_ERROR,
+            f"unknown export view: {view}",
         )
     return view
 

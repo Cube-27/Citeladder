@@ -17,6 +17,7 @@
 # keyset-paginated via the shared cursor helpers (invariant 2).
 from __future__ import annotations
 
+import re
 import statistics
 import uuid
 from dataclasses import replace
@@ -27,17 +28,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.opportunities.detectors import (
     AnalysisEvidence,
+    CommerceEvidence,
     DetectorHit,
+    ProductEntryEvidence,
     PromptSnapshotEvidence,
     SiteEvidence,
     SiteIssueEvidence,
     SiteUrlEvidence,
     VisibilityEvidence,
     detect_brand_absent_high_value_prompt,
+    detect_competitor_product_dominates,
     detect_owned_page_not_cited,
+    detect_price_mention_mismatch,
+    detect_product_not_mentioned,
     detect_site_issue_opportunities,
 )
 from app.analysis.opportunities.scoring import priority_score
+from app.analysis.product_service import build_product_scoring_config
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
@@ -57,14 +64,17 @@ from app.core.config.opportunities import (
     OPPORTUNITY_TYPES,
     RECOMPUTE_MAX_ANALYSES,
     RECOMPUTE_MAX_ISSUES,
+    RECOMPUTE_MAX_PRODUCT_SNAPSHOTS,
     RULE_VERSION,
     STATUS_OPEN,
     validate_rule_id,
 )
 from app.core.config.site_health import (
+    CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
 )
+from app.domain.products.visibility import select_current_snapshots
 from app.domain.prompts.locks import acquire_project_lock
 from app.domain.site_health.normalization import (
     decode_keyset_cursor,
@@ -79,6 +89,7 @@ from app.models.analysis import (
 from app.models.audit import Audit, AuditPromptSnapshot
 from app.models.brand import OwnedDomain
 from app.models.opportunity import Opportunity, OpportunitySnapshot
+from app.models.product import ProductMetricSnapshot
 from app.models.project import Project
 from app.models.site_health import SiteCrawl, SiteIssue, SiteUrl
 
@@ -99,7 +110,19 @@ __all__ = [
 # ``domain/analysis/service.py``; the constants themselves are config-owned).
 _DASHBOARD_READY_STATUSES = (AUDIT_STATUS_COMPLETED, AUDIT_STATUS_PARTIALLY_COMPLETED)
 # A crawl whose issue rows are usable evidence (terminal, with analysis).
-_EVIDENCE_CRAWL_STATUSES = (CRAWL_STATUS_COMPLETED, CRAWL_STATUS_PARTIALLY_COMPLETED)
+#
+# CANCELLED belongs here: a cancelled run still fully analyzed every page that
+# finished before the stop, and ``cancel_crawl`` rolls exactly those pages into
+# the same canonical snapshot a clean terminalization writes. Excluding it meant
+# the cancel-path recompute resolved no crawl and wrote an EMPTY snapshot over
+# real findings — the dashboard showed partial scores while Opportunities sat
+# blank. The issue rows are immutable evidence; how the run ended does not make
+# the pages that did complete any less true.
+_EVIDENCE_CRAWL_STATUSES = (
+    CRAWL_STATUS_COMPLETED,
+    CRAWL_STATUS_PARTIALLY_COMPLETED,
+    CRAWL_STATUS_CANCELLED,
+)
 
 _PROJECT_NOT_FOUND = "Project not found"
 _OPPORTUNITY_NOT_FOUND = "Opportunity not found"
@@ -382,6 +405,97 @@ async def _load_site_evidence(
     )
 
 
+async def _load_commerce_evidence(
+    session: AsyncSession, *, workspace_id: uuid.UUID, audit: Audit
+) -> CommerceEvidence:
+    """Frozen catalog identity + persisted product snapshots for one audit.
+
+    Entry identity (name/sku/competitor) reads the audit's FROZEN catalog
+    (``Audit.configuration``, invariant 9) so a later catalog edit or delete
+    never rewrites what the audit measured; the metrics read the persisted
+    ``ProductMetricSnapshot`` rows (one per frozen entry, zero-filled when
+    unmentioned — invariant 7). An audit with no frozen catalog short-circuits
+    to empty evidence without a query.
+    """
+    config = build_product_scoring_config(audit.configuration or {})
+    if not config.products and not config.competitor_products:
+        return CommerceEvidence(audit_id=audit.id, entries=())
+    snapshots = list(
+        (
+            await session.scalars(
+                select(ProductMetricSnapshot)
+                .where(
+                    ProductMetricSnapshot.audit_id == audit.id,
+                    ProductMetricSnapshot.workspace_id == workspace_id,
+                )
+                # Newest-first so the cap truncates the OLDEST rows: an
+                # ascending order with more snapshots than the cap dropped the
+                # current ones and projected stale metrics.
+                # ``select_current_snapshots`` is order-independent (it selects
+                # by analyzer/rule version, not position), so this only changes
+                # which rows survive the limit, never which one wins per entry.
+                .order_by(
+                    ProductMetricSnapshot.created_at.desc(),
+                    ProductMetricSnapshot.id.desc(),
+                )
+                .limit(RECOMPUTE_MAX_PRODUCT_SNAPSHOTS)
+            )
+        ).all()
+    )
+    by_entry = select_current_snapshots(snapshots)
+
+    def _entry(
+        *,
+        entry_id: str,
+        kind: str,
+        name: str,
+        sku: str,
+        competitor_name: str,
+    ) -> ProductEntryEvidence:
+        snapshot = by_entry.get(entry_id)
+        return ProductEntryEvidence(
+            entry_id=entry_id,
+            kind=kind,
+            name=name,
+            sku=sku,
+            competitor_name=competitor_name,
+            mention_count=snapshot.mention_count if snapshot is not None else 0,
+            sov_share=float(snapshot.sov_share) if snapshot is not None else 0.0,
+            price_mismatch_rate=(
+                float(snapshot.price_mismatch_rate)
+                if snapshot is not None and snapshot.price_mismatch_rate is not None
+                else None
+            ),
+            snapshot_id=snapshot.id if snapshot is not None else None,
+            source_analysis_ids=(
+                tuple(sorted(str(sid) for sid in (snapshot.source_analysis_ids or [])))
+                if snapshot is not None
+                else ()
+            ),
+        )
+
+    entries = [
+        _entry(
+            entry_id=entry.id,
+            kind="product",
+            name=entry.name,
+            sku=entry.sku,
+            competitor_name="",
+        )
+        for entry in config.products
+    ] + [
+        _entry(
+            entry_id=entry.id,
+            kind="competitor_product",
+            name=entry.name,
+            sku="",
+            competitor_name=entry.competitor,
+        )
+        for entry in config.competitor_products
+    ]
+    return CommerceEvidence(audit_id=audit.id, entries=tuple(entries))
+
+
 # =========================================================================
 # Recompute (supersede-not-mutate write path, one transaction)
 # =========================================================================
@@ -442,6 +556,13 @@ async def recompute(
                     for hit in visibility_hits
                 ]
             hits.extend(visibility_hits)
+            # Commerce-derived rules: same audit, persisted product slice.
+            commerce = await _load_commerce_evidence(
+                session, workspace_id=workspace_id, audit=audit
+            )
+            hits.extend(detect_product_not_mentioned(commerce))
+            hits.extend(detect_competitor_product_dominates(commerce))
+            hits.extend(detect_price_mention_mismatch(commerce))
     if crawl is not None:
         site = await _load_site_evidence(
             session, workspace_id=workspace_id, crawl=crawl
@@ -805,13 +926,90 @@ async def update_status(
     return _project_item(row)
 
 
+async def _resolve_scored_audit(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> Audit | None:
+    """The latest dashboard-ready audit that also has its aggregate snapshot.
+
+    Mirrors ``recompute``'s default-resolution condition exactly: an audit
+    without its ``MetricSnapshot`` row is NOT dashboard-ready, and recompute
+    discards it. Counting such an audit as evidence made ``stale`` true even
+    immediately after a successful recompute — permanently, since no
+    recompute could ever catch up to it.
+    """
+    audit = await _resolve_source(
+        session,
+        Audit,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        source_id=None,
+        ready_statuses=_DASHBOARD_READY_STATUSES,
+        not_found_detail=_AUDIT_NOT_FOUND,
+    )
+    if audit is None:
+        return None
+    has_snapshot = await session.scalar(
+        select(MetricSnapshot.id).where(
+            MetricSnapshot.audit_id == audit.id,
+            MetricSnapshot.workspace_id == workspace_id,
+        )
+    )
+    return audit if has_snapshot is not None else None
+
+
+async def _latest_evidence_at(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> datetime | None:
+    """Newest usable-evidence timestamp (latest dashboard-ready audit/crawl).
+
+    Read-time only (C4c): compared against the latest snapshot's
+    ``created_at`` to derive staleness — nothing is persisted, so a failed
+    best-effort recompute hook manifests as exactly this drift.
+
+    The audit condition MIRRORS ``recompute``'s (see ``_resolve_scored_audit``).
+    """
+    audit = await _resolve_scored_audit(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    crawl = await _resolve_source(
+        session,
+        SiteCrawl,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        source_id=None,
+        ready_statuses=_EVIDENCE_CRAWL_STATUSES,
+        not_found_detail=_CRAWL_NOT_FOUND,
+    )
+    stamps = [
+        stamp
+        for stamp in (
+            (audit.completed_at or audit.created_at) if audit is not None else None,
+            (crawl.completed_at or crawl.created_at) if crawl is not None else None,
+        )
+        if stamp is not None
+    ]
+    return max(stamps) if stamps else None
+
+
 async def get_summary(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> dict:
-    """Latest snapshot projection; ``computed=false`` when never recomputed."""
+    """Latest snapshot projection; ``computed=false`` when never recomputed.
+
+    ``stale`` is read-time staleness (no persisted marker): the latest
+    completed audit/crawl is newer than the latest opportunity snapshot.
+    """
     await _require_project(session, workspace_id=workspace_id, project_id=project_id)
     snapshot = await _latest_snapshot(
         session, workspace_id=workspace_id, project_id=project_id
+    )
+    evidence_at = await _latest_evidence_at(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    stale = (
+        snapshot is not None
+        and evidence_at is not None
+        and evidence_at > snapshot.created_at
     )
     if snapshot is None:
         return {
@@ -828,6 +1026,8 @@ async def get_summary(
             "rule_version": RULE_VERSION,
             "formula_version": FORMULA_VERSION,
             "computed_at": None,
+            "evidence_updated_at": _iso(evidence_at),
+            "stale": False,
         }
     return {
         "computed": True,
@@ -843,6 +1043,8 @@ async def get_summary(
         "rule_version": snapshot.rule_version,
         "formula_version": snapshot.formula_version,
         "computed_at": _iso(snapshot.created_at),
+        "evidence_updated_at": _iso(evidence_at),
+        "stale": stale,
     }
 
 
@@ -894,6 +1096,33 @@ async def load_export_rows(
 # =========================================================================
 # Row projections (model -> strict contract dicts)
 # =========================================================================
+def _humanize_theme(theme: str) -> str:
+    """Humanized theme label (``crm-software`` -> ``Crm software theme``)."""
+    words = re.sub(r"[-_]+", " ", theme).strip()
+    if not words:
+        return ""
+    return f"{words[:1].upper()}{words[1:]} theme"
+
+
+def _target_label(row: Opportunity) -> str | None:
+    """Backend-owned target presentation (single owner — the client renders
+    this verbatim and has no derivation helper of its own).
+
+    Derived from PERSISTED fields only, mirroring ``_project_export_row``:
+    the URL for site targets, then the frozen ``evidence.prompt_text`` (the
+    audit prompt snapshot taken at detection time — it survives a later
+    prompt deletion, unlike a join on ``target_prompt_id``), then the
+    humanized theme, then the frozen ``evidence.product_name`` for
+    commerce-derived targets. Never falls back to the deterministic
+    ``target_key`` (not user-facing).
+    """
+    evidence = row.evidence or {}
+    prompt_text = str(evidence.get("prompt_text") or "").strip()
+    product_name = str(evidence.get("product_name") or "").strip()
+    theme_label = _humanize_theme(row.target_theme or "")
+    return row.target_url or prompt_text or theme_label or product_name or None
+
+
 def _project_item(row: Opportunity) -> dict:
     return {
         "id": row.id,
@@ -907,6 +1136,7 @@ def _project_item(row: Opportunity) -> dict:
         "target_prompt_id": row.target_prompt_id,
         "target_url": row.target_url,
         "target_theme": row.target_theme,
+        "target_label": _target_label(row),
         "status": row.status,
         "created_at": _iso(row.created_at),
         "updated_at": _iso(row.updated_at),

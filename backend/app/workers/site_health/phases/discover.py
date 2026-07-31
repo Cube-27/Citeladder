@@ -42,6 +42,9 @@ from app.core.config.site_health import (
     LLMS_TXT_PATH,
     OBSERVATION_SOURCE_ROOT,
     OBSERVATION_SOURCE_SITEMAP,
+    ROBOTS_FETCH_STATUS_FETCH_FAILED,
+    ROBOTS_FETCH_STATUS_FETCHED,
+    ROBOTS_FETCH_STATUS_NOT_FOUND,
     ROBOTS_TXT_PATH,
     SITE_HEALTH_USER_AGENT,
     SITEMAP_CONTENT_TYPES,
@@ -76,6 +79,28 @@ from app.workers.site_health.helpers import (
 from app.workers.site_health.outcomes import DiscoverOutcome as _DiscoverOutcome
 from app.workers.site_health.phases.support import PhaseSupport
 from app.workers.site_health.urls import authority_key as _authority_key
+
+
+def _classify_robots_fetch(body: str | None, status: int | None) -> str:
+    """SH-1 (B2): classify the robots.txt fetch for the UI.
+
+    Distinguishes "the site has NO robots.txt we must honor" (any non-5xx
+    response — fail-open, the AI-crawler stance defaults to allow) from
+    "robots.txt could not be fetched" (network error / 5xx — the stance is
+    genuinely unknown, and per RFC 9309 a 5xx is a temporary complete
+    disallow).
+
+    EVERY non-5xx status is ``not_found``, not just 404: a 401 / 403 / 429
+    robots.txt is treated by ``_ensure_robots_policy`` exactly like a 404
+    (allow-all, RFC 9309 "unavailable status" — no restrictions), so
+    labelling it ``fetch_failed`` told the UI the stance was unknown while
+    the crawl proceeded fail-open on it.
+    """
+    if body is not None:
+        return ROBOTS_FETCH_STATUS_FETCHED
+    if status is not None and not (500 <= status < 600):
+        return ROBOTS_FETCH_STATUS_NOT_FOUND
+    return ROBOTS_FETCH_STATUS_FETCH_FAILED
 
 
 class DiscoverPhaseMixin(PhaseSupport):
@@ -520,7 +545,10 @@ class DiscoverPhaseMixin(PhaseSupport):
 
         site_facts = {
             "robots": {
+                # The legacy ``fetched`` bool stays for back-compat with
+                # pre-classification readers.
                 "fetched": robots_body is not None,
+                "status": _classify_robots_fetch(robots_body, robots_status),
                 "url": f"{authority}{ROBOTS_TXT_PATH}" if authority else "",
                 "status_code": robots_status,
                 "ai_crawlers": stance,

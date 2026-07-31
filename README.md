@@ -226,6 +226,33 @@ pnpm install
 pnpm dev
 ```
 
+### Seed demo data (local development only, optional)
+
+> [!WARNING]
+> `scripts.seed_dev_data` is a **local-development-only** script. It **deletes**
+> the demo workspaces and the demo user on every run, and creates a fixed,
+> publicly-documented login. Run it only against a disposable local database —
+> **never** against a shared, staging, or production database. The script
+> **fails closed**: it refuses to run (before any delete, commit, or credential
+> creation) unless `APP_ENV` is a development value (`development` / `dev` /
+> `local` / `test` / `testing`). An unset `APP_ENV` is treated as production and
+> refused.
+
+With a local Postgres running and migrations applied, generate a full demo
+dataset from `backend/`:
+
+```bash
+APP_ENV=development uv run python -m scripts.seed_dev_data
+```
+
+This creates the demo login `demo@searchify.dev` / `DemoPass123!`, two
+workspaces, two projects with completed audits (mention/citation evidence),
+a completed Site Health crawl, and a product catalog whose fixture answers
+produce real Commerce Visibility numbers (product mentions, prices, share of
+voice). The seed is idempotent — it replaces the demo workspaces on each
+run — and deterministic: reseeding reproduces the same outcomes and
+aggregates.
+
 <a id="configuration"></a>
 ## Configuration
 
@@ -282,6 +309,8 @@ uv run ruff check .
 # Frontend (from frontend/)
 cd frontend
 pnpm test             # Vitest unit/component tests (MSW-mocked network)
+pnpm check:contract   # backend OpenAPI vs zod contract drift (fails if no
+                      # OpenAPI source — `pnpm test` only WARNS and skips it)
 pnpm check:policy     # architecture / token guards
 pnpm build            # next build
 pnpm exec tsc --noEmit # type check
@@ -319,6 +348,7 @@ pnpm test:e2e         # Playwright (requires a browser + running stack)
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Environment setup + full gotchas runbook |
 | [`docs/backend-architecture.md`](docs/backend-architecture.md) | API, models, queue, state machine, analysis |
 | [`docs/frontend-architecture.md`](docs/frontend-architecture.md) | Routes, API-contract layer, data flow |
+| [`docs/api-error-contract.md`](docs/api-error-contract.md) | The API error envelope end-to-end: wire shape, backend handlers, frontend consumption |
 | [`docs/invariants.md`](docs/invariants.md) | The 12 hard rules (review-blocking) |
 | [`docs/design.md`](docs/design.md) | Design tokens, theme, per-screen layout |
 | [`docs/site-health.md`](docs/site-health.md) | Site Health: entitlements, statuses, API endpoints, routes, exports |

@@ -53,6 +53,8 @@ from app.core.config.site_health import (
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_RUNNING,
     EXTRACTOR_VERSION,
+    FETCH_ATTEMPT_OUTCOME_ERROR,
+    FETCH_ATTEMPT_OUTCOME_SUCCESS,
     FETCH_PURPOSE_DISCOVER,
     OBSERVATION_SOURCE_LINK,
     OBSERVATION_SOURCE_ROOT,
@@ -106,9 +108,11 @@ from app.workers.site_health.urls import authority_key as _authority_key
 
 logger = logging.getLogger("app.workers.site_health_worker")
 
-# Outcome tokens for the append-only ``SiteFetchAttempt.outcome`` column.
-_OUTCOME_SUCCESS = "success"
-_OUTCOME_ERROR = "error"
+# Outcome tokens for the append-only ``SiteFetchAttempt.outcome`` column —
+# config-owned (invariant 1) and shared with the read projections
+# (``domain/site_health/failure.load_root_errors`` filters on the error one).
+_OUTCOME_SUCCESS = FETCH_ATTEMPT_OUTCOME_SUCCESS
+_OUTCOME_ERROR = FETCH_ATTEMPT_OUTCOME_ERROR
 
 # Floor for the heartbeat cadence. The configured interval is the operative
 # value (validated positive and strictly below the lease TTL); this only stops

@@ -125,30 +125,12 @@ function FilterMenu<T extends string>({
   );
 }
 
-function humanize(value: string): string {
-  const words = value.replaceAll(/[-_]+/g, ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-/** User-facing context only; never fall back to deterministic target keys. */
-function targetLine(row: Opportunity): string | null {
-  if (row.target_url) {
-    try {
-      const url = new URL(row.target_url);
-      return `${url.hostname}${url.pathname === '/' ? '' : url.pathname}`;
-    } catch {
-      return row.target_url;
-    }
-  }
-  if (row.target_theme) return `${humanize(row.target_theme)} theme`;
-  return null;
-}
-
 function FeaturedRecommendation({
   detail,
   onOpen,
 }: Readonly<{ detail: OpportunityDetail; onOpen: () => void }>) {
-  const target = targetLine(detail);
+  // The backend owns target presentation (target_label) — no client helper.
+  const target = detail.target_label;
   return (
     <Card className="border-accent-border">
       <CardContent className="grid gap-4">
@@ -228,8 +210,9 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   const listQuery = useQuery(opportunitiesQueries.list(projectId, params));
   const rows = listQuery.data?.items ?? [];
   const nextCursor = listQuery.data?.next_cursor ?? null;
-  const featuredId =
-    statusFilter === 'active' && pager.cursor === null ? (rows[0]?.id ?? null) : null;
+  // First page of the triage queue only: the top-priority row is featured.
+  // (useCursorStack yields `undefined` on the empty stack, never null.)
+  const featuredId = statusFilter === 'active' && !pager.cursor ? (rows[0]?.id ?? null) : null;
   const featuredQuery = useQuery({
     ...opportunitiesQueries.detail(featuredId ?? ''),
     enabled: featuredId !== null,
@@ -321,8 +304,8 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
                     <TableCell>
                       <div className="grid gap-0.5">
                         <span className="text-foreground text-sm font-medium">{row.title}</span>
-                        {targetLine(row) ? (
-                          <span className="text-2xs text-muted break-all">{targetLine(row)}</span>
+                        {row.target_label ? (
+                          <span className="text-2xs text-muted break-all">{row.target_label}</span>
                         ) : null}
                       </div>
                     </TableCell>

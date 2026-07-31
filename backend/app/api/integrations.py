@@ -5,7 +5,10 @@
 # ``require_active_workspace`` EXCEPT at the OAuth callback, where the
 # workspace comes only from the verified, consumed state and the user from
 # ``get_current_user`` (spec section 2). The connect endpoints are full-page
-# 302 navigations through the same-origin proxy (never fetch/XHR). No
+# 302 navigations through the same-origin proxy (never fetch/XHR) — including
+# the RETURN leg: the registered redirect URI is anchored on the app origin
+# (``integration_oauth_redirect_uri``), so the provider's post-consent
+# navigation carries the session cookie the callback authenticates with. No
 # endpoint ever returns a token — the DTOs carry no token fields (invariant
 # 6).
 from __future__ import annotations
@@ -33,11 +36,11 @@ from app.core.config.integrations import (
     ERROR_OAUTH_STATE_INVALID,
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
     ERROR_SYNC_WINDOW_INVALID,
-    INTEGRATION_OAUTH_CALLBACK_PATH,
     INTEGRATION_PROVIDER_SHOPIFY,
     INTEGRATION_PROVIDERS,
     SYNC_KIND_ON_DEMAND,
     integration_oauth_landing_url,
+    integration_oauth_redirect_uri,
     normalize_shopify_shop_domain,
 )
 from app.core.http_errors import raise_not_found
@@ -100,18 +103,13 @@ def _require_known_provider(provider: str) -> None:
         raise_not_found(_RES_PROVIDER)
 
 
-def _redirect_uri(request: Request, provider: str) -> str:
-    """Absolute callback URL for the provider-registered redirect target."""
-    base = str(request.base_url).rstrip("/")
-    return f"{base}{INTEGRATION_OAUTH_CALLBACK_PATH.format(provider=provider)}"
-
-
 def _landing_redirect(params: dict[str, str]) -> RedirectResponse:
     """302 back to Settings → Integrations with the result query (contract C2).
 
-    The target is absolute (frontend origin): the provider navigates the
-    browser to the backend callback, so a bare path would resolve against the
-    backend origin and 404.
+    The target is absolute (frontend origin) rather than a bare path: this
+    handler also answers a callback delivered straight to the backend origin
+    (a stale redirect URI registered with the provider), where a relative
+    ``/settings`` would resolve against the backend and 404.
     """
     return RedirectResponse(
         integration_oauth_landing_url(params), status_code=status.HTTP_302_FOUND
@@ -121,7 +119,6 @@ def _landing_redirect(params: dict[str, str]) -> RedirectResponse:
 @router.get("/oauth/{provider}/start", status_code=status.HTTP_302_FOUND)
 async def integration_oauth_start(
     provider: str,
-    request: Request,
     ctx: _WorkspaceDep,
     session: _SessionDep,
     shop: Annotated[str, Query()] = "",
@@ -158,7 +155,7 @@ async def integration_oauth_start(
             workspace_id=ctx.workspace_id,
             user_id=ctx.user.id,
             provider=provider,
-            redirect_uri=_redirect_uri(request, provider),
+            redirect_uri=integration_oauth_redirect_uri(provider),
             provider_account_ref=provider_account_ref,
         )
     except IntegrationNotConfiguredError as exc:
@@ -197,7 +194,7 @@ async def integration_oauth_callback(
             code=code,
             state=state,
             user=user,
-            redirect_uri=_redirect_uri(request, provider),
+            redirect_uri=integration_oauth_redirect_uri(provider),
             # The full query map for the Shopify callback HMAC verification
             # (ignored by the single-tenant transports).
             callback_params={key: value for key, value in request.query_params.items()},

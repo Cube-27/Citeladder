@@ -11,7 +11,9 @@ import { z } from 'zod';
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
 import {
   competitorProductSchema,
+  productAuditReferencesSchema,
   productEvidenceResponseSchema,
+  productImportResponseSchema,
   productSchema,
   productVisibilitySchema,
   strictValidate,
@@ -20,7 +22,9 @@ import { definedQuery, withQuery } from './shared';
 import type {
   CompetitorProduct,
   Product,
+  ProductAuditReferences,
   ProductEvidenceResponse,
+  ProductImportResponse,
   ProductVisibility,
 } from './types';
 
@@ -107,29 +111,46 @@ export const productsApi = {
   },
   remove: (productId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/products/${productId}`, options),
-  /** Multipart CSV import; returns the full refreshed catalog (dupes dropped). */
+  /**
+   * Multipart CSV import (D1): returns the refreshed catalog (`items`) plus
+   * the per-row outcome `summary` (created/skipped counts and the reason
+   * every skipped row was dropped).
+   */
   importCsv: async (projectId: string, file: File, options?: ApiRequestOptions) => {
     const form = new FormData();
     form.append('file', file);
-    const res = await apiClient.postForm<Product[]>(
+    const res = await apiClient.postForm<ProductImportResponse>(
       `/projects/${projectId}/products/import`,
       form,
       options,
     );
-    return strictValidate(productListSchema, res, 'products.importCsv');
+    return strictValidate(productImportResponseSchema, res, 'products.importCsv');
   },
   /**
    * Persist browser-parsed rows through the same `/import` endpoint (the
-   * backend accepts a JSON body of `{ products: [...] }`); returns the full
-   * refreshed catalog with `origin='imported'` on new rows.
+   * backend accepts a JSON body of `{ products: [...] }`); returns the
+   * refreshed catalog (`items`, new rows carry `origin='imported'`) plus the
+   * per-row outcome `summary` (D1).
    */
   importRows: async (projectId: string, rows: ProductInput[], options?: ApiRequestOptions) => {
-    const res = await apiClient.post<Product[]>(
+    const res = await apiClient.post<ProductImportResponse>(
       `/projects/${projectId}/products/import`,
       { products: rows },
       options,
     );
-    return strictValidate(productListSchema, res, 'products.importRows');
+    return strictValidate(productImportResponseSchema, res, 'products.importRows');
+  },
+  /**
+   * Read-only delete guard (D4): how many audit configurations froze this
+   * product. Advisory only — past runs keep their frozen copy, so a delete
+   * is never blocked by it.
+   */
+  getAuditReferences: async (productId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<ProductAuditReferences>(
+      `/products/${productId}/audit-references`,
+      options,
+    );
+    return strictValidate(productAuditReferencesSchema, res, 'products.getAuditReferences');
   },
   listCompetitorProducts: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<CompetitorProduct[]>(

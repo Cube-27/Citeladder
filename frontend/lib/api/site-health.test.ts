@@ -70,6 +70,7 @@ const crawl = {
   failed_count: 0,
   total_url_count: null,
   score_summary: null,
+  failure_summary: null,
   site_facts: siteFacts,
   extractor_version: 'x1',
   analyzer_version: 'a1',
@@ -107,10 +108,13 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
     expect(parsed.monitored_url_limit).toBe(50);
   });
 
-  it('rejects an extra key (strict)', () => {
-    expect(() =>
-      strictValidate(siteHealthEntitlementSchema, { ...entitlement, hardcoded_50: true }, 'ent'),
-    ).toThrow();
+  it('strips an additive key (tolerant-on-unknown)', () => {
+    const parsed = strictValidate(
+      siteHealthEntitlementSchema,
+      { ...entitlement, hardcoded_50: true },
+      'ent',
+    );
+    expect('hardcoded_50' in parsed).toBe(false);
   });
 
   it('rejects a missing required field', () => {
@@ -140,10 +144,10 @@ describe('siteCrawlSchema (Free redaction / nullable totals)', () => {
     expect(strictValidate(siteCrawlSchema, sample, 'crawl').sample_mode).toBe(true);
   });
 
-  it('rejects an unexpected count-bearing key on a crawl (strict)', () => {
-    expect(() =>
-      strictValidate(siteCrawlSchema, { ...crawl, hidden_full_total: 9999 }, 'crawl'),
-    ).toThrow();
+  it('strips an unexpected count-bearing key on a crawl (no leaked total)', () => {
+    // A leaked total must never reach app state — stripped on parse.
+    const parsed = strictValidate(siteCrawlSchema, { ...crawl, hidden_full_total: 9999 }, 'crawl');
+    expect('hidden_full_total' in parsed).toBe(false);
   });
 });
 
@@ -238,16 +242,16 @@ describe('siteScoreSummarySchema by_page_type (v2 P1)', () => {
     expect(parsed.score_summary?.by_page_type).toEqual({});
   });
 
-  it('rejects an extra key inside a by_page_type bucket (strict)', () => {
+  it('strips an additive key inside a by_page_type bucket (tolerant-on-unknown)', () => {
     const bad = {
       ...scoreSummary,
       by_page_type: {
         homepage: { ...scoreSummary.by_page_type.homepage, discovered_total: 9999 },
       },
     };
-    expect(() =>
-      strictValidate(siteCrawlSchema, { ...crawl, score_summary: bad }, 'crawl'),
-    ).toThrow();
+    const parsed = strictValidate(siteCrawlSchema, { ...crawl, score_summary: bad }, 'crawl');
+    expect(parsed.score_summary?.by_page_type.homepage?.analyzed_count).toBe(1);
+    expect('discovered_total' in (parsed.score_summary?.by_page_type.homepage ?? {})).toBe(false);
   });
 });
 
@@ -280,10 +284,9 @@ describe('inventoryRowSchema (nullable analysis summaries)', () => {
     ).toThrow();
   });
 
-  it('rejects an extra key on an inventory row', () => {
-    expect(() =>
-      strictValidate(inventoryRowSchema, { ...inventoryRow, sort_rank: 1 }, 'row'),
-    ).toThrow();
+  it('strips an additive key on an inventory row (tolerant-on-unknown)', () => {
+    const parsed = strictValidate(inventoryRowSchema, { ...inventoryRow, sort_rank: 1 }, 'row');
+    expect('sort_rank' in parsed).toBe(false);
   });
 });
 
@@ -300,10 +303,10 @@ describe('cursorPageSchema', () => {
     expect(parsed.next_cursor).toBe('opaque==');
   });
 
-  it('rejects an offset / page-total field (no count side channel)', () => {
-    expect(() =>
-      strictValidate(page, { items: [], next_cursor: null, total: 25000 }, 'page'),
-    ).toThrow();
+  it('strips an offset / page-total field (no count side channel)', () => {
+    // No count side channel: a leaked total is stripped from parsed output.
+    const parsed = strictValidate(page, { items: [], next_cursor: null, total: 25000 }, 'page');
+    expect('total' in parsed).toBe(false);
   });
 });
 
@@ -406,8 +409,9 @@ describe('pageDetailSchema (field_cwv_available literal false)', () => {
     ).toThrow();
   });
 
-  it('rejects a leaked LCP field (strict)', () => {
-    expect(() => strictValidate(pageDetailSchema, { ...detail, lcp_ms: 1200 }, 'page')).toThrow();
+  it('strips a leaked LCP field (crawler never fabricates field CWV)', () => {
+    const parsed = strictValidate(pageDetailSchema, { ...detail, lcp_ms: 1200 }, 'page');
+    expect('lcp_ms' in parsed).toBe(false);
   });
 });
 
@@ -441,10 +445,13 @@ describe('rerunPageResponseSchema (rerun identity/status)', () => {
     ).toThrow();
   });
 
-  it('rejects an extra field (strict)', () => {
-    expect(() =>
-      strictValidate(rerunPageResponseSchema, { ...base, new_crawl_id: UUID }, 'rerun'),
-    ).toThrow();
+  it('strips an additive field (tolerant-on-unknown)', () => {
+    const parsed = strictValidate(
+      rerunPageResponseSchema,
+      { ...base, new_crawl_id: UUID },
+      'rerun',
+    );
+    expect('new_crawl_id' in parsed).toBe(false);
   });
 });
 

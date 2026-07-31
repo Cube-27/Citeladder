@@ -29,6 +29,9 @@ from app.core.config.site_health import (
     ERROR_ROBOTS_DENIED,
     ERROR_ROBOTS_UNAVAILABLE,
     OBSERVATION_SOURCE_SITEMAP,
+    ROBOTS_FETCH_STATUS_FETCH_FAILED,
+    ROBOTS_FETCH_STATUS_FETCHED,
+    ROBOTS_FETCH_STATUS_NOT_FOUND,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_PASS,
@@ -469,6 +472,115 @@ async def test_free_sample_stops_at_ten_across_two_projects(
 
 
 @pytest.mark.asyncio
+@pytest.mark.anyio
+async def test_free_discovery_maps_past_the_sample_budget_without_analyzing(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Free discovery keeps mapping past the analysis budget (inventory only).
+
+    Discovery and analysis used to share ONE number, so a Free crawl stopped
+    admitting URLs the moment its 10 analyze slots were spent: the user saw the
+    first 10 URLs of their site and nothing else. They are now separate budgets
+    — the inventory grows to ``free_discovery_url_cap`` while only
+    ``free_sample_url_limit`` URLs get a monitored membership and an analyze
+    task. The over-budget URLs must be REAL inventory rows (identity +
+    per-crawl observation, so the UI can list them) that cost no fetch.
+    """
+    monkeypatch.setattr(site_health_settings, "per_host_delay_seconds", 0.0)
+    # A small cap keeps the test fast while still proving the split: 4 analyzed
+    # out of 12 discovered is unambiguous about which budget bounds which.
+    monkeypatch.setattr(site_health_settings, "free_sample_url_limit", 4)
+    monkeypatch.setattr(site_health_settings, "free_discovery_url_cap", 12)
+
+    root = "https://example.com/"
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=0, root_url=root)
+        # Written AFTER the settings patch above so the entitlement freezes the
+        # small sample budget (``set_entitlement`` applies the live profile).
+        await set_entitlement(session, seed.workspace_id, CAPABILITY_FREE)
+        await session.commit()
+        await _configure_crawl(
+            session,
+            crawl_id=seed.crawl_id,
+            sample_mode=True,
+            count_disclosure=False,
+        )
+        _canonical, root_hash = canonical_identity(root)
+        session.add(
+            SiteCrawlTask(
+                crawl_id=seed.crawl_id,
+                workspace_id=seed.workspace_id,
+                task_kind=TASK_KIND_DISCOVER,
+                requested_url=root,
+                url_hash=root_hash,
+                generation=0,
+                idempotency_key=f"{seed.crawl_id}:{TASK_KIND_DISCOVER}:root:0",
+                status=TASK_STATUS_QUEUED,
+                randomized_position=0,
+            )
+        )
+        await session.commit()
+
+    # 15 in-scope children — more than the discovery cap, far more than the
+    # analysis budget, so both ceilings are genuinely exercised.
+    links = [f"https://example.com/p{i}" for i in range(15)]
+    pages = {"/": _html(links)}
+    for i in range(15):
+        pages[f"/p{i}"] = _html([])
+
+    worker = _worker(session_factory, pages, owner="free-split")
+    assert await worker.run_until_idle() > 0
+
+    async with session_factory() as session:
+        # Analysis stayed on its own budget.
+        monitored = await session.scalar(
+            select(func.count())
+            .select_from(MonitoredSiteUrl)
+            .where(
+                MonitoredSiteUrl.workspace_id == seed.workspace_id,
+                MonitoredSiteUrl.active.is_(True),
+                MonitoredSiteUrl.selection_source == SELECTION_SOURCE_FREE_SAMPLE,
+            )
+        )
+        assert monitored == 4
+        analyze_count = await session.scalar(
+            select(func.count())
+            .select_from(SiteCrawlTask)
+            .where(
+                SiteCrawlTask.workspace_id == seed.workspace_id,
+                SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
+            )
+        )
+        assert analyze_count == 4
+
+        # ...while the INVENTORY mapped well past it. This is the regression:
+        # it used to equal the sample budget exactly.
+        observed = await session.scalar(
+            select(func.count())
+            .select_from(SiteUrlObservation)
+            .where(SiteUrlObservation.crawl_id == seed.crawl_id)
+        )
+        assert observed is not None
+        assert observed > 4, "discovery must not stop at the analysis budget"
+        # Soft cap: admission is batched, so landing slightly over the 12-URL
+        # discovery cap is expected. The bound must stay STRICTLY below the
+        # full 16-URL frontier (root + 15 children) — at `<= 16` the assertion
+        # passed even when the cap was ignored entirely, so it proved nothing.
+        assert observed < 16, "the discovery cap must bound the frontier"
+        assert observed <= site_health_settings.free_discovery_url_cap + 2
+
+        # The unanalyzed remainder is real, listable inventory.
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteUrl)
+                .where(SiteUrl.project_id == seed.project_id)
+            )
+        ) >= observed
+
+
+@pytest.mark.anyio
 async def test_discover_robots_denied_short_circuits_and_records_site_facts(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -508,6 +620,7 @@ async def test_discover_robots_denied_short_circuits_and_records_site_facts(
         site_facts = crawl.site_facts or {}
         robots = site_facts.get("robots") or {}
         assert robots.get("fetched") is True
+        assert robots.get("status") == ROBOTS_FETCH_STATUS_FETCHED
         assert robots.get("status_code") == 200
         assert robots.get("ai_crawlers") == {bot: "block" for bot in AI_CRAWLER_BOTS}
         llms = site_facts.get("llms_txt") or {}
@@ -559,6 +672,34 @@ async def test_robots_cache_honors_ttl_and_4xx_is_allow_all(
 
 
 @pytest.mark.asyncio
+async def test_discover_robots_404_records_not_found_and_crawls_fail_open(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """SH-1 (B2): a 404 robots.txt means the site HAS no robots.txt.
+
+    That is ``not_found`` — crawling proceeds fail-open and the AI-crawler
+    stance defaults to allow — NOT ``fetch_failed`` (robots unreachable),
+    and the crawl completes normally.
+    """
+    seed = await _seed_root_discover(session_factory, root="https://example.com/")
+    # No "/robots.txt" key -> the mock transport 404s it; the root serves.
+    worker = _worker(session_factory, {"/": _html([])}, owner="robots-404")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_COMPLETED
+        site_facts = crawl.site_facts or {}
+        robots = site_facts.get("robots") or {}
+        assert robots.get("fetched") is False
+        assert robots.get("status") == ROBOTS_FETCH_STATUS_NOT_FOUND
+        assert robots.get("status_code") == 404
+        # Fail-open: no robots.txt means no restrictions for any AI bot.
+        assert robots.get("ai_crawlers") == {bot: "allow" for bot in AI_CRAWLER_BOTS}
+
+
+@pytest.mark.asyncio
 async def test_discover_robots_5xx_fails_unavailable_without_page_fetch(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -604,6 +745,9 @@ async def test_discover_robots_5xx_fails_unavailable_without_page_fetch(
         site_facts = crawl.site_facts or {}
         robots = site_facts.get("robots") or {}
         assert robots.get("fetched") is False
+        # SH-1 (B2): a 5xx robots.txt is fetch_failed, NOT not_found — the
+        # site's robots endpoint misbehaved; the stance is genuinely unknown.
+        assert robots.get("status") == ROBOTS_FETCH_STATUS_FETCH_FAILED
         assert robots.get("status_code") == 503
         llms = site_facts.get("llms_txt") or {}
         assert llms.get("fetched") is False

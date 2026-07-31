@@ -33,6 +33,7 @@ const item = {
   target_prompt_id: OPP,
   target_url: null,
   target_theme: 'crm',
+  target_label: 'best crm for small teams',
   status: 'open' as const,
   created_at: '2026-07-24T00:00:00Z',
   updated_at: '2026-07-24T00:00:00Z',
@@ -67,6 +68,8 @@ const summary = {
   rule_version: 'opp-rules-1',
   formula_version: 'opp-formula-1',
   computed_at: '2026-07-24T00:00:00Z',
+  evidence_updated_at: '2026-07-23T00:00:00Z',
+  stale: false,
 };
 
 const recomputeResponse = {
@@ -115,14 +118,31 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
       total_count: 0,
       median_priority: null,
       computed_at: null,
+      evidence_updated_at: null,
+      stale: false,
     };
     expect(strictValidate(opportunitySummarySchema, empty, 'test')).toEqual(empty);
   });
 
-  it('fails loud on drift: extra keys, bad enums, non-uuid ids', () => {
-    expect(() => strictValidate(opportunitySchema, { ...item, unexpected: true }, 'test')).toThrow(
-      /API validation failure/,
-    );
+  it('carries the backend-owned target_label on items and details (C1)', () => {
+    const parsedItem = strictValidate(opportunitySchema, item, 'test');
+    expect(parsedItem.target_label).toBe('best crm for small teams');
+    const parsedDetail = strictValidate(opportunityDetailSchema, detail, 'test');
+    expect(parsedDetail.target_label).toBe('best crm for small teams');
+    // A missing declared label fails loud (contract drift), null is valid.
+    expect(() =>
+      strictValidate(
+        opportunitySchema,
+        { ...item, target_label: undefined } as unknown as typeof item,
+        'test',
+      ),
+    ).toThrow(/API validation failure/);
+    expect(
+      strictValidate(opportunitySchema, { ...item, target_label: null }, 'test').target_label,
+    ).toBeNull();
+  });
+
+  it('fails loud on declared-field drift: bad enums, non-uuid ids', () => {
     expect(() =>
       strictValidate(opportunitySchema, { ...item, severity: 'urgent' }, 'test'),
     ).toThrow(/API validation failure/);
@@ -135,9 +155,17 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
     expect(() => strictValidate(opportunitySchema, { ...item, id: 'not-a-uuid' }, 'test')).toThrow(
       /API validation failure/,
     );
-    expect(() =>
-      strictValidate(opportunitySummarySchema, { ...summary, extra: 1 }, 'test'),
-    ).toThrow(/API validation failure/);
+  });
+
+  it('strips additive keys (tolerant-on-unknown)', () => {
+    const parsedItem = strictValidate(opportunitySchema, { ...item, unexpected: true }, 'test');
+    expect('unexpected' in parsedItem).toBe(false);
+    const parsedSummary = strictValidate(
+      opportunitySummarySchema,
+      { ...summary, extra: 1 },
+      'test',
+    );
+    expect('extra' in parsedSummary).toBe(false);
   });
 
   it('exposes the full vocabulary enums', () => {
@@ -231,13 +259,14 @@ describe('opportunitiesApi transport', () => {
     expect(bodies[1]).toEqual({ audit_id: AUDIT });
   });
 
-  it('fails loud when the wire shape drifts (extra key)', async () => {
+  it('strips an additive key when the wire shape drifts (tolerant-on-unknown)', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
         HttpResponse.json({ ...summary, extra: 'drift' }),
       ),
     );
-    await expect(opportunitiesApi.summary(PROJECT)).rejects.toThrow(/API validation failure/);
+    const result = await opportunitiesApi.summary(PROJECT);
+    expect('extra' in result).toBe(false);
   });
 
   it('builds same-origin export URLs with optional filters', () => {

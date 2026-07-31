@@ -33,9 +33,15 @@ class DrainableWorkerMixin:
         ``max_batches`` bounds the degenerate case where new work keeps
         arriving faster than the queue empties, so a test can never hang.
         """
+        # ``self`` is typed through the ``_RunsOnce`` protocol rather than
+        # calling ``self.run_once()`` directly: the mixin deliberately does NOT
+        # declare ``run_once`` (each worker supplies its own), so the direct
+        # call had no attribute for mypy to resolve. The protocol states the
+        # real requirement — "whatever this is mixed into exposes run_once".
+        runner: _RunsOnce = self  # type: ignore[assignment]
         total = 0
         for _ in range(max(1, max_batches)):
-            ran = await self.run_once()
+            ran = await runner.run_once()
             if ran == 0:
                 break
             total += ran

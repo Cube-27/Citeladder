@@ -39,7 +39,9 @@ function StanceBadge({ stance }: Readonly<{ stance: SiteFactsStance }>) {
 
 /** Header summary chip: blocked count, unknown stance, or all-allowed. */
 function SummaryBadge({ view }: Readonly<{ view: SiteFactsView }>) {
-  if (!view.robotsFetched) {
+  // B2: only a FETCH FAILURE leaves the stance genuinely unknown — a 404
+  // means "no robots.txt", which is a definitive all-allowed, not an unknown.
+  if (view.robotsFetchStatus === 'fetch_failed') {
     return (
       <Badge variant="status" value="warning">
         Stance unknown
@@ -136,10 +138,15 @@ export function SiteFactsPanel({
             engines cannot crawl these pages, so they can never cite them.
           </Alert>
         ) : null}
-        {!view.robotsFetched ? (
+        {view.robotsFetchStatus === 'not_found' ? (
+          <Alert tone="info">
+            No robots.txt — crawling proceeds fail-open; the AI-crawler stance defaults to allow.
+          </Alert>
+        ) : null}
+        {view.robotsFetchStatus === 'fetch_failed' ? (
           <Alert tone="warning">
-            robots.txt did not respond during this crawl, so the AI-crawler stance could not be
-            read. Crawling continued with the fail-open default.
+            robots.txt could not be fetched, so the AI-crawler stance could not be read. Crawling
+            continued with the fail-open default.
           </Alert>
         ) : null}
 
@@ -151,10 +158,12 @@ export function SiteFactsPanel({
             <Label>robots.txt</Label>
             <span className="flex items-center gap-2">
               <StatusValue status={view.robotsStatus} />
-              {view.robotsFetched ? (
+              {view.robotsFetchStatus === 'fetched' ? (
                 <Badge variant="status" value="success">
                   Fetched
                 </Badge>
+              ) : view.robotsFetchStatus === 'not_found' ? (
+                <Badge>Not found</Badge>
               ) : (
                 <Badge variant="status" value="warning">
                   Not fetched

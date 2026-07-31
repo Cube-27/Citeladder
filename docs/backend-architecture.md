@@ -92,6 +92,19 @@ its `RawResponseArtifact`: normalized token counts and any provider-reported cos
 stamped `provider-usage-v1`. This records evidence without claiming an estimate; versioned price
 cards and user-facing estimates remain the T7 workstream.
 
+### Error responses
+
+Every non-2xx response carries the unified envelope
+`{detail, error: {code, message, request_id, retryable, details?}}`, produced by the
+handlers in `app/core/errors.py` (registered in `app/main.py`). `detail` is retained
+verbatim so the change is non-breaking; `error` is the additive canonical block. Routers
+raise `ApiException` (codes from `app/core/config/errors.py`, invariant 1); a legacy raw
+`HTTPException` is normalized by the compatibility shim. Validation failures are
+sanitized (no Pydantic internals) and an unhandled exception returns a fixed
+`internal_error` 500 with nothing internal in the body.
+
+**Canonical reference: [`api-error-contract.md`](api-error-contract.md).**
+
 ## 4. Audit request + settings contract
 
 **Provider configuration lives only in Provider Settings** (`ProviderConnection` +

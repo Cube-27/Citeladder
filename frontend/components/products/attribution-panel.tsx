@@ -23,7 +23,9 @@ import {
 } from '@/components/ui/dropdown';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatUtcTimestamp } from '@/lib/format';
 import { formatPercent } from '@/lib/products/catalog';
 import {
@@ -181,9 +183,15 @@ export function AttributionPanel({
   const recomputeNotices = (
     <>
       {recomputeMutation.isError ? (
-        <Alert tone="danger">
-          Could not start the attribution recompute. Your current snapshot is unchanged — try again.
-        </Alert>
+        // A4/COM-6: a 4xx precondition (e.g. "no completed sync window is
+        // available") renders the backend message verbatim — no futile
+        // "try again"; only transient failures offer the retry affordance.
+        <MutationNotice
+          notice={mutationNoticeForError(recomputeMutation.error, {
+            action: 'start the attribution recompute',
+          })}
+          onRetry={() => recomputeMutation.mutate()}
+        />
       ) : null}
       {recomputeFailed ? (
         <Alert tone="warning">

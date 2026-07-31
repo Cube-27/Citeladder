@@ -62,19 +62,29 @@ describe('auth + workspace contract', () => {
     expect(() => strictValidate(authResponseSchema, sessionUser, 'auth')).toThrow();
   });
 
-  it('rejects an extra key on the auth wrapper (strict)', () => {
-    expect(() =>
-      strictValidate(authResponseSchema, { user: sessionUser, token: 'leaked' }, 'auth'),
-    ).toThrow();
+  it('strips an additive key on the auth wrapper (tolerant-on-unknown, ERR-5)', () => {
+    // Additive backend fields must never break the UI — they are stripped
+    // from the parsed output, so a leaked key never enters app state either.
+    const parsed = strictValidate(
+      authResponseSchema,
+      { user: sessionUser, token: 'leaked' },
+      'auth',
+    );
+    expect(parsed.user.email).toBe('user@example.com');
+    expect('token' in parsed).toBe(false);
   });
 
-  it('rejects an extra key on a SessionUser (strict)', () => {
-    expect(() =>
-      strictValidate(sessionUserSchema, { ...sessionUser, password_hash: 'x' }, 'user'),
-    ).toThrow();
+  it('strips an additive key on a SessionUser (tolerant-on-unknown)', () => {
+    const parsed = strictValidate(
+      sessionUserSchema,
+      { ...sessionUser, password_hash: 'x' },
+      'user',
+    );
+    expect(parsed.email).toBe('user@example.com');
+    expect('password_hash' in parsed).toBe(false);
   });
 
-  it('validates a workspace with role (no slug) and rejects a slug key', () => {
+  it('validates a workspace with role (no slug) and strips a slug key', () => {
     const workspace = {
       id: UUID,
       name: 'Acme',
@@ -83,8 +93,24 @@ describe('auth + workspace contract', () => {
       updated_at: '2026-07-15T00:00:00Z',
     };
     expect(strictValidate(workspaceSchema, workspace, 'ws').role).toBe('owner');
-    // Backend WorkspaceResponse has no slug — an unexpected key must fail loud.
-    expect(() => strictValidate(workspaceSchema, { ...workspace, slug: 'acme' }, 'ws')).toThrow();
+    // Backend WorkspaceResponse has no slug — an additive key is stripped.
+    const parsed = strictValidate(workspaceSchema, { ...workspace, slug: 'acme' }, 'ws');
+    expect('slug' in parsed).toBe(false);
+  });
+
+  it('still fails loud on declared-field drift (missing or mistyped fields)', () => {
+    const workspace = {
+      id: UUID,
+      name: 'Acme',
+      role: 'owner',
+      created_at: '2026-07-15T00:00:00Z',
+      updated_at: '2026-07-15T00:00:00Z',
+    };
+    // A missing declared field is drift the UI needs — it throws.
+    const { role: _role, ...missingRole } = workspace;
+    expect(() => strictValidate(workspaceSchema, missingRole, 'ws')).toThrow();
+    // A mistyped declared field throws.
+    expect(() => strictValidate(workspaceSchema, { ...workspace, name: 7 }, 'ws')).toThrow();
   });
 });
 
@@ -121,13 +147,12 @@ describe('contract schemas', () => {
     expect(() =>
       strictValidate(projectSchema, { ...project, benchmark_mode: 'nope' }, 'project'),
     ).toThrow();
-    // Strict: an unmodeled extra key on a response DTO is a contract drift bug.
-    expect(() =>
-      strictValidate(projectSchema, { ...project, surprise: true }, 'project'),
-    ).toThrow();
+    // Tolerant-on-unknown: an additive backend field is stripped, not thrown.
+    const parsed = strictValidate(projectSchema, { ...project, surprise: true }, 'project');
+    expect('surprise' in parsed).toBe(false);
   });
 
-  it('rejects a provider connection that leaks a secret key', () => {
+  it('strips a leaked secret key from a provider connection', () => {
     const base = {
       id: UUID,
       workspace_id: UUID2,
@@ -138,9 +163,13 @@ describe('contract schemas', () => {
       updated_at: '2026-07-15T00:00:00Z',
     };
     expect(strictValidate(providerConnectionSchema, base, 'conn').active).toBe(true);
-    expect(() =>
-      strictValidate(providerConnectionSchema, { ...base, api_key: 'sk-test-fake' }, 'conn'),
-    ).toThrow();
+    // Invariant 6 holds in the parsed output: a secret never enters app state.
+    const parsed = strictValidate(
+      providerConnectionSchema,
+      { ...base, api_key: 'sk-test-fake' },
+      'conn',
+    );
+    expect('api_key' in parsed).toBe(false);
   });
 
   it('accepts only the three direct transports', () => {
@@ -233,8 +262,10 @@ describe('contract schemas', () => {
     expect(strictValidate(auditSchema, audit, 'audit').status).toBe('completed');
     // The 64-bit seed is a decimal STRING on the wire, never a number.
     expect(() => strictValidate(auditSchema, { ...audit, random_seed: 42 }, 'audit')).toThrow();
-    // Strict: an unmodeled extra key must fail loud, never be silently stripped.
-    expect(() => strictValidate(auditSchema, { ...audit, extra: 'nope' }, 'audit')).toThrow();
+    // Tolerant-on-unknown (ERR-5): an additive audit field is stripped, never
+    // a screen-breaking rejection.
+    const parsed = strictValidate(auditSchema, { ...audit, extra: 'nope' }, 'audit');
+    expect('extra' in parsed).toBe(false);
   });
 
   it('validates an execution/queue row (AuditTaskResponse shape)', () => {
@@ -465,7 +496,8 @@ describe('visibility evidence contract', () => {
     expect(parsed.items[1]?.state).toBe('no_search');
   });
 
-  it('rejects an unknown fanout state and unknown extra keys (strict)', () => {
+  it('rejects an unknown fanout state and strips unknown extra keys', () => {
+    // Declared-field drift (an unknown enum value) still fails loud.
     expect(() =>
       strictValidate(
         visibilityEvidenceResponseSchema,
@@ -473,13 +505,13 @@ describe('visibility evidence contract', () => {
         'evidence',
       ),
     ).toThrow();
-    expect(() =>
-      strictValidate(
-        visibilityEvidenceResponseSchema,
-        { items: [makeItem({ unexpected: true })], truncated: false },
-        'evidence',
-      ),
-    ).toThrow();
+    // An additive key on a nested item is stripped, not thrown.
+    const parsed = strictValidate(
+      visibilityEvidenceResponseSchema,
+      { items: [makeItem({ unexpected: true })], truncated: false },
+      'evidence',
+    );
+    expect('unexpected' in (parsed.items[0] ?? {})).toBe(false);
   });
 
   it('preserves an empty query string in a search event (never invented)', () => {
@@ -524,8 +556,11 @@ describe('products contract (agentic commerce)', () => {
     expect(parsed.sku).toBe('AC-VB500');
     expect(parsed.variants[0]?.price).toBe(2499.0);
     expect(parsed.completeness.missing).toEqual(['gtin']);
-    // Strict: unknown keys are contract drift.
-    expect(() => strictValidate(productSchema, { ...product, slug: 'nope' }, 'product')).toThrow();
+    // Tolerant-on-unknown: an additive key is stripped; declared-field drift
+    // (a numeric id) still fails loud.
+    expect('slug' in strictValidate(productSchema, { ...product, slug: 'nope' }, 'product')).toBe(
+      false,
+    );
     expect(() => strictValidate(productSchema, { ...product, id: 7 }, 'product')).toThrow();
   });
 

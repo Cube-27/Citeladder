@@ -16,8 +16,13 @@ from typing import Any
 from sqlalchemy import and_, case, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.site_health import TASK_KIND_ANALYZE, capability_profile
+from app.core.config.site_health import (
+    CRAWL_STATUS_FAILED,
+    TASK_KIND_ANALYZE,
+    capability_profile,
+)
 from app.domain.site_health.entitlements import resolve_entitlement
+from app.domain.site_health.failure import load_root_errors, load_root_failure_summary
 from app.domain.site_health.inventory_scope import (
     inherited_inventory_crawl_ids,
     inventory_site_url_subquery,
@@ -97,11 +102,33 @@ async def get_entitlement_view(
 # =========================================================================
 # Crawl summary / list
 # =========================================================================
+async def _failure_summary_for(session: AsyncSession, crawl: SiteCrawl) -> dict | None:
+    """B1 failure summary for the single-crawl read paths.
+
+    Only a FAILED crawl can have one (a terminally failed root fetch is what
+    makes a crawl fail), so healthy/partial crawls skip the evidence queries
+    entirely. List projections stay ``None`` by not calling this (N+1
+    avoidance).
+    """
+    if crawl.status != CRAWL_STATUS_FAILED:
+        return None
+    return await load_root_failure_summary(session, crawl=crawl)
+
+
+async def _root_errors_for(session: AsyncSession, crawl: SiteCrawl) -> list[dict]:
+    """B3 root-failure rows for the pages/dashboard responses (same guard)."""
+    if crawl.status != CRAWL_STATUS_FAILED:
+        return []
+    return await load_root_errors(session, crawl=crawl)
+
+
 async def get_crawl_summary(
     session: AsyncSession, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
 ) -> dict:
     crawl = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
-    return project_crawl(crawl)
+    return project_crawl(
+        crawl, failure_summary=await _failure_summary_for(session, crawl)
+    )
 
 
 async def list_crawls(
@@ -546,6 +573,10 @@ async def get_pages(
     crawl = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
     limit = _clamp_limit(limit)
     project_id = crawl.project_id
+    # B3 (SH-4): the root fetch's failed calls ride alongside the page rows so
+    # a root failure is visible on the Errors & Blocked tab even though it
+    # never created a page row of its own.
+    root_errors = await _root_errors_for(session, crawl)
     scope = "pages"
     filters = {
         "crawl_id": str(crawl_id),
@@ -572,7 +603,7 @@ async def get_pages(
         over_fetch=over_fetch,
     )
     if stmt is None:
-        return {"items": [], "next_cursor": None}
+        return {"items": [], "next_cursor": None, "root_errors": root_errors}
     rows = list((await session.scalars(stmt)).all())
 
     site_ids = [r.id for r in rows]
@@ -688,7 +719,7 @@ async def get_pages(
             filters=filters,
             sort_values=[last_scanned.normalized_url, str(last_scanned.id)],
         )
-    return {"items": items, "next_cursor": next_cursor}
+    return {"items": items, "next_cursor": next_cursor, "root_errors": root_errors}
 
 
 # =========================================================================

@@ -11,10 +11,19 @@ Covers the Task 1 acceptance:
 
 from __future__ import annotations
 
+import uuid
+
 import httpx
 import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.products import PRODUCT_COMPLETENESS_ATTRIBUTE_KEYS
+from app.core.config.provider_catalog import ENGINE_GEMINI
+from app.domain.audits.planner import create_audit
+from app.models.user import User
+from app.models.workspace import WorkspaceMember
+from tests.component.audit_helpers import seed_audit_fixtures
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -142,15 +151,32 @@ async def test_product_import_csv_file_and_json_rows(
         url, files={"file": ("catalog.csv", csv_text, "text/csv")}
     )
     assert imported.status_code == 201
-    rows = imported.json()
+    body = imported.json()
+    # D1 response contract: the refreshed catalog + the per-row summary.
+    assert set(body) == {"items", "summary"}
+    assert set(body["summary"]) == {"created", "updated", "skipped", "errors"}
+    rows = body["items"]
     # The in-file duplicate is dropped; both unique rows land as imported.
     assert {row["sku"] for row in rows} == {"VC-500", "SF-200W"}
     assert {row["origin"] for row in rows} == {"imported"}
     by_sku = {row["sku"]: row for row in rows}
     assert by_sku["VC-500"]["name"] == "VoltCity 500"
     assert by_sku["SF-200W"]["attributes"]["category"] == "Power & Solar"
+    # Summary: 2 created, the in-file duplicate skipped with its row number.
+    assert body["summary"]["created"] == 2
+    assert body["summary"]["updated"] == 0
+    assert body["summary"]["skipped"] == 1
+    assert body["summary"]["errors"] == [
+        {
+            "row": 3,
+            "field": "sku",
+            "message": "Duplicate sku 'VC-500' in this import — "
+            "the first occurrence was kept",
+        }
+    ]
 
-    # JSON rows path converges on the same logic; the existing sku is a no-op.
+    # JSON rows path converges on the same logic; the existing sku is a
+    # skipped row (left unchanged), never a failure.
     json_import = await client.post(
         url,
         json={
@@ -161,9 +187,96 @@ async def test_product_import_csv_file_and_json_rows(
         },
     )
     assert json_import.status_code == 201
-    rows = json_import.json()
+    body = json_import.json()
+    rows = body["items"]
     assert {row["sku"] for row in rows} == {"VC-500", "SF-200W", "CG-S2-GR"}
     assert {row["name"] for row in rows if row["sku"] == "VC-500"} == {"VoltCity 500"}
+    assert body["summary"]["created"] == 1
+    assert body["summary"]["skipped"] == 1
+    assert body["summary"]["errors"] == [
+        {
+            "row": 1,
+            "field": "sku",
+            "message": "A product with sku 'VC-500' already exists — "
+            "it was left unchanged",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_product_import_summary_reports_missing_sku_rows(
+    client: httpx.AsyncClient,
+) -> None:
+    """COM-4: sku-less CSV rows surface as numbered row errors, not silence."""
+    await _register(client, "prod-import-skips@example.com")
+    project = await _project(client)
+    csv_text = (
+        "sku,name\nVC-500,VoltCity 500\n,No SKU row\nSF-200W,SolarFold Panel 200W\n"
+    )
+    resp = await client.post(
+        f"/api/v1/projects/{project['id']}/products/import",
+        files={"file": ("catalog.csv", csv_text, "text/csv")},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert [row["sku"] for row in body["items"]] == ["VC-500", "SF-200W"]
+    assert body["summary"]["created"] == 2
+    assert body["summary"]["skipped"] == 1
+    errors = body["summary"]["errors"]
+    assert len(errors) == 1
+    assert errors[0]["row"] == 2
+    assert errors[0]["field"] == "sku"
+    assert "Missing sku" in errors[0]["message"]
+
+
+@pytest.mark.asyncio
+async def test_product_import_json_rows_report_blank_sku_and_duplicates(
+    client: httpx.AsyncClient,
+) -> None:
+    """JSON rows that pass schema validation but cannot be imported (blank
+    sku, in-payload duplicates) land in the summary, not in a 422."""
+    await _register(client, "prod-import-json-skips@example.com")
+    project = await _project(client)
+    resp = await client.post(
+        f"/api/v1/projects/{project['id']}/products/import",
+        json={
+            "products": [
+                {"sku": "   ", "name": "Whitespace-only sku"},
+                {"sku": "DUP-1", "name": "First"},
+                {"sku": "DUP-1", "name": "Second"},
+            ]
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert [row["sku"] for row in body["items"]] == ["DUP-1"]
+    assert body["items"][0]["name"] == "First"
+    assert body["summary"]["created"] == 1
+    assert body["summary"]["skipped"] == 2
+    errors = body["summary"]["errors"]
+    assert [error["row"] for error in errors] == [1, 3]
+    assert "Missing sku" in errors[0]["message"]
+    assert "Duplicate sku 'DUP-1'" in errors[1]["message"]
+
+
+@pytest.mark.asyncio
+async def test_product_import_bad_price_json_is_sanitized_422(
+    client: httpx.AsyncClient,
+) -> None:
+    """COM-5: a schema-violating JSON row (negative price) is a sanitized
+    422 — no Pydantic internals reach the client."""
+    await _register(client, "prod-import-price-422@example.com")
+    project = await _project(client)
+    resp = await client.post(
+        f"/api/v1/projects/{project['id']}/products/import",
+        json={"products": [{"sku": "VC-500", "name": "VoltCity", "price": -5}]},
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["error"]["code"] == "validation_error"
+    assert "pydantic" not in resp.text
+    assert "ProductImport" not in resp.text
+    assert "errors.pydantic.dev" not in resp.text
 
 
 @pytest.mark.asyncio
@@ -228,6 +341,108 @@ async def test_product_import_rejects_oversized_file_before_csv_parsing(
         files={"file": ("catalog.csv", oversized, "text/csv")},
     )
     assert response.status_code == 413
+
+
+@pytest.mark.asyncio
+async def test_product_audit_references_delete_guard(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    """D4: the read-only check reports frozen-audit usage of a product."""
+    email = f"prod-audit-refs-{uuid.uuid4().hex[:8]}@example.com"
+    await _register(client, email)
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        user = await session.scalar(select(User).where(User.email == email))
+        assert user is not None
+        session.add(
+            WorkspaceMember(
+                workspace_id=seed.workspace_id, user_id=user.id, role="owner"
+            )
+        )
+        await session.commit()
+    # The register-created workspace is the user's default active one, so
+    # calls into the seeded workspace carry the explicit header.
+    headers = {"X-Workspace-Id": str(seed.workspace_id)}
+    url = f"/api/v1/projects/{seed.project_id}/products"
+
+    referenced = await client.post(
+        url,
+        json=_product_payload(sku="REF-1", name="Frozen Into Audits"),
+        headers=headers,
+    )
+    assert referenced.status_code == 201
+    referenced_id = referenced.json()["id"]
+
+    # No audit yet: nothing references the product.
+    resp = await client.get(
+        f"/api/v1/products/{referenced_id}/audit-references", headers=headers
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "product_id": referenced_id,
+        "referenced": False,
+        "audit_count": 0,
+    }
+
+    # The planner freezes the WHOLE catalog into the audit configuration.
+    async with session_factory() as session:
+        await create_audit(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            engines=[ENGINE_GEMINI],
+            prompt_set_id=seed.prompt_set_id,
+            repetitions=1,
+            random_seed="7",
+        )
+
+    resp = await client.get(
+        f"/api/v1/products/{referenced_id}/audit-references", headers=headers
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "product_id": referenced_id,
+        "referenced": True,
+        "audit_count": 1,
+    }
+
+    # A product created AFTER the audit is not part of its frozen catalog.
+    unreferenced = await client.post(
+        url,
+        json=_product_payload(sku="REF-2", name="Added After The Audit"),
+        headers=headers,
+    )
+    assert unreferenced.status_code == 201
+    unreferenced_id = unreferenced.json()["id"]
+    resp = await client.get(
+        f"/api/v1/products/{unreferenced_id}/audit-references", headers=headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["referenced"] is False
+    assert resp.json()["audit_count"] == 0
+
+    # Cross-workspace / missing ids stay 404 (invariant 5).
+    assert (
+        await client.get(
+            f"/api/v1/products/{uuid.uuid4()}/audit-references", headers=headers
+        )
+    ).status_code == 404
+
+    # CROSS-workspace, not merely missing: a product that really exists in the
+    # register-created workspace is still a 404 when the request is scoped to
+    # the seeded workspace — the id resolves, the scope does not.
+    register_project = await _project(client)
+    foreign = await client.post(
+        f"/api/v1/projects/{register_project['id']}/products",
+        json=_product_payload(sku="FOREIGN-1", name="Other Workspace Product"),
+    )
+    assert foreign.status_code == 201
+    assert (
+        await client.get(
+            f"/api/v1/products/{foreign.json()['id']}/audit-references",
+            headers=headers,
+        )
+    ).status_code == 404
 
 
 @pytest.mark.asyncio

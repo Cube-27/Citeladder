@@ -180,13 +180,16 @@ describe('trafficApi.getPages / getQueries', () => {
     expect(page.next_cursor).toBeNull();
   });
 
-  it('fails loud when a page row carries an extra key (e.g. a leaked total)', async () => {
+  it('strips an additive key on a page row (e.g. a leaked total)', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/traffic/pages`, () =>
         HttpResponse.json({ items: [{ ...pageRow, total_count: 9000 }], next_cursor: null }),
       ),
     );
-    await expect(trafficApi.getPages(PROJECT)).rejects.toThrow(/traffic.getPages/);
+    // A leaked total must never reach app state — stripped on parse.
+    const page = await trafficApi.getPages(PROJECT);
+    expect(page.items).toHaveLength(1);
+    expect('total_count' in page.items[0]).toBe(false);
   });
 });
 
@@ -228,10 +231,10 @@ describe('traffic schemas (drift policy)', () => {
     ).toThrow(/test/);
   });
 
-  it('rejects sessions on a query row (GSC-only metrics)', () => {
-    expect(() =>
-      strictValidate(trafficQueryRowSchema, { ...queryRow, sessions: 3 }, 'test'),
-    ).toThrow(/test/);
+  it('strips sessions on a query row (GSC-only metrics)', () => {
+    // Non-GSC metrics must never enter app state via a query row.
+    const parsed = strictValidate(trafficQueryRowSchema, { ...queryRow, sessions: 3 }, 'test');
+    expect('sessions' in parsed).toBe(false);
   });
 });
 

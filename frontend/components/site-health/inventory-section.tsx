@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/typography';
 import { InventorySelection } from '@/components/site-health/inventory-selection';
 import { PageTypeSelect } from '@/components/site-health/page-type-select';
 import { PagesTable } from '@/components/site-health/pages-table';
+import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
 import { siteHealthQueries, type PagesParams } from '@/lib/api/site-health';
 import type { SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 import { segmentedItemClasses, segmentedTrackClasses } from '@/components/ui/segmented';
@@ -281,6 +282,11 @@ function ScoredInventory({
 
   const rows = pagesQuery.data?.items ?? [];
   const nextCursor = pagesQuery.data?.next_cursor ?? null;
+  // B3 (SH-4): the root fetch's failed calls ride the pages response. They
+  // render ONLY on the Errors & Blocked tab, above the table, as a distinct
+  // non-clickable block — the `error_or_blocked` filter keeps its real-page
+  // semantics (a root failure never created a page row).
+  const rootErrors = tab === 'errors' ? (pagesQuery.data?.root_errors ?? []) : [];
 
   let body: ReactNode;
   if (pagesQuery.isError) {
@@ -297,14 +303,19 @@ function ScoredInventory({
         <Skeleton className="h-8 w-full" />
       </div>
     );
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && rootErrors.length === 0) {
     body = (
       <p className="text-secondary p-[var(--card-padding)] text-sm">
         {active ? 'Pages appear here as the audit reaches them.' : 'No pages in this view.'}
       </p>
     );
   } else {
-    body = <PagesTable pages={rows} crawlId={crawl.id} />;
+    body = (
+      <div className="grid gap-3 p-[var(--card-padding)]">
+        <RootErrorsBlock errors={rootErrors} />
+        {rows.length > 0 ? <PagesTable pages={rows} crawlId={crawl.id} /> : null}
+      </div>
+    );
   }
 
   return (

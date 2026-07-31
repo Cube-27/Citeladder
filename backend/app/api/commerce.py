@@ -17,11 +17,13 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.core.config.analytics import ANALYTICS_DEFAULT_GRANULARITY
+from app.core.config.errors import CODE_INVALID_CURSOR, CODE_VALIDATION_ERROR
+from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
 from app.domain.attribution.schemas import (
     AttributionOrdersPage,
@@ -95,8 +97,8 @@ async def get_commerce_attribution_endpoint(
             granularity=granularity,
         )
     except AttributionQueryError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        raise ApiException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, CODE_VALIDATION_ERROR, str(exc)
         ) from exc
 
 
@@ -128,12 +130,12 @@ async def get_attribution_orders_endpoint(
             cursor=cursor,
         )
     except AttributionCursorError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        raise ApiException(
+            status.HTTP_400_BAD_REQUEST, CODE_INVALID_CURSOR, str(exc)
         ) from exc
     except AttributionQueryError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        raise ApiException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, CODE_VALIDATION_ERROR, str(exc)
         ) from exc
 
 
@@ -178,8 +180,8 @@ async def enqueue_attribution_recompute_endpoint(
             to_date=request.to_date,
         )
     except AttributionQueryError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        raise ApiException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, CODE_VALIDATION_ERROR, str(exc)
         ) from exc
 
 

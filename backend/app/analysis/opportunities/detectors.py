@@ -21,8 +21,13 @@ from app.analysis.opportunities.scoring import (
     value_factor_for_intent,
 )
 from app.core.config.opportunities import (
+    COMMERCE_COMPETITOR_SOV_THRESHOLD,
+    COMMERCE_GAP_FACTOR,
+    COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD,
+    COMMERCE_VALUE_FACTOR,
     OPPORTUNITY_RULES_BY_ID,
     SITE_GAP_FACTOR,
+    SITE_SCHEMA_TYPE_RULE_IDS,
     SITE_STRUCTURED_DATA_RULE_IDS,
     SITE_THIN_CONTENT_RULE_IDS,
     SITE_VALUE_FACTOR,
@@ -34,6 +39,10 @@ RULE_BRAND_ABSENT = "brand_absent_high_value_prompt"
 RULE_OWNED_PAGE_NOT_CITED = "owned_page_not_cited"
 RULE_MISSING_STRUCTURED_DATA = "missing_structured_data"
 RULE_THIN_CONTENT = "thin_content"
+RULE_SCHEMA_TYPE_MISMATCH = "schema_type_mismatch"
+RULE_PRODUCT_NOT_MENTIONED = "product_not_mentioned"
+RULE_COMPETITOR_PRODUCT_DOMINATES = "competitor_product_dominates"
+RULE_PRICE_MENTION_MISMATCH = "price_mention_mismatch"
 
 
 # =========================================================================
@@ -100,6 +109,38 @@ class SiteEvidence:
     crawl_id: uuid.UUID
     issues: tuple[SiteIssueEvidence, ...]
     urls: tuple[SiteUrlEvidence, ...]
+
+
+@dataclass(frozen=True)
+class ProductEntryEvidence:
+    """One frozen catalog entry + its persisted aggregate for the audit.
+
+    Identity (``name``/``sku``/``competitor_name``) comes from the audit's
+    FROZEN catalog (``Audit.configuration``) so evidence survives later
+    catalog edits (invariant 9); the metrics come from the persisted
+    ``ProductMetricSnapshot`` rows (invariant 7). ``snapshot_id`` /
+    ``source_analysis_ids`` are empty when no snapshot exists for the entry
+    (never measured).
+    """
+
+    entry_id: str
+    kind: str  # "product" | "competitor_product"
+    name: str
+    sku: str
+    competitor_name: str
+    mention_count: int
+    sov_share: float
+    price_mismatch_rate: float | None
+    snapshot_id: uuid.UUID | None
+    source_analysis_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CommerceEvidence:
+    """The commerce slice one audit offers the detectors."""
+
+    audit_id: uuid.UUID
+    entries: tuple[ProductEntryEvidence, ...]
 
 
 @dataclass(frozen=True)
@@ -267,6 +308,8 @@ def _site_opportunity_rule_id(issue_rule_id: str) -> str | None:
         return RULE_MISSING_STRUCTURED_DATA
     if issue_rule_id in SITE_THIN_CONTENT_RULE_IDS:
         return RULE_THIN_CONTENT
+    if issue_rule_id in SITE_SCHEMA_TYPE_RULE_IDS:
+        return RULE_SCHEMA_TYPE_MISMATCH
     return None
 
 
@@ -303,6 +346,9 @@ def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]
                     "category": issue.category,
                     "issue_evidence": issue.evidence or {},
                     "crawl_id": str(evidence.crawl_id),
+                    # Deep-link identity for the drawer's Site Health page
+                    # link (rendered only when present; older rows predate it).
+                    "site_url_id": str(issue.site_url_id),
                     "url": normalized_url,
                 },
                 source_analysis_ids=(),
@@ -314,3 +360,149 @@ def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]
         )
     hits.sort(key=lambda hit: (hit.rule_id, hit.target_key, hit.source_issue_ids))
     return hits
+
+
+# =========================================================================
+# Commerce detectors (persisted ProductMetricSnapshot/ProductMention rows)
+# =========================================================================
+def _commerce_hit(
+    evidence: CommerceEvidence,
+    entry: ProductEntryEvidence,
+    *,
+    rule: OpportunityRule,
+    extras: dict[str, Any],
+) -> DetectorHit:
+    """One commerce-rule firing on one frozen catalog entry.
+
+    Shared target identity (``product:{entry_id}`` /
+    ``competitor-product:{entry_id}``), frozen-identity evidence payload, and
+    provenance: the entry's ``ProductMetricSnapshot`` (metric ids) and the
+    exact product-analysis rows it aggregated (analysis ids, invariant 4).
+    """
+    target_prefix = (
+        "competitor-product" if entry.kind == "competitor_product" else "product"
+    )
+    return DetectorHit(
+        rule_id=rule.rule_id,
+        target_key=f"{target_prefix}:{entry.entry_id}",
+        target_prompt_id=None,
+        target_url=None,
+        target_theme=None,
+        evidence={
+            # Frozen at detection (mirrors evidence.prompt_text): the drawer's
+            # target label reads this without a catalog join.
+            "product_name": entry.name,
+            "product_sku": entry.sku,
+            "product_kind": entry.kind,
+            "mention_count": entry.mention_count,
+            "sov_share": entry.sov_share,
+            "audit_id": str(evidence.audit_id),
+            **extras,
+        },
+        source_analysis_ids=entry.source_analysis_ids,
+        source_issue_ids=(),
+        source_metric_ids=(
+            (str(entry.snapshot_id),) if entry.snapshot_id is not None else ()
+        ),
+        value_factor=COMMERCE_VALUE_FACTOR,
+        gap_factor=COMMERCE_GAP_FACTOR,
+    )
+
+
+def _sorted_commerce_hits(hits: list[DetectorHit]) -> list[DetectorHit]:
+    hits.sort(key=lambda hit: (hit.rule_id, hit.target_key))
+    return hits
+
+
+def _has_provenance(entry: ProductEntryEvidence) -> bool:
+    """True when the entry can back a hit's provenance (invariant 4).
+
+    A ``ProductMetricSnapshot`` (metric id) or the analyses it aggregated —
+    without either, a ``DetectorHit`` built from this entry would carry three
+    empty provenance lists.
+    """
+    return entry.snapshot_id is not None or bool(entry.source_analysis_ids)
+
+
+def _is_unmentioned_product(entry: ProductEntryEvidence) -> bool:
+    """An own-catalog product MEASURED at zero mentions.
+
+    "Never measured" (no snapshot, no analyses) is not evidence of "never
+    mentioned", and would also breach the provenance contract — so it is
+    excluded. Unmentioned entries DO get a zero-filled snapshot (invariant 7),
+    so a genuinely unmentioned product still qualifies.
+    """
+    return (
+        entry.kind == "product"
+        and entry.mention_count == 0
+        and _has_provenance(entry)
+    )
+
+
+def detect_product_not_mentioned(evidence: CommerceEvidence) -> list[DetectorHit]:
+    """Fire per frozen catalog product measured with zero mentions."""
+    rule = OPPORTUNITY_RULES_BY_ID[RULE_PRODUCT_NOT_MENTIONED]
+    if not rule.enabled:
+        return []
+    return _sorted_commerce_hits(
+        [
+            _commerce_hit(evidence, entry, rule=rule, extras={})
+            for entry in evidence.entries
+            if _is_unmentioned_product(entry)
+        ]
+    )
+
+
+def detect_competitor_product_dominates(
+    evidence: CommerceEvidence,
+) -> list[DetectorHit]:
+    """Fire per competitor product whose persisted SOV share is above the
+    config threshold (``COMMERCE_COMPETITOR_SOV_THRESHOLD``)."""
+    rule = OPPORTUNITY_RULES_BY_ID[RULE_COMPETITOR_PRODUCT_DOMINATES]
+    if not rule.enabled:
+        return []
+    return _sorted_commerce_hits(
+        [
+            _commerce_hit(
+                evidence,
+                entry,
+                rule=rule,
+                extras={
+                    "competitor_name": entry.competitor_name,
+                    "sov_threshold": COMMERCE_COMPETITOR_SOV_THRESHOLD,
+                },
+            )
+            for entry in evidence.entries
+            if entry.kind == "competitor_product"
+            and entry.sov_share > COMMERCE_COMPETITOR_SOV_THRESHOLD
+        ]
+    )
+
+
+def detect_price_mention_mismatch(evidence: CommerceEvidence) -> list[DetectorHit]:
+    """Fire per product whose persisted price-relation mismatch rate is above
+    the config threshold (``COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD``).
+
+    A null rate (no verifiable price mentions) never fires: absent price
+    evidence is not evidence of a mismatch.
+    """
+    rule = OPPORTUNITY_RULES_BY_ID[RULE_PRICE_MENTION_MISMATCH]
+    if not rule.enabled:
+        return []
+    return _sorted_commerce_hits(
+        [
+            _commerce_hit(
+                evidence,
+                entry,
+                rule=rule,
+                extras={
+                    "price_mismatch_rate": entry.price_mismatch_rate,
+                    "price_mismatch_threshold": COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD,
+                },
+            )
+            for entry in evidence.entries
+            if entry.kind == "product"
+            and entry.price_mismatch_rate is not None
+            and entry.price_mismatch_rate > COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD
+        ]
+    )

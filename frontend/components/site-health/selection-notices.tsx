@@ -1,32 +1,38 @@
 'use client';
 
 import { Alert } from '@/components/ui/alert';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { QuotaStatus } from '@/lib/site-health/selection';
 
 /**
  * The stacked alert strip for the monitored-selection flow: bulk failure,
  * over-quota warning, stale-version merge notice, and commit failure. Purely
  * presentational — visibility rules mirror the container's mutation state.
+ * Mutation failures render through the shared A4 notice (verbatim 4xx,
+ * transient retry, support correlation).
  */
 export function SelectionNotices({
-  bulkError,
-  bulkErrorMessage,
+  bulkNotice,
+  onBulkRetry,
   quota,
   staleNotice,
-  replaceError,
+  replaceNotice,
+  onReplaceRetry,
 }: Readonly<{
-  bulkError: boolean;
-  bulkErrorMessage: string | null;
+  bulkNotice: MutationNoticeData | null;
+  /** Retry affordance for a transient bulk failure (re-runs the bulk action). */
+  onBulkRetry?: () => void;
   quota: QuotaStatus | null;
   staleNotice: boolean;
-  replaceError: boolean;
+  replaceNotice: MutationNoticeData | null;
+  /** Retry affordance for a transient commit failure (re-sends the staged set). */
+  onReplaceRetry?: () => void;
 }>) {
   return (
     <>
-      {bulkError && !staleNotice ? (
-        <Alert tone="danger">
-          {bulkErrorMessage ?? 'Could not apply the bulk selection. Please try again.'}
-        </Alert>
+      {bulkNotice && !staleNotice ? (
+        <MutationNotice notice={bulkNotice} onRetry={onBulkRetry} />
       ) : null}
       {quota?.overLimit ? (
         <Alert tone="warning">
@@ -40,8 +46,8 @@ export function SelectionNotices({
           — review and resubmit.
         </Alert>
       ) : null}
-      {replaceError && !staleNotice ? (
-        <Alert tone="danger">Could not save your selection. Please try again.</Alert>
+      {replaceNotice && !staleNotice ? (
+        <MutationNotice notice={replaceNotice} onRetry={onReplaceRetry} />
       ) : null}
     </>
   );

@@ -262,6 +262,36 @@ describe('UrlDetail', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 
+  it('renders the placeholder (not "0ms") for an unmeasured TTFB (B6)', async () => {
+    mswServer.use(
+      ...handlers(
+        detail({
+          delivery: {
+            field_cwv_available: false,
+            status_code: 200,
+            ttfb_ms: 0,
+            wire_bytes: 40000,
+            decoded_bytes: 145408,
+            html_bytes: 145408,
+            http_version: 'HTTP/2',
+            compression: 'gzip',
+            cache_control: 'no-cache',
+            blocking_resource_count: 0,
+          },
+        }),
+      ),
+    );
+
+    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    // A 0 ms reading is an unmeasured hop, never an instant response.
+    expect(screen.queryByText('0ms')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    // Byte counts do NOT share the zero rule — they still render normally.
+    expect(screen.getByText('39.1 KB')).toBeInTheDocument();
+  });
+
   it('same-active-crawl rerun: polls in place through completed → pending → running → completed without navigating', async () => {
     // The rerun response points at the SAME crawl/URL (created_new_crawl
     // false), so the component must poll in place — never navigate.

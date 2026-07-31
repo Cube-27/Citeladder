@@ -9,10 +9,18 @@ from __future__ import annotations
 
 import csv
 import io
+from typing import NamedTuple
+
+from pydantic import ValidationError
 
 from app.core.config.http import IMPORT_MAX_CELL_CHARS, IMPORT_MAX_COLUMNS
 from app.core.config.products import PRODUCT_IMPORT_MAX_ROWS
-from app.domain.products.schemas import ProductInput, ProductVariant
+from app.core.errors import sanitize_validation_errors
+from app.domain.products.schemas import (
+    ProductImportRowError,
+    ProductInput,
+    ProductVariant,
+)
 
 # Accepted header aliases -> canonical field. Case/space/underscore-insensitive.
 _SKU_KEYS = {"sku", "sku_id", "product_sku", "product_id"}
@@ -40,6 +48,19 @@ class ProductCsvError(ValueError):
     """Raised when a product CSV cannot be parsed into unambiguous rows."""
 
 
+class ProductCsvParseResult(NamedTuple):
+    """Numbered import rows plus the per-row skips (D1 import feedback).
+
+    ``rows`` pairs each parsed row with its 1-based DATA-row number (the
+    header is row 0, fully-blank rows are dropped before numbering) — the
+    same numbering the browser preview shows. ``errors`` carries the rows
+    that were skipped (empty sku, failing field validation) with reasons.
+    """
+
+    rows: list[tuple[int, ProductInput]]
+    errors: list[ProductImportRowError]
+
+
 def _split_list(value: str) -> list[str]:
     for separator in _ALIAS_SEPARATORS:
         if separator in value:
@@ -62,17 +83,36 @@ def _parse_price(value: str) -> float | None:
         return None
 
 
-def parse_product_csv(content: str) -> list[ProductInput]:
-    """Parse CSV text into ``ProductInput`` rows.
+def _row_validation_error(
+    row_number: int, exc: ValidationError
+) -> ProductImportRowError:
+    """A failing ``ProductInput`` row -> a sanitized, skipped-row reason.
+
+    Never a 500 (COM-5). Two shapes are guarded: an EMPTY sanitized list must
+    not be indexed, and a ``loc`` carrying a sequence index (``variants``, 0)
+    must be stringified before joining.
+    """
+    sanitized = sanitize_validation_errors(exc.errors())
+    first = sanitized[0] if sanitized else {}
+    return ProductImportRowError(
+        row=row_number,
+        field=".".join(str(part) for part in first.get("loc", ())),
+        message=first.get("message") or "Invalid value",
+    )
+
+
+def parse_product_csv(content: str) -> ProductCsvParseResult:
+    """Parse CSV text into numbered ``ProductInput`` rows + row-level skips.
 
     Requires a header row with at least ``name`` and ``sku`` (aliases
-    accepted, any column order). BOM-stripped; fully-blank rows and rows with
-    an empty ``sku`` are skipped (sku is the import identity). A missing
-    ``name`` falls back to the sku.
+    accepted, any column order). BOM-stripped; fully-blank rows are skipped.
+    Rows with an empty ``sku`` or that fail ``ProductInput`` validation are
+    skipped WITH a reason (D1 — previously silent / an unhandled 500); a
+    missing ``name`` falls back to the sku.
     """
     text = content.lstrip("\ufeff")
     if not text.strip():
-        return []
+        return ProductCsvParseResult(rows=[], errors=[])
     reader = csv.reader(io.StringIO(text))
     rows: list[list[str]] = []
     for row in reader:
@@ -85,7 +125,7 @@ def parse_product_csv(content: str) -> list[ProductInput]:
             if len(rows) > PRODUCT_IMPORT_MAX_ROWS + 1:
                 raise ProductCsvError("Product CSV has too many rows")
     if not rows:
-        return []
+        return ProductCsvParseResult(rows=[], errors=[])
 
     header = [cell.strip().lower().replace(" ", "_") for cell in rows[0]]
 
@@ -117,13 +157,22 @@ def parse_product_csv(content: str) -> list[ProductInput]:
             return ""
         return row[index].strip()
 
-    products: list[ProductInput] = []
-    for row in rows[1:]:
+    products: list[tuple[int, ProductInput]] = []
+    errors: list[ProductImportRowError] = []
+    for row_number, row in enumerate(rows[1:], start=1):
         sku = _cell(row, sku_i)
         name = _cell(row, name_i)
         if not sku:
             # sku is the (project_id, sku) import identity — a row without one
             # cannot be de-duplicated, so it is skipped rather than guessed.
+            errors.append(
+                ProductImportRowError(
+                    row=row_number,
+                    field="sku",
+                    message="Missing sku — the row was skipped "
+                    "(sku is the import identity)",
+                )
+            )
             continue
         attributes = {
             key: _cell(row, index)
@@ -131,16 +180,22 @@ def parse_product_csv(content: str) -> list[ProductInput]:
             if index is not None and _cell(row, index)
         }
         variant = _cell(row, variant_i)
-        products.append(
-            ProductInput(
-                sku=sku,
-                name=name or sku,
-                aliases=_split_list(_cell(row, aliases_i)),
-                variants=[ProductVariant(name=variant)] if variant else [],
-                price=_parse_price(_cell(row, price_i)),
-                currency=_cell(row, currency_i),
-                url=_cell(row, url_i),
-                attributes=attributes,
+        try:
+            products.append(
+                (
+                    row_number,
+                    ProductInput(
+                        sku=sku,
+                        name=name or sku,
+                        aliases=_split_list(_cell(row, aliases_i)),
+                        variants=[ProductVariant(name=variant)] if variant else [],
+                        price=_parse_price(_cell(row, price_i)),
+                        currency=_cell(row, currency_i),
+                        url=_cell(row, url_i),
+                        attributes=attributes,
+                    ),
+                )
             )
-        )
-    return products
+        except ValidationError as exc:
+            errors.append(_row_validation_error(row_number, exc))
+    return ProductCsvParseResult(rows=products, errors=errors)

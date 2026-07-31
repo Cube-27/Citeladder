@@ -11,6 +11,7 @@ import { IconChip } from '@/components/ui/icon-chip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { integrationsApi, type IntegrationSyncRun } from '@/lib/api/integrations';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { productsApi, type ProductInput } from '@/lib/api/products';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Product } from '@/lib/api/types';
@@ -18,6 +19,7 @@ import { isActiveSyncRun, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs'
 import type { useCatalogQueries } from '@/lib/products/use-products-screen';
 
 import { CatalogTable } from './catalog-table';
+import { ProductDeleteDialog } from './product-delete-dialog';
 import { ProductFormDialog } from './product-form-dialog';
 import { ProductImportDialog } from './product-import-dialog';
 
@@ -47,10 +49,21 @@ export function CatalogPanel({
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  // The product awaiting delete confirmation (D4) — non-null opens the dialog.
+  const [pendingDelete, setPendingDelete] = useState<Product | null>(null);
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.products.list(projectId) });
+  };
+
+  // Open the import dialog on a CLEAN slate. Closing already resets the
+  // mutation, but only via `onOpenChange(false)` — a reopen that skipped that
+  // path (or any future one) would render the previous run's completion
+  // summary instead of the upload form, so clearing here is what actually
+  // guarantees the result prop is null when the dialog mounts.
+  const openImport = () => {
+    importMutation.reset();
+    setImportOpen(true);
   };
 
   const createMutation = useMutation({
@@ -74,16 +87,17 @@ export function CatalogPanel({
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => productsApi.remove(id),
-    onSettled: () => setBusyId(null),
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      await invalidate();
+      setPendingDelete(null);
+    },
   });
 
   const importMutation = useMutation({
     mutationFn: (rows: ProductInput[]) => productsApi.importRows(projectId, rows),
-    onSuccess: async () => {
-      await invalidate();
-      setImportOpen(false);
-    },
+    // The dialog stays open on the server-side summary (D1); it closes from
+    // its own Done button, which resets the mutation below.
+    onSuccess: invalidate,
   });
 
   const health = catalogHealthQuery.data;
@@ -174,7 +188,7 @@ export function CatalogPanel({
           {products.length} product{products.length === 1 ? '' : 's'} in the catalog
         </p>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+          <Button variant="secondary" size="sm" onClick={openImport}>
             <Upload className="size-4" aria-hidden />
             Import CSV
           </Button>
@@ -192,10 +206,6 @@ export function CatalogPanel({
         </div>
       </div>
 
-      {deleteMutation.isError ? (
-        <Alert tone="danger">{errorMessage(deleteMutation.error)}</Alert>
-      ) : null}
-
       {products.length === 0 ? (
         <Card>
           <CardContent className="grid justify-items-center gap-4 py-12 text-center">
@@ -211,7 +221,7 @@ export function CatalogPanel({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="md" onClick={() => setImportOpen(true)}>
+              <Button variant="ghost" size="md" onClick={openImport}>
                 Import CSV
               </Button>
               <Button variant="primary" size="md" onClick={() => setFormOpen(true)}>
@@ -226,15 +236,11 @@ export function CatalogPanel({
           health={health ?? null}
           healthPending={catalogHealthQuery.isPending}
           syncOverrides={syncOverrides}
-          busyId={busyId}
           onEdit={(product) => {
             setEditing(product);
             setFormOpen(true);
           }}
-          onDelete={(product) => {
-            setBusyId(product.id);
-            deleteMutation.mutate(product.id);
-          }}
+          onDelete={(product) => setPendingDelete(product)}
         />
       )}
 
@@ -261,11 +267,50 @@ export function CatalogPanel({
 
       <ProductImportDialog
         open={importOpen}
-        onOpenChange={setImportOpen}
+        onOpenChange={(open) => {
+          // Closing clears the finished/failed mutation so a reopen starts
+          // fresh (never a stale summary or error notice).
+          if (!open) importMutation.reset();
+          setImportOpen(open);
+        }}
         isImporting={importMutation.isPending}
-        error={importMutation.isError ? errorMessage(importMutation.error) : undefined}
+        error={
+          importMutation.isError
+            ? mutationNoticeForError(importMutation.error, { action: 'import the products' })
+            : undefined
+        }
+        onRetry={() => {
+          // Re-post the exact failed row set (existing SKUs are skipped, so a
+          // retry never double-imports).
+          if (importMutation.variables) importMutation.mutate(importMutation.variables);
+        }}
+        result={importMutation.data?.summary ?? null}
         onImport={async (rows) => {
           await importMutation.mutateAsync(rows);
+        }}
+      />
+
+      <ProductDeleteDialog
+        product={pendingDelete}
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDelete(null);
+            deleteMutation.reset();
+          }
+        }}
+        isDeleting={deleteMutation.isPending}
+        notice={
+          deleteMutation.isError
+            ? mutationNoticeForError(deleteMutation.error, { action: 'delete the product' })
+            : undefined
+        }
+        onConfirm={() => {
+          // `mutate`, not `mutateAsync`: nothing awaits the result here, and an
+          // un-awaited rejected promise is an unhandled rejection. Failure is
+          // surfaced through `deleteMutation.isError` above — the same pattern
+          // the import flow uses.
+          if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
         }}
       />
     </div>

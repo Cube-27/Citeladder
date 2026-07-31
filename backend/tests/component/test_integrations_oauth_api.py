@@ -61,6 +61,21 @@ def _landing(query: str) -> str:
     return f"{settings.frontend_url.rstrip('/')}/settings?tab=integrations&{query}"
 
 
+def _callback_uri(provider: str) -> str:
+    """Expected registered redirect URI: the APP origin, not ``base_url``.
+
+    Anchored on ``frontend_url`` so the provider's post-consent navigation
+    returns through the same-origin proxy and carries the session cookie the
+    callback authenticates with (a backend-origin callback arrives cookieless
+    whenever the app is served from a different host — 127.0.0.1 vs
+    localhost, or a tunnel — and 401s).
+    """
+    return (
+        f"{settings.frontend_url.rstrip('/')}"
+        f"/api/v1/integrations/oauth/{provider}/callback"
+    )
+
+
 def _fixture(name: str) -> dict:
     return json.loads((_FIXTURES / name).read_text())
 
@@ -209,9 +224,7 @@ async def test_google_connect_happy_path_shared_grant(
     assert location.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
     query = parse_qs(urlsplit(location).query)
     assert query["client_id"] == [_GOOGLE_CLIENT_ID]
-    assert query["redirect_uri"] == [
-        "http://testserver/api/v1/integrations/oauth/gsc/callback"
-    ]
+    assert query["redirect_uri"] == [_callback_uri("gsc")]
     assert query["response_type"] == ["code"]
     assert set(query["scope"][0].split(" ")) == _GOOGLE_SCOPES
     assert query["access_type"] == ["offline"]
@@ -368,6 +381,35 @@ async def test_callback_landing_is_absolute_frontend_url(
     assert callback2.headers["location"] == (
         "http://localhost:3000/settings?tab=integrations&connected=ga4"
     )
+
+
+@pytest.mark.asyncio
+async def test_redirect_uri_is_app_origin_not_request_host(
+    client: httpx.AsyncClient,
+    _oauth_credentials: None,
+    _fake_oauth: _FakeOAuthServer,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The registered redirect URI tracks ``frontend_url``, never the host.
+
+    Regression guard: it was built from ``request.base_url``. The browser
+    reaches the backend through the Next ``rewrites()`` proxy, which sets
+    ``changeOrigin`` — so the backend sees its OWN host and handed the
+    provider a BACKEND-origin redirect URI. The post-consent navigation then
+    bypassed the proxy and arrived without the app-origin session cookie,
+    and the callback's ``get_current_user`` 401'd ("Not authenticated")
+    whenever the app was served from a different host than the backend
+    (127.0.0.1 vs localhost, or a tunnel).
+    """
+    await _register(client, "int-redirect-origin@example.com")
+    monkeypatch.setattr(settings, "frontend_url", "https://app.example.test/")
+
+    query = parse_qs(urlsplit((await _start(client, "gsc")).headers["location"]).query)
+    # No trailing-slash doubling, and the request's own host is absent.
+    assert query["redirect_uri"] == [
+        "https://app.example.test/api/v1/integrations/oauth/gsc/callback"
+    ]
+    assert "testserver" not in query["redirect_uri"][0]
 
 
 @pytest.mark.asyncio
@@ -674,9 +716,7 @@ async def test_shopify_connect_happy_path(
     assert location.startswith(f"https://{_SHOP}/admin/oauth/authorize?")
     query = parse_qs(urlsplit(location).query)
     assert query["client_id"] == [_SHOPIFY_CLIENT_ID]
-    assert query["redirect_uri"] == [
-        "http://testserver/api/v1/integrations/oauth/shopify/callback"
-    ]
+    assert query["redirect_uri"] == [_callback_uri("shopify")]
     # Comma-joined scopes; NO response_type/access_type/prompt extras.
     assert query["scope"] == ["read_products,read_orders"]
     assert "response_type" not in query

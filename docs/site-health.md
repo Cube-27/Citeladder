@@ -167,7 +167,36 @@ typed `400`, never a `500`.
 site-level blob `_crawl_setup` builds (robots.txt AI-crawler stance, llms.txt
 result, sitemap files); the dashboard's **AI crawler access** panel
 (`site-facts-panel.tsx`, between the status strip and the per-page-type
-scores) renders it and hides itself while it is `null`.
+scores) renders it and hides itself while it is `null`. Its
+`robots.status` classifies the robots.txt fetch (SH-1):
+`fetched` / `not_found` (HTTP 404 — the site HAS no robots.txt; crawling
+proceeds fail-open and the AI-crawler stance defaults to allow) /
+`fetch_failed` (network error / 5xx — the stance is genuinely unknown). The
+legacy `robots.fetched` bool stays for back-compat.
+
+`failure_summary` (required, nullable — SH-2/SH-5) explains a **failed** crawl:
+`{code, message, attempts, status_code, target_url}`, projected by
+`domain/site_health/failure.py` from the root discover task's terminal
+`SiteFetchAttempt` rows — a stable machine `code` plus a human `message`
+naming the terminal status/attempt count ("The site returned HTTP 500 after 3
+attempts"), never a bare `http_4xx` token. The worker writes the same message
+onto `SiteCrawl.error_message` at terminalization and records a
+**`crawl.failed`** event (payload `{status, failure}`) INSTEAD of the
+misleading `crawl.completed`. Single-crawl reads (`GET /site-crawls/{id}`,
+cancel, dashboard) carry it; the list projection leaves it `null` (N+1
+avoidance). A fully-failed crawl also maps `analysis_status` to `failed`
+(SH-3 — an empty plan is only `completed` when the plan was legitimately
+empty, e.g. Starter with no monitored selection).
+
+`root_errors` (required array — SH-4) rides the **pages** and **dashboard**
+responses: one entry per REAL root-target network call the crawl lost
+(`method, target, outcome, error_code, status_code, latency_ms`), empty for
+any crawl whose root fetch succeeded (including retried-then-succeeded). The
+Errors & Blocked tab renders them as a distinct **non-clickable** block above
+the table (`root-errors-block.tsx`) — they are deliberately not page rows (a
+root failure never created a `SiteUrl`, so no `site_url_id` and no
+PageDetail), they never enter the keyset pagination, and the
+`error_or_blocked` filter keeps its real-page semantics.
 
 ---
 
@@ -200,6 +229,17 @@ Site Health and Issues are live MVP nav items.
 |---|---|
 | `/site-health` | The Site Health screen: discovery-in-progress, inventory selection, live analysis, and the completed dashboard (mockups 708 / 709 / 712 / 713). The phase is derived from the crawl + pages queries. |
 | `/site-health/crawls/[crawlId]/pages/[siteUrlId]` | Per-URL detail: metadata, Technical/AEO/overall score rings (`—` for null), delivery metrics, all issues by severity, and crawl-bounded issue history (mockup 711). |
+
+**Unmeasured delivery timings render `—` (SH-6).** `0` and `null` are both
+treated as UI **sentinels for "no usable measurement"**. The fetcher records
+whole milliseconds, so a `0` TTFB (or a `0 ms` root-error latency) is almost
+always an unmeasured hop — a redirect/no-body hop, a DNS failure that never
+reached the wire, or a legacy row. It is *not* proof the hop was never measured:
+a genuinely sub-millisecond duration also rounds down to `0`. The tradeoff is
+deliberate — rendering `0ms` would advertise impossibly fast delivery far more
+often than it would report a real sub-millisecond response — so both collapse to
+the placeholder. **Byte counts do not share this rule**: `0 B` is a real,
+measured empty body and still renders as a number.
 | `/issues` | Grouped Issues catalog: severity/occurrence/affected-page summary tiles, grouped cards with remediation, server-backed search/filter/pagination, and affected-URL navigation (mockup 710). |
 
 Data flow notes:
@@ -235,20 +275,31 @@ deterministic precedence (top wins):
 
 1. **no crawl** → `empty` (first-run "Start discovery" card).
 2. **`completed` / `partially_completed`** → `dashboard`.
-3. **any crawl with `score_summary`** (including `cancelled`/`failed` mid-run) →
+3. **`failed` with `analyzed_count === 0` and `score_summary.overall_score`
+   null** → `terminal` (SH-2). A fully-failed crawl persists a
+   *present-but-null-score* summary (`persist_empty=True`), so the score-data
+   probe at clause 4 alone would misroute it to an empty dashboard. Placement
+   after clause 2 protects a legitimately `completed` empty-plan crawl — which
+   persists the same null-score summary shape — from regressing to `terminal`.
+4. **any crawl with `score_summary`** (including `cancelled`/`failed` mid-run) →
    `dashboard`. Score data always outranks the discovering/analyzing sub-states,
    so a landed projection is never hidden behind an active-looking view.
-4. **`failed` without data** → `terminal` (explicit stopped card + restart).
-5. **`cancelled` without data**: Starter with discovered URLs → `selection`
+5. **`failed` without data** → `terminal` (explicit stopped card + restart).
+6. **`cancelled` without data**: Starter with discovered URLs → `selection`
    (the inventory persists through a cancel and re-seeds the next crawl);
    otherwise → `terminal`.
-6. **active Starter crawl + committed monitored set** → `analyzing`, including
+7. **active Starter crawl + committed monitored set** → `analyzing`, including
    the interval where re-discovery is running and `analysis_status` still says
    `pending`.
-7. **discovery still running** → `discovering`.
-8. **analysis running** → `analyzing`.
-9. **Starter + analysis pending** → `selection`; otherwise (Free auto-analysis)
+8. **discovery still running** → `discovering`.
+9. **analysis running** → `analyzing`.
+10. **Starter + analysis pending** → `selection`; otherwise (Free auto-analysis)
    → `analyzing`.
+
+A `failed` crawl's terminal view keeps the tabbed page browser mounted
+(`inventoryModeForPhase(phase, crawl)`) so the **Errors & Blocked** tab stays
+reachable: it renders the `root_errors` failure block (see below) even though
+a root failure never created page rows.
 
 ### Cancellation with partial data
 

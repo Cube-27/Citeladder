@@ -25,4 +25,6 @@ export const productKeys = {
   // switching a control re-derives the view.
   evidence: (productId: string, filters: ListFilters = {}) =>
     ['products', 'evidence', productId, filters] as const,
+  // D4 delete guard: the frozen-audit usage check for one product.
+  auditReferences: (productId: string) => ['products', 'audit-references', productId] as const,
 };

@@ -8,7 +8,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Product } from '@/lib/api/types';
 import { mswServer } from '@/test/msw-server';
@@ -17,11 +17,33 @@ import { renderWithProviders } from '@/test/render';
 import { ProductEvidenceTable } from './product-evidence-table';
 
 const PRODUCT_ID = '11111111-1111-4111-8111-111111111111';
+const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
 const EVIDENCE_URL = `/api/v1/products/${PRODUCT_ID}/visibility/evidence`;
+const AUDITS_URL = '/api/v1/audits';
+
+/** Minimal auditSchema-valid run (drives the run-aware empty copy, D2). */
+const completedAudit = {
+  id: '77777777-7777-4777-8777-777777777777',
+  workspace_id: '88888888-8888-4888-8888-888888888888',
+  project_id: PROJECT_ID,
+  status: 'completed',
+  benchmark_mode: 'consumer_like',
+  repetitions: 1,
+  random_seed: '42',
+  requested_count: 1,
+  completed_count: 1,
+  failed_count: 0,
+  error_message: '',
+  engine_snapshots: [],
+  created_at: '2026-07-15T00:00:00Z',
+  updated_at: '2026-07-15T01:00:00Z',
+  started_at: '2026-07-15T00:00:10Z',
+  completed_at: '2026-07-15T01:00:00Z',
+};
 
 const product = {
   id: PRODUCT_ID,
-  project_id: '22222222-2222-4222-8222-222222222222',
+  project_id: PROJECT_ID,
   sku: 'AC-VB500',
   name: 'Acme VoltBike 500',
   aliases: [],
@@ -119,6 +141,12 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
+beforeEach(() => {
+  // Default: no runs at all (the run-aware empty copy falls back to the
+  // "once a run completes" guidance); tests override per case.
+  mswServer.use(http.get(AUDITS_URL, () => HttpResponse.json([])));
+});
+
 function renderTable() {
   return renderWithProviders(<ProductEvidenceTable product={product} />);
 }
@@ -202,6 +230,35 @@ describe('ProductEvidenceTable kind sub-tabs', () => {
     await waitFor(() =>
       expect(screen.getByText(/No mentions of this product yet/)).toBeInTheDocument(),
     );
+  });
+
+  it('keeps the "once a run completes" copy while no run has completed', async () => {
+    // D2/COM-3: with zero completed runs the original guidance stays true.
+    mswServer.use(http.get(EVIDENCE_URL, () => HttpResponse.json({ items: [], truncated: false })));
+    renderTable();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'No mentions of this product yet — they appear here once a run completes.',
+        ),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Completed runs recorded no mentions/)).not.toBeInTheDocument();
+  });
+
+  it('switches to run-aware copy when runs completed without mentioning the product', async () => {
+    // COM-3: "once a run completes" is wrong once runs HAVE completed.
+    mswServer.use(
+      http.get(EVIDENCE_URL, () => HttpResponse.json({ items: [], truncated: false })),
+      http.get(AUDITS_URL, () => HttpResponse.json([completedAudit])),
+    );
+    renderTable();
+
+    await waitFor(() =>
+      expect(screen.getByText(/Completed runs recorded no mentions/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/they appear here once a run completes/)).not.toBeInTheDocument();
   });
 
   it('sends engine + surface + limit on the evidence request', async () => {

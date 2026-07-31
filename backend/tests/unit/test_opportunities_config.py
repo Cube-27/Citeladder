@@ -5,6 +5,10 @@ from __future__ import annotations
 import pytest
 
 from app.core.config.opportunities import (
+    COMMERCE_COMPETITOR_SOV_THRESHOLD,
+    COMMERCE_GAP_FACTOR,
+    COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD,
+    COMMERCE_VALUE_FACTOR,
     GAP_COMPETITOR_CAP,
     GAP_COMPETITOR_WEIGHT,
     GAP_OWNED_CITATION_WEIGHT,
@@ -23,7 +27,9 @@ from app.core.config.opportunities import (
     PRIORITY_SCALE,
     RECOMPUTE_MAX_ANALYSES,
     RECOMPUTE_MAX_ISSUES,
+    RECOMPUTE_MAX_PRODUCT_SNAPSHOTS,
     SEVERITY_WEIGHTS,
+    SITE_SCHEMA_TYPE_RULE_IDS,
     SITE_STRUCTURED_DATA_RULE_IDS,
     SITE_THIN_CONTENT_RULE_IDS,
     validate_rule_id,
@@ -54,6 +60,10 @@ def test_v1_enabled_rule_set() -> None:
         "owned_page_not_cited",
         "missing_structured_data",
         "thin_content",
+        "schema_type_mismatch",
+        "product_not_mentioned",
+        "competitor_product_dominates",
+        "price_mention_mismatch",
     }
 
 
@@ -131,6 +141,36 @@ def test_validate_rule_id_rejects_unknown() -> None:
 def test_site_mapping_sets_reference_real_site_health_rules() -> None:
     assert SITE_STRUCTURED_DATA_RULE_IDS
     assert SITE_THIN_CONTENT_RULE_IDS
-    assert SITE_STRUCTURED_DATA_RULE_IDS.isdisjoint(SITE_THIN_CONTENT_RULE_IDS)
-    for rule_id in SITE_STRUCTURED_DATA_RULE_IDS | SITE_THIN_CONTENT_RULE_IDS:
+    assert SITE_SCHEMA_TYPE_RULE_IDS
+    mapping_sets = (
+        SITE_STRUCTURED_DATA_RULE_IDS,
+        SITE_THIN_CONTENT_RULE_IDS,
+        SITE_SCHEMA_TYPE_RULE_IDS,
+    )
+    for left, right in (
+        (SITE_STRUCTURED_DATA_RULE_IDS, SITE_THIN_CONTENT_RULE_IDS),
+        (SITE_STRUCTURED_DATA_RULE_IDS, SITE_SCHEMA_TYPE_RULE_IDS),
+        (SITE_THIN_CONTENT_RULE_IDS, SITE_SCHEMA_TYPE_RULE_IDS),
+    ):
+        assert left.isdisjoint(right)
+    for rule_id in frozenset().union(*mapping_sets):
         assert rule_id in SITE_HEALTH_RULES_BY_ID
+
+
+def test_schema_type_mismatch_has_distinct_copy() -> None:
+    # The issue fires when structured data EXISTS but lacks the expected
+    # type — reusing missing_structured_data's "add structured data" copy
+    # would give wrong guidance.
+    mismatch = OPPORTUNITY_RULES_BY_ID["schema_type_mismatch"]
+    missing = OPPORTUNITY_RULES_BY_ID["missing_structured_data"]
+    assert mismatch.title != missing.title
+    assert mismatch.remediation != missing.remediation
+    assert "Add schema.org structured data" not in mismatch.remediation
+
+
+def test_commerce_thresholds_are_unit_interval() -> None:
+    assert 0.0 < COMMERCE_COMPETITOR_SOV_THRESHOLD < 1.0
+    assert 0.0 < COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD < 1.0
+    assert COMMERCE_VALUE_FACTOR > 0
+    assert COMMERCE_GAP_FACTOR > 0
+    assert RECOMPUTE_MAX_PRODUCT_SNAPSHOTS > 0

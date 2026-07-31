@@ -3,7 +3,9 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Label, Metric } from '@/components/ui/typography';
+import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
 import {
@@ -28,12 +30,16 @@ export function ProgressPanel({
   audit,
   onCancel,
   cancelPending,
-  cancelError,
+  cancelNotice,
+  onCancelRetry,
 }: Readonly<{
   audit: Audit;
   onCancel: () => void;
   cancelPending: boolean;
-  cancelError?: string | null;
+  /** The A4 mutation notice for a failed cancel (verbatim 4xx, transient retry). */
+  cancelNotice?: MutationNoticeData | null;
+  /** Retry affordance for a transient cancel failure. */
+  onCancelRetry?: () => void;
 }>) {
   // "Updating…" tracks whether the parent is still polling (not yet terminal);
   // the Cancel button is enabled only while the backend will accept a cancel.
@@ -105,7 +111,7 @@ export function ProgressPanel({
         {audit.error_message ? (
           <p className="text-danger-text text-sm">{audit.error_message}</p>
         ) : null}
-        {cancelError ? <p className="text-danger-text text-sm">{cancelError}</p> : null}
+        {cancelNotice ? <MutationNotice notice={cancelNotice} onRetry={onCancelRetry} /> : null}
       </CardContent>
     </Card>
   );

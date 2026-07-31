@@ -213,7 +213,7 @@ def _is_current_version(snapshot: ProductMetricSnapshot) -> bool:
     )
 
 
-def _select_current_snapshots(
+def select_current_snapshots(
     snapshots: list[ProductMetricSnapshot],
 ) -> dict[str, ProductMetricSnapshot]:
     """One snapshot per frozen entry id; the CURRENT version wins ties.
@@ -221,6 +221,9 @@ def _select_current_snapshots(
     v1 and v2 snapshots coexist for the same entry (widened unique
     indexes); the projection serves the current version when both exist
     and falls back to the v1 row otherwise (v1 rows are never mutated).
+
+    Order-independent: the input list may be in any order, since selection
+    is by version, not position.
     """
     by_entry: dict[str, ProductMetricSnapshot] = {}
     for snapshot in snapshots:
@@ -286,7 +289,7 @@ async def get_product_visibility(
     )
 
     config = build_product_scoring_config(audit.configuration)
-    by_entry = _select_current_snapshots(snapshots)
+    by_entry = select_current_snapshots(snapshots)
 
     sliced = {
         entry_id: _entry_metrics(snapshot, engine, surface)
@@ -632,7 +635,7 @@ def product_visibility_csv(
     (sorted keys, compact separators) so repeated exports are byte-equal.
     """
     config = build_product_scoring_config(audit.configuration)
-    by_entry = _select_current_snapshots(snapshots)
+    by_entry = select_current_snapshots(snapshots)
     ordered = [(entry.id, entry.name, entry.sku) for entry in config.products]
     ordered += [(entry.id, entry.name, "") for entry in config.competitor_products]
 

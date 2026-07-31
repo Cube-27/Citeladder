@@ -60,6 +60,9 @@ class OpportunityItem(_Model):
     target_prompt_id: uuid.UUID | None
     target_url: str | None
     target_theme: str | None
+    # Backend-owned target presentation (url / frozen prompt text / humanized
+    # theme / frozen product name); null when nothing user-facing exists.
+    target_label: str | None
     status: str
     created_at: str
     updated_at: str
@@ -102,6 +105,10 @@ class OpportunitySummary(_Model):
     rule_version: str
     formula_version: str
     computed_at: str | None
+    # Read-time freshness (no persisted marker): newest usable audit/crawl
+    # evidence timestamp, and whether it post-dates the latest snapshot.
+    evidence_updated_at: str | None
+    stale: bool
 
 
 class RecomputeResponse(_Model):

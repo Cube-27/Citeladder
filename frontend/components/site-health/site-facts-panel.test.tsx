@@ -43,6 +43,24 @@ const robotsUnfetched = {
   llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 404, present: false },
 };
 
+/** B2: the site HAS no robots.txt (HTTP 404) — a definitive default-allow. */
+const robotsNotFound = {
+  ...variantA,
+  robots: {
+    ...variantA.robots,
+    fetched: false,
+    status: 'not_found',
+    status_code: 404,
+    ai_crawlers: {
+      GPTBot: 'allow',
+      ClaudeBot: 'allow',
+      PerplexityBot: 'allow',
+      'Google-Extended': 'allow',
+    },
+  },
+  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 404, present: false },
+};
+
 const allAllowed = {
   ...variantA,
   robots: {
@@ -76,6 +94,7 @@ function crawl(siteFacts: SiteCrawl['site_facts']): SiteCrawl {
     total_url_count: 3,
     has_more_site_urls: false,
     score_summary: null,
+    failure_summary: null,
     site_facts: siteFacts,
     extractor_version: 'e1',
     analyzer_version: 'a1',
@@ -95,6 +114,7 @@ function dashboard(crawlValue: SiteCrawl | null): SiteHealthDashboard {
     crawl: crawlValue,
     score_summary: null,
     quota: { used: 4, limit: 50 },
+    root_errors: [],
   };
 }
 
@@ -165,20 +185,36 @@ describe('SiteFactsPanel', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows unknown stance for all bots when robots.txt did not respond', () => {
+  it('shows unknown stance for all bots when robots.txt could not be fetched (B2)', () => {
     render(<SiteFactsPanel crawl={crawl(robotsUnfetched)} dashboard={undefined} />);
 
     expect(screen.getByText('Stance unknown')).toBeInTheDocument();
     expect(screen.getAllByText('Unknown')).toHaveLength(4);
     expect(screen.queryByText('Block')).not.toBeInTheDocument();
     expect(screen.queryByText('Allow')).not.toBeInTheDocument();
-    expect(screen.getByText(/robots\.txt did not respond during this crawl/)).toBeInTheDocument();
+    expect(screen.getByText(/robots\.txt could not be fetched/)).toBeInTheDocument();
 
     const files = screen.getByTestId('site-facts-well-known-files');
     expect(within(files).getByText('Not fetched')).toBeInTheDocument();
     expect(within(files).getByText('Absent')).toBeInTheDocument();
     expect(within(files).getByText('404')).toBeInTheDocument();
     expect(within(files).getByText('—')).toBeInTheDocument(); // no robots status
+  });
+
+  it('shows a definitive all-allowed stance when the site has NO robots.txt (B2 not_found)', () => {
+    // A 404 robots.txt is not a fetch failure: the fail-open default IS the
+    // answer, so the panel says so instead of crying "unknown".
+    render(<SiteFactsPanel crawl={crawl(robotsNotFound)} dashboard={undefined} />);
+
+    expect(screen.getByText('All 4 allowed')).toBeInTheDocument();
+    expect(screen.getAllByText('Allow')).toHaveLength(4);
+    expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
+    expect(screen.getByText(/No robots\.txt — crawling proceeds fail-open/)).toBeInTheDocument();
+
+    const files = screen.getByTestId('site-facts-well-known-files');
+    expect(within(files).getByText('Not found')).toBeInTheDocument();
+    // robots.txt AND llms.txt both answered 404 in this fixture.
+    expect(within(files).getAllByText('404')).toHaveLength(2);
   });
 
   it('shows the all-allowed summary with no alert (variant B)', () => {

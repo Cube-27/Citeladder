@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/table';
 import { productsApi } from '@/lib/api/products';
 import { queryKeys } from '@/lib/api/query-keys';
+import { runsApi } from '@/lib/api/runs';
 import type { Product, ProductEvidenceItem } from '@/lib/api/types';
 import {
   BUYER_DESTINATION_KIND_LABELS,
@@ -36,6 +37,7 @@ import {
   type ProductEvidenceSubTab,
 } from '@/lib/products/catalog';
 import { engineLabel } from '@/lib/providers/catalog';
+import { isDashboardStatus } from '@/lib/visibility/dashboard';
 
 import { EngineFilterDropdown } from './engine-filter-dropdown';
 import { NestedTabs } from './nested-tabs';
@@ -81,6 +83,22 @@ export function ProductEvidenceTable({
   });
 
   const items = evidenceQuery.data?.items ?? [];
+
+  // Run-awareness for the empty copy (D2/COM-3): "mentions appear once a run
+  // completes" is wrong when runs HAVE completed — the copy must say so.
+  //
+  // Gated to the ONE case that consumes it: the Mentions sub-tab, with the
+  // evidence query settled and no mentions in it. Ungated, every visit to the
+  // drill-down fetched the project's whole audit list to pick between two
+  // sentences that were usually never rendered at all.
+  const mentionsAreEmpty =
+    evidenceQuery.isSuccess && !items.some((item) => item.evidence_kind === 'product_mention');
+  const auditsQuery = useQuery({
+    queryKey: queryKeys.runs.list({ project_id: product.project_id }),
+    queryFn: ({ signal }) => runsApi.listAudits({ project_id: product.project_id }, { signal }),
+    enabled: subTab === 'mentions' && mentionsAreEmpty,
+  });
+  const hasCompletedRun = (auditsQuery.data ?? []).some((audit) => isDashboardStatus(audit.status));
   const truncated = evidenceQuery.data?.truncated ?? false;
 
   return (
@@ -151,6 +169,7 @@ export function ProductEvidenceTable({
                 items={items.filter((item) => item.evidence_kind === 'product_mention')}
                 truncated={truncated}
                 engineParam={engineParam}
+                hasCompletedRun={hasCompletedRun}
               />
             )
           }
@@ -219,7 +238,12 @@ function EvidenceCardShell({
   );
 }
 
-function MentionEvidenceCard({ items, truncated, engineParam }: EvidenceKindCardProps) {
+function MentionEvidenceCard({
+  items,
+  truncated,
+  engineParam,
+  hasCompletedRun,
+}: EvidenceKindCardProps & Readonly<{ hasCompletedRun: boolean }>) {
   return (
     <EvidenceCardShell
       eyebrow="Evidence · Mentions"
@@ -230,7 +254,9 @@ function MentionEvidenceCard({ items, truncated, engineParam }: EvidenceKindCard
       emptyCopy={
         engineParam
           ? `No persisted mentions of this product on ${engineLabel(engineParam)} yet.`
-          : 'No mentions of this product yet — they appear here once a run completes.'
+          : hasCompletedRun
+            ? 'Completed runs recorded no mentions of this product — check that its name and aliases match how people ask about it.'
+            : 'No mentions of this product yet — they appear here once a run completes.'
       }
       notice={`Showing the first ${EVIDENCE_LIMIT} mentions for this product; older mentions are truncated.`}
     >

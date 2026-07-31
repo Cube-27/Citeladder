@@ -11,6 +11,8 @@ import { SectionTitle } from '@/components/ui/typography';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
 import { queryKeys } from '@/lib/api/query-keys';
+import { humanizeApiError } from '@/lib/api/errors';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import { shouldPollAudit } from '@/lib/runs/status';
 
@@ -18,8 +20,7 @@ import { shouldPollAudit } from '@/lib/runs/status';
 const POLL_INTERVAL_MS = 3_000;
 
 function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return 'Something went wrong. Please try again.';
+  return humanizeApiError(error).message;
 }
 
 /**
@@ -89,7 +90,12 @@ export default function RunDetailPage() {
           audit={auditQuery.data}
           onCancel={() => cancelMutation.mutate()}
           cancelPending={cancelMutation.isPending}
-          cancelError={cancelMutation.isError ? errorMessage(cancelMutation.error) : null}
+          cancelNotice={
+            cancelMutation.isError
+              ? mutationNoticeForError(cancelMutation.error, { action: 'cancel the run' })
+              : null
+          }
+          onCancelRetry={() => cancelMutation.mutate()}
         />
       )}
 

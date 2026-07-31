@@ -7,10 +7,30 @@
  *   - **No `user_id` anywhere** — the contract is workspace-scoped.
  *   - Provider secrets are **never** present on the wire (BYOK, invariant 6).
  *   - `sentiment` / `avg_position` are nullable (not computed yet; roadmap).
- *   - Validation **fails loud** via `strictValidate` — a mismatch is a bug to
- *     fix in the schema (backend is source of truth), never to swallow.
+ *   - Validation **fails loud** via `strictValidate` on every DECLARED field —
+ *     a missing required field or a wrong type is a bug to fix in the schema
+ *     (backend is source of truth), never to swallow. UNKNOWN keys are
+ *     stripped (see `responseObject`), so an additive backend field can never
+ *     break the UI (ERR-5).
  */
 import { z } from 'zod';
+
+/**
+ * Response-object contract (drift policy §6): strict on every DECLARED field
+ * — a missing required field or a wrong type still fails loud via
+ * `strictValidate` — and tolerant of UNKNOWN keys: zod's default `.strip()`
+ * drops additive backend fields from the parsed output, so an additive
+ * backend deploy can never take a screen down (ERR-5; previously
+ * `z.strictObject` rejected any response carrying an undeclared key).
+ *
+ * Drift no longer breaks the UI, but it is still tracked: the contract-drift
+ * guard (`lib/api/contract-drift.ts`, wired into `pnpm test` and runnable as
+ * `pnpm check:contract`) FAILS when a declared field disappears from the
+ * backend response model and WARNS on additive-only diffs so this file is
+ * updated promptly. Request payloads stay strict — they are built from typed
+ * TypeScript DTOs at the call site, never parsed with a tolerant schema.
+ */
+const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 
 /** UUID id helper — all ids and foreign keys use this. */
 const uuid = () => z.uuid();
@@ -25,7 +45,7 @@ const uuid = () => z.uuid();
 // carried on `workspaceSchema.role` below) and must not be conflated with it
 // via a restrictive enum — doing so previously rejected every real register/
 // login response (`role: "user"` is not `owner|admin|member|viewer`).
-export const sessionUserSchema = z.strictObject({
+export const sessionUserSchema = responseObject({
   id: uuid(),
   email: z.email(),
   role: z.string(),
@@ -37,19 +57,21 @@ export const sessionUserSchema = z.strictObject({
 // register/login/me all return the authenticated user wrapped as
 // `{ user: SessionUser }` (backend `AuthResponse`); the JWT rides the HttpOnly
 // cookie, never the body. Fail loud on any extra key.
-export const authResponseSchema = z.strictObject({ user: sessionUserSchema });
+export const authResponseSchema = responseObject({ user: sessionUserSchema });
 
 // OAuth start scaffold (Phase B backend): a configured provider answers
-// `{ authorize_url, state }`; unconfigured providers answer 503 before this
-// schema is ever parsed.
-export const oauthStartResponseSchema = z.strictObject({
+// `{ authorize_url, state, session_nonce }`; unconfigured providers answer
+// 503 before this schema is ever parsed. `session_nonce` is additive — older
+// backends omit it, so it parses with a default.
+export const oauthStartResponseSchema = responseObject({
   authorize_url: z.string().min(1),
   state: z.string().min(1),
+  session_nonce: z.string().default(''),
 });
 
 // Backend `WorkspaceResponse` is `{ id, name, role, created_at, updated_at }` —
 // no slug; the caller's membership `role` is carried instead.
-export const workspaceSchema = z.strictObject({
+export const workspaceSchema = responseObject({
   id: uuid(),
   name: z.string(),
   role: z.string(),
@@ -66,7 +88,7 @@ export const productTourStatusSchema = z.enum([
   'skipped',
 ]);
 
-export const productTourSchema = z.strictObject({
+export const productTourSchema = responseObject({
   workspace_id: uuid(),
   version: z.string(),
   status: productTourStatusSchema,
@@ -79,7 +101,7 @@ export const productTourSchema = z.strictObject({
 // Brand / project / prompts
 // ---------------------------------------------------------------------------
 
-export const competitorSchema = z.strictObject({
+export const competitorSchema = responseObject({
   id: uuid(),
   name: z.string(),
   aliases: z.array(z.string()),
@@ -105,7 +127,7 @@ export const promptStatusSchema = z.enum(['proposed', 'active', 'archived']);
 
 // Backend `PromptResponse.theme` is a non-null string (empty when unset), so
 // the wire value is always a string — never null.
-export const promptSchema = z.strictObject({
+export const promptSchema = responseObject({
   id: uuid(),
   prompt_set_id: uuid(),
   topic_id: uuid().nullable().optional(),
@@ -125,7 +147,7 @@ export const promptSchema = z.strictObject({
 
 // A topical category grouping prompts within a project (first-class resource;
 // counts are per-status projections for the topics rail).
-export const topicSchema = z.strictObject({
+export const topicSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   name: z.string(),
@@ -140,7 +162,7 @@ export const topicSchema = z.strictObject({
 // `POST /prompt-sets/{id}/generate` result: inserted suggestions, the topics
 // they landed in (with refreshed counts), and how many duplicates the DB
 // conflict-safe dedupe dropped.
-export const promptGenerateResponseSchema = z.strictObject({
+export const promptGenerateResponseSchema = responseObject({
   generated: z.array(promptSchema),
   topics: z.array(topicSchema),
   dropped_duplicates: z.number().int(),
@@ -148,9 +170,9 @@ export const promptGenerateResponseSchema = z.strictObject({
 
 // `POST /brand-suggestions/competitors` result: setup-form competitor
 // suggestions (stateless — nothing persisted until the user saves the form).
-export const competitorSuggestResponseSchema = z.strictObject({
+export const competitorSuggestResponseSchema = responseObject({
   competitors: z.array(
-    z.strictObject({
+    responseObject({
       name: z.string(),
       aliases: z.array(z.string()),
       domains: z.array(z.string()),
@@ -161,28 +183,28 @@ export const competitorSuggestResponseSchema = z.strictObject({
 
 export const brandProfileSourceSchema = z.enum(['manual', 'web_evidence', 'ai_suggested']);
 
-const brandProfileFieldSourcesSchema = z.strictObject({
+const brandProfileFieldSourcesSchema = responseObject({
   description: brandProfileSourceSchema.nullable(),
   positioning: brandProfileSourceSchema.nullable(),
   products_services: brandProfileSourceSchema.nullable(),
   target_audience: brandProfileSourceSchema.nullable(),
 });
 
-const brandProfileSourceArtifactsSchema = z.strictObject({
+const brandProfileSourceArtifactsSchema = responseObject({
   description: uuid().nullable(),
   positioning: uuid().nullable(),
   products_services: uuid().nullable(),
   target_audience: uuid().nullable(),
 });
 
-export const brandProfileDraftSchema = z.strictObject({
+export const brandProfileDraftSchema = responseObject({
   description: z.string(),
   positioning: z.string(),
   products_services: z.array(z.string()),
   target_audience: z.string(),
 });
 
-export const brandProfileSchema = z.strictObject({
+export const brandProfileSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid(),
@@ -194,7 +216,7 @@ export const brandProfileSchema = z.strictObject({
   updated_at: z.string(),
 });
 
-export const brandProfileSuggestionSchema = z.strictObject({
+export const brandProfileSuggestionSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid(),
@@ -212,14 +234,14 @@ export const brandProfileFieldSchema = z.enum([
   'target_audience',
 ]);
 
-export const brandProfileAcceptResponseSchema = z.strictObject({
+export const brandProfileAcceptResponseSchema = responseObject({
   profile: brandProfileSchema,
   accepted_fields: z.array(brandProfileFieldSchema),
   skipped_manual_fields: z.array(brandProfileFieldSchema),
 });
 
 // `POST /brand-suggestions/owned-domains` result: bare owned-domain strings.
-export const ownedDomainSuggestResponseSchema = z.strictObject({
+export const ownedDomainSuggestResponseSchema = responseObject({
   domains: z.array(z.string()),
   dropped_duplicates: z.number().int(),
 });
@@ -227,20 +249,20 @@ export const ownedDomainSuggestResponseSchema = z.strictObject({
 // `POST /brand-suggestions/prompts` result. `theme` and `intent` default to ""
 // server-side (PromptSuggestionItem), so they are always present but may be
 // empty — the UI treats empty as "no theme" rather than hiding the row.
-const promptSuggestionItemSchema = z.strictObject({
+const promptSuggestionItemSchema = responseObject({
   text: z.string(),
   theme: z.string(),
   intent: z.string(),
 });
 
-export const promptSuggestResponseSchema = z.strictObject({
+export const promptSuggestResponseSchema = responseObject({
   prompts: z.array(promptSuggestionItemSchema),
   // The agent's own topic grouping, preserved rather than flattened. A caller
   // that persists uses this to create the same Topic rows `/generate` does,
   // so an onboarded prompt set is not left untopiced. Holds the same prompts
   // as `prompts` above, just grouped.
   topics: z.array(
-    z.strictObject({
+    responseObject({
       name: z.string(),
       prompts: z.array(promptSuggestionItemSchema),
     }),
@@ -248,7 +270,7 @@ export const promptSuggestResponseSchema = z.strictObject({
   dropped_duplicates: z.number().int(),
 });
 
-export const promptSetSchema = z.strictObject({
+export const promptSetSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   name: z.string(),
@@ -266,7 +288,7 @@ export const benchmarkModeSchema = z.enum([
   'forced_grounded',
 ]);
 
-export const projectSchema = z.strictObject({
+export const projectSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   name: z.string(),
@@ -276,7 +298,7 @@ export const projectSchema = z.strictObject({
   language_code: z.string(),
   benchmark_mode: benchmarkModeSchema,
   default_repetitions: z.number().int(),
-  brand: z.strictObject({
+  brand: responseObject({
     aliases: z.array(z.string()),
     logo_url: z.string().nullable().optional(),
   }),
@@ -300,13 +322,13 @@ export const dashboardSectionStateSchema = z.enum([
   'failed',
 ]);
 
-export const dashboardSourceSchema = z.strictObject({
+export const dashboardSourceSchema = responseObject({
   id: uuid(),
   kind: z.string(),
   timestamp: z.string(),
 });
 
-export const dashboardSectionSchema = z.strictObject({
+export const dashboardSectionSchema = responseObject({
   id: z.enum([
     'visibility',
     'answers',
@@ -328,8 +350,8 @@ export const dashboardSectionSchema = z.strictObject({
   source: dashboardSourceSchema.nullable(),
 });
 
-export const dashboardSchema = z.strictObject({
-  project: z.strictObject({
+export const dashboardSchema = responseObject({
+  project: responseObject({
     id: uuid(),
     workspace_id: uuid(),
     name: z.string(),
@@ -353,7 +375,7 @@ export const logicalEngineSchema = z.enum(['chatgpt', 'gemini', 'claude']);
 
 // A configured route on a connection: which logical engine this transport
 // serves and the concrete transport model to call.
-export const providerRouteSchema = z.strictObject({
+export const providerRouteSchema = responseObject({
   id: uuid(),
   logical_engine: logicalEngineSchema,
   transport_provider: transportProviderSchema,
@@ -365,7 +387,7 @@ export const providerRouteSchema = z.strictObject({
 
 // Strict: an unexpected key (e.g. a leaked `api_key`/`secret`) is a contract
 // violation and must fail loud — the secret is never present on the wire.
-export const providerConnectionSchema = z.strictObject({
+export const providerConnectionSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   // Optional so the pre-B4 minimal shape (used in the schema test) still
@@ -384,17 +406,17 @@ export const providerConnectionSchema = z.strictObject({
   updated_at: z.string(),
 });
 
-const providerCatalogRouteSchema = z.strictObject({
+const providerCatalogRouteSchema = responseObject({
   transport_provider: transportProviderSchema,
   default_model: z.string(),
 });
 
-const providerCatalogEngineSchema = z.strictObject({
+const providerCatalogEngineSchema = responseObject({
   logical_engine: logicalEngineSchema,
   routes: z.array(providerCatalogRouteSchema),
 });
 
-export const providerCatalogSchema = z.strictObject({
+export const providerCatalogSchema = responseObject({
   transports: z.array(transportProviderSchema),
   engines: z.array(providerCatalogEngineSchema),
 });
@@ -417,7 +439,16 @@ export const auditStatusSchema = z.enum([
 ]);
 
 // The engine provenance a run froze at launch (B5 `AuditEngineSnapshotResponse`).
-export const auditEngineSnapshotSchema = z.strictObject({
+export const auditEngineSnapshotSchema = responseObject({
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+});
+
+// Frozen shopping-surface identity (B5 `AuditShoppingSurfaceSnapshotResponse`;
+// empty list while the shopping-surface gate is off).
+export const auditShoppingSurfaceSnapshotSchema = responseObject({
+  shopping_surface: z.string(),
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
@@ -426,7 +457,7 @@ export const auditEngineSnapshotSchema = z.strictObject({
 // A run/audit projection (B5 `AuditResponse`). `random_seed` is a decimal
 // STRING (64-bit seed), `error_message` a non-null string ('' when unset), and
 // the engine provenance is carried but the provider key never is (invariant 6).
-export const auditSchema = z.strictObject({
+export const auditSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid(),
@@ -439,6 +470,7 @@ export const auditSchema = z.strictObject({
   failed_count: z.number().int(),
   error_message: z.string(),
   engine_snapshots: z.array(auditEngineSnapshotSchema),
+  shopping_surface_snapshots: z.array(auditShoppingSurfaceSnapshotSchema).default([]),
   created_at: z.string(),
   updated_at: z.string(),
   started_at: z.string().nullable(),
@@ -455,7 +487,7 @@ export const citationClassificationSchema = z.enum([
 ]);
 
 // One classified source citation on the evidence card (B6 `CitationEvidence`).
-export const citationSchema = z.strictObject({
+export const citationSchema = responseObject({
   ordinal: z.number().int(),
   url: z.string(),
   title: z.string(),
@@ -480,7 +512,7 @@ export const executionStatusSchema = z.enum([
 // One execution/queue row in the run's executions table (B5 `AuditTaskResponse`).
 // `answer_text` / `error_detail` default to '' (never null); the classified
 // citation evidence lives on the single-execution evidence endpoint below.
-export const executionSchema = z.strictObject({
+export const executionSchema = responseObject({
   id: uuid(),
   audit_id: uuid(),
   prompt_index: z.number().int(),
@@ -489,6 +521,9 @@ export const executionSchema = z.strictObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
+  // Frozen shopping-surface identity per task (B5; additive — older backends
+  // omit it, so it parses with a default like `shopping_surface_snapshots`).
+  shopping_surface: z.string().default(''),
   status: executionStatusSchema,
   attempt_count: z.number().int(),
   max_attempts: z.number().int(),
@@ -506,7 +541,7 @@ export const executionSchema = z.strictObject({
 // same id space as the executions list — so the evidence page keys off the row
 // id. `analysis_id` is the internal ResponseAnalysis id (traceability only).
 // `sentiment` / `avg_position` are present but null until the roadmap (B-2).
-export const executionEvidenceSchema = z.strictObject({
+export const executionEvidenceSchema = responseObject({
   id: uuid(),
   analysis_id: uuid(),
   audit_id: uuid(),
@@ -541,7 +576,7 @@ export const executionEvidenceSchema = z.strictObject({
 // ---------------------------------------------------------------------------
 
 // One per-engine comparison row for the selected run (B6 `EngineComparisonRow`).
-export const visibilityEngineSchema = z.strictObject({
+export const visibilityEngineSchema = responseObject({
   logical_engine: z.string(),
   total_completed: z.number().int(),
   brand_mention_rate: z.number().nullable(),
@@ -553,7 +588,7 @@ export const visibilityEngineSchema = z.strictObject({
 // One brand-vs-competitor rankings-table row (B6 `RankingRow`). `mention_rate`
 // is the Visibility% and `share_of_voice` the SOV%; `sentiment` / `avg_position`
 // are present but null until the roadmap computes them (decision B-2).
-export const rankingRowSchema = z.strictObject({
+export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
   logo_url: z.string().nullable().optional(),
@@ -569,7 +604,7 @@ export const rankingRowSchema = z.strictObject({
 // server-side from the persisted MetricSnapshot for the selected audit
 // (defaults to the latest completed audit). No cross-run trend in this payload
 // — the Trends tab reads /visibility/trends for that.
-export const visibilitySchema = z.strictObject({
+export const visibilitySchema = responseObject({
   project_id: uuid(),
   audit_id: uuid(),
   audit_status: auditStatusSchema,
@@ -609,7 +644,7 @@ export const siteHealthAccessModeSchema = z.enum(['sample', 'selection']);
 // frontend must read it here and never hard-code 50. `sample_url_limit` is the
 // Free automatic sample size (10). `can_view_discovered_total` gates every
 // discovered-count disclosure (false for Free).
-export const siteHealthEntitlementSchema = z.strictObject({
+export const siteHealthEntitlementSchema = responseObject({
   workspace_id: uuid(),
   plan_key: siteHealthPlanSchema,
   access_mode: siteHealthAccessModeSchema,
@@ -699,7 +734,7 @@ export const pageTypeSchema = z.enum([
 // count + mean Technical/AEO/overall scores across the analyzed pages of one
 // page type. A mean is null when no analyzed page of the type produced that
 // score — never a fabricated zero.
-export const pageTypeScoreSummarySchema = z.strictObject({
+export const pageTypeScoreSummarySchema = responseObject({
   analyzed_count: z.number().int(),
   technical_score: z.number().nullable(),
   aeo_score: z.number().nullable(),
@@ -709,7 +744,7 @@ export const pageTypeScoreSummarySchema = z.strictObject({
 // Crawl score/coverage summary (nullable scores until analysis produces them).
 // `by_page_type` breaks the means down per classified page type (empty until
 // at least one analyzed page has been classified).
-export const siteScoreSummarySchema = z.strictObject({
+export const siteScoreSummarySchema = responseObject({
   overall_score: z.number().nullable(),
   technical_score: z.number().nullable(),
   aeo_score: z.number().nullable(),
@@ -720,10 +755,22 @@ export const siteScoreSummarySchema = z.strictObject({
   by_page_type: z.record(z.string(), pageTypeScoreSummarySchema),
 });
 
+// Why a crawl failed (SH-2/SH-5 — B1): stable machine `code` + human
+// `message` + the terminal HTTP status / attempt count when present. Projected
+// from the root discover task's terminal fetch attempts; null on any crawl
+// that did not fail (and on list projections — N+1 avoidance).
+export const crawlFailureSummarySchema = responseObject({
+  code: z.string(),
+  message: z.string(),
+  attempts: z.number().int().nullable(),
+  status_code: z.number().int().nullable(),
+  target_url: z.string(),
+});
+
 // A crawl projection. `total_url_count` is null while full discovery runs and
 // ALWAYS null for a Free sample crawl; `has_more_site_urls`/`discovered_count`
 // are absent (optional) or null under Free redaction — never a leaked total.
-export const siteCrawlSchema = z.strictObject({
+export const siteCrawlSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid(),
@@ -743,6 +790,9 @@ export const siteCrawlSchema = z.strictObject({
   total_url_count: z.number().int().nullable(),
   has_more_site_urls: z.boolean().nullable().optional(),
   score_summary: siteScoreSummarySchema.nullable(),
+  // B1: REQUIRED key (the backend response model always serializes it); null
+  // on healthy/partial crawls and on list projections.
+  failure_summary: crawlFailureSummarySchema.nullable(),
   // v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
   // sitemap files). Mirrors the backend's untyped `dict | None`, and is
   // REQUIRED because the response model always serializes the key — making
@@ -763,7 +813,7 @@ export const siteCrawlSchema = z.strictObject({
 // the last page. There is no offset / page total field (invariant: no Free
 // count side channel; stable cursors while discovery appends rows).
 export const cursorPageSchema = <T extends z.ZodTypeAny>(item: T) =>
-  z.strictObject({
+  responseObject({
     items: z.array(item),
     next_cursor: z.string().nullable(),
   });
@@ -784,7 +834,7 @@ const analysisSummaryFields = {
 // One lightweight inventory row. Ordering is URL-only. The analysis summary
 // fields (`issue_count`, `technical_score`, `aeo_score`, `overall_score`,
 // `last_audited`) are null until analysis completes for that URL.
-export const inventoryRowSchema = z.strictObject({
+export const inventoryRowSchema = responseObject({
   site_url_id: uuid(),
   normalized_url: z.string(),
   display_url: z.string(),
@@ -802,13 +852,13 @@ export const inventoryPageSchema = cursorPageSchema(inventoryRowSchema);
 export const siteCrawlListPageSchema = cursorPageSchema(siteCrawlSchema);
 
 // Workspace-wide monitored quota usage (counts every active monitored row).
-export const monitoredQuotaSchema = z.strictObject({
+export const monitoredQuotaSchema = responseObject({
   used: z.number().int(),
   limit: z.number().int(),
 });
 
 // One persistent monitored-set row.
-export const monitoredUrlSchema = z.strictObject({
+export const monitoredUrlSchema = responseObject({
   site_url_id: uuid(),
   normalized_url: z.string(),
   display_url: z.string(),
@@ -820,7 +870,7 @@ export const monitoredUrlSchema = z.strictObject({
 });
 
 // `GET /projects/{id}/monitored-urls` — persistent set + revision + quota.
-export const monitoredUrlsResponseSchema = z.strictObject({
+export const monitoredUrlsResponseSchema = responseObject({
   project_id: uuid(),
   selection_version: z.number().int(),
   monitored_urls: z.array(monitoredUrlSchema),
@@ -829,7 +879,7 @@ export const monitoredUrlsResponseSchema = z.strictObject({
 
 // Deterministic HTTP delivery facts. `field_cwv_available` is a literal false —
 // the HTTP-first crawler never fabricates field Core Web Vitals (no LCP/CLS/INP).
-export const deliveryFactsSchema = z.strictObject({
+export const deliveryFactsSchema = responseObject({
   field_cwv_available: z.literal(false),
   status_code: z.number().int().nullable(),
   ttfb_ms: z.number().nullable(),
@@ -843,7 +893,7 @@ export const deliveryFactsSchema = z.strictObject({
 });
 
 // Bounded normalized page facts (deterministic; extractor-versioned).
-export const pageFactsSchema = z.strictObject({
+export const pageFactsSchema = responseObject({
   title: z.string().nullable(),
   meta_description: z.string().nullable(),
   canonical_url: z.string().nullable(),
@@ -866,7 +916,7 @@ export const issueDimensionSchema = z.enum(['technical', 'aeo']);
 // affected page's classification; it is OPTIONAL — the v1 backend DTO has no
 // such key, so the badge renders only when the projection carries it (same
 // absent-or-null treatment as the Free-redacted count fields).
-export const affectedUrlSchema = z.strictObject({
+export const affectedUrlSchema = responseObject({
   site_url_id: uuid(),
   normalized_url: z.string(),
   display_url: z.string(),
@@ -875,7 +925,7 @@ export const affectedUrlSchema = z.strictObject({
 });
 
 // One issue catalog row (failure projection with remediation snapshot).
-export const siteIssueSchema = z.strictObject({
+export const siteIssueSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),
   rule_id: z.string(),
@@ -893,7 +943,7 @@ export const siteIssueSchema = z.strictObject({
 // Grouped-issue catalog summary (occurrence + severity + affected-page counts).
 // `severity_counts` keys are the severity vocabulary; `dimension_counts` keys
 // are the rule dimensions (technical/aeo); values are occurrence counts.
-export const issuesSummarySchema = z.strictObject({
+export const issuesSummarySchema = responseObject({
   issue_count: z.number().int(),
   severity_counts: z.record(z.string(), z.number().int()),
   dimension_counts: z.record(z.string(), z.number().int()),
@@ -905,7 +955,7 @@ export const issuesSummarySchema = z.strictObject({
 // affected URLs. `id` is the stable canonical (representative) issue id for the
 // rule group; `affected_url_count` is the full deduplicated total and
 // `next_cursor` walks the affected-URL page.
-export const siteIssueDetailSchema = z.strictObject({
+export const siteIssueDetailSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),
   rule_id: z.string(),
@@ -930,7 +980,7 @@ export const siteIssuesPageSchema = cursorPageSchema(siteIssueSchema).extend({
 
 // Analyzed-page summary row (`/pages` list). Scores/issue-count are null when
 // analysis has not completed; `error_code` is '' when there is no error.
-export const pageSummarySchema = z.strictObject({
+export const pageSummarySchema = responseObject({
   site_url_id: uuid(),
   crawl_id: uuid(),
   normalized_url: z.string(),
@@ -942,10 +992,27 @@ export const pageSummarySchema = z.strictObject({
   ...analysisSummaryFields,
 });
 
-export const pagesPageSchema = cursorPageSchema(pageSummarySchema);
+// One REAL root-target network call the crawl lost (SH-4 — B3). Deliberately
+// NOT a page row: a root failure never creates a SiteUrl, so there is no
+// `site_url_id` and no PageDetail link — the Errors & Blocked tab renders
+// these as a distinct non-clickable block above the table.
+export const rootErrorSchema = responseObject({
+  method: z.string(),
+  target: z.string(),
+  outcome: z.string(),
+  error_code: z.string(),
+  status_code: z.number().int().nullable(),
+  latency_ms: z.number().int().nullable(),
+});
+
+export const pagesPageSchema = cursorPageSchema(pageSummarySchema).extend({
+  // REQUIRED (backend always serializes); empty unless the crawl's root fetch
+  // failed terminally. Never enters the keyset pagination of `items`.
+  root_errors: z.array(rootErrorSchema),
+});
 
 // One persisted rule evaluation on a page (all outcomes, current label).
-const ruleEvaluationSchema = z.strictObject({
+const ruleEvaluationSchema = responseObject({
   id: uuid(),
   rule_id: z.string(),
   title: z.string(),
@@ -961,7 +1028,7 @@ const ruleEvaluationSchema = z.strictObject({
 });
 
 // One deduplicated link/asset reference discovered on a page.
-const linkReferenceSchema = z.strictObject({
+const linkReferenceSchema = responseObject({
   id: uuid(),
   kind: z.string(),
   target_url: z.string(),
@@ -972,7 +1039,7 @@ const linkReferenceSchema = z.strictObject({
 });
 
 // Full analyzed-page detail (persisted facts/delivery/scores/issues/provenance).
-export const pageDetailSchema = z.strictObject({
+export const pageDetailSchema = responseObject({
   site_url_id: uuid(),
   crawl_id: uuid(),
   normalized_url: z.string(),
@@ -1007,7 +1074,7 @@ export const pageDetailSchema = z.strictObject({
 // mints a fresh single-page rerun crawl in that case (`created_new_crawl`),
 // so the client must poll the returned `crawl_id`/`site_url_id` (the fresh
 // run) rather than the terminal source crawl it was invoked from.
-export const rerunPageResponseSchema = z.strictObject({
+export const rerunPageResponseSchema = responseObject({
   crawl_id: uuid(),
   site_url_id: uuid(),
   task_id: uuid(),
@@ -1017,7 +1084,7 @@ export const rerunPageResponseSchema = z.strictObject({
 
 // One per-URL issue-history row — an issue occurrence from the selected crawl
 // or a prior crawl in the project chronology (immutable failure projection).
-export const issueHistoryRowSchema = z.strictObject({
+export const issueHistoryRowSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),
   rule_id: z.string(),
@@ -1036,7 +1103,7 @@ export const issueHistoryPageSchema = cursorPageSchema(issueHistoryRowSchema);
 
 // Append-only safe crawl event. Free payloads never carry total/frontier/
 // overflow data; `event_type` is an open string (backend owns the catalogue).
-export const siteCrawlEventSchema = z.strictObject({
+export const siteCrawlEventSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),
   event_type: z.string(),
@@ -1046,11 +1113,14 @@ export const siteCrawlEventSchema = z.strictObject({
 });
 
 // Latest / selected crawl dashboard projection (`/projects/{id}/site-health`).
-export const siteHealthDashboardSchema = z.strictObject({
+export const siteHealthDashboardSchema = responseObject({
   project_id: uuid(),
   crawl: siteCrawlSchema.nullable(),
   score_summary: siteScoreSummarySchema.nullable(),
   quota: monitoredQuotaSchema,
+  // B3: same root-failure projection as the pages response — the failed
+  // crawl's dashboard renders the failure block without a second fetch.
+  root_errors: z.array(rootErrorSchema),
 });
 
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade
@@ -1073,7 +1143,7 @@ export const siteHealthErrorCodeSchema = z.enum([
 
 // Coded error body. Quota errors carry `limit`/`currently_used`; a stale
 // selection carries the expected/current versions. Extra keys fail loud.
-export const siteHealthErrorSchema = z.strictObject({
+export const siteHealthErrorSchema = responseObject({
   code: siteHealthErrorCodeSchema,
   message: z.string(),
   limit: z.number().int().optional(),
@@ -1092,7 +1162,7 @@ export const siteHealthErrorSchema = z.strictObject({
 // derived from the persisted `share_of_voice.mention_counts`. Both are
 // deterministic reprojections of persisted metrics (invariant 7) and are
 // nullable when the source metric is absent.
-export const visibilityTrendSovSchema = z.strictObject({
+export const visibilityTrendSovSchema = responseObject({
   response: z.number().nullable(),
   mention: z.number().nullable(),
 });
@@ -1108,7 +1178,7 @@ export const visibilityTrendRankingRowSchema = rankingRowSchema;
 // metadata lists every distinct analyzer/scoring version the point folds, with
 // `spans_version_boundary` set when a bucket mixes versions. `sentiment` /
 // `avg_position` stay null (decision B-2 / invariant 9).
-export const visibilityTrendPointSchema = z.strictObject({
+export const visibilityTrendPointSchema = responseObject({
   audit_id: uuid().nullable(),
   completed_at: z.string(),
   logical_engine: z.string().nullable(),
@@ -1146,7 +1216,7 @@ export const visibilityFanoutStateSchema = z.enum(['queries_available', 'count_o
 // One normalized stored search event (backend `VisibilityEvidenceSearchEvent`).
 // Empty query strings are preserved verbatim (a count-only event); query text
 // is never invented.
-export const visibilityEvidenceSearchEventSchema = z.strictObject({
+export const visibilityEvidenceSearchEventSchema = responseObject({
   sequence: z.number().int(),
   query: z.string(),
   call_id: z.string(),
@@ -1157,7 +1227,7 @@ export const visibilityEvidenceSearchEventSchema = z.strictObject({
 // One persisted brand/competitor mention row (backend
 // `VisibilityMentionEvidence`). Projected directly from `BrandMention` /
 // `CompetitorMention`; never inferred from answer text at read time.
-export const visibilityMentionEvidenceSchema = z.strictObject({
+export const visibilityMentionEvidenceSchema = responseObject({
   kind: z.enum(['brand', 'competitor']),
   name: z.string(),
   first_offset: z.number().int().nullable(),
@@ -1169,7 +1239,7 @@ export const visibilityMentionEvidenceSchema = z.strictObject({
 // `VisibilityExecutionEvidence`). `prompt_id` is nullable so a deleted source
 // prompt stays readable via its frozen `prompt_text`; `completed_at` is
 // nullable for an incomplete/legacy row.
-export const visibilityExecutionEvidenceSchema = z.strictObject({
+export const visibilityExecutionEvidenceSchema = responseObject({
   audit_id: uuid(),
   task_id: uuid(),
   analysis_id: uuid(),
@@ -1196,7 +1266,7 @@ export const visibilityExecutionEvidenceSchema = z.strictObject({
 // The shared evidence dataset for the two evidence tabs (backend
 // `VisibilityEvidenceResponse`). `items` is newest-first; `truncated` is set
 // when more than `limit` matches exist (no offset/cursor/total).
-export const visibilityEvidenceResponseSchema = z.strictObject({
+export const visibilityEvidenceResponseSchema = responseObject({
   items: z.array(visibilityExecutionEvidenceSchema),
   truncated: z.boolean(),
 });
@@ -1228,7 +1298,7 @@ export const contentOutputTypeSchema = z.enum(['website_page']);
 // Provenance for the frozen Website-context snapshot (backend
 // `WebsiteContextSummary`) — which crawl, how fresh, which sources. Never
 // page bodies, never the key.
-export const websiteContextSummarySchema = z.strictObject({
+export const websiteContextSummarySchema = responseObject({
   crawl_id: uuid(),
   crawl_completed_at: z.string().nullable(),
   extractor_version: z.string(),
@@ -1243,7 +1313,7 @@ export const websiteContextSummarySchema = z.strictObject({
 // Bounded history-list projection (backend `ContentGenerationListItem`) —
 // never `output_text`, never the full prompt. Model provenance is explicit
 // (`requested_model` vs `returned_model`); there is no generic `model` field.
-export const contentGenerationListItemSchema = z.strictObject({
+export const contentGenerationListItemSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   status: contentGenerationStatusSchema,
@@ -1261,7 +1331,7 @@ export const contentGenerationListItemSchema = z.strictObject({
 
 // Full projection of one generation (backend `ContentGenerationDetail`).
 // Superset of the list item; never the provider API key (invariant 6).
-export const contentGenerationDetailSchema = z.strictObject({
+export const contentGenerationDetailSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   status: contentGenerationStatusSchema,
@@ -1332,7 +1402,7 @@ export const integrationSyncRunStatusSchema = z.enum([
 // `GET /integrations` row: a connection joined to its grant's status +
 // granted scopes. Tokens live encrypted on the grant and are NEVER serialized
 // (invariant 6) — any `*_token` key on the wire fails strict validation.
-export const integrationConnectionSchema = z.strictObject({
+export const integrationConnectionSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   grant_id: uuid(),
@@ -1351,7 +1421,7 @@ export const integrationConnectionListSchema = z.array(integrationConnectionSche
 
 // `POST /integrations/{id}/test` — cheap authenticated probe result (status +
 // error_code, never the token). `error_code` is '' on success.
-export const integrationTestResultSchema = z.strictObject({
+export const integrationTestResultSchema = responseObject({
   connection_id: uuid(),
   status: z.string(),
   error_code: z.string(),
@@ -1362,7 +1432,7 @@ export const integrationTestResultSchema = z.strictObject({
 // Sync-run history/detail projection (status, window, row counts — invariant
 // 7: a read-only projection of the queue row). `row_count` is the number of
 // imported rows; `error_code` / `error_detail` are '' when there is no error.
-export const integrationSyncRunSchema = z.strictObject({
+export const integrationSyncRunSchema = responseObject({
   id: uuid(),
   connection_id: uuid(),
   sync_kind: integrationSyncKindSchema,
@@ -1383,7 +1453,7 @@ export const integrationSyncRunListSchema = z.array(integrationSyncRunSchema);
 
 // 202 enqueue identity (C3) — one per queued run. The frontend polls
 // `GET /integrations/{connection_id}/syncs/{sync_run_id}` until terminal.
-export const integrationSyncEnqueueSchema = z.strictObject({
+export const integrationSyncEnqueueSchema = responseObject({
   sync_run_id: uuid(),
   connection_id: uuid(),
   status: integrationSyncRunStatusSchema,
@@ -1405,7 +1475,7 @@ export const snapshotGranularitySchema = z.enum(['day', 'week', 'month']);
 
 // One dated point of a metric series. A `null` value is an UNAVAILABLE bucket
 // and renders as a chart gap — never coerced to a misleading zero.
-export const metricSeriesPointSchema = z.strictObject({
+export const metricSeriesPointSchema = responseObject({
   date: z.string(),
   value: z.number().nullable(),
 });
@@ -1415,7 +1485,7 @@ export const metricSeriesSchema = z.array(metricSeriesPointSchema);
 // Window totals. `ctr` / `position` are null when undefined (zero
 // impressions); `sessions` / `conversions` are null when no GA4 connection
 // feeds the window — the frontend never invents a number.
-export const trafficTotalsSchema = z.strictObject({
+export const trafficTotalsSchema = responseObject({
   impressions: z.number().int(),
   clicks: z.number().int(),
   ctr: z.number().nullable(),
@@ -1427,13 +1497,13 @@ export const trafficTotalsSchema = z.strictObject({
 // `GET /projects/{id}/traffic` — headline projection for the persisted
 // snapshot matching (window, granularity). An absent snapshot yields an empty
 // payload (empty series, zeroed/null totals), never a recomputation.
-export const trafficDashboardSchema = z.strictObject({
+export const trafficDashboardSchema = responseObject({
   project_id: uuid(),
   window_start: z.string(),
   window_end: z.string(),
   granularity: snapshotGranularitySchema,
   totals: trafficTotalsSchema,
-  series: z.strictObject({
+  series: responseObject({
     impressions: metricSeriesSchema,
     clicks: metricSeriesSchema,
     ctr: metricSeriesSchema,
@@ -1448,7 +1518,7 @@ export const trafficDashboardSchema = z.strictObject({
 // One persisted per-page stat row (`TrafficPageStat`). `site_url_id` is the
 // optional join to the crawled SiteUrl (SET NULL — unmatched pages are still
 // valid measured pages). Metrics carry the same nullability as the totals.
-export const trafficPageRowSchema = z.strictObject({
+export const trafficPageRowSchema = responseObject({
   canonical_url: z.string(),
   site_url_id: uuid().nullable(),
   impressions: z.number().int(),
@@ -1461,7 +1531,7 @@ export const trafficPageRowSchema = z.strictObject({
 
 // One persisted per-query stat row (`TrafficQueryStat`; the key is the
 // normalized query string — NFKC/casefold/whitespace at projection time).
-export const trafficQueryRowSchema = z.strictObject({
+export const trafficQueryRowSchema = responseObject({
   normalized_query: z.string(),
   impressions: z.number().int(),
   clicks: z.number().int(),
@@ -1497,14 +1567,14 @@ export const referralMatchSignalSchema = z.enum(['referrer', 'utm', 'user_agent'
 // Visibility ↔ referral correlation summary. Below the minimum aligned-sample
 // size the backend reports `insufficient_data` with a NULL coefficient —
 // never a fabricated number (invariant 9). The UI renders `—` for that state.
-export const analyticsCorrelationSchema = z.strictObject({
+export const analyticsCorrelationSchema = responseObject({
   state: z.enum(['ok', 'insufficient_data']),
   coefficient: z.number().nullable(),
   sample_size: z.number().int(),
 });
 
 // Per-`ai_source` referral breakdown row.
-export const analyticsSourceBreakdownRowSchema = z.strictObject({
+export const analyticsSourceBreakdownRowSchema = responseObject({
   ai_source: aiSourceSchema,
   sessions: z.number().int(),
   share: z.number().nullable(),
@@ -1512,7 +1582,7 @@ export const analyticsSourceBreakdownRowSchema = z.strictObject({
 
 // Per-engine visibility series (folded from persisted MetricSnapshot rows;
 // `logical_engine` is the audited engine vocabulary, invariant 10).
-export const analyticsEngineVisibilitySchema = z.strictObject({
+export const analyticsEngineVisibilitySchema = responseObject({
   logical_engine: z.string(),
   series: metricSeriesSchema,
 });
@@ -1520,7 +1590,7 @@ export const analyticsEngineVisibilitySchema = z.strictObject({
 // `GET /projects/{id}/llm-analytics` — headline AEO Insights projection:
 // referral volume/share series, per-source breakdown, per-engine visibility
 // series, and the correlation summary. Empty history → empty payload.
-export const llmAnalyticsSchema = z.strictObject({
+export const llmAnalyticsSchema = responseObject({
   project_id: uuid(),
   window_start: z.string(),
   window_end: z.string(),
@@ -1538,7 +1608,7 @@ export const llmAnalyticsSchema = z.strictObject({
 // its ReferralEvent). URLs/UA are sanitized before persistence on the
 // backend; `logical_engine` is null when the source has no audited-engine
 // mapping, and `match_signal` is null when no rule fired (non-AI referral).
-export const analyticsReferralRowSchema = z.strictObject({
+export const analyticsReferralRowSchema = responseObject({
   id: uuid(),
   occurred_at: z.string(),
   landing_url: z.string(),
@@ -1556,7 +1626,7 @@ export const analyticsReferralsPageSchema = cursorPageSchema(analyticsReferralRo
 // One theme-level visibility rollup row (grouped by the frozen
 // theme/intent of the audited prompts). Rates/score are null when the
 // underlying metric is absent (no fabricated numbers).
-export const llmAnalyticsThemeRowSchema = z.strictObject({
+export const llmAnalyticsThemeRowSchema = responseObject({
   theme: z.string(),
   intent: promptIntentSchema,
   total_completed: z.number().int(),
@@ -1572,7 +1642,7 @@ export const llmAnalyticsThemeListSchema = z.array(llmAnalyticsThemeRowSchema);
 // Products (agentic commerce) — catalog + visibility projections
 // ---------------------------------------------------------------------------
 
-export const productVariantSchema = z.strictObject({
+export const productVariantSchema = responseObject({
   name: z.string(),
   sku: z.string(),
   price: z.number().nullable(),
@@ -1580,7 +1650,7 @@ export const productVariantSchema = z.strictObject({
 
 // Computed data-quality badge: present/total against the backend config
 // matrix (never persisted — computed on read).
-export const productCompletenessSchema = z.strictObject({
+export const productCompletenessSchema = responseObject({
   score: z.number(),
   present: z.number().int(),
   total: z.number().int(),
@@ -1593,7 +1663,7 @@ export const productCompletenessSchema = z.strictObject({
 // fields are null on unbound manual/imported rows.
 export const productOriginSchema = z.enum(['manual', 'imported', 'synced']);
 
-export const productSchema = z.strictObject({
+export const productSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   sku: z.string(),
@@ -1615,7 +1685,7 @@ export const productSchema = z.strictObject({
   updated_at: z.string(),
 });
 
-export const competitorProductSchema = z.strictObject({
+export const competitorProductSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   competitor_id: uuid(),
@@ -1626,6 +1696,35 @@ export const competitorProductSchema = z.strictObject({
   url: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
+});
+
+// D1 import feedback: the bulk-import response carries the refreshed catalog
+// plus a per-row outcome summary (backend `ProductImportResponse`). `updated`
+// is reserved (v1 imports are insert-only, so it is always 0).
+export const productImportRowErrorSchema = responseObject({
+  row: z.number().int(),
+  field: z.string(),
+  message: z.string(),
+});
+
+export const productImportSummarySchema = responseObject({
+  created: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  errors: z.array(productImportRowErrorSchema),
+});
+
+export const productImportResponseSchema = responseObject({
+  items: z.array(productSchema),
+  summary: productImportSummarySchema,
+});
+
+// D4 delete guard: read-only frozen-audit usage check for one product
+// (backend `ProductAuditReferences`).
+export const productAuditReferencesSchema = responseObject({
+  product_id: uuid(),
+  referenced: z.boolean(),
+  audit_count: z.number().int().nonnegative(),
 });
 
 // Buyer-destination classification vocabulary (backend `MERCHANT_KINDS`).
@@ -1639,16 +1738,16 @@ export const buyerDestinationKindSchema = z.enum([
 // Persisted buyer-destination aggregate for one visibility entry: the total
 // destination count, per-kind tallies, and per-domain rows (sanitized —
 // domain + display name only, never a raw URL).
-export const buyerDestinationMixSchema = z.strictObject({
+export const buyerDestinationMixSchema = responseObject({
   total: z.number().int().nonnegative(),
   by_kind: z
-    .strictObject({
+    .object({
       merchant_kind: buyerDestinationKindSchema,
       count: z.number().int().nonnegative(),
     })
     .array(),
   by_domain: z
-    .strictObject({
+    .object({
       merchant_domain: z.string(),
       merchant_name: z.string(),
       merchant_kind: buyerDestinationKindSchema,
@@ -1660,9 +1759,9 @@ export const buyerDestinationMixSchema = z.strictObject({
 // Persisted competitor co-placement rows for one visibility entry (answer
 // executions listing the entry beside a competitor product), with the
 // backend's truncation flag preserved verbatim.
-export const competitorCoPlacementSchema = z.strictObject({
+export const competitorCoPlacementSchema = responseObject({
   items: z
-    .strictObject({
+    .object({
       competitor_product_id: uuid().nullable(),
       competitor_name: z.string(),
       product_name: z.string(),
@@ -1676,7 +1775,7 @@ export const competitorCoPlacementSchema = z.strictObject({
 // partial: v2 rows count every key, v1 rows count only `match`/`mismatch`,
 // and `{}` is valid (a v1 entry with nothing verifiable). Direction is NEVER
 // inferred for v1 data — the UI renders `Direction unavailable` there.
-export const priceRelationCountsSchema = z.strictObject({
+export const priceRelationCountsSchema = responseObject({
   match: z.number().int().nonnegative().optional(),
   higher: z.number().int().nonnegative().optional(),
   lower: z.number().int().nonnegative().optional(),
@@ -1704,7 +1803,7 @@ const productVisibilityEntryV2Fields = {
   competitor_co_placement: competitorCoPlacementSchema,
 } as const;
 
-export const productVisibilityEntrySchema = z.strictObject({
+export const productVisibilityEntrySchema = responseObject({
   // Nullable: the aggregate survives the catalog row's delete (SET NULL).
   product_id: uuid().nullable(),
   sku: z.string(),
@@ -1719,7 +1818,7 @@ export const productVisibilityEntrySchema = z.strictObject({
   ...productVisibilityEntryV2Fields,
 });
 
-export const competitorProductVisibilityEntrySchema = z.strictObject({
+export const competitorProductVisibilityEntrySchema = responseObject({
   competitor_product_id: uuid().nullable(),
   competitor_name: z.string(),
   name: z.string(),
@@ -1734,7 +1833,7 @@ export const competitorProductVisibilityEntrySchema = z.strictObject({
 
 // Selected-audit product dashboard projection (persisted rows only). Identity
 // (sku/name/competitor_name) comes from the audit's frozen configuration.
-export const productVisibilitySchema = z.strictObject({
+export const productVisibilitySchema = responseObject({
   project_id: uuid(),
   audit_id: uuid(),
   audit_status: auditStatusSchema,
@@ -1769,7 +1868,7 @@ export const priceRelationSchema = z.enum(['match', 'higher', 'lower']);
 // Generalized evidence row: one pinned key set for every kind, with the
 // kind-specific field groups present on every row and null for the other
 // kinds (the backend emits exactly this shape).
-export const productEvidenceItemSchema = z.strictObject({
+export const productEvidenceItemSchema = responseObject({
   evidence_id: uuid(),
   analysis_id: uuid(),
   evidence_kind: productEvidenceKindSchema,
@@ -1811,7 +1910,7 @@ export const productEvidenceItemSchema = z.strictObject({
   destination_url: z.string().nullable(),
 });
 
-export const productEvidenceResponseSchema = z.strictObject({
+export const productEvidenceResponseSchema = responseObject({
   items: z.array(productEvidenceItemSchema),
   truncated: z.boolean(),
 });
@@ -1828,7 +1927,7 @@ export const feedIssueSeveritySchema = z.enum(['info', 'warning', 'error']);
 
 // One connection's current-or-latest sync summary (a read-only projection of
 // the sync queue row — same status vocabulary as integrationSyncRunSchema).
-export const commerceSyncSummarySchema = z.strictObject({
+export const commerceSyncSummarySchema = responseObject({
   sync_run_id: uuid(),
   connection_id: uuid(),
   status: integrationSyncRunStatusSchema,
@@ -1841,7 +1940,7 @@ export const commerceSyncSummarySchema = z.strictObject({
 });
 
 // A catalog feed connection (Shopify) with its grant status and latest sync.
-export const commerceConnectionSummarySchema = z.strictObject({
+export const commerceConnectionSummarySchema = responseObject({
   connection_id: uuid(),
   provider: z.literal('shopify'),
   label: z.string(),
@@ -1853,7 +1952,7 @@ export const commerceConnectionSummarySchema = z.strictObject({
 
 // One SKU's feed-health row. `product_id` is null when the feed item no
 // longer resolves to a catalog row; `rule_ids` are non-secret rule codes.
-export const productFeedHealthSchema = z.strictObject({
+export const productFeedHealthSchema = responseObject({
   product_id: uuid().nullable(),
   connection_id: uuid(),
   external_item_ref: z.string(),
@@ -1867,7 +1966,7 @@ export const productFeedHealthSchema = z.strictObject({
 
 // `GET /projects/{id}/commerce/catalog-health`. Connections + products are
 // arrays because catalog rows can be bound to different connection ids.
-export const commerceCatalogHealthSchema = z.strictObject({
+export const commerceCatalogHealthSchema = responseObject({
   project_id: uuid(),
   connections: z.array(commerceConnectionSummarySchema),
   products: z.array(productFeedHealthSchema),
@@ -1898,7 +1997,7 @@ const isoCurrencyCode = () => z.string().length(3);
 // (the refine mirrors the backend producer contract); null metrics mean
 // unavailable — never a fabricated zero.
 export const attributionMetricSetSchema = z
-  .strictObject({
+  .object({
     currency: isoCurrencyCode().nullable(),
     revenue: z.number().nullable(),
     orders: z.number().int().nullable(),
@@ -1915,7 +2014,7 @@ export const attributionMetricSetSchema = z
   );
 
 // Per-`ai_source` deterministic row within one method/currency partition.
-export const attributionSourceRowSchema = z.strictObject({
+export const attributionSourceRowSchema = responseObject({
   ai_source: aiSourceSchema,
   currency: isoCurrencyCode(),
   metrics: attributionMetricSetSchema,
@@ -1924,7 +2023,7 @@ export const attributionSourceRowSchema = z.strictObject({
 // Per-SKU row. `ai_source` is null and `source_label` carries the
 // default-channel label when GA4 item granularity is reduced — those rows
 // must never be relabelled as per-AI-source data.
-export const attributionProductRowSchema = z.strictObject({
+export const attributionProductRowSchema = responseObject({
   product_id: uuid().nullable(),
   sku: z.string(),
   name: z.string(),
@@ -1940,7 +2039,7 @@ export const attributionProductRowSchema = z.strictObject({
 // every available row (an unavailable method reports no_data/not_connected
 // with null metrics rather than a fabricated zero).
 export const attributionMethodMetricsSchema = z
-  .strictObject({
+  .object({
     method: attributionMethodSchema,
     state: attributionDataStateSchema,
     source_granularity: attributionSourceGranularitySchema.nullable(),
@@ -1980,7 +2079,7 @@ export const attributionDeltaStateSchema = z.enum([
 
 // Backend-projected A1 − A2 for one currency (may be negative; non-comparable
 // rows carry null values). The browser NEVER computes this delta itself.
-export const attributionDeltaSchema = z.strictObject({
+export const attributionDeltaSchema = responseObject({
   currency: isoCurrencyCode(),
   state: attributionDeltaStateSchema,
   revenue: z.number().nullable(),
@@ -1991,7 +2090,7 @@ export const attributionDeltaSchema = z.strictObject({
 
 // Orders with no referrer evidence (no session join key exists — they stay
 // unattributed). A null share is unavailable, never 0%.
-export const unattributedMetricsSchema = z.strictObject({
+export const unattributedMetricsSchema = responseObject({
   currency: isoCurrencyCode(),
   orders: z.number().int(),
   order_share: z.number().nullable(),
@@ -2002,7 +2101,7 @@ export const unattributedMetricsSchema = z.strictObject({
 // excluded from every deterministic total/delta/trend. `ai_source` is a
 // plain string (the allocation can carry an unassigned bucket outside the
 // deterministic AI-source vocabulary).
-export const statisticalAllocationRowSchema = z.strictObject({
+export const statisticalAllocationRowSchema = responseObject({
   ai_source: z.string(),
   currency: isoCurrencyCode(),
   estimated_revenue: z.number().nullable(),
@@ -2011,7 +2110,7 @@ export const statisticalAllocationRowSchema = z.strictObject({
 });
 
 export const attributionStatisticalSchema = z
-  .strictObject({
+  .object({
     state: z.enum(['not_offered', 'available', 'insufficient_data']),
     sample_size: z.number().int().nullable(),
     allocations: z.array(statisticalAllocationRowSchema),
@@ -2041,12 +2140,12 @@ export const attributionStatisticalSchema = z
     }
   });
 
-export const attributionDeterministicSchema = z.strictObject({
+export const attributionDeterministicSchema = responseObject({
   a1: z.array(attributionMethodMetricsSchema),
   a2: z.array(attributionMethodMetricsSchema),
   delta: z.array(attributionDeltaSchema),
   unattributed: z.array(unattributedMetricsSchema),
-  coverage: z.strictObject({
+  coverage: responseObject({
     total_latest_orders: z.number().int(),
     orders_with_evidence: z.number().int(),
     linked_ai_orders: z.number().int(),
@@ -2058,14 +2157,14 @@ export const attributionDeterministicSchema = z.strictObject({
   }),
 });
 
-export const attributionMetricsSchema = z.strictObject({
+export const attributionMetricsSchema = responseObject({
   deterministic: attributionDeterministicSchema,
   statistical: attributionStatisticalSchema,
 });
 
 // `GET /projects/{id}/commerce/attribution` — the persisted snapshot
 // projection (an absent snapshot yields the empty contract, not a 404).
-export const attributionSnapshotSchema = z.strictObject({
+export const attributionSnapshotSchema = responseObject({
   project_id: uuid(),
   window_start: z.string(),
   window_end: z.string(),
@@ -2095,7 +2194,7 @@ export const attributionTaskStatusSchema = z.enum([
 
 // `POST /projects/{id}/commerce/attribution/recompute` (202) and
 // `GET /projects/{id}/commerce/attribution/recompute/{task_id}` responses.
-export const attributionRecomputeSchema = z.strictObject({
+export const attributionRecomputeSchema = responseObject({
   task_id: uuid(),
   project_id: uuid(),
   status: attributionTaskStatusSchema,
@@ -2116,7 +2215,7 @@ export const opportunitySeveritySchema = z.enum(['critical', 'high', 'medium', '
 export const opportunityStatusSchema = z.enum(['open', 'in_progress', 'dismissed', 'resolved']);
 
 // One live opportunity row in the priority-sorted catalog.
-export const opportunitySchema = z.strictObject({
+export const opportunitySchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   rule_id: z.string(),
@@ -2128,6 +2227,9 @@ export const opportunitySchema = z.strictObject({
   target_prompt_id: uuid().nullable(),
   target_url: z.string().nullable(),
   target_theme: z.string().nullable(),
+  // Backend-owned target presentation (url / frozen prompt text / humanized
+  // theme / frozen product name); null when nothing user-facing exists.
+  target_label: z.string().nullable(),
   status: opportunityStatusSchema,
   created_at: z.string(),
   updated_at: z.string(),
@@ -2153,7 +2255,7 @@ export const opportunitiesPageSchema = cursorPageSchema(opportunitySchema);
 
 // Latest recompute snapshot projection. `computed=false` (with empty counts +
 // null ids) before the first recompute — a 200, never a 404.
-export const opportunitySummarySchema = z.strictObject({
+export const opportunitySummarySchema = responseObject({
   computed: z.boolean(),
   run_id: uuid().nullable(),
   audit_id: uuid().nullable(),
@@ -2167,10 +2269,14 @@ export const opportunitySummarySchema = z.strictObject({
   rule_version: z.string(),
   formula_version: z.string(),
   computed_at: z.string().nullable(),
+  // Read-time freshness: newest usable audit/crawl evidence timestamp, and
+  // whether it post-dates the latest snapshot (drives the stale badge).
+  evidence_updated_at: z.string().nullable(),
+  stale: z.boolean(),
 });
 
 // The immutable snapshot written by one recompute run (POST response).
-export const recomputeResponseSchema = z.strictObject({
+export const recomputeResponseSchema = responseObject({
   id: uuid(),
   run_id: uuid(),
   audit_id: uuid().nullable(),
@@ -2190,7 +2296,7 @@ export const recomputeResponseSchema = z.strictObject({
 // Billing (provider ids, plan ids, secrets, and billing PII never cross wire)
 // ---------------------------------------------------------------------------
 
-export const billingPriceSchema = z.strictObject({
+export const billingPriceSchema = responseObject({
   region: z.enum(['india', 'international']),
   currency: z.enum(['INR', 'USD']),
   base_amount_minor: z.number().int().nonnegative(),
@@ -2200,7 +2306,7 @@ export const billingPriceSchema = z.strictObject({
   checkout_available: z.boolean(),
 });
 
-export const billingCatalogPlanSchema = z.strictObject({
+export const billingCatalogPlanSchema = responseObject({
   tier_key: z.enum(['free', 'paid', 'enterprise']),
   name: z.string(),
   cadence: z.enum(['none', 'monthly', 'custom']),
@@ -2210,13 +2316,13 @@ export const billingCatalogPlanSchema = z.strictObject({
   price: billingPriceSchema.nullable(),
 });
 
-export const billingCatalogSchema = z.strictObject({
+export const billingCatalogSchema = responseObject({
   catalog_version: z.string(),
   country_code: z.string().nullable(),
   plans: z.array(billingCatalogPlanSchema),
 });
 
-export const billingSummarySchema = z.strictObject({
+export const billingSummarySchema = responseObject({
   billing_account_id: uuid(),
   billing_country: z.string(),
   country_verification: z.string(),
@@ -2230,17 +2336,17 @@ export const billingSummarySchema = z.strictObject({
   checkout_block_reason: z.string().nullable(),
 });
 
-export const billingCheckoutSchema = z.strictObject({
+export const billingCheckoutSchema = responseObject({
   checkout_url: z.url().refine((value) => value.startsWith('https://')),
   expires_at: z.string(),
 });
 
-export const billingCancelSchema = z.strictObject({
+export const billingCancelSchema = responseObject({
   status: z.string(),
   cancel_at_period_end: z.boolean(),
 });
 
-export const workspaceEntitlementSchema = z.strictObject({
+export const workspaceEntitlementSchema = responseObject({
   workspace_id: uuid(),
   tier_key: z.enum(['free', 'paid']),
   capability_revision: z.number().int().nonnegative(),
@@ -2252,13 +2358,16 @@ export const workspaceEntitlementSchema = z.strictObject({
 });
 
 // ---------------------------------------------------------------------------
-// strictValidate — fail loud on any schema drift (drift policy §6)
+// strictValidate — fail loud on declared-field drift (drift policy §6)
 // ---------------------------------------------------------------------------
 
 /**
  * Validate `data` against `schema`, throwing a descriptive error tagged with
- * `context` on any mismatch. The backend is the source of truth: a failure here
- * means `schemas.ts` is out of sync and must be fixed — never swallowed.
+ * `context` on any mismatch of a DECLARED field. The backend is the source of
+ * truth: a failure here means `schemas.ts` is out of sync and must be fixed —
+ * never swallowed. Unknown keys are stripped by `responseObject` (tolerated
+ * additive drift); the contract-drift guard (`lib/api/contract-drift.ts`)
+ * keeps the two field sets from silently diverging.
  */
 export function strictValidate<T>(schema: z.ZodType<T>, data: unknown, context: string): T {
   const result = schema.safeParse(data);

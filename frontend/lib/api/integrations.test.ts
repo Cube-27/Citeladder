@@ -68,22 +68,28 @@ describe('integrationsApi.list', () => {
     expect(items[0].last_synced_at).toBe('2026-07-22T00:00:00Z');
   });
 
-  it('fails loud when the backend leaks an access_token (invariant 6)', async () => {
+  it('strips a leaked access_token so it never enters app state (invariant 6)', async () => {
     mswServer.use(
       http.get('/api/v1/integrations', () =>
         HttpResponse.json([{ ...connection, access_token: 'ya29.leaked' }]),
       ),
     );
-    await expect(integrationsApi.list()).rejects.toThrow(/integrations.list/);
+    // Tolerant-on-unknown: the additive key is stripped on parse, so the
+    // leaked token can never reach the UI or app state.
+    const items = await integrationsApi.list();
+    expect(items).toHaveLength(1);
+    expect('access_token' in items[0]).toBe(false);
   });
 
-  it('fails loud when the backend leaks a refresh_token (invariant 6)', async () => {
+  it('strips a leaked refresh_token so it never enters app state (invariant 6)', async () => {
     mswServer.use(
       http.get('/api/v1/integrations', () =>
         HttpResponse.json([{ ...connection, refresh_token: '1//leaked' }]),
       ),
     );
-    await expect(integrationsApi.list()).rejects.toThrow(/integrations.list/);
+    const items = await integrationsApi.list();
+    expect(items).toHaveLength(1);
+    expect('refresh_token' in items[0]).toBe(false);
   });
 });
 
@@ -170,13 +176,15 @@ describe('integrationsApi.sync + sync-run projections', () => {
     expect(run.row_count).toBe(400);
   });
 
-  it('fails loud on an extra key in a sync-run projection', async () => {
+  it('strips an additive key from a sync-run projection (tolerant-on-unknown)', async () => {
     mswServer.use(
       http.get(`/api/v1/integrations/${CONN}/syncs/${SYNC}`, () =>
         HttpResponse.json({ ...syncRun, idempotency_key: 'internal-only' }),
       ),
     );
-    await expect(integrationsApi.getSync(CONN, SYNC)).rejects.toThrow(/integrations.getSync/);
+    const run = await integrationsApi.getSync(CONN, SYNC);
+    expect(run.id).toBe(SYNC);
+    expect('idempotency_key' in run).toBe(false);
   });
 });
 

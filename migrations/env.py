@@ -18,7 +18,16 @@ config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # ``disable_existing_loggers=False`` is REQUIRED, not cosmetic. The
+    # fileConfig default (True) sets ``disabled = True`` on every logger that
+    # already exists but is not named in alembic.ini — which, whenever
+    # migrations run in-process after the app is imported, silently mutes the
+    # application's own loggers (``app.core.errors`` among them) for the rest
+    # of the process. That is how a run of the test suite lost the
+    # unhandled-exception log line the 500 handler is required to emit, and it
+    # would do the same to any host that runs `alembic upgrade` in-process
+    # before serving.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
