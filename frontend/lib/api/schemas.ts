@@ -423,6 +423,15 @@ export const auditEngineSnapshotSchema = z.strictObject({
   transport_model: z.string(),
 });
 
+// Frozen shopping-surface identity (B5 `AuditShoppingSurfaceSnapshotResponse`;
+// empty list while the shopping-surface gate is off).
+export const auditShoppingSurfaceSnapshotSchema = z.strictObject({
+  shopping_surface: z.string(),
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+});
+
 // A run/audit projection (B5 `AuditResponse`). `random_seed` is a decimal
 // STRING (64-bit seed), `error_message` a non-null string ('' when unset), and
 // the engine provenance is carried but the provider key never is (invariant 6).
@@ -439,6 +448,7 @@ export const auditSchema = z.strictObject({
   failed_count: z.number().int(),
   error_message: z.string(),
   engine_snapshots: z.array(auditEngineSnapshotSchema),
+  shopping_surface_snapshots: z.array(auditShoppingSurfaceSnapshotSchema).default([]),
   created_at: z.string(),
   updated_at: z.string(),
   started_at: z.string().nullable(),
