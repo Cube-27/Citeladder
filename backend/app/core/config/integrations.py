@@ -146,6 +146,32 @@ INTEGRATION_OAUTH_CALLBACK_PATH: Final = (
 INTEGRATION_OAUTH_LANDING_PATH: Final = "/settings?tab=integrations"
 
 
+def integration_oauth_redirect_uri(provider: str) -> str:
+    """Absolute OAuth callback URL registered with the provider.
+
+    Anchored on ``frontend_url`` — the APP origin — never on the incoming
+    request's base URL. The browser reaches the backend through the Next
+    ``rewrites()`` proxy, which sets ``changeOrigin`` (the backend sees its
+    OWN host, not the app's), so a request-derived redirect URI sends the
+    provider's post-consent navigation straight to the backend origin,
+    bypassing the proxy. The session cookie is host-only on the app origin,
+    so that navigation arrives with no cookie and the callback 401s
+    ("Not authenticated") — and in production the backend origin is not
+    browser-reachable at all.
+
+    Routing the callback back through the app origin keeps it same-origin
+    (invariant 12): the cookie always rides along and the proxy forwards it.
+    The value is deployment-pinned rather than per-request because providers
+    match ``redirect_uri`` EXACTLY against their registered value — and the
+    same string must be reproducible at the token exchange.
+    """
+    # Lazy for the same reason as ``integration_oauth_landing_url`` below.
+    from app.core.config import settings
+
+    base = settings.frontend_url.rstrip("/")
+    return f"{base}{INTEGRATION_OAUTH_CALLBACK_PATH.format(provider=provider)}"
+
+
 def integration_oauth_landing_url(params: dict[str, str]) -> str:
     """Absolute frontend landing URL the OAuth callback 302s to (contract C2).
 
