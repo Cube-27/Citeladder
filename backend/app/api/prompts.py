@@ -82,6 +82,7 @@ from app.domain.prompts.service import (
 from app.domain.prompts.service import (
     TopicNotFoundError as PromptTopicNotFoundError,
 )
+from app.domain.prompts.topical_binding import TopicalBindingError
 from app.domain.prompts.topics import (
     DuplicateTopicError,
     TopicNotFoundError,
@@ -111,17 +112,26 @@ def _conflict(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
-async def _map_occupancy[T](call: Callable[[], Awaitable[T]]) -> T:
-    """Run one occupancy-gated mutation, mapping a denial to the coded 403.
+async def _map_prompt_mutation[T](call: Callable[[], Awaitable[T]]) -> T:
+    """Run one gated prompt mutation, mapping domain denials to coded errors.
 
-    The quota check lives in the domain service (never a route precheck);
-    the router only translates the domain error into the API error contract.
+    The quota + topical-binding checks live in the domain service (never a
+    route precheck); the router only translates the domain errors into the
+    API error contract: occupancy denials are a coded 403, binding
+    rejections a coded 422 (request-content validation).
     """
     try:
         return await call()
     except OccupancyError as exc:
         raise ApiException.coded(
             status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
+    except TopicalBindingError as exc:
+        raise ApiException.coded(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            exc.code,
+            str(exc),
+            details=exc.details,
         ) from exc
 
 
@@ -233,7 +243,7 @@ async def create_prompt_endpoint(
 ) -> PromptResponse:
     create = PromptCreate(prompt_set_id=prompt_set_id, **payload.model_dump())
     try:
-        prompt = await _map_occupancy(
+        prompt = await _map_prompt_mutation(
             lambda: create_prompt(
                 session, workspace_id=ctx.workspace_id, payload=create
             )
@@ -257,11 +267,13 @@ async def update_prompt_endpoint(
     session: _SessionDep,
 ) -> PromptResponse:
     try:
-        prompt = await update_prompt(
-            session,
-            workspace_id=ctx.workspace_id,
-            prompt_id=prompt_id,
-            payload=payload,
+        prompt = await _map_prompt_mutation(
+            lambda: update_prompt(
+                session,
+                workspace_id=ctx.workspace_id,
+                prompt_id=prompt_id,
+                payload=payload,
+            )
         )
     except PromptNotFoundError as exc:
         raise_not_found("Prompt", cause=exc)
@@ -335,7 +347,7 @@ async def import_prompts_endpoint(
             detail=f"Invalid prompt import payload: {exc}",
         ) from exc
     try:
-        prompt_set = await _map_occupancy(
+        prompt_set = await _map_prompt_mutation(
             lambda: import_prompts(
                 session,
                 workspace_id=ctx.workspace_id,
@@ -403,7 +415,7 @@ async def generate_prompts_endpoint(
         window_seconds=abuse_settings.agent_call_window_seconds,
     )
     try:
-        generated, topics, dropped = await _map_occupancy(
+        generated, topics, dropped = await _map_prompt_mutation(
             lambda: generate_prompts(
                 session,
                 workspace_id=ctx.workspace_id,
@@ -454,12 +466,14 @@ async def bulk_status_endpoint(
 ) -> PromptSetResponse:
     """Bulk review transition (accept-all / archive-selected)."""
     try:
-        prompt_set = await bulk_set_status(
-            session,
-            workspace_id=ctx.workspace_id,
-            prompt_set_id=prompt_set_id,
-            prompt_ids=payload.prompt_ids,
-            status=payload.status,
+        prompt_set = await _map_prompt_mutation(
+            lambda: bulk_set_status(
+                session,
+                workspace_id=ctx.workspace_id,
+                prompt_set_id=prompt_set_id,
+                prompt_ids=payload.prompt_ids,
+                status=payload.status,
+            )
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)

@@ -14,5 +14,9 @@ IMPORT_MAX_COLUMNS: Final = 64
 IMPORT_MAX_CELL_CHARS: Final = 8_192
 
 PROMPT_IMPORT_MAX_ROWS: Final = 500
-PROMPT_TEXT_MAX_CHARS: Final = 4_000
+# DTO ceiling for prompt text on create/import/update. Kept consistent with
+# the planner's frozen-prompt guardrail (``audit_settings.max_prompt_chars``,
+# config/audits.py) — same bound, two owners on purpose: the DTO knob bounds
+# what is WRITTEN; the planner knob bounds what may RUN (frozen snapshot).
+PROMPT_TEXT_MAX_CHARS: Final = 300
 PROMPT_INTENT_MAX_CHARS: Final = 64

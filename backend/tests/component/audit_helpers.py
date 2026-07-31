@@ -94,9 +94,12 @@ async def seed_audit_fixtures(
 
     prompt_ids: list[uuid.UUID] = []
     for index in range(prompt_count):
+        # The text names the seeded brand so it passes topical binding
+        # (audit admission rejects off-domain prompts); "best option" leads
+        # for tests asserting that prefix.
         prompt = Prompt(
             prompt_set_id=prompt_set.id,
-            text=f"best option {index}",
+            text=f"best option {index} for acme",
             theme="general",
             intent="category",
             enabled=True,

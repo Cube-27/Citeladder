@@ -119,6 +119,14 @@ async def _make_project_and_set(
             json={"project_id": project["id"], "name": "Default"},
         )
     ).json()["id"]
+    # Category identity for topical binding: unbranded generated/manual texts
+    # bind through the products_services vocabulary (a partial upsert, so
+    # later per-test brand-profile PUTs keep it).
+    profile = await client.put(
+        f"/api/v1/projects/{project['id']}/brand-profile",
+        json={"products_services": ["running shoes"]},
+    )
+    assert profile.status_code == 200
     return project, prompt_set_id
 
 
@@ -477,7 +485,10 @@ def _agent_response_with_n_prompts(n: int, *, topic: str = "Bulk") -> str:
                 {
                     "name": topic,
                     "prompts": [
-                        {"text": f"{topic} prompt number {i}", "intent": "discovery"}
+                        {
+                            "text": f"{topic} running shoes prompt {i}",
+                            "intent": "discovery",
+                        }
                         for i in range(n)
                     ],
                 }
@@ -663,7 +674,7 @@ async def test_generate_manual_active_rows_count_toward_pool(
     for i in range(18):
         created = await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": f"manual prompt {i}"},
+            json={"text": f"manual acme prompt {i}"},
         )
         assert created.status_code == 201
 
@@ -694,7 +705,7 @@ async def test_generate_counts_intra_response_duplicates(
                         "prompts": [
                             {"text": "Best Shoes?", "intent": "discovery"},
                             {"text": "best  shoes", "intent": "discovery"},
-                            {"text": "hiking boots", "intent": "discovery"},
+                            {"text": "hiking shoes", "intent": "discovery"},
                         ],
                     }
                 ]
@@ -724,7 +735,7 @@ async def test_generate_bounds_existing_prompt_context(
     for i in range(6):
         created = await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": f"existing context prompt {i}"},
+            json={"text": f"existing acme context prompt {i}"},
         )
         assert created.status_code == 201
 
@@ -737,7 +748,7 @@ async def test_generate_bounds_existing_prompt_context(
     assert resp.status_code == 201
     sent = agent.calls[0]["user"]
     # Only the first 3 existing prompts appear in the "do NOT duplicate" block.
-    included = [i for i in range(6) if f"existing context prompt {i}" in sent]
+    included = [i for i in range(6) if f"existing acme context prompt {i}" in sent]
     assert len(included) == 3
 
 
@@ -1057,7 +1068,7 @@ async def test_create_prompt_rejects_foreign_topic_id(
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{set_a}/prompts",
-        json={"text": "scoped prompt", "topic_id": foreign_topic["id"]},
+        json={"text": "scoped acme prompt", "topic_id": foreign_topic["id"]},
     )
 
     assert resp.status_code == 404
@@ -1131,7 +1142,7 @@ async def test_prompt_topic_assignment_same_project_succeeds(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "best hiking boots"},
+            json={"text": "best hiking shoes"},
         )
     ).json()
     resp = await client.patch(
@@ -1179,7 +1190,7 @@ async def test_prompt_topic_assignment_cross_project_rejected(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_a}/prompts",
-            json={"text": "cross project prompt"},
+            json={"text": "cross project acme prompt"},
         )
     ).json()
     resp = await client.patch(
@@ -1210,7 +1221,7 @@ async def test_prompt_topic_assignment_cross_workspace_rejected(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "my prompt"},
+            json={"text": "my acme prompt"},
         )
     ).json()
     resp = await client.patch(
@@ -1230,7 +1241,7 @@ async def test_prompt_topic_assignment_unknown_topic_rejected(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "orphan prompt"},
+            json={"text": "orphan acme prompt"},
         )
     ).json()
     resp = await client.patch(
@@ -1319,7 +1330,7 @@ async def test_bulk_status_rejects_foreign_prompt_ids(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "real prompt"},
+            json={"text": "real acme prompt"},
         )
     ).json()
 
@@ -1443,9 +1454,9 @@ async def test_import_over_occupancy_returns_coded_403(
         f"/api/v1/prompt-sets/{prompt_set_id}/import",
         json={
             "prompts": [
-                {"text": "first import"},
-                {"text": "second import"},
-                {"text": "third import"},
+                {"text": "first acme import"},
+                {"text": "second acme import"},
+                {"text": "third acme import"},
             ]
         },
     )

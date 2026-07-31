@@ -194,6 +194,10 @@ EVENT_AUDIT_COMPLETED: Final = "audit.completed"
 # worker); these two are orchestration-level (no provider call involved).
 ERROR_RUN_DEADLINE: Final = "run_deadline_exceeded"
 ERROR_CANCELLED: Final = "cancelled"
+# Prompt-count admission codes for the FUNDED/TRIAL paths (the
+# ``audit_prompt_count`` knob above; mapped at the API layer).
+CODE_PROMPT_COUNT_POLICY_UNCONFIGURED: Final = "prompt_count_policy_unconfigured"
+CODE_PROMPT_COUNT_EXCEEDED: Final = "prompt_count_exceeded"
 # ``ERROR_MAX_ATTEMPTS`` is queue-neutral (re-exported from task_queue above).
 ERROR_NO_CONNECTION: Final = "provider_connection_missing"
 
@@ -309,6 +313,12 @@ class AuditSettings(BaseSettings):
     trend_smoothing_days: int = 7
     # Hard ceiling on a single frozen prompt's length (validated by the planner).
     max_prompt_chars: int = 300
+    # Max number of selected active prompts one audit may run on the FUNDED
+    # and TRIAL paths. UNSET (None) ON PURPOSE: those paths fail closed with
+    # ``prompt_count_policy_unconfigured`` rather than inventing a count.
+    # BYOK runs stay governed by their existing product limits and never read
+    # this knob.
+    audit_prompt_count: int | None = None
 
     def retry_delay(
         self, attempt: int, retry_after_seconds: float | None = None

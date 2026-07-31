@@ -44,6 +44,11 @@ from app.domain.projects.shim import project_scoring_identity
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.service import PromptSetNotFoundError, prepare_prompt_inserts
+from app.domain.prompts.topical_binding import (
+    BindingVocabulary,
+    build_project_vocabulary,
+    validate_prompt_binding,
+)
 from app.models.brand import Brand
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
@@ -350,6 +355,30 @@ async def _get_or_create_topic(
     return topic
 
 
+def _drop_unbound_suggestions(
+    suggestions: list[SuggestedTopic], vocabulary: BindingVocabulary
+) -> list[SuggestedTopic]:
+    """Drop suggested prompts that fail topical binding (model output is
+    not trusted merely because a model produced it).
+
+    Runs before any occupancy charge or insert: an off-domain suggestion is
+    never persisted and never consumes a ``prompt_slots`` slot. Topics
+    emptied by the drop are removed; when every suggestion is off-domain the
+    generation persists nothing (an empty 201), matching the duplicate-drop
+    sanitize semantics.
+    """
+    kept: list[SuggestedTopic] = []
+    for topic in suggestions:
+        prompts = [
+            p
+            for p in topic.prompts
+            if validate_prompt_binding(p.text, vocabulary).accepted
+        ]
+        if prompts:
+            kept.append(SuggestedTopic(name=topic.name, prompts=prompts))
+    return kept
+
+
 async def _apply_insert_capacity(
     session: AsyncSession,
     *,
@@ -631,6 +660,12 @@ async def generate_prompts(
     }
 
     try:
+        # Topical binding gate: generated text is not trusted merely because
+        # a model produced it — off-domain suggestions are dropped before any
+        # occupancy charge or insert (empty vocabulary fails closed).
+        suggestions = _drop_unbound_suggestions(
+            suggestions, build_project_vocabulary(project)
+        )
         # Occupancy gate: filter already-persisted texts and charge ONLY the
         # rows that can actually insert, under the account-capacity lock, in
         # this same transaction. Over-allowance raises before any insert.

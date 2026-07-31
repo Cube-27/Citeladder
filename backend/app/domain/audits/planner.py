@@ -33,7 +33,10 @@ from app.core.config.audits import (
     AUDIT_STATUS_DRAFT,
     AUDIT_STATUS_QUEUED,
     AUDIT_STATUS_VALIDATING,
+    AUDIT_TRIGGER_TRIAL,
     AUDIT_TRIGGERS,
+    CODE_PROMPT_COUNT_EXCEEDED,
+    CODE_PROMPT_COUNT_POLICY_UNCONFIGURED,
     EVENT_AUDIT_CANCELLED,
     EVENT_AUDIT_CREATED,
     EVENT_AUDIT_QUEUED,
@@ -106,6 +109,12 @@ from app.domain.entitlements.types import (
 )
 from app.domain.products.shim import project_product_identity
 from app.domain.projects.shim import project_scoring_identity
+from app.domain.prompts.topical_binding import (
+    BINDING_FAILURE_MESSAGES,
+    TopicalBindingError,
+    build_project_vocabulary,
+    validate_prompt_binding,
+)
 from app.models.audit import (
     Audit,
     AuditEngineSnapshot,
@@ -136,6 +145,25 @@ class FundedAdmissionError(RuntimeError):
     ``funded_credits_exhausted`` / ``funded_cost_unresolved`` /
     ``entitlement_unresolved``). Nothing persists when raised inside the
     planner transaction: no audit, task, or ledger rows, nothing enqueued.
+    """
+
+    def __init__(
+        self, message: str, *, code: str, details: dict[str, Any] | None = None
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.details = details
+
+
+class PromptCountPolicyError(RuntimeError):
+    """Funded/trial prompt-count admission refusal (mapped at the API layer).
+
+    Same coded pattern as ``FundedAdmissionError``: ``prompt_count_policy_unconfigured``
+    when the ``audit_prompt_count`` knob is unset (fail closed — the planner
+    never invents a count) or ``prompt_count_exceeded`` when the selected
+    active prompts exceed the configured count. Raised before any audit,
+    task, or ledger row persists. BYOK runs never hit this error.
     """
 
     def __init__(
@@ -201,6 +229,11 @@ async def _load_project(
         select(Project)
         .options(
             selectinload(Project.brand).selectinload(Brand.aliases),
+            # Binding identity (topical admission): profile + topics are the
+            # category side of the vocabulary; competitors are never loaded
+            # into it.
+            selectinload(Project.brand).selectinload(Brand.profile),
+            selectinload(Project.topics),
             selectinload(Project.competitors),
             selectinload(Project.owned_domains),
             selectinload(Project.unintended_domains),
@@ -458,6 +491,55 @@ def _validate_prompt_lengths(prompts: list[Prompt]) -> None:
     if too_long:
         raise AuditValidationError(
             f"Prompt(s) exceed the maximum length of {limit} characters"
+        )
+
+
+def _evaluate_prompt_admission(
+    *,
+    project: Project,
+    prompts: list[Prompt],
+    trigger: str,
+    credential_mode: str,
+) -> None:
+    """Precomputed prompt admission for one run (topical binding + count policy).
+
+    Called ONCE by ``create_audit``, which only applies its decision and
+    gains no validation loop/branch of its own. Every selected active prompt
+    must bind to the project's identity/category vocabulary — stale or
+    bypassed content (seeded before binding, or written by a path that
+    skipped it) can never run; an empty vocabulary fails closed. On top of
+    that, the FUNDED and TRIAL paths fail closed with
+    ``prompt_count_policy_unconfigured`` while ``audit_prompt_count`` is
+    unset, and enforce it as the max selected active prompts once configured.
+    BYOK manual runs are never count-gated (their existing product limits
+    govern) but ARE binding-gated like every path.
+    """
+    vocabulary = build_project_vocabulary(project)
+    for prompt in prompts:
+        result = validate_prompt_binding(prompt.text or "", vocabulary)
+        if not result.accepted:
+            raise TopicalBindingError(
+                f"Prompt {prompt.id} cannot run: "
+                f"{BINDING_FAILURE_MESSAGES[result.code]}",
+                code=result.code,
+                details={"prompt_id": str(prompt.id)},
+            )
+    if credential_mode != CREDENTIAL_MODE_FUNDED and trigger != AUDIT_TRIGGER_TRIAL:
+        return
+    limit = audit_settings.audit_prompt_count
+    if limit is None:
+        raise PromptCountPolicyError(
+            "The audit prompt-count policy is not configured "
+            "(AUDIT_AUDIT_PROMPT_COUNT); funded and trial audit creation "
+            "fails closed rather than inventing a count",
+            code=CODE_PROMPT_COUNT_POLICY_UNCONFIGURED,
+        )
+    if len(prompts) > limit:
+        raise PromptCountPolicyError(
+            f"Audit selected {len(prompts)} active prompts, exceeding the "
+            f"configured prompt-count policy of {limit}",
+            code=CODE_PROMPT_COUNT_EXCEEDED,
+            details={"selected": len(prompts), "limit": limit},
         )
 
 
@@ -957,6 +1039,15 @@ async def create_audit(
         benchmark_mode=benchmark_mode,
         measurement_mode=measurement_mode,
         repetitions=repetitions,
+    )
+    # Prompt admission (topical binding over every selected active prompt +
+    # the funded/trial prompt-count policy) is PRECOMPUTED by one extracted
+    # helper; this shell only applies its decision and stays branch-free.
+    _evaluate_prompt_admission(
+        project=project,
+        prompts=prompts,
+        trigger=plan.trigger,
+        credential_mode=credential_mode,
     )
     reps = plan.repetitions
     engine_list = list(routes.keys())

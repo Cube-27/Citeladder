@@ -29,13 +29,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.exports import audit_to_csv, audit_to_markdown
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
-from app.core.config.audits import AUDIT_TERMINAL_STATUSES, AUDIT_TRIGGER_MANUAL
+from app.core.config.audits import (
+    AUDIT_TERMINAL_STATUSES,
+    AUDIT_TRIGGER_MANUAL,
+    CODE_PROMPT_COUNT_EXCEEDED,
+    CODE_PROMPT_COUNT_POLICY_UNCONFIGURED,
+)
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.entitlements import (
     CODE_FUNDED_BUDGET_EXHAUSTED,
     CODE_FUNDED_COST_UNRESOLVED,
     CODE_FUNDED_CREDITS_EXHAUSTED,
     CODE_MANUAL_RUN_RATE_EXCEEDED,
+)
+from app.core.config.prompts import (
+    CODE_BINDING_VOCABULARY_EMPTY,
+    CODE_PROMPT_OFF_TOPIC,
 )
 from app.core.database import SessionLocal
 from app.core.errors import ApiException
@@ -53,6 +62,7 @@ from app.domain.audits.planner import (
     AuditNotFoundError,
     AuditValidationError,
     FundedAdmissionError,
+    PromptCountPolicyError,
     cancel_audit,
     create_audit,
     get_audit,
@@ -67,6 +77,7 @@ from app.domain.audits.schemas import (
 )
 from app.domain.entitlements.enforcement import RateAdmissionDeniedError
 from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
+from app.domain.prompts.topical_binding import TopicalBindingError
 from app.models.audit import Audit, AuditEvent
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -84,12 +95,19 @@ _SSE_TERMINAL_GRACE_POLLS = 2
 # status mapping lives here. Rate denials are 429; an unresolvable
 # entitlement is 403 (never data); commercial budget/credit exhaustion is a
 # graceful 403; an unresolvable funded cost estimate is a 422 fail-closed.
+# Topical-binding rejections are 422 (request-content validation); an unset
+# prompt-count policy is a 422 fail-closed (like an unresolved cost), while
+# breaching a configured count is a graceful 403 (like budget exhaustion).
 _ADMISSION_STATUS: dict[str, int] = {
     CODE_MANUAL_RUN_RATE_EXCEEDED: status.HTTP_429_TOO_MANY_REQUESTS,
     STATUS_ENTITLEMENT_UNRESOLVED: status.HTTP_403_FORBIDDEN,
     CODE_FUNDED_COST_UNRESOLVED: status.HTTP_422_UNPROCESSABLE_ENTITY,
     CODE_FUNDED_BUDGET_EXHAUSTED: status.HTTP_403_FORBIDDEN,
     CODE_FUNDED_CREDITS_EXHAUSTED: status.HTTP_403_FORBIDDEN,
+    CODE_PROMPT_OFF_TOPIC: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_BINDING_VOCABULARY_EMPTY: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_PROMPT_COUNT_POLICY_UNCONFIGURED: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_PROMPT_COUNT_EXCEEDED: status.HTTP_403_FORBIDDEN,
 }
 
 
@@ -113,7 +131,12 @@ def _translate_create_audit_errors() -> Iterator[None]:
             detail="Workspace usage limit exceeded",
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
-    except (RateAdmissionDeniedError, FundedAdmissionError) as exc:
+    except (
+        RateAdmissionDeniedError,
+        FundedAdmissionError,
+        PromptCountPolicyError,
+        TopicalBindingError,
+    ) as exc:
         raise ApiException.coded(
             _ADMISSION_STATUS.get(exc.code, status.HTTP_403_FORBIDDEN),
             exc.code,

@@ -265,7 +265,7 @@ async def test_prompt_set_and_prompt_crud_and_intent_validation(
     # Known intent is kept.
     created = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "best running shoes", "intent": "Discovery"},
+        json={"text": "best acme running shoes", "intent": "Discovery"},
     )
     assert created.status_code == 201
     assert created.json()["intent"] == "discovery"
@@ -275,7 +275,7 @@ async def test_prompt_set_and_prompt_crud_and_intent_validation(
     # Unknown intent normalizes to "".
     created2 = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "another prompt", "intent": "teleport"},
+        json={"text": "another acme prompt", "intent": "teleport"},
     )
     assert created2.status_code == 201
     assert created2.json()["intent"] == ""
@@ -313,7 +313,7 @@ async def test_csv_import_bulk_creates_imported_prompts(
 
     csv_bytes = (
         b"text,theme,intent\n"
-        b"cheap laptops,tech,discovery\n"
+        b"cheap acme laptops,tech,discovery\n"
         b"Acme vs Globex,compare,comparison\n"
         b"   ,skip,discovery\n"
     )
@@ -341,7 +341,7 @@ async def test_csv_import_accepts_json_rows(client: httpx.AsyncClient) -> None:
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        json={"prompts": [{"text": "row one"}, {"text": "row two"}]},
+        json={"prompts": [{"text": "acme row one"}, {"text": "acme row two"}]},
     )
     assert resp.status_code == 201
     assert resp.json()["prompt_count"] == 2
@@ -453,13 +453,13 @@ async def test_create_prompt_over_occupancy_returns_coded_403(
 
     first = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "first prompt"},
+        json={"text": "first acme prompt"},
     )
     assert first.status_code == 201
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "second prompt"},
+        json={"text": "second acme prompt"},
     )
     assert resp.status_code == 403
     body = resp.json()
@@ -471,6 +471,6 @@ async def test_create_prompt_over_occupancy_returns_coded_403(
     # capacity: duplicates never consume a slot, so no 403 pre-empts it.
     dup = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": " First   Prompt "},
+        json={"text": " First   Acme Prompt "},
     )
     assert dup.status_code == 409

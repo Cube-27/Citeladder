@@ -52,6 +52,7 @@ from app.domain.prompts.service import (
     update_prompt,
 )
 from app.models.billing import WorkspaceBillingLink
+from app.models.brand import Brand
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.workspace import Workspace
@@ -74,6 +75,10 @@ async def _seed_project_set(
     """ORM-seed a project + prompt set (bypasses occupancy on purpose)."""
     project = Project(workspace_id=workspace_id, name="Seed Project")
     session.add(project)
+    await session.flush()
+    # Binding identity for topical admission: texts below name the brand.
+    brand = Brand(project_id=project.id, name="Acme Corp")
+    session.add(brand)
     await session.flush()
     prompt_set = PromptSet(project_id=project.id, name="Seed Set")
     session.add(prompt_set)
@@ -214,7 +219,9 @@ async def test_concurrent_manual_prompt_inserts_never_exceed_grant(
                 return "denied"
 
     results = await asyncio.gather(
-        _create("alpha question"), _create("beta question"), _create("gamma question")
+        _create("alpha acme question"),
+        _create("beta acme question"),
+        _create("gamma acme question"),
     )
     assert sorted(results) == ["denied", "ok", "ok"]
 
@@ -236,8 +243,8 @@ async def test_concurrent_imports_never_exceed_grant(
         )
         await session.commit()
 
-    rows_a = [PromptInput(text=f"batch a {idx}") for idx in range(3)]
-    rows_b = [PromptInput(text=f"batch b {idx}") for idx in range(3)]
+    rows_a = [PromptInput(text=f"batch a acme {idx}") for idx in range(3)]
+    rows_b = [PromptInput(text=f"batch b acme {idx}") for idx in range(3)]
 
     async def _import(rows: list[PromptInput]) -> str:
         async with session_factory() as session:
@@ -310,7 +317,7 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
                     {
                         "name": topic,
                         "prompts": [
-                            {"text": f"{topic} prompt {idx}", "intent": ""}
+                            {"text": f"{topic} acme prompt {idx}", "intent": ""}
                             for idx in range(5)
                         ],
                     }
@@ -372,7 +379,7 @@ async def test_duplicate_filtering_charges_only_actual_inserts(
         await create_prompt(
             session,
             workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="alpha"),
+            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme alpha"),
         )
 
     # "alpha" + an intra-upload repeat normalize to the persisted hash, so
@@ -383,10 +390,10 @@ async def test_duplicate_filtering_charges_only_actual_inserts(
             workspace_id=workspace.id,
             prompt_set_id=prompt_set_id,
             rows=[
-                PromptInput(text="alpha"),
-                PromptInput(text=" ALPHA "),
-                PromptInput(text="beta"),
-                PromptInput(text="gamma"),
+                PromptInput(text="acme alpha"),
+                PromptInput(text=" ACME ALPHA "),
+                PromptInput(text="acme beta"),
+                PromptInput(text="acme gamma"),
             ],
         )
         assert len(prompt_set.prompts) == 3
@@ -398,7 +405,7 @@ async def test_duplicate_filtering_charges_only_actual_inserts(
             session,
             workspace_id=workspace.id,
             prompt_set_id=prompt_set_id,
-            rows=[PromptInput(text="alpha"), PromptInput(text="beta")],
+            rows=[PromptInput(text="acme alpha"), PromptInput(text="acme beta")],
         )
         assert len(prompt_set.prompts) == 3
 
@@ -446,7 +453,7 @@ async def test_archived_proposed_generated_rows_count_and_update_is_free(
             await create_prompt(
                 session,
                 workspace_id=workspace.id,
-                payload=PromptCreate(prompt_set_id=prompt_set_id, text="new text"),
+                payload=PromptCreate(prompt_set_id=prompt_set_id, text="new acme text"),
             )
         await session.rollback()
 
@@ -456,9 +463,9 @@ async def test_archived_proposed_generated_rows_count_and_update_is_free(
             session,
             workspace_id=workspace.id,
             prompt_id=archived_id,
-            payload=PromptUpdate(text="rewritten archived row"),
+            payload=PromptUpdate(text="rewritten acme archived row"),
         )
-        assert updated.text == "rewritten archived row"
+        assert updated.text == "rewritten acme archived row"
 
     async with session_factory() as session:
         assert await _prompt_count(session, prompt_set_id) == 3
@@ -482,7 +489,7 @@ async def test_deletion_frees_capacity(
         first = await create_prompt(
             session,
             workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="first"),
+            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme first"),
         )
         first_id = first.id
 
@@ -491,7 +498,7 @@ async def test_deletion_frees_capacity(
             await create_prompt(
                 session,
                 workspace_id=workspace.id,
-                payload=PromptCreate(prompt_set_id=prompt_set_id, text="second"),
+                payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme second"),
             )
         await session.rollback()
 
@@ -502,7 +509,7 @@ async def test_deletion_frees_capacity(
         await create_prompt(
             session,
             workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="second"),
+            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme second"),
         )
         assert await _prompt_count(session, prompt_set_id) == 1
 
@@ -581,7 +588,7 @@ async def test_unresolved_entitlement_fails_closed(
             await create_prompt(
                 session,
                 workspace_id=workspace_id,
-                payload=PromptCreate(prompt_set_id=prompt_set_id, text="denied"),
+                payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme denied"),
             )
         await session.rollback()
 
@@ -608,6 +615,6 @@ async def test_unprovisioned_account_is_not_occupancy_gated(
         await create_prompt(
             session,
             workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="free"),
+            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme free"),
         )
         assert await _prompt_count(session, prompt_set_id) == 1
