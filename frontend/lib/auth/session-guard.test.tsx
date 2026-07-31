@@ -2,8 +2,9 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 
+import { ApiError } from '@/lib/api/errors';
 import { runsApi } from '@/lib/api/runs';
 import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -136,4 +137,93 @@ describe('SessionGuard', () => {
     expect(window.localStorage.getItem('searchify-theme')).toBe('dark');
     expect(getActiveWorkspaceId()).toBeNull();
   });
+
+  it('acts on a 401 reaching the cache directly, after the deferring microtask', async () => {
+    // The watchdog defers to a microtask because Effect Events may not be
+    // called during render, and React Query notifies subscribers synchronously
+    // — sometimes mid-render. This drives the cache itself rather than an HTTP
+    // query, so the subscription + deferral are exercised on their own.
+    mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
+
+    const { queryClient } = renderWithProviders(
+      <SessionGuard fallback={<div>loading</div>}>
+        <Protected />
+      </SessionGuard>,
+    );
+    await screen.findByText(/signed in as guarded@example.com/i);
+
+    await expect(reject401(queryClient, 'while-mounted')).rejects.toThrow();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/login'));
+  });
+
+  it('drops a 401 already queued when the guard unmounts mid-notify', async () => {
+    // Isolates the `disposed` latch from `unsubscribe()`. The guard subscribed
+    // on mount, so its listener runs BEFORE the one below and has already
+    // queued its microtask by the time this one unmounts — synchronously,
+    // inside the same notify. Unsubscribing cannot help there; only the latch
+    // can. Deterministic because React Query notifies subscribers in
+    // subscription order, synchronously.
+    mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
+
+    const { queryClient, unmount } = renderWithProviders(
+      <SessionGuard fallback={<div>loading</div>}>
+        <Protected />
+      </SessionGuard>,
+    );
+    await screen.findByText(/signed in as guarded@example.com/i);
+
+    let unmountedMidNotify = false;
+    const stop = queryClient.getQueryCache().subscribe((event) => {
+      if (unmountedMidNotify || event.type !== 'updated' || !event.query.state.error) return;
+      unmountedMidNotify = true;
+      unmount();
+    });
+
+    await expect(reject401(queryClient, 'mid-notify')).rejects.toThrow();
+    stop();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+
+    expect(unmountedMidNotify).toBe(true);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('stops acting on cache 401s once unmounted', async () => {
+    // The plain case: a 401 arriving entirely after teardown. Nothing is
+    // triggered before unmounting on purpose — `clearSession`'s own
+    // `redirectingRef` latch would otherwise swallow the second redirect and
+    // this would pass with the teardown deleted.
+    //
+    // Scope, so the next reader does not assume more than it proves: with the
+    // `disposed` latch in place, deleting `unsubscribe()` alone changes nothing
+    // observable here (the latch stops the callback either way) — that line is
+    // leak prevention, and the redirect behaviour is pinned by the latch and by
+    // the mid-notify test above.
+    mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
+
+    const { queryClient, unmount } = renderWithProviders(
+      <SessionGuard fallback={<div>loading</div>}>
+        <Protected />
+      </SessionGuard>,
+    );
+    await screen.findByText(/signed in as guarded@example.com/i);
+
+    unmount();
+
+    await expect(reject401(queryClient, 'after-unmount')).rejects.toThrow();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+    expect(replace).not.toHaveBeenCalled();
+  });
 });
+
+/** Drive a real errored `'updated'` cache event carrying a 401. */
+function reject401(queryClient: QueryClient, key: string) {
+  return queryClient.fetchQuery({
+    queryKey: [key],
+    queryFn: () => Promise.reject(new ApiError('Unauthorized', 401, '')),
+    retry: false,
+  });
+}
