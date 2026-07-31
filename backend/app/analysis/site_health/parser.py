@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import codecs
+import logging
 from typing import Any
 from urllib.parse import urljoin, urlsplit
 
@@ -62,6 +63,8 @@ _SECURITY_HEADERS = (
     "x-frame-options",
     "referrer-policy",
 )
+
+logger = logging.getLogger("app.analysis.site_health.parser")
 
 
 def _safe_parser_encoding(charset: str) -> str | None:
@@ -229,8 +232,16 @@ def _body_text(root: Any, *, max_chars: int) -> dict[str, Any]:
     try:
         for junk in node.xpath(".//script | .//style | .//noscript | .//template"):
             junk.getparent().remove(junk)
-    except Exception:
-        pass
+    except (etree.Error, AttributeError, TypeError, ValueError) as exc:
+        # Partial-facts contract keeps the (unpruned) body text rather than
+        # crashing extraction, but the reason is no longer swallowed silently
+        # (ERR-6): an unpruned page inflates the word count and can mislead
+        # the thin-content rule.
+        logger.debug(
+            "body-text junk-node removal failed; continuing with unpruned text",
+            exc_info=True,
+            extra={"error_type": type(exc).__name__},
+        )
     raw = _text(node)
     text = " ".join(raw.split())[:max_chars]
     word_count = len(text.split()) if text else 0

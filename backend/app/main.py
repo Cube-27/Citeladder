@@ -5,8 +5,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.analytics import router as analytics_router
 from app.api.audits import router as audits_router
@@ -34,6 +36,13 @@ from app.connectors.billing.http_client import aclose_shared_billing_clients
 from app.core.config import get_frontend_origins, settings
 from app.core.config.api import API_V1_PREFIX
 from app.core.database import dispose_engine
+from app.core.errors import (
+    ApiException,
+    api_exception_handler,
+    http_exception_shim_handler,
+    request_validation_error_handler,
+    unhandled_exception_handler,
+)
 from app.core.http_security import ApiNoStoreMiddleware, RequestBodyLimitMiddleware
 from app.core.telemetry import (
     configure_logging,
@@ -103,6 +112,15 @@ def create_app() -> FastAPI:
     """Application factory: build and configure the FastAPI app."""
     configure_logging()
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+    # Unified error envelope (WS-A A1): one canonical payload for every
+    # non-2xx response — migrated ApiException routers, legacy HTTPException
+    # raises (compat shim, incl. Starlette routing 404/405), request
+    # validation failures, and unhandled 500s alike.
+    app.add_exception_handler(ApiException, api_exception_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_shim_handler)
+    app.add_exception_handler(RequestValidationError, request_validation_error_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
 
     app.add_middleware(
         CORSMiddleware,

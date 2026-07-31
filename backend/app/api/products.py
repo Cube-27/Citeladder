@@ -17,7 +17,6 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Query,
     Request,
     Response,
@@ -32,9 +31,19 @@ from app.api.request_bodies import read_limited_body, read_limited_upload
 from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
+from app.core.config.errors import (
+    CODE_CONFLICT,
+    CODE_NOT_FOUND,
+    CODE_VALIDATION_ERROR,
+)
 from app.core.config.products import (
     PRODUCT_EVIDENCE_DEFAULT_LIMIT,
     PRODUCT_EVIDENCE_MAX_LIMIT,
+)
+from app.core.errors import (
+    ApiException,
+    sanitize_validation_errors,
+    validation_error_summary,
 )
 from app.core.http_errors import raise_not_found
 from app.domain.analysis.service import (
@@ -90,17 +99,17 @@ _RES_PRODUCT = "Product"
 _RES_COMPETITOR_PRODUCT = "Competitor product"
 
 
-def _not_found(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+def _not_found(detail: str) -> ApiException:
+    return ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, detail)
 
 
-def _conflict(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+def _conflict(detail: str) -> ApiException:
+    return ApiException(status.HTTP_409_CONFLICT, CODE_CONFLICT, detail)
 
 
-def _unprocessable(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
+def _unprocessable(detail: str) -> ApiException:
+    return ApiException(
+        status.HTTP_422_UNPROCESSABLE_ENTITY, CODE_VALIDATION_ERROR, detail
     )
 
 
@@ -217,7 +226,17 @@ async def _resolve_import_rows(
         try:
             return ProductImport.model_validate_json(raw_body).products
         except ValidationError as exc:
-            raise _unprocessable(f"Invalid product import payload: {exc}") from exc
+            # COM-5: never serialize raw Pydantic text (the ``ProductImport``
+            # model name, the errors.pydantic.dev URL, echoed input values)
+            # into the response — sanitized field-level messages only.
+            errors = sanitize_validation_errors(exc.errors())
+            raise ApiException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                CODE_VALIDATION_ERROR,
+                "Invalid product import payload: "
+                + validation_error_summary(errors),
+                details={"errors": errors},
+            ) from exc
 
     # Raw CSV posted as text/csv (no multipart wrapper).
     csv_body = _decode_csv(await read_limited_body(request))

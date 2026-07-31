@@ -12,6 +12,7 @@ docstring; this is a mixin on the one worker class, not a separate process.
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from urllib.parse import urljoin
 
@@ -20,6 +21,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.web_evidence.fetcher import FetchError, FetchRequest
+from app.connectors.web_evidence.url_policy import UrlPolicyError
 from app.core.config.site_health import (
     ANALYZER_VERSION,
     FETCH_PURPOSE_LINK_CHECK,
@@ -37,6 +39,8 @@ from app.models.site_health import (
 from app.workers.site_health.outcomes import LinkProbeOutcome as _LinkProbeOutcome
 from app.workers.site_health.phases.support import PhaseSupport
 from app.workers.site_health.urls import authority_key as _authority_key
+
+logger = logging.getLogger("app.workers.site_health.phases.link_check")
 
 
 class LinkCheckPhaseMixin(PhaseSupport):
@@ -118,7 +122,15 @@ class LinkCheckPhaseMixin(PhaseSupport):
         """Find the latest analyze artifact + analysis + facts for the URL."""
         try:
             _canonical, url_hash_value = canonical_identity(requested_url)
-        except Exception:
+        except UrlPolicyError as exc:
+            # The task URL was canonicalized at admission, so a policy
+            # rejection here is a defensive can't-happen — but never swallow
+            # it silently into a misleading "nothing to do" success (ERR-6).
+            logger.debug(
+                "link-check source lookup skipped: task URL failed canonicalization",
+                exc_info=True,
+                extra={"error_type": type(exc).__name__},
+            )
             return None
         site_url_id = await session.scalar(
             select(SiteUrl.id).where(
