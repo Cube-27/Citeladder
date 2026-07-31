@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Final
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -45,9 +46,12 @@ from app.core.config.site_health import (
     APPLICABILITY_CRAWL_FINALIZE,
     CRAWL_ACTIVE_STATUSES,
     CRAWL_STATUS_COMPLETED,
+    CRAWL_STATUS_DRAFT,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
+    CRAWL_STATUS_QUEUED,
     CRAWL_STATUS_RUNNING,
+    CRAWL_STATUS_VALIDATING,
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
@@ -96,6 +100,22 @@ logger = logging.getLogger("app.workers.site_health.lifecycle")
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+# The legal intermediate hops from each non-running ACTIVE status up to
+# ``running`` (``_CRAWL_TRANSITIONS`` has no direct edge from queued/draft to a
+# terminal state). Used only by the drained-crawl terminalization below, so a
+# crawl whose work finished before it was ever marked running can still reach
+# its terminal state instead of staying active forever.
+_RUNNING_PATH: Final[dict[str, tuple[str, ...]]] = {
+    CRAWL_STATUS_DRAFT: (
+        CRAWL_STATUS_VALIDATING,
+        CRAWL_STATUS_QUEUED,
+        CRAWL_STATUS_RUNNING,
+    ),
+    CRAWL_STATUS_VALIDATING: (CRAWL_STATUS_QUEUED, CRAWL_STATUS_RUNNING),
+    CRAWL_STATUS_QUEUED: (CRAWL_STATUS_RUNNING,),
+}
 
 
 def _count_disclosure(crawl: SiteCrawl) -> bool:
@@ -268,6 +288,19 @@ class CrawlLifecycle:
                 # so their issues land in the severity/category rollups.
                 await self._run_crawl_finalize_pass(session, crawl=crawl)
                 await self._persist_snapshot(session, crawl=crawl)
+
+            # Every task is drained, so this crawl is finished whatever active
+            # status it is parked in. Terminalizing only from RUNNING stranded
+            # any crawl whose last task drained while it was still
+            # draft/validating/queued (a crawl whose work all failed or was
+            # swept before the worker ever flipped it to RUNNING): it stayed
+            # ACTIVE forever, so the UI kept offering Cancel on a run that had
+            # long since stopped, and the opportunities recompute below never
+            # fired. The transition table has no queued -> completed edge, so
+            # walk the crawl through its legal intermediate states first.
+            if crawl_is_active(crawl) and crawl.status != CRAWL_STATUS_RUNNING:
+                for step in _RUNNING_PATH.get(crawl.status, ()):
+                    apply_crawl_status(crawl, step)
 
             if crawl.status == CRAWL_STATUS_RUNNING:
                 crawl.completed_at = _utcnow()

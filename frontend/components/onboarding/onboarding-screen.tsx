@@ -41,9 +41,12 @@ import { ReviewStep } from './review-step';
  * Onboarding — the only way a project gets created (plan.md §10, decision 11;
  * `/setup` is retired).
  *
- * Four steps: Brand → Discovery → Review → Finish. Discovery fires all three suggestion
- * calls automatically on entry; there is no Generate button, because discovery
- * is the reason the screen exists.
+ * Four steps: Brand → Discovery → Review → Finish, framed by a slim header
+ * (logo + compact inline stepper) and a centered card per step. The review
+ * step widens to a two-column grid so the whole review fits without a nested-
+ * card scroll. Discovery fires all three suggestion calls automatically on
+ * entry; there is no Generate button, because discovery is the reason the
+ * screen exists.
  *
  * Second project onward (`?new=1`) runs the identical flow — the discovery is
  * the value, not a first-run formality — with two differences: the copy drops
@@ -52,6 +55,22 @@ import { ReviewStep } from './review-step';
  */
 const STEPS = ['Brand', 'Discovery', 'Review', 'Finish'] as const;
 type StepIndex = 0 | 1 | 2 | 3;
+
+/**
+ * Per-step stage geometry. The short form/progress/congrats steps are narrow
+ * cards centered both ways; the data-dense review step is wide, top-aligned,
+ * and flex-height so its internal columns fill the stage rather than scroll it.
+ */
+const STEP_STAGE: Record<StepIndex, { maxWidth: string; centerY: string; stageAlign: string }> = {
+  0: { maxWidth: 'max-w-3xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
+  1: { maxWidth: 'max-w-3xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
+  2: { maxWidth: 'h-full max-w-5xl', centerY: '', stageAlign: '' },
+  3: {
+    maxWidth: 'max-w-lg',
+    centerY: 'justify-center text-center',
+    stageAlign: 'sm:justify-center',
+  },
+};
 
 function manualCompetitorId(): string {
   return (
@@ -195,6 +214,10 @@ export function OnboardingScreen() {
   );
 
   return (
+    // The viewport-height flex chain (min-h-dvh col → flex-1 overflow-y stage →
+    // h-full step) keeps short steps floating on the ambient background with
+    // centered tight cards instead of a tall white slab; the review step fills
+    // the stage with a two-column grid instead of one long scroll.
     <div className="relative flex min-h-dvh flex-col bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
       {/* Background ambient lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -202,44 +225,51 @@ export function OnboardingScreen() {
         <div className="absolute -right-40 -bottom-40 size-[500px] rounded-full bg-sky-200/40 blur-[120px]" />
       </div>
 
-      <header className="border-b border-slate-200 bg-white px-6 py-4 sm:px-10">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-          <span className="flex items-center gap-3">
-            <LogoMark size={26} />
-            <span className="font-mkt-display text-lg font-bold text-slate-900">Searchify</span>
+      <header className="border-b border-slate-200/80 bg-white/90 py-3 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 sm:gap-6 sm:px-6 lg:px-8">
+          <span className="flex shrink-0 items-center gap-2.5">
+            <LogoMark size={24} />
+            <span className="font-mkt-display text-base font-bold text-slate-900">Searchify</span>
           </span>
-          <span className="rounded-full border border-slate-200/60 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            Step {step + 1} of {STEPS.length}
-          </span>
-        </div>
-      </header>
 
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-8 pb-20 sm:px-10">
-        {/* Labelled stepper with smooth progress bar */}
-        <div className="shadow-card mb-8 rounded-2xl border border-slate-200 bg-white p-5">
-          <ol className="grid list-none grid-cols-4 gap-3 p-0">
+          {/* Compact inline stepper — replaces the old dedicated stepper card. */}
+          <ol className="mx-auto flex min-w-0 list-none items-center p-0 sm:gap-1">
             {STEPS.map((label, index) => {
               const state = index < step ? 'done' : index === step ? 'current' : 'upcoming';
               return (
-                <li
-                  key={label}
-                  aria-current={state === 'current' ? 'step' : undefined}
-                  className="grid gap-2"
-                >
-                  <div
-                    className={cn(
-                      'h-1.5 rounded-full transition-colors duration-300',
-                      state === 'done'
-                        ? 'bg-emerald-500'
-                        : state === 'current'
-                          ? 'bg-indigo-600'
-                          : 'bg-slate-200',
-                    )}
-                  />
-                  <div className="flex items-center gap-1.5">
+                <li key={label} className="flex items-center">
+                  {index > 0 ? (
                     <span
                       className={cn(
-                        'text-2xs font-bold uppercase',
+                        'mx-2 h-px w-4 transition-colors sm:w-8',
+                        index <= step ? 'bg-indigo-300' : 'bg-slate-200',
+                      )}
+                      aria-hidden
+                    />
+                  ) : null}
+                  <span
+                    aria-current={state === 'current' ? 'step' : undefined}
+                    className="flex items-center gap-1.5"
+                  >
+                    <span
+                      className={cn(
+                        'text-2xs flex size-5 items-center justify-center rounded-full font-bold transition-colors',
+                        state === 'current'
+                          ? 'bg-indigo-600 text-white'
+                          : state === 'done'
+                            ? 'bg-emerald-500 text-white'
+                            : 'border border-slate-200 bg-white text-slate-400',
+                      )}
+                    >
+                      {state === 'done' ? (
+                        <Check className="size-3" strokeWidth={3} aria-hidden />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-2xs hidden font-bold uppercase sm:inline',
                         state === 'current'
                           ? 'text-indigo-600'
                           : state === 'done'
@@ -249,111 +279,167 @@ export function OnboardingScreen() {
                     >
                       {label}
                     </span>
-                  </div>
+                  </span>
                 </li>
               );
             })}
           </ol>
+
+          <span className="text-3xs ml-auto shrink-0 rounded-full border border-slate-200/60 bg-slate-100 px-2.5 py-1 font-semibold text-slate-500 sm:ml-0">
+            Step {step + 1} of {STEPS.length}
+          </span>
         </div>
+      </header>
 
-        {/* Step Content Container */}
-        <div className="shadow-card relative rounded-2xl border border-slate-200 bg-white p-8 sm:p-10">
+      {/* Step stage: cards center within the viewport leftover instead of
+          stretching against it; review trades centering for fill width. */}
+      <main
+        className={cn(
+          'flex flex-1 flex-col px-4 py-6 sm:justify-center sm:px-6 sm:py-8 lg:px-8',
+          STEP_STAGE[step].stageAlign,
+        )}
+      >
+        <div
+          className={cn(
+            'mx-auto flex w-full flex-col',
+            STEP_STAGE[step].maxWidth,
+            STEP_STAGE[step].centerY,
+          )}
+        >
           {step === 0 ? (
-            <form noValidate onSubmit={submitBrand} className="grid gap-6">
-              <div className="grid gap-1.5">
-                <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
-                  {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
-                </h1>
-                <p className="text-sm text-slate-500">
-                  We&apos;ll discover your domains, competitors and starting prompts from this.
-                </p>
-              </div>
+            <form
+              noValidate
+              onSubmit={submitBrand}
+              className="shadow-card rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+            >
+              <div className="grid gap-6">
+                <div className="grid gap-1.5">
+                  <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
+                    {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
+                  </h1>
+                  <p className="text-sm text-slate-500">
+                    We&apos;ll discover your domains, competitors and starting prompts from this.
+                  </p>
+                </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field
-                  label="Brand name"
-                  required
-                  error={form.formState.errors.brand_name?.message}
-                >
-                  {(props) => (
-                    <Input
-                      {...props}
-                      {...form.register('brand_name')}
-                      placeholder="Acme"
-                      className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
-                    />
-                  )}
-                </Field>
-
-                <Field
-                  label="Website"
-                  required
-                  error={form.formState.errors.website_url?.message}
-                  hint={derivedDomain ? `We'll track ${derivedDomain}` : undefined}
-                >
-                  {(props) => (
-                    <Input
-                      {...props}
-                      {...form.register('website_url')}
-                      placeholder="acme.com"
-                      className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
-                    />
-                  )}
-                </Field>
-
-                <Field label="Country" error={form.formState.errors.country_code?.message}>
-                  {(props) => (
-                    <Controller
-                      control={form.control}
-                      name="country_code"
-                      render={({ field }) => (
-                        <MarketSelect
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
+                  {/* Identity column: the two fields the discovery keys on. */}
+                  <div className="grid gap-5">
+                    <Field
+                      label="Brand name"
+                      required
+                      error={form.formState.errors.brand_name?.message}
+                    >
+                      {(props) => (
+                        <Input
                           {...props}
-                          ariaLabel="Country"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          options={COUNTRY_OPTIONS}
+                          {...form.register('brand_name')}
+                          placeholder="Acme"
+                          className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
                         />
                       )}
-                    />
-                  )}
-                </Field>
-                <Field label="Language" error={form.formState.errors.language_code?.message}>
-                  {(props) => (
-                    <Controller
-                      control={form.control}
-                      name="language_code"
-                      render={({ field }) => (
-                        <MarketSelect
+                    </Field>
+
+                    <Field
+                      label="Website"
+                      required
+                      error={form.formState.errors.website_url?.message}
+                      hint={derivedDomain ? `We'll track ${derivedDomain}` : undefined}
+                    >
+                      {(props) => (
+                        <Input
                           {...props}
-                          ariaLabel="Language"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          options={LANGUAGE_OPTIONS}
+                          {...form.register('website_url')}
+                          placeholder="acme.com"
+                          className="border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:bg-white"
                         />
                       )}
-                    />
-                  )}
-                </Field>
-              </div>
+                    </Field>
+                  </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                <Button type="submit" className="font-semibold">
-                  Continue
-                </Button>
-                {isAdditional ? (
-                  <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
-                    Cancel
+                  {/* Context column: the readonly summary tile fills what was
+                      dead air next to the two inputs; the subtle slate keeps it
+                      clearly non-interactive while balancing the height. */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-5 py-5">
+                    <p className="text-2xs font-bold tracking-wide text-slate-500 uppercase">
+                      Here&apos;s what we&apos;ll set up
+                    </p>
+                    <ul className="mt-3 grid gap-2.5">
+                      {[
+                        'Crawl your site to discover owned domains',
+                        'Identify the competitors AI engines compare you to',
+                        'Generate starting buyer prompts to track',
+                      ].map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
+                          <Check
+                            className="mt-0.5 size-4 shrink-0 text-indigo-500"
+                            strokeWidth={2.5}
+                            aria-hidden
+                          />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Market row spans back under both columns so the card reads
+                      wide instead of leaving a lone field pair beside the tile. */}
+                  <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2">
+                    <Field label="Country" error={form.formState.errors.country_code?.message}>
+                      {(props) => (
+                        <Controller
+                          control={form.control}
+                          name="country_code"
+                          render={({ field }) => (
+                            <MarketSelect
+                              {...props}
+                              ariaLabel="Country"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              options={COUNTRY_OPTIONS}
+                            />
+                          )}
+                        />
+                      )}
+                    </Field>
+                    <Field label="Language" error={form.formState.errors.language_code?.message}>
+                      {(props) => (
+                        <Controller
+                          control={form.control}
+                          name="language_code"
+                          render={({ field }) => (
+                            <MarketSelect
+                              {...props}
+                              ariaLabel="Language"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              options={LANGUAGE_OPTIONS}
+                            />
+                          )}
+                        />
+                      )}
+                    </Field>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button type="submit" className="font-semibold">
+                    Continue
                   </Button>
-                ) : null}
+                  {isAdditional ? (
+                    <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </form>
           ) : null}
 
           {step === 1 ? (
-            <div className="grid gap-6">
+            <div className="shadow-card grid gap-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
               <div className="grid gap-1.5">
                 <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
                   Finding what to track
@@ -372,7 +458,7 @@ export function OnboardingScreen() {
                 </Alert>
               ) : null}
 
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-3">
                 <Button
                   onClick={() => setStep(2)}
                   disabled={discovery.isRunning}
@@ -388,7 +474,7 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 2 ? (
-            <div className="grid gap-6">
+            <div className="shadow-card flex h-full flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
               <div className="grid gap-1.5">
                 <h1 className="font-mkt-display text-2xl font-bold text-slate-900 sm:text-3xl">
                   Does this look right?
@@ -443,8 +529,8 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 3 ? (
-            <div className="grid max-w-xl gap-6">
-              <div className="grid gap-2">
+            <div className="shadow-card grid justify-items-center gap-6 rounded-2xl border border-slate-200 bg-white p-8 text-center sm:p-10">
+              <div className="grid justify-items-center gap-2">
                 <div className="mb-2 inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                   <Check className="size-6" strokeWidth={2.5} aria-hidden />
                 </div>

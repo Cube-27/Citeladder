@@ -15,10 +15,7 @@ import type { AiSource, AnalyticsCorrelation, LlmAnalytics } from '@/lib/api/ana
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { formatShortDate } from '@/lib/format';
 import { bucketAdjective, type AnalyticsGranularity } from './options';
-import {
-  CORRELATION_MIN_SAMPLE,
-  REFERRALS_PAGE_SIZE,
-} from '@/lib/config/operational';
+import { CORRELATION_MIN_SAMPLE, REFERRALS_PAGE_SIZE } from '@/lib/config/operational';
 
 export { CORRELATION_MIN_SAMPLE, REFERRALS_PAGE_SIZE };
 

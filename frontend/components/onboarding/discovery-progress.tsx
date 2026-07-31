@@ -48,7 +48,7 @@ export function DiscoveryProgress({
   onRetry: (key: 'domains' | 'competitors' | 'prompts') => void;
 }>) {
   return (
-    <ul className="grid list-none gap-4 p-0">
+    <ul className="grid list-none gap-3 p-0">
       {ROWS.map((row) => {
         const section = state[row.key];
         const count = section.data.length;

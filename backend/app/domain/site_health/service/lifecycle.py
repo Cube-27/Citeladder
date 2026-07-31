@@ -10,6 +10,7 @@ keeps its scores instead of dead-ending on a null summary.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from sqlalchemy import and_, func, or_, select, update
@@ -27,6 +28,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_SUCCEEDED,
 )
+from app.domain.opportunities.service import recompute as recompute_opportunities
 from app.domain.site_health.entitlements import resolve_entitlement
 from app.domain.site_health.service.common import (
     _CRAWL_NOT_FOUND,
@@ -53,6 +55,8 @@ from app.models.site_health import (
     SiteCrawlEvent,
     SiteCrawlTask,
 )
+
+logger = logging.getLogger("app.domain.site_health.service.lifecycle")
 
 
 # =========================================================================
@@ -146,6 +150,27 @@ async def cancel_crawl(
         count_disclosure=_crawl_count_disclosure(crawl),
     )
     await session.commit()
+
+    # A cancelled run still produced real evidence for every page that finished
+    # before the stop, and the snapshot above already rolled it into
+    # ``score_summary``. Only the WORKER's clean terminalization used to
+    # recompute Opportunities, so a run the user cancelled left the catalog
+    # empty (or showing a previous crawl's findings) even though the dashboard
+    # had fresh scores for the pages that did complete — two screens
+    # disagreeing about the same site. Best-effort and AFTER the commit, on the
+    # same terms as the worker's recompute: the cancel itself is already
+    # durable, so a scoring snag can never fail the cancel.
+    if crawl.score_summary is not None:
+        try:
+            await recompute_opportunities(
+                session, workspace_id=workspace_id, project_id=crawl.project_id
+            )
+        except Exception:
+            logger.exception(
+                "opportunities recompute after cancel failed",
+                extra={"project_id": str(crawl.project_id)},
+            )
+
     refreshed = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
     return project_crawl(refreshed)
 

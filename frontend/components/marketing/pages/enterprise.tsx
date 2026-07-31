@@ -1,11 +1,4 @@
-import {
-  ArrowRight,
-  Check,
-  Layers,
-  Shield,
-  Sigma,
-  type LucideIcon,
-} from 'lucide-react';
+import { ArrowRight, Check, Layers, Shield, Sigma, type LucideIcon } from 'lucide-react';
 
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
