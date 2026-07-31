@@ -284,11 +284,16 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "workspace_site_health_entitlements",
+        "workspace_site_health_runtime",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("plan_key", sa.String(length=32), nullable=False),
-        sa.Column("capability_revision", sa.Integer(), nullable=False),
+        sa.Column("resolved_registry_revision", sa.String(length=64), nullable=False),
+        sa.Column(
+            "resolved_entitlement_lifecycle_version", sa.Integer(), nullable=False
+        ),
+        sa.Column(
+            "resolved_valid_until", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("discovery_mode", sa.String(length=16), nullable=False),
         sa.Column("discovery_url_cap", sa.Integer(), nullable=True),
         sa.Column("sample_url_limit", sa.Integer(), nullable=False),
@@ -301,12 +306,12 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "workspace_id", name="uq_ws_site_health_entitlement_workspace"
+            "workspace_id", name="uq_ws_site_health_runtime_workspace"
         ),
     )
     op.create_index(
-        op.f("ix_workspace_site_health_entitlements_workspace_id"),
-        "workspace_site_health_entitlements",
+        op.f("ix_workspace_site_health_runtime_workspace_id"),
+        "workspace_site_health_runtime",
         ["workspace_id"],
         unique=False,
     )
@@ -519,37 +524,6 @@ def upgrade() -> None:
     op.create_index(op.f("ix_audits_trigger"), "audits", ["trigger"], unique=False)
     op.create_index(
         op.f("ix_audits_workspace_id"), "audits", ["workspace_id"], unique=False
-    )
-    op.create_table(
-        "billing_checkout_attempts",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("billing_account_id", sa.UUID(), nullable=False),
-        sa.Column("provider", sa.String(length=24), nullable=False),
-        sa.Column("tier_key", sa.String(length=24), nullable=False),
-        sa.Column("cadence", sa.String(length=24), nullable=False),
-        sa.Column("currency", sa.String(length=3), nullable=False),
-        sa.Column("status", sa.String(length=24), nullable=False),
-        sa.Column("external_reference", sa.String(length=255), nullable=False),
-        sa.Column("checkout_url", sa.Text(), nullable=False),
-        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
-        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "billing_account_id",
-            "idempotency_key",
-            name="uq_billing_checkout_account_idempotency",
-        ),
-    )
-    op.create_index(
-        op.f("ix_billing_checkout_attempts_billing_account_id"),
-        "billing_checkout_attempts",
-        ["billing_account_id"],
-        unique=False,
     )
     op.create_table(
         "billing_customers",
@@ -1123,7 +1097,8 @@ def upgrade() -> None:
         sa.Column("provider", sa.String(length=24), nullable=False),
         sa.Column("external_subscription_id", sa.String(length=255), nullable=False),
         sa.Column("external_price_id", sa.String(length=255), nullable=False),
-        sa.Column("tier_key", sa.String(length=24), nullable=False),
+        sa.Column("catalog_key", sa.String(length=64), nullable=False),
+        sa.Column("subscription_kind", sa.String(length=16), nullable=False),
         sa.Column("cadence", sa.String(length=24), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False),
@@ -1159,7 +1134,14 @@ def upgrade() -> None:
         "billing_subscriptions",
         ["billing_account_id"],
         unique=True,
-        postgresql_where=sa.text("is_current"),
+        postgresql_where=sa.text("is_current AND subscription_kind = 'base'"),
+    )
+    op.create_index(
+        "uq_billing_subscription_one_current_addon",
+        "billing_subscriptions",
+        ["billing_account_id", "catalog_key"],
+        unique=True,
+        postgresql_where=sa.text("is_current AND subscription_kind = 'addon'"),
     )
     op.create_table(
         "brand_aliases",
@@ -1683,34 +1665,6 @@ def upgrade() -> None:
         "traffic_query_stats",
         ["workspace_id"],
         unique=False,
-    )
-    op.create_table(
-        "account_entitlements",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("billing_account_id", sa.UUID(), nullable=False),
-        sa.Column("tier_key", sa.String(length=24), nullable=False),
-        sa.Column("capability_revision", sa.Integer(), nullable=False),
-        sa.Column("source_subscription_id", sa.UUID(), nullable=True),
-        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("paid_through", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("grace_until", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["source_subscription_id"],
-            ["billing_subscriptions.id"],
-            ondelete="SET NULL",
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_account_entitlements_billing_account_id"),
-        "account_entitlements",
-        ["billing_account_id"],
-        unique=True,
     )
     op.create_table(
         "audit_prompt_snapshots",
@@ -4366,11 +4320,6 @@ def downgrade() -> None:
     )
     op.drop_table("audit_prompt_snapshots")
     op.drop_index(
-        op.f("ix_account_entitlements_billing_account_id"),
-        table_name="account_entitlements",
-    )
-    op.drop_table("account_entitlements")
-    op.drop_index(
         op.f("ix_traffic_query_stats_workspace_id"), table_name="traffic_query_stats"
     )
     op.drop_index(
@@ -4594,11 +4543,6 @@ def downgrade() -> None:
         op.f("ix_billing_customers_billing_account_id"), table_name="billing_customers"
     )
     op.drop_table("billing_customers")
-    op.drop_index(
-        op.f("ix_billing_checkout_attempts_billing_account_id"),
-        table_name="billing_checkout_attempts",
-    )
-    op.drop_table("billing_checkout_attempts")
     op.drop_index(op.f("ix_audits_workspace_id"), table_name="audits")
     op.drop_index(op.f("ix_audits_trigger"), table_name="audits")
     op.drop_index(op.f("ix_audits_status"), table_name="audits")
@@ -4628,10 +4572,10 @@ def downgrade() -> None:
     )
     op.drop_table("analytics_snapshots")
     op.drop_index(
-        op.f("ix_workspace_site_health_entitlements_workspace_id"),
-        table_name="workspace_site_health_entitlements",
+        op.f("ix_workspace_site_health_runtime_workspace_id"),
+        table_name="workspace_site_health_runtime",
     )
-    op.drop_table("workspace_site_health_entitlements")
+    op.drop_table("workspace_site_health_runtime")
     op.drop_index(
         op.f("ix_workspace_members_workspace_id"), table_name="workspace_members"
     )

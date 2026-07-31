@@ -44,7 +44,7 @@ import hashlib
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from sqlalchemy import select
@@ -58,6 +58,7 @@ from app.connectors.answer_engines.contracts import (
 )
 from app.core.config import settings
 from app.core.config.audits import audit_settings
+from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
@@ -67,12 +68,13 @@ from app.core.config.provider_catalog import (
     TRANSPORT_OPENAI,
     default_model,
 )
-from app.core.config.site_health import CAPABILITY_STARTER
 from app.core.database import SessionLocal
 from app.core.security import encrypt_secret
 from app.domain.audits.planner import create_audit
 from app.domain.auth.service import EmailAlreadyRegisteredError, register_user
-from app.domain.site_health.entitlements import set_entitlement
+from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.entitlements.grants import issue_override_bundle
+from app.domain.entitlements.types import GrantSpec
 from app.domain.site_health.planner import create_crawl
 from app.domain.site_health.selection import (
     BULK_SELECT_MODE_ALL,
@@ -103,6 +105,9 @@ DEMO_EMAIL = "demo@searchify.dev"
 DEMO_PASSWORD = "DemoPass123!"
 DEMO_WORKSPACE_NAMES = ("Wanderlust Gear Co.", "Wanderlust Gear Co. - Agency")
 _PUBLIC_IP = "93.184.216.34"
+# Monitored-URL allowance granted to the demo workspace so Site Health seeds a
+# full-discovery crawl with user selection (mirrors the old Starter limit).
+SEED_MONITORED_URL_ALLOWANCE = 50
 
 
 @dataclass(frozen=True)
@@ -515,6 +520,34 @@ async def _cleanup_previous_seed(session: AsyncSession) -> None:
         logger.info("Removed previously-seeded demo user")
 
 
+async def _seed_monitored_urls_grant(
+    session: AsyncSession,
+    owner_user_id: uuid.UUID,
+    workspace_id: uuid.UUID,
+) -> None:
+    """Give the demo workspace a positive ``monitored_urls`` allowance.
+
+    Uses the production grant path (billing bootstrap + operator override
+    bundle) so the projected ``WorkspaceSiteHealthRuntime`` row is a true
+    projection: full discovery, user selection, and count disclosure — exactly
+    what the seeded "discover -> select -> recrawl analyzes" flow needs.
+    """
+    owner = await session.get(User, owner_user_id)
+    if owner is None:  # pragma: no cover - the seeder just created this user
+        raise RuntimeError("demo user missing during entitlement seed")
+    account = await ensure_user_billing(session, owner, workspace_ids=(workspace_id,))
+    await issue_override_bundle(
+        session,
+        operator_user=owner,
+        account_id=account.id,
+        grants=(GrantSpec(key=KEY_MONITORED_URLS, value=SEED_MONITORED_URL_ALLOWANCE),),
+        reason="dev seed monitored-URL allowance",
+        valid_from=datetime.now(UTC) - timedelta(days=1),
+        valid_until=None,
+        idempotency_key=f"seed-dev-data:{workspace_id}",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Main seed
 # ---------------------------------------------------------------------------
@@ -574,6 +607,7 @@ async def seed() -> None:
         await session.commit()
         workspace_id = personal_ws.id
         agency_workspace_id = agency_ws.id
+        demo_user_id = user.id
         logger.info(
             "Seeded user %s workspaces=%s/%s",
             user.email,
@@ -843,11 +877,11 @@ async def seed() -> None:
     # 6. Site Health: run the REAL crawl planner (`create_crawl`) + REAL
     #    SiteHealthWorker (with a mocked transport) to drain discovery, then
     #    select every discovered URL as "monitored" and recrawl so the
-    #    Starter analyze tasks get seeded for them (mirrors the production
+    #    analyze tasks get seeded for them (mirrors the production
     #    "discover -> select monitored URLs -> recrawl analyzes" flow; a
     #    hand-built crawl/task never goes through that selection gate).
     async with SessionLocal() as session:
-        await set_entitlement(session, workspace_id, CAPABILITY_STARTER)
+        await _seed_monitored_urls_grant(session, demo_user_id, workspace_id)
         crawl1 = await create_crawl(
             session, workspace_id=workspace_id, project_id=project_id, random_seed="99"
         )

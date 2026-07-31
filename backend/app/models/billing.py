@@ -24,9 +24,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.config.billing import (
     CADENCE_MONTHLY,
     PROVIDER_RAZORPAY,
+    SUBSCRIPTION_KIND_BASE,
     SUBSCRIPTION_PENDING,
-    TIER_FREE,
-    TIER_PAID,
 )
 from app.core.database import Base
 
@@ -140,7 +139,14 @@ class BillingSubscription(Base):
             "uq_billing_subscription_one_current",
             "billing_account_id",
             unique=True,
-            postgresql_where=text("is_current"),
+            postgresql_where=text("is_current AND subscription_kind = 'base'"),
+        ),
+        Index(
+            "uq_billing_subscription_one_current_addon",
+            "billing_account_id",
+            "catalog_key",
+            unique=True,
+            postgresql_where=text("is_current AND subscription_kind = 'addon'"),
         ),
     )
 
@@ -160,7 +166,14 @@ class BillingSubscription(Base):
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
     external_subscription_id: Mapped[str] = mapped_column(String(255))
     external_price_id: Mapped[str] = mapped_column(String(255))
-    tier_key: Mapped[str] = mapped_column(String(24), default=TIER_PAID)
+    # v8 commercial catalog key (tier_1 | tier_2 | tier_3 | addon/top-up key);
+    # resolved against the config-owned catalog, never a provider display name.
+    catalog_key: Mapped[str] = mapped_column(String(64), default="")
+    # base | addon: one current base per account; one current row per
+    # (account, catalog_key) per add-on.
+    subscription_kind: Mapped[str] = mapped_column(
+        String(16), default=SUBSCRIPTION_KIND_BASE
+    )
     cadence: Mapped[str] = mapped_column(String(24), default=CADENCE_MONTHLY)
     currency: Mapped[str] = mapped_column(String(3))
     status: Mapped[str] = mapped_column(String(24), default=SUBSCRIPTION_PENDING)
@@ -176,77 +189,6 @@ class BillingSubscription(Base):
     )
     provider_state_version: Mapped[int] = mapped_column(Integer, default=0)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
-
-
-class AccountEntitlement(Base):
-    __tablename__ = "account_entitlements"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    billing_account_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("billing_accounts.id", ondelete="CASCADE"),
-        unique=True,
-        index=True,
-    )
-    tier_key: Mapped[str] = mapped_column(String(24), default=TIER_FREE)
-    capability_revision: Mapped[int] = mapped_column(Integer, default=1)
-    source_subscription_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("billing_subscriptions.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    effective_from: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    paid_through: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    grace_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
-
-
-class BillingCheckoutAttempt(Base):
-    __tablename__ = "billing_checkout_attempts"
-    __table_args__ = (
-        UniqueConstraint(
-            "billing_account_id",
-            "idempotency_key",
-            name="uq_billing_checkout_account_idempotency",
-        ),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    billing_account_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("billing_accounts.id", ondelete="CASCADE"),
-        index=True,
-    )
-    provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
-    tier_key: Mapped[str] = mapped_column(String(24), default=TIER_PAID)
-    cadence: Mapped[str] = mapped_column(String(24), default=CADENCE_MONTHLY)
-    currency: Mapped[str] = mapped_column(String(3))
-    status: Mapped[str] = mapped_column(String(24), default="pending")
-    external_reference: Mapped[str] = mapped_column(String(255), default="")
-    checkout_url: Mapped[str] = mapped_column(Text, default="")
-    idempotency_key: Mapped[str] = mapped_column(String(255))
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

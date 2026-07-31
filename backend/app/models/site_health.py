@@ -42,15 +42,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config.site_health import (
     ANALYSIS_STATUS_PENDING,
-    CAPABILITY_FREE,
     CRAWL_STATUS_DRAFT,
     DISCOVERY_MODE_SAMPLE,
     DISCOVERY_STATUS_PENDING,
-    FREE_MONITORED_URL_LIMIT,
-    FREE_SAMPLE_URL_LIMIT,
     INITIAL_TASK_GENERATION,
     PAGE_ANALYSIS_STATUS_PENDING,
     PAGE_TYPE_OTHER,
+    SAMPLE_URL_LIMIT,
     SELECTION_SOURCE_USER,
     TASK_KIND_DISCOVER,
     site_health_settings,
@@ -79,21 +77,21 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class WorkspaceSiteHealthEntitlement(Base):
-    """Workspace-level Site Health entitlement + the quota serialization lock.
+class WorkspaceSiteHealthRuntime(Base):
+    """Workspace Site Health runtime projection + quota serialization lock.
 
-    Exactly one row per workspace (unique ``workspace_id``). ``plan_key`` is a
-    CAPABILITY key (``free`` / ``starter``), never a marketing display name.
-    Freezes the capability's discovery mode, discovery cap, sample limit,
-    monitored-URL limit, and the count-disclosure flag. This row is the row
-    locked (``FOR UPDATE``) to serialize workspace-wide monitored-quota checks.
-    No billing-provider fields (billing is out of scope).
+    Exactly one row per workspace (unique ``workspace_id``). This row is NOT a
+    commercial source of truth: it is the projection of the account's resolved
+    ``monitored_urls`` entitlement allowance onto neutral crawl policy, plus
+    the row locked (``FOR UPDATE``) to serialize workspace-wide
+    monitored-quota checks. ``resolved_*`` provenance records which resolver
+    output produced the projection so callers can refresh on drift.
     """
 
-    __tablename__ = "workspace_site_health_entitlements"
+    __tablename__ = "workspace_site_health_runtime"
     __table_args__ = (
         UniqueConstraint(
-            "workspace_id", name="uq_ws_site_health_entitlement_workspace"
+            "workspace_id", name="uq_ws_site_health_runtime_workspace"
         ),
     )
 
@@ -105,24 +103,25 @@ class WorkspaceSiteHealthEntitlement(Base):
         ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
         index=True,
     )
-    # CAPABILITY key: "free" | "starter" (not a plan display name).
-    plan_key: Mapped[str] = mapped_column(String(32), default=CAPABILITY_FREE)
-    # Bumped when a workspace's capability profile changes.
-    capability_revision: Mapped[int] = mapped_column(Integer, default=1)
+    # Resolver provenance of the last projection (fail-closed empty defaults).
+    resolved_registry_revision: Mapped[str] = mapped_column(String(64), default="")
+    resolved_entitlement_lifecycle_version: Mapped[int] = mapped_column(
+        Integer, default=0
+    )
+    resolved_valid_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     discovery_mode: Mapped[str] = mapped_column(
         String(16), default=DISCOVERY_MODE_SAMPLE
     )
-    # Free caps discovery at the sample size; Starter has no hard cap (null).
+    # Sample mode caps discovery at the sample size; full mode has no hard cap.
     discovery_url_cap: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=FREE_SAMPLE_URL_LIMIT
+        Integer, nullable=True, default=SAMPLE_URL_LIMIT
     )
-    sample_url_limit: Mapped[int] = mapped_column(
-        Integer, default=FREE_SAMPLE_URL_LIMIT
-    )
-    monitored_url_limit: Mapped[int] = mapped_column(
-        Integer, default=FREE_MONITORED_URL_LIMIT
-    )
-    # Whether total/frontier/overflow counts may be disclosed (Free = False).
+    sample_url_limit: Mapped[int] = mapped_column(Integer, default=SAMPLE_URL_LIMIT)
+    # Fail-closed: zero selectable monitored URLs until an allowance resolves.
+    monitored_url_limit: Mapped[int] = mapped_column(Integer, default=0)
+    # Whether total/frontier/overflow counts may be disclosed (zero = False).
     count_disclosure: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow

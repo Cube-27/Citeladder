@@ -16,9 +16,11 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.entitlements import (
+    CAPABILITY_REGISTRY_REVISION,
+)
 from app.core.config.site_health import (
     ANALYZER_VERSION,
-    CAPABILITY_STARTER,
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_RUNNING,
     EXTRACTOR_VERSION,
@@ -26,11 +28,15 @@ from app.core.config.site_health import (
     SELECTION_SOURCE_USER,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
+    runtime_policy_for_allowance,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
 )
-from app.domain.site_health.entitlements import set_entitlement
+from app.domain.site_health.entitlements import (
+    apply_runtime_policy,
+    resolve_runtime,
+)
 from app.domain.site_health.normalization import canonical_identity
 from app.models.site_health import (
     MonitoredSiteUrl,
@@ -42,9 +48,47 @@ from app.models.site_health import (
 from app.workers.site_health_worker import (
     SiteHealthWorker,
 )
-from tests.component.site_health_helpers import seed_site_crawl
+from tests.component.site_health_helpers import (
+    seed_monitored_urls_allowance,
+    seed_site_crawl,
+)
 
 _PUBLIC_IP = "93.184.216.34"
+
+# Default monitored-URL allowance for the "paid-like" crawl seeds (mirrors the
+# old Starter limit of 50; tests that exercise the limit pass their own).
+DEFAULT_SEED_MONITORED_URLS = 50
+
+
+async def _seed_runtime(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    *,
+    monitored_urls: int,
+) -> None:
+    """Seed the workspace runtime state for ``monitored_urls`` allowance.
+
+    A positive allowance goes through the production grant path
+    (``seed_monitored_urls_allowance``: billing account + link + override
+    grant + refresh), so the row is a true projection that survives the
+    refresh in ``rerun_page``/``replace_monitored_set``/``create_crawl``.
+    A zero allowance writes the fail-closed sample policy directly: the
+    workspace has no billing link, so any later refresh re-projects the same
+    zero policy, and the worker phases only ever READ the row.
+    """
+    if monitored_urls > 0:
+        await seed_monitored_urls_allowance(
+            session, workspace_id=workspace_id, monitored_urls=monitored_urls
+        )
+        return
+    runtime = await resolve_runtime(session, workspace_id)
+    apply_runtime_policy(
+        runtime,
+        runtime_policy_for_allowance(0),
+        resolved_registry_revision=CAPABILITY_REGISTRY_REVISION,
+        resolved_entitlement_lifecycle_version=0,
+        resolved_valid_until=None,
+    )
 
 
 class _FakeResolver:
@@ -277,17 +321,17 @@ async def _seed_analyze_phase_crawl(
     *,
     root: str,
     urls: tuple[str, ...],
-    capability: str = CAPABILITY_STARTER,
+    monitored_urls: int = DEFAULT_SEED_MONITORED_URLS,
     site_facts: dict | None = None,
 ):
-    """Seed a Starter crawl already through discovery: every URL monitored
-    with one QUEUED analyze task (the analyze-phase starting state).
+    """Seed a full-allowance crawl already through discovery: every URL
+    monitored with one QUEUED analyze task (the analyze-phase starting state).
 
     Returns ``(seed, ids)`` where ``ids`` holds one
     ``(site_url_id, analyze_task_id)`` pair per URL, in ``urls`` order.
     """
     seed = await seed_site_crawl(session, task_count=0, root_url=root)
-    await set_entitlement(session, seed.workspace_id, capability)
+    await _seed_runtime(session, seed.workspace_id, monitored_urls=monitored_urls)
     await session.commit()
     crawl = await session.get(SiteCrawl, seed.crawl_id)
     assert crawl is not None
@@ -329,12 +373,12 @@ async def _seed_analyze_ready(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     root: str = "https://example.com/rich",
-    capability: str = CAPABILITY_STARTER,
+    monitored_urls: int = DEFAULT_SEED_MONITORED_URLS,
 ):
-    """Seed a Starter crawl with a monitored URL + one queued analyze task."""
+    """Seed a full-allowance crawl with a monitored URL + one queued analyze task."""
     async with session_factory() as session:
         seed, ((site_url_id, analyze_task_id),) = await _seed_analyze_phase_crawl(
-            session, root=root, capability=capability, urls=(root,)
+            session, root=root, monitored_urls=monitored_urls, urls=(root,)
         )
         return seed, site_url_id, analyze_task_id
 
@@ -343,14 +387,16 @@ async def _seed_root_discover(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     root: str,
-    capability: str = CAPABILITY_STARTER,
+    monitored_urls: int = DEFAULT_SEED_MONITORED_URLS,
     sample_mode: bool = False,
 ):
     """Seed a crawl with a single QUEUED root discover task (the planner's
     output), ready for one worker run."""
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
-        await set_entitlement(session, seed.workspace_id, capability)
+        await _seed_runtime(
+            session, seed.workspace_id, monitored_urls=monitored_urls
+        )
         await session.commit()
         await _configure_crawl(
             session,
@@ -381,7 +427,7 @@ async def _seed_root_only(
     *,
     root: str = "https://example.com/",
 ):
-    """A Starter root-discover seed with a default root (terminalization tests).
+    """A full-allowance root-discover seed with a default root (terminalization tests).
 
     The same setup as :func:`_seed_root_discover`, whose ``root`` is explicit
     because the discover tests each pin their own; these callers only care that

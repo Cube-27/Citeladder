@@ -62,72 +62,59 @@ if TYPE_CHECKING:
     from app.models.site_health import SiteCrawlTask
 
 # =========================================================================
-# Entitlement capabilities (keyed by CAPABILITY, not plan display name)
+# Neutral Site Health runtime policy (no commercial capability vocabulary)
 # =========================================================================
-# The two approved capability keys. These are stable machine keys used for the
-# workspace entitlement row + every capability-based redaction decision. A
-# user-facing "plan display name" (marketing label) is intentionally NOT stored
-# or matched here — capability is the single source of truth.
-CAPABILITY_FREE: Final = "free"
-CAPABILITY_STARTER: Final = "starter"
-SITE_HEALTH_CAPABILITIES: Final[frozenset[str]] = frozenset(
-    {CAPABILITY_FREE, CAPABILITY_STARTER}
-)
-# The capability seeded/resolved for a workspace that has none yet. This is the
-# FALLBACK when ``SITE_HEALTH_DEFAULT_CAPABILITY`` is unset; runtime callers
-# resolve through ``default_site_health_capability()`` so the env override
-# (e.g. ``starter`` during development) takes effect.
-DEFAULT_SITE_HEALTH_CAPABILITY: Final = CAPABILITY_FREE
-
-# Discovery modes: Free crawls a deterministic bounded SAMPLE; Starter runs a
-# progressive FULL inventory.
+# A workspace's Site Health behavior is a RUNTIME PROJECTION of the resolved
+# ``monitored_urls`` entitlement allowance (see domain/entitlements). This
+# module owns only the neutral mapping knobs (invariant 1); it never stores or
+# matches a plan display name or a commercial capability key.
+#
+# Mapping (frozen plan):
+#   - zero / no allowance -> SAMPLE discovery capped at the neutral sample
+#     limit, zero selectable monitored URLs, no count disclosure;
+#   - positive allowance  -> FULL progressive discovery, that exact monitored
+#     URL limit, count disclosure enabled.
 DISCOVERY_MODE_SAMPLE: Final = "sample"
 DISCOVERY_MODE_FULL: Final = "full"
 
-# Internal frozen-configuration key for Starter inventory continuity. A fresh
+# Internal frozen-configuration key for full-inventory continuity. A fresh
 # analysis/recrawl remains a distinct evidence run, but its dashboard may read
 # the admitted URL sets from these earlier full-discovery crawls so discovered
 # URLs do not disappear while the new crawl is still re-discovering them.
 INVENTORY_SOURCE_CRAWL_IDS_KEY: Final = "inventory_source_crawl_ids"
 
-# Capability limit DEFAULTS. The operative values are env-overridable via
-# ``SiteHealthSettings`` (``SITE_HEALTH_FREE_SAMPLE_URL_LIMIT`` etc.) so
-# development can lift them without a code change; ``capability_profile()``
-# always reads the live settings. These constants remain as the settings
-# defaults and as static column defaults on the entitlement model.
-#
-# Free: deterministic automatic sample of N admitted URLs across the whole
-# workspace; no user selection; no monitored set beyond the system sample.
-FREE_SAMPLE_URL_LIMIT: Final = 10
-FREE_MONITORED_URL_LIMIT: Final = 10
+# Neutral sample cap DEFAULT. The operative value is env-overridable via
+# ``SiteHealthSettings.sample_url_limit`` (``SITE_HEALTH_SAMPLE_URL_LIMIT``) so
+# development can lift it without a code change; ``runtime_policy_for_allowance``
+# always reads the live settings. The constant remains as the settings default
+# and as the static column default on the runtime model.
+SAMPLE_URL_LIMIT: Final = 10
 
-# Free INVENTORY cap — deliberately decoupled from the analysis budget above.
+# Sample-mode INVENTORY cap — deliberately decoupled from the analysis budget
+# above.
 #
 # These used to be the same number, which made "how many URLs do we know about"
 # and "how many URLs do we deep-analyze" one decision: discovery stopped dead at
 # 10 because admitting a URL and monitoring it for analysis were the same act.
 # The inventory is cheap (an identity row + an observation row, no fetch), the
 # analysis is not, so the crawl now keeps mapping the site up to this soft cap
-# while only ``free_sample_url_limit`` URLs are ever analyzed. "Soft" is
-# accurate: admission happens in batches, so a batch that straddles the cap
-# lands slightly over it rather than being split mid-batch.
-FREE_DISCOVERY_URL_CAP: Final = 200
-
-# Starter: progressive inventory; up to N active monitored URLs workspace-wide.
-STARTER_MONITORED_URL_LIMIT: Final = 50
+# while only ``sample_url_limit`` URLs are ever analyzed. "Soft" is accurate:
+# admission happens in batches, so a batch that straddles the cap lands slightly
+# over it rather than being split mid-batch.
+SAMPLE_DISCOVERY_URL_CAP: Final = 200
 
 
-class SiteHealthCapability:
-    """A frozen capability profile resolved from the workspace entitlement.
+class SiteHealthRuntimePolicy:
+    """The neutral crawl policy projected from a resolved allowance.
 
-    Immutable, value-typed record of exactly what a capability may do. Built
-    from the config constants above so there is one owner for every limit and
-    disclosure flag. ``count_disclosure`` gates whether total/frontier/overflow
-    counts may ever leave the backend (Free = never; Starter = yes).
+    Immutable, value-typed record of exactly how a workspace crawls. Built by
+    ``runtime_policy_for_allowance`` so there is one owner for the
+    allowance-to-policy mapping. ``count_disclosure`` gates whether
+    total/frontier/overflow counts may ever leave the backend (zero allowance
+    = never; positive = yes).
     """
 
     __slots__ = (
-        "capability",
         "discovery_mode",
         "discovery_url_cap",
         "sample_url_limit",
@@ -139,7 +126,6 @@ class SiteHealthCapability:
     def __init__(
         self,
         *,
-        capability: str,
         discovery_mode: str,
         discovery_url_cap: int | None,
         sample_url_limit: int,
@@ -147,9 +133,9 @@ class SiteHealthCapability:
         allows_user_selection: bool,
         count_disclosure: bool,
     ) -> None:
-        self.capability = capability
         self.discovery_mode = discovery_mode
-        # None means "no hard discovery cap" (Starter). Free caps at 10.
+        # None means "no hard discovery cap" (full inventory). Sample mode caps
+        # at the sample limit.
         self.discovery_url_cap = discovery_url_cap
         self.sample_url_limit = sample_url_limit
         self.monitored_url_limit = monitored_url_limit
@@ -157,62 +143,43 @@ class SiteHealthCapability:
         self.count_disclosure = count_disclosure
 
 
-# Capability profiles are BUILT FROM LIVE SETTINGS (env-overridable limits), so
-# everything that must know "what can this workspace do" resolves through
-# ``capability_profile`` and picks up ``SITE_HEALTH_*`` env overrides. The
-# resolved profile is frozen onto rows with two different lifecycles: existing
-# entitlement rows are REFRESHED to the live profile on next resolve (see
-# ``entitlements._sync_profile_drift`` — an env limit change needs no operator
-# command), while ``SiteCrawl.configuration`` stays frozen at creation so an
-# env change never alters an in-flight run (invariant 9).
-def _build_capability_profiles() -> dict[str, SiteHealthCapability]:
-    s = site_health_settings
-    return {
-        CAPABILITY_FREE: SiteHealthCapability(
-            capability=CAPABILITY_FREE,
-            discovery_mode=DISCOVERY_MODE_SAMPLE,
-            # Inventory cap, NOT the analysis budget — see FREE_DISCOVERY_URL_CAP.
-            discovery_url_cap=s.free_discovery_url_cap,
-            sample_url_limit=s.free_sample_url_limit,
-            monitored_url_limit=s.free_monitored_url_limit,
-            allows_user_selection=False,
-            count_disclosure=False,
-        ),
-        CAPABILITY_STARTER: SiteHealthCapability(
-            capability=CAPABILITY_STARTER,
+def runtime_policy_for_allowance(
+    monitored_urls_allowance: int,
+) -> SiteHealthRuntimePolicy:
+    """Map a resolved ``monitored_urls`` allowance to the crawl policy.
+
+    Fail-closed: a zero/negative allowance yields the sample policy with zero
+    selectable monitored URLs and no count disclosure. Limits reflect the LIVE
+    ``SITE_HEALTH_*`` settings. The resolved policy is frozen onto the runtime
+    row (updated in place — it is a projection, never a commercial source of
+    truth) and onto ``SiteCrawl.configuration`` at creation (invariant 9).
+
+    Sample mode's inventory cap is deliberately DECOUPLED from its analysis
+    budget: discovery keeps mapping the site up to
+    ``sample_discovery_url_cap`` while only ``sample_url_limit`` URLs ever get a
+    monitored membership and an analyze task (see SAMPLE_DISCOVERY_URL_CAP).
+    """
+    settings = site_health_settings
+    if monitored_urls_allowance > 0:
+        return SiteHealthRuntimePolicy(
             discovery_mode=DISCOVERY_MODE_FULL,
             discovery_url_cap=None,
             sample_url_limit=0,
-            monitored_url_limit=s.starter_monitored_url_limit,
+            monitored_url_limit=monitored_urls_allowance,
             allows_user_selection=True,
             count_disclosure=True,
-        ),
-    }
+        )
+    return SiteHealthRuntimePolicy(
+        discovery_mode=DISCOVERY_MODE_SAMPLE,
+        # Inventory cap, NOT the analysis budget — see SAMPLE_DISCOVERY_URL_CAP.
+        discovery_url_cap=settings.sample_discovery_url_cap,
+        sample_url_limit=settings.sample_url_limit,
+        monitored_url_limit=0,
+        allows_user_selection=False,
+        count_disclosure=False,
+    )
 
 
-def normalize_capability(value: str | None) -> str:
-    """Coerce an entitlement value to a known capability key (default Free)."""
-    key = str(value or "").strip().lower()
-    return key if key in SITE_HEALTH_CAPABILITIES else DEFAULT_SITE_HEALTH_CAPABILITY
-
-
-def default_site_health_capability() -> str:
-    """The capability seeded for a workspace with no entitlement row yet.
-
-    Env-overridable (``SITE_HEALTH_DEFAULT_CAPABILITY``) so development can
-    default new workspaces to ``starter``; an unknown value fails closed to
-    Free via ``normalize_capability``.
-    """
-    return normalize_capability(site_health_settings.default_capability)
-
-
-def capability_profile(capability: str | None) -> SiteHealthCapability:
-    """Resolve the capability profile for a workspace entitlement.
-
-    Unknown/missing values resolve to the Free profile (fail-closed to the most
-    restrictive capability). Limits reflect the LIVE ``SITE_HEALTH_*`` settings.
-    """
-    return _build_capability_profiles()[normalize_capability(capability)]
 
 
 # Selection source: a monitored row is either user-managed or a system-managed
@@ -562,7 +529,7 @@ POLICY_BLOCKING_ERROR_CODES: Final[frozenset[str]] = frozenset(
 # =========================================================================
 # Coded API failures (stable tokens returned to the client)
 # =========================================================================
-CODE_STARTER_REQUIRED: Final = "starter_required"
+CODE_MONITORING_NOT_ALLOWED: Final = "monitoring_not_allowed"
 CODE_QUOTA_EXCEEDED: Final = "site_health_quota_exceeded"
 CODE_STALE_SELECTION_VERSION: Final = "stale_selection_version"
 CODE_CRAWL_ALREADY_ACTIVE: Final = "crawl_already_active"
@@ -1710,18 +1677,15 @@ class SiteHealthSettings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    # --- Capability limits / default capability (dev-tunable tiers) ---
-    # The capability a workspace with no entitlement row resolves to. Unknown
-    # values fail closed to "free". Set to "starter" in development to get
-    # full discovery + user selection without an operator command.
-    default_capability: str = DEFAULT_SITE_HEALTH_CAPABILITY
-    # Free: deterministic automatic sample size / monitored allowance.
-    free_sample_url_limit: int = FREE_SAMPLE_URL_LIMIT
-    free_monitored_url_limit: int = FREE_MONITORED_URL_LIMIT
-    # Free: how far discovery maps the site (inventory only — NOT analyzed).
-    free_discovery_url_cap: int = FREE_DISCOVERY_URL_CAP
-    # Starter: workspace-wide active monitored-URL quota.
-    starter_monitored_url_limit: int = STARTER_MONITORED_URL_LIMIT
+    # --- Neutral sample policy (dev-tunable) ---
+    # Sample-mode crawl allowance used when the workspace's resolved
+    # ``monitored_urls`` entitlement is zero: a deterministic automatic sample
+    # of this many admitted URLs across the whole workspace; no user
+    # selection; no count disclosure.
+    sample_url_limit: int = SAMPLE_URL_LIMIT
+    # Sample mode: how far discovery maps the site (inventory only — NOT
+    # analyzed). Decoupled from the analysis budget above.
+    sample_discovery_url_cap: int = SAMPLE_DISCOVERY_URL_CAP
 
     # --- Frontier / discovery bounds ---
     # Absolute frontier ceiling for a FULL (Starter) crawl to bound memory/time.
@@ -1839,19 +1803,14 @@ class SiteHealthSettings(BaseSettings):
     sse_max_duration_seconds: float = 300.0
 
     @model_validator(mode="after")
-    def _validate_capability_limits(self) -> SiteHealthSettings:
-        """Reject negative capability limits from env overrides.
+    def _validate_sample_limits(self) -> SiteHealthSettings:
+        """Reject a negative sample limit from env overrides.
 
-        The limits feed quota arithmetic and SQL ``LIMIT`` clauses; a negative
-        value would silently disable selection ("0 of -5") or break sampling.
-        Zero stays allowed (an intentional "nothing permitted" configuration).
+        The limit feeds quota arithmetic and SQL ``LIMIT`` clauses; a negative
+        value would silently break sampling. Zero stays allowed (an
+        intentional "no sample" configuration).
         """
-        for name in (
-            "free_sample_url_limit",
-            "free_monitored_url_limit",
-            "free_discovery_url_cap",
-            "starter_monitored_url_limit",
-        ):
+        for name in ("sample_url_limit", "sample_discovery_url_cap"):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
         if self.inventory_history_crawl_limit <= 0:
@@ -1864,12 +1823,12 @@ class SiteHealthSettings(BaseSettings):
 
         A cap below the sample budget would starve analysis of candidates it is
         entitled to fetch. Its own validator (rather than a branch bolted onto
-        ``_validate_capability_limits``) keeps that method on its downward
+        ``_validate_sample_limits``) keeps that method on its downward
         complexity ratchet.
         """
-        if self.free_discovery_url_cap < self.free_sample_url_limit:
+        if self.sample_discovery_url_cap < self.sample_url_limit:
             raise ValueError(
-                "free_discovery_url_cap must not be less than free_sample_url_limit"
+                "sample_discovery_url_cap must not be less than sample_url_limit"
             )
         return self
 

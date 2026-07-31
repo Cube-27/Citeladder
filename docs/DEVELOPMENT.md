@@ -111,28 +111,30 @@ uv run alembic upgrade head
 
 ---
 
-## Site Health entitlements (development)
+## Site Health runtime (development)
 
-Site Health entitlements are **capability-based** (`free` / `starter`), stored one row
-per workspace in `workspace_site_health_entitlements`. There is no billing-provider
-integration in this codebase — production billing may call the same domain service
-(`app.domain.site_health.entitlements.set_entitlement`) later.
+Site Health behavior is a **runtime projection** of the account's resolved
+`monitored_urls` entitlement allowance, stored one row per workspace in
+`workspace_site_health_runtime`. The row is not a commercial source of truth: it
+carries the neutral crawl policy (discovery mode, discovery/sample caps, monitored-URL
+limit, count-disclosure flag) plus resolver provenance, and it doubles as the `FOR
+UPDATE` quota-serialization lock.
 
-A workspace with no explicit entitlement resolves to **Free** (fail-closed to the most
-restrictive capability). To grant a workspace the **Starter** capability locally (or reset
-it to Free), use the operator/dev command, run from `backend/` with `DATABASE_URL` pointing
-at the target database:
+A workspace with no grants resolves to the **zero-allowance sample policy** (fail-closed:
+sample discovery, zero selectable monitored URLs, no count disclosure). To grant a
+monitored-URL allowance locally, use the operator/dev command, run from `backend/` with
+`DATABASE_URL` pointing at the target database:
 
 ```bash
 cd backend
-uv run python -m scripts.set_site_health_entitlement <workspace_uuid> starter
-uv run python -m scripts.set_site_health_entitlement <workspace_uuid> free
+uv run python -m scripts.set_site_health_entitlement <workspace_uuid> <monitored_urls>
 ```
 
-The command freezes the resolved capability profile (discovery mode, discovery/sample
-caps, monitored-URL limit, count-disclosure flag) onto the row, bumps
-`capability_revision`, and emits a single audit-safe log line recording the change (no
-secrets).
+The command issues an audited operator `override` grant through the append-only write
+service (`app.domain.entitlements.grants.issue_override_bundle`), re-projects the
+workspace runtime row, and emits a single audit-safe log line (no secrets). Allowances
+SUM across grants — a second grant adds to the first; revoking earlier grants is a
+separate audited operation.
 
 ---
 

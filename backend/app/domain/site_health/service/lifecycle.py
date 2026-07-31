@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,8 +29,10 @@ from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_SUCCEEDED,
 )
+from app.domain.entitlements.service import (
+    refresh_site_health_runtime_for_workspace,
+)
 from app.domain.opportunities.service import recompute as recompute_opportunities
-from app.domain.site_health.entitlements import resolve_entitlement
 from app.domain.site_health.service.common import (
     _CRAWL_NOT_FOUND,
     SiteHealthNotFoundError,
@@ -226,7 +229,9 @@ async def get_dashboard(
             .limit(1)
         )
 
-    entitlement = await resolve_entitlement(session, workspace_id)
+    runtime = await refresh_site_health_runtime_for_workspace(
+        session, workspace_id=workspace_id, at=datetime.now(UTC)
+    )
     used = await session.scalar(
         select(func.count())
         .select_from(MonitoredSiteUrl)
@@ -253,7 +258,7 @@ async def get_dashboard(
         "score_summary": _score_summary(crawl) if crawl is not None else None,
         "quota": {
             "used": int(used or 0),
-            "limit": int(entitlement.monitored_url_limit),
+            "limit": int(runtime.monitored_url_limit),
         },
         "root_errors": root_errors,
     }

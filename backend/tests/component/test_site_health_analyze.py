@@ -19,8 +19,6 @@ from app.core.config.site_health import (
     ANALYSIS_STATUS_COMPLETED,
     ANALYSIS_STATUS_FAILED,
     ANALYZER_VERSION,
-    CAPABILITY_FREE,
-    CAPABILITY_STARTER,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
     CRAWL_STATUS_RUNNING,
@@ -43,7 +41,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
 )
-from app.domain.site_health.entitlements import set_entitlement
 from app.domain.site_health.normalization import canonical_identity
 from app.models.site_health import (
     MonitoredSiteUrl,
@@ -61,6 +58,7 @@ from app.workers.site_health_worker import (
 )
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
+    DEFAULT_SEED_MONITORED_URLS,
     _analyses_by_page_url,
     _ByteStream,
     _configure_crawl,
@@ -70,6 +68,7 @@ from tests.component.site_health_worker_helpers import (
     _rich_page,
     _seed_analyze_phase_crawl,
     _seed_analyze_ready,
+    _seed_runtime,
     _thin_html,
     _worker,
 )
@@ -81,7 +80,7 @@ async def test_analyze_guard_blocks_live_entitlement_downgrade_before_io(
 ) -> None:
     seed, _site_url_id, task_id = await _seed_analyze_ready(session_factory)
     async with session_factory() as session:
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_FREE)
+        await _seed_runtime(session, seed.workspace_id, monitored_urls=0)
         await session.commit()
 
     requests: list[httpx.Request] = []
@@ -159,7 +158,7 @@ async def test_cancelled_user_analysis_does_not_penalize_applicable_free_sample(
             randomized_position=1,
         )
         session.add(sample_task)
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_FREE)
+        await _seed_runtime(session, seed.workspace_id, monitored_urls=0)
         await session.commit()
         sample_task_id = sample_task.id
 
@@ -661,10 +660,10 @@ async def test_rerun_from_completed_crawl_worker_analyzes_only_reran_url(
     # Invoke the domain rerun (what the API endpoint calls). Because there is
     # no active crawl, it mints a fresh rerun crawl.
     async with session_factory() as session:
-        from app.domain.site_health.entitlements import resolve_entitlement
+        from app.domain.site_health.entitlements import resolve_runtime
 
-        entitlement = await resolve_entitlement(session, seed.workspace_id)
-        assert entitlement.plan_key == CAPABILITY_STARTER
+        runtime = await resolve_runtime(session, seed.workspace_id)
+        assert runtime.monitored_url_limit == DEFAULT_SEED_MONITORED_URLS
         result = await rerun_page(
             session,
             workspace_id=seed.workspace_id,
@@ -753,7 +752,7 @@ async def test_rerun_from_completed_crawl_worker_analyzes_only_reran_url(
 
 
 @pytest.mark.asyncio
-async def test_free_recrawl_allowance_only_decrements_on_new_activation(
+async def test_sample_recrawl_allowance_only_decrements_on_new_activation(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Handoff finding 2: a recrawl must not consume allowance for a membership
@@ -781,7 +780,7 @@ async def test_free_recrawl_allowance_only_decrements_on_new_activation(
     root = "https://example.com/"
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_FREE)
+        await _seed_runtime(session, seed.workspace_id, monitored_urls=0)
         await session.commit()
         await _configure_crawl(
             session,

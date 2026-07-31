@@ -11,17 +11,21 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import and_, case, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.site_health import (
-    CRAWL_STATUS_FAILED,
-    TASK_KIND_ANALYZE,
-    capability_profile,
+from app.core.config.entitlements import KEY_MONITORED_URLS
+from app.core.config.site_health import CRAWL_STATUS_FAILED, TASK_KIND_ANALYZE
+from app.domain.entitlements.service import (
+    refresh_site_health_runtime_for_account,
+    refresh_site_health_runtime_for_workspace,
+    resolve_workspace_entitlement,
 )
-from app.domain.site_health.entitlements import resolve_entitlement
+from app.domain.entitlements.types import STATUS_RESOLVED
+from app.domain.site_health.entitlements import resolve_runtime
 from app.domain.site_health.failure import load_root_errors, load_root_failure_summary
 from app.domain.site_health.inventory_scope import (
     inherited_inventory_crawl_ids,
@@ -53,6 +57,7 @@ from app.domain.site_health.service.presentation import (
     presentation_status_for,
     project_crawl,
 )
+from app.models.billing import WorkspaceBillingLink
 from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
@@ -65,7 +70,6 @@ from app.models.site_health import (
     SiteRuleEvaluation,
     SiteUrl,
     SiteUrlObservation,
-    WorkspaceSiteHealthEntitlement,
 )
 
 
@@ -75,27 +79,69 @@ from app.models.site_health import (
 async def get_entitlement_view(
     session: AsyncSession, *, workspace_id: uuid.UUID
 ) -> dict:
-    """Project the workspace entitlement into the strict entitlement contract.
+    """Project the workspace Site Health entitlement into the neutral contract.
 
-    Derives ``access_mode`` (Starter selects a monitored set; Free gets a
-    server sample) and ``can_view_discovered_total`` from the live capability
-    profile. Seeds a Free row on first use (fail-closed).
+    Thin wrapper kept at the frozen complexity budget; the projection lives in
+    ``_site_health_entitlement_view``.
     """
-    row: WorkspaceSiteHealthEntitlement = await resolve_entitlement(
-        session, workspace_id
+    return await _site_health_entitlement_view(
+        session, workspace_id=workspace_id, at=datetime.now(UTC)
     )
-    profile = capability_profile(row.plan_key)
-    access_mode = "selection" if profile.allows_user_selection else "sample"
+
+
+async def _site_health_entitlement_view(
+    session: AsyncSession, *, workspace_id: uuid.UUID, at: datetime
+) -> dict:
+    """Resolve the account at an explicit ``at`` and project the neutral DTO.
+
+    Sources ``resolver_status`` / ``contributing_grant_ids`` from the
+    ``ResolvedEntitlement`` (never the runtime row) and lazily refreshes the
+    runtime projection. ``unresolved`` yields a zero monitored limit, the
+    neutral sample limit, no disclosure, and empty grant IDs. The read
+    commits nothing.
+    """
+    account_id = await session.scalar(
+        select(WorkspaceBillingLink.billing_account_id).where(
+            WorkspaceBillingLink.workspace_id == workspace_id
+        )
+    )
+    if account_id is None:
+        entitlement = await resolve_workspace_entitlement(
+            session, workspace_id=workspace_id, at=at
+        )
+        row = await refresh_site_health_runtime_for_workspace(
+            session, workspace_id=workspace_id, at=at
+        )
+    else:
+        entitlement = await refresh_site_health_runtime_for_account(
+            session, account_id=account_id, at=at
+        )
+        row = await resolve_runtime(session, workspace_id)
+    resolved = entitlement.status == STATUS_RESOLVED
+    capability = entitlement.capability(KEY_MONITORED_URLS)
+    if not resolved:
+        access_mode = "unresolved"
+    elif row.monitored_url_limit > 0:
+        access_mode = "full"
+    else:
+        access_mode = "sample"
     return {
         "workspace_id": row.workspace_id,
-        "plan_key": profile.capability,
         "access_mode": access_mode,
         "sample_url_limit": int(row.sample_url_limit),
-        "monitored_url_limit": int(row.monitored_url_limit),
-        "can_view_discovered_total": bool(row.count_disclosure),
-        "capability_revision": int(row.capability_revision),
-        "created_at": _iso(row.created_at),
-        "updated_at": _iso(row.updated_at),
+        "monitored_url_limit": int(row.monitored_url_limit) if resolved else 0,
+        "count_disclosure": bool(row.count_disclosure) if resolved else False,
+        "resolver_status": entitlement.status,
+        "registry_revision": entitlement.registry_revision,
+        "entitlement_lifecycle_version": int(
+            entitlement.entitlement_lifecycle_version
+        ),
+        "valid_until": entitlement.valid_until,
+        "contributing_grant_ids": (
+            list(capability.contributing_grant_ids)
+            if resolved and capability is not None
+            else []
+        ),
     }
 
 
@@ -528,7 +574,9 @@ async def get_monitored_set(
             }
         )
 
-    entitlement = await resolve_entitlement(session, workspace_id)
+    runtime = await refresh_site_health_runtime_for_workspace(
+        session, workspace_id=workspace_id, at=datetime.now(UTC)
+    )
     used = await session.scalar(
         select(func.count())
         .select_from(MonitoredSiteUrl)
@@ -543,7 +591,7 @@ async def get_monitored_set(
         "monitored_urls": monitored_urls,
         "quota": {
             "used": int(used or 0),
-            "limit": int(entitlement.monitored_url_limit),
+            "limit": int(runtime.monitored_url_limit),
         },
     }
 

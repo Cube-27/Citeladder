@@ -140,3 +140,67 @@ async def seed_site_crawl(
         crawl_id=crawl.id,
         task_ids=task_ids,
     )
+
+
+async def seed_monitored_urls_allowance(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    monitored_urls: int,
+) -> None:
+    """Wire a billing account + workspace link + override grant so the
+    workspace resolves to a ``monitored_urls`` allowance of exactly
+    ``monitored_urls``.
+
+    Uses the production grant path (``issue_override_bundle``), so the
+    account lifecycle-version bump and the Site Health runtime-row refresh
+    happen exactly as in production. When the workspace already has a
+    billing link (e.g. API-seeded workspaces bootstrap one), the grant lands
+    on the EXISTING account. Callers own the commit.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import select
+
+    from app.core.config.entitlements import KEY_MONITORED_URLS
+    from app.domain.entitlements.grants import issue_override_bundle
+    from app.domain.entitlements.types import GrantSpec
+    from app.models.billing import BillingAccount, WorkspaceBillingLink
+
+    account_id = await session.scalar(
+        select(WorkspaceBillingLink.billing_account_id).where(
+            WorkspaceBillingLink.workspace_id == workspace_id
+        )
+    )
+    if account_id is not None:
+        account = await session.get(BillingAccount, account_id)
+        assert account is not None
+        operator = await session.get(User, account.owner_user_id)
+        assert operator is not None
+    else:
+        operator = User(
+            email=f"billing-{uuid.uuid4().hex[:8]}@example.com",
+            hashed_password="x",
+            is_active=True,
+        )
+        session.add(operator)
+        await session.flush()
+        account = BillingAccount(owner_user_id=operator.id)
+        session.add(account)
+        await session.flush()
+        session.add(
+            WorkspaceBillingLink(
+                workspace_id=workspace_id, billing_account_id=account.id
+            )
+        )
+        await session.flush()
+    await issue_override_bundle(
+        session,
+        operator_user=operator,
+        account_id=account.id,
+        grants=(GrantSpec(key=KEY_MONITORED_URLS, value=monitored_urls),),
+        reason="test seed allowance",
+        valid_from=datetime.now(UTC) - timedelta(days=1),
+        valid_until=None,
+        idempotency_key=f"test-seed:{workspace_id}:{uuid.uuid4().hex[:12]}",
+    )

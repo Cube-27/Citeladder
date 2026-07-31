@@ -108,9 +108,9 @@ def test_project_crawl_withholds_the_total_until_inventory_is_complete() -> None
     assert done["has_more_site_urls"] is False
 
 
-def test_project_crawl_redacts_every_count_field_for_a_free_crawl() -> None:
+def test_project_crawl_redacts_every_count_field_for_a_sample_crawl() -> None:
     # The frozen `count_disclosure` snapshot is the authority (a later
-    # capability change must not retroactively reveal a sample crawl's counts).
+    # allowance change must not retroactively reveal a sample crawl's counts).
     out = project_crawl(
         _crawl(
             configuration={"count_disclosure": False},
@@ -125,12 +125,14 @@ def test_project_crawl_redacts_every_count_field_for_a_free_crawl() -> None:
     assert out["visible_url_count"] == 7
 
 
-def test_project_crawl_falls_back_to_the_frozen_capability_profile() -> None:
-    # Pre-`count_disclosure` crawls only froze the capability key.
-    free = project_crawl(_crawl(configuration={"capability": "free"}))
-    starter = project_crawl(_crawl(configuration={"capability": "starter"}))
-    assert free["discovered_count"] is None
-    assert starter["discovered_count"] == 42
+def test_project_crawl_fails_closed_without_a_frozen_disclosure() -> None:
+    # A crawl whose configuration never froze `count_disclosure` redacts
+    # (fail-closed); only an explicit frozen True discloses counts.
+    unfrozen = project_crawl(_crawl(configuration={}))
+    disclosed = project_crawl(_crawl(configuration={"count_disclosure": True}))
+    assert unfrozen["discovered_count"] is None
+    assert unfrozen["total_url_count"] is None
+    assert disclosed["discovered_count"] == 42
 
 
 # --------------------------------------------------------------------------

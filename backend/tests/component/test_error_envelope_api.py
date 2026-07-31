@@ -21,18 +21,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
-from app.core.config.site_health import CAPABILITY_STARTER
 from app.core.telemetry import (
     generate_correlation_id,
     reset_correlation_id,
     set_correlation_id,
 )
-from app.domain.site_health.entitlements import set_entitlement
 from app.main import app
 from app.models.site_health import SiteHealthProfile
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from tests.component.opportunity_helpers import _seed_scenario
+from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
 pytestmark = pytest.mark.asyncio
 
@@ -206,8 +205,11 @@ async def test_site_health_stale_selection_version_409_envelope(
             select(WorkspaceMember).where(WorkspaceMember.user_id == user.id)
         )
         assert member is not None
-        # Starter capability + a profile row so the version check is reached.
-        await set_entitlement(session, member.workspace_id, CAPABILITY_STARTER)
+        # A positive monitored-URL allowance + a profile row so the version
+        # check is reached.
+        await seed_monitored_urls_allowance(
+            session, workspace_id=member.workspace_id, monitored_urls=50
+        )
         session.add(
             SiteHealthProfile(
                 workspace_id=member.workspace_id, project_id=uuid.UUID(project["id"])

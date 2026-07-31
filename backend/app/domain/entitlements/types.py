@@ -45,6 +45,19 @@ class RevocationInput:
 
 
 @dataclass(frozen=True, slots=True)
+class GrantSpec:
+    """One capability key/value pair a grant-bundle write will persist.
+
+    Levels carry the integer ordinal into the registry's ``ordered_values``;
+    flags carry only 0 or 1. The write service validates both against the
+    registry before insert.
+    """
+
+    key: str
+    value: int
+
+
+@dataclass(frozen=True, slots=True)
 class ResolvedCapability:
     """The folded value of one capability key at resolution time."""
 

@@ -1,4 +1,11 @@
-"""Race-safe Free billing bootstrap for users and owner workspaces."""
+"""Race-safe billing bootstrap for users and owner workspaces.
+
+Ensures only the ``BillingAccount`` and ``WorkspaceBillingLink`` rows. There
+is deliberately NO baseline grant and NO Site Health seeding: a new account
+has an explicit resolved entitlement with no capabilities and no funding,
+and the workspace runtime row seeds lazily (fail-closed sample policy) on
+first Site Health use.
+"""
 
 from __future__ import annotations
 
@@ -8,9 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.billing import TIER_FREE
-from app.domain.site_health.entitlements import resolve_entitlement
-from app.models.billing import AccountEntitlement, BillingAccount, WorkspaceBillingLink
+from app.models.billing import BillingAccount, WorkspaceBillingLink
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 
@@ -21,7 +26,7 @@ async def ensure_user_billing(
     *,
     workspace_ids: tuple[uuid.UUID, ...] | None = None,
 ) -> BillingAccount:
-    """Ensure one account, Free entitlement, and links for owned workspaces.
+    """Ensure one account and links for owned workspaces.
 
     The caller owns the transaction boundary. PostgreSQL upserts make login
     repair and concurrent first requests idempotent without rolling back the
@@ -37,12 +42,6 @@ async def ensure_user_billing(
     )
     if account is None:  # pragma: no cover - impossible after insert/select
         raise RuntimeError("billing account bootstrap failed")
-
-    await session.execute(
-        pg_insert(AccountEntitlement)
-        .values(billing_account_id=account.id, tier_key=TIER_FREE)
-        .on_conflict_do_nothing(index_elements=["billing_account_id"])
-    )
 
     if workspace_ids is None:
         workspace_ids = tuple(
@@ -62,7 +61,6 @@ async def ensure_user_billing(
             .values(workspace_id=workspace_id, billing_account_id=account.id)
             .on_conflict_do_nothing(index_elements=["workspace_id"])
         )
-        await resolve_entitlement(session, workspace_id, default_capability=TIER_FREE)
 
     await session.flush()
     return account
@@ -74,13 +72,6 @@ async def user_billing_bootstrap_complete(session: AsyncSession, user: User) -> 
         select(BillingAccount).where(BillingAccount.owner_user_id == user.id)
     )
     if account is None:
-        return False
-    entitlement_id = await session.scalar(
-        select(AccountEntitlement.id).where(
-            AccountEntitlement.billing_account_id == account.id
-        )
-    )
-    if entitlement_id is None:
         return False
     owner_workspace_ids = set(
         (

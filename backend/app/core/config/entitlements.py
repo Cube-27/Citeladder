@@ -270,6 +270,13 @@ def _build_registry() -> CapabilityRegistry:
     )
 
 
+# Bounded in-process entitlement cache knobs (domain/entitlements/cache.py).
+# The cache is replica-safe only because every lookup first reads the persisted
+# account ``entitlement_lifecycle_version`` and includes it in the key; these
+# knobs bound memory and serve-staleness between version bumps.
+ENTITLEMENT_CACHE_MAX_ENTRIES: Final = 1024
+ENTITLEMENT_CACHE_MAX_TTL_SECONDS: Final = 300
+
 # One config-owned registry revision for the whole v8 entitlement layer.
 CAPABILITY_REGISTRY_REVISION: Final = "entitlements-v1"
 

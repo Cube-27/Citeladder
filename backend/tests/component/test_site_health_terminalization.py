@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.site_health import (
     ANALYSIS_STATUS_COMPLETED,
     ANALYSIS_STATUS_FAILED,
-    CAPABILITY_STARTER,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
@@ -40,7 +39,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
-from app.domain.site_health.entitlements import set_entitlement
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.snapshot import persist_crawl_snapshot
 from app.models.site_health import (
@@ -59,6 +57,7 @@ from app.models.site_health import (
 from app.workers.site_health.helpers import _is_crawl_finalize_rule
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
+    DEFAULT_SEED_MONITORED_URLS,
     _analyses_by_page_url,
     _configure_crawl,
     _html,
@@ -66,6 +65,7 @@ from tests.component.site_health_worker_helpers import (
     _seed_analyze_phase_crawl,
     _seed_analyze_ready,
     _seed_root_only,
+    _seed_runtime,
     _worker,
 )
 
@@ -234,7 +234,9 @@ async def test_stolen_lease_does_not_terminalize_crawl(
     root = "https://example.com/"
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_STARTER)
+        await _seed_runtime(
+            session, seed.workspace_id, monitored_urls=DEFAULT_SEED_MONITORED_URLS
+        )
         await session.commit()
         await _configure_crawl(
             session,
@@ -293,7 +295,9 @@ async def test_crawl_not_completed_while_analyze_queued(
     root = "https://example.com/rich"
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_STARTER)
+        await _seed_runtime(
+            session, seed.workspace_id, monitored_urls=DEFAULT_SEED_MONITORED_URLS
+        )
         await session.commit()
         crawl = await session.get(SiteCrawl, seed.crawl_id)
         assert crawl is not None
@@ -388,7 +392,9 @@ async def test_partial_analysis_failure_partially_completes(
         seed = await seed_site_crawl(
             session, task_count=0, root_url="https://example.com/rich"
         )
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_STARTER)
+        await _seed_runtime(
+            session, seed.workspace_id, monitored_urls=DEFAULT_SEED_MONITORED_URLS
+        )
         await session.commit()
         crawl = await session.get(SiteCrawl, seed.crawl_id)
         assert crawl is not None

@@ -24,7 +24,6 @@ from app.core.config.site_health import (
     SEVERITY_LOW,
     SEVERITY_MEDIUM,
     SITE_HEALTH_RULES_BY_ID,
-    capability_profile,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
@@ -125,18 +124,14 @@ def display_label_for(rule_id: str, evidence: dict | None = None) -> str:
 # Crawl projection (model aliases -> strict contract)
 # =========================================================================
 def _crawl_count_disclosure(crawl: SiteCrawl) -> bool:
-    """Whether this crawl may disclose total/discovered counts (Free = never).
+    """Whether this crawl may disclose total/discovered counts.
 
-    Reads the frozen ``configuration.count_disclosure`` snapshot first (so a
-    later capability change never retroactively reveals a sample crawl's
-    counts); falls back to the capability profile derived from the frozen
-    ``capability`` key.
+    Reads only the frozen ``configuration.count_disclosure`` snapshot (so a
+    later allowance change never retroactively reveals a sample crawl's
+    counts); a missing snapshot fails closed to no disclosure.
     """
     config = crawl.configuration or {}
-    if "count_disclosure" in config:
-        return bool(config.get("count_disclosure"))
-    capability = str(config.get("capability") or "")
-    return capability_profile(capability).count_disclosure
+    return bool(config.get("count_disclosure", False))
 
 
 def _score_summary(crawl: SiteCrawl) -> dict | None:

@@ -1,10 +1,11 @@
-"""Site Health model constraints + Free-default entitlement (Task 1).
+"""Site Health model constraints + fail-closed runtime row (Task 1).
 
 Verifies the uniqueness/FK/index contract that the queue, quota, and
 idempotency logic depends on: duplicate URL identity, duplicate task slot
 (including the ``generation`` discriminator), duplicate rule evaluation and
-selection uniqueness, plus the capability-based entitlement resolver defaulting
-to Free. Requires a real Postgres (Postgres UUID + partial index semantics).
+selection uniqueness, plus the workspace runtime row seeding the fail-closed
+zero-allowance sample policy on first use. Requires a real Postgres
+(Postgres UUID + partial index semantics).
 """
 
 from __future__ import annotations
@@ -13,18 +14,22 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.entitlements import (
+    CAPABILITY_REGISTRY_REVISION,
+)
 from app.core.config.site_health import (
-    CAPABILITY_FREE,
-    CAPABILITY_STARTER,
-    FREE_MONITORED_URL_LIMIT,
+    DISCOVERY_MODE_FULL,
+    DISCOVERY_MODE_SAMPLE,
     INITIAL_TASK_GENERATION,
+    SAMPLE_DISCOVERY_URL_CAP,
+    SAMPLE_URL_LIMIT,
     SELECTION_SOURCE_USER,
-    STARTER_MONITORED_URL_LIMIT,
     TASK_KIND_DISCOVER,
+    runtime_policy_for_allowance,
 )
 from app.domain.site_health.entitlements import (
-    resolve_entitlement,
-    set_entitlement,
+    apply_runtime_policy,
+    resolve_runtime,
 )
 from app.models.site_health import (
     MonitoredSiteUrl,
@@ -156,69 +161,103 @@ async def test_monitored_url_unique_per_project(
 
 
 @pytest.mark.asyncio
-async def test_resolve_entitlement_defaults_to_free(
+async def test_resolve_runtime_seeds_zero_allowance_sample_row(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
         seed = await seed_site_crawl(session)
     async with session_factory() as session:
-        row = await resolve_entitlement(session, seed.workspace_id)
+        row = await resolve_runtime(session, seed.workspace_id)
         await session.commit()
-        assert row.plan_key == CAPABILITY_FREE
-        assert row.monitored_url_limit == FREE_MONITORED_URL_LIMIT
+        # Fail-closed: no resolved allowance -> sample policy, zero selectable
+        # monitored URLs, no count disclosure.
+        assert row.discovery_mode == DISCOVERY_MODE_SAMPLE
+        assert row.sample_url_limit == SAMPLE_URL_LIMIT
+        assert row.monitored_url_limit == 0
         assert row.count_disclosure is False
+        # Inventory is DECOUPLED from the analysis budget: sample mode keeps
+        # mapping the site to the discovery cap while only ``sample_url_limit``
+        # URLs are ever analyzed.
+        assert row.discovery_url_cap == SAMPLE_DISCOVERY_URL_CAP
+        assert row.discovery_url_cap > row.sample_url_limit
 
     # Idempotent: a second resolve returns the same seeded row, no duplicate.
     async with session_factory() as session:
-        again = await resolve_entitlement(session, seed.workspace_id)
+        again = await resolve_runtime(session, seed.workspace_id)
         assert again.id == row.id
 
 
 @pytest.mark.asyncio
-async def test_set_entitlement_starter_then_free(
+async def test_apply_runtime_policy_full_then_sample(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
         seed = await seed_site_crawl(session)
     async with session_factory() as session:
-        starter = await set_entitlement(session, seed.workspace_id, CAPABILITY_STARTER)
+        row = await resolve_runtime(session, seed.workspace_id)
+        apply_runtime_policy(
+            row,
+            runtime_policy_for_allowance(50),
+            resolved_registry_revision=CAPABILITY_REGISTRY_REVISION,
+            resolved_entitlement_lifecycle_version=1,
+            resolved_valid_until=None,
+        )
         await session.commit()
-        assert starter.plan_key == CAPABILITY_STARTER
-        assert starter.monitored_url_limit == STARTER_MONITORED_URL_LIMIT
-        assert starter.count_disclosure is True
-        assert starter.capability_revision == 1
+        assert row.discovery_mode == DISCOVERY_MODE_FULL
+        assert row.monitored_url_limit == 50
+        assert row.count_disclosure is True
+        row_id = row.id
 
     async with session_factory() as session:
-        back = await set_entitlement(session, seed.workspace_id, CAPABILITY_FREE)
+        row = await resolve_runtime(session, seed.workspace_id)
+        apply_runtime_policy(
+            row,
+            runtime_policy_for_allowance(0),
+            resolved_registry_revision=CAPABILITY_REGISTRY_REVISION,
+            resolved_entitlement_lifecycle_version=2,
+            resolved_valid_until=None,
+        )
         await session.commit()
-        assert back.plan_key == CAPABILITY_FREE
-        assert back.monitored_url_limit == FREE_MONITORED_URL_LIMIT
-        # Revision bumped again on the in-place update.
-        assert back.capability_revision == 2
+        # In-place projection: same row, now the zero-allowance sample policy.
+        assert row.id == row_id
+        assert row.discovery_mode == DISCOVERY_MODE_SAMPLE
+        assert row.monitored_url_limit == 0
+        assert row.count_disclosure is False
+        assert row.resolved_entitlement_lifecycle_version == 2
 
 
 @pytest.mark.asyncio
-async def test_set_entitlement_unknown_coerces_to_free(
+async def test_runtime_policy_fail_closed_for_nonpositive_allowance(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    """A zero/negative allowance always maps to the sample policy."""
     async with session_factory() as session:
         seed = await seed_site_crawl(session)
     async with session_factory() as session:
-        row = await set_entitlement(session, seed.workspace_id, "enterprise")
+        row = await resolve_runtime(session, seed.workspace_id)
+        apply_runtime_policy(
+            row,
+            runtime_policy_for_allowance(-3),
+            resolved_registry_revision=CAPABILITY_REGISTRY_REVISION,
+            resolved_entitlement_lifecycle_version=0,
+            resolved_valid_until=None,
+        )
         await session.commit()
-        assert row.plan_key == CAPABILITY_FREE
+        assert row.discovery_mode == DISCOVERY_MODE_SAMPLE
+        assert row.monitored_url_limit == 0
+        assert row.count_disclosure is False
 
 
 @pytest.mark.asyncio
-async def test_resolve_entitlement_conflict_preserves_ambient_transaction(
+async def test_resolve_runtime_conflict_preserves_ambient_transaction(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Handoff finding 3: an insert conflict must NOT roll back the caller.
 
-    ``resolve_entitlement`` runs inside the crawl-creation transaction that has
+    ``resolve_runtime`` runs inside the crawl-creation transaction that has
     already taken the project ``FOR UPDATE`` lock used to serialize active
     crawls. If a concurrent first-use request wins the race to insert the
-    unique workspace entitlement row, the loser must NOT ``session.rollback()``
+    unique workspace runtime row, the loser must NOT ``session.rollback()``
     (which would release that lock and discard pending work) — it must resolve
     the conflict via an idempotent upsert and leave the ambient transaction
     (and any pending, un-flushed changes) intact.
@@ -226,21 +265,21 @@ async def test_resolve_entitlement_conflict_preserves_ambient_transaction(
     from sqlalchemy import func as _func
     from sqlalchemy import select as _select
 
-    from app.models.site_health import WorkspaceSiteHealthEntitlement
+    from app.models.site_health import WorkspaceSiteHealthRuntime
 
     async with session_factory() as session:
         seed = await seed_site_crawl(session)
 
-    # Winner: seed + COMMIT the entitlement row first (a concurrent request).
+    # Winner: seed + COMMIT the runtime row first (a concurrent request).
     async with session_factory() as loser:
         winner_id = None
         async with session_factory() as winner:
-            row = await resolve_entitlement(winner, seed.workspace_id)
+            row = await resolve_runtime(winner, seed.workspace_id)
             await winner.commit()
             winner_id = row.id
 
         # Loser: stage other pending work in the SAME transaction, THEN resolve
-        # the entitlement (which now conflicts). The pending work must survive.
+        # the runtime row (which now conflicts). The pending work must survive.
         pending = SiteUrl(
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
@@ -251,7 +290,7 @@ async def test_resolve_entitlement_conflict_preserves_ambient_transaction(
         await loser.flush()
         pending_id = pending.id
 
-        resolved = await resolve_entitlement(loser, seed.workspace_id)
+        resolved = await resolve_runtime(loser, seed.workspace_id)
         # Resolved to the winner's row (no duplicate, no error).
         assert resolved.id == winner_id
         await loser.commit()
@@ -260,10 +299,10 @@ async def test_resolve_entitlement_conflict_preserves_ambient_transaction(
         found = await loser.scalar(_select(SiteUrl.id).where(SiteUrl.id == pending_id))
         assert found == pending_id
 
-        # Exactly one entitlement row exists for the workspace.
+        # Exactly one runtime row exists for the workspace.
         count = await loser.scalar(
             _select(_func.count()).where(
-                WorkspaceSiteHealthEntitlement.workspace_id == seed.workspace_id
+                WorkspaceSiteHealthRuntime.workspace_id == seed.workspace_id
             )
         )
         assert count == 1

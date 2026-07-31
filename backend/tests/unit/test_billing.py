@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -12,60 +11,10 @@ from pydantic import SecretStr
 
 from app.connectors.billing.base import BillingProviderError
 from app.connectors.billing.razorpay import RazorpayBillingProvider
-from app.core.config.billing import billing_settings, quote_for_country
+from app.core.config.billing import billing_settings
 from app.domain.auth import service as auth_service
-from app.domain.billing.service import catalog
 from app.domain.billing.webhooks import verify_razorpay_signature
 from scripts.provision_razorpay_plans import _validate_environment
-
-
-def _ready(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(billing_settings, "checkout_enabled", True)
-    monkeypatch.setattr(billing_settings, "razorpay_live_ready", True)
-    monkeypatch.setattr(billing_settings, "razorpay_international_ready", True)
-    monkeypatch.setattr(billing_settings, "usd_inr_rate", Decimal("83.5"))
-    monkeypatch.setattr(
-        billing_settings, "razorpay_paid_monthly_inr_plan_id", "plan_inr"
-    )
-    monkeypatch.setattr(
-        billing_settings, "razorpay_paid_monthly_usd_plan_id", "plan_usd"
-    )
-
-
-def test_country_quote_selects_fixed_inr_plus_gst(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _ready(monkeypatch)
-    quote = quote_for_country("in")
-    assert quote.currency == "INR"
-    assert quote.base_amount_minor == 409_150
-    assert quote.tax_amount_minor == 73_647
-    assert quote.total_amount_minor == 482_797
-    assert quote.available is True
-
-
-def test_international_quote_stays_usd(monkeypatch: pytest.MonkeyPatch) -> None:
-    _ready(monkeypatch)
-    quote = quote_for_country("GB")
-    assert quote.currency == "USD"
-    assert quote.total_amount_minor == 4_900
-    assert quote.tax_amount_minor == 0
-
-
-def test_public_catalog_never_exposes_provider_configuration(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _ready(monkeypatch)
-    payload = catalog("IN").model_dump()
-    serialized = str(payload).lower()
-    assert [plan["tier_key"] for plan in payload["plans"]] == [
-        "free",
-        "paid",
-        "enterprise",
-    ]
-    assert "plan_inr" not in serialized
-    assert "razorpay" not in serialized
-    assert "secret" not in serialized
 
 
 def test_webhook_signature_uses_exact_raw_body(

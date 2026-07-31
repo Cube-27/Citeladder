@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,7 +28,7 @@ PageAnalysisStatus = Literal[
     "blocked",
     "cancelled",
 ]
-AccessMode = Literal["sample", "selection"]
+AccessMode = Literal["sample", "full", "unresolved"]
 IssueSeverity = Literal["critical", "high", "medium", "low", "info"]
 IssueDimension = Literal["technical", "aeo"]
 SiteUrlSource = Literal["root", "link", "sitemap", "redirect"]
@@ -92,16 +93,24 @@ class RerunPageResponse(_Model):
 # =========================================================================
 # Entitlement
 # =========================================================================
-class EntitlementResponse(_Model):
+class SiteHealthEntitlementResponse(_Model):
+    """Neutral Site Health entitlement view (no commercial vocabulary).
+
+    Sourced from the account's ``ResolvedEntitlement`` plus the workspace
+    runtime projection; ``unresolved`` always carries a zero monitored limit,
+    the neutral sample limit, no disclosure, and empty grant IDs.
+    """
+
     workspace_id: uuid.UUID
-    plan_key: Literal["free", "starter"]
     access_mode: AccessMode
     sample_url_limit: int
     monitored_url_limit: int
-    can_view_discovered_total: bool
-    capability_revision: int
-    created_at: str
-    updated_at: str
+    count_disclosure: bool
+    resolver_status: Literal["resolved", "entitlement_unresolved"]
+    registry_revision: str
+    entitlement_lifecycle_version: int
+    valid_until: datetime | None
+    contributing_grant_ids: list[uuid.UUID]
 
 
 # =========================================================================

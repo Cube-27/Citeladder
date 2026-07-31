@@ -18,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.site_health import (
     AI_CRAWLER_BOTS,
     ANALYSIS_STATUS_COMPLETED,
-    CAPABILITY_FREE,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_RUNNING,
@@ -45,7 +44,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
-from app.domain.site_health.entitlements import set_entitlement
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.service import presentation_status_for
 from app.models.site_health import (
@@ -75,16 +73,17 @@ from tests.component.site_health_worker_helpers import (
     _html,
     _seed_analyze_ready,
     _seed_root_discover,
+    _seed_runtime,
     _worker,
 )
 
 
 @pytest.mark.asyncio
-async def test_starter_discover_admits_children_and_completes(
+async def test_full_allowance_discover_admits_children_and_completes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     root = "https://example.com/"
-    # A Starter crawl with the single root discover task the planner queues.
+    # A full-allowance crawl with the planner's single root discover task.
     seed = await _seed_root_discover(session_factory, root=root)
 
     pages = {
@@ -276,7 +275,7 @@ async def test_free_sample_stops_at_ten_across_two_projects(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Two Free crawls in the SAME workspace share the 10-URL sample budget."""
+    """Two sample crawls in the SAME workspace share the 10-URL budget."""
     # Every URL below is on the one host, so the 0.5s politeness delay would
     # serialize ~20 fetches into ~10s of pure sleeping. The budget accounting
     # under test is delay-independent, so zero it (same treatment as the
@@ -322,10 +321,10 @@ async def test_free_sample_stops_at_ten_across_two_projects(
         session.add(crawl_b)
         await session.flush()
         crawl_b_id = crawl_b.id
-        await set_entitlement(session, seed_a.workspace_id, CAPABILITY_FREE)
+        await _seed_runtime(session, seed_a.workspace_id, monitored_urls=0)
         await session.commit()
 
-        # Configure both crawls for Free sample mode.
+        # Configure both crawls for sample mode.
         await _configure_crawl(
             session,
             crawl_id=seed_a.crawl_id,
@@ -362,7 +361,7 @@ async def test_free_sample_stops_at_ten_across_two_projects(
         session.add(_root_task(seed_a.crawl_id))
         await session.commit()
 
-    # Each root page links to in-scope children. The workspace-wide Free
+    # Each root page links to in-scope children. The workspace-wide sample
     # budget is 10, and the root/fetched identity itself now also consumes
     # one slot of that budget (it goes through admission too, not just its
     # child links), so project A's root + 6 children (7) plus project B's
@@ -429,7 +428,7 @@ async def test_free_sample_stops_at_ten_across_two_projects(
         )
         assert any(u in set(links_b) for u in monitored_urls)
 
-        # Auto-enqueued analyze tasks (priority=1 by the Free sample path) are
+        # Auto-enqueued analyze tasks (priority=1 by the sample path) are
         # now claimable and EXECUTED by the worker (Task 5): the workspace-wide
         # free-sample cap of 10 still holds (10 monitored URLs -> 10 analyze
         # tasks total), but they are succeeded rather than left queued.
@@ -457,7 +456,7 @@ async def test_free_sample_stops_at_ten_across_two_projects(
         )
         assert analysis_count == 10
 
-        # At least one crawl reached the Free cap terminal state.
+        # At least one crawl reached the sample cap terminal state.
         crawl_a = await session.get(SiteCrawl, seed_a.crawl_id)
         assert crawl_a is not None
         _crawl_b = await session.get(SiteCrawl, crawl_b_id)
@@ -482,23 +481,23 @@ async def test_free_discovery_maps_past_the_sample_budget_without_analyzing(
     Discovery and analysis used to share ONE number, so a Free crawl stopped
     admitting URLs the moment its 10 analyze slots were spent: the user saw the
     first 10 URLs of their site and nothing else. They are now separate budgets
-    — the inventory grows to ``free_discovery_url_cap`` while only
-    ``free_sample_url_limit`` URLs get a monitored membership and an analyze
+    — the inventory grows to ``sample_discovery_url_cap`` while only
+    ``sample_url_limit`` URLs get a monitored membership and an analyze
     task. The over-budget URLs must be REAL inventory rows (identity +
     per-crawl observation, so the UI can list them) that cost no fetch.
     """
     monkeypatch.setattr(site_health_settings, "per_host_delay_seconds", 0.0)
     # A small cap keeps the test fast while still proving the split: 4 analyzed
     # out of 12 discovered is unambiguous about which budget bounds which.
-    monkeypatch.setattr(site_health_settings, "free_sample_url_limit", 4)
-    monkeypatch.setattr(site_health_settings, "free_discovery_url_cap", 12)
+    monkeypatch.setattr(site_health_settings, "sample_url_limit", 4)
+    monkeypatch.setattr(site_health_settings, "sample_discovery_url_cap", 12)
 
     root = "https://example.com/"
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
-        # Written AFTER the settings patch above so the entitlement freezes the
-        # small sample budget (``set_entitlement`` applies the live profile).
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_FREE)
+        # Written AFTER the settings patch above so the projected runtime row
+        # freezes the small sample budget (the policy reads live settings).
+        await _seed_runtime(session, seed.workspace_id, monitored_urls=0)
         await session.commit()
         await _configure_crawl(
             session,
@@ -568,7 +567,7 @@ async def test_free_discovery_maps_past_the_sample_budget_without_analyzing(
         # full 16-URL frontier (root + 15 children) — at `<= 16` the assertion
         # passed even when the cap was ignored entirely, so it proved nothing.
         assert observed < 16, "the discovery cap must bound the frontier"
-        assert observed <= site_health_settings.free_discovery_url_cap + 2
+        assert observed <= site_health_settings.sample_discovery_url_cap + 2
 
         # The unanalyzed remainder is real, listable inventory.
         assert (
@@ -759,7 +758,7 @@ async def test_discover_robots_5xx_fails_unavailable_without_page_fetch(
 async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Full Starter pipeline in ONE run (the real production flow):
+    """Full-allowance pipeline in ONE run (the real production flow):
 
     The depth-0 site setup parses robots (per-bot stance + declared sitemap),
     probes llms.txt, ingests the sitemap tree into in-scope admissions, caches

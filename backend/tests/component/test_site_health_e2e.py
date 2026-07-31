@@ -10,13 +10,14 @@ and each Slice 6 reconciliation invariant in isolation. This module adds the
     -> issues catalog -> per-URL detail -> issue history -> CSV/MD export;
   - crawl lifecycle mutations over HTTP: create (201) and cancel (terminal),
     which the isolated endpoint tests never drive through the router;
-  - the stale monitored-selection conflict (HTTP 409) after a Starter workspace
+  - the stale monitored-selection conflict (HTTP 409) after a full-allowance
+    workspace
     commits one selection version and then submits a now-stale expected version;
   - a partial/error crawl: a ``partially_completed`` crawl whose failed page
     surfaces the ``error`` presentation status + its error code and null scores
     (never a fabricated zero);
-  - Free-sample redaction end to end: the crawl projection and the event replay
-    never leak a discovered/total count for a non-disclosing (Free) workspace;
+  - sample redaction end to end: the crawl projection and the event replay
+    never leak a discovered/total count for a non-disclosing workspace;
   - the same journey resolving in a NON-default workspace via ``X-Workspace-Id``.
 
 These are deliberately broad, deterministic, and DB-backed. They do not attempt
@@ -32,7 +33,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health import (
-    CAPABILITY_STARTER,
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
@@ -41,7 +41,6 @@ from app.core.config.site_health import (
     TASK_KIND_ANALYZE,
 )
 from app.core.config.task_queue import TASK_STATUS_FAILED
-from app.domain.site_health.entitlements import set_entitlement
 from app.models.project import Project
 from app.models.site_health import (
     SiteCrawl,
@@ -57,6 +56,7 @@ from app.models.workspace import Workspace, WorkspaceMember
 
 # Reuse the exact seed helpers the focused component suite uses so the E2E
 # journey exercises the same fixtures/shapes (no duplicated seeding logic).
+from tests.component.site_health_helpers import seed_monitored_urls_allowance
 from tests.component.test_site_health_api import (
     _register,
     _seed_scenario,
@@ -233,10 +233,11 @@ async def test_stale_monitored_selection_conflict_409(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """A Starter workspace's second commit with a stale version is a 409.
+    """A full-allowance workspace's stale second commit is a 409.
 
-    Free may not select (that gate is proven elsewhere), so the workspace is
-    upgraded to Starter first. The first PUT (expected version 0) succeeds and
+    A zero-allowance workspace may not select (that gate is proven elsewhere),
+    so the workspace is granted an allowance first. The first PUT (expected
+    version 0) succeeds and
     bumps the persisted ``selection_version``; a second PUT replaying the now
     stale expected version 0 must be rejected with a coded 409 carrying the
     current version, and must NOT overwrite the committed selection.
@@ -244,7 +245,9 @@ async def test_stale_monitored_selection_conflict_409(
     await _register(client, "stale@example.com")
     async with session_factory() as session:
         scn = await _seed_scenario(session, email="stale@example.com")
-        await set_entitlement(session, scn.workspace_id, CAPABILITY_STARTER)
+        await seed_monitored_urls_allowance(
+            session, workspace_id=scn.workspace_id, monitored_urls=50
+        )
         await session.commit()
         # Resolve two discoverable URL ids for the project.
         rows = (
@@ -418,13 +421,14 @@ async def test_partial_error_crawl_surfaces_failed_pages(
     assert row["overall_score"] is None
 
 
-async def test_free_redaction_end_to_end(
+async def test_sample_redaction_end_to_end(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """A Free workspace never leaks a discovered/total count anywhere.
+    """A non-disclosing workspace never leaks a discovered/total count.
 
-    The seeded workspace is Free (fail-closed). Its crawl projection must null
+    The seeded workspace has no allowance (fail-closed zero). Its crawl
+    projection must null
     the discovered/total/has-more fields, and the event replay must not expose a
     total-bearing key in any payload.
     """
@@ -434,7 +438,8 @@ async def test_free_redaction_end_to_end(
     headers = {"X-Workspace-Id": str(scn.workspace_id)}
 
     ent = await client.get("/api/v1/entitlements", headers=headers)
-    assert ent.json()["plan_key"] == "free"
+    assert ent.json()["access_mode"] == "unresolved"
+    assert ent.json()["count_disclosure"] is False
 
     crawl = (
         await client.get(f"/api/v1/site-crawls/{scn.crawl_id}", headers=headers)
