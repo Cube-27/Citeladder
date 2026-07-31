@@ -27,10 +27,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.task_queue import (
+    TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_CANCELLED,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
-    TASK_STATUS_QUEUED,
     TASK_STATUS_RETRY_WAIT,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
@@ -127,7 +127,10 @@ class PostgresTaskQueue[
             # monotonic across concurrent claim transactions.
             base_order = tuple(self._spec.claim_order(model))
             eligible_filter = (
-                model.status.in_([TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT]),
+                # queued / retry_wait / capacity_wait (config-owned claimable
+                # vocabulary): a capacity-parked task becomes claimable again
+                # exactly like a retry — once its ``available_at`` passes.
+                model.status.in_(sorted(TASK_CLAIMABLE_STATUSES)),
                 model.available_at <= now,
             )
             eligible = select(

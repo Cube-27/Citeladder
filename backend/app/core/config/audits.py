@@ -27,6 +27,7 @@ from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
     TASK_LEASED_STATUSES,
     TASK_STATUS_CANCELLED,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
@@ -46,6 +47,7 @@ __all_queue_reexports = (
     TASK_CLAIMABLE_STATUSES,
     TASK_LEASED_STATUSES,
     TASK_STATUS_CANCELLED,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
@@ -188,6 +190,58 @@ EVENT_TASK_FAILED: Final = "task.failed"
 EVENT_TASK_RETRY: Final = "task.retry"
 EVENT_AUDIT_CANCELLED: Final = "audit.cancelled"
 EVENT_AUDIT_COMPLETED: Final = "audit.completed"
+# Task parked on a provider-capacity decision (T4); payload carries only the
+# opaque task id + retry timing (never credentials/prompts/provider bodies).
+EVENT_TASK_CAPACITY_WAIT: Final = "task.capacity_wait"
+
+# --- Provider capacity vocabulary (T4) --------------------------------------
+# One owner for the pool/lease/credential vocabulary persisted on
+# ``ProviderCapacityBucket`` / ``ProviderCapacityLease`` and passed through the
+# ``app.orchestration.provider_capacity`` contracts (invariant 2 — never
+# re-literal these strings).
+#
+# Pool kinds (``ProviderCapacityBucket.pool_kind``, String(16)):
+POOL_KIND_TRANSPORT: Final = "transport"
+POOL_KIND_CONNECTION: Final = "connection"
+POOL_KIND_FUNDED_GLOBAL: Final = "funded_global"
+POOL_KIND_FUNDED_ACCOUNT: Final = "funded_account"
+POOL_KINDS: Final[frozenset[str]] = frozenset(
+    {
+        POOL_KIND_TRANSPORT,
+        POOL_KIND_CONNECTION,
+        POOL_KIND_FUNDED_GLOBAL,
+        POOL_KIND_FUNDED_ACCOUNT,
+    }
+)
+# Lease kinds (``ProviderCapacityLease.lease_kind``, String(16)). Concurrency
+# leases are returned on release; token starts are consumed from the bucket's
+# token balance at acquire time and are NEVER returned, so they are not leases.
+LEASE_KIND_CONCURRENCY: Final = "concurrency"
+# Which credential a task's provider call will use. BYOK acquires the
+# transport + connection pools only; platform-funded acquires the transport +
+# funded-global + funded-account pools.
+CREDENTIAL_KIND_BYOK: Final = "byok"
+CREDENTIAL_KIND_FUNDED: Final = "funded"
+CREDENTIAL_KINDS: Final[frozenset[str]] = frozenset(
+    {CREDENTIAL_KIND_BYOK, CREDENTIAL_KIND_FUNDED}
+)
+# Safe decision codes (``CapacityDecision.code``). Opaque tokens only — they
+# never embed provider error bodies.
+CAPACITY_CODE_CONCURRENCY: Final = "capacity_concurrency"
+CAPACITY_CODE_RATE_LIMITED: Final = "capacity_rate_limited"
+CAPACITY_CODE_UNCONFIGURED: Final = "capacity_unconfigured"
+# Release outcomes (``CapacityOutcome.kind``).
+CAPACITY_OUTCOME_SUCCEEDED: Final = "succeeded"
+CAPACITY_OUTCOME_FAILED: Final = "failed"
+CAPACITY_OUTCOME_RATE_LIMITED: Final = "rate_limited"
+# Stamped on every bucket row; a config/knob change re-syncs a locked bucket
+# to the live policy at acquire time instead of drifting silently.
+CAPACITY_POLICY_VERSION: Final = "v8-t4-1"
+# Telemetry event names (structured log events, funded-ledger pattern).
+# Payloads carry ONLY pool kind, transport, opaque task/account ids, and retry
+# timing — never credentials, prompts, or provider bodies (invariant 6).
+TELEMETRY_CAPACITY_WAIT: Final = "audit.capacity.wait"
+TELEMETRY_CAPACITY_RATE_LIMITED: Final = "audit.capacity.rate_limited"
 
 # --- Error tokens specific to the run lifecycle ---------------------------
 # Provider-call error tokens live in ``provider_catalog`` (reused by the
@@ -253,7 +307,8 @@ class AuditSettings(BaseSettings):
     # ~29s average, so 10 in flight puts a run at roughly 90s instead of the
     # ~4 minutes a concurrency of 4 gave. Paired with DB_POOL_SIZE/
     # DB_MAX_OVERFLOW (peak demand is ~2 sessions per in-flight task; the
-    # startup guard warns if the pool cannot cover it).
+    # startup assertion ``assert_worker_pool_capacity`` RAISES if the pool
+    # cannot cover it).
     #
     # CEILING IS THE PROVIDER, NOT THIS NUMBER. Grounded answers carry the web
     # search results back in as input: measured Claude calls averaged ~16k INPUT
@@ -266,6 +321,50 @@ class AuditSettings(BaseSettings):
     # (``_warn_if_provider_pacing_unbounded``) whenever concurrency is > 1 with
     # pacing off, so the risk is visible in the logs rather than only here.
     worker_concurrency: int = 10
+
+    # --- Provider capacity pools (T4) ---------------------------------------
+    # Frozen defaults; each is ``measurement_required`` in the gate record —
+    # they bound burst shape, not provider-verified rates, until live-key
+    # measurement establishes real tier ceilings. The route-owned token-bucket
+    # knobs (capacity / refill rate / max cooldown) live with the route policy
+    # in ``config/provider_catalog.py`` (route identity is
+    # ``(logical_engine, transport_provider)``).
+    #
+    # In-flight ceiling for ONE workspace credential (BYOK key) on a transport
+    # AND for the shared per-transport pool: one credential may not exceed the
+    # transport's own concurrency envelope.
+    per_transport_concurrency: int = 4
+    # Total platform-funded calls in flight per transport across ALL accounts.
+    funded_pool_max_concurrency: int = 12
+    # Per-account slice of the funded pool, so one account's audits cannot
+    # starve a sibling account (funded fairness).
+    funded_pool_per_account: int = 6
+    # Peak DB sessions one in-flight task can check out at once (task session +
+    # heartbeat/finalize overlap). Feeds the startup pool assertion.
+    worker_db_sessions_per_task: int = 2
+    # Sessions reserved for non-task work in the worker process (sweeper,
+    # claim, audit-state transitions) so the pool assertion leaves room for
+    # them: db_pool_size + db_max_overflow must be >=
+    # worker_max_inflight * worker_db_sessions_per_task + operational_headroom.
+    operational_headroom: int = 4
+    # Capacity-lease TTL: a crash orphans a lease, and capacity is recovered
+    # only once it expires, so this must outlive the longest single provider
+    # call (the benchmark timeout) plus margin.
+    capacity_lease_ttl_seconds: float = 240.0
+    # Retry timing parked on a task when every relevant pool is at its
+    # concurrency ceiling (no provider guidance exists for this case).
+    capacity_concurrency_retry_seconds: float = 2.0
+
+    @property
+    def worker_max_inflight(self) -> int:
+        """Canonical T4 name for the worker's in-flight task ceiling.
+
+        Folded onto the pre-existing ``worker_concurrency`` field (one knob,
+        one owner — invariant 2): the field keeps its env var and every
+        existing reader/monkeypatch; new capacity code reads this name.
+        """
+        return self.worker_concurrency
+
     # How long the loop sleeps when the queue is empty before polling again. Also
     # gates the expired-lease sweep (``AuditWorker._sweep_expired_leases``) so
     # the pool's slots share one sweep per interval instead of one each.

@@ -19,6 +19,7 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineResponse,
 )
 from app.connectors.answer_engines.errors import ProviderError
+from app.core.config import settings
 from app.core.config.audits import (
     MEASUREMENT_MODE_PULSE,
     audit_settings,
@@ -252,3 +253,36 @@ def test_build_request_snapshot_records_policy_and_omits_the_brand_list() -> Non
     assert "brand_names" not in snapshot
     assert "api_key" not in snapshot
     assert "Acme" not in str(snapshot)
+
+
+def _pool_demand() -> int:
+    return (
+        audit_settings.worker_max_inflight * audit_settings.worker_db_sessions_per_task
+        + audit_settings.operational_headroom
+    )
+
+
+def test_assert_worker_pool_capacity_raises_when_undersized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The pre-T4 pool shape (4+2) cannot cover peak demand: startup RAISES."""
+    monkeypatch.setattr(settings, "db_pool_size", 4)
+    monkeypatch.setattr(settings, "db_max_overflow", 2)
+    assert 4 + 2 < _pool_demand()  # the configuration under test IS undersized
+    with pytest.raises(RuntimeError, match="db pool undersized"):
+        audit_worker.assert_worker_pool_capacity()
+
+
+def test_assert_worker_pool_capacity_passes_at_exact_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pool_size + max_overflow == exact demand is ENOUGH (>=, not >)."""
+    monkeypatch.setattr(settings, "db_pool_size", _pool_demand())
+    monkeypatch.setattr(settings, "db_max_overflow", 0)
+    audit_worker.assert_worker_pool_capacity()  # must not raise
+
+
+def test_assert_worker_pool_capacity_passes_with_shipped_defaults() -> None:
+    """The shipped pool defaults exactly cover the frozen T4 worker demand."""
+    assert settings.db_pool_size + settings.db_max_overflow == _pool_demand()
+    audit_worker.assert_worker_pool_capacity()  # must not raise

@@ -143,6 +143,71 @@ def route_policy(logical_engine: str, transport_provider: str) -> RoutePolicy:
     return policy
 
 
+# --- Route-owned token-bucket pacing (T4) ------------------------------------
+# One entry per approved route (same keys as ``ROUTE_POLICIES``): the token
+# bucket that paces provider CALL STARTS on the route's transport bucket. The
+# rates are UNVERIFIED and therefore UNSET (``None``) ON PURPOSE: with no
+# measured provider tier rates, funded acquisition fails CLOSED
+# (``capacity_unconfigured``) and BYOK runs concurrency-only, until a live
+# measurement configures real rates. ``max_cooldown_seconds`` is always set:
+# it clamps any provider-advised ``Retry-After`` before the shared
+# ``blocked_until`` cooldown is written, so an untrusted provider hint can
+# never park a pool longer than this.
+DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS: Final = 60.0
+
+
+@dataclass(frozen=True, slots=True)
+class RouteCapacityPolicy:
+    """Token-bucket pacing policy for one approved (engine, transport) route.
+
+    ``capacity`` is the bucket's max tokens (burst size);
+    ``refill_tokens_per_second`` is the sustained start rate. Both are
+    ``None`` while the route's provider rates are unverified.
+    """
+
+    capacity: float | None
+    refill_tokens_per_second: float | None
+    max_cooldown_seconds: float
+
+
+# One entry per approved route in ``APPROVED_ROUTES`` (same keys).
+ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
+    (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
+    (ENGINE_CHATGPT, TRANSPORT_OPENAI): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
+    (ENGINE_GEMINI, TRANSPORT_GOOGLE): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
+}
+
+
+def route_capacity_policy(
+    logical_engine: str, transport_provider: str
+) -> RouteCapacityPolicy:
+    """Token-bucket pacing policy for an approved route (fails closed).
+
+    Raises ``ValueError`` for a route with no entry rather than pacing with an
+    invented rate: an unconfigured approved route (``None`` rates) is a
+    DELIBERATE fail-closed state; an UNKNOWN route is a bug.
+    """
+    policy = ROUTE_CAPACITY_POLICIES.get((logical_engine, transport_provider))
+    if policy is None:
+        raise ValueError(
+            f"no route capacity policy for ({logical_engine!r}, "
+            f"{transport_provider!r}); approved routes must declare one"
+        )
+    return policy
+
+
 def is_reasoning_pinned_off(logical_engine: str, transport_provider: str) -> bool:
     """True only when the route pins reasoning explicitly OFF."""
     policy = route_policy(logical_engine, transport_provider)

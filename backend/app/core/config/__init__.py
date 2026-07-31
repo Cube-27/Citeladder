@@ -142,18 +142,22 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/searchify",
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
-    # Conservative shared defaults keep a multi-service deployment from
-    # multiplying into hundreds of possible RDS connections. ECS task families
-    # must override these independently from a tested connection budget; the
-    # audit worker warns when its concurrency exceeds its assigned capacity.
+    # Sized so the shared engine pool exactly covers the audit worker's peak
+    # demand at the frozen T4 defaults: worker_max_inflight (10) x
+    # worker_db_sessions_per_task (2) + operational_headroom (4) = 24 =
+    # pool_size (20) + max_overflow (4). The audit worker ASSERTS this
+    # invariant at startup (``assert_worker_pool_capacity`` raises), so any
+    # deployment override of one side must rebalance the other from a tested
+    # connection budget; a multi-service deployment still multiplies these, so
+    # keep the per-service budget conservative when overriding.
     db_pool_size: int = Field(
-        default=4,
+        default=20,
         ge=1,
         le=50,
         validation_alias=AliasChoices("DB_POOL_SIZE", "db_pool_size"),
     )
     db_max_overflow: int = Field(
-        default=2,
+        default=4,
         ge=0,
         le=50,
         validation_alias=AliasChoices("DB_MAX_OVERFLOW", "db_max_overflow"),

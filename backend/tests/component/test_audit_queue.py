@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.audits import (
     AUDIT_QUEUE_SPEC,
     AUDIT_TRIGGER_MANUAL,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_RETRY_WAIT,
@@ -166,6 +167,45 @@ async def test_succeed_and_retry_lifecycle(
 
 
 _FIXTURE_SURFACE = "google_shopping"
+
+
+@pytest.mark.asyncio
+async def test_capacity_wait_rows_are_claimable_once_due(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``capacity_wait`` is in the claimable vocabulary, gated on available_at.
+
+    A capacity-parked row reuses ``available_at`` (no duplicate queued-state
+    column): it is skipped while its time is in the future and claimed exactly
+    like a retry once due.
+    """
+    audit = await _make_queued_audit(session_factory, prompts=2, reps=1)  # 2
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AuditTask).where(AuditTask.audit_id == audit.id)
+            )
+        ).all()
+        parked, other = rows[0], rows[1]
+        parked.status = TASK_STATUS_CAPACITY_WAIT
+        parked.available_at = datetime.now(UTC) + timedelta(hours=1)
+        await session.commit()
+        parked_id, other_id = parked.id, other.id
+
+    queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
+    claimed = await queue.claim(owner="w1", limit=10)
+    # Parked in the future: not claimable; the queued sibling is.
+    assert {t.id for t in claimed} == {other_id}
+
+    async with session_factory() as session:
+        task = await session.get(AuditTask, parked_id)
+        assert task is not None
+        task.available_at = datetime.now(UTC) - timedelta(seconds=1)
+        await session.commit()
+
+    claimed = await queue.claim(owner="w1", limit=10)
+    assert {t.id for t in claimed} == {parked_id}
+    assert claimed[0].status == TASK_STATUS_LEASED
 
 
 @pytest.mark.asyncio

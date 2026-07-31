@@ -379,34 +379,43 @@ def _apply_response_to_task(
     task.error_detail = ""
 
 
-def _warn_if_pool_undersized() -> None:
-    """Validate the shared engine pool against worker concurrency at startup.
+def assert_worker_pool_capacity() -> None:
+    """Fail fast at startup when the engine pool cannot cover peak demand.
 
     Every session here is short-lived (never held across provider I/O), but a
-    batch of ``worker_concurrency`` tasks plus their heartbeat loops can check
-    out up to ~2 connections per task at once. When the configured pool
+    batch of ``worker_max_inflight`` tasks plus their heartbeat loops can
+    check out up to ``worker_db_sessions_per_task`` connections per task at
+    once, and the sweeper/claim/audit-state paths need
+    ``operational_headroom`` more. When the configured pool
     (``pool_size + max_overflow``) is smaller than that peak, every batch
-    queues on connection checkout (bounded by ``pool_timeout``) — flag the
-    mismatch loudly instead of degrading silently.
+    queues on connection checkout (bounded by ``pool_timeout``) — so the
+    worker REFUSES to start rather than degrading silently. Raises before the
+    process loop; the fix is always a config rebalance (invariant 1).
     """
     capacity = settings.db_pool_size + settings.db_max_overflow
-    demand = 2 * max(1, audit_settings.worker_concurrency)
+    demand = (
+        max(1, audit_settings.worker_max_inflight)
+        * audit_settings.worker_db_sessions_per_task
+        + audit_settings.operational_headroom
+    )
     if capacity < demand:
-        logger.warning(
-            "db pool smaller than peak worker session demand",
-            extra={
-                "worker_concurrency": audit_settings.worker_concurrency,
-                "pool_capacity": capacity,
-                "peak_session_demand": demand,
-            },
+        raise RuntimeError(
+            "db pool undersized for audit worker: "
+            f"db_pool_size + db_max_overflow = {capacity} < "
+            f"worker_max_inflight ({audit_settings.worker_max_inflight}) * "
+            f"worker_db_sessions_per_task "
+            f"({audit_settings.worker_db_sessions_per_task}) + "
+            f"operational_headroom ({audit_settings.operational_headroom}) = "
+            f"{demand}; raise DB_POOL_SIZE/DB_MAX_OVERFLOW or lower the "
+            "worker demand knobs"
         )
 
 
 def _warn_if_provider_pacing_unbounded() -> None:
     """Surface the provider-rate-limit risk of the concurrency defaults.
 
-    The sibling of ``_warn_if_pool_undersized``, for the ceiling the worker does
-    NOT control. ``worker_concurrency`` bounds in-flight tasks, but nothing here
+    The sibling of ``assert_worker_pool_capacity``, for the ceiling the worker
+    does NOT control. ``worker_concurrency`` bounds in-flight tasks, but nothing here
     bounds tokens-per-minute at the provider: with pacing off, N slots can start
     N calls against the same transport at once. Grounded answers carry the web
     search results back in as input (measured ~16k input tokens per Claude call),
@@ -603,7 +612,7 @@ class AuditWorker(DrainableWorkerMixin):
 
     async def run_forever(self) -> None:  # pragma: no cover - long-running loop
         logger.info("audit worker started", extra={"owner": self.owner})
-        _warn_if_pool_undersized()
+        assert_worker_pool_capacity()
         _warn_if_provider_pacing_unbounded()
         try:
             while True:

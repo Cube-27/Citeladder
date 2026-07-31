@@ -33,8 +33,9 @@ class TaskQueue[T](Protocol):
     ) -> list[T]:
         """Atomically claim up to ``limit`` eligible tasks for ``owner``.
 
-        Selects claimable rows (``queued``/``retry_wait`` whose ``available_at``
-        has passed) in the spec's deterministic order, optionally restricted to
+        Selects claimable rows (``queued``/``retry_wait``/``capacity_wait``
+        whose ``available_at`` has passed) in the spec's deterministic order,
+        optionally restricted to
         ``kinds`` (e.g. a worker that only handles a subset of task kinds),
         locks them with ``FOR UPDATE SKIP LOCKED`` so two workers never grab
         the same row, marks them ``leased`` with a fresh ``lease_owner`` +
