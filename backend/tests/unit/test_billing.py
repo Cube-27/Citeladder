@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -10,7 +12,7 @@ import httpx
 import pytest
 from pydantic import BaseModel, SecretStr, ValidationError
 
-from app.connectors.billing.base import BillingProviderError
+from app.connectors.billing.base import BillingProviderError, ProviderMetadata
 from app.connectors.billing.razorpay import RazorpayBillingProvider
 from app.core.config.billing import (
     ADDON_EXTRA_PROJECT,
@@ -20,12 +22,15 @@ from app.core.config.billing import (
     REGION_CURRENCIES,
     REGION_INDIA,
     REGION_INTERNATIONAL,
+    TOPUP_BENCHMARK_CREDITS,
     GrantTemplate,
     billing_settings,
     commercial_catalog,
     plan_checkout_availability,
     plan_period_grant_specs,
     resolve_region,
+    scale_grant_specs,
+    topup_grant_specs,
 )
 from app.core.config.entitlements import (
     BENCHMARK_CADENCE_VALUES,
@@ -52,6 +57,12 @@ from app.core.config.provider_catalog import (
 )
 from app.domain.auth import service as auth_service
 from app.domain.billing import schemas as billing_schemas
+from app.domain.billing.idempotency import (
+    TrialUnavailableError,
+    reject_deferred_trial,
+    request_fingerprint,
+    validate_idempotency_key,
+)
 from app.domain.billing.schemas import (
     BillingEntitlementResponse,
     GrantProvenanceResponse,
@@ -59,8 +70,17 @@ from app.domain.billing.schemas import (
     SubscriptionCreateRequest,
     UsageItemResponse,
 )
+from app.domain.billing.service import (
+    BillingConflictError,
+    resolve_addon_intent,
+    resolve_base_intent,
+)
 from app.domain.billing.webhooks import verify_razorpay_signature
-from scripts.provision_razorpay_plans import _validate_environment
+from scripts.provision_razorpay_plans import (
+    _validate_environment,
+    _verify,
+    catalog_refs,
+)
 
 
 def test_webhook_signature_uses_exact_raw_body(
@@ -107,6 +127,12 @@ async def test_login_skips_billing_repair_when_bootstrap_is_complete(
     session.commit.assert_not_awaited()
 
 
+def _metadata() -> ProviderMetadata:
+    return ProviderMetadata(
+        intent_id="intent-1", account_ref="account-1", catalog_revision="commercial-v8"
+    )
+
+
 @pytest.mark.asyncio
 async def test_razorpay_adapter_creates_hosted_subscription(
     monkeypatch: pytest.MonkeyPatch,
@@ -122,12 +148,15 @@ async def test_razorpay_adapter_creates_hosted_subscription(
         assert request.headers["authorization"].startswith("Basic ")
         body = request.content.decode()
         assert '"plan_id":"plan_test"' in body
+        assert '"total_count":1200' in body
+        assert "searchify_intent_id" in body
         assert "test-secret" not in body
         return httpx.Response(
             200,
             json={
                 "id": "sub_test",
                 "status": "created",
+                "plan_id": "plan_test",
                 "short_url": "https://rzp.io/i/hosted-test",
             },
         )
@@ -136,11 +165,16 @@ async def test_razorpay_adapter_creates_hosted_subscription(
         transport=httpx.MockTransport(handler), base_url="https://api.razorpay.com"
     ) as client:
         provider = RazorpayBillingProvider(client=client)
-        hosted = await provider.create_subscription(
-            plan_id="plan_test", attempt_id="attempt", billing_account_id="account"
+        hosted = await provider.create_base_subscription(
+            price_ref="plan_test",
+            intent_id="intent-1",
+            account_ref="account-1",
+            trial_days=None,
+            metadata=_metadata(),
         )
     assert hosted.external_subscription_id == "sub_test"
     assert hosted.checkout_url == "https://rzp.io/i/hosted-test"
+    assert hosted.price_ref == "plan_test"
 
 
 @pytest.mark.asyncio
@@ -159,6 +193,7 @@ async def test_razorpay_adapter_rejects_untrusted_checkout_host(
             json={
                 "id": "sub_test",
                 "status": "created",
+                "plan_id": "plan_test",
                 "short_url": "https://example.com/phishing",
             },
         )
@@ -166,15 +201,17 @@ async def test_razorpay_adapter_rejects_untrusted_checkout_host(
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
         with pytest.raises(BillingProviderError, match="provider_invalid_checkout_url"):
-            await provider.create_subscription(
-                plan_id="plan_test",
-                attempt_id="attempt",
-                billing_account_id="account",
+            await provider.create_base_subscription(
+                price_ref="plan_test",
+                intent_id="intent-1",
+                account_ref="account-1",
+                trial_days=None,
+                metadata=_metadata(),
             )
 
 
 @pytest.mark.asyncio
-async def test_razorpay_adapter_reuses_subscription_found_by_attempt_note(
+async def test_razorpay_fetch_subscription_echoes_intent_identity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
@@ -188,80 +225,112 @@ async def test_razorpay_adapter_reuses_subscription_found_by_attempt_note(
         return httpx.Response(
             200,
             json={
-                "items": [
-                    {
-                        "id": "sub_existing",
-                        "status": "created",
-                        "short_url": "https://rzp.io/i/existing",
-                        "notes": {"searchify_attempt_id": "attempt"},
-                    }
-                ]
+                "id": "sub_existing",
+                "status": "active",
+                "plan_id": "plan_test",
+                "current_start": 1,
+                "current_end": 2,
+                "updated_at": 3,
+                "cancel_at_cycle_end": 1,
+                "notes": {
+                    "searchify_intent_id": "intent-1",
+                    "searchify_account_ref": "account-1",
+                },
             },
         )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
-        hosted = await provider.create_subscription(
-            plan_id="plan_test",
-            attempt_id="attempt",
-            billing_account_id="account",
-            reconcile_existing=True,
-        )
-    assert hosted.external_subscription_id == "sub_existing"
+        record = await provider.fetch_subscription("sub_existing")
+    assert record.external_subscription_id == "sub_existing"
+    assert record.price_ref == "plan_test"
+    # The opaque identity refs echoed from the metadata we sent are what the
+    # activation transaction verifies before granting anything.
+    assert record.intent_id == "intent-1"
+    assert record.account_ref == "account-1"
+    assert record.cancel_at_period_end is True
     assert [request.method for request in requests] == ["GET"]
 
 
 @pytest.mark.asyncio
-async def test_razorpay_reconciliation_paginates_until_attempt_is_found(
+async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
     )
-    monkeypatch.setattr(billing_settings, "reconciliation_list_count", 1)
-    skips: list[str | None] = []
 
-    async def handler(request: httpx.Request) -> httpx.Response:
-        skips.append(request.url.params.get("skip"))
-        if request.url.params.get("skip") == "0":
-            return httpx.Response(
-                200,
-                json={
-                    "items": [
-                        {
-                            "id": "sub_other",
-                            "status": "created",
-                            "notes": {"searchify_attempt_id": "other"},
-                        }
-                    ]
-                },
-            )
+    async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
             json={
-                "items": [
-                    {
-                        "id": "sub_existing",
-                        "status": "created",
-                        "short_url": "https://rzp.io/i/existing",
-                        "notes": {"searchify_attempt_id": "attempt"},
-                    }
-                ]
+                "id": "sub_test",
+                "status": "created",
+                "plan_id": "plan_other",
+                "short_url": "https://rzp.io/i/hosted-test",
             },
         )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
-        hosted = await provider.create_subscription(
-            plan_id="plan_test",
-            attempt_id="attempt",
-            billing_account_id="account",
-            reconcile_existing=True,
+        with pytest.raises(BillingProviderError, match="provider_price_ref_mismatch"):
+            await provider.create_addon_subscription(
+                price_ref="plan_test",
+                quantity=2,
+                intent_id="intent-1",
+                account_ref="account-1",
+                metadata=_metadata(),
+            )
+
+
+@pytest.mark.asyncio
+async def test_razorpay_one_time_payment_validates_the_echoed_amount(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
+    monkeypatch.setattr(
+        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
+    )
+    bodies: list[str] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(request.content.decode())
+        amount = 1_000 if len(bodies) == 1 else 500
+        return httpx.Response(
+            200,
+            json={
+                "id": "plink_test",
+                "status": "created",
+                "amount": amount,
+                "currency": "USD",
+                "short_url": "https://rzp.io/i/pay-test",
+            },
         )
 
-    assert hosted.external_subscription_id == "sub_existing"
-    assert skips == ["0", "1"]
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RazorpayBillingProvider(client=client)
+        hosted = await provider.create_one_time_payment(
+            amount_minor=1_000,
+            currency="USD",
+            intent_id="intent-1",
+            account_ref="account-1",
+            metadata=_metadata(),
+        )
+        assert hosted.external_payment_id == "plink_test"
+        assert hosted.amount_minor == 1_000
+        # The intent id is the provider-side reference; partial payments are
+        # never accepted.
+        assert '"reference_id":"intent-1"' in bodies[0]
+        assert '"accept_partial":false' in bodies[0]
+        with pytest.raises(BillingProviderError, match="provider_amount_mismatch"):
+            await provider.create_one_time_payment(
+                amount_minor=1_000,
+                currency="USD",
+                intent_id="intent-1",
+                account_ref="account-1",
+                metadata=_metadata(),
+            )
 
 
 @pytest.mark.asyncio
@@ -279,10 +348,12 @@ async def test_razorpay_adapter_maps_all_transport_errors(
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
         with pytest.raises(BillingProviderError, match="provider_unavailable") as exc:
-            await provider.create_subscription(
-                plan_id="plan_test",
-                attempt_id="attempt",
-                billing_account_id="account",
+            await provider.create_base_subscription(
+                price_ref="plan_test",
+                intent_id="intent-1",
+                account_ref="account-1",
+                trial_days=None,
+                metadata=_metadata(),
             )
     assert exc.value.retryable is True
 
@@ -632,3 +703,202 @@ def test_subscription_create_request_normalizes_and_bounds_the_country() -> None
             country_code="US",
             amount_minor=1,
         )
+
+
+# --- Idempotent intent: key validation, fingerprint, deferred trial --------
+def test_validate_idempotency_key_requires_a_bounded_token() -> None:
+    for bad in (None, "", "short", "has whitespace", "tab\tkey", "x" * 256):
+        with pytest.raises(ValueError, match="idempotency_key_required"):
+            validate_idempotency_key(bad)
+    assert validate_idempotency_key("  abcdefgh  ") == "abcdefgh"
+    assert validate_idempotency_key("x" * 255) == "x" * 255
+
+
+def test_request_fingerprint_is_canonical_and_sensitive_to_the_body() -> None:
+    account_id = uuid.uuid4()
+    base = {
+        "operation": "subscription.create",
+        "account_id": account_id,
+        "catalog_revision": "commercial-v8",
+        "catalog_key": "tier_1",
+        "quantity": 1,
+        "credential_mode": "byok",
+    }
+    fingerprint = request_fingerprint(**base)
+    assert fingerprint == request_fingerprint(**base)
+    assert len(fingerprint) == 64
+    for change in (
+        {"catalog_key": "tier_2"},
+        {"quantity": 2},
+        {"credential_mode": "funded"},
+        {"operation": "addon.activate"},
+    ):
+        assert request_fingerprint(**{**base, **change}) != fingerprint
+
+
+def test_reject_deferred_trial_raises_before_any_write() -> None:
+    reject_deferred_trial(False)
+    with pytest.raises(TrialUnavailableError, match="trial_unavailable"):
+        reject_deferred_trial(True)
+
+
+# --- Server-resolved quotes -------------------------------------------------
+def _enable_international_checkout(
+    monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]
+) -> None:
+    monkeypatch.setattr(billing_settings, "checkout_enabled", True)
+    monkeypatch.setattr(billing_settings, "razorpay_live_ready", True)
+    monkeypatch.setattr(billing_settings, "razorpay_international_ready", True)
+    monkeypatch.setattr(billing_settings, "provider_price_refs", refs)
+
+
+def test_resolve_base_intent_quote_matches_catalog_and_separates_credit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refs = {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"}
+    _enable_international_checkout(monkeypatch, refs)
+    now = datetime.now(UTC)
+    intent = resolve_base_intent(
+        catalog_key="tier_1", credential_mode="byok", country_code=" us ", at=now
+    )
+    quote = intent.quote
+    assert quote.catalog_key == "tier_1"
+    assert quote.catalog_revision == billing_settings.catalog_version
+    assert quote.credential_mode == "byok"
+    assert quote.region == REGION_INTERNATIONAL
+    assert quote.base_price.amount_minor == 9_900
+    # BYOK: no credit price, and the total is the base alone (tax inclusive).
+    assert quote.credit_price is None
+    assert quote.tax.amount_minor == 0
+    assert quote.total_price.amount_minor == 9_900
+    # The private provider ref NEVER reaches the quote DTO.
+    assert "ref_private" not in quote.model_dump_json()
+
+    # Funded: the margin-configured credit price is separate; total = base +
+    # credit, and base is never derived from credit.
+    monkeypatch.setattr(billing_settings, "funded_margin_bps", 2_000)
+    refs[f"tier_1:{REGION_INTERNATIONAL}:credit"] = "ref_credit"
+    monkeypatch.setattr(billing_settings, "provider_price_refs", refs)
+    funded = resolve_base_intent(
+        catalog_key="tier_1", credential_mode="funded", country_code="US", at=now
+    )
+    assert funded.quote.credit_price is not None
+    assert funded.quote.credit_price.amount_minor == 60_000
+    assert funded.quote.base_price.amount_minor == 9_900
+    assert funded.quote.total_price.amount_minor == 69_900
+
+
+def test_resolve_base_intent_refuses_unknown_keys_and_unconfigured_funded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refs = {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"}
+    _enable_international_checkout(monkeypatch, refs)
+    now = datetime.now(UTC)
+    with pytest.raises(BillingConflictError, match="catalog_key_unknown"):
+        resolve_base_intent(
+            catalog_key="nope", credential_mode="byok", country_code="US", at=now
+        )
+    # Funded margin UNSET: funded checkout refuses rather than guessing.
+    with pytest.raises(BillingConflictError, match="checkout_unavailable"):
+        resolve_base_intent(
+            catalog_key="tier_1", credential_mode="funded", country_code="US", at=now
+        )
+    # Checkout disabled at the operator level: nothing is purchasable.
+    monkeypatch.setattr(billing_settings, "checkout_enabled", False)
+    with pytest.raises(BillingConflictError, match="checkout_unavailable"):
+        resolve_base_intent(
+            catalog_key="tier_1", credential_mode="byok", country_code="US", at=now
+        )
+
+
+def test_resolve_quote_applies_india_gst_server_side(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refs = {f"tier_1:{REGION_INDIA}:base": "ref_private_in"}
+    _enable_international_checkout(monkeypatch, refs)
+    monkeypatch.setattr(billing_settings, "usd_inr_rate", Decimal("83"))
+    intent = resolve_base_intent(
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code="IN",
+        at=datetime.now(UTC),
+    )
+    quote = intent.quote
+    assert quote.region == REGION_INDIA
+    assert quote.base_price.currency == "INR"
+    assert quote.base_price.amount_minor == 9_900 * 83
+    # Exclusive India GST: 18% ON TOP, owned by config.
+    assert quote.tax.amount_minor == int(round(9_900 * 83 * 0.18))
+    assert quote.total_price.amount_minor == (
+        quote.base_price.amount_minor + quote.tax.amount_minor
+    )
+
+
+def test_resolve_addon_intent_bounds_quantity_and_requires_availability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refs = {f"{ADDON_EXTRA_PROJECT}:{REGION_INTERNATIONAL}:base": "ref_private"}
+    _enable_international_checkout(monkeypatch, refs)
+    now = datetime.now(UTC)
+    with pytest.raises(BillingConflictError, match="checkout_unavailable"):
+        # Unit price unset: the add-on stays unavailable.
+        resolve_addon_intent(
+            catalog_key=ADDON_EXTRA_PROJECT, quantity=1, country_code="US", at=now
+        )
+    monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
+    with pytest.raises(BillingConflictError, match="quantity_out_of_bounds"):
+        resolve_addon_intent(
+            catalog_key=ADDON_EXTRA_PROJECT, quantity=21, country_code="US", at=now
+        )
+    with pytest.raises(BillingConflictError, match="catalog_key_unknown"):
+        resolve_addon_intent(catalog_key="nope", quantity=1, country_code="US", at=now)
+    intent = resolve_addon_intent(
+        catalog_key=ADDON_EXTRA_PROJECT, quantity=3, country_code="US", at=now
+    )
+    assert intent.quote.total_price.amount_minor == 3 * 1_900
+    assert intent.quote.credential_mode == "byok"
+
+
+def test_topup_grant_specs_scale_and_reject_stale_revisions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Pack size UNSET: no grant template exists for the current revision.
+    assert (
+        topup_grant_specs(TOPUP_BENCHMARK_CREDITS, billing_settings.catalog_version)
+        is None
+    )
+    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_per_pack", 25)
+    specs = topup_grant_specs(TOPUP_BENCHMARK_CREDITS, billing_settings.catalog_version)
+    assert specs == ((KEY_BENCHMARK_CREDITS, 25),)
+    assert scale_grant_specs(specs, 3) == ((KEY_BENCHMARK_CREDITS, 75),)
+    with pytest.raises(ValueError, match=">= 1"):
+        scale_grant_specs(specs, 0)
+    # A stale revision never silently issues today's bundle.
+    assert topup_grant_specs(TOPUP_BENCHMARK_CREDITS, "billing-v1") is None
+    assert topup_grant_specs("nope", billing_settings.catalog_version) is None
+
+
+# --- Provisioning CLI over the commercial catalog ---------------------------
+def test_provision_script_reports_missing_and_configured_refs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rows = catalog_refs()
+    # Only the three self-serve plans have a positive international price by
+    # default (India is unrated, add-ons/top-ups are unpriced).
+    assert {row.settings_key for row in rows} == {
+        f"{key}:{REGION_INTERNATIONAL}:base" for key in ("tier_1", "tier_2", "tier_3")
+    }
+    assert all(not row.configured for row in rows)
+    assert _verify(rows) == 1
+    monkeypatch.setattr(
+        billing_settings,
+        "provider_price_refs",
+        {row.settings_key: "ref_private" for row in rows},
+    )
+    configured = catalog_refs()
+    assert all(row.configured for row in configured)
+    assert _verify(configured) == 0
+    # A configured funded margin surfaces the credit refs as their own rows.
+    monkeypatch.setattr(billing_settings, "funded_margin_bps", 2_000)
+    keys = {row.settings_key for row in catalog_refs()}
+    assert f"tier_1:{REGION_INTERNATIONAL}:credit" in keys

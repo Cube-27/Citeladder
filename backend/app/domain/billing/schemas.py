@@ -401,11 +401,6 @@ class ProviderConnectionStatesResponse(_StrictResponse):
     providers: list[ProviderConnectionStateResponse]
 
 
-class CancelResponse(BaseModel):
-    status: str
-    cancel_at_period_end: bool
-
-
 __all__ = [
     "ActivationKind",
     "ActivationResponse",
@@ -415,7 +410,6 @@ __all__ = [
     "BillingEntitlementResponse",
     "BillingRegion",
     "BillingUsageResponse",
-    "CancelResponse",
     "CapabilityValueResponse",
     "CatalogAddonResponse",
     "CatalogAvailability",

@@ -84,6 +84,26 @@ RAZORPAY_EVENT_TYPES: Final = frozenset(
     }
 )
 
+RAZORPAY_PAYMENT_EVENT_TYPES: Final = frozenset({"payment.captured", "payment.failed"})
+
+# Authoritative one-time payment vocabulary (provider-neutral).
+PAYMENT_PENDING: Final = "payment_pending"
+PAYMENT_PAID: Final = "paid"
+PAYMENT_FAILED: Final = "payment_failed"
+
+# Razorpay payment / payment-link statuses mapped to the neutral vocabulary.
+RAZORPAY_PAYMENT_STATUS_MAP: Final[dict[str, str]] = {
+    "created": PAYMENT_PENDING,
+    "authorized": PAYMENT_PENDING,
+    "partially_paid": PAYMENT_PENDING,
+    "captured": PAYMENT_PAID,
+    "paid": PAYMENT_PAID,
+    "failed": PAYMENT_FAILED,
+    "cancelled": PAYMENT_FAILED,
+    "expired": PAYMENT_FAILED,
+    "refunded": PAYMENT_FAILED,
+}
+
 RAZORPAY_STATUS_MAP: Final[dict[str, str]] = {
     "created": SUBSCRIPTION_PENDING,
     "authenticated": SUBSCRIPTION_PENDING,
@@ -202,6 +222,87 @@ COMING_SOON_PLAN_CAPABILITY_KEYS: Final[tuple[str, ...]] = (
 )
 # Plans that display the coming-soon provider comparison rows.
 COMING_SOON_ROW_PLAN_KEYS: Final[tuple[str, ...]] = (PLAN_TIER_2, PLAN_TIER_3)
+
+# --- Commercial write-path vocabulary (config-owned, invariant 1) ----------
+# PendingActivation.activation_kind.
+ACTIVATION_KIND_BASE: Final = "base"
+ACTIVATION_KIND_ADDON: Final = "addon"
+ACTIVATION_KIND_TOPUP: Final = "topup"
+ACTIVATION_KINDS: Final[frozenset[str]] = frozenset(
+    {ACTIVATION_KIND_BASE, ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP}
+)
+
+# PendingActivation.status.
+ACTIVATION_PENDING: Final = "pending"
+ACTIVATION_ACTIVATED: Final = "activated"
+ACTIVATION_FAILED: Final = "failed"
+ACTIVATION_ABANDONED: Final = "abandoned"
+ACTIVATION_STATUSES: Final[frozenset[str]] = frozenset(
+    {
+        ACTIVATION_PENDING,
+        ACTIVATION_ACTIVATED,
+        ACTIVATION_FAILED,
+        ACTIVATION_ABANDONED,
+    }
+)
+
+# IdempotencyRecord.state.
+IDEMPOTENCY_STARTED: Final = "started"
+IDEMPOTENCY_COMPLETED: Final = "completed"
+IDEMPOTENCY_FAILED: Final = "failed"
+
+# Credential modes a purchase may name.
+CREDENTIAL_MODE_BYOK: Final = "byok"
+CREDENTIAL_MODE_FUNDED: Final = "funded"
+CREDENTIAL_MODES: Final[frozenset[str]] = frozenset(
+    {CREDENTIAL_MODE_BYOK, CREDENTIAL_MODE_FUNDED}
+)
+
+# Idempotent commercial operations (the canonical fingerprint's first field).
+OPERATION_SUBSCRIPTION_CREATE: Final = "subscription.create"
+OPERATION_SUBSCRIPTION_CANCEL: Final = "subscription.cancel"
+OPERATION_ADDON_ACTIVATE: Final = "addon.activate"
+OPERATION_ADDON_CANCEL: Final = "addon.cancel"
+OPERATION_TOPUP_PURCHASE: Final = "topup.purchase"
+
+# Safe rejection/failure codes returned to a client (never provider text).
+REASON_TRIAL_REQUESTED_UNAVAILABLE: Final = "trial_unavailable"
+REASON_IDEMPOTENCY_KEY_REQUIRED: Final = "idempotency_key_required"
+REASON_IDEMPOTENCY_KEY_REUSED: Final = "idempotency_key_reused"
+REASON_CATALOG_KEY_UNKNOWN: Final = "catalog_key_unknown"
+REASON_QUANTITY_OUT_OF_BOUNDS: Final = "quantity_out_of_bounds"
+REASON_SUBSCRIPTION_EXISTS: Final = "subscription_already_active"
+REASON_ADDON_EXISTS: Final = "addon_already_active"
+REASON_NO_CURRENT_SUBSCRIPTION: Final = "no_current_subscription"
+REASON_BASE_SUBSCRIPTION_REQUIRED: Final = "base_subscription_required"
+REASON_PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
+REASON_PROVIDER_REJECTED: Final = "provider_rejected"
+REASON_ACTIVATION_EXPIRED: Final = "activation_expired"
+
+# Add-on keys whose adapter has not shipped: activation ALWAYS refuses with
+# ``provider_unavailable`` before any provider I/O or grant issuance.
+COMING_SOON_ADDON_KEYS: Final[frozenset[str]] = frozenset()
+
+# Bounded idempotency-key shape a client header must satisfy.
+IDEMPOTENCY_KEY_MIN_LENGTH: Final = 8
+IDEMPOTENCY_KEY_MAX_LENGTH: Final = 255
+
+# Structured telemetry event names (allowlisted safe fields only — opaque ids,
+# never credentials, prompts, provider bodies, or amounts).
+TELEMETRY_ENTITLEMENT_UNRESOLVED: Final = "billing.entitlement_unresolved"
+TELEMETRY_FUNDED_BUDGET_EXHAUSTED: Final = "billing.funded_budget_exhausted"
+TELEMETRY_CONSUMABLE_CREDITS_EXHAUSTED: Final = "billing.consumable_credits_exhausted"
+TELEMETRY_DUPLICATE_GRANT_PREVENTED: Final = "billing.duplicate_grant_prevented"
+BILLING_TELEMETRY_EVENTS: Final[tuple[str, ...]] = (
+    TELEMETRY_ENTITLEMENT_UNRESOLVED,
+    TELEMETRY_FUNDED_BUDGET_EXHAUSTED,
+    TELEMETRY_CONSUMABLE_CREDITS_EXHAUSTED,
+    TELEMETRY_DUPLICATE_GRANT_PREVENTED,
+)
+
+# Authority that settled a pending activation (provenance, invariant 4).
+ACTIVATION_AUTHORITY_WEBHOOK: Final = "webhook"
+ACTIVATION_AUTHORITY_RECONCILIATION: Final = "reconciliation"
 
 
 @dataclass(frozen=True, slots=True)
@@ -427,6 +528,18 @@ class BillingSettings(BaseSettings):
     http_max_keepalive_connections: int = 10
     http_keepalive_expiry_seconds: float = 60.0
     checkout_expiry_minutes: int = 60
+    # Validity of a server-resolved quote and of the pending activation that
+    # stores it. A pending row older than this is eligible for abandonment.
+    quote_validity_minutes: int = 60
+    # Server-side digest secret for ``quote_id``. Empty falls back to the
+    # webhook secret so a quote is never signed with a client-visible value.
+    quote_signing_secret: SecretStr = SecretStr("")
+    # Reconciliation sweep bounds (invariant 8: bounded SKIP LOCKED claims).
+    reconciliation_batch_size: int = 50
+    # A pending row is only probed once it has had this long to settle.
+    reconciliation_stale_after_seconds: int = 300
+    # After this long with no provider record, a pending row is abandoned.
+    reconciliation_abandon_after_seconds: int = 86_400
     reconciliation_list_count: int = 100
     reconciliation_lookback_seconds: int = 86_400
     subscription_total_cycles: int = 1200
@@ -804,6 +917,34 @@ def plan_checkout_availability(
     return True, None
 
 
+def price_tax_minor(price: CatalogPrice) -> int:
+    """Region tax added ON TOP of one configured price (0 when inclusive).
+
+    Config owns the rate (invariant 1): an ``exclusive`` price (India) adds
+    GST, an ``inclusive`` price is already final. Domain code never embeds a
+    tax rate or a rounding rule.
+    """
+    if price.tax_behavior != TAX_BEHAVIOR_EXCLUSIVE:
+        return 0
+    return _minor_units(Decimal(price.amount_minor) * billing_settings.india_gst_rate)
+
+
+def item_checkout_availability(
+    *, availability: str, price: CatalogPrice | None, region: str
+) -> tuple[bool, str | None]:
+    """Whether one add-on/top-up is purchasable in a region, with a safe reason.
+
+    An absent private provider ref, an unpriced region, a catalog-unavailable
+    item, or a region without operator-enabled checkout all refuse here rather
+    than failing mid-purchase.
+    """
+    if availability != AVAILABILITY_AVAILABLE:
+        return False, REASON_CHECKOUT_UNAVAILABLE
+    if price is None or not price.purchasable or not region_checkout_ready(region):
+        return False, REASON_CHECKOUT_UNAVAILABLE
+    return True, None
+
+
 def plan_period_grant_specs(
     catalog_key: str, catalog_revision: str
 ) -> tuple[tuple[str, int], ...] | None:
@@ -825,3 +966,63 @@ def plan_period_grant_specs(
     if not templates:
         return None
     return tuple((template.key, template.value) for template in templates)
+
+
+def topup_grant_specs(
+    catalog_key: str, catalog_revision: str
+) -> tuple[tuple[str, int], ...] | None:
+    """PER-UNIT grant templates for one top-up pack (config-owned seam).
+
+    Returns None for an unknown key, a revision the current catalog does not
+    own, or a pack whose size is UNSET (an unsized pack issues nothing).
+    """
+    catalog = commercial_catalog()
+    if catalog_revision != catalog.revision:
+        return None
+    topup = catalog.topup(catalog_key)
+    templates = topup.grant_bundle_per_unit if topup is not None else ()
+    if not templates:
+        return None
+    return tuple((template.key, template.value) for template in templates)
+
+
+def scale_grant_specs(
+    specs: tuple[tuple[str, int], ...], quantity: int
+) -> tuple[tuple[str, int], ...]:
+    """Scale per-unit grant templates by a purchased quantity.
+
+    Config owns the scaling rule (invariant 1) so no activation path
+    multiplies a pack size inline.
+    """
+    if quantity < 1:
+        raise ValueError("grant scaling quantity must be >= 1")
+    return tuple((key, value * quantity) for key, value in specs)
+
+
+# Public usage units per counter capability type. Config owns the display unit
+# (invariant 1) so the usage projection never invents one inline.
+USAGE_UNITS_BY_CAPABILITY_TYPE: Final[dict[str, str]] = {
+    "counter.consumable": "credits",
+    "counter.occupancy": "slots",
+    "counter.rate": "runs",
+}
+
+
+# BillingAccount.country_verification. ``declared`` is the buyer-submitted ISO
+# country locked at purchase; ``provisional`` is the pre-purchase default.
+COUNTRY_VERIFICATION_PROVISIONAL: Final = "provisional"
+COUNTRY_VERIFICATION_DECLARED: Final = "declared"
+
+
+# SubscriptionChangeResponse.status. Deliberately separate from the activation
+# vocabulary: a scheduled cancellation is never pending/activated/failed.
+CANCELLATION_SCHEDULED: Final = "cancellation_scheduled"
+CANCELLATION_ALREADY_SCHEDULED: Final = "already_scheduled"
+
+
+# UsageItemResponse.limit_state. Current registry counters are FINITE (measured
+# by the ledger) or UNKNOWN (measurement not yet landed); ``unlimited`` exists
+# in the contract but is never used to mean "unresolved".
+LIMIT_STATE_FINITE: Final = "finite"
+LIMIT_STATE_UNLIMITED: Final = "unlimited"
+LIMIT_STATE_UNKNOWN: Final = "unknown"

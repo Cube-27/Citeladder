@@ -1,12 +1,14 @@
-"""Component tests for the v8 billing surface: cancel + Razorpay webhooks.
+"""Component tests for the v8 billing surface: cancellation + Razorpay webhooks.
 
 The v6 catalog/quote/checkout/workspace-entitlement routes are deleted; what
-remains is ``POST /billing/cancel`` and the signed webhook ingress driving the
-lifecycle projector (``apply_subscription_state``): stale rejection, the
-account ``entitlement_lifecycle_version`` bump per accepted event, one
-idempotent period grant bundle (via the monkeypatched
+remains here is ``DELETE /billing/subscription`` and the signed webhook
+ingress driving the lifecycle projector (``apply_subscription_state``): stale
+rejection, the account ``entitlement_lifecycle_version`` bump per accepted
+event, one idempotent period grant bundle (via the monkeypatched
 ``plan_period_grant_specs`` catalog seam), deterministic terminal revocations,
-and the synchronous Site Health runtime re-projection.
+and the synchronous Site Health runtime re-projection. The commercial WRITE
+path (subscriptions/add-ons/top-ups + activation) lives in
+``test_billing_commercial.py``.
 """
 
 from __future__ import annotations
@@ -147,21 +149,36 @@ async def test_webhook_rejects_invalid_signature(client: httpx.AsyncClient) -> N
 
 
 @pytest.mark.asyncio
-async def test_signed_unhandled_webhook_is_acknowledged(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+async def test_signed_unmatched_webhook_is_acknowledged_and_grants_nothing(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
-    raw = b'{"event":"payment.captured"}'
-    response = await client.post(
-        "/api/v1/billing/webhooks/razorpay",
-        content=raw,
-        headers={
-            "X-Razorpay-Signature": _sign(raw),
-            "X-Razorpay-Event-Id": "evt_unhandled",
-            "Content-Type": "application/json",
+    raw = json.dumps(
+        {
+            "event": "payment.captured",
+            "created_at": 1,
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_unmatched",
+                        "status": "captured",
+                        "amount": 100,
+                        "currency": "USD",
+                        "created_at": 1,
+                    }
+                }
+            },
         },
-    )
+        separators=(",", ":"),
+    ).encode()
+    response = await _post_webhook(client, raw, event_id="evt_unmatched")
     assert response.status_code == 204
+    # A valid but unmatched event is recorded safely and grants NOTHING.
+    event = (await db_session.scalars(select(BillingWebhookEvent))).one()
+    assert event.result_code == "unmatched"
+    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
 
 
 @pytest.mark.asyncio
@@ -394,11 +411,23 @@ async def test_cancel_at_period_end_keeps_access_and_writes_no_revocations(
 
 
 @pytest.mark.asyncio
+async def test_delete_subscription_requires_an_idempotency_key(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "billing-delete-nokey@example.com")
+    response = await client.delete("/api/v1/billing/subscription")
+    assert response.status_code == 400
+    assert "idempotency_key_required" in response.text
+
+
+@pytest.mark.asyncio
 async def test_cancel_without_subscription_is_conflict(
     client: httpx.AsyncClient,
 ) -> None:
     await _register(client, "billing-cancel-empty@example.com")
-    response = await client.post("/api/v1/billing/cancel")
+    response = await client.delete(
+        "/api/v1/billing/subscription", headers={"Idempotency-Key": "cancel-key-1"}
+    )
     assert response.status_code == 409
     assert "no_current_subscription" in response.text
 
@@ -444,12 +473,17 @@ async def test_cancel_marks_cancel_at_period_end(
             )
 
     monkeypatch.setattr(billing_api, "get_billing_provider", FakeProvider)
-    response = await client.post("/api/v1/billing/cancel")
+    response = await client.delete(
+        "/api/v1/billing/subscription", headers={"Idempotency-Key": "cancel-key-2"}
+    )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["cancel_at_period_end"] is True
-    assert body["status"] == "cancel_scheduled"
+    # The deletion vocabulary is SubscriptionChangeResponse, deliberately NOT
+    # an activation: no pending/activated/failed/abandoned tokens.
+    assert body["catalog_key"] == "tier_1"
+    assert body["status"] == "cancellation_scheduled"
+    assert "cancel_at_period_end" not in body
     assert calls == [True]
 
     db_session.expire_all()
@@ -462,9 +496,12 @@ async def test_cancel_marks_cancel_at_period_end(
     assert await _account_version(db_session) == 2
     assert await db_session.scalar(select(func.count(GrantRevocation.id))) == 0
 
-    # Cancelling again is an idempotent no-op (no second provider call).
-    again = await client.post("/api/v1/billing/cancel")
+    # Cancelling again reports already_scheduled with NO second provider call.
+    again = await client.delete(
+        "/api/v1/billing/subscription", headers={"Idempotency-Key": "cancel-key-3"}
+    )
     assert again.status_code == 200
+    assert again.json()["status"] == "already_scheduled"
     assert calls == [True]
 
 

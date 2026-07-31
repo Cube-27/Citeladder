@@ -175,6 +175,9 @@ class BillingSubscription(Base):
         String(16), default=SUBSCRIPTION_KIND_BASE
     )
     cadence: Mapped[str] = mapped_column(String(24), default=CADENCE_MONTHLY)
+    # Purchased units for an add-on subscription (always 1 for a base plan).
+    # The period grant bundle scales the per-unit template by this quantity.
+    quantity: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     currency: Mapped[str] = mapped_column(String(3))
     status: Mapped[str] = mapped_column(String(24), default=SUBSCRIPTION_PENDING)
     current_period_start: Mapped[datetime | None] = mapped_column(
@@ -493,6 +496,17 @@ class PendingActivation(Base):
     external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     external_price_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     checkout_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The server-resolved quote (safe DTO fields only, invariant 6) frozen at
+    # intent time and replayed byte-equivalently on every read of this row.
+    quote: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # ISO alpha-2 country and resolved region this intent was priced for; the
+    # purchase re-resolves and LOCKS the submitted country server-side.
+    country_code: Mapped[str] = mapped_column(String(2), default="")
+    region: Mapped[str] = mapped_column(String(16), default="")
+    # Which authority settled this row (webhook | reconciliation) plus its
+    # opaque reference: provenance on the derived activation (invariant 4).
+    settled_by: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    settled_authority_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(255))
     request_fingerprint: Mapped[str] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
