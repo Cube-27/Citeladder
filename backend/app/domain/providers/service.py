@@ -22,9 +22,13 @@ from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
 from app.core.config.provider_catalog import (
     ERROR_PARSE,
+    ERROR_UNKNOWN,
     PROBE_PROMPT,
+    PUBLIC_PROVIDER_CATALOG,
+    REASON_VERIFICATION_REQUIRED,
     TEST_STATUS_FAILED,
     TEST_STATUS_OK,
+    ProviderCatalogEntry,
     configured_endpoint,
     default_model,
     default_probe_engine,
@@ -32,8 +36,14 @@ from app.core.config.provider_catalog import (
     is_endpoint_approved,
     is_route_approved,
     provider_catalog_settings,
+    public_provider_routes,
 )
 from app.core.security import decrypt_secret, encrypt_secret
+from app.domain.billing.schemas import (
+    ProviderConnectionStateResponse,
+    ProviderConnectionStatesResponse,
+    ProviderProbeResponse,
+)
 from app.domain.providers.schemas import (
     ProviderConnectionCreate,
     ProviderConnectionResponse,
@@ -355,4 +365,142 @@ async def run_connection_test(
         transport_provider=transport,
         transport_model=resolved_model,
         tested_at=tested_at,
+    )
+
+
+# --- Workspace connection states (authenticated commercial surface) --------
+
+
+def derive_connection_state(
+    entry: ProviderCatalogEntry,
+    connection: ProviderConnection | None,
+    latest_probe: ProviderConnectionTest | None,
+) -> ProviderConnectionStateResponse:
+    """Derive one catalog provider's workspace state (pure, fail closed).
+
+    ``connection`` is the workspace's active connection for the entry's
+    transport identity (or None); ``latest_probe`` is that connection's most
+    recent append-only probe row (or None). Precedence: ``unavailable`` when
+    no adapter ships; ``missing`` when no active connection exists or the
+    configured key has never been successfully probed; ``failed`` when the
+    latest attempted probe failed; ``connected`` only after a successful
+    probe while the connection remains active. An unprobed key is NEVER
+    connected. The probe's ``detail`` column never leaves the database — the
+    DTO carries the classification token only (invariant 6).
+    """
+    if not entry.adapter_shipped:
+        return ProviderConnectionStateResponse(
+            key=entry.key,
+            label=entry.label,
+            state="unavailable",
+            safe_reason=entry.unavailable_reason,
+            grant_key=entry.grant_key,
+            latest_probe=None,
+        )
+    if connection is None or not connection.active or latest_probe is None:
+        # Fail closed: no active connection, or the configured key has never
+        # had a successful probe (latest_probe=None for never-probed).
+        return ProviderConnectionStateResponse(
+            key=entry.key,
+            label=entry.label,
+            state="missing",
+            safe_reason=REASON_VERIFICATION_REQUIRED,
+            grant_key=entry.grant_key,
+            latest_probe=None,
+        )
+    if latest_probe.status == TEST_STATUS_OK:
+        return ProviderConnectionStateResponse(
+            key=entry.key,
+            label=entry.label,
+            state="connected",
+            safe_reason=None,
+            grant_key=entry.grant_key,
+            latest_probe=ProviderProbeResponse(
+                status=TEST_STATUS_OK,
+                safe_reason=None,
+                tested_at=latest_probe.created_at,
+                model=latest_probe.transport_model or None,
+                latency_ms=latest_probe.latency_ms,
+            ),
+        )
+    return ProviderConnectionStateResponse(
+        key=entry.key,
+        label=entry.label,
+        state="failed",
+        safe_reason=latest_probe.error_code or ERROR_UNKNOWN,
+        grant_key=entry.grant_key,
+        latest_probe=ProviderProbeResponse(
+            status=TEST_STATUS_FAILED,
+            safe_reason=latest_probe.error_code or ERROR_UNKNOWN,
+            tested_at=latest_probe.created_at,
+            model=latest_probe.transport_model or None,
+            latency_ms=latest_probe.latency_ms,
+        ),
+    )
+
+
+async def _latest_probes(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    connection_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, ProviderConnectionTest]:
+    """Latest probe per connection in one DISTINCT ON round trip.
+
+    The probe table is append-only (invariant 3) and unbounded per
+    connection, so this never loads full history. ``workspace_id`` is
+    filtered even though the ids are already workspace-scoped (invariant 5).
+    """
+    if not connection_ids:
+        return {}
+    result = await session.execute(
+        select(ProviderConnectionTest)
+        .where(
+            ProviderConnectionTest.workspace_id == workspace_id,
+            ProviderConnectionTest.connection_id.in_(connection_ids),
+        )
+        .order_by(
+            ProviderConnectionTest.connection_id,
+            ProviderConnectionTest.created_at.desc(),
+            ProviderConnectionTest.id.desc(),
+        )
+        .distinct(ProviderConnectionTest.connection_id)
+    )
+    return {probe.connection_id: probe for probe in result.scalars()}
+
+
+async def get_connection_states(
+    session: AsyncSession, *, workspace_id: uuid.UUID
+) -> ProviderConnectionStatesResponse:
+    """Per-provider workspace states for ``GET /provider-connections/states``.
+
+    Every catalog row is present exactly once, in catalog order. Catalog
+    entries map to connections through the transport identity the connection
+    row carries (invariant 10); the most recently created active connection
+    per transport wins. Reads only this workspace's rows (invariant 5).
+    """
+    result = await session.execute(
+        select(ProviderConnection)
+        .where(
+            ProviderConnection.workspace_id == workspace_id,
+            ProviderConnection.active.is_(True),
+        )
+        .order_by(ProviderConnection.created_at.desc())
+    )
+    by_transport: dict[str, ProviderConnection] = {}
+    for connection in result.scalars():
+        by_transport.setdefault(connection.transport_provider, connection)
+    latest_probes = await _latest_probes(
+        session,
+        workspace_id=workspace_id,
+        connection_ids=[c.id for c in by_transport.values()],
+    )
+    providers: list[ProviderConnectionStateResponse] = []
+    for entry in PUBLIC_PROVIDER_CATALOG:
+        routes = public_provider_routes(entry.key)
+        connection = by_transport.get(routes[0][1]) if routes else None
+        probe = latest_probes.get(connection.id) if connection is not None else None
+        providers.append(derive_connection_state(entry, connection, probe))
+    return ProviderConnectionStatesResponse(
+        workspace_id=workspace_id, providers=providers
     )

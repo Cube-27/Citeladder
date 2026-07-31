@@ -225,6 +225,11 @@ AVAILABILITY_UNAVAILABLE: Final = "unavailable"
 # Safe, non-leaking reason for a coming-soon provider row.
 REASON_PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
 
+# Safe reason for a shipped provider whose configured key has not (yet) been
+# verified by a successful probe; the authenticated states route fails closed
+# with it (an unprobed key is NEVER connected).
+REASON_VERIFICATION_REQUIRED: Final = "verification_required"
+
 
 def validate_availability(availability: str, reason: str | None) -> None:
     """Shared availability/reason consistency rule for any catalog row.
