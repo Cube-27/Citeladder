@@ -15,6 +15,7 @@ from fastapi import (
     Depends,
     Header,
     HTTPException,
+    Query,
     Request,
     Response,
     status,
@@ -25,10 +26,11 @@ from app.api.deps import get_current_user, get_db
 from app.connectors.billing.base import BillingProviderError
 from app.connectors.billing.factory import get_billing_provider
 from app.core.config.billing import billing_settings
-from app.domain.billing.schemas import CancelResponse
+from app.domain.billing.schemas import BillingCatalogResponse, CancelResponse
 from app.domain.billing.service import (
     BillingConflictError,
     cancel_current_subscription,
+    public_catalog,
 )
 from app.domain.billing.webhooks import (
     InvalidWebhookError,
@@ -38,6 +40,22 @@ from app.domain.billing.webhooks import (
 from app.models.user import User
 
 router = APIRouter(tags=["billing"])
+
+
+@router.get("/billing/catalog", response_model=BillingCatalogResponse)
+async def get_catalog(
+    country: Annotated[str | None, Query(max_length=2)] = None,
+) -> BillingCatalogResponse:
+    """The PUBLIC commercial catalog (invariant 5 exception by design).
+
+    It reads no workspace data, no provider connection, and no probe, so it
+    needs no ``require_workspace_member`` boundary — everything workspace- or
+    account-scoped stays authenticated. ``country`` is a PREVIEW hint only:
+    when it is omitted the response reports a null country and the
+    config-owned international preview region, and a purchase must still submit
+    its own ISO country.
+    """
+    return public_catalog(country)
 
 
 @router.post("/billing/cancel", response_model=CancelResponse)

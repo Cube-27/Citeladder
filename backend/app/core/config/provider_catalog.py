@@ -16,6 +16,13 @@ from typing import Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.config.entitlements import (
+    CAPABILITY_REGISTRY,
+    KEY_PROVIDER_COPILOT,
+    KEY_PROVIDER_GROK,
+    KEY_PROVIDER_PERPLEXITY,
+)
+
 # --- Logical engines (what the user asked for) ----------------------------
 ENGINE_CHATGPT: Final = "chatgpt"
 ENGINE_GEMINI: Final = "gemini"
@@ -197,6 +204,149 @@ def is_endpoint_approved(transport_provider: str, base_url: str) -> bool:
         return False
     supplied = base_url.strip().rstrip("/")
     return not supplied or supplied == approved
+
+
+# --- Public provider catalog (display surface, NOT a write enum) ----------
+# The public/commercial surface shows more providers than Searchify can
+# execute: shipped BYOK engines plus explicitly COMING-SOON ones. This catalog
+# is display-only. ``ACTIVE_TRANSPORTS`` and ``APPROVED_ROUTES`` above stay
+# OpenAI/Anthropic/Google only, so a create/test/audit routing path can never
+# accept a coming-soon key just because it appears here.
+PROVIDER_GROK: Final = "grok"
+PROVIDER_PERPLEXITY: Final = "perplexity"
+PROVIDER_COPILOT: Final = "copilot"
+
+# Public availability vocabulary (single owner; the billing catalog reads it).
+# Deliberately two-valued: workspace connection state is a separate,
+# authenticated contract and never leaks into a public catalog row.
+AVAILABILITY_AVAILABLE: Final = "available"
+AVAILABILITY_UNAVAILABLE: Final = "unavailable"
+
+# Safe, non-leaking reason for a coming-soon provider row.
+REASON_PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
+
+
+def validate_availability(availability: str, reason: str | None) -> None:
+    """Shared availability/reason consistency rule for any catalog row.
+
+    An unavailable row needs a safe, non-leaking reason; an available row
+    carries none. The commercial catalog (``config/billing.py``) reuses this so
+    the two-token vocabulary has exactly one owner (invariant 2).
+    """
+    if availability == AVAILABILITY_AVAILABLE:
+        if reason is not None:
+            raise ValueError("an available catalog row carries no reason")
+        return
+    if availability != AVAILABILITY_UNAVAILABLE:
+        raise ValueError(f"unsupported availability: {availability!r}")
+    if not reason:
+        raise ValueError("an unavailable catalog row needs a safe reason")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCatalogEntry:
+    """One provider row in the PUBLIC provider catalog.
+
+    ``adapter_shipped`` says whether an execution adapter exists at all;
+    ``grant_key`` is the DESCRIPTIVE capability identity for the row (it is not
+    proof that anything may be granted); ``issuable`` is authoritative and is
+    true only for a real, issuable entitlement-registry capability. Shipped
+    BYOK engines are not grant-gated, so they are non-issuable too.
+    """
+
+    key: str
+    label: str
+    availability: str
+    unavailable_reason: str | None
+    adapter_shipped: bool
+    grant_key: str
+    issuable: bool
+
+    def __post_init__(self) -> None:
+        validate_availability(self.availability, self.unavailable_reason)
+        if self.adapter_shipped != (self.availability == AVAILABILITY_AVAILABLE):
+            raise ValueError(
+                f"provider {self.key!r} availability disagrees with adapter_shipped"
+            )
+        definition = CAPABILITY_REGISTRY.get(self.grant_key)
+        expected = definition is not None and definition.issuable
+        if self.issuable and not expected:
+            raise ValueError(
+                f"provider {self.key!r} claims an issuable grant key it cannot have"
+            )
+
+
+PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
+    ProviderCatalogEntry(
+        key=ENGINE_CHATGPT,
+        label="ChatGPT",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.chatgpt",
+        issuable=False,
+    ),
+    ProviderCatalogEntry(
+        key=ENGINE_CLAUDE,
+        label="Claude",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.claude",
+        issuable=False,
+    ),
+    ProviderCatalogEntry(
+        key=ENGINE_GEMINI,
+        label="Gemini",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.gemini",
+        issuable=False,
+    ),
+    # Coming soon: no adapter ships, no route exists, and no plan bundle may
+    # issue a runnable grant for them. Copilot is additionally NON-ISSUABLE in
+    # the entitlement registry — nothing may ever write it.
+    ProviderCatalogEntry(
+        key=PROVIDER_GROK,
+        label="Grok",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key=KEY_PROVIDER_GROK,
+        issuable=True,
+    ),
+    ProviderCatalogEntry(
+        key=PROVIDER_PERPLEXITY,
+        label="Perplexity",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key=KEY_PROVIDER_PERPLEXITY,
+        issuable=True,
+    ),
+    ProviderCatalogEntry(
+        key=PROVIDER_COPILOT,
+        label="Microsoft Copilot",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key=KEY_PROVIDER_COPILOT,
+        issuable=False,
+    ),
+)
+
+
+def public_provider_routes(provider_key: str) -> tuple[tuple[str, str, str], ...]:
+    """Approved (engine, transport, model) routes for a public catalog row.
+
+    Reads ``APPROVED_ROUTES`` only, so a coming-soon key resolves to no routes
+    by construction rather than by a hand-maintained exception list.
+    """
+    return tuple(
+        (provider_key, transport, model)
+        for transport, model in APPROVED_ROUTES.get(provider_key, {}).items()
+    )
 
 
 # --- Retry / error classification tokens (recorded on tests + attempts) ---

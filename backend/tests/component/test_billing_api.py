@@ -150,9 +150,7 @@ async def test_webhook_rejects_invalid_signature(client: httpx.AsyncClient) -> N
 async def test_signed_unhandled_webhook_is_acknowledged(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(
-        billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET)
-    )
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     raw = b'{"event":"payment.captured"}'
     response = await client.post(
         "/api/v1/billing/webhooks/razorpay",
@@ -172,9 +170,7 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET)
-    )
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-activate@example.com")
     account = (await db_session.scalars(select(BillingAccount))).one()
@@ -209,8 +205,7 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     assert grant.source_ref == f"subscription:{subscription_id}"
     period_start_iso = datetime.fromtimestamp(start, tz=UTC).isoformat()
     assert grant.idempotency_key == (
-        f"sub:{subscription_id}:{period_start_iso}:"
-        f"{billing_settings.catalog_version}"
+        f"sub:{subscription_id}:{period_start_iso}:{billing_settings.catalog_version}"
     )
     assert grant.period_end is not None
 
@@ -248,9 +243,7 @@ async def test_stale_event_is_rejected_without_a_version_bump(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET)
-    )
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-stale@example.com")
     account = (await db_session.scalars(select(BillingAccount))).one()
@@ -284,9 +277,7 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET)
-    )
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-terminal@example.com")
     account = (await db_session.scalars(select(BillingAccount))).one()
@@ -333,11 +324,14 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     assert revocations[0].reason == "subscription_ended"
 
     # The lost allowance re-projected the workspace runtime row to zero.
-    assert await db_session.scalar(
-        select(func.count(WorkspaceSiteHealthRuntime.id)).where(
-            WorkspaceSiteHealthRuntime.monitored_url_limit == 0
+    assert (
+        await db_session.scalar(
+            select(func.count(WorkspaceSiteHealthRuntime.id)).where(
+                WorkspaceSiteHealthRuntime.monitored_url_limit == 0
+            )
         )
-    ) == 1
+        == 1
+    )
 
     # A redelivered terminal webhook (same logical event, new event id) hits
     # the deterministic idempotency key: no second revocation row.
@@ -354,15 +348,11 @@ async def test_cancel_at_period_end_keeps_access_and_writes_no_revocations(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET)
-    )
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-cape@example.com")
     account = (await db_session.scalars(select(BillingAccount))).one()
-    subscription = await _seed_subscription(
-        db_session, account, external_id="sub_cape"
-    )
+    subscription = await _seed_subscription(db_session, account, external_id="sub_cape")
     subscription_id = subscription.id
 
     now = datetime.now(UTC)
@@ -466,12 +456,168 @@ async def test_cancel_marks_cancel_at_period_end(
     persisted_sub = await db_session.get(BillingSubscription, subscription_id)
     assert persisted_sub is not None
     assert persisted_sub.cancel_at_period_end is True
-    # The accepted lifecycle projection bumped the account version (no
-    # bundle: the catalog seam is unbound in this test, and cancel-at-period
-    # -end never revokes).
-    assert await _account_version(db_session) == 1
+    # Two bumps: the accepted lifecycle projection, plus the tier_1 period
+    # bundle the config-owned catalog now issues on a cancel-scheduled event.
+    # Cancel-at-period-end still never revokes.
+    assert await _account_version(db_session) == 2
+    assert await db_session.scalar(select(func.count(GrantRevocation.id))) == 0
 
     # Cancelling again is an idempotent no-op (no second provider call).
     again = await client.post("/api/v1/billing/cancel")
     assert again.status_code == 200
     assert calls == [True]
+
+
+# --- Public catalog route --------------------------------------------------
+@pytest.mark.asyncio
+async def test_public_catalog_needs_no_auth_and_previews_without_a_country(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.get("/api/v1/billing/catalog")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["catalog_revision"] == billing_settings.catalog_version
+    # No country supplied: null country, config-owned international preview.
+    assert body["country_code"] is None
+    assert body["region"] == "international"
+    assert body["currency"] == "USD"
+    assert body["currency_minor_units"] == 2
+    assert [plan["key"] for plan in body["plans"]] == [
+        "tier_1",
+        "tier_2",
+        "tier_3",
+        "enterprise",
+    ]
+    # Lists are always present and may be empty, never null.
+    for key in ("plans", "addons", "topups", "providers"):
+        assert isinstance(body[key], list)
+    # No workspace state and no private provider reference anywhere.
+    raw = response.text
+    for token in (
+        "provider_price_ref",
+        "workspace_id",
+        "connection",
+        "latest_probe",
+        "api_key",
+    ):
+        assert token not in raw
+
+
+@pytest.mark.asyncio
+async def test_public_catalog_resolves_india_region_server_side(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.get("/api/v1/billing/catalog", params={"country": "in"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["country_code"] == "IN"
+    assert body["region"] == "india"
+    assert body["currency"] == "INR"
+    # No operator FX rate configured, so the INR amount is 0 (never guessed)
+    # and checkout is unavailable.
+    tier_1 = body["plans"][0]
+    assert tier_1["base_price"] == {"currency": "INR", "amount_minor": 0}
+    assert tier_1["checkout_available"] is False
+    assert tier_1["unavailable_reason"] == "checkout_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_public_catalog_plan_rows_separate_base_and_credit_prices(
+    client: httpx.AsyncClient,
+) -> None:
+    body = (await client.get("/api/v1/billing/catalog")).json()
+    plans = {plan["key"]: plan for plan in body["plans"]}
+    assert [
+        plans[key]["base_price"]["amount_minor"]
+        for key in ("tier_1", "tier_2", "tier_3")
+    ] == [9_900, 19_900, 29_900]
+    for key in ("tier_1", "tier_2", "tier_3"):
+        plan = plans[key]
+        # Funded margin unset: no credit price and therefore no funded total.
+        assert plan["credit_price"] is None
+        assert plan["funded_total_price"] is None
+        assert plan["trial_availability"] == "unavailable"
+        assert plan["trial_unavailable_reason"] == "trial_unavailable"
+        assert plan["trial_days"] == billing_settings.trial_days
+        assert plan["contact_url"] is None
+    enterprise = plans["enterprise"]
+    assert enterprise["contact_only"] is True
+    assert enterprise["self_serve"] is False
+    assert enterprise["base_price"] is None
+    assert enterprise["credit_price"] is None
+    assert enterprise["checkout_available"] is False
+    assert enterprise["unavailable_reason"] == "contact_only"
+    assert enterprise["contact_url"] == billing_settings.contact_sales_url
+    # Upper tiers show the coming-soon provider rows with no granted value.
+    tier_2_rows = {row["key"]: row for row in plans["tier_2"]["capabilities"]}
+    for key in ("provider.grok", "provider.perplexity", "provider.copilot"):
+        assert tier_2_rows[key]["value"] is None
+    assert tier_2_rows["provider.copilot"]["issuable"] is False
+    assert "provider.grok" not in {
+        row["key"] for row in plans["tier_1"]["capabilities"]
+    }
+
+
+@pytest.mark.asyncio
+async def test_public_catalog_reports_unset_addons_and_topups_as_unavailable(
+    client: httpx.AsyncClient,
+) -> None:
+    body = (await client.get("/api/v1/billing/catalog")).json()
+    for addon in body["addons"]:
+        assert addon["availability"] == "unavailable"
+        assert addon["unavailable_reason"] == "checkout_unavailable"
+        assert addon["cadence"] == "monthly"
+        assert addon["quantity_min"] == 1
+        assert addon["quantity_max"] >= addon["quantity_min"]
+    topup = body["topups"][0]
+    assert topup["availability"] == "unavailable"
+    assert topup["unavailable_reason"] == "checkout_unavailable"
+    assert topup["grant_key"] == "benchmark_credits"
+    # Pack size unset: credits_per_unit is null, expiry copy is still present.
+    assert topup["credits_per_unit"] is None
+    assert topup["expiry_days"] == billing_settings.topup_credit_valid_days
+
+
+@pytest.mark.asyncio
+async def test_public_provider_rows_mark_coming_soon_engines_unavailable(
+    client: httpx.AsyncClient,
+) -> None:
+    body = (await client.get("/api/v1/billing/catalog")).json()
+    providers = {row["key"]: row for row in body["providers"]}
+    for key in ("grok", "perplexity", "copilot"):
+        row = providers[key]
+        assert row["availability"] == "unavailable"
+        assert row["unavailable_reason"] == "provider_unavailable"
+        assert row["adapter_shipped"] is False
+        assert row["grant_key"] == f"provider.{key}"
+        assert row["routes"] == []
+    assert providers["copilot"]["issuable"] is False
+    assert providers["grok"]["issuable"] is True
+    # Shipped engines carry their approved route triple.
+    assert providers["chatgpt"]["availability"] == "available"
+    assert providers["chatgpt"]["routes"] == [
+        {
+            "logical_engine": "chatgpt",
+            "transport_provider": "openai",
+            "model": "gpt-5.4",
+        }
+    ]
+    # Public availability vocabulary only — never a connection state.
+    assert {row["availability"] for row in body["providers"]} <= {
+        "available",
+        "unavailable",
+    }
+
+
+@pytest.mark.asyncio
+async def test_public_catalog_openapi_locks_the_final_plan_literals(
+    client: httpx.AsyncClient,
+) -> None:
+    schemas = (await client.get("/openapi.json")).json()["components"]["schemas"]
+    assert schemas["CatalogPlanResponse"]["properties"]["key"]["enum"] == [
+        "tier_1",
+        "tier_2",
+        "tier_3",
+        "enterprise",
+    ]
+    assert schemas["BillingCatalogResponse"]["additionalProperties"] is False
