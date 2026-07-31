@@ -2163,6 +2163,9 @@ export const opportunitySchema = responseObject({
   target_prompt_id: uuid().nullable(),
   target_url: z.string().nullable(),
   target_theme: z.string().nullable(),
+  // Backend-owned target presentation (url / frozen prompt text / humanized
+  // theme / frozen product name); null when nothing user-facing exists.
+  target_label: z.string().nullable(),
   status: opportunityStatusSchema,
   created_at: z.string(),
   updated_at: z.string(),
@@ -2202,6 +2205,10 @@ export const opportunitySummarySchema = responseObject({
   rule_version: z.string(),
   formula_version: z.string(),
   computed_at: z.string().nullable(),
+  // Read-time freshness: newest usable audit/crawl evidence timestamp, and
+  // whether it post-dates the latest snapshot (drives the stale badge).
+  evidence_updated_at: z.string().nullable(),
+  stale: z.boolean(),
 });
 
 // The immutable snapshot written by one recompute run (POST response).

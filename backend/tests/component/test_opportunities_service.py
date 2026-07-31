@@ -24,6 +24,10 @@ from app.core.config.opportunities import (
     OPPORTUNITY_RULES_BY_ID,
     RULE_VERSION,
 )
+from app.core.config.products import (
+    PRODUCT_ANALYZER_VERSION,
+    PRODUCT_SCORING_RULE_VERSION,
+)
 from app.core.config.site_health import CRAWL_STATUS_RUNNING
 from app.domain.opportunities import service
 from app.domain.opportunities.service import (
@@ -35,6 +39,7 @@ from app.domain.opportunities.service import (
 from app.models.analysis import Citation, MetricSnapshot
 from app.models.audit import Audit
 from app.models.opportunity import OpportunitySnapshot
+from app.models.product import ProductMetricSnapshot
 from app.models.project import Project
 from app.models.site_health import SiteCrawl, SiteIssue
 from app.models.workspace import Workspace
@@ -796,3 +801,200 @@ async def test_export_rows_projection_and_filters(db_session: AsyncSession) -> N
             project_id=scn.project_id,
             severity="bogus",
         )
+
+
+# =========================================================================
+# C1: backend-owned target_label on the item + detail projections
+# =========================================================================
+async def test_list_and_detail_carry_backend_target_label(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+
+    page = await service.list_opportunities(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    labels = {item["rule_id"]: item["target_label"] for item in page["items"]}
+    # Visibility targets label with the FROZEN prompt snapshot text.
+    assert labels["brand_absent_high_value_prompt"] == "best crm for small teams"
+    assert labels["owned_page_not_cited"] == "best crm for small teams"
+    # Site targets label with their URL.
+    assert labels["missing_structured_data"] == URL_A
+    assert labels["thin_content"] == URL_B
+
+    rows = await _live_rows(db_session, scn)
+    brand_absent = _by_rule(rows, "brand_absent_high_value_prompt")
+    detail = await service.get_opportunity(
+        db_session, workspace_id=scn.workspace_id, opportunity_id=brand_absent.id
+    )
+    # The detail inherits the item projection's label (featured card source).
+    assert detail["target_label"] == "best crm for small teams"
+
+
+# =========================================================================
+# C3: commerce-derived rules over persisted product evidence
+# =========================================================================
+async def test_commerce_rules_fire_from_persisted_product_evidence(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    product_zero_id = uuid.uuid4()
+    product_mismatch_id = uuid.uuid4()
+    competitor_dom_id = uuid.uuid4()
+
+    audit = await db_session.get(Audit, scn.audit_id)
+    assert audit is not None
+    # The planner freezes the catalog identity into the audit at creation.
+    audit.configuration = {
+        "products": [
+            {"id": str(product_zero_id), "sku": "SUMMIT-40", "name": "Summit 40L"},
+            {
+                "id": str(product_mismatch_id),
+                "sku": "VOYAGER-25",
+                "name": "Voyager 25L",
+            },
+        ],
+        "competitor_products": [
+            {
+                "id": str(competitor_dom_id),
+                "competitor_name": "TrailBlaze",
+                "name": "TrailBlaze Alpine 45",
+            }
+        ],
+    }
+
+    def _product_snapshot(
+        entry_id: str,
+        *,
+        kind: str,
+        mention_count: int,
+        sov_share: float,
+        mismatch: float | None = None,
+    ) -> ProductMetricSnapshot:
+        # FK columns stay null (the deleted-catalog shape): identity keys off
+        # the frozen metrics["entry_id"], like the finalize write path.
+        return ProductMetricSnapshot(
+            workspace_id=scn.workspace_id,
+            audit_id=scn.audit_id,
+            project_id=scn.project_id,
+            product_analyzer_version=PRODUCT_ANALYZER_VERSION,
+            product_scoring_rule_version=PRODUCT_SCORING_RULE_VERSION,
+            mention_count=mention_count,
+            sov_share=sov_share,
+            price_mismatch_rate=mismatch,
+            metrics={"entry_id": entry_id, "kind": kind},
+            source_analysis_ids=[str(scn.analysis0_id)],
+        )
+
+    db_session.add_all(
+        [
+            _product_snapshot(
+                str(product_zero_id), kind="product", mention_count=0, sov_share=0.0
+            ),
+            _product_snapshot(
+                str(product_mismatch_id),
+                kind="product",
+                mention_count=4,
+                sov_share=0.2,
+                mismatch=0.5,
+            ),
+            _product_snapshot(
+                str(competitor_dom_id),
+                kind="competitor_product",
+                mention_count=9,
+                sov_share=0.8,
+            ),
+        ]
+    )
+    await db_session.flush()
+
+    result = await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    assert result["total_count"] == 7
+
+    rows = await _live_rows(db_session, scn)
+    not_mentioned = _by_rule(rows, "product_not_mentioned")
+    assert not_mentioned.target_key == f"product:{product_zero_id}"
+    assert not_mentioned.opportunity_type == "visibility"
+    assert not_mentioned.severity == "high"
+    assert not_mentioned.priority_score == 30.0
+    assert not_mentioned.evidence is not None
+    assert not_mentioned.evidence["product_name"] == "Summit 40L"
+    assert not_mentioned.evidence["mention_count"] == 0
+    assert not_mentioned.evidence["audit_id"] == str(scn.audit_id)
+    assert len(not_mentioned.source_metric_ids) == 1
+    # The mentioned product never fires the zero-mention rule.
+    assert all(
+        row.target_key != f"product:{product_mismatch_id}"
+        or row.rule_id != "product_not_mentioned"
+        for row in rows
+    )
+
+    dominates = _by_rule(rows, "competitor_product_dominates")
+    assert dominates.target_key == f"competitor-product:{competitor_dom_id}"
+    assert dominates.priority_score == 30.0
+    assert dominates.evidence is not None
+    assert dominates.evidence["competitor_name"] == "TrailBlaze"
+    assert dominates.evidence["sov_share"] == 0.8
+
+    mismatch = _by_rule(rows, "price_mention_mismatch")
+    assert mismatch.target_key == f"product:{product_mismatch_id}"
+    assert mismatch.priority_score == 20.0
+    assert mismatch.evidence is not None
+    assert mismatch.evidence["price_mismatch_rate"] == 0.5
+    # (rule_id, target_key) dedup keeps exactly one row per rule per target —
+    # ``_by_rule`` above asserts exact singleness for each commerce rule.
+
+
+# =========================================================================
+# C4(c): read-time staleness on the summary projection
+# =========================================================================
+async def test_summary_staleness_is_read_time(db_session: AsyncSession) -> None:
+    scn = await _seed_scenario(db_session)
+    await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+
+    summary = await service.get_summary(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    assert summary["computed"] is True
+    assert summary["stale"] is False
+    assert summary["evidence_updated_at"] is not None
+
+    # A newer completed audit lands after the snapshot -> read-time stale.
+    await _add_visibility(
+        db_session,
+        workspace_id=scn.workspace_id,
+        project_id=scn.project_id,
+        prompt_ids=[scn.prompt0_id, scn.prompt1_id],
+    )
+    summary = await service.get_summary(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    assert summary["stale"] is True
+
+    # A refresh clears it (the snapshot is newer than the evidence again).
+    await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    summary = await service.get_summary(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    assert summary["stale"] is False
+
+
+async def test_summary_stale_is_false_when_never_computed(
+    db_session: AsyncSession,
+) -> None:
+    workspace_id, project_id, _prompt_ids = await _seed_base(db_session)
+    summary = await service.get_summary(
+        db_session, workspace_id=workspace_id, project_id=project_id
+    )
+    assert summary["computed"] is False
+    assert summary["stale"] is False
+    assert summary["evidence_updated_at"] is None

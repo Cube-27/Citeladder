@@ -33,6 +33,7 @@ const item = {
   target_prompt_id: OPP,
   target_url: null,
   target_theme: 'crm',
+  target_label: 'best crm for small teams',
   status: 'open' as const,
   created_at: '2026-07-24T00:00:00Z',
   updated_at: '2026-07-24T00:00:00Z',
@@ -67,6 +68,8 @@ const summary = {
   rule_version: 'opp-rules-1',
   formula_version: 'opp-formula-1',
   computed_at: '2026-07-24T00:00:00Z',
+  evidence_updated_at: '2026-07-23T00:00:00Z',
+  stale: false,
 };
 
 const recomputeResponse = {
@@ -115,8 +118,28 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
       total_count: 0,
       median_priority: null,
       computed_at: null,
+      evidence_updated_at: null,
+      stale: false,
     };
     expect(strictValidate(opportunitySummarySchema, empty, 'test')).toEqual(empty);
+  });
+
+  it('carries the backend-owned target_label on items and details (C1)', () => {
+    const parsedItem = strictValidate(opportunitySchema, item, 'test');
+    expect(parsedItem.target_label).toBe('best crm for small teams');
+    const parsedDetail = strictValidate(opportunityDetailSchema, detail, 'test');
+    expect(parsedDetail.target_label).toBe('best crm for small teams');
+    // A missing declared label fails loud (contract drift), null is valid.
+    expect(() =>
+      strictValidate(
+        opportunitySchema,
+        { ...item, target_label: undefined } as unknown as typeof item,
+        'test',
+      ),
+    ).toThrow(/API validation failure/);
+    expect(
+      strictValidate(opportunitySchema, { ...item, target_label: null }, 'test').target_label,
+    ).toBeNull();
   });
 
   it('fails loud on declared-field drift: bad enums, non-uuid ids', () => {

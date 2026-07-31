@@ -223,6 +223,8 @@ async def test_summary_empty_then_populated(
     assert body["total_count"] == 0
     assert body["run_id"] is None
     assert body["analyzer_version"]
+    assert body["stale"] is False
+    assert body["evidence_updated_at"] is not None  # seeded evidence exists
 
     recompute = await client.post(
         f"/api/v1/projects/{scn.project_id}/opportunities/recompute",
@@ -238,6 +240,9 @@ async def test_summary_empty_then_populated(
     assert body["total_count"] == 4
     assert body["median_priority"] == 50.0
     assert body["computed_at"]
+    # Freshly recomputed over the latest evidence -> not stale.
+    assert body["stale"] is False
+    assert body["evidence_updated_at"]
 
 
 # =========================================================================
@@ -263,6 +268,8 @@ async def test_list_ordering_filters_and_keyset(
     assert first["priority_score"] == SCORE_BRAND_ABSENT
     assert first["status"] == "open"
     assert first["target_key"]
+    # C1: the backend owns target presentation — the frozen prompt text.
+    assert first["target_label"] == "best crm for small teams"
     assert first["created_at"]
     assert body["next_cursor"] is None
 
@@ -337,6 +344,8 @@ async def test_detail_200_and_404(
     body = detail.json()
     assert body["id"] == item["id"]
     assert body["rule_id"] == "thin_content"
+    # The detail inherits the item projection's backend-owned label.
+    assert body["target_label"] == item["target_label"]
     assert body["remediation"]
     assert body["evidence"]["issue_rule_id"] == "technical.thin_content"
     assert body["source_issue_ids"] == [str(scn.issue_thin_id)]

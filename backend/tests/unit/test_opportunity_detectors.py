@@ -8,16 +8,25 @@ import pytest
 
 from app.analysis.opportunities.detectors import (
     AnalysisEvidence,
+    CommerceEvidence,
+    ProductEntryEvidence,
     PromptSnapshotEvidence,
     SiteEvidence,
     SiteIssueEvidence,
     SiteUrlEvidence,
     VisibilityEvidence,
     detect_brand_absent_high_value_prompt,
+    detect_competitor_product_dominates,
     detect_owned_page_not_cited,
+    detect_price_mention_mismatch,
+    detect_product_not_mentioned,
     detect_site_issue_opportunities,
 )
 from app.core.config.opportunities import (
+    COMMERCE_COMPETITOR_SOV_THRESHOLD,
+    COMMERCE_GAP_FACTOR,
+    COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD,
+    COMMERCE_VALUE_FACTOR,
     OPPORTUNITY_RULES_BY_ID,
     SITE_GAP_FACTOR,
     SITE_VALUE_FACTOR,
@@ -272,6 +281,209 @@ def test_site_rules_skip_issue_with_unknown_url_identity() -> None:
 
 def test_site_rules_empty_evidence_yields_no_hits() -> None:
     assert detect_site_issue_opportunities(_site((), ())) == []
+
+
+def test_schema_type_mismatch_fires_from_mapped_issue() -> None:
+    url_id = uuid.uuid4()
+    evidence = _site(
+        (_issue("aeo.schema_expected_for_type", url_id, severity="high"),),
+        (_url(url_id, "https://acme.com/product"),),
+    )
+    (hit,) = detect_site_issue_opportunities(evidence)
+    assert hit.rule_id == "schema_type_mismatch"
+    assert hit.target_key == "url:https://acme.com/product"
+    assert hit.target_url == "https://acme.com/product"
+    assert hit.evidence["issue_rule_id"] == "aeo.schema_expected_for_type"
+    assert hit.evidence["site_url_id"] == str(url_id)
+    assert len(hit.source_issue_ids) == 1
+    # Own remediation copy, not missing_structured_data's.
+    rule = OPPORTUNITY_RULES_BY_ID["schema_type_mismatch"]
+    missing = OPPORTUNITY_RULES_BY_ID["missing_structured_data"]
+    assert rule.remediation != missing.remediation
+
+
+# =========================================================================
+# Commerce rules (ProductMetricSnapshot / frozen-catalog evidence)
+# =========================================================================
+def _entry(
+    entry_id: str,
+    *,
+    kind: str = "product",
+    name: str = "Summit 40L",
+    sku: str = "SUMMIT-40",
+    competitor_name: str = "",
+    mention_count: int = 0,
+    sov_share: float = 0.0,
+    price_mismatch_rate: float | None = None,
+    snapshot_id: uuid.UUID | None = None,
+    source_analysis_ids: tuple[str, ...] = (),
+) -> ProductEntryEvidence:
+    return ProductEntryEvidence(
+        entry_id=entry_id,
+        kind=kind,
+        name=name,
+        sku=sku,
+        competitor_name=competitor_name,
+        mention_count=mention_count,
+        sov_share=sov_share,
+        price_mismatch_rate=price_mismatch_rate,
+        snapshot_id=snapshot_id if snapshot_id is not None else uuid.uuid4(),
+        source_analysis_ids=source_analysis_ids,
+    )
+
+
+def _commerce(entries: tuple[ProductEntryEvidence, ...]) -> CommerceEvidence:
+    return CommerceEvidence(audit_id=uuid.uuid4(), entries=entries)
+
+
+def test_product_not_mentioned_fires_on_zero_mentions() -> None:
+    entry = _entry("p-zero", mention_count=0)
+    evidence = _commerce(
+        (
+            _entry("p-mentioned", mention_count=3),
+            entry,
+            _entry(
+                "c-zero",
+                kind="competitor_product",
+                name="TrailBlaze Alpine 45",
+                mention_count=0,
+            ),
+        )
+    )
+    (hit,) = detect_product_not_mentioned(evidence)
+    assert hit.rule_id == "product_not_mentioned"
+    assert hit.target_key == "product:p-zero"
+    assert hit.target_prompt_id is None
+    assert hit.target_url is None
+    assert hit.target_theme is None
+    assert hit.evidence["product_name"] == "Summit 40L"
+    assert hit.evidence["product_sku"] == "SUMMIT-40"
+    assert hit.evidence["audit_id"] == str(evidence.audit_id)
+    # Competitor products never fire the own-catalog rule.
+    assert hit.target_key != "competitor-product:c-zero"
+
+
+def test_product_not_mentioned_empty_evidence_yields_no_hits() -> None:
+    assert detect_product_not_mentioned(_commerce(())) == []
+
+
+def test_competitor_product_dominates_fires_above_threshold() -> None:
+    entry = _entry(
+        "c-dom",
+        kind="competitor_product",
+        name="TrailBlaze Alpine 45",
+        competitor_name="TrailBlaze",
+        mention_count=9,
+        sov_share=COMMERCE_COMPETITOR_SOV_THRESHOLD + 0.1,
+        source_analysis_ids=(str(uuid.uuid4()),),
+    )
+    evidence = _commerce(
+        (
+            entry,
+            _entry("p-own", mention_count=1, sov_share=0.1),
+            # Below/at the threshold -> no firing.
+            _entry(
+                "c-tie",
+                kind="competitor_product",
+                name="Tie",
+                sov_share=COMMERCE_COMPETITOR_SOV_THRESHOLD,
+            ),
+        )
+    )
+    (hit,) = detect_competitor_product_dominates(evidence)
+    assert hit.rule_id == "competitor_product_dominates"
+    assert hit.target_key == "competitor-product:c-dom"
+    assert hit.evidence["competitor_name"] == "TrailBlaze"
+    assert hit.evidence["sov_share"] == entry.sov_share
+    assert hit.evidence["sov_threshold"] == COMMERCE_COMPETITOR_SOV_THRESHOLD
+    assert hit.source_analysis_ids == entry.source_analysis_ids
+    assert hit.source_metric_ids == (str(entry.snapshot_id),)
+    assert hit.value_factor == COMMERCE_VALUE_FACTOR
+    assert hit.gap_factor == COMMERCE_GAP_FACTOR
+
+
+def test_price_mention_mismatch_fires_above_threshold() -> None:
+    entry = _entry(
+        "p-mismatch",
+        mention_count=4,
+        price_mismatch_rate=COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD + 0.05,
+    )
+    evidence = _commerce(
+        (
+            entry,
+            # Null rate (no verifiable prices) and at-threshold -> no firing.
+            _entry("p-null", mention_count=2, price_mismatch_rate=None),
+            _entry(
+                "p-edge",
+                mention_count=2,
+                price_mismatch_rate=COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD,
+            ),
+        )
+    )
+    (hit,) = detect_price_mention_mismatch(evidence)
+    assert hit.rule_id == "price_mention_mismatch"
+    assert hit.target_key == "product:p-mismatch"
+    assert hit.evidence["price_mismatch_rate"] == entry.price_mismatch_rate
+    assert (
+        hit.evidence["price_mismatch_threshold"]
+        == COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD
+    )
+    assert hit.source_metric_ids == (str(entry.snapshot_id),)
+
+
+@pytest.mark.parametrize(
+    "rule_id,detector,evidence",
+    [
+        (
+            "product_not_mentioned",
+            detect_product_not_mentioned,
+            _commerce((_entry("p-zero", mention_count=0),)),
+        ),
+        (
+            "competitor_product_dominates",
+            detect_competitor_product_dominates,
+            _commerce(
+                (
+                    _entry(
+                        "c-dom",
+                        kind="competitor_product",
+                        sov_share=COMMERCE_COMPETITOR_SOV_THRESHOLD + 0.1,
+                    ),
+                )
+            ),
+        ),
+        (
+            "price_mention_mismatch",
+            detect_price_mention_mismatch,
+            _commerce(
+                (
+                    _entry(
+                        "p-mismatch",
+                        price_mismatch_rate=COMMERCE_PRICE_MISMATCH_RATE_THRESHOLD
+                        + 0.05,
+                    ),
+                )
+            ),
+        ),
+        (
+            "schema_type_mismatch",
+            detect_site_issue_opportunities,
+            (
+                lambda url_id: _site(
+                    (_issue("aeo.schema_expected_for_type", url_id),),
+                    (_url(url_id, "https://acme.com/x"),),
+                )
+            )(uuid.uuid4()),
+        ),
+    ],
+)
+def test_disabled_new_rules_never_emit(
+    monkeypatch, rule_id, detector, evidence
+) -> None:
+    rule = OPPORTUNITY_RULES_BY_ID[rule_id]
+    assert detector(evidence), "sanity: the detector fires while enabled"
+    monkeypatch.setattr(rule, "enabled", False)
+    assert detector(evidence) == []
 
 
 # =========================================================================

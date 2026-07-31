@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Download, RefreshCw } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
@@ -134,9 +135,17 @@ function SummaryStrip({
             <span className="text-muted"> · </span>
             <span className="mono font-semibold">{inProgressCount}</span> in progress
           </p>
-          <p className="text-muted text-xs">
-            Updated {formatAudited(summary.computed_at)} from your latest available evidence.
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-muted text-xs">
+              Last computed {formatAudited(summary.computed_at)} from your latest available
+              evidence.
+            </p>
+            {summary.stale ? (
+              <Badge variant="status" value="warning">
+                Newer evidence available
+              </Badge>
+            ) : null}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Dropdown>

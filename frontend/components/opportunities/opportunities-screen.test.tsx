@@ -46,6 +46,7 @@ function opportunity(overrides: Record<string, unknown> = {}) {
     target_prompt_id: OPP_A,
     target_url: null,
     target_theme: 'crm',
+    target_label: 'best crm for small teams',
     status: 'open',
     created_at: '2026-07-24T00:00:00Z',
     updated_at: '2026-07-24T00:00:00Z',
@@ -64,6 +65,7 @@ const siteRow = opportunity({
   target_prompt_id: null,
   target_url: 'https://acme.com/blog',
   target_theme: null,
+  target_label: 'https://acme.com/blog',
 });
 
 const summary = {
@@ -80,6 +82,8 @@ const summary = {
   rule_version: 'opp-rules-1',
   formula_version: 'opp-formula-1',
   computed_at: '2026-07-24T00:00:00Z',
+  evidence_updated_at: '2026-07-23T00:00:00Z',
+  stale: false,
 };
 
 const recomputeResponse = {
@@ -203,16 +207,72 @@ describe('OpportunitiesScreen', () => {
     // Export has been collapsed into a dropdown trigger.
     expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
 
-    // Catalog rows: title, target line, impact/area badges.
+    // Catalog rows: title, backend-owned target label, impact/area badges.
     await screen.findByText('Brand absent from high-value prompt');
     const catalog = screen.getByRole('table');
     expect(within(catalog).getByText('Brand absent from high-value prompt')).toBeInTheDocument();
     expect(within(catalog).getByText('Thin content on an owned page')).toBeInTheDocument();
-    expect(within(catalog).getByText('acme.com/blog')).toBeInTheDocument();
+    expect(within(catalog).getByText('https://acme.com/blog')).toBeInTheDocument();
+    expect(within(catalog).getByText('best crm for small teams')).toBeInTheDocument();
     expect(within(catalog).getByText('HIGH')).toBeInTheDocument();
     expect(within(catalog).getByText('Visibility')).toBeInTheDocument();
     // No priority score exposed in the table.
     expect(screen.queryByText('120.0')).not.toBeInTheDocument();
+  });
+
+  it('renders the featured card with the API target label (C1)', async () => {
+    mockBase();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json(summary),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [opportunity(), siteRow], next_cursor: null }),
+      ),
+      http.get(`/api/v1/opportunities/${OPP_A}`, () => HttpResponse.json(detail)),
+    );
+
+    renderScreen();
+
+    // The detail-backed featured card takes its "Applies to" line from the
+    // API target_label (no client-side derivation). The card renders after a
+    // three-fetch chain (projects -> list -> detail), so allow a longer wait.
+    expect(await screen.findByText('Next best action', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('Applies to best crm for small teams')).toBeInTheDocument();
+  });
+
+  it('shows the stale badge only when newer evidence exists (C4c)', async () => {
+    mockBase();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json({ ...summary, stale: true, evidence_updated_at: '2026-07-25T00:00:00Z' }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [siteRow], next_cursor: null }),
+      ),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByText(/Last computed/)).toBeInTheDocument();
+    expect(screen.getByText('Newer evidence available')).toBeInTheDocument();
+  });
+
+  it('hides the stale badge when the snapshot is current (C4c)', async () => {
+    mockBase();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json(summary),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [siteRow], next_cursor: null }),
+      ),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByText(/Last computed/)).toBeInTheDocument();
+    expect(screen.queryByText('Newer evidence available')).not.toBeInTheDocument();
   });
 
   it('sends filter dropdown selections as server query params (never a client filter)', async () => {
@@ -343,14 +403,19 @@ describe('OpportunitiesScreen', () => {
     expect(within(drawer).getByText('“best crm for small teams”')).toBeInTheDocument();
     expect(within(drawer).getByText('Globex')).toBeInTheDocument();
     expect(within(drawer).getByText('Publish a comparison page.')).toBeInTheDocument();
-    // Internal provenance (rule_id, versions, source ids) must NOT be rendered.
-    expect(screen.queryByText('brand_absent_high_value_prompt')).not.toBeInTheDocument();
-    expect(screen.queryByText('opp-analyzer-1')).not.toBeInTheDocument();
-    expect(screen.queryByText('opp-rules-1')).not.toBeInTheDocument();
-    expect(screen.queryByText('opp-formula-1')).not.toBeInTheDocument();
-    expect(screen.queryByText('Rule version')).not.toBeInTheDocument();
-    expect(screen.queryByText('Formula')).not.toBeInTheDocument();
-    expect(screen.queryByText('Source ids')).not.toBeInTheDocument();
+
+    // C2: the Source section renders the persisted provenance with deep-links.
+    const runLink = within(drawer).getByRole('link', { name: 'View run' });
+    expect(runLink).toHaveAttribute('href', `/runs/${RUN}`);
+    const promptLink = within(drawer).getByRole('link', { name: 'Open prompt library' });
+    expect(promptLink).toHaveAttribute('href', '/prompts');
+    expect(within(drawer).getByText('1 analysis · 1 metric snapshot')).toBeInTheDocument();
+    // C2: priority score with a plain-language formula note + version tokens.
+    expect(within(drawer).getByText('120')).toBeInTheDocument();
+    expect(within(drawer).getByText(/impact weight × target value/)).toBeInTheDocument();
+    expect(within(drawer).getByText('opp-analyzer-1')).toBeInTheDocument();
+    expect(within(drawer).getByText('opp-rules-1')).toBeInTheDocument();
+    expect(within(drawer).getByText('opp-formula-1')).toBeInTheDocument();
 
     // Footer workflow: Mark in progress patches the row.
     await user.click(screen.getByRole('button', { name: 'Mark in progress' }));
@@ -359,6 +424,55 @@ describe('OpportunitiesScreen', () => {
     // Close returns to the catalog.
     await user.click(screen.getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByText('Opportunity detail')).not.toBeInTheDocument());
+  });
+
+  it('renders the Site Health page deep-link for site-sourced rows (C2)', async () => {
+    mockBase();
+    const SITE_URL = '77777777-7777-4777-8777-777777777777';
+    const siteDetail = {
+      ...siteRow,
+      remediation: 'Add substantive body content.',
+      evidence: {
+        issue_rule_id: 'technical.thin_content',
+        crawl_id: RUN,
+        site_url_id: SITE_URL,
+        url: 'https://acme.com/blog',
+      },
+      source_analysis_ids: [],
+      source_issue_ids: [RUN],
+      source_metric_ids: [],
+      source_traffic_ids: [],
+      analyzer_version: 'opp-analyzer-1',
+      rule_version: 'opp-rules-2',
+      formula_version: 'opp-formula-1',
+      superseded_by_id: null,
+      superseded_at: null,
+    };
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json(summary),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [siteRow], next_cursor: null }),
+      ),
+      http.get(`/api/v1/opportunities/${OPP_B}`, () => HttpResponse.json(siteDetail)),
+    );
+
+    const user = userEvent.setup();
+    renderScreen();
+    const rowTitle = await screen.findByText('Thin content on an owned page');
+    const row = rowTitle.closest('tr');
+    await user.click(within(row!).getByRole('button', { name: /Review/ }));
+
+    const drawer = await screen.findByRole('dialog', { name: 'Opportunity detail' });
+    const pageLink = within(drawer).getByRole('link', { name: 'View page detail' });
+    expect(pageLink).toHaveAttribute('href', `/site-health/crawls/${RUN}/pages/${SITE_URL}`);
+    // No visibility-run or prompt link for a site-sourced row.
+    expect(within(drawer).queryByRole('link', { name: 'View run' })).not.toBeInTheDocument();
+    expect(
+      within(drawer).queryByRole('link', { name: 'Open prompt library' }),
+    ).not.toBeInTheDocument();
+    expect(within(drawer).getByText('1 site issue')).toBeInTheDocument();
   });
 
   it('clears prior project data and selections during project switch', async () => {

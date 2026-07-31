@@ -82,6 +82,7 @@ from app.core.security import decrypt_secret
 from app.core.telemetry import configure_logging
 from app.domain.audits.cost_projection import build_execution_cost_projection
 from app.domain.audits.state_events import apply_transition, record_event
+from app.domain.opportunities.service import recompute as recompute_opportunities
 from app.models.audit import (
     Audit,
     AuditEngineSnapshot,
@@ -1138,8 +1139,12 @@ class AuditWorker(DrainableWorkerMixin):
         Runs once an audit reaches ANALYZING. Aggregates from persisted analyses
         only (invariant 7 — no provider call) and drives ANALYZING -> REPORTING
         -> COMPLETED / PARTIALLY_COMPLETED. Guarded with ``FOR UPDATE`` so
-        concurrent workers don't double-finalize.
+        concurrent workers don't double-finalize. After the terminal commit it
+        best-effort refreshes the project's Opportunities (C4a) — this is the
+        ONLY audit-side hook: ``_finalize_audit`` never fires it (execution
+        boundary, no snapshots yet) and failed audits never reach ANALYZING.
         """
+        terminalized_for: tuple[uuid.UUID, uuid.UUID] | None = None
         async with self._session_factory() as session:
             audit = await session.get(Audit, audit_id, with_for_update=True)
             if audit is None or audit.status != AUDIT_STATUS_ANALYZING:
@@ -1151,7 +1156,42 @@ class AuditWorker(DrainableWorkerMixin):
             # product analyses; the brand finalize below stays untouched.
             await finalize_audit_product_analysis(session, audit=audit)
             await finalize_audit_analysis(session, audit=audit)
+            terminalized_for = (audit.workspace_id, audit.project_id)
             await session.commit()
+
+        # AFTER the commit, deliberately (mirrors the crawl hook in
+        # ``workers/site_health/lifecycle.py``): the audit's terminal status
+        # and its snapshots are already durable, so a recompute failure can
+        # never leave the audit un-terminalized.
+        if terminalized_for is not None:
+            workspace_id, project_id = terminalized_for
+            await self._recompute_opportunities(
+                workspace_id=workspace_id, project_id=project_id
+            )
+
+    async def _recompute_opportunities(
+        self, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+    ) -> None:
+        """Refresh the project's Opportunities from the just-finished audit.
+
+        Without this hook, new brand-visibility evidence never refreshed the
+        catalog until the next crawl or a manual refresh. Best-effort by
+        construction (same contract as the crawl hook): it runs in its own
+        session after the terminalization commit, and any failure is logged
+        and swallowed — stale opportunities surface as the read-time
+        staleness badge instead of blocking terminalization, and the next
+        crawl/audit or the user's manual refresh retries anyway.
+        """
+        try:
+            async with self._session_factory() as session:
+                await recompute_opportunities(
+                    session, workspace_id=workspace_id, project_id=project_id
+                )
+        except Exception:
+            logger.exception(
+                "opportunities recompute after audit terminalization failed",
+                extra={"project_id": str(project_id)},
+            )
 
 
 def main() -> None:  # pragma: no cover - process entrypoint

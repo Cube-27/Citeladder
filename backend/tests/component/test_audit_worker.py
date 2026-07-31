@@ -843,3 +843,96 @@ async def test_probe_rows_skip_brand_analysis_and_keep_denominators(
         )
         assert len(tasks) == 2
         assert all(t.shopping_surface == "" for t in tasks)
+
+
+# =========================================================================
+# C4(a): the audit-finalize Opportunities recompute hook
+# =========================================================================
+@pytest.mark.asyncio
+async def test_completed_audit_fires_opportunities_recompute_hook(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seed, audit = await _make_audit(session_factory, prompts=2, reps=1)
+    calls: list[dict[str, object]] = []
+
+    async def _record(session, *, workspace_id, project_id):
+        calls.append({"workspace_id": workspace_id, "project_id": project_id})
+
+    monkeypatch.setattr(audit_worker, "recompute_opportunities", _record)
+    worker = AuditWorker(session_factory=session_factory, owner="w-hook")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        assert refreshed.status == AUDIT_STATUS_COMPLETED
+    # The hook fired exactly once, after terminalization, with the audit's
+    # workspace/project identity.
+    assert calls == [
+        {"workspace_id": seed.workspace_id, "project_id": seed.project_id}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_failed_audit_never_fires_opportunities_hook(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
+
+    # Deactivate the connection so every task fails terminally (0 successes
+    # -> RUNNING -> FAILED, never ANALYZING).
+    async with session_factory() as session:
+        from app.models.provider import ProviderConnection
+
+        conns = (
+            await session.scalars(
+                select(ProviderConnection).where(
+                    ProviderConnection.workspace_id == seed.workspace_id
+                )
+            )
+        ).all()
+        for conn in conns:
+            conn.active = False
+        await session.commit()
+
+    calls: list[dict[str, object]] = []
+
+    async def _record(session, *, workspace_id, project_id):
+        calls.append({"workspace_id": workspace_id, "project_id": project_id})
+
+    monkeypatch.setattr(audit_worker, "recompute_opportunities", _record)
+    worker = AuditWorker(session_factory=session_factory, owner="w-hook-fail")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        assert refreshed.status == "failed"
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_opportunities_hook_failure_never_blocks_terminalization(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
+
+    async def _boom(session, *, workspace_id, project_id):
+        raise RuntimeError("recompute exploded")
+
+    monkeypatch.setattr(audit_worker, "recompute_opportunities", _boom)
+    worker = AuditWorker(session_factory=session_factory, owner="w-hook-boom")
+    # Best-effort: the raise is logged + swallowed; the audit still
+    # terminalizes.
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        assert refreshed.status == AUDIT_STATUS_COMPLETED
