@@ -142,6 +142,21 @@ def _ga4_template(
     return template
 
 
+def _account_summaries(payload: dict) -> list:
+    """The page's ``accountSummaries`` list; a non-list body fails loud.
+
+    An account with no readable properties omits the key entirely, which is
+    an empty page rather than an error.
+    """
+    summaries = payload.get("accountSummaries") or []
+    if not isinstance(summaries, list):
+        raise Ga4ApiError(
+            "GA4 property list returned malformed account summaries",
+            error_code=ERROR_PROVIDER_API,
+        )
+    return summaries
+
+
 def _iter_ga4_properties(summaries: list) -> list[ProviderProperty]:
     """Flatten ``accountSummaries`` into selectable properties.
 
@@ -281,13 +296,7 @@ class Ga4Client:
             payload = await self._fetch_account_summaries(
                 access_token=access_token, page_token=page_token
             )
-            summaries = payload.get("accountSummaries") or []
-            if not isinstance(summaries, list):
-                raise Ga4ApiError(
-                    "GA4 property list returned malformed account summaries",
-                    error_code=ERROR_PROVIDER_API,
-                )
-            properties.extend(_iter_ga4_properties(summaries))
+            properties.extend(_iter_ga4_properties(_account_summaries(payload)))
             page_token = str(payload.get("nextPageToken") or "")
             if not page_token:
                 return tuple(properties)

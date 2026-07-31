@@ -163,18 +163,37 @@ function TrafficToolbar({
   );
 }
 
-function StatCard({ stat }: Readonly<{ stat: TrafficStat }>) {
+const STAT_ACCENT_CLASSES: Readonly<Record<string, string>> = {
+  clicks: 'border-t-2 border-t-blue-500',
+  impressions: 'border-t-2 border-t-purple-500',
+  ctr: 'border-t-2 border-t-emerald-500',
+  position: 'border-t-2 border-t-amber-500',
+  sessions: 'border-t-2 border-t-sky-500',
+  conversions: 'border-t-2 border-t-violet-500',
+};
+
+function StatCard({ stat, index }: Readonly<{ stat: TrafficStat; index: number }>) {
   const valueClass = stat.placeholder ? 'text-muted' : 'text-foreground';
   const deltaClass =
     stat.tone === 'up' ? 'text-score-high' : stat.tone === 'down' ? 'text-score-low' : 'text-muted';
+  const accentClass = STAT_ACCENT_CLASSES[stat.key] ?? 'border-t-2 border-t-accent';
+
   return (
-    <Card data-testid={`stat-${stat.key}`}>
-      <CardContent className="grid gap-1 p-4">
-        <span className={eyebrowClasses}>{stat.label}</span>
-        <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
-        <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
-      </CardContent>
-    </Card>
+    <div
+      data-testid={`stat-${stat.key}`}
+      className={cn(
+        'grid gap-1 p-4 border-border transition-colors hover:bg-background-alt/40',
+        accentClass,
+        index < 4 ? 'max-xl:border-b' : '',
+        index % 2 !== 1 ? 'max-sm:border-r' : '',
+        index % 3 !== 2 ? 'sm:max-xl:border-r' : '',
+        index < 5 ? 'xl:border-r' : '',
+      )}
+    >
+      <span className={eyebrowClasses}>{stat.label}</span>
+      <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
+      <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
+    </div>
   );
 }
 
@@ -448,14 +467,13 @@ export function TrafficScreen() {
         </Alert>
       ) : null}
 
-      <div
-        className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
-        data-testid="traffic-stats"
-      >
-        {stats.map((stat) => (
-          <StatCard key={stat.key} stat={stat} />
-        ))}
-      </div>
+      <Card data-testid="traffic-stats" className="overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
+          {stats.map((stat, index) => (
+            <StatCard key={stat.key} stat={stat} index={index} />
+          ))}
+        </div>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <TrendCard

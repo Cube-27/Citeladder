@@ -1,17 +1,14 @@
 'use client';
 
-import { Check, FolderOpen, Plus } from 'lucide-react';
+import { FolderOpen, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { BrandLogo } from '@/components/ui/brand-logo';
-import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cn } from '@/lib/utils';
 
 import { ProjectEditPanel } from './project-edit-panel';
 import { DashboardScreen } from './dashboard-screen';
@@ -31,7 +28,7 @@ import { DashboardScreen } from './dashboard-screen';
  */
 export function ProjectsScreen() {
   const router = useRouter();
-  const { projects, activeProjectId, setActiveProjectId, isLoading } = useProjectContext();
+  const { projects, isLoading } = useProjectContext();
   const [editing, setEditing] = useState<Project | null>(null);
 
   if (isLoading) {

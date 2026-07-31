@@ -468,6 +468,7 @@
   },
   "app/api/integrations.py": {
     "functions": {
+      "_enforce_discovery_limit": 2,
       "_landing_redirect": 1,
       "_require_known_provider": 2,
       "create_mapping_endpoint": 6,
@@ -922,8 +923,10 @@
   "app/connectors/integrations/ga4.py": {
     "functions": {
       "Ga4Client.__init__": 1,
-      "Ga4Client.list_properties": 5,
+      "Ga4Client._fetch_account_summaries": 4,
+      "Ga4Client.list_properties": 4,
       "Ga4Client.query_search_analytics": 23,
+      "_account_summaries": 3,
       "_coerce_metric_value": 3,
       "_ga4_template": 4,
       "_iter_ga4_properties": 12,
@@ -1959,7 +1962,8 @@
   },
   "app/domain/integrations/mappings.py": {
     "functions": {
-      "_canonical_property_ref": 9,
+      "_canonical_property_ref": 8,
+      "_project_owned_hosts": 2,
       "_to_mapping_response": 1,
       "create_mapping": 5,
       "disable_mapping": 2,
@@ -1967,7 +1971,7 @@
       "property_ref_host": 2
     },
     "loc": 241,
-    "max_cc": 9
+    "max_cc": 8
   },
   "app/domain/integrations/schemas.py": {
     "functions": {},
@@ -2015,9 +2019,10 @@
   },
   "app/domain/integrations/tokens.py": {
     "functions": {
-      "fresh_access_token": 9
+      "_store_rotated_bundle": 4,
+      "fresh_access_token": 7
     },
-    "max_cc": 9
+    "max_cc": 7
   },
   "app/domain/opportunities/__init__.py": {
     "functions": {},

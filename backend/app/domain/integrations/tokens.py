@@ -88,15 +88,31 @@ async def fresh_access_token(
         # the transaction open, blocking every other caller on this grant.
         await session.rollback()
         raise
-    locked.access_token_encrypted = encrypt_secret(bundle.access_token)
+    _store_rotated_bundle(locked, bundle, now=now)
+    await session.commit()
+    return bundle.access_token
+
+
+def _store_rotated_bundle(
+    grant: IntegrationOAuthGrant,
+    bundle: integration_oauth.OAuthTokenBundle,
+    *,
+    now: datetime,
+) -> None:
+    """Persist a refreshed bundle onto the locked grant (encrypted).
+
+    Each field is written only when the provider actually returned it: a
+    refresh response may omit the refresh token (the existing one stays
+    valid) and the scope list (the grant keeps its recorded scopes), so
+    overwriting unconditionally would erase working credentials.
+    """
+    grant.access_token_encrypted = encrypt_secret(bundle.access_token)
     if bundle.refresh_token:
-        locked.refresh_token_encrypted = encrypt_secret(bundle.refresh_token)
-    locked.token_expires_at = (
+        grant.refresh_token_encrypted = encrypt_secret(bundle.refresh_token)
+    grant.token_expires_at = (
         now + timedelta(seconds=bundle.expires_in)
         if bundle.expires_in is not None
         else None
     )
     if bundle.granted_scopes:
-        locked.granted_scopes = list(bundle.granted_scopes)
-    await session.commit()
-    return bundle.access_token
+        grant.granted_scopes = list(bundle.granted_scopes)
