@@ -226,6 +226,23 @@ pnpm install
 pnpm dev
 ```
 
+### Seed demo data (optional)
+
+With Postgres running and migrations applied, generate a full demo dataset
+from `backend/`:
+
+```bash
+uv run python -m scripts.seed_dev_data
+```
+
+This creates the demo login `demo@searchify.dev` / `DemoPass123!`, two
+workspaces, two projects with completed audits (mention/citation evidence),
+a completed Site Health crawl, and a product catalog whose fixture answers
+produce real Commerce Visibility numbers (product mentions, prices, share of
+voice). The seed is idempotent — it replaces the demo workspaces on each
+run — and deterministic: reseeding reproduces the same outcomes and
+aggregates.
+
 <a id="configuration"></a>
 ## Configuration
 

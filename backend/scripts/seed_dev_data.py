@@ -40,8 +40,10 @@ from __future__ import annotations
 
 import asyncio
 import gzip
+import hashlib
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import httpx
@@ -102,12 +104,144 @@ DEMO_WORKSPACE_NAMES = ("Wanderlust Gear Co.", "Wanderlust Gear Co. - Agency")
 _PUBLIC_IP = "93.184.216.34"
 
 
+@dataclass(frozen=True)
+class _ProductSpec:
+    """One seeded own-catalog product the fixture answers must name."""
+
+    name: str
+    sku: str
+    url: str
+    price: float
+    currency: str = "USD"
+
+
+@dataclass(frozen=True)
+class _CompetitorProductSpec:
+    """The seeded competitor product the fixture answers must name."""
+
+    name: str
+    url: str
+    price: float
+    currency: str = "USD"
+
+
+# Demo catalog for the Wanderlust project (Agentic Commerce surface). The
+# stub adapter's fixture answers name these exact products with these exact
+# prices, so the deterministic product analyzer
+# (analysis/product_scoring.py) produces non-zero ProductResponseAnalysis /
+# ProductMention / ProductMetricSnapshot rows and the Commerce Visibility
+# tab demonstrates real values (keep the answers below in sync - the unit
+# test tests/unit/test_seed_dev_data.py guards the contract).
+DEMO_PRODUCT_SPECS: tuple[_ProductSpec, ...] = (
+    _ProductSpec(
+        name="Summit 40L Trail Pack",
+        sku="WGC-S40-BLK",
+        url="https://wanderlustgear.com/backpacks/summit-40l",
+        price=189.99,
+    ),
+    _ProductSpec(
+        name="Voyager 25L Carry-On Pack",
+        sku="WGC-V25-GRY",
+        url="https://wanderlustgear.com/backpacks/voyager-25l",
+        price=129.99,
+    ),
+)
+DEMO_COMPETITOR_PRODUCT_SPEC = _CompetitorProductSpec(
+    name="TrailBlaze Alpine 45",
+    url="https://trailblazepacks.com/alpine-45",
+    price=174.99,
+)
+
+# Wanderlust prompt fixtures: (text, intent, status, origin) covering every
+# intent (discovery/comparison/purchase/service/local) and every status
+# (active/proposed/archived). Only "active" prompts enter the seeded audit.
+PROMPT_SPECS: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "best hiking backpack for a week-long trip",
+        "discovery",
+        "active",
+        "manual",
+    ),
+    (
+        "what is the most durable travel backpack under $200",
+        "discovery",
+        "active",
+        "manual",
+    ),
+    (
+        "Wanderlust Gear vs TrailBlaze Packs which is better",
+        "comparison",
+        "active",
+        "manual",
+    ),
+    (
+        "compare Summit Gear and Wanderlust Gear warranties",
+        "comparison",
+        "active",
+        "imported",
+    ),
+    (
+        "where can I buy a waterproof backpack online",
+        "purchase",
+        "active",
+        "manual",
+    ),
+    (
+        "best place to buy carry-on travel backpacks",
+        "purchase",
+        "active",
+        "manual",
+    ),
+    ("does Wanderlust Gear offer free returns", "service", "active", "manual"),
+    (
+        "how do I file a warranty claim for a torn backpack",
+        "service",
+        "proposed",
+        "generated",
+    ),
+    (
+        "best outdoor gear shops near Denver Colorado",
+        "local",
+        "active",
+        "manual",
+    ),
+    (
+        "hiking backpack stores in Seattle Washington",
+        "local",
+        "proposed",
+        "generated",
+    ),
+    (
+        "old prompt about discontinued backpack line",
+        "discovery",
+        "archived",
+        "manual",
+    ),
+)
+
+
 # ---------------------------------------------------------------------------
 # Stub answer-engine adapter (no network calls) - mirrors
 # tests/component/test_analysis_api.py::_StubAdapter but varies the answer
 # per engine/prompt so different prompts get different mention/citation
 # outcomes (some brand-mentioning, some not, some citing competitor only).
+# Answers are recommendation-style prose with numbered product picks that
+# name the seeded catalog products + competitor product WITH prices (and
+# buyer-destination links), so the deterministic product analyzer
+# (analysis/product_scoring.py) produces non-zero ProductResponseAnalysis /
+# ProductMention / ProductMetricSnapshot rows and the Commerce Visibility
+# tab demonstrates real values.
 # ---------------------------------------------------------------------------
+def _prompt_bucket(prompt: str) -> int:
+    """Stable per-prompt variety bucket (0, 1, or 2).
+
+    md5 of the prompt text: Python's salted ``hash()`` varies per process,
+    which made seeded mention/citation outcomes change on every reseed.
+    """
+    digest = hashlib.md5(prompt.encode("utf-8"), usedforsecurity=False)
+    return int(digest.hexdigest(), 16) % 3
+
+
 class _SeedStubAdapter:
     def __init__(
         self, *, logical_engine: str, transport_provider: str, **_: object
@@ -117,13 +251,26 @@ class _SeedStubAdapter:
 
     async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
         prompt = request.prompt
-        # Deterministic variety: every 3rd prompt has no brand mention at all
-        # (a real "lost" query), the rest mention the brand and cite it.
-        bucket = abs(hash(prompt)) % 3
+        summit, voyager = DEMO_PRODUCT_SPECS
+        alpine = DEMO_COMPETITOR_PRODUCT_SPEC
+        # Deterministic variety: bucket 0 is a real "lost" query (no brand
+        # mention, competitor product only), bucket 1 mentions the brand and
+        # ranks both own products above the competitor product, bucket 2
+        # mentions the brand and its own products only. Every product pick
+        # keeps its price + buyer-destination URL on the mention's own line
+        # and close behind it: the analyzer's price/destination extraction
+        # scans a line-clipped window centered on the mention
+        # (PRODUCT_PRICE_WINDOW_CHARS=160, PRODUCT_ATTRIBUTE_WINDOW_CHARS=200).
+        bucket = _prompt_bucket(prompt)
         if bucket == 0:
             answer = (
                 f"For '{prompt}', popular options include TrailBlaze Packs and "
-                "Summit Gear. Both offer solid warranties."
+                "Summit Gear. Both offer solid warranties. Two packs come up "
+                "most often:\n"
+                f"1. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
+                "two-year warranty, a 45-liter alpine pack.\n"
+                "2. Summit Gear Ridgeline 50 - $159.99, a lightweight 50-liter "
+                "pack for weekend trips."
             )
             citations = (
                 CitationResult(
@@ -140,7 +287,13 @@ class _SeedStubAdapter:
             answer = (
                 f"When it comes to '{prompt}', Wanderlust Gear Co. is a strong "
                 "choice thanks to its lifetime warranty, and TrailBlaze Packs is "
-                "a solid alternative for budget shoppers."
+                "a solid alternative for budget shoppers. The top picks:\n"
+                f"1. {summit.name} - ${summit.price:.2f} ({summit.url}) - "
+                "lifetime warranty, a 40-liter trail pack.\n"
+                f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
+                "lower price, a carry-on sized 25-liter pack.\n"
+                f"3. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
+                "two-year warranty, a 45-liter alpine alternative."
             )
             citations = (
                 CitationResult(
@@ -165,7 +318,12 @@ class _SeedStubAdapter:
         else:
             answer = (
                 f"'{prompt}' - Wanderlust Gear Co. consistently ranks well in "
-                "outdoor gear roundups for durability and customer service."
+                "outdoor gear roundups for durability and customer service. Two "
+                "packs stand out:\n"
+                f"1. {summit.name} - ${summit.price:.2f} ({summit.url}) - "
+                "lifetime warranty, the brand's 40-liter trail pack.\n"
+                f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
+                "lower price, a compact 25-liter carry-on for weekend travel."
             )
             citations = (
                 CitationResult(
@@ -442,76 +600,14 @@ async def seed() -> None:
             )
         )
 
-        # Prompts covering every intent + every status.
+        # Prompts covering every intent + every status (module-level
+        # PROMPT_SPECS so the fixture unit test can mirror them).
         prompt_set = PromptSet(project_id=project.id, name="Core Discovery Set")
         session.add(prompt_set)
         await session.flush()
 
-        prompt_specs = [
-            (
-                "best hiking backpack for a week-long trip",
-                "discovery",
-                "active",
-                "manual",
-            ),
-            (
-                "what is the most durable travel backpack under $200",
-                "discovery",
-                "active",
-                "manual",
-            ),
-            (
-                "Wanderlust Gear vs TrailBlaze Packs which is better",
-                "comparison",
-                "active",
-                "manual",
-            ),
-            (
-                "compare Summit Gear and Wanderlust Gear warranties",
-                "comparison",
-                "active",
-                "imported",
-            ),
-            (
-                "where can I buy a waterproof backpack online",
-                "purchase",
-                "active",
-                "manual",
-            ),
-            (
-                "best place to buy carry-on travel backpacks",
-                "purchase",
-                "active",
-                "manual",
-            ),
-            ("does Wanderlust Gear offer free returns", "service", "active", "manual"),
-            (
-                "how do I file a warranty claim for a torn backpack",
-                "service",
-                "proposed",
-                "generated",
-            ),
-            (
-                "best outdoor gear shops near Denver Colorado",
-                "local",
-                "active",
-                "manual",
-            ),
-            (
-                "hiking backpack stores in Seattle Washington",
-                "local",
-                "proposed",
-                "generated",
-            ),
-            (
-                "old prompt about discontinued backpack line",
-                "discovery",
-                "archived",
-                "manual",
-            ),
-        ]
         prompt_ids: list[uuid.UUID] = []
-        for text, intent, status, origin in prompt_specs:
+        for text, intent, status, origin in PROMPT_SPECS:
             prompt = Prompt(
                 prompt_set_id=prompt_set.id,
                 text=text,
@@ -525,35 +621,27 @@ async def seed() -> None:
             await session.flush()
             prompt_ids.append(prompt.id)
 
-        # Products (Agentic Commerce surface).
-        session.add(
-            Product(
-                project_id=project.id,
-                name="Summit 40L Trail Pack",
-                sku="WGC-S40-BLK",
-                url="https://wanderlustgear.com/backpacks/summit-40l",
-                price=189.99,
-                currency="USD",
+        # Products (Agentic Commerce surface): the catalog the fixture
+        # answers name (module-level specs; see the adapter comment).
+        for spec in DEMO_PRODUCT_SPECS:
+            session.add(
+                Product(
+                    project_id=project.id,
+                    name=spec.name,
+                    sku=spec.sku,
+                    url=spec.url,
+                    price=spec.price,
+                    currency=spec.currency,
+                )
             )
-        )
-        session.add(
-            Product(
-                project_id=project.id,
-                name="Voyager 25L Carry-On Pack",
-                sku="WGC-V25-GRY",
-                url="https://wanderlustgear.com/backpacks/voyager-25l",
-                price=129.99,
-                currency="USD",
-            )
-        )
         session.add(
             CompetitorProduct(
                 project_id=project.id,
                 competitor_id=trailblaze.id,
-                name="TrailBlaze Alpine 45",
-                url="https://trailblazepacks.com/alpine-45",
-                price=174.99,
-                currency="USD",
+                name=DEMO_COMPETITOR_PRODUCT_SPEC.name,
+                url=DEMO_COMPETITOR_PRODUCT_SPEC.url,
+                price=DEMO_COMPETITOR_PRODUCT_SPEC.price,
+                currency=DEMO_COMPETITOR_PRODUCT_SPEC.currency,
             )
         )
 
@@ -561,7 +649,7 @@ async def seed() -> None:
         project_id = project.id
         active_prompt_ids = [
             pid
-            for pid, (_t, _i, status, _o) in zip(prompt_ids, prompt_specs, strict=True)
+            for pid, (_t, _i, status, _o) in zip(prompt_ids, PROMPT_SPECS, strict=True)
             if status == "active"
         ]
         logger.info(
