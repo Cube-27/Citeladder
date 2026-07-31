@@ -18,7 +18,7 @@
     "test:visual": "playwright test --config e2e/visual/visual.config.ts",
     "test:visual:update": "playwright test --config e2e/visual/visual.config.ts --update-snapshots",
     "check:policy": "node scripts/check-token-escapes.mjs && node scripts/check-frontend-architecture.mjs && node scripts/check-design-tokens.mjs && node scripts/check-elevation.mjs && node scripts/check-ads-scale.mjs",
-    "check:contract": "vitest run lib/api/contract-drift.test.ts"
+    "check:contract": "node scripts/check-contract.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

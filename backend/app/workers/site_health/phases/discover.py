@@ -522,13 +522,21 @@ class DiscoverPhaseMixin(PhaseSupport):
             )
 
         # SH-1 (B2): classify the robots.txt fetch so the UI can distinguish
-        # "the site has NO robots.txt" (404 — fail-open, stance defaults to
-        # allow) from "robots.txt could not be fetched" (network error / 5xx —
-        # stance genuinely unknown). The legacy ``fetched`` bool stays for
-        # back-compat with pre-classification readers.
+        # "the site has NO robots.txt we must honor" (any non-5xx response —
+        # fail-open, stance defaults to allow) from "robots.txt could not be
+        # fetched" (network error / 5xx — stance genuinely unknown, and per
+        # RFC 9309 a 5xx is a temporary complete disallow).
+        #
+        # EVERY non-5xx status belongs in ``not_found``, not just 404: a 401 /
+        # 403 / 429 robots.txt is treated by ``_ensure_robots_policy`` exactly
+        # like a 404 (allow-all, RFC 9309 "unavailable status" — no
+        # restrictions), so labelling it ``fetch_failed`` told the UI the
+        # stance was unknown while the crawl proceeded fail-open on it. The
+        # legacy ``fetched`` bool stays for back-compat with pre-
+        # classification readers.
         if robots_body is not None:
             robots_fetch_status = ROBOTS_FETCH_STATUS_FETCHED
-        elif robots_status == 404:
+        elif robots_status is not None and not (500 <= robots_status < 600):
             robots_fetch_status = ROBOTS_FETCH_STATUS_NOT_FOUND
         else:
             robots_fetch_status = ROBOTS_FETCH_STATUS_FETCH_FAILED

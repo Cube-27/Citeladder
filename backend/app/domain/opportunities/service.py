@@ -74,7 +74,7 @@ from app.core.config.site_health import (
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
 )
-from app.domain.products.visibility import _select_current_snapshots
+from app.domain.products.visibility import select_current_snapshots
 from app.domain.prompts.locks import acquire_project_lock
 from app.domain.site_health.normalization import (
     decode_keyset_cursor,
@@ -428,15 +428,21 @@ async def _load_commerce_evidence(
                     ProductMetricSnapshot.audit_id == audit.id,
                     ProductMetricSnapshot.workspace_id == workspace_id,
                 )
+                # Newest-first so the cap truncates the OLDEST rows: an
+                # ascending order with more snapshots than the cap dropped the
+                # current ones and projected stale metrics.
+                # ``select_current_snapshots`` is order-independent (it selects
+                # by analyzer/rule version, not position), so this only changes
+                # which rows survive the limit, never which one wins per entry.
                 .order_by(
-                    ProductMetricSnapshot.created_at.asc(),
-                    ProductMetricSnapshot.id.asc(),
+                    ProductMetricSnapshot.created_at.desc(),
+                    ProductMetricSnapshot.id.desc(),
                 )
                 .limit(RECOMPUTE_MAX_PRODUCT_SNAPSHOTS)
             )
         ).all()
     )
-    by_entry = _select_current_snapshots(snapshots)
+    by_entry = select_current_snapshots(snapshots)
 
     def _entry(
         *,
@@ -928,6 +934,12 @@ async def _latest_evidence_at(
     Read-time only (C4c): compared against the latest snapshot's
     ``created_at`` to derive staleness — nothing is persisted, so a failed
     best-effort recompute hook manifests as exactly this drift.
+
+    The audit condition MIRRORS ``recompute``'s: a resolved audit only counts
+    as evidence when it also has its aggregate ``MetricSnapshot`` row.
+    ``recompute`` drops such an audit (it is not dashboard-ready), so
+    counting it here made ``stale`` true even immediately after a successful
+    recompute — permanently, since no recompute could ever catch up.
     """
     audit = await _resolve_source(
         session,
@@ -938,6 +950,15 @@ async def _latest_evidence_at(
         ready_statuses=_DASHBOARD_READY_STATUSES,
         not_found_detail=_AUDIT_NOT_FOUND,
     )
+    if audit is not None:
+        has_metric_snapshot = await session.scalar(
+            select(MetricSnapshot.id).where(
+                MetricSnapshot.audit_id == audit.id,
+                MetricSnapshot.workspace_id == workspace_id,
+            )
+        )
+        if has_metric_snapshot is None:
+            audit = None
     crawl = await _resolve_source(
         session,
         SiteCrawl,

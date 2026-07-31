@@ -121,4 +121,29 @@ describe('ProductDeleteDialog audit-reference guard (D4)', () => {
     await screen.findByText('AC-VB500');
     expect(screen.queryByText(/frozen into/)).not.toBeInTheDocument();
   });
+
+  it('fails open after a 5xx exhausts its retries — delete stays armed', async () => {
+    // The 404 case above short-circuits the retry policy. A 5xx is the path
+    // that actually RETRIES, so it is the one that proves the button is
+    // re-enabled once the query settles rather than staying stuck on the
+    // pending gate that blocks it while the check is in flight.
+    let attempts = 0;
+    mswServer.use(
+      http.get(REFERENCES_URL, () => {
+        attempts += 1;
+        return new HttpResponse(null, { status: 500 });
+      }),
+    );
+    renderDialog();
+
+    // While retries are outstanding the destructive action stays blocked.
+    expect(screen.getByRole('button', { name: 'Checking…' })).toBeDisabled();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled(), {
+      timeout: 10_000,
+    });
+    expect(attempts).toBeGreaterThan(1); // the retry path really ran
+    await screen.findByText('AC-VB500');
+    expect(screen.queryByText(/frozen into/)).not.toBeInTheDocument();
+  }, 15_000);
 });

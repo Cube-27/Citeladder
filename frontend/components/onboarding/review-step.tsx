@@ -38,10 +38,7 @@ function SectionHead({
   return (
     <div className="flex items-baseline gap-2">
       <p
-        className={cn(
-          'text-2xs font-bold uppercase',
-          muted ? 'text-slate-500' : 'text-slate-700',
-        )}
+        className={cn('text-2xs font-bold uppercase', muted ? 'text-slate-500' : 'text-slate-700')}
       >
         {label}
       </p>
@@ -71,10 +68,7 @@ function Chip({
     >
       <span className="truncate">{label}</span>
       <X
-        className={cn(
-          'size-4 shrink-0 transition-opacity',
-          selected ? 'opacity-70' : 'opacity-40',
-        )}
+        className={cn('size-4 shrink-0 transition-opacity', selected ? 'opacity-70' : 'opacity-40')}
         aria-hidden
       />
     </button>

@@ -7,9 +7,11 @@
 > (§6 subsystem ownership), [`frontend-architecture.md`](frontend-architecture.md) (§6
 > drift policy).
 
-One owner per concept (invariant 2): the envelope is produced **only** by
-`backend/app/core/errors.py` and consumed **only** by `frontend/lib/api/client.ts`.
-Codes live in `backend/app/core/config/errors.py` (invariant 1) — never inline.
+One owner per concept (invariant 2): the envelope is **produced** only by
+`backend/app/core/errors.py`; on the frontend, `frontend/lib/api/client.ts` owns
+**parsing** the wire envelope and `frontend/lib/api/errors.ts` owns the `ApiError`
+type and its display-safe projection (`humanizeApiError`). Codes live in
+`backend/app/core/config/errors.py` (invariant 1) — never inline.
 
 ## 1. The wire envelope
 
@@ -30,10 +32,10 @@ Every non-2xx response — from a router raise, a validation failure, a Starlett
 ```
 
 **`error` is additive; `detail` is never removed.** The change is deliberately
-non-breaking: every pre-existing client and test that reads FastAPI's `detail` keeps
-working byte-for-byte, including the coded-dict dialect
-(`{"code", "message", …}`) that the selection/opportunity/crawl endpoints already
-returned. New code reads `error`.
+non-breaking: the `detail` **value and type** are unchanged, so every pre-existing
+client and test that reads FastAPI's `detail` keeps working — including the
+coded-dict dialect (`{"code", "message", …}`) that the
+selection/opportunity/crawl endpoints already returned. New code reads `error`.
 
 ### Field rules
 

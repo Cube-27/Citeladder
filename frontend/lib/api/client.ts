@@ -133,7 +133,14 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
     try {
       const response = await fetchResponse(path, options, requestId);
       if (response.ok) return { response, requestId };
-      const parsed = await readErrorBody(response);
+      // Reading the body can itself time out (the per-attempt signal covers the
+      // whole exchange, not just the headers). Without this the expiry escaped
+      // as a bare TimeoutError DOMException — bypassing the retryable
+      // ApiError conversion below and surfacing as an opaque failure.
+      const parsed = await readErrorBody(response).catch((error: unknown) => {
+        if (isTimeoutError(error)) throw timeoutApiError(requestId);
+        throw error;
+      });
       throw new ApiError(
         parsed.message,
         response.status,
@@ -179,7 +186,7 @@ async function parseResponse<T>(response: Response, kind: ResponseKind): Promise
   if (kind === 'text') return response.text() as Promise<T>;
   if (kind === 'blob') return response.blob() as Promise<T>;
   const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
+  if (!isJsonContentType(contentType)) {
     const text = await response.text();
     if (!text.trim()) return undefined as T;
     throw new ApiError('Expected JSON response from API.', response.status, text);
@@ -196,8 +203,18 @@ async function request<T>(
 ) {
   const encodedBody =
     body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body);
-  const { response } = await requestResponse(path, { ...options, method, body: encodedBody });
-  return parseResponse<T>(response, kind);
+  const { response, requestId } = await requestResponse(path, {
+    ...options,
+    method,
+    body: encodedBody,
+  });
+  // Same exposure as the error-body read: a 2xx whose BODY stalls past the
+  // per-attempt timeout must surface as the retryable A3 ApiError, not as a
+  // raw TimeoutError DOMException the caller cannot classify.
+  return parseResponse<T>(response, kind).catch((error: unknown) => {
+    if (isTimeoutError(error)) throw timeoutApiError(requestId);
+    throw error;
+  });
 }
 
 export const apiClient = {
@@ -218,6 +235,23 @@ export const apiClient = {
   delete: <T>(path: string, options?: ApiRequestOptions) =>
     request<T>('DELETE', path, 'json', undefined, options),
 };
+
+/**
+ * Longest plain-text body still treated as a human message. Above this it is
+ * an error PAGE, not a sentence — see `readErrorBody`.
+ */
+const MAX_PLAIN_TEXT_MESSAGE_CHARS = 200;
+
+/**
+ * True for JSON media types, including the RFC 9457 `application/problem+json`
+ * dialect. `problem+json` carries a structured body, so routing it down the
+ * plain-text branch would have surfaced a raw JSON blob as the message — the
+ * exact thing `readErrorBody` promises never to do.
+ */
+function isJsonContentType(contentType: string): boolean {
+  const type = contentType.split(';')[0].trim().toLowerCase();
+  return type === 'application/json' || type.endsWith('+json');
+}
 
 /** The extracted, display-safe projection of an error response body (A2). */
 type ErrorPayload = {
@@ -253,9 +287,14 @@ async function readErrorBody(response: Response): Promise<ErrorPayload> {
   } catch {
     return { message: fallback, raw };
   }
-  if (!contentType.includes('application/json')) {
-    // Plain-text bodies (e.g. Starlette's unhandled-500 page) are shown as-is.
-    return { message: raw.trim() || fallback, raw };
+  if (!isJsonContentType(contentType)) {
+    // Short plain-text bodies (e.g. a proxy's one-line error) are shown as-is.
+    // A LONG body is almost never a message — it is an HTML error page or a
+    // stack dump — so it falls back to the status text and stays available on
+    // `ApiError.body` for debugging, rather than being pasted into the UI.
+    const text = raw.trim();
+    const usable = text && text.length <= MAX_PLAIN_TEXT_MESSAGE_CHARS && !text.includes('<');
+    return { message: usable ? text : fallback, raw };
   }
   try {
     return { ...extractFromPayload(JSON.parse(raw), fallback), raw };

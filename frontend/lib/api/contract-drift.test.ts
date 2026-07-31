@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import {
   acquireOpenApiSpec,
   componentProperties,
+  contractGuardIsStrict,
   CONTRACT_SCHEMA_MAP,
   declaredKeysFor,
   diffContract,
@@ -141,11 +142,18 @@ describe('backend contract drift guard', () => {
   it('has no missing declared fields against the backend OpenAPI models', async () => {
     const { acquired, errors } = await acquireOpenApiSpec();
     if (!acquired) {
-      // Documented behavior (§6): the vitest wrapper skips when no schema
-      // source is available; `pnpm check:contract` (CI) fails instead.
-      console.warn(
-        `[contract-drift] no OpenAPI source available — skipping the live guard.\n${errors.join('\n')}`,
-      );
+      // Documented behavior (§6): the plain vitest wrapper skips when no
+      // schema source is available, but `pnpm check:contract` / CI must FAIL
+      // — otherwise the guard silently never runs where it matters most.
+      const detail = `no OpenAPI source available:\n${errors.join('\n')}`;
+      if (contractGuardIsStrict()) {
+        throw new Error(
+          `[contract-drift] ${detail}\n\nThe contract guard cannot run. Provide a spec via ` +
+            'SEARCHIFY_OPENAPI_JSON, a working backend/.venv, or a reachable ' +
+            'SEARCHIFY_BACKEND_ORIGIN.',
+        );
+      }
+      console.warn(`[contract-drift] ${detail}\nSkipping the live guard.`);
       return;
     }
     const result = diffContract(acquired.spec);

@@ -305,6 +305,10 @@ def test_schema_type_mismatch_fires_from_mapped_issue() -> None:
 # =========================================================================
 # Commerce rules (ProductMetricSnapshot / frozen-catalog evidence)
 # =========================================================================
+# Sentinel distinguishing "no snapshot_id argument" from an explicit None.
+_UNSET = object()
+
+
 def _entry(
     entry_id: str,
     *,
@@ -315,9 +319,13 @@ def _entry(
     mention_count: int = 0,
     sov_share: float = 0.0,
     price_mismatch_rate: float | None = None,
-    snapshot_id: uuid.UUID | None = None,
+    # ``_UNSET`` (not None) is the "generate one" default, so a caller can pass
+    # snapshot_id=None to build the never-measured entry the provenance rule
+    # turns on. Defaulting None to a fresh UUID made that shape unreachable.
+    snapshot_id: uuid.UUID | None | object = _UNSET,
     source_analysis_ids: tuple[str, ...] = (),
 ) -> ProductEntryEvidence:
+    resolved_snapshot_id = uuid.uuid4() if snapshot_id is _UNSET else snapshot_id
     return ProductEntryEvidence(
         entry_id=entry_id,
         kind=kind,
@@ -327,7 +335,7 @@ def _entry(
         mention_count=mention_count,
         sov_share=sov_share,
         price_mismatch_rate=price_mismatch_rate,
-        snapshot_id=snapshot_id if snapshot_id is not None else uuid.uuid4(),
+        snapshot_id=resolved_snapshot_id,  # type: ignore[arg-type]
         source_analysis_ids=source_analysis_ids,
     )
 
@@ -365,6 +373,50 @@ def test_product_not_mentioned_fires_on_zero_mentions() -> None:
 
 def test_product_not_mentioned_empty_evidence_yields_no_hits() -> None:
     assert detect_product_not_mentioned(_commerce(())) == []
+
+
+def test_product_not_mentioned_skips_never_measured_entry() -> None:
+    """No snapshot AND no source analyses -> no provenance, so no hit.
+
+    A zero-filled snapshot exists for every entry the audit measured
+    (invariant 7), so a bare entry means the audit never measured it — and
+    emitting it would produce a DetectorHit with all three provenance lists
+    empty, violating the invariant-4 contract.
+    """
+    evidence = _commerce((_entry("p-unmeasured", mention_count=0, snapshot_id=None),))
+    assert detect_product_not_mentioned(evidence) == []
+
+
+def test_product_not_mentioned_fires_when_only_analyses_carry_provenance() -> None:
+    """A snapshot-less entry with source analyses still has provenance."""
+    analysis_id = str(uuid.uuid4())
+    evidence = _commerce(
+        (
+            _entry(
+                "p-analyses-only",
+                mention_count=0,
+                snapshot_id=None,
+                source_analysis_ids=(analysis_id,),
+            ),
+        )
+    )
+    (hit,) = detect_product_not_mentioned(evidence)
+    assert hit.source_analysis_ids == (analysis_id,)
+    assert hit.source_metric_ids == ()
+
+
+def test_product_not_mentioned_hits_always_carry_provenance() -> None:
+    """Every emitted hit populates at least one provenance list (invariant 4)."""
+    evidence = _commerce(
+        (
+            _entry("p-measured", mention_count=0),
+            _entry("p-unmeasured", mention_count=0, snapshot_id=None),
+        )
+    )
+    hits = detect_product_not_mentioned(evidence)
+    assert [hit.target_key for hit in hits] == ["product:p-measured"]
+    for hit in hits:
+        assert hit.source_analysis_ids or hit.source_issue_ids or hit.source_metric_ids
 
 
 def test_competitor_product_dominates_fires_above_threshold() -> None:

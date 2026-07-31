@@ -23,10 +23,12 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from http import HTTPStatus
 from typing import Any
 
 from fastapi import HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -173,7 +175,15 @@ def _status_phrase(status_code: int) -> str:
 
 
 async def api_exception_handler(request: Request, exc: ApiException) -> JSONResponse:
-    """Render an :class:`ApiException` as the unified envelope."""
+    """Render an :class:`ApiException` as the unified envelope.
+
+    ``details``/``detail`` are raiser-supplied and may carry values
+    ``json.dumps`` cannot serialize (UUIDs, datetimes, Decimals, Enums,
+    Pydantic models) — a 500 from inside the error handler itself. They go
+    through ``jsonable_encoder`` so any such value renders; ``None`` stays
+    ``None`` so ``error_envelope``'s absent-details / detail-falls-back-to-
+    message behavior is unchanged.
+    """
     return JSONResponse(
         status_code=exc.status_code,
         content=error_envelope(
@@ -181,8 +191,8 @@ async def api_exception_handler(request: Request, exc: ApiException) -> JSONResp
             message=exc.message,
             request_id=request_id_for(request),
             retryable=exc.is_retryable(),
-            details=exc.details,
-            detail=exc.detail,
+            details=jsonable_encoder(exc.details) if exc.details is not None else None,
+            detail=jsonable_encoder(exc.detail) if exc.detail is not None else None,
         ),
         headers=exc.headers,
     )
@@ -202,7 +212,10 @@ def _parse_legacy_detail(
     code: str | None = None
     message: str | None = None
     details: dict[str, Any] | None = None
-    detail = exc.detail
+    # Annotated ``Any``: ``HTTPException.detail`` is typed ``str``, but a coded
+    # raise carries a dict and this function deliberately reassigns None for
+    # the empty case — without this mypy narrows it to ``str`` and rejects both.
+    detail: Any = exc.detail
     if isinstance(detail, str) and not detail:
         detail = None  # an empty legacy detail behaves as absent
     if isinstance(detail, dict):
@@ -252,9 +265,15 @@ async def http_exception_shim_handler(
 
 
 def sanitize_validation_errors(
-    errors: list[dict[str, Any]],
+    errors: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     """Map raw Pydantic error dicts to sanitized field-level entries (COM-5).
+
+    Typed against the shapes the callers actually hold — Pydantic's
+    ``list[ErrorDetails]`` (a TypedDict, so not a ``dict[str, Any]``) and
+    FastAPI's ``Sequence[Any]`` — rather than forcing each call site to cast.
+    Only ``.get()`` is used on each entry, so ``Mapping`` is the honest
+    requirement.
 
     Strips everything that leaks internals — ``ctx`` (raw constraint values),
     ``input`` (echoed payloads, possibly secrets), and the
@@ -279,13 +298,19 @@ def sanitize_validation_errors(
     return sanitized
 
 
-def validation_error_summary(errors: list[dict[str, Any]]) -> str:
-    """One-line human summary (the first field error) for ``detail``/``message``."""
+def validation_error_summary(errors: Sequence[Mapping[str, Any]]) -> str:
+    """One-line human summary (the first field error) for ``detail``/``message``.
+
+    Reads tolerantly: the intended input is ``sanitize_validation_errors``
+    output (``loc``/``message`` always present), but a raw Pydantic entry uses
+    ``msg`` and may carry non-string ``loc`` parts, so both are accepted rather
+    than raising ``KeyError``/``TypeError`` from inside an error path.
+    """
     if not errors:
         return _VALIDATION_ERROR_MESSAGE
     first = errors[0]
-    loc = ".".join(first["loc"])
-    message = first["message"]
+    loc = ".".join(str(part) for part in first.get("loc", ()))
+    message = str(first.get("message") or first.get("msg") or "Invalid value")
     return f"{loc}: {message}" if loc else message
 
 

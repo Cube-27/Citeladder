@@ -169,9 +169,11 @@ reuses the cached dataset rather than refetching.
 
 ## 6. Drift policy
 
-- Every response is validated with **zod `strictValidate`** — it **fails loud** on any
-  mismatch of a **declared field** (a missing required field, a wrong type, an unknown enum
-  value) rather than silently coercing. A validation failure is a bug to fix, not to swallow.
+- Every JSON response object is validated with **zod `strictValidate`** — it **fails loud**
+  on any mismatch of a **declared field** (a missing required field, a wrong type, an unknown
+  enum value) rather than silently coercing. A validation failure is a bug to fix, not to
+  swallow. (Non-JSON response bodies — CSV/Markdown exports via `getText`, PDF/CSV blobs via
+  `getBlob` — have no zod schema and are not parsed.)
 - **Tolerant-on-unknown (ERR-5).** Response objects are built with the `responseObject`
   helper in `lib/api/schemas.ts` (zod `.strip()` semantics): **unknown keys are dropped**
   from the parsed output, so an additive backend field can never break a screen. (The old
@@ -188,8 +190,12 @@ reuses the cached dataset rather than refetching.
   `SEARCHIFY_OPENAPI_JSON` (path to a schema export) when set, else generated offline from
   the checked-in backend code (`backend/.venv` — no server, database, or network), else
   fetched from the live backend at `SEARCHIFY_BACKEND_ORIGIN` (default
-  `http://localhost:8000`). When no source is available the vitest wrapper logs and skips;
-  `pnpm check:contract` fails.
+  `http://localhost:8000`). When no source is available the plain vitest wrapper logs and
+  skips, while `pnpm check:contract` (and any run with `CI` set) **fails** — it sets
+  `SEARCHIFY_CONTRACT_STRICT=1`, which `contractGuardIsStrict` turns into a hard error
+  instead of a skip. **`pnpm test` alone is therefore not sufficient verification of the
+  contract**: always run `pnpm check:contract` too, since `pnpm test` silently skips the
+  guard whenever the OpenAPI source is unavailable.
 - **Requests stay strict.** Outgoing payloads are built from typed TypeScript DTOs at the
   call site — they are never parsed with a tolerant schema, so a request-side drift fails
   at compile time, not at runtime.

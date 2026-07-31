@@ -15,12 +15,18 @@ import uuid
 
 import httpx
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
 from app.core.config.site_health import CAPABILITY_STARTER
+from app.core.telemetry import (
+    generate_correlation_id,
+    reset_correlation_id,
+    set_correlation_id,
+)
 from app.domain.site_health.entitlements import set_entitlement
 from app.main import app
 from app.models.site_health import SiteHealthProfile
@@ -215,7 +221,7 @@ async def test_site_health_stale_selection_version_409_envelope(
     )
     assert resp.status_code == 409
     body = resp.json()
-    # Legacy coded dict is byte-preserved...
+    # Legacy coded dict keeps its exact value and type...
     assert body["detail"]["code"] == "stale_selection_version"
     assert body["detail"]["current_selection_version"] == 0
     assert body["detail"]["message"] == body["error"]["message"]
@@ -300,22 +306,40 @@ async def test_unhandled_exception_returns_internal_error_envelope() -> None:
     async def _boom() -> None:
         raise RuntimeError(marker)
 
-    app.add_api_route(
+    # A LOCAL app carrying the shared app's registered handlers, rather than
+    # adding a throwaway route to the shared router and stripping it in a
+    # `finally`: that mutation is visible to every other test while it is in
+    # place, and a crash between the add and the cleanup leaks the route for
+    # the rest of the session.
+    test_app = FastAPI()
+    test_app.add_api_route(
         "/__test-unhandled-envelope", _boom, methods=["GET"], include_in_schema=False
     )
-    try:
-        # ServerErrorMiddleware re-raises after responding; don't re-raise here.
-        transport = ASGITransport(app=app, raise_app_exceptions=False)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://testserver"
-        ) as raw_client:
-            resp = await raw_client.get("/__test-unhandled-envelope")
-    finally:
-        app.router.routes[:] = [
-            route
-            for route in app.router.routes
-            if getattr(route, "path", "") != "/__test-unhandled-envelope"
-        ]
+    for exc_class_or_status, handler in app.exception_handlers.items():
+        test_app.add_exception_handler(exc_class_or_status, handler)
+
+    # The shared app's correlation middleware is a closure inside
+    # ``create_app`` (not importable), so mint the id the same way here — the
+    # handler reads ``request.state.correlation_id``, and the A6 support path
+    # this test asserts depends on that id being present.
+    @test_app.middleware("http")
+    async def _correlation(request, call_next):
+        correlation_id = generate_correlation_id()
+        request.state.correlation_id = correlation_id
+        token = set_correlation_id(correlation_id)
+        try:
+            response = await call_next(request)
+        finally:
+            reset_correlation_id(token)
+        response.headers[settings.request_id_header] = correlation_id
+        return response
+
+    # ServerErrorMiddleware re-raises after responding; don't re-raise here.
+    transport = ASGITransport(app=test_app, raise_app_exceptions=False)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as raw_client:
+        resp = await raw_client.get("/__test-unhandled-envelope")
 
     assert resp.status_code == 500
     body = resp.json()

@@ -56,6 +56,16 @@ export function CatalogPanel({
     await queryClient.invalidateQueries({ queryKey: queryKeys.products.list(projectId) });
   };
 
+  // Open the import dialog on a CLEAN slate. Closing already resets the
+  // mutation, but only via `onOpenChange(false)` — a reopen that skipped that
+  // path (or any future one) would render the previous run's completion
+  // summary instead of the upload form, so clearing here is what actually
+  // guarantees the result prop is null when the dialog mounts.
+  const openImport = () => {
+    importMutation.reset();
+    setImportOpen(true);
+  };
+
   const createMutation = useMutation({
     mutationFn: (input: ProductInput) => productsApi.create(projectId, input),
     onSuccess: async () => {
@@ -178,7 +188,7 @@ export function CatalogPanel({
           {products.length} product{products.length === 1 ? '' : 's'} in the catalog
         </p>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+          <Button variant="secondary" size="sm" onClick={openImport}>
             <Upload className="size-4" aria-hidden />
             Import CSV
           </Button>
@@ -211,7 +221,7 @@ export function CatalogPanel({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="md" onClick={() => setImportOpen(true)}>
+              <Button variant="ghost" size="md" onClick={openImport}>
                 Import CSV
               </Button>
               <Button variant="primary" size="md" onClick={() => setFormOpen(true)}>
@@ -290,9 +300,17 @@ export function CatalogPanel({
           }
         }}
         isDeleting={deleteMutation.isPending}
-        error={deleteMutation.isError ? errorMessage(deleteMutation.error) : undefined}
-        onConfirm={async () => {
-          if (pendingDelete) await deleteMutation.mutateAsync(pendingDelete.id);
+        notice={
+          deleteMutation.isError
+            ? mutationNoticeForError(deleteMutation.error, { action: 'delete the product' })
+            : undefined
+        }
+        onConfirm={() => {
+          // `mutate`, not `mutateAsync`: nothing awaits the result here, and an
+          // un-awaited rejected promise is an unhandled rejection. Failure is
+          // surfaced through `deleteMutation.isError` above — the same pattern
+          // the import flow uses.
+          if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
         }}
       />
     </div>

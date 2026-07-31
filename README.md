@@ -226,13 +226,23 @@ pnpm install
 pnpm dev
 ```
 
-### Seed demo data (optional)
+### Seed demo data (local development only, optional)
 
-With Postgres running and migrations applied, generate a full demo dataset
-from `backend/`:
+> [!WARNING]
+> `scripts.seed_dev_data` is a **local-development-only** script. It **deletes**
+> the demo workspaces and the demo user on every run, and creates a fixed,
+> publicly-documented login. Run it only against a disposable local database —
+> **never** against a shared, staging, or production database. The script
+> **fails closed**: it refuses to run (before any delete, commit, or credential
+> creation) unless `APP_ENV` is a development value (`development` / `dev` /
+> `local` / `test` / `testing`). An unset `APP_ENV` is treated as production and
+> refused.
+
+With a local Postgres running and migrations applied, generate a full demo
+dataset from `backend/`:
 
 ```bash
-uv run python -m scripts.seed_dev_data
+APP_ENV=development uv run python -m scripts.seed_dev_data
 ```
 
 This creates the demo login `demo@searchify.dev` / `DemoPass123!`, two
@@ -299,6 +309,8 @@ uv run ruff check .
 # Frontend (from frontend/)
 cd frontend
 pnpm test             # Vitest unit/component tests (MSW-mocked network)
+pnpm check:contract   # backend OpenAPI vs zod contract drift (fails if no
+                      # OpenAPI source — `pnpm test` only WARNS and skips it)
 pnpm check:policy     # architecture / token guards
 pnpm build            # next build
 pnpm exec tsc --noEmit # type check

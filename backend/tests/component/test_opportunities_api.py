@@ -11,16 +11,20 @@ Seed helpers live in ``tests/component/opportunity_helpers.py``.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta
 
 import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.site_health import CRAWL_STATUS_COMPLETED
 from app.models.audit import Audit
+from app.models.site_health import SiteCrawl, SiteHealthProfile
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 from tests.component.opportunity_helpers import (
+    ROOT_URL,
     SCORE_BRAND_ABSENT,
     SCORE_OWNED_PAGE,
     Scenario,
@@ -243,6 +247,67 @@ async def test_summary_empty_then_populated(
     # Freshly recomputed over the latest evidence -> not stale.
     assert body["stale"] is False
     assert body["evidence_updated_at"]
+
+
+async def test_summary_goes_stale_when_newer_evidence_lands(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Newer terminal evidence after a recompute flips ``stale`` to true.
+
+    Covers the TRUE branch of ``_latest_evidence_at`` / ``get_summary``: the
+    read-time drift marker (C4c) that says "the snapshot predates the
+    evidence", with no persisted staleness flag.
+    """
+    scn = await _seed_and_recompute(client, session_factory)
+    url = f"/api/v1/projects/{scn.project_id}/opportunities/summary"
+
+    fresh = (await client.get(url, headers=_headers(scn))).json()
+    assert fresh["stale"] is False
+    computed_at = fresh["computed_at"]
+
+    # A newer completed crawl on the same project, terminalized AFTER the
+    # snapshot — the evidence moved on and no recompute has run since.
+    #
+    # The stamp is a few seconds in the PAST, not the future: it only has to
+    # beat the existing snapshot's `created_at`, and a future stamp would stay
+    # newer than every later snapshot too, so the recompute-clears-it
+    # assertion below could never pass.
+    async with session_factory() as session:
+        profile_id = await session.scalar(
+            select(SiteHealthProfile.id).where(
+                SiteHealthProfile.project_id == scn.project_id
+            )
+        )
+        assert profile_id is not None
+        session.add(
+            SiteCrawl(
+                workspace_id=scn.workspace_id,
+                project_id=scn.project_id,
+                profile_id=profile_id,
+                status=CRAWL_STATUS_COMPLETED,
+                root_url=ROOT_URL,
+                random_seed="2",
+                completed_at=datetime.fromisoformat(computed_at)
+                + timedelta(milliseconds=1),
+            )
+        )
+        await session.commit()
+
+    after = await client.get(url, headers=_headers(scn))
+    assert after.status_code == 200
+    body = after.json()
+    assert body["stale"] is True
+    assert body["computed_at"] == computed_at  # nothing was recomputed
+    assert body["evidence_updated_at"] > computed_at
+
+    # Recomputing over the newer evidence clears the flag again.
+    recompute = await client.post(
+        f"/api/v1/projects/{scn.project_id}/opportunities/recompute",
+        headers=_headers(scn),
+    )
+    assert recompute.status_code == 200
+    assert (await client.get(url, headers=_headers(scn))).json()["stale"] is False
 
 
 # =========================================================================

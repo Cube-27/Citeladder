@@ -428,6 +428,22 @@ async def test_product_audit_references_delete_guard(
         )
     ).status_code == 404
 
+    # CROSS-workspace, not merely missing: a product that really exists in the
+    # register-created workspace is still a 404 when the request is scoped to
+    # the seeded workspace — the id resolves, the scope does not.
+    register_project = await _project(client)
+    foreign = await client.post(
+        f"/api/v1/projects/{register_project['id']}/products",
+        json=_product_payload(sku="FOREIGN-1", name="Other Workspace Product"),
+    )
+    assert foreign.status_code == 201
+    assert (
+        await client.get(
+            f"/api/v1/products/{foreign.json()['id']}/audit-references",
+            headers=headers,
+        )
+    ).status_code == 404
+
 
 @pytest.mark.asyncio
 async def test_competitor_product_crud(client: httpx.AsyncClient) -> None:

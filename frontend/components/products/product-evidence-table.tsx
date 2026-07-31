@@ -82,15 +82,23 @@ export function ProductEvidenceTable({
       ),
   });
 
+  const items = evidenceQuery.data?.items ?? [];
+
   // Run-awareness for the empty copy (D2/COM-3): "mentions appear once a run
   // completes" is wrong when runs HAVE completed — the copy must say so.
+  //
+  // Gated to the ONE case that consumes it: the Mentions sub-tab, with the
+  // evidence query settled and no mentions in it. Ungated, every visit to the
+  // drill-down fetched the project's whole audit list to pick between two
+  // sentences that were usually never rendered at all.
+  const mentionsAreEmpty =
+    evidenceQuery.isSuccess && !items.some((item) => item.evidence_kind === 'product_mention');
   const auditsQuery = useQuery({
     queryKey: queryKeys.runs.list({ project_id: product.project_id }),
     queryFn: ({ signal }) => runsApi.listAudits({ project_id: product.project_id }, { signal }),
+    enabled: subTab === 'mentions' && mentionsAreEmpty,
   });
   const hasCompletedRun = (auditsQuery.data ?? []).some((audit) => isDashboardStatus(audit.status));
-
-  const items = evidenceQuery.data?.items ?? [];
   const truncated = evidenceQuery.data?.truncated ?? false;
 
   return (

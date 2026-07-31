@@ -21,7 +21,11 @@ from app.core.config.products import (
     PRODUCT_ORIGIN_IMPORTED,
     PRODUCT_ORIGIN_MANUAL,
 )
-from app.domain.products.schemas import ProductImportRowError, ProductImportSummary
+from app.domain.products.schemas import (
+    ProductImportRowError,
+    ProductImportSummary,
+    ProductInput,
+)
 from app.models.audit import Audit
 from app.models.brand import Competitor
 from app.models.product import CompetitorProduct, Product
@@ -181,7 +185,7 @@ async def import_products(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    rows: list[tuple[int, Any]],
+    rows: list[tuple[int, ProductInput]],
     row_errors: Iterable[ProductImportRowError] = (),
 ) -> ProductImportResult:
     """CSV bulk-create: persist already-parsed product rows as ``imported``.

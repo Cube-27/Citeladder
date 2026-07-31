@@ -117,9 +117,20 @@ def create_app() -> FastAPI:
     # non-2xx response — migrated ApiException routers, legacy HTTPException
     # raises (compat shim, incl. Starlette routing 404/405), request
     # validation failures, and unhandled 500s alike.
-    app.add_exception_handler(ApiException, api_exception_handler)
-    app.add_exception_handler(StarletteHTTPException, http_exception_shim_handler)
-    app.add_exception_handler(RequestValidationError, request_validation_error_handler)
+    # ``add_exception_handler`` types its handler as taking the BASE
+    # ``Exception``, so a handler narrowed to the type it is registered for is
+    # rejected even though Starlette only ever dispatches that type to it. The
+    # ignores are on the registration (Starlette's typing gap), keeping the
+    # handlers themselves precisely typed — see errors.py.
+    app.add_exception_handler(ApiException, api_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(
+        StarletteHTTPException,
+        http_exception_shim_handler,  # type: ignore[arg-type]
+    )
+    app.add_exception_handler(
+        RequestValidationError,
+        request_validation_error_handler,  # type: ignore[arg-type]
+    )
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
     app.add_middleware(

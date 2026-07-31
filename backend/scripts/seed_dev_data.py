@@ -56,6 +56,7 @@ from app.connectors.answer_engines.contracts import (
     CitationResult,
     SearchEventResult,
 )
+from app.core.config import settings
 from app.core.config.audits import audit_settings
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -446,9 +447,50 @@ def _site_transport() -> httpx.MockTransport:
 
 
 # ---------------------------------------------------------------------------
+# Development-only guard (fail closed BEFORE any write)
+# ---------------------------------------------------------------------------
+# Environments this seeder is allowed to touch. Anything else — staging,
+# production, or an unrecognized token — is refused.
+_DEVELOPMENT_ENVS = frozenset({"development", "dev", "local", "test", "testing"})
+
+
+class SeedEnvironmentError(RuntimeError):
+    """The configured target is not an approved development database."""
+
+
+def _require_development_target() -> None:
+    """Refuse to seed anything but a development database.
+
+    This seeder DELETES the demo workspaces and the demo user, and creates a
+    fixed, publicly-known credential (``DEMO_EMAIL`` / ``DEMO_PASSWORD``).
+    Against a shared, staging, or production database that is destructive AND
+    an account-takeover vector, so the check runs before the first delete or
+    commit rather than trusting the operator's shell.
+
+    ``APP_ENV`` is the gate. An empty/unset value is treated as production:
+    the safe default for a destructive script is to refuse, not to assume.
+    """
+    env = str(settings.app_env or "").strip().lower()
+    if env not in _DEVELOPMENT_ENVS:
+        raise SeedEnvironmentError(
+            f"Refusing to seed: APP_ENV is {env or '<unset>'!r}, not a development "
+            f"environment ({', '.join(sorted(_DEVELOPMENT_ENVS))}). This script "
+            "deletes the demo workspaces/user and creates a well-known demo "
+            "login, so it must never run against a shared, staging, or "
+            "production database. Set APP_ENV=development and point "
+            "DATABASE_URL at a disposable local database."
+        )
+    logger.info("Environment check passed: APP_ENV=%s", env)
+
+
+# ---------------------------------------------------------------------------
 # Cleanup (idempotency)
 # ---------------------------------------------------------------------------
 async def _cleanup_previous_seed(session: AsyncSession) -> None:
+    # Defense in depth: the guard also runs at the top of ``seed()``, but this
+    # function performs the first deletes, so it re-asserts rather than
+    # trusting every future caller to have checked.
+    _require_development_target()
     existing = (
         (
             await session.execute(
@@ -477,6 +519,8 @@ async def _cleanup_previous_seed(session: AsyncSession) -> None:
 # Main seed
 # ---------------------------------------------------------------------------
 async def seed() -> None:
+    # Fail closed BEFORE the first delete/commit or any credential creation.
+    _require_development_target()
     async with SessionLocal() as session:
         await _cleanup_previous_seed(session)
 
@@ -500,10 +544,23 @@ async def seed() -> None:
                             WorkspaceMember.workspace_id == Workspace.id,
                         )
                         .where(WorkspaceMember.user_id == user.id)
+                        # Deterministic pick when the demo user belongs to
+                        # several workspaces — otherwise a re-run could rename
+                        # a different workspace each time.
+                        .order_by(Workspace.created_at.asc(), Workspace.id.asc())
                     )
                 )
                 .scalars()
                 .first()
+            )
+        if personal_ws is None:
+            # Neither path produced a workspace: fail with the cause rather
+            # than an AttributeError on the rename below.
+            raise SeedEnvironmentError(
+                f"Could not resolve a personal workspace for {DEMO_EMAIL}: "
+                "ensure_personal_workspace returned None and the user has no "
+                "workspace membership. Re-run against a clean development "
+                "database."
             )
         # Rename the auto-created personal workspace to our demo name so
         # cleanup/re-run can find it, and add a second agency workspace.

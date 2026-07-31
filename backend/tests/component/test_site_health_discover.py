@@ -563,9 +563,12 @@ async def test_free_discovery_maps_past_the_sample_budget_without_analyzing(
         )
         assert observed is not None
         assert observed > 4, "discovery must not stop at the analysis budget"
-        # Soft cap: admission is batched, so landing slightly over is expected;
-        # what must NOT happen is running away to the full 16-URL frontier.
-        assert observed <= 16
+        # Soft cap: admission is batched, so landing slightly over the 12-URL
+        # discovery cap is expected. The bound must stay STRICTLY below the
+        # full 16-URL frontier (root + 15 children) — at `<= 16` the assertion
+        # passed even when the cap was ignored entirely, so it proved nothing.
+        assert observed < 16, "the discovery cap must bound the frontier"
+        assert observed <= site_health_settings.free_discovery_url_cap + 2
 
         # The unanalyzed remainder is real, listable inventory.
         assert (

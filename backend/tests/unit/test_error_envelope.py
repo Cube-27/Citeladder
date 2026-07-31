@@ -275,16 +275,41 @@ def test_validation_error_summary_first_error() -> None:
 # =========================================================================
 # Global handlers
 # =========================================================================
-async def test_unhandled_exception_handler_hides_internals(
-    caplog,
-) -> None:
-    # logger.exception reads sys.exc_info(), so invoke the handler from
-    # inside a live except block (as Starlette does in production).
+async def test_unhandled_exception_handler_hides_internals() -> None:
+    # Capture with a handler attached DIRECTLY to the logger rather than
+    # `caplog`. Any earlier test that calls `configure_logging()` installs
+    # structlog with `cache_logger_on_first_use=True` and reconfigures the root
+    # logger, after which caplog's root-level capture saw nothing here and this
+    # test failed only in a full-suite run (never standalone). Binding to the
+    # emitting logger is independent of root handlers and propagation.
+    records: list[logging.LogRecord] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    err_logger = logging.getLogger("app.core.errors")
+    handler = _Capture(level=logging.ERROR)
+    err_logger.addHandler(handler)
+    previous_level = err_logger.level
+    err_logger.setLevel(logging.ERROR)
     try:
-        raise RuntimeError("secret-internal-marker")
-    except RuntimeError as exc:
-        with caplog.at_level(logging.ERROR, logger="app.core.errors"):
+        # logger.exception reads sys.exc_info(), so invoke the handler from
+        # inside a live except block (as Starlette does in production).
+        try:
+            raise RuntimeError("secret-internal-marker")
+        except RuntimeError as exc:
             response = await unhandled_exception_handler(_request("req-500"), exc)
+    finally:
+        err_logger.removeHandler(handler)
+        err_logger.setLevel(previous_level)
+
+    logged = "\n".join(
+        f"{record.getMessage()}\n{logging.Formatter().formatException(record.exc_info)}"
+        if record.exc_info
+        else record.getMessage()
+        for record in records
+    )
     assert response.status_code == 500
     body = json.loads(response.body)
     assert body["error"]["code"] == CODE_INTERNAL_ERROR
@@ -297,8 +322,13 @@ async def test_unhandled_exception_handler_hides_internals(
     # ...and the request id is echoed on the response header for support.
     assert response.headers[settings.request_id_header] == "req-500"
     # The failure IS logged (with traceback) for operators.
-    assert "unhandled_api_exception" in caplog.text
-    assert "secret-internal-marker" in caplog.text
+    assert "unhandled_api_exception" in logged
+    assert "secret-internal-marker" in logged
+    # The client-visible request id is on the log record too: the correlation
+    # contextvar may already be unwound here, so the handler must carry it
+    # explicitly or the id handed to the user appears in no log line.
+    assert records
+    assert getattr(records[0], "request_id", None) == "req-500"
 
 
 def test_request_id_for_prefers_request_state() -> None:

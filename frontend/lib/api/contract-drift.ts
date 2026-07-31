@@ -347,9 +347,23 @@ function backendPythonCandidates(root: string): string[] {
 }
 
 /**
+ * True when a missing OpenAPI source must FAIL rather than skip.
+ *
+ * `pnpm check:contract` runs the same vitest file as `pnpm test`, so the
+ * documented "the wrapper skips, check:contract fails" split needs an explicit
+ * signal — without one both paths skipped, and the guard could silently never
+ * run in CI. `check:contract` sets `SEARCHIFY_CONTRACT_STRICT=1`; `CI` alone
+ * also counts, so a CI run of `pnpm test` cannot quietly skip the guard either.
+ */
+export function contractGuardIsStrict(env: NodeJS.ProcessEnv = process.env): boolean {
+  return Boolean(env.SEARCHIFY_CONTRACT_STRICT || env.CI);
+}
+
+/**
  * Obtain the backend OpenAPI document. Returns null (with `errors` noting
  * each attempted source) when no source is available — the caller decides
- * whether that is a skip (vitest wrapper) or a failure (`check:contract`).
+ * whether that is a skip (vitest wrapper) or a failure (`check:contract` /
+ * CI, via `contractGuardIsStrict`).
  */
 export async function acquireOpenApiSpec(options?: {
   env?: NodeJS.ProcessEnv;

@@ -70,10 +70,31 @@ export function humanizeApiError(
       requestId: error.requestId,
     };
   }
-  if (error instanceof Error && error.message.trim()) {
+  if (error instanceof Error && error.message.trim() && !isStructuredParseFailure(error)) {
     return { message: error.message };
   }
   return { message: fallbackMessage };
+}
+
+/**
+ * True for a contract-validation failure whose message is machine detail, not
+ * user copy.
+ *
+ * `strictValidate` (lib/api/schemas.ts) throws a plain `Error` whose message
+ * embeds `ZodError.message` — a serialized JSON array of issue objects. It was
+ * therefore returned verbatim as the user-facing message, putting a raw JSON
+ * blob on screen: exactly what the transport's `readErrorBody` guarantees
+ * never to do. A drift bug is for the developer to fix, so the user gets the
+ * generic fallback while the original error keeps its full detail for logs.
+ */
+function isStructuredParseFailure(error: Error): boolean {
+  const message = error.message;
+  return (
+    message.startsWith('API validation failure in ') ||
+    error.name === 'ZodError' ||
+    // A bare serialized ZodError message is a JSON array of issue objects.
+    (message.trimStart().startsWith('[') && message.includes('"code"'))
+  );
 }
 
 /** Extract an HTTP status from an ApiError or a duck-typed `{ status }` error. */
