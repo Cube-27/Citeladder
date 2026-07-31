@@ -33,6 +33,7 @@ from app.core.config import settings
 from app.core.config.integrations import (
     ERROR_PROVIDER_API,
     GSC_API_BASE_URL,
+    GSC_SITES_PATH,
     INTEGRATION_OAUTH_REVOKE_URLS,
     INTEGRATION_OAUTH_TOKEN_URLS,
     INTEGRATION_TRANSPORT_GOOGLE,
@@ -50,7 +51,7 @@ from app.core.config.integrations import (
 # grant behind either connection). The host is config-owned
 # (``GSC_API_BASE_URL``) and allow-listed. The Microsoft-grant probe
 # (``GetSites``) lives with the Bing data-API client (I12).
-_GSC_SITES_PROBE_PATH = "/webmasters/v3/sites"
+_GSC_SITES_PROBE_PATH = GSC_SITES_PATH
 
 
 class IntegrationOAuthError(IntegrationApiError):

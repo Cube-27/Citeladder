@@ -1451,6 +1451,33 @@ export const integrationSyncRunSchema = responseObject({
 // `GET /integrations/{id}/syncs` — bare array of run projections.
 export const integrationSyncRunListSchema = z.array(integrationSyncRunSchema);
 
+// `GET /integrations/{id}/properties` — the provider properties this grant can
+// read, for the property picker. Discovery output, not stored state:
+// `property_ref` is the canonical ref posted back to create a mapping
+// (a GSC siteUrl, a bare GA4 numeric id); `label` is display-only.
+export const integrationPropertySchema = responseObject({
+  property_ref: z.string(),
+  label: z.string(),
+});
+
+export const integrationPropertyListSchema = z.array(integrationPropertySchema);
+
+// `GET|POST /integrations/{id}/mappings` — the property→project bridge that
+// tells a sync WHICH property to pull and which project owns the rows.
+export const integrationPropertyMappingSchema = responseObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  connection_id: uuid(),
+  provider: integrationProviderSchema,
+  property_ref: z.string(),
+  project_id: uuid(),
+  status: z.enum(['active', 'disabled']),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const integrationPropertyMappingListSchema = z.array(integrationPropertyMappingSchema);
+
 // 202 enqueue identity (C3) — one per queued run. The frontend polls
 // `GET /integrations/{connection_id}/syncs/{sync_run_id}` until terminal.
 export const integrationSyncEnqueueSchema = responseObject({

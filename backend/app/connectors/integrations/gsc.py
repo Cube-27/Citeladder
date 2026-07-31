@@ -35,16 +35,17 @@ import httpx
 
 from app.connectors.integrations._http import (
     IntegrationApiError,
+    ProviderProperty,
     RequestPacer,
     assert_approved_url,
-    classify_status,
-    nested_error_detail,
-    parse_retry_after,
+    json_object_or_raise,
 )
 from app.core.config.integrations import (
     ERROR_PROVIDER_API,
     GSC_API_BASE_URL,
+    GSC_PERMISSION_UNVERIFIED,
     GSC_SEARCH_ANALYTICS_PATH,
+    GSC_SITES_PATH,
     INTEGRATION_PROVIDER_GSC,
     integration_settings,
 )
@@ -83,6 +84,59 @@ class GscClient:
     def __init__(self, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._transport = transport
         self._pacer = RequestPacer()
+
+    async def list_properties(
+        self, *, access_token: str
+    ) -> tuple[ProviderProperty, ...]:
+        """List the verified sites this grant can read (property discovery).
+
+        Backs the property picker: the user selects from what Google says
+        they actually own, so a site ref is never typed or guessed. Sites
+        the caller cannot read search analytics for (``siteUnverifiedUser``)
+        are filtered out — offering them would only produce a 403 at sync.
+        Returns refs in the provider's own ``siteUrl`` spelling.
+        """
+        url = GSC_API_BASE_URL + GSC_SITES_PATH
+        assert_approved_url(url, label="GSC", error_type=GscApiError)
+        await self._pacer.wait(
+            integration_settings.requests_per_minute(INTEGRATION_PROVIDER_GSC)
+        )
+        try:
+            async with httpx.AsyncClient(
+                transport=self._transport,
+                timeout=integration_settings.sync_request_timeout_seconds,
+            ) as client:
+                response = await client.get(
+                    url,
+                    # Set per-request and never logged (invariant 6).
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+        except httpx.HTTPError as exc:
+            raise GscApiError(
+                f"GSC site list request failed: {type(exc).__name__}",
+                error_code=ERROR_PROVIDER_API,
+                retryable=True,
+            ) from exc
+        payload = json_object_or_raise(
+            response, label="GSC site list", error_type=GscApiError
+        )
+        # An account with no verified sites omits the key entirely.
+        entries = payload.get("siteEntry") or []
+        if not isinstance(entries, list):
+            raise GscApiError(
+                "GSC site list returned malformed entries",
+                error_code=ERROR_PROVIDER_API,
+            )
+        properties = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            site_url = str(entry.get("siteUrl") or "").strip()
+            permission = str(entry.get("permissionLevel") or "").strip()
+            if not site_url or permission == GSC_PERMISSION_UNVERIFIED:
+                continue
+            properties.append(ProviderProperty(property_ref=site_url, label=site_url))
+        return tuple(properties)
 
     async def query_search_analytics(
         self,
@@ -136,31 +190,9 @@ class GscClient:
                 error_code=ERROR_PROVIDER_API,
                 retryable=True,
             ) from exc
-        if response.status_code != 200:
-            error_code, retryable = classify_status(response.status_code)
-            try:
-                detail = nested_error_detail(response.json())
-            except ValueError:
-                detail = ""
-            suffix = f" ({detail})" if detail else ""
-            raise GscApiError(
-                f"GSC query returned HTTP {response.status_code}{suffix}",
-                error_code=error_code,
-                retryable=retryable,
-                retry_after_seconds=parse_retry_after(response),
-            )
-        try:
-            payload = response.json()
-        except ValueError as exc:
-            raise GscApiError(
-                "GSC query returned a non-JSON body",
-                error_code=ERROR_PROVIDER_API,
-            ) from exc
-        if not isinstance(payload, dict):
-            raise GscApiError(
-                "GSC query returned an unexpected body",
-                error_code=ERROR_PROVIDER_API,
-            )
+        payload = json_object_or_raise(
+            response, label="GSC query", error_type=GscApiError
+        )
         rows = payload.get("rows")
         if rows is None:
             # An empty result omits the rows key entirely.

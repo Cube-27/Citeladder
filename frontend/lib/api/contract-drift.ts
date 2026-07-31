@@ -109,6 +109,8 @@ export const CONTRACT_SCHEMA_MAP = {
   integrationSyncRunSchema: 'IntegrationSyncRunResponse',
   integrationSyncEnqueueSchema: 'IntegrationSyncEnqueueResponse',
   integrationTestResultSchema: 'IntegrationTestResponse',
+  integrationPropertySchema: 'IntegrationPropertyResponse',
+  integrationPropertyMappingSchema: 'IntegrationPropertyMappingResponse',
   // Billing
   billingCatalogSchema: 'BillingCatalogResponse',
   billingSummarySchema: 'BillingSummaryResponse',

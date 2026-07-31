@@ -16,6 +16,7 @@ import {
   type IntegrationProvider,
 } from '@/lib/api/integrations';
 import { FAMILY_META, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
+import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
 import { queryKeys } from '@/lib/api/query-keys';
 import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
 import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
@@ -174,6 +175,10 @@ function ConnectionRow({
   });
 
   const busy = testMutation.isPending || syncMutation.isPending || deleteMutation.isPending;
+  // The active MAPPING, not account_ref: a connection can keep pointing at a
+  // property whose mapping is gone (mappings cascade with their project),
+  // and every sync of that state fails `unmapped_property` after fetching.
+  const hasProperty = useActiveMapping(connection.id) !== null;
   const lastConnection = grant.connections.length === 1;
   const siblings = grant.connections.filter((conn) => conn.id !== connection.id);
   const familyTitle = FAMILY_META[grant.family].title;
@@ -192,7 +197,7 @@ function ConnectionRow({
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-foreground truncate text-sm font-semibold">{label}</div>
-          <div className="text-muted truncate font-mono text-xs">{connection.account_ref}</div>
+          <PropertyPicker connection={connection} disabled={busy} />
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Button
@@ -207,7 +212,11 @@ function ConnectionRow({
             variant="secondary"
             size="sm"
             onClick={() => syncMutation.mutate()}
-            disabled={busy || runActive || grant.status !== 'connected'}
+            // No property selected ⇒ nothing to fetch from. The run would
+            // fail `unmapped_property` server-side; blocking it here says so
+            // up front instead of queueing a guaranteed failure.
+            title={hasProperty ? undefined : 'Select a property first'}
+            disabled={busy || runActive || !hasProperty || grant.status !== 'connected'}
           >
             {syncMutation.isPending ? (
               <>

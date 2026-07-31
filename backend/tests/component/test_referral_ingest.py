@@ -123,7 +123,7 @@ async def test_ingest_sanitizes_referrer_rows_before_write(
             ],
             metrics={"sessions": 2},
         )
-        # A " | " inside a free-form fullReferrer value must survive the
+        # A " | " inside a free-form pageReferrer value must survive the
         # right-peeling unpack (only the trailing date dim is peeled).
         separator_row = await seed_metric_row(
             session,

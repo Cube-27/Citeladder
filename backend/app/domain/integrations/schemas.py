@@ -92,6 +92,18 @@ class IntegrationSyncRunResponse(BaseModel):
     completed_at: datetime | None
 
 
+class IntegrationPropertyResponse(BaseModel):
+    """One selectable provider property from ``GET /{id}/properties``.
+
+    Provider-side discovery output, not stored state: ``property_ref`` is
+    the canonical ref the caller posts back to create a mapping, ``label``
+    is display-only. Carries no token and no provider credentials.
+    """
+
+    property_ref: str
+    label: str
+
+
 class IntegrationPropertyMappingCreate(BaseModel):
     """``POST /integrations/{id}/mappings`` body.
 

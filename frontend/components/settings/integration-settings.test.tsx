@@ -33,6 +33,7 @@ const CONN_GSC = '33333333-3333-4333-8333-333333333333';
 const CONN_GA4 = '44444444-4444-4444-8444-444444444444';
 const CONN_BING = '66666666-6666-4666-8666-666666666666';
 const SYNC = '77777777-7777-4777-8777-777777777777';
+const MAPPING_ID = '99999999-9999-4999-8999-999999999999';
 
 const activeProject = {
   id: '88888888-8888-4888-8888-888888888888',
@@ -114,7 +115,40 @@ function mockList(items: Record<string, unknown>[]) {
   mswServer.use(http.get('/api/v1/integrations', () => HttpResponse.json(items)));
 }
 
+/**
+ * Every connection reports ONE active mapping by default.
+ *
+ * The card reads the mapping — not `account_ref` — to decide whether a
+ * property is selected, because the two drift apart (mappings cascade with
+ * their project while `account_ref` survives on the connection).
+ */
+function mockMappings() {
+  mswServer.use(
+    http.get('/api/v1/integrations/:connectionId/mappings', ({ params }) => {
+      const connectionId = String(params.connectionId);
+      const source = [gscConnection, ga4Connection, bingConnection].find(
+        (conn) => conn.id === connectionId,
+      );
+      return HttpResponse.json([
+        {
+          // A real uuid: the mapping schema is strict and validates the shape.
+          id: MAPPING_ID,
+          workspace_id: WS,
+          connection_id: connectionId,
+          provider: source?.provider ?? 'gsc',
+          property_ref: source?.account_ref ?? '',
+          project_id: activeProject.id,
+          status: 'active',
+          created_at: '2026-07-20T00:00:00Z',
+          updated_at: '2026-07-20T00:00:00Z',
+        },
+      ]);
+    }),
+  );
+}
+
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => mockMappings());
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -158,7 +192,11 @@ describe('IntegrationSettings — grant cards', () => {
     ).toBeInTheDocument();
     expect(within(googleCard).getByText('Google Search Console')).toBeInTheDocument();
     expect(within(googleCard).getByText('Google Analytics 4')).toBeInTheDocument();
-    expect(within(googleCard).getByText('sc-domain:example.com')).toBeInTheDocument();
+    // The selected property comes from the connection's active MAPPING, which
+    // is a second fetch — hence findBy rather than getBy.
+    expect(
+      await within(googleCard).findByText('sc-domain:example.com'),
+    ).toBeInTheDocument();
     expect(within(googleCard).getByText('properties/123456789')).toBeInTheDocument();
     // Granted-scope chips (short scope names).
     expect(within(googleCard).getByText('webmasters.readonly')).toBeInTheDocument();
@@ -365,6 +403,9 @@ describe('IntegrationSettings — sync polling', () => {
     const row = await screen.findByTestId('connection-row-gsc');
     const syncButton = within(row).getByRole('button', { name: 'Sync now' });
     await waitFor(() => expect(listCalls).toBe(1));
+    // Sync is gated on the connection having an active property mapping, so
+    // it only enables once that fetch lands.
+    await waitFor(() => expect(syncButton).toBeEnabled());
     await ue.click(syncButton);
 
     // The enqueued run is polled and surfaced as a run-status badge; Sync now

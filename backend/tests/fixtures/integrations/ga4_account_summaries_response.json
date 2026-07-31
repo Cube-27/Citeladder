@@ -1,0 +1,33 @@
+{
+  "accountSummaries": [
+    {
+      "name": "accountSummaries/100",
+      "account": "accounts/100",
+      "displayName": "Acme Group",
+      "propertySummaries": [
+        {
+          "property": "properties/123456789",
+          "displayName": "Acme Web"
+        },
+        {
+          "property": "properties/987654321",
+          "displayName": "Acme Blog"
+        }
+      ]
+    },
+    {
+      "name": "accountSummaries/200",
+      "account": "accounts/200",
+      "displayName": "Side Project",
+      "propertySummaries": [
+        {
+          "property": "properties/555000111"
+        },
+        {
+          "property": "malformed-no-numeric-id",
+          "displayName": "Skipped"
+        }
+      ]
+    }
+  ]
+}

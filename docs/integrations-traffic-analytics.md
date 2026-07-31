@@ -14,7 +14,7 @@ single successor of the retired v1 plan/handoff docs.
 
 - **C1 dataset ids:** `gsc_page_daily`, `gsc_query_daily`, `ga4_channel_daily`
   (sessionDefaultChannelGroup,date), `ga4_source_medium_daily`
-  (sessionSource,sessionMedium,date), `ga4_referrer_daily` (fullReferrer,date),
+  (sessionSource,sessionMedium,date), `ga4_referrer_daily` (pageReferrer,date),
   `ga4_landing_daily` (landingPage,sessionSource,sessionMedium,date),
   `bing_page_daily`, `bing_query_daily`. `dimension_key` = declared-order dims
   joined `" | "` — the ONLY owners are `pack_dimension_key`/
