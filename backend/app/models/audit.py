@@ -31,8 +31,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+# Pure vocabulary module: ``contracts`` imports nothing from ``app``, so the
+# canonical finish-reason enum can be reused here without a layering cycle
+# (invariant 2 — one owner for the closed vocabulary, never re-literalled).
+from app.connectors.answer_engines.contracts import FinishReason
 from app.core.config.audits import (
     AUDIT_STATUS_DRAFT,
+    MEASUREMENT_MODE_BENCHMARK,
     TASK_STATUS_QUEUED,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
@@ -81,6 +86,12 @@ class Audit(Base):
     # mode/route/credential detail stays frozen in ``configuration``.
     trigger: Mapped[str] = mapped_column(String(16), default="manual", index=True)
     benchmark_mode: Mapped[str] = mapped_column(String(32), default="")
+    # Measurement mode (pulse | benchmark) — an axis INDEPENDENT of
+    # ``benchmark_mode`` (prompt framing). Defaults to ``benchmark`` so an
+    # explicit manual run keeps its pre-existing full-run shape.
+    measurement_mode: Mapped[str] = mapped_column(
+        String(16), default=MEASUREMENT_MODE_BENCHMARK, nullable=False
+    )
     # Funded-execution provenance. Null for BYOK runs. The billing account that
     # funds this run (SET NULL so account removal never erases audit history),
     # the funded budget period the reservation counts against, and the worst-case
@@ -391,6 +402,14 @@ class AuditTask(Base):
     request_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     provider_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Canonical finish reason (closed vocabulary — see
+    # ``connectors.answer_engines.contracts.FinishReason``). Non-null and
+    # defaulted to ``unknown``: gates read ONLY this column. ``raw_finish_reason``
+    # keeps the provider's own spelling for forensics and is never gated on.
+    finish_reason: Mapped[str] = mapped_column(
+        String(24), default=FinishReason.UNKNOWN.value, nullable=False
+    )
+    raw_finish_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_code: Mapped[str] = mapped_column(String(32), default="")
     error_detail: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(
@@ -444,6 +463,12 @@ class RawResponseArtifact(Base):
     citations: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     provider_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     usage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Canonical finish reason (non-null, ``unknown`` default) + the raw provider
+    # token. Only the canonical value is ever used by gates.
+    finish_reason: Mapped[str] = mapped_column(
+        String(24), default=FinishReason.UNKNOWN.value, nullable=False
+    )
+    raw_finish_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -505,15 +530,11 @@ class ExecutionCostProjection(Base):
     cached_input_cost_microusd: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True
     )
-    output_cost_microusd: Mapped[int | None] = mapped_column(
-        BigInteger, nullable=True
-    )
+    output_cost_microusd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     reasoning_cost_microusd: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True
     )
-    search_cost_microusd: Mapped[int | None] = mapped_column(
-        BigInteger, nullable=True
-    )
+    search_cost_microusd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     provider_reported_cost_microusd: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True
     )

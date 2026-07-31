@@ -11,6 +11,7 @@
 # each logical engine has exactly one approved route.
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,6 +49,97 @@ APPROVED_ROUTES: Final[dict[str, dict[str, str]]] = {
         TRANSPORT_GOOGLE: "gemini-flash-latest",
     },
 }
+
+
+# --- Execution-time route policy -----------------------------------------
+# Keyed on the SAME approved (engine, transport) identity as ``APPROVED_ROUTES``
+# above — this is the execution-time policy for those routes, not a second
+# catalog: the model id is never repeated here (read it through
+# ``default_model``). ``config/measurement.py`` owns the offline SWEEP
+# vocabulary (``REASONING_EFFORT_UNSET|LOW|MEDIUM|HIGH``); the two tokens below
+# are the execution-time PIN states, which the sweep has no equivalent for.
+#
+# ``off``: reasoning/thinking is explicitly disabled on the request.
+# ``unverified``: no supported low reasoning value has been established for the
+# route (no fixture and no live evidence), so the route stays UNPINNED and its
+# cost-sensitive funded variant is ineligible. Fails closed — never treated as
+# "off".
+REASONING_EFFORT_OFF: Final = "off"
+REASONING_EFFORT_UNVERIFIED: Final = "unverified"
+
+# Whether the pinned transport model is known to match what a consumer of the
+# logical engine actually gets. Consumer-representativeness is DEFERRED: every
+# active route is ``unverified`` today.
+REPRESENTATIVE_STATUS_UNVERIFIED: Final = "unverified"
+REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
+
+
+@dataclass(frozen=True, slots=True)
+class RoutePolicy:
+    """Execution-time policy for one approved (engine, transport) route.
+
+    ``reasoning_effort`` is the value the adapter pins (or the ``unverified``
+    sentinel when nothing may be pinned yet); ``reasoning_pinnable`` says
+    whether the route accepts an explicit reasoning control at all;
+    ``representative_status`` records consumer-representativeness evidence for
+    the pinned model; ``batch_enabled`` gates any batch/async submission path.
+    No prompt-caching knob exists — Searchify requests never enable provider
+    prompt caching.
+    """
+
+    reasoning_effort: str
+    reasoning_pinnable: bool
+    representative_status: str
+    batch_enabled: bool
+
+
+# One entry per approved route in ``APPROVED_ROUTES`` (same keys).
+ROUTE_POLICIES: Final[dict[tuple[str, str], RoutePolicy]] = {
+    # Anthropic exposes an explicit thinking control, so reasoning is PINNED OFF.
+    (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC): RoutePolicy(
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        batch_enabled=False,
+    ),
+    # OpenAI + Google reasoning pins stay ``unverified``: until fixtures or live
+    # evidence establish a supported low value, nothing is pinned and the
+    # cost-sensitive funded route is ineligible.
+    (ENGINE_CHATGPT, TRANSPORT_OPENAI): RoutePolicy(
+        reasoning_effort=REASONING_EFFORT_UNVERIFIED,
+        reasoning_pinnable=False,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        batch_enabled=False,
+    ),
+    (ENGINE_GEMINI, TRANSPORT_GOOGLE): RoutePolicy(
+        reasoning_effort=REASONING_EFFORT_UNVERIFIED,
+        reasoning_pinnable=False,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        batch_enabled=False,
+    ),
+}
+
+
+def route_policy(logical_engine: str, transport_provider: str) -> RoutePolicy:
+    """Execution-time policy for an approved route (fails closed).
+
+    Raises ``ValueError`` for a route with no policy entry rather than assuming
+    a permissive default: an unknown route must never silently execute with
+    reasoning treated as off or batch treated as allowed.
+    """
+    policy = ROUTE_POLICIES.get((logical_engine, transport_provider))
+    if policy is None:
+        raise ValueError(
+            f"no route policy for ({logical_engine!r}, {transport_provider!r}); "
+            "approved routes must declare one"
+        )
+    return policy
+
+
+def is_reasoning_pinned_off(logical_engine: str, transport_provider: str) -> bool:
+    """True only when the route pins reasoning explicitly OFF."""
+    policy = route_policy(logical_engine, transport_provider)
+    return policy.reasoning_pinnable and policy.reasoning_effort == REASONING_EFFORT_OFF
 
 
 def is_route_approved(logical_engine: str, transport_provider: str) -> bool:

@@ -9,6 +9,7 @@
 # ``config/ai_visibility.py`` guardrail knobs.
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -100,6 +101,49 @@ MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"
 MEASUREMENT_MODES: Final[frozenset[str]] = frozenset(
     {MEASUREMENT_MODE_PULSE, MEASUREMENT_MODE_BENCHMARK}
 )
+
+# UNMEASURED CANDIDATE — this wording has never been executed against a live
+# provider key. It is a hypothesis about output length, nothing more. The cost
+# and latency reduction figures quoted in the frozen v8 plan (the −56% / −49%
+# pair) were NOT produced with this string and DO NOT apply to it: no number
+# anywhere in this repository may be attributed to this instruction until a
+# live-key T1 measurement run measures it and clears the gate thresholds in
+# ``config/measurement.py``. Until then it is an unvalidated candidate that
+# happens to be the wording pulse mode sends.
+PULSE_ANSWER_INSTRUCTION: Final = (
+    "Answer directly and concisely. "
+    "Include only the details needed to answer the question."
+)
+"""UNMEASURED CANDIDATE answer-shaping instruction used by pulse mode.
+
+Pulse mode IS enabled and sends this wording, but the wording itself carries no
+measurement: the frozen plan's −56% cost / −49% latency figures were obtained
+with different wording and DO NOT apply here until a live-key T1 measurement
+run validates this exact string. Treat any claim otherwise as a bug.
+"""
+# SHA-256 of ``PULSE_ANSWER_INSTRUCTION`` — pinned by a unit test so the
+# candidate wording can never drift silently (a drifted wording is a different,
+# equally unmeasured candidate).
+PULSE_ANSWER_INSTRUCTION_SHA256: Final = (
+    "a7d86db3b284d8d7397125046327ac013107240255cd6ba3ee6544feaebfb69a"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MeasurementModePolicy:
+    """Frozen route/output policy for one measurement mode.
+
+    Resolved from live settings by ``measurement_policy_for_mode`` and then
+    FROZEN by the caller onto the audit (invariant 9 — never re-read live
+    config once a run is planned).
+    """
+
+    retrieval_enabled: bool
+    max_output_tokens: int
+    timeout_seconds: float
+    repetitions: int
+    answer_instruction: str
+
 
 # --- Task (queue row) statuses -------------------------------------------
 # Owned by ``config/task_queue.py`` and re-exported at the top of this module
@@ -227,6 +271,21 @@ class AuditSettings(BaseSettings):
     # HTTP client timeout for a single provider call (passed to the adapter).
     request_timeout_seconds: float = 60.0
 
+    # --- Measurement-mode route/output policy (invariant 1) --------------
+    # Pulse trades answer breadth for cost/latency: a short output cap, a short
+    # per-call timeout, one repetition, and the UNMEASURED CANDIDATE answer
+    # instruction. Benchmark is the full comparable run.
+    pulse_max_output_tokens: int = 600
+    benchmark_max_output_tokens: int = 4096
+    pulse_timeout_seconds: float = 30.0
+    benchmark_timeout_seconds: float = 150.0
+    pulse_repetitions: int = 1
+    benchmark_repetitions: int = 3
+    # Days of history folded into a trend series by the reporting projection.
+    trend_smoothing_days: int = 7
+    # Hard ceiling on a single frozen prompt's length (validated by the planner).
+    max_prompt_chars: int = 300
+
     def retry_delay(
         self, attempt: int, retry_after_seconds: float | None = None
     ) -> float:
@@ -246,6 +305,39 @@ class AuditSettings(BaseSettings):
 
 
 audit_settings = AuditSettings()
+
+
+def measurement_policy_for_mode(mode: str) -> MeasurementModePolicy:
+    """Resolve the route/output policy for a measurement mode.
+
+    Reads the LIVE settings; the caller freezes the returned policy onto the
+    audit and never re-reads it (invariant 9). Fails CLOSED: an unknown mode
+    raises rather than silently defaulting to a cheaper or costlier shape.
+
+    The pulse ``answer_instruction`` is an UNMEASURED CANDIDATE (see
+    ``PULSE_ANSWER_INSTRUCTION``): no cost/latency figure from the frozen plan
+    is attributable to it until a live-key T1 run validates the wording.
+    """
+    if mode == MEASUREMENT_MODE_PULSE:
+        return MeasurementModePolicy(
+            retrieval_enabled=False,
+            max_output_tokens=audit_settings.pulse_max_output_tokens,
+            timeout_seconds=audit_settings.pulse_timeout_seconds,
+            repetitions=audit_settings.pulse_repetitions,
+            answer_instruction=PULSE_ANSWER_INSTRUCTION,
+        )
+    if mode == MEASUREMENT_MODE_BENCHMARK:
+        return MeasurementModePolicy(
+            retrieval_enabled=True,
+            max_output_tokens=audit_settings.benchmark_max_output_tokens,
+            timeout_seconds=audit_settings.benchmark_timeout_seconds,
+            repetitions=audit_settings.benchmark_repetitions,
+            answer_instruction="",
+        )
+    raise ValueError(
+        f"unknown measurement mode {mode!r}; expected one of "
+        f"{sorted(MEASUREMENT_MODES)}"
+    )
 
 
 def _audit_model() -> type[AuditTask]:
