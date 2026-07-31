@@ -755,6 +755,18 @@ export const siteScoreSummarySchema = responseObject({
   by_page_type: z.record(z.string(), pageTypeScoreSummarySchema),
 });
 
+// Why a crawl failed (SH-2/SH-5 — B1): stable machine `code` + human
+// `message` + the terminal HTTP status / attempt count when present. Projected
+// from the root discover task's terminal fetch attempts; null on any crawl
+// that did not fail (and on list projections — N+1 avoidance).
+export const crawlFailureSummarySchema = responseObject({
+  code: z.string(),
+  message: z.string(),
+  attempts: z.number().int().nullable(),
+  status_code: z.number().int().nullable(),
+  target_url: z.string(),
+});
+
 // A crawl projection. `total_url_count` is null while full discovery runs and
 // ALWAYS null for a Free sample crawl; `has_more_site_urls`/`discovered_count`
 // are absent (optional) or null under Free redaction — never a leaked total.
@@ -778,6 +790,9 @@ export const siteCrawlSchema = responseObject({
   total_url_count: z.number().int().nullable(),
   has_more_site_urls: z.boolean().nullable().optional(),
   score_summary: siteScoreSummarySchema.nullable(),
+  // B1: REQUIRED key (the backend response model always serializes it); null
+  // on healthy/partial crawls and on list projections.
+  failure_summary: crawlFailureSummarySchema.nullable(),
   // v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
   // sitemap files). Mirrors the backend's untyped `dict | None`, and is
   // REQUIRED because the response model always serializes the key — making
@@ -977,7 +992,24 @@ export const pageSummarySchema = responseObject({
   ...analysisSummaryFields,
 });
 
-export const pagesPageSchema = cursorPageSchema(pageSummarySchema);
+// One REAL root-target network call the crawl lost (SH-4 — B3). Deliberately
+// NOT a page row: a root failure never creates a SiteUrl, so there is no
+// `site_url_id` and no PageDetail link — the Errors & Blocked tab renders
+// these as a distinct non-clickable block above the table.
+export const rootErrorSchema = responseObject({
+  method: z.string(),
+  target: z.string(),
+  outcome: z.string(),
+  error_code: z.string(),
+  status_code: z.number().int().nullable(),
+  latency_ms: z.number().int().nullable(),
+});
+
+export const pagesPageSchema = cursorPageSchema(pageSummarySchema).extend({
+  // REQUIRED (backend always serializes); empty unless the crawl's root fetch
+  // failed terminally. Never enters the keyset pagination of `items`.
+  root_errors: z.array(rootErrorSchema),
+});
 
 // One persisted rule evaluation on a page (all outcomes, current label).
 const ruleEvaluationSchema = responseObject({
@@ -1086,6 +1118,9 @@ export const siteHealthDashboardSchema = responseObject({
   crawl: siteCrawlSchema.nullable(),
   score_summary: siteScoreSummarySchema.nullable(),
   quota: monitoredQuotaSchema,
+  // B3: same root-failure projection as the pages response — the failed
+  // crawl's dashboard renders the failure block without a second fetch.
+  root_errors: z.array(rootErrorSchema),
 });
 
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade

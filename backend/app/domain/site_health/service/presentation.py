@@ -170,7 +170,7 @@ def _score_summary(crawl: SiteCrawl) -> dict | None:
     }
 
 
-def project_crawl(crawl: SiteCrawl) -> dict:
+def project_crawl(crawl: SiteCrawl, *, failure_summary: dict | None = None) -> dict:
     """Project a ``SiteCrawl`` to the strict crawl contract (with redaction).
 
     Aliases model columns to the contract (``random_seed -> seed``,
@@ -179,6 +179,11 @@ def project_crawl(crawl: SiteCrawl) -> dict:
     ``rule_catalog_version -> rule_version``). For a Free (non-disclosing)
     crawl the discovered/total/has-more fields are ``None`` so no full-site
     count ever leaks.
+
+    ``failure_summary`` (B1) is loaded by the caller (it needs a session);
+    single-crawl read paths pass it for a failed crawl, list projections
+    leave it ``None`` (N+1 avoidance). It carries no count disclosures, so
+    Free redaction does not touch it.
     """
     disclose = _crawl_count_disclosure(crawl)
     return {
@@ -206,6 +211,7 @@ def project_crawl(crawl: SiteCrawl) -> dict:
         ),
         "has_more_site_urls": ((not crawl.inventory_complete) if disclose else None),
         "score_summary": _score_summary(crawl),
+        "failure_summary": failure_summary,
         # v2 P2: bounded site-level facts (robots AI-crawler stance, llms.txt,
         # sitemap files). Contains no discovered totals — safe for Free.
         "site_facts": crawl.site_facts or None,

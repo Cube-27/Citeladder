@@ -89,6 +89,7 @@ function crawl(overrides: Record<string, unknown> = {}) {
     total_url_count: 3,
     has_more_site_urls: false,
     score_summary: null,
+    failure_summary: null,
     site_facts: siteFacts,
     extractor_version: 'e1',
     analyzer_version: 'a1',
@@ -134,6 +135,7 @@ function mockRoutes(crawlOverrides: Record<string, unknown> = {}) {
         crawl: crawl(crawlOverrides),
         score_summary: null,
         quota: { used: 3, limit: 50 },
+        root_errors: [],
       }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/monitored-urls`, () =>
@@ -145,7 +147,7 @@ function mockRoutes(crawlOverrides: Record<string, unknown> = {}) {
       }),
     ),
     http.get(`/api/v1/site-crawls/${CRAWL}/pages`, () =>
-      HttpResponse.json({ items: [], next_cursor: null }),
+      HttpResponse.json({ items: [], next_cursor: null, root_errors: [] }),
     ),
     http.get(`/api/v1/site-crawls/${CRAWL}/inventory`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
@@ -172,13 +174,102 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText('Robots.txt denied crawling.')).toBeInTheDocument();
+    // B1: the terminal card renders reason + what-to-do guidance (one span).
+    expect(
+      await screen.findByText(/Robots\.txt denied crawling\. Re-crawl to try again\./),
+    ).toBeInTheDocument();
     // The header offers the restart — the screen itself stays the dashboard.
     expect(screen.getByRole('button', { name: 'Start a new crawl' })).toBeInTheDocument();
     // No redundant Cancel control for an already-stopped crawl.
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     // The score section stays mounted with placeholders (no screen swap).
     expect(screen.getByTestId('score-section')).toBeInTheDocument();
+  });
+
+  it('routes a failed crawl with a PRESENT-but-null-score summary to terminal (the SH-2 shape)', async () => {
+    // The production shape behind SH-2: a fully-failed crawl persists an
+    // EMPTY summary object (persist_empty=True) whose scores are all null —
+    // `score_summary != null` alone misreads it as dashboard-worthy. The
+    // phase resolution must probe the failure shape (nothing analyzed AND no
+    // overall score) and land on the terminal card with the API-projected
+    // failure reason instead.
+    mockRoutes({
+      status: 'failed',
+      analysis_status: 'failed',
+      analyzed_count: 0,
+      score_summary: {
+        overall_score: null,
+        technical_score: null,
+        aeo_score: null,
+        selected_count: 0,
+        analyzed_count: 0,
+        issue_count: 0,
+        scoring_version: 's1',
+        by_page_type: {},
+      },
+      failure_summary: {
+        code: 'http_5xx',
+        message: 'The site returned HTTP 500 after 3 attempts',
+        attempts: 3,
+        status_code: 500,
+        target_url: 'https://acme.com/',
+      },
+      error_message: 'The site returned HTTP 500 after 3 attempts',
+    });
+
+    renderScreen();
+
+    // Terminal card with the failure-summary reason + code-aware guidance —
+    // NOT an empty dashboard.
+    expect(
+      await screen.findByText(
+        /The site returned HTTP 500 after 3 attempts\. The site is having server trouble/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start a new crawl' })).toBeInTheDocument();
+  });
+
+  it('renders the root-failure block on the Errors & Blocked tab for a failed crawl (B3)', async () => {
+    // SH-4: a root-fetch failure leaves no page row, so the evidence rides
+    // the pages response as `root_errors` and renders as a distinct
+    // NON-clickable block above the (empty) table.
+    const user = userEvent.setup();
+    mockRoutes({
+      status: 'failed',
+      analysis_status: 'failed',
+      analyzed_count: 0,
+      error_message: 'The site returned HTTP 404 for the start URL',
+    });
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/pages`, () =>
+        HttpResponse.json({
+          items: [],
+          next_cursor: null,
+          root_errors: [
+            {
+              method: 'GET',
+              target: 'https://acme.com/',
+              outcome: 'error',
+              error_code: 'http_4xx',
+              status_code: 404,
+              latency_ms: 120,
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderScreen();
+
+    // The failed terminal view keeps the tabbed page browser (B3 decision).
+    await screen.findByText(/The site returned HTTP 404 for the start URL/);
+    await user.click(screen.getByRole('button', { name: 'Errors & Blocked' }));
+    const block = await screen.findByTestId('root-errors-block');
+    expect(within(block).getByText('http_4xx')).toBeInTheDocument();
+    expect(within(block).getByText('HTTP 404')).toBeInTheDocument();
+    expect(within(block).getByText('https://acme.com/')).toBeInTheDocument();
+    // Non-clickable: no page-detail link exists for a URL never admitted.
+    expect(within(block).queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('shows generic terminal copy for a cancelled crawl with NOTHING discovered', async () => {
@@ -266,6 +357,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
           }),
           score_summary: summary,
           quota: { used: 4, limit: 50 },
+          root_errors: [],
         }),
       ),
     );
@@ -334,6 +426,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
           crawl: serverCrawl,
           score_summary: serverCrawl.score_summary,
           quota: { used: monitored.length, limit: 50 },
+          root_errors: [],
         }),
       ),
       http.get(`/api/v1/projects/${PROJECT}/monitored-urls`, () =>
@@ -393,7 +486,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
         return HttpResponse.json(serverCrawl);
       }),
       http.get('/api/v1/site-crawls/:id/pages', () =>
-        HttpResponse.json({ items: [], next_cursor: null }),
+        HttpResponse.json({ items: [], next_cursor: null, root_errors: [] }),
       ),
       http.get('/api/v1/site-crawls/:id/inventory', () =>
         HttpResponse.json({

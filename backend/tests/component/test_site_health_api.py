@@ -24,14 +24,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health import (
     CRAWL_STATUS_COMPLETED,
+    CRAWL_STATUS_FAILED,
+    ERROR_HTTP_5XX,
+    FETCH_ATTEMPT_OUTCOME_ERROR,
     INITIAL_TASK_GENERATION,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     RULE_OUTCOME_FAIL,
     SELECTION_SOURCE_USER,
     TASK_KIND_ANALYZE,
+    TASK_KIND_DISCOVER,
 )
-from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
+from app.core.config.task_queue import TASK_STATUS_FAILED, TASK_STATUS_SUCCEEDED
 from app.models.project import Project
 from app.models.site_health import (
     MonitoredSiteUrl,
@@ -39,6 +43,7 @@ from app.models.site_health import (
     SiteCrawlEvent,
     SiteCrawlTask,
     SiteFetchArtifact,
+    SiteFetchAttempt,
     SiteHealthProfile,
     SiteIssue,
     SitePageAnalysis,
@@ -1396,3 +1401,203 @@ async def test_rerun_page_unmonitored_url_is_conflict(
     )
     assert resp.status_code == 409, resp.text
     assert resp.json()["detail"]["code"] == "rerun_not_allowed"
+
+
+# =========================================================================
+# Failed-crawl surfacing (B1 failure_summary + B3 root_errors)
+# =========================================================================
+async def _seed_failed_crawl(session: AsyncSession, *, email: str) -> Scenario:
+    """Seed a FAILED crawl whose root fetch lost 3 retried calls (HTTP 500).
+
+    The evidence shape the worker persists for a fully-failed crawl: a
+    terminally failed root discover task plus one ``SiteFetchAttempt`` error
+    row per REAL network call — and NO SiteUrl rows at all (a root failure
+    never admits a page).
+    """
+    root = "https://broken.test/"
+    workspace = Workspace(name="Broken WS")
+    session.add(workspace)
+    await session.flush()
+
+    user = await session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    session.add(
+        WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role="owner")
+    )
+
+    project = Project(
+        workspace_id=workspace.id,
+        name="Broken Site",
+        brand_name="Broken",
+        country_code="AU",
+        language_code="en-AU",
+        benchmark_mode="consumer_like",
+        default_repetitions=1,
+        website_url=root,
+    )
+    session.add(project)
+    await session.flush()
+
+    profile = SiteHealthProfile(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        root_url=root,
+        root_host="broken.test",
+        registrable_domain="broken.test",
+    )
+    session.add(profile)
+    await session.flush()
+
+    crawl = SiteCrawl(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        profile_id=profile.id,
+        status=CRAWL_STATUS_FAILED,
+        discovery_status="failed",
+        analysis_status="failed",
+        root_url=root,
+        random_seed="1",
+        discovered_url_count=0,
+        admitted_url_count=0,
+        analyzed_url_count=0,
+        failed_url_count=1,
+        inventory_complete=False,
+        rule_catalog_version="v1",
+        error_message="The site returned HTTP 500 after 3 attempts",
+    )
+    session.add(crawl)
+    await session.flush()
+
+    task = SiteCrawlTask(
+        crawl_id=crawl.id,
+        workspace_id=workspace.id,
+        task_kind=TASK_KIND_DISCOVER,
+        requested_url=root,
+        url_hash=_hash(root),
+        generation=INITIAL_TASK_GENERATION,
+        idempotency_key=f"{crawl.id}:discover:root:0",
+        status=TASK_STATUS_FAILED,
+        depth=0,
+        attempt_count=3,
+        error_code=ERROR_HTTP_5XX,
+        error_detail="the server returned HTTP 500",
+    )
+    session.add(task)
+    await session.flush()
+
+    for attempt_number in (1, 2, 3):
+        session.add(
+            SiteFetchAttempt(
+                task_id=task.id,
+                crawl_id=crawl.id,
+                workspace_id=workspace.id,
+                attempt_number=attempt_number,
+                request_ordinal=0,
+                method="GET",
+                target_host="broken.test",
+                outcome=FETCH_ATTEMPT_OUTCOME_ERROR,
+                error_code=ERROR_HTTP_5XX,
+                status_code=500,
+                latency_ms=100 * attempt_number,
+            )
+        )
+    await session.commit()
+    return Scenario(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        crawl_id=crawl.id,
+        monitored_url_id=uuid.uuid4(),  # unused by these tests
+        issue_url_id=uuid.uuid4(),
+        canonical_issue_id=uuid.uuid4(),
+    )
+
+
+async def test_failed_crawl_surfaces_failure_summary_and_root_errors(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """B1/B3: the failed crawl explains itself on every single-crawl read."""
+    await _register(client, "failed@example.com")
+    async with session_factory() as session:
+        scn = await _seed_failed_crawl(session, email="failed@example.com")
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+
+    expected_summary = {
+        "code": ERROR_HTTP_5XX,
+        "message": "The site returned HTTP 500 after 3 attempts",
+        "attempts": 3,
+        "status_code": 500,
+        "target_url": "https://broken.test/",
+    }
+
+    # Crawl summary carries the humanized failure summary (SH-2/SH-5).
+    summary = await client.get(f"/api/v1/site-crawls/{scn.crawl_id}", headers=headers)
+    assert summary.status_code == 200
+    assert summary.json()["failure_summary"] == expected_summary
+
+    # The list projection deliberately leaves it None (N+1 avoidance).
+    listing = await client.get(
+        f"/api/v1/site-crawls?project_id={scn.project_id}", headers=headers
+    )
+    assert listing.status_code == 200
+    listed = [r for r in listing.json()["items"] if r["id"] == str(scn.crawl_id)]
+    assert listed and listed[0]["failure_summary"] is None
+
+    # Pages: no page rows exist for a root failure, but the failed root calls
+    # ride alongside as root_errors (SH-4) in call order.
+    pages = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/pages", headers=headers
+    )
+    assert pages.status_code == 200
+    page_body = pages.json()
+    assert page_body["items"] == []
+    assert page_body["root_errors"] == [
+        {
+            "method": "GET",
+            "target": "https://broken.test/",
+            "outcome": FETCH_ATTEMPT_OUTCOME_ERROR,
+            "error_code": ERROR_HTTP_5XX,
+            "status_code": 500,
+            "latency_ms": 100 * attempt_number,
+        }
+        for attempt_number in (1, 2, 3)
+    ]
+
+    # Dashboard: the crawl projection carries the summary AND the top-level
+    # root_errors so the failed dashboard needs no second fetch.
+    dashboard = await client.get(
+        f"/api/v1/projects/{scn.project_id}/site-health", headers=headers
+    )
+    assert dashboard.status_code == 200
+    dash_body = dashboard.json()
+    assert dash_body["crawl"]["failure_summary"] == expected_summary
+    assert dash_body["root_errors"] == page_body["root_errors"]
+
+
+async def test_healthy_crawl_has_no_failure_summary_or_root_errors(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The B1/B3 projections are null/empty on any crawl that did not fail."""
+    await _register(client, "healthy@example.com")
+    async with session_factory() as session:
+        scn = await _seed_scenario(session, email="healthy@example.com")
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+
+    summary = await client.get(f"/api/v1/site-crawls/{scn.crawl_id}", headers=headers)
+    assert summary.status_code == 200
+    assert summary.json()["failure_summary"] is None
+
+    pages = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/pages", headers=headers
+    )
+    assert pages.status_code == 200
+    assert pages.json()["root_errors"] == []
+
+    dashboard = await client.get(
+        f"/api/v1/projects/{scn.project_id}/site-health", headers=headers
+    )
+    assert dashboard.status_code == 200
+    dash_body = dashboard.json()
+    assert dash_body["crawl"]["failure_summary"] is None
+    assert dash_body["root_errors"] == []

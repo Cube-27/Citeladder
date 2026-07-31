@@ -70,6 +70,7 @@ const crawl = {
   failed_count: 0,
   total_url_count: null,
   score_summary: null,
+  failure_summary: null,
   site_facts: siteFacts,
   extractor_version: 'x1',
   analyzer_version: 'a1',

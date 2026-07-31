@@ -6,6 +6,7 @@ import {
   STALL_TIMEOUT_MS,
   canShowDiscoveredTotal,
   crawlBadgeValue,
+  crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
   formatAudited,
@@ -246,6 +247,7 @@ describe('resolveSiteHealthPhase', () => {
     analysis_status: 'pending' as const,
     score_summary: null,
     visible_url_count: 42,
+    analyzed_count: 0,
   };
 
   it('resolves the active flow phases', () => {
@@ -371,6 +373,93 @@ describe('resolveSiteHealthPhase', () => {
     expect(
       resolveSiteHealthPhase(
         { ...base, status: 'failed', discovery_status: 'failed', score_summary: summary },
+        'starter',
+      ),
+    ).toBe('dashboard');
+  });
+
+  it('routes a fully-failed crawl with a PRESENT-but-null-score summary to terminal (SH-2)', () => {
+    // The production SH-2 shape: a fully-failed crawl persists an EMPTY
+    // summary object (persist_empty=True) — every score null — which
+    // `score_summary != null` alone misreads as dashboard-worthy. Nothing
+    // analyzed + no overall score means there is nothing to dashboard.
+    const emptySummary = {
+      overall_score: null,
+      technical_score: null,
+      aeo_score: null,
+      selected_count: 0,
+      analyzed_count: 0,
+      issue_count: 0,
+      scoring_version: 's1',
+      by_page_type: {},
+    };
+    expect(
+      resolveSiteHealthPhase(
+        {
+          ...base,
+          status: 'failed',
+          discovery_status: 'failed',
+          analysis_status: 'failed',
+          analyzed_count: 0,
+          score_summary: emptySummary,
+        },
+        'starter',
+      ),
+    ).toBe('terminal');
+  });
+
+  it('keeps a legitimately COMPLETED empty-plan crawl on the dashboard (clause order)', () => {
+    // Same present-but-null summary shape as the failed case, but a crawl
+    // that COMPLETED with a legitimately empty analysis plan (e.g. Starter
+    // with no monitored selection) must not regress to terminal — clause 2
+    // claims completed/partially_completed before the failure probe runs.
+    const emptySummary = {
+      overall_score: null,
+      technical_score: null,
+      aeo_score: null,
+      selected_count: 0,
+      analyzed_count: 0,
+      issue_count: 0,
+      scoring_version: 's1',
+      by_page_type: {},
+    };
+    expect(
+      resolveSiteHealthPhase(
+        {
+          ...base,
+          status: 'completed',
+          discovery_status: 'completed',
+          analysis_status: 'completed',
+          analyzed_count: 0,
+          score_summary: emptySummary,
+        },
+        'starter',
+      ),
+    ).toBe('dashboard');
+  });
+
+  it('keeps a failed crawl with analyzed pages but no summary on the dashboard via scores only', () => {
+    // Failed + analyzed pages + real partial scores → the failure probe does
+    // not match and the score-data clause keeps the partial results visible.
+    const summary = {
+      overall_score: 40,
+      technical_score: 45,
+      aeo_score: 35,
+      selected_count: 5,
+      analyzed_count: 2,
+      issue_count: 1,
+      scoring_version: 's1',
+      by_page_type: {},
+    };
+    expect(
+      resolveSiteHealthPhase(
+        {
+          ...base,
+          status: 'failed',
+          discovery_status: 'failed',
+          analyzed_count: 2,
+          score_summary: summary,
+        },
         'starter',
       ),
     ).toBe('dashboard');
@@ -534,6 +623,11 @@ describe('canonical-screen view-model (primaryAction / inventoryMode)', () => {
     expect(inventoryModeForPhase('dashboard')).toBe('scored');
     expect(inventoryModeForPhase('empty')).toBe('none');
     expect(inventoryModeForPhase('terminal')).toBe('none');
+    // B3: a FAILED crawl's terminal view keeps the tabbed page browser so the
+    // Errors & Blocked tab can render the root-failure block; any other
+    // terminal shape (cancelled with nothing) still lists nothing.
+    expect(inventoryModeForPhase('terminal', { status: 'failed' })).toBe('scored');
+    expect(inventoryModeForPhase('terminal', { status: 'cancelled' })).toBe('none');
   });
 });
 
@@ -556,12 +650,18 @@ describe('score-data helpers (cancelled-with-data product rule)', () => {
 });
 
 describe('dashboardRunNotice', () => {
+  const noticeBase = {
+    analyzed_count: 3,
+    error_message: '',
+    failure_summary: null,
+  };
+
   it('returns null for a cleanly completed crawl (no notice)', () => {
-    expect(dashboardRunNotice({ status: 'completed' })).toBeNull();
+    expect(dashboardRunNotice({ ...noticeBase, status: 'completed' })).toBeNull();
   });
 
   it('labels a cancelled dashboard explicitly with a Cancelled badge + info tone', () => {
-    const notice = dashboardRunNotice({ status: 'cancelled' });
+    const notice = dashboardRunNotice({ ...noticeBase, status: 'cancelled' });
     expect(notice?.badge).toBe('cancelled');
     expect(notice?.tone).toBe('info');
     expect(notice?.message).toMatch(/cancelled/i);
@@ -569,14 +669,65 @@ describe('dashboardRunNotice', () => {
   });
 
   it('labels a partial dashboard with a Partial badge + warning tone', () => {
-    const notice = dashboardRunNotice({ status: 'partially_completed' });
+    const notice = dashboardRunNotice({ ...noticeBase, status: 'partially_completed' });
     expect(notice?.badge).toBe('partial');
     expect(notice?.tone).toBe('warning');
   });
 
   it('labels a failed-with-data dashboard with a Failed badge', () => {
-    const notice = dashboardRunNotice({ status: 'failed' });
+    const notice = dashboardRunNotice({ ...noticeBase, status: 'failed' });
     expect(notice?.badge).toBe('failed');
+    // Partial results exist — the "so far" phrasing stays, with the reason.
+    expect(notice?.message).toMatch(/showing the pages analyzed so far/);
+  });
+
+  it('drops the "pages analyzed so far" claim when nothing was analyzed (SH-2)', () => {
+    const notice = dashboardRunNotice({
+      status: 'failed',
+      analyzed_count: 0,
+      error_message: '',
+      failure_summary: {
+        code: 'dns_resolution_failed',
+        message: 'The domain could not be resolved (DNS)',
+        attempts: 1,
+        status_code: null,
+        target_url: 'https://gone.example/',
+      },
+    });
+    expect(notice?.badge).toBe('failed');
+    expect(notice?.message).not.toMatch(/showing the pages analyzed so far/);
+    expect(notice?.message).toContain('The run failed before any page was analyzed.');
+    expect(notice?.message).toContain('The domain could not be resolved (DNS)');
+    expect(notice?.message).toMatch(/domain is spelled correctly/);
+  });
+});
+
+describe('crawlFailureCopy (B1)', () => {
+  it('prefers the API-projected failure summary message + code-aware guidance', () => {
+    const copy = crawlFailureCopy({
+      error_message: 'legacy row message',
+      failure_summary: {
+        code: 'http_5xx',
+        message: 'The site returned HTTP 500 after 3 attempts',
+        attempts: 3,
+        status_code: 500,
+        target_url: 'https://acme.com/',
+      },
+    });
+    expect(copy.reason).toBe('The site returned HTTP 500 after 3 attempts');
+    expect(copy.guidance).toMatch(/server trouble/i);
+  });
+
+  it('falls back to error_message, then to a neutral sentence — never a bare code', () => {
+    const fromError = crawlFailureCopy({
+      error_message: 'The site returned HTTP 404 for the start URL',
+      failure_summary: null,
+    });
+    expect(fromError.reason).toBe('The site returned HTTP 404 for the start URL');
+    expect(fromError.guidance).toBe('Re-crawl to try again.');
+
+    const neutral = crawlFailureCopy({ error_message: '', failure_summary: null });
+    expect(neutral.reason).toBe('This crawl failed before it produced results.');
   });
 });
 

@@ -67,6 +67,7 @@ describe('readSiteFacts', () => {
       robots: { ...variantA.robots, fetched: false, status_code: null },
     });
     expect(view?.robotsFetched).toBe(false);
+    expect(view?.robotsFetchStatus).toBe('fetch_failed');
     expect(view?.robotsStatus).toBeNull();
     expect(view?.bots.map(({ stance }) => stance)).toEqual([
       'unknown',
@@ -74,6 +75,59 @@ describe('readSiteFacts', () => {
       'unknown',
       'unknown',
     ]);
+  });
+
+  it('classifies a 404 robots.txt as not_found — every bot allowed by default (B2)', () => {
+    // A 404 means the site HAS no robots.txt: the fail-open default IS the
+    // real answer, so the stance is a definitive allow — not "unknown".
+    const view = readSiteFacts({
+      ...variantA,
+      robots: {
+        ...variantA.robots,
+        fetched: false,
+        status: 'not_found',
+        status_code: 404,
+      },
+    });
+    expect(view?.robotsFetchStatus).toBe('not_found');
+    expect(view?.bots.every(({ stance }) => stance === 'allow')).toBe(true);
+  });
+
+  it('derives the classification for a pre-token blob (legacy fallback, B2)', () => {
+    // Blobs written before `robots.status` existed derive the same way the
+    // worker classifies: fetched bool, then the HTTP 404 probe, else failed.
+    const notFound = readSiteFacts({
+      ...variantA,
+      robots: { ...variantA.robots, fetched: false, status_code: 404 },
+    });
+    expect(notFound?.robotsFetchStatus).toBe('not_found');
+    expect(notFound?.bots.every(({ stance }) => stance === 'allow')).toBe(true);
+
+    const fetched = readSiteFacts(variantA);
+    expect(fetched?.robotsFetchStatus).toBe('fetched');
+
+    const failed = readSiteFacts({
+      ...variantA,
+      robots: { ...variantA.robots, fetched: false, status_code: 503 },
+    });
+    expect(failed?.robotsFetchStatus).toBe('fetch_failed');
+    expect(failed?.bots.every(({ stance }) => stance === 'unknown')).toBe(true);
+  });
+
+  it('prefers the explicit status token over the derived fallback', () => {
+    // A fetch_failed token with a 404 status (a drifted blob) follows the
+    // token — the worker's classification is authoritative.
+    const view = readSiteFacts({
+      ...variantA,
+      robots: {
+        ...variantA.robots,
+        fetched: false,
+        status: 'fetch_failed',
+        status_code: 404,
+      },
+    });
+    expect(view?.robotsFetchStatus).toBe('fetch_failed');
+    expect(view?.bots.every(({ stance }) => stance === 'unknown')).toBe(true);
   });
 
   it.each([null, undefined, 'robots', 42, [], ['x']])(

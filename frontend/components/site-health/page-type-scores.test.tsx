@@ -27,6 +27,7 @@ function dashboard(scoreSummary: SiteScoreSummary | null): SiteHealthDashboard {
     crawl: null,
     score_summary: scoreSummary,
     quota: { used: 4, limit: 50 },
+    root_errors: [],
   };
 }
 
@@ -69,6 +70,7 @@ function crawl(scoreSummary: SiteScoreSummary | null): SiteCrawl {
     total_url_count: 3,
     has_more_site_urls: false,
     score_summary: scoreSummary,
+    failure_summary: null,
     site_facts: siteFacts,
     extractor_version: 'e1',
     analyzer_version: 'a1',

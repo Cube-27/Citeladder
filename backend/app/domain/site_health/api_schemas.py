@@ -128,6 +128,18 @@ class ScoreSummary(_Model):
     by_page_type: dict[str, ScoreSummaryByType] = {}
 
 
+class CrawlFailureSummary(_Model):
+    # Why a crawl failed (SH-2/SH-5 — B1): stable machine ``code`` + human
+    # ``message`` + the terminal HTTP status / attempt count when present.
+    # Projected from the root discover task's terminal fetch attempts — the
+    # same shape that rides the ``crawl.failed`` event payload.
+    code: str
+    message: str
+    attempts: int | None
+    status_code: int | None
+    target_url: str
+
+
 class CrawlResponse(_Model):
     id: uuid.UUID
     workspace_id: uuid.UUID
@@ -148,6 +160,9 @@ class CrawlResponse(_Model):
     total_url_count: int | None = None
     has_more_site_urls: bool | None = None
     score_summary: ScoreSummary | None = None
+    # B1: present only on a failed crawl whose root fetch failed; ``None`` on
+    # healthy/partial crawls and on list projections (N+1 avoidance).
+    failure_summary: CrawlFailureSummary | None = None
     # v2 P2: bounded site-level facts (robots AI stance / llms.txt / sitemap
     # files); no discovered totals inside, so it is never redacted.
     site_facts: dict | None = None
@@ -242,9 +257,26 @@ class PageSummary(_Model):
     last_audited: str | None
 
 
+class RootError(_Model):
+    # One REAL root-target network call the crawl lost (SH-4 — B3). These are
+    # deliberately NOT page rows: a root failure never creates a ``SiteUrl``,
+    # so there is no ``site_url_id`` and no PageDetail link — the Errors &
+    # Blocked tab renders them as a distinct non-clickable block.
+    method: str
+    target: str
+    outcome: str
+    error_code: str
+    status_code: int | None
+    latency_ms: int | None
+
+
 class PagesPage(_Model):
     items: list[PageSummary]
     next_cursor: str | None
+    # B3: terminal root-target fetch failures, empty for any crawl whose root
+    # fetch succeeded (including retried-then-succeeded). Never enters the
+    # keyset pagination above.
+    root_errors: list[RootError] = []
 
 
 class PageFacts(_Model):
@@ -431,6 +463,9 @@ class DashboardResponse(_Model):
     crawl: CrawlResponse | None
     score_summary: ScoreSummary | None
     quota: MonitoredQuota
+    # B3: same root-failure projection as the pages response, so the failed
+    # crawl's dashboard can render the failure block without a second fetch.
+    root_errors: list[RootError] = []
 
 
 class SiteHealthError(_Model):

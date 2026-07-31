@@ -42,6 +42,9 @@ from app.core.config.site_health import (
     LLMS_TXT_PATH,
     OBSERVATION_SOURCE_ROOT,
     OBSERVATION_SOURCE_SITEMAP,
+    ROBOTS_FETCH_STATUS_FETCH_FAILED,
+    ROBOTS_FETCH_STATUS_FETCHED,
+    ROBOTS_FETCH_STATUS_NOT_FOUND,
     ROBOTS_TXT_PATH,
     SITE_HEALTH_USER_AGENT,
     SITEMAP_CONTENT_TYPES,
@@ -518,9 +521,21 @@ class DiscoverPhaseMixin(PhaseSupport):
                 exclude_globs=exclude_globs,
             )
 
+        # SH-1 (B2): classify the robots.txt fetch so the UI can distinguish
+        # "the site has NO robots.txt" (404 — fail-open, stance defaults to
+        # allow) from "robots.txt could not be fetched" (network error / 5xx —
+        # stance genuinely unknown). The legacy ``fetched`` bool stays for
+        # back-compat with pre-classification readers.
+        if robots_body is not None:
+            robots_fetch_status = ROBOTS_FETCH_STATUS_FETCHED
+        elif robots_status == 404:
+            robots_fetch_status = ROBOTS_FETCH_STATUS_NOT_FOUND
+        else:
+            robots_fetch_status = ROBOTS_FETCH_STATUS_FETCH_FAILED
         site_facts = {
             "robots": {
                 "fetched": robots_body is not None,
+                "status": robots_fetch_status,
                 "url": f"{authority}{ROBOTS_TXT_PATH}" if authority else "",
                 "status_code": robots_status,
                 "ai_crawlers": stance,

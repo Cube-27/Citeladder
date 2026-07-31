@@ -29,6 +29,9 @@ from app.core.config.site_health import (
     ERROR_ROBOTS_DENIED,
     ERROR_ROBOTS_UNAVAILABLE,
     OBSERVATION_SOURCE_SITEMAP,
+    ROBOTS_FETCH_STATUS_FETCH_FAILED,
+    ROBOTS_FETCH_STATUS_FETCHED,
+    ROBOTS_FETCH_STATUS_NOT_FOUND,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_PASS,
@@ -508,6 +511,7 @@ async def test_discover_robots_denied_short_circuits_and_records_site_facts(
         site_facts = crawl.site_facts or {}
         robots = site_facts.get("robots") or {}
         assert robots.get("fetched") is True
+        assert robots.get("status") == ROBOTS_FETCH_STATUS_FETCHED
         assert robots.get("status_code") == 200
         assert robots.get("ai_crawlers") == {bot: "block" for bot in AI_CRAWLER_BOTS}
         llms = site_facts.get("llms_txt") or {}
@@ -559,6 +563,36 @@ async def test_robots_cache_honors_ttl_and_4xx_is_allow_all(
 
 
 @pytest.mark.asyncio
+async def test_discover_robots_404_records_not_found_and_crawls_fail_open(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """SH-1 (B2): a 404 robots.txt means the site HAS no robots.txt.
+
+    That is ``not_found`` — crawling proceeds fail-open and the AI-crawler
+    stance defaults to allow — NOT ``fetch_failed`` (robots unreachable),
+    and the crawl completes normally.
+    """
+    seed = await _seed_root_discover(session_factory, root="https://example.com/")
+    # No "/robots.txt" key -> the mock transport 404s it; the root serves.
+    worker = _worker(session_factory, {"/": _html([])}, owner="robots-404")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_COMPLETED
+        site_facts = crawl.site_facts or {}
+        robots = site_facts.get("robots") or {}
+        assert robots.get("fetched") is False
+        assert robots.get("status") == ROBOTS_FETCH_STATUS_NOT_FOUND
+        assert robots.get("status_code") == 404
+        # Fail-open: no robots.txt means no restrictions for any AI bot.
+        assert robots.get("ai_crawlers") == {
+            bot: "allow" for bot in AI_CRAWLER_BOTS
+        }
+
+
+@pytest.mark.asyncio
 async def test_discover_robots_5xx_fails_unavailable_without_page_fetch(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -604,6 +638,9 @@ async def test_discover_robots_5xx_fails_unavailable_without_page_fetch(
         site_facts = crawl.site_facts or {}
         robots = site_facts.get("robots") or {}
         assert robots.get("fetched") is False
+        # SH-1 (B2): a 5xx robots.txt is fetch_failed, NOT not_found — the
+        # site's robots endpoint misbehaved; the stance is genuinely unknown.
+        assert robots.get("status") == ROBOTS_FETCH_STATUS_FETCH_FAILED
         assert robots.get("status_code") == 503
         llms = site_facts.get("llms_txt") or {}
         assert llms.get("fetched") is False

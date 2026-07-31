@@ -14,13 +14,20 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health import (
+    ANALYSIS_STATUS_COMPLETED,
+    ANALYSIS_STATUS_FAILED,
     CAPABILITY_STARTER,
+    CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
     CRAWL_STATUS_RUNNING,
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
+    ERROR_HTTP_4XX,
+    EVENT_CRAWL_COMPLETED,
+    EVENT_CRAWL_FAILED,
+    FETCH_ATTEMPT_OUTCOME_ERROR,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     SELECTION_SOURCE_USER,
@@ -28,6 +35,7 @@ from app.core.config.site_health import (
     TASK_KIND_DISCOVER,
 )
 from app.core.config.task_queue import (
+    TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
@@ -38,8 +46,10 @@ from app.domain.site_health.snapshot import persist_crawl_snapshot
 from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
+    SiteCrawlEvent,
     SiteCrawlTask,
     SiteFetchArtifact,
+    SiteFetchAttempt,
     SiteHealthSnapshot,
     SiteIssue,
     SitePageAnalysis,
@@ -79,6 +89,119 @@ async def test_fully_failed_root_terminalizes_crawl_as_failed(
         assert crawl.discovery_status == DISCOVERY_STATUS_FAILED
         # An empty inventory is not "complete".
         assert crawl.inventory_complete is False
+
+
+@pytest.mark.asyncio
+async def test_fully_failed_root_surfaces_humanized_failure_and_failed_event(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """SH-2/SH-3/SH-5 (B1): a failed crawl explains itself, once, in code+prose.
+
+    The terminalization must (a) map the empty analysis plan to FAILED (the
+    plan was empty BECAUSE discovery produced nothing — not a legitimate
+    0-of-0 completion), (b) write a humanized ``error_message`` naming the
+    terminal status, and (c) record a ``crawl.failed`` event carrying the
+    failure summary INSTEAD of the misleading ``crawl.completed``.
+    """
+    seed = await _seed_root_only(session_factory)
+    # Empty page map -> the root "/" resolves to a 404 (non-retryable http_4xx).
+    worker = _worker(session_factory, {}, owner="fail-root-surface")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_FAILED
+        # SH-3: the analysis lifecycle failed WITH the crawl.
+        assert crawl.analysis_status == ANALYSIS_STATUS_FAILED
+        # SH-5: a human sentence naming the terminal status — never a bare
+        # ``http_4xx`` code.
+        assert crawl.error_message == "The site returned HTTP 404 for the start URL"
+
+        # The evidence the read projections (failure_summary / root_errors)
+        # rely on: one failed attempt row on the root task.
+        root_task = await session.scalar(
+            select(SiteCrawlTask).where(
+                SiteCrawlTask.crawl_id == seed.crawl_id,
+                SiteCrawlTask.task_kind == TASK_KIND_DISCOVER,
+                SiteCrawlTask.depth == 0,
+            )
+        )
+        assert root_task is not None
+        assert root_task.status == TASK_STATUS_FAILED
+        attempts = list(
+            (
+                await session.scalars(
+                    select(SiteFetchAttempt).where(
+                        SiteFetchAttempt.task_id == root_task.id
+                    )
+                )
+            ).all()
+        )
+        assert len(attempts) == 1
+        assert attempts[0].outcome == FETCH_ATTEMPT_OUTCOME_ERROR
+        assert attempts[0].error_code == ERROR_HTTP_4XX
+        assert attempts[0].status_code == 404
+
+        # SH-2: crawl.failed INSTEAD of crawl.completed, with the summary.
+        events = list(
+            (
+                await session.scalars(
+                    select(SiteCrawlEvent).where(
+                        SiteCrawlEvent.crawl_id == seed.crawl_id
+                    )
+                )
+            ).all()
+        )
+        event_types = [e.event_type for e in events]
+        assert EVENT_CRAWL_COMPLETED not in event_types
+        failed_events = [e for e in events if e.event_type == EVENT_CRAWL_FAILED]
+        assert len(failed_events) == 1
+        assert failed_events[0].message == "crawl failed"
+        payload = failed_events[0].payload
+        assert payload["status"] == CRAWL_STATUS_FAILED
+        failure = payload["failure"]
+        assert failure["code"] == ERROR_HTTP_4XX
+        assert failure["message"] == crawl.error_message
+        assert failure["status_code"] == 404
+        assert failure["target_url"] == "https://example.com/"
+
+
+@pytest.mark.asyncio
+async def test_legitimately_empty_plan_keeps_analysis_completed_event(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """SH-3 guard: a HEALTHY crawl with an empty analysis plan is COMPLETED.
+
+    The root fetches fine but admits no monitored selection (Starter with no
+    monitored URLs -> zero analyze tasks): the empty plan is a legitimate
+    0-of-0, so analysis terminalizes COMPLETED and the crawl records the
+    usual ``crawl.completed`` — the fully-failed mapping must not leak here.
+    """
+    seed = await _seed_root_only(session_factory)
+    # Root serves a linkless page: discovery succeeds, nothing else to do.
+    worker = _worker(session_factory, {"/": _html([])}, owner="empty-plan")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_COMPLETED
+        assert crawl.discovery_status == DISCOVERY_STATUS_COMPLETED
+        assert crawl.analysis_status == ANALYSIS_STATUS_COMPLETED
+        assert crawl.error_message in (None, "")
+
+        event_types = list(
+            (
+                await session.scalars(
+                    select(SiteCrawlEvent.event_type).where(
+                        SiteCrawlEvent.crawl_id == seed.crawl_id
+                    )
+                )
+            ).all()
+        )
+        assert EVENT_CRAWL_COMPLETED in event_types
+        assert EVENT_CRAWL_FAILED not in event_types
 
 
 @pytest.mark.asyncio

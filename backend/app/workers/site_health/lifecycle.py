@@ -56,6 +56,7 @@ from app.core.config.site_health import (
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
     EVENT_CRAWL_COMPLETED,
+    EVENT_CRAWL_FAILED,
     EXTRACTOR_VERSION,
     LINK_KIND_ANCHOR,
     OBSERVATION_SOURCE_SITEMAP,
@@ -74,6 +75,7 @@ from app.core.config.task_queue import (
     TASK_TERMINAL_STATUSES,
 )
 from app.domain.opportunities.service import recompute as recompute_opportunities
+from app.domain.site_health.failure import load_root_failure_summary
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.selection import crawl_is_active
 from app.domain.site_health.snapshot import persist_crawl_snapshot
@@ -273,6 +275,14 @@ class CrawlLifecycle:
             if crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
                 if analyze_total > 0 and analyze_applicable == 0:
                     apply_analysis_status(crawl, ANALYSIS_STATUS_CANCELLED)
+                elif fully_failed:
+                    # SH-3: an empty analysis plan is only COMPLETED when the
+                    # plan was legitimately empty (e.g. Starter with no
+                    # monitored selection — discovery DID admit URLs). When
+                    # discovery fully failed, ``0 == 0`` applicable would
+                    # report analysis "completed" for a crawl that never
+                    # fetched a single page; the analysis failed with it.
+                    apply_analysis_status(crawl, ANALYSIS_STATUS_FAILED)
                 elif analyze_succeeded == analyze_applicable:
                     apply_analysis_status(crawl, ANALYSIS_STATUS_COMPLETED)
                 elif analyze_succeeded > 0:
@@ -304,29 +314,45 @@ class CrawlLifecycle:
 
             if crawl.status == CRAWL_STATUS_RUNNING:
                 crawl.completed_at = _utcnow()
+                failure_summary: dict | None = None
                 if fully_failed:
                     apply_crawl_status(crawl, CRAWL_STATUS_FAILED)
-                    # A failed crawl with a blank ``error_message`` renders as a
-                    # bare "This crawl failed" with nothing actionable. The
-                    # reason is already on the task that failed — carry it up.
-                    if not crawl.error_message:
-                        crawl.error_message = await self._failure_reason(
-                            session, crawl_id
-                        )
+                    # SH-2/SH-5 (B1): the failure summary is the single
+                    # humanized source of truth — a stable code + sentence +
+                    # status/attempts projected from the root task's terminal
+                    # fetch attempts. Its message lands on the crawl row; its
+                    # full shape rides the ``crawl.failed`` event payload.
+                    failure_summary = await load_root_failure_summary(
+                        session, crawl=crawl
+                    )
+                    if failure_summary is not None and not crawl.error_message:
+                        crawl.error_message = failure_summary["message"]
                 elif discovery_partial or (
                     analyze_applicable > 0 and analyze_succeeded < analyze_applicable
                 ):
                     apply_crawl_status(crawl, CRAWL_STATUS_PARTIALLY_COMPLETED)
                 else:
                     apply_crawl_status(crawl, CRAWL_STATUS_COMPLETED)
-                record_crawl_event(
-                    session,
-                    crawl_id=crawl_id,
-                    event_type=EVENT_CRAWL_COMPLETED,
-                    message="crawl completed",
-                    payload={"status": crawl.status},
-                    count_disclosure=_count_disclosure(crawl),
-                )
+                if crawl.status == CRAWL_STATUS_FAILED:
+                    # SH-2 (B1): a failed run is NOT a "completed" event — SSE
+                    # and replay consumers get the failure summary instead.
+                    record_crawl_event(
+                        session,
+                        crawl_id=crawl_id,
+                        event_type=EVENT_CRAWL_FAILED,
+                        message="crawl failed",
+                        payload={"status": crawl.status, "failure": failure_summary},
+                        count_disclosure=_count_disclosure(crawl),
+                    )
+                else:
+                    record_crawl_event(
+                        session,
+                        crawl_id=crawl_id,
+                        event_type=EVENT_CRAWL_COMPLETED,
+                        message="crawl completed",
+                        payload={"status": crawl.status},
+                        count_disclosure=_count_disclosure(crawl),
+                    )
                 terminalized_for = (crawl.workspace_id, crawl.project_id)
             await session.commit()
 
@@ -414,33 +440,6 @@ class CrawlLifecycle:
             )
             await self.reconcile(crawl_id)
         return len(stalled)
-
-    async def _failure_reason(self, session: AsyncSession, crawl_id: uuid.UUID) -> str:
-        """Human-facing reason a crawl failed, from its last failed task.
-
-        A crawl only reaches ``failed`` because its discovery produced nothing,
-        which in practice means the root task failed for one classified reason
-        (rate limited, robots-denied, DNS, SSRF policy). Surfacing that code +
-        detail is the difference between "This crawl failed" and "the site
-        rate-limited us — try again shortly".
-        """
-        row = (
-            await session.execute(
-                select(SiteCrawlTask.error_code, SiteCrawlTask.error_detail)
-                .where(
-                    SiteCrawlTask.crawl_id == crawl_id,
-                    SiteCrawlTask.status == TASK_STATUS_FAILED,
-                    SiteCrawlTask.error_code != "",
-                )
-                .order_by(SiteCrawlTask.completed_at.desc().nullslast())
-                .limit(1)
-            )
-        ).first()
-        if row is None:
-            return ""
-        error_code, error_detail = row
-        detail = str(error_detail or "").strip()
-        return f"{error_code}: {detail}" if detail else str(error_code)
 
     async def _task_counts(
         self, session: AsyncSession, crawl_id: uuid.UUID

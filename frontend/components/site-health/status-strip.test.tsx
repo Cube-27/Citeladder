@@ -93,6 +93,7 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
     rule_version: 'r1',
     scoring_version: 's1',
     error_message: '',
+    failure_summary: null,
     created_at: '2026-07-16T00:00:00Z',
     updated_at: '2026-07-16T00:00:00Z',
     started_at: '2026-07-16T00:00:00Z',

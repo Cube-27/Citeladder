@@ -442,6 +442,13 @@ AI_CRAWLER_BOTS: Final[tuple[str, ...]] = (
 # Stance tokens recorded per bot in ``site_facts.robots.ai_crawlers``.
 AI_CRAWLER_STANCE_ALLOW: Final = "allow"
 AI_CRAWLER_STANCE_BLOCK: Final = "block"
+# robots.txt fetch classification recorded in ``site_facts.robots.status``
+# (SH-1/B2): a 404 means the site simply HAS no robots.txt — crawling
+# proceeds fail-open and the AI-crawler stance defaults to allow — which is a
+# different finding than robots.txt being unreachable (network error / 5xx).
+ROBOTS_FETCH_STATUS_FETCHED: Final = "fetched"
+ROBOTS_FETCH_STATUS_NOT_FOUND: Final = "not_found"
+ROBOTS_FETCH_STATUS_FETCH_FAILED: Final = "fetch_failed"
 
 # =========================================================================
 # Bot-block signatures (spec §5.4)
@@ -505,6 +512,10 @@ ERROR_MALFORMED_RESPONSE: Final = "malformed_response"
 # blocked response is retained in the per-call trace only; it never becomes an
 # analyzable artifact.
 ERROR_BOT_BLOCKED: Final = "bot_blocked"
+# Per-network-call outcome tokens persisted on ``SiteFetchAttempt.outcome``
+# (one row per real call; the writer and the read projections share them).
+FETCH_ATTEMPT_OUTCOME_SUCCESS: Final = "success"
+FETCH_ATTEMPT_OUTCOME_ERROR: Final = "error"
 SITE_FETCH_ERROR_TOKENS: Final[frozenset[str]] = frozenset(
     {
         ERROR_ROBOTS_DENIED,
@@ -553,6 +564,11 @@ EVENT_DISCOVERY_PROGRESS: Final = "discovery.progress"
 EVENT_ANALYSIS_PROGRESS: Final = "analysis.progress"
 EVENT_CRAWL_STATUS: Final = "crawl.status"
 EVENT_CRAWL_COMPLETED: Final = "crawl.completed"
+# Emitted INSTEAD of ``crawl.completed`` when the crawl terminalizes as
+# fully-failed (SH-2/B1): SSE/replay consumers never see a misleading
+# "completed" event for a failed run. The payload carries the failure summary
+# (code + human message + attempts/status_code/target_url).
+EVENT_CRAWL_FAILED: Final = "crawl.failed"
 EVENT_CRAWL_CANCELLED: Final = "crawl.cancelled"
 
 # =========================================================================

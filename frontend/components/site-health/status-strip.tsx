@@ -13,8 +13,10 @@ import {
   PLACEHOLDER,
   canShowDiscoveredTotal,
   crawlBadgeValue,
+  crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
+  endSentence,
   isDiscoveryProvisional,
   isDiscoveryTerminal,
   statusLabel,
@@ -152,6 +154,9 @@ function StripContent({
   }
 
   if (phase === 'terminal') {
+    // B1: a failed crawl names its reason (the API-projected failure summary /
+    // humanized error_message, never a bare code) plus what to do next.
+    const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
     return (
       <Alert tone={crawl.status === 'failed' ? 'danger' : 'info'}>
         <div className="flex flex-wrap items-center gap-2">
@@ -161,7 +166,7 @@ function StripContent({
           <span>
             {crawl.status === 'cancelled'
               ? 'This crawl was cancelled before it produced results.'
-              : crawl.error_message || 'This crawl failed before it produced results.'}
+              : `${endSentence(failure?.reason ?? '')} ${failure?.guidance}`}
           </span>
         </div>
       </Alert>
