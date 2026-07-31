@@ -414,17 +414,33 @@ def _sorted_commerce_hits(hits: list[DetectorHit]) -> list[DetectorHit]:
     return hits
 
 
-def detect_product_not_mentioned(evidence: CommerceEvidence) -> list[DetectorHit]:
-    """Fire per frozen catalog product MEASURED with zero mentions.
+def _has_provenance(entry: ProductEntryEvidence) -> bool:
+    """True when the entry can back a hit's provenance (invariant 4).
 
-    A measured zero requires a persisted ``ProductMetricSnapshot`` for the
-    entry: a catalog product the audit never measured (no snapshot, no
-    source analyses) would emit a hit with all three provenance lists empty,
-    violating the ``DetectorHit`` provenance contract (invariant 4) — and
-    "never measured" is not evidence of "never mentioned". Zero-filled
-    snapshots exist for unmentioned entries (invariant 7), so a genuinely
-    unmentioned product still fires.
+    A ``ProductMetricSnapshot`` (metric id) or the analyses it aggregated —
+    without either, a ``DetectorHit`` built from this entry would carry three
+    empty provenance lists.
     """
+    return entry.snapshot_id is not None or bool(entry.source_analysis_ids)
+
+
+def _is_unmentioned_product(entry: ProductEntryEvidence) -> bool:
+    """An own-catalog product MEASURED at zero mentions.
+
+    "Never measured" (no snapshot, no analyses) is not evidence of "never
+    mentioned", and would also breach the provenance contract — so it is
+    excluded. Unmentioned entries DO get a zero-filled snapshot (invariant 7),
+    so a genuinely unmentioned product still qualifies.
+    """
+    return (
+        entry.kind == "product"
+        and entry.mention_count == 0
+        and _has_provenance(entry)
+    )
+
+
+def detect_product_not_mentioned(evidence: CommerceEvidence) -> list[DetectorHit]:
+    """Fire per frozen catalog product measured with zero mentions."""
     rule = OPPORTUNITY_RULES_BY_ID[RULE_PRODUCT_NOT_MENTIONED]
     if not rule.enabled:
         return []
@@ -432,9 +448,7 @@ def detect_product_not_mentioned(evidence: CommerceEvidence) -> list[DetectorHit
         [
             _commerce_hit(evidence, entry, rule=rule, extras={})
             for entry in evidence.entries
-            if entry.kind == "product"
-            and entry.mention_count == 0
-            and (entry.snapshot_id is not None or entry.source_analysis_ids)
+            if _is_unmentioned_product(entry)
         ]
     )
 

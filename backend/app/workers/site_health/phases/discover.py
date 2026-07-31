@@ -81,6 +81,28 @@ from app.workers.site_health.phases.support import PhaseSupport
 from app.workers.site_health.urls import authority_key as _authority_key
 
 
+def _classify_robots_fetch(body: str | None, status: int | None) -> str:
+    """SH-1 (B2): classify the robots.txt fetch for the UI.
+
+    Distinguishes "the site has NO robots.txt we must honor" (any non-5xx
+    response — fail-open, the AI-crawler stance defaults to allow) from
+    "robots.txt could not be fetched" (network error / 5xx — the stance is
+    genuinely unknown, and per RFC 9309 a 5xx is a temporary complete
+    disallow).
+
+    EVERY non-5xx status is ``not_found``, not just 404: a 401 / 403 / 429
+    robots.txt is treated by ``_ensure_robots_policy`` exactly like a 404
+    (allow-all, RFC 9309 "unavailable status" — no restrictions), so
+    labelling it ``fetch_failed`` told the UI the stance was unknown while
+    the crawl proceeded fail-open on it.
+    """
+    if body is not None:
+        return ROBOTS_FETCH_STATUS_FETCHED
+    if status is not None and not (500 <= status < 600):
+        return ROBOTS_FETCH_STATUS_NOT_FOUND
+    return ROBOTS_FETCH_STATUS_FETCH_FAILED
+
+
 class DiscoverPhaseMixin(PhaseSupport):
     """TASK_KIND_DISCOVER handling."""
 
@@ -521,29 +543,12 @@ class DiscoverPhaseMixin(PhaseSupport):
                 exclude_globs=exclude_globs,
             )
 
-        # SH-1 (B2): classify the robots.txt fetch so the UI can distinguish
-        # "the site has NO robots.txt we must honor" (any non-5xx response —
-        # fail-open, stance defaults to allow) from "robots.txt could not be
-        # fetched" (network error / 5xx — stance genuinely unknown, and per
-        # RFC 9309 a 5xx is a temporary complete disallow).
-        #
-        # EVERY non-5xx status belongs in ``not_found``, not just 404: a 401 /
-        # 403 / 429 robots.txt is treated by ``_ensure_robots_policy`` exactly
-        # like a 404 (allow-all, RFC 9309 "unavailable status" — no
-        # restrictions), so labelling it ``fetch_failed`` told the UI the
-        # stance was unknown while the crawl proceeded fail-open on it. The
-        # legacy ``fetched`` bool stays for back-compat with pre-
-        # classification readers.
-        if robots_body is not None:
-            robots_fetch_status = ROBOTS_FETCH_STATUS_FETCHED
-        elif robots_status is not None and not (500 <= robots_status < 600):
-            robots_fetch_status = ROBOTS_FETCH_STATUS_NOT_FOUND
-        else:
-            robots_fetch_status = ROBOTS_FETCH_STATUS_FETCH_FAILED
         site_facts = {
             "robots": {
+                # The legacy ``fetched`` bool stays for back-compat with
+                # pre-classification readers.
                 "fetched": robots_body is not None,
-                "status": robots_fetch_status,
+                "status": _classify_robots_fetch(robots_body, robots_status),
                 "url": f"{authority}{ROBOTS_TXT_PATH}" if authority else "",
                 "status_code": robots_status,
                 "ai_crawlers": stance,

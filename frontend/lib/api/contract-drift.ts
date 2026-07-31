@@ -351,12 +351,15 @@ function backendPythonCandidates(root: string): string[] {
  *
  * `pnpm check:contract` runs the same vitest file as `pnpm test`, so the
  * documented "the wrapper skips, check:contract fails" split needs an explicit
- * signal — without one both paths skipped, and the guard could silently never
- * run in CI. `check:contract` sets `SEARCHIFY_CONTRACT_STRICT=1`; `CI` alone
- * also counts, so a CI run of `pnpm test` cannot quietly skip the guard either.
+ * signal — without one both paths skipped and the guard could silently never
+ * run anywhere. Only `check:contract` sets `SEARCHIFY_CONTRACT_STRICT=1`.
+ *
+ * Deliberately NOT keyed on `CI`: the CI frontend job runs `pnpm test` without
+ * a backend virtualenv, so treating `CI` as strict would fail the whole suite
+ * on an unavailable spec rather than on real contract drift.
  */
 export function contractGuardIsStrict(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.SEARCHIFY_CONTRACT_STRICT || env.CI);
+  return Boolean(env.SEARCHIFY_CONTRACT_STRICT);
 }
 
 /**

@@ -60,6 +60,8 @@
     "functions": {
       "_commerce_hit": 3,
       "_group_by_prompt_index": 2,
+      "_has_provenance": 2,
+      "_is_unmentioned_product": 3,
       "_prompt_target": 5,
       "_site_opportunity_rule_id": 4,
       "_sorted_commerce_hits": 1,
@@ -68,7 +70,7 @@
       "detect_competitor_product_dominates": 5,
       "detect_owned_page_not_cited": 3,
       "detect_price_mention_mismatch": 6,
-      "detect_product_not_mentioned": 5,
+      "detect_product_not_mentioned": 4,
       "detect_site_issue_opportunities": 7
     },
     "loc": 316,
@@ -1333,6 +1335,9 @@
       "ApiException.__init__": 2,
       "ApiException.coded": 2,
       "ApiException.is_retryable": 2,
+      "_error_loc_path": 2,
+      "_error_message_text": 3,
+      "_json_safe": 2,
       "_parse_legacy_detail": 15,
       "_status_phrase": 2,
       "api_exception_handler": 1,
@@ -1340,7 +1345,7 @@
       "http_exception_shim_handler": 2,
       "request_id_for": 4,
       "request_validation_error_handler": 1,
-      "sanitize_validation_errors": 8,
+      "sanitize_validation_errors": 7,
       "unhandled_exception_handler": 2,
       "validation_error_summary": 3
     },
@@ -2031,6 +2036,7 @@
       "_project_item": 2,
       "_project_snapshot": 4,
       "_require_project": 2,
+      "_resolve_scored_audit": 3,
       "_resolve_source": 3,
       "_target_label": 9,
       "_utcnow": 1,
@@ -2061,6 +2067,7 @@
   "app/domain/products/csv_import.py": {
     "functions": {
       "_parse_price": 4,
+      "_row_validation_error": 4,
       "_split_list": 6,
       "parse_product_csv": 26
     },
@@ -2120,12 +2127,12 @@
       "_load_audit_and_snapshots": 5,
       "_normalize_aggregate": 11,
       "_project_price_relation": 4,
-      "_select_current_snapshots": 5,
       "_snapshot_entry_id": 5,
       "get_product_evidence": 22,
       "get_product_visibility": 16,
       "load_product_visibility_export_bundle": 1,
-      "product_visibility_csv": 25
+      "product_visibility_csv": 25,
+      "select_current_snapshots": 5
     },
     "loc": 815,
     "max_cc": 25
@@ -3113,12 +3120,13 @@
       "DiscoverPhaseMixin._persisted_discover_artifact_id": 2,
       "DiscoverPhaseMixin._prune_robots_cache": 7,
       "DiscoverPhaseMixin._run_discover": 9,
-      "DiscoverPhaseMixin._site_setup": 20,
+      "DiscoverPhaseMixin._site_setup": 18,
       "DiscoverPhaseMixin._sitemap_candidates": 3,
-      "DiscoverPhaseMixin._write_sitemap_observations": 3
+      "DiscoverPhaseMixin._write_sitemap_observations": 3,
+      "_classify_robots_fetch": 4
     },
     "loc": 864,
-    "max_cc": 20
+    "max_cc": 19
   },
   "app/workers/site_health/phases/link_check.py": {
     "functions": {

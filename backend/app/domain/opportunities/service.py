@@ -926,20 +926,16 @@ async def update_status(
     return _project_item(row)
 
 
-async def _latest_evidence_at(
+async def _resolve_scored_audit(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
-) -> datetime | None:
-    """Newest usable-evidence timestamp (latest dashboard-ready audit/crawl).
+) -> Audit | None:
+    """The latest dashboard-ready audit that also has its aggregate snapshot.
 
-    Read-time only (C4c): compared against the latest snapshot's
-    ``created_at`` to derive staleness — nothing is persisted, so a failed
-    best-effort recompute hook manifests as exactly this drift.
-
-    The audit condition MIRRORS ``recompute``'s: a resolved audit only counts
-    as evidence when it also has its aggregate ``MetricSnapshot`` row.
-    ``recompute`` drops such an audit (it is not dashboard-ready), so
-    counting it here made ``stale`` true even immediately after a successful
-    recompute — permanently, since no recompute could ever catch up.
+    Mirrors ``recompute``'s default-resolution condition exactly: an audit
+    without its ``MetricSnapshot`` row is NOT dashboard-ready, and recompute
+    discards it. Counting such an audit as evidence made ``stale`` true even
+    immediately after a successful recompute — permanently, since no
+    recompute could ever catch up to it.
     """
     audit = await _resolve_source(
         session,
@@ -950,15 +946,31 @@ async def _latest_evidence_at(
         ready_statuses=_DASHBOARD_READY_STATUSES,
         not_found_detail=_AUDIT_NOT_FOUND,
     )
-    if audit is not None:
-        has_metric_snapshot = await session.scalar(
-            select(MetricSnapshot.id).where(
-                MetricSnapshot.audit_id == audit.id,
-                MetricSnapshot.workspace_id == workspace_id,
-            )
+    if audit is None:
+        return None
+    has_snapshot = await session.scalar(
+        select(MetricSnapshot.id).where(
+            MetricSnapshot.audit_id == audit.id,
+            MetricSnapshot.workspace_id == workspace_id,
         )
-        if has_metric_snapshot is None:
-            audit = None
+    )
+    return audit if has_snapshot is not None else None
+
+
+async def _latest_evidence_at(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> datetime | None:
+    """Newest usable-evidence timestamp (latest dashboard-ready audit/crawl).
+
+    Read-time only (C4c): compared against the latest snapshot's
+    ``created_at`` to derive staleness — nothing is persisted, so a failed
+    best-effort recompute hook manifests as exactly this drift.
+
+    The audit condition MIRRORS ``recompute``'s (see ``_resolve_scored_audit``).
+    """
+    audit = await _resolve_scored_audit(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
     crawl = await _resolve_source(
         session,
         SiteCrawl,

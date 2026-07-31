@@ -51,6 +51,7 @@ _LOCATION_PREFIXES = frozenset({"body", "query", "path", "header", "cookie"})
 
 _INTERNAL_ERROR_MESSAGE = "An unexpected error occurred"
 _VALIDATION_ERROR_MESSAGE = "Request validation failed"
+_INVALID_VALUE_MESSAGE = "Invalid value"
 
 __all__ = [
     "ApiException",
@@ -174,16 +175,20 @@ def _status_phrase(status_code: int) -> str:
         return "Error"
 
 
-async def api_exception_handler(request: Request, exc: ApiException) -> JSONResponse:
-    """Render an :class:`ApiException` as the unified envelope.
+def _json_safe(value: Any) -> Any:
+    """JSON-encodable projection of a raiser-supplied value, preserving None.
 
-    ``details``/``detail`` are raiser-supplied and may carry values
-    ``json.dumps`` cannot serialize (UUIDs, datetimes, Decimals, Enums,
-    Pydantic models) — a 500 from inside the error handler itself. They go
-    through ``jsonable_encoder`` so any such value renders; ``None`` stays
-    ``None`` so ``error_envelope``'s absent-details / detail-falls-back-to-
-    message behavior is unchanged.
+    ``ApiException.details``/``detail`` are arbitrary caller data and may hold
+    values ``json.dumps`` cannot serialize (UUIDs, datetimes, Decimals, Enums,
+    Pydantic models) — which would raise a 500 from inside the error handler
+    itself. ``None`` passes through untouched so ``error_envelope``'s
+    absent-details / detail-falls-back-to-message behavior is unchanged.
     """
+    return None if value is None else jsonable_encoder(value)
+
+
+async def api_exception_handler(request: Request, exc: ApiException) -> JSONResponse:
+    """Render an :class:`ApiException` as the unified envelope."""
     return JSONResponse(
         status_code=exc.status_code,
         content=error_envelope(
@@ -191,8 +196,8 @@ async def api_exception_handler(request: Request, exc: ApiException) -> JSONResp
             message=exc.message,
             request_id=request_id_for(request),
             retryable=exc.is_retryable(),
-            details=jsonable_encoder(exc.details) if exc.details is not None else None,
-            detail=jsonable_encoder(exc.detail) if exc.detail is not None else None,
+            details=_json_safe(exc.details),
+            detail=_json_safe(exc.detail),
         ),
         headers=exc.headers,
     )
@@ -264,6 +269,22 @@ async def http_exception_shim_handler(
     )
 
 
+def _error_loc_path(entry: Mapping[str, Any]) -> str:
+    """Dotted field path from an error entry's ``loc`` (parts stringified).
+
+    Sequence indices arrive as ints (``("variants", 0, "name")``), so joining
+    without ``str()`` raises ``TypeError`` from inside an error path.
+    """
+    return ".".join(str(part) for part in entry.get("loc", ()))
+
+
+def _error_message_text(entry: Mapping[str, Any]) -> str:
+    """Human message from a SANITIZED entry (``message``) or a RAW Pydantic
+    one (``msg``), falling back when neither is usable."""
+    text = entry.get("message") or entry.get("msg")
+    return str(text) if text else _INVALID_VALUE_MESSAGE
+
+
 def sanitize_validation_errors(
     errors: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -286,10 +307,9 @@ def sanitize_validation_errors(
         loc = [str(part) for part in err.get("loc", ())]
         if loc and loc[0] in _LOCATION_PREFIXES:
             loc = loc[1:]
-        msg = err.get("msg")
         entry: dict[str, Any] = {
             "loc": loc,
-            "message": str(msg) if msg else "Invalid value",
+            "message": _error_message_text(err),
         }
         err_type = err.get("type")
         if isinstance(err_type, str) and err_type:
@@ -309,8 +329,8 @@ def validation_error_summary(errors: Sequence[Mapping[str, Any]]) -> str:
     if not errors:
         return _VALIDATION_ERROR_MESSAGE
     first = errors[0]
-    loc = ".".join(str(part) for part in first.get("loc", ()))
-    message = str(first.get("message") or first.get("msg") or "Invalid value")
+    loc = _error_loc_path(first)
+    message = _error_message_text(first)
     return f"{loc}: {message}" if loc else message
 
 

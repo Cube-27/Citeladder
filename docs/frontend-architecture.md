@@ -191,11 +191,12 @@ reuses the cached dataset rather than refetching.
   the checked-in backend code (`backend/.venv` — no server, database, or network), else
   fetched from the live backend at `SEARCHIFY_BACKEND_ORIGIN` (default
   `http://localhost:8000`). When no source is available the plain vitest wrapper logs and
-  skips, while `pnpm check:contract` (and any run with `CI` set) **fails** — it sets
-  `SEARCHIFY_CONTRACT_STRICT=1`, which `contractGuardIsStrict` turns into a hard error
-  instead of a skip. **`pnpm test` alone is therefore not sufficient verification of the
-  contract**: always run `pnpm check:contract` too, since `pnpm test` silently skips the
-  guard whenever the OpenAPI source is unavailable.
+  skips, while `pnpm check:contract` **fails** — it sets `SEARCHIFY_CONTRACT_STRICT=1`,
+  which `contractGuardIsStrict` turns into a hard error instead of a skip. **`pnpm test`
+  alone is therefore not sufficient verification of the contract**: always run
+  `pnpm check:contract` too (from `backend/`-adjacent checkouts, where the offline
+  codegen can reach `backend/.venv`), since `pnpm test` silently skips the guard whenever
+  the OpenAPI source is unavailable.
 - **Requests stay strict.** Outgoing payloads are built from typed TypeScript DTOs at the
   call site — they are never parsed with a tolerant schema, so a request-side drift fails
   at compile time, not at runtime.

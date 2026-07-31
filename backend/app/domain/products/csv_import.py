@@ -83,6 +83,24 @@ def _parse_price(value: str) -> float | None:
         return None
 
 
+def _row_validation_error(
+    row_number: int, exc: ValidationError
+) -> ProductImportRowError:
+    """A failing ``ProductInput`` row -> a sanitized, skipped-row reason.
+
+    Never a 500 (COM-5). Two shapes are guarded: an EMPTY sanitized list must
+    not be indexed, and a ``loc`` carrying a sequence index (``variants``, 0)
+    must be stringified before joining.
+    """
+    sanitized = sanitize_validation_errors(exc.errors())
+    first = sanitized[0] if sanitized else {}
+    return ProductImportRowError(
+        row=row_number,
+        field=".".join(str(part) for part in first.get("loc", ())),
+        message=first.get("message") or "Invalid value",
+    )
+
+
 def parse_product_csv(content: str) -> ProductCsvParseResult:
     """Parse CSV text into numbered ``ProductInput`` rows + row-level skips.
 
@@ -179,18 +197,5 @@ def parse_product_csv(content: str) -> ProductCsvParseResult:
                 )
             )
         except ValidationError as exc:
-            # A row that fails field validation (e.g. an over-long name) is a
-            # skipped row with a sanitized reason (COM-5), never a 500. Both
-            # guards keep that promise: an empty sanitized list must not be
-            # indexed, and a ``loc`` carrying a sequence index (``variants``,
-            # 0) must not be str-joined as ints.
-            sanitized = sanitize_validation_errors(exc.errors())
-            first = sanitized[0] if sanitized else {}
-            errors.append(
-                ProductImportRowError(
-                    row=row_number,
-                    field=".".join(str(part) for part in first.get("loc", ())),
-                    message=first.get("message") or "Invalid value",
-                )
-            )
+            errors.append(_row_validation_error(row_number, exc))
     return ProductCsvParseResult(rows=products, errors=errors)
