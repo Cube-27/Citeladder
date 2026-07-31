@@ -43,7 +43,7 @@ from app.domain.projects.knowledge_base import (
 from app.domain.projects.shim import project_scoring_identity
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
-from app.domain.prompts.service import PromptSetNotFoundError
+from app.domain.prompts.service import PromptSetNotFoundError, prepare_prompt_inserts
 from app.models.brand import Brand
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
@@ -350,6 +350,40 @@ async def _get_or_create_topic(
     return topic
 
 
+async def _apply_insert_capacity(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+    suggestions: list[SuggestedTopic],
+) -> tuple[list[SuggestedTopic], int]:
+    """Enforce ``prompt_slots`` occupancy on parsed suggestions.
+
+    Runs the shared insert-capacity plan in the write transaction (after the
+    project and prompt-set locks; the account-capacity lock is always the
+    last lock taken), drops suggestions whose text already persists in the
+    set, and raises ``OccupancyLimitExceededError`` when the rows that can
+    actually insert would exceed the account allowance. Returns the
+    persistable suggestions plus the count dropped as already-persisted
+    duplicates (folded into the response's ``dropped_duplicates``).
+    """
+    texts = [prompt.text for topic in suggestions for prompt in topic.prompts]
+    approved = await prepare_prompt_inserts(
+        session,
+        workspace_id=workspace_id,
+        prompt_set_id=prompt_set_id,
+        texts=texts,
+    )
+    kept: list[SuggestedTopic] = []
+    dropped = 0
+    for topic in suggestions:
+        prompts = [p for p in topic.prompts if prompt_text_hash(p.text) in approved]
+        dropped += len(topic.prompts) - len(prompts)
+        if prompts:
+            kept.append(SuggestedTopic(name=topic.name, prompts=prompts))
+    return kept, dropped
+
+
 async def _insert_prompts_returning(
     session: AsyncSession,
     *,
@@ -597,9 +631,18 @@ async def generate_prompts(
     }
 
     try:
+        # Occupancy gate: filter already-persisted texts and charge ONLY the
+        # rows that can actually insert, under the account-capacity lock, in
+        # this same transaction. Over-allowance raises before any insert.
+        suggestions, capacity_dropped = await _apply_insert_capacity(
+            session,
+            workspace_id=workspace_id,
+            prompt_set_id=prompt_set.id,
+            suggestions=suggestions,
+        )
         touched_topics: list[Topic] = []
         inserted_ids: list[uuid.UUID] = []
-        dropped = intra_duplicates
+        dropped = intra_duplicates + capacity_dropped
         for suggestion in suggestions:
             if target_topic is not None:
                 # Scoped generation: everything lands in the requested topic.

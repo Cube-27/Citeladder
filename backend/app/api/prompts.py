@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 from fastapi import (
@@ -31,7 +32,9 @@ from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.abuse import abuse_settings
+from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
+from app.domain.entitlements.enforcement import OccupancyError
 from app.domain.prompts.csv_import import parse_prompt_csv
 from app.domain.prompts.generation import (
     GenerationOutputError,
@@ -106,6 +109,20 @@ def _not_found(detail: str) -> HTTPException:
 
 def _conflict(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+async def _map_occupancy[T](call: Callable[[], Awaitable[T]]) -> T:
+    """Run one occupancy-gated mutation, mapping a denial to the coded 403.
+
+    The quota check lives in the domain service (never a route precheck);
+    the router only translates the domain error into the API error contract.
+    """
+    try:
+        return await call()
+    except OccupancyError as exc:
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
 
 
 # --------------------------------------------------------------------------
@@ -216,8 +233,10 @@ async def create_prompt_endpoint(
 ) -> PromptResponse:
     create = PromptCreate(prompt_set_id=prompt_set_id, **payload.model_dump())
     try:
-        prompt = await create_prompt(
-            session, workspace_id=ctx.workspace_id, payload=create
+        prompt = await _map_occupancy(
+            lambda: create_prompt(
+                session, workspace_id=ctx.workspace_id, payload=create
+            )
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)
@@ -316,11 +335,13 @@ async def import_prompts_endpoint(
             detail=f"Invalid prompt import payload: {exc}",
         ) from exc
     try:
-        prompt_set = await import_prompts(
-            session,
-            workspace_id=ctx.workspace_id,
-            prompt_set_id=prompt_set_id,
-            rows=rows,
+        prompt_set = await _map_occupancy(
+            lambda: import_prompts(
+                session,
+                workspace_id=ctx.workspace_id,
+                prompt_set_id=prompt_set_id,
+                rows=rows,
+            )
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)
@@ -382,13 +403,15 @@ async def generate_prompts_endpoint(
         window_seconds=abuse_settings.agent_call_window_seconds,
     )
     try:
-        generated, topics, dropped = await generate_prompts(
-            session,
-            workspace_id=ctx.workspace_id,
-            prompt_set_id=prompt_set_id,
-            payload=payload,
-            agent=agent,
-            prompt_set=prompt_set,
+        generated, topics, dropped = await _map_occupancy(
+            lambda: generate_prompts(
+                session,
+                workspace_id=ctx.workspace_id,
+                prompt_set_id=prompt_set_id,
+                payload=payload,
+                agent=agent,
+                prompt_set=prompt_set,
+            )
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)

@@ -29,9 +29,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
+from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.domain.audits.planner import AuditValidationError, create_audit, list_tasks
+from app.domain.entitlements.types import GrantSpec
 from app.models.prompt import Prompt
 from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.occupancy_helpers import seed_occupancy_grants
 
 VALID_AGENT_RESPONSE = json.dumps(
     {
@@ -1373,3 +1376,84 @@ async def test_planner_excludes_proposed_and_archived_prompts(
                 prompt_ids=[seed.prompt_ids[0]],
                 repetitions=1,
             )
+
+
+# =========================================================================
+# Account occupancy enforcement (slice23 Task 4): the route maps the
+# domain denial to the coded 403; the quota check lives in the service.
+# =========================================================================
+@pytest.mark.asyncio
+async def test_generate_over_occupancy_returns_coded_403(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    project, prompt_set_id = await _make_project_and_set(
+        client, "occ-gen-403@example.com"
+    )
+    # A zero-slot grant provisions the capability with no headroom: every
+    # generated row that could actually insert is over the allowance.
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=0),),
+        )
+        await session.commit()
+
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
+        json={"count": 3, "confirm_send_evidence": True},
+    )
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["error"]["code"] == "occupancy_limit_exceeded"
+    assert body["error"]["retryable"] is False
+    assert body["error"]["details"]["key"] == "prompt_slots"
+    assert body["detail"]["code"] == "occupancy_limit_exceeded"
+
+    # The denial is atomic: nothing persisted from the rejected generation.
+    got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
+    assert got.json()["prompts"] == []
+
+
+@pytest.mark.asyncio
+async def test_import_over_occupancy_returns_coded_403(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    project, prompt_set_id = await _make_project_and_set(
+        client, "occ-import-403@example.com"
+    )
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
+        )
+        await session.commit()
+
+    # 3 distinct rows against an allowance of 2: the whole import is denied
+    # atomically (duplicates would be filtered before charging; there are
+    # none here).
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/import",
+        json={
+            "prompts": [
+                {"text": "first import"},
+                {"text": "second import"},
+                {"text": "third import"},
+            ]
+        },
+    )
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["error"]["code"] == "occupancy_limit_exceeded"
+    assert body["error"]["details"] == {
+        "key": "prompt_slots",
+        "allowance": 2,
+        "current": 0,
+        "requested": 3,
+    }
+    got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
+    assert got.json()["prompts"] == []

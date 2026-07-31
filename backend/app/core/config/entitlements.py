@@ -139,8 +139,7 @@ class CapabilityRegistry:
                     )
                 if len(entry.ordered_values) != len(set(entry.ordered_values)):
                     raise ValueError(
-                        f"level capability {entry.key!r} has duplicate "
-                        "ordered_values"
+                        f"level capability {entry.key!r} has duplicate ordered_values"
                     )
             elif entry.ordered_values:
                 raise ValueError(
@@ -386,3 +385,22 @@ CREDENTIAL_MODE_FUNDED: Final = "funded"
 CREDENTIAL_MODES: Final[frozenset[str]] = frozenset(
     {CREDENTIAL_MODE_BYOK, CREDENTIAL_MODE_FUNDED}
 )
+
+# ---------------------------------------------------------------------------
+# Account occupancy enforcement (slice23 Task 4; config-owned, invariant 1)
+# ---------------------------------------------------------------------------
+# Namespace folded into the 64-bit ``pg_advisory_xact_lock`` key that
+# serializes occupancy-checked mutations for one billing account
+# (domain/entitlements/enforcement.py). Distinct from the prompts-domain
+# lock namespaces so the lock families can never overlap.
+OCCUPANCY_LOCK_NAMESPACE: Final = 0x43415041  # "CAPA"
+
+# API error codes for occupancy enforcement failures (api-error-contract
+# section 5: codes live in config, raised via ``ApiException.coded``).
+CODE_OCCUPANCY_LIMIT_EXCEEDED: Final = "occupancy_limit_exceeded"
+CODE_OCCUPANCY_UNRESOLVED: Final = "occupancy_unresolved"
+
+# Structured-log event names. Safe fields only: account/workspace ids,
+# capability keys, and integer counts — never user data (invariant 6).
+EVENT_OCCUPANCY_LIMIT_EXCEEDED: Final = "billing.occupancy_limit_exceeded"
+EVENT_OCCUPANCY_UNRESOLVED: Final = "billing.occupancy_unresolved"
