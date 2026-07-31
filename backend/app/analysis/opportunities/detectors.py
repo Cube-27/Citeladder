@@ -433,9 +433,7 @@ def _is_unmentioned_product(entry: ProductEntryEvidence) -> bool:
     so a genuinely unmentioned product still qualifies.
     """
     return (
-        entry.kind == "product"
-        and entry.mention_count == 0
-        and _has_provenance(entry)
+        entry.kind == "product" and entry.mention_count == 0 and _has_provenance(entry)
     )
 
 

@@ -30,6 +30,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel,
   id,
   'aria-describedby': describedBy,
+  className,
 }: Readonly<{
   value: T;
   onChange: (value: T) => void;
@@ -37,6 +38,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel?: string;
   id?: string;
   'aria-describedby'?: string;
+  className?: string;
 }>) {
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   // With an off-list `value` nothing is checked, and a group where every option
@@ -57,7 +59,10 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={ariaLabel}
       aria-describedby={describedBy}
-      className="border-border bg-background-alt inline-flex flex-wrap gap-1 rounded-full border p-1"
+      className={cn(
+        'border-border bg-background-alt inline-flex h-[var(--control-height-sm)] items-center gap-0.5 rounded-full border p-0.5',
+        className,
+      )}
     >
       {options.map((option, index) => {
         const selected = option.value === value;
@@ -83,8 +88,10 @@ export function SegmentedControl<T extends string>({
               move(index, delta);
             }}
             className={cn(
-              'focus-ring rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-              selected ? 'bg-panel text-foreground' : 'text-secondary hover:text-foreground',
+              'focus-ring inline-flex h-full items-center justify-center rounded-full px-2.5 text-xs font-medium transition-colors',
+              selected
+                ? 'bg-panel text-foreground shadow-card font-semibold'
+                : 'text-secondary hover:text-foreground',
             )}
           >
             {option.label}
