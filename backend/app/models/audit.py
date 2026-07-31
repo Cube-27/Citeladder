@@ -76,7 +76,27 @@ class Audit(Base):
     status: Mapped[str] = mapped_column(
         String(32), default=AUDIT_STATUS_DRAFT, index=True
     )
+    # What initiated this run: manual | trial | scheduled | system. Indexed for
+    # account-wide rate/budget queries. PR1 has no schedule caller; the exact
+    # mode/route/credential detail stays frozen in ``configuration``.
+    trigger: Mapped[str] = mapped_column(String(16), default="manual", index=True)
     benchmark_mode: Mapped[str] = mapped_column(String(32), default="")
+    # Funded-execution provenance. Null for BYOK runs. The billing account that
+    # funds this run (SET NULL so account removal never erases audit history),
+    # the funded budget period the reservation counts against, and the worst-case
+    # reserved cost in micro-USD (nonnegative).
+    funding_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("billing_accounts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    funded_budget_period_start: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    funded_reserved_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
     # Neutral, brand-free system instruction frozen at creation (invariant 6).
     system_instruction: Mapped[str] = mapped_column(Text, default="")
     repetitions: Mapped[int] = mapped_column(Integer, default=1)

@@ -22,6 +22,11 @@ TIERS: Final = frozenset({TIER_FREE, TIER_PAID})
 CADENCE_MONTHLY: Final = "monthly"
 CADENCES: Final = frozenset({CADENCE_MONTHLY})
 
+# BillingSubscription.subscription_kind.
+SUBSCRIPTION_KIND_BASE: Final = "base"
+SUBSCRIPTION_KIND_ADDON: Final = "addon"
+SUBSCRIPTION_KINDS: Final = frozenset({SUBSCRIPTION_KIND_BASE, SUBSCRIPTION_KIND_ADDON})
+
 PROVIDER_RAZORPAY: Final = "razorpay"
 
 SUBSCRIPTION_PENDING: Final = "pending"

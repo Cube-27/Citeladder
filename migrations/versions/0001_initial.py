@@ -91,8 +91,18 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("billing_country", sa.String(length=2), nullable=False),
         sa.Column("country_verification", sa.String(length=16), nullable=False),
+        sa.Column(
+            "entitlement_lifecycle_version",
+            sa.Integer(),
+            server_default="0",
+            nullable=False,
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "entitlement_lifecycle_version >= 0",
+            name="ck_billing_account_entitlement_version_nonneg",
+        ),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -464,7 +474,15 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
+        sa.Column("trigger", sa.String(length=16), nullable=False),
         sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
+        sa.Column("funding_account_id", sa.UUID(), nullable=True),
+        sa.Column(
+            "funded_budget_period_start", sa.DateTime(timezone=True), nullable=True
+        ),
+        sa.Column(
+            "funded_reserved_cost_microusd", sa.BigInteger(), nullable=True
+        ),
         sa.Column("system_instruction", sa.Text(), nullable=False),
         sa.Column("repetitions", sa.Integer(), nullable=False),
         sa.Column("random_seed", sa.String(length=32), nullable=False),
@@ -479,6 +497,9 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["funding_account_id"], ["billing_accounts.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -486,9 +507,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
+        op.f("ix_audits_funding_account_id"),
+        "audits",
+        ["funding_account_id"],
+        unique=False,
+    )
+    op.create_index(
         op.f("ix_audits_project_id"), "audits", ["project_id"], unique=False
     )
     op.create_index(op.f("ix_audits_status"), "audits", ["status"], unique=False)
+    op.create_index(op.f("ix_audits_trigger"), "audits", ["trigger"], unique=False)
     op.create_index(
         op.f("ix_audits_workspace_id"), "audits", ["workspace_id"], unique=False
     )
@@ -3678,6 +3706,243 @@ def upgrade() -> None:
         ["workspace_id"],
         unique=False,
     )
+    op.create_table(
+        "account_grants",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("source_kind", sa.String(length=16), nullable=False),
+        sa.Column("source_ref", sa.String(length=255), nullable=False),
+        sa.Column("key", sa.String(length=64), nullable=False),
+        sa.Column("value", sa.Integer(), nullable=False),
+        sa.Column("period_start", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("period_end", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("valid_from", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("valid_until", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("catalog_revision", sa.String(length=64), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "period_start IS NULL OR period_end IS NULL OR period_start < period_end",
+            name="ck_account_grant_period_ordered",
+        ),
+        sa.CheckConstraint(
+            "valid_until IS NULL OR valid_until > valid_from",
+            name="ck_account_grant_valid_ordered",
+        ),
+        sa.CheckConstraint("value >= 0", name="ck_account_grant_value_nonneg"),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "idempotency_key",
+            "key",
+            name="uq_account_grant_bundle_key",
+        ),
+    )
+    op.create_index(
+        "ix_account_grant_account_key_valid",
+        "account_grants",
+        ["billing_account_id", "key", "valid_from"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_account_grant_source",
+        "account_grants",
+        ["source_kind", "source_ref"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_account_grants_billing_account_id"),
+        "account_grants",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_table(
+        "idempotency_records",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
+        sa.Column("operation", sa.String(length=64), nullable=False),
+        sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
+        sa.Column("state", sa.String(length=16), nullable=False),
+        sa.Column("response_status", sa.Integer(), nullable=True),
+        sa.Column(
+            "response_body", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "idempotency_key",
+            name="uq_idempotency_record_account_key",
+        ),
+    )
+    op.create_index(
+        "ix_idempotency_record_expiry",
+        "idempotency_records",
+        ["expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_idempotency_records_billing_account_id"),
+        "idempotency_records",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_table(
+        "pending_activations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("activation_kind", sa.String(length=16), nullable=False),
+        sa.Column("catalog_key", sa.String(length=64), nullable=False),
+        sa.Column("quantity", sa.Integer(), nullable=False),
+        sa.Column("catalog_revision", sa.String(length=64), nullable=False),
+        sa.Column("credential_mode", sa.String(length=16), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column("external_reference", sa.String(length=255), nullable=True),
+        sa.Column("external_price_id", sa.String(length=255), nullable=True),
+        sa.Column("checkout_url", sa.Text(), nullable=True),
+        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
+        sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("failed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("failure_code", sa.String(length=64), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "quantity > 0", name="ck_pending_activation_quantity_positive"
+        ),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "idempotency_key",
+            name="uq_pending_activation_account_idempotency",
+        ),
+    )
+    op.create_index(
+        "ix_pending_activation_status_created",
+        "pending_activations",
+        ["status", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_pending_activations_billing_account_id"),
+        "pending_activations",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_pending_activation_provider_reference",
+        "pending_activations",
+        ["provider", "external_reference"],
+        unique=True,
+        postgresql_where=sa.text("external_reference IS NOT NULL"),
+    )
+    op.create_table(
+        "consumable_ledger",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("grant_id", sa.UUID(), nullable=False),
+        sa.Column("capability_key", sa.String(length=64), nullable=False),
+        sa.Column("entry_kind", sa.String(length=16), nullable=False),
+        sa.Column("reservation_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("attempt", sa.Integer(), nullable=True),
+        sa.Column("units", sa.Integer(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "(entry_kind = 'debit' AND attempt IS NOT NULL AND attempt > 0) "
+            "OR (entry_kind <> 'debit' AND attempt IS NULL)",
+            name="ck_consumable_ledger_attempt_shape",
+        ),
+        sa.CheckConstraint("units > 0", name="ck_consumable_ledger_units_positive"),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["grant_id"], ["account_grants.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "idempotency_key",
+            name="uq_consumable_ledger_idempotency",
+        ),
+    )
+    op.create_index(
+        op.f("ix_consumable_ledger_billing_account_id"),
+        "consumable_ledger",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_consumable_ledger_grant_key_created",
+        "consumable_ledger",
+        ["grant_id", "capability_key", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_consumable_ledger_reservation_kind",
+        "consumable_ledger",
+        ["reservation_id", "entry_kind"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_consumable_ledger_task_attempt",
+        "consumable_ledger",
+        ["task_id", "attempt"],
+        unique=True,
+        postgresql_where=sa.text("entry_kind = 'debit'"),
+    )
+    op.create_table(
+        "grant_revocations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("grant_id", sa.UUID(), nullable=False),
+        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("reason", sa.String(length=255), nullable=False),
+        sa.Column("actor_user_id", sa.UUID(), nullable=True),
+        sa.Column("actor_kind", sa.String(length=24), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["grant_id"], ["account_grants.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "grant_id", "idempotency_key", name="uq_grant_revocation_idempotency"
+        ),
+    )
+    op.create_index(
+        "ix_grant_revocation_grant_effective",
+        "grant_revocations",
+        ["grant_id", "effective_from"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_grant_revocations_grant_id"),
+        "grant_revocations",
+        ["grant_id"],
+        unique=False,
+    )
     op.create_foreign_key(
         "fk_audit_tasks_result_artifact_id",
         "audit_tasks",
@@ -3706,6 +3971,53 @@ def downgrade() -> None:
     op.drop_constraint(
         "fk_audit_tasks_result_artifact_id", "audit_tasks", type_="foreignkey"
     )
+    op.drop_index(
+        op.f("ix_grant_revocations_grant_id"), table_name="grant_revocations"
+    )
+    op.drop_index(
+        "ix_grant_revocation_grant_effective", table_name="grant_revocations"
+    )
+    op.drop_table("grant_revocations")
+    op.drop_index(
+        "uq_consumable_ledger_task_attempt",
+        table_name="consumable_ledger",
+        postgresql_where=sa.text("entry_kind = 'debit'"),
+    )
+    op.drop_index(
+        "ix_consumable_ledger_reservation_kind", table_name="consumable_ledger"
+    )
+    op.drop_index(
+        "ix_consumable_ledger_grant_key_created", table_name="consumable_ledger"
+    )
+    op.drop_index(
+        op.f("ix_consumable_ledger_billing_account_id"), table_name="consumable_ledger"
+    )
+    op.drop_table("consumable_ledger")
+    op.drop_index(
+        "uq_pending_activation_provider_reference",
+        table_name="pending_activations",
+        postgresql_where=sa.text("external_reference IS NOT NULL"),
+    )
+    op.drop_index(
+        op.f("ix_pending_activations_billing_account_id"),
+        table_name="pending_activations",
+    )
+    op.drop_index(
+        "ix_pending_activation_status_created", table_name="pending_activations"
+    )
+    op.drop_table("pending_activations")
+    op.drop_index(
+        op.f("ix_idempotency_records_billing_account_id"),
+        table_name="idempotency_records",
+    )
+    op.drop_index("ix_idempotency_record_expiry", table_name="idempotency_records")
+    op.drop_table("idempotency_records")
+    op.drop_index(
+        op.f("ix_account_grants_billing_account_id"), table_name="account_grants"
+    )
+    op.drop_index("ix_account_grant_source", table_name="account_grants")
+    op.drop_index("ix_account_grant_account_key_valid", table_name="account_grants")
+    op.drop_table("account_grants")
     op.drop_index(op.f("ix_site_issues_workspace_id"), table_name="site_issues")
     op.drop_index("ix_site_issues_url_created", table_name="site_issues")
     op.drop_index(op.f("ix_site_issues_site_url_id"), table_name="site_issues")
@@ -4288,8 +4600,10 @@ def downgrade() -> None:
     )
     op.drop_table("billing_checkout_attempts")
     op.drop_index(op.f("ix_audits_workspace_id"), table_name="audits")
+    op.drop_index(op.f("ix_audits_trigger"), table_name="audits")
     op.drop_index(op.f("ix_audits_status"), table_name="audits")
     op.drop_index(op.f("ix_audits_project_id"), table_name="audits")
+    op.drop_index(op.f("ix_audits_funding_account_id"), table_name="audits")
     op.drop_table("audits")
     op.drop_index(
         op.f("ix_attribution_snapshots_workspace_id"),
