@@ -470,10 +470,7 @@ function ScoreTile({ label, value }: Readonly<{ label: string; value: number | n
 /** Persisted HTTP delivery facts (mockup 711 "Delivery Metrics"). */
 function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   const items: Array<{ label: string; value: string }> = [
-    {
-      label: 'TTFB',
-      value: delivery.ttfb_ms === null ? PLACEHOLDER : `${Math.round(delivery.ttfb_ms)}ms`,
-    },
+    { label: 'TTFB', value: formatMeasuredMs(delivery.ttfb_ms) },
     { label: 'Response Size', value: formatBytes(delivery.decoded_bytes ?? delivery.html_bytes) },
     {
       label: 'HTTP Status',
@@ -622,6 +619,20 @@ function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUr
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * A measured elapsed-time metric, or the placeholder (B6).
+ *
+ * `0` is not a real timing: the fetcher records whole milliseconds, so a zero
+ * means the hop was never measured (a redirect/no-body hop, or a legacy row
+ * persisted before the metric existed) — not a sub-millisecond response.
+ * Rendering it as "0ms" advertises impossibly fast delivery. Byte counts do
+ * NOT share this rule (`0 B` is a real body), so `formatBytes` keeps `0`.
+ */
+function formatMeasuredMs(value: number | null): string {
+  if (value === null || value <= 0) return PLACEHOLDER;
+  return `${Math.round(value)}ms`;
 }
 
 /** Human-readable byte size (KB) or the placeholder. */

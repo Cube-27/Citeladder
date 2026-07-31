@@ -336,13 +336,13 @@ export function resolveSiteHealthPhase(
   // 6. Failed with no data — explicit stopped card, never an active-looking view.
   if (crawl.status === 'failed') return 'terminal';
 
-  // 6. Cancelled with no data: Starter keeps the discovered inventory (selection
+  // 7. Cancelled with no data: Starter keeps the discovered inventory (selection
   // survives a cancel and re-seeds the next crawl); everyone else dead-ends.
   if (crawl.status === 'cancelled') {
     return plan === 'starter' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
   }
 
-  // 7. Every remaining status is ACTIVE (draft/validating/queued/running). An
+  // 8. Every remaining status is ACTIVE (draft/validating/queued/running). An
   // active crawl for a project with a committed monitored set is an analysis
   // run from the moment it is created: the planner seeds the monitored set's
   // analyze tasks at crawl creation, and a selection commit enqueues analyze
@@ -352,10 +352,10 @@ export function resolveSiteHealthPhase(
   // right after "Start analysis" / "Re-crawl".
   if (hasMonitoredSelection) return 'analyzing';
 
-  // 8. Discovery still running.
+  // 9. Discovery still running.
   if (!TERMINAL_DISCOVERY.has(crawl.discovery_status)) return 'discovering';
 
-  // 9–11. Discovery done. Free auto-analyzes its sample (no manual selection);
+  // 10–12. Discovery done. Free auto-analyzes its sample (no manual selection);
   // Starter stages a monitored set unless analysis has already started.
   if (crawl.analysis_status === 'running') return 'analyzing';
   if (plan === 'starter' && crawl.analysis_status === 'pending') return 'selection';

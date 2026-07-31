@@ -24,6 +24,22 @@ export function getApiRequestTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_API_REQUEST_TIMEOUT_MS;
 }
 
+/**
+ * Bounded backoff between the API client's network-failure retries (A3). The
+ * delay is multiplied by the attempt number, so attempt 2 waits one unit.
+ */
+export const API_RETRY_BACKOFF_MS = 150;
+
+/**
+ * Contract-drift guard (A5) knobs — the dev/CI tool that diffs the backend
+ * OpenAPI response models against the zod contracts. `check:contract` reads
+ * the live backend only as a last resort, so its origin and timeout are
+ * tunable here rather than inline in the guard (invariant 1).
+ */
+export const CONTRACT_BACKEND_ORIGIN = 'http://localhost:8000';
+export const CONTRACT_LIVE_FETCH_TIMEOUT_MS = 2_000;
+export const CONTRACT_CODEGEN_TIMEOUT_MS = 120_000;
+
 // Analytics and evidence request/display bounds.
 export const REFERRALS_PAGE_SIZE = 50;
 export const CORRELATION_MIN_SAMPLE = 8;

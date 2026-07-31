@@ -61,6 +61,27 @@ describe('RootErrorsBlock (B3)', () => {
     expect(within(row).queryByText('http_5xx')).not.toBeInTheDocument();
   });
 
+  it('renders a dash for a 0 ms latency — an unmeasured hop, not an instant one (B6)', () => {
+    render(
+      <RootErrorsBlock
+        errors={[
+          {
+            method: 'GET',
+            target: 'https://acme.com/',
+            outcome: 'error',
+            error_code: 'dns_resolution_failed',
+            status_code: null,
+            latency_ms: 0,
+          },
+        ]}
+      />,
+    );
+
+    const row = screen.getByTestId('root-error-row');
+    expect(within(row).queryByText('0 ms')).not.toBeInTheDocument();
+    expect(within(row).getAllByText('—')).toHaveLength(2);
+  });
+
   it('renders nothing for an empty list', () => {
     const { container } = render(<RootErrorsBlock errors={[]} />);
     expect(container).toBeEmptyDOMElement();

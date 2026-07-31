@@ -31,6 +31,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
+import {
+  CONTRACT_BACKEND_ORIGIN,
+  CONTRACT_CODEGEN_TIMEOUT_MS,
+  CONTRACT_LIVE_FETCH_TIMEOUT_MS,
+} from '@/lib/config/operational';
 import { connectionTestResultSchema } from './providers';
 import * as schemas from './schemas';
 
@@ -374,7 +379,7 @@ export async function acquireOpenApiSpec(options?: {
     try {
       const stdout = execFileSync(python, ['-c', GENERATE_OPENAPI_PY], {
         cwd: backendDir,
-        timeout: options?.timeoutMs ?? 120_000,
+        timeout: options?.timeoutMs ?? CONTRACT_CODEGEN_TIMEOUT_MS,
         maxBuffer: 64 * 1024 * 1024,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -389,10 +394,10 @@ export async function acquireOpenApiSpec(options?: {
 
   // 3. Live backend (last resort — handy in local dev).
   const fetchImpl = options?.fetchImpl ?? fetch;
-  const origin = env.SEARCHIFY_BACKEND_ORIGIN ?? 'http://localhost:8000';
+  const origin = env.SEARCHIFY_BACKEND_ORIGIN ?? CONTRACT_BACKEND_ORIGIN;
   try {
     const response = await fetchImpl(`${origin}/openapi.json`, {
-      signal: AbortSignal.timeout(2_000),
+      signal: AbortSignal.timeout(CONTRACT_LIVE_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const spec = (await response.json()) as OpenApiSpec;

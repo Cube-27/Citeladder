@@ -21,7 +21,11 @@
  *     only — never for ordinary mutations.
  *   - JSON enforcement: a 2xx response that is not JSON is a contract violation.
  */
-import { API_BASE_URL, getApiRequestTimeoutMs } from '@/lib/config/operational';
+import {
+  API_BASE_URL,
+  API_RETRY_BACKOFF_MS,
+  getApiRequestTimeoutMs,
+} from '@/lib/config/operational';
 import { ApiError, isAbortError, isTimeoutError } from './errors';
 
 /** Relative API base. Same-origin; proxied to BACKEND_ORIGIN by Next rewrites. */
@@ -150,7 +154,7 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
         // network-class failure; the final surface is the retryable ApiError.
         throw isTimeoutError(error) ? timeoutApiError(requestId) : error;
       }
-      await delay(150 * attempt, options.signal);
+      await delay(API_RETRY_BACKOFF_MS * attempt, options.signal);
     }
   }
 

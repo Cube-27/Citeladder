@@ -1,6 +1,7 @@
 'use client';
 
 import type { RootError } from '@/lib/api/types';
+import { PLACEHOLDER } from '@/lib/site-health/status';
 
 /**
  * Root-failure block for the Errors & Blocked tab (SH-4 — B3).
@@ -32,10 +33,14 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               <span className="mono text-danger-text text-sm">{error.error_code}</span>
             ) : null}
             <span className="mono text-muted text-sm">
-              {error.status_code !== null ? `HTTP ${error.status_code}` : '—'}
+              {error.status_code !== null ? `HTTP ${error.status_code}` : PLACEHOLDER}
             </span>
             <span className="mono text-muted text-sm">
-              {error.latency_ms !== null ? `${error.latency_ms} ms` : '—'}
+              {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
+                  wire), not an instant response — show the placeholder. */}
+              {error.latency_ms !== null && error.latency_ms > 0
+                ? `${error.latency_ms} ms`
+                : PLACEHOLDER}
             </span>
           </li>
         ))}
