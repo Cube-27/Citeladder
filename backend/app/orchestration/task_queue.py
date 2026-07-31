@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 
 
@@ -75,6 +76,23 @@ class TaskQueue[T](Protocol):
 
         Increments nothing here (the worker increments ``attempt_count`` before
         the call); the queue only reschedules and releases the lease.
+        """
+        ...
+
+    async def park_capacity_wait(
+        self,
+        *,
+        task_id: uuid.UUID,
+        owner: str,
+        available_at: datetime,
+    ) -> bool:
+        """Park a task in ``capacity_wait`` until ``available_at``.
+
+        Unlike ``retry`` this consumes NO attempt budget: the provider call
+        never started, so ``attempt_count`` is untouched. The lease is
+        released and the row becomes claimable again exactly like a retry —
+        once ``available_at`` passes (``capacity_wait`` is in the claimable
+        vocabulary).
         """
         ...
 

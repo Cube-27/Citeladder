@@ -209,6 +209,60 @@ async def test_capacity_wait_rows_are_claimable_once_due(
 
 
 @pytest.mark.asyncio
+async def test_park_capacity_wait_releases_lease_until_due(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``park_capacity_wait`` parks an owned running row without spending budget.
+
+    The lease is released and ``attempt_count`` untouched (no provider call
+    happened); the row leaves the claimable set until ``available_at`` passes
+    and only the lease owner may park it.
+    """
+    await _make_queued_audit(session_factory, prompts=1, reps=1)  # 1
+    queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
+
+    claimed = await queue.claim(owner="w1", limit=1)
+    assert len(claimed) == 1
+    task_id = claimed[0].id
+    assert await queue.mark_running(task_id=task_id, owner="w1")
+
+    due = datetime.now(UTC) + timedelta(hours=1)
+    assert await queue.park_capacity_wait(task_id=task_id, owner="w1", available_at=due)
+
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        assert task.status == TASK_STATUS_CAPACITY_WAIT
+        assert task.lease_owner is None
+        assert task.lease_expires_at is None
+        assert task.available_at == due
+        # No attempt budget was spent: the provider call never started.
+        assert task.attempt_count == 0
+
+    # Parked in the future: not claimable by anyone.
+    assert await queue.claim(owner="w2", limit=1) == []
+
+    # Once due it is claimable again; a non-owner cannot park it.
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.available_at = datetime.now(UTC) - timedelta(seconds=1)
+        await session.commit()
+    reclaimed = await queue.claim(owner="w2", limit=1)
+    assert [t.id for t in reclaimed] == [task_id]
+    assert await queue.mark_running(task_id=task_id, owner="w2")
+    assert not await queue.park_capacity_wait(
+        task_id=task_id, owner="w1", available_at=due
+    )
+    assert await queue.park_capacity_wait(task_id=task_id, owner="w2", available_at=due)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        assert task.status == TASK_STATUS_CAPACITY_WAIT
+        assert task.attempt_count == 0
+
+
+@pytest.mark.asyncio
 async def test_claim_transition_sweeper_ignore_shopping_surface(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:

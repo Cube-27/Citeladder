@@ -4,14 +4,23 @@
 # rows via ``PostgresTaskQueue`` (``FOR UPDATE SKIP LOCKED``, lease committed
 # BEFORE any network I/O), resolves the decrypted BYOK key from the task's
 # ``ProviderConnection`` at execution time (never env, never logged — invariant
-# 6), builds the answer-engine adapter, and calls it with request pacing, a hard
-# per-call ceiling, and a bounded retry budget. Each attempt appends an
-# immutable ``ProviderAttempt``; a successful call persists an immutable
-# ``RawResponseArtifact`` plus the task's execution fields (single writer = the
-# claiming worker — invariant 3). It heartbeats the lease while a call runs,
-# drives the audit lifecycle (QUEUED -> RUNNING, then RUNNING -> ANALYZING /
-# FAILED at the execution boundary), and honors cooperative cancel + the per-run
-# wall-clock deadline at each task boundary (invariant 9).
+# 6), builds the answer-engine adapter, and calls it with request pacing and a
+# hard per-call ceiling. ONE queue attempt makes ONE external call
+# (``call_provider_once``): the queue's retry/backoff is the SOLE retry loop,
+# bounded by the task's frozen ``max_attempts``. Before the call it acquires
+# provider capacity (``app.orchestration.provider_capacity``) — a refusal
+# parks the task in ``capacity_wait`` without spending an attempt — and after
+# the call it releases capacity with the outcome (a provider 429 writes the
+# shared cooldown). Each actual call appends one immutable ``ProviderAttempt``
+# and, for a FUNDED task (frozen reservation in the task's route snapshot),
+# bills exactly one ledger unit — a timed-out call bills too — with the
+# task's unused reservation released at terminalization. A successful call
+# persists an immutable ``RawResponseArtifact`` plus the task's execution
+# fields (single writer = the claiming worker — invariant 3). It heartbeats
+# the lease while a call runs, drives the audit lifecycle (QUEUED -> RUNNING,
+# then RUNNING -> ANALYZING / FAILED at the execution boundary), and honors
+# cooperative cancel + the per-run wall-clock deadline at each task boundary
+# (invariant 9).
 #
 # Scoring/analysis is B6's job: this worker persists the raw answer + citations
 # and hands a finished-execution audit off at ``analyzing``.
@@ -23,7 +32,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -57,12 +66,19 @@ from app.core.config.audits import (
     AUDIT_STATUS_QUEUED,
     AUDIT_STATUS_RUNNING,
     AUDIT_TERMINAL_STATUSES,
+    CAPACITY_OUTCOME_FAILED,
+    CAPACITY_OUTCOME_RATE_LIMITED,
+    CAPACITY_OUTCOME_SUCCEEDED,
+    CREDENTIAL_KIND_BYOK,
+    CREDENTIAL_KIND_FUNDED,
     ERROR_NO_CONNECTION,
     ERROR_RUN_DEADLINE,
     EVENT_AUDIT_RUNNING,
+    EVENT_TASK_CAPACITY_WAIT,
     EVENT_TASK_FAILED,
     EVENT_TASK_RETRY,
     EVENT_TASK_SUCCEEDED,
+    TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
@@ -80,6 +96,7 @@ from app.core.config.costs import (
 from app.core.config.provider_catalog import (
     ERROR_INVALID_SURFACE,
     ERROR_PARSE,
+    ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
     RETRYABLE_ERRORS,
     is_active_transport,
@@ -92,6 +109,10 @@ from app.core.security import decrypt_secret
 from app.core.telemetry import configure_logging
 from app.domain.audits.cost_projection import build_execution_cost_projection
 from app.domain.audits.state_events import apply_transition, record_event
+from app.domain.entitlements.ledger import (
+    record_billable_attempt,
+    release_unused_reservation,
+)
 from app.domain.opportunities.service import recompute as recompute_opportunities
 from app.models.audit import (
     Audit,
@@ -103,6 +124,13 @@ from app.models.audit import (
 )
 from app.models.provider import ProviderConnection
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
+from app.orchestration.provider_capacity import (
+    CapacityDecision,
+    CapacityOutcome,
+    CapacityRequest,
+    acquire_provider_capacity,
+    release_provider_capacity,
+)
 from app.workers.drain import DrainableWorkerMixin
 
 logger = logging.getLogger("app.workers.audit_worker")
@@ -110,6 +138,19 @@ logger = logging.getLogger("app.workers.audit_worker")
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def _drain_horizon_seconds() -> float:
+    """How long a one-shot drain waits for a parked row to become claimable.
+
+    Covers the transient states a drain itself creates — the concurrency
+    capacity park (``capacity_concurrency_retry_seconds``) — plus one poll
+    interval of slack. One owner so the wait budget and the soon-claimable
+    check can never drift apart (invariant 2).
+    """
+    return audit_settings.capacity_concurrency_retry_seconds + max(
+        0.05, audit_settings.poll_interval_seconds
+    )
 
 
 # --- Request pacing (per transport, across concurrent tasks in this process) --
@@ -140,9 +181,9 @@ async def pace_provider_request(transport_provider: str) -> None:
 class CallAttempt:
     """The outcome of ONE actual provider call (a success or a failure).
 
-    ``_call_with_retries`` returns one of these per real call it made so the
-    caller can persist an append-only ``ProviderAttempt`` row for EACH attempt
-    (retryable failures + the final success/failure), not just the last one.
+    ``call_provider_once`` returns exactly one of these per real call, so the
+    persistence path appends one immutable ``ProviderAttempt`` per actual
+    provider call (invariant 3) — never a collapsed summary.
     """
 
     response: AnswerEngineResponse | None
@@ -153,50 +194,180 @@ class CallAttempt:
         return self.response is not None
 
 
-async def _call_with_retries(
-    adapter, request: AnswerEngineRequest
-) -> list[CallAttempt]:
-    """Call the provider with pacing, a hard per-call ceiling, and retries.
+async def call_provider_once(
+    adapter, request: AnswerEngineRequest, *, timeout_seconds: float
+) -> CallAttempt:
+    """Make ONE provider call for ONE queue attempt (the sole-call contract).
 
-    Returns one ``CallAttempt`` per actual provider call made (never empty). The
-    last entry is the terminal outcome: a success (``response`` set) or the final
-    failure once the retry budget is spent / a non-retryable error is hit.
-    Earlier entries are retryable failures. A single call can never run past
-    ``max_call_seconds`` (``asyncio.wait_for`` guards the HTTP client); the loop
-    is bounded by ``max_attempts``.
+    The queue's retry/backoff is the ONLY retry loop (bounded by the frozen
+    ``task.max_attempts``); this function never retries, so one external call
+    maps to exactly one queue attempt, one ``ProviderAttempt`` row, and one
+    billable ledger unit. Request pacing and the hard per-call ceiling are
+    preserved: a stalled call (hung socket, redirect loop) can never run past
+    the frozen ``timeout_seconds`` — ``asyncio.wait_for`` guards the HTTP
+    client independently of the client timeout.
     """
-    attempts = max(1, audit_settings.max_attempts)
-    results: list[CallAttempt] = []
-    for attempt in range(attempts):
-        error: ProviderError | None = None
-        try:
-            await pace_provider_request(adapter.transport_provider)
-            # Hard per-call ceiling independent of the HTTP client timeout: a
-            # stalled call (hung socket, redirect loop) can never run past this.
-            response = await asyncio.wait_for(
-                adapter.execute(request),
-                timeout=audit_settings.max_call_seconds,
-            )
-            results.append(CallAttempt(response=response, error=None))
-            return results
-        except TimeoutError:
-            error = ProviderError(
-                "provider call exceeded max_call_seconds "
-                f"({audit_settings.max_call_seconds}s)",
+    try:
+        await pace_provider_request(adapter.transport_provider)
+        response = await asyncio.wait_for(
+            adapter.execute(request),
+            timeout=timeout_seconds,
+        )
+        return CallAttempt(response=response, error=None)
+    except TimeoutError:
+        return CallAttempt(
+            response=None,
+            error=ProviderError(
+                f"provider call exceeded timeout_seconds ({timeout_seconds}s)",
                 error_code=ERROR_TIMEOUT,
                 retryable=True,
-            )
-        except ProviderError as exc:
-            error = exc
-        results.append(CallAttempt(response=None, error=error))
-        retryable = bool(
-            error and error.retryable and error.error_code in RETRYABLE_ERRORS
+            ),
         )
-        if not retryable or attempt == attempts - 1:
-            break
-        retry_after = getattr(error, "retry_after_seconds", None)
-        await asyncio.sleep(audit_settings.retry_delay(attempt, retry_after))
-    return results
+    except ProviderError as exc:
+        return CallAttempt(response=None, error=exc)
+
+
+@dataclass(frozen=True, slots=True)
+class _FrozenFunding:
+    """The planner-frozen funded reservation one task bills against.
+
+    Opaque ids only (invariant 6): the reservation id the worker bills and
+    the billing account the capacity pools key on. Never a credential.
+    """
+
+    reservation_id: uuid.UUID
+    billing_account_id: uuid.UUID | None
+
+
+def _frozen_funding_from(route_snapshot: dict | None) -> _FrozenFunding | None:
+    """Read the frozen funding block off a task's route snapshot.
+
+    The planner writes the block in the same transaction as the reservation
+    itself (no funded task is claimable without it). A task with no block —
+    every BYOK task — returns None and never touches the ledger.
+    """
+    funding = (route_snapshot or {}).get("funding") or {}
+    reservation = funding.get("reservation_id")
+    if not reservation:
+        return None
+    account = funding.get("funding_account_id")
+    return _FrozenFunding(
+        reservation_id=uuid.UUID(str(reservation)),
+        billing_account_id=uuid.UUID(str(account)) if account else None,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _ExecutionContext:
+    """Everything ONE attempt needs, loaded + frozen BEFORE any provider I/O.
+
+    Plain values only (no ORM rows), so nothing lazy-loads after the short
+    load session closes. ``attempt_number`` is the persisted
+    ``task.attempt_count + 1`` — the identity of the single call this queue
+    attempt will make.
+    """
+
+    task_id: uuid.UUID
+    audit_id: uuid.UUID
+    logical_engine: str
+    transport_provider: str
+    transport_model: str
+    prompt_text: str
+    system_instruction: str
+    configuration: dict
+    policy: MeasurementModePolicy
+    base_url: str
+    attempt_number: int
+    connection_id: uuid.UUID | None
+    connection_active: bool
+    api_key_encrypted: str
+    funding: _FrozenFunding | None
+
+
+def _terminal_rejection(context: _ExecutionContext) -> tuple[str, str] | None:
+    """The (code, detail) for a task that must fail BEFORE any provider I/O.
+
+    A frozen task on a retired transport, a missing/inactive connection, or an
+    unapproved endpoint fails terminally before key decryption, capacity
+    acquisition, and any network call (invariant 6/10) — no external call is
+    made, so no ledger unit is billed either.
+    """
+    if not is_active_transport(context.transport_provider):
+        return (
+            ERROR_INVALID_SURFACE,
+            "transport provider is retired and not executable",
+        )
+    if context.connection_id is None or not context.connection_active:
+        return (ERROR_NO_CONNECTION, "provider connection missing or inactive")
+    if not is_endpoint_approved(context.transport_provider, context.base_url):
+        return (ERROR_INVALID_SURFACE, "provider endpoint is not approved")
+    return None
+
+
+def _build_call_request(
+    context: _ExecutionContext,
+) -> tuple[AnswerEngineRequest, dict]:
+    """The adapter request + provenance snapshot from the FROZEN policy only."""
+    request = _build_request(
+        prompt_text=context.prompt_text,
+        system_instruction=context.system_instruction,
+        transport_model=context.transport_model,
+        logical_engine=context.logical_engine,
+        transport_provider=context.transport_provider,
+        policy=context.policy,
+    )
+    snapshot = _build_request_snapshot(
+        logical_engine=context.logical_engine,
+        transport_provider=context.transport_provider,
+        transport_model=context.transport_model,
+        request=request,
+        configuration=context.configuration,
+        answer_instruction=context.policy.answer_instruction,
+    )
+    return request, snapshot
+
+
+def _capacity_request(context: _ExecutionContext) -> CapacityRequest:
+    """This attempt's capacity demand, keyed by its credential kind.
+
+    Funded tasks draw the funded-global + funded-account pools (the account
+    comes from the frozen funding block); BYOK draws transport + connection.
+    """
+    if context.funding is not None:
+        return CapacityRequest(
+            task_id=context.task_id,
+            attempt_number=context.attempt_number,
+            logical_engine=context.logical_engine,
+            transport_provider=context.transport_provider,
+            credential_kind=CREDENTIAL_KIND_FUNDED,
+            billing_account_id=context.funding.billing_account_id,
+        )
+    return CapacityRequest(
+        task_id=context.task_id,
+        attempt_number=context.attempt_number,
+        logical_engine=context.logical_engine,
+        transport_provider=context.transport_provider,
+        credential_kind=CREDENTIAL_KIND_BYOK,
+        connection_id=context.connection_id,
+    )
+
+
+def _capacity_outcome(attempt: CallAttempt) -> CapacityOutcome:
+    """Map one finished call to its capacity release outcome.
+
+    A provider 429/rate-limit releases as ``rate_limited`` with the
+    provider-advised (untrusted, clamped downstream) Retry-After hint so every
+    drawn pool observes the shared cooldown; anything else is a plain release.
+    """
+    if attempt.succeeded:
+        return CapacityOutcome(kind=CAPACITY_OUTCOME_SUCCEEDED)
+    error = attempt.error
+    if error is not None and error.error_code == ERROR_RATE_LIMIT:
+        return CapacityOutcome(
+            kind=CAPACITY_OUTCOME_RATE_LIMITED,
+            retry_after_seconds=error.retry_after_seconds,
+        )
+    return CapacityOutcome(kind=CAPACITY_OUTCOME_FAILED)
 
 
 def _build_request_snapshot(
@@ -600,15 +771,62 @@ class AuditWorker(DrainableWorkerMixin):
         Same contract as ``DrainableWorkerMixin.run_until_idle`` (drain until a
         pass does no work, bounded by ``max_batches``), but driven by
         ``run_pipelined`` — this worker's pump drains in one pass rather than
-        one claim batch at a time.
+        one claim batch at a time. One refinement: an empty pass is only
+        "idle" when no pending row becomes claimable within the short drain
+        horizon. A capacity park (or a short retry backoff) makes the queue
+        LOOK empty for a moment; abandoning work the drain itself just
+        re-parked would strand it until the next invocation.
         """
         total = 0
+        idle_budget = _drain_horizon_seconds()
         for _ in range(max(1, max_batches)):
             ran = await self.run_pipelined(drain=True)
-            if ran == 0:
-                break
             total += ran
+            keep_waiting, idle_budget = await self._wait_out_idle_pass(
+                ran, idle_budget
+            )
+            if not keep_waiting:
+                break
         return total
+
+    async def _wait_out_idle_pass(
+        self, ran: int, idle_budget: float
+    ) -> tuple[bool, float]:
+        """Bounded patience for transient unavailability after an empty pass.
+
+        Once the queue looks empty the drain waits out at most ONE park
+        horizon for pending rows to become claimable again (a capacity park
+        or short retry backoff makes the queue LOOK empty for a moment).
+        A row that stays unavailable past the horizon — a misconfigured
+        zero-ceiling pool, a permanent funded fail-closed — ends the drain
+        instead of looping forever; the next invocation resumes it.
+        """
+        if ran > 0:
+            return True, idle_budget
+        if idle_budget <= 0 or not await self._has_soon_claimable_tasks():
+            return False, idle_budget
+        sleep = max(0.05, audit_settings.poll_interval_seconds)
+        await asyncio.sleep(sleep)
+        return True, idle_budget - sleep
+
+    async def _has_soon_claimable_tasks(self) -> bool:
+        """True while a pending row becomes claimable within the drain horizon.
+
+        The horizon covers the transient states a drain itself creates — the
+        concurrency capacity park (``capacity_concurrency_retry_seconds``)
+        plus one poll interval of slack. Longer horizons are NOT drained: a
+        shared 429 cooldown or an unconfigured funded route cannot proceed on
+        this invocation, exactly like a long provider Retry-After retry.
+        """
+        horizon = _utcnow() + timedelta(seconds=_drain_horizon_seconds())
+        async with self._session_factory() as session:
+            soon = await session.scalar(
+                select(func.count())
+                .select_from(AuditTask)
+                .where(AuditTask.status.in_(sorted(TASK_CLAIMABLE_STATUSES)))
+                .where(AuditTask.available_at <= horizon)
+            )
+            return bool(soon)
 
     async def run_forever(self) -> None:  # pragma: no cover - long-running loop
         logger.info("audit worker started", extra={"owner": self.owner})
@@ -655,7 +873,13 @@ class AuditWorker(DrainableWorkerMixin):
                 # Cooperative cancel: stop at this boundary if the audit was
                 # killed since the claim, rather than hitting the provider.
                 if audit.status == AUDIT_STATUS_CANCELLED:
-                    await session.rollback()
+                    # Terminal without a provider call: no billable unit, but
+                    # the task's unused funded reservation is released (BYOK
+                    # no-op) so cancelled runs never strand credits.
+                    await self._apply_funded_ledger(
+                        session, task=task, billable=False, terminal=True
+                    )
+                    await session.commit()
                     await self._queue.cancel(task_id=task_id)
                     return
 
@@ -664,7 +888,11 @@ class AuditWorker(DrainableWorkerMixin):
                 # instead of starting another provider call. The audit itself
                 # is finalized once by this method's finally block.
                 if self._deadline_passed(audit):
-                    await session.rollback()
+                    # Same terminal release as the cancel path above.
+                    await self._apply_funded_ledger(
+                        session, task=task, billable=False, terminal=True
+                    )
+                    await session.commit()
                     await self._queue.fail(
                         task_id=task_id,
                         owner=self.owner,
@@ -718,13 +946,81 @@ class AuditWorker(DrainableWorkerMixin):
             )
 
     async def _run_provider_call(self, task_id: uuid.UUID, audit_id: uuid.UUID) -> None:
-        # Load everything the call needs in one short session, then close it
-        # before the (long) network call so no txn is held across provider I/O.
+        """Orchestrate ONE queue attempt: load -> validate -> capacity -> call.
+
+        A thin shell over the helpers below — each owns one concern (frozen
+        context, terminal validation, adapter build, capacity, the single
+        call, outcome persistence) so no function carries the old CC-17 lump.
+        """
+        context = await self._load_execution_context(task_id, audit_id)
+        if context is None:
+            return
+        rejection = _terminal_rejection(context)
+        if rejection is not None:
+            await self._fail_terminal(
+                task_id=task_id,
+                audit_id=audit_id,
+                logical_engine=context.logical_engine,
+                transport_provider=context.transport_provider,
+                transport_model=context.transport_model,
+                error_code=rejection[0],
+                error_detail=rejection[1],
+            )
+            return
+        request, request_snapshot = _build_call_request(context)
+        adapter = await self._build_adapter_or_fail(context, request_snapshot)
+        if adapter is None:
+            return
+        # Capacity I/O happens only AFTER the claim committed (invariant 8).
+        capacity = _capacity_request(context)
+        decision = await acquire_provider_capacity(
+            self._session_factory, request=capacity
+        )
+        if not decision.acquired:
+            # Parked: NO provider call happens, so no attempt budget is spent
+            # and no ledger unit is billed. The task re-enters the claimable
+            # set once the decision's available_at passes.
+            await self._park_capacity_wait(
+                task_id=task_id, audit_id=audit_id, decision=decision
+            )
+            return
+        attempt = await self._execute_with_capacity(context, capacity, adapter, request)
+        if attempt.succeeded:
+            await self._persist_success(
+                task_id=task_id,
+                audit_id=audit_id,
+                attempts=[attempt],
+                logical_engine=context.logical_engine,
+                transport_provider=context.transport_provider,
+                transport_model=context.transport_model,
+                request_snapshot=request_snapshot,
+            )
+        else:
+            await self._handle_failure(
+                task_id=task_id,
+                audit_id=audit_id,
+                attempts=[attempt],
+                logical_engine=context.logical_engine,
+                transport_provider=context.transport_provider,
+                transport_model=context.transport_model,
+                request_snapshot=request_snapshot,
+            )
+
+    async def _load_execution_context(
+        self, task_id: uuid.UUID, audit_id: uuid.UUID
+    ) -> _ExecutionContext | None:
+        """Load everything the call needs in one short session, then close it.
+
+        The session ends before any capacity/provider I/O so no transaction is
+        ever held across a network call (invariant 8). The measurement policy
+        comes from the FROZEN configuration, never the live settings: an env
+        change must not alter an in-flight run (invariant 9).
+        """
         async with self._session_factory() as session:
             task = await session.get(AuditTask, task_id)
             audit = await session.get(Audit, audit_id)
             if task is None or audit is None:
-                return
+                return None
             snapshot = await session.get(AuditEngineSnapshot, task.engine_snapshot_id)
             connection: ProviderConnection | None = None
             if snapshot is not None and snapshot.connection_id is not None:
@@ -732,129 +1028,190 @@ class AuditWorker(DrainableWorkerMixin):
                     ProviderConnection, snapshot.connection_id
                 )
             configuration = dict(audit.configuration or {})
-            # The FROZEN measurement policy this run was planned with. Never the
-            # live settings: an env change must not alter an in-flight run
-            # (invariant 9).
-            policy = measurement_policy_from_configuration(configuration)
-            system_instruction = audit.system_instruction or ""
-            logical_engine = task.logical_engine
-            transport_provider = task.transport_provider
-            transport_model = task.transport_model
-            prompt_text = task.prompt_text or ""
-            base_url = snapshot.base_url if snapshot is not None else ""
-
-        # A frozen task on a retired transport fails terminally BEFORE the
-        # connection-activity check, key decryption, and external network I/O.
-        # ``_fail_terminal`` persists a failed ProviderAttempt, but no adapter
-        # is invoked and no raw artifact occurs (invariant 6/10).
-        if not is_active_transport(transport_provider):
-            await self._fail_terminal(
+            return _ExecutionContext(
                 task_id=task_id,
                 audit_id=audit_id,
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
-                transport_model=transport_model,
-                error_code=ERROR_INVALID_SURFACE,
-                error_detail="transport provider is retired and not executable",
+                logical_engine=task.logical_engine,
+                transport_provider=task.transport_provider,
+                transport_model=task.transport_model,
+                prompt_text=task.prompt_text or "",
+                system_instruction=audit.system_instruction or "",
+                configuration=configuration,
+                policy=measurement_policy_from_configuration(configuration),
+                base_url=snapshot.base_url if snapshot is not None else "",
+                attempt_number=task.attempt_count + 1,
+                connection_id=(
+                    snapshot.connection_id if snapshot is not None else None
+                ),
+                connection_active=(
+                    bool(connection.active) if connection is not None else False
+                ),
+                api_key_encrypted=(
+                    connection.api_key_encrypted if connection is not None else ""
+                ),
+                funding=_frozen_funding_from(task.provider_route_snapshot),
             )
-            return
 
-        # A missing/inactive connection is a terminal misconfiguration.
-        if connection is None or not connection.active:
-            await self._fail_terminal(
-                task_id=task_id,
-                audit_id=audit_id,
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
-                transport_model=transport_model,
-                error_code=ERROR_NO_CONNECTION,
-                error_detail="provider connection missing or inactive",
-            )
-            return
+    async def _build_adapter_or_fail(
+        self, context: _ExecutionContext, request_snapshot: dict
+    ):
+        """Build the adapter from the execution-time decrypted BYOK key.
 
-        # Fail closed before decrypting a BYOK key if a legacy/frozen endpoint
-        # is not the exact operator-configured credential destination.
-        if not is_endpoint_approved(transport_provider, base_url):
-            await self._fail_terminal(
-                task_id=task_id,
-                audit_id=audit_id,
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
-                transport_model=transport_model,
-                error_code=ERROR_INVALID_SURFACE,
-                error_detail="provider endpoint is not approved",
-            )
-            return
-
-        # Resolve the BYOK key at execution time. Never logged/persisted.
-        api_key = decrypt_secret(connection.api_key_encrypted)
-        request = _build_request(
-            prompt_text=prompt_text,
-            system_instruction=system_instruction,
-            transport_model=transport_model,
-            logical_engine=logical_engine,
-            transport_provider=transport_provider,
-            policy=policy,
-        )
-        request_snapshot = _build_request_snapshot(
-            logical_engine=logical_engine,
-            transport_provider=transport_provider,
-            transport_model=transport_model,
-            request=request,
-            configuration=configuration,
-            answer_instruction=policy.answer_instruction,
-        )
-
+        The key is resolved at execution time only — never logged, persisted,
+        or placed in a snapshot (invariant 6). A build failure is a terminal
+        misconfiguration, not a retryable provider error.
+        """
+        api_key = decrypt_secret(context.api_key_encrypted)
         try:
-            adapter = build_adapter(
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
+            return build_adapter(
+                logical_engine=context.logical_engine,
+                transport_provider=context.transport_provider,
                 api_key=api_key,
-                country_code=str(configuration.get("country_code", "")),
-                base_url=base_url,
+                country_code=str(context.configuration.get("country_code", "")),
+                base_url=context.base_url,
             )
         except ProviderError as exc:
             await self._fail_terminal(
-                task_id=task_id,
-                audit_id=audit_id,
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
-                transport_model=transport_model,
+                task_id=context.task_id,
+                audit_id=context.audit_id,
+                logical_engine=context.logical_engine,
+                transport_provider=context.transport_provider,
+                transport_model=context.transport_model,
                 error_code=exc.error_code,
                 error_detail=str(exc),
                 request_snapshot=request_snapshot,
             )
-            return
+            return None
 
-        # Heartbeat the lease while the (possibly slow) call runs.
-        heartbeat = asyncio.create_task(self._heartbeat_loop(task_id))
+    async def _execute_with_capacity(
+        self,
+        context: _ExecutionContext,
+        capacity: CapacityRequest,
+        adapter,
+        request: AnswerEngineRequest,
+    ) -> CallAttempt:
+        """Run the single provider call under held capacity; ALWAYS release.
+
+        The release carries the call's outcome so a provider 429 writes the
+        shared pool cooldown (``rate_limited``) while any other result simply
+        returns the concurrency leases. Token starts stay consumed either
+        way; an abandoned call (crash/cancellation) releases as ``failed``.
+        """
+        attempt: CallAttempt | None = None
         try:
-            attempts = await _call_with_retries(adapter, request)
+            attempt = await self._execute_one_attempt(context, adapter, request)
+            return attempt
+        finally:
+            await release_provider_capacity(
+                self._session_factory,
+                request=capacity,
+                outcome=(
+                    _capacity_outcome(attempt)
+                    if attempt is not None
+                    else CapacityOutcome(kind=CAPACITY_OUTCOME_FAILED)
+                ),
+            )
+
+    async def _execute_one_attempt(
+        self, context: _ExecutionContext, adapter, request: AnswerEngineRequest
+    ) -> CallAttempt:
+        """Make this queue attempt's ONE provider call, heartbeating the lease.
+
+        The per-call ceiling is the FROZEN mode timeout from the task's
+        configuration — never the live settings (invariant 9).
+        """
+        heartbeat = asyncio.create_task(self._heartbeat_loop(context.task_id))
+        try:
+            return await call_provider_once(
+                adapter,
+                request,
+                timeout_seconds=context.policy.timeout_seconds,
+            )
         finally:
             heartbeat.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await heartbeat
 
-        final = attempts[-1]
-        if final.succeeded:
-            await self._persist_success(
-                task_id=task_id,
-                audit_id=audit_id,
-                attempts=attempts,
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
-                transport_model=transport_model,
-                request_snapshot=request_snapshot,
+    async def _park_capacity_wait(
+        self,
+        *,
+        task_id: uuid.UUID,
+        audit_id: uuid.UUID,
+        decision: CapacityDecision,
+    ) -> None:
+        """Park the task on a capacity refusal; the attempt budget is untouched.
+
+        Records ``EVENT_TASK_CAPACITY_WAIT`` (opaque ids + retry timing only —
+        invariant 6) under the owner/liveness lock, then hands the row to the
+        queue, which re-parks it claimable once ``available_at`` passes.
+        """
+        async with self._session_factory() as session:
+            locked = await self._lock_owned_running_task(
+                session, task_id=task_id, audit_id=audit_id
             )
-        else:
-            await self._handle_failure(
-                task_id=task_id,
+            if locked is None:
+                await session.rollback()
+                return
+            record_event(
+                session,
                 audit_id=audit_id,
-                attempts=attempts,
-                logical_engine=logical_engine,
-                transport_provider=transport_provider,
-                transport_model=transport_model,
-                request_snapshot=request_snapshot,
+                event_type=EVENT_TASK_CAPACITY_WAIT,
+                message="task waiting on provider capacity",
+                payload={
+                    "task_id": str(task_id),
+                    "code": decision.code,
+                    "pool_kind": decision.pool_kind,
+                    "available_at": (
+                        decision.available_at.isoformat()
+                        if decision.available_at is not None
+                        else ""
+                    ),
+                    "retry_after_seconds": decision.retry_after_seconds or 0.0,
+                },
+            )
+            await session.commit()
+        await self._queue.park_capacity_wait(
+            task_id=task_id,
+            owner=self.owner,
+            available_at=decision.available_at or _utcnow(),
+        )
+
+    async def _apply_funded_ledger(
+        self,
+        session: AsyncSession,
+        *,
+        task: AuditTask,
+        billable: bool,
+        terminal: bool,
+    ) -> None:
+        """The funded-ledger call sites for one task (no-op for BYOK).
+
+        ``billable`` converts one reserved unit into a billable attempt — one
+        per ACTUAL provider call, including timeouts (a timed-out call is
+        billable), keyed on the just-persisted 1-based ``attempt_count`` with
+        a deterministic idempotency key so a replay never double-debits.
+        ``terminal`` releases the task's unused reservation exactly once at
+        terminalization (idempotent on the ledger side). Caller owns the
+        commit so the ledger rows land atomically with the attempt row.
+        """
+        funding = _frozen_funding_from(task.provider_route_snapshot)
+        if funding is None:
+            return
+        if billable:
+            await record_billable_attempt(
+                session,
+                reservation_id=funding.reservation_id,
+                task_id=task.id,
+                attempt=task.attempt_count,
+                idempotency_key=f"{task.id}:{task.attempt_count}:funded-billable",
+                at=_utcnow(),
+            )
+        if terminal:
+            await release_unused_reservation(
+                session,
+                reservation_id=funding.reservation_id,
+                idempotency_key=f"{task.id}:funded-release-unused",
+                at=_utcnow(),
             )
 
     async def _heartbeat_loop(
@@ -919,10 +1276,12 @@ class AuditWorker(DrainableWorkerMixin):
     ) -> None:
         """Append one immutable ProviderAttempt per actual provider call.
 
-        ProviderAttempt is append-only "one row per attempt" (invariant 3): a
-        run that retried twice then succeeded records three rows (two failed +
-        one succeeded), not a single collapsed row. Advances ``attempt_count``
-        by the number of calls made and stamps each row's ``attempt_number``.
+        ProviderAttempt is append-only "one row per attempt" (invariant 3):
+        one queue attempt makes one call, so each persistence pass appends
+        exactly one row — a task that failed twice through queue retries and
+        then succeeded ends with three rows (two failed + one succeeded), not
+        a single collapsed row. Advances ``attempt_count`` by the number of
+        calls made and stamps each row's ``attempt_number``.
         """
         base = task.attempt_count
         for offset, attempt in enumerate(attempts, start=1):
@@ -1066,6 +1425,11 @@ class AuditWorker(DrainableWorkerMixin):
                 transport_model=transport_model,
                 artifact_id=artifact_id,
             )
+            # Funded ledger (no-op BYOK): bill the just-persisted call and
+            # release the task's unused reservation at this terminalization.
+            await self._apply_funded_ledger(
+                session, task=task, billable=True, terminal=True
+            )
             # Append-only cost projection (invariant 3): built AFTER the
             # ProviderAttempt rows so attempt_count is the persisted actual
             # call count. Unknown usage/rates stay null — never zero.
@@ -1131,6 +1495,12 @@ class AuditWorker(DrainableWorkerMixin):
             attempt_number = task.attempt_count
             exhausted = task.attempt_count >= task.max_attempts
             will_retry = retryable and not exhausted
+            # Funded ledger (no-op BYOK): bill this actual call — a timed-out
+            # call bills too — and release the unused reservation only when
+            # the task terminalizes (a queue retry keeps it for the next call).
+            await self._apply_funded_ledger(
+                session, task=task, billable=True, terminal=not will_retry
+            )
             record_event(
                 session,
                 audit_id=audit_id,
@@ -1195,6 +1565,12 @@ class AuditWorker(DrainableWorkerMixin):
                     error_code=error_code,
                     error_detail=error_detail[:2000],
                 )
+            )
+            # No provider call happened (terminal misconfiguration): nothing
+            # to bill, but the task's unused funded reservation is released
+            # (BYOK no-op) so a rejected funded task never strands credits.
+            await self._apply_funded_ledger(
+                session, task=task, billable=False, terminal=True
             )
             record_event(
                 session,
