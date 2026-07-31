@@ -7,9 +7,11 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,8 @@ from app.core.config.products import (
     PRODUCT_ORIGIN_IMPORTED,
     PRODUCT_ORIGIN_MANUAL,
 )
+from app.domain.products.schemas import ProductImportRowError, ProductImportSummary
+from app.models.audit import Audit
 from app.models.brand import Competitor
 from app.models.product import CompetitorProduct, Product
 from app.models.project import Project
@@ -164,21 +168,33 @@ async def delete_product(
     await session.commit()
 
 
+@dataclass(frozen=True)
+class ProductImportResult:
+    """The import outcome (D1): the refreshed catalog + the per-row summary."""
+
+    catalog: list[Product]
+    summary: ProductImportSummary
+
+
 async def import_products(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    rows: list[Any],
-) -> list[Product]:
+    rows: list[tuple[int, Any]],
+    row_errors: Iterable[ProductImportRowError] = (),
+) -> ProductImportResult:
     """CSV bulk-create: persist already-parsed product rows as ``imported``.
 
-    Rows with an empty sku are skipped (the parser already drops them; the
-    JSON path re-checks). Duplicates are dropped keeping the FIRST occurrence,
-    never a request failure: a repeat within the upload is filtered before the
-    insert, and a clash with an existing product is dropped by ``ON CONFLICT DO
-    NOTHING`` on the per-project sku constraint. Returns the full refreshed
-    catalog so the caller projects the whole table back.
+    ``rows`` pairs each parsed row with its 1-based source-row number so the
+    summary can name it; ``row_errors`` carries the parse-stage skips (empty
+    sku / field validation) to fold into the same summary. Rows are NEVER a
+    request failure: an empty sku is skipped, a repeat within the upload is
+    dropped keeping the FIRST occurrence (``ON CONFLICT DO NOTHING`` cannot
+    resolve two conflicting rows in the SAME statement), and a clash with an
+    existing product is skipped — ``RETURNING`` reports exactly which skus
+    were inserted, so ``created`` is exact even under a concurrent import.
+    Returns the full refreshed catalog plus the summary (D1).
     """
     await _project_in_workspace(
         session, workspace_id=workspace_id, project_id=project_id
@@ -187,18 +203,36 @@ async def import_products(
         raise ProductImportError(
             f"Import accepts at most {PRODUCT_IMPORT_MAX_ROWS} rows"
         )
+    errors = list(row_errors)
     # One multi-VALUES INSERT rather than a statement per row: the cap is 500
     # rows, so a per-row execute costs up to 500 round-trips per import.
     values = []
+    candidates: list[tuple[int, str]] = []
     seen_skus: set[str] = set()
-    for row in rows:
+    for row_number, row in rows:
         sku = str(row.sku or "").strip()
-        # Within-batch duplicates must be dropped here: ON CONFLICT DO NOTHING
-        # cannot resolve two conflicting rows in the SAME statement (Postgres
-        # raises "cannot affect row a second time").
-        if not sku or sku in seen_skus:
+        if not sku:
+            errors.append(
+                ProductImportRowError(
+                    row=row_number,
+                    field="sku",
+                    message="Missing sku — the row was skipped "
+                    "(sku is the import identity)",
+                )
+            )
+            continue
+        if sku in seen_skus:
+            errors.append(
+                ProductImportRowError(
+                    row=row_number,
+                    field="sku",
+                    message=f"Duplicate sku '{sku}' in this import — "
+                    "the first occurrence was kept",
+                )
+            )
             continue
         seen_skus.add(sku)
+        candidates.append((row_number, sku))
         values.append(
             {
                 "id": uuid.uuid4(),
@@ -214,16 +248,63 @@ async def import_products(
                 "origin": PRODUCT_ORIGIN_IMPORTED,
             }
         )
+    inserted_skus: set[str] = set()
     if values:
-        await session.execute(
+        result = await session.execute(
             pg_insert(Product)
             .values(values)
             .on_conflict_do_nothing(constraint="uq_product_project_sku")
+            .returning(Product.sku)
         )
+        inserted_skus = set(result.scalars().all())
+    created = 0
+    for row_number, sku in candidates:
+        if sku in inserted_skus:
+            created += 1
+        else:
+            errors.append(
+                ProductImportRowError(
+                    row=row_number,
+                    field="sku",
+                    message=f"A product with sku '{sku}' already exists — "
+                    "it was left unchanged",
+                )
+            )
     await session.commit()
-    return await list_products(
+    catalog = await list_products(
         session, workspace_id=workspace_id, project_id=project_id
     )
+    errors.sort(key=lambda error: error.row)
+    return ProductImportResult(
+        catalog=catalog,
+        summary=ProductImportSummary(
+            created=created,
+            updated=0,  # v1 imports are insert-only (reserved, see schema).
+            skipped=len(errors),
+            errors=errors,
+        ),
+    )
+
+
+async def count_product_audit_references(
+    session: AsyncSession, *, workspace_id: uuid.UUID, product_id: uuid.UUID
+) -> int:
+    """Count the project's audits whose FROZEN configuration references this
+    product (D4 delete guard — read-only; the freeze itself already
+    guarantees audit integrity, invariant 9)."""
+    product = await get_product(
+        session, workspace_id=workspace_id, product_id=product_id
+    )
+    count = await session.scalar(
+        select(func.count(Audit.id)).where(
+            Audit.project_id == product.project_id,
+            Audit.workspace_id == workspace_id,
+            # JSONB containment: any frozen ``products`` element carrying this
+            # id (extra element keys are ignored by ``@>``).
+            Audit.configuration.contains({"products": [{"id": str(product.id)}]}),
+        )
+    )
+    return int(count or 0)
 
 
 # --------------------------------------------------------------------------

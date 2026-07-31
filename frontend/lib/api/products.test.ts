@@ -183,19 +183,58 @@ describe('productsApi', () => {
     expect(fetchMock.mock.calls[2]?.[1]?.method).toBe('DELETE');
   });
 
-  it('imports CSV as FormData and rows as a { products } JSON body', async () => {
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse([product])));
+  it('imports CSV as FormData and rows as a { products } JSON body (D1 summary)', async () => {
+    const importResponse = {
+      items: [product],
+      summary: {
+        created: 1,
+        updated: 0,
+        skipped: 1,
+        errors: [
+          {
+            row: 3,
+            field: 'sku',
+            message: "Duplicate sku 'AC-VB500' in this import — the first occurrence was kept",
+          },
+        ],
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(jsonResponse(importResponse, 201)));
     vi.stubGlobal('fetch', fetchMock);
 
     const { productsApi } = await import('./products');
-    await productsApi.importCsv(UUID2, new File(['sku,name\nAC-VB500,Acme'], 'products.csv'));
+    const csvResult = await productsApi.importCsv(
+      UUID2,
+      new File(['sku,name\nAC-VB500,Acme'], 'products.csv'),
+    );
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/v1/projects/${UUID2}/products/import`);
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
+    // D1: the refreshed catalog plus the per-row outcome summary.
+    expect(csvResult.items).toHaveLength(1);
+    expect(csvResult.summary.created).toBe(1);
+    expect(csvResult.summary.skipped).toBe(1);
+    expect(csvResult.summary.errors[0]).toMatchObject({ row: 3, field: 'sku' });
 
     const rows = [{ sku: 'AC-VB500', name: 'Acme VoltBike 500' }];
-    await productsApi.importRows(UUID2, rows);
+    const rowsResult = await productsApi.importRows(UUID2, rows);
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe(`/api/v1/projects/${UUID2}/products/import`);
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ products: rows });
+    expect(rowsResult.summary.created).toBe(1);
+  });
+
+  it('reads the frozen-audit delete-guard check for one product (D4)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ product_id: UUID, referenced: true, audit_count: 2 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { productsApi } = await import('./products');
+    const references = await productsApi.getAuditReferences(UUID);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/v1/products/${UUID}/audit-references`);
+    expect(references.referenced).toBe(true);
+    expect(references.audit_count).toBe(2);
   });
 
   it('scopes competitor-product CRUD to the project / flat paths', async () => {

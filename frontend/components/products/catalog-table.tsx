@@ -32,6 +32,7 @@ import type {
 import { formatUtcTimestamp } from '@/lib/format';
 import { SYNC_RUN_BADGE, syncRunStatusLabel } from '@/lib/integrations/sync-runs';
 import {
+  completenessHoverDetail,
   feedHealthDisplay,
   feedHealthLabel,
   formatPrice,
@@ -58,7 +59,6 @@ export function CatalogTable({
   syncOverrides = {},
   onEdit,
   onDelete,
-  busyId,
 }: Readonly<{
   products: Product[];
   /** The catalog-health projection (null while unavailable/failed). */
@@ -69,7 +69,6 @@ export function CatalogTable({
   syncOverrides?: Readonly<Record<string, IntegrationSyncRun>>;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  busyId?: string | null;
 }>) {
   const { page, setPage, pageCount, from, to } = useTablePage(products.length, PAGE_SIZE);
   const pagedProducts = products.slice(from - 1, to);
@@ -161,7 +160,6 @@ export function CatalogTable({
                     </DropdownItem>
                     <DropdownSeparator />
                     <DropdownItem
-                      disabled={busyId === product.id}
                       onSelect={() => onDelete(product)}
                       className="text-danger-text data-[highlighted]:bg-danger-bg"
                     >
@@ -190,8 +188,10 @@ export function CatalogTable({
 
 /**
  * The data-quality badge: `12/12` (success when complete, neutral otherwise)
- * with the missing attribute list on hover — the badge is never color-only
- * (the `N missing` text carries the meaning).
+ * — the badge is never color-only (the `N missing` text carries the
+ * meaning). EVERY row carries the per-SKU hover detail (D4): the feed
+ * completeness score plus, for incomplete rows, the human-labelled missing
+ * attributes (all from the `completeness` payload).
  */
 function CompletenessBadge({ completeness }: Readonly<{ completeness: ProductCompleteness }>) {
   const complete = completeness.missing.length === 0;
@@ -205,8 +205,7 @@ function CompletenessBadge({ completeness }: Readonly<{ completeness: ProductCom
       {label} · {completeness.missing.length} missing
     </Badge>
   );
-  if (complete) return badge;
-  return <Tooltip content={`Missing: ${completeness.missing.join(', ')}`}>{badge}</Tooltip>;
+  return <Tooltip content={completenessHoverDetail(completeness)}>{badge}</Tooltip>;
 }
 
 /** Origin badge: explicit text for manual / CSV-imported / feed-synced rows. */

@@ -56,8 +56,11 @@ from app.domain.products.schemas import (
     CompetitorProductInput,
     CompetitorProductResponse,
     CompetitorProductUpdate,
+    ProductAuditReferences,
     ProductEvidenceResponse,
     ProductImport,
+    ProductImportResponse,
+    ProductImportRowError,
     ProductInput,
     ProductResponse,
     ProductUpdate,
@@ -71,6 +74,7 @@ from app.domain.products.service import (
     DuplicateProductError,
     ProductImportError,
     ProductNotFoundError,
+    count_product_audit_references,
     create_competitor_product,
     create_product,
     delete_competitor_product,
@@ -200,20 +204,44 @@ async def delete_product_endpoint(
         raise_not_found(_RES_PRODUCT, cause=exc)
 
 
+@router.get(
+    "/products/{product_id}/audit-references",
+    response_model=ProductAuditReferences,
+)
+async def product_audit_references_endpoint(
+    product_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> ProductAuditReferences:
+    """Read-only delete guard (D4): how many audit configurations froze this
+    product. Deleting stays allowed — past runs keep their frozen copy."""
+    try:
+        count = await count_product_audit_references(
+            session, workspace_id=ctx.workspace_id, product_id=product_id
+        )
+    except ProductNotFoundError as exc:
+        raise_not_found(_RES_PRODUCT, cause=exc)
+    return ProductAuditReferences(
+        product_id=product_id, referenced=count > 0, audit_count=count
+    )
+
+
 # --------------------------------------------------------------------------
 # CSV / JSON-rows bulk import (mirrors the prompts import flow)
 # --------------------------------------------------------------------------
 async def _resolve_import_rows(
     request: Request, file: UploadFile | None
-) -> list[ProductInput]:
+) -> tuple[list[tuple[int, ProductInput]], list[ProductImportRowError]]:
     """Accept either a multipart CSV upload or a JSON body of parsed rows.
 
-    Both converge to a list of ``ProductInput`` for the service (mirrors
-    ``api/prompts.py``). Malformed CSV (e.g. headerless) is a 422, not a 500.
+    Both converge to ``(numbered rows, row-level skip errors)`` for the
+    service (D1): each row carries its 1-based source-row number so the
+    import summary can name it. Malformed CSV (e.g. headerless) and
+    schema-violating JSON are 422s, never 500s; CSV rows that fail field
+    validation become row errors instead.
     """
     if file is not None:
         raw = _decode_csv(await read_limited_upload(file))
-        return parse_product_csv(raw)
+        parsed = parse_product_csv(raw)
+        return parsed.rows, parsed.errors
 
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
@@ -224,7 +252,7 @@ async def _resolve_import_rows(
         except ValueError as exc:
             raise _unprocessable("Request body is not valid JSON") from exc
         try:
-            return ProductImport.model_validate_json(raw_body).products
+            products = ProductImport.model_validate_json(raw_body).products
         except ValidationError as exc:
             # COM-5: never serialize raw Pydantic text (the ``ProductImport``
             # model name, the errors.pydantic.dev URL, echoed input values)
@@ -237,10 +265,12 @@ async def _resolve_import_rows(
                 + validation_error_summary(errors),
                 details={"errors": errors},
             ) from exc
+        return [(index + 1, row) for index, row in enumerate(products)], []
 
     # Raw CSV posted as text/csv (no multipart wrapper).
     csv_body = _decode_csv(await read_limited_body(request))
-    return parse_product_csv(csv_body)
+    parsed = parse_product_csv(csv_body)
+    return parsed.rows, parsed.errors
 
 
 def _decode_csv(body: bytes) -> str:
@@ -252,7 +282,7 @@ def _decode_csv(body: bytes) -> str:
 
 @router.post(
     "/projects/{project_id}/products/import",
-    response_model=list[ProductResponse],
+    response_model=ProductImportResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def import_products_endpoint(
@@ -261,7 +291,9 @@ async def import_products_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
     file: UploadFile | None = None,
-) -> list[ProductResponse]:
+) -> ProductImportResponse:
+    """Bulk-import (D1): the refreshed catalog + a per-row outcome summary
+    (created/skipped counts and the reason every skipped row was dropped)."""
     await enforce_workspace_request(
         session,
         workspace_id=ctx.workspace_id,
@@ -270,21 +302,25 @@ async def import_products_endpoint(
         window_seconds=abuse_settings.bulk_import_window_seconds,
     )
     try:
-        rows = await _resolve_import_rows(request, file)
+        rows, row_errors = await _resolve_import_rows(request, file)
     except ProductCsvError as exc:
         raise _unprocessable(str(exc)) from exc
     try:
-        products = await import_products(
+        result = await import_products(
             session,
             workspace_id=ctx.workspace_id,
             project_id=project_id,
             rows=rows,
+            row_errors=row_errors,
         )
     except ProductNotFoundError as exc:
         raise_not_found(_RES_PROJECT, cause=exc)
     except ProductImportError as exc:
         raise _unprocessable(str(exc)) from exc
-    return [product_to_response(p) for p in products]
+    return ProductImportResponse(
+        items=[product_to_response(p) for p in result.catalog],
+        summary=result.summary,
+    )
 
 
 # --------------------------------------------------------------------------

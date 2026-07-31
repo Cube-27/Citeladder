@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { ProductInput } from '@/lib/api/products';
+import type { ProductImportSummary } from '@/lib/api/types';
 import { parseProductCsv, validProductRows, type ParsedProductCsv } from '@/lib/products/csv';
 
 /** Read a File as text, falling back to FileReader where `File.text` is absent (jsdom). */
@@ -36,7 +37,9 @@ const readFileText = (file: File) =>
  * warnings/errors) BEFORE anything is persisted. On confirm, only the
  * importable rows are handed to `onImport`, which posts them to the
  * `/projects/{id}/products/import` endpoint. A header row is required —
- * matching the backend.
+ * matching the backend. After a successful import the dialog stays open on
+ * the server-side outcome (D1): created/skipped counts and the reason every
+ * skipped row was dropped, so silent skips are impossible (COM-4).
  */
 export function ProductImportDialog({
   open,
@@ -45,6 +48,7 @@ export function ProductImportDialog({
   isImporting,
   error,
   onRetry,
+  result,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,6 +58,8 @@ export function ProductImportDialog({
   error?: MutationNoticeData;
   /** Retry affordance for a transient import failure (re-posts the same rows). */
   onRetry?: () => void;
+  /** The server-side import summary (D1) — shown after a successful import. */
+  result?: ProductImportSummary | null;
 }>) {
   const [parsed, setParsed] = useState<ParsedProductCsv | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -84,6 +90,25 @@ export function ProductImportDialog({
     if (importable.length === 0) return;
     await onImport(importable);
   };
+
+  if (result) {
+    return (
+      <Dialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        title="Import complete"
+        description="The server-side outcome of the import — every skipped row is named."
+        className="w-[860px]"
+        footer={
+          <Button variant="primary" onClick={() => handleOpenChange(false)}>
+            Done
+          </Button>
+        }
+      >
+        <ImportResultSummary result={result} />
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog
@@ -207,5 +232,65 @@ export function ProductImportDialog({
         ) : null}
       </div>
     </Dialog>
+  );
+}
+
+/**
+ * The server-side import outcome (D1): created/skipped counts as badges
+ * (the text carries the meaning, never color-only) plus one row per skipped
+ * source row with its number, field, and reason — replacing the old silent
+ * 201 (COM-4). `updated` is reserved and always 0 in v1, so it is not shown.
+ */
+function ImportResultSummary({ result }: Readonly<{ result: ProductImportSummary }>) {
+  return (
+    <div className="grid gap-4 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="status" value="success">
+          {result.created} created
+        </Badge>
+        {result.skipped > 0 ? (
+          <Badge variant="status" value="warning">
+            {result.skipped} skipped
+          </Badge>
+        ) : (
+          <Badge variant="status" value="success">
+            0 skipped
+          </Badge>
+        )}
+      </div>
+
+      {result.errors.length === 0 ? (
+        <Alert tone="success">Every row imported — no rows were skipped.</Alert>
+      ) : (
+        <div className="grid gap-2">
+          <p className="text-secondary text-sm">
+            {result.errors.length} row{result.errors.length === 1 ? ' was' : 's were'} skipped.
+            Fix them in the file and import again — already-imported SKUs are left unchanged.
+          </p>
+          <div className="border-border-subtle max-h-[300px] overflow-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Row</TableHead>
+                  <TableHead>Field</TableHead>
+                  <TableHead className="min-w-[320px]">Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {result.errors.map((rowError) => (
+                  <TableRow key={`${rowError.row}:${rowError.field}`}>
+                    <TableCell numeric className="text-muted">
+                      {rowError.row}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{rowError.field || '—'}</TableCell>
+                    <TableCell className="text-secondary text-sm">{rowError.message}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

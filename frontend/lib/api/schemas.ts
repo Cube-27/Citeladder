@@ -1663,6 +1663,35 @@ export const competitorProductSchema = responseObject({
   updated_at: z.string(),
 });
 
+// D1 import feedback: the bulk-import response carries the refreshed catalog
+// plus a per-row outcome summary (backend `ProductImportResponse`). `updated`
+// is reserved (v1 imports are insert-only, so it is always 0).
+export const productImportRowErrorSchema = responseObject({
+  row: z.number().int(),
+  field: z.string(),
+  message: z.string(),
+});
+
+export const productImportSummarySchema = responseObject({
+  created: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  errors: z.array(productImportRowErrorSchema),
+});
+
+export const productImportResponseSchema = responseObject({
+  items: z.array(productSchema),
+  summary: productImportSummarySchema,
+});
+
+// D4 delete guard: read-only frozen-audit usage check for one product
+// (backend `ProductAuditReferences`).
+export const productAuditReferencesSchema = responseObject({
+  product_id: uuid(),
+  referenced: z.boolean(),
+  audit_count: z.number().int().nonnegative(),
+});
+
 // Buyer-destination classification vocabulary (backend `MERCHANT_KINDS`).
 export const buyerDestinationKindSchema = z.enum([
   'marketplace',

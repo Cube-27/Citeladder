@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/table';
 import { productsApi } from '@/lib/api/products';
 import { queryKeys } from '@/lib/api/query-keys';
+import { runsApi } from '@/lib/api/runs';
 import type { Product, ProductEvidenceItem } from '@/lib/api/types';
 import {
   BUYER_DESTINATION_KIND_LABELS,
@@ -36,6 +37,7 @@ import {
   type ProductEvidenceSubTab,
 } from '@/lib/products/catalog';
 import { engineLabel } from '@/lib/providers/catalog';
+import { isDashboardStatus } from '@/lib/visibility/dashboard';
 
 import { EngineFilterDropdown } from './engine-filter-dropdown';
 import { NestedTabs } from './nested-tabs';
@@ -79,6 +81,16 @@ export function ProductEvidenceTable({
         { signal },
       ),
   });
+
+  // Run-awareness for the empty copy (D2/COM-3): "mentions appear once a run
+  // completes" is wrong when runs HAVE completed — the copy must say so.
+  const auditsQuery = useQuery({
+    queryKey: queryKeys.runs.list({ project_id: product.project_id }),
+    queryFn: ({ signal }) => runsApi.listAudits({ project_id: product.project_id }, { signal }),
+  });
+  const hasCompletedRun = (auditsQuery.data ?? []).some((audit) =>
+    isDashboardStatus(audit.status),
+  );
 
   const items = evidenceQuery.data?.items ?? [];
   const truncated = evidenceQuery.data?.truncated ?? false;
@@ -151,6 +163,7 @@ export function ProductEvidenceTable({
                 items={items.filter((item) => item.evidence_kind === 'product_mention')}
                 truncated={truncated}
                 engineParam={engineParam}
+                hasCompletedRun={hasCompletedRun}
               />
             )
           }
@@ -219,7 +232,12 @@ function EvidenceCardShell({
   );
 }
 
-function MentionEvidenceCard({ items, truncated, engineParam }: EvidenceKindCardProps) {
+function MentionEvidenceCard({
+  items,
+  truncated,
+  engineParam,
+  hasCompletedRun,
+}: EvidenceKindCardProps & Readonly<{ hasCompletedRun: boolean }>) {
   return (
     <EvidenceCardShell
       eyebrow="Evidence · Mentions"
@@ -230,7 +248,9 @@ function MentionEvidenceCard({ items, truncated, engineParam }: EvidenceKindCard
       emptyCopy={
         engineParam
           ? `No persisted mentions of this product on ${engineLabel(engineParam)} yet.`
-          : 'No mentions of this product yet — they appear here once a run completes.'
+          : hasCompletedRun
+            ? 'Completed runs recorded no mentions of this product — check that its name and aliases match how people ask about it.'
+            : 'No mentions of this product yet — they appear here once a run completes.'
       }
       notice={`Showing the first ${EVIDENCE_LIMIT} mentions for this product; older mentions are truncated.`}
     >

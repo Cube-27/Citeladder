@@ -13,6 +13,7 @@ import type {
   FeedHealthStatus,
   LogicalEngine,
   PriceRelationCounts,
+  ProductCompleteness,
   ProductFeedHealth,
   ProductOrigin,
   ProductVisibility,
@@ -392,6 +393,49 @@ export function buildCoPlacementMatrix(
 // ---------------------------------------------------------------------------
 // Catalog feed health + sync display model (null-safe commerce formatters)
 // ---------------------------------------------------------------------------
+
+/**
+ * Human labels for the per-SKU completeness matrix keys (backend
+ * `config/products.py`: `PRODUCT_REQUIRED_ATTRIBUTES` +
+ * `PRODUCT_COMPLETENESS_ATTRIBUTE_KEYS`). Drives the completeness hover
+ * detail (D4) so raw keys like `gtin` never render verbatim.
+ */
+export const FEED_ATTRIBUTE_LABELS: Record<string, string> = {
+  name: 'Name',
+  sku: 'SKU',
+  price: 'Price',
+  currency: 'Currency',
+  url: 'URL',
+  brand: 'Brand',
+  category: 'Category',
+  gtin: 'GTIN',
+  mpn: 'MPN',
+  availability: 'Availability',
+  condition: 'Condition',
+  description: 'Description',
+};
+
+/** Label one completeness matrix key (unknown keys pass through). */
+export function feedAttributeLabel(key: string): string {
+  return FEED_ATTRIBUTE_LABELS[key] ?? key;
+}
+
+/**
+ * The per-SKU completeness hover detail (D4): the score plus, for an
+ * incomplete row, exactly which feed attributes are missing — everything is
+ * already in the `completeness` payload, so the hover works for every row
+ * (complete ones included), not just the ones with a warning badge.
+ */
+export function completenessHoverDetail(completeness: ProductCompleteness): string {
+  const score = formatPercent(completeness.score);
+  if (completeness.missing.length === 0) {
+    return `Feed completeness ${score} — all ${completeness.total} required attributes present`;
+  }
+  const missing = completeness.missing.map(feedAttributeLabel).join(', ');
+  return `Feed completeness ${score} — missing ${completeness.missing.length} of ${completeness.total}: ${missing}`;
+}
+
+
 
 /**
  * Feed-health cell model: an unbound product (null `connection_id`) is

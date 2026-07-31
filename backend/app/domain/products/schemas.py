@@ -107,6 +107,48 @@ class ProductImport(BaseModel):
     )
 
 
+class ProductImportRowError(BaseModel):
+    """One skipped import row (D1): the 1-based source row, the field that
+    caused the skip, and a human reason. ``row`` counts DATA rows (the CSV
+    header is row 0), matching the import dialog's preview numbering; for the
+    JSON path it is the 1-based index into the ``products`` array."""
+
+    row: int = Field(ge=1)
+    field: str
+    message: str
+
+
+class ProductImportSummary(BaseModel):
+    """Per-row outcome tally for one import (D1).
+
+    ``updated`` is reserved: v1 imports are INSERT-only (an existing sku is
+    skipped, never overwritten), so it is always 0 — it keeps the contract
+    stable for a future upsert mode without a breaking change.
+    """
+
+    created: int = Field(ge=0)
+    updated: int = Field(ge=0)
+    skipped: int = Field(ge=0)
+    errors: list[ProductImportRowError] = Field(default_factory=list)
+
+
+class ProductImportResponse(BaseModel):
+    """Bulk-import result (D1): the full refreshed catalog + the summary."""
+
+    items: list[ProductResponse]
+    summary: ProductImportSummary
+
+
+class ProductAuditReferences(BaseModel):
+    """Read-only delete-guard check (D4): how many audit configurations froze
+    this product. Audit integrity is guaranteed by the freeze itself — this
+    only backs the UX warning."""
+
+    product_id: uuid.UUID
+    referenced: bool
+    audit_count: int = Field(ge=0)
+
+
 class ProductResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
