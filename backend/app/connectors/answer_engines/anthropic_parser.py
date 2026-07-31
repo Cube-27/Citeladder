@@ -108,8 +108,9 @@ def parse_anthropic_message(
             (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0)
         ),
         "web_search_requests": search_count,
-        # Anthropic does not return a per-request dollar cost.
-        "provider_cost_usd": 0.0,
+        # Anthropic returns no per-request dollar cost, so no provider_cost_usd
+        # key is emitted: an absent key projects as "unknown" — a fabricated
+        # zero would be indistinguishable from a real zero-cost report.
     }
     return AnswerEngineResponse(
         logical_engine=logical_engine,

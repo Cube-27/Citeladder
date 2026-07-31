@@ -451,18 +451,23 @@ class RawResponseArtifact(Base):
 
 
 class ExecutionCostProjection(Base):
-    """Immutable normalized provider usage for one successful execution.
+    """Append-only, versioned usage/cost observation for one artifact.
 
-    This preserves raw-artifact provenance without coupling completed audits to
-    mutable provider price cards. A later pricing version can derive estimates
-    from this row, but cannot alter what the provider reported at execution.
+    One row per ``(raw_response_artifact, formula_version, pricing_version)``:
+    repricing appends a NEW row under a new pricing version and never mutates
+    an existing one (invariant 3). Every usage/cost field is nullable —
+    unknown never becomes zero; only ``projection_status`` summarizes how much
+    of the observation is known (``complete | partial | unknown``, vocabulary
+    owned by ``app.core.config.costs``).
     """
 
     __tablename__ = "execution_cost_projections"
     __table_args__ = (
-        UniqueConstraint("task_id", name="uq_execution_cost_projection_task"),
         UniqueConstraint(
-            "raw_response_artifact_id", name="uq_execution_cost_projection_artifact"
+            "raw_response_artifact_id",
+            "formula_version",
+            "pricing_version",
+            name="uq_execution_cost_projection_version",
         ),
     )
 
@@ -484,11 +489,37 @@ class ExecutionCostProjection(Base):
         ForeignKey("raw_response_artifacts.id", ondelete="CASCADE"),
         index=True,
     )
-    projection_version: Mapped[str] = mapped_column(String(32))
-    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    provider_reported_cost_microusd: Mapped[int] = mapped_column(BigInteger, default=0)
+    formula_version: Mapped[str] = mapped_column(String(32))
+    pricing_version: Mapped[str] = mapped_column(String(64))
+    projection_status: Mapped[str] = mapped_column(String(16))
+    uncached_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cached_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reasoning_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    search_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    attempt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    uncached_input_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    cached_input_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    output_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    reasoning_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    search_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    provider_reported_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    projected_total_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

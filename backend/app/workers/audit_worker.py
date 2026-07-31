@@ -68,6 +68,12 @@ from app.core.config.audits import (
     audit_settings,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
+from app.core.config.costs import (
+    EXECUTION_COST_FORMULA_VERSION,
+    PRICING_CATALOG_VERSION,
+    RouteIdentity,
+    route_pricing_for,
+)
 from app.core.config.provider_catalog import (
     ERROR_INVALID_SURFACE,
     ERROR_PARSE,
@@ -87,6 +93,7 @@ from app.models.audit import (
     Audit,
     AuditEngineSnapshot,
     AuditTask,
+    ExecutionCostProjection,
     ProviderAttempt,
     RawResponseArtifact,
 )
@@ -826,6 +833,32 @@ class AuditWorker(DrainableWorkerMixin):
                 )
         task.attempt_count = base + len(attempts)
 
+    def _build_cost_projection(
+        self, *, artifact: RawResponseArtifact, attempt_count: int
+    ) -> ExecutionCostProjection:
+        """Price one persisted artifact into an append-only projection row.
+
+        Reads the artifact's own persisted route identity for the pricing
+        lookup (never the request snapshot) and stamps the persisted ACTUAL
+        attempt count — ProviderAttempt rows are written before this runs.
+        """
+
+        pricing = route_pricing_for(
+            RouteIdentity(
+                logical_engine=artifact.logical_engine,
+                transport_provider=artifact.transport_provider,
+                transport_model=artifact.transport_model,
+            ),
+            PRICING_CATALOG_VERSION,
+        )
+        assert pricing is not None  # the current catalog version is always known
+        return build_execution_cost_projection(
+            artifact,
+            pricing=pricing,
+            formula_version=EXECUTION_COST_FORMULA_VERSION,
+            attempt_count=attempt_count,
+        )
+
     async def _persist_success(
         self,
         *,
@@ -871,7 +904,6 @@ class AuditWorker(DrainableWorkerMixin):
             session.add(artifact)
             await session.flush()
             artifact_id = artifact.id
-            session.add(build_execution_cost_projection(artifact))
 
             task.answer_text = response.answer_text
             task.search_used = response.search_used
@@ -915,6 +947,14 @@ class AuditWorker(DrainableWorkerMixin):
                 transport_provider=transport_provider,
                 transport_model=transport_model,
                 artifact_id=artifact_id,
+            )
+            # Append-only cost projection (invariant 3): built AFTER the
+            # ProviderAttempt rows so attempt_count is the persisted actual
+            # call count. Unknown usage/rates stay null — never zero.
+            session.add(
+                self._build_cost_projection(
+                    artifact=artifact, attempt_count=task.attempt_count
+                )
             )
             record_event(
                 session,

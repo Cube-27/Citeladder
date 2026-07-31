@@ -90,6 +90,17 @@ AUDIT_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
     }
 )
 
+# --- Measurement modes ----------------------------------------------------
+# Pulse vs benchmark measurement vocabulary. Keyed on by the expected-cost
+# catalogue (``config/costs.py``) now; the route/output policy, planner
+# freezing, and ``Audit.measurement_mode`` column arrive with T3 and must use
+# these same constants (invariant 2 — never re-literal the mode strings).
+MEASUREMENT_MODE_PULSE: Final = "pulse"
+MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"
+MEASUREMENT_MODES: Final[frozenset[str]] = frozenset(
+    {MEASUREMENT_MODE_PULSE, MEASUREMENT_MODE_BENCHMARK}
+)
+
 # --- Task (queue row) statuses -------------------------------------------
 # Owned by ``config/task_queue.py`` and re-exported at the top of this module
 # (``TASK_STATUS_*`` / ``TASK_TERMINAL_STATUSES`` / ``TASK_CLAIMABLE_STATUSES``

@@ -33,6 +33,11 @@ from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     audit_settings,
 )
+from app.core.config.costs import (
+    EXECUTION_COST_FORMULA_VERSION,
+    PRICING_CATALOG_VERSION,
+    PROJECTION_STATUS_PARTIAL,
+)
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_GEMINI,
@@ -85,7 +90,13 @@ class _StubAdapter:
                 ),
             ),
             provider_metadata={"query_text_available": True},
-            usage={"input_tokens": 10, "output_tokens": 20},
+            # The normalized parser shape (what all three live parsers emit).
+            usage={
+                "total_input_tokens": 10,
+                "total_output_tokens": 20,
+                "total_tokens": 30,
+                "web_search_requests": 1,
+            },
             latency_ms=5,
         )
 
@@ -165,10 +176,29 @@ async def test_worker_runs_all_tasks_and_finalizes(
             )
         )
         assert cost_projection is not None
-        assert cost_projection.input_tokens == 10
+        # Legacy total keys map to uncached-input/output; cache/reasoning
+        # splits and provider cost are unknown — null, never zero. With all
+        # catalogue rates unverified the observation is usage-only (partial).
+        assert cost_projection.uncached_input_tokens == 10
         assert cost_projection.output_tokens == 20
         assert cost_projection.total_tokens == 30
-        assert cost_projection.provider_reported_cost_microusd == 0
+        assert cost_projection.search_requests == 1
+        assert cost_projection.cached_input_tokens is None
+        assert cost_projection.reasoning_tokens is None
+        assert cost_projection.uncached_input_cost_microusd is None
+        assert cost_projection.projected_total_cost_microusd is None
+        assert cost_projection.provider_reported_cost_microusd is None
+        assert cost_projection.projection_status == PROJECTION_STATUS_PARTIAL
+        assert cost_projection.formula_version == EXECUTION_COST_FORMULA_VERSION
+        assert cost_projection.pricing_version == PRICING_CATALOG_VERSION
+        # Provenance: one actual persisted ProviderAttempt for this task, and
+        # the projection points at its immutable source artifact.
+        assert cost_projection.attempt_count == 1
+        artifact = await session.get(
+            RawResponseArtifact, cost_projection.raw_response_artifact_id
+        )
+        assert artifact is not None
+        assert artifact.task_id == cost_projection.task_id
 
         # Each succeeded task was scored on persist (B6, invariant 4).
         assert all(t.score is not None for t in tasks)

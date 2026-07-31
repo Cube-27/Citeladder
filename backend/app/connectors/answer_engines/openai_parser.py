@@ -262,8 +262,9 @@ def _normalized_usage(payload: dict[str, Any]) -> dict[str, Any]:
         "total_input_tokens": input_tokens,
         "total_output_tokens": output_tokens,
         "total_tokens": total_tokens,
-        # OpenAI does not return a per-request dollar cost.
-        "provider_cost_usd": 0.0,
+        # OpenAI returns no per-request dollar cost, so no provider_cost_usd
+        # key is emitted: an absent key projects as "unknown" — a fabricated
+        # zero would be indistinguishable from a real zero-cost report.
     }
 
 
