@@ -80,9 +80,17 @@ def upgrade() -> None:
         "workspaces",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("is_system", sa.Boolean(), server_default="false", nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "uq_workspaces_single_system",
+        "workspaces",
+        ["is_system"],
+        unique=True,
+        postgresql_where=sa.text("is_system"),
     )
     op.create_table(
         "billing_accounts",
@@ -213,6 +221,17 @@ def upgrade() -> None:
             server_default="",
             nullable=False,
         ),
+        sa.Column(
+            "credential_source",
+            sa.String(length=16),
+            server_default="byok",
+            nullable=False,
+        ),
+        sa.Column("paused_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "pause_reason", sa.String(length=64), server_default="", nullable=False
+        ),
+        sa.Column("pause_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_tested_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_test_status", sa.String(length=16), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -226,6 +245,12 @@ def upgrade() -> None:
         op.f("ix_provider_connections_workspace_id"),
         "provider_connections",
         ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_provider_connections_workspace_source",
+        "provider_connections",
+        ["workspace_id", "credential_source", "transport_provider"],
         unique=False,
     )
     op.create_table(
@@ -291,9 +316,7 @@ def upgrade() -> None:
         sa.Column(
             "resolved_entitlement_lifecycle_version", sa.Integer(), nullable=False
         ),
-        sa.Column(
-            "resolved_valid_until", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("resolved_valid_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("discovery_mode", sa.String(length=16), nullable=False),
         sa.Column("discovery_url_cap", sa.Integer(), nullable=True),
         sa.Column("sample_url_limit", sa.Integer(), nullable=False),
@@ -305,9 +328,7 @@ def upgrade() -> None:
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "workspace_id", name="uq_ws_site_health_runtime_workspace"
-        ),
+        sa.UniqueConstraint("workspace_id", name="uq_ws_site_health_runtime_workspace"),
     )
     op.create_index(
         op.f("ix_workspace_site_health_runtime_workspace_id"),
@@ -481,13 +502,12 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("trigger", sa.String(length=16), nullable=False),
         sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
+        sa.Column("measurement_mode", sa.String(length=16), nullable=False),
         sa.Column("funding_account_id", sa.UUID(), nullable=True),
         sa.Column(
             "funded_budget_period_start", sa.DateTime(timezone=True), nullable=True
         ),
-        sa.Column(
-            "funded_reserved_cost_microusd", sa.BigInteger(), nullable=True
-        ),
+        sa.Column("funded_reserved_cost_microusd", sa.BigInteger(), nullable=True),
         sa.Column("system_instruction", sa.Text(), nullable=False),
         sa.Column("repetitions", sa.Integer(), nullable=False),
         sa.Column("random_seed", sa.String(length=32), nullable=False),
@@ -1100,6 +1120,7 @@ def upgrade() -> None:
         sa.Column("catalog_key", sa.String(length=64), nullable=False),
         sa.Column("subscription_kind", sa.String(length=16), nullable=False),
         sa.Column("cadence", sa.String(length=24), nullable=False),
+        sa.Column("quantity", sa.Integer(), server_default="1", nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("current_period_start", sa.DateTime(timezone=True), nullable=True),
@@ -2087,6 +2108,8 @@ def upgrade() -> None:
             "provider_metadata", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
         sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.Column("finish_reason", sa.String(length=24), nullable=False),
+        sa.Column("raw_finish_reason", sa.String(length=64), nullable=True),
         sa.Column("error_code", sa.String(length=32), nullable=False),
         sa.Column("error_detail", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -2129,6 +2152,86 @@ def upgrade() -> None:
         op.f("ix_audit_tasks_workspace_id"),
         "audit_tasks",
         ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "provider_capacity_buckets",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("pool_kind", sa.String(length=16), nullable=False),
+        sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=True),
+        sa.Column("billing_account_id", sa.UUID(), nullable=True),
+        sa.Column("capacity", sa.Numeric(14, 4), nullable=False),
+        sa.Column("tokens", sa.Numeric(14, 4), nullable=False),
+        sa.Column("refill_tokens_per_second", sa.Numeric(14, 4), nullable=False),
+        sa.Column("refilled_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("blocked_until", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("policy_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "pool_kind",
+            "transport_provider",
+            "connection_id",
+            "billing_account_id",
+            name="uq_provider_capacity_bucket_pool",
+            postgresql_nulls_not_distinct=True,
+        ),
+    )
+    op.create_index(
+        op.f("ix_provider_capacity_buckets_blocked_until"),
+        "provider_capacity_buckets",
+        ["blocked_until"],
+        unique=False,
+    )
+    op.create_table(
+        "provider_capacity_leases",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("bucket_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("attempt_number", sa.Integer(), nullable=False),
+        sa.Column("lease_kind", sa.String(length=16), nullable=False),
+        sa.Column("units", sa.Numeric(14, 4), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("released_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["bucket_id"], ["provider_capacity_buckets.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "bucket_id",
+            "task_id",
+            "attempt_number",
+            "lease_kind",
+            name="uq_provider_capacity_lease_slot",
+        ),
+    )
+    op.create_index(
+        op.f("ix_provider_capacity_leases_bucket_id"),
+        "provider_capacity_leases",
+        ["bucket_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_provider_capacity_leases_expires_at"),
+        "provider_capacity_leases",
+        ["expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_provider_capacity_leases_task_id"),
+        "provider_capacity_leases",
+        ["task_id"],
         unique=False,
     )
     op.create_table(
@@ -2689,6 +2792,8 @@ def upgrade() -> None:
             "provider_metadata", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
         sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("finish_reason", sa.String(length=24), nullable=False),
+        sa.Column("raw_finish_reason", sa.String(length=64), nullable=True),
         sa.Column("latency_ms", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
@@ -3736,9 +3841,7 @@ def upgrade() -> None:
         sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
         sa.Column("state", sa.String(length=16), nullable=False),
         sa.Column("response_status", sa.Integer(), nullable=True),
-        sa.Column(
-            "response_body", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
+        sa.Column("response_body", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -3778,6 +3881,11 @@ def upgrade() -> None:
         sa.Column("external_reference", sa.String(length=255), nullable=True),
         sa.Column("external_price_id", sa.String(length=255), nullable=True),
         sa.Column("checkout_url", sa.Text(), nullable=True),
+        sa.Column("quote", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("country_code", sa.String(length=2), nullable=False),
+        sa.Column("region", sa.String(length=16), nullable=False),
+        sa.Column("settled_by", sa.String(length=24), nullable=True),
+        sa.Column("settled_authority_id", sa.String(length=255), nullable=True),
         sa.Column("idempotency_key", sa.String(length=255), nullable=False),
         sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
@@ -3845,9 +3953,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["grant_id"], ["account_grants.id"], ondelete="RESTRICT"
         ),
-        sa.ForeignKeyConstraint(
-            ["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "billing_account_id",
@@ -3939,12 +4045,8 @@ def downgrade() -> None:
     op.drop_constraint(
         "fk_audit_tasks_result_artifact_id", "audit_tasks", type_="foreignkey"
     )
-    op.drop_index(
-        op.f("ix_grant_revocations_grant_id"), table_name="grant_revocations"
-    )
-    op.drop_index(
-        "ix_grant_revocation_grant_effective", table_name="grant_revocations"
-    )
+    op.drop_index(op.f("ix_grant_revocations_grant_id"), table_name="grant_revocations")
+    op.drop_index("ix_grant_revocation_grant_effective", table_name="grant_revocations")
     op.drop_table("grant_revocations")
     op.drop_index(
         "uq_consumable_ledger_task_attempt",
@@ -4262,6 +4364,24 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_feed_issues_project_id"), table_name="feed_issues")
     op.drop_index(op.f("ix_feed_issues_connection_id"), table_name="feed_issues")
     op.drop_table("feed_issues")
+    op.drop_index(
+        op.f("ix_provider_capacity_leases_task_id"),
+        table_name="provider_capacity_leases",
+    )
+    op.drop_index(
+        op.f("ix_provider_capacity_leases_expires_at"),
+        table_name="provider_capacity_leases",
+    )
+    op.drop_index(
+        op.f("ix_provider_capacity_leases_bucket_id"),
+        table_name="provider_capacity_leases",
+    )
+    op.drop_table("provider_capacity_leases")
+    op.drop_index(
+        op.f("ix_provider_capacity_buckets_blocked_until"),
+        table_name="provider_capacity_buckets",
+    )
+    op.drop_table("provider_capacity_buckets")
     op.drop_index(op.f("ix_audit_tasks_workspace_id"), table_name="audit_tasks")
     op.drop_index(op.f("ix_audit_tasks_status"), table_name="audit_tasks")
     op.drop_index(op.f("ix_audit_tasks_available_at"), table_name="audit_tasks")
@@ -4598,6 +4718,9 @@ def downgrade() -> None:
     op.drop_index("ix_queue_workspace_turn_order", table_name="queue_workspace_turns")
     op.drop_table("queue_workspace_turns")
     op.drop_index(
+        "ix_provider_connections_workspace_source", table_name="provider_connections"
+    )
+    op.drop_index(
         op.f("ix_provider_connections_workspace_id"), table_name="provider_connections"
     )
     op.drop_table("provider_connections")
@@ -4625,6 +4748,11 @@ def downgrade() -> None:
         op.f("ix_billing_accounts_owner_user_id"), table_name="billing_accounts"
     )
     op.drop_table("billing_accounts")
+    op.drop_index(
+        "uq_workspaces_single_system",
+        table_name="workspaces",
+        postgresql_where=sa.text("is_system"),
+    )
     op.drop_table("workspaces")
     op.drop_index(op.f("ix_users_email"), table_name="users")
     op.drop_table("users")
