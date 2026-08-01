@@ -138,7 +138,10 @@ class RazorpayBillingProvider:
             raise BillingProviderError("provider_invalid_response")
         if status not in RAZORPAY_PAYMENT_STATUS_MAP:
             raise BillingProviderError("provider_invalid_response")
-        notes = data.get("notes") if isinstance(data.get("notes"), dict) else {}
+        # Read once and narrow the result: calling ``get`` twice gives the type
+        # checker no way to tie the isinstance check to the value being used.
+        raw_notes = data.get("notes")
+        notes = raw_notes if isinstance(raw_notes, dict) else {}
         return ProviderPayment(
             external_payment_id=external_id,
             status=RAZORPAY_PAYMENT_STATUS_MAP[status],

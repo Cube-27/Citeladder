@@ -573,8 +573,11 @@ async def get_connection_states(
         .order_by(ProviderConnection.created_at.desc())
     )
     by_transport: dict[str, ProviderConnection] = {}
-    for connection in result.scalars():
-        by_transport.setdefault(connection.transport_provider, connection)
+    # Named apart from the per-catalog-entry ``connection`` below, which is
+    # nullable: one name for both would make the optional lookup an assignment
+    # to a non-optional variable.
+    for candidate in result.scalars():
+        by_transport.setdefault(candidate.transport_provider, candidate)
     latest_probes = await _latest_probes(
         session,
         workspace_id=workspace_id,

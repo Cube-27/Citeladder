@@ -45,6 +45,13 @@ jobs:
         run: uv sync --frozen --extra dev
       - name: Ruff
         run: uv run ruff check .
+      # Type check. Not previously gated, so 35 real errors had accumulated
+      # unnoticed (a Literal[] the checker could not read, two shadowed
+      # variables that silently widened a type, an optional the caller
+      # treated as proven). Cleared to zero, and gated here so the next one
+      # fails the build instead of joining a backlog.
+      - name: Mypy
+        run: uv run mypy app
       # Downward ratchet on module size / function complexity. The July 2026
       # audit found two modules at MI 0.0; they got there because nothing in CI
       # measured either. Fails only on REGRESSION against the checked-in

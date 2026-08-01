@@ -131,7 +131,10 @@ async def _enforce_import_binding(
     vocabulary = await load_project_vocabulary(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    failures = []
+    # Mixed value types (``row`` is an int), so the entry type is spelled out —
+    # otherwise the inferred value type is the common supertype and ``code``
+    # comes back too wide to pass on as the error's code.
+    failures: list[dict[str, Any]] = []
     for index, text in enumerate(texts):
         if not text:
             continue
@@ -151,6 +154,25 @@ async def _enforce_import_binding(
             code=failures[0]["code"],
             details={"rows": failures},
         )
+
+
+async def _prompt_set_project_id(
+    session: AsyncSession, prompt_set_id: uuid.UUID
+) -> uuid.UUID:
+    """The set's project id, read as a scalar column (no ORM row materialized).
+
+    Deliberately NOT read off a loaded ``PromptSet``: holding that instance
+    would pin its already-loaded prompts collection in the identity map and the
+    caller's post-write refresh would serve the stale collection (see the note
+    in ``import_prompts``). A missing row means the set was deleted between the
+    scope check and here, which is the same 404 the scope check raises.
+    """
+    project_id = await session.scalar(
+        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
+    )
+    if project_id is None:
+        raise PromptSetNotFoundError("Prompt set not found")
+    return project_id
 
 
 async def _project_in_workspace(
@@ -572,9 +594,7 @@ async def _enforce_update_binding(
     )
     if new_text is None and not activates:
         return
-    project_id = await session.scalar(
-        select(PromptSet.project_id).where(PromptSet.id == prompt.prompt_set_id)
-    )
+    project_id = await _prompt_set_project_id(session, prompt.prompt_set_id)
     text = (new_text if new_text is not None else prompt.text).strip()
     await enforce_prompt_binding(
         session, workspace_id=workspace_id, project_id=project_id, text=text
@@ -693,9 +713,7 @@ async def import_prompts(
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
     )
-    project_id = await session.scalar(
-        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
-    )
+    project_id = await _prompt_set_project_id(session, prompt_set_id)
     texts = _import_texts(rows)
     await _enforce_import_binding(
         session,
@@ -744,9 +762,7 @@ async def bulk_set_status(
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
     )
-    project_id = await session.scalar(
-        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
-    )
+    project_id = await _prompt_set_project_id(session, prompt_set_id)
     await _enforce_activation_binding(
         session,
         workspace_id=workspace_id,

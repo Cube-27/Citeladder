@@ -1060,16 +1060,17 @@
       "BrandEvidencePage.word_count": 2,
       "_meta_description": 5,
       "_node_text": 3,
+      "_prune_non_prose": 4,
       "_safe_parser_encoding": 4,
       "_strip_delimiters": 8,
       "_visible_text": 5,
       "evidence_block_lines": 2,
-      "extract_brand_page": 9,
+      "extract_brand_page": 7,
       "fallback_urls": 2,
       "fetch_brand_page": 6,
       "serialize_brand_evidence": 7
     },
-    "max_cc": 9
+    "max_cc": 8
   },
   "app/connectors/web_evidence/contracts.py": {
     "functions": {
@@ -2814,6 +2815,7 @@
       "_import_texts": 3,
       "_insert_imported_row": 2,
       "_project_in_workspace": 2,
+      "_prompt_set_project_id": 2,
       "_receipt_proves_generated": 2,
       "_require_insertable": 2,
       "_resolve_origin_through_binding_gate": 2,
