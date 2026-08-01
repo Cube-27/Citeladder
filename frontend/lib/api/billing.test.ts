@@ -78,16 +78,16 @@ describe('billing API contract', () => {
   it('carries an Idempotency-Key on every commercial POST', async () => {
     const addon = stubFetch({ ...ACTIVATION, kind: 'addon', catalog_key: 'addon_seats' });
     await billingApi.activateAddon('addon_seats', 3, 'addon-key');
-    expect(new Headers((addon.mock.calls[0] as [string, RequestInit])[1].headers).get(
-      'Idempotency-Key',
-    )).toBe('addon-key');
+    expect(
+      new Headers((addon.mock.calls[0] as [string, RequestInit])[1].headers).get('Idempotency-Key'),
+    ).toBe('addon-key');
     vi.unstubAllGlobals();
 
     const topup = stubFetch({ ...ACTIVATION, kind: 'topup', catalog_key: 'topup_bench' });
     await billingApi.purchaseTopup('topup_bench', 2, 'topup-key');
-    expect(new Headers((topup.mock.calls[0] as [string, RequestInit])[1].headers).get(
-      'Idempotency-Key',
-    )).toBe('topup-key');
+    expect(
+      new Headers((topup.mock.calls[0] as [string, RequestInit])[1].headers).get('Idempotency-Key'),
+    ).toBe('topup-key');
   });
 
   it('parses add-on deactivation through its own vocabulary, not the activation machine', async () => {

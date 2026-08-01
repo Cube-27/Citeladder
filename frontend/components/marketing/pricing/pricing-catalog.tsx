@@ -206,7 +206,10 @@ export function PricingCatalog() {
             describedBy="byok-disclosure"
           />
           <span className="text-mkt-ink text-mkt-sm font-medium">{BYOK_SWITCH_LABEL}</span>
-          <p id="byok-disclosure" className="text-mkt-sm text-mkt-ink-muted max-w-[70ch] basis-full">
+          <p
+            id="byok-disclosure"
+            className="text-mkt-sm text-mkt-ink-muted max-w-[70ch] basis-full"
+          >
             {BYOK_DISCLOSURE}
           </p>
           {!byok && (
@@ -288,7 +291,9 @@ export function PricingCatalog() {
  */
 function isStillValid(
   intent: PendingPricingIntentV1,
-  catalog: NonNullable<ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.catalog>>>>['data']>,
+  catalog: NonNullable<
+    ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.catalog>>>>['data']
+  >,
 ): boolean {
   if (intent.kind === 'checkout') {
     const plan = catalog.plans.find((entry) => entry.key === intent.catalog_key);
@@ -331,7 +336,7 @@ function CatalogError({ onRetry }: Readonly<{ onRetry: () => void }>) {
       <button
         type="button"
         onClick={onRetry}
-        className="border-mkt-line text-mkt-ink focus-ring mx-auto inline-flex h-10 items-center rounded-sm border px-4 text-mkt-sm font-medium"
+        className="border-mkt-line text-mkt-ink focus-ring text-mkt-sm mx-auto inline-flex h-10 items-center rounded-sm border px-4 font-medium"
       >
         Retry
       </button>

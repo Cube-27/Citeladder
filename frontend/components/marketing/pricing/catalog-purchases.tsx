@@ -99,7 +99,7 @@ function PurchaseRow({
         type="button"
         disabled={!purchasable || pending}
         onClick={onPurchase}
-        className="border-mkt-line text-mkt-ink focus-ring mt-1 inline-flex h-10 w-fit items-center justify-center rounded-sm border px-4 text-mkt-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+        className="border-mkt-line text-mkt-ink focus-ring text-mkt-sm mt-1 inline-flex h-10 w-fit items-center justify-center rounded-sm border px-4 font-medium disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? 'Starting…' : `Add ${entry.name}`}
       </button>

@@ -25,11 +25,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
               Capability
             </th>
             {catalog.plans.map((plan) => (
-              <th
-                key={plan.key}
-                scope="col"
-                className="text-mkt-sm text-mkt-ink p-4 font-semibold"
-              >
+              <th key={plan.key} scope="col" className="text-mkt-sm text-mkt-ink p-4 font-semibold">
                 {plan.name}
               </th>
             ))}

@@ -51,7 +51,11 @@ export function parsePendingIntent(
     return null;
   }
   if (typeof value.catalog_key !== 'string' || value.catalog_key === '') return null;
-  if (typeof value.quantity !== 'number' || !Number.isInteger(value.quantity) || value.quantity < 1) {
+  if (
+    typeof value.quantity !== 'number' ||
+    !Number.isInteger(value.quantity) ||
+    value.quantity < 1
+  ) {
     return null;
   }
   if (typeof value.byok !== 'boolean') return null;

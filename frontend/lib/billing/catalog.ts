@@ -28,10 +28,7 @@ export type HeadlinePrice =
   | { kind: 'contact' }
   | { kind: 'unavailable'; reason: string | null };
 
-export function catalogPlanByKey(
-  catalog: BillingCatalog,
-  key: string,
-): CatalogPlan | undefined {
+export function catalogPlanByKey(catalog: BillingCatalog, key: string): CatalogPlan | undefined {
   return catalog.plans.find((plan) => plan.key === key);
 }
 
@@ -77,10 +74,7 @@ export type CheckoutSelection =
  * funded selection while `credit_price` is null — the client must not be able
  * to start a checkout the backend would have to reject.
  */
-export function checkoutSelection(
-  plan: CatalogPlan,
-  mode: CredentialMode,
-): CheckoutSelection {
+export function checkoutSelection(plan: CatalogPlan, mode: CredentialMode): CheckoutSelection {
   if (plan.contact_only || !plan.self_serve || !isSelfServeKey(plan.key)) {
     return { ok: false, reason: plan.unavailable_reason };
   }
@@ -159,9 +153,7 @@ export type ProviderMarketingState = {
  */
 export function providerMarketingState(provider: CatalogProvider): ProviderMarketingState {
   const shipped =
-    provider.availability === 'available' &&
-    provider.adapter_shipped &&
-    provider.routes.length > 0;
+    provider.availability === 'available' && provider.adapter_shipped && provider.routes.length > 0;
   return {
     key: provider.key,
     label: provider.label,
@@ -171,9 +163,7 @@ export function providerMarketingState(provider: CatalogProvider): ProviderMarke
   };
 }
 
-export function providerMarketingStates(
-  catalog: BillingCatalog,
-): ProviderMarketingState[] {
+export function providerMarketingStates(catalog: BillingCatalog): ProviderMarketingState[] {
   return catalog.providers.map(providerMarketingState);
 }
 

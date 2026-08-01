@@ -144,12 +144,12 @@ const activation = (kind: string, catalog_key: string) => ({
   failure_code: null,
 });
 
-const catalogHandler = () =>
-  http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
+const catalogHandler = () => http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
 const anonymous = () =>
-  http.get('/api/v1/auth/me', () => HttpResponse.json({ detail: 'unauthenticated' }, { status: 401 }));
-const authenticated = () =>
-  http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER }));
+  http.get('/api/v1/auth/me', () =>
+    HttpResponse.json({ detail: 'unauthenticated' }, { status: 401 }),
+  );
+const authenticated = () => http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER }));
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
@@ -234,7 +234,9 @@ describe('PricingCatalog', () => {
     await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
     await waitFor(() =>
       expect(
-        [...document.querySelectorAll('[data-price]')].some((n) => n.textContent === 'Not yet priced'),
+        [...document.querySelectorAll('[data-price]')].some(
+          (n) => n.textContent === 'Not yet priced',
+        ),
       ).toBe(true),
     );
     expect(spy).not.toHaveBeenCalled();

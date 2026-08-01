@@ -35,9 +35,7 @@ export function WhatWeMeasure() {
         ))}
       </StaggerGroup>
       <Reveal>
-        <p className="text-mkt-sm text-mkt-ink-muted mt-8 max-w-[90ch]">
-          {WHAT_WE_MEASURE_NOTE}
-        </p>
+        <p className="text-mkt-sm text-mkt-ink-muted mt-8 max-w-[90ch]">{WHAT_WE_MEASURE_NOTE}</p>
       </Reveal>
     </Section>
   );

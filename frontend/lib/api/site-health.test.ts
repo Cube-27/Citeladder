@@ -128,11 +128,7 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
   it('rejects a retired plan-shaped entitlement', () => {
     const { access_mode: _drop, ...planShaped } = entitlement;
     expect(() =>
-      strictValidate(
-        siteHealthEntitlementSchema,
-        { ...planShaped, plan_key: 'starter' },
-        'ent',
-      ),
+      strictValidate(siteHealthEntitlementSchema, { ...planShaped, plan_key: 'starter' }, 'ent'),
     ).toThrow();
   });
 

@@ -74,8 +74,6 @@ describe('Switch', () => {
       </>,
     );
 
-    expect(screen.getByRole('switch')).toHaveAccessibleDescription(
-      'You pay providers directly.',
-    );
+    expect(screen.getByRole('switch')).toHaveAccessibleDescription('You pay providers directly.');
   });
 });

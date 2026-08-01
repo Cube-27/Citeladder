@@ -123,8 +123,7 @@ const USAGE = {
   ],
 };
 
-const catalogHandler = () =>
-  http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
+const catalogHandler = () => http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
 const usageHandler = () => http.get('/api/v1/billing/usage', () => HttpResponse.json(USAGE));
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));

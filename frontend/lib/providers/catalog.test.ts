@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProviderCatalog, ProviderConnection } from '@/lib/api/types';
 import {
   buildEngineCards,
+  ENGINE_ORDER,
   isConnectable,
   connectionForTransport,
   discoveryModelOptions,
@@ -48,7 +49,9 @@ describe('buildEngineCards', () => {
   // resolving it to a working transport.
   it('makes every planned provider unavailable, route-less and unconnectable', () => {
     const cards = buildEngineCards(catalog);
-    const planned = cards.filter((c) => ['grok', 'perplexity', 'copilot'].includes(c.logical_engine));
+    const planned = cards.filter((c) =>
+      ['grok', 'perplexity', 'copilot'].includes(c.logical_engine),
+    );
 
     expect(planned).toHaveLength(3);
     for (const card of planned) {
@@ -168,6 +171,25 @@ describe('connection helpers', () => {
     // Idempotent: re-adding an existing engine does not duplicate it.
     const again = mergeRoutePayload(conn, 'chatgpt', 'gpt-5.4');
     expect(again).toHaveLength(1);
+  });
+});
+
+describe('planned providers are excluded from every run control', () => {
+  // Discovery options derive from the catalog's approved ROUTES. A planned
+  // provider has none, so it cannot appear here — and cannot be aliased onto
+  // another transport, since it has no transport enum entry either.
+  it('offers no discovery model for a planned provider', () => {
+    const labels = discoveryModelOptions(catalog).map((option) => option.label.toLowerCase());
+    for (const planned of ['grok', 'perplexity', 'copilot']) {
+      expect(labels.some((label) => label.includes(planned))).toBe(false);
+    }
+  });
+
+  // Launch and filter controls iterate ENGINE_ORDER, which stays the shipped
+  // roster. Planned providers are presentation-only entries from
+  // buildEngineCards and must never leak into it.
+  it('keeps ENGINE_ORDER to the shipped roster', () => {
+    expect([...ENGINE_ORDER]).toEqual(['chatgpt', 'gemini', 'claude']);
   });
 });
 

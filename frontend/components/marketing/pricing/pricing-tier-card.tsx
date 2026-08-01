@@ -40,7 +40,8 @@ export function PricingTierCard({
   const price = headlinePrice(plan, mode);
   const highlighted = presentation?.highlighted ?? false;
 
-  const numeric = price.kind === 'price' ? majorUnits(price.money, catalog.currency_minor_units) : null;
+  const numeric =
+    price.kind === 'price' ? majorUnits(price.money, catalog.currency_minor_units) : null;
   const settled =
     price.kind === 'price'
       ? formatMoney(price.money, catalog.currency_minor_units)
@@ -70,7 +71,10 @@ export function PricingTierCard({
           value={numeric}
           format={(value) =>
             formatMoney(
-              { currency: catalog.currency, amount_minor: value * 10 ** catalog.currency_minor_units },
+              {
+                currency: catalog.currency,
+                amount_minor: value * 10 ** catalog.currency_minor_units,
+              },
               catalog.currency_minor_units,
             )
           }
@@ -111,7 +115,7 @@ function PlanCta({
     return (
       <a
         href={plan.contact_url ?? '/demo'}
-        className="border-mkt-line text-mkt-ink focus-ring inline-flex h-10 w-full items-center justify-center rounded-sm border text-mkt-sm font-medium"
+        className="border-mkt-line text-mkt-ink focus-ring text-mkt-sm inline-flex h-10 w-full items-center justify-center rounded-sm border font-medium"
       >
         {CONTACT_LABEL}
       </a>
@@ -126,7 +130,7 @@ function PlanCta({
       type="button"
       disabled={disabled}
       onClick={() => onCheckout(plan)}
-      className="bg-mkt-proof text-mkt-surface focus-ring inline-flex h-10 w-full items-center justify-center rounded-sm text-mkt-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+      className="bg-mkt-proof text-mkt-surface focus-ring text-mkt-sm inline-flex h-10 w-full items-center justify-center rounded-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? 'Starting checkout…' : `Choose ${plan.name}`}
     </button>

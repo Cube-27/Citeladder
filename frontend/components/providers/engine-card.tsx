@@ -55,7 +55,8 @@ export function EngineCard({
         )}
         {model.state === 'failed' && model.latest_probe && (
           <p className="text-danger-text text-xs">
-            Last test failed{model.latest_probe.safe_reason ? `: ${model.latest_probe.safe_reason}` : ''}
+            Last test failed
+            {model.latest_probe.safe_reason ? `: ${model.latest_probe.safe_reason}` : ''}
             {model.latest_probe.model ? ` (model ${model.latest_probe.model})` : ''}.
           </p>
         )}

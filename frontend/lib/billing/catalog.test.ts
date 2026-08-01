@@ -102,13 +102,23 @@ describe('comparisonRows', () => {
           plan({
             key: 'tier_1',
             capabilities: [
-              { key: 'project_slots', capability_type: 'counter.occupancy', value: 1, issuable: true },
+              {
+                key: 'project_slots',
+                capability_type: 'counter.occupancy',
+                value: 1,
+                issuable: true,
+              },
             ],
           }),
           plan({
             key: 'tier_2',
             capabilities: [
-              { key: 'project_slots', capability_type: 'counter.occupancy', value: 5, issuable: true },
+              {
+                key: 'project_slots',
+                capability_type: 'counter.occupancy',
+                value: 5,
+                issuable: true,
+              },
               { key: 'audit_web_search', capability_type: 'flag', value: true, issuable: true },
             ],
           }),
@@ -157,9 +167,7 @@ describe('providerMarketingState', () => {
             adapter_shipped: true,
             grant_key: 'provider.openai',
             issuable: true,
-            routes: [
-              { logical_engine: 'chatgpt', transport_provider: 'openai', model: 'gpt-5' },
-            ],
+            routes: [{ logical_engine: 'chatgpt', transport_provider: 'openai', model: 'gpt-5' }],
           },
           {
             key: 'provider.grok',
