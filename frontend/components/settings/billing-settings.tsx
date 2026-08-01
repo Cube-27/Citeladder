@@ -15,6 +15,7 @@ import { UsageMeters } from '@/components/billing/usage-meters';
 import { billingApi, createIdempotencyKey, type SelfServePlanKey } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import {
   catalogPlanByKey,
   checkoutSelection,
@@ -63,7 +64,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
     onSuccess: async (activation) => {
       // A hosted checkout is only actionable while the URL is present.
       if (activation.checkout_url) {
-        window.location.assign(activation.checkout_url);
+        hardNavigate(activation.checkout_url);
         return;
       }
       await refresh();

@@ -154,6 +154,50 @@ describe('useAuthMutation', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
   });
 
+  // A pricing selection captured before signing in was the visitor's last
+  // deliberate action; landing them on /projects would silently discard it.
+  it('resumes a captured pricing intent instead of the normal destination', async () => {
+    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
+    globalThis.sessionStorage.setItem(
+      'searchify.pendingPricingIntent.v1',
+      JSON.stringify({
+        version: 1,
+        kind: 'checkout',
+        catalog_key: 'tier_2',
+        quantity: 1,
+        byok: true,
+        country_code: null,
+        idempotency_key: 'idem-1',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+    const { result } = setup();
+
+    act(() => {
+      void result.current.submit({});
+    });
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/pricing?resumeActivation=1'));
+    // No intent field may leak into the auth URL — the record stays in
+    // storage and is revalidated against the live catalog before any purchase.
+    expect(replace).not.toHaveBeenCalledWith(expect.stringContaining('tier_2'));
+    globalThis.sessionStorage.clear();
+  });
+
+  it('ignores a malformed stored intent and uses the normal destination', async () => {
+    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
+    globalThis.sessionStorage.setItem('searchify.pendingPricingIntent.v1', '{"version":99}');
+    const { result } = setup();
+
+    act(() => {
+      void result.current.submit({});
+    });
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
+    globalThis.sessionStorage.clear();
+  });
+
   it('falls back to /onboarding when the projects lookup fails', async () => {
     // 4xx: the shared retry policy never retries it, so the fallback is
     // immediate.
