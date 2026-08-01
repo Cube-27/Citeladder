@@ -88,7 +88,7 @@ async def test_create_connection_redacts_secret_in_response(
     # Provenance recorded on routes (invariant 10).
     engines = {r["logical_engine"]: r for r in body["routes"]}
     assert engines["chatgpt"]["transport_provider"] == "openai"
-    assert engines["chatgpt"]["transport_model"] == "gpt-5.4"
+    assert engines["chatgpt"]["transport_model"] == "gpt-5.6-luna"
     assert engines["chatgpt"]["is_default"] is True
     # New routes are active.
     assert engines["chatgpt"]["active"] is True
@@ -317,7 +317,7 @@ async def test_test_endpoint_returns_status_success(
         "id": "resp-x",
         "object": "response",
         "status": "completed",
-        "model": "gpt-5.4",
+        "model": "gpt-5.6-luna",
         "output": [
             {
                 "type": "message",
@@ -378,7 +378,7 @@ async def test_test_endpoint_probe_is_a_liveness_check_not_a_measurement(
                 "id": "resp-probe",
                 "object": "response",
                 "status": "completed",
-                "model": "gpt-5.4",
+                "model": "gpt-5.6-luna",
                 "output": [
                     {
                         "type": "message",

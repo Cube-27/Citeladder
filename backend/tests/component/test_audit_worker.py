@@ -422,7 +422,7 @@ async def test_worker_persists_openai_provenance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A ChatGPT audit executes over the direct ``openai`` transport and freezes
-    # the chatgpt/openai/gpt-5.4 provenance triple on the task + attempt.
+    # the chatgpt/openai/gpt-5.6-luna provenance triple on the task + attempt.
     async with session_factory() as session:
         seed = await seed_audit_fixtures(
             session, prompt_count=1, engines=[ENGINE_CHATGPT]
@@ -454,7 +454,7 @@ async def test_worker_persists_openai_provenance(
         assert task.status == "succeeded"
         assert task.logical_engine == ENGINE_CHATGPT
         assert task.transport_provider == TRANSPORT_OPENAI
-        assert task.transport_model == "gpt-5.4"
+        assert task.transport_model == "gpt-5.6-luna"
         assert task.result_artifact_id is not None
 
 

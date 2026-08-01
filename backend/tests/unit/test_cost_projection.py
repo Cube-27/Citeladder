@@ -337,9 +337,9 @@ def test_provenance_columns_echo_the_artifact() -> None:
 
 
 def test_approved_route_identities_match_the_provider_catalog_contract() -> None:
-    assert ROUTE_CHATGPT == RouteIdentity("chatgpt", "openai", "gpt-5.4")
-    assert ROUTE_CLAUDE == RouteIdentity("claude", "anthropic", "claude-sonnet-4-6")
-    assert ROUTE_GEMINI == RouteIdentity("gemini", "google", "gemini-flash-latest")
+    assert ROUTE_CHATGPT == RouteIdentity("chatgpt", "openai", "gpt-5.6-luna")
+    assert ROUTE_CLAUDE == RouteIdentity("claude", "anthropic", "claude-haiku-4-5")
+    assert ROUTE_GEMINI == RouteIdentity("gemini", "google", "gemini-2.5-flash-lite")
     assert len(APPROVED_ROUTE_IDENTITIES) == 3
 
 
@@ -376,7 +376,8 @@ def test_route_pricing_unknown_route_gets_unverified_card() -> None:
 @pytest.mark.parametrize(
     ("route", "mode", "retrieval", "token", "fee", "searches", "complete"),
     [
-        # Frozen Anthropic estimates only.
+        # Frozen Anthropic estimates only. Still Sonnet-measured while the
+        # route runs Haiku 4.5 — retained because they overstate (see costs.py).
         (ROUTE_CLAUDE, MEASUREMENT_MODE_PULSE, False, 2_890, None, None, True),
         (ROUTE_CLAUDE, MEASUREMENT_MODE_PULSE, True, 2_890, None, None, False),
         (ROUTE_CLAUDE, MEASUREMENT_MODE_BENCHMARK, False, 146_600, None, None, True),

@@ -38,6 +38,7 @@ from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
+    REASONING_EFFORT_OFF,
     TRANSPORT_GOOGLE,
     provider_catalog_settings,
 )
@@ -76,9 +77,13 @@ def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
     configured catalog cap when unsupplied (invariant 1). Nothing is re-read
     from live settings that the request already froze (invariant 9).
 
-    No thinking control is sent: the ``gemini``/``google`` route policy pins
-    reasoning ``unverified`` (see ``ROUTE_POLICIES``), so nothing may be pinned
-    yet and this adapter must not invent a value.
+    The ``gemini``/``google`` route pins reasoning OFF (``ROUTE_POLICIES``), so
+    a ``thinkingBudget`` of 0 is sent whenever the FROZEN request says off.
+    ``gemini-2.5-flash-lite`` already defaults to thinking-off, but stating it
+    keeps the pin visible in the persisted request snapshot and stops a future
+    model swap from silently re-enabling thinking. NOTE: 0 is only a valid
+    budget on Flash-Lite — the 3.1/3.5 Flash-Lite tiers floor at ``minimal``
+    and would reject it.
     """
     return {
         "model": request.model,
@@ -87,8 +92,16 @@ def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
         "store": False,
         # Frozen per-call output cap so one generation cannot run away.
         "max_output_tokens": output_token_cap(request),
+        **_thinking_fields(request),
         **_grounding_fields(request),
     }
+
+
+def _thinking_fields(request: AnswerEngineRequest) -> dict[str, Any]:
+    """The thinking-disable field, or no field at all when nothing is pinned."""
+    if request.reasoning_effort != REASONING_EFFORT_OFF:
+        return {}
+    return {"thinking_config": {"thinking_budget": 0}}
 
 
 def _grounding_fields(request: AnswerEngineRequest) -> dict[str, Any]:

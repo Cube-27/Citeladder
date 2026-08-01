@@ -43,6 +43,7 @@ from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
+    REASONING_EFFORT_OFF,
     TRANSPORT_OPENAI,
     provider_catalog_settings,
 )
@@ -61,9 +62,10 @@ def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, An
     An optional approximate country hint is attached to the web-search tool.
     No brand/competitor/domain list, no credentials.
 
-    No reasoning control is sent: the ``chatgpt``/``openai`` route policy pins
-    reasoning ``unverified`` (see ``ROUTE_POLICIES``), so nothing may be pinned
-    yet and this adapter must not invent a value.
+    The ``chatgpt``/``openai`` route pins reasoning OFF (``ROUTE_POLICIES``),
+    so an explicit ``none`` effort is sent whenever the FROZEN request says
+    off. Omitting the key would let the model's own default effort apply,
+    which is not none — the pin has to be stated to hold.
     """
     payload: dict[str, Any] = {
         "model": request.model,
@@ -73,6 +75,8 @@ def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, An
         # Frozen per-call output cap so one generation cannot run away.
         "max_output_tokens": output_token_cap(request),
     }
+    if request.reasoning_effort == REASONING_EFFORT_OFF:
+        payload["reasoning"] = {"effort": "none"}
     if request.retrieval_enabled:
         payload["tools"] = [_web_search_tool(country_code)]
     # Responses API takes the system prompt as a top-level ``instructions``

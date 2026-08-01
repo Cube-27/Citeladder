@@ -1,0 +1,211 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Searchify "Proof" — the double-ring CTA
+   Owner for `DoubleRingCtaLink` (components/marketing/primitives/button.tsx).
+
+   Split out of marketing-theme.css the way marketing-motion.css was: that
+   file holds the @theme token block and the few scene rules a utility cannot
+   express, and its header says in as many words not to raise its budget for
+   a new component rule. This is a component rule, so it gets an owner.
+
+   The construction is two nested pills. The OUTER shell is the link and the
+   translucent case; the INNER pill is the visible button and, because it
+   clips, it is also the stage — two identical arrow badges live inside it and
+   trade places on hover, so the arrow reads as one object travelling through
+   the control rather than two discs fading in and out. The label's padding
+   flips in the same beat, which is what sells the travel.
+
+   A 200-line budget is enforced by scripts/check-frontend-architecture.mjs.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.mkt-double-cta {
+  --cta-fill: linear-gradient(110deg, #3b82f6 0%, #406ae4 100%);
+  /* One duration/easing for every moving part, or the badges and the label
+     land out of step and the arrow stops reading as a single object. */
+  --cta-travel: 0.4s cubic-bezier(0.44, 0, 0.56, 1);
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  /* TINTED glass, not white. The canvas is #fff and the sky field only
+     #cbdaf1, so a translucent WHITE ring leaves no edge and the blur has
+     nothing to bite on; the pill's own blue plus the bloom give it one. */
+  border: 1px solid #3b82f64d;
+  border-radius: 9999px;
+  background: #3b82f61f;
+  box-shadow:
+    inset 0 1px 1px #ffffffb3,
+    0 2px 10px -2px #3b82f640;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+/* The shell is the link, so it owns the focus ring — the inner pill would
+   draw it inside the case, where the clip would cut it. */
+.mkt-double-cta:focus-visible {
+  outline: 2px solid var(--color-mkt-proof);
+  outline-offset: 3px;
+}
+
+.mkt-double-cta__pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  /* The right side is oversized to reserve the badge's berth. Hover swaps the
+     two values, which is what walks the label across. */
+  padding: 12px 54px 12px 30px;
+  border: 1px solid #ffffff38;
+  border-radius: 9999px;
+  background: var(--cta-fill);
+  box-shadow:
+    inset 4px 4px 8px #ffffff1f,
+    inset -4px -4px 8px #ffffff1f,
+    0 8px 16px #3b82f659;
+  transition: padding var(--cta-travel);
+}
+
+.mkt-double-cta__label {
+  color: #fff;
+  font-size: var(--text-mkt-body);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.mkt-double-cta__badge {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 9999px;
+  background: #fff;
+  color: var(--color-mkt-ink);
+  transition:
+    left var(--cta-travel),
+    right var(--cta-travel),
+    transform var(--cta-travel);
+}
+
+.mkt-double-cta__badge svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.25;
+}
+
+/* Resting state: one badge parked on the right, its twin held off-canvas to
+   the left and pre-rotated so it arrives straightening up. */
+.mkt-double-cta__badge--outgoing {
+  right: 8px;
+  transform: translateY(-50%);
+}
+
+.mkt-double-cta__badge--incoming {
+  left: -32px;
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.mkt-double-cta:hover .mkt-double-cta__pill {
+  padding-right: 30px;
+  padding-left: 54px;
+}
+
+.mkt-double-cta:hover .mkt-double-cta__badge--outgoing {
+  right: -32px;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.mkt-double-cta:hover .mkt-double-cta__badge--incoming {
+  left: 8px;
+  transform: translateY(-50%);
+}
+
+/* Ink-tinted ring for the same reason the default one is blue: a blue case
+   around a black pill would read as a third colour rather than a housing. */
+.mkt-double-cta--dark {
+  --cta-fill: linear-gradient(110deg, #323232 0%, #000 100%);
+  border-color: #00000038;
+  background: #0000001a;
+  box-shadow:
+    inset 0 1px 1px #ffffff8c,
+    0 2px 10px -2px #00000038;
+}
+
+/* Nav: the same construction at chrome scale. */
+.mkt-double-cta--nav .mkt-double-cta__pill {
+  padding: 10px 40px 10px 24px;
+}
+
+.mkt-double-cta--nav .mkt-double-cta__label {
+  font-size: var(--text-mkt-sm);
+  font-weight: 700;
+}
+
+.mkt-double-cta--nav .mkt-double-cta__badge {
+  width: 22px;
+  height: 22px;
+}
+
+.mkt-double-cta--nav:hover .mkt-double-cta__pill {
+  padding-right: 24px;
+  padding-left: 40px;
+}
+
+/* Right-icon: the mirror image — the arrow starts on the left and exits
+   right, so every horizontal pair above is swapped. */
+.mkt-double-cta--right-icon .mkt-double-cta__pill {
+  padding-right: 30px;
+  padding-left: 54px;
+}
+
+.mkt-double-cta--right-icon .mkt-double-cta__badge--outgoing {
+  right: auto;
+  left: 8px;
+}
+
+.mkt-double-cta--right-icon .mkt-double-cta__badge--incoming {
+  right: -32px;
+  left: auto;
+}
+
+.mkt-double-cta--right-icon:hover .mkt-double-cta__pill {
+  padding-right: 54px;
+  padding-left: 30px;
+}
+
+.mkt-double-cta--right-icon:hover .mkt-double-cta__badge--outgoing {
+  right: auto;
+  left: calc(100% + 1px);
+}
+
+.mkt-double-cta--right-icon:hover .mkt-double-cta__badge--incoming {
+  right: 8px;
+  left: auto;
+}
+
+/* Mobile sizes apply to the page CTA only — nav chrome is already compact. */
+@media (max-width: 639px) {
+  .mkt-double-cta:not(.mkt-double-cta--nav) .mkt-double-cta__pill {
+    padding: 8px 44px 8px 20px;
+  }
+
+  .mkt-double-cta:not(.mkt-double-cta--nav) .mkt-double-cta__badge {
+    width: 28px;
+    height: 28px;
+  }
+
+  .mkt-double-cta:not(.mkt-double-cta--nav):hover .mkt-double-cta__pill {
+    padding-right: 20px;
+    padding-left: 44px;
+  }
+}
+
+/* The badge swap is decoration: the label and target never move without it. */
+@media (prefers-reduced-motion: reduce) {
+  .mkt-double-cta__pill,
+  .mkt-double-cta__badge {
+    transition: none;
+  }
+}

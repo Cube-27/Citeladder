@@ -50,11 +50,14 @@
    would duplicate preflight and the whole utility layer. Unused @theme
    values are tree-shaken — app routes pay nothing for this.
 
-   Two owners: -theme holds the @theme token block plus the scene rules a
-   utility cannot express; -motion holds every keyframe and scroll timeline.
+   Three owners: -theme holds the @theme token block plus the scene rules a
+   utility cannot express; -motion holds every keyframe and scroll timeline;
+   -cta owns the double-ring CTA construction, which is a component rule and
+   so does not belong in the token file.
    The split keeps the token file inside its deliberate 400-line budget. */
 @import './(marketing)/marketing-theme.css';
 @import './(marketing)/marketing-motion.css';
+@import './(marketing)/marketing-cta.css';
 
 /* Chrome rules (focus rings, selection, the logo mark, scrollbars, a11y
    media queries) — no tokens, so it comes last. */

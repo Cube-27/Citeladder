@@ -28,7 +28,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from app.core.config.audits import MEASUREMENT_MODE_BENCHMARK, MEASUREMENT_MODE_PULSE
+from app.core.config.audits import (
+    MEASUREMENT_MODE_BENCHMARK,
+    MEASUREMENT_MODE_PULSE,
+)
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
@@ -177,6 +180,16 @@ _ROUTE_PRICING_CATALOGS: Final[dict[str, dict[RouteIdentity, RoutePricing]]] = {
 # expected costs per execution — NOT unit rates — so no provider rate card is
 # derived from them. OpenAI/Google token estimates and every per-search fee
 # stay None: funded admission reads ``complete`` and fails closed there.
+#
+# STALE-BUT-CONSERVATIVE: these were measured on ``claude-sonnet-4-6``, and the
+# Claude route now runs ``claude-haiku-4-5``. They are retained rather than
+# deleted because they are wrong in the SAFE direction — Haiku 4.5 is ~3x
+# cheaper than Sonnet 4.6 per token, so the frozen figures OVERSTATE the cost
+# of a Haiku execution. Funded admission therefore reserves more budget than a
+# run consumes: it may deny a run that would have fit, but can never admit one
+# it cannot pay for. They are NOT rescaled by the published price ratio (a
+# number derived from a rate card is not an observation). Replace with a live
+# Haiku 4.5 measurement to recover the lost headroom.
 _EXPECTED_COST_CATALOG: Final[
     dict[tuple[RouteIdentity, str], _ExpectedCostEstimate]
 ] = {

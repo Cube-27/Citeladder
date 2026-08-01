@@ -29,9 +29,12 @@ from app.core.config.analysis import (
     AMBIGUOUS_ALIASES,
     FANOUT_FEATURE_RULES,
     GEMINI_25_FLASH_INPUT_PER_MILLION_USD,
+    GEMINI_25_FLASH_LITE_INPUT_PER_MILLION_USD,
+    GEMINI_25_FLASH_LITE_OUTPUT_PER_MILLION_USD,
     GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD,
     GEMINI_25_GROUNDED_PROMPT_USD,
     TOKENS_PER_MILLION,
+    uses_gemini_flash_lite_pricing,
     uses_gemini_flash_pricing,
 )
 from app.core.config.costs import MICRO_USD_PER_USD
@@ -590,16 +593,22 @@ def _aggregate_cost(
 
     token_estimate = 0.0
     grounding_if_billable = 0.0
-    # ``gemini-flash-latest`` is an alias that currently resolves to the 2.5-flash
-    # generation, so it shares the same public paid-list pricing.
+    # Flash and Flash-Lite are DIFFERENT price cards; the active Gemini route
+    # is Flash-Lite. Grounded-prompt pricing is shared between the two.
+    input_rate: float | None
+    output_rate: float | None
     if uses_gemini_flash_pricing(config.provider, config.model):
+        input_rate = GEMINI_25_FLASH_INPUT_PER_MILLION_USD
+        output_rate = GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD
+    elif uses_gemini_flash_lite_pricing(config.provider, config.model):
+        input_rate = GEMINI_25_FLASH_LITE_INPUT_PER_MILLION_USD
+        output_rate = GEMINI_25_FLASH_LITE_OUTPUT_PER_MILLION_USD
+    else:
+        input_rate = output_rate = None
+    if input_rate is not None and output_rate is not None:
         token_estimate = (
-            token_usage["input_tokens"]
-            * GEMINI_25_FLASH_INPUT_PER_MILLION_USD
-            / TOKENS_PER_MILLION
-            + token_usage["output_tokens"]
-            * GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD
-            / TOKENS_PER_MILLION
+            token_usage["input_tokens"] * input_rate / TOKENS_PER_MILLION
+            + token_usage["output_tokens"] * output_rate / TOKENS_PER_MILLION
         )
         grounding_if_billable = grounded_requests * GEMINI_25_GROUNDED_PROMPT_USD
     return {

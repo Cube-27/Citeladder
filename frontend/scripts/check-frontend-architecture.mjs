@@ -62,6 +62,13 @@ const lineBudgets = [
   // motion. If it starts accumulating layout or colour, split it instead.
   // (ADS Phase A considered 300 → 320 and left it: that phase adds no motion.)
   { file: 'app/(marketing)/marketing-motion.css', maxLines: 300 },
+  // The double-ring CTA. Split from -theme.css on the same principle as
+  // -motion.css: that file's header forbids raising its budget to absorb a
+  // component rule, and this is one. It owns ONE construction — the shell,
+  // the clipped pill, the two trading badges and their variants. A second
+  // unrelated component rule does not belong here; it needs its own owner or,
+  // better, a primitive in components/marketing/primitives/.
+  { file: 'app/(marketing)/marketing-cta.css', maxLines: 215 },
   { file: 'components/ui/theme-toggle.tsx', maxLines: 120 },
   { file: 'lib/theme.ts', maxLines: 160 },
   // F5 app shell: composition only — split any sub-piece that outgrows this.

@@ -636,7 +636,7 @@ async def test_public_provider_rows_mark_coming_soon_engines_unavailable(
         {
             "logical_engine": "chatgpt",
             "transport_provider": "openai",
-            "model": "gpt-5.4",
+            "model": "gpt-5.6-luna",
         }
     ]
     # Public availability vocabulary only — never a connection state.

@@ -45,15 +45,27 @@ ACTIVE_TRANSPORTS: Final[frozenset[str]] = frozenset(
 # tuples are allowed. The ``/provider-catalog`` endpoint projects this;
 # adapters validate their requested model against it. Exactly one approved
 # transport per engine (v2 direct-only).
+# Every model here is the CHEAPEST non-reasoning tier its transport offers, and
+# every id is an EXPLICIT version rather than a moving alias: a floating alias
+# (the former ``gemini-flash-latest``) silently re-points the measured model
+# under a frozen snapshot, which breaks measurement identity (invariant 7).
 APPROVED_ROUTES: Final[dict[str, dict[str, str]]] = {
     ENGINE_CHATGPT: {
-        TRANSPORT_OPENAI: "gpt-5.4",
+        # Cheapest CURRENT-generation OpenAI tier ($0.20/$1.20 per Mtok).
+        # ``gpt-5-nano`` is cheaper still but is a reasoning model, so it
+        # cannot satisfy the no-reasoning requirement; Luna exposes an
+        # explicit ``none`` effort and the route pins it below.
+        TRANSPORT_OPENAI: "gpt-5.6-luna",
     },
     ENGINE_CLAUDE: {
-        TRANSPORT_ANTHROPIC: "claude-sonnet-4-6",
+        # Cheapest Anthropic tier ($1/$5 per Mtok); thinking off by default.
+        TRANSPORT_ANTHROPIC: "claude-haiku-4-5",
     },
     ENGINE_GEMINI: {
-        TRANSPORT_GOOGLE: "gemini-flash-latest",
+        # Cheapest Gemini tier ($0.10/$0.40 per Mtok) AND the only Flash-Lite
+        # that can disable thinking outright — 3.1/3.5 Flash-Lite floor at
+        # ``minimal`` and cost 2.5-3x more.
+        TRANSPORT_GOOGLE: "gemini-2.5-flash-lite",
     },
 }
 
@@ -109,18 +121,22 @@ ROUTE_POLICIES: Final[dict[tuple[str, str], RoutePolicy]] = {
         representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
         batch_enabled=False,
     ),
-    # OpenAI + Google reasoning pins stay ``unverified``: until fixtures or live
-    # evidence establish a supported low value, nothing is pinned and the
-    # cost-sensitive funded route is ineligible.
+    # OpenAI + Google now pin reasoning OFF. Both routes moved to a cheapest
+    # tier that exposes a documented disable value — ``reasoning.effort:
+    # "none"`` on ``gpt-5.6-luna`` and ``thinkingBudget: 0`` on
+    # ``gemini-2.5-flash-lite`` — so "no supported low value exists" (the
+    # reason these were ``unverified``) no longer holds. The pin is REQUIRED,
+    # not cosmetic: sending no control lets the route default apply, and
+    # Luna's default effort is NOT none.
     (ENGINE_CHATGPT, TRANSPORT_OPENAI): RoutePolicy(
-        reasoning_effort=REASONING_EFFORT_UNVERIFIED,
-        reasoning_pinnable=False,
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
         representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
         batch_enabled=False,
     ),
     (ENGINE_GEMINI, TRANSPORT_GOOGLE): RoutePolicy(
-        reasoning_effort=REASONING_EFFORT_UNVERIFIED,
-        reasoning_pinnable=False,
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
         representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
         batch_enabled=False,
     ),

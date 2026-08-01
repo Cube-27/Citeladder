@@ -81,6 +81,7 @@ from app.core.config.projects import (
     DEFAULT_BENCHMARK_MODE,
     MAX_REPETITIONS,
     MIN_REPETITIONS,
+    PROMPT_ORIGIN_GENERATED,
 )
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.core.config.provider_catalog import (
@@ -566,6 +567,13 @@ def _evaluate_prompt_admission(
     """
     vocabulary = build_project_vocabulary(project)
     for prompt in prompts:
+        # ``generated`` is trusted persisted provenance, not a client claim:
+        # its writers either verify the backend's HMAC generation receipt or
+        # ground and filter model output before insert. Re-running the lexical
+        # overlap heuristic here rejects valid brand-neutral synonyms that the
+        # proof-bearing writer deliberately admitted.
+        if prompt.origin == PROMPT_ORIGIN_GENERATED:
+            continue
         result = validate_prompt_binding(prompt.text or "", vocabulary)
         if not result.accepted:
             raise TopicalBindingError(

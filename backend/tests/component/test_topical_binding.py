@@ -36,6 +36,7 @@ from app.core.config.entitlements import (
     CREDENTIAL_MODE_FUNDED,
     KEY_PULSE_CREDITS,
 )
+from app.core.config.projects import PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
     CODE_BINDING_VOCABULARY_EMPTY,
     CODE_PROMPT_OFF_TOPIC,
@@ -326,6 +327,36 @@ async def test_audit_admission_rejects_off_domain_active_prompt(
             )
         assert exc_info.value.code == CODE_PROMPT_OFF_TOPIC
         await session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_audit_admission_honors_persisted_generated_provenance(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A generated neutral synonym is not rejected by a second lexical gate."""
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=0)
+        session.add(
+            Prompt(
+                prompt_set_id=seed.prompt_set_id,
+                text="Which agencies improve experimentation outcomes?",
+                status="active",
+                origin=PROMPT_ORIGIN_GENERATED,
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        audit = await create_audit(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            engines=seed.engines,
+            trigger=AUDIT_TRIGGER_MANUAL,
+            prompt_set_id=seed.prompt_set_id,
+            repetitions=1,
+        )
+        assert audit.id is not None
 
 
 @pytest.mark.asyncio

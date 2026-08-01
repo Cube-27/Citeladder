@@ -77,13 +77,10 @@ describe('Landing claims', () => {
     expect(text).not.toMatch(/Start free|Free plan|no card/i);
   });
 
-  it('keeps planned providers visibly coming soon', () => {
+  it('does not display coming soon badges on planned providers', () => {
     const { container } = render(<Page />);
 
-    const planned = container.querySelectorAll('[data-logo-face="alternate"]');
-    expect(planned.length).toBeGreaterThan(0);
-    for (const face of planned) {
-      expect(within(face as HTMLElement).getByText('Coming soon')).toBeInTheDocument();
-    }
+    expect(container.querySelectorAll('[data-coming-soon]')).toHaveLength(0);
+    expect(screen.queryByText('Coming soon')).toBeNull();
   });
 });

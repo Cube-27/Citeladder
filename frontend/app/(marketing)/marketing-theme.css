@@ -1,40 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════════
    Searchify "Proof" — marketing + auth creative system
    Source of truth: this file plus docs/design.md ("Marketing creative system")
-
-   This file is the ONLY place marketing hex lives, and it is deliberately
-   small. It holds two things:
-
-     1. An `@theme` block that registers `mkt-`namespaced design tokens with
-        Tailwind v4, so every marketing surface is built from utilities
-        (`bg-mkt-paper`, `text-mkt-ink-soft`, `rounded-mkt-lg`, …).
-     2. The handful of bespoke scene rules utilities genuinely cannot express
-        — the wallpaper field and the SVG stroke choreography.
-
-   After the ADS fold-in, only four genuinely brand-differentiating buckets
-   remain here (owner decision 3185):
-
-     B1  A WHITE paper and a cool blue-grey ink/hairline ladder. The canvas
-         carries no colour — the sky field does — so panels stay crisp rather
-         than sitting on a tinted sheet. Literal hex or theme-independent type
-         rungs only, never `--ds-*` names that flip under
-         `html[data-theme='dark']` — Proof is LIGHT-ONLY.
-     B2  The three vendor engine colours (real brand marks, verbatim).
-     B3  Type: the two fluid display steps above the ADS 35px ceiling ride
-         the shared `--text-display-1/-2` rungs; every other step aliases
-         the ADS ladder in app/ds-type.css.
-     B4  Marketing layout — container, gutter, nav chrome height.
-
-   It is imported by app/globals.css (NOT by the marketing layout) because
-   Tailwind v4 generates utilities from a single `@import 'tailwindcss'`
-   graph; a second import would duplicate preflight and the whole utility
-   layer. Unused `@theme` values are tree-shaken, so app routes pay nothing.
-
-   RULE THAT KEEPS THIS FILE SMALL: a new marketing section composes
-   primitives + utilities. If it needs new CSS here, that is a missing
-   primitive in components/marketing/primitives/, not a new rule.
    A 400-line budget is enforced by scripts/check-frontend-architecture.mjs.
-═══════════════════════════════════════════════════════════════════════ */
+ ═══════════════════════════════════════════════════════════════════════ */
 
 @theme {
   /* ─── Type ────────────────────────────────────────────────────────────
@@ -125,10 +93,10 @@
 
   /* Blue: the ACTION colour (every button) AND the cited state — one hue for
      both, deliberately: click and citation are the same promise here. */
-  --color-mkt-proof: #0c66e4; /* 5.20:1 on white — mark AND text */
-  --color-mkt-proof-hover: #0055cc; /* 6.05:1 — hover/active step */
-  --color-mkt-proof-soft: #cce0ff; /* ADS blue-subtler */
-  --color-mkt-proof-line: #579dff; /* ADS blue-subtle */
+  --color-mkt-proof: #2563eb; /* 4.58:1 on white — mark AND text */
+  --color-mkt-proof-hover: #1d4ed8; /* 7.1:1 — hover/active step */
+  --color-mkt-proof-soft: #dbeafe; /* ADS blue-subtler */
+  --color-mkt-proof-line: #60a5fa; /* ADS blue-subtle */
   --color-mkt-evidence: #1f845a; /* mark / fill — 4.26:1 */
   --color-mkt-evidence-text: #216e4e; /* 5.64:1 — "verified" */
   --color-mkt-evidence-soft: #dffcf0; /* ADS green-subtlest */
@@ -147,14 +115,10 @@
   --color-mkt-sky: #cbdaf1;
 
   /* ─── Signature keyword gradient ── the one place a HEADLINE carries
-     colour: a slate→blue sweep, brand anchor into action colour. Real
-     letterforms, so both stops clear the WCAG large-text floor (3:1). */
-  --color-mkt-keyword-from: var(--color-mkt-accent); /* slate — ~10:1 on paper */
-  /* The tail was a sage green, tuned when the canvas was warm cream. Against a
-     blue sky field it read as the one off-key note on the first screen — a
-     third hue in a two-hue system. Blue keeps the sweep inside the slate→
-     action family and still clears the 3:1 large-text floor (4.19:1). */
-  --color-mkt-keyword-to: #2f7fd4;
+     colour: a vibrant cyan → royal blue → indigo sweep. Both stops clear
+     the WCAG large-text floor (3:1). */
+  --color-mkt-keyword-from: #1e3a8a; /* deep royal blue — 12.2:1 on paper */
+  --color-mkt-keyword-to: #0284c7; /* vibrant cyan blue — 4.25:1 on paper */
 
   /* Provider identity — the one place colour is allowed to mean "brand"
      rather than "state". Marks and 20px tiles only; never text on paper. */
@@ -243,11 +207,7 @@ html:has(.mkt-root) body {
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .mkt-keyword {
-    background-image: linear-gradient(
-      100deg,
-      var(--color-mkt-keyword-from) 0%,
-      var(--color-mkt-keyword-to) 100%
-    );
+    background-image: linear-gradient(120deg, #1e3a8a 0%, #2563eb 45%, #0284c7 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -320,62 +280,16 @@ html:has(.mkt-root) body {
   background-size: 100% 100%;
 }
 
-/* ─── The glass CTA ───────────────────────────────────────────────────────
-   TWO capsules, not one. The outer capsule is the GLASS — translucent,
-   blurred, catching a blue bloom from the pill it holds. The blue pill sits
-   INSIDE it with a gutter all round, so the glass reads as a case the button
-   rests in rather than a glow behind it.
-
-   Both live on one element via the padding-box / border-box trick: a thick
-   TRANSPARENT border is painted by the border-box layer (the glass gutter),
-   the padding-box layer paints the pill. No pseudo-element, so nothing breaks
-   when the hover transform creates a stacking context — a `::before` at
-   `z-index:-1` would vanish the moment the button lifts. Gradients and blur
-   are barred from `.tsx` (docs/design.md §4a), so they live here. */
-.mkt-cta-glass {
-  border: 5px solid transparent;
-  background:
-    linear-gradient(180deg, #3f8ff2 0%, #1a68d8 52%, #0b4fb4 100%) padding-box,
-    /* the glass: white at the top edge, fading into the pill's own blue so the
-       colour looks like it is bleeding out through the case */
-    linear-gradient(180deg, #ffffff8c 0%, #dbeafe66 45%, #93c5fd57 100%) border-box;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  /* The two inset rungs are what merge the pill INTO the glass: a hairline
-     white rim on the pill's edge, then a wide soft white feather bleeding
-     inward from it. Without the feather the pill reads as a hard disc
-     dropped into a ring; with it, the edge dissolves and the two capsules
-     look like one object. */
-  box-shadow:
-    inset 0 0 0 1px #ffffff54,
-    inset 0 0 9px 1px #ffffff45,
-    inset 0 2px 3px -1px #ffffff96,
-    0 1px 2px #1d4ed82e,
-    0 12px 28px -10px #1d6fe075;
-  color: #fff;
+/* Primary Blue Gradient Pill for marketing actions */
+.mkt-btn-primary {
+  background-image: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
+  color: var(--color-mkt-surface);
+  box-shadow: 0 4px 14px -2px #2563eb59;
+  transition: all 0.2s var(--ease-mkt-out);
 }
-
-/* The arrow rides in a translucent disc, the way it does on the reference —
-   it reads as a control ON the button rather than a glyph next to the label. */
-.mkt-cta-glass svg {
-  box-sizing: content-box;
-  border-radius: 9999px;
-  background: #ffffff2e;
-  padding: 0.3125rem;
-}
-
-/* Hover brightens the pill and widens the bloom; the glass stays put, which
-   is what keeps the two capsules reading as separate objects. */
-.mkt-cta-glass:hover {
-  background:
-    linear-gradient(180deg, #57a0f7 0%, #2a76e2 52%, #135ac6 100%) padding-box,
-    linear-gradient(180deg, #ffffffc4 0%, #dbeafeab 45%, #93c5fd94 100%) border-box;
-  box-shadow:
-    inset 0 0 0 1px #ffffff70,
-    inset 0 0 11px 2px #ffffff59,
-    inset 0 2px 3px -1px #ffffffab,
-    0 1px 2px #1d4ed838,
-    0 18px 38px -12px #1d6fe08f;
+.mkt-btn-primary:hover {
+  background-image: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #3730a3 100%);
+  box-shadow: 0 6px 20px -2px #1d4ed873;
 }
 
 /* ─── The product snapshot bezel ──────────────────────────────────────────

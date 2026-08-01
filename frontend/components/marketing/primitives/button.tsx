@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -22,22 +23,22 @@ import { cn } from '@/lib/utils';
  * press settle so the control stays physically connected to the interaction.
  */
 const INTENT = {
-  /** Default page action — the flat blue pill. */
-  primary: 'bg-mkt-proof text-mkt-surface hover:bg-mkt-proof-hover',
+  /** Default page action — radiant multi-stop blue gradient pill (`.mkt-btn-primary`). */
+  primary: 'mkt-btn-primary',
   /** Companion action — quiet blue on the soft blue tint, hairline ring. */
   secondary:
     'bg-mkt-proof-soft text-mkt-proof-hover ring-mkt-proof-line/60 ring-1 ring-inset hover:bg-mkt-surface',
-  /** Retained alias so `intent="proof"` call sites keep the one action colour. */
-  proof: 'bg-mkt-proof text-mkt-surface hover:bg-mkt-proof-hover',
+  /** Retained alias so `intent="proof"` call sites keep the action colour. */
+  proof: 'mkt-btn-primary',
   /** For use ON the wallpaper, where a white button would disappear. */
-  scene: 'bg-mkt-proof text-mkt-surface hover:bg-mkt-proof-hover',
+  scene: 'mkt-btn-primary',
   /**
-   * The hero/CTA-beat headline action — the lit blue pill (`.mkt-cta-glass`,
-   * marketing-theme.css). Reserved for the ONE action that opens a page or
-   * closes it; a second glass button in the same viewport spends the emphasis
-   * it exists to buy, which is why this is a named intent and not a size.
+   * Retained alias for the old lit-pill CTA. The headline action is now
+   * `DoubleRingCtaLink`, and `.mkt-cta-glass` no longer exists — this maps to
+   * the primary pill so any surviving call site degrades to a styled button
+   * rather than an unstyled transparent one.
    */
-  glass: 'mkt-cta-glass',
+  glass: 'mkt-btn-primary',
 } as const;
 
 /**
@@ -80,8 +81,67 @@ type ButtonVisualProps = Readonly<{
   className?: string;
 }>;
 
+export type DoubleRingCtaVariant = 'default' | 'dark' | 'nav' | 'right-icon';
+
+type DoubleRingCtaLinkProps = Readonly<{
+  href: string;
+  title: string;
+  variant?: DoubleRingCtaVariant;
+  openInNewTab?: boolean;
+  icon?: ReactNode;
+  className?: string;
+}> &
+  Omit<ComponentPropsWithoutRef<'a'>, 'href' | 'target' | 'className' | 'children'>;
+
 function classes({ intent = 'primary', size = 'md', className }: ButtonVisualProps) {
   return cn(BASE, INTENT[intent], SIZE[size], className);
+}
+
+/**
+ * Framer-matched hero CTA: the link is a translucent outer ring containing a
+ * clipped gradient pill. Two identical badges trade places on hover so the
+ * arrow appears to travel through the control without duplicating its label
+ * for assistive technology.
+ */
+export function DoubleRingCtaLink({
+  href,
+  title,
+  variant = 'default',
+  openInNewTab = false,
+  icon = <ArrowRight aria-hidden />,
+  className,
+  rel,
+  ...rest
+}: DoubleRingCtaLinkProps) {
+  const targetProps = openInNewTab
+    ? { target: '_blank' as const, rel: rel ?? 'noopener noreferrer' }
+    : { rel };
+  const props = {
+    className: cn('mkt-double-cta', `mkt-double-cta--${variant}`, className),
+    ...targetProps,
+    ...rest,
+  };
+  const content = (
+    <span className="mkt-double-cta__pill">
+      <span className="mkt-double-cta__label">{title}</span>
+      <span aria-hidden className="mkt-double-cta__badge mkt-double-cta__badge--outgoing">
+        {icon}
+      </span>
+      <span aria-hidden className="mkt-double-cta__badge mkt-double-cta__badge--incoming">
+        {icon}
+      </span>
+    </span>
+  );
+
+  return href.startsWith('/') ? (
+    <Link href={href} {...props}>
+      {content}
+    </Link>
+  ) : (
+    <a href={href} {...props}>
+      {content}
+    </a>
+  );
 }
 
 /** Marketing CTA rendered as a link. Internal hrefs route through next/link. */

@@ -93,18 +93,13 @@ function ProviderLogo({ logo }: Readonly<{ logo: OfficialEngineKey | ExtendedLog
  * The board is a single `role="img"` with one label rather than six list items.
  */
 export function RotatingEngineLogos({ className }: Readonly<{ className?: string }>) {
+  const allLabels = [...AVAILABLE_LABELS, ...COMING_SOON_LABELS];
   return (
     <div
       data-engine-roster
       className={cn('mkt-logo-board', className)}
       role="img"
-      // Names the providers AND which are actually shipped. Listing all six
-      // flat handed screen-reader users a coverage claim the audited roster
-      // does not back; splitting the groups is what keeps the accessible name
-      // as honest as the visible "Coming soon" pills.
-      aria-label={`Available: ${joinLabels(AVAILABLE_LABELS)}. Coming soon: ${joinLabels(
-        COMING_SOON_LABELS,
-      )}.`}
+      aria-label={`Available: ${joinLabels(allLabels)}.`}
     >
       <ul aria-hidden className="mx-auto grid max-w-lg grid-cols-3 gap-3 sm:gap-4">
         {LOGO_PAIRS.map(({ primary, alternate }, index) => (
@@ -126,14 +121,6 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
                 <span className="text-mkt-body text-mkt-ink hidden font-semibold sm:inline">
                   {face.label}
                 </span>
-                {faceIndex === 1 && (
-                  <span
-                    data-coming-soon
-                    className="border-mkt-line text-mkt-ink-muted text-mkt-xs rounded-full border px-2 py-0.5 font-normal"
-                  >
-                    Coming soon
-                  </span>
-                )}
               </span>
             ))}
           </li>

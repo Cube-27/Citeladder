@@ -822,13 +822,22 @@ def test_openai_payload_cap_falls_back_to_config_when_unsupplied() -> None:
     assert payload["max_output_tokens"] == provider_catalog_settings.max_output_tokens
 
 
-def test_openai_payload_sends_no_reasoning_control_while_unverified() -> None:
-    # The chatgpt/openai route pins reasoning ``unverified``; the adapter must
-    # not invent a value for it.
+def test_openai_payload_pins_reasoning_off() -> None:
+    # The chatgpt/openai route pins reasoning OFF, and the pin must be STATED:
+    # omitting the key lets the model's own default effort apply, which is not
+    # none.
     policy = route_policy("chatgpt", "openai")
-    assert policy.reasoning_effort == REASONING_EFFORT_UNVERIFIED
+    assert policy.reasoning_effort == REASONING_EFFORT_OFF
     payload = openai_payload(
         _request(reasoning_effort=policy.reasoning_effort), country_code=""
+    )
+    assert payload["reasoning"] == {"effort": "none"}
+
+
+def test_openai_payload_sends_no_reasoning_control_when_unpinned() -> None:
+    # The adapter must still never invent a value for an unpinned route.
+    payload = openai_payload(
+        _request(reasoning_effort=REASONING_EFFORT_UNVERIFIED), country_code=""
     )
     assert "reasoning" not in payload
 
@@ -896,11 +905,23 @@ def test_gemini_payload_includes_grounding_tools_for_benchmark() -> None:
     assert payload["max_output_tokens"] == 4096
 
 
-def test_gemini_payload_sends_no_thinking_control_while_unverified() -> None:
+def test_gemini_payload_pins_thinking_off() -> None:
     policy = route_policy("gemini", "google")
-    assert policy.reasoning_effort == REASONING_EFFORT_UNVERIFIED
+    assert policy.reasoning_effort == REASONING_EFFORT_OFF
     payload = gemini_payload(
-        _request(model="gemini-flash-latest", reasoning_effort=policy.reasoning_effort)
+        _request(
+            model="gemini-2.5-flash-lite", reasoning_effort=policy.reasoning_effort
+        )
+    )
+    assert payload["thinking_config"] == {"thinking_budget": 0}
+
+
+def test_gemini_payload_sends_no_thinking_control_when_unpinned() -> None:
+    payload = gemini_payload(
+        _request(
+            model="gemini-2.5-flash-lite",
+            reasoning_effort=REASONING_EFFORT_UNVERIFIED,
+        )
     )
     assert "thinking" not in payload
     assert "thinking_config" not in payload

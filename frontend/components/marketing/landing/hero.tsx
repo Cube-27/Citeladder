@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DoubleRingCtaLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { HeroAtmosphere } from './hero-atmosphere';
@@ -45,10 +45,12 @@ export function Hero() {
           </h1>
           <p className="text-mkt-lead text-mkt-ink-soft mx-auto mt-6 max-w-[80ch]">{hook.body}</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
-            <ButtonLink href={DEMO_HREF} intent="glass" size="lg" className="w-full sm:w-auto">
-              {hook.primaryCta}
-              <ArrowRight aria-hidden />
-            </ButtonLink>
+            <DoubleRingCtaLink
+              href={DEMO_HREF}
+              title={hook.primaryCta}
+              icon={<ArrowRight aria-hidden />}
+              className="self-center"
+            />
             <ButtonLink
               href="#how-it-works"
               intent="secondary"

@@ -61,6 +61,17 @@ describe('Landing page (public marketing `/`)', () => {
     expect(h1s[0]).toBeInTheDocument();
   });
 
+  it('uses the double-ring CTA construction for the hero action', () => {
+    stubAnonymous();
+    const { container } = renderWithProviders(<Page />);
+
+    const hero = container.querySelector('header');
+    const cta = hero?.querySelector('.mkt-double-cta');
+    expect(cta).not.toBeNull();
+    expect(cta?.querySelector('.mkt-double-cta__pill')).not.toBeNull();
+    expect(cta?.querySelectorAll('.mkt-double-cta__badge')).toHaveLength(2);
+  });
+
   it('exposes the section anchors the shared chrome links to', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);

@@ -9,7 +9,8 @@ Covers the config-owned foundation the planner/worker/adapters build on:
     axes — constraining one never constrains the other;
   - ``NormalizedUsage`` starts entirely unknown (unknown never becomes zero);
   - ``FinishReason`` is exactly the seven canonical values;
-  - route reasoning pins: Anthropic pinned off, OpenAI/Google ``unverified``.
+  - route reasoning pins: every active route is pinned off, now that each one
+    runs a cheapest tier exposing a documented disable value.
 
 No assertion here attributes any cost/latency result to the candidate wording:
 the candidate is unmeasured until a live-key measurement run validates it.
@@ -47,7 +48,6 @@ from app.core.config.provider_catalog import (
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
     REASONING_EFFORT_OFF,
-    REASONING_EFFORT_UNVERIFIED,
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
@@ -217,16 +217,20 @@ def test_anthropic_reasoning_is_pinned_off() -> None:
         (ENGINE_GEMINI, TRANSPORT_GOOGLE),
     ],
 )
-def test_openai_and_google_reasoning_pins_stay_unverified(
+def test_openai_and_google_reasoning_pins_are_off(
     engine: str, transport: str
 ) -> None:
-    """No supported low value is established, so the pin stays unverified."""
+    """Both routes moved to a tier with a documented disable value.
+
+    ``gpt-5.6-luna`` accepts ``reasoning.effort: "none"`` and
+    ``gemini-2.5-flash-lite`` accepts ``thinkingBudget: 0``, so the reason
+    these were ``unverified`` (no supported low value existed) no longer holds.
+    """
     policy = route_policy(engine, transport)
 
-    assert policy.reasoning_effort == REASONING_EFFORT_UNVERIFIED
-    assert policy.reasoning_pinnable is False
-    # ``unverified`` must never be read as "off".
-    assert is_reasoning_pinned_off(engine, transport) is False
+    assert policy.reasoning_effort == REASONING_EFFORT_OFF
+    assert policy.reasoning_pinnable is True
+    assert is_reasoning_pinned_off(engine, transport) is True
 
 
 def test_every_active_route_declares_a_policy_and_no_batch_path() -> None:

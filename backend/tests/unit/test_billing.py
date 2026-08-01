@@ -573,9 +573,9 @@ def test_plan_period_grant_specs_reads_the_catalog_and_rejects_stale_revisions(
 def test_active_write_enums_stay_openai_anthropic_google_only() -> None:
     assert ACTIVE_TRANSPORTS == frozenset({"openai", "anthropic", "google"})
     assert APPROVED_ROUTES == {
-        "chatgpt": {"openai": "gpt-5.4"},
-        "claude": {"anthropic": "claude-sonnet-4-6"},
-        "gemini": {"google": "gemini-flash-latest"},
+        "chatgpt": {"openai": "gpt-5.6-luna"},
+        "claude": {"anthropic": "claude-haiku-4-5"},
+        "gemini": {"google": "gemini-2.5-flash-lite"},
     }
     coming_soon = {"grok", "perplexity", "copilot"}
     assert not coming_soon & set(APPROVED_ROUTES)
