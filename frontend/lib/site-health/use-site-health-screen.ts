@@ -66,13 +66,23 @@ export function useSiteHealthScreen(projectId: string | null) {
   // An active crawl the client has stopped polling: surfaced so the screen can
   // say so explicitly rather than showing a progress state that never advances.
   const stalled = isCrawlStalled(crawl);
-  const plan: SiteHealthEntitlement['plan_key'] = entitlementQuery.data?.plan_key ?? 'free';
+  /**
+   * The neutral access mode, or null when the entitlement is not usable.
+   *
+   * FAIL CLOSED — there is deliberately no `?? 'sample'` fallback here. An
+   * entitlement that is pending, errored, or `entitlement_unresolved` yields
+   * null, which resolves the phase to `'resolving'` and enables no crawl or
+   * selection action. Defaulting would let an unresolved account act as if it
+   * had been granted the minimum, which is a grant we never verified.
+   */
+  const entitlement: SiteHealthEntitlement | null =
+    entitlementQuery.data?.resolver_status === 'resolved' ? entitlementQuery.data : null;
+  const accessMode = entitlement?.access_mode ?? null;
   // `undefined` / `null` mean "this input has not settled once yet" — the phase
   // resolution below is total over that state instead of resolving against
-  // whichever query happened to land first. A FAILED query counts as settled:
-  // it has an answer (the fallback), and waiting forever would be worse.
+  // whichever query happened to land first.
   const crawlInput = dashboardQuery.isPending ? undefined : crawl;
-  const planInput = entitlementQuery.isPending ? null : plan;
+  const accessModeInput = entitlementQuery.isPending ? null : accessMode;
 
   // SSE invalidation accelerator (polling stays the baseline). Dropped for a
   // stalled crawl too: if we have given up polling it, holding a reconnecting
@@ -131,8 +141,8 @@ export function useSiteHealthScreen(projectId: string | null) {
   const monitoredInput = monitoredQuery.isPending ? null : (projectSelectedTotal ?? 0) > 0;
 
   const phase: SiteHealthPhase = useMemo(
-    () => resolveSiteHealthPhase(crawlInput, planInput, monitoredInput),
-    [crawlInput, planInput, monitoredInput],
+    () => resolveSiteHealthPhase(crawlInput, accessModeInput, monitoredInput),
+    [crawlInput, accessModeInput, monitoredInput],
   );
 
   // Canonical-screen view-model: the same layout stays mounted through the

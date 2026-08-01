@@ -421,6 +421,21 @@ export const providerCatalogSchema = responseObject({
   engines: z.array(providerCatalogEngineSchema),
 });
 
+// `POST /provider-connections/{id}/test`. Lives here with every other response
+// contract rather than beside the caller, and locks `status` to the two values
+// the backend actually emits so a probe outcome cannot be a free string.
+export const connectionTestResultSchema = responseObject({
+  connection_id: uuid(),
+  status: z.enum(['ok', 'failed']),
+  error_code: z.string().default(''),
+  detail: z.string().default(''),
+  latency_ms: z.number().nullable().default(null),
+  logical_engine: z.string().default(''),
+  transport_provider: z.string().default(''),
+  transport_model: z.string().default(''),
+  tested_at: z.string(),
+});
+
 // ---------------------------------------------------------------------------
 // Audits (runs) + executions + evidence
 // ---------------------------------------------------------------------------
@@ -454,6 +469,27 @@ export const auditShoppingSurfaceSnapshotSchema = responseObject({
   transport_model: z.string(),
 });
 
+/**
+ * Canonical measurement mode. This is an axis INDEPENDENT of `benchmark_mode`
+ * (prompt framing): it selects the frozen route/output policy. `''` means the
+ * run predates the frozen policy block — render it as unknown, never as a
+ * default mode.
+ */
+export const measurementModeSchema = z.enum(['pulse', 'benchmark', '']);
+
+/**
+ * One measured route on an AGGREGATE surface. Aggregates carry a LIST of these
+ * in stable catalog order and must never be collapsed into a single model:
+ * `retrieval_enabled: null` means the audit predates the frozen policy, not
+ * "retrieval off".
+ */
+export const modelProvenanceSchema = responseObject({
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  transport_model: z.string(),
+  retrieval_enabled: z.boolean().nullable(),
+});
+
 // A run/audit projection (B5 `AuditResponse`). `random_seed` is a decimal
 // STRING (64-bit seed), `error_message` a non-null string ('' when unset), and
 // the engine provenance is carried but the provider key never is (invariant 6).
@@ -463,6 +499,9 @@ export const auditSchema = responseObject({
   project_id: uuid(),
   status: auditStatusSchema,
   benchmark_mode: z.string(),
+  // Aggregate surface: the frozen mode column plus every measured route.
+  measurement_mode: measurementModeSchema.default(''),
+  model_provenance: z.array(modelProvenanceSchema).default([]),
   repetitions: z.number().int(),
   random_seed: z.string(),
   requested_count: z.number().int(),
@@ -524,6 +563,10 @@ export const executionSchema = responseObject({
   // Frozen shopping-surface identity per task (B5; additive — older backends
   // omit it, so it parses with a default like `shopping_surface_snapshots`).
   shopping_surface: z.string().default(''),
+  // Execution surface: the provenance triple is SINGULAR (one execution = one
+  // exact model), projected from the frozen task snapshots only.
+  measurement_mode: measurementModeSchema.default(''),
+  retrieval_enabled: z.boolean().nullable().default(null),
   status: executionStatusSchema,
   attempt_count: z.number().int(),
   max_attempts: z.number().int(),
@@ -552,6 +595,9 @@ export const executionEvidenceSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
+  // Execution-level surface: singular model, frozen snapshots only.
+  measurement_mode: measurementModeSchema.default(''),
+  retrieval_enabled: z.boolean().nullable().default(null),
   prompt_index: z.number().int(),
   repetition: z.number().int(),
   prompt_class: z.string(),
@@ -613,6 +659,9 @@ export const visibilitySchema = responseObject({
   total_completed: z.number().int(),
   total_failed: z.number().int(),
   visibility_score: z.number(),
+  // Aggregate surface: never a forced singular model across engines.
+  measurement_mode: measurementModeSchema.default(''),
+  model_provenance: z.array(modelProvenanceSchema).default([]),
   rankings: z.array(rankingRowSchema),
   per_engine: z.array(visibilityEngineSchema),
   sentiment: z.string().nullable(),
@@ -632,28 +681,28 @@ export const visibilitySchema = responseObject({
 // number — the frontend never invents a total.
 // ---------------------------------------------------------------------------
 
-// Workspace Site Health plan. Free and Starter only; billing is out of scope.
-export const siteHealthPlanSchema = z.enum(['free', 'starter']);
-
-// Capability access mode: Free gets a server-selected `sample`; Starter gets
-// user `selection` of a persistent monitored set.
+// Capability access mode: a zero-allowance account gets a server-selected
+// `sample`; an account with a monitored allowance gets user `selection` of a
+// persistent monitored set. This is a NEUTRAL capability, not a plan name —
+// there is deliberately no `plan_key` here to branch on.
 export const siteHealthAccessModeSchema = z.enum(['sample', 'selection']);
 
-// `GET /entitlements` — current workspace Site Health capabilities + revision.
-// `monitored_url_limit` is the ONLY authority for the selection quota — the
-// frontend must read it here and never hard-code 50. `sample_url_limit` is the
-// Free automatic sample size (10). `can_view_discovered_total` gates every
-// discovered-count disclosure (false for Free).
+// `GET /entitlements` — the workspace's neutral Site Health runtime
+// projection. `monitored_url_limit` is the ONLY authority for the selection
+// quota (never hard-code 50); `count_disclosure` gates every discovered-count
+// disclosure. `resolver_status` is the fail-closed signal: anything other than
+// `resolved` must enable no crawl or selection action.
 export const siteHealthEntitlementSchema = responseObject({
   workspace_id: uuid(),
-  plan_key: siteHealthPlanSchema,
   access_mode: siteHealthAccessModeSchema,
   sample_url_limit: z.number().int(),
   monitored_url_limit: z.number().int(),
-  can_view_discovered_total: z.boolean(),
-  capability_revision: z.number().int(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  count_disclosure: z.boolean(),
+  resolver_status: z.enum(['resolved', 'entitlement_unresolved']),
+  registry_revision: z.string(),
+  entitlement_lifecycle_version: z.number().int(),
+  valid_until: z.string().nullable(),
+  contributing_grant_ids: z.array(uuid()),
 });
 
 // Independent crawl lifecycle sub-states (plan §Persistence lifecycle states).
@@ -1189,6 +1238,14 @@ export const visibilityTrendPointSchema = responseObject({
   rankings: z.array(visibilityTrendRankingRowSchema),
   sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
+  // Measurement identity partition (invariant 7): a point folds only inside
+  // one (measurement_mode, transport_model, retrieval_enabled) identity, so
+  // the client must never recombine points across these. `transport_model` is
+  // null when the point spans several models — see `model_provenance`.
+  measurement_mode: measurementModeSchema.default(''),
+  transport_model: z.string().nullable().default(null),
+  retrieval_enabled: z.boolean().nullable().default(null),
+  model_provenance: z.array(modelProvenanceSchema).default([]),
   // Provenance (invariant 4): every source snapshot this point folds.
   source_snapshot_ids: z.array(uuid()),
   // Distinct versions across the folded snapshots (invariant 4).
@@ -1253,6 +1310,9 @@ export const visibilityExecutionEvidenceSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
+  // Execution-level surface (singular model).
+  measurement_mode: measurementModeSchema.default(''),
+  retrieval_enabled: z.boolean().nullable().default(null),
   search_used: z.boolean(),
   search_query_count: z.number().int(),
   query_text_available: z.boolean(),
@@ -2323,66 +2383,347 @@ export const recomputeResponseSchema = responseObject({
 // Billing (provider ids, plan ids, secrets, and billing PII never cross wire)
 // ---------------------------------------------------------------------------
 
-export const billingPriceSchema = responseObject({
-  region: z.enum(['india', 'international']),
-  currency: z.enum(['INR', 'USD']),
-  base_amount_minor: z.number().int().nonnegative(),
-  tax_amount_minor: z.number().int().nonnegative(),
-  total_amount_minor: z.number().int().nonnegative(),
-  tax_label: z.string().nullable(),
-  checkout_available: z.boolean(),
+// Plan keys are LOCKED to the four the backend publishes. A retired `free`/
+// `paid` key must fail parsing rather than render as an unknown tier.
+export const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
+export const credentialModeSchema = z.enum(['byok', 'funded']);
+export const billingRegionSchema = z.enum(['india', 'international']);
+export const catalogAvailabilitySchema = z.enum(['available', 'unavailable']);
+export const grantSourceKindSchema = z.enum(['plan', 'addon', 'topup', 'trial', 'override']);
+export const entitlementStatusSchema = z.enum(['resolved', 'entitlement_unresolved']);
+export const capabilityTypeSchema = z.enum([
+  'flag',
+  'counter.occupancy',
+  'counter.consumable',
+  'counter.rate',
+  'level',
+]);
+export const counterCapabilityTypeSchema = z.enum([
+  'counter.occupancy',
+  'counter.consumable',
+  'counter.rate',
+]);
+/**
+ * `limit_state` is the ONLY authority for what a null aggregate means: the
+ * backend never uses null to mean both "unlimited" and "unresolved". The UI
+ * must branch on this, never on nullability.
+ */
+export const limitStateSchema = z.enum(['finite', 'unlimited', 'unknown']);
+export const activationKindSchema = z.enum(['base', 'addon', 'topup']);
+export const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
+
+export const moneySchema = responseObject({
+  currency: z.enum(['USD', 'INR']),
+  amount_minor: z.number().int().nonnegative(),
 });
 
-export const billingCatalogPlanSchema = responseObject({
-  tier_key: z.enum(['free', 'paid', 'enterprise']),
-  name: z.string(),
-  cadence: z.enum(['none', 'monthly', 'custom']),
-  self_serve: z.boolean(),
-  description: z.string(),
-  features: z.array(z.string()),
-  price: billingPriceSchema.nullable(),
-});
-
-export const billingCatalogSchema = responseObject({
-  catalog_version: z.string(),
-  country_code: z.string().nullable(),
-  plans: z.array(billingCatalogPlanSchema),
-});
-
-export const billingSummarySchema = responseObject({
-  billing_account_id: uuid(),
-  billing_country: z.string(),
-  country_verification: z.string(),
-  tier_key: z.enum(['free', 'paid']),
-  subscription_status: z.string().nullable(),
-  current_period_end: z.string().nullable(),
-  cancel_at_period_end: z.boolean(),
-  paid_through: z.string().nullable(),
-  grace_until: z.string().nullable(),
-  can_checkout: z.boolean(),
-  checkout_block_reason: z.string().nullable(),
-});
-
-export const billingCheckoutSchema = responseObject({
-  checkout_url: z.url().refine((value) => value.startsWith('https://')),
+/**
+ * The server-resolved charge. `quote_id` is an opaque digest that proves the
+ * displayed terms without exposing any provider identity — the frontend
+ * compares its displayed price against `base_price` here and never computes a
+ * total of its own.
+ */
+export const resolvedQuoteSchema = responseObject({
+  quote_id: z.string(),
+  catalog_revision: z.string(),
+  catalog_key: z.string(),
+  credential_mode: credentialModeSchema,
+  country_code: z.string(),
+  region: billingRegionSchema,
+  base_price: moneySchema,
+  credit_price: moneySchema.nullable(),
+  tax: moneySchema,
+  total_price: moneySchema,
   expires_at: z.string(),
 });
 
-export const billingCancelSchema = responseObject({
+export const capabilityValueSchema = responseObject({
+  key: z.string(),
+  capability_type: capabilityTypeSchema,
+  value: z.union([z.boolean(), z.number(), z.string()]).nullable(),
+  issuable: z.boolean(),
+});
+
+export const catalogProviderRouteSchema = responseObject({
+  logical_engine: z.string(),
+  transport_provider: z.string(),
+  model: z.string(),
+});
+
+/**
+ * PUBLIC provider row — availability only, never workspace state. Grok,
+ * Perplexity and Copilot appear here as `unavailable` with an empty `routes`
+ * list; that absence of a route is what makes them non-connectable.
+ */
+export const catalogProviderSchema = responseObject({
+  key: z.string(),
+  label: z.string(),
+  availability: catalogAvailabilitySchema,
+  unavailable_reason: z.string().nullable(),
+  adapter_shipped: z.boolean(),
+  grant_key: z.string(),
+  issuable: z.boolean(),
+  routes: z.array(catalogProviderRouteSchema),
+});
+
+export const catalogPlanSchema = responseObject({
+  key: planCatalogKeySchema,
+  name: z.string(),
+  description: z.string(),
+  cadence: z.enum(['monthly', 'custom']),
+  self_serve: z.boolean(),
+  contact_only: z.boolean(),
+  contact_url: z.string().nullable(),
+  base_price: moneySchema.nullable(),
+  // Null in this release: funded inputs are deliberately unset. Never coerce
+  // to zero and never derive a funded total from it.
+  credit_price: moneySchema.nullable(),
+  funded_total_price: moneySchema.nullable(),
+  checkout_available: z.boolean(),
+  unavailable_reason: z.string().nullable(),
+  capabilities: z.array(capabilityValueSchema),
+  trial_availability: catalogAvailabilitySchema,
+  trial_unavailable_reason: z.string().nullable(),
+  trial_days: z.number().int().nullable(),
+});
+
+export const catalogAddonSchema = responseObject({
+  key: z.string(),
+  name: z.string(),
+  description: z.string(),
+  cadence: z.literal('monthly'),
+  unit_price: moneySchema.nullable(),
+  quantity_min: z.number().int(),
+  quantity_max: z.number().int(),
+  availability: catalogAvailabilitySchema,
+  unavailable_reason: z.string().nullable(),
+  grant_key: z.string(),
+  grant_value_per_unit: z.number().int(),
+});
+
+export const catalogTopupSchema = responseObject({
+  key: z.string(),
+  name: z.string(),
+  description: z.string(),
+  unit_price: moneySchema.nullable(),
+  quantity_min: z.number().int(),
+  quantity_max: z.number().int(),
+  availability: catalogAvailabilitySchema,
+  unavailable_reason: z.string().nullable(),
+  grant_key: z.enum(['benchmark_credits', 'pulse_credits']),
+  credits_per_unit: z.number().int().nullable(),
+  expiry_days: z.number().int(),
+});
+
+export const billingCatalogSchema = responseObject({
+  catalog_revision: z.string(),
+  country_code: z.string().nullable(),
+  region: billingRegionSchema,
+  currency: z.enum(['USD', 'INR']),
+  currency_minor_units: z.number().int(),
+  plans: z.array(catalogPlanSchema),
+  addons: z.array(catalogAddonSchema),
+  topups: z.array(catalogTopupSchema),
+  providers: z.array(catalogProviderSchema),
+});
+
+export const grantProvenanceSchema = responseObject({
+  grant_id: uuid(),
+  source_kind: grantSourceKindSchema,
+  key: z.string(),
+  value: z.number().int(),
+  valid_from: z.string(),
+  effective_valid_until: z.string().nullable(),
+  revoked_at: z.string().nullable(),
+  catalog_revision: z.string(),
+});
+
+export const resolvedCapabilitySchema = responseObject({
+  key: z.string(),
+  capability_type: capabilityTypeSchema,
+  value: z.union([z.boolean(), z.number(), z.string()]).nullable(),
+  contributing_grant_ids: z.array(uuid()),
+  ordered_draw_grant_ids: z.array(uuid()),
+});
+
+export const subscriptionSummarySchema = responseObject({
+  catalog_key: z.string(),
   status: z.string(),
+  current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
 });
 
-export const workspaceEntitlementSchema = responseObject({
-  workspace_id: uuid(),
-  tier_key: z.enum(['free', 'paid']),
-  capability_revision: z.number().int().nonnegative(),
-  audit_web_search: z.boolean(),
-  audit_scheduling: z.boolean(),
-  site_health_capability: z.enum(['free', 'starter']),
-  paid_through: z.string().nullable(),
-  grace_until: z.string().nullable(),
+export const trialGrantSummarySchema = responseObject({
+  deadline: z.string(),
+  days_remaining: z.number().int(),
+  exhausted: z.boolean(),
 });
+
+/**
+ * The resolved account entitlement. There is deliberately no
+ * `funded_execution_allowed` flag — funded admission is an enforcement-time
+ * decision, so the UI must never present one.
+ */
+export const billingEntitlementSchema = responseObject({
+  billing_account_id: uuid(),
+  status: entitlementStatusSchema,
+  errors: z.array(z.string()),
+  registry_revision: z.string(),
+  entitlement_lifecycle_version: z.number().int(),
+  resolved_at: z.string(),
+  valid_until: z.string().nullable(),
+  subscription: subscriptionSummarySchema.nullable(),
+  trial_grant: trialGrantSummarySchema.nullable(),
+  capabilities: z.array(resolvedCapabilitySchema),
+  grants: z.array(grantProvenanceSchema),
+});
+
+export const usageGrantBalanceSchema = responseObject({
+  grant_id: uuid(),
+  source_kind: grantSourceKindSchema,
+  allowance: z.number().int(),
+  consumed: z.number().int(),
+  reserved: z.number().int(),
+  remaining: z.number().int(),
+  effective_valid_until: z.string().nullable(),
+});
+
+export const usageItemSchema = responseObject({
+  key: z.string(),
+  capability_type: counterCapabilityTypeSchema,
+  unit: z.string(),
+  limit_state: limitStateSchema,
+  allowance: z.number().int().nullable(),
+  consumed: z.number().int().nullable(),
+  reserved: z.number().int().nullable(),
+  remaining: z.number().int().nullable(),
+  window_started_at: z.string().nullable(),
+  resets_at: z.string().nullable(),
+  earliest_expiry: z.string().nullable(),
+  grants: z.array(usageGrantBalanceSchema),
+});
+
+export const billingUsageSchema = responseObject({
+  billing_account_id: uuid(),
+  entitlement_lifecycle_version: z.number().int(),
+  status: entitlementStatusSchema,
+  items: z.array(usageItemSchema),
+});
+
+/** Every commercial POST answers with this. `quote` is always present. */
+export const activationSchema = responseObject({
+  activation_id: uuid(),
+  kind: activationKindSchema,
+  catalog_key: z.string(),
+  quantity: z.number().int(),
+  status: activationStatusSchema,
+  quote: resolvedQuoteSchema,
+  checkout_url: z.string().nullable(),
+  expires_at: z.string(),
+  failure_code: z.string().nullable(),
+});
+
+/**
+ * Deactivation has its OWN vocabulary — deliberately not the activation state
+ * machine. Parsing a DELETE through `activationSchema` would invent a
+ * pending/failed lifecycle the backend never reports.
+ */
+export const subscriptionChangeSchema = responseObject({
+  catalog_key: z.string(),
+  status: z.enum(['cancellation_scheduled', 'already_scheduled']),
+  effective_at: z.string(),
+});
+
+// --- Authenticated provider connection state -------------------------------
+// Separate contract from the PUBLIC catalog above: availability is what we
+// sell, connection state is what this workspace actually has.
+export const providerConnectionStateSchema = z.enum([
+  'connected',
+  'missing',
+  'failed',
+  'unavailable',
+]);
+
+export const providerProbeSchema = responseObject({
+  status: z.enum(['ok', 'failed']),
+  safe_reason: z.string().nullable(),
+  tested_at: z.string(),
+  model: z.string().nullable(),
+  latency_ms: z.number().int().nullable(),
+});
+
+export const providerConnectionStateEntrySchema = responseObject({
+  key: z.string(),
+  label: z.string(),
+  state: providerConnectionStateSchema,
+  safe_reason: z.string().nullable(),
+  grant_key: z.string(),
+  latest_probe: providerProbeSchema.nullable(),
+});
+
+export const providerConnectionStatesSchema = responseObject({
+  workspace_id: uuid(),
+  providers: z.array(providerConnectionStateEntrySchema),
+});
+
+// ---------------------------------------------------------------------------
+// Audit events — the discriminated envelope shared by `GET /audits/{id}/events`
+// and its SSE stream. On the wire SSE `event:` IS `event_type` and SSE `id:` IS
+// the event UUID (the `Last-Event-ID` resume cursor).
+//
+// This is a DISCRIMINATED UNION, not a permissive envelope: an unknown
+// `event_type` fails parsing rather than reaching a handler as a partial
+// object. Payloads are invalidation signals only — never treat one as a row.
+// ---------------------------------------------------------------------------
+
+const eventEnvelope = <Type extends string, Payload extends z.ZodTypeAny>(
+  eventType: Type,
+  payload: Payload,
+) =>
+  responseObject({
+    id: uuid(),
+    audit_id: uuid(),
+    occurred_at: z.string(),
+    event_type: z.literal(eventType),
+    payload,
+  });
+
+export const auditEventSchema = z.discriminatedUnion('event_type', [
+  eventEnvelope('audit.created', responseObject({
+    requested_count: z.number().int(),
+    engines: z.array(z.string()),
+  })),
+  eventEnvelope('audit.queued', responseObject({ task_count: z.number().int() })),
+  eventEnvelope('audit.running', z.null()),
+  eventEnvelope('audit.status', responseObject({
+    status: z.string(),
+    completed: z.number().int().nullable().default(null),
+    failed: z.number().int().nullable().default(null),
+  })),
+  eventEnvelope('audit.cancelled', responseObject({
+    status: z.string(),
+    completed: z.number().int().nullable().default(null),
+    failed: z.number().int().nullable().default(null),
+  })),
+  eventEnvelope('audit.completed', responseObject({
+    status: z.string(),
+    completed: z.number().int(),
+    failed: z.number().int(),
+    visibility_score: z.number(),
+  })),
+  eventEnvelope('task.succeeded', responseObject({ task_id: uuid() })),
+  eventEnvelope('task.failed', responseObject({ task_id: uuid(), error_code: z.string() })),
+  eventEnvelope('task.retry', responseObject({ task_id: uuid(), error_code: z.string() })),
+  eventEnvelope('task.capacity_wait', responseObject({
+    task_id: uuid(),
+    code: z.string(),
+    pool_kind: z.string(),
+    available_at: z.string().default(''),
+    retry_after_seconds: z.number().default(0),
+  })),
+]);
+
+export const auditEventListSchema = z.array(auditEventSchema);
 
 // ---------------------------------------------------------------------------
 // strictValidate — fail loud on declared-field drift (drift policy §6)

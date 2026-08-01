@@ -8,9 +8,17 @@
 import type { z } from 'zod';
 
 import type {
+  auditEventSchema,
   auditSchema,
   auditStatusSchema,
   authResponseSchema,
+  connectionTestResultSchema,
+  measurementModeSchema,
+  modelProvenanceSchema,
+  providerConnectionStateEntrySchema,
+  providerConnectionStateSchema,
+  providerConnectionStatesSchema,
+  providerProbeSchema,
   brandProfileAcceptResponseSchema,
   brandProfileDraftSchema,
   brandProfileSchema,
@@ -170,6 +178,15 @@ export type TransportProvider = z.infer<typeof transportProviderSchema>;
 export type LogicalEngine = z.infer<typeof logicalEngineSchema>;
 export type ProviderConnection = z.infer<typeof providerConnectionSchema>;
 export type ProviderCatalog = z.infer<typeof providerCatalogSchema>;
+export type ConnectionTestResult = z.infer<typeof connectionTestResultSchema>;
+// The authenticated workspace projection — distinct from public availability.
+export type ProviderConnectionState = z.infer<typeof providerConnectionStateSchema>;
+export type ProviderConnectionStateEntry = z.infer<typeof providerConnectionStateEntrySchema>;
+export type ProviderConnectionStates = z.infer<typeof providerConnectionStatesSchema>;
+export type ProviderProbe = z.infer<typeof providerProbeSchema>;
+export type MeasurementMode = z.infer<typeof measurementModeSchema>;
+export type ModelProvenance = z.infer<typeof modelProvenanceSchema>;
+export type AuditEvent = z.infer<typeof auditEventSchema>;
 export type AuditStatus = z.infer<typeof auditStatusSchema>;
 export type Audit = z.infer<typeof auditSchema>;
 export type ExecutionStatus = z.infer<typeof executionStatusSchema>;
