@@ -10,7 +10,7 @@ type ExtendedLogoKey = 'grok' | 'copilot' | 'perplexity';
  *
  * Keeping the planned marks is a deliberate, user-approved deviation from the
  * "no provider logo without a shipped adapter" gate (see
- * docs/plans/v8-pending-features.md §4). The replacement gate is what the code
+ * docs/plans/v8-delivered.md §4.4). The replacement gate is what the code
  * below enforces: every planned face is visibly and accessibly labelled
  * "Coming soon", is never a link or a connect affordance, and has no route in
  * the provider catalog — so the board can never imply six working

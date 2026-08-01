@@ -346,6 +346,7 @@ def test_settings_env_prefix_and_bounds(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv("INTEGRATION_SYNC_PAGE_SIZE", "5000")
     configured = IntegrationSettings(_env_file=None)
     assert configured.sync_page_size == 5000
+    assert configured.sync_default_window_days == 28
     assert configured.sync_max_attempts >= 1
     assert configured.lease_ttl_seconds > configured.heartbeat_interval_seconds
 

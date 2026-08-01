@@ -180,8 +180,6 @@ def runtime_policy_for_allowance(
     )
 
 
-
-
 # Selection source: a monitored row is either user-managed or a system-managed
 # Free sample membership.
 SELECTION_SOURCE_USER: Final = "user"

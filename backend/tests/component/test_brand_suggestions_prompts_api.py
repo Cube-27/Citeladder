@@ -24,7 +24,10 @@ import httpx
 import pytest
 
 import app.api.brand_suggestions as brand_suggestions_api
+import app.domain.projects.suggestions as suggestions_domain
 from app.connectors.agent.client import AgentNotConfiguredError
+from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
+from app.domain.projects.brand_evidence import BrandEvidence
 
 VALID_PROMPT_RESPONSE = json.dumps(
     {
@@ -76,6 +79,25 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
     agent = FakeAgent()
     monkeypatch.setattr(brand_suggestions_api, "DefaultAgentClient", lambda: agent)
     return agent
+
+
+@pytest.fixture(autouse=True)
+def stub_brand_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub the brand-website crawl so no test hits the live internet."""
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return BrandEvidence(
+            pages=(
+                BrandEvidencePage(
+                    url="https://acme.com/",
+                    title="Acme Corp",
+                    meta_description="Australian family retailer.",
+                    text=" ".join(["retailer"] * 200),
+                ),
+            )
+        )
+
+    monkeypatch.setattr(suggestions_domain, "collect_brand_evidence", _collect)
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:

@@ -64,7 +64,7 @@ type StepIndex = 0 | 1 | 2 | 3;
 const STEP_STAGE: Record<StepIndex, { maxWidth: string; centerY: string; stageAlign: string }> = {
   0: { maxWidth: 'max-w-3xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
   1: { maxWidth: 'max-w-3xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
-  2: { maxWidth: 'h-full max-w-5xl', centerY: '', stageAlign: '' },
+  2: { maxWidth: 'max-w-4xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
   3: {
     maxWidth: 'max-w-lg',
     centerY: 'justify-center text-center',

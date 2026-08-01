@@ -240,9 +240,7 @@ class TestVocabulary:
         ):
             assert isinstance(vocabulary, frozenset)
             assert vocabulary
-        assert LEDGER_ENTRY_KINDS == frozenset(
-            {"reservation", "debit", "release"}
-        )
+        assert LEDGER_ENTRY_KINDS == frozenset({"reservation", "debit", "release"})
         assert CREDENTIAL_MODES == frozenset({"byok", "funded"})
 
 

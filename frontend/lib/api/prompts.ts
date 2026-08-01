@@ -31,6 +31,13 @@ export type PromptInput = {
   // prompt and then PATCHing every prompt. Must name a topic of the prompt's
   // own project — the backend answers 404 otherwise.
   topic_id?: string;
+  // Provenance. `generated` is honoured only alongside a valid
+  // `generation_receipt` (returned by the suggestion endpoints), and exempts
+  // the prompt from topical binding — a measurement prompt is deliberately
+  // brand-neutral, so it cannot be judged by word-overlap against the brand's
+  // own vocabulary. Anything unverified is stored as `manual`.
+  origin?: 'manual' | 'generated';
+  generation_receipt?: string;
 };
 
 export type PromptUpdateInput = Partial<PromptInput> & {

@@ -64,9 +64,7 @@ def apply_runtime_policy(
     row.monitored_url_limit = policy.monitored_url_limit
     row.count_disclosure = policy.count_disclosure
     row.resolved_registry_revision = resolved_registry_revision
-    row.resolved_entitlement_lifecycle_version = (
-        resolved_entitlement_lifecycle_version
-    )
+    row.resolved_entitlement_lifecycle_version = resolved_entitlement_lifecycle_version
     row.resolved_valid_until = resolved_valid_until
     return row
 

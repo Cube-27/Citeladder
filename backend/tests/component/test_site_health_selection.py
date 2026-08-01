@@ -813,9 +813,7 @@ async def test_recrawl_lineage_skips_intervening_free_sample_crawl(
         )
 
     assert recrawl.configuration is not None
-    assert recrawl.configuration[INVENTORY_SOURCE_CRAWL_IDS_KEY] == [
-        str(full_crawl_id)
-    ]
+    assert recrawl.configuration[INVENTORY_SOURCE_CRAWL_IDS_KEY] == [str(full_crawl_id)]
 
 
 @pytest.mark.asyncio

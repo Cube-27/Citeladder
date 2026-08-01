@@ -15,12 +15,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config.api import API_V1_PREFIX
+from app.core.config.brand_profile import BRAND_PROFILE_SOURCE_MANUAL
 from app.core.config.entitlements import KEY_PROJECT_SLOTS
 from app.domain.entitlements.enforcement import (
     enforce_occupancy,
     lock_workspace_capacity,
 )
-from app.domain.projects.normalization import normalize_benchmark_mode
+from app.domain.projects.normalization import (
+    clean_profile_products,
+    normalize_benchmark_mode,
+)
 from app.domain.projects.schemas import (
     BrandResponse,
     CompetitorResponse,
@@ -183,10 +187,26 @@ async def create_project(
     session.add(project)
     await session.flush()
     if project.brand is not None:
+        # Normalize ONCE, then derive both the stored values and the source
+        # markers from the normalized form: a whitespace-only string (or a
+        # product list that cleans to empty) stores as empty and must not be
+        # recorded as a manually-authored field.
+        profile_fields: dict[str, Any] = {
+            "description": (payload.description or "").strip(),
+            "positioning": (payload.positioning or "").strip(),
+            "products_services": clean_profile_products(payload.products_services),
+            "target_audience": (payload.target_audience or "").strip(),
+        }
         project.brand.profile = BrandProfile(
             workspace_id=workspace_id,
             project_id=project.id,
             brand_id=project.brand.id,
+            **profile_fields,
+            sources={
+                field: BRAND_PROFILE_SOURCE_MANUAL
+                for field, value in profile_fields.items()
+                if value
+            },
         )
     await session.commit()
     return await get_project(session, workspace_id=workspace_id, project_id=project.id)

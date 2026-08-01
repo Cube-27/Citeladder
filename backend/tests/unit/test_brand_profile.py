@@ -7,12 +7,18 @@ import json
 import pytest
 
 import app.domain.projects.brand_profile_suggestions as suggestion_service
+from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
+from app.domain.projects.brand_evidence import BrandEvidence
 from app.domain.projects.brand_profile_suggestions import (
+    BrandEvidenceUnavailableError,
     BrandProfileSuggestionOutputError,
     build_brand_profile_suggestion_message,
     parse_brand_profile_draft,
 )
-from app.domain.projects.knowledge_base import build_brand_knowledge_context
+from app.domain.projects.knowledge_base import (
+    build_brand_knowledge_context,
+    build_brand_knowledge_data,
+)
 from app.models.brand import Brand, BrandProfile
 from app.models.project import Project
 
@@ -70,10 +76,19 @@ def test_profile_draft_parser_normalizes_fields() -> None:
     assert draft.products_services == ["Clothing", "Homewares"]
 
 
-def test_profile_draft_parser_rejects_empty_or_malformed_output() -> None:
+def test_profile_draft_parser_rejects_malformed_output() -> None:
     with pytest.raises(BrandProfileSuggestionOutputError):
         parse_brand_profile_draft("not-json")
-    with pytest.raises(BrandProfileSuggestionOutputError):
+
+
+def test_all_empty_draft_is_missing_evidence_not_bad_output() -> None:
+    """The system prompt REQUIRES unsupported fields to come back empty.
+
+    An all-empty draft is therefore the model correctly reporting that the
+    evidence supported nothing — an actionable grounding outcome (422), not
+    malformed provider output (502).
+    """
+    with pytest.raises(BrandEvidenceUnavailableError) as excinfo:
         parse_brand_profile_draft(
             json.dumps(
                 {
@@ -84,6 +99,8 @@ def test_profile_draft_parser_rejects_empty_or_malformed_output() -> None:
                 }
             )
         )
+
+    assert excinfo.value.reason == "insufficient_website_content"
 
 
 def test_profile_draft_parser_wraps_post_normalization_validation(
@@ -117,8 +134,53 @@ def test_suggestion_message_uses_shared_knowledge_context() -> None:
     )
     project.brand = Brand(name="Acme")
 
-    message = build_brand_profile_suggestion_message(project)
+    # The builder takes the projected knowledge DATA, not the ORM row: it runs
+    # after the evidence crawl, when the session transaction has ended.
+    # Evidence is required — the instruction names it as the only admissible
+    # source, so the block must always be present.
+    message = build_brand_profile_suggestion_message(
+        build_brand_knowledge_data(project),
+        BrandEvidence(
+            pages=(
+                BrandEvidencePage(
+                    url="https://acme.example/",
+                    title="Acme",
+                    meta_description="",
+                    text="Acme sells homewares.",
+                ),
+            )
+        ),
+    )
 
     assert "<brand_knowledge_base" in message
     assert '"brand_name":"Acme"' in message
     assert '"country_code":"AU"' in message
+
+
+def test_suggestion_message_refuses_to_instruct_without_evidence() -> None:
+    """The evidence-only instruction must never point at an absent block."""
+    with pytest.raises(BrandEvidenceUnavailableError):
+        build_brand_profile_suggestion_message(
+            {"brand_name": "Acme"}, BrandEvidence(failure_reason="website_unreachable")
+        )
+
+
+def test_suggestion_message_embeds_website_evidence() -> None:
+    knowledge = {"brand_name": "Cube27"}
+    evidence = BrandEvidence(
+        pages=(
+            BrandEvidencePage(
+                url="https://cube27.example/",
+                title="Cube27",
+                meta_description="Data engineering consultancy.",
+                text="Cube27 builds cloud data platforms.",
+            ),
+        )
+    )
+
+    message = build_brand_profile_suggestion_message(knowledge, evidence)
+
+    assert "<brand_website_evidence>" in message
+    assert "cloud data platforms" in message
+    # The instruction must name the evidence as the only admissible source.
+    assert "ONLY" in message

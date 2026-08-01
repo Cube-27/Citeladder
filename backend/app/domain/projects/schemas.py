@@ -93,6 +93,25 @@ class BrandProfileSourceArtifacts(BaseModel):
     target_audience: uuid.UUID | None = None
 
 
+class BrandKnowledgeFields(BaseModel):
+    """The four brand-knowledge fields in their non-optional form.
+
+    Shared by every request that carries brand knowledge as plain values with
+    empty defaults (``ProjectCreate``, ``BrandContextRequest``).
+    ``BrandProfileUpsert`` deliberately does NOT inherit this: its fields are
+    ``| None`` because it is a PARTIAL upsert where "absent" and "cleared" must
+    be distinguishable, and ``BrandProfileDraft`` keeps its own optional
+    variant for the same reason.
+    """
+
+    description: str = Field(default="", max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
+    positioning: str = Field(default="", max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
+    products_services: list[
+        Annotated[str, Field(max_length=BRAND_PROFILE_PRODUCT_MAX_CHARS)]
+    ] = Field(default_factory=list, max_length=BRAND_PROFILE_PRODUCTS_MAX_COUNT)
+    target_audience: str = Field(default="", max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
+
+
 class BrandProfileUpsert(BaseModel):
     """Human-authored partial upsert; every supplied field becomes manual."""
 
@@ -167,7 +186,13 @@ class BrandProfileAcceptResponse(BaseModel):
 # --------------------------------------------------------------------------
 # Project requests
 # --------------------------------------------------------------------------
-class ProjectCreate(BaseModel):
+class ProjectCreate(BrandKnowledgeFields):
+    # Inherits description/positioning/products_services/target_audience:
+    # brand knowledge is optional at create, and onboarding sends what it
+    # derived from the brand's own website. That seeds the BrandProfile and
+    # therefore the topical-binding vocabulary — without it the vocabulary is
+    # just the brand name, and correct brand-NEUTRAL prompts (the only kind
+    # that can measure a competitor) have nothing legitimate to bind against.
     name: str = Field(min_length=1, max_length=255)
     brand_name: str = Field(default="", max_length=255)
     brand: BrandInput = Field(default_factory=BrandInput)
@@ -207,7 +232,7 @@ class ProjectUpdate(BaseModel):
 # Brand suggestions (stateless — the setup form may be pre-save, so brand
 # context travels in the body instead of a project id in the path)
 # --------------------------------------------------------------------------
-class BrandContextRequest(BaseModel):
+class BrandContextRequest(BrandKnowledgeFields):
     brand_name: str = Field(min_length=1, max_length=255)
     website_url: str = Field(default="", max_length=1024)
     brand_aliases: list[Annotated[str, Field(max_length=255)]] = Field(
@@ -215,12 +240,6 @@ class BrandContextRequest(BaseModel):
     )
     country_code: str = Field(default="", max_length=8)
     language_code: str = Field(default="", max_length=16)
-    description: str = Field(default="", max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
-    positioning: str = Field(default="", max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
-    products_services: list[
-        Annotated[str, Field(max_length=BRAND_PROFILE_PRODUCT_MAX_CHARS)]
-    ] = Field(default_factory=list, max_length=BRAND_PROFILE_PRODUCTS_MAX_COUNT)
-    target_audience: str = Field(default="", max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
     # Backend-enforced consent gate (mirrors PromptGenerateRequest): brand
     # evidence is only sent to the default agent when this is true.
     confirm_send_evidence: bool = False
@@ -271,6 +290,10 @@ class PromptSuggestionItem(BaseModel):
     text: str = Field(min_length=1)
     theme: str = Field(default="", max_length=255)
     intent: str = ""
+    # Proof the backend generated this text, to be echoed back on create so the
+    # prompt is stored as ``generated`` and skips the topical-binding gate (see
+    # ``domain/prompts/receipts.py``). Opaque to the client.
+    generation_receipt: str = ""
 
 
 class SuggestedTopicGroup(BaseModel):

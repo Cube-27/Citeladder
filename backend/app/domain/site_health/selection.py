@@ -669,9 +669,7 @@ async def bulk_select_monitored_set(
         # zero-allowance workspace must still get its usual
         # MonitoringNotAllowedError from the locked path, not a misleading
         # quota error.
-        if runtime_allows_monitored_analysis(runtime) and (
-            len(site_url_ids) > limit
-        ):
+        if runtime_allows_monitored_analysis(runtime) and (len(site_url_ids) > limit):
             currently_used = int(
                 (
                     await session.scalar(
@@ -794,8 +792,7 @@ async def rerun_page(
         runtime, selection_source=membership.selection_source
     ):
         raise MonitoringNotAllowedError(
-            "The current monitored-URL allowance does not allow analysis of "
-            "this URL"
+            "The current monitored-URL allowance does not allow analysis of this URL"
         )
 
     site_url = await session.get(SiteUrl, site_url_id)

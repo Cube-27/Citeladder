@@ -56,9 +56,7 @@ def map_anthropic_finish_reason(raw: object) -> FinishReason:
     ``FinishReason.UNKNOWN`` (never guessed). The raw token is preserved
     separately on the response.
     """
-    return _ANTHROPIC_FINISH_REASONS.get(
-        str(raw or "").strip(), FinishReason.UNKNOWN
-    )
+    return _ANTHROPIC_FINISH_REASONS.get(str(raw or "").strip(), FinishReason.UNKNOWN)
 
 
 def normalize_anthropic_usage(

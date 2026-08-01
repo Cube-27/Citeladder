@@ -3,8 +3,10 @@
 Drives the real ``IntegrationDispatcher`` tick against a live Postgres
 schema. Covers:
 
-  - One ``scheduled`` run per ACTIVE connection per tick for the default
-    trailing window (connections on non-connected grants are skipped).
+  - One ``scheduled`` run per ACTIVE connection per DISTINCT window per tick:
+    the default trailing window plus the late-data revision window (these
+    collapse to one run only when the two windows coincide). Connections on
+    non-connected grants are skipped.
   - Dedup: a second tick while a run is active enqueues NOTHING
     (``ActiveWindowConflictError`` -> skip); once the window's run is
     terminal the next tick re-syncs it with a bumped ``resync_seq``.
@@ -136,14 +138,28 @@ async def test_tick_enqueues_scheduled_run_per_active_connection(
 
     ticked = await _dispatcher(session_factory).run_once()
 
-    assert ticked == 1  # one run; the late window equals the trailing window
+    # A tick enqueues the trailing window plus the late-data revision window.
+    # They collapse to ONE run only when the two windows coincide (i.e.
+    # ``sync_default_window_days == sync_late_data_revision_days``); with a
+    # longer import window they are distinct windows and both enqueue. Derive
+    # the expectation from config rather than pinning one configuration.
+    windows_coincide = (
+        integration_settings.sync_default_window_days
+        == integration_settings.sync_late_data_revision_days
+    )
+    expected = 1 if windows_coincide else 2
+    assert ticked == expected
     active_runs = await _runs(db_session, active.connection_id)
-    assert len(active_runs) == 1
-    run = active_runs[0]
-    assert run.sync_kind == SYNC_KIND_SCHEDULED
-    assert run.status == TASK_STATUS_QUEUED
-    assert run.resync_seq == 0
-    assert (run.window_start, run.window_end) == default_sync_window()
+    assert len(active_runs) == expected
+    # The trailing-window run is always present and always scheduled/queued.
+    trailing = next(
+        run
+        for run in active_runs
+        if (run.window_start, run.window_end) == default_sync_window()
+    )
+    assert trailing.sync_kind == SYNC_KIND_SCHEDULED
+    assert trailing.status == TASK_STATUS_QUEUED
+    assert trailing.resync_seq == 0
     # A connection whose grant is not connected is never scheduled.
     assert await _runs(db_session, inactive.connection_id) == []
 
@@ -155,17 +171,35 @@ async def test_tick_dedups_on_active_window_conflict(
     seed, _grant = await _seed_connection(db_session)
     dispatcher = _dispatcher(session_factory)
 
-    assert await dispatcher.run_once() == 1
-    # Second tick while the run is active: conflict -> skip, no duplicate.
+    # One run per DISTINCT window (trailing + late-data revision); they
+    # collapse to one only when the two windows coincide. See the sibling test.
+    per_tick = (
+        1
+        if integration_settings.sync_default_window_days
+        == integration_settings.sync_late_data_revision_days
+        else 2
+    )
+    assert await dispatcher.run_once() == per_tick
+    # Second tick while the runs are active: conflict -> skip, no duplicate.
     assert await dispatcher.run_once() == 0
-    assert len(await _runs(db_session, seed.connection_id)) == 1
+    assert len(await _runs(db_session, seed.connection_id)) == per_tick
 
-    # Once terminal, the same window re-syncs with a bumped resync_seq.
+    # Once terminal, each window re-syncs with a bumped resync_seq.
     await _complete_all(db_session, seed.connection_id)
-    assert await dispatcher.run_once() == 1
+    assert await dispatcher.run_once() == per_tick
     runs = await _runs(db_session, seed.connection_id)
-    assert [run.resync_seq for run in runs] == [0, 1]
-    assert {run.window_start for run in runs} == {default_sync_window()[0]}
+    # Every distinct window is present exactly twice: the original run and its
+    # bumped re-sync. Grouping by window (rather than asserting a single one)
+    # keeps this true whether or not the trailing and late windows coincide.
+    by_window: dict[tuple[date, date], list[int]] = {}
+    for run in runs:
+        by_window.setdefault((run.window_start, run.window_end), []).append(
+            run.resync_seq
+        )
+    assert len(by_window) == per_tick
+    assert all(sorted(seqs) == [0, 1] for seqs in by_window.values())
+    # The trailing window is always one of them.
+    assert default_sync_window() in by_window
 
 
 @pytest.mark.asyncio

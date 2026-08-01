@@ -23,6 +23,10 @@ PromptIntent = Literal["", "discovery", "comparison", "purchase", "service", "lo
 # repeated here; this guard keeps the alias in lock-step with the config
 # constants (PROMPT_STATUS_*) so they cannot drift silently.
 PromptStatus = Literal["proposed", "active", "archived"]
+# Same inline-literal rule as above: the values mirror ``PROMPT_ORIGIN_MANUAL``
+# and ``PROMPT_ORIGIN_GENERATED`` in ``config/projects.py``. ``imported`` is not
+# offered here — CSV import sets its own origin server-side.
+PromptOrigin = Literal["manual", "generated"]
 assert set(get_args(PromptStatus)) == PROMPT_STATUSES
 
 
@@ -46,6 +50,21 @@ class PromptInput(BaseModel):
     branded: bool = False
     enabled: bool = True
     topic_id: uuid.UUID | None = None
+    # Provenance. ``manual`` (the default) is free text a human typed and stays
+    # subject to the topical-binding gate. ``generated`` marks a prompt the
+    # backend's own agent produced from verified brand-website evidence — the
+    # onboarding flow — which is constrained at generation time instead (see
+    # ``create_prompt``).
+    #
+    # This is a CLIENT-SUPPLIED claim, so it is not trusted on its own: the
+    # service re-verifies that the text really came from a generation the
+    # backend performed before honouring the exemption.
+    origin: PromptOrigin = "manual"
+    # Backend-issued HMAC over this prompt's text, returned by the suggestion
+    # endpoints. Required for ``origin="generated"`` to be honoured; ignored
+    # otherwise. Without a valid receipt the prompt is stored as ``manual`` and
+    # the binding gate applies as normal.
+    generation_receipt: str = Field(default="", max_length=128)
 
 
 class PromptCreate(PromptInput):

@@ -195,8 +195,7 @@ class AnalyzePhaseMixin(PhaseSupport):
             await session.execute(
                 select(WorkspaceSiteHealthRuntime)
                 .where(
-                    WorkspaceSiteHealthRuntime.workspace_id
-                    == crawl_hint.workspace_id
+                    WorkspaceSiteHealthRuntime.workspace_id == crawl_hint.workspace_id
                 )
                 .with_for_update()
             )

@@ -36,6 +36,13 @@ export type ReviewPrompt = {
   theme: string;
   intent: string;
   selected: boolean;
+  /**
+   * Backend proof that this text came from a real generation. Echoed back on
+   * create so the prompt is stored as `generated` and skips topical binding,
+   * which cannot judge a deliberately brand-neutral measurement prompt.
+   * Opaque; absent for anything the user typed themselves.
+   */
+  generation_receipt?: string;
 };
 
 export type ReviewDomain = {

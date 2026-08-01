@@ -65,9 +65,9 @@ describe('rangeToWindow', () => {
   });
 
   it('resolves bounded presets into UTC from/to dates', () => {
-    expect(rangeToWindow('7d', NOW)).toEqual({ from: '2026-07-16', to: '2026-07-23' });
-    expect(rangeToWindow('28d', NOW)).toEqual({ from: '2026-06-25', to: '2026-07-23' });
-    expect(rangeToWindow('90d', NOW)).toEqual({ from: '2026-04-24', to: '2026-07-23' });
+    expect(rangeToWindow('7d', NOW)).toEqual({ from: '2026-07-16', to: '2026-07-22' });
+    expect(rangeToWindow('28d', NOW)).toEqual({ from: '2026-06-25', to: '2026-07-22' });
+    expect(rangeToWindow('90d', NOW)).toEqual({ from: '2026-04-24', to: '2026-07-22' });
   });
 
   it('labels every preset', () => {

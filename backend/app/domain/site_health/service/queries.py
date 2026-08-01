@@ -133,9 +133,7 @@ async def _site_health_entitlement_view(
         "count_disclosure": bool(row.count_disclosure) if resolved else False,
         "resolver_status": entitlement.status,
         "registry_revision": entitlement.registry_revision,
-        "entitlement_lifecycle_version": int(
-            entitlement.entitlement_lifecycle_version
-        ),
+        "entitlement_lifecycle_version": int(entitlement.entitlement_lifecycle_version),
         "valid_until": entitlement.valid_until,
         "contributing_grant_ids": (
             list(capability.contributing_grant_ids)

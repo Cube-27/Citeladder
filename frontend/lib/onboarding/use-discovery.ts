@@ -35,7 +35,9 @@ export type DiscoverySection<T> = {
 export type DiscoveryState = {
   domains: DiscoverySection<string[]>;
   competitors: DiscoverySection<Array<{ name: string; domains: string[] }>>;
-  prompts: DiscoverySection<Array<{ text: string; theme: string; intent: string }>>;
+  prompts: DiscoverySection<
+    Array<{ text: string; theme: string; intent: string; generation_receipt?: string }>
+  >;
 };
 
 const idle = <T>(data: T): DiscoverySection<T> => ({
@@ -48,7 +50,9 @@ const idle = <T>(data: T): DiscoverySection<T> => ({
 const INITIAL: DiscoveryState = {
   domains: idle<string[]>([]),
   competitors: idle<Array<{ name: string; domains: string[] }>>([]),
-  prompts: idle<Array<{ text: string; theme: string; intent: string }>>([]),
+  prompts: idle<
+    Array<{ text: string; theme: string; intent: string; generation_receipt?: string }>
+  >([]),
 };
 
 type SectionKey = keyof DiscoveryState;

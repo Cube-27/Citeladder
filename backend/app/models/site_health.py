@@ -90,9 +90,7 @@ class WorkspaceSiteHealthRuntime(Base):
 
     __tablename__ = "workspace_site_health_runtime"
     __table_args__ = (
-        UniqueConstraint(
-            "workspace_id", name="uq_ws_site_health_runtime_workspace"
-        ),
+        UniqueConstraint("workspace_id", name="uq_ws_site_health_runtime_workspace"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

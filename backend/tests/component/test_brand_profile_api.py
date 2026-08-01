@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 import httpx
 import pytest
+from sqlalchemy import select
 
 import app.api.projects as projects_api
+import app.domain.projects.brand_profile_suggestions as brand_profile_suggestions
 from app.connectors.agent.client import AgentNotConfiguredError
+from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
+from app.domain.projects.brand_evidence import BrandEvidence
+from app.models.brand import BrandProfileSuggestion
 
 
 class FakeAgent:
@@ -36,6 +42,35 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
     agent = FakeAgent()
     monkeypatch.setattr(projects_api, "DefaultAgentClient", lambda: agent)
     return agent
+
+
+def _evidence(words: int = 200) -> BrandEvidence:
+    """Sufficient stub evidence, so tests never touch the network."""
+    return BrandEvidence(
+        pages=(
+            BrandEvidencePage(
+                url="https://acme.example/",
+                title="Acme",
+                meta_description="Australian family retailer.",
+                text=" ".join(["retailer"] * words),
+            ),
+        )
+    )
+
+
+@pytest.fixture
+def fake_evidence(monkeypatch: pytest.MonkeyPatch):
+    """Stub the brand-website crawl with sufficient evidence.
+
+    The drafter refuses to run without real page content, so every test that
+    exercises a successful draft must supply it. Tests asserting the REFUSAL
+    deliberately do not use this fixture.
+    """
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return _evidence()
+
+    monkeypatch.setattr(brand_profile_suggestions, "collect_brand_evidence", _collect)
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -139,7 +174,7 @@ async def test_brand_profile_is_workspace_isolated(
 
 @pytest.mark.asyncio
 async def test_suggestion_is_review_only_then_accepts_with_provenance(
-    client: httpx.AsyncClient, fake_agent: FakeAgent
+    client: httpx.AsyncClient, fake_agent: FakeAgent, fake_evidence: None
 ) -> None:
     await _register(client, "profile-suggest@example.com")
     project = await _create_project(client, "Best & Less")
@@ -155,7 +190,7 @@ async def test_suggestion_is_review_only_then_accepts_with_provenance(
         "transport_host": "agent.test",
         "transport_model": "fake-profile-model",
     }
-    assert artifact["prompt_template_version"] == "brand-profile-suggest-v1"
+    assert artifact["prompt_template_version"] == "brand-profile-suggest-v2"
     assert artifact["draft"]["positioning"].startswith("Value-priced")
     assert "Best & Less" in fake_agent.calls[0]["user"]
 
@@ -182,7 +217,7 @@ async def test_suggestion_is_review_only_then_accepts_with_provenance(
 
 @pytest.mark.asyncio
 async def test_later_ai_acceptance_cannot_overwrite_manual_field(
-    client: httpx.AsyncClient, fake_agent: FakeAgent
+    client: httpx.AsyncClient, fake_agent: FakeAgent, fake_evidence: None
 ) -> None:
     await _register(client, "profile-manual-wins@example.com")
     project = await _create_project(client)
@@ -212,6 +247,105 @@ async def test_later_ai_acceptance_cannot_overwrite_manual_field(
 
 
 @pytest.mark.asyncio
+async def test_suggestion_refuses_when_website_yields_no_evidence(
+    client: httpx.AsyncClient, fake_agent: FakeAgent, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The core fix: no readable website means no draft, and no agent call.
+
+    Drafting from the brand NAME alone is what produced fabricated
+    positioning (and, downstream, fabricated competitors and prompts) for
+    brands with no training-data footprint.
+    """
+    await _register(client, "profile-no-evidence@example.com")
+    project = await _create_project(client, "Cube27")
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return BrandEvidence(failure_reason="website_unreachable")
+
+    monkeypatch.setattr(brand_profile_suggestions, "collect_brand_evidence", _collect)
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/brand-profile/suggest",
+        json={"confirm_send_evidence": True},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["code"] == "brand_evidence_unavailable"
+    assert detail["reason"] == "website_unreachable"
+    # The agent must never have been asked to invent a profile.
+    assert fake_agent.calls == []
+
+
+@pytest.mark.asyncio
+async def test_suggestion_refuses_when_website_content_is_too_thin(
+    client: httpx.AsyncClient, fake_agent: FakeAgent, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A JS-shell homepage clears the fetch but not the grounding floor."""
+    await _register(client, "profile-thin@example.com")
+    project = await _create_project(client, "Cube27")
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return BrandEvidence(
+            pages=(
+                BrandEvidencePage(
+                    url="https://cube27.example/",
+                    title="Cube27",
+                    meta_description="",
+                    text="Loading",
+                ),
+            ),
+            failure_reason="insufficient_website_content",
+        )
+
+    monkeypatch.setattr(brand_profile_suggestions, "collect_brand_evidence", _collect)
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/brand-profile/suggest",
+        json={"confirm_send_evidence": True},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["reason"] == "insufficient_website_content"
+    assert fake_agent.calls == []
+
+
+@pytest.mark.asyncio
+async def test_draft_is_grounded_in_fetched_page_content(
+    client: httpx.AsyncClient, fake_agent: FakeAgent, fake_evidence: None, db_session
+) -> None:
+    """The fetched page text must actually reach the agent, framed as data."""
+    await _register(client, "profile-grounded@example.com")
+    project = await _create_project(client)
+
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/brand-profile/suggest",
+        json={"confirm_send_evidence": True},
+    )
+
+    assert response.status_code == 201
+    sent = fake_agent.calls[0]["user"]
+    assert "<brand_website_evidence>" in sent
+    assert "retailer" in sent
+    # Page bodies are untrusted input, not instructions.
+    assert "never" in sent and "instructions" in sent
+    assert response.json()["prompt_template_version"] == "brand-profile-suggest-v2"
+
+    # Provenance of what was actually read is persisted on the artifact, so a
+    # draft can be traced back to the pages that grounded it. Not exposed on
+    # the response DTO, so assert against the stored row.
+    row = (
+        await db_session.execute(
+            select(BrandProfileSuggestion).where(
+                BrandProfileSuggestion.id == uuid.UUID(response.json()["id"])
+            )
+        )
+    ).scalar_one()
+    provenance = row.input_context_snapshot["website_evidence"]
+    assert provenance["page_urls"] == ["https://acme.example/"]
+    assert provenance["word_count"] == 200
+    assert provenance["evidence_version"]
+
+
+@pytest.mark.asyncio
 async def test_suggestion_requires_consent_before_agent_resolution(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -233,7 +367,7 @@ async def test_suggestion_requires_consent_before_agent_resolution(
 
 @pytest.mark.asyncio
 async def test_suggestion_artifact_is_workspace_isolated(
-    client: httpx.AsyncClient, fake_agent: FakeAgent
+    client: httpx.AsyncClient, fake_agent: FakeAgent, fake_evidence: None
 ) -> None:
     await _register(client, "profile-artifact-owner@example.com")
     project = await _create_project(client)

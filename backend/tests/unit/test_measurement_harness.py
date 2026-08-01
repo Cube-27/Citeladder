@@ -270,13 +270,13 @@ async def test_extracted_queries_and_citation_counts_use_the_shared_scorer(
 async def test_gate_input_is_canonical_finish_reason_only(prompts) -> None:
     run = await _fixture_run(prompts)
     payload = json.loads(
-        (
-            route_fixture_path(MEASUREMENT_ROUTE_KEYS[0], search_enabled=False)
-        ).read_text(encoding="utf-8")
+        (route_fixture_path(MEASUREMENT_ROUTE_KEYS[0], search_enabled=False)).read_text(
+            encoding="utf-8"
+        )
     )
-    allowed = {
-        str(envelope["finish_reason"]) for envelope in payload["envelopes"]
-    } | {measurement_config.FINISH_REASON_NOT_EXECUTED}
+    allowed = {str(envelope["finish_reason"]) for envelope in payload["envelopes"]} | {
+        measurement_config.FINISH_REASON_NOT_EXECUTED
+    }
     chatgpt_no_search = {
         observation.finish_reason
         for observation in run.observations
@@ -326,9 +326,7 @@ async def test_route_costs_keep_reasoning_and_search_lines_separate(prompts) -> 
 async def test_route_costs_report_partial_when_some_lines_known(prompts) -> None:
     run = await _fixture_run(prompts)
     summary = summarize_route_costs(run)
-    claude_cells = [
-        cell for cell in summary["cells"] if cell["route_key"] == "claude"
-    ]
+    claude_cells = [cell for cell in summary["cells"] if cell["route_key"] == "claude"]
     assert claude_cells
     assert any(
         cell["lines"]["provider_reported_cost_microusd"] is not None
@@ -408,9 +406,7 @@ async def test_write_measurement_outputs_emits_three_artifacts(
 
 
 async def test_sweep_ceiling_rejects_an_oversized_matrix(prompts, monkeypatch) -> None:
-    monkeypatch.setattr(
-        measurement_config.measurement_settings, "max_observations", 5
-    )
+    monkeypatch.setattr(measurement_config.measurement_settings, "max_observations", 5)
     with pytest.raises(MeasurementConfigurationError):
         await _fixture_run(prompts, repetitions=1)
 
@@ -435,9 +431,7 @@ def test_cli_rejects_live_without_both_opt_ins() -> None:
         cli.resolve_runner(parser.parse_args(["--source", "live", "--live"]))
     with pytest.raises(MeasurementConfigurationError):
         cli.resolve_runner(
-            parser.parse_args(
-                ["--source", "live", "--live", "--confirm", "please-run"]
-            )
+            parser.parse_args(["--source", "live", "--live", "--confirm", "please-run"])
         )
     with pytest.raises(MeasurementConfigurationError):
         cli.resolve_runner(parser.parse_args(["--source", "fixtures", "--live"]))

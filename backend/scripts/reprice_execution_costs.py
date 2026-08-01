@@ -67,9 +67,7 @@ def select_repricing_targets(
             already.append(artifact_id)
         else:
             targets.append(artifact_id)
-    return RepricingPlan(
-        targets=tuple(targets), already_projected=tuple(already)
-    )
+    return RepricingPlan(targets=tuple(targets), already_projected=tuple(already))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -124,8 +122,7 @@ def _validate_versions(formula_version: str, pricing_version: str) -> None:
         )
     if not pricing_version_known(pricing_version):
         raise RepricingConfigurationError(
-            f"--pricing-version {pricing_version!r} is not a catalogued "
-            "pricing version"
+            f"--pricing-version {pricing_version!r} is not a catalogued pricing version"
         )
 
 
@@ -136,18 +133,14 @@ async def _run(args: argparse.Namespace) -> int:
             RawResponseArtifact.created_at, RawResponseArtifact.id
         )
         if args.artifact_id:
-            statement = statement.where(
-                RawResponseArtifact.id.in_(args.artifact_id)
-            )
+            statement = statement.where(RawResponseArtifact.id.in_(args.artifact_id))
         artifact_ids = (await session.scalars(statement)).all()
         existing = frozenset(
             (
                 await session.scalars(
                     select(ExecutionCostProjection.raw_response_artifact_id).where(
-                        ExecutionCostProjection.formula_version
-                        == args.formula_version,
-                        ExecutionCostProjection.pricing_version
-                        == args.pricing_version,
+                        ExecutionCostProjection.formula_version == args.formula_version,
+                        ExecutionCostProjection.pricing_version == args.pricing_version,
                     )
                 )
             ).all()

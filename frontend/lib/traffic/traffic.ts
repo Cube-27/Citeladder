@@ -82,9 +82,16 @@ export function rangeToWindow(
   now: Date = new Date(),
 ): { from?: string; to?: string } {
   if (range === 'latest') return {};
-  const from = new Date(now.getTime());
-  from.setUTCDate(from.getUTCDate() - RANGE_DAYS[range]);
-  return { from: isoDate(from), to: isoDate(now) };
+  // Synced provider windows end on the latest complete UTC day (yesterday),
+  // not the still-changing current day. Anchor presets to that same boundary
+  // so a 28-day selection can match the persisted 28-day sync snapshot.
+  const to = new Date(now.getTime());
+  to.setUTCDate(to.getUTCDate() - 1);
+  const from = new Date(to.getTime());
+  // API windows are inclusive at both ends, so "Last 7 days" is the latest
+  // complete day plus the preceding six dates (not an eight-day window).
+  from.setUTCDate(from.getUTCDate() - (RANGE_DAYS[range] - 1));
+  return { from: isoDate(from), to: isoDate(to) };
 }
 
 /**

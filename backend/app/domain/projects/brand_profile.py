@@ -12,6 +12,11 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_FIELDS,
     BRAND_PROFILE_SOURCE_MANUAL,
 )
+
+# ``clean_profile_products`` lives in ``normalization`` (its owner) because
+# ``domain/projects/service`` needs it too and cannot import from this module
+# without a cycle. Re-exported here so existing importers keep working.
+from app.domain.projects.normalization import clean_profile_products
 from app.domain.projects.schemas import (
     BrandProfileResponse,
     BrandProfileSourceArtifacts,
@@ -20,21 +25,18 @@ from app.domain.projects.schemas import (
 from app.domain.projects.service import get_project
 from app.models.brand import BrandProfile
 
+__all__ = [
+    "BrandProfileNotFoundError",
+    "brand_profile_to_response",
+    # Re-exported from ``normalization`` for the many existing importers.
+    "clean_profile_products",
+    "get_brand_profile",
+    "upsert_manual_brand_profile",
+]
+
 
 class BrandProfileNotFoundError(LookupError):
     """Raised when a profile is absent or outside the caller's workspace."""
-
-
-def clean_profile_products(values: list[str]) -> list[str]:
-    cleaned: list[str] = []
-    seen: set[str] = set()
-    for value in values:
-        item = value.strip()
-        key = item.casefold()
-        if item and key not in seen:
-            seen.add(key)
-            cleaned.append(item)
-    return cleaned
 
 
 def brand_profile_to_response(profile: BrandProfile) -> BrandProfileResponse:

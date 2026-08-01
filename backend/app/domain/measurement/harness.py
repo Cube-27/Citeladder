@@ -172,8 +172,7 @@ class MeasurementRunner(Protocol):
 
     async def observe(
         self, case: MeasurementCase, prompt: MeasurementPrompt
-    ) -> MeasurementObservation:
-        ...
+    ) -> MeasurementObservation: ...
 
 
 # --- Prompt loading + safety --------------------------------------------
@@ -596,9 +595,7 @@ def _cost_cell(
     key: tuple[str, bool, str, str], rows: list[MeasurementObservation]
 ) -> dict[str, Any]:
     route_key, search_enabled, reasoning_effort, output_treatment = key
-    provider_cost = _sum_optional(
-        row.provider_reported_cost_microusd for row in rows
-    )
+    provider_cost = _sum_optional(row.provider_reported_cost_microusd for row in rows)
     search_fee = _sum_optional(row.search_fee_microusd for row in rows)
     lines = {
         "uncached_input_tokens": _sum_optional(

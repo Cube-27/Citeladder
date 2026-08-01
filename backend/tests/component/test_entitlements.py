@@ -75,9 +75,7 @@ async def _account_with_workspace(
     session.add(workspace)
     await session.flush()
     session.add(
-        WorkspaceBillingLink(
-            workspace_id=workspace.id, billing_account_id=account.id
-        )
+        WorkspaceBillingLink(workspace_id=workspace.id, billing_account_id=account.id)
     )
     await session.commit()
     return account, workspace, user
@@ -153,9 +151,7 @@ async def test_bundle_replay_is_suppressed_and_shape_conflict_raises(
                 write, grants=(GrantSpec(key=KEY_MONITORED_URLS, value=50),), **kwargs
             )
             await write.commit()
-            assert tuple(row.id for row in replayed) == tuple(
-                row.id for row in first
-            )
+            assert tuple(row.id for row in replayed) == tuple(row.id for row in first)
         await session.refresh(account)
         assert account.entitlement_lifecycle_version == 1
 

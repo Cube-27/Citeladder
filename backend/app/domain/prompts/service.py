@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.core.config.projects import (
+    PROMPT_ORIGIN_GENERATED,
     PROMPT_ORIGIN_IMPORTED,
     PROMPT_ORIGIN_MANUAL,
 )
@@ -31,6 +32,7 @@ from app.domain.entitlements.enforcement import (
 from app.domain.projects.normalization import normalize_intent
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.prompts.receipts import verify_prompt_receipt
 from app.domain.prompts.topical_binding import (
     BINDING_FAILURE_MESSAGES,
     TopicalBindingError,
@@ -355,14 +357,39 @@ async def create_prompt(
         prompt_set_id=payload.prompt_set_id,
     )
     text = payload.text.strip()
-    # Topical binding: manual text must share the project's identity/category
-    # vocabulary (rejects BEFORE any occupancy charge or insert).
-    await enforce_prompt_binding(
-        session,
-        workspace_id=workspace_id,
-        project_id=prompt_set.project_id,
-        text=text,
+    # Topical binding applies to free text a human typed. A prompt the backend
+    # itself generated from verified brand-website evidence is exempt: binding
+    # is word-overlap against the project's stored vocabulary, but a correct
+    # measurement prompt is brand-NEUTRAL by design (the same text is run for
+    # the brand AND its competitors), so it can only ever bind on category
+    # wording — and a legitimate synonym shares no literal token.
+    #
+    # The exemption is proof-gated, never taken on the client's word: ``origin``
+    # arrives in the request body, so it is honoured only alongside a valid
+    # backend-issued receipt over this exact text. An unverified claim falls
+    # through to the ordinary gate.
+    claimed_generated = getattr(payload, "origin", PROMPT_ORIGIN_MANUAL) == (
+        PROMPT_ORIGIN_GENERATED
     )
+    is_generated = claimed_generated and verify_prompt_receipt(
+        text, getattr(payload, "generation_receipt", None)
+    )
+    if not is_generated:
+        # Bind against the PERSISTED topic, never the request body's ``theme``
+        # (free text the caller chooses — binding against it would let any
+        # client supply its own prompt's wording as the vocabulary).
+        await enforce_prompt_binding(
+            session,
+            workspace_id=workspace_id,
+            project_id=prompt_set.project_id,
+            text=text,
+            topic_text=await _scoped_topic_text(
+                session,
+                workspace_id=workspace_id,
+                prompt_set_id=payload.prompt_set_id,
+                topic_id=getattr(payload, "topic_id", None),
+            ),
+        )
     # normalized_text_hash is set by the Prompt model's @validates("text") hook.
     prompt = Prompt(
         prompt_set_id=payload.prompt_set_id,
@@ -371,7 +398,7 @@ async def create_prompt(
         intent=normalize_intent(payload.intent),
         branded=payload.branded,
         enabled=payload.enabled,
-        origin=PROMPT_ORIGIN_MANUAL,
+        origin=PROMPT_ORIGIN_GENERATED if is_generated else PROMPT_ORIGIN_MANUAL,
     )
     # Same scope rule as the update path: a topic must belong to the prompt's
     # own project. Validated before the insert so a cross-scope topic is a 404
@@ -422,6 +449,40 @@ async def _get_prompt(
     if prompt is None:
         raise PromptNotFoundError("Prompt not found")
     return prompt
+
+
+async def _scoped_topic_text(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+    topic_id: uuid.UUID | None,
+) -> str:
+    """Persisted name + description of ``topic_id``, scoped to the set's project.
+
+    Returns "" when no topic is referenced or it is out of scope. This is the
+    ONLY admissible source of topic text for binding: the request body's
+    ``theme`` is a free-text string the caller chooses, so binding against it
+    would let any client widen the vocabulary with its own prompt's wording and
+    defeat the gate entirely.
+    """
+    if topic_id is None:
+        return ""
+    row = (
+        await session.execute(
+            select(Topic.name, Topic.description)
+            .join(Project, Project.id == Topic.project_id)
+            .join(PromptSet, PromptSet.project_id == Project.id)
+            .where(
+                Topic.id == topic_id,
+                PromptSet.id == prompt_set_id,
+                Project.workspace_id == workspace_id,
+            )
+        )
+    ).one_or_none()
+    if row is None:
+        return ""
+    return " ".join(part for part in (row.name, row.description) if part)
 
 
 async def _validate_topic_scope(

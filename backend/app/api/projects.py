@@ -58,6 +58,7 @@ from app.domain.projects.brand_profile import (
     upsert_manual_brand_profile,
 )
 from app.domain.projects.brand_profile_suggestions import (
+    BrandEvidenceUnavailableError,
     BrandProfileSuggestionNotFoundError,
     BrandProfileSuggestionOutputError,
     BrandProfileSuggestionValidationError,
@@ -280,6 +281,17 @@ async def suggest_brand_profile_endpoint(
         )
     except (ProjectNotFoundError, BrandProfileNotFoundError) as exc:
         raise_not_found("Brand profile", cause=exc)
+    except BrandEvidenceUnavailableError as exc:
+        # An actionable precondition, not a server fault: the brand's own site
+        # gave us nothing to ground a draft in, so the human fills it in.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "brand_evidence_unavailable",
+                "message": str(exc),
+                "reason": exc.reason,
+            },
+        ) from exc
     except BrandProfileSuggestionOutputError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

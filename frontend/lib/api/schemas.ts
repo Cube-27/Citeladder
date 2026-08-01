@@ -253,6 +253,10 @@ const promptSuggestionItemSchema = responseObject({
   text: z.string(),
   theme: z.string(),
   intent: z.string(),
+  // Backend proof that this text came from a real generation, echoed back on
+  // create so the prompt is stored as `generated` and skips topical binding.
+  // Optional so an older backend without receipts still validates.
+  generation_receipt: z.string().optional(),
 });
 
 export const promptSuggestResponseSchema = responseObject({

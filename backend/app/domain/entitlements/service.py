@@ -63,8 +63,7 @@ def _unresolved(
     error: str,
 ) -> ResolvedEntitlement:
     logger.info(
-        "billing.entitlement_unresolved account_id=%s registry_revision=%s "
-        "error=%s",
+        "billing.entitlement_unresolved account_id=%s registry_revision=%s error=%s",
         account_id,
         CAPABILITY_REGISTRY.revision,
         error,
@@ -162,9 +161,7 @@ async def resolve_account_entitlement(
     )
     if cached is not None:
         return cached
-    grants, revocations, subscription_end = await _load_fold_inputs(
-        session, account_id
-    )
+    grants, revocations, subscription_end = await _load_fold_inputs(session, account_id)
     try:
         entitlement = fold_entitlement(
             account_id=account_id,

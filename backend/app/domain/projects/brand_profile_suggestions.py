@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.agent.client import DefaultAgentClient
+from app.core.config.brand_evidence import BRAND_EVIDENCE_FAILURE_MESSAGES
 from app.core.config.brand_profile import (
     BRAND_PROFILE_FIELDS,
     BRAND_PROFILE_SOURCE_AI_SUGGESTED,
@@ -18,14 +19,15 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_SUGGESTER_VERSION,
     BRAND_PROFILE_SUGGESTION_SYSTEM_PROMPT,
 )
+from app.domain.projects.brand_evidence import BrandEvidence, collect_brand_evidence
 from app.domain.projects.brand_profile import (
     BrandProfileNotFoundError,
     brand_profile_to_response,
     clean_profile_products,
 )
 from app.domain.projects.knowledge_base import (
-    build_brand_knowledge_context,
     build_brand_knowledge_data,
+    serialize_brand_knowledge_context,
 )
 from app.domain.projects.schemas import (
     BrandProfileAcceptResponse,
@@ -42,6 +44,20 @@ class BrandProfileSuggestionValidationError(ValueError):
 
 class BrandProfileSuggestionOutputError(RuntimeError):
     """The agent returned an unusable profile draft."""
+
+
+class BrandEvidenceUnavailableError(RuntimeError):
+    """The brand's own website yielded too little content to draft from.
+
+    Raised BEFORE the agent is called. Drafting a profile from the brand name
+    alone is what produced fabricated positioning, competitors, and prompts for
+    brands with no training-data footprint; refusing to draft is the correct
+    outcome, and the human fills the profile in by hand instead.
+    """
+
+    def __init__(self, message: str, *, reason: str) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class BrandProfileSuggestionNotFoundError(LookupError):
@@ -77,17 +93,54 @@ def parse_brand_profile_draft(raw: str) -> BrandProfileDraft:
             f"Unparseable normalized agent output: {exc}"
         ) from exc
     if not any(draft.model_dump().values()):
-        raise BrandProfileSuggestionOutputError(
-            "Agent output contained no usable profile fields"
+        # The system prompt REQUIRES an unsupported field to come back empty,
+        # so an all-empty draft is the model correctly reporting that the
+        # evidence did not support any field. That is a grounding outcome the
+        # user can act on (fill the profile in), not malformed output — a 502
+        # here would blame the provider for obeying its instructions.
+        raise BrandEvidenceUnavailableError(
+            BRAND_EVIDENCE_FAILURE_MESSAGES["insufficient_website_content"],
+            reason="insufficient_website_content",
         )
     return draft
 
 
-def build_brand_profile_suggestion_message(project: Any) -> str:
-    return (
-        f"{build_brand_knowledge_context(project)}\n"
-        "Draft the four requested profile fields for human review."
+def build_brand_profile_suggestion_message(
+    knowledge: dict[str, object], evidence: BrandEvidence
+) -> str:
+    """Assemble the drafter's user message: identity + real page evidence.
+
+    The evidence block carries what the brand's own site says; the knowledge
+    block carries the curated identity rows. The instruction names the evidence
+    as the only admissible source so the two blocks can't be conflated.
+
+    ``evidence`` is REQUIRED and must carry pages. The instruction below tells
+    the model that the evidence block is its only admissible source, so
+    emitting that instruction without the block would direct the model at
+    content that is not there — leaving it to fall back on the brand name,
+    which is the exact failure this whole path exists to prevent.
+
+    Takes the already-projected knowledge DATA (not the ORM ``Project``): the
+    caller snapshots it before ending its transaction, and this runs after the
+    evidence crawl, when touching an expired ORM attribute would attempt lazy
+    I/O outside the async greenlet context.
+    """
+    if not evidence.pages:
+        raise BrandEvidenceUnavailableError(
+            BRAND_EVIDENCE_FAILURE_MESSAGES.get(
+                evidence.failure_reason,
+                BRAND_EVIDENCE_FAILURE_MESSAGES["website_unreachable"],
+            ),
+            reason=evidence.failure_reason or "website_unreachable",
+        )
+    sections = [serialize_brand_knowledge_context(knowledge)]
+    sections.append(evidence.serialize())
+    sections.append(
+        "Draft the four requested profile fields for human review, using ONLY "
+        "the <brand_website_evidence> page content above. Leave any field "
+        "empty that the evidence does not support."
     )
+    return "\n".join(sections)
 
 
 def brand_profile_suggestion_to_response(
@@ -119,10 +172,30 @@ async def suggest_brand_profile(
     if project.brand is None:
         raise BrandProfileNotFoundError("Project brand not found")
     input_snapshot = build_brand_knowledge_data(project)
-    user_message = build_brand_profile_suggestion_message(project)
+    website_url = project.website_url
 
-    # Do not hold a database transaction open during provider I/O.
+    # Do not hold a database transaction open during network I/O — this covers
+    # the evidence crawl as well as the provider call.
     await session.rollback()
+
+    # Ground the draft in the brand's own site BEFORE calling the agent. With
+    # no evidence there is nothing to draft from but the brand name, which is
+    # exactly the fabrication path this gate exists to close.
+    evidence = await collect_brand_evidence(website_url)
+    if not evidence.is_sufficient:
+        raise BrandEvidenceUnavailableError(
+            BRAND_EVIDENCE_FAILURE_MESSAGES.get(
+                evidence.failure_reason,
+                "Could not read enough content from this brand's website to "
+                "draft a profile. Fill the profile in manually instead.",
+            ),
+            reason=evidence.failure_reason,
+        )
+    user_message = build_brand_profile_suggestion_message(input_snapshot, evidence)
+    # Record provenance AFTER building the message so the evidence block the
+    # agent saw is exactly the curated knowledge, not the provenance stanza.
+    input_snapshot["website_evidence"] = evidence.provenance()
+
     raw = await agent.complete_json(
         system=BRAND_PROFILE_SUGGESTION_SYSTEM_PROMPT,
         user=user_message,

@@ -8,7 +8,7 @@
 # endpoints spend agent quota and forward brand data to the provider.
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,7 @@ from app.domain.projects.schemas import (
     SuggestedTopicGroup,
 )
 from app.domain.projects.suggestions import (
+    BrandEvidenceRequiredError,
     SuggestionOutputError,
     SuggestionValidationError,
     suggest_competitors,
@@ -38,6 +39,7 @@ from app.domain.projects.suggestions import (
     validate_prompt_suggestion_payload,
     validate_suggestion_payload,
 )
+from app.domain.prompts.receipts import issue_prompt_receipt
 
 router = APIRouter(prefix="/brand-suggestions", tags=["brand-suggestions"])
 
@@ -88,6 +90,19 @@ def _raise_agent_failed(exc: ProviderError) -> None:
     ) from exc
 
 
+def _raise_no_evidence(exc: BrandEvidenceRequiredError) -> None:
+    """422: nothing to ground on — the website is unreadable and no
+    description was supplied. Actionable by the user, not a server fault."""
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail={
+            "code": "brand_evidence_required",
+            "message": str(exc),
+            "reason": exc.reason,
+        },
+    ) from exc
+
+
 @router.post(
     "/competitors",
     response_model=CompetitorSuggestResponse,
@@ -119,6 +134,8 @@ async def suggest_competitors_endpoint(
     )
     try:
         competitors, dropped = await suggest_competitors(payload=payload, agent=agent)
+    except BrandEvidenceRequiredError as exc:
+        _raise_no_evidence(exc)
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     except SuggestionOutputError as exc:
@@ -164,6 +181,8 @@ async def suggest_owned_domains_endpoint(
     )
     try:
         domains, dropped = await suggest_owned_domains(payload=payload, agent=agent)
+    except BrandEvidenceRequiredError as exc:
+        _raise_no_evidence(exc)
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     except SuggestionOutputError as exc:
@@ -211,25 +230,31 @@ async def suggest_prompts_endpoint(
     )
     try:
         prompts, topics, dropped = await suggest_prompts(payload=payload, agent=agent)
+    except BrandEvidenceRequiredError as exc:
+        _raise_no_evidence(exc)
     except SuggestionValidationError as exc:
         _raise_invalid(exc)
     except SuggestionOutputError as exc:
         _raise_unparseable(exc)
     except ProviderError as exc:
         _raise_agent_failed(exc)
+
+    # Each suggestion carries a receipt proving the backend generated it, so the
+    # caller can persist it as ``generated`` (skipping topical binding, which
+    # cannot judge a deliberately brand-neutral prompt) without the endpoint
+    # having to trust a client-supplied origin claim.
+    def _item(row: Any) -> PromptSuggestionItem:
+        return PromptSuggestionItem(
+            text=row.text,
+            theme=row.theme,
+            intent=row.intent,
+            generation_receipt=issue_prompt_receipt(row.text),
+        )
+
     return PromptSuggestResponse(
-        prompts=[
-            PromptSuggestionItem(text=p.text, theme=p.theme, intent=p.intent)
-            for p in prompts
-        ],
+        prompts=[_item(p) for p in prompts],
         topics=[
-            SuggestedTopicGroup(
-                name=t.name,
-                prompts=[
-                    PromptSuggestionItem(text=p.text, theme=p.theme, intent=p.intent)
-                    for p in t.prompts
-                ],
-            )
+            SuggestedTopicGroup(name=t.name, prompts=[_item(p) for p in t.prompts])
             for t in topics
         ],
         dropped_duplicates=dropped,

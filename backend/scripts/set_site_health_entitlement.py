@@ -52,9 +52,7 @@ async def _run(workspace_id: uuid.UUID, monitored_urls: int) -> None:
             )
         )
         if link is None:
-            raise RuntimeError(
-                f"workspace {workspace_id} has no billing account link"
-            )
+            raise RuntimeError(f"workspace {workspace_id} has no billing account link")
         owner = await session.scalar(
             select(User)
             .join(

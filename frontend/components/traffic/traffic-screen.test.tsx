@@ -243,6 +243,10 @@ describe('TrafficScreen — populated dashboard', () => {
     const impressionsCard = screen.getByTestId('trend-chart-impressions');
     expect(within(impressionsCard).getByText('Google Search Console · daily')).toBeInTheDocument();
     expect(within(impressionsCard).getByText('60K')).toBeInTheDocument();
+    // The two available impression readings are separated by a null bucket.
+    // They are isolated SVG segments, so both must render as visible marks
+    // instead of leaving an apparently empty graph.
+    expect(impressionsCard.querySelectorAll('[data-isolated-point]')).toHaveLength(2);
     expect(screen.getByTestId('trend-chart-clicks')).toBeInTheDocument();
     expect(screen.getByTestId('trend-chart-average-position')).toBeInTheDocument();
 

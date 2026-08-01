@@ -394,9 +394,7 @@ async def _seed_root_discover(
     output), ready for one worker run."""
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
-        await _seed_runtime(
-            session, seed.workspace_id, monitored_urls=monitored_urls
-        )
+        await _seed_runtime(session, seed.workspace_id, monitored_urls=monitored_urls)
         await session.commit()
         await _configure_crawl(
             session,

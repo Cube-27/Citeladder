@@ -742,8 +742,12 @@ class IntegrationSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="INTEGRATION_", extra="ignore")
 
-    # --- Sync windows (GSC/GA4 data lags and is revised for ~2-3 days) -----
-    sync_default_window_days: int = Field(default=3, gt=0)
+    # --- Sync windows -----------------------------------------------------
+    # Import the full Traffic reporting window on every normal sync. Provider
+    # data still receives a separate short late-data revision pass below;
+    # limiting the primary import to that revision span leaves new projects
+    # with only one or two usable historical buckets after provider lag.
+    sync_default_window_days: int = Field(default=28, gt=0)
     sync_backfill_max_days: int = Field(default=480, gt=0)
     # Dispatcher tick (default daily).
     sync_cadence_seconds: float = Field(default=86400.0, gt=0)

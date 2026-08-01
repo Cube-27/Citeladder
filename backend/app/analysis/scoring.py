@@ -559,12 +559,14 @@ def _reported_cost_usd(usage: dict[str, Any]) -> float:
 
     ``provider_cost_microusd`` is the canonical typed spelling (already
     micro-USD) and wins; ``provider_cost_usd`` is the pre-T3 dollar spelling
-    kept readable for legacy artifacts. Nothing reported contributes nothing —
-    no fabricated cost.
+    kept readable for legacy artifacts. Parsing is float-tolerant so a decimal
+    micro-USD spelling from a legacy artifact still counts instead of zeroing
+    the whole execution. Nothing reported contributes nothing — no fabricated
+    cost.
     """
     if usage.get("provider_cost_microusd") is not None:
         try:
-            return int(usage["provider_cost_microusd"]) / MICRO_USD_PER_USD
+            return float(usage["provider_cost_microusd"]) / MICRO_USD_PER_USD
         except (TypeError, ValueError):
             return 0.0
     try:

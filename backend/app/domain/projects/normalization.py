@@ -67,3 +67,22 @@ def normalize_prompt_rows(
             row["generation_evidence"] = prompt.get("generation_evidence")
         normalized.append(row)
     return normalized
+
+
+def clean_profile_products(values: list[str] | None) -> list[str]:
+    """Trim, drop blanks, and de-duplicate case-insensitively (first wins).
+
+    Lives here rather than in ``domain/projects/brand_profile`` so both the
+    profile module and ``domain/projects/service`` can use it: the latter seeds
+    a BrandProfile at project creation, and importing it from ``brand_profile``
+    (which imports ``service``) would be a circular import.
+    """
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for value in values or []:
+        item = value.strip()
+        key = item.casefold()
+        if item and key not in seen:
+            seen.add(key)
+            cleaned.append(item)
+    return cleaned

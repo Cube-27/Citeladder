@@ -300,13 +300,12 @@ def test_consumable_resolution_carries_the_draw_order() -> None:
 # Top-up expiry is coupled to the readable base subscription end
 # =========================================================================
 def test_topup_without_a_subscription_end_is_never_active() -> None:
-    topup = _grant(
-        KEY_BENCHMARK_CREDITS, 100, source_kind=GRANT_SOURCE_TOPUP
-    )
+    topup = _grant(KEY_BENCHMARK_CREDITS, 100, source_kind=GRANT_SOURCE_TOPUP)
     assert effective_grant_expiry(topup, None) == datetime.min.replace(tzinfo=UTC)
-    assert _fold((topup,), subscription_end=None).capability_value(
-        KEY_BENCHMARK_CREDITS
-    ) == 0
+    assert (
+        _fold((topup,), subscription_end=None).capability_value(KEY_BENCHMARK_CREDITS)
+        == 0
+    )
 
 
 def test_topup_expiry_is_the_min_of_valid_until_and_subscription_end() -> None:
@@ -331,18 +330,23 @@ def test_topup_expiry_moves_with_renewal_and_cancellation() -> None:
     )
     # Active while the base subscription runs past ``at``.
     renewed = _AT + timedelta(days=15)
-    assert _fold((topup,), subscription_end=renewed).capability_value(
-        KEY_BENCHMARK_CREDITS
-    ) == 100
+    assert (
+        _fold((topup,), subscription_end=renewed).capability_value(
+            KEY_BENCHMARK_CREDITS
+        )
+        == 100
+    )
     # A cancellation removes the readable end: the top-up resolves unavailable.
-    assert _fold((topup,), subscription_end=None).capability_value(
-        KEY_BENCHMARK_CREDITS
-    ) == 0
+    assert (
+        _fold((topup,), subscription_end=None).capability_value(KEY_BENCHMARK_CREDITS)
+        == 0
+    )
     # A base end BEFORE ``at`` likewise leaves the top-up expired.
     lapsed = _AT - timedelta(days=1)
-    assert _fold((topup,), subscription_end=lapsed).capability_value(
-        KEY_BENCHMARK_CREDITS
-    ) == 0
+    assert (
+        _fold((topup,), subscription_end=lapsed).capability_value(KEY_BENCHMARK_CREDITS)
+        == 0
+    )
 
 
 # =========================================================================

@@ -212,29 +212,54 @@ def build_project_vocabulary(project: Project) -> BindingVocabulary:
     return build_vocabulary(names=names, hosts=hosts, texts=texts)
 
 
-def validate_prompt_binding(text: str, vocabulary: BindingVocabulary) -> BindingResult:
+def validate_prompt_binding(
+    text: str, vocabulary: BindingVocabulary, *, topic_text: str = ""
+) -> BindingResult:
     """Bind one prompt text to the project vocabulary (pure, deterministic).
 
-    Accepts only when the prompt shares at least one normalized non-stopword
+    Accepts when the prompt shares at least one normalized non-stopword
     identity/category token with the vocabulary OR contains an exact
     normalized vocabulary phrase. Empty vocabulary fails CLOSED with
     ``binding_vocabulary_empty`` so the caller completes the project identity
     or uses generation instead of admitting unbound text.
+
+    ``topic_text`` is the name/description of the topic this prompt is being
+    filed under. A prompt is admitted when it binds to ITS OWN topic even if
+    it shares no token with the wider project vocabulary.
+
+    Why: a measurement prompt must be brand-NEUTRAL — the same text is run for
+    the brand and its competitors to see who gets mentioned, so a prompt
+    naming the brand measures nothing. Correct prompts therefore share only
+    CATEGORY wording, and category wording legitimately varies from the
+    project's stored terms ("BI dashboards" under a
+    "business_intelligence_and_analytics" topic shares no literal token: "bi"
+    is below the token floor). Binding a prompt to the topic a human is
+    deliberately filing it under keeps the off-domain check meaningful without
+    rejecting correct, on-topic prompts.
     """
     if not vocabulary.tokens and not vocabulary.phrases:
         return BindingResult(accepted=False, code=CODE_BINDING_VOCABULARY_EMPTY)
+    # The prompt's own topic is category identity for THIS prompt, so it
+    # widens the vocabulary for this check only (never mutates the project's).
+    effective = vocabulary
+    if topic_text.strip():
+        topic_vocabulary = build_vocabulary(texts=[topic_text])
+        effective = BindingVocabulary(
+            tokens=vocabulary.tokens | topic_vocabulary.tokens,
+            phrases=vocabulary.phrases | topic_vocabulary.phrases,
+        )
     normalized = _normalize_text(text)
     for token in normalized.split():
         if (
             len(token) >= TOPICAL_BINDING_MIN_TOKEN_CHARS
             and token not in TOPICAL_BINDING_STOPWORDS
-            and token in vocabulary.tokens
+            and token in effective.tokens
         ):
             return BindingResult(
                 accepted=True, code=BINDING_CODE_ACCEPTED, matched_token=token
             )
     padded = f" {normalized} "
-    for phrase in sorted(vocabulary.phrases):
+    for phrase in sorted(effective.phrases):
         if f" {phrase} " in padded:
             return BindingResult(
                 accepted=True, code=BINDING_CODE_ACCEPTED, matched_phrase=phrase
@@ -266,18 +291,24 @@ async def load_project_vocabulary(
 
 
 async def enforce_prompt_binding(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID, text: str
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    text: str,
+    topic_text: str = "",
 ) -> BindingResult:
     """Require ``text`` to bind to the project's vocabulary (raises coded).
 
     The shared enforcement for the single-text mutation paths (manual create,
     text update, activation transition). A rejection raises
-    ``TopicalBindingError`` BEFORE any write.
+    ``TopicalBindingError`` BEFORE any write. ``topic_text`` is the topic the
+    prompt is being filed under; see ``validate_prompt_binding``.
     """
     vocabulary = await load_project_vocabulary(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    result = validate_prompt_binding(text, vocabulary)
+    result = validate_prompt_binding(text, vocabulary, topic_text=topic_text)
     if not result.accepted:
         raise TopicalBindingError(
             BINDING_FAILURE_MESSAGES[result.code], code=result.code

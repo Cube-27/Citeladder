@@ -133,6 +133,12 @@ export async function createProjectFromOnboarding({
       branded: false,
       enabled: true,
       ...(topicId ? { topic_id: topicId } : {}),
+      // Carry the generation proof so the backend stores this as `generated`
+      // and skips topical binding. A prompt the user edited or wrote loses its
+      // receipt and is correctly treated as manual free text.
+      ...(prompt.generation_receipt
+        ? { origin: 'generated' as const, generation_receipt: prompt.generation_receipt }
+        : {}),
     });
   }
 

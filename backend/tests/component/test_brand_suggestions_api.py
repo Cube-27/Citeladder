@@ -22,7 +22,10 @@ import httpx
 import pytest
 
 import app.api.brand_suggestions as brand_suggestions_api
+import app.domain.projects.suggestions as suggestions_domain
 from app.connectors.agent.client import AgentNotConfiguredError
+from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
+from app.domain.projects.brand_evidence import BrandEvidence
 
 VALID_COMPETITOR_RESPONSE = json.dumps(
     {
@@ -58,6 +61,35 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
     agent = FakeAgent()
     monkeypatch.setattr(brand_suggestions_api, "DefaultAgentClient", lambda: agent)
     return agent
+
+
+def _stub_evidence(words: int = 200) -> BrandEvidence:
+    return BrandEvidence(
+        pages=(
+            BrandEvidencePage(
+                url="https://acme.com/",
+                title="Acme Corp",
+                meta_description="Australian family retailer.",
+                text=" ".join(["retailer"] * words),
+            ),
+        )
+    )
+
+
+@pytest.fixture(autouse=True)
+def stub_brand_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub the brand-website crawl for every test in this module.
+
+    Autouse and unconditional: suggestions now fetch the brand's site before
+    calling the agent, and a component test must never depend on the live
+    internet. Tests that assert the NO-EVIDENCE refusal override this with
+    their own patch.
+    """
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return _stub_evidence()
+
+    monkeypatch.setattr(suggestions_domain, "collect_brand_evidence", _collect)
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -287,3 +319,90 @@ async def test_suggest_requires_authentication(
 
     assert resp.status_code == 401
     assert fake_agent.calls == []
+
+
+# --------------------------------------------------------------------------
+# Grounding: onboarding sends brand name + URL only, so the brand's own
+# website is the only real source. Without it the agent would invent a
+# business from the NAME — the cube27 defect.
+# --------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_competitors_are_grounded_in_fetched_website_content(
+    client: httpx.AsyncClient, fake_agent: FakeAgent
+) -> None:
+    await _register(client, "grounded-competitors@example.com")
+
+    resp = await client.post(
+        "/api/v1/brand-suggestions/competitors",
+        json=_competitor_payload(),
+    )
+
+    assert resp.status_code == 201
+    sent = fake_agent.calls[0]["user"]
+    assert "<brand_website_evidence>" in sent
+    assert "retailer" in sent
+    # The model must be told not to infer the market from the brand name.
+    assert "Do NOT infer the brand's market from its name." in sent
+
+
+@pytest.mark.asyncio
+async def test_bare_payload_without_readable_website_is_refused(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The core onboarding fix: name + unreadable URL must not reach the agent.
+
+    Onboarding sends no description/positioning, so an unreadable site leaves
+    the brand NAME as the only signal — exactly what produced fabricated
+    competitors for a brand with no training-data footprint.
+    """
+    await _register(client, "no-evidence-competitors@example.com")
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return BrandEvidence(failure_reason="website_unreachable")
+
+    monkeypatch.setattr(suggestions_domain, "collect_brand_evidence", _collect)
+
+    resp = await client.post(
+        "/api/v1/brand-suggestions/competitors",
+        json={
+            "brand_name": "Cube27",
+            "website_url": "https://cube27.example",
+            "confirm_send_evidence": True,
+            "existing_competitor_names": [],
+        },
+    )
+
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert detail["code"] == "brand_evidence_required"
+    assert detail["reason"] == "website_unreachable"
+    assert fake_agent.calls == []
+
+
+@pytest.mark.asyncio
+async def test_curated_description_still_works_without_website_evidence(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A human-written description IS grounding, so the crawl is optional.
+
+    Only the no-grounding-at-all case is refused; a setup form where someone
+    typed what the brand does must keep working when the site is unreachable.
+    """
+    await _register(client, "curated-competitors@example.com")
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return BrandEvidence(failure_reason="website_unreachable")
+
+    monkeypatch.setattr(suggestions_domain, "collect_brand_evidence", _collect)
+
+    resp = await client.post(
+        "/api/v1/brand-suggestions/competitors",
+        json=_competitor_payload(description="Australian value clothing retailer."),
+    )
+
+    assert resp.status_code == 201
+    assert len(fake_agent.calls) == 1

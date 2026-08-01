@@ -27,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.agent.client import DefaultAgentClient
+from app.connectors.web_evidence.brand_evidence import evidence_block_lines
 from app.core.config.projects import PROMPT_INTENTS, PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
     GENERATION_SYSTEM_PROMPT,
@@ -146,6 +147,17 @@ def build_generation_user_message(
         serialize_brand_knowledge_context(
             dict(brand_context.get("knowledge_base", {}))
         ),
+    ]
+    # What the brand's own site says, when it could be read — named as the
+    # primary source so prompts describe the real business rather than
+    # whatever the brand's NAME suggests.
+    lines += evidence_block_lines(
+        brand_context.get("website_evidence", ""),
+        "Ground every prompt in the <brand_website_evidence> page content "
+        "above: it is what this brand actually sells and to whom. Do NOT "
+        "infer the brand's market or products from its name.",
+    )
+    lines += [
         f"Brand: {brand_context.get('brand_name', '')}",
         f"Brand aliases: {', '.join(brand_context.get('brand_aliases', [])) or 'none'}",
         f"Competitors: {', '.join(competitors) or 'none'}",

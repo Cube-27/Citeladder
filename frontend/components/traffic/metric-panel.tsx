@@ -143,9 +143,15 @@ export function MetricPanel({
     };
   });
 
-  const segments = toSegments(plotted).filter((segment) => segment.length > 1);
+  const allSegments = toSegments(plotted);
+  const segments = allSegments.filter((segment) => segment.length > 1);
+  // Sparse provider data commonly leaves null buckets between readings. Each
+  // one-point segment still represents a real measurement and needs a mark;
+  // otherwise two isolated readings produce an entirely blank chart.
+  const isolatedPoints = allSegments
+    .filter((segment) => segment.length === 1)
+    .map((segment) => segment[0]);
   const drawn = plotted.filter((p): p is PlottedPoint => p !== null);
-  const lone = drawn.length === 1 ? drawn[0] : null;
 
   const first = points[0]?.label ?? '';
   const last = points.at(-1)?.label ?? '';
@@ -220,9 +226,18 @@ export function MetricPanel({
                 className={series.strokeClass}
               />
             ))}
-            {/* A lone reading has no line to draw, so mark it or the panel
-                would read as empty. */}
-            {lone ? <circle cx={lone.x} cy={lone.y} r={3} className={series.fillClass} /> : null}
+            {/* A one-point segment has no line to draw. Mark every isolated
+                reading so sparse series never look empty. */}
+            {isolatedPoints.map((point) => (
+              <circle
+                key={`isolated-${point.label}`}
+                cx={point.x}
+                cy={point.y}
+                r={3}
+                className={series.fillClass}
+                data-isolated-point=""
+              />
+            ))}
           </g>
 
           {hover ? (
