@@ -301,8 +301,7 @@ class Ga4Client:
             if not page_token:
                 return tuple(properties)
         raise Ga4ApiError(
-            "GA4 property list exceeded "
-            f"{GA4_ACCOUNT_SUMMARIES_MAX_PAGES} pages",
+            f"GA4 property list exceeded {GA4_ACCOUNT_SUMMARIES_MAX_PAGES} pages",
             error_code=ERROR_PROVIDER_API,
         )
 

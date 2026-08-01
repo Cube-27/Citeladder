@@ -133,9 +133,9 @@ No P0 items.
 | Detail-page Searchify column had an "Open source / self-host" dimension and "Open source under MIT" price cell | **Applied:** dimension is "Self-host"; price cell is "Free self-host option on your own infrastructure — hosted plans [TODO(user)]" | P0 |
 | Detail narrative hint listed "open source" as a talking point | **Applied:** hint dropped it | P0 |
 | Final ghost CTAs were external "Star on GitHub" buttons | **Applied:** internal "Read the FAQ" (`/faq`); blog-post ghost is "All posts" | P0 |
-| `COMPETITORS` is empty — the index shows only the research-in-progress note | Research Profound, Otterly, Scrunch, Peec first-party; fill rows, taglines, verdicts | P1 |
-| Detail pages hard-code "Last reviewed · [TODO(user): date]" | Stamp the review date when each competitor ships | P1 |
-| Detail hero says the column comes "straight from our docs and source code" | Reword to "our docs and the running platform" when a competitor page first ships (no competitor page renders today, so not P0) | P2 |
+| `COMPETITORS` was empty — the index showed only the research-in-progress note | **Applied:** all four vendors (Profound, Otterly AI, Scrunch AI, Peec AI) reviewed first-party from their homepages + pricing pages on 2026-08-01; rows, taglines, verdicts, and "where they fit better" blocks shipped. The customer-facing pages carry no verification-process wording — a row ships only when both cells are written, and unsupported dimensions are omitted per vendor | P1 |
+| Detail pages hard-coded "Last reviewed · [TODO(user): date]" | **Applied:** every entry stamped `2026-08-01` (date of the first-party review) | P1 |
+| Detail hero said the column came "straight from our docs and source code" | **Applied:** hero lead reworded; the sourcing discipline now lives in the module header comment, not on the customer page | P2 |
 
 ## FAQ
 

@@ -12,6 +12,9 @@ import Page from './page';
 // no providers and no MSW. The async [competitor] route wrapper only resolves
 // `params` and picks the module entry (covered by e2e's 200/404 cases) — the
 // sync CompareDetailView it delegates to is rendered directly here.
+// These pages are customer-facing: every row ships with both cells written,
+// and no verification-process wording ("Not verified by us" et al.) may
+// reach the DOM.
 describe('Compare index page (/compare)', () => {
   it('renders exactly one h1 and no h2–h6 containing the product name', () => {
     render(<Page />);
@@ -71,39 +74,47 @@ describe('CompareDetailView (/compare/[competitor])', () => {
     }
   });
 
-  it('shows the real Searchify column and the explicit unverified competitor state', () => {
+  it('renders both columns, the freshness badge, and the editorial blocks', () => {
     const { container } = render(<CompareDetailView competitor={competitor} />);
 
     // Table header: real Searchify column, competitor column named for the slug.
     expect(screen.getByRole('columnheader', { name: 'Searchify' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: competitor.name })).toBeInTheDocument();
 
-    // Searchify column: the source-grounded strings render verbatim.
+    // Every row ships with BOTH cells written — dimension, ours, theirs.
     for (const row of competitor.rows) {
       expect(screen.getByText(row.dimension)).toBeInTheDocument();
       expect(screen.getByText(row.searchify)).toBeInTheDocument();
+      expect(screen.getByText(row.competitor)).toBeInTheDocument();
     }
 
-    // Every competitor cell renders the fixed unverified state — the page
-    // would rather show a gap than a guess — and the badge says so too.
-    expect(screen.getAllByText('Not verified by us')).toHaveLength(competitor.rows.length);
-    expect(screen.getByText('Not independently verified')).toBeInTheDocument();
+    // Header badges: the vendor's tagline and the freshness stamp — never a
+    // verification-process badge.
+    expect(screen.getByText(competitor.tagline)).toBeInTheDocument();
+    expect(screen.getByText(`Last reviewed · ${competitor.lastReviewed}`)).toBeInTheDocument();
 
-    // No editorial placeholder or instruction text may reach the DOM.
+    // Editorial blocks: verdict plus the honest "where they fit better".
+    const editorial = screen.getByRole('region', { name: 'Verdict and fit' });
+    expect(within(editorial).getByText(competitor.verdict)).toBeInTheDocument();
+    expect(
+      within(editorial).getByRole('heading', { name: `Where ${competitor.name} fits better.` }),
+    ).toBeInTheDocument();
+    expect(within(editorial).getByText(competitor.betterFit)).toBeInTheDocument();
+
+    // No verification theater may reach the DOM — this is a customer page.
+    expect(container.textContent).not.toMatch(/Not verified by us/);
+    expect(container.textContent).not.toMatch(/Not independently verified/);
+    expect(container.textContent).not.toMatch(/rather show a gap than a guess/i);
     expect(container.textContent).not.toMatch(/TODO\(user\)/);
-    expect(container.textContent).not.toMatch(/2–3 paragraphs/);
-
-    // No narrative section exists while the owner-supplied verdict is absent.
-    expect(screen.queryByRole('region', { name: 'Narrative comparison' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Our verdict' })).toBeNull();
   });
 
-  it('shows the honest-framing line under the table', () => {
+  it('shows the freshness line under the table', () => {
     render(<CompareDetailView competitor={competitor} />);
 
-    expect(screen.getByText(/maintained by the Searchify team/i)).toBeInTheDocument();
-    expect(screen.getByText(/have not independently verified this vendor/i)).toBeInTheDocument();
-    expect(screen.getByText(/rather show a gap than a guess/i)).toBeInTheDocument();
+    expect(screen.getByText(/Maintained by the Searchify team/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`Last reviewed\\s+${competitor.lastReviewed}`, 'i')),
+    ).toBeInTheDocument();
   });
 
   it('links back to the comparison index', () => {

@@ -1,6 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════════
    Searchify "Proof" — marketing + auth creative system
-   Source of truth: docs/redesign/designs/searchify-brand-deck.html
+   Source of truth: this file plus docs/design.md ("Marketing creative
+   system"). The brand deck that seeded the direction has been retired — the
+   shipped tokens below are the identity now.
 
    This file is the ONLY place marketing hex lives, and it is deliberately
    small. It holds two things:

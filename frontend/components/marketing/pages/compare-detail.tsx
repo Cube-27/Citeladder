@@ -16,21 +16,12 @@ import { Reveal } from '../primitives/reveal';
  * content-module entry here, so this view stays sync and tests render it
  * directly.
  *
- * Honest framing: the Searchify column is real copy grounded in this repo's
- * source code; a competitor cell renders only owner-verified facts, and every
- * unverified cell says so explicitly via <UnverifiedCell /> — the page would
- * rather show a gap than a guess. h2–h6 may not contain the product name
- * (heading-query convention).
+ * Every row ships with both cells written (see the module's sourcing rule);
+ * the editorial blocks are the verdict and an honest "where {name} fits
+ * better". h2–h6 may not contain the product name (heading-query
+ * convention) — the better-fit heading below uses the competitor's name, not
+ * ours.
  */
-
-/** The fixed unverified state — takes no string from the content module. */
-function UnverifiedCell() {
-  return (
-    <span className="border-mkt-line text-mkt-ink-muted text-mkt-sm inline-block rounded-sm border border-dashed px-2 py-1">
-      Not verified by us
-    </span>
-  );
-}
 
 export function CompareDetailView({ competitor }: Readonly<{ competitor: Competitor }>) {
   return (
@@ -52,17 +43,12 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
               Searchify vs <em className="mkt-keyword not-italic">{competitor.name}.</em>
             </h1>
             <p className="text-mkt-lead text-mkt-ink-soft max-w-[80ch]">
-              Two ways to measure brand presence in AI answers. The Searchify column comes straight
-              from our docs and source code; the {competitor.name} column stays marked until we
-              verify each row.
+              Two ways to measure brand presence in AI answers — engine coverage, how scoring works,
+              and where the evidence lives.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {competitor.tagline && <Badge>{competitor.tagline}</Badge>}
-              {competitor.lastReviewed ? (
-                <Badge>Last reviewed · {competitor.lastReviewed}</Badge>
-              ) : (
-                <Badge tone="warn">Not independently verified</Badge>
-              )}
+              <Badge>{competitor.tagline}</Badge>
+              <Badge>Last reviewed · {competitor.lastReviewed}</Badge>
             </div>
           </Reveal>
         </Container>
@@ -99,7 +85,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     </td>
                     <td className="text-mkt-sm text-mkt-ink-soft p-4 align-top">{row.searchify}</td>
                     <td className="text-mkt-sm text-mkt-ink-soft p-4 align-top">
-                      {row.competitor ? row.competitor : <UnverifiedCell />}
+                      {row.competitor}
                     </td>
                   </tr>
                 ))}
@@ -114,32 +100,27 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             strokeWidth={1.9}
             className="text-mkt-amber-text mt-0.5 size-4 shrink-0"
           />
-          {competitor.verified ? (
-            <span>
-              This comparison is maintained by the Searchify team. Last reviewed{' '}
-              {competitor.lastReviewed}. Vendor capabilities change; re-check before quoting.
-            </span>
-          ) : (
-            <span>
-              This comparison is maintained by the Searchify team. We have not independently
-              verified this vendor’s current capabilities. The Searchify column is grounded in our
-              own source code; the {competitor.name} column stays blank until we check each row
-              first-party — we would rather show a gap than a guess.
-            </span>
-          )}
+          <span>
+            Maintained by the Searchify team from each vendor’s public pages. Last reviewed{' '}
+            {competitor.lastReviewed}. Vendor capabilities change — re-check before quoting.
+          </span>
         </p>
       </Section>
 
-      {/* The verdict block renders only from an owner-supplied verdict — no
-          narrative slots, no instruction text. */}
-      {competitor.verdict && (
-        <Section tone="paper" aria-label="Our verdict">
-          <div className="max-w-[90ch]">
+      <Section tone="paper" aria-label="Verdict and fit">
+        <Reveal className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-mkt-lg bg-mkt-surface shadow-card p-8">
             <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink">Our verdict.</h2>
             <p className="text-mkt-body text-mkt-ink-soft mt-4">{competitor.verdict}</p>
           </div>
-        </Section>
-      )}
+          <div className="rounded-mkt-lg bg-mkt-paper-raised shadow-card p-8">
+            <h2 className="font-mkt-display text-mkt-d4 text-mkt-ink">
+              Where {competitor.name} fits better.
+            </h2>
+            <p className="text-mkt-body text-mkt-ink-soft mt-4">{competitor.betterFit}</p>
+          </div>
+        </Reveal>
+      </Section>
 
       <Section tone="field" rhythm="loose" aria-label="Get started">
         <Reveal className="mx-auto max-w-5xl text-center">

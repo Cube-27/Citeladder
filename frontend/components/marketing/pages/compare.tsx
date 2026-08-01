@@ -13,9 +13,9 @@ import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 /**
  * `/compare` — the comparison index. Competitor cards render from the content
  * module; the "how we compare fairly" band exists because these pages make
- * claims about other people's products, and the honest-framing rule (every
- * unverified cell stays blank and says so) has to be visible to the reader,
- * not just enforced in the data.
+ * claims about other people's products, so our own sourcing discipline
+ * (deterministic, evidence-first, on the reader's own keys) is stated openly
+ * on the page.
  */
 
 export function CompareIndex() {
@@ -26,7 +26,7 @@ export function CompareIndex() {
         eyebrow="Comparisons"
         title="How Searchify"
         accent="compares."
-        lead="Side-by-side notes on Searchify and other AI visibility tools — what each covers, how scoring works, and where the evidence lives. Maintained by the Searchify team, marked wherever we still need to verify."
+        lead="Side-by-side notes on Searchify and four other AI visibility tools — what each covers, how scoring works, and where the evidence lives. Reviewed on 2026-08-01."
       />
 
       <Section tone="surface" rhythm="tight" aria-label="Competitors">
@@ -37,7 +37,7 @@ export function CompareIndex() {
 
         {COMPETITORS.length === 0 ? (
           <p className="border-mkt-line rounded-mkt-lg text-mkt-sm text-mkt-ink-muted border border-dashed p-10 text-center">
-            Comparison research is in progress. We publish pages only after every claim is verified.
+            Comparison notes are published as each vendor review completes.
           </p>
         ) : (
           <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -58,11 +58,9 @@ export function CompareIndex() {
                       {competitor.name}
                     </span>
                   </span>
-                  {competitor.tagline && (
-                    <span className="text-mkt-sm text-mkt-ink-muted mt-4 block">
-                      {competitor.tagline}
-                    </span>
-                  )}
+                  <span className="text-mkt-sm text-mkt-ink-muted mt-4 block">
+                    {competitor.tagline}
+                  </span>
                   <span className="text-mkt-sm text-mkt-proof mt-auto flex items-center gap-2 pt-6 font-semibold">
                     Searchify vs {competitor.name}
                     <ArrowRight className="size-4" aria-hidden />
@@ -78,7 +76,7 @@ export function CompareIndex() {
         <SectionHeader
           kicker="How we compare fairly"
           title="Compared honestly, in the open."
-          intro="Where a competitor fact is not verified first-party, the cell stays blank and says so."
+          intro="Every competitor fact on these pages comes from the vendor's own public site, with the review date on the page."
           headingId="compare-fair-title"
         />
         <Reveal className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">

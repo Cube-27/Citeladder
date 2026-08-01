@@ -30,10 +30,7 @@ export async function generateMetadata({
   const description =
     `How Searchify compares to ${competitor.name}: engines covered, scoring model, evidence ` +
     'drill-down, BYOK privacy, and site-health auditing. The Searchify column is ' +
-    'sourced from our source code' +
-    (competitor.verified
-      ? `. Last reviewed ${competitor.lastReviewed}.`
-      : `; the ${competitor.name} column is pending first-party verification.`);
+    `sourced from our source code. Last reviewed ${competitor.lastReviewed}.`;
   return {
     title: { absolute: title },
     description,

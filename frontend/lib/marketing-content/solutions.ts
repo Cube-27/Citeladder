@@ -72,7 +72,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     eyebrow: 'For founders',
     title: 'Know if AI engines recommend you before your prospects search.',
     pains: [
-      'Buyers ask ChatGPT and Perplexity before visiting your site.',
+      'Buyers ask answer engines before visiting your site.',
       'Enterprise AEO platforms are overpriced for growing teams.',
       'You need transparent, verifiable scores instead of black boxes.',
     ],

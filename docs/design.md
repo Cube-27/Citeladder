@@ -539,8 +539,8 @@ projects.
 The public surface — every `(marketing)` route **and** the logged-out auth screens
 (`/login`, `/register`) — runs **Searchify Proof**, a fully independent creative system.
 "Marketing pages have no relation to the app" still holds; Proof simply replaces the retired
-dark **Signal/Dusk** identity. Source of truth for the direction:
-[`searchify-brand-deck.html`](searchify-brand-deck.html).
+dark **Signal/Dusk** identity. The brand deck that seeded the direction has been retired;
+the source of truth is now `frontend/app/(marketing)/marketing-theme.css` plus this section.
 
 **Architecture.** Tokens live in `frontend/app/(marketing)/marketing-theme.css` as a Tailwind
 v4 `@theme` block in the `mkt-` namespace, imported by `globals.css` (Tailwind builds

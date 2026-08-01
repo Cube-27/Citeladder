@@ -1,6 +1,6 @@
 /**
- * Landing-page copy for the public "Proof" surface, following the approved
- * brand deck (docs/searchify-brand-deck.html).
+ * Landing-page copy for the public "Proof" surface (see docs/design.md,
+ * "Marketing creative system").
  *
  * Four writing rules govern this file:
  *   1. State what was measured, where, and when.
