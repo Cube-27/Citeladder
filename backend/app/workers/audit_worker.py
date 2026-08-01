@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.analysis.product_service import (
@@ -112,14 +113,13 @@ from app.domain.audits.cost_projection import build_execution_cost_projection
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.entitlements.ledger import (
     record_billable_attempt,
-    release_unused_reservation,
+    release_terminal_funded_task,
 )
 from app.domain.opportunities.service import recompute as recompute_opportunities
 from app.domain.providers.credentials import pause_connection_after_key_failure
 from app.models.audit import (
     Audit,
     AuditTask,
-    ExecutionCostProjection,
     ProviderAttempt,
     RawResponseArtifact,
 )
@@ -669,7 +669,65 @@ class AuditWorker(DrainableWorkerMixin):
             if self._last_sweep_at is not None and now - self._last_sweep_at < interval:
                 return
             self._last_sweep_at = now
-            await self._queue.release_expired()
+            await self._sweep_queue()
+
+    async def _sweep_queue(self) -> None:
+        """Release expired leases and reconcile swept funded reservations.
+
+        The queue sweeper is billing-agnostic BY DESIGN: a task it
+        terminalizes at max attempts (a crash-looping worker) never gets a
+        funded release from any worker path, so the sweep only REPORTS those
+        ids. The audit worker — the sweep's caller and the billing-aware
+        owner on this path — releases each terminalized funded task's unused
+        reservation here so a crash loop can never leak credits.
+        """
+        sweep = await self._queue.release_expired_detailed()
+        await self._release_swept_funded_tasks(sweep.failed_task_ids)
+
+    async def _release_swept_funded_tasks(
+        self, failed_task_ids: tuple[uuid.UUID, ...]
+    ) -> None:
+        """Funded-ledger janitor for sweeper-terminalized tasks."""
+        for task_id in failed_task_ids:
+            await self._release_terminalized_funded_task(task_id, trigger="sweep")
+
+    async def _release_terminalized_funded_task(
+        self, task_id: uuid.UUID, *, trigger: str
+    ) -> None:
+        """Best-effort release of one terminalized task's funded reservation.
+
+        The task is already terminal, so nothing will bill its still-reserved
+        units again; a BYOK task has no frozen funding block and is skipped.
+        Idempotent per deterministic trigger key: a same-key IntegrityError
+        is the ledger's designed race guard (a concurrent releaser won) and
+        is logged, never raised — terminalization never depends on this.
+        """
+        try:
+            async with self._session_factory() as session:
+                task = await session.get(AuditTask, task_id)
+                funding = _frozen_funding_from(
+                    task.provider_route_snapshot if task is not None else None
+                )
+                if task is not None and funding is not None:
+                    await release_terminal_funded_task(
+                        session,
+                        reservation_id=funding.reservation_id,
+                        audit_id=task.audit_id,
+                        task_id=task.id,
+                        trigger=trigger,
+                        at=_utcnow(),
+                    )
+                await session.commit()
+        except IntegrityError:
+            logger.info(
+                "funded release already settled by a concurrent releaser",
+                extra={"task_id": str(task_id), "trigger": trigger},
+            )
+        except Exception:
+            logger.exception(
+                "funded release for a terminalized task failed",
+                extra={"task_id": str(task_id), "trigger": trigger},
+            )
 
     async def run_once(self) -> int:
         """Sweep expired leases, claim a batch, execute it. Returns count run.
@@ -683,7 +741,7 @@ class AuditWorker(DrainableWorkerMixin):
         the rest of the batch mid-flight; every claimed task completes before
         this method returns.
         """
-        await self._queue.release_expired()
+        await self._sweep_queue()
         tasks = await self._queue.claim(
             owner=self.owner,
             limit=max(1, audit_settings.worker_concurrency),
@@ -1220,10 +1278,12 @@ class AuditWorker(DrainableWorkerMixin):
                 at=_utcnow(),
             )
         if terminal:
-            await release_unused_reservation(
+            await release_terminal_funded_task(
                 session,
                 reservation_id=funding.reservation_id,
-                idempotency_key=f"{task.id}:funded-release-unused",
+                audit_id=task.audit_id,
+                task_id=task.id,
+                trigger="unused",
                 at=_utcnow(),
             )
 
@@ -1333,14 +1393,23 @@ class AuditWorker(DrainableWorkerMixin):
                 )
         task.attempt_count = base + len(attempts)
 
-    def _build_cost_projection(
-        self, *, artifact: RawResponseArtifact, attempt_count: int
-    ) -> ExecutionCostProjection:
+    def _record_cost_projection(
+        self,
+        session: AsyncSession,
+        *,
+        artifact: RawResponseArtifact,
+        attempt_count: int,
+    ) -> None:
         """Price one persisted artifact into an append-only projection row.
 
         Reads the artifact's own persisted route identity for the pricing
         lookup (never the request snapshot) and stamps the persisted ACTUAL
         attempt count — ProviderAttempt rows are written before this runs.
+        The row is analytics-only: a pricing-catalog miss logs a safe warning
+        and SKIPS the projection — unknown pricing never blocks evidence (the
+        assert this replaced rolled the whole success transaction back,
+        losing the artifact, the attempts, and the funded bill+release to a
+        post-call crash).
         """
 
         pricing = route_pricing_for(
@@ -1351,12 +1420,23 @@ class AuditWorker(DrainableWorkerMixin):
             ),
             PRICING_CATALOG_VERSION,
         )
-        assert pricing is not None  # the current catalog version is always known
-        return build_execution_cost_projection(
-            artifact,
-            pricing=pricing,
-            formula_version=EXECUTION_COST_FORMULA_VERSION,
-            attempt_count=attempt_count,
+        if pricing is None:
+            logger.warning(
+                "execution cost projection skipped: no pricing for route",
+                extra={
+                    "logical_engine": artifact.logical_engine,
+                    "transport_provider": artifact.transport_provider,
+                    "transport_model": artifact.transport_model,
+                },
+            )
+            return
+        session.add(
+            build_execution_cost_projection(
+                artifact,
+                pricing=pricing,
+                formula_version=EXECUTION_COST_FORMULA_VERSION,
+                attempt_count=attempt_count,
+            )
         )
 
     async def _persist_success(
@@ -1445,11 +1525,11 @@ class AuditWorker(DrainableWorkerMixin):
             )
             # Append-only cost projection (invariant 3): built AFTER the
             # ProviderAttempt rows so attempt_count is the persisted actual
-            # call count. Unknown usage/rates stay null — never zero.
-            session.add(
-                self._build_cost_projection(
-                    artifact=artifact, attempt_count=task.attempt_count
-                )
+            # call count. Unknown usage/rates stay null — never zero, and an
+            # unknown pricing catalog skips the row instead of blocking the
+            # success path.
+            self._record_cost_projection(
+                session, artifact=artifact, attempt_count=task.attempt_count
             )
             record_event(
                 session,
@@ -1628,12 +1708,33 @@ class AuditWorker(DrainableWorkerMixin):
 
     async def _record_crash(self, task_id: uuid.UUID, exc: Exception) -> None:
         detail = f"{type(exc).__name__}: {exc}"
-        await self._queue.fail(
+        failed = await self._queue.fail(
             task_id=task_id,
             owner=self.owner,
             error_code=ERROR_PARSE,
             error_detail=detail,
         )
+        await self._release_crashed_funded_task(task_id, terminalized=failed)
+
+    async def _release_crashed_funded_task(
+        self, task_id: uuid.UUID, *, terminalized: bool
+    ) -> None:
+        """Release a crashed task's unused funded reservation (best-effort).
+
+        A crash escaping ``_run_provider_call`` ran none of the evidence
+        paths, so unlike cancel/deadline/fail-terminal it had no
+        funded-ledger terminalization: the reservation — or its unbilled
+        remainder — leaked. ``queue.fail`` owns the terminalization and is
+        owner-guarded, so a lost lease (the sweeper handed the task to
+        another worker, which will bill against the reservation) skips the
+        release entirely. A provider call that DID happen was billed by the
+        success/failure path before the crash — the ledger releases only
+        still-reserved units, so the call stays billed exactly once and the
+        remainder is released exactly once.
+        """
+        if not terminalized:
+            return
+        await self._release_terminalized_funded_task(task_id, trigger="crash")
 
     async def _finalize_audit(self, audit_id: uuid.UUID) -> None:
         """Move a finished-execution audit off ``running`` at the boundary.

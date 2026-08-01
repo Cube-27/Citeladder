@@ -464,6 +464,36 @@ async def release_unused_reservation(
     await session.flush()
 
 
+async def release_terminal_funded_task(
+    session: AsyncSession,
+    *,
+    reservation_id: uuid.UUID,
+    audit_id: uuid.UUID,
+    task_id: uuid.UUID,
+    trigger: str,
+    at: datetime,
+) -> None:
+    """Release a terminalized funded task's unused reservation exactly once.
+
+    The ONE release owner for every funded terminalization path, keyed per
+    trigger source: BYOK precedence (``byok``), worker terminalization
+    (``unused``), audit cancel (``cancel``), queue-sweeper reclaim
+    (``sweep``), and crash (``crash``). A same-trigger replay is a no-op and
+    a same-key concurrent race hits the designed IntegrityError guard; a
+    cross-trigger race is suppressed by the outstanding computation
+    (reserved − released per grant, settled under the terminalization path's
+    row locks), so exactly the still-reserved units are ever released. The
+    provider call that DID happen is never touched: billed units are already
+    released+debited by ``record_billable_attempt`` and stay consumed.
+    """
+    await release_unused_reservation(
+        session,
+        reservation_id=reservation_id,
+        idempotency_key=f"{audit_id}:{task_id}:funded-release-{trigger}",
+        at=at,
+    )
+
+
 async def consumable_usage(
     session: AsyncSession,
     *,
