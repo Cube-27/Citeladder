@@ -10,7 +10,8 @@ import asyncio
 import logging
 import re
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Annotated
 
@@ -252,33 +253,16 @@ async def put_brand_profile_endpoint(
     return brand_profile_to_response(profile)
 
 
-@router.post(
-    "/{project_id}/brand-profile/suggest",
-    response_model=BrandProfileSuggestionResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def suggest_brand_profile_endpoint(
-    project_id: uuid.UUID,
-    payload: BrandProfileSuggestRequest,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-) -> BrandProfileSuggestionResponse:
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
+@contextmanager
+def _brand_profile_drafting_failures_mapped() -> Iterator[None]:
+    """Map the drafting call's domain failures to their HTTP statuses.
+
+    Kept beside the endpoint rather than inline so the endpoint reads as the
+    two steps it actually performs (authorize, then draft) instead of one call
+    trailing a four-rung translation ladder.
+    """
     try:
-        validate_brand_profile_suggest_request(payload)
-    except BrandProfileSuggestionValidationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"code": "brand_profile_suggestion_invalid", "message": str(exc)},
-        ) from exc
-    agent = _resolve_default_agent()
-    try:
-        suggestion = await suggest_brand_profile(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            agent=agent,
-        )
+        yield
     except (ProjectNotFoundError, BrandProfileNotFoundError) as exc:
         raise_not_found("Brand profile", cause=exc)
     except BrandEvidenceUnavailableError as exc:
@@ -305,6 +289,35 @@ async def suggest_brand_profile_endpoint(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail={"code": "agent_call_failed", "message": str(exc)},
         ) from exc
+
+
+@router.post(
+    "/{project_id}/brand-profile/suggest",
+    response_model=BrandProfileSuggestionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def suggest_brand_profile_endpoint(
+    project_id: uuid.UUID,
+    payload: BrandProfileSuggestRequest,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+) -> BrandProfileSuggestionResponse:
+    await _get_project_or_404(session, ctx.workspace_id, project_id)
+    try:
+        validate_brand_profile_suggest_request(payload)
+    except BrandProfileSuggestionValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "brand_profile_suggestion_invalid", "message": str(exc)},
+        ) from exc
+    agent = _resolve_default_agent()
+    with _brand_profile_drafting_failures_mapped():
+        suggestion = await suggest_brand_profile(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            agent=agent,
+        )
     return brand_profile_suggestion_to_response(suggestion)
 
 

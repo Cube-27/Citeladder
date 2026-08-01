@@ -21,11 +21,12 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Row, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -181,7 +182,7 @@ def _route_candidates(
 
 
 def _first_healthy(
-    rows: list[tuple[ProviderConnection, ProviderRoute]], *, at: datetime
+    rows: Sequence[Row[Any]], *, at: datetime
 ) -> tuple[ProviderConnection, ProviderRoute] | None:
     """First catalog/endpoint-approved, unpaused (connection, route), or None."""
     for connection, route in rows:
@@ -244,10 +245,15 @@ def _require_funded_proofs(
     entitlement, a complete expected cost, and the successful per-task
     reservation (whose account must match the admitted funding account).
     """
+    # The reservation is THE funding proof, so its absence is checked first and
+    # on its own: folding it into the conjunction below left the returned value
+    # optional to every reader (and to the type checker) even though this
+    # function's whole contract is that it hands back a proven reservation.
+    if reservation is None:
+        raise _unavailable(logical_engine)
     unavailable = (
         entitlement.status != STATUS_RESOLVED
         or not expected_cost.complete
-        or reservation is None
         or (account_id is not None and reservation.billing_account_id != account_id)
     )
     if unavailable:

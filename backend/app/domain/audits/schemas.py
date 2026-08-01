@@ -26,7 +26,6 @@ from app.core.config.audits import (
     EVENT_TASK_RETRY,
     EVENT_TASK_SUCCEEDED,
     MEASUREMENT_MODE_BENCHMARK,
-    MEASUREMENT_MODE_PULSE,
     MEASUREMENT_POLICY_KEY,
 )
 
@@ -189,9 +188,12 @@ class AuditCreate(BaseModel):
     # cap, timeout, repetitions, answer instruction). Defaults to ``benchmark``
     # so an explicit manual run keeps its full-run shape; a later PR3
     # schedule/trial caller passes its own mode explicitly.
-    measurement_mode: Literal[MEASUREMENT_MODE_PULSE, MEASUREMENT_MODE_BENCHMARK] = (
-        MEASUREMENT_MODE_BENCHMARK
-    )
+    # The literal spellings are written out rather than interpolated from the
+    # config constants: a type checker cannot see through a name inside
+    # ``Literal[...]``. The constants remain the DEFAULT and the value the rest
+    # of the code compares against, so a drift between the two sides shows up
+    # here as a type error instead of passing silently.
+    measurement_mode: Literal["pulse", "benchmark"] = MEASUREMENT_MODE_BENCHMARK
     # Optional explicit 64-bit seed (decimal string). Generated + stored when
     # omitted so the slot shuffle is reproducible (invariant 9).
     random_seed: str | None = None
@@ -429,56 +431,56 @@ class _AuditEventEnvelope(BaseModel):
 
 
 class AuditCreatedEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_AUDIT_CREATED] = EVENT_AUDIT_CREATED
+    event_type: Literal["audit.created"] = EVENT_AUDIT_CREATED
     payload: AuditCreatedPayload
 
 
 class AuditQueuedEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_AUDIT_QUEUED] = EVENT_AUDIT_QUEUED
+    event_type: Literal["audit.queued"] = EVENT_AUDIT_QUEUED
     payload: AuditQueuedPayload
 
 
 class AuditRunningEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_AUDIT_RUNNING] = EVENT_AUDIT_RUNNING
+    event_type: Literal["audit.running"] = EVENT_AUDIT_RUNNING
     payload: None = None
 
 
 class AuditStatusEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_AUDIT_STATUS] = EVENT_AUDIT_STATUS
+    event_type: Literal["audit.status"] = EVENT_AUDIT_STATUS
     payload: AuditStatusPayload
 
 
 class AuditCancelledEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_AUDIT_CANCELLED] = EVENT_AUDIT_CANCELLED
+    event_type: Literal["audit.cancelled"] = EVENT_AUDIT_CANCELLED
     payload: AuditStatusPayload
 
 
 class AuditCompletedEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_AUDIT_COMPLETED] = EVENT_AUDIT_COMPLETED
+    event_type: Literal["audit.completed"] = EVENT_AUDIT_COMPLETED
     payload: AuditCompletedPayload
 
 
 class TaskSucceededEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_TASK_SUCCEEDED] = EVENT_TASK_SUCCEEDED
+    event_type: Literal["task.succeeded"] = EVENT_TASK_SUCCEEDED
     payload: TaskSucceededPayload
 
 
 class TaskFailedEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_TASK_FAILED] = EVENT_TASK_FAILED
+    event_type: Literal["task.failed"] = EVENT_TASK_FAILED
     payload: TaskFailedPayload
 
 
 class TaskRetryEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_TASK_RETRY] = EVENT_TASK_RETRY
+    event_type: Literal["task.retry"] = EVENT_TASK_RETRY
     payload: TaskRetryPayload
 
 
 class TaskCapacityWaitEvent(_AuditEventEnvelope):
-    event_type: Literal[EVENT_TASK_CAPACITY_WAIT] = EVENT_TASK_CAPACITY_WAIT
+    event_type: Literal["task.capacity_wait"] = EVENT_TASK_CAPACITY_WAIT
     payload: TaskCapacityWaitPayload
 
 
-AuditEventResponse = Annotated[
+_AuditEventVariant = (
     AuditCreatedEvent
     | AuditQueuedEvent
     | AuditRunningEvent
@@ -488,7 +490,17 @@ AuditEventResponse = Annotated[
     | TaskSucceededEvent
     | TaskFailedEvent
     | TaskRetryEvent
-    | TaskCapacityWaitEvent,
+    | TaskCapacityWaitEvent
+)
+"""The bare variant union, named so the lookup below can be typed as it.
+
+Kept separate from the annotated alias only because ``EVENT_SCHEMA_BY_TYPE``
+needs the union WITHOUT the discriminator metadata: typing that mapping as the
+shared base returned an envelope too wide for the response contract.
+"""
+
+AuditEventResponse = Annotated[
+    _AuditEventVariant,
     Field(discriminator="event_type"),
 ]
 """The discriminated audit-event contract (tagged on ``event_type``).
@@ -498,7 +510,7 @@ these DTOs (invariant 2). Extend the union — and only the union — when addin
 an event type; ``EVENT_SCHEMA_BY_TYPE`` derives from it.
 """
 
-EVENT_SCHEMA_BY_TYPE: Final[dict[str, type[_AuditEventEnvelope]]] = {
+EVENT_SCHEMA_BY_TYPE: Final[dict[str, type[_AuditEventVariant]]] = {
     variant.model_fields["event_type"].default: variant
     for variant in get_args(get_args(AuditEventResponse)[0])
 }

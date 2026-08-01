@@ -436,14 +436,16 @@
     "functions": {
       "_raise_agent_failed": 1,
       "_raise_invalid": 1,
+      "_raise_no_evidence": 1,
       "_raise_unparseable": 1,
       "_resolve_agent": 2,
-      "suggest_competitors_endpoint": 6,
-      "suggest_owned_domains_endpoint": 5,
-      "suggest_prompts_endpoint": 8
+      "_suggestion_failures_mapped": 5,
+      "suggest_competitors_endpoint": 4,
+      "suggest_owned_domains_endpoint": 3,
+      "suggest_prompts_endpoint": 6
     },
     "loc": 236,
-    "max_cc": 8
+    "max_cc": 6
   },
   "app/api/commerce.py": {
     "functions": {
@@ -569,6 +571,7 @@
   },
   "app/api/projects.py": {
     "functions": {
+      "_brand_profile_drafting_failures_mapped": 5,
       "_get_project_or_404": 2,
       "_logo_response": 2,
       "_map_occupancy": 2,
@@ -588,7 +591,7 @@
       "list_projects_endpoint": 2,
       "put_brand_profile_endpoint": 2,
       "refresh_project_logos_endpoint": 2,
-      "suggest_brand_profile_endpoint": 5,
+      "suggest_brand_profile_endpoint": 3,
       "update_project_endpoint": 2
     },
     "loc": 594,
@@ -1052,6 +1055,23 @@
     "loc": 0,
     "max_cc": 0
   },
+  "app/connectors/web_evidence/brand_evidence.py": {
+    "functions": {
+      "BrandEvidencePage.word_count": 2,
+      "_meta_description": 5,
+      "_node_text": 3,
+      "_prune_non_prose": 4,
+      "_safe_parser_encoding": 4,
+      "_strip_delimiters": 8,
+      "_visible_text": 5,
+      "evidence_block_lines": 2,
+      "extract_brand_page": 7,
+      "fallback_urls": 2,
+      "fetch_brand_page": 6,
+      "serialize_brand_evidence": 7
+    },
+    "max_cc": 8
+  },
   "app/connectors/web_evidence/contracts.py": {
     "functions": {
       "DnsResolver.resolve": 1,
@@ -1270,6 +1290,10 @@
     },
     "loc": 272,
     "max_cc": 7
+  },
+  "app/core/config/brand_evidence.py": {
+    "functions": {},
+    "max_cc": 0
   },
   "app/core/config/brand_logos.py": {
     "functions": {},
@@ -2573,10 +2597,24 @@
     "loc": 0,
     "max_cc": 0
   },
+  "app/domain/projects/brand_evidence.py": {
+    "functions": {
+      "BrandEvidence.is_sufficient": 1,
+      "BrandEvidence.provenance": 2,
+      "BrandEvidence.serialize": 1,
+      "BrandEvidence.word_count": 2,
+      "_cache_get": 3,
+      "_cache_put": 4,
+      "_gather": 9,
+      "_homepage_url": 5,
+      "collect_brand_evidence": 12,
+      "reset_brand_evidence_cache": 1
+    },
+    "max_cc": 12
+  },
   "app/domain/projects/brand_profile.py": {
     "functions": {
       "brand_profile_to_response": 8,
-      "clean_profile_products": 4,
       "get_brand_profile": 2,
       "upsert_manual_brand_profile": 8
     },
@@ -2585,11 +2623,12 @@
   },
   "app/domain/projects/brand_profile_suggestions.py": {
     "functions": {
+      "BrandEvidenceUnavailableError.__init__": 1,
       "accept_brand_profile_suggestion": 13,
       "brand_profile_suggestion_to_response": 1,
-      "build_brand_profile_suggestion_message": 1,
+      "build_brand_profile_suggestion_message": 3,
       "parse_brand_profile_draft": 4,
-      "suggest_brand_profile": 3,
+      "suggest_brand_profile": 4,
       "validate_brand_profile_suggest_request": 2
     },
     "loc": 247,
@@ -2624,6 +2663,7 @@
   },
   "app/domain/projects/normalization.py": {
     "functions": {
+      "clean_profile_products": 5,
       "normalize_benchmark_mode": 4,
       "normalize_intent": 4,
       "normalize_prompt_rows": 10
@@ -2646,9 +2686,10 @@
       "_build_competitors": 7,
       "_clean_list": 4,
       "_loaded_project_query": 1,
+      "_seed_manual_brand_profile": 7,
       "brand_logo_url": 1,
       "competitor_logo_url": 1,
-      "create_project": 4,
+      "create_project": 3,
       "delete_project": 1,
       "get_project": 2,
       "list_projects": 1,
@@ -2667,7 +2708,10 @@
   },
   "app/domain/projects/suggestions.py": {
     "functions": {
+      "BrandEvidenceRequiredError.__init__": 1,
       "_brand_context_lines": 5,
+      "_ground_brand_context": 3,
+      "_has_curated_context": 9,
       "_normalize_domain": 4,
       "_payload_brand_context": 5,
       "build_competitor_user_message": 2,
@@ -2749,6 +2793,13 @@
     "loc": 37,
     "max_cc": 1
   },
+  "app/domain/prompts/receipts.py": {
+    "functions": {
+      "issue_prompt_receipt": 1,
+      "verify_prompt_receipt": 2
+    },
+    "max_cc": 2
+  },
   "app/domain/prompts/schemas.py": {
     "functions": {},
     "loc": 183,
@@ -2764,7 +2815,11 @@
       "_import_texts": 3,
       "_insert_imported_row": 2,
       "_project_in_workspace": 2,
+      "_prompt_set_project_id": 2,
+      "_receipt_proves_generated": 2,
       "_require_insertable": 2,
+      "_resolve_origin_through_binding_gate": 2,
+      "_scoped_topic_text": 5,
       "_validate_topic_scope": 3,
       "bulk_set_status": 2,
       "create_prompt": 3,
@@ -2794,9 +2849,9 @@
       "build_vocabulary": 7,
       "enforce_prompt_binding": 2,
       "load_project_vocabulary": 1,
-      "validate_prompt_binding": 9
+      "validate_prompt_binding": 10
     },
-    "max_cc": 9
+    "max_cc": 10
   },
   "app/domain/prompts/topics.py": {
     "functions": {

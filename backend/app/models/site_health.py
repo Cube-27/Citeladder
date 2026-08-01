@@ -48,6 +48,7 @@ from app.core.config.site_health import (
     INITIAL_TASK_GENERATION,
     PAGE_ANALYSIS_STATUS_PENDING,
     PAGE_TYPE_OTHER,
+    SAMPLE_DISCOVERY_URL_CAP,
     SAMPLE_URL_LIMIT,
     SELECTION_SOURCE_USER,
     TASK_KIND_DISCOVER,
@@ -112,9 +113,10 @@ class WorkspaceSiteHealthRuntime(Base):
     discovery_mode: Mapped[str] = mapped_column(
         String(16), default=DISCOVERY_MODE_SAMPLE
     )
-    # Sample mode caps discovery at the sample size; full mode has no hard cap.
+    # Sample mode caps discovery at the sample INVENTORY cap (deliberately
+    # decoupled from the analysis budget below); full mode has no hard cap.
     discovery_url_cap: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=SAMPLE_URL_LIMIT
+        Integer, nullable=True, default=SAMPLE_DISCOVERY_URL_CAP
     )
     sample_url_limit: Mapped[int] = mapped_column(Integer, default=SAMPLE_URL_LIMIT)
     # Fail-closed: zero selectable monitored URLs until an allowance resolves.

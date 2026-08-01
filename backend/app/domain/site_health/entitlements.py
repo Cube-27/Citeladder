@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -55,7 +56,7 @@ def apply_runtime_policy(
     *,
     resolved_registry_revision: str,
     resolved_entitlement_lifecycle_version: int,
-    resolved_valid_until,
+    resolved_valid_until: datetime | None,
 ) -> WorkspaceSiteHealthRuntime:
     """Project the neutral policy + resolver provenance onto the row."""
     row.discovery_mode = policy.discovery_mode

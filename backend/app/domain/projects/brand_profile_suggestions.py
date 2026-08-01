@@ -194,7 +194,14 @@ async def suggest_brand_profile(
     user_message = build_brand_profile_suggestion_message(input_snapshot, evidence)
     # Record provenance AFTER building the message so the evidence block the
     # agent saw is exactly the curated knowledge, not the provenance stanza.
-    input_snapshot["website_evidence"] = evidence.provenance()
+    #
+    # Deliberately NOT ``website_evidence``: across the brand-context builders
+    # (``_brand_context_lines``, ``build_prompt_suggestion_user_message``,
+    # ``build_generation_user_message``) that key names the SERIALIZED evidence
+    # block — a string emitted as its own top-level section. This is the
+    # provenance mapping describing what was read, so it gets its own key
+    # rather than colliding on a name that means something else.
+    input_snapshot["website_evidence_provenance"] = evidence.provenance()
 
     raw = await agent.complete_json(
         system=BRAND_PROFILE_SUGGESTION_SYSTEM_PROMPT,

@@ -8,6 +8,8 @@
 # endpoints spend agent quota and forward brand data to the provider.
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -103,6 +105,29 @@ def _raise_no_evidence(exc: BrandEvidenceRequiredError) -> None:
     ) from exc
 
 
+@contextmanager
+def _suggestion_failures_mapped() -> Iterator[None]:
+    """Map every domain suggestion failure to its HTTP status, in one place.
+
+    All three suggestion endpoints call a different ``suggest_*`` collaborator
+    but translate the SAME four failures identically. Spelling that ladder out
+    per endpoint meant a new failure mode had to be remembered in three places
+    — ``BrandEvidenceRequiredError`` was added to exactly that ladder — and it
+    put four exception handlers into each endpoint's branch count. One
+    collaborator owns the mapping; the endpoints just say which call it wraps.
+    """
+    try:
+        yield
+    except BrandEvidenceRequiredError as exc:
+        _raise_no_evidence(exc)
+    except SuggestionValidationError as exc:
+        _raise_invalid(exc)
+    except SuggestionOutputError as exc:
+        _raise_unparseable(exc)
+    except ProviderError as exc:
+        _raise_agent_failed(exc)
+
+
 @router.post(
     "/competitors",
     response_model=CompetitorSuggestResponse,
@@ -132,16 +157,8 @@ async def suggest_competitors_endpoint(
         limit=abuse_settings.agent_call_limit,
         window_seconds=abuse_settings.agent_call_window_seconds,
     )
-    try:
+    with _suggestion_failures_mapped():
         competitors, dropped = await suggest_competitors(payload=payload, agent=agent)
-    except BrandEvidenceRequiredError as exc:
-        _raise_no_evidence(exc)
-    except SuggestionValidationError as exc:
-        _raise_invalid(exc)
-    except SuggestionOutputError as exc:
-        _raise_unparseable(exc)
-    except ProviderError as exc:
-        _raise_agent_failed(exc)
     return CompetitorSuggestResponse(
         competitors=[
             CompetitorInput(name=c.name, aliases=c.aliases, domains=c.domains)
@@ -179,16 +196,8 @@ async def suggest_owned_domains_endpoint(
         limit=abuse_settings.agent_call_limit,
         window_seconds=abuse_settings.agent_call_window_seconds,
     )
-    try:
+    with _suggestion_failures_mapped():
         domains, dropped = await suggest_owned_domains(payload=payload, agent=agent)
-    except BrandEvidenceRequiredError as exc:
-        _raise_no_evidence(exc)
-    except SuggestionValidationError as exc:
-        _raise_invalid(exc)
-    except SuggestionOutputError as exc:
-        _raise_unparseable(exc)
-    except ProviderError as exc:
-        _raise_agent_failed(exc)
     return OwnedDomainSuggestResponse(domains=domains, dropped_duplicates=dropped)
 
 
@@ -228,16 +237,8 @@ async def suggest_prompts_endpoint(
         limit=abuse_settings.agent_call_limit,
         window_seconds=abuse_settings.agent_call_window_seconds,
     )
-    try:
+    with _suggestion_failures_mapped():
         prompts, topics, dropped = await suggest_prompts(payload=payload, agent=agent)
-    except BrandEvidenceRequiredError as exc:
-        _raise_no_evidence(exc)
-    except SuggestionValidationError as exc:
-        _raise_invalid(exc)
-    except SuggestionOutputError as exc:
-        _raise_unparseable(exc)
-    except ProviderError as exc:
-        _raise_agent_failed(exc)
 
     # Each suggestion carries a receipt proving the backend generated it, so the
     # caller can persist it as ``generated`` (skipping topical binding, which

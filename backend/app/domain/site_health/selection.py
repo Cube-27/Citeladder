@@ -64,6 +64,7 @@ from app.models.site_health import (
     SiteHealthProfile,
     SiteUrl,
     SiteUrlObservation,
+    WorkspaceSiteHealthRuntime,
 )
 
 
@@ -394,10 +395,10 @@ async def replace_monitored_set(
     4. Validate every requested id is a discovered URL in this project.
     5. Enforce the workspace-wide active limit counting every active row
        regardless of source; over-limit raises ``site_health_quota_exceeded``.
-    6. Apply the full-set delta: activate/convert requested rows to
-       user-managed (the sample-to-user conversion when an allowance
-       omitted active rows (never delete — evidence survives), bump the
-       version.
+    6. Apply the full-set delta: requested rows are activated or converted to
+       user-managed (the sample-to-user conversion an allowance performs on
+       rows it first selects), omitted active rows are deactivated and never
+       deleted (evidence survives), and the version is bumped.
     7. Enqueue ``analyze`` tasks for additions into the active crawl (next
        generation) and cancel only queued/retry analyze tasks for removals.
 
@@ -1000,7 +1001,7 @@ def evaluate_task_guard(
     crawl: SiteCrawl | None,
     task: SiteCrawlTask | None,
     monitored: MonitoredSiteUrl | None,
-    runtime,  # WorkspaceSiteHealthRuntime | None
+    runtime: WorkspaceSiteHealthRuntime | None,
     owner: str,
 ) -> GuardDecision:
     """Combined pure guard the worker calls before I/O and before persistence.

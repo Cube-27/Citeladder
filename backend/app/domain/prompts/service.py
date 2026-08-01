@@ -131,7 +131,10 @@ async def _enforce_import_binding(
     vocabulary = await load_project_vocabulary(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    failures = []
+    # Mixed value types (``row`` is an int), so the entry type is spelled out —
+    # otherwise the inferred value type is the common supertype and ``code``
+    # comes back too wide to pass on as the error's code.
+    failures: list[dict[str, Any]] = []
     for index, text in enumerate(texts):
         if not text:
             continue
@@ -151,6 +154,25 @@ async def _enforce_import_binding(
             code=failures[0]["code"],
             details={"rows": failures},
         )
+
+
+async def _prompt_set_project_id(
+    session: AsyncSession, prompt_set_id: uuid.UUID
+) -> uuid.UUID:
+    """The set's project id, read as a scalar column (no ORM row materialized).
+
+    Deliberately NOT read off a loaded ``PromptSet``: holding that instance
+    would pin its already-loaded prompts collection in the identity map and the
+    caller's post-write refresh would serve the stale collection (see the note
+    in ``import_prompts``). A missing row means the set was deleted between the
+    scope check and here, which is the same 404 the scope check raises.
+    """
+    project_id = await session.scalar(
+        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
+    )
+    if project_id is None:
+        raise PromptSetNotFoundError("Prompt set not found")
+    return project_id
 
 
 async def _project_in_workspace(
@@ -330,6 +352,66 @@ async def prepare_prompt_inserts(
     return approved
 
 
+def _receipt_proves_generated(payload: Any, text: str) -> bool:
+    """Whether the backend can PROVE it generated ``text`` (binding exemption).
+
+    Topical binding applies to free text a human typed. A prompt the backend
+    itself generated from verified brand-website evidence is exempt: binding is
+    word-overlap against the project's stored vocabulary, but a correct
+    measurement prompt is brand-NEUTRAL by design (the same text is run for the
+    brand AND its competitors), so it can only ever bind on category wording —
+    and a legitimate synonym shares no literal token.
+
+    The exemption is proof-gated, never taken on the client's word: ``origin``
+    arrives in the request body, so it is honoured only alongside a valid
+    backend-issued receipt over this exact text. An unverified claim returns
+    False and falls through to the ordinary gate.
+    """
+    claimed_generated = getattr(payload, "origin", PROMPT_ORIGIN_MANUAL) == (
+        PROMPT_ORIGIN_GENERATED
+    )
+    return claimed_generated and verify_prompt_receipt(
+        text, getattr(payload, "generation_receipt", None)
+    )
+
+
+async def _resolve_origin_through_binding_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt_set: PromptSet,
+    payload: Any,
+    text: str,
+) -> str:
+    """The prompt's origin — enforcing topical binding unless generation is proven.
+
+    The origin and the gate are ONE decision, not two: ``generated`` is exactly
+    the case the gate does not apply to, so resolving them apart invites a
+    caller to record an origin the gate never agreed with. Returns
+    ``generated`` only when a backend receipt covers this exact text;
+    everything else is ``manual`` and must clear the gate first (which raises
+    rather than returning on failure).
+    """
+    if _receipt_proves_generated(payload, text):
+        return PROMPT_ORIGIN_GENERATED
+    # Bind against the PERSISTED topic, never the request body's ``theme``
+    # (free text the caller chooses — binding against it would let any
+    # client supply its own prompt's wording as the vocabulary).
+    await enforce_prompt_binding(
+        session,
+        workspace_id=workspace_id,
+        project_id=prompt_set.project_id,
+        text=text,
+        topic_text=await _scoped_topic_text(
+            session,
+            workspace_id=workspace_id,
+            prompt_set_id=payload.prompt_set_id,
+            topic_id=getattr(payload, "topic_id", None),
+        ),
+    )
+    return PROMPT_ORIGIN_MANUAL
+
+
 def _require_insertable(approved: frozenset[str], text_hash: str) -> None:
     """A single-create candidate the plan did not approve is a duplicate."""
     if text_hash not in approved:
@@ -357,39 +439,13 @@ async def create_prompt(
         prompt_set_id=payload.prompt_set_id,
     )
     text = payload.text.strip()
-    # Topical binding applies to free text a human typed. A prompt the backend
-    # itself generated from verified brand-website evidence is exempt: binding
-    # is word-overlap against the project's stored vocabulary, but a correct
-    # measurement prompt is brand-NEUTRAL by design (the same text is run for
-    # the brand AND its competitors), so it can only ever bind on category
-    # wording — and a legitimate synonym shares no literal token.
-    #
-    # The exemption is proof-gated, never taken on the client's word: ``origin``
-    # arrives in the request body, so it is honoured only alongside a valid
-    # backend-issued receipt over this exact text. An unverified claim falls
-    # through to the ordinary gate.
-    claimed_generated = getattr(payload, "origin", PROMPT_ORIGIN_MANUAL) == (
-        PROMPT_ORIGIN_GENERATED
+    origin = await _resolve_origin_through_binding_gate(
+        session,
+        workspace_id=workspace_id,
+        prompt_set=prompt_set,
+        payload=payload,
+        text=text,
     )
-    is_generated = claimed_generated and verify_prompt_receipt(
-        text, getattr(payload, "generation_receipt", None)
-    )
-    if not is_generated:
-        # Bind against the PERSISTED topic, never the request body's ``theme``
-        # (free text the caller chooses — binding against it would let any
-        # client supply its own prompt's wording as the vocabulary).
-        await enforce_prompt_binding(
-            session,
-            workspace_id=workspace_id,
-            project_id=prompt_set.project_id,
-            text=text,
-            topic_text=await _scoped_topic_text(
-                session,
-                workspace_id=workspace_id,
-                prompt_set_id=payload.prompt_set_id,
-                topic_id=getattr(payload, "topic_id", None),
-            ),
-        )
     # normalized_text_hash is set by the Prompt model's @validates("text") hook.
     prompt = Prompt(
         prompt_set_id=payload.prompt_set_id,
@@ -398,7 +454,7 @@ async def create_prompt(
         intent=normalize_intent(payload.intent),
         branded=payload.branded,
         enabled=payload.enabled,
-        origin=PROMPT_ORIGIN_GENERATED if is_generated else PROMPT_ORIGIN_MANUAL,
+        origin=origin,
     )
     # Same scope rule as the update path: a topic must belong to the prompt's
     # own project. Validated before the insert so a cross-scope topic is a 404
@@ -538,9 +594,7 @@ async def _enforce_update_binding(
     )
     if new_text is None and not activates:
         return
-    project_id = await session.scalar(
-        select(PromptSet.project_id).where(PromptSet.id == prompt.prompt_set_id)
-    )
+    project_id = await _prompt_set_project_id(session, prompt.prompt_set_id)
     text = (new_text if new_text is not None else prompt.text).strip()
     await enforce_prompt_binding(
         session, workspace_id=workspace_id, project_id=project_id, text=text
@@ -659,9 +713,7 @@ async def import_prompts(
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
     )
-    project_id = await session.scalar(
-        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
-    )
+    project_id = await _prompt_set_project_id(session, prompt_set_id)
     texts = _import_texts(rows)
     await _enforce_import_binding(
         session,
@@ -710,9 +762,7 @@ async def bulk_set_status(
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
     )
-    project_id = await session.scalar(
-        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
-    )
+    project_id = await _prompt_set_project_id(session, prompt_set_id)
     await _enforce_activation_binding(
         session,
         workspace_id=workspace_id,

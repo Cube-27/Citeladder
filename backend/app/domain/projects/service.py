@@ -149,6 +149,40 @@ def _build_competitors(items: list[Any] | None) -> list[Competitor]:
     return competitors
 
 
+def _seed_manual_brand_profile(
+    project: Project, *, workspace_id: uuid.UUID, payload: Any
+) -> None:
+    """Attach the human-authored brand profile to a freshly created project.
+
+    Normalizes ONCE, then derives both the stored values and the source markers
+    from the normalized form: a whitespace-only string (or a product list that
+    cleans to empty) stores as empty and must NOT be recorded as a manually
+    authored field — an empty "manual" marker would outrank a later AI
+    suggestion for a field the human never actually filled in.
+
+    A project with no brand has nothing to profile and is left untouched.
+    """
+    if project.brand is None:
+        return
+    profile_fields: dict[str, Any] = {
+        "description": (payload.description or "").strip(),
+        "positioning": (payload.positioning or "").strip(),
+        "products_services": clean_profile_products(payload.products_services),
+        "target_audience": (payload.target_audience or "").strip(),
+    }
+    project.brand.profile = BrandProfile(
+        workspace_id=workspace_id,
+        project_id=project.id,
+        brand_id=project.brand.id,
+        **profile_fields,
+        sources={
+            field: BRAND_PROFILE_SOURCE_MANUAL
+            for field, value in profile_fields.items()
+            if value
+        },
+    )
+
+
 async def create_project(
     session: AsyncSession, *, workspace_id: uuid.UUID, payload: Any
 ) -> Project:
@@ -186,28 +220,7 @@ async def create_project(
     ]
     session.add(project)
     await session.flush()
-    if project.brand is not None:
-        # Normalize ONCE, then derive both the stored values and the source
-        # markers from the normalized form: a whitespace-only string (or a
-        # product list that cleans to empty) stores as empty and must not be
-        # recorded as a manually-authored field.
-        profile_fields: dict[str, Any] = {
-            "description": (payload.description or "").strip(),
-            "positioning": (payload.positioning or "").strip(),
-            "products_services": clean_profile_products(payload.products_services),
-            "target_audience": (payload.target_audience or "").strip(),
-        }
-        project.brand.profile = BrandProfile(
-            workspace_id=workspace_id,
-            project_id=project.id,
-            brand_id=project.brand.id,
-            **profile_fields,
-            sources={
-                field: BRAND_PROFILE_SOURCE_MANUAL
-                for field, value in profile_fields.items()
-                if value
-            },
-        )
+    _seed_manual_brand_profile(project, workspace_id=workspace_id, payload=payload)
     await session.commit()
     return await get_project(session, workspace_id=workspace_id, project_id=project.id)
 
