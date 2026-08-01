@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import (
@@ -301,6 +302,110 @@ async def replay_intent(
     return IntentResult(response=_pending_response(pending), replayed=True)
 
 
+async def _replay_insert_race_winner(
+    session: AsyncSession,
+    *,
+    account: BillingAccount,
+    operation: str,
+    intent: ResolvedIntent,
+    idempotency_key: str,
+) -> IntentResult:
+    """Replay the winner of a same-Idempotency-Key insert race.
+
+    Two concurrent requests with the same fresh key both miss the FOR UPDATE
+    read, both insert, and the loser's commit trips the account-key unique.
+    That violation PROVES the winner's record is committed (Postgres reports
+    it only after the winner commits), so replaying returns the winner's
+    stored response: the SAME fingerprint replays, a DIFFERENT one still
+    raises the 409 conflict — and the provider is never called twice.
+
+    ``rollback()`` expires every persistent object regardless of
+    ``expire_on_commit=False``, so the account must be re-loaded before any
+    attribute (``account.id`` inside ``replay_intent``) is read again.
+    """
+    await session.rollback()
+    await session.refresh(account)
+    replayed = await replay_intent(
+        session,
+        account=account,
+        operation=operation,
+        catalog_key=intent.catalog_key,
+        quantity=intent.quantity,
+        credential_mode=intent.credential_mode,
+        idempotency_key=idempotency_key,
+    )
+    if replayed is None:  # pragma: no cover - the winner committed first
+        raise RuntimeError("insert-race loser found no winning idempotency record")
+    return replayed
+
+
+async def _run_new_intent(
+    session: AsyncSession,
+    *,
+    account: BillingAccount,
+    operation: str,
+    intent: ResolvedIntent,
+    idempotency_key: str,
+    fingerprint: str,
+    provider_call: ProviderCall,
+    status_code: int,
+    at: datetime,
+) -> IntentResult:
+    """Steps 6-9 for a fresh key: commit the intent, call, settle."""
+    try:
+        pending = await _insert_intent(
+            session,
+            account=account,
+            operation=operation,
+            intent=intent,
+            idempotency_key=idempotency_key,
+            fingerprint=fingerprint,
+            now=at,
+        )
+    except IntegrityError:
+        return await _replay_insert_race_winner(
+            session,
+            account=account,
+            operation=operation,
+            intent=intent,
+            idempotency_key=idempotency_key,
+        )
+    try:
+        result = await provider_call(pending)
+    except BillingProviderError as exc:
+        if exc.retryable:
+            # UNCERTAIN outcome: leave the row pending for reconciliation.
+            # Nothing is uncommitted here — the intent committed BEFORE the
+            # provider call (invariant 8) — so there is nothing to roll back.
+            # A rollback would only EXPIRE ``pending`` (rollback ignores
+            # ``expire_on_commit=False``) and break the projection below.
+            return IntentResult(response=_pending_response(pending), replayed=False)
+        pending.status = ACTIVATION_FAILED
+        pending.failed_at = at
+        pending.failure_code = exc.code
+        return IntentResult(
+            response=await _complete(
+                session,
+                account_id=account.id,
+                idempotency_key=idempotency_key,
+                pending=pending,
+                status_code=status_code,
+            ),
+            replayed=False,
+        )
+    _apply_hosted_result(pending, result)
+    return IntentResult(
+        response=await _complete(
+            session,
+            account_id=account.id,
+            idempotency_key=idempotency_key,
+            pending=pending,
+            status_code=status_code,
+        ),
+        replayed=False,
+    )
+
+
 async def execute_intent(
     session: AsyncSession,
     *,
@@ -337,45 +442,16 @@ async def execute_intent(
     )
     if replayed is not None:
         return replayed
-    pending = await _insert_intent(
+    return await _run_new_intent(
         session,
         account=account,
         operation=operation,
         intent=intent,
         idempotency_key=idempotency_key,
         fingerprint=fingerprint,
-        now=at,
-    )
-    try:
-        result = await provider_call(pending)
-    except BillingProviderError as exc:
-        if exc.retryable:
-            # UNCERTAIN outcome: leave the row pending for reconciliation.
-            await session.rollback()
-            return IntentResult(response=_pending_response(pending), replayed=False)
-        pending.status = ACTIVATION_FAILED
-        pending.failed_at = at
-        pending.failure_code = exc.code
-        return IntentResult(
-            response=await _complete(
-                session,
-                account_id=account.id,
-                idempotency_key=idempotency_key,
-                pending=pending,
-                status_code=status_code,
-            ),
-            replayed=False,
-        )
-    _apply_hosted_result(pending, result)
-    return IntentResult(
-        response=await _complete(
-            session,
-            account_id=account.id,
-            idempotency_key=idempotency_key,
-            pending=pending,
-            status_code=status_code,
-        ),
-        replayed=False,
+        provider_call=provider_call,
+        status_code=status_code,
+        at=at,
     )
 
 

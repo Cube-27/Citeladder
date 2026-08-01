@@ -379,11 +379,10 @@ class AuditSettings(BaseSettings):
     # that need pacing set AUDIT_MIN_REQUEST_INTERVAL_SECONDS; the startup
     # warning above makes the unpaced default explicit rather than silent.
     min_request_interval_seconds: float = 0.0
-    # Hard per-call ceiling enforced with ``asyncio.wait_for`` around the
-    # provider call, independent of the HTTP client timeout.
-    max_call_seconds: float = 90.0
     # Per-run wall-clock deadline. Once exceeded, remaining tasks stop at their
-    # boundary and terminalize, so a run can never sit live forever.
+    # boundary and terminalize, so a run can never sit live forever. Frozen
+    # onto the audit at creation and read back through
+    # ``max_run_seconds_from_configuration`` (invariant 9).
     max_run_seconds: float = 1800.0
     # Retry budget for a single task (attempt_count is bounded by max_attempts).
     max_attempts: int = 5
@@ -500,6 +499,21 @@ def frozen_policy_configuration(policy: MeasurementModePolicy) -> dict:
         "repetitions": policy.repetitions,
         "answer_instruction": policy.answer_instruction,
     }
+
+
+def max_run_seconds_from_configuration(configuration: dict | None) -> float:
+    """Read the FROZEN per-run deadline out of an audit's ``configuration``.
+
+    The planner freezes ``max_run_seconds`` at creation (invariant 9: an env
+    change mid-run must never alter an in-flight audit), and the worker's
+    deadline check reads ONLY this copy. Rows planned before the freeze carry
+    no key; for those (and only those) the live setting is the closest
+    available approximation.
+    """
+    frozen = (configuration or {}).get("max_run_seconds")
+    if frozen is None:
+        return audit_settings.max_run_seconds
+    return float(frozen)
 
 
 def measurement_policy_from_configuration(

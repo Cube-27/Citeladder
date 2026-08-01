@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -123,6 +124,8 @@ from app.models.billing import (
     GrantRevocation,
 )
 from app.models.user import User
+
+logger = logging.getLogger("app.billing")
 
 # Provider-authoritative states that fund the current period's grant bundle.
 # ``trialing`` is deliberately NOT grant authority in PR1.
@@ -238,6 +241,17 @@ async def _issue_period_bundle(
         subscription.catalog_key, billing_settings.catalog_version
     )
     if not templates:
+        # A key the LIVE catalog no longer resolves (e.g. a removed plan key)
+        # would otherwise silently issue NOTHING while the provider keeps
+        # charging the subscription. Safe fields only: catalog key/revision,
+        # never account identifiers (invariant 6).
+        logger.warning(
+            "subscription renewal resolved no grant specs",
+            extra={
+                "catalog_key": subscription.catalog_key,
+                "catalog_revision": billing_settings.catalog_version,
+            },
+        )
         return
     templates = scale_grant_specs(templates, max(subscription.quantity, 1))
     period_start_key = event.period_start.isoformat()
@@ -546,6 +560,10 @@ def public_catalog(country_code: str | None) -> BillingCatalogResponse:
 # exposed. ``quote_id`` is an opaque HMAC over the safe resolved inputs PLUS
 # the PRIVATE provider price ref, so it binds the displayed terms to the exact
 # provider price without leaking any provider identity (invariant 6).
+# ``quote_id`` is CLIENT-FACING tamper-evidence ONLY: nothing server-side ever
+# verifies it — execution re-resolves catalog, region, price, and provider
+# refs from the live catalog — so do NOT build a server-side quote_id check
+# here; it would be security theater, not a control.
 
 
 @dataclass(frozen=True, slots=True)

@@ -14,13 +14,18 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
+from decimal import Decimal
 from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import func, select
 
+from app.core.config.audits import POOL_KIND_CONNECTION
 from app.core.config.provider_catalog import PROBE_PROMPT, provider_catalog_settings
 from app.core.security import decrypt_secret
+from app.models.audit import ProviderCapacityBucket
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
 
@@ -231,6 +236,52 @@ async def test_delete_connection(client: httpx.AsyncClient) -> None:
     assert resp.status_code == 204
     listed = await client.get("/api/v1/provider-connections")
     assert listed.json() == []
+
+
+@pytest.mark.asyncio
+async def test_delete_two_same_transport_connections_clears_capacity_buckets(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """Two same-transport BYOK connections each own a connection-pool capacity
+    bucket; deleting BOTH must not trip the nulls-not-distinct pool unique
+    (the SET NULL FK would otherwise collapse both buckets onto one identity).
+    """
+    await _register(client, "prov-buckets@example.com")
+    first = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(label="OpenAI A"),
+    )
+    second = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(label="OpenAI B"),
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+    first_id, second_id = first.json()["id"], second.json()["id"]
+
+    for connection_id in (first_id, second_id):
+        db_session.add(
+            ProviderCapacityBucket(
+                pool_kind=POOL_KIND_CONNECTION,
+                transport_provider="openai",
+                connection_id=uuid.UUID(connection_id),
+                billing_account_id=None,
+                capacity=Decimal("5"),
+                tokens=Decimal("0"),
+                refill_tokens_per_second=Decimal("0"),
+            )
+        )
+    await db_session.commit()
+
+    delete_first = await client.delete(f"/api/v1/provider-connections/{first_id}")
+    assert delete_first.status_code == 204
+    # Before the fix this second delete 500'd on uq_provider_capacity_bucket_pool.
+    delete_second = await client.delete(f"/api/v1/provider-connections/{second_id}")
+    assert delete_second.status_code == 204
+
+    listed = await client.get("/api/v1/provider-connections")
+    assert listed.json() == []
+    assert await db_session.scalar(select(func.count(ProviderCapacityBucket.id))) == 0
 
 
 @pytest.mark.asyncio

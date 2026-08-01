@@ -588,6 +588,37 @@ async def test_worker_cuts_off_at_run_deadline(
 
 
 @pytest.mark.asyncio
+async def test_worker_reads_frozen_run_deadline_not_live_settings(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The deadline is FROZEN at creation (invariant 9): shrinking the LIVE
+    setting to zero mid-run must NOT terminalize an in-flight audit.
+    """
+    seed, audit = await _make_audit(session_factory, prompts=1, reps=1)  # 1
+    monkeypatch.setattr(audit_settings, "max_run_seconds", 0.0)
+
+    # Mark the audit started a minute ago: a LIVE read of the zeroed setting
+    # would trip the cutoff immediately; the frozen default (1800s) must not.
+    async with session_factory() as session:
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        refreshed.started_at = datetime.now(UTC) - timedelta(seconds=60)
+        await session.commit()
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-frozen-dl")
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        tasks = await list_tasks(
+            session, workspace_id=seed.workspace_id, audit_id=audit.id
+        )
+        assert {t.status for t in tasks} == {"succeeded"}
+        assert {t.error_code for t in tasks} == {""}
+
+
+@pytest.mark.asyncio
 async def test_worker_fails_task_with_missing_connection(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,

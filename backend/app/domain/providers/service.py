@@ -13,7 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -53,6 +53,7 @@ from app.domain.providers.schemas import (
     ProviderConnectionUpdate,
     ProviderRouteResponse,
 )
+from app.models.audit import ProviderCapacityBucket
 from app.models.provider import (
     ProviderConnection,
     ProviderConnectionTest,
@@ -267,6 +268,17 @@ async def delete_connection(
 ) -> None:
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
+    )
+    # Delete the connection's capacity buckets in the SAME transaction. The
+    # bucket pool unique is nulls-not-distinct over (pool_kind, transport,
+    # connection_id, billing_account_id), so the SET NULL FK would otherwise
+    # collapse two same-transport connection deletes onto one identity and
+    # 23505 the second delete. A dead connection's pacing state is garbage
+    # anyway; the bucket's leases cascade with it.
+    await session.execute(
+        delete(ProviderCapacityBucket).where(
+            ProviderCapacityBucket.connection_id == connection.id
+        )
     )
     await session.delete(connection)
     await session.commit()

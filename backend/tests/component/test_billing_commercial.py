@@ -12,6 +12,7 @@ The provider is ALWAYS a fake — no live-key test.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -35,10 +36,14 @@ from app.connectors.billing.base import (
 from app.core.config.billing import (
     ACTIVATION_AUTHORITY_RECONCILIATION,
     ACTIVATION_AUTHORITY_WEBHOOK,
+    OPERATION_SUBSCRIPTION_CREATE,
     billing_settings,
 )
+from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
+from app.domain.billing.idempotency import IntentResult, execute_intent
 from app.domain.billing.reconciliation import reconcile_pending_activations
+from app.domain.billing.service import resolve_base_intent
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -47,6 +52,7 @@ from app.models.billing import (
     IdempotencyRecord,
     PendingActivation,
 )
+from tests.component.log_capture import capture_log_messages
 
 _SECRET = "commercial-webhook-secret"
 _PLAN_REF = "plan_test_private"
@@ -451,6 +457,209 @@ async def test_idempotency_replays_same_body_and_rejects_a_different_one(
     assert "idempotency_key_reused" in conflict.text
     assert len(provider.base_calls) == 1
     assert await db_session.scalar(select(func.count(PendingActivation.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_uncertain_provider_error_returns_202_pending_then_replays(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A RETRYABLE provider error is an uncertain outcome: the intent was
+    committed before the call, so the route returns a clean 202-pending (not
+    a 500) and a same-key retry replays it without a second provider call.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+
+    class _UncertainProvider(_FakeProvider):
+        async def create_base_subscription(
+            self, *, price_ref, intent_id, account_ref, trial_days, metadata
+        ) -> HostedSubscription:
+            await self._assert_pending_committed(intent_id)
+            self.base_calls.append({"price_ref": price_ref, "trial_days": trial_days})
+            raise BillingProviderError("provider_unavailable", retryable=True)
+
+    provider = _UncertainProvider(session_factory)
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    await _register(client, "uncertain@example.com")
+    payload = {
+        "catalog_key": "tier_1",
+        "credential_mode": "byok",
+        "country_code": "US",
+    }
+    headers = {"Idempotency-Key": "uncertain-key-01"}
+
+    response = await client.post(
+        "/api/v1/billing/subscriptions", json=payload, headers=headers
+    )
+    assert response.status_code == 202
+    body = response.json()
+    assert body["kind"] == "base"
+    assert body["status"] == "pending"
+    # No hosted reference was ever persisted: nothing safe to show yet.
+    assert body["checkout_url"] is None
+    assert body["failure_code"] is None
+
+    # The uncertain outcome leaves the committed rows pending for
+    # reconciliation (never failed, never a grant).
+    pending = (await db_session.scalars(select(PendingActivation))).one()
+    assert pending.status == "pending"
+    record = (await db_session.scalars(select(IdempotencyRecord))).one()
+    assert record.state == "started"
+    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+
+    # A same-key retry replays the pending projection — no second call.
+    replay = await client.post(
+        "/api/v1/billing/subscriptions", json=payload, headers=headers
+    )
+    assert replay.status_code == 202
+    assert replay.json() == body
+    assert len(provider.base_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_same_key_requests_never_500_or_double_call(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two concurrent same-Idempotency-Key checkouts: one winner, one replayed
+    response — never a 500 and never a second provider call.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    provider = _FakeProvider(session_factory)
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    await _register(client, "race-api@example.com")
+    payload = {
+        "catalog_key": "tier_1",
+        "credential_mode": "byok",
+        "country_code": "US",
+    }
+    headers = {"Idempotency-Key": "race-key-api-0001"}
+
+    async def _post() -> httpx.Response:
+        return await client.post(
+            "/api/v1/billing/subscriptions", json=payload, headers=headers
+        )
+
+    first, second = await asyncio.gather(_post(), _post())
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["activation_id"] == second.json()["activation_id"]
+    assert len(provider.base_calls) == 1
+    assert await db_session.scalar(select(func.count(PendingActivation.id))) == 1
+    assert await db_session.scalar(select(func.count(IdempotencyRecord.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_insert_race_loser_replays_the_winner(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Force both same-key intents past the replay check BEFORE either insert
+    commits: the loser's commit trips the account-key unique, and it must
+    replay the winner's committed intent instead of 500ing on IntegrityError.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    await _register(client, "race-domain@example.com")
+    account_id = (await _account(db_session)).id
+    intent = resolve_base_intent(
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code="US",
+        at=datetime.now(UTC),
+    )
+
+    barrier = asyncio.Barrier(2)
+    real_insert = idempotency_module._insert_intent
+
+    async def _gated_insert(session: AsyncSession, **kwargs: object):
+        # Both intents arrive here only AFTER both replay checks missed.
+        await barrier.wait()
+        return await real_insert(session, **kwargs)
+
+    monkeypatch.setattr(idempotency_module, "_insert_intent", _gated_insert)
+
+    calls = 0
+
+    async def _provider_call(pending: PendingActivation) -> HostedSubscription:
+        nonlocal calls
+        calls += 1
+        return HostedSubscription(
+            external_subscription_id="sub_race",
+            checkout_url="https://rzp.io/i/sub_race",
+            status="created",
+            price_ref=_PLAN_REF,
+        )
+
+    async def _run(session: AsyncSession) -> IntentResult:
+        account = await session.get(BillingAccount, account_id)
+        assert account is not None
+        return await execute_intent(
+            session,
+            account=account,
+            operation=OPERATION_SUBSCRIPTION_CREATE,
+            intent=intent,
+            idempotency_key="race-key-domain-1",
+            provider_call=_provider_call,
+            status_code=202,
+        )
+
+    async with (
+        session_factory() as first_session,
+        session_factory() as second_session,
+    ):
+        first, second = await asyncio.gather(_run(first_session), _run(second_session))
+
+    # Exactly one winner ran the provider call; the loser replayed it.
+    assert {first.replayed, second.replayed} == {False, True}
+    assert calls == 1
+    assert first.response.activation_id == second.response.activation_id
+    assert first.response.status == second.response.status == "pending"
+    assert first.response.quote == second.response.quote
+    async with session_factory() as session:
+        assert await session.scalar(select(func.count(PendingActivation.id))) == 1
+        assert await session.scalar(select(func.count(IdempotencyRecord.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A plan key the LIVE catalog no longer owns must not silently issue
+    nothing while the provider keeps charging: the renewal logs the safe
+    catalog fields and writes no grants.
+    """
+    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    await _register(client, "renew-removed@example.com")
+    account = await _account(db_session)
+    subscription = await _seed_live_base(db_session, account)
+    subscription.catalog_key = "tier_removed"
+    await db_session.commit()
+
+    now = datetime.now(UTC)
+    raw = _subscription_activation_payload(
+        external_id="sub_live_base",
+        intent_id=str(uuid.uuid4()),
+        account_ref=str(account.id),
+        updated_at=int(now.timestamp()),
+        current_start=int(now.timestamp()),
+        current_end=int((now + timedelta(days=30)).timestamp()),
+    )
+    with capture_log_messages("app.billing") as messages:
+        response = await _post_webhook(
+            client, raw, event_id=f"evt_{uuid.uuid4().hex[:12]}"
+        )
+    assert response.status_code == 204
+    assert any("no grant specs" in message for message in messages)
+    # Nothing was issued for the unresolvable key.
+    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
 
 
 # --- Activation via the signed webhook ---------------------------------------

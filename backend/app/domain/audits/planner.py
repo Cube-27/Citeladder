@@ -681,7 +681,6 @@ def _frozen_configuration(
         "shopping_surfaces": list(SHOPPING_SURFACES),
         "repetitions": plan.repetitions,
         "max_attempts": audit_settings.max_attempts,
-        "max_call_seconds": audit_settings.max_call_seconds,
         "max_run_seconds": audit_settings.max_run_seconds,
         # The frozen per-call timeout is the MODE's, not the generic live
         # ``request_timeout_seconds``: an env change mid-run must never alter an

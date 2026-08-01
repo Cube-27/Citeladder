@@ -85,6 +85,7 @@ from app.core.config.audits import (
     TASK_TERMINAL_STATUSES,
     MeasurementModePolicy,
     audit_settings,
+    max_run_seconds_from_configuration,
     measurement_policy_from_configuration,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
@@ -953,8 +954,14 @@ class AuditWorker(DrainableWorkerMixin):
                 # Per-run wall-clock deadline: once the audit has been running
                 # longer than max_run_seconds, terminalize remaining tasks
                 # instead of starting another provider call. The audit itself
-                # is finalized once by this method's finally block.
-                if self._deadline_passed(audit):
+                # is finalized once by this method's finally block. The FROZEN
+                # value written at creation governs (invariant 9): a live
+                # settings change mid-run must never extend or shorten an
+                # in-flight audit.
+                deadline_seconds = max_run_seconds_from_configuration(
+                    audit.configuration
+                )
+                if self._deadline_passed(audit, deadline_seconds):
                     # Same terminal release as the cancel path above.
                     await self._apply_funded_ledger(
                         session, task=task, billable=False, terminal=True
@@ -965,8 +972,7 @@ class AuditWorker(DrainableWorkerMixin):
                         owner=self.owner,
                         error_code=ERROR_RUN_DEADLINE,
                         error_detail=(
-                            "audit exceeded max_run_seconds "
-                            f"({audit_settings.max_run_seconds}s)"
+                            f"audit exceeded max_run_seconds ({deadline_seconds}s)"
                         ),
                     )
                     return
@@ -987,14 +993,14 @@ class AuditWorker(DrainableWorkerMixin):
         finally:
             await self._finalize_audit(audit_id)
 
-    def _deadline_passed(self, audit: Audit) -> bool:
+    def _deadline_passed(self, audit: Audit, deadline_seconds: float) -> bool:
         started = audit.started_at
         if started is None:
             return False
         if started.tzinfo is None:
             started = started.replace(tzinfo=UTC)
         elapsed = (_utcnow() - started).total_seconds()
-        return elapsed >= audit_settings.max_run_seconds
+        return elapsed >= deadline_seconds
 
     def _ensure_running(self, session: AsyncSession, audit: Audit) -> None:
         if audit.status == AUDIT_STATUS_QUEUED:
