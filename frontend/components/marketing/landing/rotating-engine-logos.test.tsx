@@ -26,9 +26,7 @@ describe('RotatingEngineLogos', () => {
     render(<RotatingEngineLogos />);
 
     const label = screen.getByRole('img').getAttribute('aria-label') ?? '';
-    expect(label).toBe(
-      'Available: ChatGPT, Gemini, Claude, Grok, Copilot and Perplexity.',
-    );
+    expect(label).toBe('Available: ChatGPT, Gemini, Claude, Grok, Copilot and Perplexity.');
     // Naming a provider is allowed; claiming it is measured today is not.
     expect(label).not.toMatch(/monitor|audit|track|cover/i);
   });
