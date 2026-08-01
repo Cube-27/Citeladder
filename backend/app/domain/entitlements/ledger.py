@@ -164,13 +164,16 @@ async def _grant_balances(
     sums: dict[uuid.UUID, dict[str, int]] = {}
     for grant_id, entry_kind, total in rows:
         sums.setdefault(grant_id, {})[entry_kind] = int(total or 0)
-    return {
-        row.id: row.value
-        - sums.get(row.id, {}).get(LEDGER_ENTRY_RESERVATION, 0)
-        + sums.get(row.id, {}).get(LEDGER_ENTRY_RELEASE, 0)
-        - sums.get(row.id, {}).get(LEDGER_ENTRY_DEBIT, 0)
-        for row in grants
-    }
+    balances: dict[uuid.UUID, int] = {}
+    for row in grants:
+        kind_sums = sums.get(row.id, {})
+        balances[row.id] = (
+            row.value
+            - kind_sums.get(LEDGER_ENTRY_RESERVATION, 0)
+            + kind_sums.get(LEDGER_ENTRY_RELEASE, 0)
+            - kind_sums.get(LEDGER_ENTRY_DEBIT, 0)
+        )
+    return balances
 
 
 async def _reservation_entries(
@@ -293,10 +296,16 @@ async def reserve_funded_task(
     )
 
 
-async def _outstanding_reserved_units(
+async def _reservation_state(
     session: AsyncSession, reservation_id: uuid.UUID
-) -> dict[uuid.UUID, int]:
-    """Per-grant reserved-but-not-yet-released units for one reservation."""
+) -> tuple[ConsumableLedger, dict[uuid.UUID, int]]:
+    """(base entry, per-grant outstanding units) for one reservation.
+
+    Every reservation row of one reservation carries the same account,
+    capability, audit, and task ids, so the first entry serves as the base
+    row — no second query. Per-grant outstanding units are the reserved sums
+    minus the released sums.
+    """
     entries = await _reservation_entries(session, reservation_id)
     if not entries:
         raise LedgerError(f"unknown reservation: {reservation_id}")
@@ -313,7 +322,7 @@ async def _outstanding_reserved_units(
     ).all()
     for grant_id, released in releases:
         outstanding[grant_id] = outstanding.get(grant_id, 0) - int(released or 0)
-    return outstanding
+    return entries[0], outstanding
 
 
 async def record_billable_attempt(
@@ -347,22 +356,13 @@ async def record_billable_attempt(
     )
     if billed is not None:
         return
-    outstanding = await _outstanding_reserved_units(session, reservation_id)
+    base, outstanding = await _reservation_state(session, reservation_id)
     grant_id = await _draw_first_grant(session, outstanding, units=units)
     if grant_id is None:
         raise LedgerError(
             f"reservation {reservation_id} has no {units} outstanding unit(s) "
             f"to bill for attempt {attempt}"
         )
-    base = await session.scalar(
-        select(ConsumableLedger)
-        .where(
-            ConsumableLedger.reservation_id == reservation_id,
-            ConsumableLedger.entry_kind == LEDGER_ENTRY_RESERVATION,
-        )
-        .limit(1)
-    )
-    assert base is not None  # guaranteed by _outstanding_reserved_units
     session.add(
         ConsumableLedger(
             billing_account_id=base.billing_account_id,
@@ -442,16 +442,7 @@ async def release_unused_reservation(
     Idempotent: once nothing is outstanding the call is a no-op, and each
     release row carries a deterministic per-grant key as the final race guard.
     """
-    outstanding = await _outstanding_reserved_units(session, reservation_id)
-    base = await session.scalar(
-        select(ConsumableLedger)
-        .where(
-            ConsumableLedger.reservation_id == reservation_id,
-            ConsumableLedger.entry_kind == LEDGER_ENTRY_RESERVATION,
-        )
-        .limit(1)
-    )
-    assert base is not None  # guaranteed by _outstanding_reserved_units
+    base, outstanding = await _reservation_state(session, reservation_id)
     for grant_id, units in sorted(outstanding.items(), key=lambda kv: kv[0].bytes):
         if units <= 0:
             continue

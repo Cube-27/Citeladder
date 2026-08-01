@@ -699,6 +699,52 @@ def _bounded_quantity(quantity: int, bounds: QuantityBounds) -> int:
     return quantity
 
 
+def _resolve_pack_intent(
+    *,
+    kind: str,
+    item: AddonCatalogEntry | TopupCatalogEntry,
+    quantity: int,
+    country_code: str,
+    region: str,
+    at: datetime,
+) -> ResolvedIntent:
+    """Validate a quantity-bounded pack purchase and resolve its quote.
+
+    The ONE owner of the add-on/top-up intent shape (invariant 2): bounded
+    quantity, region price, availability gate, BYOK credential mode, no
+    credit line. The kind-specific guards (coming-soon, live base) stay with
+    the callers.
+    """
+    _bounded_quantity(quantity, item.quantity_bounds)
+    price = item.price(region)
+    available, reason = item_checkout_availability(
+        availability=item.availability, price=price, region=region
+    )
+    if not available or price is None:
+        raise BillingConflictError(reason or REASON_CHECKOUT_UNAVAILABLE)
+    return ResolvedIntent(
+        kind=kind,
+        catalog_key=item.key,
+        quantity=quantity,
+        credential_mode=CREDENTIAL_MODE_BYOK,
+        country_code=country_code,
+        region=region,
+        price_ref=price.provider_price_ref,
+        credit_price_ref="",
+        quote=resolve_quote(
+            kind=kind,
+            catalog_key=item.key,
+            quantity=quantity,
+            credential_mode=CREDENTIAL_MODE_BYOK,
+            country_code=country_code,
+            region=region,
+            base=price,
+            credit=None,
+            at=at,
+        ),
+    )
+
+
 def resolve_addon_intent(
     *, catalog_key: str, quantity: int, country_code: str, at: datetime
 ) -> ResolvedIntent:
@@ -713,33 +759,13 @@ def resolve_addon_intent(
     addon = commercial_catalog().addon(catalog_key)
     if addon is None:
         raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
-    _bounded_quantity(quantity, addon.quantity_bounds)
-    price = addon.price(region)
-    available, reason = item_checkout_availability(
-        availability=addon.availability, price=price, region=region
-    )
-    if not available or price is None:
-        raise BillingConflictError(reason or REASON_CHECKOUT_UNAVAILABLE)
-    return ResolvedIntent(
+    return _resolve_pack_intent(
         kind=ACTIVATION_KIND_ADDON,
-        catalog_key=catalog_key,
+        item=addon,
         quantity=quantity,
-        credential_mode=CREDENTIAL_MODE_BYOK,
         country_code=country_code,
         region=region,
-        price_ref=price.provider_price_ref,
-        credit_price_ref="",
-        quote=resolve_quote(
-            kind=ACTIVATION_KIND_ADDON,
-            catalog_key=catalog_key,
-            quantity=quantity,
-            credential_mode=CREDENTIAL_MODE_BYOK,
-            country_code=country_code,
-            region=region,
-            base=price,
-            credit=None,
-            at=at,
-        ),
+        at=at,
     )
 
 
@@ -751,33 +777,13 @@ def resolve_topup_intent(
     topup = commercial_catalog().topup(catalog_key)
     if topup is None:
         raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
-    _bounded_quantity(quantity, topup.quantity_bounds)
-    price = topup.price(region)
-    available, reason = item_checkout_availability(
-        availability=topup.availability, price=price, region=region
-    )
-    if not available or price is None:
-        raise BillingConflictError(reason or REASON_CHECKOUT_UNAVAILABLE)
-    return ResolvedIntent(
+    return _resolve_pack_intent(
         kind=ACTIVATION_KIND_TOPUP,
-        catalog_key=catalog_key,
+        item=topup,
         quantity=quantity,
-        credential_mode=CREDENTIAL_MODE_BYOK,
         country_code=country_code,
         region=region,
-        price_ref=price.provider_price_ref,
-        credit_price_ref="",
-        quote=resolve_quote(
-            kind=ACTIVATION_KIND_TOPUP,
-            catalog_key=catalog_key,
-            quantity=quantity,
-            credential_mode=CREDENTIAL_MODE_BYOK,
-            country_code=country_code,
-            region=region,
-            base=price,
-            credit=None,
-            at=at,
-        ),
+        at=at,
     )
 
 

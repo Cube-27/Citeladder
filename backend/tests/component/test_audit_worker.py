@@ -13,9 +13,6 @@ claim/lease loop against a Postgres schema:
 from __future__ import annotations
 
 import asyncio
-import logging
-from collections.abc import Iterator
-from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -104,10 +101,10 @@ from app.workers import audit_worker
 from app.workers.audit_worker import AuditWorker
 from tests.component.audit_helpers import (
     _mark_connection_probed,
-    capture_provider_events,
     seed_audit_fixtures,
     seed_platform_connection,
 )
+from tests.component.log_capture import capture_log_messages
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 
@@ -1911,36 +1908,6 @@ async def test_funded_task_never_claimable_without_its_frozen_reservation(
     assert TASK_STATUS_PENDING_RESERVATION not in TASK_CLAIMABLE_STATUSES
 
 
-@contextmanager
-def _capture_log_messages(*logger_names: str) -> Iterator[list[str]]:
-    """Capture rendered messages on the given loggers (funded_helpers pattern).
-
-    Binds a handler directly to each named logger (never the root, which
-    other tests reconfigure) and forces the level down for the capture
-    window so INFO records are always created.
-    """
-    messages: list[str] = []
-
-    class _Capture(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            messages.append(record.getMessage())
-
-    bound: list[tuple[logging.Logger, logging.Handler, int]] = []
-    for name in logger_names:
-        target = logging.getLogger(name)
-        handler = _Capture()
-        previous = target.level
-        target.addHandler(handler)
-        target.setLevel(logging.INFO)
-        bound.append((target, handler, previous))
-    try:
-        yield messages
-    finally:
-        for target, handler, previous in bound:
-            target.removeHandler(handler)
-            target.setLevel(previous)
-
-
 @pytest.mark.asyncio
 async def test_no_secret_bearing_logs_or_events(
     session_factory: async_sessionmaker[AsyncSession],
@@ -1959,7 +1926,7 @@ async def test_no_secret_bearing_logs_or_events(
     monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
 
     worker = AuditWorker(session_factory=session_factory, owner="w-secrets")
-    with _capture_log_messages(
+    with capture_log_messages(
         "app.workers.audit_worker", "app.orchestration.provider_capacity"
     ) as messages:
         await worker.run_pipelined(drain=True)  # parks; capacity telemetry fires
@@ -2146,7 +2113,7 @@ async def test_byok_auth_failure_pauses_connection_and_fails_task(
     monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
 
     worker = AuditWorker(session_factory=session_factory, owner="w-auth-byok")
-    with capture_provider_events() as events:
+    with capture_log_messages("app.providers") as events:
         await worker.run_until_idle()
 
     # One provider call total: auth is non-retryable and the worker never
@@ -2231,7 +2198,7 @@ async def test_platform_auth_failure_pauses_platform_row_without_tenant_exposure
     monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
 
     worker = AuditWorker(session_factory=session_factory, owner="w-auth-platform")
-    with capture_provider_events() as events:
+    with capture_log_messages("app.providers") as events:
         await worker.run_until_idle()
 
     async with session_factory() as session:

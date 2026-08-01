@@ -49,10 +49,10 @@ from app.models.provider import ProviderConnection
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from tests.component.audit_helpers import (
-    capture_provider_events,
     seed_audit_fixtures,
     seed_platform_connection,
 )
+from tests.component.log_capture import capture_log_messages
 
 _AT = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
 _ACCOUNT_ID = uuid.uuid4()
@@ -440,7 +440,7 @@ async def test_pause_writer_pauses_byok_and_emits_safe_event(
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, engines=[ENGINE_CLAUDE], probed=True)
         connection = await _tenant_connection(session, seed.workspace_id)
-        with capture_provider_events() as events:
+        with capture_log_messages("app.providers") as events:
             await pause_connection_after_key_failure(session, connection.id, _AT)
         await session.commit()
 
@@ -474,7 +474,7 @@ async def test_pause_writer_pauses_platform_row_and_emits_platform_event(
             )
         )
         assert platform_connection is not None
-        with capture_provider_events() as events:
+        with capture_log_messages("app.providers") as events:
             await pause_connection_after_key_failure(
                 session, platform_connection.id, _AT
             )
@@ -493,7 +493,7 @@ async def test_pause_writer_ignores_a_missing_connection(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        with capture_provider_events() as events:
+        with capture_log_messages("app.providers") as events:
             await pause_connection_after_key_failure(session, uuid.uuid4(), _AT)
         await session.commit()
     assert events == []

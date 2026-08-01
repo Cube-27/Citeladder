@@ -8,19 +8,16 @@ canonical, funded accounts share fairly, expired leases recover capacity, a
 parked decisions carry ``capacity_wait``/``available_at``, and funded pacing
 fails CLOSED while route token rates are unconfigured.
 
-Telemetry capture binds a handler DIRECTLY to the emitting
-``app.orchestration.provider_capacity`` logger (never caplog's root), with
-the level pinned for the capture window — see tests/component/funded_helpers.py
-for why.
+Telemetry capture goes through the shared
+``tests/component/log_capture.py`` helper (binds DIRECTLY to the emitting
+logger, never caplog's root, with the level pinned for the capture window).
 """
 
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
-from collections.abc import AsyncIterator, Iterator
-from contextlib import contextmanager
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -72,6 +69,7 @@ from app.orchestration.provider_capacity import (
     release_provider_capacity,
 )
 from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.log_capture import capture_log_messages
 
 _GEMINI_ROUTE = (ENGINE_GEMINI, TRANSPORT_GOOGLE)
 _NOW = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
@@ -177,27 +175,6 @@ def _configure_route_pacing(
     )
 
 
-@contextmanager
-def _capture_capacity_events() -> Iterator[list[str]]:
-    """Capture rendered messages on the provider-capacity logger."""
-    messages: list[str] = []
-
-    class _Capture(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            messages.append(record.getMessage())
-
-    capacity_logger = logging.getLogger("app.orchestration.provider_capacity")
-    handler = _Capture()
-    previous_level = capacity_logger.level
-    capacity_logger.addHandler(handler)
-    capacity_logger.setLevel(logging.INFO)
-    try:
-        yield messages
-    finally:
-        capacity_logger.removeHandler(handler)
-        capacity_logger.setLevel(previous_level)
-
-
 @pytest_asyncio.fixture
 async def second_session_factory(
     _schema_engine: AsyncEngine,
@@ -255,7 +232,7 @@ async def test_concurrent_acquires_never_overshoot_transport_ceiling(
             factory, request=_byok(seed.task_ids[index], seed.connection_id)
         )
 
-    with _capture_capacity_events() as events:
+    with capture_log_messages("app.orchestration.provider_capacity") as events:
         decisions = await asyncio.gather(*(_acquire(i) for i in range(6)))
 
     acquired = [d for d in decisions if d.acquired]
@@ -431,7 +408,7 @@ async def test_shared_429_cooldown_blocks_siblings(
     )
     assert acquired.acquired
 
-    with _capture_capacity_events() as events:
+    with capture_log_messages("app.orchestration.provider_capacity") as events:
         await release_provider_capacity(
             session_factory,
             request=request,
@@ -583,7 +560,7 @@ async def test_funded_fails_closed_when_route_rates_unset(
     """Unverified (None) route rates: funded parks; BYOK is concurrency-only."""
     seed = await _seed(session_factory, prompts=2)
 
-    with _capture_capacity_events() as events:
+    with capture_log_messages("app.orchestration.provider_capacity") as events:
         funded = await acquire_provider_capacity(
             session_factory, request=_funded(seed.task_ids[0], seed.account_ids[0])
         )

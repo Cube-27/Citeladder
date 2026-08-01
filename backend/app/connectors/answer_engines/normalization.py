@@ -53,6 +53,23 @@ def annotation_offset(annotation: dict[str, Any], *keys: str) -> int | None:
     return None
 
 
+def cited_span(
+    text: str, annotation: dict[str, Any]
+) -> tuple[int | None, int | None, str]:
+    """``(start, end, cited_text)`` for one citation annotation against its text.
+
+    Owns the single span-validity rule every offset-based parser shares: the
+    cited text is sliced from the answer only when both offsets are present
+    AND address a valid span; anything else drops to ``(None, None, "")`` —
+    a possibly-stale provider offset is never trusted over the answer text.
+    """
+    start = annotation_offset(annotation, "start_index", "startIndex")
+    end = annotation_offset(annotation, "end_index", "endIndex")
+    if start is not None and end is not None and 0 <= start < end <= len(text):
+        return start, end, text[start:end]
+    return None, None, ""
+
+
 def coerce_int(value: object, default: int = 0) -> int:
     """Best-effort integer coercion that never raises.
 
@@ -167,6 +184,7 @@ def normalized_usage_dict(usage: NormalizedUsage) -> dict[str, int | None]:
 # unchanged and this file stays their single normalization entry point.
 __all__ = [
     "annotation_offset",
+    "cited_span",
     "coerce_int",
     "normalize_domain",
     "output_token_cap",

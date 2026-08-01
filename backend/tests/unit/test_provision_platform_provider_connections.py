@@ -37,7 +37,7 @@ from scripts.provision_platform_provider_connections import (
     PlatformProvisioningError,
     provision_platform_connections,
 )
-from tests.component.audit_helpers import capture_provider_events
+from tests.component.log_capture import capture_log_messages
 
 _VALID_ENCRYPTION_KEY = "provision-test-encryption-key-0123456789abcdef"
 _OPENAI_KEY = "test-openai-platform-key-9f8e7d6c"
@@ -77,7 +77,7 @@ async def test_provision_creates_system_workspace_connections_and_routes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        with capture_provider_events() as events:
+        with capture_log_messages("app.providers") as events:
             reports = await provision_platform_connections(
                 session, credentials=_credentials()
             )

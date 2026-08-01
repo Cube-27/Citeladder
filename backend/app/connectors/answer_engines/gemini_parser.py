@@ -53,7 +53,7 @@ from app.connectors.answer_engines.contracts import (
     SearchEventResult,
 )
 from app.connectors.answer_engines.normalization import (
-    annotation_offset,
+    cited_span,
     normalize_domain,
     normalized_usage_dict,
     sum_optional,
@@ -133,17 +133,13 @@ def normalize_gemini_usage(
     """
     usage = usage_mapping(payload.get("usage") or payload.get("usageMetadata"))
     prompt = usage_count(usage, "promptTokenCount", "prompt_token_count")
-    cached = usage_count(
-        usage, "cachedContentTokenCount", "cached_content_token_count"
-    )
+    cached = usage_count(usage, "cachedContentTokenCount", "cached_content_token_count")
     uncached = prompt
     if prompt is not None and cached is not None:
         uncached = max(prompt - cached, 0)
     output = usage_count(usage, "candidatesTokenCount", "candidates_token_count")
     reasoning = usage_count(usage, "thoughtsTokenCount", "thoughts_token_count")
-    total = usage_count(
-        usage, "totalTokenCount", "total_token_count", "total_tokens"
-    )
+    total = usage_count(usage, "totalTokenCount", "total_token_count", "total_tokens")
     if total is None:
         total = sum_optional(prompt, output, reasoning)
     return NormalizedUsage(
@@ -215,16 +211,9 @@ def _extract_citations(blocks: list[dict[str, Any]]) -> list[CitationResult]:
             title = str(annotation.get("title") or "").strip()
             if not url and not title:
                 continue
-            start = annotation_offset(annotation, "start_index", "startIndex")
-            end = annotation_offset(annotation, "end_index", "endIndex")
             # Derive cited text from the answer where offsets are valid, rather
             # than trusting a possibly-stale provider-duplicated field.
-            cited_text = ""
-            if start is not None and end is not None and 0 <= start < end <= len(text):
-                cited_text = text[start:end]
-            else:
-                start = None
-                end = None
+            start, end, cited_text = cited_span(text, annotation)
             citations.append(
                 CitationResult(
                     ordinal=ordinal,
@@ -291,8 +280,10 @@ def sanitize_metadata(
                     }
                 )
             evidence_steps.append({**common, "content": content})
-    normalized = usage if usage is not None else normalize_gemini_usage(
-        payload, web_search_requests=None
+    normalized = (
+        usage
+        if usage is not None
+        else normalize_gemini_usage(payload, web_search_requests=None)
     )
     return {
         "interaction_id": payload.get("id"),
@@ -332,9 +323,7 @@ def parse_interaction(
     )
     citations = _extract_citations(blocks)
 
-    search_calls = sum(
-        1 for step in steps if _step_type(step) == "google_search_call"
-    )
+    search_calls = sum(1 for step in steps if _step_type(step) == "google_search_call")
     search_used = search_calls > 0
     usage = normalize_gemini_usage(payload, web_search_requests=search_calls)
     raw_finish_reason = gemini_raw_finish_reason(payload)

@@ -54,7 +54,7 @@ from app.connectors.answer_engines.contracts import (
     SearchEventResult,
 )
 from app.connectors.answer_engines.normalization import (
-    annotation_offset,
+    cited_span,
     normalize_domain,
     normalized_usage_dict,
     sum_optional,
@@ -84,15 +84,19 @@ _OPENAI_STATUSES: dict[str, FinishReason] = {
 }
 
 
+def _incomplete_reason(payload: Mapping[str, Any]) -> str:
+    """The trimmed ``incomplete_details.reason`` token, or ``""`` when absent."""
+    details = usage_mapping(payload.get("incomplete_details"))
+    return str(details.get("reason") or "").strip()
+
+
 def openai_raw_finish_reason(payload: Mapping[str, Any]) -> str:
     """The raw provider finish token: the incomplete reason, else the status.
 
     Preserved verbatim on the response and in sanitized metadata so no
     provider-specific spelling has to be reconstructed later.
     """
-    details = usage_mapping(payload.get("incomplete_details"))
-    reason = str(details.get("reason") or "").strip()
-    return reason or str(payload.get("status") or "").strip()
+    return _incomplete_reason(payload) or str(payload.get("status") or "").strip()
 
 
 def map_openai_finish_reason(payload: Mapping[str, Any]) -> FinishReason:
@@ -103,8 +107,7 @@ def map_openai_finish_reason(payload: Mapping[str, Any]) -> FinishReason:
     Anything unrecognized — including an ``incomplete`` status with no reason —
     maps to ``FinishReason.UNKNOWN`` rather than being guessed at.
     """
-    details = usage_mapping(payload.get("incomplete_details"))
-    reason = str(details.get("reason") or "").strip()
+    reason = _incomplete_reason(payload)
     if reason:
         return _OPENAI_INCOMPLETE_REASONS.get(reason, FinishReason.UNKNOWN)
     status = str(payload.get("status") or "").strip()
@@ -207,9 +210,7 @@ def _search_events(
         if _item_type(item) != "web_search_call":
             continue
         call_id = str(item.get("id") or item.get("call_id") or "")
-        action = item.get("action")
-        action = action if isinstance(action, dict) else {}
-        queries = _action_queries(action)
+        queries = _action_queries(_action_of(item))
         if queries:
             for query_sequence, text in enumerate(queries):
                 events.append(
@@ -265,14 +266,7 @@ def _citations(blocks: list[dict[str, Any]]) -> tuple[CitationResult, ...]:
             title = str(annotation.get("title") or "").strip()
             if not url and not title:
                 continue
-            start = annotation_offset(annotation, "start_index", "startIndex")
-            end = annotation_offset(annotation, "end_index", "endIndex")
-            cited_text = ""
-            if start is not None and end is not None and 0 <= start < end <= len(text):
-                cited_text = text[start:end]
-            else:
-                start = None
-                end = None
+            start, end, cited_text = cited_span(text, annotation)
             domain = normalize_domain(urlparse(url).hostname or title)
             citations.append(
                 CitationResult(

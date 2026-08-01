@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from app.core.config.entitlements import (
@@ -119,17 +120,13 @@ def _validate_grant(grant: GrantInput, registry: CapabilityRegistry) -> None:
     if definition is None:
         raise ResolverInputError(f"unknown capability key in grant: {grant.key!r}")
     if grant.source_kind not in GRANT_SOURCE_KINDS:
-        raise ResolverInputError(
-            f"unknown grant source kind: {grant.source_kind!r}"
-        )
+        raise ResolverInputError(f"unknown grant source kind: {grant.source_kind!r}")
     if definition.capability_type is CapabilityType.FLAG:
         if grant.value not in (0, 1):
             raise ResolverInputError(f"flag grant value not 0/1: {grant.key!r}")
     elif definition.capability_type is CapabilityType.LEVEL:
         if not 0 <= grant.value < len(definition.ordered_values):
-            raise ResolverInputError(
-                f"level grant ordinal out of range: {grant.key!r}"
-            )
+            raise ResolverInputError(f"level grant ordinal out of range: {grant.key!r}")
     elif grant.value < 0:
         raise ResolverInputError(f"counter grant value negative: {grant.key!r}")
 
@@ -195,21 +192,13 @@ def _resolve_capability(
         resolved = resolve_counter(
             definition,
             active_grants,
-            ordered_draw_ids=ordered_consumable_grants(
-                active_grants, subscription_end
-            ),
+            ordered_draw_ids=ordered_consumable_grants(active_grants, subscription_end),
         )
     else:
         resolved = resolve_counter(definition, active_grants)
-    return ResolvedCapability(
-        key=resolved.key,
-        capability_type=resolved.capability_type,
-        value=resolved.value,
-        contributing_grant_ids=resolved.contributing_grant_ids,
-        ordered_draw_grant_ids=resolved.ordered_draw_grant_ids,
-        next_change_at=_next_change_at(
-            active_grants, revoked_at, subscription_end, at
-        ),
+    return replace(
+        resolved,
+        next_change_at=_next_change_at(active_grants, revoked_at, subscription_end, at),
     )
 
 
@@ -275,9 +264,7 @@ def fold_entitlement(
         registry_revision=registry.revision,
         entitlement_lifecycle_version=entitlement_lifecycle_version,
         resolved_at=at,
-        valid_until=_entitlement_valid_until(
-            grants, revocations, subscription_end, at
-        ),
+        valid_until=_entitlement_valid_until(grants, revocations, subscription_end, at),
         status=STATUS_RESOLVED,
         capabilities=capabilities,
         errors=(),

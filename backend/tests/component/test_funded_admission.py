@@ -60,7 +60,7 @@ from tests.component.audit_helpers import (
     seed_audit_fixtures,
     seed_platform_connection,
 )
-from tests.component.funded_helpers import capture_billing_events
+from tests.component.log_capture import capture_log_messages
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 # Pulse + claude is the only COMPLETE catalog estimate today (2_890 microusd,
@@ -205,7 +205,7 @@ async def test_budget_exhaustion_persists_nothing_and_emits_telemetry(
         _account, workspace_id, project_id, prompt_set_id = await _seed_funded(session)
         # Ceiling 2 minor-USD = 20_000 microusd < the 28_900 candidate.
         monkeypatch.setattr(billing_settings, "funded_monthly_budget_minor", 2)
-        with capture_billing_events() as events:
+        with capture_log_messages("app.billing") as events:
             with pytest.raises(FundedAdmissionError) as exc_info:
                 await _create_funded(
                     session,
@@ -367,7 +367,7 @@ async def test_credit_exhaustion_rolls_back_everything_and_emits_telemetry(
         _account, workspace_id, project_id, prompt_set_id = await _seed_funded(
             session, credits=3
         )
-        with capture_billing_events() as events:
+        with capture_log_messages("app.billing") as events:
             with pytest.raises(FundedAdmissionError) as exc_info:
                 await _create_funded(
                     session,
@@ -395,7 +395,7 @@ async def test_unresolved_entitlement_fails_closed(
         seed = await seed_audit_fixtures(
             session, prompt_count=1, engines=[ENGINE_CLAUDE]
         )
-        with capture_billing_events() as events:
+        with capture_log_messages("app.billing") as events:
             with pytest.raises(FundedAdmissionError) as exc_info:
                 await _create_funded(
                     session,

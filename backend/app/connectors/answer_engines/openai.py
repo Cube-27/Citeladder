@@ -90,8 +90,6 @@ def _web_search_tool(country_code: str) -> dict[str, Any]:
     return tool
 
 
-
-
 class OpenAIAnswerEngineAdapter:
     """Direct OpenAI adapter. Serves the ``chatgpt`` logical engine."""
 

@@ -45,7 +45,7 @@ from app.domain.entitlements.types import GrantSpec
 from app.models.audit import Audit, AuditTask
 from app.models.billing import AccountGrant, BillingAccount, ConsumableLedger
 from tests.component.audit_helpers import seed_audit_fixtures
-from tests.component.funded_helpers import capture_billing_events
+from tests.component.log_capture import capture_log_messages
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 _NOW = datetime.now(UTC)
@@ -433,7 +433,7 @@ async def test_insufficient_balance_is_graceful_and_emits_telemetry(
 ) -> None:
     async with session_factory() as session:
         account, _ws, audit_id, task_id = await _seed(session, credits=(2,))
-        with capture_billing_events() as events:
+        with capture_log_messages("app.billing") as events:
             with pytest.raises(FundedCreditsExhaustedError) as exc_info:
                 await reserve_funded_task(
                     session,
