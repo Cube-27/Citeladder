@@ -338,6 +338,9 @@ async def get_visibility_trends_endpoint(
     from_at: Annotated[datetime | None, Query(alias="from")] = None,
     to_at: Annotated[datetime | None, Query(alias="to")] = None,
     granularity: Annotated[str, Query()] = VISIBILITY_TREND_DEFAULT_GRANULARITY,
+    measurement_mode: Annotated[str | None, Query()] = None,
+    transport_model: Annotated[str | None, Query()] = None,
+    retrieval_enabled: Annotated[bool | None, Query()] = None,
 ) -> list[VisibilityTrendPoint]:
     """Cross-run Visibility trend projection for a project (invariant 7).
 
@@ -348,6 +351,13 @@ async def get_visibility_trends_endpoint(
     historical run is re-scored. A valid project with no matching history
     returns ``[]`` (not 404); invalid engine/granularity/range or naive
     timestamps return 422.
+
+    Folding may combine points only inside one ``(measurement_mode,
+    transport_model, retrieval_enabled)`` identity partition, so unlike
+    identities return separate ordered points. The optional
+    ``measurement_mode``/``transport_model``/``retrieval_enabled`` query
+    params request an explicit identity slice, applied before folding; an
+    unsupported ``measurement_mode`` returns 422.
     """
     # Authorize the project first (404 for a cross-workspace/missing project).
     await _get_project_or_404(session, ctx.workspace_id, project_id)
@@ -360,6 +370,9 @@ async def get_visibility_trends_endpoint(
             from_at=from_at,
             to_at=to_at,
             granularity=granularity,
+            measurement_mode=measurement_mode,
+            transport_model=transport_model,
+            retrieval_enabled=retrieval_enabled,
         )
     except TrendQueryError as exc:
         raise HTTPException(

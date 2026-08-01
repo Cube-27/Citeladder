@@ -13,6 +13,7 @@ from typing import overload
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import commerce as commerce_config
 from app.core.config.analysis import (
@@ -26,6 +27,7 @@ from app.core.config.analysis import (
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
+    MEASUREMENT_MODES,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.provider_catalog import LOGICAL_ENGINES
@@ -44,6 +46,13 @@ from app.domain.analysis.schemas import (
     VisibilityTrendPoint,
     VisibilityTrendRankingRow,
     VisibilityTrendSov,
+)
+from app.domain.audits.schemas import (
+    ModelProvenance,
+    audit_frozen_retrieval_enabled,
+    build_model_provenance,
+    execution_frozen_provenance,
+    model_provenance_for,
 )
 from app.domain.projects.logos import get_project_logo_urls
 from app.domain.projects.service import get_project
@@ -74,6 +83,14 @@ class AnalysisNotFoundError(LookupError):
 
 # Single source for the repeated "audit missing" detail (asserted by tests).
 _AUDIT_NOT_FOUND = "Audit not found"
+
+
+def _aggregate_provenance(audit: Audit) -> tuple[str, list[ModelProvenance]]:
+    """Frozen mode + stable route-provenance list for an aggregate surface."""
+    return (
+        audit.measurement_mode or "",
+        model_provenance_for(audit.engine_snapshots, audit.configuration),
+    )
 
 
 async def get_metrics(
@@ -107,7 +124,9 @@ async def get_visibility(
             raise AnalysisNotFoundError("No completed audit for project")
 
     audit = await session.scalar(
-        select(Audit).where(
+        select(Audit)
+        .options(selectinload(Audit.engine_snapshots))
+        .where(
             Audit.id == audit_id,
             Audit.workspace_id == workspace_id,
             Audit.project_id == project_id,
@@ -122,6 +141,7 @@ async def get_visibility(
     logo_urls, logo_identity_ids = await _project_logo_context(
         session, workspace_id=workspace_id, project_id=project_id
     )
+    provenance_mode, model_provenance = _aggregate_provenance(audit)
     return VisibilityResponse(
         project_id=project_id,
         audit_id=audit_id,
@@ -131,6 +151,8 @@ async def get_visibility(
         total_completed=snapshot.total_completed,
         total_failed=snapshot.total_failed,
         visibility_score=snapshot.visibility_score,
+        measurement_mode=provenance_mode,
+        model_provenance=model_provenance,
         rankings=_rankings(
             metrics,
             logo_urls=logo_urls,
@@ -176,6 +198,9 @@ async def get_visibility_trends(
     from_at: datetime | None = None,
     to_at: datetime | None = None,
     granularity: str = VISIBILITY_TREND_DEFAULT_GRANULARITY,
+    measurement_mode: str | None = None,
+    transport_model: str | None = None,
+    retrieval_enabled: bool | None = None,
 ) -> list[VisibilityTrendPoint]:
     """Project the workspace-scoped cross-run Visibility trend (invariant 7).
 
@@ -186,6 +211,14 @@ async def get_visibility_trends(
     requested bucket that would cross an analyzer/scoring version boundary makes
     the whole range fall back to raw per-run points. Returns ``[]`` (never an
     error) for a valid project with no matching history.
+
+    Folding identity is ``(measurement_mode, transport_model,
+    retrieval_enabled)`` on top of the project/engine/time filters: a bucket
+    may combine points ONLY inside one identity partition, and the response
+    carries separate ordered points for unlike identities (a point never mixes
+    pulse with benchmark, different models, or retrieval on with off). The
+    explicit ``measurement_mode``/``transport_model``/``retrieval_enabled``
+    slice arguments filter sources BEFORE any folding.
     """
     granularity = granularity or VISIBILITY_TREND_DEFAULT_GRANULARITY
     _validate_trend_query(
@@ -193,6 +226,8 @@ async def get_visibility_trends(
         from_at=from_at,
         to_at=to_at,
         granularity=granularity,
+        measurement_mode=measurement_mode,
+        transport_model=transport_model,
     )
     from_at = _to_utc(from_at)
     to_at = _to_utc(to_at)
@@ -209,6 +244,13 @@ async def get_visibility_trends(
         for snapshot, audit in rows
         if (source := _trend_source(snapshot, audit, logical_engine)) is not None
     ]
+    # An explicitly requested identity slice filters BEFORE any folding.
+    sources = _slice_sources(
+        sources,
+        measurement_mode=measurement_mode,
+        transport_model=transport_model,
+        retrieval_enabled=retrieval_enabled,
+    )
     if not sources:
         return []
 
@@ -398,6 +440,11 @@ async def get_execution_evidence(
             )
         ).all()
     )
+    # Frozen measurement provenance comes from the task/audit parents — never
+    # from live config (invariants 4/7).
+    task = await session.scalar(select(AuditTask).where(AuditTask.id == task_id))
+    audit = await session.scalar(select(Audit).where(Audit.id == analysis.audit_id))
+    measurement_mode, retrieval_enabled = _execution_provenance(task, audit)
     score = analysis.score or {}
     return ExecutionEvidenceResponse(
         id=analysis.task_id,
@@ -410,6 +457,8 @@ async def get_execution_evidence(
         logical_engine=analysis.logical_engine,
         transport_provider=analysis.transport_provider,
         transport_model=analysis.transport_model,
+        measurement_mode=measurement_mode,
+        retrieval_enabled=retrieval_enabled,
         prompt_index=analysis.prompt_index,
         repetition=analysis.repetition,
         prompt_class=analysis.prompt_class,
@@ -435,7 +484,9 @@ async def load_export_bundle(
 ) -> tuple[Audit, list[AuditTask]]:
     """Load the audit + its execution rows for CSV/MD export (invariant 7)."""
     audit = await session.scalar(
-        select(Audit).where(Audit.id == audit_id, Audit.workspace_id == workspace_id)
+        select(Audit)
+        .options(selectinload(Audit.engine_snapshots))
+        .where(Audit.id == audit_id, Audit.workspace_id == workspace_id)
     )
     if audit is None:
         raise AnalysisNotFoundError(_AUDIT_NOT_FOUND)
@@ -612,6 +663,23 @@ def _fanout_state(
     return False, VisibilityFanoutState.NO_SEARCH
 
 
+def _execution_provenance(
+    task: AuditTask | None, audit: Audit | None
+) -> tuple[str, bool | None]:
+    """Frozen ``(measurement_mode, retrieval_enabled)`` for one execution.
+
+    Task request/route snapshots win (what the call executed under), then the
+    audit's frozen mode column + policy block. Live config is never consulted
+    (invariants 4/7 — read paths are projections of frozen fields only).
+    """
+    return execution_frozen_provenance(
+        request_snapshot=task.request_snapshot if task is not None else None,
+        route_snapshot=task.provider_route_snapshot if task is not None else None,
+        audit_measurement_mode=audit.measurement_mode if audit is not None else None,
+        audit_configuration=audit.configuration if audit is not None else None,
+    )
+
+
 def _evidence_item(
     *,
     analysis: ResponseAnalysis,
@@ -628,6 +696,7 @@ def _evidence_item(
         search_used=bool(analysis.search_used),
         search_query_count=int(analysis.search_query_count or 0),
     )
+    measurement_mode, retrieval_enabled = _execution_provenance(task, audit)
     return VisibilityExecutionEvidence(
         audit_id=analysis.audit_id,
         task_id=analysis.task_id,
@@ -642,6 +711,8 @@ def _evidence_item(
         logical_engine=analysis.logical_engine,
         transport_provider=analysis.transport_provider,
         transport_model=analysis.transport_model,
+        measurement_mode=measurement_mode,
+        retrieval_enabled=retrieval_enabled,
         search_used=bool(analysis.search_used),
         search_query_count=int(analysis.search_query_count or 0),
         query_text_available=query_text_available,
@@ -804,12 +875,18 @@ class _TrendSource:
     A raw point folds exactly one of these; a bucket folds many. ``metrics`` is
     the persisted per-run metrics dict, or the engine slice
     (``metrics.per_engine[engine]``) when the request is engine-filtered.
+    ``(measurement_mode, transport_model, retrieval_enabled)`` is the frozen
+    folding identity: sources may be folded together ONLY when all three match.
     """
 
     snapshot_id: uuid.UUID
     audit_id: uuid.UUID
     completed_at: datetime
     logical_engine: str | None
+    measurement_mode: str
+    transport_model: str | None
+    retrieval_enabled: bool | None
+    model_provenance: list[ModelProvenance]
     analyzer_version: str
     scoring_rule_version: str
     total_completed: int
@@ -873,15 +950,30 @@ def _validate_engine_and_range(
             raise TrendQueryError("'from' must not be after 'to'")
 
 
+def _validate_identity_slice(
+    *, measurement_mode: str | None, transport_model: str | None
+) -> None:
+    """Validate an explicitly requested identity slice (HTTP 422 on misuse)."""
+    if measurement_mode is not None and measurement_mode not in MEASUREMENT_MODES:
+        raise TrendQueryError(f"Unsupported measurement_mode: {measurement_mode!r}")
+    if transport_model is not None and not transport_model.strip():
+        raise TrendQueryError("'transport_model' must be a non-empty model id")
+
+
 def _validate_trend_query(
     *,
     logical_engine: str | None,
     from_at: datetime | None,
     to_at: datetime | None,
     granularity: str,
+    measurement_mode: str | None,
+    transport_model: str | None,
 ) -> None:
     if granularity not in VISIBILITY_TREND_GRANULARITIES:
         raise TrendQueryError(f"Unsupported granularity: {granularity!r}")
+    _validate_identity_slice(
+        measurement_mode=measurement_mode, transport_model=transport_model
+    )
     _validate_engine_and_range(
         logical_engine=logical_engine, from_at=from_at, to_at=to_at
     )
@@ -926,6 +1018,7 @@ async def _load_trend_rows(
     stmt = (
         select(MetricSnapshot, Audit)
         .join(Audit, Audit.id == MetricSnapshot.audit_id)
+        .options(selectinload(Audit.engine_snapshots))
         .where(
             MetricSnapshot.workspace_id == workspace_id,
             MetricSnapshot.project_id == project_id,
@@ -953,7 +1046,9 @@ def _trend_source(
 
     An engine-filtered request reads the same snapshot's
     ``metrics.per_engine[engine]``; a snapshot that did not measure that engine
-    emits no point (invariant 10).
+    emits no point (invariant 10). The folding identity derives ONLY from
+    frozen audit fields: the mode column, the frozen policy block (retrieval),
+    and the frozen engine snapshots (models) — never from live config.
     """
     metrics = snapshot.metrics or {}
     completed_at = audit.completed_at
@@ -973,17 +1068,105 @@ def _trend_source(
             return None
         rate = engine_metrics.get("brand_mention_rate")
         visibility_score = round(float(rate) * 100, 2) if rate is not None else None
+    mode, transport_model, retrieval, provenance = _source_identity(
+        audit, logical_engine
+    )
     return _TrendSource(
         snapshot_id=snapshot.id,
         audit_id=snapshot.audit_id,
         completed_at=_to_utc(completed_at),
         logical_engine=logical_engine,
+        measurement_mode=mode,
+        transport_model=transport_model,
+        retrieval_enabled=retrieval,
+        model_provenance=provenance,
         analyzer_version=snapshot.analyzer_version,
         scoring_rule_version=snapshot.scoring_rule_version,
         total_completed=int(engine_metrics.get("total_completed", 0) or 0),
         visibility_score=visibility_score,
         metrics=engine_metrics,
     )
+
+
+def _source_identity(
+    audit: Audit, logical_engine: str | None
+) -> tuple[str, str | None, bool | None, list[ModelProvenance]]:
+    """Frozen folding identity + provenance list for one trend source.
+
+    Derives ONLY from frozen audit fields: the mode column, the frozen policy
+    block (retrieval), and the frozen engine snapshots (models) — never from
+    live config (invariants 4/7).
+    """
+    provenance = model_provenance_for(audit.engine_snapshots, audit.configuration)
+    return (
+        audit.measurement_mode or "",
+        _source_transport_model(provenance, logical_engine),
+        audit_frozen_retrieval_enabled(audit.configuration),
+        provenance,
+    )
+
+
+def _source_transport_model(
+    provenance: list[ModelProvenance], logical_engine: str | None
+) -> str | None:
+    """The singular frozen model for a trend source, or None when it spans models.
+
+    Engine-filtered: the frozen model for exactly that engine (None when the
+    audit has no frozen route for it). Aggregate: singular only when the audit
+    measured exactly one model — a multi-model aggregate never forces one (its
+    ``model_provenance`` list is the surface).
+    """
+    if logical_engine is not None:
+        return next(
+            (
+                item.transport_model
+                for item in provenance
+                if item.logical_engine == logical_engine
+            ),
+            None,
+        )
+    models = {item.transport_model for item in provenance}
+    return next(iter(models)) if len(models) == 1 else None
+
+
+def _identity_slice_match(
+    source: _TrendSource,
+    *,
+    measurement_mode: str | None,
+    transport_model: str | None,
+    retrieval_enabled: bool | None,
+) -> bool:
+    """True when the source belongs to an explicitly requested identity slice.
+
+    Slices match the exact frozen identity: a requested model/retrieval state
+    excludes aggregates whose identity does not equal it (never a fuzzy
+    contains-match that would let a multi-model point into a model slice).
+    """
+    if measurement_mode is not None and source.measurement_mode != measurement_mode:
+        return False
+    if transport_model is not None and source.transport_model != transport_model:
+        return False
+    return retrieval_enabled is None or source.retrieval_enabled == retrieval_enabled
+
+
+def _slice_sources(
+    sources: list[_TrendSource],
+    *,
+    measurement_mode: str | None,
+    transport_model: str | None,
+    retrieval_enabled: bool | None,
+) -> list[_TrendSource]:
+    """Keep only sources belonging to an explicitly requested identity slice."""
+    return [
+        source
+        for source in sources
+        if _identity_slice_match(
+            source,
+            measurement_mode=measurement_mode,
+            transport_model=transport_model,
+            retrieval_enabled=retrieval_enabled,
+        )
+    ]
 
 
 def _response_sov(metrics: dict) -> float | None:
@@ -1070,6 +1253,10 @@ def _raw_point(source: _TrendSource) -> VisibilityTrendPoint:
         rankings=_trend_rankings(metrics),
         sentiment=None,
         avg_position=None,
+        measurement_mode=source.measurement_mode,
+        transport_model=source.transport_model,
+        retrieval_enabled=source.retrieval_enabled,
+        model_provenance=source.model_provenance,
         source_snapshot_ids=[source.snapshot_id],
         analyzer_versions=[source.analyzer_version],
         scoring_rule_versions=[source.scoring_rule_version],
@@ -1087,36 +1274,69 @@ def _bucket_key(completed_at: datetime, granularity: str) -> datetime:
     return day - timedelta(days=at.weekday())
 
 
+# Folding identity: ``(measurement_mode, transport_model, retrieval_enabled)``.
+# Raw, weekly, and monthly folding may combine sources ONLY inside one
+# identity partition (invariant 7): no point or bucket ever mixes pulse with
+# benchmark, different models, or retrieval on with off.
+_TrendIdentity = tuple[str, str | None, bool | None]
+
+
+def _identity_of(source: _TrendSource) -> _TrendIdentity:
+    return (
+        source.measurement_mode,
+        source.transport_model,
+        source.retrieval_enabled,
+    )
+
+
+def _identity_sort_key(identity: _TrendIdentity) -> tuple[str, str, str]:
+    """Deterministic order for partitions sharing one bucket boundary."""
+    mode, model, retrieval = identity
+    return (mode, model or "", "" if retrieval is None else str(retrieval))
+
+
 def _bucket_points(
     sources: list[_TrendSource], granularity: str
 ) -> list[VisibilityTrendPoint]:
-    """Fold sources into deterministic UTC week/month buckets.
+    """Fold sources into deterministic UTC week/month identity partitions.
 
-    Under strict version bucketing, if any bucket in the selected range would
-    mix analyzer/scoring versions the whole range falls back to raw points so
-    no bucket ever blends incompatible formulas.
+    Sources are grouped by ``(bucket boundary, folding identity)`` so a bucket
+    never blends unlike identities; unlike identities in the same week/month
+    emit separate ordered points. Under strict version bucketing, if any
+    partition in the selected range would mix analyzer/scoring versions the
+    whole range falls back to raw points so no bucket ever blends incompatible
+    formulas.
     """
-    grouped: dict[datetime, list[_TrendSource]] = {}
+    grouped: dict[tuple[datetime, _TrendIdentity], list[_TrendSource]] = {}
     for source in sources:
-        grouped.setdefault(_bucket_key(source.completed_at, granularity), []).append(
-            source
-        )
+        key = (_bucket_key(source.completed_at, granularity), _identity_of(source))
+        grouped.setdefault(key, []).append(source)
 
     if VISIBILITY_TRENDS_STRICT_VERSION_BUCKETS and any(
         _is_mixed_version(bucket) for bucket in grouped.values()
     ):
         return [_raw_point(source) for source in sources]
 
-    points: list[VisibilityTrendPoint] = []
-    for key in sorted(grouped):
-        points.append(_fold_bucket(key, grouped[key]))
-    return points
+    return [
+        _fold_bucket(key[0], bucket)
+        for key, bucket in sorted(
+            grouped.items(),
+            key=lambda entry: (entry[0][0], _identity_sort_key(entry[0][1])),
+        )
+    ]
 
 
 def _is_mixed_version(bucket: list[_TrendSource]) -> bool:
     analyzers = {s.analyzer_version for s in bucket}
     scorings = {s.scoring_rule_version for s in bucket}
     return len(analyzers) > 1 or len(scorings) > 1
+
+
+def _bucket_provenance(bucket: list[_TrendSource]) -> list[ModelProvenance]:
+    """The deduped, stable-ordered union of a partition's route provenance."""
+    return build_model_provenance(
+        item for source in bucket for item in source.model_provenance
+    )
 
 
 def _fold_bucket(key: datetime, bucket: list[_TrendSource]) -> VisibilityTrendPoint:
@@ -1178,6 +1398,8 @@ def _fold_bucket(key: datetime, bucket: list[_TrendSource]) -> VisibilityTrendPo
     # brand rename across snapshots does not undercount brand share.
     brand_keys = brand_names or {"Brand"}
 
+    # Every source in the bucket shares one folding identity by construction.
+    measurement_mode, transport_model, retrieval_enabled = _identity_of(bucket[0])
     return VisibilityTrendPoint(
         audit_id=None,
         completed_at=key,
@@ -1192,6 +1414,10 @@ def _fold_bucket(key: datetime, bucket: list[_TrendSource]) -> VisibilityTrendPo
         rankings=ranking_rows,
         sentiment=None,
         avg_position=None,
+        measurement_mode=measurement_mode,
+        transport_model=transport_model,
+        retrieval_enabled=retrieval_enabled,
+        model_provenance=_bucket_provenance(bucket),
         source_snapshot_ids=[source.snapshot_id for source in bucket],
         analyzer_versions=sorted({s.analyzer_version for s in bucket}),
         scoring_rule_versions=sorted({s.scoring_rule_version for s in bucket}),

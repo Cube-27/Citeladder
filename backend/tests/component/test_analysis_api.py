@@ -34,6 +34,9 @@ from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
     AUDIT_TRIGGER_MANUAL,
+    MEASUREMENT_MODE_BENCHMARK,
+    MEASUREMENT_MODE_PULSE,
+    MEASUREMENT_POLICY_KEY,
     audit_settings,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
@@ -226,6 +229,20 @@ async def test_metrics_and_visibility_are_projections(
         # Per-engine comparison for the single engine.
         assert len(vis.per_engine) == 1
         assert vis.per_engine[0].logical_engine == ENGINE_GEMINI
+        # Measurement provenance (invariants 4/7): the frozen mode column and
+        # the stable aggregate model-provenance list — retrieval comes from
+        # the frozen policy block (benchmark froze retrieval ON).
+        assert vis.measurement_mode == MEASUREMENT_MODE_BENCHMARK
+        assert [p.model_dump() for p in vis.model_provenance] == [
+            {
+                "logical_engine": ENGINE_GEMINI,
+                "transport_provider": TRANSPORT_GOOGLE,
+                "transport_model": "gemini-flash-latest",
+                "retrieval_enabled": True,
+            }
+        ]
+        # Vocabulary lock: no ``mode`` alias is ever emitted.
+        assert "mode" not in vis.model_dump()
         # Roadmap fields present but null (decision B-2).
         assert vis.sentiment is None
         assert vis.avg_position is None
@@ -311,6 +328,12 @@ async def test_execution_evidence_projection(
         assert evidence.id == analysis.task_id
         assert evidence.task_id == analysis.task_id
         assert evidence.analysis_id == analysis.id
+        # Execution-level provenance: the exact singular model plus the frozen
+        # mode/retrieval state the call executed under (inv. 4/7, 10).
+        assert evidence.transport_model == "gemini-flash-latest"
+        assert evidence.measurement_mode == MEASUREMENT_MODE_BENCHMARK
+        assert evidence.retrieval_enabled is True
+        assert "mode" not in evidence.model_dump()
         # Roadmap fields present but null.
         assert evidence.sentiment is None
         assert evidence.avg_position is None
@@ -545,7 +568,15 @@ async def _seed_snapshot(
     analyzer_version: str = "b6-analysis-1",
     scoring_rule_version: str = "scoring-v1",
     status: str = AUDIT_STATUS_COMPLETED,
+    measurement_mode: str | None = None,
+    transport_model: str | None = None,
+    retrieval_enabled: bool | None = None,
 ):
+    configuration = None
+    if retrieval_enabled is not None:
+        configuration = {
+            MEASUREMENT_POLICY_KEY: {"retrieval_enabled": retrieval_enabled}
+        }
     audit = Audit(
         workspace_id=workspace_id,
         project_id=project_id,
@@ -553,9 +584,22 @@ async def _seed_snapshot(
         completed_at=completed_at,
         requested_count=total_completed,
         completed_count=total_completed,
+        configuration=configuration,
     )
+    if measurement_mode is not None:
+        audit.measurement_mode = measurement_mode
     session.add(audit)
     await session.flush()
+    if transport_model is not None:
+        session.add(
+            AuditEngineSnapshot(
+                audit_id=audit.id,
+                logical_engine=ENGINE_GEMINI,
+                transport_provider=TRANSPORT_GOOGLE,
+                transport_model=transport_model,
+            )
+        )
+        await session.flush()
     snapshot = MetricSnapshot(
         workspace_id=workspace_id,
         audit_id=audit.id,
@@ -1034,6 +1078,202 @@ async def test_trends_invalid_query_raises(
                 project_id=seed.project_id,
                 from_at=datetime(2026, 3, 1),  # naive
             )
+        # Identity-slice validation: an unknown measurement mode or an empty
+        # model id is a query error (HTTP 422), never a silent empty slice.
+        with pytest.raises(TrendQueryError):
+            await get_visibility_trends(
+                session,
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                measurement_mode="deep_dive",
+            )
+        with pytest.raises(TrendQueryError):
+            await get_visibility_trends(
+                session,
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                transport_model="  ",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Measurement-identity partitioned trends (slice1 §7).
+#
+# Folding identity is (measurement_mode, transport_model, retrieval_enabled)
+# on top of the project/engine/time filters: raw, weekly, and monthly folding
+# may combine points ONLY inside one identity partition. These seed otherwise
+# identical audits across two modes x two model ids x retrieval on/off and
+# assert separate series at every granularity — no cross-partition averages or
+# rank folding — plus that an explicit slice query filters BEFORE folding.
+# ---------------------------------------------------------------------------
+_PARTITION_IDENTITIES = [
+    # (measurement_mode, transport_model, retrieval_enabled, visibility scores)
+    (MEASUREMENT_MODE_PULSE, "model-a", False, (20.0, 40.0)),
+    (MEASUREMENT_MODE_BENCHMARK, "model-a", True, (60.0, 80.0)),
+    (MEASUREMENT_MODE_BENCHMARK, "model-b", True, (100.0, 0.0)),
+    (MEASUREMENT_MODE_BENCHMARK, "model-a", False, (10.0, 30.0)),
+]
+
+
+async def _seed_partition_audits(session, *, workspace_id, project_id) -> dict:
+    """Seed two runs per identity, all inside one 2026 week/month."""
+    snapshots: dict[tuple, list] = {}
+    for mode, model, retrieval, scores in _PARTITION_IDENTITIES:
+        for run, score in enumerate(scores):
+            _, snapshot = await _seed_snapshot(
+                session,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                completed_at=datetime(2026, 1, 5, 6 + run, tzinfo=UTC),
+                metrics=_trend_metrics(
+                    brand_rate=score / 100,
+                    owned_rate=0.5,
+                    competitor_rate=0.5,
+                    brand_count=1,
+                    competitor_count=1,
+                    total_completed=1,
+                ),
+                visibility_score=score,
+                total_completed=1,
+                measurement_mode=mode,
+                transport_model=model,
+                retrieval_enabled=retrieval,
+            )
+            snapshots.setdefault((mode, model, retrieval), []).append(snapshot)
+    return snapshots
+
+
+def _identity_of(point) -> tuple:
+    return (point.measurement_mode, point.transport_model, point.retrieval_enabled)
+
+
+@pytest.mark.asyncio
+async def test_trends_partition_by_measurement_identity(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        snapshots = await _seed_partition_audits(
+            session, workspace_id=seed.workspace_id, project_id=seed.project_id
+        )
+        await session.commit()
+
+        raw = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            granularity="run",
+        )
+        weekly = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            granularity="week",
+        )
+        monthly = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            granularity="month",
+        )
+
+    expected_identities = {
+        (mode, model, retrieval) for mode, model, retrieval, _ in _PARTITION_IDENTITIES
+    }
+    # Raw granularity: one point per run, each carrying its frozen identity.
+    assert len(raw) == 8
+    assert {_identity_of(p) for p in raw} == expected_identities
+    assert all(p.audit_id is not None for p in raw)
+
+    # Week + month fold WITHIN an identity only: four separate ordered series,
+    # one per identity — never one blended bucket (no cross-partition folding).
+    for points in (weekly, monthly):
+        assert len(points) == 4
+        assert {_identity_of(p) for p in points} == expected_identities
+        for point in points:
+            identity = _identity_of(point)
+            expected = snapshots[identity]
+            # The bucket folds exactly its own partition's snapshots...
+            assert {str(sid) for sid in point.source_snapshot_ids} == {
+                str(s.id) for s in expected
+            }
+            # ...so the folded visibility is the partition's own average
+            # (completion-weighted; 1 completion per run) and never blends in
+            # another mode/model/retrieval run.
+            scores = [s.visibility_score for s in expected]
+            assert point.visibility_score == pytest.approx(sum(scores) / len(scores))
+            # Aggregate provenance: the partition's single frozen route.
+            assert [p.transport_model for p in point.model_provenance] == [identity[1]]
+            assert all(
+                p.retrieval_enabled == identity[2] for p in point.model_provenance
+            )
+            assert "mode" not in point.model_dump()
+    # Ordered by bucket boundary, then deterministically by identity.
+    assert [(_identity_of(p)) for p in weekly] == sorted(
+        {_identity_of(p) for p in weekly},
+        key=lambda i: (i[0], i[1], str(i[2])),
+    )
+
+
+@pytest.mark.asyncio
+async def test_trends_identity_slice_filters_before_folding(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        snapshots = await _seed_partition_audits(
+            session, workspace_id=seed.workspace_id, project_id=seed.project_id
+        )
+        await session.commit()
+
+        # A full identity slice at week granularity folds ONLY the slice.
+        sliced = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            granularity="week",
+            measurement_mode=MEASUREMENT_MODE_BENCHMARK,
+            transport_model="model-a",
+            retrieval_enabled=True,
+        )
+        assert len(sliced) == 1
+        point = sliced[0]
+        assert _identity_of(point) == ("benchmark", "model-a", True)
+        assert point.visibility_score == pytest.approx(70.0)
+        assert {str(sid) for sid in point.source_snapshot_ids} == {
+            str(s.id) for s in snapshots[("benchmark", "model-a", True)]
+        }
+
+        # A mode-only slice keeps both retrieval states as separate series.
+        pulse_only = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            measurement_mode=MEASUREMENT_MODE_PULSE,
+        )
+        assert len(pulse_only) == 2
+        assert all(p.measurement_mode == MEASUREMENT_MODE_PULSE for p in pulse_only)
+
+        # A retrieval slice at run granularity selects exactly the matching
+        # runs (benchmark retrieval-on across both models).
+        retrieval_on = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            retrieval_enabled=True,
+        )
+        assert len(retrieval_on) == 4
+        assert all(p.retrieval_enabled is True for p in retrieval_on)
+
+        # A model-only slice excludes the other model's runs.
+        model_b = await get_visibility_trends(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            transport_model="model-b",
+        )
+        assert len(model_b) == 2
+        assert all(p.transport_model == "model-b" for p in model_b)
 
 
 # ---------------------------------------------------------------------------
@@ -1304,6 +1544,12 @@ async def test_evidence_projects_mentions_citations_and_queries(
     assert item.task_id is not None
     assert item.artifact_id is not None
     assert item.prompt_snapshot_id is not None
+    # Frozen measurement provenance (inv. 4/7): the frozen mode column, and
+    # retrieval unrecorded when nothing froze it — never inferred from live
+    # config. Vocabulary lock: no ``mode`` alias.
+    assert item.measurement_mode == MEASUREMENT_MODE_BENCHMARK
+    assert item.retrieval_enabled is None
+    assert "mode" not in item.model_dump()
 
 
 @pytest.mark.asyncio

@@ -14,6 +14,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domain.audits.schemas import ModelProvenance
+
 
 class MetricsResponse(BaseModel):
     """Single-run ``MetricSnapshot`` projection (``GET /audits/{id}/metrics``)."""
@@ -74,6 +76,11 @@ class VisibilityResponse(BaseModel):
     total_completed: int
     total_failed: int
     visibility_score: float
+    # Frozen measurement provenance of the selected run (invariants 4/7): the
+    # audit's frozen mode column plus the stable catalog-ordered route list
+    # (aggregate surface — never a forced singular model across engines).
+    measurement_mode: str = ""
+    model_provenance: list[ModelProvenance] = Field(default_factory=list)
     rankings: list[RankingRow] = Field(default_factory=list)
     per_engine: list[EngineComparisonRow] = Field(default_factory=list)
     # Roadmap (B-2): present but null until an LLM stage is added.
@@ -137,6 +144,15 @@ class VisibilityTrendPoint(BaseModel):
     # Roadmap (B-2): present but null until an LLM stage is added.
     sentiment: str | None = None
     avg_position: float | None = None
+    # Measurement identity partition (invariant 7): folding may combine points
+    # ONLY inside one ``(measurement_mode, transport_model, retrieval_enabled)``
+    # identity, so a point never mixes modes, models, or retrieval on/off.
+    # ``transport_model`` is singular only when the point spans exactly one
+    # model; it is null for a multi-model aggregate (see ``model_provenance``).
+    measurement_mode: str = ""
+    transport_model: str | None = None
+    retrieval_enabled: bool | None = None
+    model_provenance: list[ModelProvenance] = Field(default_factory=list)
     # Provenance (invariant 4): every source snapshot this point folds.
     source_snapshot_ids: list[uuid.UUID] = Field(default_factory=list)
     # Distinct versions across the folded snapshots (invariant 4).
@@ -178,6 +194,10 @@ class ExecutionEvidenceResponse(BaseModel):
     logical_engine: str = ""
     transport_provider: str = ""
     transport_model: str = ""
+    # Frozen measurement provenance (execution-level: singular model, frozen
+    # task request/route snapshots — never live config, invariants 4/7).
+    measurement_mode: str = ""
+    retrieval_enabled: bool | None = None
     prompt_index: int
     repetition: int
     prompt_class: str = ""
@@ -277,6 +297,9 @@ class VisibilityExecutionEvidence(BaseModel):
     logical_engine: str = ""
     transport_provider: str = ""
     transport_model: str = ""
+    # Frozen measurement provenance (execution-level surface, invariants 4/7).
+    measurement_mode: str = ""
+    retrieval_enabled: bool | None = None
 
     # Query-fanout signals + derived availability state.
     search_used: bool = False
