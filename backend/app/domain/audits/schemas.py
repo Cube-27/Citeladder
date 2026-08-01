@@ -10,15 +10,29 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.config.audits import (
+    EVENT_AUDIT_CANCELLED,
+    EVENT_AUDIT_COMPLETED,
+    EVENT_AUDIT_CREATED,
+    EVENT_AUDIT_QUEUED,
+    EVENT_AUDIT_RUNNING,
+    EVENT_AUDIT_STATUS,
+    EVENT_TASK_CAPACITY_WAIT,
+    EVENT_TASK_FAILED,
+    EVENT_TASK_RETRY,
+    EVENT_TASK_SUCCEEDED,
     MEASUREMENT_MODE_BENCHMARK,
     MEASUREMENT_MODE_PULSE,
     MEASUREMENT_POLICY_KEY,
 )
+
+if TYPE_CHECKING:
+    # Type-only: domain schemas never import a model at runtime (circular).
+    from app.models.audit import AuditEvent
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.projects import MAX_REPETITIONS, MIN_REPETITIONS
 from app.core.config.provider_catalog import APPROVED_ROUTES
@@ -304,12 +318,205 @@ class AuditResponse(BaseModel):
         return values
 
 
-class AuditEventResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+# --- Audit lifecycle events (the discriminated list/SSE contract) -----------
+#
+# ``GET /audits/{id}/events`` — the JSON list AND the SSE stream — serializes
+# every persisted ``AuditEvent`` through ONE discriminated envelope: common
+# ``id`` / ``audit_id`` / ``event_type`` / ``occurred_at`` plus a ``payload``
+# that is a tagged union keyed on ``event_type``. On the wire, SSE ``event:``
+# IS the JSON ``event_type`` and SSE ``id:`` IS the event UUID — the
+# ``Last-Event-ID`` resume cursor. Every payload schema is closed
+# (``extra="forbid"``) and carries no secret-bearing content (invariant 6):
+# opaque ids, statuses, counts, and retry timing only.
+#
+# ADDING A NEW EVENT TYPE is a contract change, in three places:
+#   1. the ``EVENT_*`` token in ``app/core/config/audits.py``;
+#   2. a strict payload schema + envelope variant in the union below (the
+#      serializer index derives from the union, so the union is the only
+#      list to extend here);
+#   3. contract tests in ``tests/component/test_audit_events_sse.py``.
+# Serializing an event whose type has no variant RAISES — the list endpoint
+# and the stream never emit an untyped payload.
+
+
+class _StrictEventPayload(BaseModel):
+    """Base for every audit-event payload: closed and secret-free."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class AuditCreatedPayload(_StrictEventPayload):
+    """``audit.created`` — the planner's frozen run shape."""
+
+    requested_count: int
+    engines: list[str]
+
+
+class AuditQueuedPayload(_StrictEventPayload):
+    """``audit.queued`` — the planned task count."""
+
+    task_count: int
+
+
+class AuditStatusPayload(_StrictEventPayload):
+    """``audit.status`` / ``audit.cancelled`` — a guarded state-machine move.
+
+    The counts ride along only on the analysis stage's terminal transition;
+    every other transition is status-only.
+    """
+
+    status: str
+    completed: int | None = None
+    failed: int | None = None
+
+
+class TaskSucceededPayload(_StrictEventPayload):
+    """``task.succeeded`` — opaque task reference only."""
+
+    task_id: uuid.UUID
+
+
+class TaskFailedPayload(_StrictEventPayload):
+    """``task.failed`` — task reference + the safe error token (never a body)."""
+
+    task_id: uuid.UUID
+    error_code: str
+
+
+class TaskRetryPayload(_StrictEventPayload):
+    """``task.retry`` — task reference + the safe error token."""
+
+    task_id: uuid.UUID
+    error_code: str
+
+
+class TaskCapacityWaitPayload(_StrictEventPayload):
+    """``task.capacity_wait`` — a provider-capacity park decision (T4).
+
+    Opaque ids + retry timing only — never credentials, prompts, or provider
+    bodies (invariant 6). ``available_at`` is the persisted ISO timestamp
+    ("" when the decision carried no guidance).
+    """
+
+    task_id: uuid.UUID
+    code: str
+    pool_kind: str
+    available_at: str = ""
+    retry_after_seconds: float = 0.0
+
+
+class AuditCompletedPayload(_StrictEventPayload):
+    """``audit.completed`` — terminal completion with the measured counts."""
+
+    status: str
+    completed: int
+    failed: int
+    visibility_score: float
+
+
+class _AuditEventEnvelope(BaseModel):
+    """Common envelope fields shared by every audit-event variant.
+
+    ``occurred_at`` projects the persisted ``created_at`` column; both names
+    are accepted on input, only ``occurred_at`` is emitted.
+    """
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: uuid.UUID
     audit_id: uuid.UUID
-    event_type: str
-    message: str = ""
-    payload: dict | None = None
-    created_at: datetime
+    occurred_at: datetime = Field(validation_alias="created_at")
+
+
+class AuditCreatedEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_AUDIT_CREATED] = EVENT_AUDIT_CREATED
+    payload: AuditCreatedPayload
+
+
+class AuditQueuedEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_AUDIT_QUEUED] = EVENT_AUDIT_QUEUED
+    payload: AuditQueuedPayload
+
+
+class AuditRunningEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_AUDIT_RUNNING] = EVENT_AUDIT_RUNNING
+    payload: None = None
+
+
+class AuditStatusEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_AUDIT_STATUS] = EVENT_AUDIT_STATUS
+    payload: AuditStatusPayload
+
+
+class AuditCancelledEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_AUDIT_CANCELLED] = EVENT_AUDIT_CANCELLED
+    payload: AuditStatusPayload
+
+
+class AuditCompletedEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_AUDIT_COMPLETED] = EVENT_AUDIT_COMPLETED
+    payload: AuditCompletedPayload
+
+
+class TaskSucceededEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_TASK_SUCCEEDED] = EVENT_TASK_SUCCEEDED
+    payload: TaskSucceededPayload
+
+
+class TaskFailedEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_TASK_FAILED] = EVENT_TASK_FAILED
+    payload: TaskFailedPayload
+
+
+class TaskRetryEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_TASK_RETRY] = EVENT_TASK_RETRY
+    payload: TaskRetryPayload
+
+
+class TaskCapacityWaitEvent(_AuditEventEnvelope):
+    event_type: Literal[EVENT_TASK_CAPACITY_WAIT] = EVENT_TASK_CAPACITY_WAIT
+    payload: TaskCapacityWaitPayload
+
+
+AuditEventResponse = Annotated[
+    AuditCreatedEvent
+    | AuditQueuedEvent
+    | AuditRunningEvent
+    | AuditStatusEvent
+    | AuditCancelledEvent
+    | AuditCompletedEvent
+    | TaskSucceededEvent
+    | TaskFailedEvent
+    | TaskRetryEvent
+    | TaskCapacityWaitEvent,
+    Field(discriminator="event_type"),
+]
+"""The discriminated audit-event contract (tagged on ``event_type``).
+
+One envelope per persisted event type; the JSON list and the SSE stream share
+these DTOs (invariant 2). Extend the union — and only the union — when adding
+an event type; ``EVENT_SCHEMA_BY_TYPE`` derives from it.
+"""
+
+EVENT_SCHEMA_BY_TYPE: Final[dict[str, type[_AuditEventEnvelope]]] = {
+    variant.model_fields["event_type"].default: variant
+    for variant in get_args(get_args(AuditEventResponse)[0])
+}
+"""``event_type`` -> envelope variant, derived from the union above."""
+
+
+def audit_event_response(event: AuditEvent) -> AuditEventResponse:
+    """Serialize one persisted event through its discriminated variant.
+
+    Shared by the JSON list and the SSE stream so both surfaces emit the same
+    strict shape. Raises on an unmapped ``event_type`` — a new event type that
+    missed its discriminator schema (see the section header) — rather than
+    emitting an untyped payload.
+    """
+    schema = EVENT_SCHEMA_BY_TYPE.get(event.event_type)
+    if schema is None:
+        raise ValueError(
+            f"no audit-event schema for event_type {event.event_type!r}; "
+            "add its discriminator variant to AuditEventResponse"
+        )
+    return schema.model_validate(event)

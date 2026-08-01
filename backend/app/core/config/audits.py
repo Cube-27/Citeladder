@@ -419,6 +419,13 @@ class AuditSettings(BaseSettings):
     # this knob.
     audit_prompt_count: int | None = None
 
+    # --- SSE audit-event stream (GET /audits/{id}/events?stream=true) -------
+    # Poll cadence of the stream loop, and the idle cutoff after which it
+    # stops streaming a terminal audit so the connection cannot hang forever.
+    # The API layer READS these; it never hard-codes them (invariant 1).
+    sse_poll_seconds: float = 1.0
+    sse_terminal_grace_polls: int = 2
+
     def retry_delay(
         self, attempt: int, retry_after_seconds: float | None = None
     ) -> float:
