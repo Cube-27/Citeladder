@@ -31,11 +31,22 @@ _GROK = _ENTRIES[PROVIDER_GROK]
 _T0 = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
 
 
-def _connection(*, active: bool = True) -> ProviderConnection:
+def _connection(
+    *,
+    active: bool = True,
+    api_key_encrypted: str = "encrypted-key-material",
+    paused_at: datetime | None = None,
+    pause_reason: str = "",
+    pause_until: datetime | None = None,
+) -> ProviderConnection:
     return ProviderConnection(
         workspace_id=uuid.uuid4(),
         transport_provider="openai",
         active=active,
+        api_key_encrypted=api_key_encrypted,
+        paused_at=paused_at,
+        pause_reason=pause_reason,
+        pause_until=pause_until,
     )
 
 
@@ -138,3 +149,73 @@ def test_probe_dto_never_carries_internal_detail() -> None:
     )
     assert "detail" not in state.latest_probe.model_dump()
     assert "raw provider msg" not in state.model_dump_json()
+
+
+def test_paused_connection_reports_failed_with_safe_pause_reason() -> None:
+    state = derive_connection_state(
+        _CHATGPT,
+        _connection(paused_at=_T0, pause_reason=ERROR_AUTH),
+        _probe(TEST_STATUS_OK),
+    )
+    assert state.state == "failed"
+    assert state.safe_reason == ERROR_AUTH
+    probe = state.latest_probe
+    assert probe is not None
+    assert probe.status == TEST_STATUS_OK
+    assert probe.safe_reason == ERROR_AUTH
+
+
+def test_paused_connection_without_classification_falls_back_to_unknown() -> None:
+    state = derive_connection_state(
+        _CHATGPT,
+        _connection(paused_at=_T0, pause_reason=""),
+        _probe(TEST_STATUS_OK),
+    )
+    assert state.state == "failed"
+    assert state.safe_reason == ERROR_UNKNOWN
+    assert state.latest_probe is not None
+    assert state.latest_probe.safe_reason == ERROR_UNKNOWN
+
+
+def test_pause_deadline_passed_is_not_paused() -> None:
+    state = derive_connection_state(
+        _CHATGPT,
+        _connection(paused_at=_T0, pause_reason=ERROR_AUTH, pause_until=_T0),
+        _probe(TEST_STATUS_OK),
+        at=datetime(2026, 7, 31, 13, 0, 0, tzinfo=UTC),
+    )
+    assert state.state == "connected"
+    assert state.safe_reason is None
+
+
+def test_pause_deadline_future_is_paused() -> None:
+    state = derive_connection_state(
+        _CHATGPT,
+        _connection(paused_at=_T0, pause_reason=ERROR_AUTH, pause_until=_T0),
+        _probe(TEST_STATUS_OK),
+        at=datetime(2026, 7, 31, 11, 0, 0, tzinfo=UTC),
+    )
+    assert state.state == "failed"
+    assert state.safe_reason == ERROR_AUTH
+
+
+def test_paused_never_probed_connection_is_missing() -> None:
+    state = derive_connection_state(
+        _CHATGPT,
+        _connection(paused_at=_T0, pause_reason=ERROR_AUTH),
+        None,
+    )
+    assert state.state == "missing"
+    assert state.safe_reason == REASON_VERIFICATION_REQUIRED
+    assert state.latest_probe is None
+
+
+def test_connection_without_key_material_is_missing() -> None:
+    state = derive_connection_state(
+        _CHATGPT,
+        _connection(api_key_encrypted=""),
+        _probe(TEST_STATUS_OK),
+    )
+    assert state.state == "missing"
+    assert state.safe_reason == REASON_VERIFICATION_REQUIRED
+    assert state.latest_probe is None

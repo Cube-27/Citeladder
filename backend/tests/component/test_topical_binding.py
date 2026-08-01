@@ -40,6 +40,7 @@ from app.core.config.prompts import (
     CODE_BINDING_VOCABULARY_EMPTY,
     CODE_PROMPT_OFF_TOPIC,
 )
+from app.core.config.provider_catalog import ENGINE_CLAUDE
 from app.core.security import encrypt_secret
 from app.domain.audits.planner import (
     PromptCountPolicyError,
@@ -50,7 +51,10 @@ from app.domain.prompts.topical_binding import TopicalBindingError
 from app.models.brand import Brand, OwnedDomain
 from app.models.prompt import Prompt
 from app.models.provider import ProviderConnection, ProviderRoute
-from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.audit_helpers import (
+    seed_audit_fixtures,
+    seed_platform_connection,
+)
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 # ---------------------------------------------------------------------------
@@ -533,9 +537,12 @@ async def test_prompt_text_bound_300_accepts_301_rejects(
 async def _seed_funded_workspace(
     session: AsyncSession, *, prompt_count: int
 ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, list[str]]:
+    # Tenant connection stays unprobed (BYOK precedence must not claim funded
+    # tasks); the platform credential backs funded credential resolution.
     seed = await seed_audit_fixtures(
-        session, prompt_count=prompt_count, engines=["claude"]
+        session, prompt_count=prompt_count, engines=["claude"], probed=False
     )
+    await seed_platform_connection(session, engines=(ENGINE_CLAUDE,))
     await seed_occupancy_grants(
         session,
         workspace_id=seed.workspace_id,

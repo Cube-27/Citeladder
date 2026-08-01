@@ -432,3 +432,101 @@ async def test_cross_workspace_access_denied(
     assert got.status_code == 404
     tested = await client.post(f"/api/v1/provider-connections/{conn_id}/test")
     assert tested.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# T11: platform credentials + the system workspace are tenant-invisible
+# ---------------------------------------------------------------------------
+
+_PLATFORM_SECRET = "platform-secret-test-key"  # pragma: allowlist secret
+
+
+async def _seed_platform_connection_id(db_session) -> str:
+    """Seed THE system workspace with a healthy platform connection (T11)."""
+    from sqlalchemy import select
+
+    from app.models.provider import ProviderConnection
+    from tests.component.audit_helpers import seed_platform_connection
+
+    system = await seed_platform_connection(db_session, engines=("claude",))
+    await db_session.commit()
+    connection = await db_session.scalar(
+        select(ProviderConnection).where(ProviderConnection.workspace_id == system.id)
+    )
+    assert connection is not None
+    return str(connection.id)
+
+
+@pytest.mark.asyncio
+async def test_platform_connection_invisible_to_tenant_crud_and_test(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    await _register(client, "platform-tenant@example.com")
+    platform_id = await _seed_platform_connection_id(db_session)
+
+    listed = await client.get("/api/v1/provider-connections")
+    assert listed.status_code == 200
+    assert listed.json() == []
+    assert _PLATFORM_SECRET not in str(listed.json())
+
+    patched = await client.patch(
+        f"/api/v1/provider-connections/{platform_id}", json={"label": "hijack"}
+    )
+    assert patched.status_code == 404
+    assert patched.json()["detail"] == "Provider connection not found"
+
+    deleted = await client.delete(f"/api/v1/provider-connections/{platform_id}")
+    assert deleted.status_code == 404
+    assert deleted.json()["detail"] == "Provider connection not found"
+
+    tested = await client.post(f"/api/v1/provider-connections/{platform_id}/test")
+    assert tested.status_code == 404
+    assert tested.json()["detail"] == "Provider connection not found"
+
+    for body in (patched.json(), deleted.json(), tested.json()):
+        assert _PLATFORM_SECRET not in str(body)
+
+
+@pytest.mark.asyncio
+async def test_system_workspace_hidden_and_membership_inert(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """The system workspace never appears in workspace lists, and a forged
+    membership row on it grants NOTHING (``get_membership`` fails closed)."""
+    await _register(client, "system-member@example.com")
+    platform_id = await _seed_platform_connection_id(db_session)
+
+    from sqlalchemy import select
+
+    from app.models.user import User
+    from app.models.workspace import Workspace, WorkspaceMember
+
+    user = await db_session.scalar(
+        select(User).where(User.email == "system-member@example.com")
+    )
+    system = await db_session.scalar(
+        select(Workspace).where(Workspace.is_system.is_(True))
+    )
+    assert user is not None and system is not None
+    # A membership row naming the system workspace exists (e.g. seeded by a
+    # future provisioning flow) — it must stay inert.
+    db_session.add(
+        WorkspaceMember(workspace_id=system.id, user_id=user.id, role="owner")
+    )
+    await db_session.commit()
+
+    listed = await client.get("/api/v1/workspaces")
+    assert listed.status_code == 200
+    workspace_ids = {w["id"] for w in listed.json()}
+    assert str(system.id) not in workspace_ids
+    assert len(workspace_ids) == 1  # only the auto-created tenant workspace
+
+    # Selecting the system workspace explicitly is indistinguishable from a
+    # missing workspace (invariant 5).
+    selected = await client.get(
+        "/api/v1/provider-connections", headers={"X-Workspace-Id": str(system.id)}
+    )
+    assert selected.status_code == 404
+    assert selected.json()["detail"] == "Workspace not found"
+    assert _PLATFORM_SECRET not in str(selected.json())
+    assert platform_id not in str(selected.json())

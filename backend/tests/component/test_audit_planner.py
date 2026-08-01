@@ -11,11 +11,13 @@ Exercises ``create_audit`` against a real Postgres schema:
 from __future__ import annotations
 
 import hashlib
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+import app.domain.audits.planner as planner_module
 from app.core.config.abuse import abuse_settings
 from app.core.config.audits import (
     AUDIT_STATUS_CANCELLED,
@@ -32,8 +34,14 @@ from app.core.config.audits import (
     measurement_policy_from_configuration,
     system_instruction_for_mode,
 )
+from app.core.config.entitlements import (
+    CREDENTIAL_MODE_FUNDED,
+    KEY_PULSE_CREDITS,
+    LEDGER_ENTRY_RELEASE,
+    LEDGER_ENTRY_RESERVATION,
+)
 from app.core.config.projects import BENCHMARK_MODES
-from app.core.config.provider_catalog import route_policy
+from app.core.config.provider_catalog import ENGINE_CLAUDE, route_policy
 from app.domain.audits.planner import (
     AuditValidationError,
     cancel_audit,
@@ -41,9 +49,17 @@ from app.domain.audits.planner import (
     get_audit,
     list_tasks,
 )
-from app.models.audit import AuditEngineSnapshot, AuditPromptSnapshot
+from app.domain.entitlements.cache import clear_cache
+from app.domain.entitlements.types import GrantSpec
+from app.models.audit import AuditEngineSnapshot, AuditPromptSnapshot, AuditTask
+from app.models.billing import ConsumableLedger
 from app.models.prompt import Prompt
-from tests.component.audit_helpers import seed_audit_fixtures
+from app.models.provider import ProviderConnection
+from tests.component.audit_helpers import (
+    seed_audit_fixtures,
+    seed_platform_connection,
+)
+from tests.component.occupancy_helpers import seed_occupancy_grants
 
 
 async def _create(
@@ -690,3 +706,248 @@ async def test_create_audit_rejects_an_unknown_measurement_mode(
                 repetitions=1,
                 measurement_mode="turbo",
             )
+
+
+# ---------------------------------------------------------------------------
+# T11: frozen execution-credential provenance
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _clear_entitlement_cache():
+    clear_cache()
+    yield
+    clear_cache()
+
+
+async def _tasks(session: AsyncSession, audit_id) -> list[AuditTask]:
+    return list(
+        (
+            await session.scalars(
+                select(AuditTask).where(AuditTask.audit_id == audit_id)
+            )
+        ).all()
+    )
+
+
+async def _seed_funded_workspace(session: AsyncSession, *, probed: bool):
+    """Tenant workspace (BYOK connection probed or not) + platform credential
+    + a funded account with pulse credits."""
+    seed = await seed_audit_fixtures(
+        session, prompt_count=2, engines=[ENGINE_CLAUDE], probed=probed
+    )
+    system = await seed_platform_connection(session, engines=(ENGINE_CLAUDE,))
+    account = await seed_occupancy_grants(
+        session,
+        workspace_id=seed.workspace_id,
+        grants=(GrantSpec(key=KEY_PULSE_CREDITS, value=100),),
+    )
+    await session.commit()
+    return seed, system, account
+
+
+async def _create_funded_claude(session: AsyncSession, seed) -> object:
+    return await create_audit(
+        session,
+        trigger=AUDIT_TRIGGER_MANUAL,
+        workspace_id=seed.workspace_id,
+        project_id=seed.project_id,
+        engines=[ENGINE_CLAUDE],
+        prompt_set_id=seed.prompt_set_id,
+        repetitions=1,
+        credential_mode=CREDENTIAL_MODE_FUNDED,
+        measurement_mode=MEASUREMENT_MODE_PULSE,
+        random_seed="1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_byok_run_freezes_credential_identity(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(
+            session, prompt_count=2, engines=[ENGINE_CLAUDE]
+        )
+        connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == seed.workspace_id
+            )
+        )
+        assert connection is not None
+        audit = await _create(session, seed, seed_value="7", reps=1)
+
+        configuration = audit.configuration or {}
+        engine_route = configuration["engine_routes"][ENGINE_CLAUDE]
+        assert engine_route["credential_source"] == "byok"
+        assert engine_route["connection_id"] == str(connection.id)
+        # BYOK runs carry no funded provenance at all.
+        assert "funding" not in configuration
+        assert "task_reservations" not in configuration
+
+        tasks = await _tasks(session, audit.id)
+        assert len(tasks) == 2
+        task_credentials = configuration["task_credentials"]
+        assert set(task_credentials) == {str(task.id) for task in tasks}
+        for task in tasks:
+            snapshot = task.provider_route_snapshot or {}
+            assert snapshot["credential_source"] == "byok"
+            assert snapshot["connection_id"] == str(connection.id)
+            assert snapshot["reservation_id"] is None
+            assert "funding" not in snapshot
+            assert task_credentials[str(task.id)] == {
+                "credential_source": "byok",
+                "connection_id": str(connection.id),
+                "reservation_id": None,
+            }
+        # The engine snapshot row records the same concrete connection.
+        engine_snapshot = await session.scalar(
+            select(AuditEngineSnapshot).where(AuditEngineSnapshot.audit_id == audit.id)
+        )
+        assert engine_snapshot is not None
+        assert engine_snapshot.connection_id == connection.id
+
+
+@pytest.mark.asyncio
+async def test_funded_run_freezes_platform_credential_identity(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        seed, system, account = await _seed_funded_workspace(session, probed=False)
+        platform_connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == system.id
+            )
+        )
+        assert platform_connection is not None
+        audit = await _create_funded_claude(session, seed)
+
+        configuration = audit.configuration or {}
+        engine_route = configuration["engine_routes"][ENGINE_CLAUDE]
+        assert engine_route["credential_source"] == "platform"
+        assert engine_route["connection_id"] == str(platform_connection.id)
+
+        tasks = await _tasks(session, audit.id)
+        assert len(tasks) == 2
+        task_reservations = configuration["task_reservations"]
+        task_credentials = configuration["task_credentials"]
+        assert set(task_reservations) == {str(task.id) for task in tasks}
+        assert set(task_credentials) == {str(task.id) for task in tasks}
+        for task in tasks:
+            assert task.status == TASK_STATUS_QUEUED
+            snapshot = task.provider_route_snapshot or {}
+            assert snapshot["credential_source"] == "platform"
+            assert snapshot["connection_id"] == str(platform_connection.id)
+            reservation_id = task_reservations[str(task.id)]
+            assert snapshot["reservation_id"] == reservation_id
+            funding = snapshot.get("funding") or {}
+            assert funding["reservation_id"] == reservation_id
+            assert funding["funding_account_id"] == str(account.id)
+            assert task_credentials[str(task.id)] == {
+                "credential_source": "platform",
+                "connection_id": str(platform_connection.id),
+                "reservation_id": reservation_id,
+            }
+        engine_snapshot = await session.scalar(
+            select(AuditEngineSnapshot).where(AuditEngineSnapshot.audit_id == audit.id)
+        )
+        assert engine_snapshot is not None
+        assert engine_snapshot.connection_id == platform_connection.id
+
+
+@pytest.mark.asyncio
+async def test_funded_request_with_healthy_byok_executes_byok_and_releases(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """BYOK precedence is frozen at admission: a funded REQUEST with a healthy
+    probed tenant BYOK route executes BYOK, and the just-made reservation is
+    released in the same transaction (no stranded credits, no funded
+    fallback)."""
+    async with session_factory() as session:
+        seed, _system, _account = await _seed_funded_workspace(session, probed=True)
+        connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == seed.workspace_id
+            )
+        )
+        assert connection is not None
+        audit = await _create_funded_claude(session, seed)
+
+        configuration = audit.configuration or {}
+        tasks = await _tasks(session, audit.id)
+        assert len(tasks) == 2
+        # Every task froze BYOK: no task-reservation map entries, no funding
+        # block on any task snapshot.
+        assert (configuration.get("task_reservations") or {}) == {}
+        for task in tasks:
+            assert task.status == TASK_STATUS_QUEUED
+            snapshot = task.provider_route_snapshot or {}
+            assert snapshot["credential_source"] == "byok"
+            assert snapshot["connection_id"] == str(connection.id)
+            assert snapshot["reservation_id"] is None
+            assert "funding" not in snapshot
+            assert configuration["task_credentials"][str(task.id)] == {
+                "credential_source": "byok",
+                "connection_id": str(connection.id),
+                "reservation_id": None,
+            }
+        # The reservations were made then released in the same transaction:
+        # per reservation id, reserved units == released units (no debits).
+        ledger_rows = list(
+            (
+                await session.scalars(
+                    select(ConsumableLedger).where(
+                        ConsumableLedger.audit_id == audit.id
+                    )
+                )
+            ).all()
+        )
+        reserved: dict[object, int] = {}
+        released: dict[object, int] = {}
+        for row in ledger_rows:
+            if row.entry_kind == LEDGER_ENTRY_RESERVATION:
+                bucket = reserved
+            elif row.entry_kind == LEDGER_ENTRY_RELEASE:
+                bucket = released
+            else:
+                raise AssertionError(f"unexpected ledger entry {row.entry_kind}")
+            bucket[row.reservation_id] = bucket.get(row.reservation_id, 0) + row.units
+        assert len(reserved) == len(tasks)
+        assert reserved == released
+
+
+@pytest.mark.asyncio
+async def test_admission_at_is_one_shared_instant_everywhere(
+    session_factory: async_sessionmaker[AsyncSession], monkeypatch
+) -> None:
+    """The planner reads the clock ONCE: the exact ``admission_at`` instant
+    flows UNCHANGED into entitlement resolution and the frozen configuration
+    (a boundary-exact clock never shifts between readers)."""
+    fixed = datetime.now(UTC).replace(microsecond=0) + timedelta(hours=1)
+
+    class _StubDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            assert tz is UTC
+            return fixed
+
+    monkeypatch.setattr(planner_module, "datetime", _StubDatetime)
+    captured: dict[str, datetime] = {}
+    real_resolve = planner_module.resolve_workspace_entitlement
+
+    async def _spy(session, *, workspace_id, at):
+        captured["at"] = at
+        return await real_resolve(session, workspace_id=workspace_id, at=at)
+
+    monkeypatch.setattr(planner_module, "resolve_workspace_entitlement", _spy)
+
+    async with session_factory() as session:
+        seed, _system, _account = await _seed_funded_workspace(session, probed=False)
+        audit = await _create_funded_claude(session, seed)
+
+        assert captured["at"] == fixed
+        funding = (audit.configuration or {})["funding"]
+        assert funding["admission_at"] == fixed.isoformat()
+        assert audit.funded_budget_period_start == fixed.replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )

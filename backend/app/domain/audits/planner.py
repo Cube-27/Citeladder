@@ -20,7 +20,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Final
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,10 +63,12 @@ from app.core.config.commerce import (
 )
 from app.core.config.costs import (
     MICRO_USD_PER_USD,
+    ExpectedExecutionCost,
     RouteIdentity,
     expected_execution_cost,
 )
 from app.core.config.entitlements import (
+    CAPABILITY_REGISTRY,
     CODE_FUNDED_BUDGET_EXHAUSTED,
     CODE_FUNDED_COST_UNRESOLVED,
     CREDENTIAL_MODE_BYOK,
@@ -83,6 +85,7 @@ from app.core.config.projects import (
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.core.config.provider_catalog import (
     APPROVED_ROUTES,
+    CREDENTIAL_SOURCE_BYOK,
     LOGICAL_ENGINES,
     default_model,
     is_endpoint_approved,
@@ -99,6 +102,7 @@ from app.domain.entitlements.enforcement import (
 from app.domain.entitlements.ledger import (
     FundedCreditsExhaustedError,
     Reservation,
+    release_unused_reservation,
     reserve_funded_task,
 )
 from app.domain.entitlements.service import resolve_workspace_entitlement
@@ -106,6 +110,7 @@ from app.domain.entitlements.types import (
     STATUS_ENTITLEMENT_UNRESOLVED,
     STATUS_RESOLVED,
     ResolvedEntitlement,
+    no_capability_entitlement,
 )
 from app.domain.products.shim import project_product_identity
 from app.domain.projects.shim import project_scoring_identity
@@ -114,6 +119,11 @@ from app.domain.prompts.topical_binding import (
     TopicalBindingError,
     build_project_vocabulary,
     validate_prompt_binding,
+)
+from app.domain.providers.credentials import (
+    ExecutionCredentialsUnavailableError,
+    ResolvedCredential,
+    resolve_execution_credentials,
 )
 from app.models.audit import (
     Audit,
@@ -143,8 +153,9 @@ class FundedAdmissionError(RuntimeError):
 
     Carries a config-owned code (``funded_budget_exhausted`` /
     ``funded_credits_exhausted`` / ``funded_cost_unresolved`` /
-    ``entitlement_unresolved``). Nothing persists when raised inside the
-    planner transaction: no audit, task, or ledger rows, nothing enqueued.
+    ``entitlement_unresolved`` / ``execution_credentials_unavailable``).
+    Nothing persists when raised inside the planner transaction: no audit,
+    task, or ledger rows, nothing enqueued.
     """
 
     def __init__(
@@ -175,13 +186,19 @@ class PromptCountPolicyError(RuntimeError):
         self.details = details
 
 
+# Null funding account for the fail-closed BYOK-mode entitlement built during
+# task creation: a BYOK run has no billing account and proves nothing funded
+# (mirrors the entitlements resolver's own null-account sentinel).
+_NULL_FUNDING_ACCOUNT_ID: Final = uuid.UUID(int=0)
+
+
 @dataclass(frozen=True, slots=True)
 class _ResolvedRoute:
     """One run's resolved route identity (never a key — invariant 6).
 
     BYOK runs point at the workspace's ``ProviderConnection``; funded runs
-    have no connection (Slice 1 resolves the platform-funded credential from
-    the frozen funding block at execution time).
+    resolve the catalog route here and get their concrete platform connection
+    from per-task credential resolution (T11) at task creation.
     """
 
     logical_engine: str
@@ -337,6 +354,9 @@ async def _resolve_routes(
             ProviderRoute.workspace_id == workspace_id,
             ProviderRoute.active.is_(True),
             ProviderConnection.active.is_(True),
+            # Tenant route resolution is BYOK-only: a platform connection
+            # must never resolve as a tenant route.
+            ProviderConnection.credential_source == CREDENTIAL_SOURCE_BYOK,
         )
         .order_by(
             ProviderRoute.is_default.desc(),
@@ -380,8 +400,9 @@ def _resolve_funded_routes(engines: list[str]) -> dict[str, _ResolvedRoute]:
     """Resolve the catalog-approved funded route per requested engine.
 
     Exactly one approved transport per engine exists (invariant 10), so a
-    funded run needs no workspace connection: the frozen funding block (not
-    a connection id) is what Slice 1 credential resolution consumes.
+    funded run needs no TENANT connection: per-task credential resolution
+    (T11) binds the concrete platform connection in the system workspace once
+    the task's reservation proves funded authorization.
     """
     resolved: dict[str, _ResolvedRoute] = {}
     for engine in _normalize_engines(engines):
@@ -660,14 +681,24 @@ def _task_route_snapshot(
     engine: str,
     route: _ResolvedRoute,
     plan: _FrozenPlan,
+    credential: ResolvedCredential,
 ) -> dict:
-    """Per-task frozen route + policy snapshot (never a key — invariant 6)."""
+    """Per-task frozen route + policy + credential snapshot (never a key).
+
+    The credential block is the identity the worker LOADS at execution time
+    (T11): the concrete connection and the funded reservation id (None for
+    BYOK). It is frozen at admission and never re-resolved afterwards.
+    """
     return {
         "logical_engine": engine,
         "transport_provider": route.transport_provider,
         "transport_model": route.transport_model,
-        "connection_id": (
-            str(route.connection_id) if route.connection_id is not None else None
+        "credential_source": credential.credential_source,
+        "connection_id": str(credential.connection_id),
+        "reservation_id": (
+            str(credential.reservation_id)
+            if credential.reservation_id is not None
+            else None
         ),
         "base_url": route.base_url,
         "measurement_mode": plan.measurement_mode,
@@ -729,22 +760,18 @@ def _complete_execution_cost_microusd(
     return token_cost + search_fee * searches
 
 
-def _funded_expected_cost_microusd(
-    *,
-    routes: dict[str, _ResolvedRoute],
-    plan: _FrozenPlan,
-    tasks_per_engine: int,
-    max_attempts: int,
-) -> int:
-    """Worst-case funded cost of the whole audit (per-task cost x attempts).
+def _expected_costs_by_engine(
+    *, routes: dict[str, _ResolvedRoute], plan: _FrozenPlan
+) -> dict[str, ExpectedExecutionCost]:
+    """Per-engine expected cost of ONE execution from the sole cost owner.
 
-    Reads ONLY ``config/costs.expected_execution_cost`` (the sole cost owner)
-    and fails closed with ``funded_cost_unresolved`` on any incomplete
-    estimate. Retrieval applicability comes from the frozen mode policy.
+    Reads ONLY ``config/costs.expected_execution_cost``; retrieval
+    applicability comes from the frozen mode policy. The same map feeds the
+    funded budget gate (completeness-checked there) and per-task credential
+    resolution (which re-proves completeness before any funded selection).
     """
-    total = 0
-    for route in routes.values():
-        expected = expected_execution_cost(
+    return {
+        engine: expected_execution_cost(
             RouteIdentity(
                 logical_engine=route.logical_engine,
                 transport_provider=route.transport_provider,
@@ -753,6 +780,24 @@ def _funded_expected_cost_microusd(
             plan.measurement_mode,
             plan.policy.retrieval_enabled,
         )
+        for engine, route in routes.items()
+    }
+
+
+def _funded_expected_cost_microusd(
+    *,
+    expected_costs: dict[str, ExpectedExecutionCost],
+    plan: _FrozenPlan,
+    tasks_per_engine: int,
+    max_attempts: int,
+) -> int:
+    """Worst-case funded cost of the whole audit (per-task cost x attempts).
+
+    Fails closed with ``funded_cost_unresolved`` on any incomplete estimate.
+    Retrieval applicability comes from the frozen mode policy.
+    """
+    total = 0
+    for engine, expected in expected_costs.items():
         per_execution = _complete_execution_cost_microusd(
             token_cost=expected.token_cost_microusd,
             search_fee=expected.search_fee_microusd,
@@ -761,8 +806,7 @@ def _funded_expected_cost_microusd(
         )
         if per_execution is None or not expected.complete:
             raise FundedAdmissionError(
-                "Expected execution cost is unresolved for "
-                f"{route.logical_engine}/{route.transport_provider}",
+                f"Expected execution cost is unresolved for {engine}",
                 code=CODE_FUNDED_COST_UNRESOLVED,
             )
         total += per_execution * max_attempts * tasks_per_engine
@@ -775,7 +819,7 @@ async def _admit_funded_run(
     workspace_id: uuid.UUID,
     credential_mode: str,
     plan: _FrozenPlan,
-    routes: dict[str, _ResolvedRoute],
+    expected_costs: dict[str, ExpectedExecutionCost],
     tasks_per_engine: int,
     max_attempts: int,
     at: datetime,
@@ -810,7 +854,7 @@ async def _admit_funded_run(
     # admission on the account so the budget ceiling holds concurrently.
     await lock_billing_account_capacity(session, account_id)
     candidate = _funded_expected_cost_microusd(
-        routes=routes,
+        expected_costs=expected_costs,
         plan=plan,
         tasks_per_engine=tasks_per_engine,
         max_attempts=max_attempts,
@@ -877,6 +921,157 @@ def _task_funding_block(*, funded: _FundedAdmission, reservation: Reservation) -
     }
 
 
+async def _reserve_task_funding(
+    session: AsyncSession,
+    *,
+    audit: Audit,
+    task: AuditTask,
+    funded: _FundedAdmission,
+    at: datetime,
+) -> Reservation | None:
+    """This task's funded reservation (same transaction), or None for BYOK.
+
+    A credit shortfall raises the coded ``FundedAdmissionError`` and the whole
+    audit (tasks + reservations) rolls back; nothing is enqueued.
+    """
+    if not funded.enabled:
+        return None
+    assert funded.account_id is not None  # enabled implies resolved account
+    try:
+        return await reserve_funded_task(
+            session,
+            account_id=funded.account_id,
+            capability_key=funded.capability_key,
+            audit_id=audit.id,
+            task_id=task.id,
+            units=task.max_attempts,
+            idempotency_key=f"{audit.id}:{task.id}:funded-reserve",
+            at=at,
+        )
+    except FundedCreditsExhaustedError as exc:
+        raise FundedAdmissionError(
+            exc.message, code=exc.code, details=exc.details
+        ) from exc
+
+
+async def _resolve_task_credential(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    engine: str,
+    account_id: uuid.UUID | None,
+    entitlement: ResolvedEntitlement,
+    reservation: Reservation | None,
+    expected_cost: ExpectedExecutionCost,
+    at: datetime,
+) -> ResolvedCredential:
+    """Per-task admission credential (T11), as a coded admission refusal.
+
+    The resolver's ``execution_credentials_unavailable`` is translated into
+    the planner's graceful admission error so the API layer renders it through
+    the unified envelope; raised inside the planner transaction, nothing
+    persists (no claimable task, no provider call).
+    """
+    try:
+        return await resolve_execution_credentials(
+            session,
+            workspace_id=workspace_id,
+            account_id=account_id,
+            logical_engine=engine,
+            entitlement=entitlement,
+            reservation=reservation,
+            expected_cost=expected_cost,
+            at=at,
+        )
+    except ExecutionCredentialsUnavailableError as exc:
+        raise FundedAdmissionError(
+            exc.message, code=exc.code, details=exc.details
+        ) from exc
+
+
+async def _apply_funded_credential(
+    session: AsyncSession,
+    *,
+    audit: Audit,
+    task: AuditTask,
+    funded: _FundedAdmission,
+    reservation: Reservation,
+    credential: ResolvedCredential,
+    task_reservations: dict[str, str],
+    at: datetime,
+) -> None:
+    """Freeze the funded block, or release the reservation when BYOK won.
+
+    BYOK precedence is absolute (T11): when a healthy tenant BYOK route exists
+    for a funded request's engine, the task executes BYOK and this task's
+    just-made reservation is released in the SAME transaction so no credit is
+    stranded. Otherwise the reservation provenance freezes into the task's
+    funding block and the task-reservation map.
+    """
+    if credential.credential_source == CREDENTIAL_SOURCE_BYOK:
+        await release_unused_reservation(
+            session,
+            reservation_id=reservation.reservation_id,
+            idempotency_key=f"{audit.id}:{task.id}:funded-release-byok",
+            at=at,
+        )
+    else:
+        task.provider_route_snapshot = {
+            **(task.provider_route_snapshot or {}),
+            "funding": _task_funding_block(funded=funded, reservation=reservation),
+        }
+        task_reservations[str(task.id)] = str(reservation.reservation_id)
+    task.status = TASK_STATUS_QUEUED
+
+
+def _freeze_credential_provenance(
+    audit: Audit,
+    *,
+    engine_credentials: dict[str, ResolvedCredential],
+    task_credentials: dict[str, dict],
+    task_reservations: dict[str, str],
+    funded: _FundedAdmission,
+    at: datetime,
+) -> None:
+    """Merge the frozen credential provenance into the audit configuration.
+
+    Every engine route records its frozen ``credential_source`` + concrete
+    ``connection_id``; ``task_credentials`` is the replay map of task id to
+    its frozen credential identity (source / connection / reservation).
+    """
+    update: dict[str, Any] = {
+        "engine_routes": {
+            engine: {
+                **route_config,
+                "credential_source": engine_credentials[engine].credential_source,
+                "connection_id": str(engine_credentials[engine].connection_id),
+            }
+            for engine, route_config in (audit.configuration or {})
+            .get("engine_routes", {})
+            .items()
+            if engine in engine_credentials
+        },
+        "task_credentials": task_credentials,
+    }
+    if funded.enabled:
+        update["funding"] = {
+            "credential_mode": CREDENTIAL_MODE_FUNDED,
+            "capability_key": funded.capability_key,
+            "funding_account_id": str(funded.account_id),
+            "admission_at": at.isoformat(),
+            "budget_period_start": (
+                funded.budget_period_start.isoformat()
+                if funded.budget_period_start is not None
+                else None
+            ),
+            "reserved_cost_microusd": funded.reserved_cost_microusd,
+            "entitlement": _entitlement_provenance(funded.entitlement),
+        }
+        # Replay/provenance map: task id -> reservation id.
+        update["task_reservations"] = task_reservations
+    audit.configuration = {**(audit.configuration or {}), **update}
+
+
 async def _create_audit_tasks(
     session: AsyncSession,
     *,
@@ -887,20 +1082,34 @@ async def _create_audit_tasks(
     prompt_snapshots: list[AuditPromptSnapshot],
     engine_snapshots: dict[str, AuditEngineSnapshot],
     funded: _FundedAdmission,
+    expected_costs: dict[str, ExpectedExecutionCost],
     workspace_id: uuid.UUID,
     at: datetime,
 ) -> None:
-    """Create one task per shuffled slot; funded tasks reserve before claimable.
+    """Create one task per shuffled slot; credentials freeze before claimable.
 
-    A funded task is written in the NON-claimable ``pending_reservation``
-    state, reserves its full ``max_attempts`` in this same transaction,
-    records the reservation provenance in its frozen funding configuration,
-    and only then flips to ``queued`` — the task row and its full reservation
-    become visible atomically at commit, so no worker can claim an unreserved
-    funded task. A credit shortfall raises ``FundedAdmissionError`` and the
-    whole audit (tasks + reservations) rolls back; nothing is enqueued.
+    Each task resolves its execution credential (T11) in this same admission
+    transaction — a funded task first reserves its full ``max_attempts`` — and
+    the frozen source/connection/reservation identity lands on the task's
+    route snapshot, the engine snapshot, and the audit configuration
+    provenance maps. A task is written NON-claimable (``pending_reservation``
+    for funded) and flips to ``queued`` only with its credential frozen, so
+    the row and its execution identity become visible atomically at commit.
+    BYOK precedence is frozen here: a BYOK selection never falls back to
+    funded mid-audit (the worker only loads frozen identities).
     """
     task_reservations: dict[str, str] = {}
+    task_credentials: dict[str, dict] = {}
+    engine_credentials: dict[str, ResolvedCredential] = {}
+    # BYOK-mode runs carry no billing entitlement: this fail-closed value
+    # proves nothing funded (no DB read, no resolver telemetry). Funded runs
+    # reuse the exact entitlement resolved at the shared ``admission_at``.
+    entitlement = funded.entitlement or no_capability_entitlement(
+        account_id=_NULL_FUNDING_ACCOUNT_ID,
+        registry_revision=CAPABILITY_REGISTRY.revision,
+        entitlement_lifecycle_version=0,
+        at=at,
+    )
     for position, (prompt_index, engine, repetition) in enumerate(slots):
         prompt_snapshot = prompt_snapshots[prompt_index]
         engine_snapshot = engine_snapshots[engine]
@@ -925,9 +1134,6 @@ async def _create_audit_tasks(
             transport_model=route.transport_model,
             shopping_surface=SHOPPING_SURFACE_MEASUREMENT,
             prompt_text=prompt_snapshot.text,
-            provider_route_snapshot=_task_route_snapshot(
-                engine=engine, route=route, plan=plan
-            ),
             idempotency_key=idempotency_key,
             max_attempts=audit_settings.max_attempts,
             status=(
@@ -937,50 +1143,55 @@ async def _create_audit_tasks(
             ),
         )
         session.add(task)
-        if not funded.enabled:
-            continue
-        await session.flush()  # assign task.id for the reservation FK
-        assert funded.account_id is not None  # enabled implies resolved account
-        try:
-            reservation = await reserve_funded_task(
+        await session.flush()  # assign task.id (reservation FK + provenance)
+        reservation = await _reserve_task_funding(
+            session, audit=audit, task=task, funded=funded, at=at
+        )
+        credential = await _resolve_task_credential(
+            session,
+            workspace_id=workspace_id,
+            engine=engine,
+            account_id=funded.account_id if funded.enabled else None,
+            entitlement=entitlement,
+            reservation=reservation,
+            expected_cost=expected_costs[engine],
+            at=at,
+        )
+        task.provider_route_snapshot = _task_route_snapshot(
+            engine=engine, route=route, plan=plan, credential=credential
+        )
+        # The engine snapshot records the concrete frozen connection too
+        # (the platform connection for funded runs).
+        engine_snapshot.connection_id = credential.connection_id
+        engine_credentials[engine] = credential
+        task_credentials[str(task.id)] = {
+            "credential_source": credential.credential_source,
+            "connection_id": str(credential.connection_id),
+            "reservation_id": (
+                str(credential.reservation_id)
+                if credential.reservation_id is not None
+                else None
+            ),
+        }
+        if reservation is not None:
+            await _apply_funded_credential(
                 session,
-                account_id=funded.account_id,
-                capability_key=funded.capability_key,
-                audit_id=audit.id,
-                task_id=task.id,
-                units=task.max_attempts,
-                idempotency_key=f"{audit.id}:{task.id}:funded-reserve",
+                audit=audit,
+                task=task,
+                funded=funded,
+                reservation=reservation,
+                credential=credential,
+                task_reservations=task_reservations,
                 at=at,
             )
-        except FundedCreditsExhaustedError as exc:
-            raise FundedAdmissionError(
-                exc.message, code=exc.code, details=exc.details
-            ) from exc
-        task.provider_route_snapshot = {
-            **(task.provider_route_snapshot or {}),
-            "funding": _task_funding_block(funded=funded, reservation=reservation),
-        }
-        task.status = TASK_STATUS_QUEUED
-        task_reservations[str(task.id)] = str(reservation.reservation_id)
-    if funded.enabled:
-        audit.configuration = {
-            **(audit.configuration or {}),
-            "funding": {
-                "credential_mode": CREDENTIAL_MODE_FUNDED,
-                "capability_key": funded.capability_key,
-                "funding_account_id": str(funded.account_id),
-                "admission_at": at.isoformat(),
-                "budget_period_start": (
-                    funded.budget_period_start.isoformat()
-                    if funded.budget_period_start is not None
-                    else None
-                ),
-                "reserved_cost_microusd": funded.reserved_cost_microusd,
-                "entitlement": _entitlement_provenance(funded.entitlement),
-            },
-            # Replay/provenance map: task id -> reservation id.
-            "task_reservations": task_reservations,
-        }
+    _freeze_credential_provenance(
+        audit,
+        engine_credentials=engine_credentials,
+        task_credentials=task_credentials,
+        task_reservations=task_reservations,
+        funded=funded,
+        at=at,
+    )
 
 
 async def create_audit(
@@ -1040,6 +1251,9 @@ async def create_audit(
         measurement_mode=measurement_mode,
         repetitions=repetitions,
     )
+    # Per-engine expected costs from the sole cost owner: consumed by the
+    # funded budget gate and re-proven by per-task credential resolution.
+    expected_costs = _expected_costs_by_engine(routes=routes, plan=plan)
     # Prompt admission (topical binding over every selected active prompt +
     # the funded/trial prompt-count policy) is PRECOMPUTED by one extracted
     # helper; this shell only applies its decision and stays branch-free.
@@ -1093,7 +1307,7 @@ async def create_audit(
         workspace_id=workspace_id,
         credential_mode=credential_mode,
         plan=plan,
-        routes=routes,
+        expected_costs=expected_costs,
         tasks_per_engine=len(prompts) * reps,
         max_attempts=audit_settings.max_attempts,
         at=admission_at,
@@ -1181,6 +1395,7 @@ async def create_audit(
         prompt_snapshots=prompt_snapshots,
         engine_snapshots=engine_snapshots,
         funded=funded,
+        expected_costs=expected_costs,
         workspace_id=workspace_id,
         at=admission_at,
     )

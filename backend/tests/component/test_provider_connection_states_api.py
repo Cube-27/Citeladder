@@ -312,3 +312,71 @@ async def test_states_cross_workspace_probes_never_leak(
     assert chatgpt.state == "missing"
     assert chatgpt.safe_reason == REASON_VERIFICATION_REQUIRED
     assert chatgpt.latest_probe is None
+
+
+# ---------------------------------------------------------------------------
+# T11: platform rows are excluded; paused connections report failed
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_states_exclude_platform_rows(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """A healthy platform connection in the system workspace must NEVER make
+    the tenant's state surface report connected (or leak its key)."""
+    await _register(client, "states-platform@example.com")
+    from tests.component.audit_helpers import seed_platform_connection
+
+    await seed_platform_connection(db_session, engines=("claude",))
+    await db_session.commit()
+
+    raw = await client.get("/api/v1/provider-connections/states")
+    assert raw.status_code == 200
+    assert "platform-secret-test-key" not in str(raw.json())
+    states = ProviderConnectionStatesResponse.model_validate(raw.json())
+    claude = _state(states, "claude")
+    assert claude.state == "missing"
+    assert claude.safe_reason == REASON_VERIFICATION_REQUIRED
+    assert claude.latest_probe is None
+
+
+@pytest.mark.asyncio
+async def test_states_paused_connection_reports_failed_with_safe_reason(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """A paused (but probed) connection reports ``failed`` carrying the safe
+    pause classification token — never key material, never raw detail."""
+    await _register(client, "states-paused@example.com")
+    workspace_id = await _workspace_id(db_session)
+    connection_id = await _create_connection(
+        client, transport="openai", engine="chatgpt"
+    )
+    await _seed_probe(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        status=TEST_STATUS_OK,
+        created_at=_T0,
+    )
+
+    from app.models.provider import ProviderConnection
+
+    connection = await db_session.get(ProviderConnection, uuid.UUID(connection_id))
+    assert connection is not None
+    connection.paused_at = _T0
+    connection.pause_reason = ERROR_AUTH
+    await db_session.commit()
+
+    raw = await client.get("/api/v1/provider-connections/states")
+    assert raw.status_code == 200
+    assert _SECRET not in str(raw.json())
+    states = ProviderConnectionStatesResponse.model_validate(raw.json())
+    chatgpt = _state(states, "chatgpt")
+    assert chatgpt.state == "failed"
+    assert chatgpt.safe_reason == ERROR_AUTH
+    probe = chatgpt.latest_probe
+    assert probe is not None
+    assert probe.status == TEST_STATUS_OK
+    assert probe.safe_reason == ERROR_AUTH
+    assert "detail" not in probe.model_dump()

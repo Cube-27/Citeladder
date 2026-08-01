@@ -81,12 +81,18 @@ async def get_membership(
     """Resolve the caller's membership row for a workspace, or None.
 
     This is the single source of truth used by ``require_workspace_member``;
-    a missing row means no access (403/404), never a user-id fallback.
+    a missing row means no access (403/404), never a user-id fallback. A
+    membership row pointing at the reserved SYSTEM workspace never authorizes
+    (T11): system workspaces cannot have memberships, so even a stray row is
+    inert here.
     """
     result = await session.execute(
-        select(WorkspaceMember).where(
+        select(WorkspaceMember)
+        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+        .where(
             WorkspaceMember.workspace_id == workspace_id,
             WorkspaceMember.user_id == user_id,
+            Workspace.is_system.is_(False),
         )
     )
     return result.scalar_one_or_none()
@@ -95,11 +101,18 @@ async def get_membership(
 async def list_workspaces_for_user(
     session: AsyncSession, user: User
 ) -> list[tuple[Workspace, WorkspaceMember]]:
-    """Return the workspaces the user is a member of, with their membership."""
+    """Return the workspaces the user is a member of, with their membership.
+
+    The reserved system workspace is never a tenant workspace (T11): it is
+    excluded even if a stray membership row exists.
+    """
     result = await session.execute(
         select(Workspace, WorkspaceMember)
         .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
-        .where(WorkspaceMember.user_id == user.id)
+        .where(
+            WorkspaceMember.user_id == user.id,
+            Workspace.is_system.is_(False),
+        )
         .order_by(Workspace.created_at.asc())
     )
     return [tuple(row) for row in result.all()]

@@ -419,6 +419,27 @@ def public_provider_routes(provider_key: str) -> tuple[tuple[str, str, str], ...
     )
 
 
+# --- Credential source vocabulary (T11) ------------------------------------
+# Who owns the executing credential for one task: a tenant BYOK connection or
+# the operator's platform-funded connection in the reserved system workspace.
+CREDENTIAL_SOURCE_BYOK: Final = "byok"
+CREDENTIAL_SOURCE_PLATFORM: Final = "platform"
+CREDENTIAL_SOURCES: Final[frozenset[str]] = frozenset(
+    {CREDENTIAL_SOURCE_BYOK, CREDENTIAL_SOURCE_PLATFORM}
+)
+# Selection precedence: a healthy tenant BYOK credential always wins over the
+# platform-funded fallback; funded is reached only when no BYOK route can
+# execute.
+CREDENTIAL_SOURCE_PRECEDENCE: Final[tuple[str, str]] = (
+    CREDENTIAL_SOURCE_BYOK,
+    CREDENTIAL_SOURCE_PLATFORM,
+)
+# Coded, safe failure when neither a BYOK nor a funded-platform credential may
+# execute a task. Carries no key material, no provider detail, and no system
+# workspace information — the token IS the contract.
+CODE_EXECUTION_CREDENTIALS_UNAVAILABLE: Final = "execution_credentials_unavailable"
+
+
 # --- Retry / error classification tokens (recorded on tests + attempts) ---
 ERROR_TIMEOUT: Final = "timeout"
 ERROR_CONNECTION: Final = "connection"

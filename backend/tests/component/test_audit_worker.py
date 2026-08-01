@@ -68,6 +68,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
+    ERROR_AUTH,
     ERROR_CLIENT,
     ERROR_INVALID_SURFACE,
     ERROR_RATE_LIMIT,
@@ -86,7 +87,6 @@ from app.domain.entitlements.types import GrantSpec
 from app.models.analysis import MetricSnapshot, ResponseAnalysis
 from app.models.audit import (
     Audit,
-    AuditEngineSnapshot,
     AuditEvent,
     AuditTask,
     ExecutionCostProjection,
@@ -99,7 +99,11 @@ from app.models.billing import ConsumableLedger
 from app.models.provider import ProviderConnection
 from app.workers import audit_worker
 from app.workers.audit_worker import AuditWorker
-from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.audit_helpers import (
+    _mark_connection_probed,
+    seed_audit_fixtures,
+    seed_platform_connection,
+)
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 
@@ -1647,10 +1651,10 @@ async def _make_funded_audit(
     ``freeze`` knobs are monkeypatched BEFORE planning so they freeze onto
     the task. Funded capacity acquisition fails CLOSED while the route's
     token-bucket rates are UNSET (unverified by design), so test rates are
-    configured; and the funded engine snapshot carries no connection
-    (stage C owns platform credential resolution), so it is pointed at the
-    seeded workspace connection — these tests pin the capacity + LEDGER
-    wiring, not credential resolution.
+    configured. The tenant BYOK connection stays UNPROBED so BYOK precedence
+    cannot claim the task; the planner freezes the seeded PLATFORM connection
+    (T11) into the funded task, and the worker loads that frozen identity —
+    these tests pin the capacity + LEDGER wiring on the platform credential.
     """
     for key, value in (freeze or {}).items():
         monkeypatch.setattr(audit_settings, key, value)
@@ -1666,8 +1670,9 @@ async def _make_funded_audit(
     clear_cache()
     async with session_factory() as session:
         seed = await seed_audit_fixtures(
-            session, prompt_count=1, engines=[ENGINE_CLAUDE]
+            session, prompt_count=1, engines=[ENGINE_CLAUDE], probed=False
         )
+        system = await seed_platform_connection(session, engines=(ENGINE_CLAUDE,))
         account = await seed_occupancy_grants(
             session,
             workspace_id=seed.workspace_id,
@@ -1686,22 +1691,21 @@ async def _make_funded_audit(
             measurement_mode=MEASUREMENT_MODE_PULSE,
             random_seed="1",
         )
-        # Pre-stage-C shim: attach the seeded workspace connection so the
-        # CURRENT BYOK credential path executes the funded task.
+        # T11: the funded task's frozen credential IS the platform connection
+        # in the system workspace (planner-frozen, no shim).
         task = await session.scalar(
             select(AuditTask).where(AuditTask.audit_id == audit.id)
         )
         assert task is not None
-        snapshot = await session.get(AuditEngineSnapshot, task.engine_snapshot_id)
-        assert snapshot is not None
-        connection = await session.scalar(
+        platform_connection = await session.scalar(
             select(ProviderConnection).where(
-                ProviderConnection.workspace_id == seed.workspace_id
+                ProviderConnection.workspace_id == system.id
             )
         )
-        assert connection is not None
-        snapshot.connection_id = connection.id
-        await session.commit()
+        assert platform_connection is not None
+        snapshot = task.provider_route_snapshot or {}
+        assert snapshot.get("credential_source") == "platform"
+        assert snapshot.get("connection_id") == str(platform_connection.id)
         return seed, account, audit
 
 
@@ -1986,3 +1990,105 @@ async def test_no_secret_bearing_logs_or_events(
         assert task is not None
         assert task.status == "succeeded"
         assert "secret-test-key" not in str(task.request_snapshot)
+
+
+# ---------------------------------------------------------------------------
+# T11: the worker LOADS the frozen credential identity — never re-resolves
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_funded_task_executes_with_frozen_platform_connection_key(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The funded task runs against the frozen PLATFORM connection.
+
+    A healthy probed tenant BYOK connection appearing AFTER admission does
+    not matter: the worker loads the planner-frozen identity (it never
+    re-resolves), so the adapter is built with the platform key, not the
+    tenant key.
+    """
+    seed, _account, audit = await _make_funded_audit(session_factory, monkeypatch)
+    # Post-admission, the tenant BYOK connection becomes fully healthy — a
+    # re-resolving worker would now prefer it (BYOK precedence).
+    async with session_factory() as session:
+        tenant_connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == seed.workspace_id
+            )
+        )
+        assert tenant_connection is not None
+        _mark_connection_probed(
+            session, connection=tenant_connection, engine=ENGINE_CLAUDE
+        )
+        await session.commit()
+
+    captured: dict[str, object] = {}
+
+    def _build(**kwargs: object) -> _ClaudeStubAdapter:
+        captured.update(kwargs)
+        return _ClaudeStubAdapter()
+
+    monkeypatch.setattr(audit_worker, "build_adapter", _build)
+    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
+    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-frozen-platform")
+    await worker.run_until_idle()
+
+    assert captured["api_key"] == "platform-secret-test-key"
+    assert captured["api_key"] != "secret-test-key"
+    assert captured["transport_provider"] == TRANSPORT_ANTHROPIC
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+        assert task.status == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_byok_task_executes_with_frozen_tenant_connection_key(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The BYOK task runs against the frozen TENANT connection.
+
+    A pause marker written AFTER admission does not revoke the frozen
+    identity: the worker loads the exact frozen connection (pause affects
+    future resolution, not in-flight tasks).
+    """
+    seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
+    async with session_factory() as session:
+        tenant_connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == seed.workspace_id
+            )
+        )
+        assert tenant_connection is not None
+        tenant_connection.paused_at = datetime.now(UTC)
+        tenant_connection.pause_reason = ERROR_AUTH
+        await session.commit()
+
+    captured: dict[str, object] = {}
+
+    def _build(**kwargs: object) -> _StubAdapter:
+        captured.update(kwargs)
+        return _StubAdapter()
+
+    monkeypatch.setattr(audit_worker, "build_adapter", _build)
+    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
+    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-frozen-byok")
+    await worker.run_until_idle()
+
+    assert captured["api_key"] == "secret-test-key"
+    assert captured["transport_provider"] == TRANSPORT_GOOGLE
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+        assert task.status == "succeeded"

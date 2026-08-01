@@ -21,6 +21,7 @@ from app.connectors.answer_engines.contracts import AnswerEngineRequest
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
 from app.core.config.provider_catalog import (
+    CREDENTIAL_SOURCE_BYOK,
     ERROR_PARSE,
     ERROR_UNKNOWN,
     PROBE_PROMPT,
@@ -44,6 +45,7 @@ from app.domain.billing.schemas import (
     ProviderConnectionStatesResponse,
     ProviderProbeResponse,
 )
+from app.domain.providers.credentials import connection_paused
 from app.domain.providers.schemas import (
     ProviderConnectionCreate,
     ProviderConnectionResponse,
@@ -56,6 +58,7 @@ from app.models.provider import (
     ProviderConnectionTest,
     ProviderRoute,
 )
+from app.models.workspace import Workspace
 
 
 class ProviderConnectionNotFoundError(LookupError):
@@ -82,7 +85,21 @@ class RetiredConnectionReadOnlyError(RuntimeError):
 
 
 def _connection_query():
-    return select(ProviderConnection).options(selectinload(ProviderConnection.routes))
+    """Tenant CRUD scope: BYOK rows in a non-system workspace only (T11).
+
+    Platform-funded rows live in the reserved system workspace and are absent
+    from every tenant list/get/update/delete/test path — even when an id is
+    guessed (the workspace match and this filter both fail closed to 404).
+    """
+    return (
+        select(ProviderConnection)
+        .options(selectinload(ProviderConnection.routes))
+        .join(Workspace, Workspace.id == ProviderConnection.workspace_id)
+        .where(
+            ProviderConnection.credential_source == CREDENTIAL_SOURCE_BYOK,
+            Workspace.is_system.is_(False),
+        )
+    )
 
 
 def connection_to_response(
@@ -371,22 +388,60 @@ async def run_connection_test(
 # --- Workspace connection states (authenticated commercial surface) --------
 
 
+def _paused_state_response(
+    entry: ProviderCatalogEntry,
+    connection: ProviderConnection,
+    latest_probe: ProviderConnectionTest,
+) -> ProviderConnectionStateResponse:
+    """The ``failed`` DTO for a paused connection with a probe history.
+
+    The reason is the safe pause classification token, never raw detail; the
+    probe row's own status is preserved with the same overridden reason.
+    """
+    reason = connection.pause_reason or ERROR_UNKNOWN
+    return ProviderConnectionStateResponse(
+        key=entry.key,
+        label=entry.label,
+        state="failed",
+        safe_reason=reason,
+        grant_key=entry.grant_key,
+        latest_probe=ProviderProbeResponse(
+            status=(
+                TEST_STATUS_OK
+                if latest_probe.status == TEST_STATUS_OK
+                else TEST_STATUS_FAILED
+            ),
+            safe_reason=reason,
+            tested_at=latest_probe.created_at,
+            model=latest_probe.transport_model or None,
+            latency_ms=latest_probe.latency_ms,
+        ),
+    )
+
+
 def derive_connection_state(
     entry: ProviderCatalogEntry,
     connection: ProviderConnection | None,
     latest_probe: ProviderConnectionTest | None,
+    *,
+    at: datetime | None = None,
 ) -> ProviderConnectionStateResponse:
     """Derive one catalog provider's workspace state (pure, fail closed).
 
-    ``connection`` is the workspace's active connection for the entry's
+    ``connection`` is the workspace's active BYOK connection for the entry's
     transport identity (or None); ``latest_probe`` is that connection's most
     recent append-only probe row (or None). Precedence: ``unavailable`` when
-    no adapter ships; ``missing`` when no active connection exists or the
-    configured key has never been successfully probed; ``failed`` when the
-    latest attempted probe failed; ``connected`` only after a successful
-    probe while the connection remains active. An unprobed key is NEVER
-    connected. The probe's ``detail`` column never leaves the database — the
-    DTO carries the classification token only (invariant 6).
+    no adapter ships; ``missing`` when no active key-set connection exists or
+    the configured key has never been successfully probed; ``failed`` when
+    the connection is paused (safe reason from the pause classification —
+    never raw detail) or the latest attempted probe failed; ``connected``
+    only after a successful probe while the connection remains active,
+    key-set, and NOT paused. An unprobed key is NEVER connected. The probe's
+    ``detail`` column never leaves the database — the DTO carries the
+    classification token only (invariant 6).
+
+    ``at`` makes the pause deadline clock explicit; without it any pause
+    marker fails closed as paused.
     """
     if not entry.adapter_shipped:
         return ProviderConnectionStateResponse(
@@ -397,9 +452,15 @@ def derive_connection_state(
             grant_key=entry.grant_key,
             latest_probe=None,
         )
-    if connection is None or not connection.active or latest_probe is None:
-        # Fail closed: no active connection, or the configured key has never
-        # had a successful probe (latest_probe=None for never-probed).
+    if (
+        connection is None
+        or not connection.active
+        or not connection.api_key_encrypted
+        or latest_probe is None
+    ):
+        # Fail closed: no active connection, no key material set, or the
+        # configured key has never had a successful probe (latest_probe=None
+        # for never-probed).
         return ProviderConnectionStateResponse(
             key=entry.key,
             label=entry.label,
@@ -408,6 +469,13 @@ def derive_connection_state(
             grant_key=entry.grant_key,
             latest_probe=None,
         )
+    paused = (
+        connection.paused_at is not None
+        if at is None
+        else connection_paused(connection, at=at)
+    )
+    if paused:
+        return _paused_state_response(entry, connection, latest_probe)
     if latest_probe.status == TEST_STATUS_OK:
         return ProviderConnectionStateResponse(
             key=entry.key,
@@ -477,13 +545,18 @@ async def get_connection_states(
     Every catalog row is present exactly once, in catalog order. Catalog
     entries map to connections through the transport identity the connection
     row carries (invariant 10); the most recently created active connection
-    per transport wins. Reads only this workspace's rows (invariant 5).
+    per transport wins. Reads only this workspace's BYOK rows in a non-system
+    workspace (invariant 5) — platform-funded rows never appear in tenant
+    states (T11).
     """
     result = await session.execute(
         select(ProviderConnection)
+        .join(Workspace, Workspace.id == ProviderConnection.workspace_id)
         .where(
             ProviderConnection.workspace_id == workspace_id,
             ProviderConnection.active.is_(True),
+            ProviderConnection.credential_source == CREDENTIAL_SOURCE_BYOK,
+            Workspace.is_system.is_(False),
         )
         .order_by(ProviderConnection.created_at.desc())
     )
@@ -495,12 +568,15 @@ async def get_connection_states(
         workspace_id=workspace_id,
         connection_ids=[c.id for c in by_transport.values()],
     )
+    derived_at = datetime.now(UTC)
     providers: list[ProviderConnectionStateResponse] = []
     for entry in PUBLIC_PROVIDER_CATALOG:
         routes = public_provider_routes(entry.key)
         connection = by_transport.get(routes[0][1]) if routes else None
         probe = latest_probes.get(connection.id) if connection is not None else None
-        providers.append(derive_connection_state(entry, connection, probe))
+        providers.append(
+            derive_connection_state(entry, connection, probe, at=derived_at)
+        )
     return ProviderConnectionStatesResponse(
         workspace_id=workspace_id, providers=providers
     )

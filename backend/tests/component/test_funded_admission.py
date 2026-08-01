@@ -50,7 +50,12 @@ from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED, GrantSpec
 from app.models.audit import Audit, AuditTask
 from app.models.billing import BillingAccount, ConsumableLedger
-from tests.component.audit_helpers import seed_audit_fixtures
+from app.models.provider import ProviderConnection
+from tests.component.audit_helpers import (
+    _mark_connection_probed,
+    seed_audit_fixtures,
+    seed_platform_connection,
+)
 from tests.component.funded_helpers import capture_billing_events
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
@@ -75,10 +80,16 @@ async def _seed_funded(
     credit_key: str = KEY_PULSE_CREDITS,
 ) -> tuple[BillingAccount, uuid.UUID, uuid.UUID, uuid.UUID]:
     """Seed workspace/project/prompts plus a linked funded account with
-    credits. Returns (account, workspace_id, project_id, prompt_set_id)."""
+    credits. Returns (account, workspace_id, project_id, prompt_set_id).
+
+    The tenant BYOK connection stays UNPROBED so T11 BYOK precedence cannot
+    claim funded tasks, and the platform credential in the system workspace
+    is what funded credential resolution binds.
+    """
     seed = await seed_audit_fixtures(
-        session, prompt_count=prompt_count, engines=[ENGINE_CLAUDE]
+        session, prompt_count=prompt_count, engines=[ENGINE_CLAUDE], probed=False
     )
+    await seed_platform_connection(session, engines=(ENGINE_CLAUDE,))
     account = await seed_occupancy_grants(
         session,
         workspace_id=seed.workspace_id,
@@ -295,6 +306,18 @@ async def test_byok_run_writes_no_funded_rows(
 ) -> None:
     async with session_factory() as session:
         account, workspace_id, project_id, prompt_set_id = await _seed_funded(session)
+        # BYOK mode needs an executable tenant credential: mark the seeded
+        # tenant connection probed (``_seed_funded`` keeps it unprobed).
+        tenant_connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == workspace_id
+            )
+        )
+        assert tenant_connection is not None
+        _mark_connection_probed(
+            session, connection=tenant_connection, engine=ENGINE_CLAUDE
+        )
+        await session.commit()
         audit = await create_audit(
             session,
             workspace_id=workspace_id,

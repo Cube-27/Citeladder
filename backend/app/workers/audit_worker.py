@@ -116,7 +116,6 @@ from app.domain.entitlements.ledger import (
 from app.domain.opportunities.service import recompute as recompute_opportunities
 from app.models.audit import (
     Audit,
-    AuditEngineSnapshot,
     AuditTask,
     ExecutionCostProjection,
     ProviderAttempt,
@@ -782,9 +781,7 @@ class AuditWorker(DrainableWorkerMixin):
         for _ in range(max(1, max_batches)):
             ran = await self.run_pipelined(drain=True)
             total += ran
-            keep_waiting, idle_budget = await self._wait_out_idle_pass(
-                ran, idle_budget
-            )
+            keep_waiting, idle_budget = await self._wait_out_idle_pass(ran, idle_budget)
             if not keep_waiting:
                 break
         return total
@@ -1015,18 +1012,27 @@ class AuditWorker(DrainableWorkerMixin):
         ever held across a network call (invariant 8). The measurement policy
         comes from the FROZEN configuration, never the live settings: an env
         change must not alter an in-flight run (invariant 9).
+
+        The credential is the FROZEN identity from the task's route snapshot
+        (T11): the worker loads exactly the connection the planner froze —
+        tenant BYOK or the platform row in the system workspace — by id only.
+        The frozen identity IS the authorization, so the lookup deliberately
+        does NOT apply tenant-workspace scoping, and the worker never
+        re-resolves or falls back to another credential.
         """
         async with self._session_factory() as session:
             task = await session.get(AuditTask, task_id)
             audit = await session.get(Audit, audit_id)
             if task is None or audit is None:
                 return None
-            snapshot = await session.get(AuditEngineSnapshot, task.engine_snapshot_id)
+            route_snapshot = task.provider_route_snapshot or {}
+            frozen_connection = route_snapshot.get("connection_id")
+            connection_id = (
+                uuid.UUID(str(frozen_connection)) if frozen_connection else None
+            )
             connection: ProviderConnection | None = None
-            if snapshot is not None and snapshot.connection_id is not None:
-                connection = await session.get(
-                    ProviderConnection, snapshot.connection_id
-                )
+            if connection_id is not None:
+                connection = await session.get(ProviderConnection, connection_id)
             configuration = dict(audit.configuration or {})
             return _ExecutionContext(
                 task_id=task_id,
@@ -1038,11 +1044,9 @@ class AuditWorker(DrainableWorkerMixin):
                 system_instruction=audit.system_instruction or "",
                 configuration=configuration,
                 policy=measurement_policy_from_configuration(configuration),
-                base_url=snapshot.base_url if snapshot is not None else "",
+                base_url=str(route_snapshot.get("base_url") or ""),
                 attempt_number=task.attempt_count + 1,
-                connection_id=(
-                    snapshot.connection_id if snapshot is not None else None
-                ),
+                connection_id=connection_id,
                 connection_active=(
                     bool(connection.active) if connection is not None else False
                 ),
