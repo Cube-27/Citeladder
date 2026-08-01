@@ -5,6 +5,17 @@ import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
 
 type ExtendedLogoKey = 'grok' | 'copilot' | 'perplexity';
 
+/**
+ * Each plate turns between a SHIPPED engine and a PLANNED one.
+ *
+ * Keeping the planned marks is a deliberate, user-approved deviation from the
+ * "no provider logo without a shipped adapter" gate (see
+ * docs/plans/v8-pending-features.md §4). The replacement gate is what the code
+ * below enforces: every planned face is visibly and accessibly labelled
+ * "Coming soon", is never a link or a connect affordance, and has no route in
+ * the provider catalog — so the board can never imply six working
+ * integrations.
+ */
 const LOGO_PAIRS = [
   {
     primary: { key: 'openai', label: 'ChatGPT', color: 'text-mkt-engine-openai' },
@@ -23,6 +34,14 @@ const LOGO_PAIRS = [
     },
   },
 ] as const;
+
+/** The shipped engines, in board order. Everything else is coming soon. */
+const AVAILABLE_LABELS = LOGO_PAIRS.map((pair) => pair.primary.label);
+const COMING_SOON_LABELS = LOGO_PAIRS.map((pair) => pair.alternate.label);
+
+function joinLabels(labels: readonly string[]): string {
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
 
 const EXTENDED_LOGOS: Record<
   Exclude<ExtendedLogoKey, 'grok'>,
@@ -79,12 +98,13 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
       data-engine-roster
       className={cn('mkt-logo-board', className)}
       role="img"
-      // Names the providers without asserting what is done with them. The
-      // visual board is six marks and nothing more, so an accessible name of
-      // "Searchify monitors …" handed screen-reader users a coverage claim
-      // sighted users never see — and one the audited roster (OpenAI, Gemini,
-      // Claude) does not currently back.
-      aria-label="AI engines: ChatGPT, Gemini, Claude, Grok, Copilot and Perplexity"
+      // Names the providers AND which are actually shipped. Listing all six
+      // flat handed screen-reader users a coverage claim the audited roster
+      // does not back; splitting the groups is what keeps the accessible name
+      // as honest as the visible "Coming soon" pills.
+      aria-label={`Available: ${joinLabels(AVAILABLE_LABELS)}. Coming soon: ${joinLabels(
+        COMING_SOON_LABELS,
+      )}.`}
     >
       <ul aria-hidden className="mx-auto grid max-w-lg grid-cols-3 gap-3 sm:gap-4">
         {LOGO_PAIRS.map(({ primary, alternate }, index) => (
@@ -106,6 +126,14 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
                 <span className="text-mkt-body text-mkt-ink hidden font-semibold sm:inline">
                   {face.label}
                 </span>
+                {faceIndex === 1 && (
+                  <span
+                    data-coming-soon
+                    className="border-mkt-line text-mkt-ink-muted text-mkt-xs rounded-full border px-2 py-0.5 font-normal"
+                  >
+                    Coming soon
+                  </span>
+                )}
               </span>
             ))}
           </li>

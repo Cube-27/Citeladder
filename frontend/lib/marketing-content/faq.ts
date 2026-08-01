@@ -186,26 +186,32 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       {
         q: 'How much does Searchify cost?',
+        // No amount here on purpose: prices are region-resolved per visitor
+        // and published by the catalog, so a number baked into this answer
+        // would be wrong for most readers and stale for the rest.
         a:
-          'Free to start, then $49/month before applicable tax for Paid; Enterprise is a custom ' +
-          'sales-assisted agreement. India is charged through a fixed INR Razorpay plan with GST ' +
+          'Self-serve plans are published on /pricing, priced for your billing country; ' +
+          'Enterprise is a custom sales-assisted agreement. India is charged in INR with GST ' +
           'added. International cards are charged in USD and the card issuer may convert that ' +
           'amount. Because audits run on your own provider keys, model usage is billed by your ' +
-          'provider at their rates and is never marked up by us. See /pricing for the full table.',
+          'provider at their rates and is never marked up by us.',
       },
       {
         q: 'Do you mark up model usage?',
         a:
           'No. Audits execute on your own provider keys, so ChatGPT, Gemini and Claude usage ' +
           'is billed to your own provider accounts at their rates and never passes through us. ' +
-          'Searchify charges for the workspace, the monitoring and the evidence — $49/month ' +
-          'before applicable tax for Paid, and a sales-assisted agreement for Enterprise.',
+          'Searchify charges for the workspace, the monitoring and the evidence; the current ' +
+          'plan prices are on /pricing.',
       },
       {
-        q: 'Do I need a credit card to try it?',
+        q: 'What do I need before I can run an audit?',
+        // Replaces the retired "no card needed" answer rather than swapping
+        // one unbacked promise for another: there is no free tier and no
+        // trial in this release, so the honest answer is what is required.
         a:
-          'No. The Free plan needs no card, and paid plans start with a trial. You will need your ' +
-          'own AI provider key to run an audit, since audits execute on your keys.',
+          'A plan from /pricing and your own AI provider key — audits execute on your keys, so ' +
+          'the key is what actually runs the measurement.',
       },
       {
         q: 'Can I change plan later?',
