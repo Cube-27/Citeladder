@@ -226,6 +226,20 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("REQUEST_ID_HEADER", "request_id_header"),
     )
 
+    # --- Dev-test login platform-credential gate (T11) --------------------
+    # Escape hatch for Part B's dev-only fixed login: while disabled (the
+    # default, fail closed) that session is treated like any tenant session —
+    # it cannot resolve platform credentials or reach the reserved system
+    # workspace. Enabling it outside development/test is a startup hard-fail
+    # (``validate_production_security``).
+    dev_test_login_allow_platform_credentials: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "DEV_TEST_LOGIN_ALLOW_PLATFORM_CREDENTIALS",
+            "dev_test_login_allow_platform_credentials",
+        ),
+    )
+
     # --- Observability (optional Logfire) ---
     logfire_enabled: bool = Field(
         default=False,
@@ -277,6 +291,43 @@ def _secret_is_weak(value: str) -> bool:
     )
 
 
+# Environment names where deployment-security hard-fails do not apply (local
+# dev + test). One vocabulary, shared by the startup check and the dev-gate
+# policy below (invariant 2).
+DEVELOPMENT_ENV_NAMES: frozenset[str] = frozenset(
+    {"", "development", "dev", "local", "test", "testing"}
+)
+
+
+def _is_development_env(candidate: Settings) -> bool:
+    env = str(candidate.app_env or "development").strip().lower()
+    return env in DEVELOPMENT_ENV_NAMES
+
+
+def encryption_key_configured(candidate: Settings) -> bool:
+    """Whether the Fernet encryption key is really configured (fail closed).
+
+    The shipped placeholder default counts as MISSING: a deployment that
+    never set ``ENCRYPTION_KEY`` must not encrypt new credentials with a
+    publicly known key (provisioning refuses to run, invariant 6).
+    """
+    value = candidate.encryption_key.strip()
+    return bool(value) and value not in _INSECURE_DEFAULTS
+
+
+def _dev_gate_problems(candidate: Settings) -> list[str]:
+    """The dev-test login's platform-credential escape hatch is a development/
+    test-only tool: enabled anywhere else it is a hard deployment failure."""
+    if candidate.dev_test_login_allow_platform_credentials and not _is_development_env(
+        candidate
+    ):
+        return [
+            "dev_test_login_allow_platform_credentials must be disabled "
+            "outside development/test"
+        ]
+    return []
+
+
 def validate_production_security(candidate: Settings) -> list[str]:
     """Return non-secret deployment-policy violations for ``candidate``."""
     issues: list[str] = []
@@ -297,14 +348,14 @@ def validate_production_security(candidate: Settings) -> list[str]:
         issues.append("database password must be independent of application secrets")
     if candidate.db_ssl_mode != "require":
         issues.append("db_ssl_mode must be require in production")
+    issues.extend(_dev_gate_problems(candidate))
     return issues
 
 
 def _check_secret_defaults() -> None:
     """Warn in development and refuse weak production deployment secrets."""
     logger = logging.getLogger("app.core.config")
-    env = str(settings.app_env or "development").strip().lower()
-    is_non_dev = env not in {"", "development", "dev", "local", "test", "testing"}
+    is_non_dev = not _is_development_env(settings)
     issues = (
         validate_production_security(settings)
         if is_non_dev

@@ -8,7 +8,10 @@ real Postgres schema.
 
 from __future__ import annotations
 
+import logging
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -248,3 +251,30 @@ def _transport_for(engine: str) -> str:
         return transports[engine]
     except KeyError:
         raise ValueError(f"Unsupported engine: {engine!r}") from None
+
+
+@contextmanager
+def capture_provider_events() -> Iterator[list[str]]:
+    """Capture the rendered messages emitted on the ``app.providers`` logger.
+
+    Same posture as ``funded_helpers.capture_billing_events`` (bind DIRECTLY
+    to the emitting logger, never caplog's root, and pin the level for the
+    capture window): an earlier ``configure_logging()``/alembic ``fileConfig``
+    can otherwise silence root-level capture in full-suite runs.
+    """
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            messages.append(record.getMessage())
+
+    provider_logger = logging.getLogger("app.providers")
+    handler = _Capture()
+    previous_level = provider_logger.level
+    provider_logger.addHandler(handler)
+    provider_logger.setLevel(logging.INFO)
+    try:
+        yield messages
+    finally:
+        provider_logger.removeHandler(handler)
+        provider_logger.setLevel(previous_level)

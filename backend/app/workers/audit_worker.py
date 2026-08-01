@@ -94,6 +94,7 @@ from app.core.config.costs import (
     route_pricing_for,
 )
 from app.core.config.provider_catalog import (
+    ERROR_AUTH,
     ERROR_INVALID_SURFACE,
     ERROR_PARSE,
     ERROR_RATE_LIMIT,
@@ -114,6 +115,7 @@ from app.domain.entitlements.ledger import (
     release_unused_reservation,
 )
 from app.domain.opportunities.service import recompute as recompute_opportunities
+from app.domain.providers.credentials import pause_connection_after_key_failure
 from app.models.audit import (
     Audit,
     AuditTask,
@@ -236,6 +238,16 @@ class _FrozenFunding:
 
     reservation_id: uuid.UUID
     billing_account_id: uuid.UUID | None
+
+
+def _frozen_connection_id_from(route_snapshot: dict | None) -> uuid.UUID | None:
+    """The planner-frozen concrete connection id off a task's route snapshot.
+
+    Opaque identity only (invariant 6) — the worker LOADS this connection; it
+    never re-resolves or falls back to another credential.
+    """
+    frozen = (route_snapshot or {}).get("connection_id")
+    return uuid.UUID(str(frozen)) if frozen else None
 
 
 def _frozen_funding_from(route_snapshot: dict | None) -> _FrozenFunding | None:
@@ -1026,10 +1038,7 @@ class AuditWorker(DrainableWorkerMixin):
             if task is None or audit is None:
                 return None
             route_snapshot = task.provider_route_snapshot or {}
-            frozen_connection = route_snapshot.get("connection_id")
-            connection_id = (
-                uuid.UUID(str(frozen_connection)) if frozen_connection else None
-            )
+            connection_id = _frozen_connection_id_from(route_snapshot)
             connection: ProviderConnection | None = None
             if connection_id is not None:
                 connection = await session.get(ProviderConnection, connection_id)
@@ -1455,6 +1464,25 @@ class AuditWorker(DrainableWorkerMixin):
             task_id=task_id, owner=self.owner, result_artifact_id=artifact_id
         )
 
+    async def _pause_frozen_credential_on_auth_failure(
+        self, session: AsyncSession, *, task: AuditTask, error_code: str
+    ) -> None:
+        """Pause the task's FROZEN credential after an auth-classified failure.
+
+        Tenant BYOK row or platform row alike — the pause writer keys the
+        telemetry event off the row's own ``credential_source``. Runs inside
+        the failure-path's owner-locked transaction so the pause lands
+        atomically with the attempt evidence (invariant 3/8). A missing
+        frozen id (or a row deleted mid-run) is a no-op: the task's failure
+        handling must never crash on credential bookkeeping.
+        """
+        if error_code != ERROR_AUTH:
+            return
+        connection_id = _frozen_connection_id_from(task.provider_route_snapshot)
+        if connection_id is None:
+            return
+        await pause_connection_after_key_failure(session, connection_id, _utcnow())
+
     async def _handle_failure(
         self,
         *,
@@ -1504,6 +1532,13 @@ class AuditWorker(DrainableWorkerMixin):
             # the task terminalizes (a queue retry keeps it for the next call).
             await self._apply_funded_ledger(
                 session, task=task, billable=True, terminal=not will_retry
+            )
+            # T11 auth pause (details on the helper): pauses the FROZEN
+            # credential so no NEW task resolves it until the grace deadline;
+            # this task still fails through current finalization below and
+            # there is NO silent platform fallback.
+            await self._pause_frozen_credential_on_auth_failure(
+                session, task=task, error_code=error_code
             )
             record_event(
                 session,

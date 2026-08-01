@@ -439,6 +439,29 @@ CREDENTIAL_SOURCE_PRECEDENCE: Final[tuple[str, str]] = (
 # workspace information — the token IS the contract.
 CODE_EXECUTION_CREDENTIALS_UNAVAILABLE: Final = "execution_credentials_unavailable"
 
+# --- Credential lifecycle telemetry (T11) ----------------------------------
+# Operator telemetry event names (logged, never tenant-facing DTOs). Payloads
+# carry opaque ids, classification tokens, and pause/provisioning timing only
+# — NEVER keys, ciphertext, prompts, answers, provider bodies, or
+# authorization headers (invariant 6).
+TELEMETRY_BYOK_PAUSED: Final = "provider.byok.paused"
+TELEMETRY_PLATFORM_AUTH_FAILED: Final = "provider.platform.auth_failed"
+TELEMETRY_PLATFORM_PROVISIONED: Final = "provider.platform.provisioned"
+TELEMETRY_FUNDED_ADMISSION_DENIED: Final = "funded.execution.admission_denied"
+
+# --- Platform provisioning identity (T11) -----------------------------------
+# The reserved system workspace holds the operator's platform-funded rows
+# (exactly one, enforced by the partial unique index on Workspace.is_system).
+SYSTEM_WORKSPACE_NAME: Final = "Searchify Platform (system)"
+# Environment variables the provisioning CLI reads platform keys from, keyed
+# by transport. The VALUES are secret material and are only ever accepted as
+# SecretStr, Fernet-encrypted before flush, and never printed or logged.
+PLATFORM_CREDENTIAL_ENV_VARS: Final[dict[str, str]] = {
+    TRANSPORT_OPENAI: "SEARCHIFY_PLATFORM_OPENAI_API_KEY",
+    TRANSPORT_ANTHROPIC: "SEARCHIFY_PLATFORM_ANTHROPIC_API_KEY",
+    TRANSPORT_GOOGLE: "SEARCHIFY_PLATFORM_GOOGLE_API_KEY",
+}
+
 
 # --- Retry / error classification tokens (recorded on tests + attempts) ---
 ERROR_TIMEOUT: Final = "timeout"
@@ -498,6 +521,10 @@ class ProviderCatalogSettings(BaseSettings):
     # from the measurement caps above — a probe must not scale with them.
     test_retrieval_enabled: bool = False
     test_max_output_tokens: int = 32
+    # Recoverable auth-failure pause (T11): an ERROR_AUTH-classified execution
+    # pauses the credential for this many days before resolution may try it
+    # again (the tenant/operator rotates the key within the grace window).
+    byok_key_grace_days: int = 7
 
 
 provider_catalog_settings = ProviderCatalogSettings()

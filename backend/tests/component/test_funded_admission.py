@@ -44,7 +44,11 @@ from app.core.config.entitlements import (
     KEY_BENCHMARK_CREDITS,
     KEY_PULSE_CREDITS,
 )
-from app.core.config.provider_catalog import ENGINE_CLAUDE, ENGINE_GEMINI
+from app.core.config.provider_catalog import (
+    ENGINE_CLAUDE,
+    ENGINE_GEMINI,
+    TELEMETRY_FUNDED_ADMISSION_DENIED,
+)
 from app.domain.audits.planner import FundedAdmissionError, create_audit
 from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED, GrantSpec
@@ -212,6 +216,10 @@ async def test_budget_exhaustion_persists_nothing_and_emits_telemetry(
         await session.rollback()
         assert exc_info.value.code == CODE_FUNDED_BUDGET_EXHAUSTED
         assert any(TELEMETRY_FUNDED_BUDGET_EXHAUSTED in m for m in events)
+        # Every funded-admission denial also emits the outcome event once.
+        denied = [m for m in events if TELEMETRY_FUNDED_ADMISSION_DENIED in m]
+        assert len(denied) == 1
+        assert CODE_FUNDED_BUDGET_EXHAUSTED in denied[0]
         assert await _count(session, Audit) == 0
         assert await _count(session, AuditTask) == 0
         assert await _count(session, ConsumableLedger) == 0
@@ -370,6 +378,9 @@ async def test_credit_exhaustion_rolls_back_everything_and_emits_telemetry(
         await session.rollback()
         assert exc_info.value.code == CODE_FUNDED_CREDITS_EXHAUSTED
         assert any(TELEMETRY_CONSUMABLE_CREDITS_EXHAUSTED in m for m in events)
+        denied = [m for m in events if TELEMETRY_FUNDED_ADMISSION_DENIED in m]
+        assert len(denied) == 1
+        assert CODE_FUNDED_CREDITS_EXHAUSTED in denied[0]
         assert await _count(session, Audit) == 0
         assert await _count(session, AuditTask) == 0
         assert await _count(session, ConsumableLedger) == 0
@@ -395,6 +406,9 @@ async def test_unresolved_entitlement_fails_closed(
         await session.rollback()
         assert exc_info.value.code == STATUS_ENTITLEMENT_UNRESOLVED
         assert any(TELEMETRY_ENTITLEMENT_UNRESOLVED in m for m in events)
+        denied = [m for m in events if TELEMETRY_FUNDED_ADMISSION_DENIED in m]
+        assert len(denied) == 1
+        assert STATUS_ENTITLEMENT_UNRESOLVED in denied[0]
         assert await _count(session, Audit) == 0
         assert await _count(session, AuditTask) == 0
         assert await _count(session, ConsumableLedger) == 0

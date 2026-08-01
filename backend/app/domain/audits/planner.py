@@ -87,6 +87,7 @@ from app.core.config.provider_catalog import (
     APPROVED_ROUTES,
     CREDENTIAL_SOURCE_BYOK,
     LOGICAL_ENGINES,
+    TELEMETRY_FUNDED_ADMISSION_DENIED,
     default_model,
     is_endpoint_approved,
     is_route_approved,
@@ -165,6 +166,34 @@ class FundedAdmissionError(RuntimeError):
         self.message = message
         self.code = code
         self.details = details
+
+
+def _admission_denied(
+    message: str,
+    *,
+    code: str,
+    details: dict[str, Any] | None = None,
+    capability_key: str | None = None,
+    account_id: uuid.UUID | None = None,
+) -> FundedAdmissionError:
+    """Emit ``funded.execution.admission_denied``; return the refusal to raise.
+
+    Every funded-admission denial funnels here so the operator telemetry is
+    emitted exactly once per denial with safe fields only — the config-owned
+    code, an opaque account id, and the capability key (never prompts, key
+    material, or provider detail, invariant 6). The specific cause keeps its
+    own dedicated event too (``billing.funded_budget_exhausted`` /
+    ``billing.consumable_credits_exhausted`` / ``billing.entitlement_unresolved``).
+    Callers ``raise`` the returned error (chaining ``from exc`` where a cause
+    exists).
+    """
+    logger.info(
+        TELEMETRY_FUNDED_ADMISSION_DENIED + " code=%s account_id=%s capability_key=%s",
+        code,
+        account_id,
+        capability_key,
+    )
+    return FundedAdmissionError(message, code=code, details=details)
 
 
 class PromptCountPolicyError(RuntimeError):
@@ -805,7 +834,7 @@ def _funded_expected_cost_microusd(
             retrieval_enabled=plan.policy.retrieval_enabled,
         )
         if per_execution is None or not expected.complete:
-            raise FundedAdmissionError(
+            raise _admission_denied(
                 f"Expected execution cost is unresolved for {engine}",
                 code=CODE_FUNDED_COST_UNRESOLVED,
             )
@@ -839,9 +868,10 @@ async def _admit_funded_run(
         session, workspace_id=workspace_id, at=at
     )
     if entitlement.status != STATUS_RESOLVED:
-        raise FundedAdmissionError(
+        raise _admission_denied(
             "Billing entitlement is unavailable for this workspace",
             code=STATUS_ENTITLEMENT_UNRESOLVED,
+            account_id=entitlement.account_id,
         )
     capability_key = (
         KEY_PULSE_CREDITS
@@ -879,10 +909,12 @@ async def _admit_funded_run(
             capability_key,
             int(reserved or 0),
         )
-        raise FundedAdmissionError(
+        raise _admission_denied(
             "The account's funded monthly budget is exhausted",
             code=CODE_FUNDED_BUDGET_EXHAUSTED,
             details={"capability_key": capability_key},
+            capability_key=capability_key,
+            account_id=account_id,
         )
     return _FundedAdmission(
         enabled=True,
@@ -949,8 +981,12 @@ async def _reserve_task_funding(
             at=at,
         )
     except FundedCreditsExhaustedError as exc:
-        raise FundedAdmissionError(
-            exc.message, code=exc.code, details=exc.details
+        raise _admission_denied(
+            exc.message,
+            code=exc.code,
+            details=exc.details,
+            capability_key=funded.capability_key,
+            account_id=funded.account_id,
         ) from exc
 
 
@@ -984,8 +1020,8 @@ async def _resolve_task_credential(
             at=at,
         )
     except ExecutionCredentialsUnavailableError as exc:
-        raise FundedAdmissionError(
-            exc.message, code=exc.code, details=exc.details
+        raise _admission_denied(
+            exc.message, code=exc.code, details=exc.details, account_id=account_id
         ) from exc
 
 

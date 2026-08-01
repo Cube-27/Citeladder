@@ -36,6 +36,7 @@ from app.core.config.audits import (
     ATTEMPT_STATUS_SUCCEEDED,
     AUDIT_STATUS_CANCELLED,
     AUDIT_STATUS_COMPLETED,
+    AUDIT_STATUS_FAILED,
     AUDIT_TRIGGER_MANUAL,
     CAPACITY_CODE_CONCURRENCY,
     CAPACITY_CODE_RATE_LIMITED,
@@ -74,6 +75,8 @@ from app.core.config.provider_catalog import (
     ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
     ROUTE_CAPACITY_POLICIES,
+    TELEMETRY_BYOK_PAUSED,
+    TELEMETRY_PLATFORM_AUTH_FAILED,
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
@@ -101,6 +104,7 @@ from app.workers import audit_worker
 from app.workers.audit_worker import AuditWorker
 from tests.component.audit_helpers import (
     _mark_connection_probed,
+    capture_provider_events,
     seed_audit_fixtures,
     seed_platform_connection,
 )
@@ -2092,3 +2096,189 @@ async def test_byok_task_executes_with_frozen_tenant_connection_key(
         )
         assert task is not None
         assert task.status == "succeeded"
+
+
+# ---------------------------------------------------------------------------
+# T11 stage D: ERROR_AUTH pauses the frozen credential (BYOK + platform)
+# ---------------------------------------------------------------------------
+
+
+class _AuthFailureAdapter(_StubAdapter):
+    """Always fails with a NON-retryable auth error (terminal on one call)."""
+
+    async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
+        raise ProviderError(
+            "provider rejected the credential",
+            error_code=ERROR_AUTH,
+            retryable=False,
+        )
+
+
+class _ClaudeAuthFailureAdapter(_AuthFailureAdapter):
+    """Claude/anthropic auth-failure stub for funded-route executions."""
+
+    logical_engine = ENGINE_CLAUDE
+    transport_provider = TRANSPORT_ANTHROPIC
+
+
+@pytest.mark.asyncio
+async def test_byok_auth_failure_pauses_connection_and_fails_task(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """BYOK ERROR_AUTH pauses the frozen tenant connection (7-day grace).
+
+    The task fails through CURRENT finalization (auth is non-retryable, so
+    one call, then ``failed``; the zero-success audit lands ``failed``), the
+    ``provider.byok.paused`` telemetry carries only opaque ids + pause timing,
+    and NO platform fallback is attempted — the frozen credential identity
+    stands (exactly one adapter build, with the tenant key).
+    """
+    seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
+    builds: list[dict[str, object]] = []
+
+    def _build(**kwargs: object) -> _AuthFailureAdapter:
+        builds.append(kwargs)
+        return _AuthFailureAdapter()
+
+    monkeypatch.setattr(audit_worker, "build_adapter", _build)
+    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
+    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-auth-byok")
+    with capture_provider_events() as events:
+        await worker.run_until_idle()
+
+    # One provider call total: auth is non-retryable and the worker never
+    # re-resolves or falls back to another credential.
+    assert len(builds) == 1
+    assert builds[0]["api_key"] == "secret-test-key"
+    assert builds[0]["transport_provider"] == TRANSPORT_GOOGLE
+
+    async with session_factory() as session:
+        connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.workspace_id == seed.workspace_id
+            )
+        )
+        assert connection is not None
+        assert connection.paused_at is not None
+        assert connection.pause_reason == ERROR_AUTH
+        assert connection.pause_until is not None
+        # The configured seven-day grace window (pause_until = at + 7 days).
+        assert connection.pause_until - connection.paused_at == timedelta(days=7)
+        # Pause is separate from operator enablement.
+        assert connection.active is True
+
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+        assert task.status == "failed"
+        assert task.error_code == ERROR_AUTH
+
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        # Current finalization: no successful executions -> audit failed.
+        assert refreshed.status == AUDIT_STATUS_FAILED
+        assert refreshed.failed_count == 1
+
+        # The tenant-facing task-failure event payload is the safe shape
+        # only (opaque task id + classification token).
+        task_events = (
+            (
+                await session.execute(
+                    select(AuditEvent).where(AuditEvent.audit_id == audit.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        failure_payloads = [
+            e.payload for e in task_events if (e.payload or {}).get("error_code")
+        ]
+        assert failure_payloads
+        for payload in failure_payloads:
+            assert set(payload) == {"task_id", "error_code"}
+            assert payload["error_code"] == ERROR_AUTH
+
+    rendered = "\n".join(events)
+    assert any(TELEMETRY_BYOK_PAUSED in message for message in events)
+    assert not any(TELEMETRY_PLATFORM_AUTH_FAILED in message for message in events)
+    assert "secret-test-key" not in rendered
+    assert str(connection.id) in rendered
+
+
+@pytest.mark.asyncio
+async def test_platform_auth_failure_pauses_platform_row_without_tenant_exposure(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Platform ERROR_AUTH pauses the platform row; tenants see no system details.
+
+    The funded task's frozen PLATFORM connection gets the same 7-day pause
+    writer treatment (the row's own ``credential_source`` keys the
+    ``provider.platform.auth_failed`` telemetry), while every tenant-facing
+    audit event payload stays free of system-workspace/platform identity.
+    """
+    seed, _account, audit = await _make_funded_audit(session_factory, monkeypatch)
+
+    def _build(**kwargs: object) -> _ClaudeAuthFailureAdapter:
+        return _ClaudeAuthFailureAdapter()
+
+    monkeypatch.setattr(audit_worker, "build_adapter", _build)
+    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
+    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
+
+    worker = AuditWorker(session_factory=session_factory, owner="w-auth-platform")
+    with capture_provider_events() as events:
+        await worker.run_until_idle()
+
+    async with session_factory() as session:
+        platform_connection = await session.scalar(
+            select(ProviderConnection).where(
+                ProviderConnection.credential_source == "platform"
+            )
+        )
+        assert platform_connection is not None
+        assert platform_connection.paused_at is not None
+        assert platform_connection.pause_reason == ERROR_AUTH
+        assert platform_connection.pause_until is not None
+        assert platform_connection.pause_until - platform_connection.paused_at == (
+            timedelta(days=7)
+        )
+
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
+        )
+        assert task is not None
+        assert task.status == "failed"
+        assert task.error_code == ERROR_AUTH
+
+        refreshed = await session.get(Audit, audit.id)
+        assert refreshed is not None
+        assert refreshed.status == AUDIT_STATUS_FAILED
+
+        # Tenant-facing DTO/event surface: NO system-workspace or platform
+        # identity anywhere in the audit's event payloads.
+        task_events = (
+            (
+                await session.execute(
+                    select(AuditEvent).where(AuditEvent.audit_id == audit.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert task_events
+        for event in task_events:
+            rendered_payload = str(event.payload)
+            assert str(platform_connection.id) not in rendered_payload
+            assert str(platform_connection.workspace_id) not in rendered_payload
+            assert "platform" not in rendered_payload
+            assert "system" not in rendered_payload
+
+    rendered = "\n".join(events)
+    assert any(TELEMETRY_PLATFORM_AUTH_FAILED in message for message in events)
+    assert not any(TELEMETRY_BYOK_PAUSED in message for message in events)
+    assert "platform-secret-test-key" not in rendered

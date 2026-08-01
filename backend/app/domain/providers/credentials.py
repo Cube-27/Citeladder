@@ -19,27 +19,38 @@
 # uses metadata columns only (invariant 6).
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.config.costs import ExpectedExecutionCost
 from app.core.config.provider_catalog import (
     CODE_EXECUTION_CREDENTIALS_UNAVAILABLE,
     CREDENTIAL_SOURCE_BYOK,
     CREDENTIAL_SOURCE_PLATFORM,
+    ERROR_AUTH,
+    TELEMETRY_BYOK_PAUSED,
+    TELEMETRY_PLATFORM_AUTH_FAILED,
     TEST_STATUS_OK,
     is_endpoint_approved,
     is_route_approved,
+    provider_catalog_settings,
 )
 from app.domain.entitlements.ledger import Reservation
 from app.domain.entitlements.types import STATUS_RESOLVED, ResolvedEntitlement
 from app.models.provider import ProviderConnection, ProviderRoute
 from app.models.workspace import Workspace
+
+# Operator telemetry for the credential lifecycle (T11). Payloads are safe
+# fields only — never keys, ciphertext, prompts, answers, provider bodies, or
+# authorization headers (invariant 6).
+logger = logging.getLogger("app.providers")
 
 
 class ExecutionCredentialsUnavailableError(RuntimeError):
@@ -86,6 +97,45 @@ def connection_paused(connection: ProviderConnection, *, at: datetime) -> bool:
     if connection.paused_at is None:
         return False
     return connection.pause_until is None or connection.pause_until > at
+
+
+async def pause_connection_after_key_failure(
+    session: AsyncSession, connection_id: uuid.UUID, at: datetime
+) -> None:
+    """Pause a credential after an ERROR_AUTH-classified execution failure.
+
+    Sets ``paused_at``, the safe ``pause_reason`` classification token (the
+    recorded status — raw provider detail NEVER persists, invariant 6), and
+    ``pause_until = at + byok_key_grace_days``. Resolution already skips
+    paused rows, so no new tasks use the credential until the grace deadline
+    passes (or an operator rotation clears the pause); in-flight tasks keep
+    their frozen identity. Emits the source-specific telemetry event
+    (``provider.byok.paused`` for a tenant row, ``provider.platform.auth_failed``
+    for the platform row — the row's own ``credential_source`` distinguishes
+    the source) with opaque ids + pause timing only. The caller commits. A
+    missing row is a no-op so the worker's failure path never crashes on a
+    connection deleted mid-run.
+    """
+    connection = await session.get(ProviderConnection, connection_id)
+    if connection is None:
+        return
+    connection.paused_at = at
+    connection.pause_reason = ERROR_AUTH
+    connection.pause_until = at + timedelta(
+        days=provider_catalog_settings.byok_key_grace_days
+    )
+    event = (
+        TELEMETRY_PLATFORM_AUTH_FAILED
+        if connection.credential_source == CREDENTIAL_SOURCE_PLATFORM
+        else TELEMETRY_BYOK_PAUSED
+    )
+    logger.info(
+        event + " connection_id=%s pause_reason=%s paused_at=%s pause_until=%s",
+        connection.id,
+        connection.pause_reason,
+        at.isoformat(),
+        connection.pause_until.isoformat(),
+    )
 
 
 def _route_candidates(
@@ -205,6 +255,7 @@ async def resolve_execution_credentials(
     reservation: Reservation | None,
     expected_cost: ExpectedExecutionCost,
     at: datetime,
+    dev_test_login: bool = False,
 ) -> ResolvedCredential:
     """Resolve the ONE credential a task executes with (admission-time only).
 
@@ -214,6 +265,13 @@ async def resolve_execution_credentials(
     proof chain; anything missing raises
     ``ExecutionCredentialsUnavailableError`` with no claimable task and no
     provider call.
+
+    Dev-test login gate (T11): Part B's dev-only fixed login is treated like
+    any tenant session — when ``dev_test_login`` is set it cannot resolve
+    platform credentials or reach the reserved system workspace unless the
+    dedicated ``DEV_TEST_LOGIN_ALLOW_PLATFORM_CREDENTIALS`` gate is enabled.
+    The check fails closed BEFORE any system-workspace read; BYOK resolution
+    (the tenant's own key) is unaffected either way.
     """
     byok = await _select_byok_route(
         session, workspace_id=workspace_id, logical_engine=logical_engine, at=at
@@ -226,6 +284,11 @@ async def resolve_execution_credentials(
             transport_provider=route.transport_provider,
             model=route.transport_model,
             reservation_id=None,
+        )
+    if dev_test_login and not settings.dev_test_login_allow_platform_credentials:
+        raise ExecutionCredentialsUnavailableError(
+            "No executable credential available for this task",
+            details={"logical_engine": logical_engine},
         )
     proven = _require_funded_proofs(
         logical_engine=logical_engine,
