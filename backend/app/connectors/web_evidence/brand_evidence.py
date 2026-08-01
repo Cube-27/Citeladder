@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
@@ -212,6 +213,13 @@ async def fetch_brand_page(
 # read as instructions rather than data. Neutralized on every serialized field.
 _EVIDENCE_OPEN = "<brand_website_evidence>"
 _EVIDENCE_CLOSE = "</brand_website_evidence>"
+# Matched against the ORIGINAL string with IGNORECASE rather than against a
+# lowercased copy: ``str.lower()`` is not length-preserving for every Unicode
+# input (``"İ".lower()`` is two code points), so indices found in a lowered
+# copy can address the wrong offsets in the original and slice a delimiter out
+# at the wrong place — or miss it entirely.
+_EVIDENCE_CLOSE_RE = re.compile(re.escape(_EVIDENCE_CLOSE), re.IGNORECASE)
+_EVIDENCE_OPEN_RE = re.compile(re.escape(_EVIDENCE_OPEN), re.IGNORECASE)
 
 
 def _strip_delimiters(value: str) -> str:
@@ -229,16 +237,16 @@ def _strip_delimiters(value: str) -> str:
     # single pass). Each iteration strictly shortens the string, so this
     # terminates.
     while True:
-        lowered = out.lower()
-        index = -1
-        token = ""
-        for candidate in (_EVIDENCE_CLOSE, _EVIDENCE_OPEN):
-            found = lowered.find(candidate)
-            if found != -1 and (index == -1 or found < index):
-                index, token = found, candidate
-        if index == -1:
+        earliest: re.Match[str] | None = None
+        for pattern in (_EVIDENCE_CLOSE_RE, _EVIDENCE_OPEN_RE):
+            found = pattern.search(out)
+            if found is not None and (
+                earliest is None or found.start() < earliest.start()
+            ):
+                earliest = found
+        if earliest is None:
             return out
-        out = out[:index] + out[index + len(token) :]
+        out = out[: earliest.start()] + out[earliest.end() :]
 
 
 def serialize_brand_evidence(pages: list[BrandEvidencePage]) -> str:

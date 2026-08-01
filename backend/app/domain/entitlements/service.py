@@ -225,11 +225,14 @@ async def refresh_site_health_runtime_for_account(
         else 0
     )
     policy = runtime_policy_for_allowance(allowance)
+    # Deterministic order: every caller re-projects the same account's rows in
+    # the same sequence, so two concurrent refreshes take the runtime rows'
+    # locks in one global order instead of racing into a deadlock.
     workspace_ids = (
         await session.scalars(
-            select(WorkspaceBillingLink.workspace_id).where(
-                WorkspaceBillingLink.billing_account_id == account_id
-            )
+            select(WorkspaceBillingLink.workspace_id)
+            .where(WorkspaceBillingLink.billing_account_id == account_id)
+            .order_by(WorkspaceBillingLink.workspace_id.asc())
         )
     ).all()
     for workspace_id in workspace_ids:

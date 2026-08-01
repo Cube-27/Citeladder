@@ -20,10 +20,10 @@ function SectionHead({
 }: Readonly<{ label: string; count: string; muted?: boolean }>) {
   return (
     <div className="flex items-baseline gap-2">
-      <p className={cn('text-2xs font-bold uppercase tracking-wider', muted ? 'text-muted' : 'text-secondary')}>
+      <p className={cn('text-2xs font-bold uppercase', muted ? 'text-muted' : 'text-secondary')}>
         {label}
       </p>
-      <span className="text-3xs border-border-subtle text-muted inline-flex items-center rounded-full border bg-white px-2 py-0.5 font-semibold shadow-2xs">
+      <span className="text-3xs border-border-subtle text-muted inline-flex items-center rounded-full border bg-white px-2 py-0.5 font-semibold">
         {count}
       </span>
     </div>
@@ -74,7 +74,7 @@ function TabButton({
       className={cn(
         'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer',
         active
-          ? 'bg-white text-foreground shadow-xs font-semibold'
+          ? 'bg-white text-foreground font-semibold'
           : 'text-muted hover:text-foreground hover:bg-white/50',
       )}
     >
@@ -105,15 +105,15 @@ function Chip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer',
+        'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer',
         selected
-          ? 'border-accent-border/60 bg-accent-soft/80 text-accent-hover shadow-2xs hover:bg-accent-subtle/80'
+          ? 'border-accent-border/60 bg-accent-soft/80 text-accent-hover hover:bg-accent-subtle/80'
           : 'border-border-subtle text-muted hover:bg-background hover:text-secondary bg-white hover:border-border-bold/30',
       )}
     >
       <span className="truncate">{label}</span>
       <X
-        className={cn('size-3.5 shrink-0 transition-opacity', selected ? 'opacity-70 hover:opacity-100' : 'opacity-40')}
+        className={cn('size-4 shrink-0 transition-opacity', selected ? 'opacity-70 hover:opacity-100' : 'opacity-40')}
         aria-hidden
       />
     </button>
@@ -186,9 +186,16 @@ export function ReviewStep({
       </div>
 
       {/* Tab 1: Domains & Competitors */}
-      {activeTab === 'entities' && (
+      {/*
+        Both panels stay MOUNTED and the inactive one is hidden. Unmounting it
+        would leave the inactive tab's `aria-controls` pointing at an id that is
+        not in the document, which breaks the ARIA Tabs relationship for AT, and
+        would also discard the panel's DOM state (scroll position, an in-progress
+        competitor rename) every time the user switches tabs.
+      */}
         <div
           role="tabpanel"
+          hidden={activeTab !== 'entities'}
           id={tabPanelId('entities')}
           aria-labelledby={tabId('entities')}
           className="border-border-subtle bg-white/60 rounded-xl border p-4"
@@ -196,7 +203,8 @@ export function ReviewStep({
           <div className="max-h-[360px] sm:max-h-[400px] overflow-y-auto pr-1">
             <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
               {/* Column 1: Domains */}
-              <div className="border-border-subtle/60 bg-white rounded-lg border p-4 shadow-2xs">
+              {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
+              <div className="bg-white rounded-lg p-4 shadow-card">
                 <div className="mb-3">
                   <SectionHead label="Your domains" count={`${selectedDomains} selected`} />
                 </div>
@@ -217,16 +225,17 @@ export function ReviewStep({
               </div>
 
               {/* Column 2: Competitors */}
-              <div className="border-border-subtle/60 bg-white rounded-lg border p-4 shadow-2xs">
+              {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
+              <div className="bg-white rounded-lg p-4 shadow-card">
                 <div className="mb-3 flex items-center justify-between">
                   <SectionHead label="Competitors" count={`${selectedCompetitors} selected`} />
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={onAddCompetitor}
-                    className="text-accent-text hover:bg-accent-soft h-7 gap-1 px-2 text-xs font-semibold"
+                    className="text-accent-text hover:bg-accent-soft gap-1 px-2 text-xs font-semibold"
                   >
-                    <Plus className="size-3.5" aria-hidden />
+                    <Plus className="size-4" aria-hidden />
                     Add competitor
                   </Button>
                 </div>
@@ -243,7 +252,7 @@ export function ReviewStep({
                           aria-label={`Competitor ${index + 1} name`}
                           placeholder="Competitor name"
                           className={cn(
-                            'border-border-subtle bg-background/60 text-foreground h-9 text-sm transition-all focus:bg-white focus:border-accent focus:ring-1 focus:ring-accent/20',
+                            'border-border-subtle bg-background/60 text-foreground text-sm transition-all focus:bg-white focus:border-accent focus:ring-1 focus:ring-accent/20',
                             !competitor.selected && 'line-through opacity-50 bg-well/40',
                           )}
                         />
@@ -258,7 +267,7 @@ export function ReviewStep({
                           aria-pressed={competitor.selected}
                           onClick={() => onToggleCompetitor(index)}
                           className={cn(
-                            'size-9 shrink-0 transition-colors',
+                            'shrink-0 transition-colors',
                             competitor.selected
                               ? 'text-muted hover:text-secondary'
                               : 'bg-accent-soft text-accent-text hover:bg-accent-subtle',
@@ -274,12 +283,11 @@ export function ReviewStep({
             </div>
           </div>
         </div>
-      )}
 
       {/* Tab 2: Starting Prompts */}
-      {activeTab === 'prompts' && (
         <div
           role="tabpanel"
+          hidden={activeTab !== 'prompts'}
           id={tabPanelId('prompts')}
           aria-labelledby={tabId('prompts')}
           className="border-border-subtle bg-white/60 rounded-xl border p-4"
@@ -295,14 +303,14 @@ export function ReviewStep({
                 None found — you can write your own after setup.
               </p>
             ) : (
-              <ul className="flex flex-col gap-2.5 list-none">
+              <ul className="flex flex-col gap-2 list-none">
                 {prompts.map((prompt, index) => (
                   <li key={prompt.id}>
                     <label
                       className={cn(
                         'flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all duration-200 select-none',
                         prompt.selected
-                          ? 'border-accent-border/60 bg-accent-soft/30 hover:bg-accent-soft/50 shadow-2xs'
+                          ? 'border-accent-border/60 bg-accent-soft/30 hover:bg-accent-soft/50'
                           : 'border-border-subtle hover:bg-background/80 bg-white hover:border-border-bold/20',
                       )}
                     >
@@ -324,7 +332,7 @@ export function ReviewStep({
                         </span>
                       </div>
                       {prompt.theme ? (
-                        <span className="text-3xs bg-well/80 border-border-subtle/50 text-secondary shrink-0 rounded-full border px-2.5 py-0.5 font-medium">
+                        <span className="text-3xs bg-well/80 border-border-subtle/50 text-secondary shrink-0 rounded-full border px-2 py-0.5 font-medium">
                           {prompt.theme}
                         </span>
                       ) : null}
@@ -335,7 +343,6 @@ export function ReviewStep({
             )}
           </div>
         </div>
-      )}
     </div>
   );
 }

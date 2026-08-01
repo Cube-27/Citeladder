@@ -339,7 +339,7 @@ async def test_draft_is_grounded_in_fetched_page_content(
             )
         )
     ).scalar_one()
-    provenance = row.input_context_snapshot["website_evidence"]
+    provenance = row.input_context_snapshot["website_evidence_provenance"]
     assert provenance["page_urls"] == ["https://acme.example/"]
     assert provenance["word_count"] == 200
     assert provenance["evidence_version"]

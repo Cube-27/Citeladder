@@ -64,16 +64,23 @@ def normalize_anthropic_usage(
 ) -> NormalizedUsage:
     """Normalize Anthropic usage aliases into the canonical typed counters.
 
-    ``input_tokens`` on the Messages API already EXCLUDES cache reads, so it
-    maps straight to ``uncached_input_tokens``; cache reads come from
-    ``cache_read_input_tokens``. Anthropic reports no thinking-token count and
-    no per-request cost, so those stay null (unknown never becomes zero). The
+    ``input_tokens`` on the Messages API EXCLUDES both cache reads AND cache
+    writes, so neither can be dropped: cache reads come from
+    ``cache_read_input_tokens``, and the cache-WRITE count
+    (``cache_creation_input_tokens``) is folded into ``uncached_input_tokens``
+    because a cache write is billed as ordinary (in fact premium) uncached
+    input — leaving it out understated both the normalized input and the
+    derived total. Anthropic reports no thinking-token count and no
+    per-request cost, so those stay null (unknown never becomes zero). The
     web-search count prefers the reported value and falls back to observed
     ``server_tool_use`` blocks only when the provider reported none at all.
     """
     usage = usage_mapping(payload.get("usage"))
     server_tool_use = usage_mapping(usage.get("server_tool_use"))
-    uncached = usage_count(usage, "input_tokens")
+    uncached = sum_optional(
+        usage_count(usage, "input_tokens"),
+        usage_count(usage, "cache_creation_input_tokens", "cacheCreationInputTokens"),
+    )
     cached = usage_count(usage, "cache_read_input_tokens", "cacheReadInputTokens")
     output = usage_count(usage, "output_tokens")
     searches = usage_count(server_tool_use, "web_search_requests")
