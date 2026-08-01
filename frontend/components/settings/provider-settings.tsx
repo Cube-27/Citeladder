@@ -34,7 +34,14 @@ export function ProviderSettings() {
     queryFn: ({ signal }) => providersApi.listConnections({ signal }),
   });
 
-  const cards = buildEngineCards(catalogQuery.data);
+  // The AUTHENTICATED four-state projection. A failure here leaves every card
+  // at its fail-closed default (`missing`) rather than implying `connected`.
+  const statesQuery = useQuery({
+    queryKey: queryKeys.providers.states(),
+    queryFn: ({ signal }) => providersApi.getConnectionStates({ signal }),
+  });
+
+  const cards = buildEngineCards(catalogQuery.data, statesQuery.data?.providers);
   const connections = connectionsQuery.data ?? [];
   const isLoading = catalogQuery.isLoading || connectionsQuery.isLoading;
   const isError = catalogQuery.isError || connectionsQuery.isError;
@@ -45,6 +52,14 @@ export function ProviderSettings() {
         Bring your own API keys — save one per engine, then run a connection test. Keys are
         write-only.
       </p>
+      {/* Both halves are load-bearing: customers are billed by their provider,
+          and their own rate limits govern how quickly a report can be produced.
+          Promising report-ready latency on someone else's quota would be a
+          promise we cannot keep. */}
+      <Alert tone="info">
+        Audits run on your keys, so provider usage is billed to your provider accounts at their
+        rates. Report-ready latency is not guaranteed — your key&apos;s own rate limits apply.
+      </Alert>
 
       {isError ? (
         <Alert tone="danger">

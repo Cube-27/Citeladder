@@ -1,6 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { RUN_ACTIVE_POLL_MS } from '@/lib/config/runs';
+import { useRunEvents } from '@/lib/runs/use-run-events';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -17,7 +20,8 @@ import { runsApi } from '@/lib/api/runs';
 import { shouldPollAudit } from '@/lib/runs/status';
 
 /** Poll interval (ms) while a run is active. Polling is the baseline; SSE is optional. */
-const POLL_INTERVAL_MS = 3_000;
+// Cadences live in config, not here (invariant 1).
+const POLL_INTERVAL_MS = RUN_ACTIVE_POLL_MS;
 
 function errorMessage(error: unknown): string {
   return humanizeApiError(error).message;
@@ -53,6 +57,10 @@ export default function RunDetailPage() {
     queryFn: ({ signal }) => runsApi.listExecutions(runId, { signal }),
     refetchInterval: active ? POLL_INTERVAL_MS : false,
   });
+
+  // Stream is the accelerator; the polling above stays the baseline, so a
+  // dropped stream never stalls the run.
+  useRunEvents(runId, auditQuery.data?.project_id, active);
 
   const cancelMutation = useMutation({
     mutationFn: () => runsApi.cancelAudit(runId),

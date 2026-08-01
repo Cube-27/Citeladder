@@ -36,6 +36,8 @@ export const providerKeys = {
   connections: () => ['providers', 'connections'] as const,
   connection: (connectionId: string) => ['providers', 'connection', connectionId] as const,
   catalog: () => ['providers', 'catalog'] as const,
+  // The authenticated workspace projection — distinct from the public catalog.
+  states: () => ['providers', 'states'] as const,
 };
 
 export const contentKeys = {

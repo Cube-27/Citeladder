@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProviderCatalog, ProviderConnection } from '@/lib/api/types';
 import {
   buildEngineCards,
+  isConnectable,
   connectionForTransport,
   discoveryModelOptions,
   isConfigured,
@@ -30,9 +31,76 @@ const catalog: ProviderCatalog = {
 };
 
 describe('buildEngineCards', () => {
-  it('renders all three engines in order', () => {
+  it('renders the shipped engines in order, then the planned ones', () => {
     const cards = buildEngineCards(catalog);
-    expect(cards.map((c) => c.logical_engine)).toEqual(['chatgpt', 'gemini', 'claude']);
+    expect(cards.map((c) => c.logical_engine)).toEqual([
+      'chatgpt',
+      'gemini',
+      'claude',
+      'grok',
+      'perplexity',
+      'copilot',
+    ]);
+  });
+
+  // The approved marketing exception is safe only because a planned provider
+  // is route-less and unavailable — that is what stops anything downstream
+  // resolving it to a working transport.
+  it('makes every planned provider unavailable, route-less and unconnectable', () => {
+    const cards = buildEngineCards(catalog);
+    const planned = cards.filter((c) => ['grok', 'perplexity', 'copilot'].includes(c.logical_engine));
+
+    expect(planned).toHaveLength(3);
+    for (const card of planned) {
+      expect(card.route).toBeNull();
+      expect(card.availability).toBe('unavailable');
+      expect(card.state).toBe('unavailable');
+      expect(isConnectable(card)).toBe(false);
+    }
+  });
+
+  // "We stored a key" and "the key works" are different facts. Only a
+  // successful probe may show as connected.
+  it('fails closed to missing when no authenticated state is supplied', () => {
+    const cards = buildEngineCards(catalog);
+    expect(cards.find((c) => c.logical_engine === 'chatgpt')?.state).toBe('missing');
+  });
+
+  it('reflects the authenticated four-state projection', () => {
+    const cards = buildEngineCards(catalog, [
+      {
+        key: 'chatgpt',
+        label: 'ChatGPT',
+        state: 'connected',
+        safe_reason: null,
+        grant_key: 'provider.openai',
+        latest_probe: {
+          status: 'ok',
+          safe_reason: null,
+          tested_at: '2026-08-01T00:00:00Z',
+          model: 'gpt-5.4',
+          latency_ms: 900,
+        },
+      },
+      {
+        key: 'gemini',
+        label: 'Gemini',
+        state: 'failed',
+        safe_reason: 'auth',
+        grant_key: 'provider.google',
+        latest_probe: {
+          status: 'failed',
+          safe_reason: 'auth',
+          tested_at: '2026-08-01T00:00:00Z',
+          model: null,
+          latency_ms: null,
+        },
+      },
+    ]);
+
+    expect(cards.find((c) => c.logical_engine === 'chatgpt')?.state).toBe('connected');
+    expect(cards.find((c) => c.logical_engine === 'gemini')?.state).toBe('failed');
+    expect(cards.find((c) => c.logical_engine === 'claude')?.state).toBe('missing');
   });
 
   it('gives each engine exactly one direct route with the direct label', () => {
@@ -57,10 +125,11 @@ describe('buildEngineCards', () => {
     expect(serialized).not.toContain('coming soon');
   });
 
-  it('is resilient to an undefined catalog (three engines, null routes)', () => {
+  it('is resilient to an undefined catalog (all cards, null routes)', () => {
     const cards = buildEngineCards(undefined);
-    expect(cards).toHaveLength(3);
+    expect(cards).toHaveLength(6);
     expect(cards.every((c) => c.route === null)).toBe(true);
+    expect(cards.every((c) => !isConnectable(c))).toBe(true);
   });
 });
 

@@ -78,8 +78,8 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('heading', { name: 'ChatGPT' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Gemini' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Claude' })).toBeInTheDocument();
-    // No connections → every card reads "Not configured".
-    expect(screen.getAllByText('Not configured')).toHaveLength(3);
+    // No connections → every card reads "Missing".
+    expect(screen.getAllByText('Missing')).toHaveLength(3);
   });
 
   it('shows ChatGPT as a fixed direct OpenAI route with no toggle', async () => {
@@ -112,9 +112,10 @@ describe('ProviderSettings', () => {
     await screen.findByRole('heading', { name: 'ChatGPT' });
   });
 
-  it('submits a new OpenAI key and surfaces a successful connection test', async () => {
+  it('keeps a saved-but-unprobed key at missing, then connects after a probe', async () => {
     const user = userEvent.setup();
     let created = false;
+    let probed = false;
     let createdTransport = '';
     mswServer.use(
       catalogHandler(),
@@ -127,8 +128,25 @@ describe('ProviderSettings', () => {
         created = true;
         return HttpResponse.json(connection(), { status: 201 });
       }),
-      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () =>
+      http.get('/api/v1/provider-connections/states', () =>
         HttpResponse.json({
+          workspace_id: WORKSPACE_ID,
+          providers: [
+            {
+              key: 'chatgpt',
+              label: 'ChatGPT',
+              // The whole point: a stored key alone is NOT connected.
+              state: probed ? 'connected' : 'missing',
+              safe_reason: probed ? null : 'verification required',
+              grant_key: 'provider.openai',
+              latest_probe: null,
+            },
+          ],
+        }),
+      ),
+      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () => {
+        probed = true;
+        return HttpResponse.json({
           connection_id: CONNECTION_ID,
           status: 'ok',
           error_code: '',
@@ -138,8 +156,8 @@ describe('ProviderSettings', () => {
           transport_provider: 'openai',
           transport_model: 'gpt-5.4',
           tested_at: '2026-07-15T00:00:00Z',
-        }),
-      ),
+        });
+      }),
     );
 
     renderWithProviders(<ProviderSettings />);
@@ -152,9 +170,11 @@ describe('ProviderSettings', () => {
     await user.type(utils.getByPlaceholderText(/paste your api key/i), 'sk-test-key');
     await user.click(utils.getByRole('button', { name: /save key/i }));
 
-    // After save the connection list refetches → card becomes configured.
-    await waitFor(() => expect(utils.getByText('Configured')).toBeInTheDocument());
-    expect(createdTransport).toBe('openai');
+    // Saving a key does NOT make the engine connected — only a successful
+    // probe does. Until then it stays missing with the verification reason.
+    await waitFor(() => expect(createdTransport).toBe('openai'));
+    expect(utils.getByText('Missing')).toBeInTheDocument();
+    expect(utils.getByText(/verification required/i)).toBeInTheDocument();
 
     await user.click(utils.getByRole('button', { name: /test connection/i }));
     expect(await utils.findByText(/connection succeeded/i)).toBeInTheDocument();
@@ -186,7 +206,7 @@ describe('ProviderSettings', () => {
       'section',
     )!;
     const utils = within(chatgptCard);
-    expect(utils.getByText('Configured')).toBeInTheDocument();
+    expect(utils.getByText('Missing')).toBeInTheDocument();
 
     await user.click(utils.getByRole('button', { name: /test connection/i }));
     expect(await utils.findByText(/invalid api key/i)).toBeInTheDocument();

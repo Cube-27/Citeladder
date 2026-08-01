@@ -8,6 +8,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { ProviderConnection } from '@/lib/api/types';
 import {
   connectionForTransport,
+  isConnectable,
   isConfigured,
   mergeRoutePayload,
   type EngineCardModel,
@@ -55,7 +56,12 @@ export function useEngineConnection({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!transport || !route) throw new Error('No route available.');
+      // Availability gate, not just a null check: a planned provider has no
+      // adapter and no route, so it must not be able to construct a mutation
+      // at all — a saved key for it would be a credential we can never use.
+      if (!isConnectable(model) || !transport || !route) {
+        throw new Error('No route available.');
+      }
       const routes = mergeRoutePayload(connection, model.logical_engine, route.default_model);
       if (connection) {
         return providersApi.updateConnection(connection.id, {
