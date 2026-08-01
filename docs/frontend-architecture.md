@@ -100,8 +100,13 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
   - Shell/switcher → `/workspaces`, `/projects`
   - Dashboard → `GET /projects/{id}/dashboard`, `GET /projects/{id}/dashboard/report.pdf`
   - Product tour → `GET/PATCH /workspaces/{id}/product-tour`
-  - Billing → `/billing/catalog`, `/billing/me`, `/billing/profile`, `/billing/checkout`,
-    `/billing/manage`, `/billing/cancel`, `/workspaces/{id}/entitlements`
+  - Billing → `/billing/catalog` (public), `/billing/entitlement`, `/billing/usage`,
+    `POST /billing/subscriptions` + `DELETE /billing/subscription`,
+    `POST /billing/addons` + `DELETE /billing/addons/{key}`, `POST /billing/topups`
+    (all mutations carry a mandatory `Idempotency-Key`; `202` while pending),
+    `POST /billing/webhooks/razorpay` (server-only). Legacy routes
+    (`/billing/me|profile|checkout|manage|cancel`, `/workspaces/{id}/entitlements`)
+    are deleted and return 404.
   - Setup → `/projects` (+ `/projects/{id}`), `GET/PUT /projects/{id}/brand-profile`,
     `POST /projects/{id}/brand-profile/suggest`, and explicit suggestion acceptance
   - Prompts → `/prompt-sets`, `/prompts/{id}`, `/prompt-sets/{id}/import` (CSV),

@@ -72,7 +72,7 @@ services.
 |---|---|
 | `app/api/auth.py` | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
 | `app/api/workspaces.py` | `GET /workspaces`, `POST /workspaces` |
-| `app/api/billing.py` | Public `GET /billing/catalog`; authenticated billing summary/profile/checkout/manage/cancel; membership-authorized workspace entitlements; signed Razorpay webhook |
+| `app/api/billing.py` | Public `GET /billing/catalog`; authenticated `/billing/entitlement` + `/billing/usage` reads; idempotent subscription/add-on/top-up activations (`202` while pending, mandatory `Idempotency-Key`); HMAC-signed Razorpay webhook. Legacy summary/profile/checkout/manage/cancel routes are deleted (404) |
 | `app/api/projects.py` | `GET/POST /projects` (create also best-effort queues the initial Site Health crawl), `GET/PATCH/DELETE /projects/{id}`, project/brand-profile endpoints, `GET /projects/{id}/dashboard`, authenticated `GET /projects/{id}/dashboard/report.pdf`, and Visibility projections |
 | `app/api/prompts.py` | `GET/POST /prompt-sets`, prompt CRUD (`PATCH/DELETE /prompts/{id}`), `POST /prompt-sets/{id}/import` (MVP CSV bulk-create), `POST /prompt-sets/{id}/generate` (AI topic+prompt generation via default agent), `POST /prompt-sets/{id}/prompts/bulk-status`, topics CRUD (`GET/POST /projects/{id}/topics`, `PATCH/DELETE /topics/{id}`) |
 | `app/api/provider_connections.py` | `GET/POST /provider-connections`, `PATCH/DELETE /provider-connections/{id}`, `POST /provider-connections/{id}/test`; `GET /provider-catalog` |
@@ -172,7 +172,7 @@ sponsored workspace. No project-owned query uses that owner id as an authorizati
 | File / model | Purpose | Provenance / version columns |
 |---|---|---|
 | `models/user.py` `User` | Auth identity | — |
-| `models/billing.py` billing account, sponsorship, subscription, entitlement, checkout and webhook rows | Provider-neutral account billing and immutable subscription/event history; no provider ids or billing PII in normal DTOs | Catalog version + monotonic capability revision + provider state version |
+| `models/billing.py` billing account, workspace link, subscription, grant/revocation, consumable ledger, idempotency/pending-activation and webhook rows | Provider-neutral account billing, immutable grant/ledger/event history; no provider ids or billing PII in normal DTOs | Catalog version + registry revision + entitlement lifecycle version + provider state version |
 | `models/workspace.py` `Workspace`, `WorkspaceMember` | Tenant + membership | — |
 | `models/project.py` `Project` | Workspace-scoped project (brand_name, website_url, country_code, language_code, benchmark_mode, default_repetitions) | — |
 | `models/brand.py` `Brand`, `BrandAlias`, `Competitor`, `OwnedDomain`, `UnintendedDomain` | Normalized brand identity (serialized back to the dict the scorer expects) | — |
