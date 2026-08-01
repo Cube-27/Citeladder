@@ -27,7 +27,7 @@ const FIELDS = [
     duration: 8,
   },
   {
-    className: 'bg-mkt-proof-soft top-12 -left-28 size-[32rem]',
+    className: 'bg-mkt-frost top-12 -left-28 size-[32rem]',
     animate: {
       x: [0, -90, 75, 0],
       y: [0, 65, -45, 0],
@@ -37,7 +37,7 @@ const FIELDS = [
     duration: 9.5,
   },
   {
-    className: 'bg-mkt-wash -bottom-28 left-1/4 size-[38rem]',
+    className: 'bg-mkt-surface-sunk -bottom-28 left-1/4 size-[38rem]',
     animate: {
       x: [0, 130, -100, 0],
       y: [0, -85, 65, 0],

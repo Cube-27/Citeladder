@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * The "meta" role: small (12/16), semibold labels with tabular numerals
  * (`font-mono tabular-nums`) — the same numeric recipe every figure in the
  * app renders with, so numbers align and read as data. The default ink is
- * `text-mkt-ink-muted` (paper/surface-only — on sunken/wash bands callers
+ * `text-mkt-ink-soft` (paper/surface-only — on sunken/wash bands callers
  * pass `text-mkt-ink-soft`); kickers layer `uppercase` on top. Codifying
  * the recipe as one component is why every label on the surface matches.
  */
@@ -18,7 +18,7 @@ export function Meta({
   return (
     <Tag
       className={cn(
-        'text-mkt-meta text-mkt-ink-muted font-mono font-semibold tabular-nums',
+        'text-mkt-xs text-mkt-ink-soft font-mono font-semibold tabular-nums',
         className,
       )}
     >
@@ -39,11 +39,11 @@ export function Eyebrow({
   return (
     <span
       className={cn(
-        'text-mkt-meta text-mkt-ink-soft inline-flex items-center gap-3 font-semibold',
+        'text-mkt-xs text-mkt-ink-soft gap-mkt-14 inline-flex items-center font-semibold',
         className,
       )}
     >
-      <span className="bg-mkt-proof ring-mkt-proof-soft size-1.5 shrink-0 rounded-full ring-5" />
+      <span className="bg-mkt-indigo ring-mkt-frost size-1.5 shrink-0 rounded-full ring-5" />
       {children}
     </span>
   );

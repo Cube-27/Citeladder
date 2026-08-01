@@ -60,7 +60,7 @@ export function AuthBrandPanel() {
     <div className="relative col-span-5 flex min-h-full flex-col justify-between px-12 py-12 max-[900px]:hidden xl:px-16">
       {/* Subtle light ambient glow */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-mkt-proof-soft/40 absolute -top-24 -left-24 size-96 rounded-full blur-[100px]" />
+        <div className="bg-mkt-frost/40 absolute -top-24 -left-24 size-96 rounded-full blur-[100px]" />
         <div className="bg-mkt-sky/40 absolute top-1/2 -right-24 size-80 rounded-full blur-[90px]" />
       </div>
 
@@ -71,10 +71,10 @@ export function AuthBrandPanel() {
 
         {/* Feature showcase */}
         <div className="my-auto max-w-lg space-y-8">
-          <div className="border-mkt-proof-line/50 bg-mkt-wash text-mkt-proof-hover inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
+          <div className="border-mkt-primary/50 bg-mkt-surface-sunk text-mkt-indigo inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
             <span className="relative flex size-2">
-              <span className="bg-mkt-proof-line absolute inline-flex size-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"></span>
-              <span className="bg-mkt-proof relative inline-flex size-2 rounded-full"></span>
+              <span className="bg-mkt-primary absolute inline-flex size-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"></span>
+              <span className="bg-mkt-indigo relative inline-flex size-2 rounded-full"></span>
             </span>
             Enterprise AI Search Intelligence
           </div>
@@ -94,17 +94,17 @@ export function AuthBrandPanel() {
             {PROOF_POINTS.map((proof) => (
               <div
                 key={proof.lead}
-                className="group shadow-card border-mkt-line-soft hover:border-mkt-proof-line flex items-start gap-4 rounded-xl border bg-white p-4 transition-colors duration-200"
+                className="group shadow-card border-mkt-black-10 hover:border-mkt-primary flex items-start gap-4 rounded-xl border bg-white p-4 transition-colors duration-200"
               >
                 <div
                   aria-hidden
-                  className="border-mkt-proof-line/30 bg-mkt-wash text-mkt-proof flex size-10 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105"
+                  className="border-mkt-primary/30 bg-mkt-surface-sunk text-mkt-indigo flex size-10 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105"
                 >
                   <proof.icon className="size-5" strokeWidth={1.75} />
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-mkt-ink text-sm font-semibold">{proof.lead}</p>
-                  <p className="text-mkt-ink-muted text-xs">{proof.description}</p>
+                  <p className="text-mkt-ink-soft text-xs">{proof.description}</p>
                 </div>
               </div>
             ))}
@@ -113,12 +113,12 @@ export function AuthBrandPanel() {
       </div>
 
       {/* Footer info & active engine status */}
-      <div className="text-mkt-ink-muted flex items-center justify-between pt-6 text-xs">
-        <Meta as="p" className="text-mkt-ink-muted">
+      <div className="text-mkt-ink-soft flex items-center justify-between pt-6 text-xs">
+        <Meta as="p" className="text-mkt-ink-soft">
           © {new Date().getFullYear()} CUBE27
         </Meta>
-        <div className="border-mkt-line-soft text-mkt-ink-soft flex items-center gap-2 rounded-full border bg-white px-3 py-1">
-          <span className="bg-mkt-evidence size-1.5 animate-pulse rounded-full motion-reduce:animate-none" />
+        <div className="border-mkt-black-10 text-mkt-ink-soft flex items-center gap-2 rounded-full border bg-white px-3 py-1">
+          <span className="bg-mkt-success size-1.5 animate-pulse rounded-full motion-reduce:animate-none" />
           <span>ChatGPT • Gemini • Claude Active</span>
         </div>
       </div>

@@ -5,14 +5,16 @@ import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 const ROW =
-  'group rounded-sm flex items-start gap-3 px-3 py-2 transition-colors duration-150 ' +
+  'group rounded-mkt-sm flex items-start gap-mkt-14 px-mkt-14 py-mkt-10 transition-colors duration-150 ' +
   'hover:bg-mkt-paper focus-visible:bg-mkt-paper';
 
 function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
   return (
     <>
       {'num' in item && (
-        <span className="text-mkt-meta text-mkt-proof pt-1 font-mono tabular-nums">{item.num}</span>
+        <span className="text-mkt-xs text-mkt-indigo pt-mkt-6 font-mono tabular-nums">
+          {item.num}
+        </span>
       )}
       <span className="min-w-0">
         <span className="text-mkt-sm text-mkt-ink block leading-snug font-semibold">
@@ -20,7 +22,7 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         </span>
         {/* One line, always: a menu row that wraps turns the panel into a
             wall of paragraphs and doubles its height. */}
-        <span className="text-mkt-sm text-mkt-ink-muted mt-0.5 block truncate leading-snug">
+        <span className="text-mkt-sm text-mkt-ink-soft mt-mkt-6 block truncate leading-snug">
           {item.desc}
         </span>
       </span>
@@ -55,7 +57,7 @@ function NavRow({
         onClick={onSelect}
       >
         <RowBody item={item} />
-        <ArrowUpRight className="text-mkt-ink-muted mt-0.5 size-4 shrink-0" aria-hidden />
+        <ArrowUpRight className="text-mkt-ink-soft mt-mkt-6 size-4 shrink-0" aria-hidden />
       </a>
     );
   }

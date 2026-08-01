@@ -39,18 +39,22 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'focus-ring border-mkt-line inline-flex h-6 w-12 shrink-0 items-center rounded-full border',
-        'transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60',
-        checked ? 'bg-mkt-proof' : 'bg-mkt-wash',
+        'focus-ring border-mkt-black-10 inline-flex h-6 w-12 shrink-0 items-center rounded-full border',
+        'duration-mkt-micro ease-mkt-micro transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        // Checked takes the accent gradient — the same fill every primary
+        // action carries, so "on" reads as the active state everywhere.
+        checked ? 'mkt-gradient-accent border-transparent' : 'bg-mkt-surface-sunk',
         className,
       )}
     >
-      {/* The thumb rests inside the track — it is not a floating surface, so
-          it carries no elevation (docs/design.md §4a). */}
+      {/* The thumb rests inside the track — it is not a floating surface, so it
+          carries no elevation. A hairline, not a shadow, separates it from the
+          fill beneath (the borderless-elevation rule this repo enforces). */}
       <span
         aria-hidden
         className={cn(
-          'bg-mkt-surface border-mkt-line size-4 rounded-full border transition-transform duration-150',
+          'bg-mkt-paper border-mkt-black-10 size-4 rounded-full border',
+          'duration-mkt-micro ease-mkt-micro transition-transform',
           checked ? 'translate-x-6' : 'translate-x-1',
         )}
       />

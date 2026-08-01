@@ -1,5 +1,7 @@
 'use client';
 
+import { Check } from 'lucide-react';
+
 import type { BillingCatalog, CatalogPlan, CredentialMode } from '@/lib/api/billing';
 import { formatMoney, headlinePrice, majorUnits } from '@/lib/billing/catalog';
 import {
@@ -54,19 +56,22 @@ export function PricingTierCard({
       data-tier={plan.key}
       data-highlighted={highlighted ? 'true' : undefined}
       className={cn(
-        'rounded-mkt-lg shadow-card flex h-full flex-col p-8',
-        highlighted ? 'bg-mkt-wash ring-mkt-proof-line ring-1' : 'bg-mkt-surface',
+        'rounded-mkt-lg shadow-mkt-card p-mkt-30 flex h-full flex-col',
+        highlighted ? 'bg-mkt-surface-sunk ring-mkt-primary ring-1' : 'bg-mkt-surface',
       )}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-mkt-display text-mkt-ink text-mkt-d5">{plan.name}</h3>
+      <div className="gap-mkt-14 flex items-center justify-between">
+        <h3 className="font-mkt-display text-mkt-ink text-mkt-hsm">{plan.name}</h3>
         {highlighted && <Badge tone="proof">Recommended</Badge>}
       </div>
-      <p className="text-mkt-sm text-mkt-ink-soft mt-2 min-h-[3rem]">
+      <p className="text-mkt-sm text-mkt-ink-soft mt-mkt-10 min-h-[3rem]">
         {presentation?.blurb ?? plan.description}
       </p>
 
-      <p className="text-mkt-ink text-hero mt-4 flex items-baseline gap-1.5 font-mono leading-none font-medium tabular-nums">
+      {/* The price rides the website's own display rung, not the app's
+          `text-hero`: an app token on this surface drifts with the dashboard
+          ladder rather than the site's. */}
+      <p className="text-mkt-ink text-mkt-h2 mt-mkt-20 gap-mkt-6 flex items-baseline font-mono tabular-nums">
         <AnimatedPrice
           value={numeric}
           format={(value) =>
@@ -81,19 +86,42 @@ export function PricingTierCard({
           announce={settled}
         />
         {price.kind === 'price' && (
-          <span className="text-mkt-ink-muted text-mkt-sm font-normal">per month</span>
+          <span className="text-mkt-ink-soft text-mkt-sm font-normal">per month</span>
         )}
       </p>
 
-      <ul className="border-mkt-line-soft mt-6 grid flex-1 gap-3 border-t pt-6">
+      {/* Each capability leads with a check glyph and reads as a sentence:
+          "Prompts tracked — 250". The raw `snake_case` key used to render
+          verbatim, so the list read as a database dump rather than a list of
+          what you get. Tight 10px rhythm — a feature list is a scan target,
+          not prose. */}
+      <ul className="border-mkt-black-10 mt-mkt-20 gap-mkt-10 pt-mkt-20 grid flex-1 border-t">
         {plan.capabilities.slice(0, 5).map((capability) => (
-          <li key={capability.key} className="text-mkt-sm text-mkt-ink-soft">
-            {capability.key.replaceAll('_', ' ')}: {renderValue(capability.value)}
+          <li
+            key={capability.key}
+            className="text-mkt-sm text-mkt-ink-soft gap-mkt-10 flex items-start"
+          >
+            {/* The glyph sits in a box as tall as the text's first line, so it
+                stays optically aligned on wrapped items without a nudge margin
+                — a margin here would be an off-ladder one-off, which is exactly
+                what this system exists to prevent. */}
+            <span aria-hidden className="text-mkt-sm flex h-[1lh] shrink-0 items-center">
+              <Check className="text-mkt-success size-4" />
+            </span>
+            <span>
+              {capabilityLabel(capability.key)}
+              {renderValue(capability.value) !== 'Included' && (
+                <>
+                  {' — '}
+                  <span className="text-mkt-ink font-medium">{renderValue(capability.value)}</span>
+                </>
+              )}
+            </span>
           </li>
         ))}
       </ul>
 
-      <div className="mt-6">
+      <div className="mt-mkt-20">
         <PlanCta plan={plan} priceKind={price.kind} onCheckout={onCheckout} pending={pending} />
       </div>
     </div>
@@ -115,7 +143,7 @@ function PlanCta({
     return (
       <a
         href={plan.contact_url ?? '/demo'}
-        className="border-mkt-line text-mkt-ink focus-ring text-mkt-sm inline-flex h-10 w-full items-center justify-center rounded-sm border font-medium"
+        className="border-mkt-black-10 text-mkt-ink focus-ring text-mkt-sm rounded-mkt-sm inline-flex h-10 w-full items-center justify-center border font-medium"
       >
         {CONTACT_LABEL}
       </a>
@@ -130,7 +158,7 @@ function PlanCta({
       type="button"
       disabled={disabled}
       onClick={() => onCheckout(plan)}
-      className="bg-mkt-proof text-mkt-surface focus-ring text-mkt-sm inline-flex h-10 w-full items-center justify-center rounded-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+      className="bg-mkt-indigo text-mkt-surface focus-ring text-mkt-sm rounded-mkt-sm inline-flex h-10 w-full items-center justify-center font-medium disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? 'Starting checkout…' : `Choose ${plan.name}`}
     </button>
@@ -141,4 +169,13 @@ function renderValue(value: boolean | number | string | null): string {
   if (value === null) return '—';
   if (typeof value === 'boolean') return value ? 'Included' : '—';
   return String(value);
+}
+
+/**
+ * `prompts_tracked` → `Prompts tracked`. The catalog keys are API identifiers;
+ * rendering them raw put underscores in front of the customer.
+ */
+function capabilityLabel(key: string): string {
+  const words = key.replaceAll('_', ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

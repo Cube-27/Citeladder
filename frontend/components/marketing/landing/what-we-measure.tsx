@@ -19,23 +19,25 @@ export function WhatWeMeasure() {
   return (
     <Section tone="paper" aria-labelledby="what-we-measure-title">
       <SectionHeader
-        kicker="What we measure"
+        eyebrow="What we measure"
         title="Every number says how it was produced."
-        intro="A score without its measurement conditions is not evidence. These four travel with every figure, in the app and in every export."
+        lead="A score without its measurement conditions is not evidence. These four travel with every figure, in the app and in every export."
         headingId="what-we-measure-title"
       />
-      <StaggerGroup className="grid gap-4 md:grid-cols-2">
+      <StaggerGroup className="gap-mkt-20 grid md:grid-cols-2">
         {WHAT_WE_MEASURE.map((item) => (
           <StaggerItem key={item.term} className="h-full">
-            <div className="rounded-mkt-lg bg-mkt-surface shadow-card h-full p-8">
-              <h3 className="font-mkt-display text-mkt-ink text-mkt-d5">{item.term}</h3>
-              <p className="text-mkt-body text-mkt-ink-soft mt-3">{item.detail}</p>
+            <div className="rounded-mkt-lg bg-mkt-surface shadow-mkt-card p-mkt-30 h-full">
+              <h3 className="font-mkt-display text-mkt-ink text-mkt-hsm">{item.term}</h3>
+              <p className="text-mkt-body text-mkt-ink-soft mt-mkt-14">{item.detail}</p>
             </div>
           </StaggerItem>
         ))}
       </StaggerGroup>
       <Reveal>
-        <p className="text-mkt-sm text-mkt-ink-muted mt-8 max-w-[90ch]">{WHAT_WE_MEASURE_NOTE}</p>
+        <p className="text-mkt-sm text-mkt-ink-soft mt-mkt-30 max-w-[90ch]">
+          {WHAT_WE_MEASURE_NOTE}
+        </p>
       </Reveal>
     </Section>
   );

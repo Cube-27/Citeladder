@@ -23,7 +23,7 @@ export function WallpaperPanel({
   return (
     <div
       className={cn(
-        'mkt-wallpaper shadow-card relative overflow-hidden',
+        'mkt-wallpaper shadow-mkt-card relative overflow-hidden',
         rounded && 'rounded-mkt-lg',
         className,
       )}
@@ -36,7 +36,7 @@ export function WallpaperPanel({
 
 /**
  * Scene window — the white panel that sits on the wallpaper. Borderless by
- * rule (docs/design.md §4a): an opaque surface carried by the `shadow-card`
+ * rule (docs/design.md §4a): an opaque surface carried by the `shadow-mkt-card`
  * rung, no border, no glass, no blur.
  */
 export function Panel({
@@ -44,7 +44,7 @@ export function Panel({
   className,
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <div className={cn('bg-mkt-surface rounded-mkt-sm shadow-card', className)}>{children}</div>
+    <div className={cn('bg-mkt-surface rounded-mkt-sm shadow-mkt-card', className)}>{children}</div>
   );
 }
 
@@ -58,8 +58,8 @@ export function ExampleDataNote({ className }: Readonly<{ className?: string }>)
   return (
     <span
       className={cn(
-        'text-mkt-meta text-mkt-ink-muted border-mkt-line bg-mkt-surface rounded-full',
-        'inline-flex items-center border px-3 py-1 whitespace-nowrap uppercase',
+        'text-mkt-xs text-mkt-ink-soft border-mkt-black-10 bg-mkt-surface rounded-full',
+        'px-mkt-14 py-mkt-6 inline-flex items-center border whitespace-nowrap uppercase',
         className,
       )}
     >

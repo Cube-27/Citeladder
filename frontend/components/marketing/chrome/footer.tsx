@@ -67,7 +67,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
 ];
 
 const LINK =
-  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink inline-flex items-center gap-1 transition-[color,transform] duration-200 hover:translate-x-0.5';
+  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink inline-flex items-center gap-mkt-6 transition-[color,transform] duration-200 hover:translate-x-0.5';
 
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
@@ -98,7 +98,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={social.label}
-      className="border-mkt-line bg-mkt-surface text-mkt-ink-soft hover:border-mkt-proof hover:text-mkt-proof grid size-10 place-items-center rounded-md border transition-colors duration-200"
+      className="border-mkt-black-10 bg-mkt-surface text-mkt-ink-soft hover:border-mkt-indigo hover:text-mkt-indigo rounded-mkt-sm grid size-10 place-items-center border transition-colors duration-200"
     >
       <Icon aria-hidden className="size-4" />
     </a>
@@ -110,14 +110,14 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
  */
 export function MarketingFooter() {
   return (
-    <footer className="border-mkt-line-soft bg-mkt-surface-sunk relative border-t">
-      <Container className="py-12 sm:py-16">
+    <footer className="border-mkt-black-10 bg-mkt-surface-sunk relative border-t">
+      <Container className="py-mkt-50 sm:py-mkt-70">
         <nav
           aria-label="Footer"
-          className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.5fr_repeat(5,minmax(0,1fr))]"
+          className="gap-x-mkt-30 gap-y-mkt-40 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.5fr_repeat(5,minmax(0,1fr))]"
         >
           {/* Brand Block */}
-          <div className="col-span-2 space-y-4 sm:col-span-3 lg:col-span-1">
+          <div className="space-y-mkt-20 col-span-2 sm:col-span-3 lg:col-span-1">
             <Link href="/" aria-label="Searchify home" className="inline-block">
               <Wordmark />
             </Link>
@@ -127,7 +127,7 @@ export function MarketingFooter() {
             </p>
 
             {SOCIAL_LINKS.length > 0 && (
-              <div className="flex gap-2 pt-2">
+              <div className="gap-mkt-10 pt-mkt-10 flex">
                 {SOCIAL_LINKS.map((social) => (
                   <SocialButton key={social.key} social={social} />
                 ))}
@@ -137,11 +137,11 @@ export function MarketingFooter() {
 
           {/* Link Columns */}
           {FOOTER_COLUMNS.map((column) => (
-            <div key={column.key} className="space-y-3">
-              <p className="f-col-label text-mkt-ink text-mkt-meta mb-3 font-mono font-semibold uppercase">
+            <div key={column.key} className="space-y-mkt-14">
+              <p className="f-col-label text-mkt-ink text-mkt-xs mb-mkt-14 font-mono font-semibold uppercase">
                 {column.label}
               </p>
-              <div className="grid justify-items-start gap-3">
+              <div className="gap-mkt-14 grid justify-items-start">
                 {column.links.map((link) => (
                   <FooterColumnLink key={link.label} link={link} />
                 ))}
@@ -151,7 +151,7 @@ export function MarketingFooter() {
         </nav>
 
         {/* Legal & Attribution Footer Strip */}
-        <div className="border-mkt-line-soft mt-12 flex flex-col gap-4 border-t pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-mkt-black-10 mt-mkt-50 gap-mkt-20 pt-mkt-30 flex flex-col border-t sm:flex-row sm:items-center sm:justify-between">
           <Meta>© {new Date().getFullYear()} Searchify · A CUBE27 product</Meta>
           <Meta>Audits run on your own provider keys</Meta>
         </div>

@@ -38,15 +38,15 @@ export default function RegisterPage() {
 
   return (
     <div className="relative">
-      <div className="shadow-card border-mkt-line-soft relative rounded-2xl border bg-white p-8 sm:p-10">
+      <div className="shadow-card border-mkt-black-10 relative rounded-2xl border bg-white p-8 sm:p-10">
         <div className="mb-8 space-y-2 text-center sm:text-left">
-          <div className="border-mkt-proof-line/30 bg-mkt-wash text-mkt-proof mb-2 inline-flex size-10 items-center justify-center rounded-xl border">
+          <div className="border-mkt-primary/30 bg-mkt-surface-sunk text-mkt-indigo mb-2 inline-flex size-10 items-center justify-center rounded-xl border">
             <UserPlus className="size-5" />
           </div>
           <h1 className="font-mkt-display text-mkt-ink text-2xl font-bold sm:text-3xl">
             Create your account
           </h1>
-          <p className="text-mkt-ink-muted text-sm">
+          <p className="text-mkt-ink-soft text-sm">
             Start measuring how AI answers describe your brand.
           </p>
         </div>
@@ -67,9 +67,9 @@ export default function RegisterPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="you@company.com"
-                  className="border-mkt-line-soft bg-mkt-paper-raised/80 text-mkt-ink placeholder:text-mkt-ink-muted focus:border-mkt-proof focus:ring-mkt-proof/20 pl-10 focus:bg-white"
+                  className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 pl-10 focus:bg-white"
                 />
-                <Mail className="text-mkt-ink-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Mail className="text-mkt-ink-soft pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               </div>
             )}
           </MktField>
@@ -83,13 +83,13 @@ export default function RegisterPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="At least 8 characters"
-                  className="border-mkt-line-soft bg-mkt-paper-raised/80 text-mkt-ink placeholder:text-mkt-ink-muted focus:border-mkt-proof focus:ring-mkt-proof/20 pr-10 pl-10 focus:bg-white"
+                  className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 pr-10 pl-10 focus:bg-white"
                 />
-                <Lock className="text-mkt-ink-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Lock className="text-mkt-ink-soft pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="text-mkt-ink-muted hover:text-mkt-ink-soft absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
+                  className="text-mkt-ink-soft hover:text-mkt-ink-soft absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
                   aria-label={showPassword ? 'Hide value' : 'Show value'}
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -107,13 +107,13 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="Re-enter your password"
-                  className="border-mkt-line-soft bg-mkt-paper-raised/80 text-mkt-ink placeholder:text-mkt-ink-muted focus:border-mkt-proof focus:ring-mkt-proof/20 pr-10 pl-10 focus:bg-white"
+                  className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 pr-10 pl-10 focus:bg-white"
                 />
-                <Lock className="text-mkt-ink-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Lock className="text-mkt-ink-soft pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="text-mkt-ink-muted hover:text-mkt-ink-soft absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
+                  className="text-mkt-ink-soft hover:text-mkt-ink-soft absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
                   aria-label={showConfirmPassword ? 'Hide confirm value' : 'Show confirm value'}
                 >
                   {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -132,7 +132,7 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <Link
             href="/login"
-            className="text-mkt-proof hover:text-mkt-proof-hover font-semibold transition-colors"
+            className="text-mkt-indigo hover:text-mkt-indigo font-semibold transition-colors"
           >
             Sign in
           </Link>

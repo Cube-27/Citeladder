@@ -24,12 +24,12 @@ import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
  */
 export default function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mkt-root bg-mkt-paper-raised text-mkt-ink selection:bg-mkt-proof relative min-h-dvh w-full overflow-hidden antialiased selection:text-white min-[900px]:grid min-[900px]:grid-cols-12">
+    <div className="mkt-root bg-mkt-surface-sunk text-mkt-ink selection:bg-mkt-indigo relative min-h-dvh w-full overflow-hidden antialiased selection:text-white min-[900px]:grid min-[900px]:grid-cols-12">
       {/* Subtle light ambient background lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="bg-mkt-proof-soft/50 absolute -top-40 -left-40 size-[500px] rounded-full blur-[120px]" />
+        <div className="bg-mkt-frost/50 absolute -top-40 -left-40 size-[500px] rounded-full blur-[120px]" />
         <div className="bg-mkt-sky/50 absolute -right-40 -bottom-40 size-[500px] rounded-full blur-[120px]" />
-        <div className="bg-mkt-proof-soft/30 absolute top-1/2 left-1/2 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
+        <div className="bg-mkt-frost/30 absolute top-1/2 left-1/2 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
       </div>
 
       <AuthBrandPanel />
@@ -48,16 +48,16 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
 
             {/* Mobile reassurance pills - No separating border lines */}
             <ul className="text-mkt-ink-soft mt-8 flex flex-wrap items-center justify-center gap-2 text-xs min-[900px]:hidden">
-              <li className="border-mkt-line-soft flex items-center gap-1.5 rounded-full border bg-white px-3 py-1">
-                <span aria-hidden className="bg-mkt-proof size-1.5 rounded-full" />
+              <li className="border-mkt-black-10 flex items-center gap-1.5 rounded-full border bg-white px-3 py-1">
+                <span aria-hidden className="bg-mkt-indigo size-1.5 rounded-full" />
                 Deterministic scoring
               </li>
-              <li className="border-mkt-line-soft flex items-center gap-1.5 rounded-full border bg-white px-3 py-1">
-                <span aria-hidden className="bg-mkt-evidence size-1.5 rounded-full" />
+              <li className="border-mkt-black-10 flex items-center gap-1.5 rounded-full border bg-white px-3 py-1">
+                <span aria-hidden className="bg-mkt-success size-1.5 rounded-full" />
                 Verified evidence
               </li>
-              <li className="border-mkt-line-soft flex items-center gap-1.5 rounded-full border bg-white px-3 py-1">
-                <span aria-hidden className="bg-mkt-proof-line size-1.5 rounded-full" />
+              <li className="border-mkt-black-10 flex items-center gap-1.5 rounded-full border bg-white px-3 py-1">
+                <span aria-hidden className="bg-mkt-primary size-1.5 rounded-full" />
                 Encrypted keys
               </li>
             </ul>
@@ -65,7 +65,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
         </div>
 
         {/* Footer band */}
-        <footer className="text-mkt-ink-muted text-xs">
+        <footer className="text-mkt-ink-soft text-xs">
           <span className="min-[900px]:hidden">© {new Date().getFullYear()} CUBE27</span>
         </footer>
       </main>

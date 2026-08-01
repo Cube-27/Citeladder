@@ -61,15 +61,17 @@ describe('Landing page (public marketing `/`)', () => {
     expect(h1s[0]).toBeInTheDocument();
   });
 
-  it('uses the double-ring CTA construction for the hero action', () => {
+  it('uses the icon-button construction for the hero action', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
+    // The ring/pill/two-badge structure is the construction the travelling
+    // arrow depends on — one badge alone cannot produce the effect.
     const hero = container.querySelector('header');
-    const cta = hero?.querySelector('.mkt-double-cta');
+    const cta = hero?.querySelector('.mkt-icon-btn');
     expect(cta).not.toBeNull();
-    expect(cta?.querySelector('.mkt-double-cta__pill')).not.toBeNull();
-    expect(cta?.querySelectorAll('.mkt-double-cta__badge')).toHaveLength(2);
+    expect(cta?.querySelector('.mkt-icon-btn__pill')).not.toBeNull();
+    expect(cta?.querySelectorAll('.mkt-icon-btn__badge')).toHaveLength(2);
   });
 
   it('exposes the section anchors the shared chrome links to', () => {
