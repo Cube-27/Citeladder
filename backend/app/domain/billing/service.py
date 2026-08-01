@@ -31,6 +31,7 @@ from app.core.config.billing import (
     ACTIVATION_KIND_ADDON,
     ACTIVATION_KIND_BASE,
     ACTIVATION_KIND_TOPUP,
+    ACTIVATION_PENDING,
     CANCELLATION_ALREADY_SCHEDULED,
     CANCELLATION_SCHEDULED,
     COMING_SOON_ADDON_KEYS,
@@ -122,6 +123,7 @@ from app.models.billing import (
     BillingSubscription,
     ConsumableLedger,
     GrantRevocation,
+    PendingActivation,
 )
 from app.models.user import User
 
@@ -827,6 +829,38 @@ async def current_addon_subscription(
             BillingSubscription.is_current.is_(True),
             BillingSubscription.subscription_kind == SUBSCRIPTION_KIND_ADDON,
             BillingSubscription.catalog_key == catalog_key,
+        )
+    )
+
+
+async def pending_base_activation(
+    session: AsyncSession, account_id: uuid.UUID
+) -> PendingActivation | None:
+    """The account's UNSETTLED base intent, if one holds the one-base slot.
+
+    A committed ``pending`` row blocks a second base purchase until
+    reconciliation settles/abandons it (transitions out of ``pending`` free
+    the slot); the partial unique index is the final concurrent-insert guard.
+    """
+    return await session.scalar(
+        select(PendingActivation).where(
+            PendingActivation.billing_account_id == account_id,
+            PendingActivation.activation_kind == ACTIVATION_KIND_BASE,
+            PendingActivation.status == ACTIVATION_PENDING,
+        )
+    )
+
+
+async def pending_addon_activation(
+    session: AsyncSession, account_id: uuid.UUID, catalog_key: str
+) -> PendingActivation | None:
+    """The UNSETTLED add-on intent for (account, key), if one holds the slot."""
+    return await session.scalar(
+        select(PendingActivation).where(
+            PendingActivation.billing_account_id == account_id,
+            PendingActivation.activation_kind == ACTIVATION_KIND_ADDON,
+            PendingActivation.catalog_key == catalog_key,
+            PendingActivation.status == ACTIVATION_PENDING,
         )
     )
 

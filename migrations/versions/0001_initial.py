@@ -3926,6 +3926,24 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("external_reference IS NOT NULL"),
     )
+    # One UNSETTLED base per account and one UNSETTLED add-on per
+    # (account, catalog_key): the final guard against two concurrent
+    # different-key intents both reaching the provider. Top-ups stay
+    # repeatable; transitions out of 'pending' free the slot.
+    op.create_index(
+        "uq_pending_activation_one_pending_base",
+        "pending_activations",
+        ["billing_account_id"],
+        unique=True,
+        postgresql_where=sa.text("activation_kind = 'base' AND status = 'pending'"),
+    )
+    op.create_index(
+        "uq_pending_activation_one_pending_addon",
+        "pending_activations",
+        ["billing_account_id", "catalog_key"],
+        unique=True,
+        postgresql_where=sa.text("activation_kind = 'addon' AND status = 'pending'"),
+    )
     op.create_table(
         "consumable_ledger",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -4063,6 +4081,16 @@ def downgrade() -> None:
         op.f("ix_consumable_ledger_billing_account_id"), table_name="consumable_ledger"
     )
     op.drop_table("consumable_ledger")
+    op.drop_index(
+        "uq_pending_activation_one_pending_addon",
+        table_name="pending_activations",
+        postgresql_where=sa.text("activation_kind = 'addon' AND status = 'pending'"),
+    )
+    op.drop_index(
+        "uq_pending_activation_one_pending_base",
+        table_name="pending_activations",
+        postgresql_where=sa.text("activation_kind = 'base' AND status = 'pending'"),
+    )
     op.drop_index(
         "uq_pending_activation_provider_reference",
         table_name="pending_activations",

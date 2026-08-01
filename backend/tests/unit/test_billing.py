@@ -11,14 +11,17 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 from pydantic import BaseModel, SecretStr, ValidationError
+from sqlalchemy.exc import IntegrityError
 
 from app.connectors.billing.base import BillingProviderError, ProviderMetadata
 from app.connectors.billing.razorpay import RazorpayBillingProvider
 from app.core.config.billing import (
     ADDON_EXTRA_PROJECT,
     CURRENCY_MINOR_UNITS,
+    REASON_ADDON_PENDING,
     REASON_CHECKOUT_UNAVAILABLE,
     REASON_CONTACT_ONLY,
+    REASON_SUBSCRIPTION_PENDING,
     REGION_CURRENCIES,
     REGION_INDIA,
     REGION_INTERNATIONAL,
@@ -58,7 +61,9 @@ from app.core.config.provider_catalog import (
 from app.domain.auth import service as auth_service
 from app.domain.billing import schemas as billing_schemas
 from app.domain.billing.idempotency import (
+    _PENDING_SLOT_REASONS,
     TrialUnavailableError,
+    _violated_constraint_name,
     reject_deferred_trial,
     request_fingerprint,
     validate_idempotency_key,
@@ -740,6 +745,46 @@ def test_reject_deferred_trial_raises_before_any_write() -> None:
     reject_deferred_trial(False)
     with pytest.raises(TrialUnavailableError, match="trial_unavailable"):
         reject_deferred_trial(True)
+
+
+class _UniqueViolation(Exception):
+    """Minimal asyncpg/psycopg-shaped driver error (constraint_name carrier)."""
+
+    def __init__(self, constraint_name: str) -> None:
+        super().__init__(constraint_name)
+        self.constraint_name = constraint_name
+
+
+def test_pending_slot_violations_map_to_the_guard_reasons() -> None:
+    """The different-key slot race surfaces the SAME safe 409 codes the
+    pre-insert guards return; a same-key violation stays on the replay path.
+    """
+    assert REASON_SUBSCRIPTION_PENDING == "subscription_pending"
+    assert REASON_ADDON_PENDING == "addon_pending"
+    cases = (
+        ("uq_pending_activation_one_pending_base", REASON_SUBSCRIPTION_PENDING),
+        ("uq_pending_activation_one_pending_addon", REASON_ADDON_PENDING),
+        ("uq_pending_activation_account_idempotency", None),
+        ("uq_idempotency_record_account_key", None),
+    )
+    for constraint_name, expected in cases:
+        violation = IntegrityError("INSERT", {}, _UniqueViolation(constraint_name))
+        name = _violated_constraint_name(violation)
+        assert name == constraint_name
+        assert _PENDING_SLOT_REASONS.get(name or "") == expected
+
+
+def test_violated_constraint_name_unwraps_the_driver_adapter() -> None:
+    """SQLAlchemy's asyncpg dialect re-raises a fresh IntegrityError FROM the
+    driver error, so the name must be recovered from the ``__cause__`` chain.
+    """
+    adapted = Exception("adapted IntegrityError")
+    adapted.__cause__ = _UniqueViolation("uq_pending_activation_one_pending_addon")
+    violation = IntegrityError("INSERT", {}, adapted)
+    assert (
+        _violated_constraint_name(violation)
+        == "uq_pending_activation_one_pending_addon"
+    )
 
 
 # --- Server-resolved quotes -------------------------------------------------

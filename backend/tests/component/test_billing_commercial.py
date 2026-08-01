@@ -37,13 +37,15 @@ from app.core.config.billing import (
     ACTIVATION_AUTHORITY_RECONCILIATION,
     ACTIVATION_AUTHORITY_WEBHOOK,
     OPERATION_SUBSCRIPTION_CREATE,
+    REASON_ADDON_PENDING,
+    REASON_SUBSCRIPTION_PENDING,
     billing_settings,
 )
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
 from app.domain.billing.idempotency import IntentResult, execute_intent
 from app.domain.billing.reconciliation import reconcile_pending_activations
-from app.domain.billing.service import resolve_base_intent
+from app.domain.billing.service import BillingConflictError, resolve_base_intent
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -624,6 +626,280 @@ async def test_insert_race_loser_replays_the_winner(
     async with session_factory() as session:
         assert await session.scalar(select(func.count(PendingActivation.id))) == 1
         assert await session.scalar(select(func.count(IdempotencyRecord.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_insert_race_different_keys_loser_conflicts(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two concurrent DIFFERENT-key base intents both pass the replay check and
+    the pre-insert guard: the one-pending-base partial unique makes exactly one
+    winner, and the loser's commit maps to the SAME 409 code the guard returns
+    — never a 500 and never a second provider call.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    await _register(client, "race-slot@example.com")
+    account_id = (await _account(db_session)).id
+    intent = resolve_base_intent(
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code="US",
+        at=datetime.now(UTC),
+    )
+
+    barrier = asyncio.Barrier(2)
+    real_insert = idempotency_module._insert_intent
+
+    async def _gated_insert(session: AsyncSession, **kwargs: object):
+        # Both intents arrive here only AFTER both replay checks missed.
+        await barrier.wait()
+        return await real_insert(session, **kwargs)
+
+    monkeypatch.setattr(idempotency_module, "_insert_intent", _gated_insert)
+
+    calls = 0
+
+    async def _provider_call(pending: PendingActivation) -> HostedSubscription:
+        nonlocal calls
+        calls += 1
+        return HostedSubscription(
+            external_subscription_id="sub_slot_race",
+            checkout_url="https://rzp.io/i/sub_slot_race",
+            status="created",
+            price_ref=_PLAN_REF,
+        )
+
+    async def _run(session: AsyncSession, key: str) -> IntentResult:
+        account = await session.get(BillingAccount, account_id)
+        assert account is not None
+        return await execute_intent(
+            session,
+            account=account,
+            operation=OPERATION_SUBSCRIPTION_CREATE,
+            intent=intent,
+            idempotency_key=key,
+            provider_call=_provider_call,
+            status_code=202,
+        )
+
+    async with (
+        session_factory() as first_session,
+        session_factory() as second_session,
+    ):
+        results = await asyncio.gather(
+            _run(first_session, "slot-race-key-1"),
+            _run(second_session, "slot-race-key-2"),
+            return_exceptions=True,
+        )
+
+    winners = [result for result in results if isinstance(result, IntentResult)]
+    losers = [result for result in results if isinstance(result, BillingConflictError)]
+    assert len(winners) == 1
+    assert len(losers) == 1
+    assert str(losers[0]) == REASON_SUBSCRIPTION_PENDING
+    assert calls == 1
+    assert winners[0].response.status == "pending"
+    async with session_factory() as session:
+        assert await session.scalar(select(func.count(PendingActivation.id))) == 1
+        assert await session.scalar(select(func.count(IdempotencyRecord.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_different_key_base_posts_one_winner_one_conflict(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """API level: two concurrent different-key base purchases — exactly one 202
+    and one 409 ``subscription_pending``, one provider call, one pending row.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    provider = _FakeProvider(session_factory)
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    await _register(client, "race-slot-api@example.com")
+    payload = {
+        "catalog_key": "tier_1",
+        "credential_mode": "byok",
+        "country_code": "US",
+    }
+
+    async def _post(key: str) -> httpx.Response:
+        return await client.post(
+            "/api/v1/billing/subscriptions",
+            json=payload,
+            headers={"Idempotency-Key": key},
+        )
+
+    first, second = await asyncio.gather(
+        _post("slot-api-key-1"), _post("slot-api-key-2")
+    )
+    responses = sorted((first, second), key=lambda response: response.status_code)
+    assert [response.status_code for response in responses] == [202, 409]
+    assert responses[1].json()["detail"] == REASON_SUBSCRIPTION_PENDING
+    assert len(provider.base_calls) == 1
+    assert await db_session.scalar(select(func.count(PendingActivation.id))) == 1
+    assert await db_session.scalar(select(func.count(IdempotencyRecord.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_same_key_replay_while_pending_still_replays(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: the unsettled-slot guard runs AFTER the replay check, so a
+    same-Idempotency-Key retry of a still-pending purchase replays the original
+    response instead of 409ing on its own pending row.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    provider = _FakeProvider(session_factory)
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    await _register(client, "replay-pending@example.com")
+    payload = {
+        "catalog_key": "tier_1",
+        "credential_mode": "byok",
+        "country_code": "US",
+    }
+    headers = {"Idempotency-Key": "replay-pending-1"}
+
+    first = await client.post(
+        "/api/v1/billing/subscriptions", json=payload, headers=headers
+    )
+    assert first.status_code == 202
+    assert first.json()["status"] == "pending"
+
+    replay = await client.post(
+        "/api/v1/billing/subscriptions", json=payload, headers=headers
+    )
+    assert replay.status_code == 202
+    assert replay.json() == first.json()
+    assert len(provider.base_calls) == 1
+    assert await db_session.scalar(select(func.count(PendingActivation.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_pending_frees_the_base_slot(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A terminal transition OUT of pending frees the one-base slot: an
+    unsettled pending blocks a second different-key purchase with 409, and
+    after it settles to failed a new different-key intent succeeds.
+    """
+    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    provider = _FakeProvider(session_factory)
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    await _register(client, "slot-lifecycle@example.com")
+    payload = {
+        "catalog_key": "tier_1",
+        "credential_mode": "byok",
+        "country_code": "US",
+    }
+
+    first = await client.post(
+        "/api/v1/billing/subscriptions",
+        json=payload,
+        headers={"Idempotency-Key": "slot-key-0001"},
+    )
+    assert first.status_code == 202
+
+    blocked = await client.post(
+        "/api/v1/billing/subscriptions",
+        json=payload,
+        headers={"Idempotency-Key": "slot-key-0002"},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == REASON_SUBSCRIPTION_PENDING
+    assert len(provider.base_calls) == 1
+
+    # Reconciliation-style terminal settle (abandoned follows the same path).
+    pending = (await db_session.scalars(select(PendingActivation))).one()
+    pending.status = "failed"
+    pending.failed_at = datetime.now(UTC)
+    await db_session.commit()
+
+    # The provider issues a FRESH hosted reference for the retry (provider
+    # references stay unique across every pending row, settled or not).
+    provider.subscription_id = "sub_freed"
+    retry = await client.post(
+        "/api/v1/billing/subscriptions",
+        json=payload,
+        headers={"Idempotency-Key": "slot-key-0003"},
+    )
+    assert retry.status_code == 202
+    assert retry.json()["activation_id"] != first.json()["activation_id"]
+    assert len(provider.base_calls) == 2
+    assert await db_session.scalar(select(func.count(PendingActivation.id))) == 2
+
+
+@pytest.mark.asyncio
+async def test_pending_addon_blocks_same_key_but_not_other_addons_or_topups(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The one-pending-addon slot is scoped by (account, catalog_key): an
+    unsettled add-on blocks only a second different-key intent for the SAME
+    key — a different add-on key and a repeatable top-up still go through.
+    """
+    monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
+    monkeypatch.setattr(billing_settings, "addon_extra_prompts_usd_minor", 2_900)
+    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_usd_minor", 1_000)
+    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_per_pack", 25)
+    _enable_checkout(
+        monkeypatch,
+        {
+            "addon_extra_project:international:base": "plan_addon_private",
+            "addon_extra_prompts:international:base": "plan_prompts_private",
+            f"{_TOPUP_KEY}:international:base": _TOPUP_REF,
+        },
+    )
+    provider = _FakeProvider(session_factory, payment_id="pay_slot")
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
+    await _register(client, "addon-slot@example.com")
+    account = await _account(db_session)
+    await _seed_live_base(db_session, account)
+
+    first = await client.post(
+        "/api/v1/billing/addons",
+        json={"catalog_key": "addon_extra_project", "quantity": 1},
+        headers={"Idempotency-Key": "addon-slot-001"},
+    )
+    assert first.status_code == 202
+
+    # Same (account, catalog_key), different Idempotency-Key: 409 addon_pending.
+    blocked = await client.post(
+        "/api/v1/billing/addons",
+        json={"catalog_key": "addon_extra_project", "quantity": 1},
+        headers={"Idempotency-Key": "addon-slot-002"},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == REASON_ADDON_PENDING
+    assert len(provider.addon_calls) == 1
+
+    # A DIFFERENT add-on catalog key is not blocked (fresh hosted reference).
+    provider.subscription_id = "sub_addon_b"
+    other = await client.post(
+        "/api/v1/billing/addons",
+        json={"catalog_key": "addon_extra_prompts", "quantity": 1},
+        headers={"Idempotency-Key": "addon-slot-003"},
+    )
+    assert other.status_code == 202
+    assert len(provider.addon_calls) == 2
+
+    # Top-ups are intentionally repeatable and never slot-blocked.
+    topup = await _purchase_topup(client, quantity=1, key="addon-slot-topup")
+    assert topup.status_code == 202
+    assert len(provider.payment_calls) == 1
+    assert await db_session.scalar(select(func.count(PendingActivation.id))) == 3
 
 
 @pytest.mark.asyncio

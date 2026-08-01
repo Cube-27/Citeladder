@@ -51,13 +51,15 @@ from app.core.config.billing import (
     IDEMPOTENCY_KEY_MIN_LENGTH,
     IDEMPOTENCY_STARTED,
     PROVIDER_RAZORPAY,
+    REASON_ADDON_PENDING,
     REASON_IDEMPOTENCY_KEY_REQUIRED,
     REASON_IDEMPOTENCY_KEY_REUSED,
+    REASON_SUBSCRIPTION_PENDING,
     REASON_TRIAL_REQUESTED_UNAVAILABLE,
     billing_settings,
 )
 from app.domain.billing.schemas import ActivationResponse
-from app.domain.billing.service import ResolvedIntent
+from app.domain.billing.service import BillingConflictError, ResolvedIntent
 from app.models.billing import BillingAccount, IdempotencyRecord, PendingActivation
 
 # A hosted result is either a subscription or a one-time payment.
@@ -302,6 +304,35 @@ async def replay_intent(
     return IntentResult(response=_pending_response(pending), replayed=True)
 
 
+# The one-pending-slot partial unique indexes (PendingActivation.__table_args__
+# and migrations/versions/0001_initial.py) mapped onto the SAME safe 409 code
+# the pre-insert guard returns. A violation of one means a DIFFERENT-key
+# intent already holds the unsettled slot — never replay it as a same-key win.
+_PENDING_SLOT_REASONS: dict[str, str] = {
+    "uq_pending_activation_one_pending_base": REASON_SUBSCRIPTION_PENDING,
+    "uq_pending_activation_one_pending_addon": REASON_ADDON_PENDING,
+}
+
+
+def _violated_constraint_name(exc: IntegrityError) -> str | None:
+    """The constraint a failed commit tripped, unwrapping driver adapters.
+
+    SQLAlchemy's asyncpg dialect re-raises a fresh ``IntegrityError`` FROM the
+    driver error, so the name lives somewhere on the ``__cause__`` chain
+    (``constraint_name`` on asyncpg, ``diag.constraint_name`` on psycopg).
+    """
+    current: BaseException | None = exc.orig
+    while current is not None:
+        name = getattr(current, "constraint_name", None)  # asyncpg
+        if name is None:
+            diag = getattr(current, "diag", None)  # psycopg
+            name = getattr(diag, "constraint_name", None) if diag is not None else None
+        if name is not None:
+            return name
+        current = current.__cause__
+    return None
+
+
 async def _replay_insert_race_winner(
     session: AsyncSession,
     *,
@@ -339,6 +370,42 @@ async def _replay_insert_race_winner(
     return replayed
 
 
+async def _recover_insert_race(
+    session: AsyncSession,
+    *,
+    violation: IntegrityError,
+    account: BillingAccount,
+    operation: str,
+    intent: ResolvedIntent,
+    idempotency_key: str,
+) -> IntentResult:
+    """Map an intent-insert unique violation onto the right recovery.
+
+    Two distinct losers reach this path:
+
+    - SAME key: the (account, key) unique tripped, so replay the winner's
+      committed intent (the provider is never called twice).
+    - DIFFERENT key, same slot: a one-pending partial unique tripped, so an
+      earlier intent is still settling — refuse with the SAME 409 code the
+      pre-insert guard returns (never a 500, never a second provider call).
+
+    The loser's transaction is dead either way: ``rollback()`` before any
+    further read (it expires every persistent object regardless of
+    ``expire_on_commit=False``).
+    """
+    reason = _PENDING_SLOT_REASONS.get(_violated_constraint_name(violation) or "")
+    if reason is not None:
+        await session.rollback()
+        raise BillingConflictError(reason)
+    return await _replay_insert_race_winner(
+        session,
+        account=account,
+        operation=operation,
+        intent=intent,
+        idempotency_key=idempotency_key,
+    )
+
+
 async def _run_new_intent(
     session: AsyncSession,
     *,
@@ -362,9 +429,10 @@ async def _run_new_intent(
             fingerprint=fingerprint,
             now=at,
         )
-    except IntegrityError:
-        return await _replay_insert_race_winner(
+    except IntegrityError as exc:
+        return await _recover_insert_race(
             session,
+            violation=exc,
             account=account,
             operation=operation,
             intent=intent,

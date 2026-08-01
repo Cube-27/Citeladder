@@ -471,6 +471,23 @@ class PendingActivation(Base):
             unique=True,
             postgresql_where=text("external_reference IS NOT NULL"),
         ),
+        # One-base / one-addon invariants on the UNSETTLED slot: a committed
+        # pending holds the slot until reconciliation settles/abandons it, so
+        # a concurrent DIFFERENT-key intent cannot reach the provider twice.
+        # Top-ups are intentionally repeatable and stay unconstrained.
+        Index(
+            "uq_pending_activation_one_pending_base",
+            "billing_account_id",
+            unique=True,
+            postgresql_where=text("activation_kind = 'base' AND status = 'pending'"),
+        ),
+        Index(
+            "uq_pending_activation_one_pending_addon",
+            "billing_account_id",
+            "catalog_key",
+            unique=True,
+            postgresql_where=text("activation_kind = 'addon' AND status = 'pending'"),
+        ),
         CheckConstraint("quantity > 0", name="ck_pending_activation_quantity_positive"),
         Index("ix_pending_activation_status_created", "status", "created_at"),
     )

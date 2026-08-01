@@ -61,7 +61,9 @@ from app.core.config.billing import (
     OPERATION_SUBSCRIPTION_CREATE,
     OPERATION_TOPUP_PURCHASE,
     REASON_ADDON_EXISTS,
+    REASON_ADDON_PENDING,
     REASON_SUBSCRIPTION_EXISTS,
+    REASON_SUBSCRIPTION_PENDING,
     billing_settings,
 )
 from app.domain.billing.idempotency import (
@@ -93,6 +95,8 @@ from app.domain.billing.service import (
     current_base_subscription,
     live_base_subscription,
     owned_account,
+    pending_addon_activation,
+    pending_base_activation,
     persist_billing_country,
     public_catalog,
     resolve_addon_intent,
@@ -462,22 +466,61 @@ def _purchase_country(account: BillingAccount) -> str:
     return account.billing_country
 
 
-async def _reject_existing_base(session: AsyncSession, account: BillingAccount) -> None:
-    """Refuse a second base purchase while one is live."""
+async def _reject_live_base(session: AsyncSession, account: BillingAccount) -> None:
+    """Refuse a second base purchase while one is LIVE."""
     subscription = await current_base_subscription(session, account.id)
     if subscription is not None and subscription.status in LIVE_SUBSCRIPTION_STATUSES:
         raise BillingConflictError(REASON_SUBSCRIPTION_EXISTS)
 
 
-async def _reject_existing_addon(
+async def _reject_unsettled_base(
+    session: AsyncSession, account: BillingAccount
+) -> None:
+    """Refuse a base purchase while an earlier intent is still SETTLING.
+
+    A committed ``pending`` base holds the one-base slot exactly as a live
+    subscription does — otherwise two different-key intents both reach the
+    provider. The partial unique index stays the final TOCTOU guard inside
+    the intent commit.
+    """
+    if await pending_base_activation(session, account.id) is not None:
+        raise BillingConflictError(REASON_SUBSCRIPTION_PENDING)
+
+
+async def _reject_existing_base(session: AsyncSession, account: BillingAccount) -> None:
+    """Refuse a second base purchase while one is live OR still settling."""
+    await _reject_live_base(session, account)
+    await _reject_unsettled_base(session, account)
+
+
+async def _reject_live_addon(
     session: AsyncSession, account: BillingAccount, catalog_key: str
 ) -> None:
-    """Refuse a duplicate add-on while one is live (quantity changes are a
+    """Refuse a duplicate add-on while one is LIVE (quantity changes are a
     separate, later operation).
     """
     subscription = await current_addon_subscription(session, account.id, catalog_key)
     if subscription is not None and subscription.status in LIVE_SUBSCRIPTION_STATUSES:
         raise BillingConflictError(REASON_ADDON_EXISTS)
+
+
+async def _reject_unsettled_addon(
+    session: AsyncSession, account: BillingAccount, catalog_key: str
+) -> None:
+    """Refuse an add-on intent while an earlier one for the SAME (account,
+    catalog_key) is still settling; other add-on keys and top-ups are
+    unaffected.
+    """
+    if await pending_addon_activation(session, account.id, catalog_key) is not None:
+        raise BillingConflictError(REASON_ADDON_PENDING)
+
+
+async def _reject_existing_addon(
+    session: AsyncSession, account: BillingAccount, catalog_key: str
+) -> None:
+    """Refuse a duplicate add-on while one is live OR still settling."""
+    await _reject_live_addon(session, account, catalog_key)
+    await _reject_unsettled_addon(session, account, catalog_key)
 
 
 async def _require_live_base(session: AsyncSession, account: BillingAccount) -> None:

@@ -273,6 +273,10 @@ REASON_CATALOG_KEY_UNKNOWN: Final = "catalog_key_unknown"
 REASON_QUANTITY_OUT_OF_BOUNDS: Final = "quantity_out_of_bounds"
 REASON_SUBSCRIPTION_EXISTS: Final = "subscription_already_active"
 REASON_ADDON_EXISTS: Final = "addon_already_active"
+# An earlier intent is COMMITTED but still settling (status pending): the
+# one-base / one-addon slot is held exactly as if it were already live.
+REASON_SUBSCRIPTION_PENDING: Final = "subscription_pending"
+REASON_ADDON_PENDING: Final = "addon_pending"
 REASON_NO_CURRENT_SUBSCRIPTION: Final = "no_current_subscription"
 REASON_BASE_SUBSCRIPTION_REQUIRED: Final = "base_subscription_required"
 REASON_PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
