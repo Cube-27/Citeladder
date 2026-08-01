@@ -1,10 +1,9 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { CreditCard, ExternalLink } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -12,101 +11,75 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BILLING_CONFIRM_MAX_POLLS, BILLING_CONFIRM_POLL_MS, billingApi } from '@/lib/api/billing';
+import { UsageMeters } from '@/components/billing/usage-meters';
+import { billingApi, createIdempotencyKey, type SelfServePlanKey } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
-
-const MONEY_FORMATTERS = {
-  INR: new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-  }),
-  USD: new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }),
-} as const;
-
-function money(amountMinor: number, currency: 'INR' | 'USD') {
-  return MONEY_FORMATTERS[currency].format(amountMinor / 100);
-}
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import {
+  catalogPlanByKey,
+  checkoutSelection,
+  formatMoney,
+  headlinePrice,
+} from '@/lib/billing/catalog';
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 }
 
+/**
+ * Account plan orchestration. Usage rendering lives in `UsageMeters`.
+ *
+ * Country is REQUEST-OWNED: `/billing/profile` no longer exists, so the ISO
+ * country is submitted with the checkout that uses it rather than stored and
+ * edited separately. There is no free/paid branch left — a plan is whatever
+ * the catalog and the resolved grants say it is.
+ */
 export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean }>) {
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams();
   const { entitlement, isLoading: entitlementLoading } = useEntitlement();
-  const [countryDraft, setCountryDraft] = useState('');
-  const [confirming] = useState(() => searchParams.get('checkout') === 'return');
-  const [confirmationPolls, setConfirmationPolls] = useState(0);
+  const [country, setCountry] = useState('');
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  const summaryQuery = useQuery({
-    queryKey: queryKeys.billing.me(),
-    queryFn: ({ signal }) => billingApi.me({ signal }),
-    enabled,
-  });
-  const summaryTier = summaryQuery.data?.tier_key;
-  const refetchSummary = summaryQuery.refetch;
-  const country = countryDraft || summaryQuery.data?.billing_country || '';
   const catalogQuery = useQuery({
     queryKey: queryKeys.billing.catalog(country || undefined),
     queryFn: ({ signal }) => billingApi.catalog(country || undefined, { signal }),
-    enabled: enabled && summaryQuery.isSuccess,
+    enabled,
+    // Typing a country changes the query key. Without this the cards blank out
+    // and every checkout button re-disables on each keystroke while the
+    // re-priced catalog loads; the previous catalog stays on screen instead.
+    placeholderData: keepPreviousData,
   });
 
-  useEffect(() => {
-    if (!confirming) return;
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('checkout');
-    const query = params.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
-    );
-  }, [confirming, searchParams]);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
 
-  useEffect(() => {
-    if (
-      !enabled ||
-      !confirming ||
-      summaryTier === 'paid' ||
-      confirmationPolls >= BILLING_CONFIRM_MAX_POLLS
-    ) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void refetchSummary().finally(() => {
-        setConfirmationPolls((count) => count + 1);
-      });
-    }, BILLING_CONFIRM_POLL_MS);
-    return () => window.clearTimeout(timer);
-  }, [confirmationPolls, confirming, enabled, refetchSummary, summaryTier]);
-
-  const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
-  };
-  const countryMutation = useMutation({
-    mutationFn: () => billingApi.updateCountry(country.trim().toUpperCase()),
-    onSuccess: refresh,
-  });
   const checkoutMutation = useMutation({
-    mutationFn: () => billingApi.checkout(globalThis.crypto.randomUUID()),
-    onSuccess: ({ checkout_url }) => window.location.assign(checkout_url),
+    mutationFn: (catalogKey: SelfServePlanKey) =>
+      // BYOK only: `credit_price` is null in this release, so a funded
+      // selection cannot start a checkout the backend would refuse.
+      billingApi.createSubscription(
+        { catalog_key: catalogKey, credential_mode: 'byok', country_code: country },
+        createIdempotencyKey(),
+      ),
+    onSuccess: async (activation) => {
+      // A hosted checkout is only actionable while the URL is present.
+      if (activation.checkout_url) {
+        hardNavigate(activation.checkout_url);
+        return;
+      }
+      await refresh();
+    },
   });
+
   const cancelMutation = useMutation({
-    mutationFn: () => billingApi.cancel(),
+    mutationFn: () => billingApi.cancelSubscription(),
     onSuccess: async () => {
       setCancelOpen(false);
       await refresh();
     },
   });
 
-  if (!enabled || summaryQuery.isLoading) {
+  if (!enabled || entitlementLoading) {
     return (
       <Card>
         <CardContent className="grid gap-3">
@@ -116,165 +89,155 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
       </Card>
     );
   }
-  if (summaryQuery.isError || !summaryQuery.data) {
-    return <Alert tone="danger">Could not load billing. Check your connection and retry.</Alert>;
-  }
 
-  const summary = summaryQuery.data;
-  const paidPlan = catalogQuery.data?.plans.find((plan) => plan.tier_key === 'paid');
-  const price = paidPlan?.price;
-  const effectiveTier = entitlement?.tier_key ?? summary.tier_key;
-  const confirmationTimedOut =
-    confirming && summary.tier_key !== 'paid' && confirmationPolls >= BILLING_CONFIRM_MAX_POLLS;
+  const subscription = entitlement?.subscription ?? null;
+  const catalog = catalogQuery.data ?? null;
+  const currentPlan =
+    subscription && catalog ? catalogPlanByKey(catalog, subscription.catalog_key) : null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-      {confirming ? (
-        <Alert
-          tone={summary.tier_key === 'paid' ? 'success' : confirmationTimedOut ? 'warning' : 'info'}
-        >
-          {summary.tier_key === 'paid'
-            ? 'Payment confirmed. Paid capabilities are active.'
-            : confirmationTimedOut
-              ? 'Payment is still confirming — your plan has not changed.'
-              : 'Confirming payment — your plan will update here after verification completes.'}
-        </Alert>
-      ) : null}
-
       <Card>
         <CardHeader>
           <CardTitle>Current plan</CardTitle>
           <CardDescription>
-            The active workspace inherits its sponsor’s entitlement.
+            Your capabilities come from the grants your active subscription issued.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-foreground text-heading-sm capitalize">{effectiveTier}</p>
-              <p className="text-muted mt-1 text-xs">
-                {summary.subscription_status
-                  ? `Razorpay subscription: ${summary.subscription_status.replaceAll('_', ' ')}`
-                  : 'No Razorpay subscription'}
-              </p>
-            </div>
-            <Badge variant="status" value={effectiveTier === 'paid' ? 'success' : 'info'}>
-              {effectiveTier === 'paid' ? 'Paid' : 'Free'}
-            </Badge>
-          </div>
-          {entitlementLoading ? (
-            <p className="text-muted text-xs">Loading workspace entitlement…</p>
-          ) : null}
-          {summary.current_period_end ? (
-            <p className="text-secondary text-sm">
-              {summary.cancel_at_period_end ? 'Access scheduled to end' : 'Current period ends'}{' '}
-              {new Date(summary.current_period_end).toLocaleDateString('en-US', {
-                dateStyle: 'medium',
-                timeZone: 'UTC',
-              })}
-              .
-            </p>
-          ) : null}
-          {summary.subscription_status && !summary.cancel_at_period_end ? (
-            <Button
-              variant="secondary"
-              disabled={cancelMutation.isPending}
-              onClick={() => setCancelOpen(true)}
-            >
-              {cancelMutation.isPending ? 'Scheduling cancellation…' : 'Cancel at period end'}
-            </Button>
-          ) : null}
-          {cancelMutation.isError ? (
-            <Alert tone="danger">{message(cancelMutation.error)}</Alert>
-          ) : null}
+          {entitlement === null ? (
+            <Alert tone="warning">
+              Your entitlement could not be resolved. No paid capability is active until it does.
+            </Alert>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-foreground text-heading-sm">
+                    {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
+                  </p>
+                  <p className="text-muted mt-1 text-xs">
+                    {subscription
+                      ? `Subscription: ${subscription.status.replaceAll('_', ' ')}`
+                      : 'No active subscription'}
+                  </p>
+                </div>
+                <Badge variant="status" value={subscription ? 'success' : 'info'}>
+                  {subscription ? 'Active' : 'None'}
+                </Badge>
+              </div>
+              {subscription?.current_period_end ? (
+                <p className="text-secondary text-sm">
+                  {subscription.cancel_at_period_end
+                    ? 'Access scheduled to end'
+                    : 'Current period ends'}{' '}
+                  {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                    dateStyle: 'medium',
+                    timeZone: 'UTC',
+                  })}
+                  .
+                </p>
+              ) : null}
+              {subscription && !subscription.cancel_at_period_end ? (
+                <Button
+                  variant="secondary"
+                  disabled={cancelMutation.isPending}
+                  onClick={() => setCancelOpen(true)}
+                >
+                  {cancelMutation.isPending ? 'Scheduling cancellation…' : 'Cancel at period end'}
+                </Button>
+              ) : null}
+              {cancelMutation.isError ? (
+                <Alert tone="danger">{message(cancelMutation.error)}</Alert>
+              ) : null}
+            </>
+          )}
         </CardContent>
       </Card>
 
+      <UsageMeters enabled={enabled} />
+
       <Card>
         <CardHeader>
-          <CardTitle>Paid monthly</CardTitle>
+          <CardTitle>Change plan</CardTitle>
           <CardDescription>
-            India uses INR with GST added. Other supported countries use USD; your card issuer may
-            convert the charge.
+            Prices are resolved by the server for your billing country. Audits run on your own
+            provider keys, billed by those providers directly.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           {catalogQuery.isError ? (
             <Alert tone="danger">
-              Could not load the regional price catalog. Check your connection and retry.
+              Could not load the plan catalog. Check your connection and retry.
             </Alert>
-          ) : catalogQuery.isLoading ? (
-            <Skeleton className="h-16 w-full" />
-          ) : price && price.total_amount_minor > 0 ? (
-            <div>
-              <p className="text-foreground text-xl font-semibold">
-                {money(price.base_amount_minor, price.currency)}
-                <span className="text-muted ml-1 text-sm font-normal">/ month</span>
-              </p>
-              {price.tax_label ? (
-                <p className="text-muted mt-1 text-xs">
-                  {price.tax_label}; checkout total{' '}
-                  {money(price.total_amount_minor, price.currency)}.
-                </p>
-              ) : null}
-            </div>
+          ) : catalogQuery.isLoading || !catalog ? (
+            <Skeleton className="h-24 w-full" />
           ) : (
-            <Alert tone="info">
-              The INR catalog amount will appear after the approved USD/INR provisioning rate is
-              configured. The published international anchor remains $49/month before tax.
-            </Alert>
+            <>
+              <label className="grid gap-1.5 text-sm">
+                <span className="text-secondary font-medium">Billing country</span>
+                <input
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
+                  placeholder="IN"
+                  aria-describedby="billing-country-help"
+                  className="border-border bg-background focus-ring h-10 rounded-md border px-3 uppercase outline-none"
+                />
+                <span id="billing-country-help" className="text-muted text-xs">
+                  Two-letter ISO code. The server resolves currency, tax and the exact amount from
+                  it — the price is never submitted by this page.
+                </span>
+              </label>
+
+              {catalog.plans.map((plan) => {
+                const price = headlinePrice(plan, 'byok');
+                const selection = checkoutSelection(plan, 'byok');
+                return (
+                  <div
+                    key={plan.key}
+                    className="border-border grid gap-2 rounded-md border p-3"
+                    data-tier={plan.key}
+                  >
+                    <div className="flex items-baseline justify-between gap-4">
+                      <span className="text-foreground font-medium">{plan.name}</span>
+                      <span className="text-foreground text-sm">
+                        {price.kind === 'price'
+                          ? `${formatMoney(price.money, catalog.currency_minor_units)} / month`
+                          : price.kind === 'contact'
+                            ? 'Contact us'
+                            : 'Not yet priced'}
+                      </span>
+                    </div>
+                    {plan.contact_only ? (
+                      <Button asChild variant="secondary">
+                        <Link href={plan.contact_url ?? '/demo'}>
+                          Contact sales <ExternalLink className="size-4" aria-hidden />
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        disabled={
+                          !selection.ok || country.length !== 2 || checkoutMutation.isPending
+                        }
+                        onClick={() =>
+                          selection.ok && checkoutMutation.mutate(selection.catalog_key)
+                        }
+                      >
+                        <CreditCard className="size-4" aria-hidden />
+                        {checkoutMutation.isPending ? 'Opening checkout…' : `Choose ${plan.name}`}
+                      </Button>
+                    )}
+                    {!selection.ok && !plan.contact_only && selection.reason ? (
+                      <p className="text-muted text-xs">{selection.reason}</p>
+                    ) : null}
+                  </div>
+                );
+              })}
+              {checkoutMutation.isError ? (
+                <Alert tone="danger">{message(checkoutMutation.error)}</Alert>
+              ) : null}
+            </>
           )}
-
-          <label className="grid gap-1.5 text-sm">
-            <span className="text-secondary font-medium">Billing country</span>
-            <input
-              value={country}
-              onChange={(event) => setCountryDraft(event.target.value.toUpperCase().slice(0, 2))}
-              placeholder="IN"
-              aria-describedby="billing-country-help"
-              className="border-border bg-background focus-ring h-10 rounded-md border px-3 uppercase outline-none"
-            />
-            <span id="billing-country-help" className="text-muted text-xs">
-              Two-letter ISO code. This server-owned profile selects the fixed INR or USD plan; it
-              cannot be overridden at checkout.
-            </span>
-          </label>
-          <Button
-            variant="secondary"
-            disabled={country.length !== 2 || countryMutation.isPending}
-            onClick={() => countryMutation.mutate()}
-          >
-            {countryMutation.isPending ? 'Saving…' : 'Save billing country'}
-          </Button>
-          {countryMutation.isError ? (
-            <Alert tone="danger">{message(countryMutation.error)}</Alert>
-          ) : null}
-
-          {summary.tier_key === 'free' ? (
-            <Button
-              disabled={!summary.can_checkout || checkoutMutation.isPending}
-              onClick={() => checkoutMutation.mutate()}
-            >
-              <CreditCard className="size-4" aria-hidden />
-              {checkoutMutation.isPending ? 'Opening Razorpay…' : 'Upgrade with Razorpay'}
-            </Button>
-          ) : null}
-          {!summary.can_checkout && summary.tier_key === 'free' ? (
-            <Alert tone="info">
-              {summary.checkout_block_reason === 'billing_country_required'
-                ? 'Save your billing country to see the available checkout route.'
-                : 'Live checkout is not enabled yet — your Free plan remains active.'}
-            </Alert>
-          ) : null}
-          {checkoutMutation.isError ? (
-            <Alert tone="danger">{message(checkoutMutation.error)}</Alert>
-          ) : null}
-
-          <Button asChild variant="secondary">
-            <Link href="/demo">
-              Enterprise options <ExternalLink className="size-4" aria-hidden />
-            </Link>
-          </Button>
         </CardContent>
       </Card>
 
@@ -283,7 +246,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
         onOpenChange={(open) => {
           if (!cancelMutation.isPending) setCancelOpen(open);
         }}
-        title="Cancel Paid plan"
+        title="Cancel subscription"
         description="Cancellation takes effect at the end of the current billing period."
         footer={
           <>
@@ -292,7 +255,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
               disabled={cancelMutation.isPending}
               onClick={() => setCancelOpen(false)}
             >
-              Keep Paid
+              Keep plan
             </Button>
             <Button
               variant="destructive"
@@ -305,8 +268,8 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
         }
       >
         <p className="text-secondary text-sm">
-          Paid capabilities remain available through the verified paid-through date. Completed
-          audits and evidence are not deleted when the plan ends.
+          Your current period runs to its end and no next bundle is issued. Completed audits and
+          evidence are never deleted when a plan ends.
         </p>
         {cancelMutation.isError ? (
           <Alert tone="danger">{message(cancelMutation.error)}</Alert>

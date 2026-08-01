@@ -259,7 +259,9 @@ function DiscoveryStrip({
 }>) {
   const provisional = isDiscoveryProvisional(crawl);
   const showTotal = canShowDiscoveredTotal(entitlement, crawl);
-  const isFree = entitlement.plan_key === 'free';
+  // Neutral capability, not a plan name: `sample` means the server picks the
+  // pages, `selection` means this account stages its own monitored set.
+  const sampleMode = entitlement.access_mode === 'sample';
   let narration: string;
   if (cancelPending) {
     narration = 'Cancelling discovery — finishing the page in flight and stopping';
@@ -270,7 +272,7 @@ function DiscoveryStrip({
   }
 
   const counts: Array<{ label: string; value: number | null }> = [
-    { label: isFree ? 'Sample URLs' : 'URLs found', value: crawl.visible_url_count },
+    { label: sampleMode ? 'Sample URLs' : 'URLs found', value: crawl.visible_url_count },
   ];
   if (showTotal && crawl.total_url_count !== null) {
     counts.push({ label: 'Total discovered', value: crawl.total_url_count });
@@ -278,10 +280,10 @@ function DiscoveryStrip({
 
   return (
     <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
-      {isFree ? (
-        <p className="text-warning-text text-sm">
-          Free plan — we&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample
-          of your site. Upgrade to Starter to choose which pages to monitor.
+      {sampleMode ? (
+        <p className="text-mkt-ink-soft text-sm">
+          We&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample of your
+          site. Choosing which pages to monitor needs a monitored-URL allowance.
         </p>
       ) : null}
     </ProgressRow>

@@ -7,6 +7,8 @@ import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
 import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { hasPendingIntent } from '@/lib/billing/pending-pricing-intent';
+import { PRICING_RESUME_QUERY_PARAM, PRICING_RETURN_PATH } from '@/lib/config/billing';
 
 /**
  * Shared login/register mutation wiring (F4): on success, prime the `me` cache
@@ -31,6 +33,17 @@ export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promis
       // the newly-confirmed identity is seeded.
       await clearAccountScopedClientState(queryClient);
       queryClient.setQueryData(queryKeys.auth.me(), user);
+
+      // A pricing selection captured before signing in wins over onboarding:
+      // the visitor's last deliberate action was choosing a plan, and dropping
+      // them on /projects would silently discard it. The flag is all that
+      // travels — the intent itself stays in storage and is revalidated
+      // against the live catalog before anything is purchased.
+      if (hasPendingIntent()) {
+        router.replace(`${PRICING_RETURN_PATH}?${PRICING_RESUME_QUERY_PARAM}=1`);
+        return;
+      }
+
       let destination = '/onboarding';
       try {
         const projects = await queryClient.fetchQuery({

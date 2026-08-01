@@ -5,6 +5,7 @@ import { Hero } from '@/components/marketing/landing/hero';
 import { Proof } from '@/components/marketing/landing/proof';
 import { SeeIt } from '@/components/marketing/landing/see-it';
 import { Shift } from '@/components/marketing/landing/shift';
+import { WhatWeMeasure } from '@/components/marketing/landing/what-we-measure';
 import { LandingSessionRedirect } from '@/components/marketing/landing-session-redirect';
 
 const DESCRIPTION =
@@ -38,9 +39,11 @@ export const metadata: Metadata = {
  * forwards signed-in visitors to their dashboard (`/projects`) or to
  * first-run `/onboarding` — the contract `/` had before this page existed.
  *
- * Five beats, in order: the hook (Hero), why the ground moved (Shift), the
- * product itself (SeeIt), how its numbers are verified (Proof), and the close
- * (FinalCta). Shared chrome (nav + footer) lives in the (marketing) route-group
+ * Six beats, in order: the hook (Hero), why the ground moved (Shift), the
+ * product itself (SeeIt), what its numbers actually mean (WhatWeMeasure), how
+ * they are verified (Proof), and the close (FinalCta). The measurement
+ * disclosure sits before Proof deliberately — the axes have to be defined
+ * before the verification story leans on them. Shared chrome (nav + footer) lives in the (marketing) route-group
  * layout.
  *
  * Must stay a SYNC component (no async / headers() / cookies()) so the page
@@ -53,6 +56,7 @@ export default function LandingPage() {
         <Hero />
         <Shift />
         <SeeIt />
+        <WhatWeMeasure />
         <Proof />
         <FinalCta />
       </main>

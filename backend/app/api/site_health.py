@@ -50,7 +50,6 @@ from app.domain.site_health.api_schemas import (
     CrawlResponse,
     CreateCrawlRequest,
     DashboardResponse,
-    EntitlementResponse,
     InventoryPage,
     IssueHistoryPage,
     MonitoredUrlsResponse,
@@ -58,6 +57,7 @@ from app.domain.site_health.api_schemas import (
     PagesPage,
     ReplaceMonitoredRequest,
     RerunPageResponse,
+    SiteHealthEntitlementResponse,
     SiteIssueDetail,
     SiteIssuesPage,
 )
@@ -67,11 +67,11 @@ from app.domain.site_health.planner import (
     create_crawl,
 )
 from app.domain.site_health.selection import (
+    MonitoringNotAllowedError,
     QuotaExceededError,
     RerunNotAllowedError,
     SelectionValidationError,
     StaleSelectionVersionError,
-    StarterRequiredError,
     bulk_select_monitored_set,
     replace_monitored_set,
     rerun_page,
@@ -101,7 +101,7 @@ def _bad_cursor(exc: InvalidCursorError) -> ApiException:
 def _selection_error_response(exc: Exception) -> ApiException:
     """Map a coded selection error onto the Task 2 HTTP contract.
 
-    ``starter_required`` -> 403, ``site_health_quota_exceeded`` -> 403 (with
+    ``monitoring_not_allowed`` -> 403, ``site_health_quota_exceeded`` -> 403 (with
     ``limit``/``currently_used``), ``stale_selection_version`` -> 409 (with
     ``current_selection_version``), ``invalid_selection`` -> 422. Shared by
     the PUT replacement and the bulk-select endpoints so both speak the same
@@ -122,7 +122,7 @@ def _selection_error_response(exc: Exception) -> ApiException:
             str(exc),
             details={"current_selection_version": exc.current_version},
         )
-    if isinstance(exc, StarterRequiredError):
+    if isinstance(exc, MonitoringNotAllowedError):
         return ApiException.coded(status.HTTP_403_FORBIDDEN, exc.code, str(exc))
     # SelectionValidationError (and any other coded selection error) -> 422.
     code = getattr(exc, "code", "invalid_selection")
@@ -132,13 +132,14 @@ def _selection_error_response(exc: Exception) -> ApiException:
 # =========================================================================
 # Entitlement
 # =========================================================================
-@router.get("/entitlements", response_model=EntitlementResponse)
+@router.get("/entitlements", response_model=SiteHealthEntitlementResponse)
 async def get_entitlements_endpoint(
     ctx: _WorkspaceDep, session: _SessionDep
-) -> EntitlementResponse:
+) -> SiteHealthEntitlementResponse:
+    # Read-only: the runtime projection refreshes lazily but the read commits
+    # nothing (no seed commit).
     view = await service.get_entitlement_view(session, workspace_id=ctx.workspace_id)
-    await session.commit()  # persist the fail-closed Free seed on first use
-    return EntitlementResponse.model_validate(view)
+    return SiteHealthEntitlementResponse.model_validate(view)
 
 
 # =========================================================================
@@ -310,7 +311,7 @@ async def replace_monitored_urls_endpoint(
         )
         await session.commit()
     except (
-        StarterRequiredError,
+        MonitoringNotAllowedError,
         QuotaExceededError,
         StaleSelectionVersionError,
         SelectionValidationError,
@@ -360,7 +361,7 @@ async def bulk_select_monitored_urls_endpoint(
         )
         await session.commit()
     except (
-        StarterRequiredError,
+        MonitoringNotAllowedError,
         QuotaExceededError,
         StaleSelectionVersionError,
         SelectionValidationError,
@@ -471,7 +472,7 @@ async def rerun_page_endpoint(
             site_url_id=site_url_id,
         )
         await session.commit()
-    except StarterRequiredError as exc:
+    except MonitoringNotAllowedError as exc:
         await session.rollback()
         raise ApiException.coded(status.HTTP_403_FORBIDDEN, exc.code, str(exc)) from exc
     except RerunNotAllowedError as exc:

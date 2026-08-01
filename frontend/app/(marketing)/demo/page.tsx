@@ -75,13 +75,13 @@ export default function DemoPage() {
               <ArrowRight aria-hidden />
             </ButtonLink>
           ) : (
-            <ButtonLink href="/register">
-              Start free
+            <ButtonLink href="/pricing">
+              Compare plans
               <ArrowRight aria-hidden />
             </ButtonLink>
           )}
-          <ButtonLink href={actionHref ? '/register' : '/pricing'} intent="secondary">
-            {actionHref ? 'Start free' : 'Compare plans'}
+          <ButtonLink href="/pricing" intent="secondary">
+            Compare plans
           </ButtonLink>
         </div>
         {!actionHref && (

@@ -34,12 +34,15 @@ from app.models.audit import (
     RawResponseArtifact,
 )
 from app.models.billing import (
-    AccountEntitlement,
+    AccountGrant,
     BillingAccount,
-    BillingCheckoutAttempt,
     BillingCustomer,
     BillingSubscription,
     BillingWebhookEvent,
+    ConsumableLedger,
+    GrantRevocation,
+    IdempotencyRecord,
+    PendingActivation,
     WorkspaceBillingLink,
 )
 from app.models.brand import (
@@ -96,14 +99,14 @@ from app.models.site_health import (
     SiteRuleEvaluation,
     SiteUrl,
     SiteUrlObservation,
-    WorkspaceSiteHealthEntitlement,
+    WorkspaceSiteHealthRuntime,
 )
 from app.models.traffic import TrafficPageStat, TrafficQueryStat, TrafficSnapshot
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
 __all__ = [
-    "AccountEntitlement",
+    "AccountGrant",
     "AnalyticsSnapshot",
     "AnalyticsTask",
     "AttributionLink",
@@ -122,7 +125,6 @@ __all__ = [
     "BrandProfileSuggestion",
     "BrandMention",
     "BillingAccount",
-    "BillingCheckoutAttempt",
     "BillingCustomer",
     "BillingSubscription",
     "BillingWebhookEvent",
@@ -132,9 +134,12 @@ __all__ = [
     "CompetitorProduct",
     "ContentGeneration",
     "ContentGenerationAttempt",
+    "ConsumableLedger",
     "DiscoveryModelConfig",
     "ExecutionCostProjection",
     "FeedIssue",
+    "GrantRevocation",
+    "IdempotencyRecord",
     "IntegrationConnection",
     "IntegrationEvent",
     "IntegrationImportArtifact",
@@ -149,6 +154,7 @@ __all__ = [
     "OpportunitySnapshot",
     "OrderFact",
     "OwnedDomain",
+    "PendingActivation",
     "Product",
     "ProductMention",
     "ProductMetricSnapshot",
@@ -179,7 +185,7 @@ __all__ = [
     "SiteRuleEvaluation",
     "SiteUrl",
     "SiteUrlObservation",
-    "WorkspaceSiteHealthEntitlement",
+    "WorkspaceSiteHealthRuntime",
     "Topic",
     "TrafficPageStat",
     "TrafficQueryStat",

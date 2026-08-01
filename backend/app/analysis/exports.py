@@ -16,6 +16,11 @@ import io
 import json
 from typing import Any
 
+from app.domain.audits.schemas import (
+    ModelProvenance,
+    execution_frozen_provenance,
+    model_provenance_for,
+)
 from app.models.audit import Audit, AuditTask
 
 _CSV_COLUMNS = [
@@ -26,6 +31,10 @@ _CSV_COLUMNS = [
     "randomized_position",
     "logical_engine",
     "transport_model",
+    # Frozen measurement provenance (invariant 7): the mode + retrieval state
+    # the execution ran under, projected from frozen fields only.
+    "measurement_mode",
+    "retrieval_enabled",
     "status",
     "search_used",
     "search_query_count",
@@ -54,6 +63,26 @@ def _join(values: Any) -> str:
     return json.dumps(values, ensure_ascii=False)
 
 
+def _row_provenance(audit: Audit, task: AuditTask) -> tuple[str, bool | None]:
+    """Frozen ``(measurement_mode, retrieval_enabled)`` for one CSV row.
+
+    The frozen task request/route snapshots win (what the call executed
+    under), then the audit's frozen mode column + policy block — live config
+    is never consulted (invariants 4/7).
+    """
+    return execution_frozen_provenance(
+        request_snapshot=task.request_snapshot,
+        route_snapshot=task.provider_route_snapshot,
+        audit_measurement_mode=audit.measurement_mode,
+        audit_configuration=audit.configuration,
+    )
+
+
+def _csv_bool(value: bool | None) -> str:
+    """CSV cell for a tri-state bool; unrecorded renders empty (never inferred)."""
+    return "" if value is None else str(value)
+
+
 def audit_to_csv(audit: Audit, tasks: list[AuditTask]) -> str:
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=_CSV_COLUMNS, extrasaction="ignore")
@@ -64,6 +93,7 @@ def audit_to_csv(audit: Audit, tasks: list[AuditTask]) -> str:
         citation_domains = [
             c.get("domain") for c in (task.citations or []) if c.get("domain")
         ]
+        measurement_mode, retrieval_enabled = _row_provenance(audit, task)
         writer.writerow(
             {
                 "audit_id": str(audit.id),
@@ -73,6 +103,8 @@ def audit_to_csv(audit: Audit, tasks: list[AuditTask]) -> str:
                 "randomized_position": task.randomized_position,
                 "logical_engine": task.logical_engine,
                 "transport_model": task.transport_model,
+                "measurement_mode": measurement_mode,
+                "retrieval_enabled": _csv_bool(retrieval_enabled),
                 "status": task.status,
                 "search_used": task.search_used,
                 "search_query_count": score.get("search_query_count", 0),
@@ -132,9 +164,47 @@ def audit_to_markdown(audit: Audit, tasks: list[AuditTask]) -> str:
     return "\n".join(lines)
 
 
+def _provenance_label(item: ModelProvenance) -> str:
+    """Human-readable provenance for one measured route (frozen fields only)."""
+    if item.retrieval_enabled is None:
+        retrieval = "retrieval unrecorded"
+    elif item.retrieval_enabled:
+        retrieval = "retrieval on"
+    else:
+        retrieval = "retrieval off"
+    return (
+        f"`{item.logical_engine}` via `{item.transport_provider}` model "
+        f"`{item.transport_model}` ({retrieval})"
+    )
+
+
+def _measurement_provenance_lines(audit) -> list[str]:
+    """Methodology metadata: the audit's measurement mode + route provenance.
+
+    Both derive only from the frozen mode column, frozen policy block, and
+    frozen engine snapshots (inv. 4/7); the aggregate list is in stable
+    catalog order and never forces a singular model when the audit spans
+    models.
+    """
+    lines = [
+        f"- **Measurement mode:** `{audit.measurement_mode or '—'}` — the frozen "
+        "route/output policy (retrieval, output cap, timeout, repetitions) this "
+        "run measured under."
+    ]
+    provenance = model_provenance_for(audit.engine_snapshots or [], audit.configuration)
+    if provenance:
+        lines.append(
+            "- **Model provenance:** "
+            + "; ".join(_provenance_label(item) for item in provenance)
+            + "."
+        )
+    return lines
+
+
 def _methodology_lines(audit, config, summary):
     engines = config.get("engines") or []
     lines = ["## Methodology", ""]
+    lines.extend(_measurement_provenance_lines(audit))
     lines.append(
         "- **Engines measured:** "
         + (", ".join(f"`{e}`" for e in engines) if engines else "—")

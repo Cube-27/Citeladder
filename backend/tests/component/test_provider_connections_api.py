@@ -12,13 +12,20 @@ Covers the v2 acceptance:
 
 from __future__ import annotations
 
+import json
 import logging
+import uuid
+from decimal import Decimal
 from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import func, select
 
+from app.core.config.audits import POOL_KIND_CONNECTION
+from app.core.config.provider_catalog import PROBE_PROMPT, provider_catalog_settings
 from app.core.security import decrypt_secret
+from app.models.audit import ProviderCapacityBucket
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
 
@@ -232,6 +239,52 @@ async def test_delete_connection(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_delete_two_same_transport_connections_clears_capacity_buckets(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """Two same-transport BYOK connections each own a connection-pool capacity
+    bucket; deleting BOTH must not trip the nulls-not-distinct pool unique
+    (the SET NULL FK would otherwise collapse both buckets onto one identity).
+    """
+    await _register(client, "prov-buckets@example.com")
+    first = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(label="OpenAI A"),
+    )
+    second = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(label="OpenAI B"),
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+    first_id, second_id = first.json()["id"], second.json()["id"]
+
+    for connection_id in (first_id, second_id):
+        db_session.add(
+            ProviderCapacityBucket(
+                pool_kind=POOL_KIND_CONNECTION,
+                transport_provider="openai",
+                connection_id=uuid.UUID(connection_id),
+                billing_account_id=None,
+                capacity=Decimal("5"),
+                tokens=Decimal("0"),
+                refill_tokens_per_second=Decimal("0"),
+            )
+        )
+    await db_session.commit()
+
+    delete_first = await client.delete(f"/api/v1/provider-connections/{first_id}")
+    assert delete_first.status_code == 204
+    # Before the fix this second delete 500'd on uq_provider_capacity_bucket_pool.
+    delete_second = await client.delete(f"/api/v1/provider-connections/{second_id}")
+    assert delete_second.status_code == 204
+
+    listed = await client.get("/api/v1/provider-connections")
+    assert listed.json() == []
+    assert await db_session.scalar(select(func.count(ProviderCapacityBucket.id))) == 0
+
+
+@pytest.mark.asyncio
 async def test_invalid_route_rejected(client: httpx.AsyncClient) -> None:
     await _register(client, "prov7@example.com")
     # chatgpt is served ONLY via openai now; chatgpt over anthropic is not
@@ -294,6 +347,66 @@ async def test_test_endpoint_returns_status_success(
     assert body["transport_provider"] == "openai"
     assert body["logical_engine"] == "chatgpt"
     _assert_no_secret(body)
+
+
+@pytest.mark.asyncio
+async def test_test_endpoint_probe_is_a_liveness_check_not_a_measurement(
+    client: httpx.AsyncClient, monkeypatch
+) -> None:
+    """The ``/test`` probe never buys a grounded search and stays tiny.
+
+    A connectivity probe proves the key reaches the provider. It must not attach
+    the billable web-search tool and must cap output at the config-owned probe
+    cap (invariant 1 — no inline caps), which is independent of the measurement
+    caps a real audit freezes.
+    """
+    await _register(client, "prov8probe@example.com")
+    created = await client.post(
+        "/api/v1/provider-connections", json=_connection_payload()
+    )
+    conn_id = created.json()["id"]
+
+    from app.connectors.answer_engines import openai as openai_mod
+
+    sent: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "resp-probe",
+                "object": "response",
+                "status": "completed",
+                "model": "gpt-5.4",
+                "output": [
+                    {
+                        "type": "message",
+                        "id": "m",
+                        "content": [{"type": "output_text", "text": "ok"}],
+                    }
+                ],
+                "usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+            },
+        )
+
+    # Patch the pooled-client accessor — see the note in the success-path test.
+    mock_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(openai_mod, "shared_client", lambda: mock_client)
+
+    resp = await client.post(f"/api/v1/provider-connections/{conn_id}/test")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+    assert len(sent) == 1
+    body = sent[0]
+    # Retrieval off -> the built-in web-search tool is never attached.
+    assert "tools" not in body
+    assert body["max_output_tokens"] == (
+        provider_catalog_settings.test_max_output_tokens
+    )
+    assert body["input"]
+    assert PROBE_PROMPT in json.dumps(body["input"])
 
 
 @pytest.mark.asyncio
@@ -370,3 +483,101 @@ async def test_cross_workspace_access_denied(
     assert got.status_code == 404
     tested = await client.post(f"/api/v1/provider-connections/{conn_id}/test")
     assert tested.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# T11: platform credentials + the system workspace are tenant-invisible
+# ---------------------------------------------------------------------------
+
+_PLATFORM_SECRET = "platform-secret-test-key"  # pragma: allowlist secret
+
+
+async def _seed_platform_connection_id(db_session) -> str:
+    """Seed THE system workspace with a healthy platform connection (T11)."""
+    from sqlalchemy import select
+
+    from app.models.provider import ProviderConnection
+    from tests.component.audit_helpers import seed_platform_connection
+
+    system = await seed_platform_connection(db_session, engines=("claude",))
+    await db_session.commit()
+    connection = await db_session.scalar(
+        select(ProviderConnection).where(ProviderConnection.workspace_id == system.id)
+    )
+    assert connection is not None
+    return str(connection.id)
+
+
+@pytest.mark.asyncio
+async def test_platform_connection_invisible_to_tenant_crud_and_test(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    await _register(client, "platform-tenant@example.com")
+    platform_id = await _seed_platform_connection_id(db_session)
+
+    listed = await client.get("/api/v1/provider-connections")
+    assert listed.status_code == 200
+    assert listed.json() == []
+    assert _PLATFORM_SECRET not in str(listed.json())
+
+    patched = await client.patch(
+        f"/api/v1/provider-connections/{platform_id}", json={"label": "hijack"}
+    )
+    assert patched.status_code == 404
+    assert patched.json()["detail"] == "Provider connection not found"
+
+    deleted = await client.delete(f"/api/v1/provider-connections/{platform_id}")
+    assert deleted.status_code == 404
+    assert deleted.json()["detail"] == "Provider connection not found"
+
+    tested = await client.post(f"/api/v1/provider-connections/{platform_id}/test")
+    assert tested.status_code == 404
+    assert tested.json()["detail"] == "Provider connection not found"
+
+    for body in (patched.json(), deleted.json(), tested.json()):
+        assert _PLATFORM_SECRET not in str(body)
+
+
+@pytest.mark.asyncio
+async def test_system_workspace_hidden_and_membership_inert(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """The system workspace never appears in workspace lists, and a forged
+    membership row on it grants NOTHING (``get_membership`` fails closed)."""
+    await _register(client, "system-member@example.com")
+    platform_id = await _seed_platform_connection_id(db_session)
+
+    from sqlalchemy import select
+
+    from app.models.user import User
+    from app.models.workspace import Workspace, WorkspaceMember
+
+    user = await db_session.scalar(
+        select(User).where(User.email == "system-member@example.com")
+    )
+    system = await db_session.scalar(
+        select(Workspace).where(Workspace.is_system.is_(True))
+    )
+    assert user is not None and system is not None
+    # A membership row naming the system workspace exists (e.g. seeded by a
+    # future provisioning flow) — it must stay inert.
+    db_session.add(
+        WorkspaceMember(workspace_id=system.id, user_id=user.id, role="owner")
+    )
+    await db_session.commit()
+
+    listed = await client.get("/api/v1/workspaces")
+    assert listed.status_code == 200
+    workspace_ids = {w["id"] for w in listed.json()}
+    assert str(system.id) not in workspace_ids
+    assert len(workspace_ids) == 1  # only the auto-created tenant workspace
+
+    # Selecting the system workspace explicitly is indistinguishable from a
+    # missing workspace (invariant 5).
+    selected = await client.get(
+        "/api/v1/provider-connections", headers={"X-Workspace-Id": str(system.id)}
+    )
+    assert selected.status_code == 404
+    assert selected.json()["detail"] == "Workspace not found"
+    assert _PLATFORM_SECRET not in str(selected.json())
+    assert platform_id not in str(selected.json())

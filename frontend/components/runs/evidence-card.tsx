@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Label } from '@/components/ui/typography';
@@ -53,6 +54,13 @@ export function EvidenceCard({
       <Card>
         <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>Answer</CardTitle>
+          {/* Execution surface: exactly one model produced this answer, so the
+              exact model is named rather than an aggregate label. */}
+          <MeasurementContext
+            mode={evidence.measurement_mode}
+            retrieval={evidence.retrieval_enabled}
+            model={evidence.transport_model}
+          />
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="neutral">
               {engineLabel(evidence.logical_engine)} · {transportLabel(evidence.transport_provider)}

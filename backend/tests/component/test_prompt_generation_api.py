@@ -29,9 +29,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL
+from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.domain.audits.planner import AuditValidationError, create_audit, list_tasks
+from app.domain.entitlements.types import GrantSpec
 from app.models.prompt import Prompt
 from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.occupancy_helpers import seed_occupancy_grants
 
 VALID_AGENT_RESPONSE = json.dumps(
     {
@@ -115,6 +119,14 @@ async def _make_project_and_set(
             json={"project_id": project["id"], "name": "Default"},
         )
     ).json()["id"]
+    # Category identity for topical binding: unbranded generated/manual texts
+    # bind through the products_services vocabulary (a partial upsert, so
+    # later per-test brand-profile PUTs keep it).
+    profile = await client.put(
+        f"/api/v1/projects/{project['id']}/brand-profile",
+        json={"products_services": ["running shoes"]},
+    )
+    assert profile.status_code == 200
     return project, prompt_set_id
 
 
@@ -473,7 +485,10 @@ def _agent_response_with_n_prompts(n: int, *, topic: str = "Bulk") -> str:
                 {
                     "name": topic,
                     "prompts": [
-                        {"text": f"{topic} prompt number {i}", "intent": "discovery"}
+                        {
+                            "text": f"{topic} running shoes prompt {i}",
+                            "intent": "discovery",
+                        }
                         for i in range(n)
                     ],
                 }
@@ -659,7 +674,7 @@ async def test_generate_manual_active_rows_count_toward_pool(
     for i in range(18):
         created = await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": f"manual prompt {i}"},
+            json={"text": f"manual acme prompt {i}"},
         )
         assert created.status_code == 201
 
@@ -690,7 +705,7 @@ async def test_generate_counts_intra_response_duplicates(
                         "prompts": [
                             {"text": "Best Shoes?", "intent": "discovery"},
                             {"text": "best  shoes", "intent": "discovery"},
-                            {"text": "hiking boots", "intent": "discovery"},
+                            {"text": "hiking shoes", "intent": "discovery"},
                         ],
                     }
                 ]
@@ -720,7 +735,7 @@ async def test_generate_bounds_existing_prompt_context(
     for i in range(6):
         created = await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": f"existing context prompt {i}"},
+            json={"text": f"existing acme context prompt {i}"},
         )
         assert created.status_code == 201
 
@@ -733,7 +748,7 @@ async def test_generate_bounds_existing_prompt_context(
     assert resp.status_code == 201
     sent = agent.calls[0]["user"]
     # Only the first 3 existing prompts appear in the "do NOT duplicate" block.
-    included = [i for i in range(6) if f"existing context prompt {i}" in sent]
+    included = [i for i in range(6) if f"existing acme context prompt {i}" in sent]
     assert len(included) == 3
 
 
@@ -1053,7 +1068,7 @@ async def test_create_prompt_rejects_foreign_topic_id(
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{set_a}/prompts",
-        json={"text": "scoped prompt", "topic_id": foreign_topic["id"]},
+        json={"text": "scoped acme prompt", "topic_id": foreign_topic["id"]},
     )
 
     assert resp.status_code == 404
@@ -1127,7 +1142,7 @@ async def test_prompt_topic_assignment_same_project_succeeds(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "best hiking boots"},
+            json={"text": "best hiking shoes"},
         )
     ).json()
     resp = await client.patch(
@@ -1175,7 +1190,7 @@ async def test_prompt_topic_assignment_cross_project_rejected(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_a}/prompts",
-            json={"text": "cross project prompt"},
+            json={"text": "cross project acme prompt"},
         )
     ).json()
     resp = await client.patch(
@@ -1206,7 +1221,7 @@ async def test_prompt_topic_assignment_cross_workspace_rejected(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "my prompt"},
+            json={"text": "my acme prompt"},
         )
     ).json()
     resp = await client.patch(
@@ -1226,7 +1241,7 @@ async def test_prompt_topic_assignment_unknown_topic_rejected(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "orphan prompt"},
+            json={"text": "orphan acme prompt"},
         )
     ).json()
     resp = await client.patch(
@@ -1315,7 +1330,7 @@ async def test_bulk_status_rejects_foreign_prompt_ids(
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "real prompt"},
+            json={"text": "real acme prompt"},
         )
     ).json()
 
@@ -1349,6 +1364,7 @@ async def test_planner_excludes_proposed_and_archived_prompts(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -1366,6 +1382,7 @@ async def test_planner_excludes_proposed_and_archived_prompts(
         with pytest.raises(AuditValidationError):
             await create_audit(
                 session,
+                trigger=AUDIT_TRIGGER_MANUAL,
                 workspace_id=seed.workspace_id,
                 project_id=seed.project_id,
                 engines=seed.engines,
@@ -1373,3 +1390,84 @@ async def test_planner_excludes_proposed_and_archived_prompts(
                 prompt_ids=[seed.prompt_ids[0]],
                 repetitions=1,
             )
+
+
+# =========================================================================
+# Account occupancy enforcement (slice23 Task 4): the route maps the
+# domain denial to the coded 403; the quota check lives in the service.
+# =========================================================================
+@pytest.mark.asyncio
+async def test_generate_over_occupancy_returns_coded_403(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    project, prompt_set_id = await _make_project_and_set(
+        client, "occ-gen-403@example.com"
+    )
+    # A zero-slot grant provisions the capability with no headroom: every
+    # generated row that could actually insert is over the allowance.
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=0),),
+        )
+        await session.commit()
+
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
+        json={"count": 3, "confirm_send_evidence": True},
+    )
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["error"]["code"] == "occupancy_limit_exceeded"
+    assert body["error"]["retryable"] is False
+    assert body["error"]["details"]["key"] == "prompt_slots"
+    assert body["detail"]["code"] == "occupancy_limit_exceeded"
+
+    # The denial is atomic: nothing persisted from the rejected generation.
+    got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
+    assert got.json()["prompts"] == []
+
+
+@pytest.mark.asyncio
+async def test_import_over_occupancy_returns_coded_403(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    project, prompt_set_id = await _make_project_and_set(
+        client, "occ-import-403@example.com"
+    )
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
+        )
+        await session.commit()
+
+    # 3 distinct rows against an allowance of 2: the whole import is denied
+    # atomically (duplicates would be filtered before charging; there are
+    # none here).
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/import",
+        json={
+            "prompts": [
+                {"text": "first acme import"},
+                {"text": "second acme import"},
+                {"text": "third acme import"},
+            ]
+        },
+    )
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["error"]["code"] == "occupancy_limit_exceeded"
+    assert body["error"]["details"] == {
+        "key": "prompt_slots",
+        "allowance": 2,
+        "current": 0,
+        "requested": 3,
+    }
+    got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
+    assert got.json()["prompts"] == []

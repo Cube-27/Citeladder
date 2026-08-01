@@ -1,79 +1,60 @@
-"""Explicit Razorpay plan verifier/creator; never runs during app startup.
+"""Operator CLI: propose/verify the v8 commercial catalog's provider price refs.
 
-Examples (from backend/):
-  uv run python -m scripts.provision_razorpay_plans propose --environment test
-  uv run python -m scripts.provision_razorpay_plans verify --environment test
-  uv run python -m scripts.provision_razorpay_plans create --environment test
-  uv run python -m scripts.provision_razorpay_plans create --environment live \
-      --confirm-live billing-v1
+The catalog is CONFIG-OWNED (invariant 1): every plan/add-on/top-up price and
+its PRIVATE provider reference live in ``app/core/config/billing.py`` and reach
+this script only through ``commercial_catalog()``. The script therefore never
+invents a key, an amount, or a reference — it reports what the current settings
+resolve to so an operator can see exactly which items are unavailable because a
+private ref is absent.
+
+Operations:
+
+- ``propose`` prints the catalog items that still need a provider price ref,
+  with the exact ``"{catalog_key}:{region}:{purpose}"`` settings key to fill;
+- ``verify`` exits nonzero when any purchasable item is missing its ref.
+
+``create`` is deliberately NOT implemented: creating a live provider plan is a
+money-moving side effect that belongs to a reviewed operator runbook, not to a
+script that could be run by accident. It exits nonzero with a safe message.
+
+No secret is ever accepted on argv or printed: the script reads normal settings
+and prints only safe catalog identity (keys, regions, purposes, amounts).
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from typing import Any
+from dataclasses import dataclass
 
-import httpx
+from app.core.config.billing import (
+    PRICE_PURPOSE_BASE,
+    PRICE_PURPOSE_CREDIT,
+    REGIONS,
+    CatalogPrice,
+    billing_settings,
+    commercial_catalog,
+)
 
-from app.core.config.billing import billing_settings, quote_for_country
-
-
-def _payload(country: str) -> dict[str, Any]:
-    quote = quote_for_country(country)
-    if quote.total_amount_minor <= 0:
-        raise ValueError("INR price is not configured; set BILLING_USD_INR_RATE first")
-    return {
-        "period": "monthly",
-        "interval": 1,
-        "item": {
-            "name": f"Searchify Paid ({quote.currency})",
-            # India charges the base plus GST as the recurring total. Razorpay
-            # merchant invoice/tax configuration must separately show the
-            # legally approved base/tax split before live use.
-            "amount": quote.total_amount_minor,
-            "currency": quote.currency,
-            "description": (
-                f"{billing_settings.catalog_version}; base="
-                f"{quote.base_amount_minor}; tax={quote.tax_amount_minor}"
-            ),
-        },
-    }
+_OPERATION_CREATE = "create"
+_OPERATION_PROPOSE = "propose"
+_OPERATION_VERIFY = "verify"
 
 
-def _request(
-    client: httpx.Client,
-    method: str,
-    path: str,
-    *,
-    payload: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    key_id = billing_settings.razorpay_key_id.strip()
-    secret = billing_settings.razorpay_key_secret.get_secret_value()
-    if not key_id or not secret:
-        raise RuntimeError(
-            "BILLING_RAZORPAY_KEY_ID and BILLING_RAZORPAY_KEY_SECRET are required"
-        )
-    response = client.request(
-        method,
-        f"{billing_settings.razorpay_api_base_url.rstrip('/')}{path}",
-        auth=httpx.BasicAuth(key_id, secret),
-        json=payload,
-        timeout=billing_settings.request_timeout_seconds,
-    )
-    if response.status_code >= 400:
-        raise RuntimeError(f"Razorpay returned HTTP {response.status_code}")
-    data = response.json()
-    if not isinstance(data, dict):
-        raise RuntimeError("Razorpay returned an invalid response")
-    return data
+@dataclass(frozen=True, slots=True)
+class CatalogRef:
+    """One catalog item's regional price and the settings key that names it."""
 
+    catalog_key: str
+    region: str
+    purpose: str
+    currency: str
+    amount_minor: int
+    configured: bool
 
-def _configured_plan_id(country: str) -> str:
-    if country == "IN":
-        return billing_settings.razorpay_paid_monthly_inr_plan_id.strip()
-    return billing_settings.razorpay_paid_monthly_usd_plan_id.strip()
+    @property
+    def settings_key(self) -> str:
+        return f"{self.catalog_key}:{self.region}:{self.purpose}"
 
 
 def _validate_environment(environment: str) -> None:
@@ -85,62 +66,105 @@ def _validate_environment(environment: str) -> None:
         )
 
 
-def _verify(actual: dict[str, Any], expected: dict[str, Any]) -> None:
-    item = actual.get("item")
-    if not isinstance(item, dict):
-        raise RuntimeError("configured plan has no item")
-    for key, value in (
-        ("period", expected["period"]),
-        ("interval", expected["interval"]),
-    ):
-        if actual.get(key) != value:
-            raise RuntimeError(f"configured plan drift: {key}")
-    for key in ("amount", "currency"):
-        if item.get(key) != expected["item"][key]:
-            raise RuntimeError(f"configured plan drift: item.{key}")
+def _ref(
+    catalog_key: str, region: str, purpose: str, price: CatalogPrice | None
+) -> CatalogRef | None:
+    """Project one configured price into a safe operator row (never the ref)."""
+    if price is None or price.amount_minor <= 0:
+        # An unpriced region is not a missing reference: config owns whether the
+        # item is offered there at all.
+        return None
+    return CatalogRef(
+        catalog_key=catalog_key,
+        region=region,
+        purpose=purpose,
+        currency=price.currency,
+        amount_minor=price.amount_minor,
+        configured=bool(price.provider_price_ref),
+    )
+
+
+def catalog_refs() -> tuple[CatalogRef, ...]:
+    """Every priced catalog item/region that needs a provider price ref."""
+    catalog = commercial_catalog()
+    rows: list[CatalogRef | None] = []
+    for region in REGIONS:
+        for plan in catalog.plans:
+            rows.append(
+                _ref(plan.key, region, PRICE_PURPOSE_BASE, plan.base_price(region))
+            )
+            rows.append(
+                _ref(plan.key, region, PRICE_PURPOSE_CREDIT, plan.credit_price(region))
+            )
+        for addon in catalog.addons:
+            rows.append(
+                _ref(addon.key, region, PRICE_PURPOSE_BASE, addon.price(region))
+            )
+        for topup in catalog.topups:
+            rows.append(
+                _ref(topup.key, region, PRICE_PURPOSE_BASE, topup.price(region))
+            )
+    return tuple(row for row in rows if row is not None)
+
+
+def _describe(row: CatalogRef) -> str:
+    state = "configured" if row.configured else "MISSING"
+    return f"{row.settings_key}\t{row.currency} {row.amount_minor} minor\t{state}"
+
+
+def _propose(rows: tuple[CatalogRef, ...]) -> int:
+    catalog = commercial_catalog()
+    print(f"catalog revision: {catalog.revision}")
+    missing = [row for row in rows if not row.configured]
+    for row in rows:
+        print(_describe(row))
+    if missing:
+        print(
+            f"\n{len(missing)} priced item(s) have no provider price ref and are "
+            "therefore UNAVAILABLE. Set BILLING_PROVIDER_PRICE_REFS entries for "
+            "the keys marked MISSING above.",
+            file=sys.stderr,
+        )
+    return 0
+
+
+def _verify(rows: tuple[CatalogRef, ...]) -> int:
+    missing = [row.settings_key for row in rows if not row.configured]
+    if missing:
+        print(
+            "missing provider price refs: " + ", ".join(sorted(missing)),
+            file=sys.stderr,
+        )
+        return 1
+    print(f"all {len(rows)} priced catalog item(s) have a provider price ref")
+    return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("operation", choices=("propose", "verify", "create"))
+    parser.add_argument(
+        "operation", choices=(_OPERATION_PROPOSE, _OPERATION_VERIFY, _OPERATION_CREATE)
+    )
     parser.add_argument("--environment", required=True, choices=("test", "live"))
     parser.add_argument("--confirm-live", default="")
     args = parser.parse_args()
-    if (
-        args.operation == "create"
-        and args.environment == "live"
-        and args.confirm_live != billing_settings.catalog_version
-    ):
-        parser.error(
-            f"live creation requires --confirm-live {billing_settings.catalog_version}"
+    try:
+        _validate_environment(args.environment)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if args.operation == _OPERATION_CREATE:
+        print(
+            "creating a provider plan is a money-moving side effect and is not "
+            "automated: follow the operator runbook, then run `verify`.",
+            file=sys.stderr,
         )
-
-    proposals = {"INR": _payload("IN"), "USD": _payload("US")}
-    print(json.dumps({"environment": args.environment, "plans": proposals}, indent=2))
-    if args.operation == "propose":
-        return 0
-    _validate_environment(args.environment)
-    with httpx.Client() as client:
-        for country, currency in (("IN", "INR"), ("US", "USD")):
-            plan_id = _configured_plan_id(country)
-            if plan_id:
-                actual = _request(client, "GET", f"/plans/{plan_id}")
-                _verify(actual, proposals[currency])
-                print(f"verified {currency} plan: {plan_id}")
-                continue
-            if args.operation == "verify":
-                raise RuntimeError(f"no configured {currency} plan id")
-            created = _request(client, "POST", "/plans", payload=proposals[currency])
-            created_id = created.get("id")
-            if not isinstance(created_id, str):
-                raise RuntimeError("created plan response had no id")
-            print(f"created {currency} plan; configure id: {created_id}")
-    return 0
+        return 1
+    rows = catalog_refs()
+    if args.operation == _OPERATION_PROPOSE:
+        return _propose(rows)
+    return _verify(rows)
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except (httpx.HTTPError, RuntimeError, ValueError) as exc:
-        print(f"plan operation failed: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+    sys.exit(main())

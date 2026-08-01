@@ -20,39 +20,48 @@ statuses, API surface, exports, and frontend routes**. It matches the code in
 
 ---
 
-## Entitlements & capabilities
+## Entitlements & runtime projection
 
-Site Health is **capability-gated per workspace**, stored one row per workspace
-in `workspace_site_health_entitlements`. The capability key (`plan_key`) is
-`free` or `starter` — never a marketing display name. A workspace with no
-explicit entitlement **fail-closes to Free** (the most restrictive capability).
+Site Health reads a **projected runtime row** per workspace
+(`workspace_site_health_runtime`). The entitlements subsystem resolves the
+account's `monitored_urls` grant through the v8 resolver and projects the
+result into that row with provenance (`registry_revision`,
+`entitlement_lifecycle_version`); Site Health never resolves grants itself and
+never stores a plan/capability key. `monitored_urls = 0` means **sample** mode;
+any positive allowance means **full** mode. A workspace with no grant
+**fail-closes to sample** (the most restrictive mode).
 
-| Capability | Discovery mode | Discovered total disclosed? | Monitored selection | Analysis scope |
+| Access mode | Discovery mode | Discovered total disclosed? | Monitored selection | Analysis scope |
 |---|---|---|---|---|
-| `free` | `sample` (deterministic, seeded, read-only) | **No** — the full-site/discovered total is never revealed | Not allowed (a sample set is auto-selected) | The Free sample only |
-| `starter` | `full` (progressive inventory) | Yes | User picks a monitored URL set (quota-limited) | The selected monitored set |
+| `sample` | `sample` (deterministic, seeded, read-only) | **No** — the full-site/discovered total is never revealed | Not allowed (a sample set is auto-selected) | The sample set only |
+| `full` | `full` (progressive inventory) | Yes | User picks a monitored URL set (quota-limited) | The selected monitored set |
 
-- **Free sample behavior.** Free crawls a deterministic, seeded sample and is
+- **Sample behavior.** Sample mode crawls a deterministic, seeded sample and is
   **read-only**: the user cannot pick a monitored set, and no event, crawl
   projection, or export ever leaks a discovered/total/frontier count
-  (`can_view_discovered_total = false`). The crawl's admitted (visible) URL count
+  (`count_disclosure = false`). The crawl's admitted (visible) URL count
   is *not* a full-site total and is shown. This non-disclosure is enforced in
-  three layers: the entitlement flag, the event serializer
+  three layers: the runtime projection, the event serializer
   (`redact_event_payload`), and the crawl projection (which nulls
   `discovered_count` / `total_url_count` / `has_more_site_urls`).
-- **Starter monitored selection.** Starter runs the full progressive inventory.
-  The user selects a monitored URL set via a **full-set, versioned** replacement
-  (`PUT /projects/{id}/monitored-urls`). The set is bounded by the entitlement's
-  `monitored_url_limit` (workspace-wide, counted under a `FOR UPDATE` entitlement
-  lock). Selecting URLs converts the deterministic Free sample rows to
-  user-managed rows (deactivated rows are never deleted, so evidence survives).
-- **Granting a capability locally:** see `docs/DEVELOPMENT.md`. Production billing
-  may later call the same domain service
-  (`app.domain.site_health.entitlements.set_entitlement`).
+- **Full-mode monitored selection.** Full mode runs the full progressive
+  inventory. The user selects a monitored URL set via a **full-set, versioned**
+  replacement (`PUT /projects/{id}/monitored-urls`). The set is bounded by the
+  runtime row's `monitored_url_limit` (workspace-wide, counted under a
+  `FOR UPDATE` runtime-row lock). Selecting URLs converts the deterministic
+  sample rows to user-managed rows (deactivated rows are never deleted, so
+  evidence survives).
+- **Granting `monitored_urls` locally:** see `docs/DEVELOPMENT.md`. Grants go
+  through the v8 grant services (`app.domain.entitlements.grants`) — plan
+  bundles, add-ons, trials, or operator overrides — never a Site
+  Health-owned writer. Grant changes re-project the runtime row in the same
+  transaction.
 
-`GET /api/v1/entitlements` returns: `plan_key`, `access_mode`,
-`sample_url_limit`, `monitored_url_limit`, `can_view_discovered_total`,
-`capability_revision`, and timestamps.
+`GET /api/v1/entitlements` returns: `workspace_id`, `access_mode`,
+`sample_url_limit`, `monitored_url_limit`, `count_disclosure`,
+`resolver_status` (`resolved` | `entitlement_unresolved`), `registry_revision`,
+`entitlement_lifecycle_version`, `valid_until`, and `contributing_grant_ids`.
+There is no `plan_key` and no capability-revision field.
 
 ---
 
@@ -137,21 +146,21 @@ typed `400`, never a `500`.
 
 | Method & path | Purpose |
 |---|---|
-| `GET /entitlements` | Workspace Site Health entitlement (seeds fail-closed Free on first use). |
+| `GET /entitlements` | Workspace Site Health entitlement view (fail-closed sample when no `monitored_urls` grant resolves). |
 | `POST /site-crawls` | Create + queue a crawl for a project. New project creation also makes this best-effort queue attempt automatically; a crawl failure never rolls back the project. `seed` must be an integer string. `201`; a second active crawl for the project is `409` (`crawl_already_active`); an unusable root is `422` (`invalid_root`); unknown project is `404`. |
 | `GET /site-crawls?project_id=&limit=&cursor=` | List crawls (created-at keyset). |
-| `GET /site-crawls/{crawl_id}` | Crawl summary/projection (redacted for Free). |
+| `GET /site-crawls/{crawl_id}` | Crawl summary/projection (redacted in sample mode). |
 | `POST /site-crawls/{crawl_id}/cancel` | Cancel a crawl → `cancelled`. |
 | `GET /site-crawls/{crawl_id}/inventory?limit=&cursor=&query=&status=&monitored=&page_type=` | Admitted-URL inventory (selection source of truth). `page_type` filters by the classifier's page type (unknown values are ignored, matching the other filters). |
 | `GET /projects/{project_id}/monitored-urls` | Current monitored set + quota + `selection_version`. |
-| `PUT /projects/{project_id}/monitored-urls` | Full-set, versioned monitored-set replacement. `403` `starter_required` (Free) / `site_health_quota_exceeded`; `409` `stale_selection_version` (carries `current_selection_version`); `422` for unknown URL ids. |
+| `PUT /projects/{project_id}/monitored-urls` | Full-set, versioned monitored-set replacement. `403` `monitoring_not_allowed` (sample mode) / `site_health_quota_exceeded`; `409` `stale_selection_version` (carries `current_selection_version`); `422` for unknown URL ids. |
 | `GET /site-crawls/{crawl_id}/pages?limit=&cursor=&query=&status=&monitored=&page_type=` | Dashboard page rows (derived `analysis_status` + `error_code`, monitored flag, `page_type`, scores). |
 | `GET /site-crawls/{crawl_id}/pages/{site_url_id}` | Per-URL detail (facts, delivery, evaluations, issues, link refs). |
 | `GET /site-crawls/{crawl_id}/pages/{site_url_id}/issue-history?limit=&cursor=` | Crawl-bounded issue history for a URL. |
 | `GET /site-crawls/{crawl_id}/issues?limit=&cursor=&query=&severity=&category=&dimension=&rule=&site_url_id=&page_type=` | Grouped issues catalog + summary tiles. The grouped-issue wire filter is `rule` (not `rule_id`). `page_type` filters to issues affecting pages of that type. |
 | `GET /site-crawls/{crawl_id}/issues/{canonical_id}` | Grouped-issue detail (a non-representative member id canonicalizes to the earliest `(created_at, id)`). |
 | `GET /projects/{project_id}/site-health?crawl_id=` | Dashboard projection (defaults to the latest completed crawl). |
-| `GET /site-crawls/{crawl_id}/events?stream=` | Event replay (`stream=false`, default → ordered JSON list) or SSE (`stream=true`). Free payloads are redacted. |
+| `GET /site-crawls/{crawl_id}/events?stream=` | Event replay (`stream=false`, default → ordered JSON list) or SSE (`stream=true`). Sample-mode payloads are redacted. |
 | `GET /site-crawls/{crawl_id}/export.csv?view=` | CSV export. |
 | `GET /site-crawls/{crawl_id}/export.md?view=` | Markdown export. |
 
@@ -160,10 +169,10 @@ typed `400`, never a `500`.
 `CrawlResponse` aliases model columns to the contract:
 `random_seed → seed`, `admitted_url_count → visible_url_count`,
 `analyzed_url_count → analyzed_count`, `failed_url_count → failed_count`,
-`rule_catalog_version → rule_version`. For a **Free** (non-disclosing) crawl,
+`rule_catalog_version → rule_version`. For a **sample** (non-disclosing) crawl,
 `discovered_count`, `total_url_count`, and `has_more_site_urls` are `null`.
 
-`site_facts` (required, nullable — never Free-redacted) is the bounded
+`site_facts` (required, nullable — never sample-redacted) is the bounded
 site-level blob `_crawl_setup` builds (robots.txt AI-crawler stance, llms.txt
 result, sitemap files); the dashboard's **AI crawler access** panel
 (`site-facts-panel.tsx`, between the status strip and the per-page-type
@@ -186,7 +195,7 @@ misleading `crawl.completed`. Single-crawl reads (`GET /site-crawls/{id}`,
 cancel, dashboard) carry it; the list projection leaves it `null` (N+1
 avoidance). A fully-failed crawl also maps `analysis_status` to `failed`
 (SH-3 — an empty plan is only `completed` when the plan was legitimately
-empty, e.g. Starter with no monitored selection).
+empty, e.g. full mode with no monitored selection).
 
 `root_errors` (required array — SH-4) rides the **pages** and **dashboard**
 responses: one entry per REAL root-target network call the crawl lost
@@ -254,13 +263,13 @@ Data flow notes:
 - **Selection** commits a full versioned monitored set; a `409`
   `stale_selection_version` surfaces a stale notice and rebases (no silent
   overwrite).
-- **Discovered inventory continuity.** A Starter recrawl freezes a bounded
+- **Discovered inventory continuity.** A full-mode recrawl freezes a bounded
   newest-first lineage of earlier full-crawl ids in its configuration. The
   inventory and `All Discovered` read models union those immutable observation
   sets while the new crawl re-discovers the site, so starting analysis never
   collapses hundreds of discovered URLs to only the monitored subset. Current
   results stay current-crawl-only; inherited rows link to the source crawl that
-  owns their persisted detail. Free/sample crawls ignore this lineage entirely.
+  owns their persisted detail. Sample crawls ignore this lineage entirely.
 
 ---
 
@@ -285,15 +294,15 @@ deterministic precedence (top wins):
    `dashboard`. Score data always outranks the discovering/analyzing sub-states,
    so a landed projection is never hidden behind an active-looking view.
 5. **`failed` without data** → `terminal` (explicit stopped card + restart).
-6. **`cancelled` without data**: Starter with discovered URLs → `selection`
+6. **`cancelled` without data**: full mode with discovered URLs → `selection`
    (the inventory persists through a cancel and re-seeds the next crawl);
    otherwise → `terminal`.
-7. **active Starter crawl + committed monitored set** → `analyzing`, including
+7. **active full-mode crawl + committed monitored set** → `analyzing`, including
    the interval where re-discovery is running and `analysis_status` still says
    `pending`.
 8. **discovery still running** → `discovering`.
 9. **analysis running** → `analyzing`.
-10. **Starter + analysis pending** → `selection`; otherwise (Free auto-analysis)
+10. **full mode + analysis pending** → `selection`; otherwise (sample auto-analysis)
    → `analyzing`.
 
 A `failed` crawl's terminal view keeps the tabbed page browser mounted
@@ -308,7 +317,7 @@ dashboard, partial scores, and URL inventory visible**, explicitly labels the ru
 **Cancelled** (a text-labelled badge + notice, never color alone —
 `dashboardRunNotice` in `status.ts`), and offers **Re-crawl**. The same
 notice covers `partially_completed` (Partial) and `failed`-with-data. A cancel
-that produced *no* data routes to `selection` (Starter, inventory survives) or
+that produced *no* data routes to `selection` (full mode, inventory survives) or
 `terminal`.
 
 ### Retaining content during transitions
@@ -339,7 +348,7 @@ The same server-backed Monitored / All Discovered / Errors table renders during
 analysis and after completion. Its first cursor page polls while active, so row
 statuses and scores fill in without swapping to a separate results screen.
 
-Free non-disclosure is preserved across every state: no phase leaks a
+Sample-mode non-disclosure is preserved across every state: no phase leaks a
 discovered/full-site total, and sample-mode discovery never implies continued
 full-site scanning.
 
@@ -349,7 +358,7 @@ full-site scanning.
 
 - Keep workspace resolution on `require_active_workspace`; a foreign/missing id
   must be an indistinguishable `404`.
-- Preserve Free count/event/export **non-disclosure** (never leak a
+- Preserve sample-mode count/event/export **non-disclosure** (never leak a
   discovered/full-site total).
 - Keep inherited inventory ids as read-scope references only. Never manufacture
   a `SiteUrlObservation` or copy old analysis into a new crawl.

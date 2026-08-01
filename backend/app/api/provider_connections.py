@@ -21,6 +21,7 @@ from app.core.config.provider_catalog import (
     ACTIVE_TRANSPORTS,
     APPROVED_ROUTES,
 )
+from app.domain.billing.schemas import ProviderConnectionStatesResponse
 from app.domain.providers.schemas import (
     ProviderCatalogEngine,
     ProviderCatalogResponse,
@@ -39,6 +40,7 @@ from app.domain.providers.service import (
     create_connection,
     delete_connection,
     get_connection,
+    get_connection_states,
     list_connections,
     run_connection_test,
     update_connection,
@@ -58,6 +60,18 @@ async def list_connections_endpoint(
 ) -> list[ProviderConnectionResponse]:
     connections = await list_connections(session, workspace_id=ctx.workspace_id)
     return [connection_to_response(c) for c in connections]
+
+
+@router.get("/states", response_model=ProviderConnectionStatesResponse)
+async def get_connection_states_endpoint(
+    ctx: _WorkspaceDep, session: _SessionDep
+) -> ProviderConnectionStatesResponse:
+    """Per-provider workspace state, derived fail closed from the workspace's
+    connections and their append-only probe history (an unprobed key is never
+    ``connected``). Returns classification tokens only — never key material
+    or raw provider messages (invariant 6).
+    """
+    return await get_connection_states(session, workspace_id=ctx.workspace_id)
 
 
 @router.post(

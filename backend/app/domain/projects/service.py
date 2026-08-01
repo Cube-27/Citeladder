@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -14,6 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config.api import API_V1_PREFIX
+from app.core.config.entitlements import KEY_PROJECT_SLOTS
+from app.domain.entitlements.enforcement import (
+    enforce_occupancy,
+    lock_workspace_capacity,
+)
 from app.domain.projects.normalization import normalize_benchmark_mode
 from app.domain.projects.schemas import (
     BrandResponse,
@@ -142,7 +148,21 @@ def _build_competitors(items: list[Any] | None) -> list[Competitor]:
 async def create_project(
     session: AsyncSession, *, workspace_id: uuid.UUID, payload: Any
 ) -> Project:
-    """Create a project + its normalized brand identity in one transaction."""
+    """Create a project + its normalized brand identity in one transaction.
+
+    Occupancy is enforced INSIDE the domain service (never an API precheck):
+    the account-capacity advisory lock and the ``project_slots`` check run in
+    the same transaction as the insert, so concurrent creates across the
+    account's workspaces can never exceed the resolved allowance.
+    """
+    account_id = await lock_workspace_capacity(session, workspace_id)
+    await enforce_occupancy(
+        session,
+        account_id=account_id,
+        key=KEY_PROJECT_SLOTS,
+        requested_delta=1,
+        at=datetime.now(UTC),
+    )
     project = Project(
         workspace_id=workspace_id,
         name=payload.name,

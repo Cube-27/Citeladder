@@ -14,6 +14,8 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 const CONNECTION_ID = '11111111-1111-4111-8111-111111111111';
+const OTHER_ID = '11111111-1111-4111-8111-111111111112';
+const THIRD_ID = '11111111-1111-4111-8111-111111111113';
 const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
 
 // v2 direct-provider retirement: one direct transport per logical engine.
@@ -217,6 +219,29 @@ describe('ConnectProviderDialog', () => {
     expect(screen.getByRole('dialog', { name: 'Connect a provider' })).toBeInTheDocument();
   });
 
+  // Regression: the default-engine fallback used to accept any card without a
+  // route, so once all three shipped engines were configured it selected a
+  // PLANNED provider — a value the <select> cannot even display.
+  it('never defaults to a planned provider when every shipped engine is configured', async () => {
+    mswServer.use(
+      catalogHandler(),
+      http.get('/api/v1/provider-connections', () =>
+        HttpResponse.json([
+          connection({ transport_provider: 'openai' }),
+          connection({ id: OTHER_ID, transport_provider: 'google' }),
+          connection({ id: THIRD_ID, transport_provider: 'anthropic' }),
+        ]),
+      ),
+    );
+
+    renderWithProviders(<Harness />);
+    const dialog = await findDialog();
+    await within(dialog).findByLabelText(/api key/i);
+
+    const select = within(dialog).getByLabelText(/ai engine/i) as HTMLSelectElement;
+    expect(['chatgpt', 'gemini', 'claude']).toContain(select.value);
+  });
+
   it('shows a save error and stays open', async () => {
     const user = userEvent.setup();
     mswServer.use(
@@ -229,7 +254,7 @@ describe('ConnectProviderDialog', () => {
 
     renderWithProviders(<Harness />);
     const dialog = await findDialog();
-    await user.type(within(dialog).getByLabelText(/api key/i), 'sk-bad-key');
+    await user.type(await within(dialog).findByLabelText(/api key/i), 'sk-bad-key');
     await user.click(within(dialog).getByRole('button', { name: /save key/i }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Provider rejected the key');

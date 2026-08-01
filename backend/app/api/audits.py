@@ -18,18 +18,37 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.exports import audit_to_csv, audit_to_markdown
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
-from app.core.config.audits import AUDIT_TERMINAL_STATUSES
+from app.core.config.audits import (
+    AUDIT_TERMINAL_STATUSES,
+    AUDIT_TRIGGER_MANUAL,
+    CODE_PROMPT_COUNT_EXCEEDED,
+    CODE_PROMPT_COUNT_POLICY_UNCONFIGURED,
+    audit_settings,
+)
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
+from app.core.config.entitlements import (
+    CODE_FUNDED_BUDGET_EXHAUSTED,
+    CODE_FUNDED_COST_UNRESOLVED,
+    CODE_FUNDED_CREDITS_EXHAUSTED,
+    CODE_MANUAL_RUN_RATE_EXCEEDED,
+)
+from app.core.config.prompts import (
+    CODE_BINDING_VOCABULARY_EMPTY,
+    CODE_PROMPT_OFF_TOPIC,
+)
 from app.core.database import SessionLocal
+from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
 from app.domain.abuse.service import UsageLimitExceededError
 from app.domain.analysis.schemas import MetricsResponse
@@ -43,6 +62,8 @@ from app.domain.analysis.service import (
 from app.domain.audits.planner import (
     AuditNotFoundError,
     AuditValidationError,
+    FundedAdmissionError,
+    PromptCountPolicyError,
     cancel_audit,
     create_audit,
     get_audit,
@@ -54,7 +75,11 @@ from app.domain.audits.schemas import (
     AuditEventResponse,
     AuditResponse,
     AuditTaskResponse,
+    audit_event_response,
 )
+from app.domain.entitlements.enforcement import RateAdmissionDeniedError
+from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
+from app.domain.prompts.topical_binding import TopicalBindingError
 from app.models.audit import Audit, AuditEvent
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -62,28 +87,36 @@ router = APIRouter(prefix="/audits", tags=["audits"])
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
-# How often the SSE loop polls for new events, and the idle cutoff after which
-# it stops streaming a terminal audit.
-_SSE_POLL_SECONDS = 1.0
-_SSE_TERMINAL_GRACE_POLLS = 2
+# Admission denial code -> HTTP status. Codes are config-owned; only the
+# status mapping lives here. Rate denials are 429; an unresolvable
+# entitlement is 403 (never data); commercial budget/credit exhaustion is a
+# graceful 403; an unresolvable funded cost estimate is a 422 fail-closed.
+# Topical-binding rejections are 422 (request-content validation); an unset
+# prompt-count policy is a 422 fail-closed (like an unresolved cost), while
+# breaching a configured count is a graceful 403 (like budget exhaustion).
+_ADMISSION_STATUS: dict[str, int] = {
+    CODE_MANUAL_RUN_RATE_EXCEEDED: status.HTTP_429_TOO_MANY_REQUESTS,
+    STATUS_ENTITLEMENT_UNRESOLVED: status.HTTP_403_FORBIDDEN,
+    CODE_FUNDED_COST_UNRESOLVED: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_FUNDED_BUDGET_EXHAUSTED: status.HTTP_403_FORBIDDEN,
+    CODE_FUNDED_CREDITS_EXHAUSTED: status.HTTP_403_FORBIDDEN,
+    CODE_PROMPT_OFF_TOPIC: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_BINDING_VOCABULARY_EMPTY: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_PROMPT_COUNT_POLICY_UNCONFIGURED: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    CODE_PROMPT_COUNT_EXCEEDED: status.HTTP_403_FORBIDDEN,
+}
 
 
-@router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
-async def create_audit_endpoint(
-    payload: AuditCreate, ctx: _WorkspaceDep, session: _SessionDep
-) -> AuditResponse:
+@contextmanager
+def _translate_create_audit_errors() -> Iterator[None]:
+    """Map ``create_audit`` domain errors to HTTP responses.
+
+    One collaborator keeps the endpoint on its complexity budget while
+    admission denials (rate + funded) render through the unified
+    ``ApiException`` envelope.
+    """
     try:
-        audit = await create_audit(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=payload.project_id,
-            engines=payload.engines,
-            prompt_set_id=payload.prompt_set_id,
-            prompt_ids=payload.prompt_ids,
-            repetitions=payload.repetitions,
-            benchmark_mode=payload.benchmark_mode,
-            random_seed=payload.random_seed,
-        )
+        yield
     except AuditValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
@@ -94,6 +127,39 @@ async def create_audit_endpoint(
             detail="Workspace usage limit exceeded",
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
+    except (
+        RateAdmissionDeniedError,
+        FundedAdmissionError,
+        PromptCountPolicyError,
+        TopicalBindingError,
+    ) as exc:
+        raise ApiException.coded(
+            _ADMISSION_STATUS.get(exc.code, status.HTTP_403_FORBIDDEN),
+            exc.code,
+            str(exc),
+            details=exc.details,
+        ) from exc
+
+
+@router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
+async def create_audit_endpoint(
+    payload: AuditCreate, ctx: _WorkspaceDep, session: _SessionDep
+) -> AuditResponse:
+    with _translate_create_audit_errors():
+        audit = await create_audit(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=payload.project_id,
+            engines=payload.engines,
+            # API-created runs are user-initiated: the manual trigger.
+            trigger=AUDIT_TRIGGER_MANUAL,
+            prompt_set_id=payload.prompt_set_id,
+            prompt_ids=payload.prompt_ids,
+            repetitions=payload.repetitions,
+            benchmark_mode=payload.benchmark_mode,
+            measurement_mode=payload.measurement_mode,
+            random_seed=payload.random_seed,
+        )
     return AuditResponse.model_validate(audit)
 
 
@@ -231,23 +297,40 @@ async def list_events_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
     stream: Annotated[bool, Query()] = False,
+    last_event_id: Annotated[uuid.UUID | None, Header()] = None,
 ) -> list[AuditEventResponse] | StreamingResponse:
-    """Return the audit's lifecycle events.
+    """Return the audit's lifecycle events (strict discriminated DTOs).
 
-    With ``?stream=true`` returns a ``text/event-stream`` (SSE) that replays the
-    existing events and then tails new ones until the audit reaches a terminal
-    status. Otherwise returns the full event list as JSON.
+    With ``?stream=true`` returns a ``text/event-stream`` (SSE) that replays
+    the existing events and then tails new ones until the audit reaches a
+    terminal status. Otherwise returns the event list as JSON. Both surfaces
+    serialize through the same discriminated schema (invariant 2): SSE
+    ``event:`` is the JSON ``event_type`` and SSE ``id:`` is the event UUID.
+
+    ``Last-Event-ID`` (the SSE resume cursor) restarts strictly AFTER the
+    referenced event in both modes. A malformed value is a 422; an event
+    unknown to THIS audit gets the same safe 404 as a foreign audit — never
+    a silent replay from the beginning (invariant 5).
     """
     # Authorize first (404 for a cross-workspace / missing audit — invariant 5).
     await _get_or_404(session, ctx.workspace_id, audit_id)
+    if last_event_id is not None:
+        await _authorize_resume_cursor(session, audit_id, last_event_id)
     if not stream:
-        events = await _load_events(session, audit_id, after=None)
-        return [AuditEventResponse.model_validate(e) for e in events]
+        return await _list_event_responses(session, audit_id, after=last_event_id)
     return StreamingResponse(
-        _event_stream(audit_id),
+        _event_stream(audit_id, last_event_id=last_event_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+async def _list_event_responses(
+    session: AsyncSession, audit_id: uuid.UUID, *, after: uuid.UUID | None
+) -> list[AuditEventResponse]:
+    """The JSON event list (optionally after the resume cursor)."""
+    events = await _load_events(session, audit_id, after=after)
+    return [audit_event_response(e) for e in events]
 
 
 async def _get_or_404(
@@ -257,6 +340,21 @@ async def _get_or_404(
         return await get_audit(session, workspace_id=workspace_id, audit_id=audit_id)
     except AuditNotFoundError as exc:
         raise_not_found("Audit", cause=exc)
+
+
+async def _authorize_resume_cursor(
+    session: AsyncSession, audit_id: uuid.UUID, event_id: uuid.UUID
+) -> None:
+    """404 (audit-shaped) unless the cursor names an event of THIS audit.
+
+    An unknown or cross-audit cursor must never degrade into a replay from
+    the beginning (invariant 5): it fails with exactly the not-found a
+    foreign audit gets, so the response shape leaks nothing about which
+    side of the boundary the id fell on.
+    """
+    event = await session.get(AuditEvent, event_id)
+    if event is None or event.audit_id != audit_id:
+        raise_not_found("Audit")
 
 
 async def _load_events(
@@ -281,27 +379,33 @@ async def _load_events(
 
 
 def _sse_payload(event: AuditEvent) -> str:
-    body = {
-        "id": str(event.id),
-        "audit_id": str(event.audit_id),
-        "event_type": event.event_type,
-        "message": event.message,
-        "payload": event.payload,
-        "created_at": event.created_at.isoformat() if event.created_at else None,
-    }
-    return f"event: {event.event_type}\nid: {event.id}\ndata: {json.dumps(body)}\n\n"
+    """One SSE frame from the SAME discriminated DTO the JSON list emits.
+
+    ``event:`` / ``id:`` are read off the serialized body, so the frame
+    metadata can never drift from the JSON ``event_type`` / ``id`` (the
+    resume cursor) it wraps.
+    """
+    body = audit_event_response(event).model_dump(mode="json")
+    return (
+        f"event: {body['event_type']}\nid: {body['id']}\ndata: {json.dumps(body)}\n\n"
+    )
 
 
 async def _event_stream(
     audit_id: uuid.UUID,
-):  # pragma: no cover - streaming loop
+    *,
+    last_event_id: uuid.UUID | None = None,
+):
     """Tail an audit's events until it terminalizes.
 
     Opens its own short-lived sessions (the request session is closed once the
-    handler returns the ``StreamingResponse``). Stops shortly after the audit
-    reaches a terminal status so the connection does not hang forever.
+    handler returns the ``StreamingResponse``). Resumes strictly AFTER
+    ``last_event_id`` when given — the endpoint has already authorized the
+    cursor against this audit. Stops shortly after the audit reaches a
+    terminal status (config-owned grace, invariant 1) so the connection does
+    not hang forever.
     """
-    last_id: uuid.UUID | None = None
+    last_id = last_event_id
     terminal_polls = 0
     while True:
         async with SessionLocal() as session:
@@ -314,6 +418,6 @@ async def _event_stream(
             break
         if audit.status in AUDIT_TERMINAL_STATUSES:
             terminal_polls += 1
-            if terminal_polls >= _SSE_TERMINAL_GRACE_POLLS:
+            if terminal_polls >= audit_settings.sse_terminal_grace_polls:
                 break
-        await asyncio.sleep(_SSE_POLL_SECONDS)
+        await asyncio.sleep(audit_settings.sse_poll_seconds)

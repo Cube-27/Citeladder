@@ -13,24 +13,45 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config.provider_catalog import CREDENTIAL_SOURCE_BYOK
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN, ON_DELETE_SET_NULL
 
 
 class ProviderConnection(Base):
-    """A workspace-owned BYOK credential for one transport provider.
+    """A workspace-owned credential for one transport provider.
 
-    The API key is stored Fernet-encrypted in ``api_key_encrypted`` and is
-    decrypted only at execution time to build an adapter (invariant 6). No code
-    path places the decrypted key — or the ciphertext — into a response DTO.
+    Tenant rows are BYOK (``credential_source == "byok"``); the operator's
+    platform-funded rows (``"platform"``) live only in the reserved system
+    workspace and are never tenant-visible. The API key is stored
+    Fernet-encrypted in ``api_key_encrypted`` and is decrypted only at
+    execution time to build an adapter (invariant 6). No code path places the
+    decrypted key — or the ciphertext — into a response DTO.
+
+    ``active`` is operator enablement. The pause fields are a SEPARATE,
+    recoverable state: an auth-key failure pause marks ``paused_at`` with a
+    safe classification token in ``pause_reason`` and a recovery deadline in
+    ``pause_until`` — a paused connection is skipped by credential resolution
+    but never retired.
     """
 
     __tablename__ = "provider_connections"
+    __table_args__ = (
+        # Credential resolution looks rows up by workspace + source +
+        # transport (BYOK in the tenant workspace, platform in the system
+        # workspace), so those identity columns share one composite index.
+        Index(
+            "ix_provider_connections_workspace_source",
+            "workspace_id",
+            "credential_source",
+            "transport_provider",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -54,6 +75,22 @@ class ProviderConnection(Base):
     # connections that have never been auto-deactivated.
     deactivation_reason: Mapped[str] = mapped_column(
         String(64), default="", server_default=""
+    )
+    # Who owns this credential (provider_catalog.CREDENTIAL_SOURCE_*): tenant
+    # BYOK by default; the platform-funded rows are provisioning-owned.
+    credential_source: Mapped[str] = mapped_column(
+        String(16), default=CREDENTIAL_SOURCE_BYOK, server_default="byok"
+    )
+    # Recoverable auth-failure pause (separate from ``active`` operator
+    # enablement). ``paused_at`` NULL = not paused; ``pause_reason`` is a safe
+    # classification token (never raw provider detail); ``pause_until`` is the
+    # recovery deadline after which resolution may try the credential again.
+    paused_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    pause_reason: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    pause_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     # Result of the most recent connectivity test (denormalized for listing).
     last_tested_at: Mapped[datetime | None] = mapped_column(

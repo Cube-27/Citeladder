@@ -8,10 +8,10 @@
 #   2. Derive + FREEZE the primary registrable domain (offline PSL), root
 #      URL/host, and the validated include/exclude narrowing globs onto the
 #      project's ``SiteHealthProfile`` (created on first crawl).
-#   3. Resolve the workspace entitlement; a Free capability freezes
-#      ``sample_mode=True`` and locks the entitlement row so the workspace-wide
+#   3. Refresh the workspace runtime row; a zero monitored-URL allowance
+#      freezes ``sample_mode=True`` and locks the row so the workspace-wide
 #      Free allowance is serialized at creation time.
-#   4. Freeze the operational settings + entitlement + rule/scoring versions
+#   4. Freeze the operational settings + runtime projection + rule/scoring
 #      into ``SiteCrawl.configuration`` so a live env change never alters an
 #      in-flight run (invariant 9), store the normalized 64-bit ``random_seed``.
 #   5. Seed the in-scope root ``discover`` task (generation 0), plus re-seed the
@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,14 +58,13 @@ from app.core.config.site_health import (
     SCORING_VERSION,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
-    capability_profile,
     site_health_settings,
 )
 from app.core.config.task_queue import TASK_STATUS_QUEUED
-from app.domain.site_health.entitlements import (
-    lock_entitlement,
-    resolve_entitlement,
+from app.domain.entitlements.service import (
+    refresh_site_health_runtime_for_workspace,
 )
+from app.domain.site_health.entitlements import lock_runtime
 from app.domain.site_health.inventory_scope import freeze_inventory_lineage
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.selection import seed_monitored_targets
@@ -215,43 +215,43 @@ async def _upsert_profile(
     return profile
 
 
-def _is_sample_mode(profile) -> bool:
-    """Single source of truth for whether a capability crawls in sample mode.
+def _is_sample_mode(runtime) -> bool:
+    """Single source of truth for whether a workspace crawls in sample mode.
 
-    Free crawls a deterministic sample (no user selection); Starter runs the
-    full progressive inventory. Both ``_frozen_configuration`` and
-    ``create_crawl`` derive ``sample_mode`` from here so they can never diverge.
+    A zero monitored-URL allowance crawls a deterministic sample (no user
+    selection); a positive allowance runs the full progressive inventory. Both
+    ``_frozen_configuration`` and ``create_crawl`` derive ``sample_mode`` from
+    the runtime row here so they can never diverge.
     """
-    return (
-        not profile.allows_user_selection
-        and profile.discovery_mode == DISCOVERY_MODE_SAMPLE
-    )
+    return runtime.discovery_mode == DISCOVERY_MODE_SAMPLE
 
 
 def _frozen_configuration(
     *,
-    capability: str,
     root_registrable_domain: str,
     include_globs: list[str],
     exclude_globs: list[str],
-    entitlement,
+    runtime,
 ) -> dict:
-    """Freeze the operational settings + entitlement snapshot (invariant 9).
+    """Freeze the operational settings + runtime projection (invariant 9).
 
     Everything the worker needs to run this crawl deterministically regardless
-    of a later live env change: the narrowing scope, the frozen capability
-    limits, the crawler bounds, and the rule/scoring versions.
+    of a later live env or entitlement change: the narrowing scope, the frozen
+    neutral policy limits, the resolver provenance, the crawler bounds, and
+    the rule/scoring versions.
     """
     s = site_health_settings
-    profile = capability_profile(capability)
     return {
-        "capability": profile.capability,
-        "discovery_mode": profile.discovery_mode,
-        "sample_mode": _is_sample_mode(profile),
-        "count_disclosure": profile.count_disclosure,
-        "sample_url_limit": int(getattr(entitlement, "sample_url_limit", 0)),
-        "monitored_url_limit": int(getattr(entitlement, "monitored_url_limit", 0)),
-        "discovery_url_cap": profile.discovery_url_cap,
+        "discovery_mode": runtime.discovery_mode,
+        "sample_mode": _is_sample_mode(runtime),
+        "count_disclosure": bool(runtime.count_disclosure),
+        "sample_url_limit": int(runtime.sample_url_limit),
+        "monitored_url_limit": int(runtime.monitored_url_limit),
+        "discovery_url_cap": runtime.discovery_url_cap,
+        "resolved_registry_revision": runtime.resolved_registry_revision,
+        "resolved_entitlement_lifecycle_version": int(
+            runtime.resolved_entitlement_lifecycle_version
+        ),
         "root_registrable_domain": root_registrable_domain,
         "include_globs": include_globs,
         "exclude_globs": exclude_globs,
@@ -286,7 +286,7 @@ async def create_crawl(
 
     Derives the crawl root from ``Project.website_url``, freezes the primary
     registrable domain + narrowing onto the profile and the operational
-    settings + entitlement into ``SiteCrawl.configuration``, seeds the in-scope
+    settings + runtime projection into ``SiteCrawl.configuration``, seeds the in-scope
     root ``discover`` task (and re-seeds the persistent monitored set's
     ``analyze`` tasks), then drives the lifecycle to ``queued`` and commits so
     the worker can claim the root. Rejects a second active crawl for the same
@@ -321,23 +321,21 @@ async def create_crawl(
     includes = _normalize_globs(include_globs, label="include")
     excludes = _normalize_globs(exclude_globs, label="exclude")
 
-    # Resolve (seed if missing) the entitlement BEFORE mutating the profile.
-    # ``replace_monitored_set()`` locks entitlement before profile, so this
-    # path must match that lock order to avoid a deadlock cycle. For a Free
-    # capability, LOCK the entitlement row so the workspace-wide sample
-    # allowance is serialized at creation time against any concurrent crawl
-    # in another project.
-    entitlement = await resolve_entitlement(session, workspace_id)
-    capability = entitlement.plan_key
-    capability_prof = capability_profile(capability)
-    sample_mode = _is_sample_mode(capability_prof)
+    # Refresh (seed if missing) the runtime row BEFORE mutating the profile.
+    # ``replace_monitored_set()`` locks the runtime row before profile, so
+    # this path must match that lock order to avoid a deadlock cycle. In
+    # sample mode, LOCK the runtime row so the workspace-wide sample allowance
+    # is serialized at creation time against any concurrent crawl in another
+    # project.
+    runtime = await refresh_site_health_runtime_for_workspace(
+        session, workspace_id=workspace_id, at=datetime.now(UTC)
+    )
+    sample_mode = _is_sample_mode(runtime)
     if sample_mode:
-        entitlement = await lock_entitlement(session, workspace_id)
-        capability = entitlement.plan_key
-        # Re-derive sample_mode from the LOCKED row: the entitlement may have
-        # changed between the unlocked read above and acquiring the lock.
-        capability_prof = capability_profile(capability)
-        sample_mode = _is_sample_mode(capability_prof)
+        runtime = await lock_runtime(session, workspace_id)
+        # Re-derive sample_mode from the LOCKED row: the projection may have
+        # changed between the unlocked refresh above and acquiring the lock.
+        sample_mode = _is_sample_mode(runtime)
 
     profile = await _upsert_profile(
         session,
@@ -352,17 +350,16 @@ async def create_crawl(
 
     seed = _normalize_seed(random_seed)
     configuration = _frozen_configuration(
-        capability=capability,
         root_registrable_domain=root_registrable_domain,
         include_globs=includes,
         exclude_globs=excludes,
-        entitlement=entitlement,
+        runtime=runtime,
     )
 
-    # Keep a Starter project's earlier discovered inventory visible while a
-    # new analysis crawl re-discovers the site. The lineage references
+    # Keep a full-inventory project's earlier discovered URLs visible while
+    # a new analysis crawl re-discovers the site. The lineage references
     # immutable observations; it never copies or fabricates evidence. Sample
-    # crawls inherit nothing, preserving Free catalog non-disclosure.
+    # crawls inherit nothing, preserving sample-mode count non-disclosure.
     if not sample_mode:
         previous_crawl = await session.scalar(
             select(SiteCrawl)
@@ -457,7 +454,7 @@ async def create_page_rerun_crawl(
     project_id: uuid.UUID,
     profile: SiteHealthProfile,
     site_url: SiteUrl,
-    entitlement,
+    runtime,
     random_seed: str | None = None,
 ) -> SiteCrawl:
     """Create a fresh, single-page rerun crawl for one already-known URL.
@@ -472,7 +469,7 @@ async def create_page_rerun_crawl(
     The fresh crawl:
 
     - reuses the project's frozen ``SiteHealthProfile`` (root/scope/versions)
-      and the current capability snapshot, so scope/version provenance matches
+      and the current runtime projection, so scope/version provenance matches
       a normal crawl;
     - records the target's ``SiteUrlObservation`` up front (source_kind
       ``root``) so the page-detail projection — which scopes URLs to a crawl's
@@ -486,15 +483,12 @@ async def create_page_rerun_crawl(
     The caller owns the transaction boundary (flush, no commit), mirroring
     ``rerun_page``. Returns the new ``SiteCrawl`` (unrefreshed).
     """
-    capability = entitlement.plan_key
-    capability_prof = capability_profile(capability)
-    sample_mode = _is_sample_mode(capability_prof)
+    sample_mode = _is_sample_mode(runtime)
     configuration = _frozen_configuration(
-        capability=capability,
         root_registrable_domain=profile.registrable_domain or "",
         include_globs=list(profile.include_globs or []),
         exclude_globs=list(profile.exclude_globs or []),
-        entitlement=entitlement,
+        runtime=runtime,
     )
     seed = _normalize_seed(random_seed)
 

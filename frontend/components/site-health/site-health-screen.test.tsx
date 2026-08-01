@@ -39,14 +39,15 @@ const project = {
 
 const entitlement = {
   workspace_id: WORKSPACE,
-  plan_key: 'starter',
   access_mode: 'selection',
   sample_url_limit: 10,
   monitored_url_limit: 50,
-  can_view_discovered_total: true,
-  capability_revision: 1,
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
+  count_disclosure: true,
+  resolver_status: 'resolved',
+  registry_revision: 'registry-v8',
+  entitlement_lifecycle_version: 1,
+  valid_until: null,
+  contributing_grant_ids: [],
 };
 
 // Bounded site-facts blob the worker persists (`_crawl_setup` in

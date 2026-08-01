@@ -540,9 +540,9 @@ export function OnboardingScreen() {
                   Your workspace is ready
                 </h1>
                 <p className="text-muted text-sm leading-relaxed">
-                  {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a free Site
-                  Health crawl in the background; its status and results will appear on your
-                  dashboard.
+                  {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a Site Health
+                  crawl in the background; how much of your site it covers follows your
+                  monitored-URL allowance. Its status and results will appear on your dashboard.
                 </p>
               </div>
               <div className="pt-2">

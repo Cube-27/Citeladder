@@ -83,13 +83,16 @@ describe('FAQ page (public marketing `/faq`)', () => {
     }
   });
 
-  it('publishes the real plan prices under Account & billing', () => {
+  it('points to the catalog instead of quoting a price under Account & billing', () => {
     const { container } = render(<Page />);
 
     const billing = screen.getByRole('region', { name: 'Account & billing' });
-    // Prices match lib/marketing-content/pricing.ts, the single source. The
-    // $49 figure appears in both the cost answer and the no-markup answer.
-    expect(within(billing).getAllByText(/\$49\/month.*Paid/).length).toBeGreaterThan(0);
+    // Prices are region-resolved per visitor and published by the catalog, so
+    // an amount hard-coded here would be wrong for most readers and stale for
+    // the rest. The FAQ routes to /pricing rather than restating a number.
+    expect(within(billing).getAllByText(/\/pricing/).length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/\$49/);
+    expect(container.textContent).not.toMatch(/Free plan|no card/i);
     expect(within(billing).getByText(/India.*INR.*GST/)).toBeInTheDocument();
     // The BYOK-therefore-flat-fee reasoning is stated, not implied.
     expect(within(billing).getByText(/never marked up by/i)).toBeInTheDocument();

@@ -134,7 +134,9 @@ const STORY_STEPS = [
     label: '4. Optimize',
     navLabel: 'Opportunities',
     shiftTitle: 'Navigating The Shift',
-    productSolution: 'Turn visibility gaps into prioritized, high-ROI content & schema updates',
+    // "high-ROI" asserts an outcome nothing here measures. The prioritisation
+    // is real and deterministic; the return on it is not ours to claim.
+    productSolution: 'Turn visibility gaps into prioritized content & schema updates',
     icon: Zap,
   },
 ] as const;

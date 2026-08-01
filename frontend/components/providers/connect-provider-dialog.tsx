@@ -12,6 +12,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { LogicalEngine, ProviderConnection } from '@/lib/api/types';
 import {
   buildEngineCards,
+  isConnectable,
   connectionForTransport,
   ENGINE_LABELS,
   ENGINE_ORDER,
@@ -67,14 +68,20 @@ export function ConnectProviderDialog({
     if (open) setSelected(null);
   }
 
+  // Only connectable engines are candidates. Planned providers have no route,
+  // so the old `card.route ? … : true` fallback selected one of them as soon
+  // as all three shipped engines were configured — a default the <select>
+  // below cannot even display, since it lists ENGINE_ORDER only.
+  const connectableCards = cards.filter(isConnectable);
   const firstUnconfigured =
-    cards.find((card) =>
-      card.route
-        ? !isConfigured(connectionForTransport(connections, card.route.transport_provider))
-        : true,
+    connectableCards.find(
+      (card) => !isConfigured(connectionForTransport(connections, card.route!.transport_provider)),
     )?.logical_engine ?? ENGINE_ORDER[0];
   const engine = selected ?? firstUnconfigured;
-  const model = cards.find((card) => card.logical_engine === engine) ?? cards[0];
+  // Undefined while the catalog is still loading (no routes yet). The form is
+  // withheld rather than rendered against a route-less placeholder.
+  const model =
+    connectableCards.find((card) => card.logical_engine === engine) ?? connectableCards[0];
 
   return (
     <Dialog
@@ -101,16 +108,20 @@ export function ConnectProviderDialog({
           )}
         </Field>
 
-        <ConnectEngineForm
-          key={engine}
-          model={model}
-          connections={connections}
-          onCancel={() => onOpenChange(false)}
-          onSaved={() => {
-            onOpenChange(false);
-            onConnected?.();
-          }}
-        />
+        {model ? (
+          <ConnectEngineForm
+            key={engine}
+            model={model}
+            connections={connections}
+            onCancel={() => onOpenChange(false)}
+            onSaved={() => {
+              onOpenChange(false);
+              onConnected?.();
+            }}
+          />
+        ) : (
+          <p className="text-muted text-sm">Loading available engines…</p>
+        )}
       </div>
     </Dialog>
   );

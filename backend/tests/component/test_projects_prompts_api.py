@@ -19,10 +19,13 @@ import uuid
 import httpx
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.brand_logos import BRAND_LOGO_STATUS_READY
+from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
+from app.domain.entitlements.types import GrantSpec
 from app.models.brand import Brand, BrandLogoAsset, Competitor
+from tests.component.occupancy_helpers import seed_occupancy_grants
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -262,7 +265,7 @@ async def test_prompt_set_and_prompt_crud_and_intent_validation(
     # Known intent is kept.
     created = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "best running shoes", "intent": "Discovery"},
+        json={"text": "best acme running shoes", "intent": "Discovery"},
     )
     assert created.status_code == 201
     assert created.json()["intent"] == "discovery"
@@ -272,7 +275,7 @@ async def test_prompt_set_and_prompt_crud_and_intent_validation(
     # Unknown intent normalizes to "".
     created2 = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "another prompt", "intent": "teleport"},
+        json={"text": "another acme prompt", "intent": "teleport"},
     )
     assert created2.status_code == 201
     assert created2.json()["intent"] == ""
@@ -310,7 +313,7 @@ async def test_csv_import_bulk_creates_imported_prompts(
 
     csv_bytes = (
         b"text,theme,intent\n"
-        b"cheap laptops,tech,discovery\n"
+        b"cheap acme laptops,tech,discovery\n"
         b"Acme vs Globex,compare,comparison\n"
         b"   ,skip,discovery\n"
     )
@@ -338,7 +341,7 @@ async def test_csv_import_accepts_json_rows(client: httpx.AsyncClient) -> None:
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        json={"prompts": [{"text": "row one"}, {"text": "row two"}]},
+        json={"prompts": [{"text": "acme row one"}, {"text": "acme row two"}]},
     )
     assert resp.status_code == 201
     assert resp.json()["prompt_count"] == 2
@@ -393,3 +396,81 @@ async def test_cross_workspace_project_isolation(
         json={"project_id": a_project["id"], "name": "sneaky"},
     )
     assert ps.status_code == 404
+
+
+# =========================================================================
+# Account occupancy enforcement (slice23 Task 4): routes map the domain
+# error to the coded 403 — the quota check itself lives in the services.
+# =========================================================================
+@pytest.mark.asyncio
+async def test_create_project_over_occupancy_returns_coded_403(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _register(client, "occ-proj@example.com")
+    # Unprovisioned (no grants): the first project is not occupancy-gated.
+    first = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    workspace_id = uuid.UUID(first["workspace_id"])
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
+        )
+        await session.commit()
+
+    resp = await client.post("/api/v1/projects", json=_project_payload(name="Second"))
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["error"]["code"] == "occupancy_limit_exceeded"
+    assert body["error"]["retryable"] is False
+    assert body["error"]["details"]["key"] == "project_slots"
+    assert body["error"]["details"]["allowance"] == 1
+    # Legacy coded detail keeps its exact dialect (api-error-contract).
+    assert body["detail"]["code"] == "occupancy_limit_exceeded"
+
+
+@pytest.mark.asyncio
+async def test_create_prompt_over_occupancy_returns_coded_403(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _register(client, "occ-prompt@example.com")
+    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    prompt_set_id = (
+        await client.post(
+            "/api/v1/prompt-sets",
+            json={"project_id": project["id"], "name": "Launch set"},
+        )
+    ).json()["id"]
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=1),),
+        )
+        await session.commit()
+
+    first = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+        json={"text": "first acme prompt"},
+    )
+    assert first.status_code == 201
+
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+        json={"text": "second acme prompt"},
+    )
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["error"]["code"] == "occupancy_limit_exceeded"
+    assert body["error"]["details"]["key"] == "prompt_slots"
+    assert body["detail"]["code"] == "occupancy_limit_exceeded"
+
+    # A duplicate of the persisted prompt stays a 409 even at full
+    # capacity: duplicates never consume a slot, so no 403 pre-empts it.
+    dup = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+        json={"text": " First   Acme Prompt "},
+    )
+    assert dup.status_code == 409

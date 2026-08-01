@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from sqlalchemy import CursorResult, select
@@ -16,13 +18,26 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.core.config.projects import (
     PROMPT_ORIGIN_IMPORTED,
     PROMPT_ORIGIN_MANUAL,
 )
+from app.core.config.prompts import PROMPT_STATUS_ACTIVE
+from app.domain.entitlements.enforcement import (
+    enforce_occupancy,
+    lock_workspace_capacity,
+)
 from app.domain.projects.normalization import normalize_intent
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.prompts.topical_binding import (
+    BINDING_FAILURE_MESSAGES,
+    TopicalBindingError,
+    enforce_prompt_binding,
+    load_project_vocabulary,
+    validate_prompt_binding,
+)
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
 
@@ -43,6 +58,97 @@ class TopicNotFoundError(LookupError):
 
 class DuplicatePromptError(ValueError):
     """Raised when a prompt's normalized text already exists in the set."""
+
+
+# --------------------------------------------------------------------------
+# Topical binding enforcement (validator lives in topical_binding.py)
+# --------------------------------------------------------------------------
+async def _enforce_activation_binding(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+    prompt_ids: list[uuid.UUID],
+    status: str,
+) -> None:
+    """Binding gate for the human proposed -> active transition.
+
+    A transition INTO ``active`` (the audit-eligible status) re-validates
+    every targeted prompt against the project vocabulary, so stale or
+    bypassed content can never be promoted. Any failure rejects the whole
+    bulk request before the scoped UPDATE runs (nothing is transitioned).
+    Other statuses (archive) are not admissions and skip the gate.
+    """
+    if status != PROMPT_STATUS_ACTIVE:
+        return
+    rows = (
+        await session.execute(
+            select(Prompt.id, Prompt.text).where(
+                Prompt.prompt_set_id == prompt_set_id,
+                Prompt.id.in_(prompt_ids),
+            )
+        )
+    ).all()
+    vocabulary = await load_project_vocabulary(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    failures = []
+    for row in rows:
+        result = validate_prompt_binding(row.text or "", vocabulary)
+        if not result.accepted:
+            failures.append(
+                {
+                    "prompt_id": str(row.id),
+                    "code": result.code,
+                    "message": BINDING_FAILURE_MESSAGES[result.code],
+                }
+            )
+    if failures:
+        raise TopicalBindingError(
+            f"{len(failures)} prompt(s) fail topical binding and cannot be activated",
+            code=failures[0]["code"],
+            details={"prompts": failures},
+        )
+
+
+async def _enforce_import_binding(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    texts: Sequence[str],
+) -> None:
+    """Per-row binding gate for CSV import (atomic: all rows or none).
+
+    Every non-empty row must bind to the project vocabulary. Failures are
+    collected per row and raised together BEFORE any insert or occupancy
+    charge, so an invalid import inserts NO rows and the caller gets the
+    row-specific reasons.
+    """
+    vocabulary = await load_project_vocabulary(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    failures = []
+    for index, text in enumerate(texts):
+        if not text:
+            continue
+        result = validate_prompt_binding(text, vocabulary)
+        if not result.accepted:
+            failures.append(
+                {
+                    "row": index,
+                    "code": result.code,
+                    "message": BINDING_FAILURE_MESSAGES[result.code],
+                }
+            )
+    if failures:
+        raise TopicalBindingError(
+            f"{len(failures)} imported prompt row(s) fail topical binding; "
+            "no rows were imported",
+            code=failures[0]["code"],
+            details={"rows": failures},
+        )
 
 
 async def _project_in_workspace(
@@ -174,6 +280,60 @@ async def delete_prompt_set(
 # --------------------------------------------------------------------------
 # Prompts
 # --------------------------------------------------------------------------
+async def prepare_prompt_inserts(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+    texts: Sequence[str],
+) -> frozenset[str]:
+    """Capacity-checked insert plan for candidate prompt texts.
+
+    The ONE shared gate for every prompt-insert path (manual create, CSV
+    import, AI-generation persistence). Under the account-capacity advisory
+    lock: intra-request duplicates are removed, hashes already persisted in
+    the set are queried, and ONLY the rows that can actually insert are
+    charged against the account's ``prompt_slots`` allowance — a duplicate
+    never consumes a slot, and the comparison runs in the same transaction
+    as the inserts so concurrent writers can never exceed the grant. Returns
+    the normalized hashes approved for insert; the per-set uniqueness
+    constraint stays the final race guard.
+    """
+    unique_hashes = list(
+        dict.fromkeys(prompt_text_hash(text) for text in texts if text.strip())
+    )
+    if not unique_hashes:
+        return frozenset()
+    account_id = await lock_workspace_capacity(session, workspace_id)
+    existing = set(
+        (
+            await session.execute(
+                select(Prompt.normalized_text_hash).where(
+                    Prompt.prompt_set_id == prompt_set_id,
+                    Prompt.normalized_text_hash.in_(unique_hashes),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    approved = frozenset(h for h in unique_hashes if h not in existing)
+    await enforce_occupancy(
+        session,
+        account_id=account_id,
+        key=KEY_PROMPT_SLOTS,
+        requested_delta=len(approved),
+        at=datetime.now(UTC),
+    )
+    return approved
+
+
+def _require_insertable(approved: frozenset[str], text_hash: str) -> None:
+    """A single-create candidate the plan did not approve is a duplicate."""
+    if text_hash not in approved:
+        raise DuplicatePromptError("An equivalent prompt already exists in this set")
+
+
 async def list_prompts(
     session: AsyncSession,
     *,
@@ -189,12 +349,20 @@ async def list_prompts(
 async def create_prompt(
     session: AsyncSession, *, workspace_id: uuid.UUID, payload: Any
 ) -> Prompt:
-    await _get_prompt_set(
+    prompt_set = await _get_prompt_set(
         session,
         workspace_id=workspace_id,
         prompt_set_id=payload.prompt_set_id,
     )
     text = payload.text.strip()
+    # Topical binding: manual text must share the project's identity/category
+    # vocabulary (rejects BEFORE any occupancy charge or insert).
+    await enforce_prompt_binding(
+        session,
+        workspace_id=workspace_id,
+        project_id=prompt_set.project_id,
+        text=text,
+    )
     # normalized_text_hash is set by the Prompt model's @validates("text") hook.
     prompt = Prompt(
         prompt_set_id=payload.prompt_set_id,
@@ -217,6 +385,15 @@ async def create_prompt(
             topic_id=topic_id,
         )
         prompt.topic_id = topic_id
+    # Occupancy + duplicate plan under the account lock; the DB uniqueness
+    # constraint below stays the final race guard.
+    approved = await prepare_prompt_inserts(
+        session,
+        workspace_id=workspace_id,
+        prompt_set_id=payload.prompt_set_id,
+        texts=[text],
+    )
+    _require_insertable(approved, prompt.normalized_text_hash)
     session.add(prompt)
     try:
         await session.commit()
@@ -279,6 +456,36 @@ async def _validate_topic_scope(
         raise TopicNotFoundError("Topic not found in this prompt's project")
 
 
+async def _enforce_update_binding(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt: Prompt,
+    data: dict[str, Any],
+) -> None:
+    """Binding gate for the update path (text edits + activation transitions).
+
+    Re-validates when the text is being replaced OR the prompt is
+    transitioning INTO ``active`` — against the text it would carry after
+    the update — so an off-domain edit or a stale proposed prompt can never
+    become audit-eligible. Raises BEFORE any field is mutated.
+    """
+    new_text = data.get("text")
+    activates = (
+        data.get("status") == PROMPT_STATUS_ACTIVE
+        and prompt.status != PROMPT_STATUS_ACTIVE
+    )
+    if new_text is None and not activates:
+        return
+    project_id = await session.scalar(
+        select(PromptSet.project_id).where(PromptSet.id == prompt.prompt_set_id)
+    )
+    text = (new_text if new_text is not None else prompt.text).strip()
+    await enforce_prompt_binding(
+        session, workspace_id=workspace_id, project_id=project_id, text=text
+    )
+
+
 async def update_prompt(
     session: AsyncSession,
     *,
@@ -288,6 +495,9 @@ async def update_prompt(
 ) -> Prompt:
     prompt = await _get_prompt(session, workspace_id=workspace_id, prompt_id=prompt_id)
     data = payload.model_dump(exclude_unset=True)
+    await _enforce_update_binding(
+        session, workspace_id=workspace_id, prompt=prompt, data=data
+    )
     if data.get("text") is not None:
         prompt.text = data["text"].strip()
     if data.get("theme") is not None:
@@ -327,6 +537,37 @@ async def delete_prompt(
     await session.commit()
 
 
+def _import_texts(rows: Sequence[Any]) -> list[str]:
+    """Strip every row's text (empty strings are filtered downstream)."""
+    return [str(row.text or "").strip() for row in rows]
+
+
+async def _insert_imported_row(
+    session: AsyncSession, *, prompt_set_id: uuid.UUID, row: Any, text: str
+) -> None:
+    """Persist one capacity-approved import row as ``imported``.
+
+    ``ON CONFLICT DO NOTHING`` on the per-set hash constraint stays the
+    final race guard — a duplicate is dropped by the DB, never a failure.
+    """
+    stmt = (
+        pg_insert(Prompt)
+        .values(
+            id=uuid.uuid4(),
+            prompt_set_id=prompt_set_id,
+            text=text,
+            normalized_text_hash=prompt_text_hash(text),
+            theme=str(row.theme or "").strip(),
+            intent=normalize_intent(row.intent),
+            branded=bool(row.branded),
+            enabled=bool(row.enabled),
+            origin=PROMPT_ORIGIN_IMPORTED,
+        )
+        .on_conflict_do_nothing(constraint="uq_prompt_set_normalized_text")
+    )
+    await session.execute(stmt)
+
+
 async def import_prompts(
     session: AsyncSession,
     *,
@@ -338,34 +579,46 @@ async def import_prompts(
 
     Rows with empty text are skipped; intents are casefolded + validated.
     Duplicates (same normalized text as an existing prompt in the set, or a
-    repeat within the upload) are dropped by the DB via ``ON CONFLICT DO
-    NOTHING`` on the per-set hash constraint — never a request failure.
-    Returns the refreshed prompt set (with all prompts) so the caller can
-    project the whole set back — matching the frontend import contract.
+    repeat within the upload) are dropped — never a request failure — and
+    are filtered BEFORE occupancy is charged, so a duplicate never consumes
+    a ``prompt_slots`` slot. Every non-empty row must pass topical binding:
+    row-specific failures are raised together and, since the import is
+    atomic, an invalid upload inserts NO rows. The insert runs under the
+    account-capacity lock; the whole import is atomic, so an over-allowance
+    upload inserts nothing either. Returns the refreshed prompt set (with
+    all prompts) so the caller can project the whole set back — matching
+    the frontend import contract.
     """
+    # NOTE: the scope check's result is deliberately DISCARDED (never held in
+    # a local): keeping the instance alive would pin it in the identity map
+    # with its already-loaded (empty) prompts collection, and the refresh at
+    # the end of the import would serve that stale collection. The binding
+    # gate reads the project id through a scalar column select instead, which
+    # materializes no ORM instance.
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
     )
-    for row in rows:
-        text = str(row.text or "").strip()
-        if not text:
-            continue
-        stmt = (
-            pg_insert(Prompt)
-            .values(
-                id=uuid.uuid4(),
-                prompt_set_id=prompt_set_id,
-                text=text,
-                normalized_text_hash=prompt_text_hash(text),
-                theme=str(row.theme or "").strip(),
-                intent=normalize_intent(row.intent),
-                branded=bool(row.branded),
-                enabled=bool(row.enabled),
-                origin=PROMPT_ORIGIN_IMPORTED,
+    project_id = await session.scalar(
+        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
+    )
+    texts = _import_texts(rows)
+    await _enforce_import_binding(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        texts=texts,
+    )
+    approved = await prepare_prompt_inserts(
+        session,
+        workspace_id=workspace_id,
+        prompt_set_id=prompt_set_id,
+        texts=texts,
+    )
+    for row, text in zip(rows, texts, strict=True):
+        if text and prompt_text_hash(text) in approved:
+            await _insert_imported_row(
+                session, prompt_set_id=prompt_set_id, row=row, text=text
             )
-            .on_conflict_do_nothing(constraint="uq_prompt_set_normalized_text")
-        )
-        await session.execute(stmt)
     await session.commit()
     return await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
@@ -384,12 +637,28 @@ async def bulk_set_status(
 
     Scoped to one set: ids outside the set (or workspace) are rejected as a
     whole so the caller never silently transitions fewer prompts than asked.
-    The scoped UPDATE runs first and its rowcount is compared to the request
-    (no check-then-act window); on any mismatch we raise before committing,
-    so no partial transition ever persists.
+    A transition INTO ``active`` first passes the topical-binding gate
+    (off-domain or unbound prompts are never promoted; the whole request
+    fails before any write). The scoped UPDATE runs first and its rowcount
+    is compared to the request (no check-then-act window); on any mismatch
+    we raise before committing, so no partial transition ever persists.
     """
+    # Discarded scope check (see import_prompts: holding the instance pins a
+    # stale prompts collection for the post-transition refresh); the binding
+    # gate gets the project id from a scalar column select instead.
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
+    )
+    project_id = await session.scalar(
+        select(PromptSet.project_id).where(PromptSet.id == prompt_set_id)
+    )
+    await _enforce_activation_binding(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        prompt_set_id=prompt_set_id,
+        prompt_ids=prompt_ids,
+        status=status,
     )
     result = await session.execute(
         sa_update(Prompt)

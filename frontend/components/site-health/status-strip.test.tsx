@@ -8,14 +8,15 @@ const CRAWL = '22222222-2222-4222-8222-222222222222';
 
 const entitlement: SiteHealthEntitlement = {
   workspace_id: '33333333-3333-4333-8333-333333333333',
-  plan_key: 'starter',
   access_mode: 'selection',
   sample_url_limit: 10,
   monitored_url_limit: 50,
-  can_view_discovered_total: true,
-  capability_revision: 1,
-  created_at: '2026-07-15T00:00:00Z',
-  updated_at: '2026-07-15T00:00:00Z',
+  count_disclosure: true,
+  resolver_status: 'resolved',
+  registry_revision: 'reg-1',
+  entitlement_lifecycle_version: 1,
+  valid_until: null,
+  contributing_grant_ids: [],
 };
 
 function page(overrides: Partial<PageSummary> = {}): PageSummary {

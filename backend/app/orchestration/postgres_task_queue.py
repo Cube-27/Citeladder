@@ -27,10 +27,11 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.task_queue import (
+    TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_CANCELLED,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
-    TASK_STATUS_QUEUED,
     TASK_STATUS_RETRY_WAIT,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
@@ -127,7 +128,10 @@ class PostgresTaskQueue[
             # monotonic across concurrent claim transactions.
             base_order = tuple(self._spec.claim_order(model))
             eligible_filter = (
-                model.status.in_([TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT]),
+                # queued / retry_wait / capacity_wait (config-owned claimable
+                # vocabulary): a capacity-parked task becomes claimable again
+                # exactly like a retry — once its ``available_at`` passes.
+                model.status.in_(sorted(TASK_CLAIMABLE_STATUSES)),
                 model.available_at <= now,
             )
             eligible = select(
@@ -316,6 +320,31 @@ class PostgresTaskQueue[
             task.available_at = now + timedelta(seconds=max(0.0, delay_seconds))
             task.error_code = error_code
             task.error_detail = error_detail[:2000]
+            await session.commit()
+            return True
+
+    async def park_capacity_wait(
+        self,
+        *,
+        task_id: uuid.UUID,
+        owner: str,
+        available_at: datetime,
+    ) -> bool:
+        """Park an owned task in ``capacity_wait`` until ``available_at``.
+
+        Releases the lease without touching ``attempt_count`` — no provider
+        call happened, so no attempt budget is spent. The row re-enters the
+        claimable set once ``available_at`` passes, exactly like a retry.
+        """
+        async with self._session_factory() as session:
+            task = await self._owned_task(session, task_id, owner)
+            if task is None:
+                await session.commit()
+                return False
+            task.status = TASK_STATUS_CAPACITY_WAIT
+            task.lease_owner = None
+            task.lease_expires_at = None
+            task.available_at = available_at
             await session.commit()
             return True
 

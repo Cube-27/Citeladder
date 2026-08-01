@@ -6,13 +6,13 @@
 #
 # The monitored set is a persistent, project-level projection
 # (``MonitoredSiteUrl``) whose active rows are counted WORKSPACE-WIDE against
-# the entitlement's ``monitored_url_limit`` (Starter = 50). Every active row is
+# the runtime row's ``monitored_url_limit``. Every active row is
 # counted regardless of ``selection_source`` (``user`` | ``free_sample``).
 #
 # Concurrency contract (subplan Acceptance criteria 2): two simultaneous
 # selection updates — even across different projects in the same workspace —
 # cannot push the workspace above the limit. This is serialized by locking the
-# single ``WorkspaceSiteHealthEntitlement`` row ``FOR UPDATE`` before counting,
+# single ``WorkspaceSiteHealthRuntime`` row ``FOR UPDATE`` before counting,
 # so the two updaters are ordered and each sees the other's committed rows.
 #
 # Nothing here is ever deleted on downgrade: rows are DEACTIVATED (``active``
@@ -32,9 +32,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_health import (
+    CODE_MONITORING_NOT_ALLOWED,
     CODE_QUOTA_EXCEEDED,
     CODE_STALE_SELECTION_VERSION,
-    CODE_STARTER_REQUIRED,
     CRAWL_ACTIVE_STATUSES,
     INITIAL_TASK_GENERATION,
     OBSERVATION_SOURCE_LINK,
@@ -48,10 +48,12 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_RUNNING,
 )
+from app.domain.entitlements.service import (
+    refresh_site_health_runtime_for_workspace,
+)
 from app.domain.site_health.entitlements import (
-    entitlement_allows_monitored_analysis,
-    lock_entitlement,
-    resolve_entitlement,
+    lock_runtime,
+    runtime_allows_monitored_analysis,
 )
 from app.domain.site_health.inventory_scope import inventory_site_url_subquery
 from app.models.project import Project
@@ -82,10 +84,10 @@ class SelectionError(Exception):
         self.message = message
 
 
-class StarterRequiredError(SelectionError):
-    """Free workspace attempted a user-managed selection mutation (403)."""
+class MonitoringNotAllowedError(SelectionError):
+    """No monitored-URL allowance attempted a user-managed mutation (403)."""
 
-    code = CODE_STARTER_REQUIRED
+    code = CODE_MONITORING_NOT_ALLOWED
 
 
 class StaleSelectionVersionError(SelectionError):
@@ -99,7 +101,7 @@ class StaleSelectionVersionError(SelectionError):
 
 
 class QuotaExceededError(SelectionError):
-    """A valid Starter selection would exceed the workspace limit (403).
+    """A valid selection would exceed the workspace monitored limit (403).
 
     Carries the workspace ``limit`` and the currently-used active count so the
     API/UI can render "N of 50" feedback. Never exposes other projects' URLs.
@@ -146,11 +148,11 @@ async def _lock_project(
 ) -> Project | None:
     """Load + lock the project row ``FOR UPDATE``.
 
-    This is the SAME lock ``create_crawl`` takes first (before the entitlement
+    This is the SAME lock ``create_crawl`` takes first (before the runtime
     and profile). Taking it here serializes a terminal-page rerun against a
     concurrent full-crawl creation for the same project, so the active-crawl
     check below cannot race past ``create_crawl``'s and mint a second active
-    crawl. The global lock order is ``project -> entitlement -> profile``.
+    crawl. The global lock order is ``project -> runtime -> profile``.
     """
     result = await session.execute(
         select(Project)
@@ -201,7 +203,7 @@ async def _active_count_other_projects(
 
     Counts every active row regardless of ``selection_source`` (plan §4: quota
     usage counts every active monitored row). Called while holding the
-    entitlement lock so the value reflects other updaters' committed state.
+    runtime lock so the value reflects other updaters' committed state.
     """
     result = await session.execute(
         select(func.count())
@@ -383,17 +385,17 @@ async def replace_monitored_set(
 
     In one locked transaction (subplan Users & flows step 3):
 
-    1. Lock the workspace entitlement ``FOR UPDATE`` (serializes the
+    1. Lock the workspace runtime row ``FOR UPDATE`` (serializes the
        workspace-wide quota across concurrent updates in ANY project).
     2. Reject the mutation for a capability that disallows user selection
-       (Free) with ``starter_required``.
+       (zero allowance) with ``monitoring_not_allowed``.
     3. Lock the project profile and reject a stale
        ``expected_selection_version`` with ``stale_selection_version``.
     4. Validate every requested id is a discovered URL in this project.
     5. Enforce the workspace-wide active limit counting every active row
        regardless of source; over-limit raises ``site_health_quota_exceeded``.
     6. Apply the full-set delta: activate/convert requested rows to
-       user-managed (this is the Free->Starter sample conversion), deactivate
+       user-managed (the sample-to-user conversion when an allowance
        omitted active rows (never delete — evidence survives), bump the
        version.
     7. Enqueue ``analyze`` tasks for additions into the active crawl (next
@@ -402,19 +404,23 @@ async def replace_monitored_set(
     The caller owns the surrounding transaction boundary; this function flushes
     but does not commit, so the API layer can wrap it.
     """
-    entitlement = await lock_entitlement(session, workspace_id)
+    await refresh_site_health_runtime_for_workspace(
+        session, workspace_id=workspace_id, at=_utcnow()
+    )
+    runtime = await lock_runtime(session, workspace_id)
     profile = await _lock_profile(
         session, workspace_id=workspace_id, project_id=project_id
     )
     if profile is None:
         raise SelectionValidationError("Site Health profile not found")
 
-    # Capability gate: Free may not mutate a user-managed selection.
-    if not entitlement_allows_monitored_analysis(
-        entitlement, selection_source=SELECTION_SOURCE_USER
+    # Allowance gate: a zero monitored-URL allowance may not mutate a
+    # user-managed selection.
+    if not runtime_allows_monitored_analysis(
+        runtime, selection_source=SELECTION_SOURCE_USER
     ):
-        raise StarterRequiredError(
-            "Starter capability is required to select monitored URLs"
+        raise MonitoringNotAllowedError(
+            "A monitored-URL allowance is required to select monitored URLs"
         )
 
     # Optimistic concurrency on the persistent selection version.
@@ -436,11 +442,11 @@ async def replace_monitored_set(
 
     # Workspace-wide quota: every active row outside this project + the full
     # requested set for this project (a full-set replacement). Counted under
-    # the entitlement lock so concurrent updaters are serialized.
+    # the runtime lock so concurrent updaters are serialized.
     other_active = await _active_count_other_projects(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    limit = int(entitlement.monitored_url_limit)
+    limit = int(runtime.monitored_url_limit)
     requested_set = set(requested)
     new_workspace_total = other_active + len(requested_set)
     if new_workspace_total > limit:
@@ -467,7 +473,7 @@ async def replace_monitored_set(
     removed_ids: list[uuid.UUID] = []
 
     # Deactivate previously-active rows omitted from the submitted set. This is
-    # both a user removal AND the Free->Starter deactivation of omitted sample
+    # both a user removal AND the allowance-loss deactivation of omitted sample
     # rows — the row is preserved (never deleted) so evidence survives.
     for membership in memberships:
         if membership.active and membership.site_url_id not in requested_set:
@@ -476,7 +482,7 @@ async def replace_monitored_set(
             removed_ids.append(membership.site_url_id)
 
     # Activate / (re)activate / convert every requested row to user-managed.
-    # Converting a ``free_sample`` row to ``user`` is the first-Starter
+    # Converting a ``free_sample`` row to ``user`` is the first-allowance
     # reconciliation done in this same locked transaction.
     for rid in requested:
         existing = by_url_id.get(rid)
@@ -603,17 +609,17 @@ async def bulk_select_monitored_set(
 
     Candidates use the exact same durable inventory scope as the listing:
     current observations plus the explicitly frozen earlier full-crawl lineage
-    for a Starter recrawl. Sample crawls never inherit that lineage.
+    for a full-inventory recrawl. Sample crawls never inherit that lineage.
 
     The heavy lifting (capability gate, version check, workspace quota under
-    the entitlement lock, delta application, task enqueue/cancel) is delegated
+    the runtime lock, delta application, task enqueue/cancel) is delegated
     to ``replace_monitored_set`` — same locks, same coded errors. An ``all``
     selection larger than the workspace limit raises the SAME
     ``site_health_quota_exceeded`` a manual over-selection would — but it is
     raised HERE, before any lock is taken: candidate resolution is capped at
     ``limit + 1`` ids, so an unfiltered ``all`` over a huge inventory can
     never materialize tens of thousands of ids nor drag them through the
-    entitlement-locked replacement path. The under-lock quota check in
+    runtime-locked replacement path. The under-lock quota check in
     ``replace_monitored_set`` remains the race-safe authority; this pre-check
     only bounds the work.
     """
@@ -636,12 +642,14 @@ async def bulk_select_monitored_set(
             raise SelectionValidationError(
                 "A positive count is required for first_n bulk selection"
             )
-        # Read (not lock) the entitlement to bound candidate resolution: any
-        # set larger than the workspace limit is doomed to the same quota
-        # error downstream, so cap the query at limit + 1 and fail fast
-        # before the locked replacement path ever sees an oversized set.
-        entitlement = await resolve_entitlement(session, workspace_id)
-        limit = int(entitlement.monitored_url_limit)
+        # Read (not lock) the refreshed runtime row to bound candidate
+        # resolution: any set larger than the workspace limit is doomed to the
+        # same quota error downstream, so cap the query at limit + 1 and fail
+        # fast before the locked replacement path ever sees an oversized set.
+        runtime = await refresh_site_health_runtime_for_workspace(
+            session, workspace_id=workspace_id, at=_utcnow()
+        )
+        limit = int(runtime.monitored_url_limit)
         fetch_cap = limit + 1 if count is None else min(count, limit + 1)
         stmt = select(SiteUrl.id).where(
             SiteUrl.project_id == project_id,
@@ -657,10 +665,11 @@ async def bulk_select_monitored_set(
             fetch_cap
         )
         site_url_ids = list((await session.scalars(stmt)).all())
-        # Only pre-raise quota for entitlements that may select at all — a
-        # Free workspace must still get its usual StarterRequiredError from
-        # the locked path, not a misleading quota error.
-        if entitlement_allows_monitored_analysis(entitlement) and (
+        # Only pre-raise quota for runtimes that may select at all — a
+        # zero-allowance workspace must still get its usual
+        # MonitoringNotAllowedError from the locked path, not a misleading
+        # quota error.
+        if runtime_allows_monitored_analysis(runtime) and (
             len(site_url_ids) > limit
         ):
             currently_used = int(
@@ -729,7 +738,7 @@ async def rerun_page(
 
     Requires an active monitored membership for the URL (``rerun_not_allowed``
     otherwise — never silently no-ops). Locks the project row, then the
-    entitlement, then the project profile — the SAME order ``create_crawl``
+    runtime row, then the project profile — the SAME order ``create_crawl``
     uses — so a concurrent selection change, another rerun of the same URL, or
     a concurrent full-crawl creation is serialized. The active-crawl check
     below runs while holding the project lock, so a terminal-page rerun and a
@@ -753,14 +762,17 @@ async def rerun_page(
     # Lock the project row FIRST — the same lock ``create_crawl`` takes before
     # its active-crawl check — so a concurrent full crawl and this terminal-page
     # rerun serialize and cannot both mint an active crawl. Global lock order:
-    # project -> entitlement -> profile.
+    # project -> runtime -> profile.
     project = await _lock_project(
         session, workspace_id=workspace_id, project_id=project_id
     )
     if project is None:
         raise SelectionValidationError("Project not found")
 
-    entitlement = await lock_entitlement(session, workspace_id)
+    await refresh_site_health_runtime_for_workspace(
+        session, workspace_id=workspace_id, at=_utcnow()
+    )
+    runtime = await lock_runtime(session, workspace_id)
     profile = await _lock_profile(
         session, workspace_id=workspace_id, project_id=project_id
     )
@@ -778,11 +790,12 @@ async def rerun_page(
         raise RerunNotAllowedError(
             "The URL is not part of the active monitored selection"
         )
-    if not entitlement_allows_monitored_analysis(
-        entitlement, selection_source=membership.selection_source
+    if not runtime_allows_monitored_analysis(
+        runtime, selection_source=membership.selection_source
     ):
-        raise StarterRequiredError(
-            "The current capability does not allow analysis of this URL"
+        raise MonitoringNotAllowedError(
+            "The current monitored-URL allowance does not allow analysis of "
+            "this URL"
         )
 
     site_url = await session.get(SiteUrl, site_url_id)
@@ -827,7 +840,7 @@ async def rerun_page(
         project_id=project_id,
         profile=profile,
         site_url=site_url,
-        entitlement=entitlement,
+        runtime=runtime,
     )
     existing_task = await session.scalar(
         select(SiteCrawlTask).where(
@@ -871,7 +884,7 @@ async def seed_monitored_targets(
     scope strictly through observations, so without this row the monitored
     pages are INVISIBLE on the new crawl until re-discovery happens to
     re-observe them — the dashboard's page table starts (nearly) empty while
-    the analysis counters already move. Same pattern as the Free sample
+    the analysis counters already move. Same pattern as the system sample
     admission and the single-page rerun crawl.
     """
     result = await session.execute(
@@ -990,16 +1003,16 @@ def evaluate_task_guard(
     crawl: SiteCrawl | None,
     task: SiteCrawlTask | None,
     monitored: MonitoredSiteUrl | None,
-    entitlement,  # WorkspaceSiteHealthEntitlement | None
+    runtime,  # WorkspaceSiteHealthRuntime | None
     owner: str,
 ) -> GuardDecision:
     """Combined pure guard the worker calls before I/O and before persistence.
 
     Re-checks, in order: lease ownership, crawl status, active monitoring, and
-    the live entitlement (a downgrade blocks new work on user-source rows while
-    preserving evidence). Returns the first failing reason, or ``ok`` when all
-    pass. Pure: it never touches the DB — the worker loads the rows (under lock
-    before persistence) and passes them in.
+    the live runtime row (a lost allowance blocks new work on user-source rows
+    while preserving evidence). Returns the first failing reason, or ``ok``
+    when all pass. Pure: it never touches the DB — the worker loads the rows
+    (under lock before persistence) and passes them in.
     """
     if not lease_is_owned(task, owner=owner):
         return GuardDecision(ok=False, reason="lease_not_owned")
@@ -1008,6 +1021,6 @@ def evaluate_task_guard(
     if not monitored_is_active(monitored):
         return GuardDecision(ok=False, reason="not_actively_monitored")
     source = getattr(monitored, "selection_source", SELECTION_SOURCE_USER)
-    if not entitlement_allows_monitored_analysis(entitlement, selection_source=source):
+    if not runtime_allows_monitored_analysis(runtime, selection_source=source):
         return GuardDecision(ok=False, reason="entitlement_revoked")
     return GuardDecision(ok=True)

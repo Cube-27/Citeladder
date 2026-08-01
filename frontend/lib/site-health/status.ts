@@ -2,14 +2,17 @@
  * Site Health lifecycle / status presentation helpers (Task 2) — PURE.
  *
  * Maps the crawl overall/discovery/analysis sub-states, per-page analysis
- * states, and Free redaction rules onto display view-models the screens
- * (Tasks 7/8) render without embedding business logic. No transport, no React.
+ * states, and the neutral count-disclosure rules onto display view-models the
+ * screens render without embedding business logic. No transport, no React.
+ *
+ * These helpers branch on CAPABILITIES (`access_mode`, `count_disclosure`),
+ * never on a plan name — there is no commercial vocabulary in Site Health.
  *
  * Key product rules encoded here:
  *   - discovery counts are PROVISIONAL until discovery terminalizes ("N pages
  *     discovered so far" vs "N pages discovered");
- *   - Free sample mode never renders a total placeholder or count-dependent
- *     copy — `total_url_count` is null and there is no "discovered so far";
+ *   - sample mode never renders a total placeholder or count-dependent copy —
+ *     `total_url_count` is null and there is no "discovered so far";
  *   - error / blocked rows are explicit states, never a fabricated zero score;
  *   - missing / not-yet-analysed scores render the `—` placeholder.
  */
@@ -160,15 +163,16 @@ export function isDiscoveryProvisional(
   return !crawl.inventory_complete && !TERMINAL_DISCOVERY.has(crawl.discovery_status);
 }
 
-/** True when the crawl is a Free server-selected sample crawl. */
+/** True when the crawl is a server-selected sample crawl. */
 export function isSampleMode(crawl: Pick<SiteCrawl, 'sample_mode'>): boolean {
   return crawl.sample_mode;
 }
 
 /**
- * Discovery-progress copy. Free sample mode NEVER renders a total or "so far"
- * language (no count side channel); Starter uses provisional "discovered so
- * far" until discovery terminalizes, then the settled "discovered".
+ * Discovery-progress copy. Sample mode NEVER renders a total or "so far"
+ * language (no count side channel); selection mode uses provisional
+ * "discovered so far" until discovery terminalizes, then the settled
+ * "discovered".
  */
 export function discoveryProgressLabel(
   crawl: Pick<
@@ -187,17 +191,15 @@ export function discoveryProgressLabel(
 }
 
 /**
- * Whether a discovered/total count may be shown at all. Free (or any crawl the
- * entitlement redacts) hides the total entirely: the value is null on the wire
- * and no placeholder total is rendered.
+ * Whether a discovered/total count may be shown at all. `count_disclosure` is
+ * the neutral capability that governs it — an account without it sees no total
+ * at all: the value is null on the wire and no placeholder is rendered.
  */
 export function canShowDiscoveredTotal(
-  entitlement: Pick<SiteHealthEntitlement, 'can_view_discovered_total'>,
+  entitlement: Pick<SiteHealthEntitlement, 'count_disclosure'>,
   crawl: Pick<SiteCrawl, 'sample_mode' | 'total_url_count'>,
 ): boolean {
-  return (
-    entitlement.can_view_discovered_total && !crawl.sample_mode && crawl.total_url_count !== null
-  );
+  return entitlement.count_disclosure && !crawl.sample_mode && crawl.total_url_count !== null;
 }
 
 /** Which phase of the Site Health flow to render for the active crawl. */
@@ -263,10 +265,10 @@ export function hasScoreData(crawl: Pick<SiteCrawl, 'score_summary'>): boolean {
  *   5. any other crawl WITH score data → 'dashboard' (results already exist)
  *   6. failed WITHOUT data             → 'terminal'
  *   7. cancelled WITHOUT data:
- *        - Starter + discovered URLs   → 'selection' (inventory persists through
+ *        - selection mode + discovered URLs → 'selection' (inventory persists through
  *          a cancel; the user stages a monitored set and re-crawls)
  *        - otherwise                   → 'terminal' (nothing to show)
- *   8. ACTIVE Starter crawl + committed monitored set → 'analyzing'. Every
+ *   8. ACTIVE crawl + committed monitored set → 'analyzing'. Every
  *      crawl created while a monitored set exists is seeded with its analyze
  *      tasks at creation, and a selection commit enqueues into the active
  *      crawl — so this crawl IS an analysis run even while re-discovery
@@ -274,8 +276,8 @@ export function hasScoreData(crawl: Pick<SiteCrawl, 'score_summary'>): boolean {
  *      screen back to the URL list after "Start analysis" / "Re-crawl".
  *   9. discovery still running         → 'discovering'
  *  10. analysis running                → 'analyzing'
- *  11. Starter + analysis pending      → 'selection'
- *  12. otherwise (Free auto-analysis)  → 'analyzing'
+ *  11. selection mode + analysis pending → 'selection'
+ *  12. otherwise (sample auto-analysis) → 'analyzing'
  */
 export function resolveSiteHealthPhase(
   /** The crawl, `null` for "settled: no crawl", `undefined` for "not settled". */
@@ -291,8 +293,13 @@ export function resolveSiteHealthPhase(
       >
     | null
     | undefined,
-  /** The plan, or `null` while the entitlement query has not settled. */
-  plan: SiteHealthEntitlement['plan_key'] | null,
+  /**
+   * The neutral access mode, or `null` while the entitlement has not settled.
+   * `'selection'` means the account has a monitored allowance and stages its
+   * own set; `'sample'` means the server picks. This is a capability, never a
+   * plan name — a zero-allowance account fails closed to `'sample'`.
+   */
+  accessMode: SiteHealthEntitlement['access_mode'] | null,
   /**
    * True when the project has at least one ACTIVE monitored URL committed;
    * `null` while the monitored query has not settled.
@@ -304,7 +311,7 @@ export function resolveSiteHealthPhase(
   // afterwards is what made the phase visibly flip (and what the `crawlStarting`
   // flag used to paper over). An unsettled input has exactly one honest
   // answer — "not yet" — so say that instead of guessing.
-  if (crawl === undefined || plan === null || hasMonitoredSelection === null) {
+  if (crawl === undefined || accessMode === null || hasMonitoredSelection === null) {
     return 'resolving';
   }
 
@@ -336,10 +343,10 @@ export function resolveSiteHealthPhase(
   // 6. Failed with no data — explicit stopped card, never an active-looking view.
   if (crawl.status === 'failed') return 'terminal';
 
-  // 7. Cancelled with no data: Starter keeps the discovered inventory (selection
+  // 7. Cancelled with no data: selection mode keeps the discovered inventory (
   // survives a cancel and re-seeds the next crawl); everyone else dead-ends.
   if (crawl.status === 'cancelled') {
-    return plan === 'starter' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
+    return accessMode === 'selection' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
   }
 
   // 8. Every remaining status is ACTIVE (draft/validating/queued/running). An
@@ -355,10 +362,11 @@ export function resolveSiteHealthPhase(
   // 9. Discovery still running.
   if (!TERMINAL_DISCOVERY.has(crawl.discovery_status)) return 'discovering';
 
-  // 10–12. Discovery done. Free auto-analyzes its sample (no manual selection);
-  // Starter stages a monitored set unless analysis has already started.
+  // 10–12. Discovery done. A sample-mode account auto-analyzes its server-
+  // selected sample; a selection-mode account stages a monitored set unless
+  // analysis has already started.
   if (crawl.analysis_status === 'running') return 'analyzing';
-  if (plan === 'starter' && crawl.analysis_status === 'pending') return 'selection';
+  if (accessMode === 'selection' && crawl.analysis_status === 'pending') return 'selection';
   return 'analyzing';
 }
 
@@ -399,7 +407,7 @@ export function primaryActionForPhase(phase: SiteHealthPhase, active: boolean): 
  * canonical Site Health screen never swaps whole panels — the layout (scores +
  * status row + inventory) stays mounted and only this mode changes:
  *   - 'discovering': read-only inventory rows streaming in;
- *   - 'selectable':  Starter monitored-set staging (checkboxes + commit);
+ *   - 'selectable':  monitored-set staging (checkboxes + commit);
  *   - 'scored':      the tabbed (monitored/all/errors) page browser — used
  *                    DURING analysis and after: the same table, rows advance
  *                    queued → running → completed and scores fill in place;

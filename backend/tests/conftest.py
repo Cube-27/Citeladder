@@ -76,6 +76,15 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     _DELETE_ORDER = list(reversed(Base.metadata.sorted_tables))
 
+# ``consumable_ledger`` RESTRICT-references ``audit_tasks`` / ``audits``, and
+# the audit snapshot/audit tables CASCADE into ``audit_tasks`` (the task row
+# sits late in the order, entangled in the artifact cycle). Deleting a
+# snapshot/audit row therefore cascades into tasks while ledger history still
+# exists and trips the RESTRICT guard — so immutable ledger history must be
+# emptied BEFORE any table whose delete can cascade into the task cycle.
+# Stable sort: only the named tables move, everything else keeps its order.
+_DELETE_ORDER.sort(key=lambda table: table.name != "consumable_ledger")
+
 _CLEANUP_SQL = "DO $$ BEGIN SET CONSTRAINTS ALL DEFERRED; {deletes} END $$;".format(
     deletes="".join(
         f'DELETE FROM "{_TEST_SCHEMA}"."{table.name}";' for table in _DELETE_ORDER
@@ -102,35 +111,43 @@ async def _reset_pooled_answer_engine_clients():
 
 
 @pytest.fixture(autouse=True)
-def _pin_site_health_capability_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Isolate the suite from dev ``.env`` capability overrides.
+def _pin_site_health_sample_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolate the suite from dev ``.env`` sample-policy overrides.
 
-    The Site Health capability profiles are settings-driven (the dev ``.env``
-    ships ``SITE_HEALTH_DEFAULT_CAPABILITY=starter`` and a raised monitored
-    limit for full-feature testing). Tests assert the SHIPPED defaults
-    (fail-closed free, 10/10/50), so pin the settings back to the constants
-    for every test regardless of the developer's local env.
+    The neutral Site Health sample policy is settings-driven (the dev ``.env``
+    ships a raised ``SITE_HEALTH_SAMPLE_URL_LIMIT`` for full-feature testing).
+    Tests assert the SHIPPED defaults, so pin both the analysis budget and the
+    decoupled inventory cap back to their constants for every test regardless
+    of the developer's local env.
     """
     from app.core.config.site_health import (
-        DEFAULT_SITE_HEALTH_CAPABILITY,
-        FREE_MONITORED_URL_LIMIT,
-        FREE_SAMPLE_URL_LIMIT,
-        STARTER_MONITORED_URL_LIMIT,
+        SAMPLE_DISCOVERY_URL_CAP,
+        SAMPLE_URL_LIMIT,
         site_health_settings,
     )
 
+    monkeypatch.setattr(site_health_settings, "sample_url_limit", SAMPLE_URL_LIMIT)
     monkeypatch.setattr(
-        site_health_settings, "default_capability", DEFAULT_SITE_HEALTH_CAPABILITY
+        site_health_settings, "sample_discovery_url_cap", SAMPLE_DISCOVERY_URL_CAP
     )
-    monkeypatch.setattr(
-        site_health_settings, "free_sample_url_limit", FREE_SAMPLE_URL_LIMIT
-    )
-    monkeypatch.setattr(
-        site_health_settings, "free_monitored_url_limit", FREE_MONITORED_URL_LIMIT
-    )
-    monkeypatch.setattr(
-        site_health_settings, "starter_monitored_url_limit", STARTER_MONITORED_URL_LIMIT
-    )
+
+
+@pytest.fixture(autouse=True)
+def _pin_audit_prompt_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give the suite a configured funded/trial prompt-count policy.
+
+    The shipped default is UNSET (``audit_prompt_count is None``), under
+    which funded and trial audit creation fails closed with
+    ``prompt_count_policy_unconfigured``. Tests written against the
+    funded/trial paths exercise budget/credit/rate mechanics, not the
+    count policy, so the suite runs with a generous configured count; the
+    unset/configured enforcement itself is pinned explicitly by the
+    topical-binding tests (which monkeypatch this knob back to None or to a
+    small limit).
+    """
+    from app.core.config.audits import audit_settings
+
+    monkeypatch.setattr(audit_settings, "audit_prompt_count", 500)
 
 
 @pytest.fixture(scope="session")

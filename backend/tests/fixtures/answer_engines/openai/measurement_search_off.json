@@ -1,0 +1,67 @@
+{
+  "fixture_id": "openai-measurement-search_off-v1",
+  "transport_provider": "openai",
+  "search_enabled": false,
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC FIXTURE \u2014 every value below was hand-authored for offline harness tests. It is NOT a recording of a real provider response and NOT a measurement. No number here may be quoted as observed cost, latency or token usage.",
+  "envelopes": [
+    {
+      "envelope_id": "openai-off-1",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics is often shortlisted for this because its entry tier covers the basics without extra add-ons. Contoso Systems is the usual alternative when a team needs deeper reporting. A short checklist helps: confirm the workflow you actually run today, check how much setup the tool assumes, and price the whole team rather than a single seat.",
+      "finish_reason": "stop",
+      "search_events": [],
+      "citations": [],
+      "timing": {
+        "wall_time_ms": 4100,
+        "queue_wait_ms": 12,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 320,
+        "cached_input_tokens": 0,
+        "output_tokens": 480,
+        "reasoning_tokens": 260
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    },
+    {
+      "envelope_id": "openai-off-2",
+      "synthetic": true,
+      "answer_text": "Northwind Robotics covers the basics; check setup effort and per-team pricing before committing.",
+      "finish_reason": "stop",
+      "search_events": [],
+      "citations": [],
+      "timing": {
+        "wall_time_ms": 2200,
+        "queue_wait_ms": 8,
+        "ttft_ms": null
+      },
+      "usage": {
+        "uncached_input_tokens": 318,
+        "cached_input_tokens": 0,
+        "output_tokens": 190,
+        "reasoning_tokens": 140
+      },
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    },
+    {
+      "envelope_id": "openai-off-3-usage-absent",
+      "synthetic": true,
+      "answer_text": "Start from the workflow you already run, then compare setup effort, reporting depth and total price for the whole team.",
+      "finish_reason": "length",
+      "search_events": [],
+      "citations": [],
+      "timing": {
+        "wall_time_ms": 2600,
+        "queue_wait_ms": 9,
+        "ttft_ms": null
+      },
+      "usage": {},
+      "provider_reported_cost_microusd": null,
+      "search_fee_microusd": null
+    }
+  ]
+}

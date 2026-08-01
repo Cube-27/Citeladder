@@ -4,9 +4,10 @@ Exercises ``app.domain.site_health.selection`` and the entitlement guard
 helpers with ``SELECT ... FOR UPDATE`` on a real Postgres schema (the
 ``session_factory`` fixture from ``conftest``). Covers the two-project
 workspace quota race, stale revision, foreign ids, add-during-discovery,
-remove/re-add + generation increment, remove mid-fetch, Free->Starter sample
-conversion + quota accounting, downgrade enforcement, persistent selection on a
-second crawl, and unselected-URL analysis isolation.
+remove/re-add + generation increment, remove mid-fetch, zero-allowance ->
+full-allowance sample conversion + quota accounting, downgrade enforcement,
+persistent selection on a second crawl, and unselected-URL analysis
+isolation.
 """
 
 from __future__ import annotations
@@ -21,8 +22,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health import (
-    CAPABILITY_FREE,
-    CAPABILITY_STARTER,
     CRAWL_ACTIVE_STATUSES,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_RUNNING,
@@ -38,19 +37,18 @@ from app.core.config.task_queue import (
     TASK_STATUS_RUNNING,
 )
 from app.domain.site_health.entitlements import (
-    entitlement_allows_monitored_analysis,
-    resolve_entitlement,
-    set_entitlement,
+    resolve_runtime,
+    runtime_allows_monitored_analysis,
 )
 from app.domain.site_health.planner import (
     CrawlAlreadyActiveError,
     create_crawl,
 )
 from app.domain.site_health.selection import (
+    MonitoringNotAllowedError,
     QuotaExceededError,
     SelectionValidationError,
     StaleSelectionVersionError,
-    StarterRequiredError,
     crawl_is_active,
     evaluate_task_guard,
     lease_is_owned,
@@ -70,6 +68,7 @@ from app.models.site_health import (
 )
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
 
 def _url_hash(url: str) -> str:
@@ -162,7 +161,7 @@ async def _seed_project(
 async def _seed_workspace(
     session: AsyncSession,
     *,
-    capability: str = CAPABILITY_STARTER,
+    monitored_urls: int | None = 50,
     projects: list[dict] | None = None,
 ) -> WorkspaceSeed:
     workspace = Workspace(name="Site WS")
@@ -181,7 +180,12 @@ async def _seed_workspace(
     )
     await session.flush()
 
-    await set_entitlement(session, workspace.id, capability)
+    if monitored_urls is not None:
+        # Grant the workspace's billing account the monitored-URL allowance so
+        # entitlement resolution projects the full policy onto the runtime row.
+        await seed_monitored_urls_allowance(
+            session, workspace_id=workspace.id, monitored_urls=monitored_urls
+        )
 
     seed = WorkspaceSeed(workspace_id=workspace.id)
     for spec in projects or []:
@@ -256,18 +260,18 @@ async def test_foreign_ids_rejected(
 
 
 @pytest.mark.asyncio
-async def test_free_workspace_selection_requires_starter(
+async def test_zero_allowance_blocks_user_selection(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
         seed = await _seed_workspace(
             session,
-            capability=CAPABILITY_FREE,
+            monitored_urls=None,
             projects=[{"name": "a", "url_count": 2}],
         )
     proj = seed.projects[0]
     async with session_factory() as session:
-        with pytest.raises(StarterRequiredError):
+        with pytest.raises(MonitoringNotAllowedError):
             await replace_monitored_set(
                 session,
                 workspace_id=seed.workspace_id,
@@ -285,7 +289,7 @@ async def test_free_workspace_selection_requires_starter(
 async def test_two_project_quota_race_blocks_over_50(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    # One Starter workspace, two projects, each with 30 discovered URLs.
+    # One full-allowance workspace, two projects, 30 URLs each.
     async with session_factory() as session:
         seed = await _seed_workspace(
             session,
@@ -564,13 +568,13 @@ async def test_remove_mid_fetch_guard_blocks_persistence(
             .scalars()
             .first()
         )
-        entitlement = await resolve_entitlement(session, seed.workspace_id)
+        runtime = await resolve_runtime(session, seed.workspace_id)
 
         decision = evaluate_task_guard(
             crawl=crawl,
             task=task,
             monitored=monitored,
-            entitlement=entitlement,
+            runtime=runtime,
             owner="worker-1",
         )
     assert not decision.ok
@@ -579,17 +583,17 @@ async def test_remove_mid_fetch_guard_blocks_persistence(
 
 
 # =========================================================================
-# Free->Starter sample conversion + quota accounting
+# Zero-allowance -> full-allowance sample conversion + quota accounting
 # =========================================================================
 @pytest.mark.asyncio
-async def test_free_to_starter_converts_and_deactivates_samples(
+async def test_allowance_grant_converts_and_deactivates_samples(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    # Free workspace with a pre-existing system-managed sample of 3 URLs.
+    # Zero-allowance workspace with a pre-existing system-managed sample of 3.
     async with session_factory() as session:
         seed = await _seed_workspace(
             session,
-            capability=CAPABILITY_FREE,
+            monitored_urls=None,
             projects=[{"name": "a", "url_count": 4}],
         )
         proj = seed.projects[0]
@@ -607,13 +611,15 @@ async def test_free_to_starter_converts_and_deactivates_samples(
             )
         await session.commit()
 
-    # Upgrade to Starter.
+    # Grant the workspace a monitored-URL allowance.
     async with session_factory() as session:
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_STARTER)
+        await seed_monitored_urls_allowance(
+            session, workspace_id=seed.workspace_id, monitored_urls=50
+        )
         await session.commit()
 
-    # First Starter selection: keep sample[0], drop sample[1] and sample[2],
-    # add a brand-new url[3].
+    # First full-allowance selection: keep sample[0], drop sample[1] and
+    # sample[2], add a brand-new url[3].
     keep = proj.site_url_ids[0]
     add = proj.site_url_ids[3]
     async with session_factory() as session:
@@ -663,19 +669,19 @@ async def test_downgrade_blocks_user_row_but_allows_sample(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        seed = await _seed_workspace(session, capability=CAPABILITY_FREE, projects=[])
+        seed = await _seed_workspace(session, monitored_urls=None, projects=[])
     async with session_factory() as session:
-        free = await resolve_entitlement(session, seed.workspace_id)
-        # Free entitlement blocks NEW analysis of a user-managed row...
-        assert not entitlement_allows_monitored_analysis(
-            free, selection_source=SELECTION_SOURCE_USER
+        runtime = await resolve_runtime(session, seed.workspace_id)
+        # A zero allowance blocks NEW analysis of a user-managed row...
+        assert not runtime_allows_monitored_analysis(
+            runtime, selection_source=SELECTION_SOURCE_USER
         )
         # ...but still allows its own system-managed free_sample rows.
-        assert entitlement_allows_monitored_analysis(
-            free, selection_source=SELECTION_SOURCE_FREE_SAMPLE
+        assert runtime_allows_monitored_analysis(
+            runtime, selection_source=SELECTION_SOURCE_FREE_SAMPLE
         )
-    # Missing entitlement fails closed.
-    assert not entitlement_allows_monitored_analysis(
+    # A missing runtime row fails closed.
+    assert not runtime_allows_monitored_analysis(
         None, selection_source=SELECTION_SOURCE_FREE_SAMPLE
     )
 
@@ -766,15 +772,15 @@ async def test_create_recrawl_freezes_prior_inventory_lineage(
 async def test_recrawl_lineage_skips_intervening_free_sample_crawl(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Starter -> Free -> Starter: the final recrawl must inherit the older
-    Starter full inventory, not the newer Free sample crawl (whose lineage
-    freezes to nothing and would silently drop the inventory)."""
+    """Full -> sample -> full: the final recrawl must inherit the older
+    full-inventory crawl, not the newer sample crawl (whose lineage freezes
+    to nothing and would silently drop the inventory)."""
     async with session_factory() as session:
         seed = await _seed_workspace(session, projects=[{"name": "a", "url_count": 1}])
     proj = seed.projects[0]
 
     async with session_factory() as session:
-        starter_crawl = SiteCrawl(
+        full_crawl = SiteCrawl(
             workspace_id=seed.workspace_id,
             project_id=proj.project_id,
             profile_id=proj.profile_id,
@@ -783,9 +789,9 @@ async def test_recrawl_lineage_skips_intervening_free_sample_crawl(
             random_seed="1",
             sample_mode=False,
         )
-        session.add(starter_crawl)
+        session.add(full_crawl)
         await session.flush()
-        # A newer Free sample crawl sits between the two Starter crawls.
+        # A newer sample crawl sits between the two full-inventory crawls.
         sample_crawl = SiteCrawl(
             workspace_id=seed.workspace_id,
             project_id=proj.project_id,
@@ -797,10 +803,9 @@ async def test_recrawl_lineage_skips_intervening_free_sample_crawl(
         )
         session.add(sample_crawl)
         await session.commit()
-        starter_id = starter_crawl.id
+        full_crawl_id = full_crawl.id
 
     async with session_factory() as session:
-        await set_entitlement(session, seed.workspace_id, CAPABILITY_STARTER)
         recrawl = await create_crawl(
             session,
             workspace_id=seed.workspace_id,
@@ -808,7 +813,9 @@ async def test_recrawl_lineage_skips_intervening_free_sample_crawl(
         )
 
     assert recrawl.configuration is not None
-    assert recrawl.configuration[INVENTORY_SOURCE_CRAWL_IDS_KEY] == [str(starter_id)]
+    assert recrawl.configuration[INVENTORY_SOURCE_CRAWL_IDS_KEY] == [
+        str(full_crawl_id)
+    ]
 
 
 @pytest.mark.asyncio
@@ -965,7 +972,7 @@ async def test_full_crawl_and_page_rerun_cannot_both_create_active_crawl(
 
     Either way exactly ONE active crawl exists at the end.
     """
-    # Starter project with NO active crawl and one active monitored URL, plus a
+    # Full-allowance project with NO active crawl and one active monitored URL,
     # crawlable website_url so ``create_crawl`` can build a full crawl.
     async with session_factory() as session:
         seed = await _seed_workspace(

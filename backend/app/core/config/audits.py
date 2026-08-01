@@ -9,6 +9,7 @@
 # ``config/ai_visibility.py`` guardrail knobs.
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,6 +27,7 @@ from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
     TASK_LEASED_STATUSES,
     TASK_STATUS_CANCELLED,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
@@ -45,6 +47,7 @@ __all_queue_reexports = (
     TASK_CLAIMABLE_STATUSES,
     TASK_LEASED_STATUSES,
     TASK_STATUS_CANCELLED,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
@@ -90,6 +93,84 @@ AUDIT_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
     }
 )
 
+# --- Measurement modes ----------------------------------------------------
+# Pulse vs benchmark measurement vocabulary. Keyed on by the expected-cost
+# catalogue (``config/costs.py``) now; the route/output policy, planner
+# freezing, and ``Audit.measurement_mode`` column arrive with T3 and must use
+# these same constants (invariant 2 — never re-literal the mode strings).
+# What initiated a run (closed vocabulary; ``Audit.trigger`` is String(16)).
+# PR1 produces only ``manual`` (API) and ``system`` (dev seed) runs; a later
+# schedule/trial caller passes its own token. The manual-run rolling rate
+# (``manual_runs_per_day``) counts ONLY ``manual`` rows.
+AUDIT_TRIGGER_MANUAL: Final = "manual"
+AUDIT_TRIGGER_TRIAL: Final = "trial"
+AUDIT_TRIGGER_SCHEDULED: Final = "scheduled"
+AUDIT_TRIGGER_SYSTEM: Final = "system"
+AUDIT_TRIGGERS: Final[frozenset[str]] = frozenset(
+    {
+        AUDIT_TRIGGER_MANUAL,
+        AUDIT_TRIGGER_TRIAL,
+        AUDIT_TRIGGER_SCHEDULED,
+        AUDIT_TRIGGER_SYSTEM,
+    }
+)
+
+# Pre-claim queue status for funded tasks (slice23 Task 4 Part B): the planner
+# writes each funded task in this NON-claimable state, reserves its credits in
+# the same transaction, and only then flips it to ``TASK_STATUS_QUEUED``, so a
+# worker can never claim an unreserved funded task. Never a member of
+# ``TASK_CLAIMABLE_STATUSES``.
+TASK_STATUS_PENDING_RESERVATION: Final = "pending_reservation"
+
+MEASUREMENT_MODE_PULSE: Final = "pulse"
+MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"
+MEASUREMENT_MODES: Final[frozenset[str]] = frozenset(
+    {MEASUREMENT_MODE_PULSE, MEASUREMENT_MODE_BENCHMARK}
+)
+
+# UNMEASURED CANDIDATE — this wording has never been executed against a live
+# provider key. It is a hypothesis about output length, nothing more. The cost
+# and latency reduction figures quoted in the frozen v8 plan (the −56% / −49%
+# pair) were NOT produced with this string and DO NOT apply to it: no number
+# anywhere in this repository may be attributed to this instruction until a
+# live-key T1 measurement run measures it and clears the gate thresholds in
+# ``config/measurement.py``. Until then it is an unvalidated candidate that
+# happens to be the wording pulse mode sends.
+PULSE_ANSWER_INSTRUCTION: Final = (
+    "Answer directly and concisely. "
+    "Include only the details needed to answer the question."
+)
+"""UNMEASURED CANDIDATE answer-shaping instruction used by pulse mode.
+
+Pulse mode IS enabled and sends this wording, but the wording itself carries no
+measurement: the frozen plan's −56% cost / −49% latency figures were obtained
+with different wording and DO NOT apply here until a live-key T1 measurement
+run validates this exact string. Treat any claim otherwise as a bug.
+"""
+# SHA-256 of ``PULSE_ANSWER_INSTRUCTION`` — pinned by a unit test so the
+# candidate wording can never drift silently (a drifted wording is a different,
+# equally unmeasured candidate).
+PULSE_ANSWER_INSTRUCTION_SHA256: Final = (
+    "a7d86db3b284d8d7397125046327ac013107240255cd6ba3ee6544feaebfb69a"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MeasurementModePolicy:
+    """Frozen route/output policy for one measurement mode.
+
+    Resolved from live settings by ``measurement_policy_for_mode`` and then
+    FROZEN by the caller onto the audit (invariant 9 — never re-read live
+    config once a run is planned).
+    """
+
+    retrieval_enabled: bool
+    max_output_tokens: int
+    timeout_seconds: float
+    repetitions: int
+    answer_instruction: str
+
+
 # --- Task (queue row) statuses -------------------------------------------
 # Owned by ``config/task_queue.py`` and re-exported at the top of this module
 # (``TASK_STATUS_*`` / ``TASK_TERMINAL_STATUSES`` / ``TASK_CLAIMABLE_STATUSES``
@@ -109,12 +190,68 @@ EVENT_TASK_FAILED: Final = "task.failed"
 EVENT_TASK_RETRY: Final = "task.retry"
 EVENT_AUDIT_CANCELLED: Final = "audit.cancelled"
 EVENT_AUDIT_COMPLETED: Final = "audit.completed"
+# Task parked on a provider-capacity decision (T4); payload carries only the
+# opaque task id + retry timing (never credentials/prompts/provider bodies).
+EVENT_TASK_CAPACITY_WAIT: Final = "task.capacity_wait"
+
+# --- Provider capacity vocabulary (T4) --------------------------------------
+# One owner for the pool/lease/credential vocabulary persisted on
+# ``ProviderCapacityBucket`` / ``ProviderCapacityLease`` and passed through the
+# ``app.orchestration.provider_capacity`` contracts (invariant 2 — never
+# re-literal these strings).
+#
+# Pool kinds (``ProviderCapacityBucket.pool_kind``, String(16)):
+POOL_KIND_TRANSPORT: Final = "transport"
+POOL_KIND_CONNECTION: Final = "connection"
+POOL_KIND_FUNDED_GLOBAL: Final = "funded_global"
+POOL_KIND_FUNDED_ACCOUNT: Final = "funded_account"
+POOL_KINDS: Final[frozenset[str]] = frozenset(
+    {
+        POOL_KIND_TRANSPORT,
+        POOL_KIND_CONNECTION,
+        POOL_KIND_FUNDED_GLOBAL,
+        POOL_KIND_FUNDED_ACCOUNT,
+    }
+)
+# Lease kinds (``ProviderCapacityLease.lease_kind``, String(16)). Concurrency
+# leases are returned on release; token starts are consumed from the bucket's
+# token balance at acquire time and are NEVER returned, so they are not leases.
+LEASE_KIND_CONCURRENCY: Final = "concurrency"
+# Which credential a task's provider call will use. BYOK acquires the
+# transport + connection pools only; platform-funded acquires the transport +
+# funded-global + funded-account pools.
+CREDENTIAL_KIND_BYOK: Final = "byok"
+CREDENTIAL_KIND_FUNDED: Final = "funded"
+CREDENTIAL_KINDS: Final[frozenset[str]] = frozenset(
+    {CREDENTIAL_KIND_BYOK, CREDENTIAL_KIND_FUNDED}
+)
+# Safe decision codes (``CapacityDecision.code``). Opaque tokens only — they
+# never embed provider error bodies.
+CAPACITY_CODE_CONCURRENCY: Final = "capacity_concurrency"
+CAPACITY_CODE_RATE_LIMITED: Final = "capacity_rate_limited"
+CAPACITY_CODE_UNCONFIGURED: Final = "capacity_unconfigured"
+# Release outcomes (``CapacityOutcome.kind``).
+CAPACITY_OUTCOME_SUCCEEDED: Final = "succeeded"
+CAPACITY_OUTCOME_FAILED: Final = "failed"
+CAPACITY_OUTCOME_RATE_LIMITED: Final = "rate_limited"
+# Stamped on every bucket row; a config/knob change re-syncs a locked bucket
+# to the live policy at acquire time instead of drifting silently.
+CAPACITY_POLICY_VERSION: Final = "v8-t4-1"
+# Telemetry event names (structured log events, funded-ledger pattern).
+# Payloads carry ONLY pool kind, transport, opaque task/account ids, and retry
+# timing — never credentials, prompts, or provider bodies (invariant 6).
+TELEMETRY_CAPACITY_WAIT: Final = "audit.capacity.wait"
+TELEMETRY_CAPACITY_RATE_LIMITED: Final = "audit.capacity.rate_limited"
 
 # --- Error tokens specific to the run lifecycle ---------------------------
 # Provider-call error tokens live in ``provider_catalog`` (reused by the
 # worker); these two are orchestration-level (no provider call involved).
 ERROR_RUN_DEADLINE: Final = "run_deadline_exceeded"
 ERROR_CANCELLED: Final = "cancelled"
+# Prompt-count admission codes for the FUNDED/TRIAL paths (the
+# ``audit_prompt_count`` knob above; mapped at the API layer).
+CODE_PROMPT_COUNT_POLICY_UNCONFIGURED: Final = "prompt_count_policy_unconfigured"
+CODE_PROMPT_COUNT_EXCEEDED: Final = "prompt_count_exceeded"
 # ``ERROR_MAX_ATTEMPTS`` is queue-neutral (re-exported from task_queue above).
 ERROR_NO_CONNECTION: Final = "provider_connection_missing"
 
@@ -170,7 +307,8 @@ class AuditSettings(BaseSettings):
     # ~29s average, so 10 in flight puts a run at roughly 90s instead of the
     # ~4 minutes a concurrency of 4 gave. Paired with DB_POOL_SIZE/
     # DB_MAX_OVERFLOW (peak demand is ~2 sessions per in-flight task; the
-    # startup guard warns if the pool cannot cover it).
+    # startup assertion ``assert_worker_pool_capacity`` RAISES if the pool
+    # cannot cover it).
     #
     # CEILING IS THE PROVIDER, NOT THIS NUMBER. Grounded answers carry the web
     # search results back in as input: measured Claude calls averaged ~16k INPUT
@@ -183,6 +321,50 @@ class AuditSettings(BaseSettings):
     # (``_warn_if_provider_pacing_unbounded``) whenever concurrency is > 1 with
     # pacing off, so the risk is visible in the logs rather than only here.
     worker_concurrency: int = 10
+
+    # --- Provider capacity pools (T4) ---------------------------------------
+    # Frozen defaults; each is ``measurement_required`` in the gate record —
+    # they bound burst shape, not provider-verified rates, until live-key
+    # measurement establishes real tier ceilings. The route-owned token-bucket
+    # knobs (capacity / refill rate / max cooldown) live with the route policy
+    # in ``config/provider_catalog.py`` (route identity is
+    # ``(logical_engine, transport_provider)``).
+    #
+    # In-flight ceiling for ONE workspace credential (BYOK key) on a transport
+    # AND for the shared per-transport pool: one credential may not exceed the
+    # transport's own concurrency envelope.
+    per_transport_concurrency: int = 4
+    # Total platform-funded calls in flight per transport across ALL accounts.
+    funded_pool_max_concurrency: int = 12
+    # Per-account slice of the funded pool, so one account's audits cannot
+    # starve a sibling account (funded fairness).
+    funded_pool_per_account: int = 6
+    # Peak DB sessions one in-flight task can check out at once (task session +
+    # heartbeat/finalize overlap). Feeds the startup pool assertion.
+    worker_db_sessions_per_task: int = 2
+    # Sessions reserved for non-task work in the worker process (sweeper,
+    # claim, audit-state transitions) so the pool assertion leaves room for
+    # them: db_pool_size + db_max_overflow must be >=
+    # worker_max_inflight * worker_db_sessions_per_task + operational_headroom.
+    operational_headroom: int = 4
+    # Capacity-lease TTL: a crash orphans a lease, and capacity is recovered
+    # only once it expires, so this must outlive the longest single provider
+    # call (the benchmark timeout) plus margin.
+    capacity_lease_ttl_seconds: float = 240.0
+    # Retry timing parked on a task when every relevant pool is at its
+    # concurrency ceiling (no provider guidance exists for this case).
+    capacity_concurrency_retry_seconds: float = 2.0
+
+    @property
+    def worker_max_inflight(self) -> int:
+        """Canonical T4 name for the worker's in-flight task ceiling.
+
+        Folded onto the pre-existing ``worker_concurrency`` field (one knob,
+        one owner — invariant 2): the field keeps its env var and every
+        existing reader/monkeypatch; new capacity code reads this name.
+        """
+        return self.worker_concurrency
+
     # How long the loop sleeps when the queue is empty before polling again. Also
     # gates the expired-lease sweep (``AuditWorker._sweep_expired_leases``) so
     # the pool's slots share one sweep per interval instead of one each.
@@ -197,11 +379,10 @@ class AuditSettings(BaseSettings):
     # that need pacing set AUDIT_MIN_REQUEST_INTERVAL_SECONDS; the startup
     # warning above makes the unpaced default explicit rather than silent.
     min_request_interval_seconds: float = 0.0
-    # Hard per-call ceiling enforced with ``asyncio.wait_for`` around the
-    # provider call, independent of the HTTP client timeout.
-    max_call_seconds: float = 90.0
     # Per-run wall-clock deadline. Once exceeded, remaining tasks stop at their
-    # boundary and terminalize, so a run can never sit live forever.
+    # boundary and terminalize, so a run can never sit live forever. Frozen
+    # onto the audit at creation and read back through
+    # ``max_run_seconds_from_configuration`` (invariant 9).
     max_run_seconds: float = 1800.0
     # Retry budget for a single task (attempt_count is bounded by max_attempts).
     max_attempts: int = 5
@@ -215,6 +396,34 @@ class AuditSettings(BaseSettings):
     heartbeat_interval_seconds: float = 30.0
     # HTTP client timeout for a single provider call (passed to the adapter).
     request_timeout_seconds: float = 60.0
+
+    # --- Measurement-mode route/output policy (invariant 1) --------------
+    # Pulse trades answer breadth for cost/latency: a short output cap, a short
+    # per-call timeout, one repetition, and the UNMEASURED CANDIDATE answer
+    # instruction. Benchmark is the full comparable run.
+    pulse_max_output_tokens: int = 600
+    benchmark_max_output_tokens: int = 4096
+    pulse_timeout_seconds: float = 30.0
+    benchmark_timeout_seconds: float = 150.0
+    pulse_repetitions: int = 1
+    benchmark_repetitions: int = 3
+    # Days of history folded into a trend series by the reporting projection.
+    trend_smoothing_days: int = 7
+    # Hard ceiling on a single frozen prompt's length (validated by the planner).
+    max_prompt_chars: int = 300
+    # Max number of selected active prompts one audit may run on the FUNDED
+    # and TRIAL paths. UNSET (None) ON PURPOSE: those paths fail closed with
+    # ``prompt_count_policy_unconfigured`` rather than inventing a count.
+    # BYOK runs stay governed by their existing product limits and never read
+    # this knob.
+    audit_prompt_count: int | None = None
+
+    # --- SSE audit-event stream (GET /audits/{id}/events?stream=true) -------
+    # Poll cadence of the stream loop, and the idle cutoff after which it
+    # stops streaming a terminal audit so the connection cannot hang forever.
+    # The API layer READS these; it never hard-codes them (invariant 1).
+    sse_poll_seconds: float = 1.0
+    sse_terminal_grace_polls: int = 2
 
     def retry_delay(
         self, attempt: int, retry_after_seconds: float | None = None
@@ -235,6 +444,99 @@ class AuditSettings(BaseSettings):
 
 
 audit_settings = AuditSettings()
+
+
+def measurement_policy_for_mode(mode: str) -> MeasurementModePolicy:
+    """Resolve the route/output policy for a measurement mode.
+
+    Reads the LIVE settings; the caller freezes the returned policy onto the
+    audit and never re-reads it (invariant 9). Fails CLOSED: an unknown mode
+    raises rather than silently defaulting to a cheaper or costlier shape.
+
+    The pulse ``answer_instruction`` is an UNMEASURED CANDIDATE (see
+    ``PULSE_ANSWER_INSTRUCTION``): no cost/latency figure from the frozen plan
+    is attributable to it until a live-key T1 run validates the wording.
+    """
+    if mode == MEASUREMENT_MODE_PULSE:
+        return MeasurementModePolicy(
+            retrieval_enabled=False,
+            max_output_tokens=audit_settings.pulse_max_output_tokens,
+            timeout_seconds=audit_settings.pulse_timeout_seconds,
+            repetitions=audit_settings.pulse_repetitions,
+            answer_instruction=PULSE_ANSWER_INSTRUCTION,
+        )
+    if mode == MEASUREMENT_MODE_BENCHMARK:
+        return MeasurementModePolicy(
+            retrieval_enabled=True,
+            max_output_tokens=audit_settings.benchmark_max_output_tokens,
+            timeout_seconds=audit_settings.benchmark_timeout_seconds,
+            repetitions=audit_settings.benchmark_repetitions,
+            answer_instruction="",
+        )
+    raise ValueError(
+        f"unknown measurement mode {mode!r}; expected one of "
+        f"{sorted(MEASUREMENT_MODES)}"
+    )
+
+
+# Key of the frozen measurement-policy block inside ``Audit.configuration``.
+# One owner for the spelling: the planner writes it through
+# ``frozen_policy_configuration`` and the worker reads it back through
+# ``measurement_policy_from_configuration`` (invariant 2).
+MEASUREMENT_POLICY_KEY: Final = "measurement_policy"
+
+
+def frozen_policy_configuration(policy: MeasurementModePolicy) -> dict:
+    """Serialize a resolved policy for ``Audit.configuration`` (invariant 9).
+
+    This is the FROZEN copy the worker executes from; nothing re-reads the live
+    settings once it is written.
+    """
+    return {
+        "retrieval_enabled": policy.retrieval_enabled,
+        "max_output_tokens": policy.max_output_tokens,
+        "timeout_seconds": policy.timeout_seconds,
+        "repetitions": policy.repetitions,
+        "answer_instruction": policy.answer_instruction,
+    }
+
+
+def max_run_seconds_from_configuration(configuration: dict | None) -> float:
+    """Read the FROZEN per-run deadline out of an audit's ``configuration``.
+
+    The planner freezes ``max_run_seconds`` at creation (invariant 9: an env
+    change mid-run must never alter an in-flight audit), and the worker's
+    deadline check reads ONLY this copy. Rows planned before the freeze carry
+    no key; for those (and only those) the live setting is the closest
+    available approximation.
+    """
+    frozen = (configuration or {}).get("max_run_seconds")
+    if frozen is None:
+        return audit_settings.max_run_seconds
+    return float(frozen)
+
+
+def measurement_policy_from_configuration(
+    configuration: dict,
+) -> MeasurementModePolicy:
+    """Read the frozen policy back out of an audit's ``configuration``.
+
+    Pre-T3 audits carry no frozen block at all; for those (and only those) the
+    mode defaults are the closest available approximation, resolved from the
+    frozen ``measurement_mode`` (``benchmark`` when even that is absent). Every
+    audit planned from T3 onward returns exactly what the planner froze.
+    """
+    frozen = configuration.get(MEASUREMENT_POLICY_KEY)
+    if not frozen:
+        mode = str(configuration.get("measurement_mode") or MEASUREMENT_MODE_BENCHMARK)
+        return measurement_policy_for_mode(mode)
+    return MeasurementModePolicy(
+        retrieval_enabled=bool(frozen["retrieval_enabled"]),
+        max_output_tokens=int(frozen["max_output_tokens"]),
+        timeout_seconds=float(frozen["timeout_seconds"]),
+        repetitions=int(frozen["repetitions"]),
+        answer_instruction=str(frozen["answer_instruction"]),
+    )
 
 
 def _audit_model() -> type[AuditTask]:

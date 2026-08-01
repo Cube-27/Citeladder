@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
@@ -23,6 +24,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -31,8 +33,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+# Pure vocabulary module: ``contracts`` imports nothing from ``app``, so the
+# canonical finish-reason enum can be reused here without a layering cycle
+# (invariant 2 — one owner for the closed vocabulary, never re-literalled).
+from app.connectors.answer_engines.contracts import FinishReason
 from app.core.config.audits import (
     AUDIT_STATUS_DRAFT,
+    MEASUREMENT_MODE_BENCHMARK,
     TASK_STATUS_QUEUED,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
@@ -76,7 +83,33 @@ class Audit(Base):
     status: Mapped[str] = mapped_column(
         String(32), default=AUDIT_STATUS_DRAFT, index=True
     )
+    # What initiated this run: manual | trial | scheduled | system. Indexed for
+    # account-wide rate/budget queries. PR1 has no schedule caller; the exact
+    # mode/route/credential detail stays frozen in ``configuration``.
+    trigger: Mapped[str] = mapped_column(String(16), default="manual", index=True)
     benchmark_mode: Mapped[str] = mapped_column(String(32), default="")
+    # Measurement mode (pulse | benchmark) — an axis INDEPENDENT of
+    # ``benchmark_mode`` (prompt framing). Defaults to ``benchmark`` so an
+    # explicit manual run keeps its pre-existing full-run shape.
+    measurement_mode: Mapped[str] = mapped_column(
+        String(16), default=MEASUREMENT_MODE_BENCHMARK, nullable=False
+    )
+    # Funded-execution provenance. Null for BYOK runs. The billing account that
+    # funds this run (SET NULL so account removal never erases audit history),
+    # the funded budget period the reservation counts against, and the worst-case
+    # reserved cost in micro-USD (nonnegative).
+    funding_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("billing_accounts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    funded_budget_period_start: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    funded_reserved_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
     # Neutral, brand-free system instruction frozen at creation (invariant 6).
     system_instruction: Mapped[str] = mapped_column(Text, default="")
     repetitions: Mapped[int] = mapped_column(Integer, default=1)
@@ -371,6 +404,14 @@ class AuditTask(Base):
     request_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     provider_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Canonical finish reason (closed vocabulary — see
+    # ``connectors.answer_engines.contracts.FinishReason``). Non-null and
+    # defaulted to ``unknown``: gates read ONLY this column. ``raw_finish_reason``
+    # keeps the provider's own spelling for forensics and is never gated on.
+    finish_reason: Mapped[str] = mapped_column(
+        String(24), default=FinishReason.UNKNOWN.value, nullable=False
+    )
+    raw_finish_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_code: Mapped[str] = mapped_column(String(32), default="")
     error_detail: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(
@@ -424,6 +465,12 @@ class RawResponseArtifact(Base):
     citations: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     provider_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     usage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Canonical finish reason (non-null, ``unknown`` default) + the raw provider
+    # token. Only the canonical value is ever used by gates.
+    finish_reason: Mapped[str] = mapped_column(
+        String(24), default=FinishReason.UNKNOWN.value, nullable=False
+    )
+    raw_finish_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -431,18 +478,23 @@ class RawResponseArtifact(Base):
 
 
 class ExecutionCostProjection(Base):
-    """Immutable normalized provider usage for one successful execution.
+    """Append-only, versioned usage/cost observation for one artifact.
 
-    This preserves raw-artifact provenance without coupling completed audits to
-    mutable provider price cards. A later pricing version can derive estimates
-    from this row, but cannot alter what the provider reported at execution.
+    One row per ``(raw_response_artifact, formula_version, pricing_version)``:
+    repricing appends a NEW row under a new pricing version and never mutates
+    an existing one (invariant 3). Every usage/cost field is nullable —
+    unknown never becomes zero; only ``projection_status`` summarizes how much
+    of the observation is known (``complete | partial | unknown``, vocabulary
+    owned by ``app.core.config.costs``).
     """
 
     __tablename__ = "execution_cost_projections"
     __table_args__ = (
-        UniqueConstraint("task_id", name="uq_execution_cost_projection_task"),
         UniqueConstraint(
-            "raw_response_artifact_id", name="uq_execution_cost_projection_artifact"
+            "raw_response_artifact_id",
+            "formula_version",
+            "pricing_version",
+            name="uq_execution_cost_projection_version",
         ),
     )
 
@@ -464,11 +516,33 @@ class ExecutionCostProjection(Base):
         ForeignKey("raw_response_artifacts.id", ondelete="CASCADE"),
         index=True,
     )
-    projection_version: Mapped[str] = mapped_column(String(32))
-    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    provider_reported_cost_microusd: Mapped[int] = mapped_column(BigInteger, default=0)
+    formula_version: Mapped[str] = mapped_column(String(32))
+    pricing_version: Mapped[str] = mapped_column(String(64))
+    projection_status: Mapped[str] = mapped_column(String(16))
+    uncached_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cached_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reasoning_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    search_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    attempt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    uncached_input_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    cached_input_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    output_cost_microusd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reasoning_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    search_cost_microusd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    provider_reported_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    projected_total_cost_microusd: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
@@ -540,3 +614,132 @@ class AuditEvent(Base):
     )
 
     audit: Mapped[Audit] = relationship("Audit", back_populates="events")
+
+
+class ProviderCapacityBucket(Base):
+    """One shared provider-capacity pool (T4): concurrency ceiling + pacing.
+
+    Bucket identity is ``(pool_kind, transport_provider, connection_id,
+    billing_account_id)`` with NULLS NOT DISTINCT semantics, so the transport
+    pool (``connection_id``/``billing_account_id`` NULL), one BYOK
+    per-credential pool, and the funded global/per-account pools each resolve
+    to exactly one row. ``capacity`` is the pool's concurrency ceiling (max
+    active lease units); ``tokens``/``refill_tokens_per_second``/
+    ``refilled_at`` are the route token-bucket pacing state (transport pool
+    only — concurrency-only pools leave the token fields inert);
+    ``blocked_until`` is the shared 429 cooldown every sibling acquisition
+    observes. Pacing/concurrency numbers only — never credentials, prompts, or
+    provider bodies (invariant 6).
+    """
+
+    __tablename__ = "provider_capacity_buckets"
+    __table_args__ = (
+        UniqueConstraint(
+            "pool_kind",
+            "transport_provider",
+            "connection_id",
+            "billing_account_id",
+            name="uq_provider_capacity_bucket_pool",
+            postgresql_nulls_not_distinct=True,
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # POOL_KIND_* vocabulary (owned by ``app.core.config.audits``).
+    pool_kind: Mapped[str] = mapped_column(String(16))
+    transport_provider: Mapped[str] = mapped_column(String(32))
+    # SET NULL: removing a credential/account never destroys pool state.
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    billing_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("billing_accounts.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    # Concurrency ceiling: max active (non-expired, non-released) lease units.
+    capacity: Mapped[Decimal] = mapped_column(Numeric(14, 4))
+    # Route token-bucket pacing state (transport pool only).
+    tokens: Mapped[Decimal] = mapped_column(Numeric(14, 4))
+    refill_tokens_per_second: Mapped[Decimal] = mapped_column(Numeric(14, 4))
+    refilled_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    # Shared 429 cooldown; acquisitions seeing a future value park instead.
+    blocked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    policy_version: Mapped[str] = mapped_column(String(32), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    leases: Mapped[list[ProviderCapacityLease]] = relationship(
+        "ProviderCapacityLease",
+        back_populates="bucket",
+        cascade=CASCADE_ALL_DELETE_ORPHAN,
+        passive_deletes=True,
+    )
+
+
+class ProviderCapacityLease(Base):
+    """One checked-out concurrency slot on a capacity bucket (T4).
+
+    Acquired atomically with the bucket row lock and released at call end;
+    token starts are consumed from the bucket balance separately and are NEVER
+    returned here. A lease orphaned by a worker crash stops counting once
+    ``expires_at`` passes (effective concurrency is computed from non-expired,
+    non-released leases), so crashed workers never permanently leak pool
+    capacity. Unique per ``(bucket_id, task_id, attempt_number, lease_kind)``
+    so a re-acquire of the same attempt is idempotent.
+    """
+
+    __tablename__ = "provider_capacity_leases"
+    __table_args__ = (
+        UniqueConstraint(
+            "bucket_id",
+            "task_id",
+            "attempt_number",
+            "lease_kind",
+            name="uq_provider_capacity_lease_slot",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    bucket_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_capacity_buckets.id", ondelete="CASCADE"),
+        index=True,
+    )
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("audit_tasks.id", ondelete="CASCADE"),
+        index=True,
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer)
+    # LEASE_KIND_* vocabulary (owned by ``app.core.config.audits``).
+    lease_kind: Mapped[str] = mapped_column(String(16))
+    units: Mapped[Decimal] = mapped_column(Numeric(14, 4))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    released_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    bucket: Mapped[ProviderCapacityBucket] = relationship(
+        "ProviderCapacityBucket", back_populates="leases"
+    )

@@ -37,6 +37,12 @@ TASK_STATUS_SUCCEEDED: Final = "succeeded"
 TASK_STATUS_RETRY_WAIT: Final = "retry_wait"
 TASK_STATUS_FAILED: Final = "failed"
 TASK_STATUS_CANCELLED: Final = "cancelled"
+# Parked on a provider-capacity decision (T4): no pool/token budget was
+# available, so the task waits for ``available_at`` exactly like a retry wait —
+# the queued-state column is REUSED, never duplicated. Unlike
+# ``pending_reservation`` (audit-only, never claimable) this status IS
+# claimable once its ``available_at`` passes.
+TASK_STATUS_CAPACITY_WAIT: Final = "capacity_wait"
 
 TASK_TERMINAL_STATUSES: Final[frozenset[str]] = frozenset(
     {TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED}
@@ -47,11 +53,13 @@ TASK_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
         TASK_STATUS_LEASED,
         TASK_STATUS_RUNNING,
         TASK_STATUS_RETRY_WAIT,
+        TASK_STATUS_CAPACITY_WAIT,
     }
 )
-# Statuses a ``claim()`` may pick up (queued or ready-to-retry).
+# Statuses a ``claim()`` may pick up (queued, ready-to-retry, or unparked
+# from a capacity wait once ``available_at`` has passed).
 TASK_CLAIMABLE_STATUSES: Final[frozenset[str]] = frozenset(
-    {TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT}
+    {TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT, TASK_STATUS_CAPACITY_WAIT}
 )
 # Statuses a sweeper reclaims when their lease expires.
 TASK_LEASED_STATUSES: Final[frozenset[str]] = frozenset(

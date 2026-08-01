@@ -13,6 +13,45 @@ logical/transport provenance fields.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
+
+
+class FinishReason(StrEnum):
+    """Canonical, provider-neutral reason a generation stopped.
+
+    Closed vocabulary: gates and persistence read ONLY these values. The raw
+    provider token is preserved separately (``raw_finish_reason``) so no
+    provider-specific spelling leaks into a decision. Modelled as a ``StrEnum``
+    to match the other closed vocabularies in the codebase
+    (e.g. ``config/entitlements.CapabilityType``).
+    """
+
+    STOP = "stop"
+    LENGTH = "length"
+    TOOL_ERROR = "tool_error"
+    CONTENT_FILTER = "content_filter"
+    CANCELLED = "cancelled"
+    ERROR = "error"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class NormalizedUsage:
+    """Provider-neutral usage counters for one call.
+
+    EVERY field is nullable and defaults to ``None``. UNKNOWN NEVER BECOMES
+    ZERO: a missing counter stays null so downstream cost projection reports it
+    as unknown/partial instead of a fabricated zero that is indistinguishable
+    from a real zero. Never add a ``0`` default here.
+    """
+
+    uncached_input_tokens: int | None = None
+    cached_input_tokens: int | None = None
+    output_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    total_tokens: int | None = None
+    web_search_requests: int | None = None
+    provider_cost_microusd: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +60,17 @@ class AnswerEngineRequest:
     system_instruction: str
     model: str
     timeout_seconds: float
+    # Frozen measurement-mode policy the adapter must obey verbatim: whether to
+    # attach retrieval/search tools, the output-token cap, and the reasoning pin
+    # (``off`` | ``unverified`` | an explicit effort — see
+    # ``config/provider_catalog.RoutePolicy``). Defaults keep the pre-T3
+    # construction sites compiling; the planner/worker pass all three
+    # explicitly. ``max_output_tokens=0`` means "not supplied": no cap literal
+    # is invented here (invariant 1 — caps are config-owned), so an adapter
+    # reading a zero falls back to the configured catalog cap.
+    retrieval_enabled: bool = True
+    max_output_tokens: int = 0
+    reasoning_effort: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,5 +105,15 @@ class AnswerEngineResponse:
     search_events: tuple[SearchEventResult, ...]
     citations: tuple[CitationResult, ...]
     provider_metadata: dict = field(default_factory=dict)
-    usage: dict = field(default_factory=dict)
+    # Canonical finish reason (never null) plus the raw provider token it was
+    # mapped from. Only the canonical value is used by gates.
+    finish_reason: FinishReason = FinishReason.UNKNOWN
+    raw_finish_reason: str = ""
+    # Typed, all-nullable usage counters and the ONLY usage contract on this
+    # response (unknown never becomes zero). The legacy untyped ``usage`` bag is
+    # gone: persistence serializes THIS through ``normalized_usage_dict``, so
+    # there is exactly one in-memory source of truth. ``RawResponseArtifact.usage``
+    # remains the persisted JSON column (it still holds pre-T3 rows, which the
+    # cost projection reads through its legacy-key fallbacks).
+    normalized_usage: NormalizedUsage = field(default_factory=NormalizedUsage)
     latency_ms: int = 0

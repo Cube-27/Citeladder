@@ -13,7 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,10 +21,15 @@ from app.connectors.answer_engines.contracts import AnswerEngineRequest
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
 from app.core.config.provider_catalog import (
+    CREDENTIAL_SOURCE_BYOK,
     ERROR_PARSE,
+    ERROR_UNKNOWN,
     PROBE_PROMPT,
+    PUBLIC_PROVIDER_CATALOG,
+    REASON_VERIFICATION_REQUIRED,
     TEST_STATUS_FAILED,
     TEST_STATUS_OK,
+    ProviderCatalogEntry,
     configured_endpoint,
     default_model,
     default_probe_engine,
@@ -32,8 +37,15 @@ from app.core.config.provider_catalog import (
     is_endpoint_approved,
     is_route_approved,
     provider_catalog_settings,
+    public_provider_routes,
 )
 from app.core.security import decrypt_secret, encrypt_secret
+from app.domain.billing.schemas import (
+    ProviderConnectionStateResponse,
+    ProviderConnectionStatesResponse,
+    ProviderProbeResponse,
+)
+from app.domain.providers.credentials import connection_paused
 from app.domain.providers.schemas import (
     ProviderConnectionCreate,
     ProviderConnectionResponse,
@@ -41,11 +53,13 @@ from app.domain.providers.schemas import (
     ProviderConnectionUpdate,
     ProviderRouteResponse,
 )
+from app.models.audit import ProviderCapacityBucket
 from app.models.provider import (
     ProviderConnection,
     ProviderConnectionTest,
     ProviderRoute,
 )
+from app.models.workspace import Workspace
 
 
 class ProviderConnectionNotFoundError(LookupError):
@@ -72,7 +86,21 @@ class RetiredConnectionReadOnlyError(RuntimeError):
 
 
 def _connection_query():
-    return select(ProviderConnection).options(selectinload(ProviderConnection.routes))
+    """Tenant CRUD scope: BYOK rows in a non-system workspace only (T11).
+
+    Platform-funded rows live in the reserved system workspace and are absent
+    from every tenant list/get/update/delete/test path — even when an id is
+    guessed (the workspace match and this filter both fail closed to 404).
+    """
+    return (
+        select(ProviderConnection)
+        .options(selectinload(ProviderConnection.routes))
+        .join(Workspace, Workspace.id == ProviderConnection.workspace_id)
+        .where(
+            ProviderConnection.credential_source == CREDENTIAL_SOURCE_BYOK,
+            Workspace.is_system.is_(False),
+        )
+    )
 
 
 def connection_to_response(
@@ -241,6 +269,17 @@ async def delete_connection(
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
     )
+    # Delete the connection's capacity buckets in the SAME transaction. The
+    # bucket pool unique is nulls-not-distinct over (pool_kind, transport,
+    # connection_id, billing_account_id), so the SET NULL FK would otherwise
+    # collapse two same-transport connection deletes onto one identity and
+    # 23505 the second delete. A dead connection's pacing state is garbage
+    # anyway; the bucket's leases cascade with it.
+    await session.execute(
+        delete(ProviderCapacityBucket).where(
+            ProviderCapacityBucket.connection_id == connection.id
+        )
+    )
     await session.delete(connection)
     await session.commit()
 
@@ -257,6 +296,11 @@ async def run_connection_test(
     neutral, brand-free probe prompt. Records an append-only
     ``ProviderConnectionTest`` row and denormalizes the outcome onto the
     connection. The key is never logged or persisted (invariant 6).
+
+    The probe request carries its OWN config-owned policy
+    (``PROVIDER_TEST_RETRIEVAL_ENABLED`` / ``PROVIDER_TEST_MAX_OUTPUT_TOKENS`` /
+    ``PROVIDER_TEST_TIMEOUT_SECONDS``): retrieval OFF so a connectivity test
+    never performs a billable grounded search, and a tiny output cap.
     """
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
@@ -300,6 +344,14 @@ async def run_connection_test(
                 system_instruction="",
                 model=model,
                 timeout_seconds=provider_catalog_settings.test_timeout_seconds,
+                # A connectivity probe is a LIVENESS check, not a measurement:
+                # retrieval is disabled so testing a key never triggers (or
+                # pays for) a billable grounded search, and the cap is the tiny
+                # probe cap — both config-owned (invariant 1), never the
+                # measurement caps. No reasoning pin: the probe carries no
+                # measurement policy, so it must not invent one.
+                retrieval_enabled=provider_catalog_settings.test_retrieval_enabled,
+                max_output_tokens=provider_catalog_settings.test_max_output_tokens,
             )
         )
         latency_ms = response.latency_ms
@@ -342,4 +394,201 @@ async def run_connection_test(
         transport_provider=transport,
         transport_model=resolved_model,
         tested_at=tested_at,
+    )
+
+
+# --- Workspace connection states (authenticated commercial surface) --------
+
+
+def _paused_state_response(
+    entry: ProviderCatalogEntry,
+    connection: ProviderConnection,
+    latest_probe: ProviderConnectionTest,
+) -> ProviderConnectionStateResponse:
+    """The ``failed`` DTO for a paused connection with a probe history.
+
+    The reason is the safe pause classification token, never raw detail; the
+    probe row's own status is preserved with the same overridden reason.
+    """
+    reason = connection.pause_reason or ERROR_UNKNOWN
+    return ProviderConnectionStateResponse(
+        key=entry.key,
+        label=entry.label,
+        state="failed",
+        safe_reason=reason,
+        grant_key=entry.grant_key,
+        latest_probe=ProviderProbeResponse(
+            status=(
+                TEST_STATUS_OK
+                if latest_probe.status == TEST_STATUS_OK
+                else TEST_STATUS_FAILED
+            ),
+            safe_reason=reason,
+            tested_at=latest_probe.created_at,
+            model=latest_probe.transport_model or None,
+            latency_ms=latest_probe.latency_ms,
+        ),
+    )
+
+
+def derive_connection_state(
+    entry: ProviderCatalogEntry,
+    connection: ProviderConnection | None,
+    latest_probe: ProviderConnectionTest | None,
+    *,
+    at: datetime | None = None,
+) -> ProviderConnectionStateResponse:
+    """Derive one catalog provider's workspace state (pure, fail closed).
+
+    ``connection`` is the workspace's active BYOK connection for the entry's
+    transport identity (or None); ``latest_probe`` is that connection's most
+    recent append-only probe row (or None). Precedence: ``unavailable`` when
+    no adapter ships; ``missing`` when no active key-set connection exists or
+    the configured key has never been successfully probed; ``failed`` when
+    the connection is paused (safe reason from the pause classification —
+    never raw detail) or the latest attempted probe failed; ``connected``
+    only after a successful probe while the connection remains active,
+    key-set, and NOT paused. An unprobed key is NEVER connected. The probe's
+    ``detail`` column never leaves the database — the DTO carries the
+    classification token only (invariant 6).
+
+    ``at`` makes the pause deadline clock explicit; without it any pause
+    marker fails closed as paused.
+    """
+    if not entry.adapter_shipped:
+        return ProviderConnectionStateResponse(
+            key=entry.key,
+            label=entry.label,
+            state="unavailable",
+            safe_reason=entry.unavailable_reason,
+            grant_key=entry.grant_key,
+            latest_probe=None,
+        )
+    if (
+        connection is None
+        or not connection.active
+        or not connection.api_key_encrypted
+        or latest_probe is None
+    ):
+        # Fail closed: no active connection, no key material set, or the
+        # configured key has never had a successful probe (latest_probe=None
+        # for never-probed).
+        return ProviderConnectionStateResponse(
+            key=entry.key,
+            label=entry.label,
+            state="missing",
+            safe_reason=REASON_VERIFICATION_REQUIRED,
+            grant_key=entry.grant_key,
+            latest_probe=None,
+        )
+    paused = (
+        connection.paused_at is not None
+        if at is None
+        else connection_paused(connection, at=at)
+    )
+    if paused:
+        return _paused_state_response(entry, connection, latest_probe)
+    if latest_probe.status == TEST_STATUS_OK:
+        return ProviderConnectionStateResponse(
+            key=entry.key,
+            label=entry.label,
+            state="connected",
+            safe_reason=None,
+            grant_key=entry.grant_key,
+            latest_probe=ProviderProbeResponse(
+                status=TEST_STATUS_OK,
+                safe_reason=None,
+                tested_at=latest_probe.created_at,
+                model=latest_probe.transport_model or None,
+                latency_ms=latest_probe.latency_ms,
+            ),
+        )
+    return ProviderConnectionStateResponse(
+        key=entry.key,
+        label=entry.label,
+        state="failed",
+        safe_reason=latest_probe.error_code or ERROR_UNKNOWN,
+        grant_key=entry.grant_key,
+        latest_probe=ProviderProbeResponse(
+            status=TEST_STATUS_FAILED,
+            safe_reason=latest_probe.error_code or ERROR_UNKNOWN,
+            tested_at=latest_probe.created_at,
+            model=latest_probe.transport_model or None,
+            latency_ms=latest_probe.latency_ms,
+        ),
+    )
+
+
+async def _latest_probes(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    connection_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, ProviderConnectionTest]:
+    """Latest probe per connection in one DISTINCT ON round trip.
+
+    The probe table is append-only (invariant 3) and unbounded per
+    connection, so this never loads full history. ``workspace_id`` is
+    filtered even though the ids are already workspace-scoped (invariant 5).
+    """
+    if not connection_ids:
+        return {}
+    result = await session.execute(
+        select(ProviderConnectionTest)
+        .where(
+            ProviderConnectionTest.workspace_id == workspace_id,
+            ProviderConnectionTest.connection_id.in_(connection_ids),
+        )
+        .order_by(
+            ProviderConnectionTest.connection_id,
+            ProviderConnectionTest.created_at.desc(),
+            ProviderConnectionTest.id.desc(),
+        )
+        .distinct(ProviderConnectionTest.connection_id)
+    )
+    return {probe.connection_id: probe for probe in result.scalars()}
+
+
+async def get_connection_states(
+    session: AsyncSession, *, workspace_id: uuid.UUID
+) -> ProviderConnectionStatesResponse:
+    """Per-provider workspace states for ``GET /provider-connections/states``.
+
+    Every catalog row is present exactly once, in catalog order. Catalog
+    entries map to connections through the transport identity the connection
+    row carries (invariant 10); the most recently created active connection
+    per transport wins. Reads only this workspace's BYOK rows in a non-system
+    workspace (invariant 5) — platform-funded rows never appear in tenant
+    states (T11).
+    """
+    result = await session.execute(
+        select(ProviderConnection)
+        .join(Workspace, Workspace.id == ProviderConnection.workspace_id)
+        .where(
+            ProviderConnection.workspace_id == workspace_id,
+            ProviderConnection.active.is_(True),
+            ProviderConnection.credential_source == CREDENTIAL_SOURCE_BYOK,
+            Workspace.is_system.is_(False),
+        )
+        .order_by(ProviderConnection.created_at.desc())
+    )
+    by_transport: dict[str, ProviderConnection] = {}
+    for connection in result.scalars():
+        by_transport.setdefault(connection.transport_provider, connection)
+    latest_probes = await _latest_probes(
+        session,
+        workspace_id=workspace_id,
+        connection_ids=[c.id for c in by_transport.values()],
+    )
+    derived_at = datetime.now(UTC)
+    providers: list[ProviderConnectionStateResponse] = []
+    for entry in PUBLIC_PROVIDER_CATALOG:
+        routes = public_provider_routes(entry.key)
+        connection = by_transport.get(routes[0][1]) if routes else None
+        probe = latest_probes.get(connection.id) if connection is not None else None
+        providers.append(
+            derive_connection_state(entry, connection, probe, at=derived_at)
+        )
+    return ProviderConnectionStatesResponse(
+        workspace_id=workspace_id, providers=providers
     )

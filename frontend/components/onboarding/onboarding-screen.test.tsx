@@ -72,7 +72,10 @@ describe('OnboardingScreen', () => {
     await user.click(await screen.findByRole('button', { name: 'Create project' }));
 
     expect(await screen.findByRole('heading', { name: /workspace is ready/i })).toBeInTheDocument();
-    expect(screen.getByText(/free Site Health crawl/i)).toBeInTheDocument();
+    // Neutral crawl copy: there is no free tier to promise, and coverage is
+    // governed by the monitored-URL allowance rather than a plan name.
+    expect(screen.getByText(/Site Health crawl in the background/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/free Site Health crawl/i);
     expect(replace).not.toHaveBeenCalled();
     expect(setActiveProjectId).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000001');
 

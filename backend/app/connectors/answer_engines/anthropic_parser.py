@@ -10,19 +10,90 @@ Anthropic returns a block list rather than a single message string:
   - ``server_tool_use`` blocks (``name == "web_search"``) carry the actual
     search query text when the provider returns it.
   - ``usage.server_tool_use.web_search_requests`` counts the searches performed.
+  - ``stop_reason`` carries the raw provider finish token, mapped to the
+    canonical ``FinishReason`` vocabulary by ``map_anthropic_finish_reason``.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
 from app.connectors.answer_engines.contracts import (
     AnswerEngineResponse,
     CitationResult,
+    FinishReason,
+    NormalizedUsage,
     SearchEventResult,
 )
-from app.connectors.answer_engines.normalization import normalize_domain
+from app.connectors.answer_engines.normalization import (
+    normalize_domain,
+    normalized_usage_dict,
+    sum_optional,
+    usage_count,
+    usage_mapping,
+)
+
+# Raw Anthropic ``stop_reason`` -> canonical finish reason. Closed map: an
+# unlisted value maps to UNKNOWN rather than being guessed at.
+#   * ``pause_turn`` (long-running server tool turn) and ``tool_use`` are not
+#     terminal generation outcomes, so neither is reported as ``stop``.
+_ANTHROPIC_FINISH_REASONS: dict[str, FinishReason] = {
+    "end_turn": FinishReason.STOP,
+    "stop_sequence": FinishReason.STOP,
+    "max_tokens": FinishReason.LENGTH,
+    "refusal": FinishReason.CONTENT_FILTER,
+    "pause_turn": FinishReason.UNKNOWN,
+    "tool_use": FinishReason.UNKNOWN,
+}
+
+
+def map_anthropic_finish_reason(raw: object) -> FinishReason:
+    """Map an Anthropic ``stop_reason`` to the canonical vocabulary.
+
+    Pure function; anything absent or unrecognized maps to
+    ``FinishReason.UNKNOWN`` (never guessed). The raw token is preserved
+    separately on the response.
+    """
+    return _ANTHROPIC_FINISH_REASONS.get(
+        str(raw or "").strip(), FinishReason.UNKNOWN
+    )
+
+
+def normalize_anthropic_usage(
+    payload: Mapping[str, Any], *, search_events: int
+) -> NormalizedUsage:
+    """Normalize Anthropic usage aliases into the canonical typed counters.
+
+    ``input_tokens`` on the Messages API already EXCLUDES cache reads, so it
+    maps straight to ``uncached_input_tokens``; cache reads come from
+    ``cache_read_input_tokens``. Anthropic reports no thinking-token count and
+    no per-request cost, so those stay null (unknown never becomes zero). The
+    web-search count prefers the reported value and falls back to observed
+    ``server_tool_use`` blocks only when the provider reported none at all.
+    """
+    usage = usage_mapping(payload.get("usage"))
+    server_tool_use = usage_mapping(usage.get("server_tool_use"))
+    uncached = usage_count(usage, "input_tokens")
+    cached = usage_count(usage, "cache_read_input_tokens", "cacheReadInputTokens")
+    output = usage_count(usage, "output_tokens")
+    searches = usage_count(server_tool_use, "web_search_requests")
+    if searches is None and search_events:
+        searches = search_events
+    total = usage_count(usage, "total_tokens")
+    if total is None:
+        total = sum_optional(uncached, cached, output)
+    return NormalizedUsage(
+        uncached_input_tokens=uncached,
+        cached_input_tokens=cached,
+        output_tokens=output,
+        # Anthropic reports no separate thinking-token counter (thinking tokens
+        # are billed inside ``output_tokens``) and no per-request cost, so both
+        # stay null rather than becoming a fabricated zero.
+        total_tokens=total,
+        web_search_requests=searches,
+    )
 
 
 def _blocks(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -95,40 +166,34 @@ def parse_anthropic_message(
     answer_text, citations = _answer_and_citations(blocks)
     search_events = _search_events(blocks)
 
-    usage = dict(payload.get("usage") or {})
-    server_tool_use = usage.get("server_tool_use") or {}
-    search_count = int(server_tool_use.get("web_search_requests") or 0)
-    # Prefer the reported count; fall back to observed server_tool_use blocks.
-    if not search_count:
-        search_count = len(search_events)
-    normalized_usage = {
-        "total_input_tokens": int(usage.get("input_tokens") or 0),
-        "total_output_tokens": int(usage.get("output_tokens") or 0),
-        "total_tokens": int(
-            (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0)
-        ),
-        "web_search_requests": search_count,
-        # Anthropic does not return a per-request dollar cost.
-        "provider_cost_usd": 0.0,
-    }
+    usage = normalize_anthropic_usage(payload, search_events=len(search_events))
+    raw_finish_reason = str(payload.get("stop_reason") or "")
     return AnswerEngineResponse(
         logical_engine=logical_engine,
         transport_provider=transport_provider,
         transport_model=str(payload.get("model") or requested_model),
         answer_text=answer_text,
-        search_used=search_count > 0,
+        # A known-zero search count means no search; an unknown count falls
+        # back to the observed server_tool_use blocks (already folded into the
+        # normalized count above).
+        search_used=bool(usage.web_search_requests),
         search_events=search_events,
         citations=citations,
         provider_metadata={
             "id": payload.get("id"),
             "type": payload.get("type"),
             "model": payload.get("model") or requested_model,
-            "usage": normalized_usage,
+            "usage": normalized_usage_dict(usage),
             "native_search_requested": True,
             # Anthropic exposes the real query text on server_tool_use blocks.
             "query_text_available": True,
+            # Raw provider token preserved verbatim alongside the canonical
+            # mapping (only the canonical value is used by gates).
             "stop_reason": payload.get("stop_reason"),
+            "raw_finish_reason": raw_finish_reason,
         },
-        usage=normalized_usage,
+        finish_reason=map_anthropic_finish_reason(raw_finish_reason),
+        raw_finish_reason=raw_finish_reason,
+        normalized_usage=usage,
         latency_ms=latency_ms,
     )

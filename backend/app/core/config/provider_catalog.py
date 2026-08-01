@@ -11,9 +11,17 @@
 # each logical engine has exactly one approved route.
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.config.entitlements import (
+    CAPABILITY_REGISTRY,
+    KEY_PROVIDER_COPILOT,
+    KEY_PROVIDER_GROK,
+    KEY_PROVIDER_PERPLEXITY,
+)
 
 # --- Logical engines (what the user asked for) ----------------------------
 ENGINE_CHATGPT: Final = "chatgpt"
@@ -48,6 +56,162 @@ APPROVED_ROUTES: Final[dict[str, dict[str, str]]] = {
         TRANSPORT_GOOGLE: "gemini-flash-latest",
     },
 }
+
+
+# --- Execution-time route policy -----------------------------------------
+# Keyed on the SAME approved (engine, transport) identity as ``APPROVED_ROUTES``
+# above — this is the execution-time policy for those routes, not a second
+# catalog: the model id is never repeated here (read it through
+# ``default_model``). ``config/measurement.py`` owns the offline SWEEP
+# vocabulary (``REASONING_EFFORT_UNSET|LOW|MEDIUM|HIGH``); the two tokens below
+# are the execution-time PIN states, which the sweep has no equivalent for.
+#
+# ``off``: reasoning/thinking is explicitly disabled on the request.
+# ``unverified``: no supported low reasoning value has been established for the
+# route (no fixture and no live evidence), so the route stays UNPINNED and its
+# cost-sensitive funded variant is ineligible. Fails closed — never treated as
+# "off".
+REASONING_EFFORT_OFF: Final = "off"
+REASONING_EFFORT_UNVERIFIED: Final = "unverified"
+
+# Whether the pinned transport model is known to match what a consumer of the
+# logical engine actually gets. Consumer-representativeness is DEFERRED: every
+# active route is ``unverified`` today.
+REPRESENTATIVE_STATUS_UNVERIFIED: Final = "unverified"
+REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
+
+
+@dataclass(frozen=True, slots=True)
+class RoutePolicy:
+    """Execution-time policy for one approved (engine, transport) route.
+
+    ``reasoning_effort`` is the value the adapter pins (or the ``unverified``
+    sentinel when nothing may be pinned yet); ``reasoning_pinnable`` says
+    whether the route accepts an explicit reasoning control at all;
+    ``representative_status`` records consumer-representativeness evidence for
+    the pinned model; ``batch_enabled`` gates any batch/async submission path.
+    No prompt-caching knob exists — Searchify requests never enable provider
+    prompt caching.
+    """
+
+    reasoning_effort: str
+    reasoning_pinnable: bool
+    representative_status: str
+    batch_enabled: bool
+
+
+# One entry per approved route in ``APPROVED_ROUTES`` (same keys).
+ROUTE_POLICIES: Final[dict[tuple[str, str], RoutePolicy]] = {
+    # Anthropic exposes an explicit thinking control, so reasoning is PINNED OFF.
+    (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC): RoutePolicy(
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        batch_enabled=False,
+    ),
+    # OpenAI + Google reasoning pins stay ``unverified``: until fixtures or live
+    # evidence establish a supported low value, nothing is pinned and the
+    # cost-sensitive funded route is ineligible.
+    (ENGINE_CHATGPT, TRANSPORT_OPENAI): RoutePolicy(
+        reasoning_effort=REASONING_EFFORT_UNVERIFIED,
+        reasoning_pinnable=False,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        batch_enabled=False,
+    ),
+    (ENGINE_GEMINI, TRANSPORT_GOOGLE): RoutePolicy(
+        reasoning_effort=REASONING_EFFORT_UNVERIFIED,
+        reasoning_pinnable=False,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        batch_enabled=False,
+    ),
+}
+
+
+def route_policy(logical_engine: str, transport_provider: str) -> RoutePolicy:
+    """Execution-time policy for an approved route (fails closed).
+
+    Raises ``ValueError`` for a route with no policy entry rather than assuming
+    a permissive default: an unknown route must never silently execute with
+    reasoning treated as off or batch treated as allowed.
+    """
+    policy = ROUTE_POLICIES.get((logical_engine, transport_provider))
+    if policy is None:
+        raise ValueError(
+            f"no route policy for ({logical_engine!r}, {transport_provider!r}); "
+            "approved routes must declare one"
+        )
+    return policy
+
+
+# --- Route-owned token-bucket pacing (T4) ------------------------------------
+# One entry per approved route (same keys as ``ROUTE_POLICIES``): the token
+# bucket that paces provider CALL STARTS on the route's transport bucket. The
+# rates are UNVERIFIED and therefore UNSET (``None``) ON PURPOSE: with no
+# measured provider tier rates, funded acquisition fails CLOSED
+# (``capacity_unconfigured``) and BYOK runs concurrency-only, until a live
+# measurement configures real rates. ``max_cooldown_seconds`` is always set:
+# it clamps any provider-advised ``Retry-After`` before the shared
+# ``blocked_until`` cooldown is written, so an untrusted provider hint can
+# never park a pool longer than this.
+DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS: Final = 60.0
+
+
+@dataclass(frozen=True, slots=True)
+class RouteCapacityPolicy:
+    """Token-bucket pacing policy for one approved (engine, transport) route.
+
+    ``capacity`` is the bucket's max tokens (burst size);
+    ``refill_tokens_per_second`` is the sustained start rate. Both are
+    ``None`` while the route's provider rates are unverified.
+    """
+
+    capacity: float | None
+    refill_tokens_per_second: float | None
+    max_cooldown_seconds: float
+
+
+# One entry per approved route in ``APPROVED_ROUTES`` (same keys).
+ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
+    (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
+    (ENGINE_CHATGPT, TRANSPORT_OPENAI): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
+    (ENGINE_GEMINI, TRANSPORT_GOOGLE): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
+}
+
+
+def route_capacity_policy(
+    logical_engine: str, transport_provider: str
+) -> RouteCapacityPolicy:
+    """Token-bucket pacing policy for an approved route (fails closed).
+
+    Raises ``ValueError`` for a route with no entry rather than pacing with an
+    invented rate: an unconfigured approved route (``None`` rates) is a
+    DELIBERATE fail-closed state; an UNKNOWN route is a bug.
+    """
+    policy = ROUTE_CAPACITY_POLICIES.get((logical_engine, transport_provider))
+    if policy is None:
+        raise ValueError(
+            f"no route capacity policy for ({logical_engine!r}, "
+            f"{transport_provider!r}); approved routes must declare one"
+        )
+    return policy
+
+
+def is_reasoning_pinned_off(logical_engine: str, transport_provider: str) -> bool:
+    """True only when the route pins reasoning explicitly OFF."""
+    policy = route_policy(logical_engine, transport_provider)
+    return policy.reasoning_pinnable and policy.reasoning_effort == REASONING_EFFORT_OFF
 
 
 def is_route_approved(logical_engine: str, transport_provider: str) -> bool:
@@ -107,6 +271,198 @@ def is_endpoint_approved(transport_provider: str, base_url: str) -> bool:
     return not supplied or supplied == approved
 
 
+# --- Public provider catalog (display surface, NOT a write enum) ----------
+# The public/commercial surface shows more providers than Searchify can
+# execute: shipped BYOK engines plus explicitly COMING-SOON ones. This catalog
+# is display-only. ``ACTIVE_TRANSPORTS`` and ``APPROVED_ROUTES`` above stay
+# OpenAI/Anthropic/Google only, so a create/test/audit routing path can never
+# accept a coming-soon key just because it appears here.
+PROVIDER_GROK: Final = "grok"
+PROVIDER_PERPLEXITY: Final = "perplexity"
+PROVIDER_COPILOT: Final = "copilot"
+
+# Public availability vocabulary (single owner; the billing catalog reads it).
+# Deliberately two-valued: workspace connection state is a separate,
+# authenticated contract and never leaks into a public catalog row.
+AVAILABILITY_AVAILABLE: Final = "available"
+AVAILABILITY_UNAVAILABLE: Final = "unavailable"
+
+# Safe, non-leaking reason for a coming-soon provider row.
+REASON_PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
+
+# Safe reason for a shipped provider whose configured key has not (yet) been
+# verified by a successful probe; the authenticated states route fails closed
+# with it (an unprobed key is NEVER connected).
+REASON_VERIFICATION_REQUIRED: Final = "verification_required"
+
+
+def validate_availability(availability: str, reason: str | None) -> None:
+    """Shared availability/reason consistency rule for any catalog row.
+
+    An unavailable row needs a safe, non-leaking reason; an available row
+    carries none. The commercial catalog (``config/billing.py``) reuses this so
+    the two-token vocabulary has exactly one owner (invariant 2).
+    """
+    if availability == AVAILABILITY_AVAILABLE:
+        if reason is not None:
+            raise ValueError("an available catalog row carries no reason")
+        return
+    if availability != AVAILABILITY_UNAVAILABLE:
+        raise ValueError(f"unsupported availability: {availability!r}")
+    if not reason:
+        raise ValueError("an unavailable catalog row needs a safe reason")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCatalogEntry:
+    """One provider row in the PUBLIC provider catalog.
+
+    ``adapter_shipped`` says whether an execution adapter exists at all;
+    ``grant_key`` is the DESCRIPTIVE capability identity for the row (it is not
+    proof that anything may be granted); ``issuable`` is authoritative and is
+    true only for a real, issuable entitlement-registry capability. Shipped
+    BYOK engines are not grant-gated, so they are non-issuable too.
+    """
+
+    key: str
+    label: str
+    availability: str
+    unavailable_reason: str | None
+    adapter_shipped: bool
+    grant_key: str
+    issuable: bool
+
+    def __post_init__(self) -> None:
+        validate_availability(self.availability, self.unavailable_reason)
+        if self.adapter_shipped != (self.availability == AVAILABILITY_AVAILABLE):
+            raise ValueError(
+                f"provider {self.key!r} availability disagrees with adapter_shipped"
+            )
+        definition = CAPABILITY_REGISTRY.get(self.grant_key)
+        expected = definition is not None and definition.issuable
+        if self.issuable and not expected:
+            raise ValueError(
+                f"provider {self.key!r} claims an issuable grant key it cannot have"
+            )
+
+
+PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
+    ProviderCatalogEntry(
+        key=ENGINE_CHATGPT,
+        label="ChatGPT",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.chatgpt",
+        issuable=False,
+    ),
+    ProviderCatalogEntry(
+        key=ENGINE_CLAUDE,
+        label="Claude",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.claude",
+        issuable=False,
+    ),
+    ProviderCatalogEntry(
+        key=ENGINE_GEMINI,
+        label="Gemini",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.gemini",
+        issuable=False,
+    ),
+    # Coming soon: no adapter ships, no route exists, and no plan bundle may
+    # issue a runnable grant for them. Copilot is additionally NON-ISSUABLE in
+    # the entitlement registry — nothing may ever write it.
+    ProviderCatalogEntry(
+        key=PROVIDER_GROK,
+        label="Grok",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key=KEY_PROVIDER_GROK,
+        issuable=True,
+    ),
+    ProviderCatalogEntry(
+        key=PROVIDER_PERPLEXITY,
+        label="Perplexity",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key=KEY_PROVIDER_PERPLEXITY,
+        issuable=True,
+    ),
+    ProviderCatalogEntry(
+        key=PROVIDER_COPILOT,
+        label="Microsoft Copilot",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key=KEY_PROVIDER_COPILOT,
+        issuable=False,
+    ),
+)
+
+
+def public_provider_routes(provider_key: str) -> tuple[tuple[str, str, str], ...]:
+    """Approved (engine, transport, model) routes for a public catalog row.
+
+    Reads ``APPROVED_ROUTES`` only, so a coming-soon key resolves to no routes
+    by construction rather than by a hand-maintained exception list.
+    """
+    return tuple(
+        (provider_key, transport, model)
+        for transport, model in APPROVED_ROUTES.get(provider_key, {}).items()
+    )
+
+
+# --- Credential source vocabulary (T11) ------------------------------------
+# Who owns the executing credential for one task: a tenant BYOK connection or
+# the operator's platform-funded connection in the reserved system workspace.
+CREDENTIAL_SOURCE_BYOK: Final = "byok"
+CREDENTIAL_SOURCE_PLATFORM: Final = "platform"
+CREDENTIAL_SOURCES: Final[frozenset[str]] = frozenset(
+    {CREDENTIAL_SOURCE_BYOK, CREDENTIAL_SOURCE_PLATFORM}
+)
+# Selection precedence: a healthy tenant BYOK credential always wins over the
+# platform-funded fallback; funded is reached only when no BYOK route can
+# execute.
+CREDENTIAL_SOURCE_PRECEDENCE: Final[tuple[str, str]] = (
+    CREDENTIAL_SOURCE_BYOK,
+    CREDENTIAL_SOURCE_PLATFORM,
+)
+# Coded, safe failure when neither a BYOK nor a funded-platform credential may
+# execute a task. Carries no key material, no provider detail, and no system
+# workspace information — the token IS the contract.
+CODE_EXECUTION_CREDENTIALS_UNAVAILABLE: Final = "execution_credentials_unavailable"
+
+# --- Credential lifecycle telemetry (T11) ----------------------------------
+# Operator telemetry event names (logged, never tenant-facing DTOs). Payloads
+# carry opaque ids, classification tokens, and pause/provisioning timing only
+# — NEVER keys, ciphertext, prompts, answers, provider bodies, or
+# authorization headers (invariant 6).
+TELEMETRY_BYOK_PAUSED: Final = "provider.byok.paused"
+TELEMETRY_PLATFORM_AUTH_FAILED: Final = "provider.platform.auth_failed"
+TELEMETRY_PLATFORM_PROVISIONED: Final = "provider.platform.provisioned"
+TELEMETRY_FUNDED_ADMISSION_DENIED: Final = "funded.execution.admission_denied"
+
+# --- Platform provisioning identity (T11) -----------------------------------
+# The reserved system workspace holds the operator's platform-funded rows
+# (exactly one, enforced by the partial unique index on Workspace.is_system).
+SYSTEM_WORKSPACE_NAME: Final = "Searchify Platform (system)"
+# Environment variables the provisioning CLI reads platform keys from, keyed
+# by transport. The VALUES are secret material and are only ever accepted as
+# SecretStr, Fernet-encrypted before flush, and never printed or logged.
+PLATFORM_CREDENTIAL_ENV_VARS: Final[dict[str, str]] = {
+    TRANSPORT_OPENAI: "SEARCHIFY_PLATFORM_OPENAI_API_KEY",
+    TRANSPORT_ANTHROPIC: "SEARCHIFY_PLATFORM_ANTHROPIC_API_KEY",
+    TRANSPORT_GOOGLE: "SEARCHIFY_PLATFORM_GOOGLE_API_KEY",
+}
+
+
 # --- Retry / error classification tokens (recorded on tests + attempts) ---
 ERROR_TIMEOUT: Final = "timeout"
 ERROR_CONNECTION: Final = "connection"
@@ -156,6 +512,19 @@ class ProviderCatalogSettings(BaseSettings):
     request_timeout_seconds: float = 60.0
     # Shorter timeout for the lightweight connectivity probe.
     test_timeout_seconds: float = 20.0
+    # --- Connectivity-probe request policy (invariant 1) -----------------
+    # The ``/test`` probe is a LIVENESS check, not a measurement: it proves the
+    # credential + endpoint + model answer at all. Retrieval is DISABLED so a
+    # connectivity test never triggers (and never pays for) a billable grounded
+    # search, and the output cap is a handful of tokens because the expected
+    # answer is the single word in ``PROBE_PROMPT``. Neither value is ever read
+    # from the measurement caps above — a probe must not scale with them.
+    test_retrieval_enabled: bool = False
+    test_max_output_tokens: int = 32
+    # Recoverable auth-failure pause (T11): an ERROR_AUTH-classified execution
+    # pauses the credential for this many days before resolution may try it
+    # again (the tenant/operator rotates the key within the grace window).
+    byok_key_grace_days: int = 7
 
 
 provider_catalog_settings = ProviderCatalogSettings()

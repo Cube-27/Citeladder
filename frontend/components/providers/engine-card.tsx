@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { ProviderConnection } from '@/lib/api/types';
-import { TRANSPORT_LABELS, type EngineCardModel } from '@/lib/providers/catalog';
+import { isConnectable, TRANSPORT_LABELS, type EngineCardModel } from '@/lib/providers/catalog';
 import { useEngineConnection } from '@/lib/providers/use-engine-connection';
 
 import { EngineConnectionFields } from './engine-connection-fields';
@@ -28,6 +28,7 @@ export function EngineCard({
   const connectionState = useEngineConnection({ model, connections });
   const { route, transport, connection, configured, apiKey, saveMutation, testMutation, busy } =
     connectionState;
+  const connectable = isConnectable(model);
 
   return (
     <Card>
@@ -43,16 +44,29 @@ export function EngineCard({
             )}
           </div>
         </div>
-        {configured ? (
-          <Badge variant="status" value="success">
-            Configured
-          </Badge>
-        ) : (
-          <Badge variant="neutral">Not configured</Badge>
-        )}
+        <ConnectionStateBadge model={model} />
       </CardHeader>
 
       <CardContent className="grid gap-4">
+        {model.state === 'missing' && (
+          <p className="text-muted text-xs">
+            {model.safe_reason ?? 'Verification required — save a key and run a connection test.'}
+          </p>
+        )}
+        {model.state === 'failed' && model.latest_probe && (
+          <p className="text-danger-text text-xs">
+            Last test failed
+            {model.latest_probe.safe_reason ? `: ${model.latest_probe.safe_reason}` : ''}
+            {model.latest_probe.model ? ` (model ${model.latest_probe.model})` : ''}.
+          </p>
+        )}
+        {model.availability === 'unavailable' && (
+          <p className="text-muted text-xs">
+            {model.unavailable_reason === 'adapter_not_shipped'
+              ? 'Coming soon — this provider has no adapter yet and cannot be connected.'
+              : (model.unavailable_reason ?? 'Not available for connection.')}
+          </p>
+        )}
         {route ? (
           <div className="grid gap-1.5">
             <span className={eyebrowClasses}>Route</span>
@@ -63,26 +77,60 @@ export function EngineCard({
           </div>
         ) : null}
 
-        <EngineConnectionFields state={connectionState} />
+        {/* A planned provider gets no key input and no actions. The card
+            stays keyboard-reachable and informative, but there is nothing to
+            submit — a stored key for an adapter that does not exist would be a
+            credential we could never use. */}
+        {connectable ? (
+          <>
+            <EngineConnectionFields state={connectionState} />
 
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            onClick={() => saveMutation.mutate()}
-            disabled={busy || !transport || (!apiKey && !configured)}
-          >
-            {saveMutation.isPending ? 'Saving…' : configured ? 'Update key' : 'Save key'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => testMutation.mutate()}
-            disabled={busy || !connection}
-          >
-            {testMutation.isPending ? 'Testing…' : 'Test connection'}
-          </Button>
-        </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={() => saveMutation.mutate()}
+                disabled={busy || !transport || (!apiKey && !configured)}
+              >
+                {saveMutation.isPending ? 'Saving…' : configured ? 'Update key' : 'Save key'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => testMutation.mutate()}
+                disabled={busy || !connection}
+              >
+                {testMutation.isPending ? 'Testing…' : 'Test connection'}
+              </Button>
+            </div>
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * The four-state badge. `connected` requires a SUCCESSFUL probe, not a stored
+ * key: "we have a credential" and "the credential works" are different facts,
+ * and only the second one should look green.
+ */
+function ConnectionStateBadge({ model }: Readonly<{ model: EngineCardModel }>) {
+  if (model.state === 'connected') {
+    return (
+      <Badge variant="status" value="success">
+        Connected
+      </Badge>
+    );
+  }
+  if (model.state === 'failed') {
+    return (
+      <Badge variant="status" value="danger">
+        Failed
+      </Badge>
+    );
+  }
+  if (model.state === 'unavailable') {
+    return <Badge variant="neutral">Coming soon</Badge>;
+  }
+  return <Badge variant="neutral">Missing</Badge>;
 }

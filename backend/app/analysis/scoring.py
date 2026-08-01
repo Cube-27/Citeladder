@@ -34,6 +34,7 @@ from app.core.config.analysis import (
     TOKENS_PER_MILLION,
     uses_gemini_flash_pricing,
 )
+from app.core.config.costs import MICRO_USD_PER_USD
 
 
 @dataclass(frozen=True)
@@ -553,6 +554,25 @@ def _competitor_aggregates(scores, config, total):
     }
 
 
+def _reported_cost_usd(usage: dict[str, Any]) -> float:
+    """Provider-REPORTED cost for one execution, in dollars.
+
+    ``provider_cost_microusd`` is the canonical typed spelling (already
+    micro-USD) and wins; ``provider_cost_usd`` is the pre-T3 dollar spelling
+    kept readable for legacy artifacts. Nothing reported contributes nothing —
+    no fabricated cost.
+    """
+    if usage.get("provider_cost_microusd") is not None:
+        try:
+            return int(usage["provider_cost_microusd"]) / MICRO_USD_PER_USD
+        except (TypeError, ValueError):
+            return 0.0
+    try:
+        return float(usage.get("provider_cost_usd") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _aggregate_cost(
     completed: list[dict[str, Any]],
     token_usage: dict[str, int],
@@ -564,7 +584,7 @@ def _aggregate_cost(
     provider_reported = 0.0
     for execution in completed:
         usage = (execution.get("provider_metadata") or {}).get("usage") or {}
-        provider_reported += float(usage.get("provider_cost_usd") or 0)
+        provider_reported += _reported_cost_usd(usage)
 
     token_estimate = 0.0
     grounding_if_billable = 0.0
@@ -594,18 +614,41 @@ def _aggregate_cost(
     }
 
 
+def _usage_value(usage: dict[str, Any], *keys: str) -> int:
+    """First-present-key wins, coerced to a non-negative-ish int.
+
+    The canonical typed-usage spellings come first and the pre-T3 parser
+    spellings are the fallback, so a legacy persisted artifact keeps
+    aggregating. An absent counter contributes NOTHING to the sum — it is not
+    recorded anywhere as an observed zero.
+    """
+    for key in keys:
+        if key in usage:
+            try:
+                return int(usage.get(key) or 0)
+            except (TypeError, ValueError):
+                return 0
+    return 0
+
+
 def _aggregate_token_usage(completed: list[dict[str, Any]]) -> dict[str, int]:
     """Sum provider token counts across completed executions.
 
-    Reads the ``usage`` block snapshotted into ``provider_metadata``. All keys
-    default to 0 so a run with no usage data still reports a stable shape.
+    Reads the ``usage`` block snapshotted into ``provider_metadata`` — the
+    canonical typed-usage keys (``uncached_input_tokens`` / ``output_tokens``)
+    with the pre-T3 ``total_*_tokens`` spellings as the legacy fallback, so
+    artifacts persisted before the typed contract still aggregate. This is a
+    SUM across executions, so the shape stays ``int``; an unknown per-execution
+    counter simply adds nothing rather than being reported as a measured zero.
     """
     input_tokens = output_tokens = total_tokens = 0
     for e in completed:
         usage = (e.get("provider_metadata") or {}).get("usage") or {}
-        input_tokens += int(usage.get("total_input_tokens") or 0)
-        output_tokens += int(usage.get("total_output_tokens") or 0)
-        total_tokens += int(usage.get("total_tokens") or 0)
+        input_tokens += _usage_value(
+            usage, "uncached_input_tokens", "total_input_tokens"
+        )
+        output_tokens += _usage_value(usage, "output_tokens", "total_output_tokens")
+        total_tokens += _usage_value(usage, "total_tokens")
     return {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,

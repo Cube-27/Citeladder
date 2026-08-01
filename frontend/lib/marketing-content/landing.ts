@@ -182,3 +182,39 @@ export const LANDING_CONTENT = {
     secondaryCta: 'See pricing',
   },
 } as const;
+
+/**
+ * The measurement axes every figure on the site carries.
+ *
+ * These are stated once, plainly, because a score without its conditions is
+ * not evidence. Two rules govern the copy: it never implies a comparative cost
+ * outcome, and it never implies scheduled execution — no dispatcher ships in
+ * this release, so cadence is described strictly as an allowance.
+ */
+export const WHAT_WE_MEASURE = [
+  {
+    term: 'Measurement mode',
+    detail:
+      'Pulse is the light, frequent check; benchmark is the full run with the wider prompt set. ' +
+      'They answer different questions, so results from the two are reported separately and ' +
+      'never averaged together.',
+  },
+  {
+    term: 'Exact model',
+    detail:
+      'A single execution records the one model that produced it. An aggregate spanning several ' +
+      'models says so and lists them — it never picks one to stand in for the rest.',
+  },
+  {
+    term: 'Retrieval state',
+    detail:
+      'Whether the engine searched the web before answering is frozen with the run. The same ' +
+      'prompt with retrieval on and off is two different measurements, and we keep them apart.',
+  },
+  {
+    term: 'Benchmark cadence',
+    detail:
+      'How many benchmark runs your plan includes. It is an allowance you spend when you choose ' +
+      'to, not a schedule — nothing runs on its own.',
+  },
+] as const;

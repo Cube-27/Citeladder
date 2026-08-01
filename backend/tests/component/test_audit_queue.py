@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.audits import (
     AUDIT_QUEUE_SPEC,
+    AUDIT_TRIGGER_MANUAL,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_RETRY_WAIT,
@@ -34,6 +36,7 @@ async def _make_queued_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -164,6 +167,99 @@ async def test_succeed_and_retry_lifecycle(
 
 
 _FIXTURE_SURFACE = "google_shopping"
+
+
+@pytest.mark.asyncio
+async def test_capacity_wait_rows_are_claimable_once_due(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``capacity_wait`` is in the claimable vocabulary, gated on available_at.
+
+    A capacity-parked row reuses ``available_at`` (no duplicate queued-state
+    column): it is skipped while its time is in the future and claimed exactly
+    like a retry once due.
+    """
+    audit = await _make_queued_audit(session_factory, prompts=2, reps=1)  # 2
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AuditTask).where(AuditTask.audit_id == audit.id)
+            )
+        ).all()
+        parked, other = rows[0], rows[1]
+        parked.status = TASK_STATUS_CAPACITY_WAIT
+        parked.available_at = datetime.now(UTC) + timedelta(hours=1)
+        await session.commit()
+        parked_id, other_id = parked.id, other.id
+
+    queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
+    claimed = await queue.claim(owner="w1", limit=10)
+    # Parked in the future: not claimable; the queued sibling is.
+    assert {t.id for t in claimed} == {other_id}
+
+    async with session_factory() as session:
+        task = await session.get(AuditTask, parked_id)
+        assert task is not None
+        task.available_at = datetime.now(UTC) - timedelta(seconds=1)
+        await session.commit()
+
+    claimed = await queue.claim(owner="w1", limit=10)
+    assert {t.id for t in claimed} == {parked_id}
+    assert claimed[0].status == TASK_STATUS_LEASED
+
+
+@pytest.mark.asyncio
+async def test_park_capacity_wait_releases_lease_until_due(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``park_capacity_wait`` parks an owned running row without spending budget.
+
+    The lease is released and ``attempt_count`` untouched (no provider call
+    happened); the row leaves the claimable set until ``available_at`` passes
+    and only the lease owner may park it.
+    """
+    await _make_queued_audit(session_factory, prompts=1, reps=1)  # 1
+    queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
+
+    claimed = await queue.claim(owner="w1", limit=1)
+    assert len(claimed) == 1
+    task_id = claimed[0].id
+    assert await queue.mark_running(task_id=task_id, owner="w1")
+
+    due = datetime.now(UTC) + timedelta(hours=1)
+    assert await queue.park_capacity_wait(task_id=task_id, owner="w1", available_at=due)
+
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        assert task.status == TASK_STATUS_CAPACITY_WAIT
+        assert task.lease_owner is None
+        assert task.lease_expires_at is None
+        assert task.available_at == due
+        # No attempt budget was spent: the provider call never started.
+        assert task.attempt_count == 0
+
+    # Parked in the future: not claimable by anyone.
+    assert await queue.claim(owner="w2", limit=1) == []
+
+    # Once due it is claimable again; a non-owner cannot park it.
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.available_at = datetime.now(UTC) - timedelta(seconds=1)
+        await session.commit()
+    reclaimed = await queue.claim(owner="w2", limit=1)
+    assert [t.id for t in reclaimed] == [task_id]
+    assert await queue.mark_running(task_id=task_id, owner="w2")
+    assert not await queue.park_capacity_wait(
+        task_id=task_id, owner="w1", available_at=due
+    )
+    assert await queue.park_capacity_wait(task_id=task_id, owner="w2", available_at=due)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        assert task.status == TASK_STATUS_CAPACITY_WAIT
+        assert task.attempt_count == 0
 
 
 @pytest.mark.asyncio

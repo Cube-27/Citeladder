@@ -23,14 +23,15 @@ const UUID2 = '22222222-2222-4222-8222-222222222222';
 
 const entitlement = {
   workspace_id: UUID,
-  plan_key: 'starter' as const,
   access_mode: 'selection' as const,
   sample_url_limit: 10,
   monitored_url_limit: 50,
-  can_view_discovered_total: true,
-  capability_revision: 3,
-  created_at: '2026-07-15T00:00:00Z',
-  updated_at: '2026-07-15T00:00:00Z',
+  count_disclosure: true,
+  resolver_status: 'resolved' as const,
+  registry_revision: 'registry-v8',
+  entitlement_lifecycle_version: 3,
+  valid_until: null,
+  contributing_grant_ids: [UUID2],
 };
 
 // The real bounded site-facts blob the worker persists (`_crawl_setup` in
@@ -122,11 +123,20 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
     expect(() => strictValidate(siteHealthEntitlementSchema, rest, 'ent')).toThrow();
   });
 
-  it('rejects an unknown plan_key', () => {
+  // Site Health carries NO commercial vocabulary. A retired plan-shaped
+  // payload must fail rather than parse into a neutral entitlement.
+  it('rejects a retired plan-shaped entitlement', () => {
+    const { access_mode: _drop, ...planShaped } = entitlement;
+    expect(() =>
+      strictValidate(siteHealthEntitlementSchema, { ...planShaped, plan_key: 'starter' }, 'ent'),
+    ).toThrow();
+  });
+
+  it('rejects an unknown resolver status', () => {
     expect(() =>
       strictValidate(
         siteHealthEntitlementSchema,
-        { ...entitlement, plan_key: 'enterprise' },
+        { ...entitlement, resolver_status: 'trial' },
         'ent',
       ),
     ).toThrow();

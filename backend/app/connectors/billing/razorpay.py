@@ -1,4 +1,11 @@
-"""Razorpay Subscriptions adapter. Translation and transport only."""
+"""Razorpay Subscriptions + Payment Links adapter. Translation/transport only.
+
+Every method takes only server-resolved arguments (a PRIVATE ``price_ref``
+from config, an opaque intent id, an opaque account ref) and validates the
+response shape, the hosted URL host, the echoed price ref, and the expected
+amount/currency before the domain sees it. No commercial amount, catalog key,
+status vocabulary, or tax rule is decided here — config owns all of it.
+"""
 
 from __future__ import annotations
 
@@ -10,10 +17,21 @@ import httpx
 
 from app.connectors.billing.base import (
     BillingProviderError,
+    HostedPayment,
     HostedSubscription,
+    ProviderMetadata,
+    ProviderPayment,
     ProviderSubscription,
 )
-from app.core.config.billing import BillingSettings, billing_settings
+from app.core.config.billing import (
+    RAZORPAY_PAYMENT_STATUS_MAP,
+    BillingSettings,
+    billing_settings,
+)
+
+_SECONDS_PER_DAY = 86_400
+_NOTE_INTENT = "searchify_intent_id"
+_NOTE_ACCOUNT = "searchify_account_ref"
 
 
 class RazorpayBillingProvider:
@@ -61,11 +79,13 @@ class RazorpayBillingProvider:
             raise BillingProviderError("provider_invalid_response")
         return data
 
+    # --- response translation ---------------------------------------------
     def _subscription(self, data: dict[str, Any]) -> ProviderSubscription:
         external_id = data.get("id")
         status = data.get("status")
         if not isinstance(external_id, str) or not isinstance(status, str):
             raise BillingProviderError("provider_invalid_response")
+        notes = _notes_map(data.get("notes"))
         return ProviderSubscription(
             external_subscription_id=external_id,
             status=status,
@@ -73,6 +93,9 @@ class RazorpayBillingProvider:
             current_end=_optional_int(data.get("current_end")),
             updated_at=_optional_int(data.get("updated_at")) or 0,
             cancel_at_period_end=_provider_bool(data.get("cancel_at_cycle_end")),
+            price_ref=_optional_str(data.get("plan_id")),
+            intent_id=_optional_str(notes.get(_NOTE_INTENT)),
+            account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
         )
 
     def _validated_checkout_url(self, value: object) -> str:
@@ -89,75 +112,91 @@ class RazorpayBillingProvider:
             raise BillingProviderError("provider_invalid_checkout_url")
         return value
 
-    async def create_subscription(
-        self,
-        *,
-        plan_id: str,
-        attempt_id: str,
-        billing_account_id: str,
-        reconcile_existing: bool = False,
+    def _hosted_subscription(
+        self, data: dict[str, Any], *, expected_price_ref: str
     ) -> HostedSubscription:
-        if reconcile_existing:
-            existing = await self._find_subscription_by_attempt(attempt_id)
-            if existing is not None:
-                return self._hosted_subscription(existing)
-        data = await self._request(
-            "POST",
-            "/subscriptions",
-            payload={
-                "plan_id": plan_id,
-                "total_count": self.settings.subscription_total_cycles,
-                "customer_notify": 1,
-                "notes": {
-                    "searchify_attempt_id": attempt_id,
-                    "searchify_billing_account_id": billing_account_id,
-                },
-            },
-        )
-        return self._hosted_subscription(data)
-
-    def _hosted_subscription(self, data: dict[str, Any]) -> HostedSubscription:
         subscription = self._subscription(data)
+        _require_price_ref(subscription, expected_price_ref)
         return HostedSubscription(
             external_subscription_id=subscription.external_subscription_id,
             checkout_url=self._validated_checkout_url(data.get("short_url")),
             status=subscription.status,
+            price_ref=subscription.price_ref,
         )
 
-    async def _find_subscription_by_attempt(
-        self, attempt_id: str
-    ) -> dict[str, Any] | None:
-        since = (
-            int(datetime.now(UTC).timestamp())
-            - self.settings.reconciliation_lookback_seconds
+    def _payment(self, data: dict[str, Any]) -> ProviderPayment:
+        external_id = data.get("id")
+        status = data.get("status")
+        amount = _optional_int(data.get("amount"))
+        currency = data.get("currency")
+        if (
+            not isinstance(external_id, str)
+            or not isinstance(status, str)
+            or amount is None
+            or not isinstance(currency, str)
+        ):
+            raise BillingProviderError("provider_invalid_response")
+        if status not in RAZORPAY_PAYMENT_STATUS_MAP:
+            raise BillingProviderError("provider_invalid_response")
+        notes = data.get("notes") if isinstance(data.get("notes"), dict) else {}
+        return ProviderPayment(
+            external_payment_id=external_id,
+            status=RAZORPAY_PAYMENT_STATUS_MAP[status],
+            amount_minor=amount,
+            currency=currency.upper(),
+            updated_at=_optional_int(data.get("updated_at")) or 0,
+            paid_at=_optional_int(data.get("paid_at")),
+            intent_id=_optional_str(notes.get(_NOTE_INTENT)),
+            account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
         )
-        page_size = self.settings.reconciliation_list_count
-        skip = 0
-        while True:
-            data = await self._request(
-                "GET",
-                f"/subscriptions?count={page_size}&skip={skip}&from={since}",
+
+    # --- protocol ---------------------------------------------------------
+    async def create_base_subscription(
+        self,
+        *,
+        price_ref: str,
+        intent_id: str,
+        account_ref: str,
+        trial_days: int | None,
+        metadata: ProviderMetadata,
+    ) -> HostedSubscription:
+        payload: dict[str, Any] = {
+            "plan_id": price_ref,
+            "total_count": self.settings.subscription_total_cycles,
+            "customer_notify": 1,
+            "notes": metadata.as_notes(),
+        }
+        if trial_days:
+            # Trial checkout is DEFERRED: the caller never supplies days in
+            # PR1, and the free-period translation is the provider's
+            # ``start_at`` when it does.
+            payload["start_at"] = int(
+                datetime.now(UTC).timestamp() + trial_days * _SECONDS_PER_DAY
             )
-            items = data.get("items")
-            if not isinstance(items, list):
-                raise BillingProviderError("provider_invalid_response")
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                notes = item.get("notes")
-                if (
-                    isinstance(notes, dict)
-                    and notes.get("searchify_attempt_id") == attempt_id
-                ):
-                    if item.get("short_url"):
-                        return item
-                    external_id = item.get("id")
-                    if not isinstance(external_id, str):
-                        raise BillingProviderError("provider_invalid_response")
-                    return await self._request("GET", f"/subscriptions/{external_id}")
-            if len(items) < page_size:
-                return None
-            skip += len(items)
+        data = await self._request("POST", "/subscriptions", payload=payload)
+        return self._hosted_subscription(data, expected_price_ref=price_ref)
+
+    async def create_addon_subscription(
+        self,
+        *,
+        price_ref: str,
+        quantity: int,
+        intent_id: str,
+        account_ref: str,
+        metadata: ProviderMetadata,
+    ) -> HostedSubscription:
+        data = await self._request(
+            "POST",
+            "/subscriptions",
+            payload={
+                "plan_id": price_ref,
+                "quantity": quantity,
+                "total_count": self.settings.subscription_total_cycles,
+                "customer_notify": 1,
+                "notes": metadata.as_notes(),
+            },
+        )
+        return self._hosted_subscription(data, expected_price_ref=price_ref)
 
     async def fetch_subscription(
         self, external_subscription_id: str
@@ -167,7 +206,7 @@ class RazorpayBillingProvider:
         )
 
     async def cancel_subscription(
-        self, external_subscription_id: str, *, at_cycle_end: bool
+        self, external_subscription_id: str, *, at_cycle_end: bool = True
     ) -> ProviderSubscription:
         return self._subscription(
             await self._request(
@@ -177,9 +216,59 @@ class RazorpayBillingProvider:
             )
         )
 
+    async def create_one_time_payment(
+        self,
+        *,
+        amount_minor: int,
+        currency: str,
+        intent_id: str,
+        account_ref: str,
+        metadata: ProviderMetadata,
+    ) -> HostedPayment:
+        data = await self._request(
+            "POST",
+            "/payment_links",
+            payload={
+                "amount": amount_minor,
+                "currency": currency,
+                "accept_partial": False,
+                "reference_id": intent_id,
+                "notes": metadata.as_notes(),
+            },
+        )
+        payment = self._payment(data)
+        if payment.amount_minor != amount_minor or payment.currency != currency.upper():
+            raise BillingProviderError("provider_amount_mismatch")
+        return HostedPayment(
+            external_payment_id=payment.external_payment_id,
+            checkout_url=self._validated_checkout_url(data.get("short_url")),
+            status=payment.status,
+            amount_minor=payment.amount_minor,
+            currency=payment.currency,
+        )
+
+    async def fetch_payment(self, external_payment_id: str) -> ProviderPayment:
+        return self._payment(
+            await self._request("GET", f"/payment_links/{external_payment_id}")
+        )
+
+
+def _notes_map(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _require_price_ref(subscription: ProviderSubscription, expected: str) -> None:
+    """Reject a hosted subscription whose echoed plan is not the one we named."""
+    if subscription.price_ref != expected:
+        raise BillingProviderError("provider_price_ref_mismatch")
+
 
 def _optional_int(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _optional_str(value: object) -> str:
+    return value if isinstance(value, str) else ""
 
 
 def _provider_bool(value: object) -> bool:

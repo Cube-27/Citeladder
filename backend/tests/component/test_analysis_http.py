@@ -24,9 +24,14 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     AnswerEngineResponse,
     CitationResult,
+    NormalizedUsage,
     SearchEventResult,
 )
-from app.core.config.audits import AUDIT_STATUS_COMPLETED, audit_settings
+from app.core.config.audits import (
+    AUDIT_STATUS_COMPLETED,
+    AUDIT_TRIGGER_MANUAL,
+    audit_settings,
+)
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.provider_catalog import ENGINE_GEMINI, TRANSPORT_GOOGLE
 from app.domain.audits.planner import create_audit
@@ -67,7 +72,9 @@ class _StubAdapter:
                 ),
             ),
             provider_metadata={"query_text_available": True},
-            usage={"input_tokens": 10, "output_tokens": 20},
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=10, output_tokens=20, total_tokens=30
+            ),
             latency_ms=5,
         )
 
@@ -110,6 +117,7 @@ async def test_endpoints_serve_projections_over_http(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,
@@ -127,6 +135,22 @@ async def test_endpoints_serve_projections_over_http(
     assert m.status_code == 200
     assert m.json()["visibility_score"] == 100.0
 
+    # Audit projection: canonical measurement_mode + the stable aggregate
+    # model_provenance list (never a forced singular model), no `mode` alias.
+    a = await client.get(f"/api/v1/audits/{audit.id}", headers=headers)
+    assert a.status_code == 200
+    abody = a.json()
+    assert abody["measurement_mode"] == "benchmark"
+    assert abody["model_provenance"] == [
+        {
+            "logical_engine": ENGINE_GEMINI,
+            "transport_provider": TRANSPORT_GOOGLE,
+            "transport_model": "gemini-flash-latest",
+            "retrieval_enabled": True,
+        }
+    ]
+    assert "mode" not in abody
+
     # Dashboard projection (defaults to latest completed audit).
     v = await client.get(
         f"/api/v1/projects/{seed.project_id}/visibility", headers=headers
@@ -136,6 +160,10 @@ async def test_endpoints_serve_projections_over_http(
     assert body["audit_id"] == str(audit.id)
     assert body["sentiment"] is None
     assert any(r["is_brand"] for r in body["rankings"])
+    # Overview aggregate provenance: frozen mode + catalog-ordered route list.
+    assert body["measurement_mode"] == "benchmark"
+    assert body["model_provenance"] == abody["model_provenance"]
+    assert "mode" not in body
 
     # Execution evidence. The executions list and the single-execution route
     # must share one id space: the id from GET /audits/{id}/executions must
@@ -148,6 +176,13 @@ async def test_endpoints_serve_projections_over_http(
     # Every row carries the shopping-surface slot; the listing defaults to
     # measurement ("") while the gate is disabled.
     assert all(row["shopping_surface"] == "" for row in exec_rows)
+    # Execution-level provenance: exact singular model + frozen mode/retrieval
+    # from the task request snapshot; vocabulary lock (no `mode` alias).
+    first_row = exec_rows[0]
+    assert first_row["transport_model"] == "gemini-flash-latest"
+    assert first_row["measurement_mode"] == "benchmark"
+    assert first_row["retrieval_enabled"] is True
+    assert "mode" not in first_row
     execution_id = exec_rows[0]["id"]
     e = await client.get(f"/api/v1/executions/{execution_id}", headers=headers)
     assert e.status_code == 200
@@ -158,6 +193,11 @@ async def test_endpoints_serve_projections_over_http(
     assert ebody["id"] == execution_id
     assert ebody["task_id"] == execution_id
     assert ebody["analysis_id"] != execution_id
+    # Execution-detail provenance (frozen fields only, invariants 4/7).
+    assert ebody["transport_model"] == "gemini-flash-latest"
+    assert ebody["measurement_mode"] == "benchmark"
+    assert ebody["retrieval_enabled"] is True
+    assert "mode" not in ebody
 
     # Exports with correct media types.
     csv_resp = await client.get(
@@ -166,11 +206,23 @@ async def test_endpoints_serve_projections_over_http(
     assert csv_resp.status_code == 200
     assert csv_resp.headers["content-type"].startswith("text/csv")
     assert "attachment" in csv_resp.headers["content-disposition"]
+    # CSV rows carry the frozen measurement provenance beside the model/search
+    # columns; no bare `mode` column (vocabulary lock).
+    csv_header = csv_resp.text.splitlines()[0].split(",")
+    assert "measurement_mode" in csv_header
+    assert "retrieval_enabled" in csv_header
+    assert "mode" not in csv_header
 
     md_resp = await client.get(f"/api/v1/audits/{audit.id}/export.md", headers=headers)
     assert md_resp.status_code == 200
     assert md_resp.headers["content-type"].startswith("text/markdown")
     assert "# AI Search Visibility Benchmark" in md_resp.text
+    # Markdown metadata identifies the measurement mode + aggregate provenance.
+    assert "- **Measurement mode:** `benchmark`" in md_resp.text
+    assert "- **Model provenance:**" in md_resp.text
+    assert "`gemini` via `google` model `gemini-flash-latest` (retrieval on)" in (
+        md_resp.text
+    )
 
     # Cross-workspace access is denied (invariant 5): a member of another
     # workspace cannot read this audit's metrics.
@@ -286,6 +338,14 @@ async def test_trends_endpoint_serves_projection_over_http(
     assert len(point["source_snapshot_ids"]) == 1
     assert point["analyzer_versions"] == ["b6-analysis-1"]
     assert any(r["is_brand"] for r in point["rankings"])
+    # Measurement-identity partition fields are always present (canonical
+    # vocabulary; no `mode` alias). The seeded audit froze no route/policy, so
+    # model/retrieval are null — never inferred from live config.
+    assert point["measurement_mode"] == "benchmark"
+    assert point["transport_model"] is None
+    assert point["retrieval_enabled"] is None
+    assert point["model_provenance"] == []
+    assert "mode" not in point
 
 
 @pytest.mark.asyncio
@@ -344,6 +404,31 @@ async def test_trends_endpoint_query_parsing_and_422(
         base, params={"from": "2026-03-01T00:00:00"}, headers=headers
     )
     assert naive.status_code == 422
+
+    # Unsupported measurement_mode slice -> 422.
+    bad_mode = await client.get(
+        base, params={"measurement_mode": "deep_dive"}, headers=headers
+    )
+    assert bad_mode.status_code == 422
+
+    # Valid identity slices parse and filter before folding; the seeded audit
+    # (frozen benchmark mode, unrecorded model/retrieval) only matches the
+    # measurement_mode=benchmark slice.
+    mode_slice = await client.get(
+        base, params={"measurement_mode": "benchmark"}, headers=headers
+    )
+    assert mode_slice.status_code == 200
+    assert len(mode_slice.json()) == 1
+    pulse_slice = await client.get(
+        base, params={"measurement_mode": "pulse"}, headers=headers
+    )
+    assert pulse_slice.status_code == 200
+    assert pulse_slice.json() == []
+    retrieval_slice = await client.get(
+        base, params={"retrieval_enabled": "true"}, headers=headers
+    )
+    assert retrieval_slice.status_code == 200
+    assert retrieval_slice.json() == []
 
 
 @pytest.mark.asyncio
@@ -533,6 +618,13 @@ async def test_evidence_endpoint_serves_projection_over_http(
     assert item["analysis_id"] is not None
     assert item["task_id"] is not None
     assert item["prompt_snapshot_id"] is not None
+    # Execution-level measurement provenance: the exact frozen model + the
+    # frozen mode column; retrieval is null when nothing froze it (never
+    # inferred from live config). Vocabulary lock: no `mode` alias.
+    assert item["transport_model"] == "gemini-flash-latest"
+    assert item["measurement_mode"] == "benchmark"
+    assert item["retrieval_enabled"] is None
+    assert "mode" not in item
 
 
 @pytest.mark.asyncio

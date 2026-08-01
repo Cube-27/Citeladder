@@ -13,6 +13,8 @@ import type {
   LogicalEngine,
   ProviderCatalog,
   ProviderConnection,
+  ProviderConnectionState,
+  ProviderConnectionStateEntry,
   TransportProvider,
 } from '@/lib/api/types';
 
@@ -60,7 +62,35 @@ export type EngineCardModel = {
   label: string;
   /** The single direct route for this engine (null if the catalog omits it). */
   route: EngineRouteOption | null;
+  /**
+   * Whether this engine can be connected at all. A planned provider is
+   * `unavailable` with `route: null`, which is what makes it non-connectable —
+   * the card is keyboard-reachable and informative, but constructs no mutation.
+   */
+  availability: 'available' | 'unavailable';
+  /** The backend's own reason token when unavailable. Never invented here. */
+  unavailable_reason: string | null;
+  /**
+   * The AUTHENTICATED workspace state, distinct from availability. A provider
+   * can be generally available and still `missing` for this workspace.
+   */
+  state: ProviderConnectionState;
+  /** Safe probe/state reason from the authenticated projection. */
+  safe_reason: string | null;
+  latest_probe: ProviderConnectionStateEntry['latest_probe'];
 };
+
+/**
+ * Planned providers. They exist as catalog presentation entries only: no
+ * adapter, no route, and no transport enum entry, so nothing downstream can
+ * resolve one to another provider. Keeping them visible is the approved
+ * marketing exception; keeping them route-less is what makes it safe.
+ */
+export const PLANNED_ENGINES = [
+  { key: 'grok', label: 'Grok' },
+  { key: 'perplexity', label: 'Perplexity' },
+  { key: 'copilot', label: 'Copilot' },
+] as const;
 
 /** Display label for a direct transport route. */
 function directLabel(transport: TransportProvider): string {
@@ -68,12 +98,24 @@ function directLabel(transport: TransportProvider): string {
 }
 
 /**
- * Build the ordered engine card models from the catalog. Each engine exposes a
- * single direct route (the first approved route the catalog lists for it).
+ * Build the ordered engine card models.
+ *
+ * Shipped engines come first, each with its single direct route, then the
+ * planned providers as keyboard-reachable unavailable cards.
+ *
+ * The authenticated `states` projection decides the four-state badge. It FAILS
+ * CLOSED: without it, a configured key shows as `missing` rather than
+ * `connected`, because "we stored a key" is not evidence that the key works —
+ * only a successful probe is.
  */
-export function buildEngineCards(catalog: ProviderCatalog | undefined): EngineCardModel[] {
+export function buildEngineCards(
+  catalog: ProviderCatalog | undefined,
+  states?: readonly ProviderConnectionStateEntry[],
+): EngineCardModel[] {
   const byEngine = new Map(catalog?.engines.map((e) => [e.logical_engine, e]) ?? []);
-  return ENGINE_ORDER.map((engine) => {
+  const byKey = new Map((states ?? []).map((entry) => [entry.key, entry]));
+
+  const shipped = ENGINE_ORDER.map((engine) => {
     const approved = byEngine.get(engine)?.routes ?? [];
     const first = approved[0];
     const route: EngineRouteOption | null = first
@@ -83,12 +125,41 @@ export function buildEngineCards(catalog: ProviderCatalog | undefined): EngineCa
           label: directLabel(first.transport_provider),
         }
       : null;
+    const entry = byKey.get(engine) ?? byKey.get(`provider.${engine}`);
     return {
       logical_engine: engine,
       label: ENGINE_LABELS[engine],
       route,
+      availability: route ? ('available' as const) : ('unavailable' as const),
+      unavailable_reason: route ? null : 'route_not_published',
+      state: entry?.state ?? ('missing' as const),
+      safe_reason: entry?.safe_reason ?? null,
+      latest_probe: entry?.latest_probe ?? null,
     };
   });
+
+  const planned = PLANNED_ENGINES.map((provider) => {
+    const entry = byKey.get(`provider.${provider.key}`);
+    return {
+      // Cast: a planned key is deliberately NOT in the transport/adapter enum,
+      // so it can never be resolved to a connectable route.
+      logical_engine: provider.key as LogicalEngine,
+      label: provider.label,
+      route: null,
+      availability: 'unavailable' as const,
+      unavailable_reason: entry?.safe_reason ?? 'adapter_not_shipped',
+      state: 'unavailable' as const,
+      safe_reason: entry?.safe_reason ?? null,
+      latest_probe: null,
+    };
+  });
+
+  return [...shipped, ...planned];
+}
+
+/** True when this card may construct a save/test mutation at all. */
+export function isConnectable(model: EngineCardModel): boolean {
+  return model.availability === 'available' && model.route !== null;
 }
 
 /**

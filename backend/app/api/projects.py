@@ -10,6 +10,7 @@ import asyncio
 import logging
 import re
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Annotated
 
@@ -32,6 +33,7 @@ from app.core.config.analysis import (
     VISIBILITY_TREND_DEFAULT_GRANULARITY,
 )
 from app.core.config.brand_logos import BRAND_LOGO_CACHE_MAX_AGE_SECONDS
+from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
 from app.domain.analysis.schemas import (
     VisibilityEvidenceResponse,
@@ -48,6 +50,7 @@ from app.domain.analysis.service import (
 from app.domain.dashboard.report import render_dashboard_pdf
 from app.domain.dashboard.schemas import DashboardResponse
 from app.domain.dashboard.service import get_dashboard
+from app.domain.entitlements.enforcement import OccupancyError
 from app.domain.projects.brand_profile import (
     BrandProfileNotFoundError,
     brand_profile_to_response,
@@ -97,6 +100,21 @@ from app.domain.site_health.planner import (
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 logger = logging.getLogger(__name__)
+
+
+async def _map_occupancy[T](call: Callable[[], Awaitable[T]]) -> T:
+    """Run one occupancy-gated mutation, mapping a denial to the coded 403.
+
+    The quota check lives in the domain service (never a route precheck);
+    the router only translates the domain error into the API error contract.
+    """
+    try:
+        return await call()
+    except OccupancyError as exc:
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
+
 
 _RES_PROJECT = "Project"
 
@@ -151,7 +169,9 @@ async def create_project_endpoint(
     # Keep scalar identities before an optional crawl rollback expires ORM rows
     # held by the request context.
     workspace_id = ctx.workspace_id
-    project = await create_project(session, workspace_id=workspace_id, payload=payload)
+    project = await _map_occupancy(
+        lambda: create_project(session, workspace_id=workspace_id, payload=payload)
+    )
     project_id = project.id
 
     # A Free Site Health crawl is part of the first-run experience. The project
@@ -318,6 +338,9 @@ async def get_visibility_trends_endpoint(
     from_at: Annotated[datetime | None, Query(alias="from")] = None,
     to_at: Annotated[datetime | None, Query(alias="to")] = None,
     granularity: Annotated[str, Query()] = VISIBILITY_TREND_DEFAULT_GRANULARITY,
+    measurement_mode: Annotated[str | None, Query()] = None,
+    transport_model: Annotated[str | None, Query()] = None,
+    retrieval_enabled: Annotated[bool | None, Query()] = None,
 ) -> list[VisibilityTrendPoint]:
     """Cross-run Visibility trend projection for a project (invariant 7).
 
@@ -328,6 +351,13 @@ async def get_visibility_trends_endpoint(
     historical run is re-scored. A valid project with no matching history
     returns ``[]`` (not 404); invalid engine/granularity/range or naive
     timestamps return 422.
+
+    Folding may combine points only inside one ``(measurement_mode,
+    transport_model, retrieval_enabled)`` identity partition, so unlike
+    identities return separate ordered points. The optional
+    ``measurement_mode``/``transport_model``/``retrieval_enabled`` query
+    params request an explicit identity slice, applied before folding; an
+    unsupported ``measurement_mode`` returns 422.
     """
     # Authorize the project first (404 for a cross-workspace/missing project).
     await _get_project_or_404(session, ctx.workspace_id, project_id)
@@ -340,6 +370,9 @@ async def get_visibility_trends_endpoint(
             from_at=from_at,
             to_at=to_at,
             granularity=granularity,
+            measurement_mode=measurement_mode,
+            transport_model=transport_model,
+            retrieval_enabled=retrieval_enabled,
         )
     except TrendQueryError as exc:
         raise HTTPException(

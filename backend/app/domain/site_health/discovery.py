@@ -17,7 +17,7 @@
 #      inventory is queryable while discovery runs.
 #
 #   3. Free workspace-wide stop-at-10 — for a sample crawl, admission locks the
-#      workspace entitlement row ``FOR UPDATE`` and counts active
+#      workspace runtime row ``FOR UPDATE`` and counts active
 #      ``free_sample`` monitored rows ACROSS THE WHOLE WORKSPACE. Once the
 #      10-URL allowance is filled, admission and all further discovery stop
 #      transactionally; each admitted sample URL is added to the system-managed
@@ -64,7 +64,7 @@ from app.models.site_health import (
     SiteCrawlTask,
     SiteUrl,
     SiteUrlObservation,
-    WorkspaceSiteHealthEntitlement,
+    WorkspaceSiteHealthRuntime,
 )
 
 
@@ -499,14 +499,14 @@ async def admit_candidates(
 ) -> AdmissionResult:
     """Admit a deterministically-ordered batch of candidates.
 
-    Starter: insert every new ``SiteUrl`` (conflict-safe), bump the crawl's
-    admitted counter, and (when ``enqueue_children``) queue a child discover
-    task per NEW URL under the depth/frontier ceilings.
+    Full inventory: insert every new ``SiteUrl`` (conflict-safe), bump the
+    crawl's admitted counter, and (when ``enqueue_children``) queue a child
+    discover task per NEW URL under the depth/frontier ceilings.
 
-    Free (``sample_mode``): lock the workspace entitlement row ``FOR UPDATE``,
-    compute the remaining workspace-wide allowance out of the frozen sample
-    limit, admit only up to that allowance, add each admitted URL to the
-    ``free_sample`` monitored set with an auto-queued analyze task, and stop
+    Sample mode: lock the workspace runtime row ``FOR UPDATE``, compute the
+    remaining workspace-wide allowance out of the frozen sample limit, admit
+    only up to that allowance, add each admitted URL to the ``free_sample``
+    monitored set with an auto-queued analyze task, and stop
     (``sample_capped=True``) the moment the allowance is exhausted — never
     computing a hidden total.
 
@@ -534,14 +534,14 @@ async def admit_candidates(
 
     remaining: int | None = None
     if crawl.sample_mode:
-        # Lock the entitlement row so the workspace-wide sample allowance is
+        # Lock the runtime row so the workspace-wide sample allowance is
         # serialized across concurrent crawls in different projects.
-        entitlement = await session.scalar(
-            select(WorkspaceSiteHealthEntitlement)
-            .where(WorkspaceSiteHealthEntitlement.workspace_id == crawl.workspace_id)
+        runtime = await session.scalar(
+            select(WorkspaceSiteHealthRuntime)
+            .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
             .with_for_update()
         )
-        sample_limit = entitlement.sample_url_limit if entitlement is not None else 0
+        sample_limit = runtime.sample_url_limit if runtime is not None else 0
         used = await _active_free_sample_count(session, crawl.workspace_id)
         remaining = max(0, int(sample_limit) - used)
         # NOTE: an exhausted ANALYSIS allowance no longer ends admission. The
@@ -554,15 +554,16 @@ async def admit_candidates(
     for position, candidate in enumerate(ordered):
         if candidate.depth > settings.max_crawl_depth:
             continue
-        # Free INVENTORY ceiling (not the analysis budget — see below). This is
-        # what actually stops a Free crawl now: it keeps mapping the site until
-        # the discovery cap is reached, analyzing only the sample allowance.
+        # Sample-mode INVENTORY ceiling (not the analysis budget — see below).
+        # This is what actually stops a sample-mode crawl: it keeps mapping the
+        # site until the discovery cap is reached, analyzing only the sample
+        # allowance.
         if (
             crawl.sample_mode
-            and crawl.admitted_url_count + admitted >= settings.free_discovery_url_cap
+            and crawl.admitted_url_count + admitted >= settings.sample_discovery_url_cap
         ):
             break
-        # Starter frontier ceiling.
+        # Full-discovery frontier ceiling.
         if (
             not crawl.sample_mode
             and crawl.admitted_url_count + admitted >= settings.max_frontier_urls

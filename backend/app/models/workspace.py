@@ -9,7 +9,15 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,11 +33,26 @@ class ProductTourStatus(StrEnum):
 
 class Workspace(Base):
     __tablename__ = "workspaces"
+    __table_args__ = (
+        # Exactly ONE system workspace may exist: it holds the operator's
+        # platform-funded provider connections, can never have memberships,
+        # and is excluded from every tenant workspace list.
+        Index(
+            "uq_workspaces_single_system",
+            "is_system",
+            unique=True,
+            postgresql_where=text("is_system"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255))
+    # True only for the reserved platform-provisioning workspace (T11).
+    is_system: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

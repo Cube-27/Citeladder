@@ -2,7 +2,7 @@
 
 Exercises the real FastAPI app against a live Postgres schema (per invariant 5:
 every lookup is workspace-scoped; a foreign/missing id is a 404). Covers:
-  - entitlements (Free fail-closed seed) + count disclosure;
+  - entitlements (unresolved fail-closed seed / full-allowance) + disclosure;
   - crawl summary/list projection;
   - inventory + pages keyset traversal, monitored + status filters;
   - grouped issues + per-issue detail + per-URL page detail/history;
@@ -343,10 +343,12 @@ async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:
     )
 
 
-async def test_entitlements_seed_free_and_disclosure(
+async def test_entitlements_unresolved_seed_and_disclosure(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    """A workspace with no billing link resolves fail-closed: ``unresolved``,
+    zero monitored limit, and no discovered-total disclosure."""
     await _register(client, "ent@example.com")
     async with session_factory() as session:
         scn = await _seed_scenario(session, email="ent@example.com")
@@ -355,9 +357,41 @@ async def test_entitlements_seed_free_and_disclosure(
     resp = await client.get("/api/v1/entitlements", headers=headers)
     assert resp.status_code == 200
     body = resp.json()
-    assert body["plan_key"] == "free"
-    # Free plans cannot view the discovered total (fail-closed disclosure).
-    assert body["can_view_discovered_total"] is False
+    assert body["workspace_id"] == str(scn.workspace_id)
+    assert body["access_mode"] == "unresolved"
+    assert body["resolver_status"] == "entitlement_unresolved"
+    assert body["monitored_url_limit"] == 0
+    # Unresolved entitlements never disclose the discovered total.
+    assert body["count_disclosure"] is False
+    assert body["contributing_grant_ids"] == []
+
+
+async def test_entitlements_full_allowance_discloses(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A granted monitored-URL allowance projects the full mode: exact limit,
+    disclosure on, and the contributing grant id surfaced."""
+    from tests.component.site_health_helpers import seed_monitored_urls_allowance
+
+    await _register(client, "ent-full@example.com")
+    async with session_factory() as session:
+        scn = await _seed_scenario(session, email="ent-full@example.com")
+        await seed_monitored_urls_allowance(
+            session, workspace_id=scn.workspace_id, monitored_urls=50
+        )
+        await session.commit()
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+
+    resp = await client.get("/api/v1/entitlements", headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["workspace_id"] == str(scn.workspace_id)
+    assert body["access_mode"] == "full"
+    assert body["resolver_status"] == "resolved"
+    assert body["monitored_url_limit"] == 50
+    assert body["count_disclosure"] is True
+    assert len(body["contributing_grant_ids"]) == 1
 
 
 async def test_crawl_summary_and_list(
@@ -1313,17 +1347,19 @@ async def test_rerun_page_from_completed_crawl_mints_new_crawl(
     the new run rather than the terminal source crawl.
     """
     from app.core.config.site_health import (
-        CAPABILITY_STARTER,
         CRAWL_ACTIVE_STATUSES,
         TASK_KIND_ANALYZE,
     )
-    from app.domain.site_health.entitlements import set_entitlement
+    from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
     await _register(client, "rerun@example.com")
     async with session_factory() as session:
         scn = await _seed_scenario(session, email="rerun@example.com")
-        # The monitored URL is user-source, so Starter is required to rerun it.
-        await set_entitlement(session, scn.workspace_id, CAPABILITY_STARTER)
+        # The monitored URL is user-source, so a positive allowance is
+        # required to rerun it.
+        await seed_monitored_urls_allowance(
+            session, workspace_id=scn.workspace_id, monitored_urls=50
+        )
         await session.commit()
     headers = {"X-Workspace-Id": str(scn.workspace_id)}
 
@@ -1384,13 +1420,14 @@ async def test_rerun_page_unmonitored_url_is_conflict(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """A URL that is not in the active monitored selection cannot be rerun."""
-    from app.core.config.site_health import CAPABILITY_STARTER
-    from app.domain.site_health.entitlements import set_entitlement
+    from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
     await _register(client, "rerun-conflict@example.com")
     async with session_factory() as session:
         scn = await _seed_scenario(session, email="rerun-conflict@example.com")
-        await set_entitlement(session, scn.workspace_id, CAPABILITY_STARTER)
+        await seed_monitored_urls_allowance(
+            session, workspace_id=scn.workspace_id, monitored_urls=50
+        )
         await session.commit()
     headers = {"X-Workspace-Id": str(scn.workspace_id)}
 

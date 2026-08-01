@@ -32,23 +32,124 @@ Key facts used here:
   * A valid answer may contain no ``google_search_call`` step (model answered
     from memory). That is a real benchmark result, not an error.
   * REST vs SDK casing differs; we accept both snake_case and camelCase offsets.
+  * Usage arrives under the provider-native camelCase aliases
+    (``promptTokenCount`` / ``candidatesTokenCount`` / ``thoughtsTokenCount`` /
+    ``cachedContentTokenCount`` / ``totalTokenCount``). They are NORMALIZED here
+    into the canonical counters — no raw provider usage dict is passed through.
+  * ``thought`` steps stay dropped (no thought CONTENT is retained); only the
+    thought TOKEN COUNT is read, from usage.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from app.connectors.answer_engines.contracts import (
     AnswerEngineResponse,
     CitationResult,
+    FinishReason,
+    NormalizedUsage,
     SearchEventResult,
 )
 from app.connectors.answer_engines.normalization import (
-    annotation_offset,
+    cited_span,
     normalize_domain,
+    normalized_usage_dict,
+    sum_optional,
+    usage_count,
+    usage_mapping,
 )
 
 _DROP_STEP_TYPES = frozenset({"thought"})
+
+# Raw Gemini candidate/interaction finish reason -> canonical vocabulary.
+# Closed map; anything unlisted maps to UNKNOWN rather than being guessed at.
+_GEMINI_FINISH_REASONS: dict[str, FinishReason] = {
+    "STOP": FinishReason.STOP,
+    "MAX_TOKENS": FinishReason.LENGTH,
+    "SAFETY": FinishReason.CONTENT_FILTER,
+    "RECITATION": FinishReason.CONTENT_FILTER,
+    "BLOCKLIST": FinishReason.CONTENT_FILTER,
+    "PROHIBITED_CONTENT": FinishReason.CONTENT_FILTER,
+    "SPII": FinishReason.CONTENT_FILTER,
+    "IMAGE_SAFETY": FinishReason.CONTENT_FILTER,
+    # Error-ish terminations: the generation aborted, it did not complete.
+    "OTHER": FinishReason.ERROR,
+    "ERROR": FinishReason.ERROR,
+    "FAILED": FinishReason.ERROR,
+    "MALFORMED_FUNCTION_CALL": FinishReason.ERROR,
+    "UNEXPECTED_TOOL_CALL": FinishReason.ERROR,
+    "CANCELLED": FinishReason.CANCELLED,
+}
+
+
+def map_gemini_finish_reason(raw: object) -> FinishReason:
+    """Map a Gemini finish reason to the canonical vocabulary.
+
+    Pure function; case-insensitive on the provider token (REST returns the
+    SCREAMING_SNAKE form). Absent, ``FINISH_REASON_UNSPECIFIED``, or otherwise
+    unrecognized values map to ``FinishReason.UNKNOWN`` — never guessed.
+    """
+    return _GEMINI_FINISH_REASONS.get(
+        str(raw or "").strip().upper(), FinishReason.UNKNOWN
+    )
+
+
+def gemini_raw_finish_reason(payload: Mapping[str, Any]) -> str:
+    """The raw provider finish token from an Interactions payload.
+
+    Prefers the top-level interaction ``finish_reason``/``finishReason``, then
+    the first candidate's (the Generate Content shape), then the interaction
+    ``status``. Returned verbatim so no provider spelling is lost.
+    """
+    for key in ("finish_reason", "finishReason"):
+        raw = str(payload.get(key) or "").strip()
+        if raw:
+            return raw
+    candidates = payload.get("candidates")
+    if isinstance(candidates, list):
+        for candidate in candidates:
+            if not isinstance(candidate, Mapping):
+                continue
+            for key in ("finish_reason", "finishReason"):
+                raw = str(candidate.get(key) or "").strip()
+                if raw:
+                    return raw
+    return str(payload.get("status") or "").strip()
+
+
+def normalize_gemini_usage(
+    payload: Mapping[str, Any], *, web_search_requests: int | None
+) -> NormalizedUsage:
+    """Normalize Gemini's native usage aliases into the typed counters.
+
+    ``promptTokenCount`` INCLUDES cached content tokens, so the uncached input
+    line subtracts ``cachedContentTokenCount`` when a cache split is reported.
+    ``thoughtsTokenCount`` is the thinking-token COUNT (thought content stays
+    dropped) and is NOT part of ``candidatesTokenCount``, so the output line is
+    left as reported. Google reports no per-request cost, so
+    ``provider_cost_microusd`` stays null (unknown never becomes zero).
+    """
+    usage = usage_mapping(payload.get("usage") or payload.get("usageMetadata"))
+    prompt = usage_count(usage, "promptTokenCount", "prompt_token_count")
+    cached = usage_count(usage, "cachedContentTokenCount", "cached_content_token_count")
+    uncached = prompt
+    if prompt is not None and cached is not None:
+        uncached = max(prompt - cached, 0)
+    output = usage_count(usage, "candidatesTokenCount", "candidates_token_count")
+    reasoning = usage_count(usage, "thoughtsTokenCount", "thoughts_token_count")
+    total = usage_count(usage, "totalTokenCount", "total_token_count", "total_tokens")
+    if total is None:
+        total = sum_optional(prompt, output, reasoning)
+    return NormalizedUsage(
+        uncached_input_tokens=uncached,
+        cached_input_tokens=cached,
+        output_tokens=output,
+        reasoning_tokens=reasoning,
+        total_tokens=total,
+        web_search_requests=web_search_requests,
+    )
 
 
 def _step_type(step: dict[str, Any]) -> str:
@@ -110,16 +211,9 @@ def _extract_citations(blocks: list[dict[str, Any]]) -> list[CitationResult]:
             title = str(annotation.get("title") or "").strip()
             if not url and not title:
                 continue
-            start = annotation_offset(annotation, "start_index", "startIndex")
-            end = annotation_offset(annotation, "end_index", "endIndex")
             # Derive cited text from the answer where offsets are valid, rather
             # than trusting a possibly-stale provider-duplicated field.
-            cited_text = ""
-            if start is not None and end is not None and 0 <= start < end <= len(text):
-                cited_text = text[start:end]
-            else:
-                start = None
-                end = None
+            start, end, cited_text = cited_span(text, annotation)
             citations.append(
                 CitationResult(
                     ordinal=ordinal,
@@ -135,10 +229,13 @@ def _extract_citations(blocks: list[dict[str, Any]]) -> list[CitationResult]:
     return citations
 
 
-def sanitize_metadata(payload: dict[str, Any]) -> dict[str, Any]:
+def sanitize_metadata(
+    payload: dict[str, Any], usage: NormalizedUsage | None = None
+) -> dict[str, Any]:
     """Keep observable, non-sensitive provider fields only.
 
-    Retains status/model/usage/object and a redacted evidence envelope
+    Retains status/model/object, the NORMALIZED usage (never the raw provider
+    usage dict), the raw finish token, and a redacted evidence envelope
     containing search-call grouping, model output, and citation annotations.
     Strips thought steps/signatures and never carries credentials.
     """
@@ -183,12 +280,20 @@ def sanitize_metadata(payload: dict[str, Any]) -> dict[str, Any]:
                     }
                 )
             evidence_steps.append({**common, "content": content})
+    normalized = (
+        usage
+        if usage is not None
+        else normalize_gemini_usage(payload, web_search_requests=None)
+    )
     return {
         "interaction_id": payload.get("id"),
         "status": payload.get("status"),
         "model": payload.get("model"),
         "object": payload.get("object"),
-        "usage": payload.get("usage") or {},
+        "usage": normalized_usage_dict(normalized),
+        # Raw provider finish token preserved verbatim next to the canonical
+        # mapping on the response.
+        "raw_finish_reason": gemini_raw_finish_reason(payload),
         "step_types": step_types,
         "evidence_steps": evidence_steps,
     }
@@ -218,7 +323,10 @@ def parse_interaction(
     )
     citations = _extract_citations(blocks)
 
-    search_used = any(_step_type(step) == "google_search_call" for step in steps)
+    search_calls = sum(1 for step in steps if _step_type(step) == "google_search_call")
+    search_used = search_calls > 0
+    usage = normalize_gemini_usage(payload, web_search_requests=search_calls)
+    raw_finish_reason = gemini_raw_finish_reason(payload)
 
     return AnswerEngineResponse(
         logical_engine=logical_engine,
@@ -231,7 +339,9 @@ def parse_interaction(
             for index, query in enumerate(queries)
         ),
         citations=tuple(citations),
-        provider_metadata=sanitize_metadata(payload),
-        usage=dict(payload.get("usage") or {}),
+        provider_metadata=sanitize_metadata(payload, usage),
+        finish_reason=map_gemini_finish_reason(raw_finish_reason),
+        raw_finish_reason=raw_finish_reason,
+        normalized_usage=usage,
         latency_ms=latency_ms,
     )

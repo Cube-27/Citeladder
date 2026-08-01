@@ -36,6 +36,7 @@ from app.analysis.product_service import (
     build_product_scoring_config,
     finalize_audit_product_analysis,
 )
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.core.config.provider_catalog import ENGINE_GEMINI, TRANSPORT_GOOGLE
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.planner import create_audit
@@ -99,6 +100,7 @@ async def _plan_audit(
     async with session_factory() as session:
         return await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

@@ -33,9 +33,10 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     AnswerEngineResponse,
     CitationResult,
+    NormalizedUsage,
     SearchEventResult,
 )
-from app.core.config.audits import audit_settings
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL, audit_settings
 from app.core.config.products import PRODUCT_EVIDENCE_MAX_LIMIT
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -87,7 +88,9 @@ class _ProductStubAdapter:
                 ),
             ),
             provider_metadata={},
-            usage={"input_tokens": 10, "output_tokens": 20},
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=10, output_tokens=20, total_tokens=30
+            ),
             latency_ms=5,
         )
 
@@ -157,6 +160,7 @@ async def _run_audit(
     async with session_factory() as session:
         audit = await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=seed.engines,

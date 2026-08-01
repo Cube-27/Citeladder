@@ -18,6 +18,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.core.config.products import PRODUCT_COMPLETENESS_ATTRIBUTE_KEYS
 from app.core.config.provider_catalog import ENGINE_GEMINI
 from app.domain.audits.planner import create_audit
@@ -388,6 +389,7 @@ async def test_product_audit_references_delete_guard(
     async with session_factory() as session:
         await create_audit(
             session,
+            trigger=AUDIT_TRIGGER_MANUAL,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             engines=[ENGINE_GEMINI],

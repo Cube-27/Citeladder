@@ -25,15 +25,34 @@ from app.connectors.answer_engines.anthropic import (
     _payload as anthropic_payload,
 )
 from app.connectors.answer_engines.anthropic_parser import (
+    map_anthropic_finish_reason,
     parse_anthropic_message,
 )
-from app.connectors.answer_engines.contracts import AnswerEngineRequest
+from app.connectors.answer_engines.contracts import (
+    AnswerEngineRequest,
+    FinishReason,
+)
 from app.connectors.answer_engines.errors import ProviderError, safe_error_detail
 from app.connectors.answer_engines.gemini import GeminiAnswerEngineAdapter
-from app.connectors.answer_engines.gemini_parser import parse_interaction
+from app.connectors.answer_engines.gemini import _build_payload as gemini_payload
+from app.connectors.answer_engines.gemini_parser import (
+    map_gemini_finish_reason,
+    parse_interaction,
+)
 from app.connectors.answer_engines.openai import OpenAIAnswerEngineAdapter
 from app.connectors.answer_engines.openai import _payload as openai_payload
-from app.connectors.answer_engines.openai_parser import parse_openai_response
+from app.connectors.answer_engines.openai_parser import (
+    map_openai_finish_reason,
+    parse_openai_response,
+)
+from app.core.config.provider_catalog import (
+    REASONING_EFFORT_OFF,
+    REASONING_EFFORT_UNVERIFIED,
+    is_reasoning_pinned_off,
+    provider_catalog_settings,
+    route_policy,
+)
+from app.domain.audits.cost_projection import _extract_usage
 
 _FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 
@@ -307,8 +326,8 @@ def test_anthropic_parser_extracts_answer_citations_and_provenance() -> None:
     assert result.provider_metadata["query_text_available"] is True
     assert result.citations[0].domain == "bestandless.com.au"
     assert result.citations[0].cited_text == "Best&Less baby clothing from $5"
-    assert result.usage["total_tokens"] == 100
-    assert result.usage["web_search_requests"] == 1
+    assert result.normalized_usage.total_tokens == 100
+    assert result.normalized_usage.web_search_requests == 1
 
 
 def test_anthropic_safe_error_detail_extracts_type_and_message() -> None:
@@ -481,8 +500,8 @@ def test_openai_parser_grounded_fixture_provenance_and_citations() -> None:
     assert citation.cited_text == "Best&Less"
     assert citation.start_index == 0
     assert citation.end_index == 9
-    assert result.usage["web_search_requests"] == 2
-    assert result.usage["total_tokens"] == 100
+    assert result.normalized_usage.web_search_requests == 2
+    assert result.normalized_usage.total_tokens == 100
 
 
 def test_openai_parser_no_search_fixture_is_valid_result() -> None:
@@ -554,7 +573,7 @@ def test_openai_parser_count_only_call_preserves_empty_query() -> None:
     assert result.search_used is True
     assert len(result.search_events) == 1
     assert result.search_events[0].query == ""
-    assert result.usage["web_search_requests"] == 1
+    assert result.normalized_usage.web_search_requests == 1
     assert result.provider_metadata["query_text_available"] is False
 
 
@@ -752,7 +771,8 @@ def test_openai_parser_tolerates_non_numeric_usage_tokens() -> None:
             "total_tokens": None,
         },
     }
-    # Must not raise; malformed usage degrades to zeros.
+    # Must not raise; malformed usage degrades to UNKNOWN (null), never to a
+    # fabricated zero that would be indistinguishable from a real zero.
     result = parse_openai_response(
         payload,
         logical_engine="chatgpt",
@@ -760,6 +780,516 @@ def test_openai_parser_tolerates_non_numeric_usage_tokens() -> None:
         requested_model="gpt-5.4",
         latency_ms=1,
     )
-    assert result.usage["total_input_tokens"] == 0
-    assert result.usage["total_output_tokens"] == 0
-    assert result.usage["total_tokens"] == 0
+    assert result.normalized_usage.uncached_input_tokens is None
+    assert result.normalized_usage.output_tokens is None
+    assert result.normalized_usage.total_tokens is None
+
+
+# ---------------------------------------------------------------------------
+# T3 — frozen request policy drives tools / caps / reasoning (invariant 9)
+# ---------------------------------------------------------------------------
+def _request(**overrides) -> AnswerEngineRequest:
+    """A frozen request with the pre-T3 defaults, overridable per assertion."""
+    fields: dict = {
+        "prompt": "cheap baby clothes",
+        "system_instruction": "",
+        "model": "gpt-5.4",
+        "timeout_seconds": 30,
+    }
+    fields.update(overrides)
+    return AnswerEngineRequest(**fields)
+
+
+def test_openai_payload_omits_search_tools_for_pulse() -> None:
+    payload = openai_payload(
+        _request(retrieval_enabled=False, max_output_tokens=600), country_code="AU"
+    )
+    # Pulse mode is cheap precisely because no retrieval tool is attached.
+    assert "tools" not in payload
+    assert payload["max_output_tokens"] == 600
+
+
+def test_openai_payload_includes_search_tools_for_benchmark() -> None:
+    payload = openai_payload(
+        _request(retrieval_enabled=True, max_output_tokens=4096), country_code="AU"
+    )
+    assert payload["tools"][0]["type"] == "web_search"
+    assert payload["max_output_tokens"] == 4096
+
+
+def test_openai_payload_cap_falls_back_to_config_when_unsupplied() -> None:
+    payload = openai_payload(_request(), country_code="")
+    assert payload["max_output_tokens"] == provider_catalog_settings.max_output_tokens
+
+
+def test_openai_payload_sends_no_reasoning_control_while_unverified() -> None:
+    # The chatgpt/openai route pins reasoning ``unverified``; the adapter must
+    # not invent a value for it.
+    policy = route_policy("chatgpt", "openai")
+    assert policy.reasoning_effort == REASONING_EFFORT_UNVERIFIED
+    payload = openai_payload(
+        _request(reasoning_effort=policy.reasoning_effort), country_code=""
+    )
+    assert "reasoning" not in payload
+
+
+def test_anthropic_payload_omits_search_tools_for_pulse() -> None:
+    payload = anthropic_payload(
+        _request(
+            model="claude-sonnet-4-6", retrieval_enabled=False, max_output_tokens=600
+        ),
+        country_code="AU",
+    )
+    assert "tools" not in payload
+    assert payload["max_tokens"] == 600
+
+
+def test_anthropic_payload_includes_search_tools_for_benchmark() -> None:
+    payload = anthropic_payload(
+        _request(
+            model="claude-sonnet-4-6", retrieval_enabled=True, max_output_tokens=4096
+        ),
+        country_code="AU",
+    )
+    assert payload["tools"][0]["name"] == "web_search"
+    assert payload["max_tokens"] == 4096
+
+
+def test_anthropic_payload_disables_thinking_when_pinned_off() -> None:
+    # The claude/anthropic route pins reasoning OFF, so thinking is explicitly
+    # disabled on the wire.
+    assert is_reasoning_pinned_off("claude", "anthropic")
+    policy = route_policy("claude", "anthropic")
+    assert policy.reasoning_effort == REASONING_EFFORT_OFF
+    payload = anthropic_payload(
+        _request(model="claude-sonnet-4-6", reasoning_effort=policy.reasoning_effort),
+        country_code="",
+    )
+    assert payload["thinking"] == {"type": "disabled"}
+    # No pin supplied (pre-T3 construction site) => no thinking key invented.
+    assert "thinking" not in anthropic_payload(
+        _request(model="claude-sonnet-4-6"), country_code=""
+    )
+
+
+def test_gemini_payload_omits_grounding_tools_for_pulse() -> None:
+    payload = gemini_payload(
+        _request(
+            model="gemini-flash-latest",
+            retrieval_enabled=False,
+            max_output_tokens=600,
+        )
+    )
+    assert "tools" not in payload
+    assert payload["max_output_tokens"] == 600
+
+
+def test_gemini_payload_includes_grounding_tools_for_benchmark() -> None:
+    payload = gemini_payload(
+        _request(
+            model="gemini-flash-latest",
+            retrieval_enabled=True,
+            max_output_tokens=4096,
+        )
+    )
+    assert payload["tools"] == [{"type": "google_search"}]
+    assert payload["max_output_tokens"] == 4096
+
+
+def test_gemini_payload_sends_no_thinking_control_while_unverified() -> None:
+    policy = route_policy("gemini", "google")
+    assert policy.reasoning_effort == REASONING_EFFORT_UNVERIFIED
+    payload = gemini_payload(
+        _request(model="gemini-flash-latest", reasoning_effort=policy.reasoning_effort)
+    )
+    assert "thinking" not in payload
+    assert "thinking_config" not in payload
+
+
+async def test_openai_adapter_sends_the_frozen_cap_and_no_tools_for_pulse() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode())
+        return httpx.Response(
+            200, json=_load_fixture("openai_responses_no_search.json")
+        )
+
+    adapter = OpenAIAnswerEngineAdapter(
+        api_key="k",
+        country_code="AU",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    await adapter.execute(
+        _request(retrieval_enabled=False, max_output_tokens=600, timeout_seconds=30)
+    )
+    body = captured["body"]
+    assert isinstance(body, dict)
+    # The EXACT frozen cap reaches the provider, and no retrieval tool does.
+    assert body["max_output_tokens"] == 600
+    assert "tools" not in body
+
+
+# ---------------------------------------------------------------------------
+# T3 — finish-reason mapping (every listed mapping + unrecognized fallback)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("end_turn", FinishReason.STOP),
+        ("stop_sequence", FinishReason.STOP),
+        ("max_tokens", FinishReason.LENGTH),
+        ("refusal", FinishReason.CONTENT_FILTER),
+        ("pause_turn", FinishReason.UNKNOWN),
+        ("tool_use", FinishReason.UNKNOWN),
+        ("something_new", FinishReason.UNKNOWN),
+        ("", FinishReason.UNKNOWN),
+        (None, FinishReason.UNKNOWN),
+    ],
+)
+def test_map_anthropic_finish_reason(raw: object, expected: FinishReason) -> None:
+    assert map_anthropic_finish_reason(raw) is expected
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"status": "completed"}, FinishReason.STOP),
+        ({"status": "failed"}, FinishReason.ERROR),
+        ({"status": "cancelled"}, FinishReason.CANCELLED),
+        # incomplete_details WINS over the status where supplied.
+        (
+            {
+                "status": "incomplete",
+                "incomplete_details": {"reason": "max_output_tokens"},
+            },
+            FinishReason.LENGTH,
+        ),
+        (
+            {
+                "status": "completed",
+                "incomplete_details": {"reason": "content_filter"},
+            },
+            FinishReason.CONTENT_FILTER,
+        ),
+        # An incomplete status with no reason is not guessed at.
+        ({"status": "incomplete"}, FinishReason.UNKNOWN),
+        ({"status": "in_progress"}, FinishReason.UNKNOWN),
+        ({"incomplete_details": {"reason": "brand_new"}}, FinishReason.UNKNOWN),
+        ({}, FinishReason.UNKNOWN),
+    ],
+)
+def test_map_openai_finish_reason(payload: dict, expected: FinishReason) -> None:
+    assert map_openai_finish_reason(payload) is expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("STOP", FinishReason.STOP),
+        ("MAX_TOKENS", FinishReason.LENGTH),
+        ("SAFETY", FinishReason.CONTENT_FILTER),
+        ("RECITATION", FinishReason.CONTENT_FILTER),
+        ("OTHER", FinishReason.ERROR),
+        ("MALFORMED_FUNCTION_CALL", FinishReason.ERROR),
+        ("FINISH_REASON_UNSPECIFIED", FinishReason.UNKNOWN),
+        ("something_new", FinishReason.UNKNOWN),
+        ("", FinishReason.UNKNOWN),
+        (None, FinishReason.UNKNOWN),
+    ],
+)
+def test_map_gemini_finish_reason(raw: object, expected: FinishReason) -> None:
+    assert map_gemini_finish_reason(raw) is expected
+
+
+def test_anthropic_parser_maps_and_preserves_raw_finish_reason() -> None:
+    result = parse_anthropic_message(
+        {"model": "claude-sonnet-4-6", "stop_reason": "max_tokens", "content": []},
+        logical_engine="claude",
+        transport_provider="anthropic",
+        requested_model="claude-sonnet-4-6",
+        latency_ms=1,
+    )
+    assert result.finish_reason is FinishReason.LENGTH
+    # The RAW provider token survives on the response and in metadata.
+    assert result.raw_finish_reason == "max_tokens"
+    assert result.provider_metadata["raw_finish_reason"] == "max_tokens"
+    assert result.provider_metadata["stop_reason"] == "max_tokens"
+
+
+def test_openai_parser_maps_and_preserves_raw_finish_reason() -> None:
+    result = parse_openai_response(
+        {
+            "model": "gpt-5.4",
+            "status": "incomplete",
+            "incomplete_details": {"reason": "max_output_tokens"},
+            "output": [],
+        },
+        logical_engine="chatgpt",
+        transport_provider="openai",
+        requested_model="gpt-5.4",
+        latency_ms=1,
+    )
+    assert result.finish_reason is FinishReason.LENGTH
+    assert result.raw_finish_reason == "max_output_tokens"
+    assert result.provider_metadata["raw_finish_reason"] == "max_output_tokens"
+    # Grounded fixture: a plain completed status maps to stop.
+    completed = parse_openai_response(
+        _load_fixture("openai_responses_grounded.json"),
+        logical_engine="chatgpt",
+        transport_provider="openai",
+        requested_model="gpt-5.4",
+        latency_ms=1,
+    )
+    assert completed.finish_reason is FinishReason.STOP
+    assert completed.raw_finish_reason == "completed"
+
+
+def test_gemini_parser_maps_and_preserves_raw_finish_reason() -> None:
+    result = parse_interaction(
+        {"model": "gemini-flash-latest", "finish_reason": "SAFETY", "steps": []},
+        logical_engine="gemini",
+        transport_provider="google",
+        model="gemini-flash-latest",
+        latency_ms=1,
+    )
+    assert result.finish_reason is FinishReason.CONTENT_FILTER
+    assert result.raw_finish_reason == "SAFETY"
+    assert result.provider_metadata["raw_finish_reason"] == "SAFETY"
+    # The candidates shape is read too, and an unknown token stays unknown.
+    candidate = parse_interaction(
+        {
+            "model": "gemini-flash-latest",
+            "candidates": [{"finishReason": "MAX_TOKENS"}],
+            "steps": [],
+        },
+        logical_engine="gemini",
+        transport_provider="google",
+        model="gemini-flash-latest",
+        latency_ms=1,
+    )
+    assert candidate.finish_reason is FinishReason.LENGTH
+    assert candidate.raw_finish_reason == "MAX_TOKENS"
+
+
+# ---------------------------------------------------------------------------
+# T3 — typed usage normalization (aliases, cached + reasoning counts, null cost)
+# ---------------------------------------------------------------------------
+def test_openai_usage_normalizes_cached_and_reasoning_counts() -> None:
+    result = parse_openai_response(
+        {
+            "model": "gpt-5.4",
+            "status": "completed",
+            "output": [
+                {
+                    "type": "reasoning",
+                    "id": "rs_1",
+                    "summary": [{"type": "summary_text", "text": "private cot"}],
+                },
+                {
+                    "type": "message",
+                    "id": "msg_1",
+                    "content": [{"type": "output_text", "text": "Answer."}],
+                },
+            ],
+            "usage": {
+                "input_tokens": 100,
+                "input_tokens_details": {"cached_tokens": 40},
+                "output_tokens": 70,
+                "output_tokens_details": {"reasoning_tokens": 30},
+                "total_tokens": 170,
+            },
+        },
+        logical_engine="chatgpt",
+        transport_provider="openai",
+        requested_model="gpt-5.4",
+        latency_ms=1,
+    )
+    usage = result.normalized_usage
+    # ``input_tokens`` includes cache reads; the uncached line is the remainder.
+    assert usage.uncached_input_tokens == 60
+    assert usage.cached_input_tokens == 40
+    # ``output_tokens`` includes reasoning; the two canonical lines are disjoint.
+    assert usage.output_tokens == 40
+    assert usage.reasoning_tokens == 30
+    assert usage.total_tokens == 170
+    assert usage.web_search_requests == 0
+    # Absent cost is NULL, never a fabricated zero.
+    assert usage.provider_cost_microusd is None
+    # Reasoning CONTENT stays dropped even though its token count came through.
+    serialized = json.dumps(result.provider_metadata)
+    assert "private cot" not in serialized
+    for item in result.provider_metadata["evidence_items"]:
+        assert item["type"] != "reasoning"
+
+
+def test_openai_usage_leaves_unreported_splits_null() -> None:
+    result = parse_openai_response(
+        {
+            "model": "gpt-5.4",
+            "status": "completed",
+            "output": [],
+            "usage": {"input_tokens": 10, "output_tokens": 20},
+        },
+        logical_engine="chatgpt",
+        transport_provider="openai",
+        requested_model="gpt-5.4",
+        latency_ms=1,
+    )
+    usage = result.normalized_usage
+    assert usage.uncached_input_tokens == 10
+    assert usage.output_tokens == 20
+    # No split reported => unknown stays null (never 0).
+    assert usage.cached_input_tokens is None
+    assert usage.reasoning_tokens is None
+    # Derived total: exact sum of the reported components.
+    assert usage.total_tokens == 30
+    assert usage.provider_cost_microusd is None
+
+
+def test_anthropic_usage_normalizes_cache_reads_and_search_count() -> None:
+    result = parse_anthropic_message(
+        {
+            "model": "claude-sonnet-4-6",
+            "stop_reason": "end_turn",
+            "content": [{"type": "text", "text": "ok"}],
+            "usage": {
+                "input_tokens": 60,
+                "cache_read_input_tokens": 25,
+                "output_tokens": 40,
+                "server_tool_use": {"web_search_requests": 2},
+            },
+        },
+        logical_engine="claude",
+        transport_provider="anthropic",
+        requested_model="claude-sonnet-4-6",
+        latency_ms=1,
+    )
+    usage = result.normalized_usage
+    # Anthropic's ``input_tokens`` already EXCLUDES cache reads.
+    assert usage.uncached_input_tokens == 60
+    assert usage.cached_input_tokens == 25
+    assert usage.output_tokens == 40
+    assert usage.total_tokens == 125
+    assert usage.web_search_requests == 2
+    # Anthropic reports neither a thinking-token count nor a cost.
+    assert usage.reasoning_tokens is None
+    assert usage.provider_cost_microusd is None
+
+
+def test_anthropic_usage_absent_counters_stay_null() -> None:
+    result = parse_anthropic_message(
+        {"model": "claude-sonnet-4-6", "content": [{"type": "text", "text": "ok"}]},
+        logical_engine="claude",
+        transport_provider="anthropic",
+        requested_model="claude-sonnet-4-6",
+        latency_ms=1,
+    )
+    usage = result.normalized_usage
+    assert usage.uncached_input_tokens is None
+    assert usage.output_tokens is None
+    assert usage.cached_input_tokens is None
+    assert usage.total_tokens is None
+    assert usage.provider_cost_microusd is None
+    # No server_tool_use blocks and no reported count => unknown, not zero.
+    assert usage.web_search_requests is None
+    assert result.search_used is False
+
+
+def test_gemini_usage_normalizes_native_aliases() -> None:
+    result = parse_interaction(
+        {
+            "model": "gemini-flash-latest",
+            "status": "completed",
+            "finish_reason": "STOP",
+            "usage": {
+                "promptTokenCount": 120,
+                "cachedContentTokenCount": 20,
+                "candidatesTokenCount": 80,
+                "thoughtsTokenCount": 15,
+                "totalTokenCount": 215,
+            },
+            "steps": [
+                {"type": "thought", "signature": "private-thought-content"},
+                {
+                    "type": "google_search_call",
+                    "id": "gs_1",
+                    "arguments": {"queries": ["running shoes"]},
+                },
+                {
+                    "type": "model_output",
+                    "content": [{"type": "text", "text": "Answer."}],
+                },
+            ],
+        },
+        logical_engine="gemini",
+        transport_provider="google",
+        model="gemini-flash-latest",
+        latency_ms=1,
+    )
+    usage = result.normalized_usage
+    # The native camelCase aliases are NORMALIZED, not passed through raw.
+    assert usage.uncached_input_tokens == 100
+    assert usage.cached_input_tokens == 20
+    assert usage.output_tokens == 80
+    assert usage.reasoning_tokens == 15
+    assert usage.total_tokens == 215
+    assert usage.web_search_requests == 1
+    assert usage.provider_cost_microusd is None
+    # The raw provider usage dict never reaches metadata; the canonical shape
+    # does, and the thought CONTENT is still dropped.
+    meta_usage = result.provider_metadata["usage"]
+    assert "promptTokenCount" not in meta_usage
+    assert meta_usage["uncached_input_tokens"] == 100
+    assert meta_usage["reasoning_tokens"] == 15
+    assert meta_usage["provider_cost_microusd"] is None
+    serialized = json.dumps(result.provider_metadata)
+    assert "private-thought-content" not in serialized
+    assert "thought" not in result.provider_metadata["step_types"]
+
+
+def test_gemini_usage_absent_counters_stay_null() -> None:
+    result = parse_interaction(
+        {
+            "model": "gemini-flash-latest",
+            "steps": [
+                {
+                    "type": "model_output",
+                    "content": [{"type": "text", "text": "From memory."}],
+                }
+            ],
+        },
+        logical_engine="gemini",
+        transport_provider="google",
+        model="gemini-flash-latest",
+        latency_ms=1,
+    )
+    usage = result.normalized_usage
+    assert usage.uncached_input_tokens is None
+    assert usage.cached_input_tokens is None
+    assert usage.output_tokens is None
+    assert usage.reasoning_tokens is None
+    assert usage.total_tokens is None
+    assert usage.provider_cost_microusd is None
+    # A known-zero search count is meaningful evidence and stays zero.
+    assert usage.web_search_requests == 0
+
+
+def test_normalized_usage_is_projectable_by_the_cost_builder() -> None:
+    # The parser's normalized keys are exactly the granular vocabulary the cost
+    # projection prefers, so no key-name drift can silently null a cost line.
+    result = parse_interaction(
+        {
+            "model": "gemini-flash-latest",
+            "usage": {"promptTokenCount": 1_000, "candidatesTokenCount": 500},
+            "steps": [],
+        },
+        logical_engine="gemini",
+        transport_provider="google",
+        model="gemini-flash-latest",
+        latency_ms=1,
+    )
+    projected = _extract_usage(result.provider_metadata["usage"])
+    assert projected.uncached_input_tokens == 1_000
+    assert projected.output_tokens == 500
+    assert projected.provider_reported_cost_microusd is None

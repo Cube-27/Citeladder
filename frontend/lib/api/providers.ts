@@ -7,7 +7,13 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { providerCatalogSchema, providerConnectionSchema, strictValidate } from './schemas';
+import {
+  connectionTestResultSchema,
+  providerCatalogSchema,
+  providerConnectionSchema,
+  providerConnectionStatesSchema,
+  strictValidate,
+} from './schemas';
 import type {
   LogicalEngine,
   ProviderCatalog,
@@ -17,22 +23,9 @@ import type {
 
 const connectionListSchema = z.array(providerConnectionSchema);
 
-// Mirrors B4's `ProviderConnectionTestResponse`. `status` is a free string on
-// the wire ('ok' | 'failed'); the extra provenance fields are surfaced inline.
-// Exported for the contract-drift guard (`contract-drift.ts`) — the only
-// response schema owned outside `schemas.ts`.
-export const connectionTestResultSchema = z.object({
-  connection_id: z.uuid(),
-  status: z.string(),
-  error_code: z.string().optional().default(''),
-  detail: z.string().optional().default(''),
-  latency_ms: z.number().nullable().optional(),
-  logical_engine: z.string().optional().default(''),
-  transport_provider: z.string().optional().default(''),
-  transport_model: z.string().optional().default(''),
-  tested_at: z.string(),
-});
 type ConnectionTestResult = z.infer<typeof connectionTestResultSchema>;
+
+export type { ProviderConnectionStates, ProviderConnectionStateEntry } from './types';
 
 /** A route entry sent on create/update (B4 `ProviderRouteInput`). */
 export type ProviderRouteInput = {
@@ -84,6 +77,15 @@ export const providersApi = {
   getCatalog: async (options?: ApiRequestOptions) => {
     const res = await apiClient.get<ProviderCatalog>('/provider-catalog', options);
     return strictValidate(providerCatalogSchema, res, 'providers.getCatalog');
+  },
+  /**
+   * The AUTHENTICATED workspace projection: what this workspace can actually
+   * execute with. Distinct from the public catalog's `availability` — a
+   * provider can be generally available and still `missing` here.
+   */
+  getConnectionStates: async (options?: ApiRequestOptions) => {
+    const res = await apiClient.get<unknown>('/provider-connections/states', options);
+    return strictValidate(providerConnectionStatesSchema, res, 'providers.getConnectionStates');
   },
 };
 

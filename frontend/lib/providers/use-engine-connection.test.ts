@@ -24,6 +24,11 @@ const chatgptModel: EngineCardModel = {
   logical_engine: 'chatgpt',
   label: 'ChatGPT',
   route: { transport_provider: 'openai', default_model: 'gpt-5.4', label: 'Direct (OpenAI)' },
+  availability: 'available',
+  unavailable_reason: null,
+  state: 'connected',
+  safe_reason: null,
+  latest_probe: null,
 };
 
 function connection(overrides: Partial<ProviderConnection> = {}): ProviderConnection {
@@ -207,7 +212,16 @@ describe('useEngineConnection', () => {
   });
 
   it('fails the save when the catalog has no route for the engine', async () => {
-    const noRoute: EngineCardModel = { logical_engine: 'chatgpt', label: 'ChatGPT', route: null };
+    const noRoute: EngineCardModel = {
+      logical_engine: 'chatgpt',
+      label: 'ChatGPT',
+      route: null,
+      availability: 'unavailable',
+      unavailable_reason: 'route_not_published',
+      state: 'unavailable',
+      safe_reason: null,
+      latest_probe: null,
+    };
     const { result } = setup(noRoute);
 
     act(() => result.current.setApiKey('sk-new-key'));

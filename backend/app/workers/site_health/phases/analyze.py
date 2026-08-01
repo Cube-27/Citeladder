@@ -51,7 +51,7 @@ from app.models.site_health import (
     SiteRuleEvaluation,
     SiteUrl,
     SiteUrlObservation,
-    WorkspaceSiteHealthEntitlement,
+    WorkspaceSiteHealthRuntime,
 )
 from app.workers.site_health.helpers import (
     _classify_http_error,
@@ -148,24 +148,24 @@ class AnalyzePhaseMixin(PhaseSupport):
         crawl: SiteCrawl,
         lock: bool,
     ):
-        """Evaluate Task 4's live membership/entitlement guard from DB rows."""
+        """Evaluate Task 4's live membership/runtime guard from DB rows."""
         monitored_stmt = select(MonitoredSiteUrl).where(
             MonitoredSiteUrl.project_id == crawl.project_id,
             MonitoredSiteUrl.site_url_id == task.site_url_id,
         )
-        entitlement_stmt = select(WorkspaceSiteHealthEntitlement).where(
-            WorkspaceSiteHealthEntitlement.workspace_id == crawl.workspace_id
+        runtime_stmt = select(WorkspaceSiteHealthRuntime).where(
+            WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id
         )
         if lock:
             monitored_stmt = monitored_stmt.with_for_update()
-            entitlement_stmt = entitlement_stmt.with_for_update()
+            runtime_stmt = runtime_stmt.with_for_update()
         monitored = (await session.execute(monitored_stmt)).scalar_one_or_none()
-        entitlement = (await session.execute(entitlement_stmt)).scalar_one_or_none()
+        runtime = (await session.execute(runtime_stmt)).scalar_one_or_none()
         return evaluate_task_guard(
             crawl=crawl,
             task=task,
             monitored=monitored,
-            entitlement=entitlement,
+            runtime=runtime,
             owner=self.owner,
         )
 
@@ -176,26 +176,26 @@ class AnalyzePhaseMixin(PhaseSupport):
         task_id: uuid.UUID,
         crawl_id: uuid.UUID,
     ) -> tuple[tuple[SiteCrawlTask, SiteCrawl] | None, bool]:
-        """Lock live entitlement/membership and the owned task before writes.
+        """Lock live runtime/membership and the owned task before writes.
 
-        The entitlement is the selection flow's serialization point, so lock it
+        The runtime row is the selection flow's serialization point, so lock it
         before membership/task rows to follow that flow's lock order and avoid
         deadlocks with a concurrent monitored-set replacement.
 
         Returns ``(locked_rows, guard_denied)``. ``guard_denied`` is true only
         while this worker still owns the task but live crawl/membership/
-        entitlement state blocks analysis; a lost lease is not ours to cancel.
+        runtime state blocks analysis; a lost lease is not ours to cancel.
         """
         task_hint = await session.get(SiteCrawlTask, task_id)
         crawl_hint = await session.get(SiteCrawl, crawl_id)
         if task_hint is None or crawl_hint is None:
             return None, False
 
-        entitlement = (
+        runtime = (
             await session.execute(
-                select(WorkspaceSiteHealthEntitlement)
+                select(WorkspaceSiteHealthRuntime)
                 .where(
-                    WorkspaceSiteHealthEntitlement.workspace_id
+                    WorkspaceSiteHealthRuntime.workspace_id
                     == crawl_hint.workspace_id
                 )
                 .with_for_update()
@@ -231,7 +231,7 @@ class AnalyzePhaseMixin(PhaseSupport):
             crawl=crawl,
             task=task,
             monitored=monitored,
-            entitlement=entitlement,
+            runtime=runtime,
             owner=self.owner,
         )
         if not decision.ok:

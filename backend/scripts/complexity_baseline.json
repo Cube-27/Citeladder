@@ -22,16 +22,20 @@
   "app/analysis/exports.py": {
     "functions": {
       "_competitor_lines": 5,
+      "_csv_bool": 2,
       "_domain_lines": 3,
       "_failure_lines": 5,
       "_headline_lines": 4,
       "_join": 2,
       "_limitation_lines": 1,
+      "_measurement_provenance_lines": 5,
       "_methodology_lines": 9,
       "_mode_text": 2,
       "_panel_lines": 7,
       "_pct": 2,
       "_per_prompt_lines": 2,
+      "_provenance_label": 3,
+      "_row_provenance": 1,
       "_usd": 2,
       "audit_to_csv": 8,
       "audit_to_markdown": 3
@@ -148,8 +152,8 @@
   "app/analysis/scoring.py": {
     "functions": {
       "ScoringConfig.from_project": 12,
-      "_aggregate_cost": 8,
-      "_aggregate_token_usage": 7,
+      "_aggregate_cost": 7,
+      "_aggregate_token_usage": 4,
       "_brand_injected": 3,
       "_citation_aggregates": 6,
       "_citation_domain_counts": 6,
@@ -169,10 +173,12 @@
       "_prompt_class": 5,
       "_prompt_signals": 3,
       "_rate": 2,
+      "_reported_cost_usd": 5,
       "_share_of_voice": 9,
       "_stability": 2,
       "_top_domain_share": 4,
       "_url_domain": 5,
+      "_usage_value": 5,
       "aggregate_run": 6,
       "citation_domain": 6,
       "classify_citation": 3,
@@ -361,12 +367,15 @@
   },
   "app/api/audits.py": {
     "functions": {
+      "_authorize_resume_cursor": 3,
       "_event_stream": 7,
       "_get_or_404": 2,
+      "_list_event_responses": 2,
       "_load_events": 6,
-      "_sse_payload": 2,
+      "_sse_payload": 1,
+      "_translate_create_audit_errors": 4,
       "cancel_audit_endpoint": 3,
-      "create_audit_endpoint": 3,
+      "create_audit_endpoint": 2,
       "export_csv_endpoint": 2,
       "export_markdown_endpoint": 2,
       "get_audit_endpoint": 1,
@@ -394,13 +403,30 @@
   },
   "app/api/billing.py": {
     "functions": {
-      "get_billing_summary": 1,
-      "get_catalog": 3,
-      "get_workspace_entitlements": 1,
-      "patch_billing_profile": 2,
-      "post_cancel": 3,
-      "post_checkout": 4,
-      "post_manage": 1,
+      "_activation_status_code": 2,
+      "_addon_provider_call": 1,
+      "_base_provider_call": 1,
+      "_idempotency_key": 2,
+      "_purchase_country": 1,
+      "_reject_existing_addon": 1,
+      "_reject_existing_base": 1,
+      "_reject_live_addon": 3,
+      "_reject_live_base": 3,
+      "_reject_unsettled_addon": 2,
+      "_reject_unsettled_base": 2,
+      "_replayed_activation": 2,
+      "_require_live_base": 1,
+      "_run_intent": 1,
+      "_safe_commercial_errors": 3,
+      "_topup_provider_call": 1,
+      "delete_addon": 2,
+      "delete_subscription": 2,
+      "get_catalog": 1,
+      "get_entitlement": 1,
+      "get_usage": 1,
+      "post_addon": 3,
+      "post_subscription": 3,
+      "post_topup": 3,
       "razorpay_webhook": 5
     },
     "loc": 174,
@@ -545,6 +571,7 @@
     "functions": {
       "_get_project_or_404": 2,
       "_logo_response": 2,
+      "_map_occupancy": 2,
       "_resolve_default_agent": 2,
       "accept_brand_profile_suggestion_endpoint": 4,
       "create_project_endpoint": 4,
@@ -570,6 +597,7 @@
   "app/api/prompts.py": {
     "functions": {
       "_conflict": 1,
+      "_map_prompt_mutation": 3,
       "_not_found": 1,
       "_resolve_import_rows": 3,
       "bulk_status_endpoint": 3,
@@ -596,6 +624,7 @@
     "functions": {
       "create_connection_endpoint": 2,
       "delete_connection_endpoint": 2,
+      "get_connection_states_endpoint": 1,
       "get_provider_catalog": 3,
       "list_connections_endpoint": 2,
       "test_connection_endpoint": 4,
@@ -704,8 +733,10 @@
     "functions": {
       "AnthropicAnswerEngineAdapter.__init__": 3,
       "AnthropicAnswerEngineAdapter.execute": 6,
-      "_payload": 3,
-      "_raise_for_search_error": 11
+      "_payload": 2,
+      "_policy_fields": 3,
+      "_raise_for_search_error": 11,
+      "_web_search_tool": 2
     },
     "loc": 199,
     "max_cc": 11
@@ -715,7 +746,9 @@
       "_answer_and_citations": 16,
       "_blocks": 4,
       "_search_events": 8,
-      "parse_anthropic_message": 11
+      "map_anthropic_finish_reason": 2,
+      "normalize_anthropic_usage": 4,
+      "parse_anthropic_message": 4
     },
     "loc": 134,
     "max_cc": 16
@@ -748,6 +781,7 @@
       "GeminiAnswerEngineAdapter.__init__": 3,
       "GeminiAnswerEngineAdapter.execute": 8,
       "_build_payload": 1,
+      "_grounding_fields": 2,
       "safe_quota_detail": 17
     },
     "loc": 177,
@@ -755,10 +789,13 @@
   },
   "app/connectors/answer_engines/gemini_parser.py": {
     "functions": {
-      "_extract_citations": 15,
+      "_extract_citations": 12,
       "_extract_queries": 12,
       "_step_type": 3,
       "_text_blocks": 8,
+      "gemini_raw_finish_reason": 11,
+      "map_gemini_finish_reason": 2,
+      "normalize_gemini_usage": 5,
       "parse_interaction": 13,
       "sanitize_metadata": 20
     },
@@ -776,16 +813,24 @@
   "app/connectors/answer_engines/normalization.py": {
     "functions": {
       "annotation_offset": 5,
-      "coerce_int": 5
+      "cited_span": 4,
+      "coerce_int": 5,
+      "normalized_usage_dict": 1,
+      "optional_count": 12,
+      "output_token_cap": 2,
+      "sum_optional": 4,
+      "usage_count": 3,
+      "usage_mapping": 2
     },
     "loc": 61,
-    "max_cc": 5
+    "max_cc": 12
   },
   "app/connectors/answer_engines/openai.py": {
     "functions": {
       "OpenAIAnswerEngineAdapter.__init__": 3,
       "OpenAIAnswerEngineAdapter.execute": 6,
-      "_payload": 3
+      "_payload": 3,
+      "_web_search_tool": 2
     },
     "loc": 175,
     "max_cc": 6
@@ -794,17 +839,20 @@
     "functions": {
       "_action_of": 2,
       "_action_queries": 7,
-      "_citations": 16,
+      "_citations": 13,
+      "_incomplete_reason": 2,
       "_item_type": 2,
-      "_normalized_usage": 2,
       "_output_items": 4,
       "_sanitize_metadata": 13,
-      "_search_events": 8,
+      "_search_events": 7,
       "_text_blocks": 9,
+      "map_openai_finish_reason": 3,
+      "normalize_openai_usage": 6,
+      "openai_raw_finish_reason": 3,
       "parse_openai_response": 7
     },
     "loc": 308,
-    "max_cc": 16
+    "max_cc": 13
   },
   "app/connectors/billing/__init__.py": {
     "functions": {},
@@ -814,9 +862,13 @@
   "app/connectors/billing/base.py": {
     "functions": {
       "BillingProvider.cancel_subscription": 1,
-      "BillingProvider.create_subscription": 1,
+      "BillingProvider.create_addon_subscription": 1,
+      "BillingProvider.create_base_subscription": 1,
+      "BillingProvider.create_one_time_payment": 1,
+      "BillingProvider.fetch_payment": 1,
       "BillingProvider.fetch_subscription": 1,
-      "BillingProviderError.__init__": 1
+      "BillingProviderError.__init__": 1,
+      "ProviderMetadata.as_notes": 1
     },
     "loc": 49,
     "max_cc": 1
@@ -840,19 +892,25 @@
     "functions": {
       "RazorpayBillingProvider.__init__": 1,
       "RazorpayBillingProvider._auth": 3,
-      "RazorpayBillingProvider._find_subscription_by_attempt": 10,
       "RazorpayBillingProvider._hosted_subscription": 1,
+      "RazorpayBillingProvider._payment": 8,
       "RazorpayBillingProvider._request": 6,
       "RazorpayBillingProvider._subscription": 4,
       "RazorpayBillingProvider._validated_checkout_url": 8,
       "RazorpayBillingProvider.cancel_subscription": 2,
-      "RazorpayBillingProvider.create_subscription": 3,
+      "RazorpayBillingProvider.create_addon_subscription": 1,
+      "RazorpayBillingProvider.create_base_subscription": 2,
+      "RazorpayBillingProvider.create_one_time_payment": 3,
+      "RazorpayBillingProvider.fetch_payment": 1,
       "RazorpayBillingProvider.fetch_subscription": 1,
+      "_notes_map": 2,
       "_optional_int": 3,
-      "_provider_bool": 2
+      "_optional_str": 2,
+      "_provider_bool": 2,
+      "_require_price_ref": 2
     },
     "loc": 186,
-    "max_cc": 10
+    "max_cc": 8
   },
   "app/connectors/discovery_models/__init__.py": {
     "functions": {},
@@ -1104,9 +1162,12 @@
   },
   "app/core/config/__init__.py": {
     "functions": {
-      "_check_secret_defaults": 7,
+      "_check_secret_defaults": 6,
+      "_dev_gate_problems": 3,
+      "_is_development_env": 2,
       "_load_settings": 1,
       "_secret_is_weak": 4,
+      "encryption_key_configured": 2,
       "get_frontend_origins": 6,
       "validate_production_security": 11
     },
@@ -1155,8 +1216,13 @@
   "app/core/config/audits.py": {
     "functions": {
       "AuditSettings.retry_delay": 2,
+      "AuditSettings.worker_max_inflight": 1,
       "_audit_claim_order": 1,
       "_audit_model": 1,
+      "frozen_policy_configuration": 1,
+      "max_run_seconds_from_configuration": 3,
+      "measurement_policy_for_mode": 3,
+      "measurement_policy_from_configuration": 3,
       "system_instruction_for_mode": 5
     },
     "loc": 267,
@@ -1164,13 +1230,46 @@
   },
   "app/core/config/billing.py": {
     "functions": {
+      "AddonCatalogEntry.__post_init__": 1,
+      "AddonCatalogEntry.price": 1,
       "BillingSettings.checkout_hosts": 3,
+      "CatalogPrice.__post_init__": 4,
+      "CatalogPrice.purchasable": 2,
+      "CommercialCatalog.addon": 3,
+      "CommercialCatalog.plan": 3,
+      "CommercialCatalog.topup": 3,
+      "GrantTemplate.__post_init__": 3,
+      "PlanCatalogEntry.__post_init__": 7,
+      "PlanCatalogEntry.base_price": 1,
+      "PlanCatalogEntry.credit_price": 1,
+      "QuantityBounds.__post_init__": 3,
+      "TopupCatalogEntry.__post_init__": 2,
+      "TopupCatalogEntry.price": 1,
+      "_addon_availability": 3,
+      "_build_addons": 2,
+      "_build_plans": 1,
+      "_build_topups": 6,
+      "_funded_credit_prices": 2,
+      "_india_amount_minor": 2,
+      "_level_ordinal": 1,
       "_minor_units": 1,
-      "capability_profile": 1,
-      "quote_for_country": 10
+      "_plan_entry": 1,
+      "_regional_prices": 1,
+      "_tier_1_grants": 1,
+      "_upper_tier_grants": 1,
+      "commercial_catalog": 1,
+      "item_checkout_availability": 5,
+      "plan_checkout_availability": 6,
+      "plan_period_grant_specs": 7,
+      "price_tax_minor": 2,
+      "provider_price_ref": 1,
+      "region_checkout_ready": 4,
+      "resolve_region": 4,
+      "scale_grant_specs": 3,
+      "topup_grant_specs": 5
     },
     "loc": 272,
-    "max_cc": 10
+    "max_cc": 7
   },
   "app/core/config/brand_logos.py": {
     "functions": {},
@@ -1199,9 +1298,25 @@
     "max_cc": 5
   },
   "app/core/config/costs.py": {
-    "functions": {},
+    "functions": {
+      "_approved_route": 1,
+      "_unverified_pricing": 1,
+      "expected_execution_cost": 7,
+      "pricing_version_known": 1,
+      "route_pricing_for": 3
+    },
     "loc": 9,
-    "max_cc": 0
+    "max_cc": 7
+  },
+  "app/core/config/entitlements.py": {
+    "functions": {
+      "CapabilityRegistry.__post_init__": 13,
+      "CapabilityRegistry.get": 1,
+      "CapabilityRegistry.public_entries": 3,
+      "CapabilityRegistry.require": 2,
+      "_build_registry": 1
+    },
+    "max_cc": 13
   },
   "app/core/config/errors.py": {
     "functions": {
@@ -1241,6 +1356,16 @@
     "loc": 875,
     "max_cc": 5
   },
+  "app/core/config/measurement.py": {
+    "functions": {
+      "is_reasoning_effort_supported": 1,
+      "output_treatment_max_tokens": 1,
+      "route_fixture_dir": 1,
+      "route_fixture_path": 2,
+      "route_reasoning_efforts": 1
+    },
+    "max_cc": 2
+  },
   "app/core/config/oauth.py": {
     "functions": {
       "is_oauth_provider": 1,
@@ -1279,33 +1404,36 @@
   },
   "app/core/config/provider_catalog.py": {
     "functions": {
+      "ProviderCatalogEntry.__post_init__": 5,
       "configured_endpoint": 1,
       "default_model": 1,
       "default_probe_engine": 2,
       "engines_for_transport": 3,
       "is_active_transport": 1,
       "is_endpoint_approved": 3,
-      "is_route_approved": 1
+      "is_reasoning_pinned_off": 2,
+      "is_route_approved": 1,
+      "public_provider_routes": 2,
+      "route_capacity_policy": 2,
+      "route_policy": 2,
+      "validate_availability": 5
     },
     "loc": 161,
-    "max_cc": 3
+    "max_cc": 5
   },
   "app/core/config/site_health.py": {
     "functions": {
       "PageTypeProfile.__init__": 2,
       "PageTypeSchemaExpectation.__init__": 1,
-      "SiteHealthCapability.__init__": 1,
       "SiteHealthRule.__init__": 3,
-      "SiteHealthSettings._validate_capability_limits": 4,
+      "SiteHealthRuntimePolicy.__init__": 1,
       "SiteHealthSettings._validate_discovery_cap": 2,
       "SiteHealthSettings._validate_lease_and_heartbeat": 12,
+      "SiteHealthSettings._validate_sample_limits": 4,
       "SiteHealthSettings.retry_delay": 2,
-      "_build_capability_profiles": 1,
       "_site_crawl_task_model": 1,
       "_site_task_claim_order": 1,
-      "capability_profile": 1,
-      "default_site_health_capability": 1,
-      "normalize_capability": 3
+      "runtime_policy_for_allowance": 2
     },
     "loc": 1893,
     "max_cc": 12
@@ -1445,17 +1573,23 @@
       "_RateAccumulator.add": 3,
       "_RateAccumulator.value": 2,
       "_accumulate_entity": 6,
+      "_aggregate_provenance": 2,
       "_as_int": 6,
       "_as_str": 3,
       "_brand_name": 4,
       "_bucket_key": 2,
       "_bucket_points": 7,
+      "_bucket_provenance": 3,
       "_citations_by_analysis": 3,
       "_engine_rows": 5,
       "_evidence_item": 4,
+      "_execution_provenance": 5,
       "_fanout_state": 5,
       "_fold_bucket": 15,
       "_fold_ranking_rows": 6,
+      "_identity_of": 1,
+      "_identity_slice_match": 6,
+      "_identity_sort_key": 3,
       "_is_mixed_version": 4,
       "_latest_dashboard_audit_id": 1,
       "_load_snapshot": 2,
@@ -1470,10 +1604,14 @@
       "_require_aware": 3,
       "_response_sov": 6,
       "_select_events": 4,
+      "_slice_sources": 3,
+      "_source_identity": 2,
+      "_source_transport_model": 6,
       "_to_utc": 3,
       "_trend_rankings": 10,
       "_trend_source": 8,
       "_validate_engine_and_range": 6,
+      "_validate_identity_slice": 5,
       "_validate_trend_query": 2,
       "get_execution_evidence": 5,
       "get_metrics": 1,
@@ -1671,34 +1809,81 @@
   },
   "app/domain/audits/cost_projection.py": {
     "functions": {
-      "_cost_microusd": 3,
-      "_non_negative_int": 3,
-      "build_execution_cost_projection": 3
+      "_extract_usage": 5,
+      "_projected_total": 5,
+      "_projection_status": 4,
+      "_reported_cost_microusd": 2,
+      "_search_line_cost": 3,
+      "_token_line_cost": 3,
+      "_usage_int": 3,
+      "append_repricing": 4,
+      "build_execution_cost_projection": 2,
+      "normalize_optional_microusd": 8,
+      "normalize_optional_non_negative_int": 12
     },
     "loc": 58,
-    "max_cc": 3
+    "max_cc": 12
   },
   "app/domain/audits/planner.py": {
     "functions": {
+      "FundedAdmissionError.__init__": 1,
+      "PromptCountPolicyError.__init__": 1,
+      "_admission_denied": 1,
+      "_admit_funded_run": 7,
+      "_apply_funded_credential": 3,
+      "_complete_execution_cost_microusd": 5,
+      "_compose_system_instruction": 3,
+      "_create_audit_tasks": 7,
+      "_entitlement_provenance": 2,
+      "_evaluate_prompt_admission": 8,
+      "_expected_costs_by_engine": 2,
+      "_freeze_credential_provenance": 7,
+      "_freeze_plan": 2,
+      "_frozen_configuration": 3,
+      "_funded_expected_cost_microusd": 4,
       "_load_project": 2,
+      "_normalize_engines": 5,
       "_normalize_seed": 4,
       "_prompt_panel_snapshot": 2,
+      "_release_funded_on_cancel": 5,
+      "_reserve_task_funding": 4,
       "_resolve_benchmark_mode": 4,
+      "_resolve_funded_routes": 3,
+      "_resolve_measurement_policy": 3,
       "_resolve_prompts": 8,
-      "_resolve_routes": 12,
+      "_resolve_repetitions": 4,
+      "_resolve_routes": 9,
+      "_resolve_run_routes": 3,
+      "_resolve_task_credential": 2,
+      "_route_policy_snapshot": 1,
+      "_task_funding_block": 2,
+      "_task_route_snapshot": 2,
+      "_validate_prompt_lengths": 5,
+      "_validate_trigger": 2,
       "cancel_audit": 2,
-      "create_audit": 23,
+      "create_audit": 16,
       "get_audit": 2,
       "list_audits": 2,
       "list_tasks": 1
     },
     "loc": 597,
-    "max_cc": 23
+    "max_cc": 16
   },
   "app/domain/audits/schemas.py": {
-    "functions": {},
+    "functions": {
+      "AuditResponse._inject_aggregate_provenance": 5,
+      "AuditTaskResponse._inject_frozen_provenance": 4,
+      "_provenance_sort_key": 2,
+      "audit_event_response": 2,
+      "audit_frozen_retrieval_enabled": 3,
+      "build_model_provenance": 2,
+      "execution_frozen_provenance": 4,
+      "frozen_measurement_mode": 5,
+      "frozen_retrieval_enabled": 4,
+      "model_provenance_for": 2
+    },
     "loc": 119,
-    "max_cc": 0
+    "max_cc": 5
   },
   "app/domain/audits/state_events.py": {
     "functions": {
@@ -1732,46 +1917,145 @@
     "loc": 1,
     "max_cc": 0
   },
+  "app/domain/billing/activations.py": {
+    "functions": {
+      "_activation_key": 1,
+      "_claim_activation": 2,
+      "_issue_subscription_bundle": 2,
+      "_issue_topup_bundle": 3,
+      "_provider_reference": 2,
+      "_settle": 4,
+      "_settled_response": 2,
+      "_upsert_subscription": 6,
+      "_verify_identity": 8,
+      "_verify_payment": 7,
+      "_verify_subscription": 4,
+      "activate_pending": 5
+    },
+    "max_cc": 8
+  },
   "app/domain/billing/bootstrap.py": {
     "functions": {
       "ensure_user_billing": 4,
-      "user_billing_bootstrap_complete": 3
+      "user_billing_bootstrap_complete": 2
     },
     "loc": 105,
     "max_cc": 4
   },
+  "app/domain/billing/idempotency.py": {
+    "functions": {
+      "_apply_hosted_result": 2,
+      "_complete": 2,
+      "_insert_intent": 1,
+      "_locked_record": 1,
+      "_pending_response": 3,
+      "_recover_insert_race": 3,
+      "_replay": 3,
+      "_replay_insert_race_winner": 2,
+      "_run_new_intent": 4,
+      "_violated_constraint_name": 5,
+      "execute_intent": 3,
+      "provider_metadata": 1,
+      "reject_deferred_trial": 2,
+      "replay_intent": 4,
+      "request_fingerprint": 1,
+      "validate_idempotency_key": 5
+    },
+    "max_cc": 5
+  },
+  "app/domain/billing/reconciliation.py": {
+    "functions": {
+      "ReconciliationSummary.as_counts": 1,
+      "ReconciliationSummary.merge": 1,
+      "_authoritative_status": 6,
+      "_claim_batch": 3,
+      "_fetch_provider_record": 3,
+      "_mark_terminal": 2,
+      "_settle_claim": 9,
+      "reconcile_pending_activations": 6
+    },
+    "max_cc": 9
+  },
   "app/domain/billing/schemas.py": {
     "functions": {
-      "BillingProfileUpdate.normalize_country": 3
+      "SubscriptionCreateRequest._normalize_country": 1,
+      "UsageItemResponse._check_limit_state_nullability": 11,
+      "_normalized_country": 3
     },
     "loc": 93,
-    "max_cc": 3
+    "max_cc": 11
   },
   "app/domain/billing/service.py": {
     "functions": {
+      "_addon_response": 1,
+      "_apply_terminal_state": 4,
+      "_bounded_quantity": 2,
+      "_bump_account_entitlement_version": 1,
+      "_capability_value": 4,
+      "_consumable_balances": 3,
+      "_grant_input": 1,
+      "_grant_rows": 4,
+      "_issue_period_bundle": 6,
+      "_money": 2,
+      "_plan_capabilities": 7,
+      "_plan_response": 4,
+      "_provider_response": 2,
+      "_quote_digest": 1,
+      "_quote_secret": 2,
+      "_rate_window_reset": 2,
+      "_resolve_pack_intent": 4,
+      "_schedule_cancellation": 4,
+      "_subscription_summary": 2,
       "_timestamp": 2,
-      "apply_subscription_state": 15,
-      "billing_summary": 12,
-      "cancel_current_subscription": 3,
-      "catalog": 6,
-      "create_checkout": 12,
+      "_topup_response": 2,
+      "_trial_summary": 5,
+      "_usage_grant_rows": 3,
+      "_usage_item": 8,
+      "_write_terminal_revocations": 5,
+      "accept_subscription_event": 6,
+      "account_entitlement": 4,
+      "account_usage": 4,
+      "apply_subscription_state": 3,
+      "current_addon_subscription": 1,
+      "current_base_subscription": 1,
+      "live_base_subscription": 3,
       "owned_account": 2,
-      "update_country": 4
+      "pending_addon_activation": 1,
+      "pending_base_activation": 1,
+      "persist_billing_country": 1,
+      "public_catalog": 7,
+      "resolve_addon_intent": 3,
+      "resolve_base_intent": 10,
+      "resolve_quote": 6,
+      "resolve_topup_intent": 2,
+      "schedule_addon_cancellation": 2,
+      "schedule_base_cancellation": 2
     },
     "loc": 366,
-    "max_cc": 15
+    "max_cc": 10
   },
   "app/domain/billing/webhooks.py": {
     "functions": {
+      "_activate_from_event": 5,
       "_bounded_int": 4,
-      "_now": 1,
+      "_bounded_ref": 4,
+      "_entity": 4,
+      "_finish": 1,
+      "_notes": 2,
+      "_optional_str": 2,
+      "_parse_payload": 5,
+      "_pending_for_reference": 1,
+      "_process_subscription_event": 3,
       "_provider_bool": 2,
-      "_subscription_entity": 4,
-      "process_razorpay_webhook": 18,
+      "_record_event": 3,
+      "_safe_summary": 1,
+      "parse_payment_event": 9,
+      "parse_subscription_event": 5,
+      "process_razorpay_webhook": 10,
       "verify_razorpay_signature": 4
     },
     "loc": 150,
-    "max_cc": 18
+    "max_cc": 10
   },
   "app/domain/commerce/__init__.py": {
     "functions": {},
@@ -1936,14 +2220,100 @@
     "loc": 1,
     "max_cc": 0
   },
+  "app/domain/entitlements/cache.py": {
+    "functions": {
+      "_is_servable": 3,
+      "clear_cache": 1,
+      "get_cached": 3,
+      "invalidate_account": 4,
+      "invalidate_registry": 4,
+      "put_cached": 2
+    },
+    "max_cc": 4
+  },
+  "app/domain/entitlements/enforcement.py": {
+    "functions": {
+      "OccupancyError.__init__": 1,
+      "OccupancyLimitExceededError.__init__": 1,
+      "RateAdmissionDeniedError.__init__": 2,
+      "_capacity_lock_key": 1,
+      "_count_project_slots": 1,
+      "_count_prompt_slots": 1,
+      "_rate_decision": 1,
+      "enforce_occupancy": 7,
+      "evaluate_manual_run_admission": 9,
+      "lock_billing_account_capacity": 3,
+      "lock_workspace_capacity": 2
+    },
+    "max_cc": 9
+  },
+  "app/domain/entitlements/grants.py": {
+    "functions": {
+      "_bump_account_version": 2,
+      "_bundle_replay": 6,
+      "_validate_bundle_inputs": 12,
+      "_validate_spec": 8,
+      "issue_grant_bundle": 3,
+      "issue_override_bundle": 3,
+      "revoke_grants": 14
+    },
+    "max_cc": 14
+  },
+  "app/domain/entitlements/ledger.py": {
+    "functions": {
+      "FundedCreditsExhaustedError.__init__": 1,
+      "_active_grants_in_draw_order": 5,
+      "_draw_first_grant": 5,
+      "_grant_balances": 6,
+      "_ledger_sums": 3,
+      "_reservation_entries": 1,
+      "_reservation_state": 5,
+      "consumable_usage": 2,
+      "record_billable_attempt": 5,
+      "release_terminal_funded_task": 1,
+      "release_unused_reservation": 3,
+      "reserve_funded_task": 11
+    },
+    "max_cc": 11
+  },
+  "app/domain/entitlements/resolver.py": {
+    "functions": {
+      "_earliest_revocations": 4,
+      "_entitlement_valid_until": 10,
+      "_is_active": 5,
+      "_next_change_at": 8,
+      "_resolve_capability": 4,
+      "_validate_grant": 8,
+      "effective_grant_expiry": 4,
+      "fold_entitlement": 5,
+      "ordered_consumable_grants": 3,
+      "resolve_counter": 3,
+      "resolve_flag": 4,
+      "resolve_level": 3
+    },
+    "max_cc": 10
+  },
   "app/domain/entitlements/service.py": {
     "functions": {
-      "expire_account_entitlement_if_needed": 12,
-      "resolve_workspace_entitlement": 7,
-      "synchronize_sponsored_workspaces": 2
+      "_current_base_subscription_end": 1,
+      "_load_fold_inputs": 3,
+      "_unresolved": 1,
+      "refresh_site_health_runtime_for_account": 4,
+      "refresh_site_health_runtime_for_workspace": 3,
+      "resolve_account_entitlement": 4,
+      "resolve_workspace_entitlement": 2
     },
     "loc": 119,
-    "max_cc": 12
+    "max_cc": 4
+  },
+  "app/domain/entitlements/types.py": {
+    "functions": {
+      "ResolvedEntitlement.capability": 3,
+      "ResolvedEntitlement.capability_value": 2,
+      "ResolvedEntitlement.has_flag": 1,
+      "no_capability_entitlement": 1
+    },
+    "max_cc": 3
   },
   "app/domain/integrations/__init__.py": {
     "functions": {},
@@ -2023,6 +2393,49 @@
       "fresh_access_token": 7
     },
     "max_cc": 7
+  },
+  "app/domain/measurement/__init__.py": {
+    "functions": {},
+    "max_cc": 0
+  },
+  "app/domain/measurement/harness.py": {
+    "functions": {
+      "FixtureMeasurementRunner.__init__": 1,
+      "FixtureMeasurementRunner._fixture": 4,
+      "FixtureMeasurementRunner._pick": 1,
+      "FixtureMeasurementRunner.fixture_hashes": 1,
+      "FixtureMeasurementRunner.observe": 1,
+      "MeasurementRunner.fixture_hashes": 1,
+      "MeasurementRunner.observe": 1,
+      "_cell_key": 1,
+      "_cost_cell": 12,
+      "_cost_status": 4,
+      "_length_bucket": 4,
+      "_mention_count": 3,
+      "_observation_row": 1,
+      "_optional_int": 5,
+      "_quantile": 2,
+      "_reject_unsafe_prompt": 6,
+      "_required_int": 2,
+      "_run_notes": 2,
+      "_stable_index": 1,
+      "_sum_optional": 4,
+      "_sweep_reasoning_efforts": 4,
+      "_unsupported_observation": 1,
+      "_write_json": 1,
+      "build_observation": 12,
+      "expand_matrix": 8,
+      "load_measurement_prompts": 12,
+      "route_identity": 3,
+      "run_manifest": 3,
+      "run_matrix": 5,
+      "satisfies_live_gate": 4,
+      "sha256_file": 1,
+      "summarize_output_lengths": 4,
+      "summarize_route_costs": 6,
+      "write_measurement_outputs": 3
+    },
+    "max_cc": 12
   },
   "app/domain/opportunities/__init__.py": {
     "functions": {},
@@ -2288,8 +2701,10 @@
   "app/domain/prompts/generation.py": {
     "functions": {
       "_activate_first_n": 11,
+      "_apply_insert_capacity": 7,
       "_brand_context_hash": 1,
       "_cap_suggestions_to_count": 5,
+      "_drop_unbound_suggestions": 5,
       "_get_or_create_topic": 4,
       "_hydrate_inserted": 5,
       "_insert_prompts_returning": 5,
@@ -2341,9 +2756,15 @@
   },
   "app/domain/prompts/service.py": {
     "functions": {
+      "_enforce_activation_binding": 6,
+      "_enforce_import_binding": 5,
+      "_enforce_update_binding": 5,
       "_get_prompt": 2,
       "_get_prompt_set": 2,
+      "_import_texts": 3,
+      "_insert_imported_row": 2,
       "_project_in_workspace": 2,
+      "_require_insertable": 2,
       "_validate_topic_scope": 3,
       "bulk_set_status": 2,
       "create_prompt": 3,
@@ -2351,14 +2772,31 @@
       "delete_prompt": 1,
       "delete_prompt_set": 1,
       "get_prompt_set": 1,
-      "import_prompts": 5,
+      "import_prompts": 4,
       "list_prompt_sets": 2,
       "list_prompts": 1,
+      "prepare_prompt_inserts": 6,
       "update_prompt": 10,
       "update_prompt_set": 3
     },
     "loc": 407,
     "max_cc": 10
+  },
+  "app/domain/prompts/topical_binding.py": {
+    "functions": {
+      "TopicalBindingError.__init__": 1,
+      "_binding_tokens": 4,
+      "_clean": 2,
+      "_host_labels": 4,
+      "_normalize_text": 2,
+      "_phrase_of": 2,
+      "build_project_vocabulary": 7,
+      "build_vocabulary": 7,
+      "enforce_prompt_binding": 2,
+      "load_project_vocabulary": 1,
+      "validate_prompt_binding": 9
+    },
+    "max_cc": 9
   },
   "app/domain/prompts/topics.py": {
     "functions": {
@@ -2378,6 +2816,21 @@
     "loc": 1,
     "max_cc": 0
   },
+  "app/domain/providers/credentials.py": {
+    "functions": {
+      "ExecutionCredentialsUnavailableError.__init__": 1,
+      "_first_healthy": 6,
+      "_require_funded_proofs": 6,
+      "_route_candidates": 1,
+      "_select_byok_route": 1,
+      "_select_platform_route": 2,
+      "_unavailable": 1,
+      "connection_paused": 3,
+      "pause_connection_after_key_failure": 3,
+      "resolve_execution_credentials": 5
+    },
+    "max_cc": 6
+  },
   "app/domain/providers/schemas.py": {
     "functions": {
       "_validate_base_url": 7
@@ -2389,11 +2842,15 @@
     "functions": {
       "_build_routes": 6,
       "_connection_query": 1,
+      "_latest_probes": 3,
+      "_paused_state_response": 4,
       "_require_approved_endpoint": 2,
       "connection_to_response": 2,
       "create_connection": 1,
       "delete_connection": 1,
+      "derive_connection_state": 13,
       "get_connection": 2,
+      "get_connection_states": 6,
       "list_connections": 1,
       "run_connection_test": 7,
       "update_connection": 13
@@ -2430,16 +2887,15 @@
   },
   "app/domain/site_health/entitlements.py": {
     "functions": {
-      "_apply_profile": 1,
-      "_load_entitlement": 1,
-      "_sync_profile_drift": 6,
-      "entitlement_allows_monitored_analysis": 3,
-      "lock_entitlement": 1,
-      "resolve_entitlement": 7,
-      "set_entitlement": 2
+      "_load_runtime": 1,
+      "apply_runtime_policy": 1,
+      "lock_runtime": 1,
+      "resolve_runtime": 5,
+      "runtime_allows_monitored_analysis": 3,
+      "runtime_policy_is_current": 5
     },
     "loc": 227,
-    "max_cc": 7
+    "max_cc": 5
   },
   "app/domain/site_health/failure.py": {
     "functions": {
@@ -2476,7 +2932,7 @@
       "CrawlPlanError.__init__": 2,
       "_frozen_configuration": 1,
       "_has_active_crawl": 2,
-      "_is_sample_mode": 2,
+      "_is_sample_mode": 1,
       "_load_project": 3,
       "_normalize_globs": 7,
       "_normalize_seed": 4,
@@ -2566,7 +3022,7 @@
   },
   "app/domain/site_health/service/presentation.py": {
     "functions": {
-      "_crawl_count_disclosure": 4,
+      "_crawl_count_disclosure": 2,
       "_delivery_facts": 8,
       "_evaluation_row": 2,
       "_iso": 2,
@@ -2593,9 +3049,10 @@
       "_monitored_site_url_ids": 2,
       "_root_errors_for": 2,
       "_scan_window": 2,
+      "_site_health_entitlement_view": 8,
       "_site_url_page_stmt": 7,
       "get_crawl_summary": 1,
-      "get_entitlement_view": 2,
+      "get_entitlement_view": 1,
       "get_inventory": 29,
       "get_monitored_set": 6,
       "get_page_detail": 19,
@@ -2887,6 +3344,7 @@
       "PostgresTaskQueue.fail": 1,
       "PostgresTaskQueue.heartbeat": 4,
       "PostgresTaskQueue.mark_running": 4,
+      "PostgresTaskQueue.park_capacity_wait": 3,
       "PostgresTaskQueue.release_expired": 1,
       "PostgresTaskQueue.release_expired_detailed": 9,
       "PostgresTaskQueue.retry": 3,
@@ -2896,6 +3354,31 @@
     "loc": 435,
     "max_cc": 9
   },
+  "app/orchestration/provider_capacity.py": {
+    "functions": {
+      "CapacityOutcome.__post_init__": 2,
+      "CapacityRequest.__post_init__": 7,
+      "_active_units": 2,
+      "_bucket_specs": 2,
+      "_concurrency_ceiling": 3,
+      "_configured_refill": 2,
+      "_consume": 6,
+      "_emit_capacity_event": 4,
+      "_first_refusal": 7,
+      "_identity_filter": 3,
+      "_lock_buckets": 6,
+      "_lock_existing_buckets": 3,
+      "_pacing_refusal": 6,
+      "_parked": 1,
+      "_refill_tokens": 2,
+      "_safe_cooldown_seconds": 2,
+      "_sync_bucket_policy": 5,
+      "_utcnow": 1,
+      "acquire_provider_capacity": 4,
+      "release_provider_capacity": 11
+    },
+    "max_cc": 11
+  },
   "app/orchestration/task_queue.py": {
     "functions": {
       "TaskQueue.cancel": 1,
@@ -2903,6 +3386,7 @@
       "TaskQueue.fail": 1,
       "TaskQueue.heartbeat": 1,
       "TaskQueue.mark_running": 1,
+      "TaskQueue.park_capacity_wait": 1,
       "TaskQueue.release_expired": 1,
       "TaskQueue.retry": 1,
       "TaskQueue.succeed": 1
@@ -2938,38 +3422,63 @@
   "app/workers/audit_worker.py": {
     "functions": {
       "AuditWorker.__init__": 3,
+      "AuditWorker._apply_funded_ledger": 4,
+      "AuditWorker._build_adapter_or_fail": 2,
       "AuditWorker._deadline_passed": 3,
       "AuditWorker._ensure_running": 2,
+      "AuditWorker._execute_one_attempt": 2,
       "AuditWorker._execute_task": 8,
+      "AuditWorker._execute_with_capacity": 2,
       "AuditWorker._fail_terminal": 4,
       "AuditWorker._finalize_analysis": 6,
       "AuditWorker._finalize_audit": 12,
       "AuditWorker._handle_failure": 11,
+      "AuditWorker._has_soon_claimable_tasks": 2,
       "AuditWorker._heartbeat_loop": 4,
+      "AuditWorker._load_execution_context": 12,
       "AuditWorker._lock_owned_running_task": 7,
+      "AuditWorker._park_capacity_wait": 6,
+      "AuditWorker._pause_frozen_credential_on_auth_failure": 3,
       "AuditWorker._persist_success": 6,
       "AuditWorker._recompute_opportunities": 3,
       "AuditWorker._record_attempts": 5,
+      "AuditWorker._record_cost_projection": 2,
       "AuditWorker._record_crash": 1,
-      "AuditWorker._run_provider_call": 17,
+      "AuditWorker._release_crashed_funded_task": 2,
+      "AuditWorker._release_swept_funded_tasks": 2,
+      "AuditWorker._release_terminalized_funded_task": 7,
+      "AuditWorker._run_provider_call": 6,
       "AuditWorker._sweep_expired_leases": 4,
+      "AuditWorker._sweep_queue": 1,
+      "AuditWorker._wait_out_idle_pass": 4,
       "AuditWorker.run_forever": 3,
       "AuditWorker.run_once": 5,
       "AuditWorker.run_pipelined": 10,
       "AuditWorker.run_until_idle": 3,
       "CallAttempt.succeeded": 1,
+      "_apply_response_to_task": 1,
+      "_build_artifact": 1,
+      "_build_call_request": 1,
+      "_build_request": 1,
       "_build_request_snapshot": 1,
-      "_call_with_retries": 8,
+      "_capacity_outcome": 4,
+      "_capacity_request": 2,
+      "_drain_horizon_seconds": 1,
+      "_frozen_connection_id_from": 3,
+      "_frozen_funding_from": 5,
+      "_raw_finish_reason": 2,
       "_serialize_citations": 5,
       "_serialize_search_events": 2,
+      "_terminal_rejection": 5,
       "_utcnow": 1,
-      "_warn_if_pool_undersized": 2,
       "_warn_if_provider_pacing_unbounded": 3,
+      "assert_worker_pool_capacity": 2,
+      "call_provider_once": 3,
       "main": 1,
       "pace_provider_request": 5
     },
     "loc": 1161,
-    "max_cc": 17
+    "max_cc": 12
   },
   "app/workers/content_worker.py": {
     "functions": {

@@ -36,18 +36,14 @@ import {
   CONTRACT_CODEGEN_TIMEOUT_MS,
   CONTRACT_LIVE_FETCH_TIMEOUT_MS,
 } from '@/lib/config/operational';
-import { connectionTestResultSchema } from './providers';
 import * as schemas from './schemas';
 
 /**
- * The lookup behind `declaredKeysFor`: every schema in `schemas.ts` plus the
- * one response schema owned by a domain module (`providers.ts` keeps the
- * connection-test result local because only that module consumes it).
+ * The lookup behind `declaredKeysFor`: every response schema, all of which now
+ * live in `schemas.ts` — the connection-test result moved there with the v8
+ * provider contracts, so there is no longer a domain-owned exception.
  */
-const CONTRACT_SCHEMAS: Record<string, unknown> = {
-  ...schemas,
-  connectionTestResultSchema,
-};
+const CONTRACT_SCHEMAS: Record<string, unknown> = { ...schemas };
 
 // ---------------------------------------------------------------------------
 // zod schema → OpenAPI component mapping
@@ -111,12 +107,28 @@ export const CONTRACT_SCHEMA_MAP = {
   integrationTestResultSchema: 'IntegrationTestResponse',
   integrationPropertySchema: 'IntegrationPropertyResponse',
   integrationPropertyMappingSchema: 'IntegrationPropertyMappingResponse',
-  // Billing
+  // Billing (v8 commercial surface)
   billingCatalogSchema: 'BillingCatalogResponse',
-  billingSummarySchema: 'BillingSummaryResponse',
-  billingCheckoutSchema: 'CheckoutResponse',
-  billingCancelSchema: 'CancelResponse',
-  workspaceEntitlementSchema: 'WorkspaceEntitlementResponse',
+  billingEntitlementSchema: 'BillingEntitlementResponse',
+  billingUsageSchema: 'BillingUsageResponse',
+  activationSchema: 'ActivationResponse',
+  subscriptionChangeSchema: 'SubscriptionChangeResponse',
+  resolvedQuoteSchema: 'ResolvedQuoteResponse',
+  moneySchema: 'MoneyResponse',
+  catalogPlanSchema: 'CatalogPlanResponse',
+  catalogAddonSchema: 'CatalogAddonResponse',
+  catalogTopupSchema: 'CatalogTopupResponse',
+  catalogProviderSchema: 'CatalogProviderResponse',
+  capabilityValueSchema: 'CapabilityValueResponse',
+  grantProvenanceSchema: 'GrantProvenanceResponse',
+  resolvedCapabilitySchema: 'ResolvedCapabilityResponse',
+  subscriptionSummarySchema: 'SubscriptionSummaryResponse',
+  usageItemSchema: 'UsageItemResponse',
+  usageGrantBalanceSchema: 'UsageGrantBalanceResponse',
+  // Authenticated provider projection (distinct from the public catalog)
+  providerConnectionStatesSchema: 'ProviderConnectionStatesResponse',
+  providerConnectionStateEntrySchema: 'ProviderConnectionStateResponse',
+  providerProbeSchema: 'ProviderProbeResponse',
   // Products / commerce
   productSchema: 'ProductResponse',
   competitorProductSchema: 'CompetitorProductResponse',
@@ -135,7 +147,7 @@ export const CONTRACT_SCHEMA_MAP = {
   siteCrawlSchema: 'CrawlResponse',
   siteCrawlListPageSchema: 'CrawlListPage',
   siteHealthDashboardSchema: 'app__domain__site_health__api_schemas__DashboardResponse',
-  siteHealthEntitlementSchema: 'EntitlementResponse',
+  siteHealthEntitlementSchema: 'SiteHealthEntitlementResponse',
   monitoredUrlsResponseSchema: 'MonitoredUrlsResponse',
   inventoryPageSchema: 'InventoryPage',
   pagesPageSchema: 'PagesPage',
