@@ -545,26 +545,7 @@ def _validate_prompt_lengths(prompts: list[Prompt]) -> None:
         )
 
 
-def _evaluate_prompt_admission(
-    *,
-    project: Project,
-    prompts: list[Prompt],
-    trigger: str,
-    credential_mode: str,
-) -> None:
-    """Precomputed prompt admission for one run (topical binding + count policy).
-
-    Called ONCE by ``create_audit``, which only applies its decision and
-    gains no validation loop/branch of its own. Every selected active prompt
-    must bind to the project's identity/category vocabulary — stale or
-    bypassed content (seeded before binding, or written by a path that
-    skipped it) can never run; an empty vocabulary fails closed. On top of
-    that, the FUNDED and TRIAL paths fail closed with
-    ``prompt_count_policy_unconfigured`` while ``audit_prompt_count`` is
-    unset, and enforce it as the max selected active prompts once configured.
-    BYOK manual runs are never count-gated (their existing product limits
-    govern) but ARE binding-gated like every path.
-    """
+def _validate_prompt_bindings(project: Project, prompts: list[Prompt]) -> None:
     vocabulary = build_project_vocabulary(project)
     for prompt in prompts:
         # ``generated`` is trusted persisted provenance, not a client claim:
@@ -582,6 +563,11 @@ def _evaluate_prompt_admission(
                 code=result.code,
                 details={"prompt_id": str(prompt.id)},
             )
+
+
+def _enforce_prompt_count_policy(
+    prompts: list[Prompt], *, trigger: str, credential_mode: str
+) -> None:
     if credential_mode != CREDENTIAL_MODE_FUNDED and trigger != AUDIT_TRIGGER_TRIAL:
         return
     limit = audit_settings.audit_prompt_count
@@ -599,6 +585,20 @@ def _evaluate_prompt_admission(
             code=CODE_PROMPT_COUNT_EXCEEDED,
             details={"selected": len(prompts), "limit": limit},
         )
+
+
+def _evaluate_prompt_admission(
+    *,
+    project: Project,
+    prompts: list[Prompt],
+    trigger: str,
+    credential_mode: str,
+) -> None:
+    """Precompute topical-binding and selected-prompt count admission."""
+    _validate_prompt_bindings(project, prompts)
+    _enforce_prompt_count_policy(
+        prompts, trigger=trigger, credential_mode=credential_mode
+    )
 
 
 def _route_policy_snapshot(logical_engine: str, transport_provider: str) -> dict:

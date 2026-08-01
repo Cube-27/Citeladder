@@ -37,6 +37,17 @@ export function TrendChart({
   const clamp = (value: number) => Math.max(0, Math.min(effectiveDomainMax, value));
   const stepX = data.length > 1 ? innerWidth / (data.length - 1) : 0;
 
+  // Labels are NOT identities: a series can hold several points that format to
+  // the same label (two runs on the same day both render "1 Aug"), which made
+  // React collapse them onto one key. Disambiguate repeats with an occurrence
+  // suffix so every point keeps a stable identity across updates.
+  const labelOccurrences = new Map<string, number>();
+  const pointKeys = data.map((entry) => {
+    const seen = labelOccurrences.get(entry.label) ?? 0;
+    labelOccurrences.set(entry.label, seen + 1);
+    return seen === 0 ? entry.label : `${entry.label}#${seen}`;
+  });
+
   const points = data.map((entry, index) => ({
     x: data.length > 1 ? padding + index * stepX : width / 2,
     y:
@@ -91,7 +102,7 @@ export function TrendChart({
       ))}
       {points.map((point, index) =>
         data[index].versionChange ? (
-          <g key={`marker-${data[index].label}`} data-version-marker="">
+          <g key={`marker-${pointKeys[index]}`} data-version-marker="">
             <line
               x1={point.x}
               y1={padding}
@@ -110,7 +121,13 @@ export function TrendChart({
       )}
       {points.map((point, index) =>
         point.y === null ? null : (
-          <circle key={data[index].label} cx={point.x} cy={point.y} r={2.5} className="fill-accent">
+          <circle
+            key={`point-${pointKeys[index]}`}
+            cx={point.x}
+            cy={point.y}
+            r={2.5}
+            className="fill-accent"
+          >
             <title>{`${data[index].label}: ${data[index].value}`}</title>
           </circle>
         ),

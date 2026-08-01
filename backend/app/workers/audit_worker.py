@@ -80,6 +80,7 @@ from app.core.config.audits import (
     EVENT_TASK_RETRY,
     EVENT_TASK_SUCCEEDED,
     TASK_CLAIMABLE_STATUSES,
+    TASK_STATUS_LEASED,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
@@ -120,6 +121,7 @@ from app.domain.opportunities.service import recompute as recompute_opportunitie
 from app.domain.providers.credentials import pause_connection_after_key_failure
 from app.models.audit import (
     Audit,
+    AuditEvent,
     AuditTask,
     ProviderAttempt,
     RawResponseArtifact,
@@ -136,6 +138,12 @@ from app.orchestration.provider_capacity import (
 from app.workers.drain import DrainableWorkerMixin
 
 logger = logging.getLogger("app.workers.audit_worker")
+
+# Statuses a task may hold while the PRE-CALL writers act on it. The row is
+# still `leased` (not `running`) until provider capacity is held, so the
+# terminal-rejection / adapter-failure / capacity-park paths must accept it;
+# `running` stays accepted because a retry re-enters those paths.
+TASK_PRE_CALL_STATUSES = frozenset({TASK_STATUS_LEASED, TASK_STATUS_RUNNING})
 
 
 def _utcnow() -> datetime:
@@ -815,9 +823,10 @@ class AuditWorker(DrainableWorkerMixin):
                         return
                     await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
                     continue
+                parked = False
                 for task in claimed:
                     try:
-                        await self._execute_task(task)
+                        parked = await self._execute_task(task) or parked
                     except BaseException as exc:  # noqa: BLE001 - see docstring
                         if isinstance(exc, asyncio.CancelledError):
                             raise
@@ -827,6 +836,16 @@ class AuditWorker(DrainableWorkerMixin):
                             extra={"task_id": str(task.id)},
                         )
                     completed += 1
+                if parked and not drain:
+                    # The pool this slot drew on is FULL. Claiming again
+                    # immediately just parks the next pending task too — the
+                    # slot spins, each turn re-parking a different row, and a
+                    # run with more tasks than transport capacity burns claim
+                    # cycles for its whole duration. Wait out the same horizon
+                    # the refusal parked the task for, then try again.
+                    await asyncio.sleep(
+                        max(0.05, audit_settings.capacity_concurrency_retry_seconds)
+                    )
 
         await asyncio.gather(
             *(slot() for _ in range(concurrency)), return_exceptions=True
@@ -915,28 +934,33 @@ class AuditWorker(DrainableWorkerMixin):
 
     # --- per-task execution ------------------------------------------------
 
-    async def _execute_task(self, claimed: AuditTask) -> None:
+    async def _execute_task(self, claimed: AuditTask) -> bool:
         """Run one claimed task end to end inside its own session.
 
         Honors cooperative cancel + the per-run wall-clock deadline at the
         boundary (before touching the provider). Persists the immutable artifact
         + attempt and finalizes the task through the queue so the lease is always
         released. Never raises — a crash is caught and recorded as a failure.
+
+        Returns True when the task was PARKED on a capacity refusal rather
+        than executed, so the caller's slot can wait out the pool instead of
+        immediately claiming another task that would park for the same reason.
         """
         task_id = claimed.id
         audit_id = claimed.audit_id
+        parked = False
         try:
             async with self._session_factory() as session:
                 task = await session.get(AuditTask, task_id)
                 if task is None:
-                    return
+                    return False
                 # Row-lock the audit: concurrent tasks of the same audit must
                 # serialize the QUEUED -> RUNNING transition (and the cancel /
                 # deadline checks) or both would record it. Held only across
                 # in-memory checks — no network I/O before the commit below.
                 audit = await session.get(Audit, audit_id, with_for_update=True)
                 if audit is None:
-                    return
+                    return False
 
                 # Cooperative cancel: stop at this boundary if the audit was
                 # killed since the claim, rather than hitting the provider.
@@ -949,7 +973,7 @@ class AuditWorker(DrainableWorkerMixin):
                     )
                     await session.commit()
                     await self._queue.cancel(task_id=task_id)
-                    return
+                    return False
 
                 # Per-run wall-clock deadline: once the audit has been running
                 # longer than max_run_seconds, terminalize remaining tasks
@@ -975,23 +999,25 @@ class AuditWorker(DrainableWorkerMixin):
                             f"audit exceeded max_run_seconds ({deadline_seconds}s)"
                         ),
                     )
-                    return
+                    return False
 
                 # First task moves the audit QUEUED -> RUNNING.
                 self._ensure_running(session, audit)
                 await session.commit()
 
-            # Mark the queue row running (still owned) before the network call.
-            if not await self._queue.mark_running(task_id=task_id, owner=self.owner):
-                # Lease lost (sweeper reclaimed it); another worker will retry.
-                return
-
-            await self._run_provider_call(task_id, audit_id)
+            # The row stays `leased` here and is marked `running` only once
+            # capacity is actually held (see _run_provider_call): a task that
+            # is about to park waiting for a slot must never be published as
+            # running, or the run screen shows more rows running than the
+            # transport ceiling allows and each one visibly bounces back to
+            # `Capacity Wait`.
+            parked = await self._run_provider_call(task_id, audit_id)
         except Exception as exc:  # defensive: never let one task kill the loop
             logger.exception("audit task crashed", extra={"task_id": str(task_id)})
             await self._record_crash(task_id, exc)
         finally:
             await self._finalize_audit(audit_id)
+        return parked
 
     def _deadline_passed(self, audit: Audit, deadline_seconds: float) -> bool:
         started = audit.started_at
@@ -1018,16 +1044,19 @@ class AuditWorker(DrainableWorkerMixin):
                 message="audit running",
             )
 
-    async def _run_provider_call(self, task_id: uuid.UUID, audit_id: uuid.UUID) -> None:
+    async def _run_provider_call(self, task_id: uuid.UUID, audit_id: uuid.UUID) -> bool:
         """Orchestrate ONE queue attempt: load -> validate -> capacity -> call.
 
         A thin shell over the helpers below — each owns one concern (frozen
         context, terminal validation, adapter build, capacity, the single
         call, outcome persistence) so no function carries the old CC-17 lump.
+
+        Returns True when the attempt PARKED on a capacity refusal (no
+        provider call was made and the task is back in the claimable set).
         """
         context = await self._load_execution_context(task_id, audit_id)
         if context is None:
-            return
+            return False
         rejection = _terminal_rejection(context)
         if rejection is not None:
             await self._fail_terminal(
@@ -1039,11 +1068,11 @@ class AuditWorker(DrainableWorkerMixin):
                 error_code=rejection[0],
                 error_detail=rejection[1],
             )
-            return
+            return False
         request, request_snapshot = _build_call_request(context)
         adapter = await self._build_adapter_or_fail(context, request_snapshot)
         if adapter is None:
-            return
+            return False
         # Capacity I/O happens only AFTER the claim committed (invariant 8).
         capacity = _capacity_request(context)
         decision = await acquire_provider_capacity(
@@ -1056,7 +1085,17 @@ class AuditWorker(DrainableWorkerMixin):
             await self._park_capacity_wait(
                 task_id=task_id, audit_id=audit_id, decision=decision
             )
-            return
+            return True
+        # Capacity is held: NOW the row is genuinely running. Losing the lease
+        # here means the sweeper handed the task to another worker, so this
+        # attempt must hand the slot straight back rather than call out.
+        if not await self._queue.mark_running(task_id=task_id, owner=self.owner):
+            await release_provider_capacity(
+                self._session_factory,
+                request=capacity,
+                outcome=CapacityOutcome(kind=CAPACITY_OUTCOME_FAILED),
+            )
+            return False
         attempt = await self._execute_with_capacity(context, capacity, adapter, request)
         if attempt.succeeded:
             await self._persist_success(
@@ -1078,6 +1117,7 @@ class AuditWorker(DrainableWorkerMixin):
                 transport_model=context.transport_model,
                 request_snapshot=request_snapshot,
             )
+        return False
 
     async def _load_execution_context(
         self, task_id: uuid.UUID, audit_id: uuid.UUID
@@ -1221,37 +1261,93 @@ class AuditWorker(DrainableWorkerMixin):
         Records ``EVENT_TASK_CAPACITY_WAIT`` (opaque ids + retry timing only —
         invariant 6) under the owner/liveness lock, then hands the row to the
         queue, which re-parks it claimable once ``available_at`` passes.
+
+        The event is recorded AT MOST ONCE per (task, attempt, refusal code).
+        A task that cannot get capacity re-parks every
+        ``capacity_concurrency_retry_seconds`` for as long as the pool is
+        full, and recording each one turned the event log into park churn — a
+        measured 10-prompt run logged 132 ``task.capacity_wait`` events
+        against 10 real task events. Since every event is an SSE frame that
+        invalidates the run screen's queries, that churn cost a refetch storm
+        to report a state that had not changed. One event per distinct wait
+        carries the same information.
         """
         async with self._session_factory() as session:
             locked = await self._lock_owned_running_task(
-                session, task_id=task_id, audit_id=audit_id
+                session,
+                task_id=task_id,
+                audit_id=audit_id,
+                allowed_statuses=TASK_PRE_CALL_STATUSES,
             )
             if locked is None:
                 await session.rollback()
                 return
-            record_event(
+            task, _audit = locked
+            attempt_number = task.attempt_count + 1
+            if await self._capacity_wait_already_recorded(
                 session,
                 audit_id=audit_id,
-                event_type=EVENT_TASK_CAPACITY_WAIT,
-                message="task waiting on provider capacity",
-                payload={
-                    "task_id": str(task_id),
-                    "code": decision.code,
-                    "pool_kind": decision.pool_kind,
-                    "available_at": (
-                        decision.available_at.isoformat()
-                        if decision.available_at is not None
-                        else ""
-                    ),
-                    "retry_after_seconds": decision.retry_after_seconds or 0.0,
-                },
-            )
-            await session.commit()
+                task_id=task_id,
+                attempt_number=attempt_number,
+                code=decision.code,
+            ):
+                await session.rollback()
+            else:
+                record_event(
+                    session,
+                    audit_id=audit_id,
+                    event_type=EVENT_TASK_CAPACITY_WAIT,
+                    message="task waiting on provider capacity",
+                    payload={
+                        "task_id": str(task_id),
+                        "attempt": attempt_number,
+                        "code": decision.code,
+                        "pool_kind": decision.pool_kind,
+                        "available_at": (
+                            decision.available_at.isoformat()
+                            if decision.available_at is not None
+                            else ""
+                        ),
+                        "retry_after_seconds": decision.retry_after_seconds or 0.0,
+                    },
+                )
+                await session.commit()
         await self._queue.park_capacity_wait(
             task_id=task_id,
             owner=self.owner,
             available_at=decision.available_at or _utcnow(),
         )
+
+    async def _capacity_wait_already_recorded(
+        self,
+        session: AsyncSession,
+        *,
+        audit_id: uuid.UUID,
+        task_id: uuid.UUID,
+        attempt_number: int,
+        code: str,
+    ) -> bool:
+        """True when THIS wait was already recorded for this task attempt.
+
+        Keyed on (task, attempt, refusal code) so a task that parks, waits
+        out a full pool, and then parks again for a DIFFERENT reason (a
+        provider 429 rather than local concurrency) still records the new
+        condition — only the identical repeat is suppressed. Runs under the
+        caller's row lock on the task, so two workers cannot both decide the
+        event is missing.
+        """
+        existing = await session.scalar(
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(AuditEvent.audit_id == audit_id)
+            .where(AuditEvent.event_type == EVENT_TASK_CAPACITY_WAIT)
+            .where(
+                AuditEvent.payload.contains(
+                    {"task_id": str(task_id), "attempt": attempt_number, "code": code}
+                )
+            )
+        )
+        return bool(existing)
 
     async def _apply_funded_ledger(
         self,
@@ -1317,6 +1413,7 @@ class AuditWorker(DrainableWorkerMixin):
         *,
         task_id: uuid.UUID,
         audit_id: uuid.UUID,
+        allowed_statuses: frozenset[str] = frozenset({TASK_STATUS_RUNNING}),
     ) -> tuple[AuditTask, Audit] | None:
         """Lock the task FOR UPDATE and verify we still own it before writing.
 
@@ -1324,13 +1421,22 @@ class AuditWorker(DrainableWorkerMixin):
         provider call finishing and this write, the lease could have expired
         (sweeper -> another worker claimed it) or the audit could have been
         cancelled. Returns ``(task, audit)`` only when the task is still leased
-        to THIS worker, still ``running``, and the audit is not cancelled or
-        terminal; otherwise ``None`` and the stale provider result is discarded.
+        to THIS worker, in one of ``allowed_statuses``, and the audit is not
+        cancelled or terminal; otherwise ``None`` and the stale provider
+        result is discarded.
+
+        ``allowed_statuses`` defaults to ``running`` — the post-call evidence
+        writers. The pre-call writers (terminal rejection, adapter build
+        failure, capacity park) pass ``TASK_PRE_CALL_STATUSES`` instead,
+        because the row is deliberately still ``leased`` until capacity is
+        held. Each call site declares what it expects rather than the gate
+        blanket-accepting both, so a post-call write can still never land on
+        a task that never started.
         """
         task = await session.get(AuditTask, task_id, with_for_update=True)
         if task is None:
             return None
-        if task.lease_owner != self.owner or task.status != TASK_STATUS_RUNNING:
+        if task.lease_owner != self.owner or task.status not in allowed_statuses:
             return None
         audit = await session.get(Audit, audit_id)
         if (
@@ -1668,8 +1774,14 @@ class AuditWorker(DrainableWorkerMixin):
             # Owner + liveness check under a row lock before writing evidence
             # (invariant 3/8): even a terminal fail must not touch a task this
             # worker no longer owns or an audit that was cancelled meanwhile.
+            # Pre-call path: both rejection sites (retired transport / missing
+            # connection, and an adapter build failure) run before capacity is
+            # held, so the row is still `leased`.
             locked = await self._lock_owned_running_task(
-                session, task_id=task_id, audit_id=audit_id
+                session,
+                task_id=task_id,
+                audit_id=audit_id,
+                allowed_statuses=TASK_PRE_CALL_STATUSES,
             )
             if locked is None:
                 await session.rollback()
@@ -1742,15 +1854,59 @@ class AuditWorker(DrainableWorkerMixin):
             return
         await self._release_terminalized_funded_task(task_id, trigger="crash")
 
-    async def _finalize_audit(self, audit_id: uuid.UUID) -> None:
-        """Move a finished-execution audit off ``running`` at the boundary.
+    async def _progress_counts(
+        self, session: AsyncSession, audit_id: uuid.UUID
+    ) -> tuple[int, int, int]:
+        """``(succeeded, failed, remaining)`` over an audit's MEASUREMENT rows.
 
-        Runs after each task terminalizes. When no non-terminal task remains,
-        counts outcomes and transitions RUNNING -> ANALYZING (>=1 success) or
-        RUNNING -> FAILED (0 successes). On ANALYZING it hands straight to the
-        analysis stage (aggregate + terminal). A cancelled audit keeps its
-        status. Guarded with ``FOR UPDATE`` so concurrent workers don't
-        double-finalize.
+        Progress/completion denominators are MEASUREMENT-ONLY (§7.1):
+        shopping-surface probe rows never move audit counts.
+
+        ``failed`` is terminal-but-not-succeeded rather than ``total -
+        succeeded``: mid-run the difference matters, because a still-queued or
+        in-flight task is not a failure and must never be published as one.
+        The two definitions converge once ``remaining`` is 0, so the counts
+        this publishes DURING a run land on exactly the terminal figures.
+        """
+        measurement = (
+            select(func.count())
+            .select_from(AuditTask)
+            .where(AuditTask.audit_id == audit_id)
+            .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
+        )
+        total = int(await session.scalar(measurement) or 0)
+        succeeded = int(
+            await session.scalar(
+                measurement.where(AuditTask.status == TASK_STATUS_SUCCEEDED)
+            )
+            or 0
+        )
+        terminal = int(
+            await session.scalar(
+                measurement.where(AuditTask.status.in_(list(TASK_TERMINAL_STATUSES)))
+            )
+            or 0
+        )
+        return succeeded, terminal - succeeded, total - terminal
+
+    async def _finalize_audit(self, audit_id: uuid.UUID) -> None:
+        """Publish live progress, and terminalize once execution is done.
+
+        Runs after EVERY task boundary, and does two things:
+
+        1. Publishes the audit's running ``completed_count`` /
+           ``failed_count``. This happens on every pass, not just the last
+           one, because those counters ARE the run screen's progress
+           indicator: gating them on "no task remains" pinned them at 0 for
+           the whole run and then flipped them to the final figures, which
+           reads as a hung run rather than a working one.
+        2. When no non-terminal task remains, transitions RUNNING ->
+           ANALYZING (>=1 success) or RUNNING -> FAILED (0 successes). On
+           ANALYZING it hands straight to the analysis stage (aggregate +
+           terminal).
+
+        A cancelled audit keeps its status. Guarded with ``FOR UPDATE`` so
+        concurrent workers don't double-finalize or interleave counts.
         """
         reached_analyzing = False
         async with self._session_factory() as session:
@@ -1759,35 +1915,21 @@ class AuditWorker(DrainableWorkerMixin):
                 if audit is not None:
                     await session.rollback()
                 return
-            # Progress/completion denominators are MEASUREMENT-ONLY (§7.1):
-            # shopping-surface probe rows never move audit counts.
-            remaining = await session.scalar(
-                select(func.count())
-                .select_from(AuditTask)
-                .where(AuditTask.audit_id == audit_id)
-                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
-                .where(AuditTask.status.not_in(list(TASK_TERMINAL_STATUSES)))
+            succeeded, failed, remaining = await self._progress_counts(
+                session, audit_id
             )
-            if remaining and remaining > 0:
-                await session.rollback()
+            # Only dirty the row when a count actually moved: this method runs
+            # at every task boundary INCLUDING capacity parks, and an
+            # unconditional write would churn `updated_at` on passes that
+            # observed no progress at all.
+            if audit.completed_count != succeeded or audit.failed_count != failed:
+                audit.completed_count = succeeded
+                audit.failed_count = failed
+            if remaining > 0:
+                # Execution still in flight: the counts above are this pass's
+                # only contribution; the transition waits for the last task.
+                await session.commit()
                 return
-            succeeded = await session.scalar(
-                select(func.count())
-                .select_from(AuditTask)
-                .where(AuditTask.audit_id == audit_id)
-                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
-                .where(AuditTask.status == TASK_STATUS_SUCCEEDED)
-            )
-            total = await session.scalar(
-                select(func.count())
-                .select_from(AuditTask)
-                .where(AuditTask.audit_id == audit_id)
-                .where(AuditTask.shopping_surface == SHOPPING_SURFACE_MEASUREMENT)
-            )
-            succeeded = int(succeeded or 0)
-            total = int(total or 0)
-            audit.completed_count = succeeded
-            audit.failed_count = total - succeeded
             if audit.status == AUDIT_STATUS_RUNNING:
                 if succeeded == 0:
                     audit.completed_at = _utcnow()
@@ -1805,7 +1947,7 @@ class AuditWorker(DrainableWorkerMixin):
                         audit=audit,
                         target=AUDIT_STATUS_ANALYZING,
                         message="execution complete; ready for analysis",
-                        payload={"completed": succeeded, "failed": total - succeeded},
+                        payload={"completed": succeeded, "failed": failed},
                     )
                     reached_analyzing = True
             await session.commit()

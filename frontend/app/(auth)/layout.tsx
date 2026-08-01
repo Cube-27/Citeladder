@@ -28,7 +28,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
       {/* Subtle light ambient background lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="bg-mkt-frost/50 absolute -top-40 -left-40 size-[500px] rounded-full blur-[120px]" />
-        <div className="bg-mkt-sky/50 absolute -right-40 -bottom-40 size-[500px] rounded-full blur-[120px]" />
+        <div className="bg-mkt-frost/50 absolute -right-40 -bottom-40 size-[500px] rounded-full blur-[120px]" />
         <div className="bg-mkt-frost/30 absolute top-1/2 left-1/2 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]" />
       </div>
 

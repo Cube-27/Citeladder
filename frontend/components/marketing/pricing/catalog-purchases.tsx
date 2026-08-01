@@ -25,7 +25,7 @@ function reasonLabel(reason: string): string {
     funded_not_priced: 'Not available on funded credits yet.',
     trial_unavailable: 'No trial on this item.',
   };
-  if (KNOWN[reason]) return KNOWN[reason];
+  if (Object.hasOwn(KNOWN, reason)) return KNOWN[reason];
   const words = reason.replaceAll('_', ' ');
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
 }

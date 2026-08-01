@@ -61,7 +61,7 @@ export function AuthBrandPanel() {
       {/* Subtle light ambient glow */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="bg-mkt-frost/40 absolute -top-24 -left-24 size-96 rounded-full blur-[100px]" />
-        <div className="bg-mkt-sky/40 absolute top-1/2 -right-24 size-80 rounded-full blur-[90px]" />
+        <div className="bg-mkt-frost/40 absolute top-1/2 -right-24 size-80 rounded-full blur-[90px]" />
       </div>
 
       <div className="flex flex-col gap-10">

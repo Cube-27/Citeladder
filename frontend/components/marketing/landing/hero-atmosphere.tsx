@@ -17,7 +17,7 @@ const EASE_SWEEP = [0.4, 0, 0.2, 1] as const;
  */
 const FIELDS = [
   {
-    className: 'bg-mkt-sky -top-24 -right-24 size-[34rem]',
+    className: 'bg-mkt-sky-blue -top-24 -right-24 size-[34rem]',
     animate: {
       x: [0, 110, -50, 0],
       y: [0, -70, 35, 0],
@@ -47,7 +47,7 @@ const FIELDS = [
     duration: 7.5,
   },
   {
-    className: 'bg-mkt-sky top-1/3 right-1/4 size-[30rem]',
+    className: 'bg-mkt-sky-blue top-1/3 right-1/4 size-[30rem]',
     animate: {
       x: [0, -80, 80, 0],
       y: [0, 75, -55, 0],
