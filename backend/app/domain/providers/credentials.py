@@ -138,6 +138,19 @@ async def pause_connection_after_key_failure(
     )
 
 
+def _unavailable(logical_engine: str) -> ExecutionCredentialsUnavailableError:
+    """THE refusal for every unresolvable path — identical by construction.
+
+    Every caller raises this one shape so a refusal can never leak which leg
+    failed (no BYOK/platform distinction, no system-workspace hint, no
+    provider detail — invariant 6).
+    """
+    return ExecutionCredentialsUnavailableError(
+        "No executable credential available for this task",
+        details={"logical_engine": logical_engine},
+    )
+
+
 def _route_candidates(
     *,
     workspace_id: uuid.UUID,
@@ -238,10 +251,7 @@ def _require_funded_proofs(
         or (account_id is not None and reservation.billing_account_id != account_id)
     )
     if unavailable:
-        raise ExecutionCredentialsUnavailableError(
-            "No executable credential available for this task",
-            details={"logical_engine": logical_engine},
-        )
+        raise _unavailable(logical_engine)
     return reservation
 
 
@@ -286,10 +296,7 @@ async def resolve_execution_credentials(
             reservation_id=None,
         )
     if dev_test_login and not settings.dev_test_login_allow_platform_credentials:
-        raise ExecutionCredentialsUnavailableError(
-            "No executable credential available for this task",
-            details={"logical_engine": logical_engine},
-        )
+        raise _unavailable(logical_engine)
     proven = _require_funded_proofs(
         logical_engine=logical_engine,
         account_id=account_id,
@@ -301,10 +308,7 @@ async def resolve_execution_credentials(
         session, logical_engine=logical_engine, at=at
     )
     if platform is None:
-        raise ExecutionCredentialsUnavailableError(
-            "No executable credential available for this task",
-            details={"logical_engine": logical_engine},
-        )
+        raise _unavailable(logical_engine)
     connection, route = platform
     return ResolvedCredential(
         credential_source=CREDENTIAL_SOURCE_PLATFORM,

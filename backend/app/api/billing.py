@@ -157,6 +157,40 @@ def _activation_status_code(activation: ActivationResponse) -> int:
     return status.HTTP_200_OK
 
 
+async def _replayed_activation(
+    session: AsyncSession,
+    *,
+    account: BillingAccount,
+    operation: str,
+    catalog_key: str,
+    quantity: int,
+    credential_mode: str,
+    idempotency_key: str,
+    response: Response,
+) -> ActivationResponse | None:
+    """Step 4 BEFORE step 5: the stored response for an already-seen key.
+
+    Every commercial POST runs this first so a retry of an already-settled
+    purchase replays byte-equivalently instead of tripping the route's own
+    "already live" state guard; a reused key with a DIFFERENT canonical
+    request raises the 409 inside ``replay_intent``. Returning None means the
+    key is fresh and the route proceeds to its state check.
+    """
+    replayed = await replay_intent(
+        session,
+        account=account,
+        operation=operation,
+        catalog_key=catalog_key,
+        quantity=quantity,
+        credential_mode=credential_mode,
+        idempotency_key=idempotency_key,
+    )
+    if replayed is None:
+        return None
+    response.status_code = _activation_status_code(replayed.response)
+    return replayed.response
+
+
 async def _run_intent(
     session: AsyncSession,
     *,
@@ -242,9 +276,7 @@ async def post_subscription(
     with _safe_commercial_errors():
         reject_deferred_trial(payload.trial_requested)
         account = await owned_account(session, user)
-        # Step 4 BEFORE step 5: a retry of an already-settled purchase replays
-        # its stored response instead of tripping the "already live" guard.
-        replayed = await replay_intent(
+        replayed = await _replayed_activation(
             session,
             account=account,
             operation=OPERATION_SUBSCRIPTION_CREATE,
@@ -252,10 +284,10 @@ async def post_subscription(
             quantity=1,
             credential_mode=payload.credential_mode,
             idempotency_key=idempotency_key,
+            response=response,
         )
         if replayed is not None:
-            response.status_code = _activation_status_code(replayed.response)
-            return replayed.response
+            return replayed
         await _reject_existing_base(session, account)
         intent = resolve_base_intent(
             catalog_key=payload.catalog_key,
@@ -293,7 +325,7 @@ async def post_addon(
     provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await owned_account(session, user)
-        replayed = await replay_intent(
+        replayed = await _replayed_activation(
             session,
             account=account,
             operation=OPERATION_ADDON_ACTIVATE,
@@ -301,10 +333,10 @@ async def post_addon(
             quantity=payload.quantity,
             credential_mode=CREDENTIAL_MODE_BYOK,
             idempotency_key=idempotency_key,
+            response=response,
         )
         if replayed is not None:
-            response.status_code = _activation_status_code(replayed.response)
-            return replayed.response
+            return replayed
         await _reject_existing_addon(session, account, payload.catalog_key)
         intent = resolve_addon_intent(
             catalog_key=payload.catalog_key,
@@ -343,7 +375,7 @@ async def post_topup(
     provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await owned_account(session, user)
-        replayed = await replay_intent(
+        replayed = await _replayed_activation(
             session,
             account=account,
             operation=OPERATION_TOPUP_PURCHASE,
@@ -351,10 +383,10 @@ async def post_topup(
             quantity=payload.quantity,
             credential_mode=CREDENTIAL_MODE_BYOK,
             idempotency_key=idempotency_key,
+            response=response,
         )
         if replayed is not None:
-            response.status_code = _activation_status_code(replayed.response)
-            return replayed.response
+            return replayed
         await _require_live_base(session, account)
         intent = resolve_topup_intent(
             catalog_key=payload.catalog_key,
