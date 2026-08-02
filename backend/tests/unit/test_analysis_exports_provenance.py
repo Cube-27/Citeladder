@@ -13,6 +13,8 @@ from __future__ import annotations
 import csv
 import io
 import uuid
+from datetime import UTC, datetime
+from types import SimpleNamespace
 
 from app.analysis.exports import audit_to_csv, audit_to_markdown
 from app.core.config.audits import MEASUREMENT_POLICY_KEY
@@ -25,9 +27,12 @@ from app.core.config.provider_catalog import (
     TRANSPORT_OPENAI,
 )
 from app.domain.audits.schemas import (
+    AuditCreatedEvent,
+    AuditTaskResponse,
     ModelProvenance,
     build_model_provenance,
     execution_frozen_provenance,
+    frozen_retrieval_enabled,
 )
 from app.models.audit import Audit, AuditEngineSnapshot, AuditTask
 
@@ -317,3 +322,66 @@ class TestProvenanceHelpers:
             audit_configuration=None,
         )
         assert (mode, retrieval) == ("", None)
+
+    def test_frozen_retrieval_skips_explicit_null_values(self) -> None:
+        assert (
+            frozen_retrieval_enabled(
+                {"retrieval_enabled": None}, {"retrieval_enabled": True}
+            )
+            is True
+        )
+        assert (
+            frozen_retrieval_enabled(
+                {"retrieval_enabled": None}, {"retrieval_enabled": None}
+            )
+            is None
+        )
+
+    def test_task_response_uses_audit_level_frozen_fallback(self) -> None:
+        now = datetime(2026, 7, 20, tzinfo=UTC)
+        task = SimpleNamespace(
+            id=uuid.uuid4(),
+            audit_id=uuid.uuid4(),
+            prompt_index=0,
+            repetition=0,
+            randomized_position=0,
+            logical_engine=ENGINE_GEMINI,
+            transport_provider=TRANSPORT_GOOGLE,
+            transport_model=_MODEL_GEMINI,
+            status="succeeded",
+            attempt_count=1,
+            max_attempts=5,
+            prompt_text="best crm",
+            answer_text="Acme",
+            search_used=True,
+            error_code="",
+            error_detail="",
+            latency_ms=10,
+            created_at=now,
+            completed_at=now,
+            request_snapshot={"measurement_mode": ""},
+            provider_route_snapshot={"retrieval_enabled": None},
+            audit_measurement_mode="benchmark",
+            audit_configuration={MEASUREMENT_POLICY_KEY: {"retrieval_enabled": True}},
+        )
+
+        response = AuditTaskResponse.model_validate(task)
+
+        assert response.measurement_mode == "benchmark"
+        assert response.retrieval_enabled is True
+
+    def test_audit_event_accepts_both_timestamp_input_names(self) -> None:
+        now = datetime(2026, 7, 20, tzinfo=UTC)
+        common = {
+            "id": uuid.uuid4(),
+            "audit_id": uuid.uuid4(),
+            "event_type": "audit.created",
+            "payload": {"requested_count": 1, "engines": ["gemini"]},
+        }
+
+        from_created = AuditCreatedEvent.model_validate({**common, "created_at": now})
+        from_occurred = AuditCreatedEvent.model_validate({**common, "occurred_at": now})
+
+        assert from_created.occurred_at == now
+        assert from_occurred.occurred_at == now
+        assert "created_at" not in from_occurred.model_dump()

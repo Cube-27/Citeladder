@@ -166,7 +166,7 @@ describe('ProductEvidenceTable kind sub-tabs', () => {
     expect(screen.getByText('118')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute(
       'href',
-      '/runs/55555555-5555-4555-8555-555555555555/executions/66666666-6666-4666-8666-666666666666',
+      '/runs/55555555-5555-4555-8555-555555555555?execution=66666666-6666-4666-8666-666666666666',
     );
     // Other kinds' rows are not in the mentions panel.
     expect(screen.queryByText('Waterproofing')).not.toBeInTheDocument();

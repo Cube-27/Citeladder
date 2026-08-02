@@ -50,9 +50,10 @@ from app.domain.audits.planner import (
 from app.domain.entitlements.types import GrantSpec
 from app.domain.prompts.topical_binding import TopicalBindingError
 from app.models.brand import Brand, OwnedDomain
-from app.models.prompt import Prompt
+from app.models.prompt import Prompt, Topic
 from app.models.provider import ProviderConnection, ProviderRoute
 from tests.component.audit_helpers import (
+    _mark_connection_probed,
     seed_audit_fixtures,
     seed_platform_connection,
 )
@@ -304,6 +305,7 @@ async def test_audit_admission_rejects_off_domain_active_prompt(
     """A stale/bypassed active prompt can never run, even though it is active."""
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=1)
+        session.add(Topic(project_id=seed.project_id, name="Footwear"))
         session.add(
             Prompt(
                 prompt_set_id=seed.prompt_set_id,
@@ -371,6 +373,7 @@ async def test_audit_admission_api_maps_binding_rejection_to_coded_422(
     workspace_id = uuid.UUID(project["workspace_id"])
     async with session_factory() as session:
         # Off-domain ACTIVE prompt (ORM seed bypasses binding on purpose).
+        session.add(Topic(project_id=uuid.UUID(project["id"]), name="Footwear"))
         prompt = Prompt(
             prompt_set_id=uuid.UUID(prompt_set_id),
             text="best laptops for programming",
@@ -421,7 +424,7 @@ async def test_audit_admission_api_maps_binding_rejection_to_coded_422(
 # Empty vocabulary fails closed
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_empty_vocabulary_fails_closed_on_create_import_and_audit(
+async def test_empty_vocabulary_fails_closed_on_mutation_but_not_audit(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -457,7 +460,8 @@ async def test_empty_vocabulary_fails_closed_on_create_import_and_audit(
     assert imported.status_code == 422
     assert imported.json()["error"]["code"] == CODE_BINDING_VOCABULARY_EMPTY
 
-    # Audit admission over an ORM-seeded active prompt fails closed too.
+    # An already-persisted prompt can still be measured: setup should nudge the
+    # user to add identity, not make the visibility run unreachable.
     async with session_factory() as session:
         workspace_id = uuid.UUID(project["workspace_id"])
         session.add(
@@ -478,6 +482,7 @@ async def test_empty_vocabulary_fails_closed_on_create_import_and_audit(
         )
         session.add(connection)
         await session.flush()
+        _mark_connection_probed(session, connection=connection, engine="gemini")
         session.add(
             ProviderRoute(
                 workspace_id=workspace_id,
@@ -490,25 +495,23 @@ async def test_empty_vocabulary_fails_closed_on_create_import_and_audit(
         )
         await session.commit()
     async with session_factory() as session:
-        with pytest.raises(TopicalBindingError) as exc_info:
-            await create_audit(
-                session,
-                workspace_id=uuid.UUID(project["workspace_id"]),
-                project_id=uuid.UUID(project["id"]),
-                engines=["gemini"],
-                trigger=AUDIT_TRIGGER_MANUAL,
-                prompt_set_id=uuid.UUID(prompt_set_id),
-                repetitions=1,
-            )
-        assert exc_info.value.code == CODE_BINDING_VOCABULARY_EMPTY
-        await session.rollback()
+        audit = await create_audit(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            project_id=uuid.UUID(project["id"]),
+            engines=["gemini"],
+            trigger=AUDIT_TRIGGER_MANUAL,
+            prompt_set_id=uuid.UUID(prompt_set_id),
+            repetitions=1,
+        )
+        assert audit.id is not None
 
 
 @pytest.mark.asyncio
-async def test_empty_vocabulary_after_identity_removal_fails_closed(
+async def test_empty_vocabulary_after_identity_removal_keeps_audit_available(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Deleting the brand + owned domain empties the vocabulary: audits stop."""
+    """Deleting identity rows does not strand an already-configured audit."""
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=1)
         await session.execute(delete(Brand).where(Brand.project_id == seed.project_id))
@@ -518,18 +521,16 @@ async def test_empty_vocabulary_after_identity_removal_fails_closed(
         await session.commit()
 
     async with session_factory() as session:
-        with pytest.raises(TopicalBindingError) as exc_info:
-            await create_audit(
-                session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                engines=seed.engines,
-                trigger=AUDIT_TRIGGER_MANUAL,
-                prompt_set_id=seed.prompt_set_id,
-                repetitions=1,
-            )
-        assert exc_info.value.code == CODE_BINDING_VOCABULARY_EMPTY
-        await session.rollback()
+        audit = await create_audit(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            engines=seed.engines,
+            trigger=AUDIT_TRIGGER_MANUAL,
+            prompt_set_id=seed.prompt_set_id,
+            repetitions=1,
+        )
+        assert audit.id is not None
 
 
 # ---------------------------------------------------------------------------

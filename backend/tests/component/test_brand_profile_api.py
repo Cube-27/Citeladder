@@ -277,6 +277,34 @@ async def test_suggestion_refuses_when_website_yields_no_evidence(
 
 
 @pytest.mark.asyncio
+async def test_curated_description_allows_suggestion_when_site_is_unreadable(
+    client: httpx.AsyncClient, fake_agent: FakeAgent, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client, "profile-curated-fallback@example.com")
+    project = await _create_project(client, "Cube27")
+    profile_url = f"/api/v1/projects/{project['id']}/brand-profile"
+    updated = await client.put(
+        profile_url,
+        json={"description": "A human-authored cloud data consultancy."},
+    )
+    assert updated.status_code == 200
+
+    async def _collect(website_url: str) -> BrandEvidence:
+        return BrandEvidence(failure_reason="website_unreachable")
+
+    monkeypatch.setattr(brand_profile_suggestions, "collect_brand_evidence", _collect)
+    response = await client.post(
+        f"{profile_url}/suggest", json={"confirm_send_evidence": True}
+    )
+
+    assert response.status_code == 201
+    assert (
+        "human-authored cloud data consultancy" in fake_agent.calls[0]["user"].lower()
+    )
+    assert "<brand_website_evidence>" not in fake_agent.calls[0]["user"]
+
+
+@pytest.mark.asyncio
 async def test_suggestion_refuses_when_website_content_is_too_thin(
     client: httpx.AsyncClient, fake_agent: FakeAgent, monkeypatch: pytest.MonkeyPatch
 ) -> None:

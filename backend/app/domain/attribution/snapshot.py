@@ -339,9 +339,7 @@ def build_a1_projection(
         ]
         # Revenue desc, then ai_source asc — ``other`` included (revenue
         # accounting reconciles to the totals; ``other`` is schema-valid).
-        by_ai_source.sort(
-            key=lambda entry: (-entry["metrics"]["revenue"], entry["ai_source"])
-        )
+        by_ai_source.sort(key=_source_revenue_sort_key)
 
         # --- Product rows over the item reports ---------------------------
         product_groups: dict[tuple[str, str | None], dict[str, Any]] = {}
@@ -553,7 +551,7 @@ def _aggregate_a2_for_currency(
         }
         for (product_id, sku, ai_source), group in product_groups.items()
     ]
-    by_product.sort(key=lambda row: (-row["revenue"], row["sku"]))
+    by_product.sort(key=lambda row: (-row["revenue"], row["sku"], row["ai_source"]))
     total_revenue = round(
         sum(float(link_by_order[order.id].revenue_amount) for order in linked),
         _MONEY_DECIMALS,

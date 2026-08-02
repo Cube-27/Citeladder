@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import TYPE_CHECKING, Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -93,11 +94,7 @@ AUDIT_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
     }
 )
 
-# --- Measurement modes ----------------------------------------------------
-# Pulse vs benchmark measurement vocabulary. Keyed on by the expected-cost
-# catalogue (``config/costs.py``) now; the route/output policy, planner
-# freezing, and ``Audit.measurement_mode`` column arrive with T3 and must use
-# these same constants (invariant 2 — never re-literal the mode strings).
+# --- Audit triggers -------------------------------------------------------
 # What initiated a run (closed vocabulary; ``Audit.trigger`` is String(16)).
 # PR1 produces only ``manual`` (API) and ``system`` (dev seed) runs; a later
 # schedule/trial caller passes its own token. The manual-run rolling rate
@@ -122,6 +119,10 @@ AUDIT_TRIGGERS: Final[frozenset[str]] = frozenset(
 # ``TASK_CLAIMABLE_STATUSES``.
 TASK_STATUS_PENDING_RESERVATION: Final = "pending_reservation"
 
+# --- Measurement modes ----------------------------------------------------
+# Pulse vs benchmark measurement vocabulary. Keyed on by the expected-cost
+# catalogue (``config/costs.py``); route/output policy, planner freezing, and
+# ``Audit.measurement_mode`` use these same constants (invariant 2).
 MEASUREMENT_MODE_PULSE: Final = "pulse"
 MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"
 MEASUREMENT_MODES: Final[frozenset[str]] = frozenset(
@@ -537,8 +538,33 @@ def measurement_policy_from_configuration(
     audit planned from T3 onward returns exactly what the planner froze.
     """
     frozen = configuration.get(MEASUREMENT_POLICY_KEY)
-    if not frozen:
+    required_fields = {
+        "retrieval_enabled",
+        "max_output_tokens",
+        "timeout_seconds",
+        "repetitions",
+        "answer_instruction",
+    }
+    compatible = (
+        isinstance(frozen, dict)
+        and required_fields.issubset(frozen)
+        and isinstance(frozen.get("retrieval_enabled"), bool)
+        and isinstance(frozen.get("max_output_tokens"), int)
+        and not isinstance(frozen.get("max_output_tokens"), bool)
+        and frozen["max_output_tokens"] > 0
+        and isinstance(frozen.get("timeout_seconds"), int | float)
+        and not isinstance(frozen.get("timeout_seconds"), bool)
+        and isfinite(frozen["timeout_seconds"])
+        and frozen["timeout_seconds"] > 0
+        and isinstance(frozen.get("repetitions"), int)
+        and not isinstance(frozen.get("repetitions"), bool)
+        and frozen["repetitions"] > 0
+        and isinstance(frozen.get("answer_instruction"), str)
+    )
+    if not compatible:
         mode = str(configuration.get("measurement_mode") or MEASUREMENT_MODE_BENCHMARK)
+        if mode not in MEASUREMENT_MODES:
+            mode = MEASUREMENT_MODE_BENCHMARK
         return measurement_policy_for_mode(mode)
     return MeasurementModePolicy(
         retrieval_enabled=bool(frozen["retrieval_enabled"]),

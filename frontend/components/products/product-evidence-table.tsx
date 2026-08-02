@@ -312,7 +312,7 @@ function MentionEvidenceRow({ item }: Readonly<{ item: ProductEvidenceItem }>) {
       </TableCell>
       <TableCell className="text-right">
         <Link
-          href={`/runs/${item.audit_id}/executions/${item.task_id}`}
+          href={`/runs/${item.audit_id}?execution=${item.task_id}`}
           className="text-accent-text text-sm hover:underline"
         >
           Open

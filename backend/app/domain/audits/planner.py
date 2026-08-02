@@ -120,6 +120,7 @@ from app.domain.prompts.topical_binding import (
     BINDING_FAILURE_MESSAGES,
     TopicalBindingError,
     build_project_vocabulary,
+    has_project_binding_context,
     validate_prompt_binding,
 )
 from app.domain.providers.credentials import (
@@ -546,6 +547,12 @@ def _validate_prompt_lengths(prompts: list[Prompt]) -> None:
 
 
 def _validate_prompt_bindings(project: Project, prompts: list[Prompt]) -> None:
+    # A brand name/domain identifies the subject but provides no category
+    # vocabulary for neutral measurement prompts. When crawl-backed setup did
+    # not produce a profile or topic yet, keep audit creation available; the
+    # stricter lexical gate resumes as soon as real category context exists.
+    if not has_project_binding_context(project):
+        return
     vocabulary = build_project_vocabulary(project)
     for prompt in prompts:
         # ``generated`` is trusted persisted provenance, not a client claim:
@@ -1534,7 +1541,7 @@ async def list_tasks(
     surface: str = SHOPPING_SURFACE_MEASUREMENT,
 ) -> list[AuditTask]:
     """List an audit's tasks for ONE shopping surface (default measurement)."""
-    await get_audit(session, workspace_id=workspace_id, audit_id=audit_id)
+    audit = await get_audit(session, workspace_id=workspace_id, audit_id=audit_id)
     stmt = (
         select(AuditTask)
         .where(
@@ -1543,7 +1550,13 @@ async def list_tasks(
         )
         .order_by(AuditTask.randomized_position.asc())
     )
-    return list((await session.scalars(stmt)).all())
+    tasks = list((await session.scalars(stmt)).all())
+    # Transient scalar fallbacks used by the response schema. They are copied
+    # from the already-loaded audit and never trigger relationship lazy loads.
+    for task in tasks:
+        task.audit_measurement_mode = audit.measurement_mode
+        task.audit_configuration = audit.configuration
+    return tasks
 
 
 async def _release_funded_on_cancel(

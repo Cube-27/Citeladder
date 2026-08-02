@@ -1965,7 +1965,7 @@ export const productEvidenceItemSchema = responseObject({
   analysis_id: uuid(),
   evidence_kind: productEvidenceKindSchema,
   audit_id: uuid(),
-  // Execution id — links to `/runs/[runId]/executions/[executionId]`.
+  // Execution id — opens the in-run evidence drawer via `?execution=[taskId]`.
   task_id: uuid(),
   artifact_id: uuid().nullable(),
   logical_engine: z.string(),

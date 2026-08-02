@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -12,11 +12,12 @@ const AUDIT_ID = '44444444-4444-4444-8444-444444444444';
 const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const EXEC_ID = '77777777-7777-4777-8777-777777777777';
+let currentSearchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ runId: AUDIT_ID }),
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => currentSearchParams,
 }));
 
 function audit(overrides: Record<string, unknown> = {}) {
@@ -67,6 +68,9 @@ function execution(overrides: Record<string, unknown> = {}) {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  currentSearchParams = new URLSearchParams();
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -150,6 +154,56 @@ describe('RunDetailPage', () => {
       'href',
       'https://acme.example/research',
     );
+  });
+
+  it('reacts to an execution deep-link query after mount', async () => {
+    mswServer.use(
+      http.get(`/api/v1/audits/${AUDIT_ID}`, () =>
+        HttpResponse.json(audit({ status: 'completed' })),
+      ),
+      http.get(`/api/v1/audits/${AUDIT_ID}/executions`, () => HttpResponse.json([execution()])),
+      http.get(`/api/v1/executions/${EXEC_ID}`, () =>
+        HttpResponse.json({
+          id: EXEC_ID,
+          analysis_id: '88888888-8888-4888-8888-888888888888',
+          audit_id: AUDIT_ID,
+          task_id: EXEC_ID,
+          artifact_id: null,
+          analyzer_version: 'v1',
+          scoring_rule_version: 'v1',
+          logical_engine: 'gemini',
+          transport_provider: 'google',
+          transport_model: 'gemini-flash-latest',
+          prompt_index: 0,
+          repetition: 1,
+          prompt_class: 'unbranded',
+          brand_mentioned: true,
+          brand_first_offset: 0,
+          owned_domain_cited: false,
+          owned_citation_count: 0,
+          unintended_domain_cited: false,
+          citation_count: 0,
+          search_used: true,
+          search_query_count: 0,
+          sentiment: null,
+          avg_position: null,
+          score: { visibility: 1 },
+          citations: [],
+          competitors_mentioned: [],
+          created_at: '2026-07-15T00:00:03Z',
+        }),
+      ),
+    );
+
+    const view = renderWithProviders(<RunDetailPage />);
+    expect(await screen.findByText('Gemini')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    currentSearchParams = new URLSearchParams(`execution=${EXEC_ID}`);
+    view.rerender(<RunDetailPage />);
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Execution evidence');
+    expect(await screen.findByText('An answer')).toBeInTheDocument();
   });
 
   it('cancels an active run via POST /audits/{id}/cancel', async () => {

@@ -114,18 +114,16 @@ def build_brand_profile_suggestion_message(
     block carries the curated identity rows. The instruction names the evidence
     as the only admissible source so the two blocks can't be conflated.
 
-    ``evidence`` is REQUIRED and must carry pages. The instruction below tells
-    the model that the evidence block is its only admissible source, so
-    emitting that instruction without the block would direct the model at
-    content that is not there — leaving it to fall back on the brand name,
-    which is the exact failure this whole path exists to prevent.
+    Website evidence is preferred. If it is unavailable, persisted curated
+    profile fields are also admissible grounding; a brand name/URL alone is
+    still refused before this builder is called.
 
     Takes the already-projected knowledge DATA (not the ORM ``Project``): the
     caller snapshots it before ending its transaction, and this runs after the
     evidence crawl, when touching an expired ORM attribute would attempt lazy
     I/O outside the async greenlet context.
     """
-    if not evidence.pages:
+    if not evidence.pages and not _has_curated_profile_context(knowledge):
         raise BrandEvidenceUnavailableError(
             BRAND_EVIDENCE_FAILURE_MESSAGES.get(
                 evidence.failure_reason,
@@ -134,13 +132,33 @@ def build_brand_profile_suggestion_message(
             reason=evidence.failure_reason or "website_unreachable",
         )
     sections = [serialize_brand_knowledge_context(knowledge)]
-    sections.append(evidence.serialize())
+    if evidence.pages:
+        sections.append(evidence.serialize())
+        allowed_sources = "the curated profile and <brand_website_evidence>"
+    else:
+        allowed_sources = "the human-curated fields in <brand_knowledge_base>"
     sections.append(
         "Draft the four requested profile fields for human review, using ONLY "
-        "the <brand_website_evidence> page content above. Leave any field "
-        "empty that the evidence does not support."
+        f"{allowed_sources} above. Leave any field empty that those sources "
+        "do not support."
     )
     return "\n".join(sections)
+
+
+def _has_curated_profile_context(knowledge: dict[str, object]) -> bool:
+    """Whether persisted human-authored fields can safely ground a draft."""
+    return any(
+        (
+            str(knowledge.get("description") or "").strip(),
+            str(knowledge.get("positioning") or "").strip(),
+            str(knowledge.get("target_audience") or "").strip(),
+            any(
+                str(item).strip()
+                for item in knowledge.get("products_services", [])
+                if isinstance(item, str)
+            ),
+        )
+    )
 
 
 def brand_profile_suggestion_to_response(
@@ -182,7 +200,7 @@ async def suggest_brand_profile(
     # no evidence there is nothing to draft from but the brand name, which is
     # exactly the fabrication path this gate exists to close.
     evidence = await collect_brand_evidence(website_url)
-    if not evidence.is_sufficient:
+    if not evidence.is_sufficient and not _has_curated_profile_context(input_snapshot):
         raise BrandEvidenceUnavailableError(
             BRAND_EVIDENCE_FAILURE_MESSAGES.get(
                 evidence.failure_reason,

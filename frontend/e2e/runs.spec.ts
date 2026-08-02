@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * F10 Run/Executions explorer smoke: shell → open a run → open an execution.
+ * F10 Run/Executions explorer smoke: shell → open a run → open evidence.
  *
  * The `/auth/me`, `/projects`, `/audits*`, and `/executions/*` calls are stubbed
  * at the network layer so the spec runs without a live backend. It exercises the
- * full evidence-explorer navigation the plan calls for
- * (shell → Visibility/Runs → open run → open execution).
+ * in-run evidence drawer flow (shell → Runs → open run → open evidence).
  *
  * Note: this requires a running dev server (playwright.config.ts starts one).
  * It is skipped automatically when no browser/dev server is available.
@@ -157,10 +156,11 @@ test('shell → open run → open execution evidence', async ({ page }) => {
   // Run detail: progress panel + executions table.
   await expect(page).toHaveURL(new RegExp(`/runs/${AUDIT_ID}$`));
   await expect(page.getByText('Executions')).toBeVisible();
-  await page.getByRole('link', { name: 'Evidence' }).first().click();
+  await page.getByRole('button', { name: 'Evidence' }).first().click();
 
-  // Execution evidence: answer + citation.
-  await expect(page).toHaveURL(new RegExp(`/executions/${EXEC_ID}$`));
-  await expect(page.getByText('Acme is a leading CRM.')).toBeVisible();
-  await expect(page.getByText('Acme docs')).toBeVisible();
+  // Execution evidence stays in the run page's drawer: answer + citation.
+  const drawer = page.getByRole('dialog');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText('Acme is a leading CRM.')).toBeVisible();
+  await expect(drawer.getByText('Acme docs')).toBeVisible();
 });

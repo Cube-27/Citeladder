@@ -11,7 +11,8 @@ rule, and the permanently ``not_offered`` statistical namespace.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from app.core.config.analytics import (
     AI_SOURCE_CHATGPT,
@@ -32,7 +33,12 @@ from app.core.config.integrations import (
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_PROVIDER_GA4,
 )
-from app.domain.attribution.snapshot import build_a1_projection
+from app.domain.attribution.snapshot import (
+    build_a1_projection,
+    build_combined_projection,
+)
+from app.models.attribution import AttributionLink
+from app.models.commerce import OrderFact
 from app.models.integrations import IntegrationMetricRow
 
 _WORKSPACE_ID = uuid.uuid4()
@@ -607,3 +613,92 @@ def test_metrics_serialize_identically_across_input_order() -> None:
     )
     assert first.metrics == second.metrics
     assert first.source_metric_row_ids == second.source_metric_row_ids
+
+
+def test_a1_source_rows_use_shared_total_ordering() -> None:
+    artifact_id = uuid.uuid4()
+    rows = [
+        _ecommerce_sm_row(
+            "perplexity.ai",
+            "referral",
+            transactions=1,
+            purchase_revenue=10,
+            sessions=1,
+            artifact_id=artifact_id,
+        ),
+        _ecommerce_sm_row(
+            "chatgpt.com",
+            "referral",
+            transactions=1,
+            purchase_revenue=10,
+            sessions=1,
+            artifact_id=artifact_id,
+        ),
+    ]
+
+    projection = build_a1_projection(
+        rows, {}, currency_by_artifact_id={artifact_id: "USD"}
+    )
+
+    assert [
+        row["ai_source"]
+        for row in projection.metrics["deterministic"]["a1"][0]["by_ai_source"]
+    ] == [AI_SOURCE_CHATGPT, AI_SOURCE_PERPLEXITY]
+
+
+def test_a2_product_rows_tie_break_by_ai_source() -> None:
+    workspace_id = uuid.uuid4()
+    project_id = uuid.uuid4()
+    connection_id = uuid.uuid4()
+    artifact_id = uuid.uuid4()
+    orders: list[OrderFact] = []
+    links: list[AttributionLink] = []
+    for index, ai_source in enumerate(
+        (AI_SOURCE_PERPLEXITY, AI_SOURCE_CHATGPT), start=1
+    ):
+        order = OrderFact(
+            id=uuid.uuid4(),
+            workspace_id=workspace_id,
+            project_id=project_id,
+            connection_id=connection_id,
+            provider="shopify",
+            order_ref_hash=str(index) * 64,
+            resync_seq=0,
+            occurred_at=datetime(2026, 7, 20, index, tzinfo=UTC),
+            currency="USD",
+            total_amount=Decimal("10.00"),
+            line_items=[{"sku": "SKU-1", "quantity": 1, "unit_price": "10.00"}],
+            attribution_keys={"referrer_url": f"https://{ai_source}.example"},
+            source_artifact_id=artifact_id,
+        )
+        orders.append(order)
+        links.append(
+            AttributionLink(
+                id=uuid.uuid4(),
+                workspace_id=workspace_id,
+                project_id=project_id,
+                order_fact_id=order.id,
+                method="order_referrer",
+                confidence="exact",
+                matched_rule_id=f"rule-{index}",
+                rule_version="v1",
+                analyzer_version="v1",
+                evidence_refs={"ai_source": ai_source},
+                revenue_amount=Decimal("10.00"),
+                currency="USD",
+            )
+        )
+    a1 = build_a1_projection([], {}, currency_by_artifact_id={})
+
+    projection = build_combined_projection(
+        a1,
+        orders,
+        links,
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 20),
+    )
+
+    assert [
+        row["ai_source"]
+        for row in projection.metrics["deterministic"]["a2"][0]["by_product"]
+    ] == [AI_SOURCE_CHATGPT, AI_SOURCE_PERPLEXITY]

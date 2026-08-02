@@ -165,6 +165,20 @@ def test_suggestion_message_refuses_to_instruct_without_evidence() -> None:
         )
 
 
+def test_suggestion_message_uses_curated_profile_when_site_is_unreadable() -> None:
+    message = build_brand_profile_suggestion_message(
+        {
+            "brand_name": "Acme",
+            "description": "Human-authored retail analytics platform.",
+        },
+        BrandEvidence(failure_reason="website_unreachable"),
+    )
+
+    assert "Human-authored retail analytics platform" in message
+    assert "human-curated fields" in message
+    assert "<brand_website_evidence>" not in message
+
+
 def test_suggestion_message_embeds_website_evidence() -> None:
     knowledge = {"brand_name": "Cube27"}
     evidence = BrandEvidence(

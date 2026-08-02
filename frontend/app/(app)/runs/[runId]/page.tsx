@@ -44,9 +44,9 @@ export default function RunDetailPage() {
   const searchParams = useSearchParams();
   const runId = params.runId;
   const queryClient = useQueryClient();
-  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(() =>
-    searchParams.get('execution'),
-  );
+  const executionParam = searchParams.get('execution');
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
+  const activeExecutionId = executionParam ?? selectedExecutionId;
 
   const auditQuery = useQuery({
     queryKey: queryKeys.runs.detail(runId),
@@ -83,7 +83,7 @@ export default function RunDetailPage() {
 
   const executions = executionsQuery.data ?? [];
   const selectedExecution =
-    executions.find((execution) => execution.id === selectedExecutionId) ?? null;
+    executions.find((execution) => execution.id === activeExecutionId) ?? null;
 
   return (
     <div className="grid gap-6">

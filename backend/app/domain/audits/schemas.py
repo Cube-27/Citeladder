@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from app.core.config.audits import (
     EVENT_AUDIT_CANCELLED,
@@ -104,8 +104,10 @@ def build_model_provenance(
 def frozen_retrieval_enabled(*snapshots: dict | None) -> bool | None:
     """First frozen ``retrieval_enabled`` across snapshots; None if unrecorded."""
     for snapshot in snapshots:
-        if isinstance(snapshot, dict) and "retrieval_enabled" in snapshot:
-            return bool(snapshot["retrieval_enabled"])
+        if isinstance(snapshot, dict):
+            retrieval_enabled = snapshot.get("retrieval_enabled")
+            if retrieval_enabled is not None:
+                return bool(retrieval_enabled)
     return None
 
 
@@ -247,6 +249,8 @@ class AuditTaskResponse(BaseModel):
             execution_frozen_provenance(
                 request_snapshot=getattr(data, "request_snapshot", None),
                 route_snapshot=getattr(data, "provider_route_snapshot", None),
+                audit_measurement_mode=getattr(data, "audit_measurement_mode", None),
+                audit_configuration=getattr(data, "audit_configuration", None),
             )
         )
         return values
@@ -428,7 +432,9 @@ class _AuditEventEnvelope(BaseModel):
 
     id: uuid.UUID
     audit_id: uuid.UUID
-    occurred_at: datetime = Field(validation_alias="created_at")
+    occurred_at: datetime = Field(
+        validation_alias=AliasChoices("created_at", "occurred_at")
+    )
 
 
 class AuditCreatedEvent(_AuditEventEnvelope):

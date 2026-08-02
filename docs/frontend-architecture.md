@@ -202,9 +202,11 @@ reuses the cached dataset rather than refetching.
   `pnpm check:contract` too (from `backend/`-adjacent checkouts, where the offline
   codegen can reach `backend/.venv`), since `pnpm test` silently skips the guard whenever
   the OpenAPI source is unavailable.
-- **Requests stay strict.** Outgoing payloads are built from typed TypeScript DTOs at the
-  call site — they are never parsed with a tolerant schema, so a request-side drift fails
-  at compile time, not at runtime.
+- **Requests stay typed.** Outgoing payloads are built from TypeScript DTOs, so call sites get
+  compile-time type checks. These local DTOs are not generated from or validated against
+  the backend OpenAPI schema, so backend request-contract drift still requires review or
+  integration/contract tests; the automatic schema-drift guard described above applies to
+  parsed response fields.
 - **The backend is the source of truth.** The frontend never invents fields, never keeps a
   parallel schema, and never falls back to mock data in production paths. If the contract
   changes, update `schemas.ts` to match the backend, not the other way around.

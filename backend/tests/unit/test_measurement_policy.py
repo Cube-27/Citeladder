@@ -36,7 +36,10 @@ from app.core.config.audits import (
     PULSE_ANSWER_INSTRUCTION_SHA256,
     MeasurementModePolicy,
     audit_settings,
+    frozen_policy_configuration,
+    max_run_seconds_from_configuration,
     measurement_policy_for_mode,
+    measurement_policy_from_configuration,
     system_instruction_for_mode,
 )
 from app.core.config.projects import (
@@ -124,6 +127,85 @@ def test_measurement_policy_reads_live_settings_for_the_caller_to_freeze(
 def test_measurement_policy_rejects_unknown_mode() -> None:
     with pytest.raises(ValueError, match="unknown measurement mode"):
         measurement_policy_for_mode("turbo")
+
+
+def test_frozen_policy_configuration_round_trips_unchanged() -> None:
+    frozen = measurement_policy_for_mode(MEASUREMENT_MODE_PULSE)
+
+    restored = measurement_policy_from_configuration(
+        {
+            "measurement_mode": MEASUREMENT_MODE_PULSE,
+            "measurement_policy": frozen_policy_configuration(frozen),
+        }
+    )
+
+    assert restored == frozen
+
+
+def test_frozen_policy_is_isolated_from_later_live_setting_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frozen = frozen_policy_configuration(
+        measurement_policy_for_mode(MEASUREMENT_MODE_PULSE)
+    )
+    monkeypatch.setattr(audit_settings, "pulse_max_output_tokens", 1)
+
+    restored = measurement_policy_from_configuration(
+        {"measurement_mode": MEASUREMENT_MODE_PULSE, "measurement_policy": frozen}
+    )
+
+    assert restored.max_output_tokens == frozen["max_output_tokens"]
+
+
+def test_missing_or_incomplete_frozen_policy_uses_mode_defaults() -> None:
+    expected = measurement_policy_for_mode(MEASUREMENT_MODE_PULSE)
+
+    assert (
+        measurement_policy_from_configuration(
+            {"measurement_mode": MEASUREMENT_MODE_PULSE}
+        )
+        == expected
+    )
+    assert (
+        measurement_policy_from_configuration(
+            {
+                "measurement_mode": MEASUREMENT_MODE_PULSE,
+                "measurement_policy": {"retrieval_enabled": False},
+            }
+        )
+        == expected
+    )
+    assert (
+        measurement_policy_from_configuration(
+            {
+                "measurement_mode": MEASUREMENT_MODE_PULSE,
+                "measurement_policy": {
+                    "retrieval_enabled": "false",
+                    "max_output_tokens": None,
+                    "timeout_seconds": 1,
+                    "repetitions": 1,
+                    "answer_instruction": "answer",
+                },
+            }
+        )
+        == expected
+    )
+
+
+def test_unknown_legacy_measurement_mode_defaults_to_benchmark() -> None:
+    assert measurement_policy_from_configuration(
+        {"measurement_mode": "retired-mode"}
+    ) == measurement_policy_for_mode(MEASUREMENT_MODE_BENCHMARK)
+
+
+def test_max_run_seconds_prefers_frozen_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(audit_settings, "max_run_seconds", 999.0)
+
+    assert max_run_seconds_from_configuration({"max_run_seconds": 123.5}) == 123.5
+    assert max_run_seconds_from_configuration({}) == 999.0
+    assert max_run_seconds_from_configuration(None) == 999.0
 
 
 def test_measurement_policy_covers_every_declared_mode() -> None:

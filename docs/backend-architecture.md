@@ -53,26 +53,29 @@ full-product surface is marked below.
 - **httpx** async client for provider calls.
 - **structlog** + correlation ids (optional Logfire).
 - **Deploy**: FastAPI web + workers on Railway, PostgreSQL on Railway, Next.js on Vercel. Each
-  worker is a **separate Railway service** sharing the same env: `python -m
-  app.workers.audit_worker`, `app.workers.content_worker` (incl. `MISTRAL_API_KEY` and the
-  `CONTENT_*` knobs), `app.workers.integration_worker` + `app.workers.integration_dispatcher`
-  (integrations sync + cadence; need the `INTEGRATION_*` knobs, OAuth client secrets, and
-  `REFERRAL_HASH_SALT`), and `app.workers.analytics_worker` (referral/projection chain; no
-  network I/O). No Redis, no S3 at MVP.
+  worker is a **separate Railway service** with a least-privilege environment allowlist for
+  its command: `python -m app.workers.audit_worker`; `app.workers.content_worker` gets
+  `MISTRAL_API_KEY` and the `CONTENT_*` knobs; `app.workers.integration_worker` and
+  `app.workers.integration_dispatcher` get only the required `INTEGRATION_*` settings and
+  OAuth/integration secrets; referral settings such as `REFERRAL_HASH_SALT` are supplied only
+  to services that classify referral data; and `app.workers.analytics_worker` gets no provider
+  or integration secrets because its referral/projection chain performs no network I/O. No
+  Redis, no S3 at MVP.
 
 App factory (`app/main.py`) wires CORS, lifespan, explicit router includes under `/api/v1`,
 and `/health`.
 
 ## 3. Registered API surface
 
-All routes are under `/api/v1` and workspace-scoped. Thin routers delegate to `domain/*`
-services.
+All routes are under `/api/v1`. Authenticated product routes are workspace-scoped; the explicit
+billing exceptions are public `GET /billing/catalog` and the HMAC-authenticated Razorpay
+webhook. Thin routers delegate to `domain/*` services.
 
 | File | Purpose (routes) |
 |---|---|
 | `app/api/auth.py` | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
 | `app/api/workspaces.py` | `GET /workspaces`, `POST /workspaces` |
-| `app/api/billing.py` | Public `GET /billing/catalog`; authenticated `/billing/entitlement` + `/billing/usage` reads; idempotent subscription/add-on/top-up activations (`202` while pending, mandatory `Idempotency-Key`); HMAC-signed Razorpay webhook. Legacy summary/profile/checkout/manage/cancel routes are deleted (404) |
+| `app/api/billing.py` | Scope exceptions: public `GET /billing/catalog` and the HMAC-signed Razorpay webhook; authenticated workspace-scoped `/billing/entitlement` + `/billing/usage` reads; idempotent subscription/add-on/top-up activations (`202` while pending, mandatory `Idempotency-Key`). Legacy `/billing/me|profile|checkout|manage|cancel` and `/workspaces/{id}/entitlements` routes are deleted (404) |
 | `app/api/projects.py` | `GET/POST /projects` (create also best-effort queues the initial Site Health crawl), `GET/PATCH/DELETE /projects/{id}`, project/brand-profile endpoints, `GET /projects/{id}/dashboard`, authenticated `GET /projects/{id}/dashboard/report.pdf`, and Visibility projections |
 | `app/api/prompts.py` | `GET/POST /prompt-sets`, prompt CRUD (`PATCH/DELETE /prompts/{id}`), `POST /prompt-sets/{id}/import` (MVP CSV bulk-create), `POST /prompt-sets/{id}/generate` (AI topic+prompt generation via default agent), `POST /prompt-sets/{id}/prompts/bulk-status`, topics CRUD (`GET/POST /projects/{id}/topics`, `PATCH/DELETE /topics/{id}`) |
 | `app/api/provider_connections.py` | `GET/POST /provider-connections`, `PATCH/DELETE /provider-connections/{id}`, `POST /provider-connections/{id}/test`; `GET /provider-catalog` |
@@ -277,8 +280,9 @@ for a per-host slot; `global_concurrency`, `worker_concurrency`,
 politeness. Each task still uses short transactions and commits its claim before
 network I/O, so concurrency does not weaken the leasing contract.
 
-`TaskQueue` Protocol: `claim() / heartbeat() / succeed() / retry() / fail() / cancel() /
-release_expired()`. MVP impl = `PostgresTaskQueue`.
+`TaskQueue` Protocol: `claim() / mark_running() / heartbeat() / succeed() / retry() / fail() /
+cancel() / release_expired()`. MVP impl = `PostgresTaskQueue`, which implements every protocol
+operation including the leased-to-running transition in `mark_running()`.
 
 **Generic queue extension (type-only).** `PostgresTaskQueue` is parameterized over a
 `QueueSpec` (`app/core/config/task_queue.py`) so the same claim/lease/heartbeat/sweeper

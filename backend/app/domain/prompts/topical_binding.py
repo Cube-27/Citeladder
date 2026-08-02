@@ -212,6 +212,30 @@ def build_project_vocabulary(project: Project) -> BindingVocabulary:
     return build_vocabulary(names=names, hosts=hosts, texts=texts)
 
 
+def has_project_binding_context(project: Project) -> bool:
+    """Whether the project has category context suitable for topical gating.
+
+    Brand names, aliases, and domains identify the measured entity but do not
+    describe its market. A curated profile or topic does, so only those rows
+    activate the lexical audit gate.
+    """
+    brand = project.brand
+    profile = brand.profile if brand is not None else None
+    if profile is not None and any(
+        (
+            _clean(profile.description).strip(),
+            _clean(profile.positioning).strip(),
+            _clean(profile.target_audience).strip(),
+            any(_clean(item).strip() for item in profile.products_services or []),
+        )
+    ):
+        return True
+    return any(
+        _clean(topic.name).strip() or _clean(topic.description).strip()
+        for topic in project.topics
+    )
+
+
 def validate_prompt_binding(
     text: str, vocabulary: BindingVocabulary, *, topic_text: str = ""
 ) -> BindingResult:
