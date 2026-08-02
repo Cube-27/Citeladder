@@ -155,6 +155,13 @@ class CombinedProjection:
 # --- Pure helpers --------------------------------------------------------------
 
 
+def _source_revenue_sort_key(row: Mapping[str, Any]) -> tuple[float, str]:
+    """Stable source ordering without inferred heterogeneous-dict indexing."""
+    metrics = row.get("metrics")
+    revenue = metrics.get("revenue", 0) if isinstance(metrics, Mapping) else 0
+    return (-float(revenue or 0), str(row.get("ai_source") or ""))
+
+
 def _metric_money(metrics: Mapping[str, Any] | None, key: str) -> float:
     """An additive money measure: a missing/non-numeric key counts as 0."""
     value = (metrics or {}).get(key)
@@ -532,7 +539,7 @@ def _aggregate_a2_for_currency(
         }
         for ai_source, group in source_groups.items()
     ]
-    by_ai_source.sort(key=lambda row: (-row["metrics"]["revenue"], row["ai_source"]))
+    by_ai_source.sort(key=_source_revenue_sort_key)
     by_product = [
         {
             "product_id": product_id,

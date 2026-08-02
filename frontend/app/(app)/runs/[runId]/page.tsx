@@ -5,13 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RUN_ACTIVE_POLL_MS } from '@/lib/config/runs';
 import { useRunEvents } from '@/lib/runs/use-run-events';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionTitle } from '@/components/ui/typography';
 import { ExecutionsTable } from '@/components/runs/executions-table';
+import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
 import { ProgressPanel } from '@/components/runs/progress-panel';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -38,8 +40,13 @@ function errorMessage(error: unknown): string {
  */
 export default function RunDetailPage() {
   const params = useParams<{ runId: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const runId = params.runId;
   const queryClient = useQueryClient();
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(() =>
+    searchParams.get('execution'),
+  );
 
   const auditQuery = useQuery({
     queryKey: queryKeys.runs.detail(runId),
@@ -75,6 +82,8 @@ export default function RunDetailPage() {
   });
 
   const executions = executionsQuery.data ?? [];
+  const selectedExecution =
+    executions.find((execution) => execution.id === selectedExecutionId) ?? null;
 
   return (
     <div className="grid gap-6">
@@ -127,11 +136,25 @@ export default function RunDetailPage() {
         ) : (
           <Card>
             <CardContent className="p-0">
-              <ExecutionsTable auditId={runId} executions={executions} />
+              <ExecutionsTable
+                executions={executions}
+                onSelectEvidence={(execution) => setSelectedExecutionId(execution.id)}
+              />
             </CardContent>
           </Card>
         )}
       </div>
+
+      <ExecutionEvidenceDrawer
+        execution={selectedExecution}
+        open={selectedExecution !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedExecutionId(null);
+            if (searchParams.has('execution')) router.replace(`/runs/${runId}`);
+          }
+        }}
+      />
     </div>
   );
 }

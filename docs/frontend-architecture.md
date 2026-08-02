@@ -37,7 +37,7 @@
 | `/providers` | BYOK Provider Settings | **MVP** |
 | `/visibility` | Visibility workspace (four tabs: Overview, Trends, Mentions & Citations, Query Fanout) | **MVP** |
 | `/products`, `/products/[productId]` | Products workspace (agentic commerce): two tabs — Catalog (CRUD + CSV import + completeness badges) and Visibility (product SOV/mentions/rank/price-accuracy projection with engine filter); drill-down route page with mention evidence | **Implemented** — `components/products/products-screen.tsx` + `lib/api/products.ts` |
-| `/runs`, `/runs/[runId]`, `/runs/[runId]/executions/[executionId]` | Run/Executions explorer | **MVP** |
+| `/runs`, `/runs/[runId]` | Run/Executions explorer; execution evidence opens in a run-context drawer | **MVP** |
 | `/analytics` | LLM Analytics | **Implemented** — `components/analytics/analytics-screen.tsx` + `lib/api/analytics.ts` |
 | `/traffic` | Traffic | **Implemented** — `components/traffic/traffic-screen.tsx` + `lib/api/traffic.ts` |
 | `/content` | Content writer (basic v1: prompt-box-first composer, Website-context toggle, sanitised Markdown result, cancel, history) | **Implemented** |
@@ -223,7 +223,7 @@ reuses the cached dataset rather than refetching.
 - `providerCatalogSchema`
 - `auditSchema {id,workspace_id,project_id,status,random_seed,configuration,summary,
   requested_count,completed_count,failed_count,error_message,created_at,updated_at,completed_at}`
-- `executionSchema {id,audit_id,prompt_index,repetition,randomized_position,status,answer_text,
+- `executionSchema {id,audit_id,prompt_index,repetition,randomized_position,status,prompt_text,answer_text,
   search_used,search_events[],citations[],score,provider_metadata,error_code,error_message,
   latency_ms}`
 - `citationSchema {ordinal,url,title,domain,cited_text,classification}` (`owned|competitor|third_party`)

@@ -154,6 +154,16 @@ PULSE_ANSWER_INSTRUCTION_SHA256: Final = (
     "a7d86db3b284d8d7397125046327ac013107240255cd6ba3ee6544feaebfb69a"
 )
 
+# Grounded benchmark answers still need enough room for useful citations, but
+# visibility measurement does not benefit from essay-length responses. This
+# neutral instruction applies to every active transport through the frozen
+# request policy and never includes tracked brand or competitor identity.
+BENCHMARK_ANSWER_INSTRUCTION: Final = (
+    "Answer the question directly in 150 to 250 words. "
+    "Use concise paragraphs or bullets, avoid repetition, and cite the most "
+    "relevant sources when web search is available."
+)
+
 
 @dataclass(frozen=True, slots=True)
 class MeasurementModePolicy:
@@ -398,13 +408,13 @@ class AuditSettings(BaseSettings):
     request_timeout_seconds: float = 60.0
 
     # --- Measurement-mode route/output policy (invariant 1) --------------
-    # Pulse trades answer breadth for cost/latency: a short output cap, a short
-    # per-call timeout, one repetition, and the UNMEASURED CANDIDATE answer
-    # instruction. Benchmark is the full comparable run.
+    # Both modes bound output. Benchmark keeps retrieval for citation evidence
+    # while avoiding essay-length generations that add cost and latency without
+    # improving deterministic visibility scoring.
     pulse_max_output_tokens: int = 600
-    benchmark_max_output_tokens: int = 4096
+    benchmark_max_output_tokens: int = 800
     pulse_timeout_seconds: float = 30.0
-    benchmark_timeout_seconds: float = 150.0
+    benchmark_timeout_seconds: float = 60.0
     pulse_repetitions: int = 1
     benchmark_repetitions: int = 3
     # Days of history folded into a trend series by the reporting projection.
@@ -471,7 +481,7 @@ def measurement_policy_for_mode(mode: str) -> MeasurementModePolicy:
             max_output_tokens=audit_settings.benchmark_max_output_tokens,
             timeout_seconds=audit_settings.benchmark_timeout_seconds,
             repetitions=audit_settings.benchmark_repetitions,
-            answer_instruction="",
+            answer_instruction=BENCHMARK_ANSWER_INSTRUCTION,
         )
     raise ValueError(
         f"unknown measurement mode {mode!r}; expected one of "

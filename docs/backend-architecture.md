@@ -130,6 +130,12 @@ retryable error classes, max attempts, request timeout. These are frozen into
 `Audit.configuration` at creation and never re-read from live config after that (determinism,
 invariant 9).
 
+Grounded benchmark executions use one provider-neutral concise-answer policy across OpenAI,
+Anthropic, and Google: retrieval stays enabled for citation evidence, while output is capped at
+800 tokens, the call timeout is 60 seconds, and the neutral instruction requests a direct
+150–250 word answer with only the most relevant sources. The planner freezes this policy into
+the audit and every adapter consumes that frozen request shape.
+
 ## 5. High-level flow
 
 ```

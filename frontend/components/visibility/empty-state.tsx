@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Rocket } from 'lucide-react';
 
+import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -28,9 +29,13 @@ export function VisibilityEmptyState({
           : 'Launch an audit to see how AI answer engines talk about your brand.'
       }
       action={
-        <Button asChild variant={hasActiveRun ? 'secondary' : 'primary'} size="md">
-          <Link href="/runs">{hasActiveRun ? 'View runs' : 'Launch your first audit'}</Link>
-        </Button>
+        hasActiveRun ? (
+          <Button asChild variant="secondary" size="md">
+            <Link href="/runs">View runs</Link>
+          </Button>
+        ) : (
+          <LaunchAuditButton size="md">Launch your first audit</LaunchAuditButton>
+        )
       }
     />
   );

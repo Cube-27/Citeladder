@@ -523,7 +523,10 @@ class ProviderCatalogSettings(BaseSettings):
     # Caps server-side web_search invocations per Anthropic request.
     anthropic_max_uses: int = 3
     # Per-call output-token cap sent to every transport payload.
-    max_output_tokens: int = 4096
+    # Global fallback for any non-frozen request. Audit calls normally carry
+    # their own frozen cap; keeping this aligned prevents an adapter caller from
+    # accidentally permitting essay-length output.
+    max_output_tokens: int = 800
     # HTTP client timeout for a single provider call.
     request_timeout_seconds: float = 60.0
     # Shorter timeout for the lightweight connectivity probe.

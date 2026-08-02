@@ -76,6 +76,7 @@ const execution = {
   status: 'succeeded',
   attempt_count: 1,
   max_attempts: 5,
+  prompt_text: 'Which CRM is best for a growing team?',
   answer_text: 'Acme is a leading CRM.',
   search_used: true,
   error_code: '',

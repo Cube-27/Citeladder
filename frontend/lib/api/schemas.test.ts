@@ -281,6 +281,7 @@ describe('contract schemas', () => {
       status: 'succeeded',
       attempt_count: 1,
       max_attempts: 5,
+      prompt_text: 'Which CRM is best?',
       answer_text: 'Answer',
       search_used: true,
       error_code: '',

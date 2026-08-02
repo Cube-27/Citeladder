@@ -511,10 +511,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     renderPage();
 
     expect(await screen.findByText('No completed runs yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /launch your first audit/i })).toHaveAttribute(
-      'href',
-      '/runs',
-    );
+    expect(screen.getByRole('button', { name: /launch your first audit/i })).toBeInTheDocument();
     // No tablist is rendered in the empty state.
     expect(screen.queryByRole('tablist')).toBeNull();
   });

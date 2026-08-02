@@ -223,6 +223,7 @@ class AuditTaskResponse(BaseModel):
     status: str
     attempt_count: int
     max_attempts: int
+    prompt_text: str = ""
     answer_text: str = ""
     search_used: bool = False
     error_code: str = ""

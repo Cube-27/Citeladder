@@ -3,6 +3,7 @@
 import { CalendarRange, ChevronDown, CircleHelp, Download } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import {
   Dropdown,
   DropdownContent,
@@ -251,6 +252,7 @@ export function VisibilityToolbar({
           mock shows; export stays a disabled placeholder until report export
           lands (F10), rather than shipping a button that does nothing. */}
       <div className="ms-auto flex items-center gap-2">
+        <LaunchAuditButton size="sm" />
         <Tooltip content="How these metrics are calculated">
           <Button variant="secondary" size="sm" className="size-[30px] rounded-full px-0" asChild>
             {/* The label belongs on the anchor, not on the `asChild` Button:

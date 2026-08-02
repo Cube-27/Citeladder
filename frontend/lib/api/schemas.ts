@@ -574,6 +574,7 @@ export const executionSchema = responseObject({
   status: executionStatusSchema,
   attempt_count: z.number().int(),
   max_attempts: z.number().int(),
+  prompt_text: z.string(),
   answer_text: z.string(),
   search_used: z.boolean(),
   error_code: z.string(),

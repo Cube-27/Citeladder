@@ -16,6 +16,7 @@ import PromptsPage from './page';
 // rendering.
 // ---------------------------------------------------------------------------
 let currentSearch = new URLSearchParams();
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 // Leaving manage mode strips `?mode=manage` with `history.replaceState` —
 // shallow URL bookkeeping, not an App Router navigation — so the spy stands in
 // for that.
@@ -24,7 +25,7 @@ const replaceStateSpy = vi.fn((_data: unknown, _unused: string, url?: string | U
 });
 vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: pushMock, prefetch: vi.fn() }),
   usePathname: () => '/prompts',
   useSearchParams: () => currentSearch,
 }));
@@ -161,11 +162,85 @@ beforeEach(() => {
   setActiveWorkspaceId(null);
   currentSearch = new URLSearchParams();
   replaceStateSpy.mockClear();
+  pushMock.mockClear();
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('PromptsPage (Your Prompts)', () => {
+  it('launches an audit in place and routes directly to the new run', async () => {
+    const user = userEvent.setup();
+    const auditId = '99999999-9999-4999-8999-999999999999';
+    let posted: Record<string, unknown> | null = null;
+    baseHandlers([makePrompt({ topic_id: TOPIC_ID })], [makeTopic()]);
+    mswServer.use(
+      http.get('/api/v1/provider-connections', () =>
+        HttpResponse.json([
+          {
+            id: '88888888-8888-4888-8888-888888888888',
+            workspace_id: WORKSPACE_ID,
+            label: 'OpenAI',
+            transport_provider: 'openai',
+            base_url: null,
+            active: true,
+            api_key_set: true,
+            last_tested_at: null,
+            last_test_status: '',
+            routes: [
+              {
+                id: '77777777-7777-4777-8777-777777777777',
+                logical_engine: 'chatgpt',
+                transport_provider: 'openai',
+                transport_model: 'gpt-5.4',
+                is_default: true,
+              },
+            ],
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+        ]),
+      ),
+      http.post('/api/v1/audits', async ({ request }) => {
+        posted = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(
+          {
+            id: auditId,
+            workspace_id: WORKSPACE_ID,
+            project_id: PROJECT_ID,
+            status: 'queued',
+            benchmark_mode: 'consumer_like',
+            repetitions: 1,
+            random_seed: '7',
+            requested_count: 1,
+            completed_count: 0,
+            failed_count: 0,
+            error_message: '',
+            engine_snapshots: [],
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+            started_at: null,
+            completed_at: null,
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Launch audit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Launch an audit' });
+    await user.click(within(dialog).getByRole('checkbox', { name: 'ChatGPT' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Launch audit' }));
+
+    await waitFor(() => expect(posted).not.toBeNull());
+    expect(posted).toMatchObject({
+      project_id: PROJECT_ID,
+      prompt_set_id: SET_ID,
+      engines: ['chatgpt'],
+    });
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${auditId}`));
+  });
+
   it('groups active prompts by topic with a summary banner and a manage link', async () => {
     baseHandlers(
       [

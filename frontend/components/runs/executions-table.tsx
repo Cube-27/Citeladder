@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -20,12 +18,12 @@ import { executionBadgeValue, executionStatusLabel } from '@/lib/runs/status';
  *
  * One row per execution/queue task: prompt index + repetition (mono), the
  * engine badge (logical + transport), status badge, and latency (mono).
- * Succeeded rows link to the evidence page for that execution.
+ * Succeeded rows open the evidence drawer without leaving the run.
  */
 export function ExecutionsTable({
-  auditId,
   executions,
-}: Readonly<{ auditId: string; executions: Execution[] }>) {
+  onSelectEvidence,
+}: Readonly<{ executions: Execution[]; onSelectEvidence: (execution: Execution) => void }>) {
   return (
     <Table>
       <TableHeader>
@@ -41,8 +39,13 @@ export function ExecutionsTable({
         {executions.map((execution) => (
           <TableRow key={execution.id}>
             <TableCell>
-              <span className="mono text-foreground text-sm">#{execution.prompt_index + 1}</span>
-              <span className="mono text-muted ml-2 text-xs">rep {execution.repetition}</span>
+              <span
+                className="text-foreground block max-w-[42ch] truncate text-sm"
+                title={execution.prompt_text}
+              >
+                {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
+              </span>
+              <span className="mono text-muted text-xs">rep {execution.repetition}</span>
             </TableCell>
             <TableCell>
               <span className="text-foreground text-sm">
@@ -62,12 +65,13 @@ export function ExecutionsTable({
             </TableCell>
             <TableCell>
               {execution.status === 'succeeded' ? (
-                <Link
-                  href={`/runs/${auditId}/executions/${execution.id}`}
+                <button
+                  type="button"
+                  onClick={() => onSelectEvidence(execution)}
                   className="text-accent-text text-sm font-medium hover:underline"
                 >
                   Evidence
-                </Link>
+                </button>
               ) : (
                 <span className="text-subtle text-sm">—</span>
               )}

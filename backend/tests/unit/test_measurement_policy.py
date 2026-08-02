@@ -28,6 +28,7 @@ from app.connectors.answer_engines.contracts import (
     NormalizedUsage,
 )
 from app.core.config.audits import (
+    BENCHMARK_ANSWER_INSTRUCTION,
     MEASUREMENT_MODE_BENCHMARK,
     MEASUREMENT_MODE_PULSE,
     MEASUREMENT_MODES,
@@ -70,14 +71,15 @@ def test_unmeasured_candidate_instruction_wording_is_sha256_pinned() -> None:
     )
 
 
-def test_unmeasured_candidate_is_the_pulse_answer_instruction() -> None:
-    """Pulse mode sends the unmeasured candidate; benchmark sends nothing."""
+def test_measurement_modes_use_their_owned_answer_instructions() -> None:
+    """Each mode contributes its config-owned neutral answer instruction."""
     assert (
         measurement_policy_for_mode(MEASUREMENT_MODE_PULSE).answer_instruction
         == PULSE_ANSWER_INSTRUCTION
     )
     assert (
-        measurement_policy_for_mode(MEASUREMENT_MODE_BENCHMARK).answer_instruction == ""
+        measurement_policy_for_mode(MEASUREMENT_MODE_BENCHMARK).answer_instruction
+        == BENCHMARK_ANSWER_INSTRUCTION
     )
 
 
@@ -98,10 +100,10 @@ def test_measurement_policy_for_benchmark_returns_frozen_caps() -> None:
 
     assert policy == MeasurementModePolicy(
         retrieval_enabled=True,
-        max_output_tokens=4096,
-        timeout_seconds=150.0,
+        max_output_tokens=800,
+        timeout_seconds=60.0,
         repetitions=3,
-        answer_instruction="",
+        answer_instruction=BENCHMARK_ANSWER_INSTRUCTION,
     )
 
 

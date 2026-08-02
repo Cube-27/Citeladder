@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
@@ -206,12 +207,15 @@ export function YourPrompts() {
           <span className="text-foreground font-semibold">{topicCount}</span>{' '}
           {topicCount === 1 ? 'topic' : 'topics'}, which are run on each audit.
         </p>
-        <Link
-          href="/prompts?mode=manage"
-          className={buttonVariants({ variant: 'primary', size: 'sm' })}
-        >
-          Manage prompts
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/prompts?mode=manage"
+            className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+          >
+            Manage prompts
+          </Link>
+          <LaunchAuditButton size="sm" disabled={activePrompts.length === 0} />
+        </div>
       </div>
 
       <div className="relative max-w-sm">
