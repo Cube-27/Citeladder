@@ -50,6 +50,7 @@ from app.core.config.provider_catalog import (
 
 logger = logging.getLogger(__name__)
 
+
 def _add_optional_payload_fields(
     payload: dict[str, Any],
     request: AnswerEngineRequest,

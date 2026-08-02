@@ -129,6 +129,5 @@ def uses_gemini_flash_pricing(provider: str, model: str) -> bool:
 def uses_gemini_flash_lite_pricing(provider: str, model: str) -> bool:
     """Return whether an execution uses the Gemini 2.5 Flash-Lite card."""
     return (
-        provider == ENGINE_GEMINI
-        and model in GEMINI_FLASH_LITE_PRICING_MODEL_ALIASES
+        provider == ENGINE_GEMINI and model in GEMINI_FLASH_LITE_PRICING_MODEL_ALIASES
     )

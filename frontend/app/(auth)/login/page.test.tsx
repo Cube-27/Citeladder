@@ -40,6 +40,7 @@ describe('LoginPage', () => {
     expect(screen.queryByRole('button', { name: /continue with apple/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/or continue with email/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show Password' })).toBeInTheDocument();
   });
 
   it('shows validation errors and does not call the API on empty submit', async () => {
@@ -70,7 +71,7 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />);
     await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'sup3rsecret');
+    await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'sup3rsecret');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
@@ -86,7 +87,7 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />);
     await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'wrongpass');
+    await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'wrongpass');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();

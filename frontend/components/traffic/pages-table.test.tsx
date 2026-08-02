@@ -153,6 +153,18 @@ describe('PagesTable', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders only the error alert when page stats fail', async () => {
+    mswServer.use(http.get(PAGES_URL, () => new HttpResponse(null, { status: 400 })));
+    renderWithProviders(<PagesTable projectId={PROJECT} />);
+
+    const table = await screen.findByTestId('pages-table');
+    expect(await within(table).findByRole('alert')).toHaveTextContent(
+      'Could not load page stats. Check your connection and try again.',
+    );
+    expect(within(table).queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument();
+    expect(within(table).queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+  });
+
   it('forwards the window bounds to the request', async () => {
     const seen = mockPages([pageRow()]);
     renderWithProviders(<PagesTable projectId={PROJECT} from="2026-06-25" to="2026-07-23" />);

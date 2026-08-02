@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -164,6 +164,85 @@ const EVIDENCE = {
   ],
 } as const;
 
+const BENCHMARK_ROWS: readonly {
+  label: string;
+  value: string;
+  width: string;
+  own?: boolean;
+  opacity?: string;
+}[] = [
+  {
+    label: 'Acme Corp (Your Brand)',
+    value: '38.4% Share (#1 Lead)',
+    width: 'w-[38.4%]',
+    own: true,
+  },
+  { label: 'Competitor A', value: '28.1%', width: 'w-[28.1%]', opacity: 'opacity-60' },
+  { label: 'Competitor B', value: '19.5%', width: 'w-[19.5%]', opacity: 'opacity-40' },
+] as const;
+
+const OPPORTUNITY_ROWS = [
+  {
+    title: 'Update Deprecated Docs Cited by ChatGPT',
+    detail: 'Increases ChatGPT recommendation score by +14%',
+    action: 'Fix Now',
+    icon: Zap,
+    iconClassName: 'bg-mkt-warning/10 text-mkt-warning-text border-mkt-warning/50',
+    actionClassName: 'bg-mkt-indigo text-white',
+  },
+  {
+    title: 'Publish Enterprise Comparison Table for Gemini',
+    detail: 'Captures missing citations in enterprise buyer queries',
+    action: 'View Draft',
+    icon: Bot,
+    iconClassName: 'bg-mkt-frost text-mkt-indigo border-mkt-primary/50',
+    actionClassName: 'bg-mkt-surface border-mkt-black-10 text-mkt-ink border',
+  },
+] as const;
+
+function FrameView({
+  title,
+  status,
+  reduceMotion,
+  children,
+  className = 'space-y-mkt-14',
+}: Readonly<{
+  title: string;
+  status: ReactNode;
+  reduceMotion: boolean | null;
+  children: ReactNode;
+  className?: string;
+}>) {
+  return (
+    <m.div
+      initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+      transition={{ duration: 0.25, ease: EASE_OUT }}
+      className={className}
+    >
+      <div className="flex items-center justify-between">
+        <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">{title}</p>
+        {status}
+      </div>
+      {children}
+    </m.div>
+  );
+}
+
+function FrameCard({ children, className }: Readonly<{ children: ReactNode; className?: string }>) {
+  return (
+    <div
+      className={cn(
+        'bg-mkt-surface-sunk border-mkt-black-10 rounded-mkt-sm p-mkt-14 border',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 /**
  * Compact, Authentic Searchify Product Showcase Canvas with Real Trend Graphs.
  * Fits comfortably on screen with streamlined sidebar, real-time SVG charts,
@@ -264,23 +343,17 @@ export function ProductWindow() {
         <div className="bg-mkt-surface p-mkt-20 sm:p-mkt-20 flex flex-col justify-between">
           <AnimatePresence mode="wait">
             {activeStep === 0 && (
-              <m.div
+              <FrameView
                 key="observe-view"
-                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: EASE_OUT }}
-                className="space-y-mkt-20"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
-                    Visibility Overview & Trend Graph
-                  </p>
+                reduceMotion={reduceMotion}
+                title="Visibility Overview & Trend Graph"
+                status={
                   <span className="text-mkt-xs text-mkt-indigo gap-mkt-6 flex items-center font-mono font-semibold">
                     <TrendingUp className="size-3" /> Cross-Run Trend
                   </span>
-                </div>
-
+                }
+                className="space-y-mkt-20"
+              >
                 {/* Metrics Row */}
                 <div
                   className={cn(
@@ -311,7 +384,7 @@ export function ProductWindow() {
                 </div>
 
                 {/* SVG Trend Graph (Real Product Chart) */}
-                <div className="bg-mkt-surface-sunk border-mkt-black-10 rounded-mkt-sm p-mkt-14 border">
+                <FrameCard>
                   <div className="text-mkt-xs text-mkt-ink-soft mb-mkt-10 flex items-center justify-between font-mono">
                     <span>Visibility Score Trend (Last 8 Audits)</span>
                     <span className="text-mkt-success-text font-semibold">72.4% Peak</span>
@@ -356,29 +429,22 @@ export function ProductWindow() {
                     <span>May 15</span>
                     <span>Jun 30 (Latest Run)</span>
                   </div>
-                </div>
-              </m.div>
+                </FrameCard>
+              </FrameView>
             )}
 
             {activeStep === 1 && (
-              <m.div
+              <FrameView
                 key="trace-view"
-                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: EASE_OUT }}
-                className="space-y-mkt-14"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
-                    Answers & Evidence Trace
-                  </p>
+                reduceMotion={reduceMotion}
+                title="Answers & Evidence Trace"
+                status={
                   <span className="text-mkt-xs text-mkt-indigo gap-mkt-6 flex items-center font-mono font-semibold">
                     <ShieldCheck className="text-mkt-success-text size-3" /> 100% Verifiable
                   </span>
-                </div>
-
-                <div className="bg-mkt-surface-sunk border-mkt-black-10 rounded-mkt-sm p-mkt-14 border">
+                }
+              >
+                <FrameCard>
                   <div className="text-mkt-xs text-mkt-ink-soft flex items-center justify-between">
                     <span className="text-mkt-ink gap-mkt-6 flex items-center font-semibold">
                       <Search className="text-mkt-indigo size-3" />
@@ -404,118 +470,89 @@ export function ProductWindow() {
                       </span>
                     ))}
                   </div>
-                </div>
-              </m.div>
+                </FrameCard>
+              </FrameView>
             )}
 
             {activeStep === 2 && (
-              <m.div
+              <FrameView
                 key="benchmark-view"
-                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: EASE_OUT }}
-                className="space-y-mkt-14"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
-                    Share of Voice & Competitive Chart
-                  </p>
+                reduceMotion={reduceMotion}
+                title="Share of Voice & Competitive Chart"
+                status={
                   <span className="text-mkt-xs text-mkt-indigo font-mono font-semibold">
                     Market Share Comparison
                   </span>
-                </div>
-
-                <div className="bg-mkt-surface-sunk border-mkt-black-10 space-y-mkt-14 rounded-mkt-sm p-mkt-14 border">
-                  <div>
-                    <div className="text-mkt-xs mb-mkt-6 flex justify-between font-semibold">
-                      <span className="text-mkt-ink">Acme Corp (Your Brand)</span>
-                      <span className="text-mkt-indigo font-mono">38.4% Share (#1 Lead)</span>
+                }
+              >
+                <FrameCard className="space-y-mkt-14">
+                  {BENCHMARK_ROWS.map((row) => (
+                    <div key={row.label}>
+                      <div
+                        className={cn(
+                          'text-mkt-xs mb-mkt-6 flex justify-between',
+                          row.own ? 'font-semibold' : 'text-mkt-ink-soft',
+                        )}
+                      >
+                        <span className={row.own ? 'text-mkt-ink' : undefined}>{row.label}</span>
+                        <span className={cn('font-mono', row.own && 'text-mkt-indigo')}>
+                          {row.value}
+                        </span>
+                      </div>
+                      <div className="bg-mkt-black-10 h-2 w-full overflow-hidden rounded-full">
+                        <div
+                          className={cn(
+                            'h-full rounded-full',
+                            row.own ? 'bg-mkt-indigo' : 'bg-mkt-mist',
+                            row.width,
+                            row.opacity,
+                          )}
+                        />
+                      </div>
                     </div>
-                    <div className="bg-mkt-black-10 h-2 w-full overflow-hidden rounded-full">
-                      <div className="bg-mkt-indigo h-full w-[38.4%] rounded-full" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-mkt-xs text-mkt-ink-soft mb-mkt-6 flex justify-between">
-                      <span>Competitor A</span>
-                      <span className="font-mono">28.1%</span>
-                    </div>
-                    <div className="bg-mkt-black-10 h-2 w-full overflow-hidden rounded-full">
-                      <div className="bg-mkt-mist h-full w-[28.1%] rounded-full opacity-60" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-mkt-xs text-mkt-ink-soft mb-mkt-6 flex justify-between">
-                      <span>Competitor B</span>
-                      <span className="font-mono">19.5%</span>
-                    </div>
-                    <div className="bg-mkt-black-10 h-2 w-full overflow-hidden rounded-full">
-                      <div className="bg-mkt-mist h-full w-[19.5%] rounded-full opacity-40" />
-                    </div>
-                  </div>
-                </div>
-              </m.div>
+                  ))}
+                </FrameCard>
+              </FrameView>
             )}
 
             {activeStep === 3 && (
-              <m.div
+              <FrameView
                 key="optimize-view"
-                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: EASE_OUT }}
-                className="space-y-mkt-14"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-mkt-display text-mkt-sm text-mkt-ink font-semibold">
-                    Opportunities & Action Recommendations
-                  </p>
+                reduceMotion={reduceMotion}
+                title="Opportunities & Action Recommendations"
+                status={
                   <span className="text-mkt-xs text-mkt-indigo font-mono font-semibold">
                     High-Impact Moves
                   </span>
-                </div>
-
-                <div className="bg-mkt-surface-sunk border-mkt-black-10 rounded-mkt-sm p-mkt-14 flex items-center justify-between border">
-                  <div className="gap-mkt-10 flex items-center">
-                    <span className="bg-mkt-warning/10 text-mkt-warning-text border-mkt-warning/50 rounded-mkt-sm p-mkt-6 border">
-                      <Zap className="size-3" />
-                    </span>
-                    <div>
-                      <span className="text-mkt-xs text-mkt-ink block font-semibold">
-                        Update Deprecated Docs Cited by ChatGPT
+                }
+              >
+                {OPPORTUNITY_ROWS.map((row) => {
+                  const Icon = row.icon;
+                  return (
+                    <FrameCard key={row.title} className="flex items-center justify-between">
+                      <div className="gap-mkt-10 flex items-center">
+                        <span className={cn('rounded-mkt-sm p-mkt-6 border', row.iconClassName)}>
+                          <Icon className="size-3" />
+                        </span>
+                        <div>
+                          <span className="text-mkt-xs text-mkt-ink block font-semibold">
+                            {row.title}
+                          </span>
+                          <span className="text-mkt-xs text-mkt-ink-soft">{row.detail}</span>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          'text-mkt-xs rounded-mkt-sm px-mkt-10 py-mkt-6 font-semibold',
+                          row.actionClassName,
+                        )}
+                      >
+                        {row.action}
                       </span>
-                      <span className="text-mkt-xs text-mkt-ink-soft">
-                        Increases ChatGPT recommendation score by +14%
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-mkt-xs bg-mkt-indigo rounded-mkt-sm px-mkt-10 py-mkt-6 font-semibold text-white">
-                    Fix Now
-                  </span>
-                </div>
-
-                <div className="bg-mkt-surface-sunk border-mkt-black-10 rounded-mkt-sm p-mkt-14 flex items-center justify-between border">
-                  <div className="gap-mkt-10 flex items-center">
-                    <span className="bg-mkt-frost text-mkt-indigo border-mkt-primary/50 rounded-mkt-sm p-mkt-6 border">
-                      <Bot className="size-3" />
-                    </span>
-                    <div>
-                      <span className="text-mkt-xs text-mkt-ink block font-semibold">
-                        Publish Enterprise Comparison Table for Gemini
-                      </span>
-                      <span className="text-mkt-xs text-mkt-ink-soft">
-                        Captures missing citations in enterprise buyer queries
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-mkt-xs bg-mkt-surface border-mkt-black-10 text-mkt-ink rounded-mkt-sm px-mkt-10 py-mkt-6 border font-semibold">
-                    View Draft
-                  </span>
-                </div>
-              </m.div>
+                    </FrameCard>
+                  );
+                })}
+              </FrameView>
             )}
           </AnimatePresence>
         </div>

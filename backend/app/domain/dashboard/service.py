@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -52,10 +53,25 @@ def _section(section_id, title, href, state="empty", metrics=None, source=None):
     )
 
 
-async def get_dashboard(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project: Project
-) -> DashboardResponse:
-    project_id = project.id
+@dataclass(frozen=True)
+class DashboardInputs:
+    metric: MetricSnapshot | None
+    analytics: AnalyticsSnapshot | None
+    traffic: TrafficSnapshot | None
+    audit: Audit | None
+    commerce: ProductMetricSnapshot | None
+    content: ContentGeneration | None
+    crawl: SiteCrawl | None
+    health: SiteHealthSnapshot | None
+    profile: BrandProfile | None
+    prompt_count: int | None
+    opportunity_count: int | None
+
+
+async def fetch_latest_sources(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> DashboardInputs:
+    """Fetch the latest persisted source rows on the request transaction."""
 
     # Every query stays on the request session. Opening independent sessions
     # here would make the projection observe a different transaction (and can
@@ -122,34 +138,29 @@ async def get_dashboard(
             Opportunity.status == "open",
         )
     )
-
-    audit_running = audit is not None and audit.status not in AUDIT_TERMINAL_STATUSES
-    crawl_running = (
-        crawl is not None and crawl.completed_at is None and crawl.status != "failed"
+    return DashboardInputs(
+        metric=metric,
+        analytics=analytics,
+        traffic=traffic,
+        audit=audit,
+        commerce=commerce,
+        content=content,
+        crawl=crawl,
+        health=health,
+        profile=profile,
+        prompt_count=prompt_count,
+        opportunity_count=opportunity_count,
     )
-    active_work = []
-    if audit_running:
-        active_work.append("runs")
-    if crawl_running:
-        active_work.append("site_health")
-    if (
-        content is not None
-        and content.completed_at is None
-        and content.status != "failed"
-    ):
-        active_work.append("content")
 
+
+def build_analyze_sections(inputs: DashboardInputs) -> list[DashboardSection]:
+    metric = inputs.metric
+    audit = inputs.audit
+    audit_running = audit is not None and audit.status not in AUDIT_TERMINAL_STATUSES
     visibility_metrics = dict(metric.metrics or {}) if metric else {}
     visibility_metrics["visibility_score"] = metric.visibility_score if metric else None
     visibility_metrics["completed_answers"] = metric.total_completed if metric else None
-    health_metrics = {
-        "overall_score": health.overall_score if health else None,
-        "technical_score": health.technical_score if health else None,
-        "aeo_score": health.aeo_score if health else None,
-        "issues": health.issue_count if health else None,
-        "analyzed_urls": crawl.analyzed_url_count if crawl else None,
-    }
-    analyze = [
+    return [
         _section(
             "visibility",
             "Visibility",
@@ -162,32 +173,32 @@ async def get_dashboard(
             "answers",
             "Answers",
             "/analytics",
-            "ready" if analytics else "not_setup",
-            analytics.metrics if analytics else {},
-            _source(analytics, "analytics_snapshot"),
+            "ready" if inputs.analytics else "not_setup",
+            inputs.analytics.metrics if inputs.analytics else {},
+            _source(inputs.analytics, "analytics_snapshot"),
         ),
         _section(
             "traffic",
             "Traffic",
             "/traffic",
-            "ready" if traffic else "not_setup",
-            traffic.metrics if traffic else {},
-            _source(traffic, "traffic_snapshot"),
+            "ready" if inputs.traffic else "not_setup",
+            inputs.traffic.metrics if inputs.traffic else {},
+            _source(inputs.traffic, "traffic_snapshot"),
         ),
         _section(
             "prompts",
             "Prompts",
             "/prompts",
-            "ready" if prompt_count else "empty",
-            {"active": prompt_count},
+            "ready" if inputs.prompt_count else "empty",
+            {"active": inputs.prompt_count},
         ),
         _section(
             "commerce",
             "Commerce",
             "/products",
-            "ready" if commerce else "empty",
-            commerce.metrics if commerce else {},
-            _source(commerce, "product_metric_snapshot"),
+            "ready" if inputs.commerce else "empty",
+            inputs.commerce.metrics if inputs.commerce else {},
+            _source(inputs.commerce, "product_metric_snapshot"),
         ),
         _section(
             "runs",
@@ -202,21 +213,35 @@ async def get_dashboard(
             _source(audit, "audit"),
         ),
     ]
+
+
+def build_improve_sections(
+    inputs: DashboardInputs, *, active_work: list[str]
+) -> list[DashboardSection]:
+    crawl, health, content = inputs.crawl, inputs.health, inputs.content
+    crawl_running = (
+        crawl is not None and crawl.completed_at is None and crawl.status != "failed"
+    )
     site_health_state = "running" if crawl_running else "not_setup"
     if not crawl_running and crawl and crawl.status == "failed":
         site_health_state = "failed"
     elif not crawl_running and health:
         site_health_state = "ready"
-    improve = [
+    health_metrics = {
+        "overall_score": health.overall_score if health else None,
+        "technical_score": health.technical_score if health else None,
+        "aeo_score": health.aeo_score if health else None,
+        "issues": health.issue_count if health else None,
+        "analyzed_urls": crawl.analyzed_url_count if crawl else None,
+    }
+    return [
         _section(
             "content",
             "Content",
             "/content",
-            (
-                "running"
-                if "content" in active_work
-                else ("ready" if content else "empty")
-            ),
+            "running"
+            if "content" in active_work
+            else ("ready" if content else "empty"),
             {"status": content.status if content else None},
             _source(content, "content_generation"),
         ),
@@ -227,8 +252,7 @@ async def get_dashboard(
             site_health_state,
             health_metrics,
             _source(
-                health or crawl,
-                "site_health_snapshot" if health else "site_crawl",
+                health or crawl, "site_health_snapshot" if health else "site_crawl"
             ),
         ),
         _section(
@@ -243,25 +267,50 @@ async def get_dashboard(
             "opportunities",
             "Opportunities",
             "/opportunities",
-            "ready" if opportunity_count else "empty",
-            {"open": opportunity_count},
+            "ready" if inputs.opportunity_count else "empty",
+            {"open": inputs.opportunity_count},
         ),
         _section(
             "brand_knowledge",
             "Brand knowledge",
             "/knowledge-base",
-            "ready" if profile else "not_setup",
-            {"configured": profile is not None},
-            _source(profile, "brand_profile", "updated_at"),
+            "ready" if inputs.profile else "not_setup",
+            {"configured": inputs.profile is not None},
+            _source(inputs.profile, "brand_profile", "updated_at"),
         ),
+    ]
+
+
+def assemble_response(project: Project, inputs: DashboardInputs) -> DashboardResponse:
+    audit_running = (
+        inputs.audit is not None and inputs.audit.status not in AUDIT_TERMINAL_STATUSES
+    )
+    crawl_running = (
+        inputs.crawl is not None
+        and inputs.crawl.completed_at is None
+        and inputs.crawl.status != "failed"
+    )
+    active_work = []
+    if audit_running:
+        active_work.append("runs")
+    if crawl_running:
+        active_work.append("site_health")
+    if (
+        inputs.content is not None
+        and inputs.content.completed_at is None
+        and inputs.content.status != "failed"
+    ):
+        active_work.append("content")
+    improve = build_improve_sections(inputs, active_work=active_work)
+    improve.append(
         _section(
             "projects",
             "Manage projects",
             "/projects",
             "ready",
             {"active_project": project.brand_name or project.name},
-        ),
-    ]
+        )
+    )
     return DashboardResponse(
         project=DashboardProject(
             id=project.id,
@@ -272,14 +321,29 @@ async def get_dashboard(
         ),
         generated_at=datetime.now(UTC),
         executive_metrics={
-            "visibility_score": metric.visibility_score if metric else None,
-            "site_health_score": health.overall_score if health else None,
+            "visibility_score": inputs.metric.visibility_score
+            if inputs.metric
+            else None,
+            "site_health_score": inputs.health.overall_score if inputs.health else None,
             "open_opportunities": (
-                opportunity_count if opportunity_count is not None else None
+                inputs.opportunity_count
+                if inputs.opportunity_count is not None
+                else None
             ),
-            "active_prompts": prompt_count if prompt_count is not None else None,
+            "active_prompts": inputs.prompt_count
+            if inputs.prompt_count is not None
+            else None,
         },
-        analyze=analyze,
+        analyze=build_analyze_sections(inputs),
         improve=improve,
         active_work=active_work,
     )
+
+
+async def get_dashboard(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project: Project
+) -> DashboardResponse:
+    inputs = await fetch_latest_sources(
+        session, workspace_id=workspace_id, project_id=project.id
+    )
+    return assemble_response(project, inputs)

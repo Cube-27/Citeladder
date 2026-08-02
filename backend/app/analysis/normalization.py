@@ -65,24 +65,6 @@ def normalize_domain(value: object) -> str:
     return host.removeprefix("www.")
 
 
-def normalize_url(value: object) -> str:
-    """Drop the URL fragment; keep scheme/host/path/query. Lowercase host only."""
-    text = str(value or "").strip()
-    if not text:
-        return ""
-    if "://" not in text:
-        text = "https://" + text
-    parts = urlsplit(text)
-    host = (parts.hostname or "").lower().removeprefix("www.")
-    rebuilt = f"{parts.scheme}://{host}"
-    if parts.port:
-        rebuilt += f":{parts.port}"
-    rebuilt += parts.path
-    if parts.query:
-        rebuilt += f"?{parts.query}"
-    return rebuilt
-
-
 def domain_matches(candidate: str, target: str) -> bool:
     """True if ``candidate`` domain equals or is a subdomain of ``target``.
 

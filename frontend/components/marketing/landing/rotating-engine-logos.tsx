@@ -43,6 +43,8 @@ function joinLabels(labels: readonly string[]): string {
   return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
 }
 
+const ENGINE_ROSTER_LABEL = `Available: ${joinLabels(AVAILABLE_LABELS)}. Coming soon: ${joinLabels(COMING_SOON_LABELS)}.`;
+
 const EXTENDED_LOGOS: Record<
   Exclude<ExtendedLogoKey, 'grok'>,
   { path: string; viewBox: string }
@@ -93,13 +95,12 @@ function ProviderLogo({ logo }: Readonly<{ logo: OfficialEngineKey | ExtendedLog
  * The board is a single `role="img"` with one label rather than six list items.
  */
 export function RotatingEngineLogos({ className }: Readonly<{ className?: string }>) {
-  const allLabels = [...AVAILABLE_LABELS, ...COMING_SOON_LABELS];
   return (
     <div
       data-engine-roster
       className={cn('mkt-logo-board', className)}
       role="img"
-      aria-label={`Available: ${joinLabels(allLabels)}.`}
+      aria-label={ENGINE_ROSTER_LABEL}
     >
       <ul aria-hidden className="gap-mkt-14 sm:gap-mkt-20 mx-auto grid max-w-lg grid-cols-3">
         {LOGO_PAIRS.map(({ primary, alternate }, index) => (

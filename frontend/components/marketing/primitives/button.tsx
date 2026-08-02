@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
  * inner PILL — the same layering that defines badges and feature cards. The
  * ring is glass, the pill carries the accent gradient plus the paired inset
  * highlights, and the label sits on top. `Button`/`ButtonLink` render that
- * shell; `IconButton`/`IconButtonLink` add the travelling arrow badge, whose
+ * shell; `IconButtonLink` adds the travelling arrow badge, whose
  * choreography needs real CSS and lives in marketing-cta.css.
  *
  * Four variants, no more: Primary (accent gradient), Dark (dark gradient),
@@ -217,19 +217,6 @@ export function IconButtonLink({
     <a href={href} {...props}>
       {content}
     </a>
-  );
-}
-
-export function IconButton({
-  type = 'button',
-  ...visual
-}: IconButtonProps & Omit<ComponentPropsWithoutRef<'button'>, 'className' | 'children' | 'title'>) {
-  const { title, variant, side, icon, className, ...rest } = visual;
-  const shellProps = iconShell({ title, variant, side, icon, className });
-  return (
-    <button type={type} className={shellProps.className} {...rest}>
-      {shellProps.content}
-    </button>
   );
 }
 

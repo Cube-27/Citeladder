@@ -217,9 +217,7 @@ def test_anthropic_reasoning_is_pinned_off() -> None:
         (ENGINE_GEMINI, TRANSPORT_GOOGLE),
     ],
 )
-def test_openai_and_google_reasoning_pins_are_off(
-    engine: str, transport: str
-) -> None:
+def test_openai_and_google_reasoning_pins_are_off(engine: str, transport: str) -> None:
     """Both routes moved to a tier with a documented disable value.
 
     ``gpt-5.6-luna`` accepts ``reasoning.effort: "none"`` and

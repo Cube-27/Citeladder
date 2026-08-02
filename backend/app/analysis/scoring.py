@@ -577,6 +577,7 @@ def _reported_cost_usd(usage: dict[str, Any]) -> float:
     except (TypeError, ValueError):
         return 0.0
 
+
 def _provider_reported_cost(completed: list[dict[str, Any]]) -> float:
     total = 0.0
     for execution in completed:
@@ -614,6 +615,7 @@ def _paid_list_cost_estimate(
     )
     grounding_if_billable = grounded_requests * GEMINI_25_GROUNDED_PROMPT_USD
     return token_estimate, grounding_if_billable
+
 
 def _aggregate_cost(
     completed: list[dict[str, Any]],

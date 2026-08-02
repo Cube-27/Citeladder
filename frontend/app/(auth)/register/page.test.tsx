@@ -40,6 +40,8 @@ describe('RegisterPage', () => {
     expect(screen.queryByRole('button', { name: /continue with apple/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/or continue with email/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show Password' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show Confirm password' })).toBeInTheDocument();
   });
 
   it('shows validation errors and does not call the API on empty submit', async () => {

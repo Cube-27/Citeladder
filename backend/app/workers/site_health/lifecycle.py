@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Final
+from typing import Any, Final
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -497,30 +497,44 @@ class CrawlLifecycle:
     async def _run_crawl_finalize_pass(
         self, session: AsyncSession, *, crawl: SiteCrawl
     ) -> None:
-        """Evaluate the crawl_finalize-scoped rules from cross-page evidence.
+        """Orchestrate cross-page crawl-finalize rules under the crawl lock."""
+        rows = await self._load_latest_analyses(session, crawl=crawl)
+        if not rows:
+            return
+        analysis_ids = [row.id for row in rows]
+        artifact_by_analysis = {row.id: row.artifact_id for row in rows}
+        site_url_by_analysis = {row.id: row.site_url_id for row in rows}
+        evaluations = await self._evaluate_broken_internal_links(
+            session, analysis_ids=analysis_ids
+        )
+        evaluations.extend(
+            await self._evaluate_hreflang_conflicts(
+                session,
+                rows=rows,
+                artifact_by_analysis=artifact_by_analysis,
+            )
+        )
+        evaluations.extend(
+            await self._evaluate_sitemap_orphans(
+                session,
+                crawl=crawl,
+                rows=rows,
+                analysis_ids=analysis_ids,
+                site_url_by_analysis=site_url_by_analysis,
+            )
+        )
+        await self._persist_evaluations(
+            session,
+            crawl=crawl,
+            evaluations=evaluations,
+            artifact_by_analysis=artifact_by_analysis,
+            site_url_by_analysis=site_url_by_analysis,
+        )
 
-        Runs under the crawl ``FOR UPDATE`` lock that already guarantees
-        exactly-once terminalization (spec §5.3). Writes NEW
-        ``SiteRuleEvaluation`` rows — one per (analysis, crawl_finalize rule),
-        ``ON CONFLICT DO NOTHING`` on the unique slot — plus one ``SiteIssue``
-        per fail. Never mutates existing rows (invariant 3); this writer is
-        the sole owner of crawl_finalize-scope rows (the analyze writer
-        filtered them out, so the unique slots are free). Anchors:
-
-          - ``technical.broken_internal_link`` / ``technical.hreflang_conflict``:
-            every latest-completed analysis in this crawl (their evidence is
-            per-page: link probes / hreflang alternates).
-          - ``technical.sitemap_orphan``: the crawl ROOT's latest completed
-            analysis only (a site-wide condition, like the site_root rules);
-            simply absent when the root has no completed analysis.
-
-        All URL normalization happens here via ``canonical_identity`` — the
-        pure evaluators in ``analysis/site_health/finalize.py`` only receive
-        pre-normalized, bounded inputs.
-        """
-        # Latest completed analysis per URL in this crawl (the same ranking
-        # rule the snapshot aggregator uses, minus its active-membership join:
-        # finalize evidence attaches to the URL's own latest analysis).
+    async def _load_latest_analyses(
+        self, session: AsyncSession, *, crawl: SiteCrawl
+    ) -> list[Any]:
+        """Load the latest completed analysis for every URL in this crawl."""
         ranked = (
             select(
                 SitePageAnalysis.id.label("id"),
@@ -542,22 +556,20 @@ class CrawlLifecycle:
             )
             .subquery()
         )
-        rows = (
-            await session.execute(
-                select(ranked.c.id, ranked.c.site_url_id, ranked.c.artifact_id).where(
-                    ranked.c.latest_rank == 1
+        return list(
+            (
+                await session.execute(
+                    select(
+                        ranked.c.id, ranked.c.site_url_id, ranked.c.artifact_id
+                    ).where(ranked.c.latest_rank == 1)
                 )
-            )
-        ).all()
-        if not rows:
-            return
-        analysis_ids = [row.id for row in rows]
-        artifact_by_analysis = {row.id: row.artifact_id for row in rows}
-        site_url_by_analysis = {row.id: row.site_url_id for row in rows}
+            ).all()
+        )
 
-        evaluations: list[tuple[uuid.UUID, RuleEvaluation]] = []
-
-        # --- broken_internal_link: per analysis, from its link probes. -----
+    async def _evaluate_broken_internal_links(
+        self, session: AsyncSession, *, analysis_ids: list[uuid.UUID]
+    ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
+        """Evaluate per-analysis internal-link reachability evidence."""
         # Reachability rides the evidence_fingerprint prefix written by
         # ``_write_link_reference`` ("reachable:" / "unreachable:"); ALL link
         # kinds count as internal targets. ``policy_skipped:`` rows (a
@@ -586,18 +598,25 @@ class CrawlLifecycle:
                 bucket = broken.setdefault(source_analysis_id, [])
                 if target_url not in bucket:
                     bucket.append(target_url)
-        for analysis_id in analysis_ids:
-            evaluations.append(
-                (
-                    analysis_id,
-                    evaluate_broken_internal_link(
-                        checked_count=checked.get(analysis_id, 0),
-                        broken_urls=broken.get(analysis_id, []),
-                    ),
-                )
+        return [
+            (
+                analysis_id,
+                evaluate_broken_internal_link(
+                    checked_count=checked.get(analysis_id, 0),
+                    broken_urls=broken.get(analysis_id, []),
+                ),
             )
+            for analysis_id in analysis_ids
+        ]
 
-        # --- hreflang_conflict: per analysis, from artifact facts. ----------
+    async def _evaluate_hreflang_conflicts(
+        self,
+        session: AsyncSession,
+        *,
+        rows: list[Any],
+        artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
+    ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
+        """Evaluate reciprocal hreflang tags from persisted artifact facts."""
         artifacts = (
             await session.execute(
                 select(
@@ -622,6 +641,7 @@ class CrawlLifecycle:
                 canonical,
                 list((facts or {}).get("hreflang_alternates") or []),
             )
+        evaluations: list[tuple[uuid.UUID, RuleEvaluation]] = []
         for artifact_id, _final_url, facts in artifacts:
             analysis_id = analysis_by_artifact[artifact_id]
             alternates = list((facts or {}).get("hreflang_alternates") or [])
@@ -675,84 +695,94 @@ class CrawlLifecycle:
                     ),
                 )
             )
+        return evaluations
 
-        # --- sitemap_orphan: crawl-wide, anchored on the root analysis. -----
+    async def _evaluate_sitemap_orphans(
+        self,
+        session: AsyncSession,
+        *,
+        crawl: SiteCrawl,
+        rows: list[Any],
+        analysis_ids: list[uuid.UUID],
+        site_url_by_analysis: dict[uuid.UUID, uuid.UUID],
+    ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
+        """Evaluate the crawl-wide sitemap-orphan rule on the root analysis."""
         root_canonical, root_hash = crawl_root_identity(crawl)
-        if root_hash:
-            site_url_rows = (
-                await session.execute(
-                    select(SiteUrl.id, SiteUrl.url_hash).where(
-                        SiteUrl.id.in_(site_url_by_analysis.values())
-                    )
+        if not root_hash:
+            return []
+        site_url_rows = (
+            await session.execute(
+                select(SiteUrl.id, SiteUrl.url_hash).where(
+                    SiteUrl.id.in_(site_url_by_analysis.values())
                 )
-            ).all()
-            # Built by index rather than dict(rows): a SQLAlchemy Row is not a
-            # 2-tuple to the type checker, so dict() infers dict[Never, Never].
-            hash_by_site_url: dict[uuid.UUID, str] = {
-                row[0]: row[1] for row in site_url_rows
-            }
-            root_analysis_id = next(
-                (
-                    row.id
-                    for row in rows
-                    if hash_by_site_url.get(row.site_url_id) == root_hash
-                ),
-                None,
             )
-            if root_analysis_id is not None:
-                sitemap_rows = (
-                    await session.execute(
-                        select(
-                            SiteUrlObservation.site_url_id,
-                            SiteUrlObservation.observed_url,
-                        ).where(
-                            SiteUrlObservation.crawl_id == crawl.id,
-                            SiteUrlObservation.source_kind
-                            == OBSERVATION_SOURCE_SITEMAP,
-                        )
-                    )
-                ).all()
-                # Internal anchor targets observed anywhere in this crawl: a
-                # sitemap URL that no analyzed page links to is an orphan.
-                anchor_rows = (
-                    await session.execute(
-                        select(SiteLinkReference.target_url).where(
-                            SiteLinkReference.source_analysis_id.in_(analysis_ids),
-                            SiteLinkReference.is_internal.is_(True),
-                            SiteLinkReference.kind == LINK_KIND_ANCHOR,
-                        )
-                    )
-                ).all()
-                linked_targets: set[str] = set()
-                for (target_url,) in anchor_rows:
-                    target_canonical = _canonical_or_empty(str(target_url))
-                    if target_canonical:
-                        linked_targets.add(target_canonical)
-                orphans: list[str] = []
-                for _site_url_id, observed_url in sitemap_rows:
-                    observed = str(observed_url or "")
-                    observed_canonical = _canonical_or_empty(observed)
-                    if not observed_canonical:
-                        continue
-                    # The crawl root is definitionally reachable (it seeds the
-                    # crawl), never an orphan.
-                    if observed_canonical == root_canonical:
-                        continue
-                    if observed_canonical not in linked_targets:
-                        if observed not in orphans:
-                            orphans.append(observed)
-                evaluations.append(
-                    (
-                        root_analysis_id,
-                        evaluate_sitemap_orphan(
-                            sitemap_url_count=len(sitemap_rows),
-                            orphan_urls=orphans,
-                        ),
-                    )
+        ).all()
+        hash_by_site_url = {row[0]: row[1] for row in site_url_rows}
+        root_analysis_id = next(
+            (
+                row.id
+                for row in rows
+                if hash_by_site_url.get(row.site_url_id) == root_hash
+            ),
+            None,
+        )
+        if root_analysis_id is None:
+            return []
+        sitemap_rows = (
+            await session.execute(
+                select(
+                    SiteUrlObservation.site_url_id,
+                    SiteUrlObservation.observed_url,
+                ).where(
+                    SiteUrlObservation.crawl_id == crawl.id,
+                    SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
                 )
+            )
+        ).all()
+        anchor_rows = (
+            await session.execute(
+                select(SiteLinkReference.target_url).where(
+                    SiteLinkReference.source_analysis_id.in_(analysis_ids),
+                    SiteLinkReference.is_internal.is_(True),
+                    SiteLinkReference.kind == LINK_KIND_ANCHOR,
+                )
+            )
+        ).all()
+        linked_targets = {
+            canonical
+            for (target_url,) in anchor_rows
+            if (canonical := _canonical_or_empty(str(target_url)))
+        }
+        orphans: list[str] = []
+        for _site_url_id, observed_url in sitemap_rows:
+            observed = str(observed_url or "")
+            observed_canonical = _canonical_or_empty(observed)
+            if (
+                observed_canonical
+                and observed_canonical != root_canonical
+                and observed_canonical not in linked_targets
+                and observed not in orphans
+            ):
+                orphans.append(observed)
+        return [
+            (
+                root_analysis_id,
+                evaluate_sitemap_orphan(
+                    sitemap_url_count=len(sitemap_rows), orphan_urls=orphans
+                ),
+            )
+        ]
 
-        # Persist: new rows only, conflict-safe on the unique
-        # (analysis_id, rule_id) slot; one issue per fail.
+    async def _persist_evaluations(
+        self,
+        session: AsyncSession,
+        *,
+        crawl: SiteCrawl,
+        evaluations: list[tuple[uuid.UUID, RuleEvaluation]],
+        artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
+        site_url_by_analysis: dict[uuid.UUID, uuid.UUID],
+    ) -> None:
+        """Persist conflict-safe finalize evaluations and their failed issues."""
         for analysis_id, ev in evaluations:
             artifact_id = artifact_by_analysis[analysis_id]
             inserted_id = await session.scalar(
@@ -799,13 +829,8 @@ class CrawlLifecycle:
                     )
                 )
 
-        # The issues above are ``session.add``-ed, and ``SessionLocal`` is
-        # ``autoflush=False`` — so without this flush the snapshot's own SELECT
-        # (next statement in the caller) cannot see them, and every
-        # crawl_finalize issue silently missed the severity/category rollups
-        # even though this pass deliberately runs BEFORE the snapshot to be
-        # counted. Observed as a snapshot ``issue_count`` short by exactly the
-        # crawl's broken_internal_link findings.
+        # SessionLocal disables autoflush; the snapshot query immediately after
+        # this pass must see the newly added issues.
         await session.flush()
 
     async def _persist_snapshot(

@@ -72,19 +72,19 @@ function TabButton({
       onClick={onSelect}
       onKeyDown={onKeyDown}
       className={cn(
-        'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer',
+        'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 sm:text-sm',
         active
-          ? 'bg-white text-foreground font-semibold'
+          ? 'text-foreground bg-white font-semibold'
           : 'text-muted hover:text-foreground hover:bg-white/50',
       )}
     >
       <div className="flex items-center gap-1.5">
-        <Icon className="size-4 text-accent-text" />
+        <Icon className="text-accent-text size-4" />
         <span>{label}</span>
       </div>
       <span
         className={cn(
-          'rounded-full px-2 py-0.5 text-2xs font-semibold transition-colors',
+          'text-2xs rounded-full px-2 py-0.5 font-semibold transition-colors',
           active ? 'bg-accent-soft text-accent-text' : 'bg-border-subtle/60 text-muted',
         )}
       >
@@ -105,15 +105,18 @@ function Chip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer',
+        'inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
         selected
           ? 'border-accent-border/60 bg-accent-soft/80 text-accent-hover hover:bg-accent-subtle/80'
-          : 'border-border-subtle text-muted hover:bg-background hover:text-secondary bg-white hover:border-border-bold/30',
+          : 'border-border-subtle text-muted hover:bg-background hover:text-secondary hover:border-border-bold/30 bg-white',
       )}
     >
       <span className="truncate">{label}</span>
       <X
-        className={cn('size-4 shrink-0 transition-opacity', selected ? 'opacity-70 hover:opacity-100' : 'opacity-40')}
+        className={cn(
+          'size-4 shrink-0 transition-opacity',
+          selected ? 'opacity-70 hover:opacity-100' : 'opacity-40',
+        )}
         aria-hidden
       />
     </button>
@@ -193,157 +196,161 @@ export function ReviewStep({
         would also discard the panel's DOM state (scroll position, an in-progress
         competitor rename) every time the user switches tabs.
       */}
-        <div
-          role="tabpanel"
-          hidden={activeTab !== 'entities'}
-          id={tabPanelId('entities')}
-          aria-labelledby={tabId('entities')}
-          className="border-border-subtle bg-white/60 rounded-xl border p-4"
-        >
-          <div className="max-h-[360px] sm:max-h-[400px] overflow-y-auto pr-1">
-            <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-              {/* Column 1: Domains */}
-              {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
-              <div className="bg-white rounded-lg p-4 shadow-card">
-                <div className="mb-3">
-                  <SectionHead label="Your domains" count={`${selectedDomains} selected`} />
+      <div
+        role="tabpanel"
+        hidden={activeTab !== 'entities'}
+        id={tabPanelId('entities')}
+        aria-labelledby={tabId('entities')}
+        className="border-border-subtle rounded-xl border bg-white/60 p-4"
+      >
+        <div className="max-h-[360px] overflow-y-auto pr-1 sm:max-h-[400px]">
+          <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            {/* Column 1: Domains */}
+            {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
+            <div className="shadow-card rounded-lg bg-white p-4">
+              <div className="mb-3">
+                <SectionHead label="Your domains" count={`${selectedDomains} selected`} />
+              </div>
+              {domains.length === 0 ? (
+                <p className="text-muted text-sm italic">None found — you can add these later.</p>
+              ) : (
+                <div className="flex flex-wrap content-start gap-2">
+                  {domains.map((entry, index) => (
+                    <Chip
+                      key={entry.domain}
+                      label={entry.domain}
+                      selected={entry.selected}
+                      onToggle={() => onToggleDomain(index)}
+                    />
+                  ))}
                 </div>
-                {domains.length === 0 ? (
-                  <p className="text-muted text-sm italic">None found — you can add these later.</p>
-                ) : (
-                  <div className="flex flex-wrap content-start gap-2">
-                    {domains.map((entry, index) => (
-                      <Chip
-                        key={entry.domain}
-                        label={entry.domain}
-                        selected={entry.selected}
-                        onToggle={() => onToggleDomain(index)}
+              )}
+            </div>
+
+            {/* Column 2: Competitors */}
+            {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
+            <div className="shadow-card rounded-lg bg-white p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <SectionHead label="Competitors" count={`${selectedCompetitors} selected`} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onAddCompetitor}
+                  className="text-accent-text hover:bg-accent-soft gap-1 px-2 text-xs font-semibold"
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Add competitor
+                </Button>
+              </div>
+
+              {competitors.length === 0 ? (
+                <p className="text-muted text-sm italic">None found — add any you want to track.</p>
+              ) : (
+                <ul className="grid list-none content-start gap-2">
+                  {competitors.map((competitor, index) => (
+                    <li key={competitor.id} className="flex items-center gap-2">
+                      <Input
+                        value={competitor.name}
+                        onChange={(event) => onRenameCompetitor(index, event.target.value)}
+                        aria-label={`Competitor ${index + 1} name`}
+                        placeholder="Competitor name"
+                        className={cn(
+                          'border-border-subtle bg-background/60 text-foreground focus:border-accent focus:ring-accent/20 text-sm transition-all focus:bg-white focus:ring-1',
+                          !competitor.selected && 'bg-well/40 line-through opacity-50',
+                        )}
                       />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Column 2: Competitors */}
-              {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
-              <div className="bg-white rounded-lg p-4 shadow-card">
-                <div className="mb-3 flex items-center justify-between">
-                  <SectionHead label="Competitors" count={`${selectedCompetitors} selected`} />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onAddCompetitor}
-                    className="text-accent-text hover:bg-accent-soft gap-1 px-2 text-xs font-semibold"
-                  >
-                    <Plus className="size-4" aria-hidden />
-                    Add competitor
-                  </Button>
-                </div>
-
-                {competitors.length === 0 ? (
-                  <p className="text-muted text-sm italic">None found — add any you want to track.</p>
-                ) : (
-                  <ul className="grid list-none content-start gap-2">
-                    {competitors.map((competitor, index) => (
-                      <li key={competitor.id} className="flex items-center gap-2">
-                        <Input
-                          value={competitor.name}
-                          onChange={(event) => onRenameCompetitor(index, event.target.value)}
-                          aria-label={`Competitor ${index + 1} name`}
-                          placeholder="Competitor name"
-                          className={cn(
-                            'border-border-subtle bg-background/60 text-foreground text-sm transition-all focus:bg-white focus:border-accent focus:ring-1 focus:ring-accent/20',
-                            !competitor.selected && 'line-through opacity-50 bg-well/40',
-                          )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={
+                          competitor.selected
+                            ? `Exclude ${competitor.name || 'competitor'}`
+                            : `Include ${competitor.name || 'competitor'}`
+                        }
+                        aria-pressed={competitor.selected}
+                        onClick={() => onToggleCompetitor(index)}
+                        className={cn(
+                          'shrink-0 transition-colors',
+                          competitor.selected
+                            ? 'text-muted hover:text-secondary'
+                            : 'bg-accent-soft text-accent-text hover:bg-accent-subtle',
+                        )}
+                      >
+                        <X
+                          className={cn('size-4', !competitor.selected && 'opacity-40')}
+                          aria-hidden
                         />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={
-                            competitor.selected
-                              ? `Exclude ${competitor.name || 'competitor'}`
-                              : `Include ${competitor.name || 'competitor'}`
-                          }
-                          aria-pressed={competitor.selected}
-                          onClick={() => onToggleCompetitor(index)}
-                          className={cn(
-                            'shrink-0 transition-colors',
-                            competitor.selected
-                              ? 'text-muted hover:text-secondary'
-                              : 'bg-accent-soft text-accent-text hover:bg-accent-subtle',
-                          )}
-                        >
-                          <X className={cn('size-4', !competitor.selected && 'opacity-40')} aria-hidden />
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>
+      </div>
 
       {/* Tab 2: Starting Prompts */}
-        <div
-          role="tabpanel"
-          hidden={activeTab !== 'prompts'}
-          id={tabPanelId('prompts')}
-          aria-labelledby={tabId('prompts')}
-          className="border-border-subtle bg-white/60 rounded-xl border p-4"
-        >
-          <div className="mb-3 px-1 flex items-center justify-between">
-            <SectionHead label="Starting prompts" count={`${selectedPrompts} selected`} />
-            <span className="text-2xs text-muted font-medium">Click to select or deselect</span>
-          </div>
-
-          <div className="max-h-[360px] sm:max-h-[400px] overflow-y-auto pr-1">
-            {prompts.length === 0 ? (
-              <p className="border-border-subtle text-muted rounded-xl border bg-white px-4 py-4 text-sm italic">
-                None found — you can write your own after setup.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2 list-none">
-                {prompts.map((prompt, index) => (
-                  <li key={prompt.id}>
-                    <label
-                      className={cn(
-                        'flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all duration-200 select-none',
-                        prompt.selected
-                          ? 'border-accent-border/60 bg-accent-soft/30 hover:bg-accent-soft/50'
-                          : 'border-border-subtle hover:bg-background/80 bg-white hover:border-border-bold/20',
-                      )}
-                    >
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <input
-                          type="checkbox"
-                          checked={prompt.selected}
-                          onChange={() => onTogglePrompt(index)}
-                          aria-label={prompt.text}
-                          className="border-border text-accent-text focus:ring-accent/20 mt-0.5 size-4 shrink-0 cursor-pointer rounded-md accent-accent"
-                        />
-                        <span
-                          className={cn(
-                            'block text-sm leading-relaxed transition-colors min-w-0 flex-1',
-                            prompt.selected ? 'text-foreground font-medium' : 'text-muted line-through',
-                          )}
-                        >
-                          {prompt.text}
-                        </span>
-                      </div>
-                      {prompt.theme ? (
-                        <span className="text-3xs bg-well/80 border-border-subtle/50 text-secondary shrink-0 rounded-full border px-2 py-0.5 font-medium">
-                          {prompt.theme}
-                        </span>
-                      ) : null}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+      <div
+        role="tabpanel"
+        hidden={activeTab !== 'prompts'}
+        id={tabPanelId('prompts')}
+        aria-labelledby={tabId('prompts')}
+        className="border-border-subtle rounded-xl border bg-white/60 p-4"
+      >
+        <div className="mb-3 flex items-center justify-between px-1">
+          <SectionHead label="Starting prompts" count={`${selectedPrompts} selected`} />
+          <span className="text-2xs text-muted font-medium">Click to select or deselect</span>
         </div>
+
+        <div className="max-h-[360px] overflow-y-auto pr-1 sm:max-h-[400px]">
+          {prompts.length === 0 ? (
+            <p className="border-border-subtle text-muted rounded-xl border bg-white px-4 py-4 text-sm italic">
+              None found — you can write your own after setup.
+            </p>
+          ) : (
+            <ul className="flex list-none flex-col gap-2">
+              {prompts.map((prompt, index) => (
+                <li key={prompt.id}>
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all duration-200 select-none',
+                      prompt.selected
+                        ? 'border-accent-border/60 bg-accent-soft/30 hover:bg-accent-soft/50'
+                        : 'border-border-subtle hover:bg-background/80 hover:border-border-bold/20 bg-white',
+                    )}
+                  >
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={prompt.selected}
+                        onChange={() => onTogglePrompt(index)}
+                        aria-label={prompt.text}
+                        className="border-border text-accent-text focus:ring-accent/20 accent-accent mt-0.5 size-4 shrink-0 cursor-pointer rounded-md"
+                      />
+                      <span
+                        className={cn(
+                          'block min-w-0 flex-1 text-sm leading-relaxed transition-colors',
+                          prompt.selected
+                            ? 'text-foreground font-medium'
+                            : 'text-muted line-through',
+                        )}
+                      >
+                        {prompt.text}
+                      </span>
+                    </div>
+                    {prompt.theme ? (
+                      <span className="text-3xs bg-well/80 border-border-subtle/50 text-secondary shrink-0 rounded-full border px-2 py-0.5 font-medium">
+                        {prompt.theme}
+                      </span>
+                    ) : null}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
-
