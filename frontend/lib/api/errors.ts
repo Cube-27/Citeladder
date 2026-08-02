@@ -19,13 +19,15 @@ export class ApiError extends Error {
   readonly code?: string;
   /** Server-side retryability classification, when sent (A1 envelope). */
   readonly retryable?: boolean;
+  /** Server-advised delay from the standard Retry-After response header. */
+  readonly retryAfterSeconds?: number;
 
   constructor(
     message: string,
     status: number,
     body: string,
     requestId?: string,
-    options?: { code?: string; retryable?: boolean },
+    options?: { code?: string; retryable?: boolean; retryAfterSeconds?: number },
   ) {
     super(message);
     this.name = 'ApiError';
@@ -34,6 +36,7 @@ export class ApiError extends Error {
     this.requestId = requestId;
     this.code = options?.code;
     this.retryable = options?.retryable;
+    this.retryAfterSeconds = options?.retryAfterSeconds;
   }
 }
 
@@ -47,6 +50,8 @@ export type HumanizedApiError = {
   code?: string;
   /** Server retryability classification, when sent. */
   retryable?: boolean;
+  /** Server-advised delay before retrying, when sent. */
+  retryAfterSeconds?: number;
   /** `X-Request-ID` correlation token, when captured. */
   requestId?: string;
 };
@@ -67,6 +72,7 @@ export function humanizeApiError(
       status: error.status > 0 ? error.status : undefined,
       code: error.code,
       retryable: error.retryable,
+      retryAfterSeconds: error.retryAfterSeconds,
       requestId: error.requestId,
     };
   }

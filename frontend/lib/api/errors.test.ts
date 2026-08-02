@@ -7,9 +7,11 @@ describe('ApiError', () => {
     const error = new ApiError('Nope', 422, '{}', 'req-1', {
       code: 'validation_error',
       retryable: false,
+      retryAfterSeconds: 60,
     });
     expect(error.code).toBe('validation_error');
     expect(error.retryable).toBe(false);
+    expect(error.retryAfterSeconds).toBe(60);
     expect(error.requestId).toBe('req-1');
   });
 
@@ -25,12 +27,14 @@ describe('humanizeApiError', () => {
     const error = new ApiError('no completed sync window is available', 422, '{}', 'req-9', {
       code: 'precondition_failed',
       retryable: false,
+      retryAfterSeconds: 120,
     });
     expect(humanizeApiError(error)).toEqual({
       message: 'no completed sync window is available',
       status: 422,
       code: 'precondition_failed',
       retryable: false,
+      retryAfterSeconds: 120,
       requestId: 'req-9',
     });
   });

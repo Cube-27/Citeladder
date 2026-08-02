@@ -436,6 +436,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
 
   it('changes the query when a different run is selected', async () => {
     const seen: (string | null)[] = [];
+    let releaseOlder: (() => void) | undefined;
     useBaseHandlers([
       http.get('/api/v1/audits', () =>
         HttpResponse.json([
@@ -443,9 +444,14 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
           makeAudit(AUDIT_OLDER, '2026-07-10T00:00:00Z'),
         ]),
       ),
-      http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, ({ request }) => {
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, async ({ request }) => {
         const auditId = new URL(request.url).searchParams.get('audit_id');
         seen.push(auditId);
+        if (auditId === AUDIT_OLDER) {
+          await new Promise<void>((resolve) => {
+            releaseOlder = resolve;
+          });
+        }
         return HttpResponse.json(
           makeVisibility(auditId ?? AUDIT_LATEST, auditId === AUDIT_OLDER ? 42 : 67),
         );
@@ -476,6 +482,9 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     });
     await user.click(await screen.findByRole('menuitem', { name: olderLabel }));
 
+    await waitFor(() => expect(releaseOlder).toBeTypeOf('function'));
+    expect(screen.getByTestId('overview-summary')).toHaveTextContent('67%');
+    releaseOlder?.();
     await waitFor(() => expect(screen.getByTestId('overview-summary')).toHaveTextContent('42%'));
     expect(seen).toContain(AUDIT_OLDER);
   });

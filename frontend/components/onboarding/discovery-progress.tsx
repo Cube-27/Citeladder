@@ -3,6 +3,7 @@
 import { AlertTriangle, Check, Globe, Loader2, MessageSquare, Sparkles, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { humanizeApiError } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
 import type { DiscoveryState, SectionStatus } from '@/lib/onboarding/use-discovery';
 
@@ -35,9 +36,20 @@ const ROWS = [
 ] as const;
 
 function statusText(status: SectionStatus, count: number, unconfigured: boolean) {
-  if (status === 'error') return unconfigured ? 'Not available' : 'Failed';
+  if (status === 'error') return unconfigured ? 'Not configured' : 'Couldn\'t complete';
   if (status === 'done') return count === 0 ? 'Nothing found' : `${count} discovered`;
   return 'AI Searching…';
+}
+
+function errorMeta(error: unknown) {
+  const detail = humanizeApiError(error, 'Discovery failed. Please try again.');
+  const references = [
+    detail.status ? `HTTP ${detail.status}` : null,
+    detail.code ? `code ${detail.code}` : null,
+    detail.retryAfterSeconds !== undefined ? `retry after ${detail.retryAfterSeconds}s` : null,
+    detail.requestId ? `request ${detail.requestId}` : null,
+  ].filter(Boolean);
+  return { message: detail.message, references: references.join(' · ') };
 }
 
 export function DiscoveryProgress({
@@ -51,6 +63,7 @@ export function DiscoveryProgress({
     <ul className="grid list-none gap-3 p-0">
       {ROWS.map((row) => {
         const section = state[row.key];
+        const failure = section.status === 'error' ? errorMeta(section.error) : null;
         const count = section.data.length;
         const done = section.status === 'done';
         const failed = section.status === 'error';
@@ -137,6 +150,15 @@ export function DiscoveryProgress({
                 ) : null}
               </div>
             </div>
+
+            {failure ? (
+              <div className="border-danger-border/40 mt-3 border-t pt-3 pl-14" role="alert">
+                <p className="text-danger-text text-xs leading-5">{failure.message}</p>
+                {failure.references ? (
+                  <p className="text-muted mt-0.5 text-2xs">{failure.references}</p>
+                ) : null}
+              </div>
+            ) : null}
           </li>
         );
       })}

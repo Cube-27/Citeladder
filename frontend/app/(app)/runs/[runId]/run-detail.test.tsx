@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -91,6 +92,88 @@ describe('RunDetailPage', () => {
     const row = (await screen.findByText('Gemini')).closest('tr')!;
     expect(within(row).getByText('Succeeded')).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: 'Evidence' })).toBeInTheDocument();
+  });
+
+  it('keeps the running audit and executions mounted during background refetches', async () => {
+    let auditCalls = 0;
+    let executionCalls = 0;
+    let releaseAudit: (() => void) | undefined;
+    let releaseExecutions: (() => void) | undefined;
+    mswServer.use(
+      http.get(`/api/v1/audits/${AUDIT_ID}`, async () => {
+        auditCalls += 1;
+        if (auditCalls > 1) {
+          await new Promise<void>((resolve) => {
+            releaseAudit = resolve;
+          });
+        }
+        return HttpResponse.json(audit());
+      }),
+      http.get(`/api/v1/audits/${AUDIT_ID}/executions`, async () => {
+        executionCalls += 1;
+        if (executionCalls > 1) {
+          await new Promise<void>((resolve) => {
+            releaseExecutions = resolve;
+          });
+        }
+        return HttpResponse.json([execution()]);
+      }),
+    );
+
+    const { queryClient } = renderWithProviders(<RunDetailPage />);
+    expect(await screen.findByText('Running')).toBeInTheDocument();
+    expect(await screen.findByText('Gemini')).toBeInTheDocument();
+
+    const refetches = Promise.all([
+      queryClient.refetchQueries({ queryKey: queryKeys.runs.detail(AUDIT_ID), exact: true }),
+      queryClient.refetchQueries({ queryKey: queryKeys.runs.executions(AUDIT_ID), exact: true }),
+    ]);
+    await waitFor(() => {
+      expect(releaseAudit).toBeTypeOf('function');
+      expect(releaseExecutions).toBeTypeOf('function');
+    });
+
+    expect(screen.getByText('Running')).toBeInTheDocument();
+    expect(screen.getByText('Gemini')).toBeInTheDocument();
+    expect(screen.queryByText(/Could not load this run/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Could not load executions.')).not.toBeInTheDocument();
+
+    releaseAudit?.();
+    releaseExecutions?.();
+    await refetches;
+  });
+
+  it('keeps the last good run and executions visible after failed background refetches', async () => {
+    let failRefetch = false;
+    mswServer.use(
+      http.get(`/api/v1/audits/${AUDIT_ID}`, () =>
+        failRefetch
+          ? HttpResponse.json({ detail: 'temporary failure' }, { status: 400 })
+          : HttpResponse.json(audit()),
+      ),
+      http.get(`/api/v1/audits/${AUDIT_ID}/executions`, () =>
+        failRefetch
+          ? HttpResponse.json({ detail: 'temporary failure' }, { status: 400 })
+          : HttpResponse.json([execution()]),
+      ),
+    );
+
+    const { queryClient } = renderWithProviders(<RunDetailPage />);
+    expect(await screen.findByText('Running')).toBeInTheDocument();
+    expect(await screen.findByText('Gemini')).toBeInTheDocument();
+
+    failRefetch = true;
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: queryKeys.runs.detail(AUDIT_ID), exact: true }),
+      queryClient.refetchQueries({ queryKey: queryKeys.runs.executions(AUDIT_ID), exact: true }),
+    ]);
+
+    expect(queryClient.getQueryState(queryKeys.runs.detail(AUDIT_ID))?.status).toBe('error');
+    expect(queryClient.getQueryState(queryKeys.runs.executions(AUDIT_ID))?.status).toBe('error');
+    expect(screen.getByText('Running')).toBeInTheDocument();
+    expect(screen.getByText('Gemini')).toBeInTheDocument();
+    expect(screen.queryByText(/Could not load this run/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Could not load executions.')).not.toBeInTheDocument();
   });
 
   it('opens execution evidence in a drawer without navigating away', async () => {

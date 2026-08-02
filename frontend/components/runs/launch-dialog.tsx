@@ -98,6 +98,7 @@ export function LaunchDialog({
   const launchMutation = useMutation({
     mutationFn: () => runsApi.launchAudit(buildLaunchPayload(selection)),
     onSuccess: async (audit) => {
+      queryClient.setQueryData(queryKeys.runs.detail(audit.id), audit);
       await queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
       onOpenChange(false);
       setEngines([]);

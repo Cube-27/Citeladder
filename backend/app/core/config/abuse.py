@@ -9,9 +9,16 @@ from __future__ import annotations
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.config import BASE_DIR, PROJECT_ROOT
+
 
 class AbuseSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="ABUSE_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="ABUSE_",
+        env_file=(str(PROJECT_ROOT / ".env"), str(BASE_DIR / ".env")),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     login_email_limit: int = Field(default=10, ge=1)
     login_client_limit: int = Field(default=30, ge=1)

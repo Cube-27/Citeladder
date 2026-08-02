@@ -146,7 +146,11 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
         response.status,
         parsed.raw,
         response.headers.get('x-request-id') ?? parsed.requestId ?? requestId,
-        { code: parsed.code, retryable: parsed.retryable },
+        {
+          code: parsed.code,
+          retryable: parsed.retryable,
+          retryAfterSeconds: retryAfterSeconds(response.headers.get('retry-after')),
+        },
       );
     } catch (error) {
       lastError = error;
@@ -177,6 +181,13 @@ function timeoutApiError(requestId: string) {
     requestId,
     { code: 'request_timeout', retryable: true },
   );
+}
+
+/** Parse the delta-seconds form emitted by Searchify's durable usage guards. */
+function retryAfterSeconds(value: string | null): number | undefined {
+  if (!value?.trim()) return undefined;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : undefined;
 }
 
 async function parseResponse<T>(response: Response, kind: ResponseKind): Promise<T> {

@@ -93,7 +93,7 @@ export default function RunDetailPage() {
         </Link>
       </div>
 
-      {auditQuery.isError ? (
+      {auditQuery.isError && !auditQuery.data ? (
         <Alert tone="danger">Could not load this run. {errorMessage(auditQuery.error)}</Alert>
       ) : auditQuery.isLoading || !auditQuery.data ? (
         <Card>
@@ -118,9 +118,9 @@ export default function RunDetailPage() {
 
       <div className="grid gap-3">
         <SectionTitle>Executions</SectionTitle>
-        {executionsQuery.isError ? (
+        {executionsQuery.isError && !executionsQuery.data ? (
           <Alert tone="danger">Could not load executions.</Alert>
-        ) : executionsQuery.isLoading ? (
+        ) : executionsQuery.isLoading || !executionsQuery.data ? (
           <Card>
             <CardContent className="grid gap-3">
               <Skeleton className="h-8 w-full" />

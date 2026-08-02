@@ -14,8 +14,13 @@
  * explicit `enabled` flag so only the ACTIVE tab's queries run.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePathname, useSearchParams } from 'next/navigation';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { attributionApi } from '@/lib/api/attribution';
 import { commerceApi } from '@/lib/api/commerce';
@@ -37,7 +42,6 @@ import {
 import { toRunOptions } from '@/lib/visibility/dashboard';
 
 export function useProductsTab() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlTab = normalizeProductsTab(searchParams?.get('tab'));
@@ -53,7 +57,7 @@ export function useProductsTab() {
     setActiveTab(tab);
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', tab);
-    router.replace(`${pathname}?${params.toString()}`);
+    window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
   }
 
   return { activeTab, selectTab };
@@ -113,6 +117,7 @@ export function useProductVisibilityQueries(projectId: string | null, enabled = 
         { signal },
       ),
     enabled: Boolean(projectId) && enabled,
+    placeholderData: keepPreviousData,
   });
 
   return {
@@ -160,6 +165,7 @@ export function useAttributionQueries(projectId: string | null, enabled = true) 
     queryFn: ({ signal }) =>
       attributionApi.getSnapshot(projectId!, { ...windowBounds, granularity }, { signal }),
     enabled: Boolean(projectId) && enabled,
+    placeholderData: keepPreviousData,
   });
 
   const [recomputeTaskId, setRecomputeTaskId] = useState<string | null>(null);

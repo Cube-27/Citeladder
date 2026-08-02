@@ -5,12 +5,14 @@ import userEvent from '@testing-library/user-event';
 import { ProductsScreen } from './products-screen';
 
 // The screen's tab state is URL-synced (?tab=); stub next/navigation with a
-// controllable search-param + a replace spy (jsdom has no router).
-const replaceSpy = vi.fn();
+// controllable search-param + a shallow-history spy.
+const replaceStateSpy = vi.fn((_data: unknown, _unused: string, url: string) => {
+  urlTab = new URL(url, 'http://localhost').searchParams.get('tab');
+});
 let urlTab: string | null = null;
+vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: replaceSpy }),
   usePathname: () => '/products',
   useSearchParams: () => new URLSearchParams(urlTab ? `tab=${urlTab}` : ''),
 }));
@@ -72,7 +74,7 @@ vi.mock('./attribution-panel', () => ({
 
 describe('ProductsScreen tabs', () => {
   beforeEach(() => {
-    replaceSpy.mockClear();
+    replaceStateSpy.mockClear();
     urlTab = null;
   });
 
@@ -101,11 +103,11 @@ describe('ProductsScreen tabs', () => {
     await user.click(screen.getByRole('tab', { name: 'Visibility' }));
     expect(screen.getByTestId('visibility-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('catalog-panel')).not.toBeInTheDocument();
-    expect(replaceSpy).toHaveBeenCalledWith('/products?tab=visibility');
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=visibility');
 
     await user.click(screen.getByRole('tab', { name: 'Catalog' }));
     expect(screen.getByTestId('catalog-panel')).toBeInTheDocument();
-    expect(replaceSpy).toHaveBeenCalledWith('/products?tab=catalog');
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=catalog');
   });
 
   it('reads the initial tab from ?tab= (invalid values fall back to Catalog)', () => {
@@ -121,7 +123,7 @@ describe('ProductsScreen tabs', () => {
     await user.click(screen.getByRole('tab', { name: 'Attribution' }));
     expect(screen.getByTestId('attribution-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('catalog-panel')).not.toBeInTheDocument();
-    expect(replaceSpy).toHaveBeenCalledWith('/products?tab=attribution');
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=attribution');
   });
 
   it('reads the Attribution tab from ?tab=attribution', () => {

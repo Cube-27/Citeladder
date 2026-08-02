@@ -55,6 +55,27 @@ describe('apiClient', () => {
     expect(ApiError).toBeDefined();
   });
 
+  it('captures a numeric Retry-After hint on a rate-limited response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ detail: 'Workspace usage limit exceeded' }), {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'retry-after': '321.2',
+          'x-request-id': 'req-rate-limit',
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { apiClient } = await import('./client');
+    await expect(apiClient.post('/brand-suggestions/competitors', {})).rejects.toMatchObject({
+      status: 429,
+      retryAfterSeconds: 322,
+      requestId: 'req-rate-limit',
+    });
+  });
+
   it('throws ApiError on 5xx', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('Boom', { status: 503 }));
     vi.stubGlobal('fetch', fetchMock);

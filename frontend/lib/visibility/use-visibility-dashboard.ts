@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { EngineFilter } from '@/components/visibility/visibility-toolbar';
 import type { VisibilityTrendPoint } from '@/lib/api/types';
@@ -188,6 +188,7 @@ function useEvidenceQueries(
     queryFn: ({ signal }) =>
       visibilityApi.getVisibilityEvidence(projectId!, evidenceParams, { signal }),
     enabled,
+    placeholderData: keepPreviousData,
   });
 
   const promptOptionsQuery = useQuery({
@@ -202,6 +203,7 @@ function useEvidenceQueries(
         { signal },
       ),
     enabled,
+    placeholderData: keepPreviousData,
   });
   const promptOptions = useMemo(
     () => toPromptOptions(promptOptionsQuery.data?.items ?? []),
@@ -248,6 +250,7 @@ export function useVisibilityQueries(
         { signal },
       ),
     enabled: Boolean(projectId) && hasRuns && activeTab === 'overview',
+    placeholderData: keepPreviousData,
   });
 
   // Trends: the cross-run series. Enabled only on the Trends tab. Engine, date
@@ -265,6 +268,7 @@ export function useVisibilityQueries(
         { signal },
       ),
     enabled: Boolean(projectId) && hasRuns && activeTab === 'trends',
+    placeholderData: keepPreviousData,
   });
 
   // Overview's Competitors sparklines reuse the SAME trend series, but only if

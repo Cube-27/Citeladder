@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -170,7 +171,7 @@ describe('RunsPage', () => {
       }),
     );
 
-    renderWithProviders(<RunsPage />);
+    const { queryClient } = renderWithProviders(<RunsPage />);
 
     await user.click((await screen.findAllByRole('button', { name: /launch/i }))[0]);
 
@@ -189,5 +190,8 @@ describe('RunsPage', () => {
       repetitions: 1,
     });
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${AUDIT_ID}`));
+    expect(queryClient.getQueryData(queryKeys.runs.detail(AUDIT_ID))).toMatchObject(
+      audit({ status: 'queued' }),
+    );
   });
 });
