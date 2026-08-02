@@ -33,7 +33,11 @@ from app.core.config.audits import (
     audit_settings,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
-from app.core.config.provider_catalog import ENGINE_GEMINI, TRANSPORT_GOOGLE
+from app.core.config.provider_catalog import (
+    ENGINE_GEMINI,
+    TRANSPORT_GOOGLE,
+    default_model,
+)
 from app.domain.audits.planner import create_audit
 from app.models.analysis import MetricSnapshot
 from app.models.audit import Audit
@@ -42,6 +46,12 @@ from app.models.workspace import WorkspaceMember
 from app.workers import audit_worker
 from app.workers.audit_worker import AuditWorker
 from tests.component.audit_helpers import seed_audit_fixtures
+
+# The model the PLANNER freezes for these audits. Read from the catalog rather
+# than pinned as a literal: these assertions are about provenance travelling
+# intact from the frozen route to the API projections and exports, not about
+# which Gemini build is current, and a literal goes stale on every bump.
+GEMINI_MODEL = default_model(ENGINE_GEMINI, TRANSPORT_GOOGLE)
 
 
 class _StubAdapter:
@@ -145,7 +155,7 @@ async def test_endpoints_serve_projections_over_http(
         {
             "logical_engine": ENGINE_GEMINI,
             "transport_provider": TRANSPORT_GOOGLE,
-            "transport_model": "gemini-flash-latest",
+            "transport_model": GEMINI_MODEL,
             "retrieval_enabled": True,
         }
     ]
@@ -179,7 +189,7 @@ async def test_endpoints_serve_projections_over_http(
     # Execution-level provenance: exact singular model + frozen mode/retrieval
     # from the task request snapshot; vocabulary lock (no `mode` alias).
     first_row = exec_rows[0]
-    assert first_row["transport_model"] == "gemini-flash-latest"
+    assert first_row["transport_model"] == GEMINI_MODEL
     assert first_row["measurement_mode"] == "benchmark"
     assert first_row["retrieval_enabled"] is True
     assert "mode" not in first_row
@@ -194,7 +204,7 @@ async def test_endpoints_serve_projections_over_http(
     assert ebody["task_id"] == execution_id
     assert ebody["analysis_id"] != execution_id
     # Execution-detail provenance (frozen fields only, invariants 4/7).
-    assert ebody["transport_model"] == "gemini-flash-latest"
+    assert ebody["transport_model"] == GEMINI_MODEL
     assert ebody["measurement_mode"] == "benchmark"
     assert ebody["retrieval_enabled"] is True
     assert "mode" not in ebody
@@ -220,7 +230,7 @@ async def test_endpoints_serve_projections_over_http(
     # Markdown metadata identifies the measurement mode + aggregate provenance.
     assert "- **Measurement mode:** `benchmark`" in md_resp.text
     assert "- **Model provenance:**" in md_resp.text
-    assert "`gemini` via `google` model `gemini-flash-latest` (retrieval on)" in (
+    assert f"`gemini` via `google` model `{GEMINI_MODEL}` (retrieval on)" in (
         md_resp.text
     )
 

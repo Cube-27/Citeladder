@@ -57,7 +57,13 @@ export function Card({ children, ...rest }: CardProps) {
   return <div className={cardClasses(rest)}>{children}</div>;
 }
 
-/** The clickable card. Internal hrefs route through next/link. */
+/**
+ * The clickable card. Internal hrefs route through next/link.
+ *
+ * `interactive` is omitted from the public type: this card always sets it, and
+ * a caller that passed it would land in `...rest` and be spread onto the
+ * anchor as an unknown DOM attribute.
+ */
 export function CardLink({
   href,
   children,
@@ -65,7 +71,7 @@ export function CardLink({
   tone,
   className,
   ...rest
-}: CardProps & { href: string } & Omit<
+}: Omit<CardProps, 'interactive'> & { href: string } & Omit<
     ComponentPropsWithoutRef<'a'>,
     'href' | 'className' | 'children'
   >) {

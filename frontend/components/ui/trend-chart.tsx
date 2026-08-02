@@ -39,13 +39,17 @@ export function TrendChart({
 
   // Labels are NOT identities: a series can hold several points that format to
   // the same label (two runs on the same day both render "1 Aug"), which made
-  // React collapse them onto one key. Disambiguate repeats with an occurrence
-  // suffix so every point keeps a stable identity across updates.
+  // React collapse them onto one key. EVERY point carries its occurrence
+  // suffix, including the first: suffixing only repeats left the bare label in
+  // play, so a series holding both "1 Aug" and a literal "1 Aug#1" collided on
+  // the second "1 Aug". With the suffix always present, a key splits uniquely
+  // at its last `#` into (label, occurrence), and points keep a stable identity
+  // across updates.
   const labelOccurrences = new Map<string, number>();
   const pointKeys = data.map((entry) => {
     const seen = labelOccurrences.get(entry.label) ?? 0;
     labelOccurrences.set(entry.label, seen + 1);
-    return seen === 0 ? entry.label : `${entry.label}#${seen}`;
+    return `${entry.label}#${seen}`;
   });
 
   const points = data.map((entry, index) => ({

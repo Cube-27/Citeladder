@@ -229,8 +229,17 @@
      WCAG large-text exemption — and #3B82F6 gives white only 3.68:1. #2563EB
      is the same blue family at 5.17:1, so the label is legible across the
      whole sweep rather than only at the darker end. #3B82F6 keeps its job as
-     a MARK (borders, glows, dots), where 3:1 is the right bar. */
-  --gradient-mkt-accent: linear-gradient(110deg, #2563eb 0%, #406ae4 100%);
+     a MARK (borders, glows, dots), where 3:1 is the right bar.
+     The stops are CONSUMED from the named tokens rather than restated here:
+     the legibility gate measures white against `--color-mkt-gradient-from`
+     and `--color-mkt-gradient-to`, so a retune of either has to move the
+     rendered sweep too, or the test would keep passing against a gradient
+     that no longer contains the colours it checked. */
+  --gradient-mkt-accent: linear-gradient(
+    110deg,
+    var(--color-mkt-gradient-from) 0%,
+    var(--color-mkt-gradient-to) 100%
+  );
   --gradient-mkt-dark: linear-gradient(110deg, #323232 0%, #000000 100%);
 
   /* ─── Motion ── three transitions, no linear ease anywhere. */

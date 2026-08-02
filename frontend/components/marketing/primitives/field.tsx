@@ -23,8 +23,14 @@ export function MktField({
   error?: ReactNode;
   required?: boolean;
   className?: string;
+  /**
+   * Renders the control. `required` is handed back rather than left to the
+   * call site: the asterisk is `aria-hidden`, so a screen reader announces the
+   * field as optional unless the flag reaches the input itself.
+   */
   children: (props: {
     id: string;
+    required?: boolean;
     'aria-invalid'?: boolean;
     'aria-describedby'?: string;
   }) => ReactNode;
@@ -49,6 +55,7 @@ export function MktField({
       </label>
       {children({
         id,
+        required,
         'aria-invalid': error ? true : undefined,
         'aria-describedby': describedBy,
       })}

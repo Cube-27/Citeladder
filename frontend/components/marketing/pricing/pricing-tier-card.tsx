@@ -9,6 +9,7 @@ import {
   FUNDED_UNAVAILABLE_LABEL,
   PLAN_PRESENTATION,
   type PlanKey,
+  capabilityLabel,
 } from '@/lib/marketing-content/pricing';
 import { cn } from '@/lib/utils';
 
@@ -94,31 +95,41 @@ export function PricingTierCard({
           "Prompts tracked — 250". The raw `snake_case` key used to render
           verbatim, so the list read as a database dump rather than a list of
           what you get. Tight 10px rhythm — a feature list is a scan target,
-          not prose. */}
+          not prose.
+
+          Absent capabilities are dropped BEFORE the cap, not after: the glyph
+          is a success tick, so an absent value rendered "Label — —" behind a
+          tick, and dropping it late would also spend one of the five slots on
+          something the tier does not include. */}
       <ul className="border-mkt-black-10 mt-mkt-20 gap-mkt-10 pt-mkt-20 grid flex-1 border-t">
-        {plan.capabilities.slice(0, 5).map((capability) => (
-          <li
-            key={capability.key}
-            className="text-mkt-sm text-mkt-ink-soft gap-mkt-10 flex items-start"
-          >
-            {/* The glyph sits in a box as tall as the text's first line, so it
-                stays optically aligned on wrapped items without a nudge margin
-                — a margin here would be an off-ladder one-off, which is exactly
-                what this system exists to prevent. */}
-            <span aria-hidden className="text-mkt-sm flex h-[1lh] shrink-0 items-center">
-              <Check className="text-mkt-success size-4" />
-            </span>
-            <span>
-              {capabilityLabel(capability.key)}
-              {renderValue(capability.value) !== 'Included' && (
-                <>
-                  {' — '}
-                  <span className="text-mkt-ink font-medium">{renderValue(capability.value)}</span>
-                </>
-              )}
-            </span>
-          </li>
-        ))}
+        {plan.capabilities
+          .filter((capability) => isIncluded(capability.value))
+          .slice(0, 5)
+          .map((capability) => (
+            <li
+              key={capability.key}
+              className="text-mkt-sm text-mkt-ink-soft gap-mkt-10 flex items-start"
+            >
+              {/* The glyph sits in a box as tall as the text's first line, so
+                  it stays optically aligned on wrapped items without a nudge
+                  margin — a margin here would be an off-ladder one-off, which
+                  is exactly what this system exists to prevent. */}
+              <span aria-hidden className="text-mkt-sm flex h-[1lh] shrink-0 items-center">
+                <Check className="text-mkt-success size-4" />
+              </span>
+              <span>
+                {capabilityLabel(capability.key)}
+                {renderValue(capability.value) !== 'Included' && (
+                  <>
+                    {' — '}
+                    <span className="text-mkt-ink font-medium">
+                      {renderValue(capability.value)}
+                    </span>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
       </ul>
 
       <div className="mt-mkt-20">
@@ -165,17 +176,16 @@ function PlanCta({
   );
 }
 
+/**
+ * Whether the tier carries this capability at all. `null` (not applicable) and
+ * `false` (explicitly absent) both mean it does not.
+ */
+function isIncluded(value: boolean | number | string | null): boolean {
+  return value !== null && value !== false;
+}
+
 function renderValue(value: boolean | number | string | null): string {
   if (value === null) return '—';
   if (typeof value === 'boolean') return value ? 'Included' : '—';
   return String(value);
-}
-
-/**
- * `prompts_tracked` → `Prompts tracked`. The catalog keys are API identifiers;
- * rendering them raw put underscores in front of the customer.
- */
-function capabilityLabel(key: string): string {
-  const words = key.replaceAll('_', ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }

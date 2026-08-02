@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { Eyebrow } from './label';
 import { Reveal } from './reveal';
 
 /**
@@ -9,10 +10,11 @@ import { Reveal } from './reveal';
  * padding — the six cases live here, so every page breathes identically
  * (docs/website-design-system.md §3).
  *
- * The ladder is 200 desktop / 120 tablet / 80 mobile. `hero` opens at 194 to
- * clear the fixed nav strip; `open` and `close` are the two halves of a run of
- * sections that reads as one block; `none` is the marquee case, which carries
- * its own 100px gap instead of padding.
+ * The ladder is 100 desktop / 70 tablet / 50 mobile (`base`), and `hero` runs
+ * one step above it at 120 / 100 / 70 so the opening band clears the fixed nav
+ * strip. `tight` is the step below base (70 / 50 / 40); `open` and `close` are
+ * the two halves of a run of sections that reads as one block; `none` is the
+ * marquee case, which carries its own gap instead of padding.
  */
 const RHYTHM = {
   hero: 'pt-mkt-70 pb-mkt-70 md:pt-mkt-100 md:pb-mkt-100 xl:pt-mkt-120 xl:pb-mkt-120',
@@ -164,23 +166,5 @@ export function SectionHeader({
       </Heading>
       {lead && <p className="text-mkt-lead text-mkt-ink-soft max-w-[65ch]">{lead}</p>}
     </Reveal>
-  );
-}
-
-/**
- * The eyebrow / pre-title: Text XS Bold in slate, optionally led by a 6px
- * accent dot. It sits 10–20px above the heading, which is the SectionHeader
- * gap above — never spaced by the call site.
- */
-export function Eyebrow({
-  children,
-  dot = true,
-  className,
-}: Readonly<{ children: ReactNode; dot?: boolean; className?: string }>) {
-  return (
-    <p className={cn('gap-mkt-10 text-mkt-xsb text-mkt-ink-soft flex items-center', className)}>
-      {dot && <span aria-hidden className="bg-mkt-indigo size-mkt-6 shrink-0 rounded-full" />}
-      {children}
-    </p>
   );
 }

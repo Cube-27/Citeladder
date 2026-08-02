@@ -31,6 +31,7 @@ import contextlib
 import logging
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -370,6 +371,28 @@ def _capacity_request(context: _ExecutionContext) -> CapacityRequest:
         credential_kind=CREDENTIAL_KIND_BYOK,
         connection_id=context.connection_id,
     )
+
+
+def _capacity_wait_payload(
+    *, task_id: uuid.UUID, attempt_number: int, decision: CapacityDecision
+) -> dict:
+    """The ``task.capacity_wait`` event body: opaque ids + retry timing only.
+
+    Invariant 6 — no prompt text, no credential, no provider response. Split
+    out so the park path stays a lock/record/hand-off shell.
+    """
+    return {
+        "task_id": str(task_id),
+        "attempt": attempt_number,
+        "code": decision.code,
+        "pool_kind": decision.pool_kind,
+        "available_at": (
+            decision.available_at.isoformat()
+            if decision.available_at is not None
+            else ""
+        ),
+        "retry_after_seconds": decision.retry_after_seconds or 0.0,
+    }
 
 
 def _capacity_outcome(attempt: CallAttempt) -> CapacityOutcome:
@@ -805,37 +828,13 @@ class AuditWorker(DrainableWorkerMixin):
             # later is left sitting while the pool winds down.
             nonlocal completed
             while True:
-                try:
-                    await self._sweep_expired_leases()
-                    claimed = await self._queue.claim(owner=self.owner, limit=1)
-                except Exception:
-                    # A claim failure (DB blip) must not kill the slot — back off
-                    # and retry, or stop if we are draining.
-                    logger.exception("audit worker claim failed")
-                    if drain:
-                        return
-                    await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
-                    continue
+                claimed = await self._claim_for_slot(drain=drain)
+                if claimed is None:
+                    return
                 if not claimed:
-                    # This slot observed the queue empty. In drain mode that is
-                    # its own exit condition; siblings keep claiming.
-                    if drain:
-                        return
-                    await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
                     continue
-                parked = False
-                for task in claimed:
-                    try:
-                        parked = await self._execute_task(task) or parked
-                    except BaseException as exc:  # noqa: BLE001 - see docstring
-                        if isinstance(exc, asyncio.CancelledError):
-                            raise
-                        logger.error(
-                            "audit task cleanup failed",
-                            exc_info=exc,
-                            extra={"task_id": str(task.id)},
-                        )
-                    completed += 1
+                ran, parked = await self._run_claimed(claimed)
+                completed += ran
                 if parked and not drain:
                     # The pool this slot drew on is FULL. Claiming again
                     # immediately just parks the next pending task too — the
@@ -851,6 +850,51 @@ class AuditWorker(DrainableWorkerMixin):
             *(slot() for _ in range(concurrency)), return_exceptions=True
         )
         return completed
+
+    async def _claim_for_slot(self, *, drain: bool) -> list[AuditTask] | None:
+        """One pipeline slot's claim, with its own stop/backoff decision.
+
+        Returns the claimed rows, an EMPTY list when the slot should simply go
+        round again after backing off, or ``None`` when the slot's own exit
+        condition fired. A claim failure (DB blip) is treated exactly like an
+        empty queue apart from the log: it must not kill the slot.
+        """
+        try:
+            await self._sweep_expired_leases()
+            claimed = await self._queue.claim(owner=self.owner, limit=1)
+        except Exception:
+            logger.exception("audit worker claim failed")
+            claimed = []
+        if claimed:
+            return claimed
+        if drain:
+            return None
+        await asyncio.sleep(max(0.05, audit_settings.poll_interval_seconds))
+        return []
+
+    async def _run_claimed(self, claimed: Sequence[AuditTask]) -> tuple[int, bool]:
+        """Execute one slot's claim; returns ``(completed, parked)``.
+
+        Per-task crashes stay isolated the same way ``run_once`` isolates
+        them: ``_execute_task`` records its own failures, and a raising
+        cleanup path is logged rather than allowed to cancel the sibling
+        tasks still talking to providers.
+        """
+        completed = 0
+        parked = False
+        for task in claimed:
+            try:
+                parked = await self._execute_task(task) or parked
+            except BaseException as exc:  # noqa: BLE001 - see run_pipelined docstring
+                if isinstance(exc, asyncio.CancelledError):
+                    raise
+                logger.error(
+                    "audit task cleanup failed",
+                    exc_info=exc,
+                    extra={"task_id": str(task.id)},
+                )
+            completed += 1
+        return completed, parked
 
     async def run_until_idle(
         self, *, max_batches: int = DEFAULT_MAX_DRAIN_BATCHES
@@ -1097,27 +1141,31 @@ class AuditWorker(DrainableWorkerMixin):
             )
             return False
         attempt = await self._execute_with_capacity(context, capacity, adapter, request)
-        if attempt.succeeded:
-            await self._persist_success(
-                task_id=task_id,
-                audit_id=audit_id,
-                attempts=[attempt],
-                logical_engine=context.logical_engine,
-                transport_provider=context.transport_provider,
-                transport_model=context.transport_model,
-                request_snapshot=request_snapshot,
-            )
-        else:
-            await self._handle_failure(
-                task_id=task_id,
-                audit_id=audit_id,
-                attempts=[attempt],
-                logical_engine=context.logical_engine,
-                transport_provider=context.transport_provider,
-                transport_model=context.transport_model,
-                request_snapshot=request_snapshot,
-            )
+        await self._persist_attempt_outcome(context, attempt, request_snapshot)
         return False
+
+    async def _persist_attempt_outcome(
+        self,
+        context: _ExecutionContext,
+        attempt: CallAttempt,
+        request_snapshot: dict,
+    ) -> None:
+        """Route ONE finished call to the success or failure persistence path.
+
+        Both sides take the same identity block, so the only real decision
+        here is which one runs — kept out of ``_run_provider_call`` so that
+        function stays the load/validate/capacity/call shell it documents.
+        """
+        persist = self._persist_success if attempt.succeeded else self._handle_failure
+        await persist(
+            task_id=context.task_id,
+            audit_id=context.audit_id,
+            attempts=[attempt],
+            logical_engine=context.logical_engine,
+            transport_provider=context.transport_provider,
+            transport_model=context.transport_model,
+            request_snapshot=request_snapshot,
+        )
 
     async def _load_execution_context(
         self, task_id: uuid.UUID, audit_id: uuid.UUID
@@ -1298,18 +1346,11 @@ class AuditWorker(DrainableWorkerMixin):
                     audit_id=audit_id,
                     event_type=EVENT_TASK_CAPACITY_WAIT,
                     message="task waiting on provider capacity",
-                    payload={
-                        "task_id": str(task_id),
-                        "attempt": attempt_number,
-                        "code": decision.code,
-                        "pool_kind": decision.pool_kind,
-                        "available_at": (
-                            decision.available_at.isoformat()
-                            if decision.available_at is not None
-                            else ""
-                        ),
-                        "retry_after_seconds": decision.retry_after_seconds or 0.0,
-                    },
+                    payload=_capacity_wait_payload(
+                        task_id=task_id,
+                        attempt_number=attempt_number,
+                        decision=decision,
+                    ),
                 )
                 await session.commit()
         await self._queue.park_capacity_wait(

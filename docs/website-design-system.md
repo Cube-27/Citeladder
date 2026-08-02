@@ -44,9 +44,16 @@ namespace. Hex is authored **only** there; components consume the generated Tail
 | Role | Value | Token |
 |---|---|---|
 | Primary Blue | `rgb(59, 130, 246)` `#3B82F6` | `--color-mkt-primary` |
-| Vivid Indigo Blue | `rgb(64, 106, 228)` `#406AE4` | `--color-mkt-indigo` |
+| Vivid Indigo Blue | `rgb(64, 106, 228)` `#406AE4` — **ships as `#3A61D6`, see below** | `--color-mkt-indigo` |
 | Light Sky Blue | `rgb(82, 144, 244)` `#5290F4` | `--color-mkt-sky-blue` |
 | Soft Royal Blue (glow) | `rgba(58, 119, 229, 0.5)` | `--color-mkt-glow` |
+
+> **Deviation — `--color-mkt-indigo` ships one step darker than the spec.** The spec's
+> `#406AE4` is 4.77:1 on white, but this token is the one blue that carries **text**, and links
+> also sit on the two tint fills, where it lands at 4.20:1 (sunken) and 4.26:1 (frost) — below
+> AA. `#3A61D6` clears all three (5.44 / 4.79 / 4.85). `#406AE4` still ships **verbatim** where
+> the spec actually uses it: the second stop of the accent gradient, as
+> `--color-mkt-gradient-to`.
 
 ### Neutrals
 
@@ -97,7 +104,16 @@ mark role. The `-text` sibling exists so a label inside such a card has somethin
 
 Primary Blue `#3B82F6` is 3.68:1 on white — a **mark**, which is exactly how the system uses
 it (gradient fills, borders, glows, never body copy). Where blue must carry text, use
-`--color-mkt-indigo` `#406AE4` (4.77:1) or darker.
+`--color-mkt-indigo` (5.44:1 as shipped) or darker.
+
+> **Deviation — Success and Warning ship below the 3:1 mark bar.** `#10B981` is 2.54:1 on
+> white and `#FF8B06` is 2.35:1, so both fall short of the ≥ 3:1 stated above. They ship
+> anyway, and the gate (`app/globals.test.ts`, `PROOF_MARK_ROLES`) deliberately excludes them:
+> the spec uses these two as saturated brand fills for status dots and progress bars, which
+> always sit beside their own text label, so no information depends on the swatch alone.
+> Retuning two published brand values would protect a contrast nothing reads. Error `#F51C23`
+> and Primary `#3B82F6` are gated at 3:1 as stated. The rule that actually protects legibility
+> here is the `-text` sibling — asserted for all three hues, and what every label uses.
 
 ### Gradients
 
@@ -108,6 +124,14 @@ fade-down         linear-gradient(180deg, transparent 0%, #FFFFFF 100%)
 fade-right        linear-gradient(90deg,  #FFFFFF 0%, transparent 100%)
 fade-left         linear-gradient(270deg, #FFFFFF 0%, transparent 100%)
 ```
+
+> **Deviation — the accent gradient's light stop ships as `#2563EB`, not `#3B82F6`.** Every
+> pill on this surface carries a **white** label at 15px/600, below the large-text exemption,
+> and `#3B82F6` gives white only 3.68:1. `#2563EB` is the same blue family at 5.17:1, so the
+> label holds across the whole sweep rather than only at the darker end. `#3B82F6` keeps its
+> job as a mark (borders, glows, dots), where 3:1 is the right bar. Both stops are named
+> tokens — `--color-mkt-gradient-from` / `--color-mkt-gradient-to` — which the gradient
+> consumes via `var()` so the legibility gate and the rendered sweep cannot drift apart.
 
 The `fade-*` gradients are edge masks for marquees and overflowing content — always solid
 page-background on the closed edge, transparent on the open edge.

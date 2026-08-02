@@ -75,10 +75,15 @@ export const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   authenticated_exports: 'Authenticated exports',
 };
 
-/** `prompt_slots` → `Prompt slots` when no explicit label is registered. */
+/**
+ * `prompt_slots` → `Prompt slots` when no explicit label is registered.
+ *
+ * The lookup is an OWN-property check: the keys come from the billing API, and
+ * a plain-object map answers `__proto__`/`toString` from the prototype chain
+ * with a non-string, which React cannot render as a child.
+ */
 export function capabilityLabel(key: string): string {
-  const known = CAPABILITY_LABELS[key];
-  if (known) return known;
+  if (Object.hasOwn(CAPABILITY_LABELS, key)) return CAPABILITY_LABELS[key];
   const words = key.replaceAll('_', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

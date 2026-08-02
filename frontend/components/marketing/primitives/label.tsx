@@ -28,23 +28,25 @@ export function Meta({
 }
 
 /**
- * Section opener: a proof-blue dot with a halo, then the label. The dot is
- * the only decorative use of the accent on paper — everywhere else colour
- * has to mean a state.
+ * The eyebrow / pre-title (docs/website-design-system.md §5.5): Text XS Bold
+ * in slate, optionally led by a 6px accent dot at a 10px gap. It sits 10–20px
+ * above the heading, which is the SectionHeader gap — never spaced by the call
+ * site. The dot is the only decorative use of the accent on paper; everywhere
+ * else colour has to mean a state.
+ *
+ * ONE definition, here. `section.tsx` shipped a second component of the same
+ * name at a different rung, gap and dot treatment — the exact token drift this
+ * primitive layer exists to remove — so `SectionHeader` now renders this one.
  */
 export function Eyebrow({
   children,
+  dot = true,
   className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
+}: Readonly<{ children: ReactNode; dot?: boolean; className?: string }>) {
   return (
-    <span
-      className={cn(
-        'text-mkt-xs text-mkt-ink-soft gap-mkt-14 inline-flex items-center font-semibold',
-        className,
-      )}
-    >
-      <span className="bg-mkt-indigo ring-mkt-frost size-1.5 shrink-0 rounded-full ring-5" />
+    <p className={cn('gap-mkt-10 text-mkt-xsb text-mkt-ink-soft flex items-center', className)}>
+      {dot && <span aria-hidden className="bg-mkt-indigo size-mkt-6 shrink-0 rounded-full" />}
       {children}
-    </span>
+    </p>
   );
 }

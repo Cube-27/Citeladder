@@ -44,6 +44,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_GEMINI,
     TRANSPORT_GOOGLE,
+    default_model,
 )
 from app.domain.analysis import service as analysis_service
 from app.domain.analysis.schemas import VisibilityFanoutState
@@ -75,6 +76,12 @@ from app.models.audit import (
 from app.workers import audit_worker
 from app.workers.audit_worker import AuditWorker
 from tests.component.audit_helpers import seed_audit_fixtures
+
+# The model the PLANNER freezes for these audits. Read from the catalog rather
+# than pinned as a literal: these assertions are about provenance travelling
+# intact from the frozen route to the projection, not about which Gemini build
+# is current, and a literal here goes stale on every model-version bump.
+GEMINI_MODEL = default_model(ENGINE_GEMINI, TRANSPORT_GOOGLE)
 
 
 def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
@@ -237,7 +244,7 @@ async def test_metrics_and_visibility_are_projections(
             {
                 "logical_engine": ENGINE_GEMINI,
                 "transport_provider": TRANSPORT_GOOGLE,
-                "transport_model": "gemini-flash-latest",
+                "transport_model": GEMINI_MODEL,
                 "retrieval_enabled": True,
             }
         ]
@@ -330,7 +337,7 @@ async def test_execution_evidence_projection(
         assert evidence.analysis_id == analysis.id
         # Execution-level provenance: the exact singular model plus the frozen
         # mode/retrieval state the call executed under (inv. 4/7, 10).
-        assert evidence.transport_model == "gemini-flash-latest"
+        assert evidence.transport_model == GEMINI_MODEL
         assert evidence.measurement_mode == MEASUREMENT_MODE_BENCHMARK
         assert evidence.retrieval_enabled is True
         assert "mode" not in evidence.model_dump()

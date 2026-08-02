@@ -96,7 +96,15 @@ export function ButtonLink({
   );
 }
 
-/** Marketing action rendered as a real button (menus, toggles, submits). */
+/**
+ * Marketing action rendered as a real button (menus, toggles, submits).
+ *
+ * The disabled treatment sits on the OUTER element rather than in
+ * `PILL_BASE`: the pill is a child span, so a `disabled:` variant there never
+ * matches. Dimming the shell carries the ring and the pill together. The auth
+ * forms submit through this primitive, so without it a pending submit looked
+ * identical to an idle one.
+ */
 export function Button({
   variant = 'primary',
   className,
@@ -109,7 +117,11 @@ export function Button({
   >) {
   const { ring, pill } = shell(variant);
   return (
-    <button type={type} className={cn(ring, className)} {...rest}>
+    <button
+      type={type}
+      className={cn(ring, 'disabled:cursor-not-allowed disabled:opacity-60', className)}
+      {...rest}
+    >
       <span className={pill}>{children}</span>
     </button>
   );
