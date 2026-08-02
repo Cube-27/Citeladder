@@ -33,10 +33,10 @@ export function Dialog({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
+        <DialogPrimitive.Overlay className="bg-overlay-scrim z-overlay fixed inset-0" />
         <DialogPrimitive.Content
           className={cn(
-            'border-border-subtle bg-elevated shadow-modal-value fixed top-1/2 left-1/2 z-[101] flex max-h-[85vh] w-[640px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border focus:outline-none',
+            'border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-1/2 left-1/2 flex max-h-5/6 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border focus:outline-none',
             className,
           )}
         >

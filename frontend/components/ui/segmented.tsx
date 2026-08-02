@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { segmentedItemVariants, segmentedTrackVariants } from './segmented-variants';
 
 /**
  * Segmented track/pill recipes — the `bg-alt` track with a white (panel)
@@ -16,15 +16,10 @@ import { cn } from '@/lib/utils';
  * plain buttons for the chart switches). Sharing the classes keeps them
  * identical without forcing one ARIA role.
  */
-export const segmentedTrackClasses =
-  'bg-background-alt inline-flex items-center gap-0 rounded-full p-1';
+export const segmentedTrackClasses = segmentedTrackVariants({});
 
 /* Flat 2.0: the selected pill is a plain --bg-panel fill on the tinted track.
    It previously carried `shadow-xs` to lift off the track; the track is now an
    alpha neutral, so white-on-tint already separates them and the shadow was
    only softening the edge. */
-export const segmentedItemClasses = (selected: boolean) =>
-  cn(
-    'focus-ring rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors',
-    selected ? 'bg-panel text-foreground' : 'text-muted hover:text-foreground',
-  );
+export const segmentedItemClasses = (selected: boolean) => segmentedItemVariants({ selected });

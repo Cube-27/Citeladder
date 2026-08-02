@@ -182,7 +182,7 @@ function DashboardSkeleton() {
   return (
     <div className="grid gap-6" aria-hidden>
       <Skeleton className="h-8 w-64" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
@@ -374,7 +374,7 @@ export function DashboardScreen({
         <Alert tone="danger">Could not download the report. Please try again.</Alert>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
           label="Visibility score"
           value={data.executive_metrics.visibility_score}

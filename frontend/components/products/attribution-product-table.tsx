@@ -89,7 +89,7 @@ export function AttributionProductTable({ block }: Readonly<{ block: Attribution
               <TableBody>
                 {pageRows.map((row) => (
                   <TableRow key={row.key}>
-                    <TableCell className="max-w-[280px] min-w-[200px]">
+                    <TableCell className="max-w-70 min-w-50">
                       {row.identity.product_id !== null ? (
                         <div className="grid gap-0.5">
                           <span className="text-foreground truncate font-medium">

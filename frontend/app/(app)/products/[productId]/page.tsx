@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { Suspense } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,7 +30,7 @@ export default function ProductDetailPage() {
 
   if (productQuery.isLoading) {
     return (
-      <div className="grid gap-4" aria-hidden>
+      <div className="grid gap-6" aria-hidden>
         <Skeleton className="h-8 w-40" />
         <Card>
           <CardContent className="grid gap-3">
@@ -60,8 +61,18 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <TooltipProvider>
-      <ProductEvidenceTable product={productQuery.data} />
-    </TooltipProvider>
+    <Suspense
+      fallback={
+        <div className="grid gap-6" aria-hidden>
+          <Skeleton className="h-56 w-full" />
+        </div>
+      }
+    >
+      <TooltipProvider>
+        <div className="grid gap-6">
+          <ProductEvidenceTable product={productQuery.data} />
+        </div>
+      </TooltipProvider>
+    </Suspense>
   );
 }

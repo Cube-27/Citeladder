@@ -46,7 +46,7 @@ export function GenerateBrandDialog({
       onOpenChange={onOpenChange}
       title={title}
       description={description}
-      className="w-[520px]"
+      className="w-130"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

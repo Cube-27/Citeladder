@@ -197,7 +197,7 @@ export function ProductVisibilityPanel({
       <CompetitorCoPlacementMatrix matrix={buildCoPlacementMatrix(visibility.products)} />
     ) : (
       <div className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
             label="Product SOV"
             value={formatPercent(summary.sov)}
@@ -374,9 +374,9 @@ function RankingsCard({
                 <TableHead>Mentions</TableHead>
                 <TableHead>SOV</TableHead>
                 <TableHead>Win rate</TableHead>
-                <TableHead className="min-w-[140px]">Rank distribution</TableHead>
+                <TableHead className="min-w-35">Rank distribution</TableHead>
                 <TableHead>Avg rank</TableHead>
-                <TableHead className="min-w-[200px]">Price relation</TableHead>
+                <TableHead className="min-w-50">Price relation</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -408,7 +408,7 @@ function RankingTableRow({ row, position }: Readonly<{ row: RankingRow; position
       <TableCell numeric className="text-muted">
         {position}
       </TableCell>
-      <TableCell className="max-w-[280px] min-w-[180px]">
+      <TableCell className="max-w-70 min-w-45">
         <div className="grid gap-0.5">
           <span className="flex items-center gap-2">
             {row.kind === 'own' && row.entry.product_id ? (
@@ -533,7 +533,7 @@ function VisibilitySkeleton() {
   return (
     <div className="grid gap-4" aria-hidden>
       <Skeleton className="h-8 w-96" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-24 w-full" />
         ))}

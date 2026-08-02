@@ -36,7 +36,7 @@ const ROWS = [
 ] as const;
 
 function statusText(status: SectionStatus, count: number, unconfigured: boolean) {
-  if (status === 'error') return unconfigured ? 'Not configured' : 'Couldn\'t complete';
+  if (status === 'error') return unconfigured ? 'Not configured' : "Couldn't complete";
   if (status === 'done') return count === 0 ? 'Nothing found' : `${count} discovered`;
   return 'AI Searching…';
 }
@@ -78,7 +78,7 @@ export function DiscoveryProgress({
                 ? 'border-success-border/60 bg-success-bg/30'
                 : failed
                   ? 'border-danger-border/60 bg-danger-bg/30'
-                  : 'border-accent-border/40 bg-white',
+                  : 'border-accent-border/40 bg-panel',
             )}
           >
             <div className="flex items-center gap-4">
@@ -131,7 +131,7 @@ export function DiscoveryProgress({
                     <AlertTriangle className="size-4" aria-hidden />
                   </div>
                 ) : done ? (
-                  <div className="bg-success flex size-6 items-center justify-center rounded-full text-white">
+                  <div className="bg-success text-accent-fg flex size-6 items-center justify-center rounded-full">
                     <Check className="size-4" strokeWidth={2.5} aria-hidden />
                   </div>
                 ) : (
@@ -152,10 +152,10 @@ export function DiscoveryProgress({
             </div>
 
             {failure ? (
-              <div className="border-danger-border/40 mt-3 border-t pt-3 pl-14" role="alert">
+              <div className="border-danger-border/40 mt-3 border-t pt-3 pl-12" role="alert">
                 <p className="text-danger-text text-xs leading-5">{failure.message}</p>
                 {failure.references ? (
-                  <p className="text-muted mt-0.5 text-2xs">{failure.references}</p>
+                  <p className="text-muted text-2xs mt-0.5">{failure.references}</p>
                 ) : null}
               </div>
             ) : null}

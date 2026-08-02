@@ -25,6 +25,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const DIRS = ['components/marketing', 'app/(marketing)'];
+const UI_DIR = 'components/ui';
 
 /**
  * The spacing ladder — the only values the surface may use. 80 and 120 are the
@@ -178,6 +179,19 @@ for (const dir of DIRS) {
       checkSpacing(line, at);
       checkRadius(line, at);
       checkArbitrary(line, at);
+    });
+  }
+}
+
+const uiRoot = path.join(root, UI_DIR);
+if (fs.existsSync(uiRoot)) {
+  for (const file of walk(uiRoot)) {
+    const rel = path.relative(root, file).replaceAll('\\', '/');
+    const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    lines.forEach((line, i) => {
+      if (/\bmkt-[a-z0-9-]+/.test(line)) {
+        failures.push(`${rel}:${i + 1} references a marketing-only \`mkt-*\` utility.`);
+      }
     });
   }
 }

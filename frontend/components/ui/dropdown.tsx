@@ -33,7 +33,7 @@ export function DropdownContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'border-border-subtle bg-elevated shadow-modal-value z-[300] min-w-[10rem] overflow-hidden rounded-sm border p-1 focus:outline-none',
+          'border-border-subtle bg-elevated shadow-modal-value z-modal min-w-40 overflow-hidden rounded-sm border p-1 focus:outline-none',
           className,
         )}
         {...props}

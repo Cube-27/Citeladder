@@ -24,6 +24,7 @@ describe('PageHeader', () => {
     ['/opportunities', 'Opportunities'],
     ['/site-health', 'Site health'],
     ['/knowledge-base', 'Brand knowledge'],
+    ['/prompt-research', 'Prompt research'],
   ])('resolves %s to the page title %s', (route, title) => {
     expect(renderTitle(route)).toBe(title);
   });
@@ -32,6 +33,8 @@ describe('PageHeader', () => {
     ['/traffic/anything', 'Traffic'],
     ['/runs/abc', 'Run detail'],
     ['/runs/abc/executions/def', 'Execution evidence'],
+    ['/products/abc', 'Product evidence'],
+    ['/site-health/crawls/abc/pages/def', 'Page detail'],
   ])('resolves deeper route %s by longest-prefix match to %s', (route, title) => {
     expect(renderTitle(route)).toBe(title);
   });

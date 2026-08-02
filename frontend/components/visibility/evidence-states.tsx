@@ -6,6 +6,7 @@ import { Info, Inbox, RefreshCw, SearchX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { IconChip } from '@/components/ui/icon-chip';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 
@@ -56,9 +57,9 @@ export function EvidenceError({
       <CardContent>
         <div className="grid justify-items-center gap-3 py-10 text-center">
           <CardEyebrow>{title}</CardEyebrow>
-          <span className="bg-danger-bg text-danger-text flex size-10 items-center justify-center rounded-full">
+          <IconChip className="bg-danger-bg text-danger-text">
             <ICONS.warning className="size-5" aria-hidden />
-          </span>
+          </IconChip>
           <h3 className={displayHeadingLgClasses}>Couldn&apos;t load this evidence</h3>
           <p className="text-secondary max-w-xs text-sm">
             The request failed or timed out. Your filters are unchanged.
@@ -84,9 +85,9 @@ export function EvidenceEmpty({
         {/* Midnight empty-state pattern: mono eyebrow + display heading + ghost CTA. */}
         <div className="grid justify-items-center gap-3 py-10 text-center">
           <CardEyebrow>{title}</CardEyebrow>
-          <span className="bg-neutral-bg text-muted flex size-10 items-center justify-center rounded-full">
+          <IconChip className="bg-neutral-bg text-muted">
             <Inbox className="size-5" aria-hidden />
-          </span>
+          </IconChip>
           <h3 className={displayHeadingLgClasses}>{heading}</h3>
           <p className="text-secondary max-w-sm text-sm">{body}</p>
           <Button asChild variant="ghost" size="sm">
@@ -108,9 +109,9 @@ export function EvidenceFilteredEmpty({
       <CardContent>
         <div className="grid justify-items-center gap-3 py-10 text-center">
           <CardEyebrow>{title}</CardEyebrow>
-          <span className="bg-neutral-bg text-muted flex size-10 items-center justify-center rounded-full">
+          <IconChip className="bg-neutral-bg text-muted">
             <SearchX className="size-5" aria-hidden />
-          </span>
+          </IconChip>
           <h3 className={displayHeadingLgClasses}>No results match these filters</h3>
           <p className="text-secondary max-w-sm text-sm">{body}</p>
           {onClear ? (

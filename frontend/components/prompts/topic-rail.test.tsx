@@ -39,7 +39,7 @@ function renderRail(props: Partial<ComponentProps<typeof TopicRail>> = {}) {
 }
 
 describe('TopicRail layout containment', () => {
-  it('renders as a contained bordered panel card that clips its own overflow', () => {
+  it('renders as a contained raised panel card that clips its own overflow', () => {
     renderRail();
 
     const rail = screen.getByRole('navigation', { name: 'Topics' });
@@ -47,7 +47,8 @@ describe('TopicRail layout containment', () => {
     // boundary and min-width:0 so table content can never bleed over/under it.
     expect(rail).toHaveClass('overflow-hidden');
     expect(rail).toHaveClass('min-w-0');
-    expect(rail).toHaveClass('border');
+    expect(rail).not.toHaveClass('border');
+    expect(rail).toHaveClass('shadow-card');
     expect(rail).toHaveClass('bg-panel');
     // Desktop: sticky so the rail stays put while the right pane scrolls.
     expect(rail).toHaveClass('md:sticky');

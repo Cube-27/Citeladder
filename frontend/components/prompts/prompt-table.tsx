@@ -54,7 +54,7 @@ export function PromptTable({
   const pagedPrompts = prompts.slice(from - 1, to);
 
   return (
-    <div className="border-border-subtle bg-panel overflow-hidden rounded-lg border">
+    <div className="bg-panel shadow-card overflow-hidden rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
@@ -69,12 +69,12 @@ export function PromptTable({
         <TableBody>
           {pagedPrompts.map((prompt) => (
             <TableRow key={prompt.id}>
-              <TableCell className="max-w-[520px] min-w-[240px]">
+              <TableCell className="max-w-130 min-w-60">
                 <Tooltip content={prompt.text}>
                   <span className="text-foreground line-clamp-2 block">{prompt.text}</span>
                 </Tooltip>
               </TableCell>
-              <TableCell className="max-w-[180px]">
+              <TableCell className="max-w-45">
                 {prompt.theme ? (
                   <Tooltip content={prompt.theme}>
                     <Badge variant="neutral" className="max-w-full">

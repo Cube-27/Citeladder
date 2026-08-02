@@ -24,6 +24,7 @@ import {
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MutationNotice } from '@/components/ui/mutation-notice';
+import { IconChip } from '@/components/ui/icon-chip';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatUtcTimestamp } from '@/lib/format';
@@ -211,9 +212,9 @@ export function AttributionPanel({
         <Card>
           <CardContent className="grid justify-items-center gap-4 py-12 text-center">
             <CardEyebrow>Attribution</CardEyebrow>
-            <span className="bg-neutral-bg text-muted flex size-10 items-center justify-center rounded-full">
+            <IconChip className="bg-neutral-bg text-muted">
               <Inbox className="size-5" aria-hidden />
-            </span>
+            </IconChip>
             <div className="grid gap-1">
               <h2 className={displayHeadingLgClasses}>No attribution snapshot yet</h2>
               <p className="text-secondary max-w-md text-sm">
@@ -315,7 +316,7 @@ function AttributionCoverageCard({
           {coverage.window_end || '—'}.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map(([label, value]) => (
           <div key={label} className="grid gap-1">
             <span className="text-muted text-xs">{label}</span>
@@ -353,7 +354,7 @@ function CurrencyBlockSection({
 function AttributionSkeleton() {
   return (
     <div className="grid gap-4" aria-hidden>
-      <Skeleton className="h-8 w-[28rem] max-w-full" />
+      <Skeleton className="h-8 w-112 max-w-full" />
       <div className="grid gap-4 xl:grid-cols-2">
         <Skeleton className="h-56 w-full" />
         <Skeleton className="h-56 w-full" />

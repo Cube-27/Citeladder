@@ -52,7 +52,7 @@ export function BrandKnowledgeScreen() {
 
   if (profileQuery.isLoading) {
     return (
-      <div className="grid gap-4" aria-hidden>
+      <div className="grid gap-6" aria-hidden>
         <Skeleton className="h-96 w-full" />
       </div>
     );
@@ -73,7 +73,7 @@ export function BrandKnowledgeScreen() {
   // syncs its own draft from the mutation result; the key only needs to reset it
   // when the user switches to a different project.
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
       <BrandProfilePanel key={project.id} projectId={project.id} profile={profileQuery.data} />
     </div>
   );

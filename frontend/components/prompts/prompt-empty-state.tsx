@@ -17,7 +17,7 @@ export function PromptEmptyState({
   onImport,
 }: Readonly<{ onAdd: () => void; onImport: () => void }>) {
   return (
-    <div className="border-border-subtle bg-panel flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-6 py-16 text-center">
+    <div className="bg-panel shadow-card flex flex-col items-center justify-center gap-4 rounded-lg px-6 py-16 text-center">
       <IconChip>
         <MessageSquarePlus className="size-6" aria-hidden />
       </IconChip>

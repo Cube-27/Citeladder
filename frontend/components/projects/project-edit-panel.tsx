@@ -124,7 +124,7 @@ export function ProjectEditPanel({
       onOpenChange={onOpenChange}
       title={`Edit ${project.brand_name || project.name}`}
       description="Changes apply to future audits. Existing results keep the settings they ran with."
-      className="w-[620px]"
+      className="w-155"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={save.isPending}>
@@ -136,7 +136,7 @@ export function ProjectEditPanel({
         </>
       }
     >
-      <div className="grid max-h-[60vh] gap-5 overflow-y-auto pe-1">
+      <div className="grid max-h-3/5 gap-5 overflow-y-auto pe-1">
         {save.isError ? <Alert tone="danger">{onboardingErrorMessage(save.error)}</Alert> : null}
 
         <div className="grid gap-4">

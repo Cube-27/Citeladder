@@ -167,7 +167,7 @@ export function SettingsScreen() {
   }
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-6">
       <div
         role="tablist"
         aria-label="Settings sections"

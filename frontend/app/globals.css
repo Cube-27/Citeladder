@@ -276,6 +276,11 @@
   --transition-fast: 100ms;
   --transition-base: 180ms;
   --transition-slow: 280ms;
+
+  /* Layering — named stacks, never arbitrary z-index values. */
+  --z-index-overlay: 40;
+  --z-index-modal: 50;
+  --z-index-toast: 60;
 }
 
 /* ─── SEMANTIC LAYER — LIGHT (§4) ──────────────────────────────────────

@@ -16,8 +16,8 @@
 
 ## 1. Overview
 
-- **Two files, one direction of flow.** `ds-tokens.css` owns ADS *values*; `globals.css` owns
-  *meanings* and the Tailwind bridge. Components consume **bridged Tailwind semantic tokens
+- **Two files, one direction of flow.** `ds-tokens.css` owns ADS _values_; `globals.css` owns
+  _meanings_ and the Tailwind bridge. Components consume **bridged Tailwind semantic tokens
   only** — never raw hex (no-raw-hex guard), and never a bare `--ds-*` name.
 
   ```
@@ -79,28 +79,28 @@ tractable — because all 218 components already consumed bridged semantic names
 repo held zero raw hex, zero palette-direct utilities and zero `dark:` variants, repointing the
 value layer restyled the whole app without touching component code.
 
-| ADS primitive | Searchify token(s) | Notes |
-|---|---|---|
-| `accent.gray.subtlest` / neutral dark override (as `--ds-surface-canvas`) | `--bg-base` | the app canvas is **recessed** — `#F1F2F4` / `#111111`; a measured departure from ADS `surface.sunken` (§4) |
-| `elevation.surface` | `--bg-panel`, `--bg-sidebar` | cards, tables, and the sidebar+topbar chrome frame |
-| `elevation.surface.raised` | `--bg-elevated` | dropdowns, drawers, tooltips; in light it equals `surface` (ADS separates them with the raised shadow, which flat 2.0 bans) |
-| `elevation.surface.overlay` | `--surface-overlay` | modal/palette surface |
-| `color.background.neutral` / `-hovered` / `-pressed` | `--bg-alt` / `--bg-well` / `--bg-active` | **alpha**, at 6% / 14% / 31%; the quiet-control interaction ladder |
-| `color.background.input` | `--bg-input` | field fill; replaced the old `bg-well` resting state so hover has somewhere to go |
-| `color.text` / `.subtle` / `.subtlest` / `.disabled` | `--text-primary` / `--text-secondary` / `--text-muted` / `--text-subtle` | `subtlest` is captions (4.6:1, gated); `disabled` is decorative only |
-| `color.text.inverse` | `--text-inverse`, `--text-on-inverse` | on accent/bold fills; `--text-on-inverse` pairs with `--bg-inverse` (`background.neutral.bold`) for the tooltip — 7.65:1 both themes |
-| `color.link` | `--accent-text`, and `--text-link` as its alias | **no `--text-accent` token exists** |
-| `color.border` / `.bold` / `.focused` (+ `--ds-border-subtle`) | `--border-subtle` + `--border` / `--border-strong` / `--border-focus` | **alpha hairlines** so an edge composes over any tint, in two real tiers: 6% (`#091E420F` / `#A1BDD914`) inside, 14% (`#091E4224` / `#A6C5E229`) at the edge |
-| `color.background.brand.bold` + `-hovered` / `-pressed` | `--accent` / `--accent-hover` / `--accent-active` | `#0C66E4`; `--accent-soft` kept, derived via `color-mix(in srgb, var(--accent-subtle) 45%, transparent)` |
-| `color.background.accent.<hue>.{subtlest,subtler,bolder}` + `color.text.accent.<hue>` | every status, sentiment, citation, run-status and score-band family | the whole point of the ramp: `subtlest` fill + matching `text` ink is the AA-safe pairing, so ~110 domain tokens are composed rather than hand-picked |
-| `color.background.danger.bold` + `-hovered` | `--danger-solid` / `--danger-solid-hover` | ADS states this pair for exactly this case and both already clear AA against white (5.2:1 / 6.7:1), so unlike the Figma port **no hand-deepening is needed** |
-| `color.background.accent.<hue>.bolder` | `--chart-1..8`; `--series-1..5` alias `--chart-1..5` | one hue per slot: blue, green, orange, red, purple, teal, yellow, magenta. Keeps the "fold into Other" rule in `series-palette.ts` |
-| `color.background.neutral.bold` | `--chart-tooltip-bg`, with NEW `--chart-tooltip-fg` | the tooltip foreground used to be a literal `text-white` — the one genuine token gap in the old system |
-| `elevation.shadow.raised` | `--shadow-2`, `--shadow-card-value` | the card rung — every Card rests on it, borderless |
-| `elevation.shadow.overlay` | `--shadow-3`, `--shadow-4`, `--shadow-card-hover-value`, `--shadow-lg-value`, `--shadow-modal` | overlays, plus the hover lift of interactive cards. `--shadow-1` and `--shadow-xs/sm/elevated` are `none` |
-| `radius.{xsmall,small,medium,large,xlarge}` (2/4/8/12/16) | `--radius-xs/sm/md/lg/xl`; `--radius-2xl` = 16; `--radius-full` kept | **buttons are rounded-md (8px), not pills**; badges are `rounded-sm` (4px) |
-| `space.025…1000` | existing `--space-1..20` 4px grid, **unchanged** | the two scales already agree; renaming would churn ~40 contract entries for no visual gain |
-| Inter, Apfel Grotezk | `--font-primary-family` = Inter stack; `--font-display-family` = Apfel Grotezk stack; `--font-mono-family` aliases the Inter stack (no monospace shipped) | next/font in `app/layout.tsx` loads `--font-inter`; `globals.css` self-hosts Apfel Grotezk from `public/fonts`; `--font-sans` remains the Tailwind body/UI bridge; marketing `--font-mkt-display` aliases the same display family |
+| ADS primitive                                                                         | Searchify token(s)                                                                                                                                        | Notes                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accent.gray.subtlest` / neutral dark override (as `--ds-surface-canvas`)             | `--bg-base`                                                                                                                                               | the app canvas is **recessed** — `#F1F2F4` / `#111111`; a measured departure from ADS `surface.sunken` (§4)                                                                                                                       |
+| `elevation.surface`                                                                   | `--bg-panel`, `--bg-sidebar`                                                                                                                              | cards, tables, and the sidebar+topbar chrome frame                                                                                                                                                                                |
+| `elevation.surface.raised`                                                            | `--bg-elevated`                                                                                                                                           | dropdowns, drawers, tooltips; in light it equals `surface` (ADS separates them with the raised shadow, which flat 2.0 bans)                                                                                                       |
+| `elevation.surface.overlay`                                                           | `--surface-overlay`                                                                                                                                       | modal/palette surface                                                                                                                                                                                                             |
+| `color.background.neutral` / `-hovered` / `-pressed`                                  | `--bg-alt` / `--bg-well` / `--bg-active`                                                                                                                  | **alpha**, at 6% / 14% / 31%; the quiet-control interaction ladder                                                                                                                                                                |
+| `color.background.input`                                                              | `--bg-input`                                                                                                                                              | field fill; replaced the old `bg-well` resting state so hover has somewhere to go                                                                                                                                                 |
+| `color.text` / `.subtle` / `.subtlest` / `.disabled`                                  | `--text-primary` / `--text-secondary` / `--text-muted` / `--text-subtle`                                                                                  | `subtlest` is captions (4.6:1, gated); `disabled` is decorative only                                                                                                                                                              |
+| `color.text.inverse`                                                                  | `--text-inverse`, `--text-on-inverse`                                                                                                                     | on accent/bold fills; `--text-on-inverse` pairs with `--bg-inverse` (`background.neutral.bold`) for the tooltip — 7.65:1 both themes                                                                                              |
+| `color.link`                                                                          | `--accent-text`, and `--text-link` as its alias                                                                                                           | **no `--text-accent` token exists**                                                                                                                                                                                               |
+| `color.border` / `.bold` / `.focused` (+ `--ds-border-subtle`)                        | `--border-subtle` + `--border` / `--border-strong` / `--border-focus`                                                                                     | **alpha hairlines** so an edge composes over any tint, in two real tiers: 6% (`#091E420F` / `#A1BDD914`) inside, 14% (`#091E4224` / `#A6C5E229`) at the edge                                                                      |
+| `color.background.brand.bold` + `-hovered` / `-pressed`                               | `--accent` / `--accent-hover` / `--accent-active`                                                                                                         | `#0C66E4`; `--accent-soft` kept, derived via `color-mix(in srgb, var(--accent-subtle) 45%, transparent)`                                                                                                                          |
+| `color.background.accent.<hue>.{subtlest,subtler,bolder}` + `color.text.accent.<hue>` | every status, sentiment, citation, run-status and score-band family                                                                                       | the whole point of the ramp: `subtlest` fill + matching `text` ink is the AA-safe pairing, so ~110 domain tokens are composed rather than hand-picked                                                                             |
+| `color.background.danger.bold` + `-hovered`                                           | `--danger-solid` / `--danger-solid-hover`                                                                                                                 | ADS states this pair for exactly this case and both already clear AA against white (5.2:1 / 6.7:1), so unlike the Figma port **no hand-deepening is needed**                                                                      |
+| `color.background.accent.<hue>.bolder`                                                | `--chart-1..8`; `--series-1..5` alias `--chart-1..5`                                                                                                      | one hue per slot: blue, green, orange, red, purple, teal, yellow, magenta. Keeps the "fold into Other" rule in `series-palette.ts`                                                                                                |
+| `color.background.neutral.bold`                                                       | `--chart-tooltip-bg`, with NEW `--chart-tooltip-fg`                                                                                                       | the tooltip foreground used to be a literal `text-white` — the one genuine token gap in the old system                                                                                                                            |
+| `elevation.shadow.raised`                                                             | `--shadow-2`, `--shadow-card-value`                                                                                                                       | the card rung — every Card rests on it, borderless                                                                                                                                                                                |
+| `elevation.shadow.overlay`                                                            | `--shadow-3`, `--shadow-4`, `--shadow-card-hover-value`, `--shadow-lg-value`, `--shadow-modal`                                                            | overlays, plus the hover lift of interactive cards. `--shadow-1` and `--shadow-xs/sm/elevated` are `none`                                                                                                                         |
+| `radius.{xsmall,small,medium,large,xlarge}` (2/4/8/12/16)                             | `--radius-xs/sm/md/lg/xl`; `--radius-2xl` = 16; `--radius-full` kept                                                                                      | **buttons are rounded-md (8px), not pills**; badges are `rounded-sm` (4px)                                                                                                                                                        |
+| `space.025…1000`                                                                      | existing `--space-1..20` 4px grid, **unchanged**                                                                                                          | the two scales already agree; renaming would churn ~40 contract entries for no visual gain                                                                                                                                        |
+| Inter, Apfel Grotezk                                                                  | `--font-primary-family` = Inter stack; `--font-display-family` = Apfel Grotezk stack; `--font-mono-family` aliases the Inter stack (no monospace shipped) | next/font in `app/layout.tsx` loads `--font-inter`; `globals.css` self-hosts Apfel Grotezk from `public/fonts`; `--font-sans` remains the Tailwind body/UI bridge; marketing `--font-mkt-display` aliases the same display family |
 
 ## 4. Token values
 
@@ -147,7 +147,7 @@ And two deliberate departures from the literal ADS token set, both measured:
 Machine-enforced by `scripts/check-elevation.mjs`, wired into `pnpm check:policy`.
 
 The model is the **borderless, elevation-driven surface** — the Gmail/Trello/
-atlassian.design arrangement. A surface is separated by *light* (its shadow rung) and the
+atlassian.design arrangement. A surface is separated by _light_ (its shadow rung) and the
 canvas tint step, not by a drawn outline. Borders survive only where they carry structure:
 table rules, in-card separators, and form fields, all at the 6% subtle tier.
 
@@ -159,7 +159,8 @@ table rules, in-card separators, and form fields, all at the 6% subtle tier.
 3. **Shadow only on cards and true overlays** — modal, dropdown, popover, tooltip, toast,
    command palette — through the single `shadow-modal-value` rung. The guard holds an
    explicit allowlist of the files permitted to apply it; adding one is a design decision.
-   Tables, sidebars, inputs, tabs, badges and page headers cast nothing.
+   A table or settings panel that owns an outer surface is a card and therefore uses the
+   raised rung; internal rows, sidebars, inputs, tabs, badges and page headers cast nothing.
 4. **Borders are structural, not decorative, and live at the subtle tier.** Card edges are
    gone entirely; chrome frames, overlay edges, table rules and fields keep a 1px alpha
    hairline at `--border-subtle` (6%). The 14% `--border` tier remains for the few edges
@@ -192,7 +193,7 @@ on every screen was the loudest possible exception to rule 5.
 There is no separate dark value table, and that is the design. `globals.css` contains exactly:
 
 ```css
-html[data-theme='dark'] {
+html[data-theme="dark"] {
   color-scheme: dark;
 }
 ```
@@ -249,24 +250,24 @@ The ladder is the ADS `font.*` composite scale. **13px and 15px do not exist.** 
 carries its own line-height, and the heading steps bake their weight into the token, so call
 sites carry size only (an explicit `font-*`/`leading-*` utility still wins — Tailwind emits
 it after the baked default). `--text-heading-xs` and `--text-heading-sm` exist as separate
-names because ADS's 14px and 16px headings collide on *size* with `--text-sm`/`--text-base`
+names because ADS's 14px and 16px headings collide on _size_ with `--text-sm`/`--text-base`
 but not on line-height or weight, and Tailwind cannot express two line-heights for one size
 token.
 
-| Token | Size / line-height | Weight | ADS source | Use |
-|---|---|---|---|---|
-| `--text-2xs` | 11px / 16px | 400 | `font.body.small` | micro captions |
-| `--text-xs` | 12px / 16px | 400 | `font.body.UNSAFE_small` | captions, timestamps, the eyebrow recipe |
-| `--text-sm` | 14px / 20px | 400 | `font.body` | **the body default** — table cells, secondary lines |
-| `--text-base` | 16px / 24px | 400 | `font.body.large` | lead paragraphs only |
-| `--text-heading-xs` | 14px / 16px | 500 | `font.heading.xsmall` | card titles, panel h3 |
-| `--text-heading-sm` | 16px / 20px | 500 | `font.heading.small` | section h2, dialog titles, wordmark |
-| `--text-lg` | 20px / 24px | 500 | `font.heading.medium` | page `<h1>` |
-| `--text-xl` | 24px / 28px | 500 | `font.heading.large` | onboarding / empty-page titles |
-| `--text-2xl` | 29px / 32px | 500 | `font.heading.xlarge` | rare, hero numerals |
-| `--text-hero` | 35px / 40px | 500 | `font.heading.xxlarge` | app display ceiling — name kept, was 48px |
-| `--text-display-1` | clamp, 31 → 60px / 1.04 | 500 | above the ADS ceiling | marketing hero (aliased as `--text-mkt-d1`) |
-| `--text-display-2` | clamp, 25 → 44px / 1.08 | 500 | above the ADS ceiling | marketing section head (aliased as `--text-mkt-d2`) |
+| Token               | Size / line-height      | Weight | ADS source               | Use                                                 |
+| ------------------- | ----------------------- | ------ | ------------------------ | --------------------------------------------------- |
+| `--text-2xs`        | 11px / 16px             | 400    | `font.body.small`        | micro captions                                      |
+| `--text-xs`         | 12px / 16px             | 400    | `font.body.UNSAFE_small` | captions, timestamps, the eyebrow recipe            |
+| `--text-sm`         | 14px / 20px             | 400    | `font.body`              | **the body default** — table cells, secondary lines |
+| `--text-base`       | 16px / 24px             | 400    | `font.body.large`        | lead paragraphs only                                |
+| `--text-heading-xs` | 14px / 16px             | 500    | `font.heading.xsmall`    | card titles, panel h3                               |
+| `--text-heading-sm` | 16px / 20px             | 500    | `font.heading.small`     | section h2, dialog titles, wordmark                 |
+| `--text-lg`         | 20px / 24px             | 500    | `font.heading.medium`    | page `<h1>`                                         |
+| `--text-xl`         | 24px / 28px             | 500    | `font.heading.large`     | onboarding / empty-page titles                      |
+| `--text-2xl`        | 29px / 32px             | 500    | `font.heading.xlarge`    | rare, hero numerals                                 |
+| `--text-hero`       | 35px / 40px             | 500    | `font.heading.xxlarge`   | app display ceiling — name kept, was 48px           |
+| `--text-display-1`  | clamp, 31 → 60px / 1.04 | 500    | above the ADS ceiling    | marketing hero (aliased as `--text-mkt-d1`)         |
+| `--text-display-2`  | clamp, 25 → 44px / 1.08 | 500    | above the ADS ceiling    | marketing section head (aliased as `--text-mkt-d2`) |
 
 - The eyebrow recipe is ADS `font.heading.xxsmall` — 12/16 @600, **no uppercase, no
   tracking** — composed at the call site as `text-xs font-semibold` (`eyebrowClasses`); there
@@ -302,6 +303,23 @@ gutter), `--sidebar-width: 240px`, `--topbar-height: 48px`, `--nav-item-height: 
 `--content-max-width: 1440px`. The shell consumes these as `var()` escapes
 (`w-[var(--sidebar-width)]`, `h-[var(--topbar-height)]`, `gap-[var(--card-gap)]`,
 `max-w-[var(--content-max-width)]`, `h-[var(--nav-item-height)]`) — no px literals.
+
+**Two-tier page rhythm:** the shell owns PageHeader → page-content separation through
+`gap-[var(--card-gap)]`; page screens then choose exactly one content tier.
+
+| Tier                              | Recipe              | Use                                                                                                            | Current pages                                                                                                                                                                                   |
+| --------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — dashboard / analytics / setup | `grid gap-6` (24px) | Default for every app page, multi-panel dashboard, analytics view, setup flow, or mixed content page           | Projects, Visibility, Analytics, Traffic, Content, Opportunities, Products (including product evidence), Prompts / Prompt Research, Settings, Providers, Knowledge Base, and Site Health detail |
+| B — dense admin / table           | `grid gap-4` (16px) | Explicit opt-in only when the page is predominantly one data table; never a shortcut for squeezing a dashboard | Runs and Issues table workspaces; panel-local dense tables may also use the rung without changing their page tier                                                                               |
+
+Stat strips use one responsive recipe: `grid gap-4 sm:grid-cols-2 lg:grid-cols-4`. Numeric
+`gap-4` / `gap-6` remains valid for table gutters and local card grids; the CSS variable is
+reserved for the shell-level PageHeader → section relationship so the concept has one owner.
+
+**Layering:** `z-overlay = 40` (scrims), `z-modal = 50` (dialog, drawer, dropdown, tooltip),
+and `z-toast = 60` (notifications). Components use the named utilities, never `z-[…]`.
+`--shadow-xs-value = none` is intentional: there is no third in-flow elevation rung between
+flat content and `shadow-card`.
 
 **Radii (the ADS `radius.*` scale, every rung resolving through `--ds-radius-*`):**
 `--radius-xs: 2px` (`radius.xsmall` — tags, the smallest chips), `--radius-sm: 4px`
@@ -341,14 +359,28 @@ bridged names (`bg-background`, `text-foreground`, `border-border`, `bg-accent`,
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-active: var(--accent-active);
-  --color-success: var(--success); /* + warning/danger/info + *-bg/*-border/*-text */
-  --color-sentiment-positive: var(--sentiment-positive); /* + neutral/negative */
-  --color-citation-owned: var(--citation-owned); /* + competitor/third-party + *-bg/*-border/*-text */
+  --color-success: var(
+    --success
+  ); /* + warning/danger/info + *-bg/*-border/*-text */
+  --color-sentiment-positive: var(
+    --sentiment-positive
+  ); /* + neutral/negative */
+  --color-citation-owned: var(
+    --citation-owned
+  ); /* + competitor/third-party + *-bg/*-border/*-text */
   --color-run-completed: var(--run-completed); /* + every run-status */
-  --color-score-high: var(--score-high); /* + low/mid/good + *-bg/*-border/*-text/*-ring */
-  --color-chart-1: var(--chart-1); /* + chart-2..8 + series-1..5/series-other aliases */
-  --shadow-card: var(--shadow-card-value); /* the card rung (raised); + card-hover — xs/sm/elevated stay `none` (§4a) */
-  --shadow-modal-value: var(--shadow-modal); /* the overlay rung — allowlisted overlays only */
+  --color-score-high: var(
+    --score-high
+  ); /* + low/mid/good + *-bg/*-border/*-text/*-ring */
+  --color-chart-1: var(
+    --chart-1
+  ); /* + chart-2..8 + series-1..5/series-other aliases */
+  --shadow-card: var(
+    --shadow-card-value
+  ); /* the card rung (raised); + card-hover — xs/sm/elevated stay `none` (§4a) */
+  --shadow-modal-value: var(
+    --shadow-modal
+  ); /* the overlay rung — allowlisted overlays only */
   /* type sizes (incl. --text-hero/--text-display-1/-2), radii,
      line-heights bridged here too (§7–§8) — no tracking namespace */
 }
@@ -367,26 +399,35 @@ All CVA-driven, token-only, Radix where relevant, lucide icons. Ported to the Fi
 (buttons/badges/elevation, score ring, sparkline) — see the component source in
 `frontend/components/ui/`, which is now the authority.
 
-| Primitive | Notes |
-|---|---|
-| `button` | **rounded-md (8px) — pill variants retired.** Primary = accent fill + `--accent-fg` (white) text + accent-tinted shadow, 14px/500; hover/active walk `--accent-hover`/`--accent-active`. Secondary = panel bg + `--border` hairline; ghost = transparent + accent-subtle hover; destructive = danger tokens. Sizes sm/md/lg/icon; `asChild`; icon slot. |
-| `badge` | pill (`--radius-full`) 11.5px/500 with token bg/border/text. Variants map to tokens: `status` (success/warning/danger/info), `sentiment`, `classification` (**owned = Figma blue**, competitor, third-party), `run-status` (all 8), `score-band` (low/mid/good/high). |
-| `card` | `bg-panel` + `shadow-card` (raised rung) + `--radius-lg`, **borderless**; interactive cards lift to `shadow-card-hover` + 2px rise on hover; header/title/description/content slots + optional mono eyebrow panel label. |
-| `table` (dense) | 32px sticky header (the `--text-xs` @600 eyebrow recipe, muted), 40px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation). |
-| `score-ring` | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-heading-sm`, `lg` = `--text-xl`, `hero` = `--text-hero`); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.** |
-| `sparkline` | trend-colored 1.5px polyline + end dot (Sparkline.tsx). |
-| `donut` | segmented ring for per-engine / citation share; hover-thicken + mono center value; legend; ARIA. |
-| `tabs` / `segmented` | underline tabs (2px accent indicator, per VisibilityDashboard.tsx) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent). |
-| `input` / `field` | 14px text, `--border` hairline, `--radius-sm`, focus = accent border + `--focus-ring`; `field` wraps label + help + error. |
-| `dialog` | Radix modal; `--overlay-scrim`, `bg-elevated`, `--shadow-4`, `--radius-xl`. |
-| `command-palette` | ⌘K/Ctrl+K navigation over nav destinations + workspace projects, plus the sidebar command row that opens it. Radix dialog primitive directly (not `dialog` — a palette's header is its input); same scrim/surface tokens. Substring filter, clamped cursor, `role="listbox"` + `aria-activedescendant`. |
-| `dropdown` | Radix menu; `bg-elevated`, `border`, `--shadow-3`. |
-| `tooltip` | Radix; inverse chip (`--chart-tooltip-bg`), `--text-xs`. |
-| `skeleton` | `--skeleton-base` → `--skeleton-highlight` shimmer (~1.2s). |
-| `empty-state` | shared icon chip + heading + body + CTA slots. |
-| `typography` | scale classes for every §7 token incl. `text-hero` / `text-data-lg`. |
-| `series-palette` | values resolve from the `--chart-*` aliases; class strings (`stroke-series-N`) unchanged. |
-| `history-drawer` | right-side Radix drawer for run history / execution list. |
+| Primitive            | Notes                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `button`             | **rounded-md (8px) — pill variants retired.** Primary = accent fill + `--accent-fg` (white) text + accent-tinted shadow, 14px/500; hover/active walk `--accent-hover`/`--accent-active`. Secondary = panel bg + `--border` hairline; ghost = transparent + accent-subtle hover; destructive = danger tokens. Sizes sm/md/lg/icon; `asChild`; icon slot. |
+| `badge`              | pill (`--radius-full`) 11.5px/500 with token bg/border/text. Variants map to tokens: `status` (success/warning/danger/info), `sentiment`, `classification` (**owned = Figma blue**, competitor, third-party), `run-status` (all 8), `score-band` (low/mid/good/high).                                                                                   |
+| `card`               | `bg-panel` + `shadow-card` (raised rung) + `--radius-lg`, **borderless**; interactive cards lift to `shadow-card-hover` + 2px rise on hover; header/title/description/content slots + optional mono eyebrow panel label.                                                                                                                                |
+| `table` (dense)      | 32px sticky header (the `--text-xs` @600 eyebrow recipe, muted), 40px rows, 14px cells, mono tabular numerals for numeric columns, neutral-50 row hover, sortable carets; shared `table-pagination` footer (mono indicator + ghost Prev/Next, clamp-only reconciliation).                                                                               |
+| `score-ring`         | Figma geometry: rounded linecap, 0.8s sweep transition, ring color from `--score-*-ring`, track from the theme; center numeral (`md` = `--text-heading-sm`, `lg` = `--text-xl`, `hero` = `--text-hero`); ARIA label with %. **Band thresholds stay 25/50/75 — `score-band.ts` unchanged.**                                                              |
+| `sparkline`          | trend-colored 1.5px polyline + end dot (Sparkline.tsx).                                                                                                                                                                                                                                                                                                 |
+| `donut`              | segmented ring for per-engine / citation share; hover-thicken + mono center value; legend; ARIA.                                                                                                                                                                                                                                                        |
+| `tabs` / `segmented` | underline tabs (2px accent indicator, per VisibilityDashboard.tsx) + a pill segmented control (`--segmented-bg`, active = accent-fg on accent).                                                                                                                                                                                                         |
+| `input` / `field`    | 14px text, `--border` hairline, `--radius-sm`, focus = accent border + `--focus-ring`; `field` wraps label + help + error.                                                                                                                                                                                                                              |
+| `dialog`             | Radix modal; `--overlay-scrim`, `bg-elevated`, `--shadow-4`, `--radius-xl`.                                                                                                                                                                                                                                                                             |
+| `command-palette`    | ⌘K/Ctrl+K navigation over nav destinations + workspace projects, plus the sidebar command row that opens it. Radix dialog primitive directly (not `dialog` — a palette's header is its input); same scrim/surface tokens. Substring filter, clamped cursor, `role="listbox"` + `aria-activedescendant`.                                                 |
+| `dropdown`           | Radix menu; `bg-elevated`, `border`, `--shadow-3`.                                                                                                                                                                                                                                                                                                      |
+| `tooltip`            | Radix; inverse chip (`--chart-tooltip-bg`), `--text-xs`.                                                                                                                                                                                                                                                                                                |
+| `skeleton`           | `--skeleton-base` → `--skeleton-highlight` shimmer (~1.2s).                                                                                                                                                                                                                                                                                             |
+| `empty-state`        | shared icon chip + heading + body + CTA slots.                                                                                                                                                                                                                                                                                                          |
+| `typography`         | scale classes for every §7 token incl. `text-hero` / `text-data-lg`.                                                                                                                                                                                                                                                                                    |
+| `series-palette`     | values resolve from the `--chart-*` aliases; class strings (`stroke-series-N`) unchanged.                                                                                                                                                                                                                                                               |
+| `history-drawer`     | right-side Radix drawer for run history / execution list.                                                                                                                                                                                                                                                                                               |
+
+**Primitives we export.** `Card` is the only generic raised container and always includes
+`shadow-card`; `Badge` owns pill styling and its status dot; `IconChip` owns the circular icon
+well used by metrics and empty states. Compose those primitives instead of reproducing their
+pill, dot, or `size-10 rounded-full` anatomy in feature code. A “card without shadow” means an
+in-flow `bg-panel` + `rounded-*` container that does not use `shadow-card`; that pattern is
+deprecated and rejected by the elevation guard. Pills and standalone dots are allowed only
+inside the owning primitives or controls whose semantics require the shape (switches,
+checkboxes, radio indicators).
 
 ## 11. Per-screen prose
 
@@ -460,16 +501,17 @@ theme toggle top-right. The pages own the single h1.
 First-run route group **without** the app shell (SessionGuard + ProjectProvider; the layout
 redirects to `/projects` when projects exist). **Full-screen split**: left panel = logo
 header + sign-out, a top progress stepper, the step form, and a footer pager (Back/Continue
-+ "Step N of M"); right panel = a **live preview** that summarizes the brand, then populates
-discovered competitors/domains/prompts as they arrive, then mirrors the review selection.
-Flow: **Brand** (name + website URL + derived-domain preview + explicit AI consent
-checkbox) → **Discovery** (competitor + owned-domain + prompt suggestions fire in parallel;
-animated staged progress; per-section status + retry) → **Review** (pre-filled **editable**
-competitor rows, domain chips, prompt rows with theme/intent; market defaults US/en with
-inline change) → **Finish** (create project + prompt set + prompts, refetch the projects query,
-then confirm that the Free Site Health crawl is queued before the user opens `/projects`). When
-the agent is unconfigured (503) the flow degrades
-to a manual-entry fallback with an inline notice — onboarding never requires the agent.
+
+- "Step N of M"); right panel = a **live preview** that summarizes the brand, then populates
+  discovered competitors/domains/prompts as they arrive, then mirrors the review selection.
+  Flow: **Brand** (name + website URL + derived-domain preview + explicit AI consent
+  checkbox) → **Discovery** (competitor + owned-domain + prompt suggestions fire in parallel;
+  animated staged progress; per-section status + retry) → **Review** (pre-filled **editable**
+  competitor rows, domain chips, prompt rows with theme/intent; market defaults US/en with
+  inline change) → **Finish** (create project + prompt set + prompts, refetch the projects query,
+  then confirm that the Free Site Health crawl is queued before the user opens `/projects`). When
+  the agent is unconfigured (503) the flow degrades
+  to a manual-entry fallback with an inline notice — onboarding never requires the agent.
 
 ### 11.4 Active-project Dashboard and product tour (`/projects`)
 
@@ -534,6 +576,7 @@ integrations) — the same Figma-language reskin: tokens + new primitives, hiera
 spacing per this document, shared empty-state; no contract or data-flow changes.
 **Setup** (`/setup`) keeps its wizard flow restyled; `/setup/new` stays for additional
 projects.
+
 ## Marketing creative system (the `.mkt` contract)
 
 The public surface — every `(marketing)` route **and** the logged-out auth screens
@@ -563,24 +606,24 @@ semantic name that would flip under `html[data-theme='dark']`: Proof is light-on
 `marketing-motion.css`. The previous marketing stylesheet reached **6,846 lines** of global
 `.mkt` cascade because nothing stopped it growing. If a new section needs CSS in the theme
 file, it needs a **primitive** instead — that is the rule the budget exists to force. When a
-genuinely new *concern* arrives (as motion did), give it an owner; do not raise the ceiling.
+genuinely new _concern_ arrives (as motion did), give it an owner; do not raise the ceiling.
 
 **Palette.** Warm paper and warm ink carry the page; colour is rationed to states, provider
-identity and evidence marks — plus **one** headline word (see *Signature keyword*).
+identity and evidence marks — plus **one** headline word (see _Signature keyword_).
 
-| Role | Value | Token |
-|---|---|---|
-| page canvas | `#faf8f0` | `--color-mkt-paper` |
-| raised / inset fields | `#fdfbf5` | `--color-mkt-paper-raised` |
-| panels | `#ffffff` | `--color-mkt-surface` |
-| band tint (sunken) | `#efece3` | `--color-mkt-surface-sunk` |
-| band tint (wash) | `#eaf1fa` | `--color-mkt-wash` |
-| primary ink | `#2b2926` (13.6:1) | `--color-mkt-ink` |
-| body copy | `#57534e` (7.2:1) | `--color-mkt-ink-soft` |
-| meta / captions | `#6b6560` (5.4:1) | `--color-mkt-ink-muted` |
-| structural hairline | `#29252012` | `--color-mkt-line-soft` |
-| chip / field outline | `#29252026` | `--color-mkt-line` |
-| wallpaper base | `#cbdaf1` | `--color-mkt-sky` |
+| Role                  | Value              | Token                      |
+| --------------------- | ------------------ | -------------------------- |
+| page canvas           | `#faf8f0`          | `--color-mkt-paper`        |
+| raised / inset fields | `#fdfbf5`          | `--color-mkt-paper-raised` |
+| panels                | `#ffffff`          | `--color-mkt-surface`      |
+| band tint (sunken)    | `#efece3`          | `--color-mkt-surface-sunk` |
+| band tint (wash)      | `#eaf1fa`          | `--color-mkt-wash`         |
+| primary ink           | `#2b2926` (13.6:1) | `--color-mkt-ink`          |
+| body copy             | `#57534e` (7.2:1)  | `--color-mkt-ink-soft`     |
+| meta / captions       | `#6b6560` (5.4:1)  | `--color-mkt-ink-muted`    |
+| structural hairline   | `#29252012`        | `--color-mkt-line-soft`    |
+| chip / field outline  | `#29252026`        | `--color-mkt-line`         |
+| wallpaper base        | `#cbdaf1`          | `--color-mkt-sky`          |
 
 The paper is the brand. Marketing runs a **warm neutral ramp of its own** — the app's cool ADS
 navy ink (`#172B4D`) on a warm cream canvas is the specific mismatch that made the site read
@@ -597,17 +640,17 @@ fallback. Both stops are held to the WCAG **large-text** floor (3:1 — 9.44:1 a
 because the tail is a real letterform, not a fill. This is the single exemption to "colour is
 never in headlines"; a second gradient word on a page is a bug.
 
-**Mark vs text — the rule that governs every state hue.** A hue that works as a *fill* is not
-automatically legible as *text*. Each state therefore ships in two forms: the **mark**
+**Mark vs text — the rule that governs every state hue.** A hue that works as a _fill_ is not
+automatically legible as _text_. Each state therefore ships in two forms: the **mark**
 (≥ 3:1, dots/bars/tiles only) and the **`-text` variant** (≥ 4.5:1, safe for copy). The
 deck's own values all failed as text, which is why the split exists.
 
-| State | Mark (≥ 3:1) | Text (≥ 4.5:1) |
-|---|---|---|
-| proof / active + linked | `#0C66E4` | `#0C66E4` (4.89:1) |
-| evidence / verified | `#1F845A` | `#216E4E` (5.80:1) |
-| signal / decline + refusal | `#CA3521` | `#AE2A19` (6.28:1) |
-| review / needs attention | `#B65C02` | `#974F0C` (5.74:1) |
+| State                      | Mark (≥ 3:1) | Text (≥ 4.5:1)     |
+| -------------------------- | ------------ | ------------------ |
+| proof / active + linked    | `#0C66E4`    | `#0C66E4` (4.89:1) |
+| evidence / verified        | `#1F845A`    | `#216E4E` (5.80:1) |
+| signal / decline + refusal | `#CA3521`    | `#AE2A19` (6.28:1) |
+| review / needs attention   | `#B65C02`    | `#974F0C` (5.74:1) |
 
 Blue is the one hue that needs no split: `#0C66E4` clears AA on paper as both mark and text,
 so proof ships a single token plus a `#0055CC` (6.23:1) hover step. It is still mark/link-only
@@ -615,8 +658,8 @@ on the sunken band (4.40:1). The other three hues keep their `-text` siblings, a
 mark values are the ADS `*-bolder` steps — "needs review" is ADS **orange**, not yellow,
 which reads sickly on warm paper.
 
-**The gate, not the values.** `frontend/app/globals.test.ts` §5 enforces the *ratios* and the
-*structure* — every text role clears AA on paper and on each band fill, every mark clears 3:1,
+**The gate, not the values.** `frontend/app/globals.test.ts` §5 enforces the _ratios_ and the
+_structure_ — every text role clears AA on paper and on each band fill, every mark clears 3:1,
 every state hue except proof has a `-text` sibling, and both keyword stops clear 3:1. It
 resolves each colour from whatever `marketing-theme.css` currently declares and asserts no hex
 literal, so retuning the brand needs no test edit. The hex values in the tables above are
@@ -742,7 +785,6 @@ Both strips sit **directly on the paper** — no cards, borders or fills. Provid
 official brand geometry from `engine-logo.tsx` in each provider's own colour, and the questions
 are quoted and italic so they read as things buyers ask rather than as claims we are making.
 
-
 ## 13. Motion + accessibility (app)
 
 - **Motion**: `--transition-fast: 100ms`, `--transition-base: 180ms`,
@@ -791,3 +833,18 @@ are quoted and italic so they read as things buyers ask rather than as claims we
     token escapes), `scripts/check-ads-scale.mjs` (the type/spacing ladders), and
     `scripts/check-frontend-architecture.mjs` (line budgets, including the 400-line ceiling on
     `marketing-theme.css` and 700 on `globals.css`).
+
+## 15. Design-system guardrails
+
+`pnpm check:policy` runs the guards below in order. Drift rules are pinned at zero unless a
+table states a structural budget; raising a ceiling is a design-system decision, not a routine
+fix.
+
+| Script                            | Enforced contract                                                                                                                                                                                              | Pinned count / budget                                                                                                                     |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-token-escapes.mjs`         | No raw CSS-var utilities, raw hex, Tailwind palette colours, literal `bg/text-white                                                                                                                            | black`, or numeric arbitrary sizes on the product surface; tests and the separately governed marketing tree are excluded where documented | 0 violations |
+| `check-frontend-architecture.mjs` | Frontend ownership boundaries and file-size budgets, including `globals.css` and marketing theme budgets                                                                                                       | Existing per-file budgets; 0 violations                                                                                                   |
+| `check-design-tokens.mjs`         | Required ADS primitive, app semantic, and marketing token sets stay present and bridged                                                                                                                        | 118 ADS primitives, 239 app tokens, 71 marketing tokens at this audit                                                                     |
+| `check-elevation.mjs`             | Borderless `bg-panel` cards require `shadow-card`; overlay shadows are allowlisted; gradients/blur are banned on chrome; `rounded-md border` ad-hoc panels are banned; elevation token assignments cannot move | 0 violations; `shadow-xs/sm/elevated = none`                                                                                              |
+| `check-ads-scale.mjs`             | No tracking utilities, arbitrary typography, retired type rungs, or off-ladder ADS spacing classes                                                                                                             | 0 / 0 / 0                                                                                                                                 |
+| `check-mkt-scale.mjs`             | Marketing spacing/radius/shadow ladder, Tailwind-merge registration, plus zero `mkt-*` references under `components/ui/`                                                                                       | 0 violations                                                                                                                              |

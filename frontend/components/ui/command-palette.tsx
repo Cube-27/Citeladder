@@ -213,7 +213,7 @@ export function CommandPalette() {
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
+          <DialogPrimitive.Overlay className="bg-overlay-scrim z-overlay fixed inset-0" />
           <DialogPrimitive.Content
             // Radix requires a Title for the dialog's accessible name and
             // warns when one is absent. The palette has no visible heading —
@@ -229,7 +229,7 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="border-border-subtle bg-elevated shadow-modal-value fixed top-24 left-1/2 z-[101] flex max-h-[60vh] w-[560px] max-w-[92vw] -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
+            className="border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border-subtle flex items-center gap-3 border-b px-4">

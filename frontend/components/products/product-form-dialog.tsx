@@ -74,7 +74,7 @@ export function ProductFormDialog({
       onOpenChange={handleOpenChange}
       title={isEdit ? 'Edit product' : 'Add product'}
       description="Add a single SKU to the catalog. Attributes feed the completeness score used in visibility audits."
-      className="w-[720px]"
+      className="w-180"
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>

@@ -54,7 +54,11 @@ function PromptsScreen() {
     );
   }
 
-  return <YourPrompts />;
+  return (
+    <div className="grid gap-6">
+      <YourPrompts />
+    </div>
+  );
 }
 
 export default function PromptsPage() {

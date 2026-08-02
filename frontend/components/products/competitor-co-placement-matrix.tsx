@@ -57,9 +57,9 @@ export function CompetitorCoPlacementMatrix({ matrix }: Readonly<{ matrix: CoPla
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Your product</TableHead>
+                  <TableHead className="min-w-50">Your product</TableHead>
                   {matrix.columns.map((column) => (
-                    <TableHead key={column.key} scope="col" className="min-w-[140px]">
+                    <TableHead key={column.key} scope="col" className="min-w-35">
                       <span className="block truncate">{column.productName}</span>
                       <span className="text-muted block truncate text-xs font-normal">
                         {column.competitorName}
@@ -71,7 +71,7 @@ export function CompetitorCoPlacementMatrix({ matrix }: Readonly<{ matrix: CoPla
               <TableBody>
                 {matrix.rows.map((row) => (
                   <TableRow key={row.key}>
-                    <TableHead scope="row" className="max-w-[280px] min-w-[200px] font-medium">
+                    <TableHead scope="row" className="max-w-70 min-w-50 font-medium">
                       <span className="text-foreground block truncate">{row.productName}</span>
                       <span className="text-muted block truncate text-xs font-normal">
                         {row.sku}

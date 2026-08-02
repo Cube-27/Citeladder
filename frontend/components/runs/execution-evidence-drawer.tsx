@@ -31,8 +31,8 @@ export function ExecutionEvidenceDrawer({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="bg-overlay-scrim fixed inset-0 z-[100]" />
-        <DialogPrimitive.Content className="border-border-subtle bg-elevated shadow-modal-value fixed top-0 right-0 z-[101] flex h-full w-[min(720px,100vw)] flex-col border-l focus:outline-none">
+        <DialogPrimitive.Overlay className="bg-overlay-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Content className="border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-0 right-0 flex h-full w-full max-w-180 flex-col border-l focus:outline-none">
           <header className="border-border-subtle flex items-center justify-between gap-3 border-b px-5 py-4">
             <div className="min-w-0">
               <DialogPrimitive.Title className="text-foreground text-heading-sm">

@@ -39,11 +39,11 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'focus-ring border-mkt-black-10 inline-flex h-6 w-12 shrink-0 items-center rounded-full border',
-        'duration-mkt-micro ease-mkt-micro transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        'focus-ring border-border inline-flex h-6 w-12 shrink-0 items-center rounded-full border',
+        'transition-colors duration-100 ease-in-out disabled:cursor-not-allowed disabled:opacity-60',
         // Checked takes the accent gradient — the same fill every primary
         // action carries, so "on" reads as the active state everywhere.
-        checked ? 'mkt-gradient-accent border-transparent' : 'bg-mkt-surface-sunk',
+        checked ? 'bg-accent border-transparent' : 'bg-alt',
         className,
       )}
     >
@@ -53,8 +53,8 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          'bg-mkt-paper border-mkt-black-10 size-4 rounded-full border',
-          'duration-mkt-micro ease-mkt-micro transition-transform',
+          'bg-panel border-border size-4 rounded-full border',
+          'transition-transform duration-100 ease-in-out',
           checked ? 'translate-x-6' : 'translate-x-1',
         )}
       />

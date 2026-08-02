@@ -64,13 +64,13 @@ export function TrafficSkeleton() {
   return (
     <div className="grid gap-6" aria-busy="true" data-testid="traffic-skeleton">
       <div className="flex flex-wrap items-center gap-2">
-        <Skeleton className="h-[30px] w-44 rounded-full" />
-        <Skeleton className="h-[38px] w-56 rounded-full" />
-        <Skeleton className="ml-auto h-[30px] w-28 rounded-full" />
+        <Skeleton className="h-8 w-40 rounded-full" />
+        <Skeleton className="h-10 w-60 rounded-full" />
+        <Skeleton className="ml-auto h-8 w-32 rounded-full" />
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-[104px]" />
+          <Skeleton key={i} className="h-26" />
         ))}
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
@@ -337,11 +337,8 @@ function UnifiedPerformanceCard({
   return (
     <Card className="shadow-card overflow-hidden">
       {/* Header Metric Tabs */}
-      <div
-        data-testid="traffic-stats"
-        className="border-border grid grid-cols-2 border-b sm:grid-cols-3 xl:grid-cols-6"
-      >
-        {stats.map((stat, index) => {
+      <div data-testid="traffic-stats" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => {
           const isChartable = (['clicks', 'impressions', 'ctr', 'position'] as string[]).includes(
             stat.key,
           );
@@ -383,10 +380,6 @@ function UnifiedPerformanceCard({
                 'border-border grid cursor-pointer gap-1 p-4 transition-all select-none',
                 accentBorder,
                 activeBg,
-                index < 4 ? 'max-xl:border-b' : '',
-                index % 2 !== 1 ? 'max-sm:border-r' : '',
-                index % 3 !== 2 ? 'sm:max-xl:border-r' : '',
-                index < 5 ? 'xl:border-r' : '',
               )}
             >
               {isChartable ? (
@@ -624,7 +617,7 @@ export function TrafficScreen() {
   // projected traffic — the connect/first-sync empty state (mockup).
   if (empty && range === 'latest') {
     return (
-      <div className="grid gap-5">
+      <div className="grid gap-6">
         {syncBanner}
         <TrafficEmptyState hasConnections={connections.length > 0} />
       </div>
@@ -635,7 +628,7 @@ export function TrafficScreen() {
   // (read endpoints serve persisted snapshot windows only — never recompute).
   if (empty) {
     return (
-      <div className="grid gap-5">
+      <div className="grid gap-6">
         {toolbar}
         {syncBanner}
         <Alert tone="info">

@@ -87,7 +87,7 @@ export function TopicRail({
           so nothing from the right pane can overlap it. */}
       <nav
         aria-label="Topics"
-        className="border-border-subtle bg-panel hidden min-w-0 content-start gap-1 overflow-hidden rounded-lg border p-2 md:sticky md:top-4 md:grid"
+        className="bg-panel shadow-card hidden min-w-0 content-start gap-1 overflow-hidden rounded-lg p-2 md:sticky md:top-4 md:grid"
       >
         <div className="flex items-center justify-between px-1">
           <h3 className={eyebrowClasses}>Topics</h3>

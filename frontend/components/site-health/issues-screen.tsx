@@ -34,7 +34,7 @@ export function IssuesScreen() {
   const loading = projectLoading || (Boolean(projectId) && dashboardQuery.isLoading);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       {!projectLoading && !projectId ? (
         <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>
       ) : loading ? (

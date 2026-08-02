@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Globe, MessageSquare, Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ReviewCompetitor, ReviewDomain, ReviewPrompt } from '@/lib/onboarding/forms';
@@ -23,9 +24,7 @@ function SectionHead({
       <p className={cn('text-2xs font-bold uppercase', muted ? 'text-muted' : 'text-secondary')}>
         {label}
       </p>
-      <span className="text-3xs border-border-subtle text-muted inline-flex items-center rounded-full border bg-white px-2 py-0.5 font-semibold">
-        {count}
-      </span>
+      <Badge variant="neutral">{count}</Badge>
     </div>
   );
 }
@@ -74,8 +73,8 @@ function TabButton({
       className={cn(
         'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 sm:text-sm',
         active
-          ? 'text-foreground bg-white font-semibold'
-          : 'text-muted hover:text-foreground hover:bg-white/50',
+          ? 'text-foreground bg-panel font-semibold'
+          : 'text-muted hover:text-foreground hover:bg-panel/50',
       )}
     >
       <div className="flex items-center gap-1.5">
@@ -108,7 +107,7 @@ function Chip({
         'inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
         selected
           ? 'border-accent-border/60 bg-accent-soft/80 text-accent-hover hover:bg-accent-subtle/80'
-          : 'border-border-subtle text-muted hover:bg-background hover:text-secondary hover:border-border-bold/30 bg-white',
+          : 'border-border-subtle text-muted hover:bg-background hover:text-secondary hover:border-border-bold/30 bg-panel',
       )}
     >
       <span className="truncate">{label}</span>
@@ -201,13 +200,13 @@ export function ReviewStep({
         hidden={activeTab !== 'entities'}
         id={tabPanelId('entities')}
         aria-labelledby={tabId('entities')}
-        className="border-border-subtle rounded-xl border bg-white/60 p-4"
+        className="bg-panel/60 shadow-card rounded-xl p-4"
       >
-        <div className="max-h-[360px] overflow-y-auto pr-1 sm:max-h-[400px]">
+        <div className="max-h-90 overflow-y-auto pr-1 sm:max-h-100">
           <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             {/* Column 1: Domains */}
             {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
-            <div className="shadow-card rounded-lg bg-white p-4">
+            <div className="bg-panel shadow-card rounded-lg p-4">
               <div className="mb-3">
                 <SectionHead label="Your domains" count={`${selectedDomains} selected`} />
               </div>
@@ -229,7 +228,7 @@ export function ReviewStep({
 
             {/* Column 2: Competitors */}
             {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
-            <div className="shadow-card rounded-lg bg-white p-4">
+            <div className="bg-panel shadow-card rounded-lg p-4">
               <div className="mb-3 flex items-center justify-between">
                 <SectionHead label="Competitors" count={`${selectedCompetitors} selected`} />
                 <Button
@@ -255,7 +254,7 @@ export function ReviewStep({
                         aria-label={`Competitor ${index + 1} name`}
                         placeholder="Competitor name"
                         className={cn(
-                          'border-border-subtle bg-background/60 text-foreground focus:border-accent focus:ring-accent/20 text-sm transition-all focus:bg-white focus:ring-1',
+                          'border-border-subtle bg-background/60 text-foreground focus:border-accent focus:ring-accent/20 focus:bg-panel text-sm transition-all focus:ring-1',
                           !competitor.selected && 'bg-well/40 line-through opacity-50',
                         )}
                       />
@@ -296,16 +295,16 @@ export function ReviewStep({
         hidden={activeTab !== 'prompts'}
         id={tabPanelId('prompts')}
         aria-labelledby={tabId('prompts')}
-        className="border-border-subtle rounded-xl border bg-white/60 p-4"
+        className="bg-panel/60 shadow-card rounded-xl p-4"
       >
         <div className="mb-3 flex items-center justify-between px-1">
           <SectionHead label="Starting prompts" count={`${selectedPrompts} selected`} />
           <span className="text-2xs text-muted font-medium">Click to select or deselect</span>
         </div>
 
-        <div className="max-h-[360px] overflow-y-auto pr-1 sm:max-h-[400px]">
+        <div className="max-h-90 overflow-y-auto pr-1 sm:max-h-100">
           {prompts.length === 0 ? (
-            <p className="border-border-subtle text-muted rounded-xl border bg-white px-4 py-4 text-sm italic">
+            <p className="bg-panel shadow-card text-muted rounded-xl px-4 py-4 text-sm italic">
               None found — you can write your own after setup.
             </p>
           ) : (
@@ -317,7 +316,7 @@ export function ReviewStep({
                       'flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all duration-200 select-none',
                       prompt.selected
                         ? 'border-accent-border/60 bg-accent-soft/30 hover:bg-accent-soft/50'
-                        : 'border-border-subtle hover:bg-background/80 hover:border-border-bold/20 bg-white',
+                        : 'border-border-subtle bg-panel hover:bg-background/80 hover:border-border-bold/20',
                     )}
                   >
                     <div className="flex min-w-0 flex-1 items-start gap-3">

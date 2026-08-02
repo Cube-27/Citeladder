@@ -430,7 +430,7 @@ export function IntegrationCard({
           {grant.connections.length === 1 ? 'connection' : 'connections'}.
         </div>
 
-        <div className="border-border-subtle rounded-md border">
+        <div className="border-border-subtle rounded-sm border">
           {grant.connections.map((connection) => (
             <ConnectionRow key={connection.id} connection={connection} grant={grant} />
           ))}

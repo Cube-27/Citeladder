@@ -140,7 +140,7 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
         {queries.map((query, index) => (
           <li
             key={`${index}-${query}`}
-            className="border-border-subtle bg-panel text-secondary rounded-md border px-3 py-2 font-mono text-xs"
+            className="bg-panel shadow-card text-secondary rounded-lg px-3 py-2 font-mono text-xs"
           >
             {query}
           </li>
@@ -151,14 +151,14 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
 
   if (item.state === 'count_only') {
     return (
-      <div className="border-border-subtle bg-panel text-muted rounded-md border px-3 py-2 text-xs">
+      <div className="bg-panel shadow-card text-muted rounded-lg px-3 py-2 text-xs">
         {countOnlyExplanation(item)}
       </div>
     );
   }
 
   return (
-    <div className="border-border-subtle bg-panel text-muted flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
+    <div className="bg-panel shadow-card text-muted flex items-center gap-2 rounded-lg px-3 py-2 text-xs">
       <MinusCircle className="size-4 shrink-0" aria-hidden />
       <span>No web searches performed for this execution</span>
     </div>

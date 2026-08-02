@@ -25,7 +25,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
           <li
             key={`${error.target}:${index}`}
             data-testid="root-error-row"
-            className="border-border-subtle bg-background-alt flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2"
+            className="border-border-subtle bg-background-alt flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border px-3 py-2"
           >
             <span className="mono text-foreground text-sm font-semibold">{error.method}</span>
             <span className="mono text-muted min-w-0 flex-1 truncate text-sm">{error.target}</span>

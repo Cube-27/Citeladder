@@ -41,7 +41,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           logoUrl={activeProject?.brand.logo_url}
           websiteUrl={activeProject?.website_url}
           size="sm"
-          className="bg-foreground text-background size-[26px] rounded-md"
+          className="bg-foreground text-background size-6.5 rounded-md"
         />
         <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
         <ChevronsUpDown className="text-muted size-4 shrink-0" aria-hidden strokeWidth={2} />

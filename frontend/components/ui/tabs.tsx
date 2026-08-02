@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { tabItemVariants, tabListVariants } from './tabs-variants';
 
 /**
  * ADS underline tablist recipes — the one tab treatment for the app
@@ -24,13 +24,6 @@ import { cn } from '@/lib/utils';
  * mounted), and sharing the classes keeps them identical without forcing one
  * structure.
  */
-export const tabListClasses =
-  "relative flex w-full max-w-full flex-nowrap gap-1 overflow-x-auto [scrollbar-width:none] before:absolute before:inset-x-0 before:bottom-0 before:h-px before:bg-border before:content-[''] [&::-webkit-scrollbar]:hidden";
+export const tabListClasses = tabListVariants({});
 
-export const tabItemClasses = (selected: boolean) =>
-  cn(
-    'focus-ring relative shrink-0 rounded-t-md px-3 pt-1.5 pb-2 text-sm font-medium whitespace-nowrap transition-colors',
-    selected
-      ? "text-accent-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent after:content-['']"
-      : 'text-secondary hover:bg-background-alt hover:text-foreground',
-  );
+export const tabItemClasses = (selected: boolean) => tabItemVariants({ selected });

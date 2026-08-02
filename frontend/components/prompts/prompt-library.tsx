@@ -241,7 +241,7 @@ export function PromptLibrary() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
       {isError ? (
         <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
       ) : null}
@@ -255,7 +255,7 @@ export function PromptLibrary() {
         onAdd={openAdd}
       />
 
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(200px,260px)_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 md:grid-cols-[minmax(200px,260px)_minmax(0,1fr)]">
         <TopicRail
           topics={topics}
           selectedTopicId={selectedTopicId}
@@ -336,7 +336,7 @@ export function PromptLibrary() {
           {!hasPrompts ? (
             <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />
           ) : visible.length === 0 ? (
-            <div className="border-border-subtle bg-panel text-secondary rounded-lg border border-dashed px-6 py-12 text-center text-sm">
+            <div className="bg-panel shadow-card text-secondary rounded-lg px-6 py-12 text-center text-sm">
               {statusTab === 'proposed'
                 ? 'No proposed prompts. Use "Generate prompts & topics" to draft suggestions.'
                 : 'No prompts match your search or filters.'}

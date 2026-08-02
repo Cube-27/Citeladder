@@ -94,7 +94,7 @@ export function AuthBrandPanel() {
             {PROOF_POINTS.map((proof) => (
               <div
                 key={proof.lead}
-                className="group shadow-card border-mkt-black-10 hover:border-mkt-primary flex items-start gap-4 rounded-xl border bg-white p-4 transition-colors duration-200"
+                className="group bg-panel shadow-card hover:shadow-card-hover flex items-start gap-4 rounded-xl p-4 transition-shadow duration-200"
               >
                 <div
                   aria-hidden
@@ -117,7 +117,7 @@ export function AuthBrandPanel() {
         <Meta as="p" className="text-mkt-ink-soft">
           © {new Date().getFullYear()} CUBE27
         </Meta>
-        <div className="border-mkt-black-10 text-mkt-ink-soft flex items-center gap-2 rounded-full border bg-white px-3 py-1">
+        <div className="border-mkt-black-10 bg-panel text-mkt-ink-soft flex items-center gap-2 rounded-full border px-3 py-1">
           <span className="bg-mkt-success size-1.5 animate-pulse rounded-full motion-reduce:animate-none" />
           <span>ChatGPT • Gemini • Claude Active</span>
         </div>

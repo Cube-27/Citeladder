@@ -140,7 +140,7 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
             {item.citations.map((citation) => (
               <li
                 key={`${item.analysis_id}-${citation.ordinal}-${citation.url}`}
-                className="border-border-subtle bg-panel flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                className="bg-panel shadow-card flex items-center justify-between gap-3 rounded-lg px-3 py-2"
               >
                 <span className="text-secondary min-w-0 truncate text-xs">
                   {citation.title?.trim() || citation.domain || citation.url}

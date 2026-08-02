@@ -88,6 +88,7 @@ const SHADOW_UTILITY =
   /(?<![\w-])(?:inset-)?shadow-(?!none\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
 const GRADIENT_UTILITY =
   /(?<![\w-])(?:bg-gradient-to-[a-z]+|bg-linear-|bg-radial-|bg-conic-|backdrop-blur)/g;
+const CLASS_LITERAL = /(?:className\s*=\s*|cn\()(["'`])([\s\S]*?)\1/g;
 
 /**
  * Blank out comments while preserving line numbers and column offsets, so a
@@ -126,6 +127,31 @@ for (const root of SEARCH_ROOTS) {
     const isOverlay = OVERLAY_ALLOWLIST.has(file);
     const isWebsite = MKT_ROOTS.some((root) => file.startsWith(root));
     const lines = stripComments(readFileSync(absolute, 'utf8')).split(/\r?\n/);
+    const source = stripComments(readFileSync(absolute, 'utf8'));
+
+    for (const match of source.matchAll(CLASS_LITERAL)) {
+      const classes = match[2];
+      const lineNumber = source.slice(0, match.index).split(/\r?\n/).length;
+      if (/\bbg-panel(?:\/\d+)?\b/.test(classes) && /\brounded-(?!full\b)[^\s"'`]+/.test(classes)) {
+        if (!/\bshadow-card\b/.test(classes)) {
+          report(
+            file,
+            lineNumber,
+            '`bg-panel` + `rounded-*` in-flow surface is missing `shadow-card`.',
+          );
+        }
+        if (/(?:^|\s)border(?:\s|$)/.test(classes)) {
+          report(file, lineNumber, 'card surface carries an outer border; cards are borderless.');
+        }
+      }
+      if (/\brounded-md\b/.test(classes) && /(?:^|\s)border(?:\s|$)/.test(classes)) {
+        report(
+          file,
+          lineNumber,
+          '`rounded-md border` standing alone is deprecated; use a primitive or an explicit structural treatment.',
+        );
+      }
+    }
 
     lines.forEach((text, index) => {
       const lineNumber = index + 1;

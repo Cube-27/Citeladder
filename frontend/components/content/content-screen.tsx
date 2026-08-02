@@ -186,7 +186,7 @@ function ProjectContentScreen({
   else if (copyFailed) copyLabel = 'Copy failed';
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="grid gap-6">
       {/* Composer */}
       <Card data-component-id="content-prompt-box">
         <CardContent className="flex flex-col gap-3 py-5">

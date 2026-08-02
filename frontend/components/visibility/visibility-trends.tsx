@@ -113,7 +113,7 @@ export function VisibilityTrends({
         </Alert>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <StatCard key={stat.key} stat={stat} />
         ))}
@@ -216,7 +216,7 @@ function TrendCard({
               data={chartPoints}
               width={680}
               height={180}
-              className="h-[180px] w-full"
+              className="h-45 w-full"
             />
             {chartPoints.length > 1 ? (
               <div className="text-2xs text-muted mt-1 flex justify-between font-mono" aria-hidden>
@@ -272,7 +272,7 @@ function RankingHistoryCard({
 function TrendsSkeleton() {
   return (
     <div className="grid gap-6" aria-hidden>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3, 4, 5, 6].map((i) => (
           <Card key={i}>
             <CardContent className="grid gap-2 p-4">
@@ -284,7 +284,7 @@ function TrendsSkeleton() {
       </div>
       <Card>
         <CardContent className="grid gap-4">
-          <Skeleton className="h-[180px] w-full" />
+          <Skeleton className="h-45 w-full" />
         </CardContent>
       </Card>
     </div>

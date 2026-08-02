@@ -79,7 +79,7 @@ export function GeneratePromptsDialog({
       onOpenChange={handleOpenChange}
       title="Generate prompts & topics"
       description="Searchify drafts topic-organized prompt suggestions from your brand profile."
-      className="w-[520px]"
+      className="w-130"
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -130,7 +130,7 @@ export function GeneratePromptsDialog({
           </select>
         </label>
 
-        <label className="border-border bg-background-alt flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+        <label className="border-border bg-background-alt flex items-start gap-2 rounded-sm border px-3 py-2 text-sm">
           <input
             type="checkbox"
             checked={confirmed}

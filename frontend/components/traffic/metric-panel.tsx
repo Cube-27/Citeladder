@@ -179,7 +179,7 @@ export function MetricPanel({
           viewBox={`0 0 ${plotWidth} ${PLOT.height}`}
           width={plotWidth}
           height={PLOT.height}
-          className="h-[148px] w-full"
+          className="h-37 w-full"
           onMouseLeave={() => setHover(null)}
         >
           <title>{summary}</title>
@@ -302,7 +302,7 @@ export function MetricPanel({
         {hover ? (
           <div
             role="status"
-            className="border-border-subtle bg-elevated text-foreground text-2xs shadow-card pointer-events-none absolute top-0 rounded-md border px-2 py-1"
+            className="border-border-subtle bg-elevated text-foreground text-2xs shadow-card pointer-events-none absolute top-0 rounded-sm border px-2 py-1"
             style={{ left: `${(hover.x / plotWidth) * 100}%` }}
           >
             <span className="text-muted">{hover.label}</span>{' '}

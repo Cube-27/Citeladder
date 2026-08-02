@@ -16,6 +16,8 @@
  *      `border-border-subtle`, `bg-success-bg`, or the `mkt-` set on the
  *      marketing/auth surface).
  *   4. globals.css itself parses and contains the expected theme structure.
+ *   5. Literal white/black utilities and numeric arbitrary size utilities are
+ *      forbidden on the product surface. Marketing has its own scale guard.
  *
  * Run: node scripts/check-token-escapes.mjs
  */
@@ -26,6 +28,9 @@ const ROOT = process.cwd();
 const SEARCH_ROOTS = ['app', 'components', 'lib'];
 const TOKEN_ESCAPE_PATTERN = /\b(?:bg|text|border|shadow|ring|fill|stroke)-(?:\[var\(--|\(--)/;
 const RAW_HEX_PATTERN = /#[0-9a-fA-F]{3,8}\b/;
+const RAW_NEUTRAL_PATTERN = /\b(?:bg|text)-(?:white|black)\b/g;
+const ARBITRARY_SIZE_PATTERN = /\b(?:w|h|size|min-w|max-w|min-h|max-h)-\[[0-9]+(?:px|vh|vw|rem)\]/g;
+const PRODUCT_EXCLUDES = ['app/(marketing)/', 'components/marketing/'];
 
 /** Tailwind's built-in palette ramps — banned in favour of semantic tokens. */
 const PALETTE_HUES =
@@ -65,6 +70,7 @@ for (const root of SEARCH_ROOTS) {
   for (const file of walk(rootPath)) {
     const normalized = relative(ROOT, file).replaceAll('\\', '/');
     const text = readFileSync(file, 'utf8');
+    const isMarketing = PRODUCT_EXCLUDES.some((prefix) => normalized.startsWith(prefix));
     if (TOKEN_ESCAPE_PATTERN.test(text)) {
       violations.push(`${normalized}: raw CSS-var Tailwind escape (use a bridged token)`);
     }
@@ -77,6 +83,20 @@ for (const root of SEARCH_ROOTS) {
     }
     if (RAW_HEX_PATTERN.test(text)) {
       violations.push(`${normalized}: raw hex color (no hex in component/app .ts/.tsx source)`);
+    }
+    if (!isMarketing) {
+      const rawNeutrals = [...new Set(text.match(RAW_NEUTRAL_PATTERN) ?? [])];
+      if (rawNeutrals.length) {
+        violations.push(
+          `${normalized}: literal neutral utility (use a semantic token): ${rawNeutrals.join(', ')}`,
+        );
+      }
+      const arbitrarySizes = [...new Set(text.match(ARBITRARY_SIZE_PATTERN) ?? [])];
+      if (arbitrarySizes.length) {
+        violations.push(
+          `${normalized}: arbitrary numeric size (use a Tailwind/config token): ${arbitrarySizes.join(', ')}`,
+        );
+      }
     }
   }
 }

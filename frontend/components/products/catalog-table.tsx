@@ -83,7 +83,7 @@ export function CatalogTable({
   );
 
   return (
-    <div className="border-border-subtle bg-panel overflow-hidden rounded-lg border">
+    <div className="bg-panel shadow-card overflow-hidden rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
@@ -101,7 +101,7 @@ export function CatalogTable({
         <TableBody>
           {pagedProducts.map((product) => (
             <TableRow key={product.id}>
-              <TableCell className="max-w-[320px] min-w-[200px]">
+              <TableCell className="max-w-80 min-w-50">
                 <div className="grid gap-0.5">
                   <Link
                     href={`/products/${product.id}`}

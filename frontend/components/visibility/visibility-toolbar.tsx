@@ -254,7 +254,7 @@ export function VisibilityToolbar({
       <div className="ms-auto flex items-center gap-2">
         <LaunchAuditButton size="sm" />
         <Tooltip content="How these metrics are calculated">
-          <Button variant="secondary" size="sm" className="size-[30px] rounded-full px-0" asChild>
+          <Button variant="secondary" size="sm" className="size-8 rounded-full px-0" asChild>
             {/* The label belongs on the anchor, not on the `asChild` Button:
                 Slot does forward it, but this is the element a screen reader
                 actually announces, and the icon-only link has no text of its

@@ -264,7 +264,7 @@ function MentionEvidenceCard({
         <TableHeader>
           <TableRow>
             <TableHead>Engine</TableHead>
-            <TableHead className="min-w-[220px]">Prompt</TableHead>
+            <TableHead className="min-w-55">Prompt</TableHead>
             <TableHead>Rank</TableHead>
             <TableHead>Price mentioned</TableHead>
             <TableHead>vs catalog</TableHead>
@@ -288,7 +288,7 @@ function MentionEvidenceRow({ item }: Readonly<{ item: ProductEvidenceItem }>) {
       <TableCell>
         <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
       </TableCell>
-      <TableCell className="max-w-[320px]">
+      <TableCell className="max-w-80">
         <span className="text-foreground line-clamp-2 block text-sm">{item.prompt_text}</span>
         <span className="text-muted text-xs">
           #{item.prompt_index} · rep {item.repetition}
@@ -384,10 +384,10 @@ function AttributeEvidenceCard({ items, truncated, engineParam }: EvidenceKindCa
         <TableHeader>
           <TableRow>
             <TableHead>Engine</TableHead>
-            <TableHead className="min-w-[220px]">Prompt</TableHead>
+            <TableHead className="min-w-55">Prompt</TableHead>
             <TableHead>Dimension</TableHead>
             <TableHead>Group</TableHead>
-            <TableHead className="min-w-[220px]">Matched text</TableHead>
+            <TableHead className="min-w-55">Matched text</TableHead>
             <TableHead>Offset</TableHead>
           </TableRow>
         </TableHeader>
@@ -397,7 +397,7 @@ function AttributeEvidenceCard({ items, truncated, engineParam }: EvidenceKindCa
               <TableCell>
                 <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
               </TableCell>
-              <TableCell className="max-w-[320px]">
+              <TableCell className="max-w-80">
                 <span className="text-foreground line-clamp-2 block text-sm">
                   {item.prompt_text}
                 </span>
@@ -407,7 +407,7 @@ function AttributeEvidenceCard({ items, truncated, engineParam }: EvidenceKindCa
               </TableCell>
               <TableCell className="text-secondary">{item.attribute_dimension ?? '—'}</TableCell>
               <TableCell className="text-secondary">{item.attribute_group ?? '—'}</TableCell>
-              <TableCell className="max-w-[320px]">
+              <TableCell className="max-w-80">
                 {item.attribute_text !== null ? (
                   <span className="text-foreground line-clamp-2 block text-sm">
                     &ldquo;{item.attribute_text}&rdquo;
@@ -446,10 +446,10 @@ function DestinationEvidenceCard({ items, truncated, engineParam }: EvidenceKind
         <TableHeader>
           <TableRow>
             <TableHead>Engine</TableHead>
-            <TableHead className="min-w-[220px]">Prompt</TableHead>
+            <TableHead className="min-w-55">Prompt</TableHead>
             <TableHead>Merchant</TableHead>
             <TableHead>Kind</TableHead>
-            <TableHead className="min-w-[200px]">Destination URL</TableHead>
+            <TableHead className="min-w-50">Destination URL</TableHead>
             <TableHead>Price</TableHead>
           </TableRow>
         </TableHeader>
@@ -459,7 +459,7 @@ function DestinationEvidenceCard({ items, truncated, engineParam }: EvidenceKind
               <TableCell>
                 <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
               </TableCell>
-              <TableCell className="max-w-[320px]">
+              <TableCell className="max-w-80">
                 <span className="text-foreground line-clamp-2 block text-sm">
                   {item.prompt_text}
                 </span>
@@ -467,7 +467,7 @@ function DestinationEvidenceCard({ items, truncated, engineParam }: EvidenceKind
                   #{item.prompt_index} · rep {item.repetition}
                 </span>
               </TableCell>
-              <TableCell className="max-w-[220px]">
+              <TableCell className="max-w-55">
                 {item.merchant_name !== null || item.merchant_domain !== null ? (
                   <div className="grid gap-0.5">
                     <span className="text-foreground truncate font-medium">
@@ -490,7 +490,7 @@ function DestinationEvidenceCard({ items, truncated, engineParam }: EvidenceKind
                   <span className="text-subtle">—</span>
                 )}
               </TableCell>
-              <TableCell className="max-w-[260px]">
+              <TableCell className="max-w-65">
                 {item.destination_url !== null ? (
                   // The backend emits this URL already sanitized; it opens in
                   // a new tab with noopener/noreferrer.

@@ -73,7 +73,7 @@ export function VisibilityDashboard() {
   // polling), not silently absent until it completes.
   if (!hasRuns) {
     return (
-      <div className="grid gap-5">
+      <div className="grid gap-6">
         {activeRun ? <ActiveRunBanner run={activeRun} /> : null}
         <VisibilityEmptyState hasActiveRun={Boolean(activeRun)} />
       </div>
@@ -115,7 +115,7 @@ export function VisibilityDashboard() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
       {activeRun ? <ActiveRunBanner run={activeRun} /> : null}
       {/* Renders only for multi-project workspaces — see the component. */}
       <ProjectsStatCard />

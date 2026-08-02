@@ -181,7 +181,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
                   onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
                   placeholder="IN"
                   aria-describedby="billing-country-help"
-                  className="border-border bg-background focus-ring h-10 rounded-md border px-3 uppercase outline-none"
+                  className="border-border bg-background focus-ring h-10 rounded-sm border px-3 uppercase outline-none"
                 />
                 <span id="billing-country-help" className="text-muted text-xs">
                   Two-letter ISO code. The server resolves currency, tax and the exact amount from
@@ -195,7 +195,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
                 return (
                   <div
                     key={plan.key}
-                    className="border-border grid gap-2 rounded-md border p-3"
+                    className="border-border grid gap-2 rounded-sm border p-3"
                     data-tier={plan.key}
                   >
                     <div className="flex items-baseline justify-between gap-4">

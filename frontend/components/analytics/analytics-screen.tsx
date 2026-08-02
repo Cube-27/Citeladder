@@ -173,7 +173,7 @@ export function AnalyticsScreen() {
   // (read endpoints serve persisted snapshot windows only — never recompute).
   if (empty) {
     return (
-      <div className="grid gap-5">
+      <div className="grid gap-6">
         {toolbar}
         <Alert tone="info">
           No synced snapshot covers {formatWindowDate(windowBounds.from ?? '')} –{' '}
@@ -214,15 +214,15 @@ export function AnalyticsSkeleton() {
   return (
     <div className="grid gap-6" aria-hidden>
       <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-[30px] w-36 rounded-full" />
-        <Skeleton className="h-[38px] w-56 rounded-full" />
+        <Skeleton className="h-8 w-40 rounded-full" />
+        <Skeleton className="h-10 w-60 rounded-full" />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         {[0, 1].map((index) => (
           <Card key={index}>
             <CardContent className="grid gap-4">
               <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-[180px] w-full" />
+              <Skeleton className="h-45 w-full" />
             </CardContent>
           </Card>
         ))}
@@ -329,7 +329,7 @@ function TrendCard({
               width={680}
               height={180}
               domainMax={domainMax}
-              className="h-[180px] w-full"
+              className="h-45 w-full"
             />
             {points.length > 1 ? (
               <div className="text-2xs text-muted mt-1 flex justify-between font-mono" aria-hidden>

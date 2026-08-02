@@ -21,7 +21,7 @@ export const inputClasses =
   'focus-ring h-[var(--control-height)] w-full rounded-sm border border-border bg-input px-2 text-sm text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong focus:border-accent aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 const textareaClasses =
-  'focus-ring min-h-[96px] w-full resize-y rounded-sm border border-border bg-input p-2 text-sm text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong focus:border-accent aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-ring min-h-24 w-full resize-y rounded-sm border border-border bg-input p-2 text-sm text-foreground transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-strong focus:border-accent aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 export function Input({
   className,

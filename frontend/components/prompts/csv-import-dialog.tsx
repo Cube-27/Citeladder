@@ -84,7 +84,7 @@ export function CsvImportDialog({
       onOpenChange={handleOpenChange}
       title="Import prompts from CSV"
       description="Columns: text, theme, intent, branded, enabled (header row optional)."
-      className="w-[820px]"
+      className="w-205"
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -136,7 +136,7 @@ export function CsvImportDialog({
               ) : null}
             </div>
 
-            <div className="border-border-subtle max-h-[340px] overflow-auto rounded-md border">
+            <div className="border-border-subtle max-h-85 overflow-auto rounded-sm border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -157,9 +157,7 @@ export function CsvImportDialog({
                         <TableCell numeric className="text-muted">
                           {row.line}
                         </TableCell>
-                        <TableCell className="max-w-[280px] truncate">
-                          {row.input.text || '—'}
-                        </TableCell>
+                        <TableCell className="max-w-70 truncate">{row.input.text || '—'}</TableCell>
                         <TableCell>{row.input.theme || '—'}</TableCell>
                         <TableCell>{intentLabels[row.input.intent]}</TableCell>
                         <TableCell>{row.input.branded ? 'Yes' : 'No'}</TableCell>

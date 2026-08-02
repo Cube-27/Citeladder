@@ -83,7 +83,7 @@ export function BuyerDestinationBreakdown({ mix }: Readonly<{ mix: BuyerDestinat
               <TableBody>
                 {mix.by_domain.map((row) => (
                   <TableRow key={row.merchant_domain}>
-                    <TableCell className="max-w-[280px] min-w-[180px]">
+                    <TableCell className="max-w-70 min-w-45">
                       <div className="grid gap-0.5">
                         <span className="text-foreground truncate font-medium">
                           {row.merchant_name}

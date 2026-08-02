@@ -23,7 +23,7 @@ export function AuthEmailField({
             type="email"
             autoComplete="email"
             placeholder="you@company.com"
-            className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 pl-10 focus:bg-white"
+            className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 focus:bg-panel pl-10"
           />
           <Mail className="text-mkt-ink-soft pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         </div>
@@ -58,7 +58,7 @@ export function AuthPasswordField({
             type={visible ? 'text' : 'password'}
             autoComplete={autoComplete}
             placeholder={placeholder}
-            className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 pr-10 pl-10 focus:bg-white"
+            className="border-mkt-black-10 bg-mkt-surface-sunk/80 text-mkt-ink placeholder:text-mkt-ink-soft focus:border-mkt-indigo focus:ring-mkt-indigo/20 focus:bg-panel pr-10 pl-10"
           />
           <Lock className="text-mkt-ink-soft pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <button
@@ -104,7 +104,7 @@ export function AuthFormShell({
 }>) {
   return (
     <div className="relative">
-      <div className="shadow-card border-mkt-black-10 relative rounded-2xl border bg-white p-8 sm:p-10">
+      <div className="bg-panel shadow-card relative rounded-2xl p-8 sm:p-10">
         <div className="mb-8 space-y-2 text-center sm:text-left">
           <div className="border-mkt-primary/30 bg-mkt-surface-sunk text-mkt-indigo mb-2 inline-flex size-10 items-center justify-center rounded-xl border">
             <Icon className="size-5" />

@@ -98,7 +98,7 @@ export function ProductImportDialog({
         onOpenChange={handleOpenChange}
         title="Import complete"
         description="The server-side outcome of the import — every skipped row is named."
-        className="w-[860px]"
+        className="w-215"
         footer={
           <Button variant="primary" onClick={() => handleOpenChange(false)}>
             Done
@@ -116,7 +116,7 @@ export function ProductImportDialog({
       onOpenChange={handleOpenChange}
       title="Import products from CSV"
       description="Columns: name, sku, variant, category, price, currency, url, gtin (header row required)."
-      className="w-[860px]"
+      className="w-215"
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -168,7 +168,7 @@ export function ProductImportDialog({
               ) : null}
             </div>
 
-            <div className="border-border-subtle max-h-[340px] overflow-auto rounded-md border">
+            <div className="border-border-subtle max-h-85 overflow-auto rounded-sm border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -193,11 +193,9 @@ export function ProductImportDialog({
                         <TableCell numeric className="text-muted">
                           {row.line}
                         </TableCell>
-                        <TableCell className="max-w-[180px] truncate">
-                          {row.input.name || '—'}
-                        </TableCell>
+                        <TableCell className="max-w-45 truncate">{row.input.name || '—'}</TableCell>
                         <TableCell className="font-mono text-xs">{row.input.sku || '—'}</TableCell>
-                        <TableCell className="max-w-[140px] truncate">
+                        <TableCell className="max-w-35 truncate">
                           {row.input.variants?.[0]?.name || '—'}
                         </TableCell>
                         <TableCell>{String(attributes.category ?? '') || '—'}</TableCell>
@@ -207,9 +205,7 @@ export function ProductImportDialog({
                             : '—'}
                         </TableCell>
                         <TableCell>{row.input.currency || '—'}</TableCell>
-                        <TableCell className="max-w-[160px] truncate">
-                          {row.input.url || '—'}
-                        </TableCell>
+                        <TableCell className="max-w-40 truncate">{row.input.url || '—'}</TableCell>
                         <TableCell>{String(attributes.gtin ?? '') || '—'}</TableCell>
                         <TableCell>
                           {invalid ? (
@@ -267,13 +263,13 @@ function ImportResultSummary({ result }: Readonly<{ result: ProductImportSummary
             {result.errors.length} row{result.errors.length === 1 ? ' was' : 's were'} skipped. Fix
             them in the file and import again — already-imported SKUs are left unchanged.
           </p>
-          <div className="border-border-subtle max-h-[300px] overflow-auto rounded-md border">
+          <div className="border-border-subtle max-h-75 overflow-auto rounded-sm border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Row</TableHead>
                   <TableHead>Field</TableHead>
-                  <TableHead className="min-w-[320px]">Reason</TableHead>
+                  <TableHead className="min-w-80">Reason</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

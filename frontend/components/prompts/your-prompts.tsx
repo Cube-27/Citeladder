@@ -13,7 +13,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Input } from '@/components/ui/input';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { Skeleton } from '@/components/ui/skeleton';
-import { displayHeadingXlClasses } from '@/components/ui/typography';
+import { displayHeadingLgClasses } from '@/components/ui/typography';
 import {
   Table,
   TableBody,
@@ -194,12 +194,12 @@ export function YourPrompts() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
       {isError ? (
         <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
       ) : null}
 
-      <div className="border-border-subtle bg-panel flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
+      <div className="bg-panel shadow-card flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3">
         <p className="text-secondary text-sm">
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
           <span className="text-foreground font-semibold">{activePrompts.length}</span> visibility{' '}
@@ -235,9 +235,9 @@ export function YourPrompts() {
       </div>
 
       {activePrompts.length === 0 ? (
-        <div className="border-border-subtle bg-panel grid place-items-center gap-3 rounded-lg border border-dashed px-6 py-16 text-center">
+        <div className="bg-panel shadow-card grid place-items-center gap-3 rounded-lg px-6 py-16 text-center">
           <p className={eyebrowClasses}>Your prompts</p>
-          <h2 className={displayHeadingXlClasses}>No active prompts yet</h2>
+          <h2 className={displayHeadingLgClasses}>No active prompts yet</h2>
           <p className="text-secondary max-w-md text-sm">
             Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
             topics with AI.
@@ -250,11 +250,11 @@ export function YourPrompts() {
           </Link>
         </div>
       ) : visiblePrompts.length === 0 ? (
-        <div className="border-border-subtle bg-panel text-secondary rounded-lg border border-dashed px-6 py-12 text-center text-sm">
+        <div className="bg-panel shadow-card text-secondary rounded-lg px-6 py-12 text-center text-sm">
           No prompts match your search.
         </div>
       ) : (
-        <div className="border-border-subtle bg-panel overflow-hidden rounded-lg border">
+        <div className="bg-panel shadow-card overflow-hidden rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
@@ -314,7 +314,7 @@ export function YourPrompts() {
                       ? group.prompts.map((prompt) => (
                           <TableRow key={prompt.id}>
                             <TableCell />
-                            <TableCell className="max-w-[480px]">
+                            <TableCell className="max-w-120">
                               <span className="text-foreground block truncate" title={prompt.text}>
                                 {prompt.text}
                               </span>

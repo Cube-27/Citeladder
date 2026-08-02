@@ -2,6 +2,9 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
+import { cardClasses } from './card-variants';
+
+export { cardClasses } from './card-variants';
 
 /**
  * Card (§8) — bg-panel, BORDERLESS, --radius-lg (12px), --card-padding,
@@ -31,10 +34,7 @@ export function Card({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'section'>>) {
   return (
-    <section
-      {...props}
-      className={cn('bg-panel shadow-card rounded-lg transition-shadow duration-200', className)}
-    >
+    <section {...props} className={cn(cardClasses(), className)}>
       {children}
     </section>
   );

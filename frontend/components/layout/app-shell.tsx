@@ -65,7 +65,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           {/* Top bar with opaque utility chrome. */}
           <header className="border-border-subtle bg-panel sticky top-0 z-20 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,420px)_minmax(0,1fr)] items-center border-b px-6">
             <div aria-hidden />
-            <div className="w-full max-w-[420px] min-w-0 justify-self-center">
+            <div className="w-full max-w-105 min-w-0 justify-self-center">
               <CommandPalette />
             </div>
             <div className="justify-self-end">

@@ -51,7 +51,7 @@ export function AttributeFrequencyPanel({
               <TableRow>
                 <TableHead>Dimension</TableHead>
                 <TableHead>Mentions</TableHead>
-                <TableHead className="min-w-[160px]">Share of group</TableHead>
+                <TableHead className="min-w-40">Share of group</TableHead>
               </TableRow>
             </TableHeader>
             {groups.map((group) => (
@@ -100,7 +100,7 @@ function ShareOfGroupBar({
   return (
     <span className="flex items-center gap-2">
       <span
-        className="bg-neutral-bg h-2 w-full max-w-[120px] overflow-hidden rounded-full"
+        className="bg-neutral-bg h-2 w-full max-w-30 overflow-hidden rounded-full"
         role="img"
         aria-label={`${label}: ${formatPercent(share)} of group`}
       >

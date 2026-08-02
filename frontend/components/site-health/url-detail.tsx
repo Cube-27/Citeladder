@@ -13,7 +13,7 @@ import { CursorPager } from '@/components/ui/cursor-pager';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Label, displayHeadingXlClasses } from '@/components/ui/typography';
+import { Label, displayHeadingLgClasses } from '@/components/ui/typography';
 import { ApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
@@ -243,7 +243,7 @@ function HeaderCard({
       <CardContent className="grid gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
-            <h1 className={displayHeadingXlClasses}>{detail.title ?? detail.display_url}</h1>
+            <h2 className={displayHeadingLgClasses}>{detail.title ?? detail.display_url}</h2>
           </div>
           <Button
             size="sm"
@@ -296,7 +296,7 @@ function HeaderCard({
                 Why this type?
                 {pageTypeEvidence.schemaConflict ? (
                   <span
-                    className="bg-warning ms-0.5 inline-block size-[5px] rounded-full"
+                    className="bg-warning ms-0.5 inline-block size-1.25 rounded-full"
                     aria-hidden
                   />
                 ) : null}
@@ -377,7 +377,7 @@ function PageTypeEvidencePanel({
         {evidence.schemaConflict && evidence.schemaSuggestedType !== null ? (
           <div
             role="note"
-            className="border-warning-border bg-warning-bg text-warning-text flex items-start gap-2 rounded-md border px-3 py-2 text-sm"
+            className="border-warning-border bg-warning-bg text-warning-text flex items-start gap-2 rounded-sm border px-3 py-2 text-sm"
           >
             <WarningIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
             <div>
@@ -399,7 +399,7 @@ function PageTypeEvidencePanel({
                   key={signal.signal}
                   className="border-border-subtle flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-1.5 last:border-b-0"
                 >
-                  <span className="mono text-muted w-[18px] shrink-0 text-xs">{index + 1}</span>
+                  <span className="mono text-muted w-4.5 shrink-0 text-xs">{index + 1}</span>
                   <span
                     className={cn('mono text-sm', chosen ? 'text-foreground' : 'text-secondary')}
                   >
@@ -455,7 +455,7 @@ function ScoreTile({ label, value }: Readonly<{ label: string; value: number | n
     <Card>
       <CardContent className="flex flex-col items-center gap-2 py-6">
         {value === null ? (
-          <div className="mono border-border-subtle text-muted flex size-[64px] items-center justify-center rounded-full border text-base">
+          <div className="mono border-border-subtle text-muted flex size-16 items-center justify-center rounded-full border text-base">
             {PLACEHOLDER}
           </div>
         ) : (

@@ -218,16 +218,16 @@ export function OnboardingScreen() {
     // h-full step) keeps short steps floating on the ambient background with
     // centered tight cards instead of a tall white slab; the review step fills
     // the stage with a two-column grid instead of one long scroll.
-    <div className="bg-background text-foreground selection:bg-accent relative flex min-h-dvh flex-col antialiased selection:text-white">
+    <div className="bg-background text-foreground selection:bg-accent selection:text-accent-fg relative flex min-h-dvh flex-col antialiased">
       {/* Background ambient lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-accent-subtle/40 absolute -top-40 -left-40 size-[500px] rounded-full blur-[120px]" />
-        <div className="bg-accent-subtle/40 absolute -right-40 -bottom-40 size-[500px] rounded-full blur-[120px]" />
+        <div className="bg-accent-subtle/40 absolute -top-40 -left-40 size-125 rounded-full blur-[120px]" />
+        <div className="bg-accent-subtle/40 absolute -right-40 -bottom-40 size-125 rounded-full blur-[120px]" />
       </div>
 
       {/* Opaque surface, no blur: the elevation guard (design.md §4a) keeps
           gradients and blur to display art, never a control container. */}
-      <header className="border-border-subtle/80 border-b bg-white py-3">
+      <header className="border-border-subtle/80 bg-panel border-b py-3">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 sm:gap-6 sm:px-6 lg:px-8">
           <span className="flex shrink-0 items-center gap-2">
             <LogoMark size={24} />
@@ -257,10 +257,10 @@ export function OnboardingScreen() {
                       className={cn(
                         'text-2xs flex size-5 items-center justify-center rounded-full font-bold transition-colors',
                         state === 'current'
-                          ? 'bg-accent text-white'
+                          ? 'bg-accent text-accent-fg'
                           : state === 'done'
-                            ? 'bg-success text-white'
-                            : 'border-border-subtle text-muted border bg-white',
+                            ? 'bg-success text-accent-fg'
+                            : 'border-border-subtle bg-panel text-muted border',
                       )}
                     >
                       {state === 'done' ? (
@@ -312,7 +312,7 @@ export function OnboardingScreen() {
             <form
               noValidate
               onSubmit={submitBrand}
-              className="shadow-card border-border-subtle rounded-2xl border bg-white p-6 sm:p-8"
+              className="bg-panel shadow-card rounded-2xl p-6 sm:p-8"
             >
               <div className="grid gap-6">
                 <div className="grid gap-1.5">
@@ -337,7 +337,7 @@ export function OnboardingScreen() {
                           {...props}
                           {...form.register('brand_name')}
                           placeholder="Acme"
-                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-white"
+                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-panel"
                         />
                       )}
                     </Field>
@@ -353,7 +353,7 @@ export function OnboardingScreen() {
                           {...props}
                           {...form.register('website_url')}
                           placeholder="acme.com"
-                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-white"
+                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-panel"
                         />
                       )}
                     </Field>
@@ -441,7 +441,7 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 1 ? (
-            <div className="shadow-card border-border-subtle grid gap-5 rounded-2xl border bg-white p-6 sm:p-8">
+            <div className="bg-panel shadow-card grid gap-6 rounded-2xl p-6 sm:p-8">
               <div className="grid gap-1.5">
                 <h1 className="font-mkt-display text-foreground text-2xl font-bold sm:text-3xl">
                   Finding what to track
@@ -476,7 +476,7 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 2 ? (
-            <div className="shadow-card border-border-subtle flex h-full flex-col gap-6 rounded-2xl border bg-white p-6 sm:p-8">
+            <div className="bg-panel shadow-card flex h-full flex-col gap-6 rounded-2xl p-6 sm:p-8">
               <div className="grid gap-1.5">
                 <h1 className="font-mkt-display text-foreground text-2xl font-bold sm:text-3xl">
                   Does this look right?
@@ -531,7 +531,7 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 3 ? (
-            <div className="shadow-card border-border-subtle grid justify-items-center gap-6 rounded-2xl border bg-white p-8 text-center sm:p-10">
+            <div className="bg-panel shadow-card grid justify-items-center gap-6 rounded-2xl p-8 text-center sm:p-10">
               <div className="grid justify-items-center gap-2">
                 <div className="bg-success-bg text-success-text mb-2 inline-flex size-12 items-center justify-center rounded-2xl">
                   <Check className="size-6" strokeWidth={2.5} aria-hidden />
