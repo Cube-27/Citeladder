@@ -19,15 +19,15 @@ export function EngineChip({
   return (
     <span
       className={cn(
-        'border-mkt-line bg-mkt-surface text-mkt-sm rounded-mkt-sm inline-flex items-center gap-3',
-        'border px-3 py-3 font-semibold',
+        'border-mkt-black-10 bg-mkt-surface text-mkt-sm rounded-mkt-sm gap-mkt-14 inline-flex items-center',
+        'px-mkt-14 py-mkt-14 border font-semibold',
         className,
       )}
     >
       <span
         aria-hidden
         className={cn(
-          'text-mkt-surface grid size-5 shrink-0 place-items-center rounded-md',
+          'text-mkt-surface rounded-mkt-sm grid size-5 shrink-0 place-items-center',
           'text-2xs font-medium',
           tile,
         )}

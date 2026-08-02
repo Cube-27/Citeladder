@@ -20,7 +20,36 @@ describe('cn', () => {
       'font-semibold text-heading-sm text-score-high-text',
     );
     expect(cn('text-hero', 'text-score-good-text')).toBe('text-hero text-score-good-text');
-    expect(cn('text-mkt-d2', 'text-mkt-ink')).toBe('text-mkt-d2 text-mkt-ink');
+    // Every website rung, not a sample: an unregistered one is invisible in
+    // review (the class is right there in the source) and silently renders at
+    // the inherited size — which is how every subpage headline once shipped at
+    // 14px instead of its rung.
+    for (const rung of [
+      'text-mkt-dxl',
+      'text-mkt-d404',
+      'text-mkt-h1',
+      'text-mkt-h2',
+      'text-mkt-h3',
+      'text-mkt-h4',
+      'text-mkt-h5',
+      'text-mkt-h6',
+      'text-mkt-h2sm',
+      'text-mkt-h3sm',
+      'text-mkt-h4sm',
+      'text-mkt-hsm',
+      'text-mkt-lead',
+      'text-mkt-body',
+      'text-mkt-button',
+      'text-mkt-nav',
+      'text-mkt-sm',
+      'text-mkt-xs',
+      'text-mkt-xsb',
+      'text-mkt-xl-display',
+    ]) {
+      expect(cn(rung, 'text-mkt-ink'), `${rung} was eaten by the colour`).toBe(
+        `${rung} text-mkt-ink`,
+      );
+    }
     // …while two sizes still conflict normally (later wins).
     expect(cn('text-heading-sm', 'text-lg')).toBe('text-lg');
   });

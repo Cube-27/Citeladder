@@ -50,6 +50,19 @@ from app.core.config.provider_catalog import (
 
 logger = logging.getLogger(__name__)
 
+def _add_optional_payload_fields(
+    payload: dict[str, Any],
+    request: AnswerEngineRequest,
+    *,
+    country_code: str,
+) -> None:
+    if request.reasoning_effort == REASONING_EFFORT_OFF:
+        payload["reasoning"] = {"effort": "none"}
+    if request.retrieval_enabled:
+        payload["tools"] = [_web_search_tool(country_code)]
+    if request.system_instruction:
+        payload["instructions"] = request.system_instruction
+
 
 def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, Any]:
     """Build a stateless, brand-free Responses API request body.
@@ -75,14 +88,10 @@ def _payload(request: AnswerEngineRequest, *, country_code: str) -> dict[str, An
         # Frozen per-call output cap so one generation cannot run away.
         "max_output_tokens": output_token_cap(request),
     }
-    if request.reasoning_effort == REASONING_EFFORT_OFF:
-        payload["reasoning"] = {"effort": "none"}
-    if request.retrieval_enabled:
-        payload["tools"] = [_web_search_tool(country_code)]
+    _add_optional_payload_fields(payload, request, country_code=country_code)
+
     # Responses API takes the system prompt as a top-level ``instructions``
     # field, not a message role.
-    if request.system_instruction:
-        payload["instructions"] = request.system_instruction
     return payload
 
 

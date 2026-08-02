@@ -457,44 +457,91 @@ const requiredBridged = [
 // them silently drops classes across the whole marketing surface, which is
 // exactly the failure this guard exists to catch.
 const requiredMktVars = [
-  // Type — Apfel Grotezk display alias, eight steps
+  // Type — the display alias plus every rung of the heading, compact and
+  // body/UI ladders (docs/website-design-system.md §2)
   'font-mkt-display',
-  'color-mkt-line-soft',
-  'text-mkt-d1',
-  'text-mkt-d2',
-  'text-mkt-d3',
-  'text-mkt-d4',
+  'text-mkt-dxl',
+  'text-mkt-d404',
+  'text-mkt-xl-display',
+  'text-mkt-h1',
+  'text-mkt-h2',
+  'text-mkt-h3',
+  'text-mkt-h4',
+  'text-mkt-h5',
+  'text-mkt-h6',
+  'text-mkt-h2sm',
+  'text-mkt-h3sm',
+  'text-mkt-h4sm',
+  'text-mkt-hsm',
   'text-mkt-lead',
   'text-mkt-body',
+  'text-mkt-button',
+  'text-mkt-nav',
   'text-mkt-sm',
-  'text-mkt-meta',
+  'text-mkt-xs',
+  'text-mkt-xsb',
   // Canvas + ink
   'color-mkt-paper',
   'color-mkt-surface',
-  'color-mkt-wash',
+  'color-mkt-surface-sunk',
   'color-mkt-ink',
   'color-mkt-ink-soft',
-  'color-mkt-ink-muted',
-  'color-mkt-line',
-  // State hues, each with its AA-safe text form — except proof: the single
-  // blue clears AA as both mark and text, so a -text sibling would be a
-  // duplicate token, not a safety net (globals.test.ts "Proof contract").
-  'color-mkt-proof',
-  'color-mkt-evidence',
-  'color-mkt-evidence-text',
-  'color-mkt-signal',
-  'color-mkt-signal-text',
-  'color-mkt-amber',
-  'color-mkt-amber-text',
-  // Scene surface (the wallpaper display art)
-  'color-mkt-sky',
-  // Shape, layout, motion
-  'radius-mkt-sm',
+  'color-mkt-charcoal',
+  'color-mkt-silver',
+  'color-mkt-mist',
+  'color-mkt-frost',
+  // Alpha utilities — glass surfaces and hairlines
+  'color-mkt-white-30',
+  'color-mkt-white-10',
+  'color-mkt-black-10',
+  // Primary blue: the mark, plus the AA-safe form for text
+  'color-mkt-primary',
+  'color-mkt-indigo',
+  // State hues, each with its AA-safe `-text` sibling (§1 mark/text split)
+  'color-mkt-success',
+  'color-mkt-success-text',
+  'color-mkt-error',
+  'color-mkt-error-text',
+  'color-mkt-warning',
+  'color-mkt-warning-text',
+  // Spacing ladder — the only values the surface may use
+  'spacing-mkt-6',
+  'spacing-mkt-10',
+  'spacing-mkt-14',
+  'spacing-mkt-20',
+  'spacing-mkt-30',
+  'spacing-mkt-40',
+  'spacing-mkt-50',
+  'spacing-mkt-70',
+  // 80 and 120 are the mobile/tablet rungs of the responsive section rhythm
+  // (200 → 120 → 80); deleting one silently drops a breakpoint's padding.
+  'spacing-mkt-80',
+  'spacing-mkt-100',
+  'spacing-mkt-120',
+  'spacing-mkt-194',
+  'spacing-mkt-200',
+  // Shape — the four rungs
+  'radius-mkt-pill',
+  'radius-mkt-xl',
   'radius-mkt-lg',
+  'radius-mkt-sm',
+  // Elevation
+  'shadow-mkt-soft',
+  'shadow-mkt-card',
+  'shadow-mkt-accent',
+  'shadow-mkt-nav',
+  'inset-shadow-mkt-inner',
+  // Layout + motion
   'container-mkt',
   'spacing-mkt-gutter',
   'spacing-mkt-nav',
+  'ease-mkt-micro',
   'ease-mkt-out',
+  'duration-mkt-micro',
+  // The two gradient fills: every primary action and CTA band resolves one of
+  // these, so a rename silently flattens them to no background at all.
+  'gradient-mkt-accent',
+  'gradient-mkt-dark',
 ];
 
 const missing = [];

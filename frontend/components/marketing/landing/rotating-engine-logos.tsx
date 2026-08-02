@@ -101,19 +101,19 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
       role="img"
       aria-label={`Available: ${joinLabels(allLabels)}.`}
     >
-      <ul aria-hidden className="mx-auto grid max-w-lg grid-cols-3 gap-3 sm:gap-4">
+      <ul aria-hidden className="gap-mkt-14 sm:gap-mkt-20 mx-auto grid max-w-lg grid-cols-3">
         {LOGO_PAIRS.map(({ primary, alternate }, index) => (
           <li
             key={primary.key}
             data-logo-slot={index + 1}
-            className="mkt-logo-slot relative h-12 overflow-hidden rounded-lg"
+            className="mkt-logo-slot rounded-mkt-lg relative h-12 overflow-hidden"
           >
             {[primary, alternate].map((face, faceIndex) => (
               <span
                 key={face.key}
                 data-logo-face={faceIndex === 0 ? 'primary' : 'alternate'}
                 className={cn(
-                  'mkt-logo-face absolute inset-0 flex items-center justify-center gap-3 px-3 font-medium',
+                  'mkt-logo-face gap-mkt-14 px-mkt-14 absolute inset-0 flex items-center justify-center font-medium',
                   face.color,
                 )}
               >

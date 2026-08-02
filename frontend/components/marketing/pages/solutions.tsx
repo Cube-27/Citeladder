@@ -42,14 +42,17 @@ export function SolutionsHero() {
       accent={SOLUTIONS_HERO.accent}
       lead={SOLUTIONS_HERO.lead}
     >
-      <nav aria-label="Solutions by team" className="mt-8 flex flex-wrap justify-center gap-3">
+      <nav
+        aria-label="Solutions by team"
+        className="mt-mkt-30 gap-mkt-14 flex flex-wrap justify-center"
+      >
         {SOLUTION_SEGMENTS.map(({ id, label }) => {
           const Icon = SEGMENT_ICONS[id as keyof typeof SEGMENT_ICONS];
           return (
             <a
               key={id}
               href={`#${id}`}
-              className="border-mkt-line bg-mkt-surface text-mkt-ink hover:border-mkt-line-strong rounded-mkt-sm text-mkt-sm inline-flex items-center gap-3 border px-4 py-3 font-semibold transition-colors duration-200"
+              className="border-mkt-black-10 bg-mkt-surface text-mkt-ink hover:border-mkt-mist rounded-mkt-sm text-mkt-sm gap-mkt-14 px-mkt-20 py-mkt-14 inline-flex items-center border font-semibold transition-colors duration-200"
             >
               <Icon aria-hidden strokeWidth={1.8} className="text-mkt-ink-soft size-4" />
               {label}
@@ -68,13 +71,13 @@ export function SolutionSegments() {
         <Section
           key={segment.id}
           id={segment.id}
-          tone={index % 2 ? 'sunken' : 'surface'}
-          rhythm="loose"
+          tone={index % 2 ? 'sunken' : 'paper'}
+          rhythm="base"
           aria-label={segment.label}
         >
           <Reveal
             className={cn(
-              'grid items-center gap-10 lg:grid-cols-2 lg:gap-16',
+              'gap-mkt-40 lg:gap-mkt-70 grid items-center lg:grid-cols-2',
               // Alternating sides stop five consecutive segments from reading
               // as one long list.
               index % 2 === 1 && '[&>*:first-child]:lg:order-2',
@@ -82,17 +85,17 @@ export function SolutionSegments() {
           >
             <div>
               <Meta as="p">{segment.eyebrow}</Meta>
-              <h2 className="font-mkt-display text-mkt-d3 text-mkt-ink mt-4 max-w-[32ch]">
+              <h2 className="font-mkt-display text-mkt-h3 text-mkt-ink mt-mkt-20 max-w-[32ch]">
                 {segment.title}
               </h2>
 
-              <Meta as="p" className="mt-8 mb-3">
+              <Meta as="p" className="mt-mkt-30 mb-mkt-14">
                 The pain
               </Meta>
-              <ul className="grid gap-3">
+              <ul className="gap-mkt-14 grid">
                 {segment.pains.map((pain) => (
-                  <li key={pain} className="text-mkt-sm text-mkt-ink-soft flex gap-3">
-                    <span aria-hidden className="text-mkt-line-strong">
+                  <li key={pain} className="text-mkt-sm text-mkt-ink-soft gap-mkt-14 flex">
+                    <span aria-hidden className="text-mkt-mist">
                       —
                     </span>
                     {pain}
@@ -100,23 +103,23 @@ export function SolutionSegments() {
                 ))}
               </ul>
 
-              <Meta as="p" className="mt-8 mb-3">
+              <Meta as="p" className="mt-mkt-30 mb-mkt-14">
                 How Searchify maps
               </Meta>
-              <ul className="grid gap-3">
+              <ul className="gap-mkt-14 grid">
                 {segment.mappings.map((mapping) => (
-                  <li key={mapping} className="text-mkt-sm text-mkt-ink-soft flex gap-3">
+                  <li key={mapping} className="text-mkt-sm text-mkt-ink-soft gap-mkt-14 flex">
                     <Check
                       aria-hidden
                       strokeWidth={2.5}
-                      className="text-mkt-evidence-text mt-0.5 size-4 shrink-0"
+                      className="text-mkt-success-text mt-mkt-6 size-4 shrink-0"
                     />
                     {mapping}
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-8">
+              <div className="mt-mkt-30">
                 <TextLink href={DEMO_HREF}>
                   {segment.cta}
                   <ArrowRight aria-hidden />
@@ -134,21 +137,21 @@ export function SolutionSegments() {
 
 export function SolutionsCta() {
   return (
-    <Section tone="field" rhythm="loose" aria-label="Get started">
+    <Section tone="paper" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-5xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
+        <h2 className="font-mkt-display text-mkt-h2 text-mkt-ink mb-mkt-20 mx-auto max-w-[32ch]">
           Bring your team the version of the truth it reports in.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
           One observation field, five ways of reading it. We will walk through the one that matches
           how you are measured.
         </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-mkt-30 gap-mkt-14 flex flex-col items-center justify-center sm:flex-row">
           <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
             {DEMO_CTA}
             <ArrowRight aria-hidden />
           </ButtonLink>
-          <ButtonLink href="/pricing" intent="secondary" className="w-full sm:w-auto">
+          <ButtonLink href="/pricing" variant="ghost" className="w-full sm:w-auto">
             See pricing
           </ButtonLink>
         </div>

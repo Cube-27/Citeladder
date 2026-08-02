@@ -197,8 +197,8 @@ export function PricingCatalog() {
 
   return (
     <>
-      <Section tone="surface" rhythm="tight" aria-label="Plans">
-        <div className="mb-8 flex flex-wrap items-center gap-3">
+      <Section tone="paper" rhythm="tight" aria-label="Plans">
+        <div className="mb-mkt-30 gap-mkt-14 flex flex-wrap items-center">
           <Switch
             checked={byok}
             onCheckedChange={setByok}
@@ -206,24 +206,21 @@ export function PricingCatalog() {
             describedBy="byok-disclosure"
           />
           <span className="text-mkt-ink text-mkt-sm font-medium">{BYOK_SWITCH_LABEL}</span>
-          <p
-            id="byok-disclosure"
-            className="text-mkt-sm text-mkt-ink-muted max-w-[70ch] basis-full"
-          >
+          <p id="byok-disclosure" className="text-mkt-sm text-mkt-ink-soft max-w-[70ch] basis-full">
             {BYOK_DISCLOSURE}
           </p>
           {!byok && (
-            <p className="text-mkt-sm text-mkt-ink-muted basis-full">{FUNDED_UNAVAILABLE_NOTE}</p>
+            <p className="text-mkt-sm text-mkt-ink-soft basis-full">{FUNDED_UNAVAILABLE_NOTE}</p>
           )}
         </div>
 
         {notice && (
-          <p role="status" className="text-mkt-sm text-mkt-amber-text mb-6">
+          <p role="status" className="text-mkt-sm text-mkt-warning-text mb-mkt-30">
             {notice}
           </p>
         )}
         {activation.isError && (
-          <p role="status" className="text-mkt-sm text-mkt-amber-text mb-6">
+          <p role="status" className="text-mkt-sm text-mkt-warning-text mb-mkt-30">
             {activation.error instanceof Error
               ? activation.error.message
               : 'That purchase could not be started. Please try again.'}
@@ -235,7 +232,7 @@ export function PricingCatalog() {
         ) : !catalog ? (
           <LoadingCards />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="gap-mkt-20 grid md:grid-cols-2 xl:grid-cols-4">
             {catalog.plans.map((plan) => (
               <PricingTierCard
                 key={plan.key}
@@ -254,18 +251,18 @@ export function PricingCatalog() {
         )}
       </Section>
 
-      <Section tone="paper" aria-label="Plan comparison">
+      <Section tone="paper" rhythm="tight" aria-label="Plan comparison">
         <SectionHeader
-          kicker="Compare"
+          eyebrow="Compare"
           title="What each plan includes."
-          intro="Every value here is the limit the platform actually enforces."
+          lead="Every value here is the limit the platform actually enforces."
           headingId="pricing-compare-title"
         />
         {catalog ? <PricingComparison catalog={catalog} /> : <LoadingShell />}
       </Section>
 
       {catalog && (catalog.addons.length > 0 || catalog.topups.length > 0) && (
-        <Section tone="surface" aria-label="Add-ons and top-ups">
+        <Section tone="paper" rhythm="tight" aria-label="Add-ons and top-ups">
           <CatalogPurchases
             catalog={catalog}
             pendingKey={pendingKey}
@@ -310,12 +307,12 @@ function isStillValid(
 
 function LoadingCards() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-busy="true">
+    <div className="gap-mkt-20 grid md:grid-cols-2 xl:grid-cols-4" aria-busy="true">
       {[0, 1, 2, 3].map((index) => (
         <div
           key={index}
           data-loading-card
-          className="rounded-mkt-lg bg-mkt-surface shadow-card h-80 animate-pulse"
+          className="rounded-mkt-lg bg-mkt-surface shadow-mkt-card h-80 animate-pulse"
         />
       ))}
       <p className="sr-only">Loading plans…</p>
@@ -324,19 +321,19 @@ function LoadingCards() {
 }
 
 function LoadingShell() {
-  return <div aria-busy="true" className="bg-mkt-surface h-48 animate-pulse rounded-md" />;
+  return <div aria-busy="true" className="bg-mkt-surface rounded-mkt-sm h-48 animate-pulse" />;
 }
 
 function CatalogError({ onRetry }: Readonly<{ onRetry: () => void }>) {
   return (
-    <div className="border-mkt-line rounded-mkt-lg grid gap-3 border border-dashed p-10 text-center">
+    <div className="border-mkt-black-10 rounded-mkt-lg gap-mkt-14 p-mkt-40 grid border border-dashed text-center">
       <p className="text-mkt-sm text-mkt-ink-soft">
         Plans could not be loaded, so no price is shown. Check your connection and retry.
       </p>
       <button
         type="button"
         onClick={onRetry}
-        className="border-mkt-line text-mkt-ink focus-ring text-mkt-sm mx-auto inline-flex h-10 items-center rounded-sm border px-4 font-medium"
+        className="border-mkt-black-10 text-mkt-ink focus-ring text-mkt-sm rounded-mkt-sm px-mkt-20 mx-auto inline-flex h-10 items-center border font-medium"
       >
         Retry
       </button>

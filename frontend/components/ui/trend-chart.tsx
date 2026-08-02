@@ -37,6 +37,21 @@ export function TrendChart({
   const clamp = (value: number) => Math.max(0, Math.min(effectiveDomainMax, value));
   const stepX = data.length > 1 ? innerWidth / (data.length - 1) : 0;
 
+  // Labels are NOT identities: a series can hold several points that format to
+  // the same label (two runs on the same day both render "1 Aug"), which made
+  // React collapse them onto one key. EVERY point carries its occurrence
+  // suffix, including the first: suffixing only repeats left the bare label in
+  // play, so a series holding both "1 Aug" and a literal "1 Aug#1" collided on
+  // the second "1 Aug". With the suffix always present, a key splits uniquely
+  // at its last `#` into (label, occurrence), and points keep a stable identity
+  // across updates.
+  const labelOccurrences = new Map<string, number>();
+  const pointKeys = data.map((entry) => {
+    const seen = labelOccurrences.get(entry.label) ?? 0;
+    labelOccurrences.set(entry.label, seen + 1);
+    return `${entry.label}#${seen}`;
+  });
+
   const points = data.map((entry, index) => ({
     x: data.length > 1 ? padding + index * stepX : width / 2,
     y:
@@ -91,7 +106,7 @@ export function TrendChart({
       ))}
       {points.map((point, index) =>
         data[index].versionChange ? (
-          <g key={`marker-${data[index].label}`} data-version-marker="">
+          <g key={`marker-${pointKeys[index]}`} data-version-marker="">
             <line
               x1={point.x}
               y1={padding}
@@ -110,7 +125,13 @@ export function TrendChart({
       )}
       {points.map((point, index) =>
         point.y === null ? null : (
-          <circle key={data[index].label} cx={point.x} cy={point.y} r={2.5} className="fill-accent">
+          <circle
+            key={`point-${pointKeys[index]}`}
+            cx={point.x}
+            cy={point.y}
+            r={2.5}
+            className="fill-accent"
+          >
             <title>{`${data[index].label}: ${data[index].value}`}</title>
           </circle>
         ),

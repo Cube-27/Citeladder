@@ -35,8 +35,8 @@ function hasStoredActiveProject(): boolean {
 }
 
 const NAV_LINK =
-  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink relative z-1 inline-flex items-center gap-1.5 ' +
-  'rounded-sm px-4 py-3 font-semibold transition-colors duration-200';
+  'text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink relative z-1 inline-flex items-center gap-mkt-6 ' +
+  'rounded-mkt-sm px-mkt-20 py-mkt-14 font-semibold transition-colors duration-200';
 
 /**
  * Panel geometry per menu. A drop with a labelled group renders two columns —
@@ -194,15 +194,13 @@ export function MarketingNav() {
       data-scrolled={scrolled ? 'true' : undefined}
       className={cn(
         'fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color] duration-300',
-        surfaceVisible
-          ? 'border-mkt-line-soft bg-mkt-surface'
-          : 'border-transparent bg-transparent',
+        surfaceVisible ? 'border-mkt-black-10 bg-mkt-surface' : 'border-transparent bg-transparent',
       )}
     >
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="h-mkt-nav max-w-mkt-wide px-mkt-gutter mx-auto flex w-full items-center gap-4"
+        className="h-mkt-nav max-w-mkt-wide px-mkt-gutter gap-mkt-20 mx-auto flex w-full items-center"
       >
         <Link href="/" aria-label="Searchify home" className="shrink-0">
           <Wordmark />
@@ -230,7 +228,7 @@ export function MarketingNav() {
               style={{ left: lens.left, width: lens.width }}
               transition={{ layout: { duration: 0.18, ease: EASE_OUT } }}
               className={cn(
-                'border-mkt-line-soft bg-mkt-surface shadow-modal-value pointer-events-none rounded-sm',
+                'border-mkt-black-10 bg-mkt-surface shadow-modal-value rounded-mkt-sm pointer-events-none',
                 'absolute inset-y-0 border',
               )}
             />
@@ -298,8 +296,8 @@ export function MarketingNav() {
                   maxWidth: 'calc(100vw - 2rem)',
                 }}
                 className={cn(
-                  'border-mkt-line-soft bg-mkt-surface shadow-modal-value rounded-mkt-sm absolute top-full',
-                  'mt-1.5 overflow-hidden border',
+                  'border-mkt-black-10 bg-mkt-surface shadow-modal-value rounded-mkt-sm absolute top-full',
+                  'mt-mkt-6 overflow-hidden border',
                 )}
               >
                 <div className={cn('grid', DROP_LAYOUT[openDrop].twoColumn && 'sm:grid-cols-2')}>
@@ -310,9 +308,9 @@ export function MarketingNav() {
                       // unrelated rows.
                       <div
                         key={group.label}
-                        className="border-mkt-line-soft bg-mkt-paper-raised border-t p-2 sm:border-t-0 sm:border-l"
+                        className="border-mkt-black-10 bg-mkt-surface-sunk p-mkt-10 border-t sm:border-t-0 sm:border-l"
                       >
-                        <p className="text-mkt-meta text-mkt-ink-muted px-3 pt-2 pb-2 uppercase">
+                        <p className="text-mkt-xs text-mkt-ink-soft px-mkt-14 pt-mkt-10 pb-mkt-10 uppercase">
                           {group.label}
                         </p>
                         {group.items.map((item) => (
@@ -320,7 +318,7 @@ export function MarketingNav() {
                         ))}
                       </div>
                     ) : (
-                      <div key="items" className="p-2">
+                      <div key="items" className="p-mkt-10">
                         {group.items.map((item) => (
                           <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
                         ))}
@@ -333,27 +331,27 @@ export function MarketingNav() {
           </AnimatePresence>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
+        <div className="gap-mkt-10 ml-auto flex shrink-0 items-center lg:ml-0">
           {isAuthenticated ? (
-            <ButtonLink href={dashboardHref} size="sm">
+            <ButtonLink href={dashboardHref} variant="nav">
               Dashboard
             </ButtonLink>
           ) : (
             <>
               <Link
                 href="/login"
-                className="text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink hidden px-3 font-semibold transition-colors sm:inline-flex"
+                className="text-mkt-sm text-mkt-ink-soft hover:text-mkt-ink px-mkt-14 hidden font-semibold transition-colors sm:inline-flex"
               >
                 Log in
               </Link>
-              <ButtonLink href={DEMO_HREF} size="sm">
+              <ButtonLink href={DEMO_HREF} variant="nav">
                 {DEMO_CTA}
               </ButtonLink>
             </>
           )}
           <button
             type="button"
-            className="border-mkt-line text-mkt-ink grid size-10 place-items-center rounded-sm border lg:hidden"
+            className="border-mkt-black-10 text-mkt-ink rounded-mkt-sm grid size-10 place-items-center border lg:hidden"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
@@ -371,14 +369,14 @@ export function MarketingNav() {
       {mobileOpen && (
         <div
           id="mobile-menu"
-          className="border-mkt-line-soft bg-mkt-paper-raised px-mkt-gutter max-h-[calc(100dvh-var(--spacing-mkt-nav))] overflow-y-auto border-t py-4 lg:hidden"
+          className="border-mkt-black-10 bg-mkt-surface-sunk px-mkt-gutter py-mkt-20 max-h-[calc(100dvh-var(--spacing-mkt-nav))] overflow-y-auto border-t lg:hidden"
         >
           {NAV_DROPS.map(({ key, label, href, groups }) => (
-            <div key={key} className="border-mkt-line-soft border-b last:border-b-0">
+            <div key={key} className="border-mkt-black-10 border-b last:border-b-0">
               <div className="flex items-center">
                 <Link
                   href={href}
-                  className="text-mkt-body text-mkt-ink flex-1 py-4 font-semibold"
+                  className="text-mkt-body text-mkt-ink py-mkt-20 flex-1 font-semibold"
                   onClick={() => setMobileOpen(false)}
                 >
                   {label}
@@ -400,11 +398,11 @@ export function MarketingNav() {
                   />
                 </button>
               </div>
-              <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-2">
+              <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-mkt-10">
                 {groups.map((group) => (
                   <Fragment key={group.label ?? 'items'}>
                     {group.label && (
-                      <p className="text-mkt-meta text-mkt-ink-muted px-3 pt-3 pb-1 uppercase">
+                      <p className="text-mkt-xs text-mkt-ink-soft px-mkt-14 pt-mkt-14 pb-mkt-6 uppercase">
                         {group.label}
                       </p>
                     )}
@@ -424,12 +422,12 @@ export function MarketingNav() {
             </div>
           ))}
 
-          <div className="mt-4 grid gap-2">
+          <div className="mt-mkt-20 gap-mkt-10 grid">
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}
-                className="text-mkt-body text-mkt-ink py-2 font-semibold"
+                className="text-mkt-body text-mkt-ink py-mkt-10 font-semibold"
                 onClick={() => setMobileOpen(false)}
               >
                 {label}
@@ -437,7 +435,7 @@ export function MarketingNav() {
             ))}
             <Link
               href={isAuthenticated ? dashboardHref : '/login'}
-              className="text-mkt-body text-mkt-ink-soft py-2 font-semibold"
+              className="text-mkt-body text-mkt-ink-soft py-mkt-10 font-semibold"
               onClick={() => setMobileOpen(false)}
             >
               {isAuthenticated ? 'Dashboard' : 'Log in'}

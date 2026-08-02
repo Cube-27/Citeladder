@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { DoubleRingCtaLink } from './button';
+import { IconButtonLink } from './button';
 
-describe('DoubleRingCtaLink', () => {
+describe('IconButtonLink', () => {
   it('exposes its visual variant, icon, and new-tab behavior', () => {
     render(
-      <DoubleRingCtaLink
+      <IconButtonLink
         href="/demo"
         title="Try the demo"
         variant="dark"
@@ -15,8 +15,10 @@ describe('DoubleRingCtaLink', () => {
       />,
     );
 
+    // The label is announced once even though both badges carry the icon —
+    // the duplicated badge is the travel illusion, not a second label.
     const link = screen.getByRole('link', { name: 'Try the demo' });
-    expect(link).toHaveClass('mkt-double-cta', 'mkt-double-cta--dark');
+    expect(link).toHaveClass('mkt-icon-btn', 'mkt-icon-btn--dark');
     expect(link).toHaveAttribute('href', '/demo');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');

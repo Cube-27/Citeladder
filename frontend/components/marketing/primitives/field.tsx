@@ -23,8 +23,14 @@ export function MktField({
   error?: ReactNode;
   required?: boolean;
   className?: string;
+  /**
+   * Renders the control. `required` is handed back rather than left to the
+   * call site: the asterisk is `aria-hidden`, so a screen reader announces the
+   * field as optional unless the flag reaches the input itself.
+   */
   children: (props: {
     id: string;
+    required?: boolean;
     'aria-invalid'?: boolean;
     'aria-describedby'?: string;
   }) => ReactNode;
@@ -38,27 +44,28 @@ export function MktField({
     [error ? errorId : null, hint && !error ? hintId : null].filter(Boolean).join(' ') || undefined;
 
   return (
-    <div className={cn('grid gap-2', className)}>
-      <label htmlFor={id} className="text-mkt-sm text-mkt-ink-soft font-bold">
+    <div className={cn('gap-mkt-10 grid', className)}>
+      <label htmlFor={id} className="text-mkt-sm text-mkt-ink-soft font-semibold">
         {label}
         {required && (
-          <span aria-hidden className="text-mkt-signal-text ml-0.5">
+          <span aria-hidden className="text-mkt-error-text ml-mkt-6">
             *
           </span>
         )}
       </label>
       {children({
         id,
+        required,
         'aria-invalid': error ? true : undefined,
         'aria-describedby': describedBy,
       })}
       {hint && !error && (
-        <span id={hintId} className="text-mkt-sm text-mkt-ink-muted">
+        <span id={hintId} className="text-mkt-sm text-mkt-ink-soft">
           {hint}
         </span>
       )}
       {error && (
-        <span id={errorId} role="alert" className="text-mkt-sm text-mkt-signal-text">
+        <span id={errorId} role="alert" className="text-mkt-sm text-mkt-error-text">
           {error}
         </span>
       )}
@@ -71,10 +78,10 @@ export function MktInput({ className, ...props }: ComponentPropsWithoutRef<'inpu
     <input
       {...props}
       className={cn(
-        'border-mkt-line bg-mkt-paper-raised text-mkt-ink placeholder:text-mkt-ink-muted rounded-mkt-sm',
-        'focus:border-mkt-proof focus:ring-mkt-proof-soft text-mkt-body min-h-12 w-full border px-4',
+        'border-mkt-black-10 bg-mkt-surface-sunk text-mkt-ink placeholder:text-mkt-ink-soft rounded-mkt-sm',
+        'focus:border-mkt-indigo focus:ring-mkt-frost text-mkt-body px-mkt-20 min-h-12 w-full border',
         'transition-[border-color,box-shadow,background-color] duration-200 outline-none',
-        'focus:bg-mkt-surface aria-invalid:border-mkt-signal focus:ring-2',
+        'focus:bg-mkt-surface aria-invalid:border-mkt-error focus:ring-2',
         className,
       )}
     />
@@ -87,9 +94,9 @@ export function MktAlert({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div
       role="alert"
-      className="border-mkt-signal-line bg-mkt-signal-soft text-mkt-signal-text rounded-mkt-sm text-mkt-sm flex gap-3 border p-4"
+      className="border-mkt-error bg-mkt-error-05 text-mkt-error-text rounded-mkt-sm text-mkt-sm gap-mkt-14 p-mkt-20 flex border"
     >
-      <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" />
+      <AlertCircle aria-hidden className="mt-mkt-6 size-4 shrink-0" />
       <div className="min-w-0">{children}</div>
     </div>
   );

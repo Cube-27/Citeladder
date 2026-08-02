@@ -36,14 +36,14 @@ function SpotlightCard({
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`rounded-mkt-lg hover:bg-mkt-surface/80 relative p-5 transition-all duration-300 ${className}`}
+      className={`rounded-mkt-lg hover:bg-mkt-surface/80 p-mkt-20 relative transition-all duration-300 ${className}`}
     >
       {/* Radial cursor spotlight glow */}
       <div
         className="rounded-mkt-lg pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300"
         style={{
           opacity,
-          background: `radial-gradient(400px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), color-mix(in srgb, var(--color-mkt-proof) 12%, transparent), transparent 80%)`,
+          background: `radial-gradient(400px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), color-mix(in srgb, var(--color-mkt-indigo) 12%, transparent), transparent 80%)`,
         }}
       />
       {children}
@@ -58,28 +58,28 @@ export function Proof() {
   const { proof } = LANDING_CONTENT;
 
   return (
-    <Section id="how-it-works" tone="sunken" rhythm="loose" aria-labelledby="proof-title">
+    <Section id="how-it-works" tone="sunken" rhythm="base" aria-labelledby="proof-title">
       <SectionHeader
-        kicker={proof.kicker}
+        eyebrow={proof.kicker}
         title={proof.title}
-        intro={proof.intro}
+        lead={proof.intro}
         headingId="proof-title"
       />
-      <StaggerGroup className="grid gap-8 md:grid-cols-3">
+      <StaggerGroup className="gap-mkt-30 grid md:grid-cols-3">
         {proof.steps.map((step) => (
           <StaggerItem key={step.num} className="relative">
             <SpotlightCard className="h-full">
-              <p className="text-mkt-meta text-mkt-ink-muted font-mono uppercase">
+              <p className="text-mkt-xs text-mkt-ink-soft font-mono uppercase">
                 {step.num} / {step.kicker}
               </p>
-              <h3 className="font-mkt-display text-mkt-ink text-mkt-d5 mt-3">{step.title}</h3>
-              <p className="text-mkt-sm text-mkt-ink-soft mt-3 max-w-[50ch]">{step.body}</p>
+              <h3 className="font-mkt-display text-mkt-ink text-mkt-hsm mt-mkt-14">{step.title}</h3>
+              <p className="text-mkt-sm text-mkt-ink-soft mt-mkt-14 max-w-[50ch]">{step.body}</p>
             </SpotlightCard>
           </StaggerItem>
         ))}
       </StaggerGroup>
-      <Reveal className="mt-12">
-        <p className="text-mkt-body text-mkt-ink border-mkt-proof max-w-[80ch] border-l-2 pl-5 font-semibold">
+      <Reveal className="mt-mkt-50">
+        <p className="text-mkt-body text-mkt-ink border-mkt-indigo pl-mkt-20 max-w-[80ch] border-l-2 font-semibold">
           {proof.standard}
         </p>
       </Reveal>

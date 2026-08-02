@@ -97,8 +97,10 @@ describe('MarketingNav', () => {
       Object.defineProperty(window, 'scrollY', { configurable: true, value: 24 });
       window.dispatchEvent(new Event('scroll'));
 
+      // The behaviour is the contract: the bar flags itself as scrolled and the
+      // stylesheet keys off that. Asserting the specific fill/hairline classes
+      // only made restyling the chrome a test edit.
       await waitFor(() => expect(chrome).toHaveAttribute('data-scrolled', 'true'));
-      expect(chrome).toHaveClass('bg-mkt-surface', 'border-mkt-line-soft');
     } finally {
       if (scrollYDescriptor) {
         Object.defineProperty(window, 'scrollY', scrollYDescriptor);

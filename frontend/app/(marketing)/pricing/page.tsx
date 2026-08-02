@@ -52,7 +52,7 @@ export default function PricingPage() {
         accent="Not the API markup."
         lead="Audits run on your own ChatGPT, Gemini and Claude keys — provider usage bills straight to your accounts at provider rates. Searchify charges for the workspace, the monitoring and the evidence behind every score."
       >
-        <TrustStrip className="mt-8 justify-center" />
+        <TrustStrip className="mt-mkt-30 justify-center" />
       </PageHero>
       <PricingCatalog />
       <PricingCta />

@@ -12,16 +12,16 @@ import { Section, SectionHeader } from '../primitives/section';
 export function Shift() {
   const { shift } = LANDING_CONTENT;
   return (
-    <Section id="why" tone="paper" rhythm="loose" aria-labelledby="shift-title">
-      <SectionHeader kicker={shift.kicker} title={shift.title} headingId="shift-title" />
-      <StaggerGroup className="grid gap-12 lg:grid-cols-3">
+    <Section id="why" tone="paper" rhythm="base" aria-labelledby="shift-title">
+      <SectionHeader eyebrow={shift.kicker} title={shift.title} headingId="shift-title" />
+      <StaggerGroup className="gap-mkt-50 grid lg:grid-cols-3">
         {shift.facts.map((fact) => (
           <StaggerItem key={fact.num}>
-            <p className="text-mkt-proof text-mkt-meta font-mono tabular-nums">{fact.num}</p>
-            <h3 className="font-mkt-display text-mkt-ink text-mkt-d4 mt-4 max-w-[28ch]">
+            <p className="text-mkt-indigo text-mkt-xs font-mono tabular-nums">{fact.num}</p>
+            <h3 className="font-mkt-display text-mkt-ink text-mkt-hsm mt-mkt-20 max-w-[28ch]">
               {fact.title}
             </h3>
-            <p className="text-mkt-body text-mkt-ink-soft mt-4 max-w-[56ch]">{fact.body}</p>
+            <p className="text-mkt-body text-mkt-ink-soft mt-mkt-20 max-w-[56ch]">{fact.body}</p>
           </StaggerItem>
         ))}
       </StaggerGroup>

@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
-import { ButtonLink, DoubleRingCtaLink } from '../primitives/button';
+import { ButtonLink, IconButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { HeroAtmosphere } from './hero-atmosphere';
@@ -32,35 +32,32 @@ export function Hero() {
   return (
     <header className="mkt-field-hero mkt-grid-field -mt-mkt-nav pt-mkt-nav relative overflow-hidden">
       <HeroAtmosphere />
-      <Container className="relative z-1 pt-20 pb-16 md:pt-28 md:pb-20">
+      <Container className="pt-mkt-80 pb-mkt-70 md:pt-mkt-120 md:pb-mkt-80 relative z-1">
         <HeroEntrance className="mx-auto max-w-5xl text-center">
           <div className="flex justify-center">
             <Eyebrow>{hook.eyebrow}</Eyebrow>
           </div>
-          <h1 className="font-mkt-display text-mkt-d1 text-mkt-ink mx-auto mt-6 max-w-[32ch] text-balance">
+          <h1 className="font-mkt-display text-mkt-h1 text-mkt-ink mt-mkt-30 mx-auto max-w-[32ch] text-balance">
             {hook.title}{' '}
             <em className="mkt-keyword not-italic">
               They ask <HeadlineRotatingWord /> instead.
             </em>
           </h1>
-          <p className="text-mkt-lead text-mkt-ink-soft mx-auto mt-6 max-w-[80ch]">{hook.body}</p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
-            <DoubleRingCtaLink
+          <p className="text-mkt-lead text-mkt-ink-soft mt-mkt-30 mx-auto max-w-[80ch]">
+            {hook.body}
+          </p>
+          <div className="mt-mkt-30 gap-mkt-14 flex flex-col justify-center sm:flex-row sm:items-center">
+            <IconButtonLink
               href={DEMO_HREF}
               title={hook.primaryCta}
               icon={<ArrowRight aria-hidden />}
               className="self-center"
             />
-            <ButtonLink
-              href="#how-it-works"
-              intent="secondary"
-              size="lg"
-              className="w-full px-8 sm:w-auto"
-            >
+            <ButtonLink href="#how-it-works" variant="ghost" className="w-full sm:w-auto">
               {hook.secondaryCta}
             </ButtonLink>
           </div>
-          <RotatingEngineLogos className="mt-8 md:mt-10" />
+          <RotatingEngineLogos className="mt-mkt-30 md:mt-mkt-40" />
         </HeroEntrance>
       </Container>
     </header>

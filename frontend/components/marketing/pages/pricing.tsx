@@ -19,21 +19,21 @@ import { Reveal } from '../primitives/reveal';
 /** Closing band — evaluation first, then the workspace. */
 export function PricingCta() {
   return (
-    <Section tone="field" rhythm="loose" aria-label="Get started">
+    <Section tone="paper" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-5xl text-center">
-        <h2 className="font-mkt-display text-mkt-d2 text-mkt-ink mx-auto mb-5 max-w-[32ch]">
+        <h2 className="font-mkt-display text-mkt-h2 text-mkt-ink mb-mkt-20 mx-auto max-w-[32ch]">
           Start from the evidence, not the invoice.
         </h2>
         <p className="text-mkt-lead text-mkt-ink-soft mx-auto max-w-[80ch]">
           Walk through your own category with us, then pick the plan that matches the volume you
           actually need.
         </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-mkt-30 gap-mkt-14 flex flex-col items-center justify-center sm:flex-row">
           <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
             {DEMO_CTA}
             <ArrowRight aria-hidden />
           </ButtonLink>
-          <ButtonLink href="/faq" intent="secondary" className="w-full sm:w-auto">
+          <ButtonLink href="/faq" variant="ghost" className="w-full sm:w-auto">
             Read the FAQ
           </ButtonLink>
         </div>

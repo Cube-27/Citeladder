@@ -577,6 +577,43 @@ def _reported_cost_usd(usage: dict[str, Any]) -> float:
     except (TypeError, ValueError):
         return 0.0
 
+def _provider_reported_cost(completed: list[dict[str, Any]]) -> float:
+    total = 0.0
+    for execution in completed:
+        usage = (execution.get("provider_metadata") or {}).get("usage") or {}
+        total += _reported_cost_usd(usage)
+    return total
+
+
+def _gemini_token_rates(config: ScoringConfig) -> tuple[float, float] | None:
+    if uses_gemini_flash_pricing(config.provider, config.model):
+        return (
+            GEMINI_25_FLASH_INPUT_PER_MILLION_USD,
+            GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD,
+        )
+    if uses_gemini_flash_lite_pricing(config.provider, config.model):
+        return (
+            GEMINI_25_FLASH_LITE_INPUT_PER_MILLION_USD,
+            GEMINI_25_FLASH_LITE_OUTPUT_PER_MILLION_USD,
+        )
+    return None
+
+
+def _paid_list_cost_estimate(
+    token_usage: dict[str, int],
+    config: ScoringConfig,
+    grounded_requests: int,
+) -> tuple[float, float]:
+    rates = _gemini_token_rates(config)
+    if rates is None:
+        return 0.0, 0.0
+    input_rate, output_rate = rates
+    token_estimate = (
+        token_usage["input_tokens"] * input_rate / TOKENS_PER_MILLION
+        + token_usage["output_tokens"] * output_rate / TOKENS_PER_MILLION
+    )
+    grounding_if_billable = grounded_requests * GEMINI_25_GROUNDED_PROMPT_USD
+    return token_estimate, grounding_if_billable
 
 def _aggregate_cost(
     completed: list[dict[str, Any]],
@@ -586,37 +623,17 @@ def _aggregate_cost(
     grounded_requests = sum(
         1 for execution in completed if execution["score"].get("search_used")
     )
-    provider_reported = 0.0
-    for execution in completed:
-        usage = (execution.get("provider_metadata") or {}).get("usage") or {}
-        provider_reported += _reported_cost_usd(usage)
-
-    token_estimate = 0.0
-    grounding_if_billable = 0.0
     # Flash and Flash-Lite are DIFFERENT price cards; the active Gemini route
     # is Flash-Lite. Grounded-prompt pricing is shared between the two.
-    input_rate: float | None
-    output_rate: float | None
-    if uses_gemini_flash_pricing(config.provider, config.model):
-        input_rate = GEMINI_25_FLASH_INPUT_PER_MILLION_USD
-        output_rate = GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD
-    elif uses_gemini_flash_lite_pricing(config.provider, config.model):
-        input_rate = GEMINI_25_FLASH_LITE_INPUT_PER_MILLION_USD
-        output_rate = GEMINI_25_FLASH_LITE_OUTPUT_PER_MILLION_USD
-    else:
-        input_rate = output_rate = None
-    if input_rate is not None and output_rate is not None:
-        token_estimate = (
-            token_usage["input_tokens"] * input_rate / TOKENS_PER_MILLION
-            + token_usage["output_tokens"] * output_rate / TOKENS_PER_MILLION
-        )
-        grounding_if_billable = grounded_requests * GEMINI_25_GROUNDED_PROMPT_USD
+    token_estimate, grounding_if_billable = _paid_list_cost_estimate(
+        token_usage, config, grounded_requests
+    )
     return {
         "currency": "USD",
         "grounded_requests": grounded_requests,
         "paid_list_token_estimate_usd": round(token_estimate, 6),
         "grounding_cost_if_billable_usd": round(grounding_if_billable, 6),
-        "provider_reported_cost_usd": round(provider_reported, 6),
+        "provider_reported_cost_usd": round(_provider_reported_cost(completed), 6),
         "free_allowance_applied": False,
         "note": (
             "Estimates use public paid-list prices. Actual cost may be zero or lower "

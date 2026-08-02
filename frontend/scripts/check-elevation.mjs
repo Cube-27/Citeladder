@@ -45,8 +45,33 @@ const OVERLAY_ALLOWLIST = new Set([
   'components/marketing/chrome/nav.tsx',
 ]);
 
-/** The card rungs — the only shadows an in-flow surface may carry. */
+/** The card rungs — the only shadows an in-flow APP surface may carry. */
 const CARD_RUNGS = new Set(['shadow-card', 'shadow-card-hover']);
+
+/**
+ * The public website runs its own elevation ladder
+ * (docs/website-design-system.md §4), which is deliberately NOT the app's
+ * borderless model: its buttons and badges are built as a translucent ring
+ * around a gradient core, and the paired inset highlights that produce that
+ * core's sheen are elevation by construction. Those rungs are tokens, declared
+ * in marketing-theme.css and named `shadow-mkt-*`, so they are still a closed
+ * set — this allows the ladder, not arbitrary shadows.
+ */
+const MKT_ROOTS = ['components/marketing/', 'app/(marketing)/'];
+/**
+ * Parsed from the theme file rather than matched by shape, so a misspelled
+ * `shadow-mkt-carrd` fails instead of silently passing an open-ended regex.
+ * Both the outer (`--shadow-mkt-*`) and inset (`--inset-shadow-mkt-*`)
+ * namespaces count — the inset rung is a real declared token.
+ */
+const MKT_THEME = join(ROOT, 'app', '(marketing)', 'marketing-theme.css');
+const MKT_RUNG_SET = new Set(
+  existsSync(MKT_THEME)
+    ? [
+        ...readFileSync(MKT_THEME, 'utf8').matchAll(/--((?:inset-)?shadow-mkt-[a-z0-9-]+)\s*:/g),
+      ].map((m) => m[1])
+    : [],
+);
 
 /** The one sanctioned overlay value. Overlays may use nothing else. */
 const ALLOWED_OVERLAY_UTILITY = 'shadow-modal-value';
@@ -58,7 +83,7 @@ const ALLOWED_OVERLAY_UTILITY = 'shadow-modal-value';
  * three are caught — matching only the named form would leave the escape
  * hatches open. `shadow-none` is fine: an explicit opt-out, not elevation.
  */
-const SHADOW_UTILITY = /(?<![\w-])shadow-(?!none\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
+const SHADOW_UTILITY = /(?<![\w-])(?:inset-)?shadow-(?!none\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
 const GRADIENT_UTILITY =
   /(?<![\w-])(?:bg-gradient-to-[a-z]+|bg-linear-|bg-radial-|bg-conic-|backdrop-blur)/g;
 
@@ -97,6 +122,7 @@ for (const root of SEARCH_ROOTS) {
   for (const absolute of walk(rootPath)) {
     const file = relative(ROOT, absolute).replaceAll('\\', '/');
     const isOverlay = OVERLAY_ALLOWLIST.has(file);
+    const isWebsite = MKT_ROOTS.some((root) => file.startsWith(root));
     const lines = stripComments(readFileSync(absolute, 'utf8')).split(/\r?\n/);
 
     lines.forEach((text, index) => {
@@ -104,6 +130,7 @@ for (const root of SEARCH_ROOTS) {
 
       for (const [match] of text.matchAll(SHADOW_UTILITY)) {
         if (CARD_RUNGS.has(match)) continue; // the card rungs — allowed anywhere
+        if (isWebsite && MKT_RUNG_SET.has(match)) continue; // the website's own ladder
         if (match === ALLOWED_OVERLAY_UTILITY && isOverlay) continue; // the overlay rung, in its allowlist
         report(
           file,

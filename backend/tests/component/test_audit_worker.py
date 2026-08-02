@@ -1467,11 +1467,16 @@ async def test_claim_commits_before_capacity_and_provider_io(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Invariant 8: the claim (+ mark_running) commits BEFORE any capacity I/O.
+    """Invariant 8: the claim commits BEFORE any capacity I/O.
 
     Witnessed from a SEPARATE session at the moment capacity acquisition
     runs: the lease is already durable (visible to other transactions), so no
     DB transaction is ever held across capacity/provider I/O.
+
+    The row is still ``leased`` at this point, not ``running``: a task is
+    only marked running once capacity is actually held, so one waiting for a
+    slot is never published as executing. The invariant is the DURABLE lease,
+    which this asserts via ``lease_owner``.
     """
     _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
     observed: dict[str, object] = {}
@@ -1492,7 +1497,7 @@ async def test_claim_commits_before_capacity_and_provider_io(
     worker = AuditWorker(session_factory=session_factory, owner="w-claim-order")
     await worker.run_until_idle()
 
-    assert observed == {"status": "running", "lease_owner": "w-claim-order"}
+    assert observed == {"status": "leased", "lease_owner": "w-claim-order"}
     async with session_factory() as session:
         task = await session.scalar(
             select(AuditTask).where(AuditTask.audit_id == audit.id)

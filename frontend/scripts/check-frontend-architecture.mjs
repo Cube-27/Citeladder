@@ -68,7 +68,15 @@ const lineBudgets = [
   // the clipped pill, the two trading badges and their variants. A second
   // unrelated component rule does not belong here; it needs its own owner or,
   // better, a primitive in components/marketing/primitives/.
-  { file: 'app/(marketing)/marketing-cta.css', maxLines: 215 },
+  // 230 after the design-system rebuild: the four spec variants (default,
+  // dark, nav, right-icon) each need their own resting/hover pair. Still ONE
+  // construction, which is the thing this budget actually protects.
+  { file: 'app/(marketing)/marketing-cta.css', maxLines: 230 },
+  // The atmospheric display art (radial fields, perspective grid, wallpaper,
+  // keyword sweep, snapshot bezel). Split from the theme file for the same
+  // reason -motion.css was: compositing rules are a separate concern from
+  // tokens, so they get an owner rather than raising the token ceiling.
+  { file: 'app/(marketing)/marketing-scenes.css', maxLines: 160 },
   { file: 'components/ui/theme-toggle.tsx', maxLines: 120 },
   { file: 'lib/theme.ts', maxLines: 160 },
   // F5 app shell: composition only — split any sub-piece that outgrows this.

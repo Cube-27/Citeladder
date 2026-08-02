@@ -5,150 +5,74 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * The one button on the Proof surface. Every button is a ROUNDED PILL, and
- * the surface has exactly ONE action colour.
+ * The buttons on the public surface (docs/website-design-system.md §5.1–5.2).
  *
- * That colour is now BLUE, in two intensities: `glass` is the lit pill for the
- * one headline action on a page, `primary` is the flat form of the same blue
- * for every other action. It used to be slate, which was coherent while slate
- * was the only accent — but a blue hero CTA above a slate nav button is the
- * page disagreeing with itself about what an action looks like, and that is
- * the single most visible inconsistency on the surface.
+ * The signature construction is a translucent outer RING wrapping a solid
+ * inner PILL — the same layering that defines badges and feature cards. The
+ * ring is glass, the pill carries the accent gradient plus the paired inset
+ * highlights, and the label sits on top. `Button`/`ButtonLink` render that
+ * shell; `IconButton`/`IconButtonLink` add the travelling arrow badge, whose
+ * choreography needs real CSS and lives in marketing-cta.css.
  *
- * The division of labour after the change: BLUE = action, SLATE = brand ink,
- * data marks and the headline sweep, GREEN/RED/AMBER = state. Reverting is one
- * token swap back to `--color-mkt-accent` in the four intents below.
- *
- * Fine pointers get a responsive 2px hover lift; every pointer gets a short
- * press settle so the control stays physically connected to the interaction.
+ * Four variants, no more: Primary (accent gradient), Dark (dark gradient),
+ * Nav (dark gradient at chrome scale, no ring), Ghost (transparent, hairline).
  */
-const INTENT = {
-  /** Default page action — radiant multi-stop blue gradient pill (`.mkt-btn-primary`). */
-  primary: 'mkt-btn-primary',
-  /** Companion action — quiet blue on the soft blue tint, hairline ring. */
-  secondary:
-    'bg-mkt-proof-soft text-mkt-proof-hover ring-mkt-proof-line/60 ring-1 ring-inset hover:bg-mkt-surface',
-  /** Retained alias so `intent="proof"` call sites keep the action colour. */
-  proof: 'mkt-btn-primary',
-  /** For use ON the wallpaper, where a white button would disappear. */
-  scene: 'mkt-btn-primary',
-  /**
-   * Retained alias for the old lit-pill CTA. The headline action is now
-   * `DoubleRingCtaLink`, and `.mkt-cta-glass` no longer exists — this maps to
-   * the primary pill so any surviving call site degrades to a styled button
-   * rather than an unstyled transparent one.
-   */
-  glass: 'mkt-btn-primary',
+const VARIANT = {
+  primary: {
+    ring: 'mkt-glass p-mkt-6 rounded-mkt-pill',
+    pill: 'mkt-gradient-accent inset-shadow-mkt-inner shadow-mkt-accent border-mkt-white-10 text-mkt-paper',
+  },
+  dark: {
+    // Ink-tinted ring, matching `.mkt-icon-btn--dark`: a white case around a
+    // black pill reads as a third colour rather than a housing.
+    ring: 'mkt-glass p-mkt-6 rounded-mkt-pill border-mkt-black-20',
+    pill: 'mkt-gradient-dark inset-shadow-mkt-inner shadow-mkt-nav border-mkt-white-10 text-mkt-paper',
+  },
+  nav: {
+    ring: '',
+    pill: 'mkt-gradient-dark border-mkt-white-10 text-mkt-paper',
+  },
+  ghost: {
+    ring: '',
+    pill: 'border-mkt-black-10 text-mkt-ink bg-transparent',
+  },
 } as const;
+
+type Variant = keyof typeof VARIANT;
 
 /**
- * The control-height ladder for the whole surface: 40 / 48 / 56, one even
- * 8px step apart. All three sizes carry the same 14px label — they differ in
- * height and padding, not in type size. Shrinking the text too would drop it
- * below the ramp. Rounded-full is the shape decision: actions here are pills.
- *
- * `lg` exists for the glass CTA: a lit pill needs room around the label for
- * the highlight and the arrow disc to read as separate parts rather than a
- * crowded stripe.
- *
- * 56px is off the ADS *spacing* ladder (48/64 are the neighbours) — but a
- * control height is chrome, not spacing, the same documented exception the
- * 72px nav bar takes. What matters is that all three live HERE, so no page
- * can invent a fourth button height.
+ * Desktop 12/30 · Nav 10/24 · Phone 8/20. The label rung stays Text Button at
+ * every size — the sizes differ in padding, not in type.
  */
-const SIZE = {
-  lg: 'min-h-14 rounded-full pr-3 pl-8 text-mkt-sm',
-  md: 'min-h-12 rounded-full px-6 text-mkt-sm',
-  sm: 'min-h-10 rounded-full px-4 text-mkt-sm',
+const PADDING = {
+  default: 'px-mkt-20 py-mkt-10 sm:px-mkt-30 sm:py-mkt-14',
+  nav: 'px-mkt-20 py-mkt-10',
 } as const;
 
-// The button owns its icon size. Call sites pass `<ArrowRight />` with no
-// className — before this, the same arrow in the same component shipped at
-// two different sizes depending on the page, because every call site made the
-// decision independently. One rung, decided here.
-const BASE =
-  'inline-flex items-center justify-center gap-3 border border-transparent font-bold ' +
-  '[transition:transform_140ms_var(--ease-mkt-out),background-color_200ms_var(--ease-mkt-out),border-color_200ms_var(--ease-mkt-out)] ' +
-  'active:[transform:translateY(0)_scale(0.98)] disabled:pointer-events-none disabled:opacity-40 ' +
-  '[@media(hover:hover)_and_(pointer:fine)_and_(prefers-reduced-motion:no-preference)]:hover:-translate-y-0.5 ' +
-  '[&_svg]:size-4 [&_svg]:shrink-0 ' +
-  '[&_svg]:transition-transform [&_svg]:duration-[140ms] [&_svg]:ease-mkt-out ' +
-  '[@media(hover:hover)_and_(pointer:fine)_and_(prefers-reduced-motion:no-preference)]:hover:[&_svg]:translate-x-0.5';
+const PILL_BASE =
+  'rounded-mkt-pill inline-flex items-center justify-center gap-mkt-10 overflow-hidden border ' +
+  'text-mkt-button whitespace-nowrap ' +
+  'duration-mkt-micro ease-mkt-micro transition-[box-shadow,background-color,border-color] ' +
+  '[&_svg]:size-4 [&_svg]:shrink-0';
 
 type ButtonVisualProps = Readonly<{
-  intent?: keyof typeof INTENT;
-  size?: keyof typeof SIZE;
+  variant?: Variant;
   className?: string;
 }>;
 
-export type DoubleRingCtaVariant = 'default' | 'dark' | 'nav' | 'right-icon';
-
-type DoubleRingCtaLinkProps = Readonly<{
-  href: string;
-  title: string;
-  variant?: DoubleRingCtaVariant;
-  openInNewTab?: boolean;
-  icon?: ReactNode;
-  className?: string;
-}> &
-  Omit<ComponentPropsWithoutRef<'a'>, 'href' | 'target' | 'className' | 'children'>;
-
-function classes({ intent = 'primary', size = 'md', className }: ButtonVisualProps) {
-  return cn(BASE, INTENT[intent], SIZE[size], className);
-}
-
-/**
- * Framer-matched hero CTA: the link is a translucent outer ring containing a
- * clipped gradient pill. Two identical badges trade places on hover so the
- * arrow appears to travel through the control without duplicating its label
- * for assistive technology.
- */
-export function DoubleRingCtaLink({
-  href,
-  title,
-  variant = 'default',
-  openInNewTab = false,
-  icon = <ArrowRight aria-hidden />,
-  className,
-  rel,
-  ...rest
-}: DoubleRingCtaLinkProps) {
-  const targetProps = openInNewTab
-    ? { target: '_blank' as const, rel: rel ?? 'noopener noreferrer' }
-    : { rel };
-  const props = {
-    className: cn('mkt-double-cta', `mkt-double-cta--${variant}`, className),
-    ...targetProps,
-    ...rest,
+function shell(variant: Variant) {
+  const { ring, pill } = VARIANT[variant];
+  const padding = variant === 'nav' ? PADDING.nav : PADDING.default;
+  return {
+    ring: cn('inline-flex w-max items-center justify-center', ring),
+    pill: cn(PILL_BASE, pill, padding),
   };
-  const content = (
-    <span className="mkt-double-cta__pill">
-      <span className="mkt-double-cta__label">{title}</span>
-      <span aria-hidden className="mkt-double-cta__badge mkt-double-cta__badge--outgoing">
-        {icon}
-      </span>
-      <span aria-hidden className="mkt-double-cta__badge mkt-double-cta__badge--incoming">
-        {icon}
-      </span>
-    </span>
-  );
-
-  return href.startsWith('/') ? (
-    <Link href={href} {...props}>
-      {content}
-    </Link>
-  ) : (
-    <a href={href} {...props}>
-      {content}
-    </a>
-  );
 }
 
 /** Marketing CTA rendered as a link. Internal hrefs route through next/link. */
 export function ButtonLink({
   href,
-  intent,
-  size,
+  variant = 'primary',
   className,
   children,
   ...rest
@@ -156,24 +80,33 @@ export function ButtonLink({
     ComponentPropsWithoutRef<'a'>,
     'href' | 'className' | 'children'
   >) {
-  const props = { className: classes({ intent, size, className }), ...rest };
-  // Hash links and mailto/tel must stay plain anchors — next/link would
-  // intercept the hash into a route transition and swallow the smooth scroll.
+  const { ring, pill } = shell(variant);
+  const props = { className: cn(ring, className), ...rest };
+  const content = <span className={pill}>{children}</span>;
+  // Hash links and mailto/tel stay plain anchors — next/link would intercept
+  // the hash into a route transition and swallow the smooth scroll.
   return href.startsWith('/') ? (
     <Link href={href} {...props}>
-      {children}
+      {content}
     </Link>
   ) : (
     <a href={href} {...props}>
-      {children}
+      {content}
     </a>
   );
 }
 
-/** Marketing action rendered as a real button (menus, toggles, submits). */
+/**
+ * Marketing action rendered as a real button (menus, toggles, submits).
+ *
+ * The disabled treatment sits on the OUTER element rather than in
+ * `PILL_BASE`: the pill is a child span, so a `disabled:` variant there never
+ * matches. Dimming the shell carries the ring and the pill together. The auth
+ * forms submit through this primitive, so without it a pending submit looked
+ * identical to an idle one.
+ */
 export function Button({
-  intent,
-  size,
+  variant = 'primary',
   className,
   children,
   type = 'button',
@@ -182,9 +115,120 @@ export function Button({
     ComponentPropsWithoutRef<'button'>,
     'className' | 'children'
   >) {
+  const { ring, pill } = shell(variant);
   return (
-    <button type={type} className={classes({ intent, size, className })} {...rest}>
-      {children}
+    <button
+      type={type}
+      className={cn(ring, 'disabled:cursor-not-allowed disabled:opacity-60', className)}
+      {...rest}
+    >
+      <span className={pill}>{children}</span>
+    </button>
+  );
+}
+
+/**
+ * The COLOUR of the icon button. `default` is the accent gradient; it emits no
+ * modifier class because the base rule already paints it.
+ */
+export type IconButtonVariant = 'default' | 'dark' | 'nav';
+
+/**
+ * Which edge the arrow travels toward. Orthogonal to the colour: these were one
+ * union until `dark` and `right-icon` turned out to be mutually exclusive, so a
+ * dark button could never send its arrow right.
+ */
+export type IconButtonSide = 'left' | 'right';
+
+type IconButtonProps = Readonly<{
+  title: string;
+  variant?: IconButtonVariant;
+  side?: IconButtonSide;
+  icon?: ReactNode;
+  className?: string;
+}>;
+
+/**
+ * The signature interaction: two identical arrow badges trade places on hover
+ * while the label's padding flips in the same beat, so the arrow reads as one
+ * object travelling THROUGH the control rather than two discs cross-fading.
+ *
+ * Both badges are aria-hidden and the label is never duplicated, so the
+ * control announces once. The choreography is in marketing-cta.css.
+ */
+function iconShell({
+  title,
+  variant = 'default',
+  side = 'left',
+  icon,
+  className,
+}: IconButtonProps) {
+  return {
+    // Only non-default modifiers are emitted — `mkt-icon-btn--default` styled
+    // nothing and just added noise to every button's class list.
+    className: cn(
+      'mkt-icon-btn',
+      variant !== 'default' && `mkt-icon-btn--${variant}`,
+      side === 'right' && 'mkt-icon-btn--right-icon',
+      className,
+    ),
+    content: (
+      <span className="mkt-icon-btn__pill">
+        <span className="mkt-icon-btn__label">{title}</span>
+        <span aria-hidden className="mkt-icon-btn__badge mkt-icon-btn__badge--outgoing">
+          {icon ?? <ArrowRight aria-hidden />}
+        </span>
+        <span aria-hidden className="mkt-icon-btn__badge mkt-icon-btn__badge--incoming">
+          {icon ?? <ArrowRight aria-hidden />}
+        </span>
+      </span>
+    ),
+  };
+}
+
+export function IconButtonLink({
+  href,
+  openInNewTab = false,
+  rel,
+  title,
+  variant,
+  side,
+  icon,
+  className,
+  ...rest
+}: IconButtonProps & { href: string; openInNewTab?: boolean } & Omit<
+    ComponentPropsWithoutRef<'a'>,
+    'href' | 'target' | 'className' | 'children' | 'title'
+  >) {
+  const shell = iconShell({ title, variant, side, icon, className });
+  const targetProps = openInNewTab
+    ? { target: '_blank' as const, rel: rel ?? 'noopener noreferrer' }
+    : { rel };
+  // `...rest` is forwarded, not dropped: the visual props are pulled out by
+  // name above, so everything left is a real anchor attribute (id, aria-*,
+  // onClick, data-*) that the caller expects to land on the element.
+  const props = { className: shell.className, ...targetProps, ...rest };
+  const content = shell.content;
+  return href.startsWith('/') ? (
+    <Link href={href} {...props}>
+      {content}
+    </Link>
+  ) : (
+    <a href={href} {...props}>
+      {content}
+    </a>
+  );
+}
+
+export function IconButton({
+  type = 'button',
+  ...visual
+}: IconButtonProps & Omit<ComponentPropsWithoutRef<'button'>, 'className' | 'children' | 'title'>) {
+  const { title, variant, side, icon, className, ...rest } = visual;
+  const shellProps = iconShell({ title, variant, side, icon, className });
+  return (
+    <button type={type} className={shellProps.className} {...rest}>
+      {shellProps.content}
     </button>
   );
 }
@@ -196,10 +240,8 @@ export function TextLink({
   className,
 }: Readonly<{ href: string; children: ReactNode; className?: string }>) {
   const cls = cn(
-    'text-mkt-ink border-mkt-line-strong hover:border-mkt-ink inline-flex items-center gap-2',
-    'border-b pb-0.5 text-mkt-sm font-bold transition-colors duration-200',
-    // Owns its icon size for the same reason the pill does — a call site that
-    // forgets falls back to lucide's 24px default next to 14px text.
+    'text-mkt-ink border-mkt-black-10 hover:border-mkt-ink gap-mkt-10 inline-flex items-center',
+    'text-mkt-xsb duration-mkt-micro border-b pb-mkt-6 transition-colors',
     '[&_svg]:size-4 [&_svg]:shrink-0',
     className,
   );

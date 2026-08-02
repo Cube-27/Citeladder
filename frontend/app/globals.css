@@ -58,6 +58,7 @@
 @import './(marketing)/marketing-theme.css';
 @import './(marketing)/marketing-motion.css';
 @import './(marketing)/marketing-cta.css';
+@import './(marketing)/marketing-scenes.css';
 
 /* Chrome rules (focus rings, selection, the logo mark, scrollbars, a11y
    media queries) — no tokens, so it comes last. */
