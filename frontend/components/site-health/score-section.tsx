@@ -108,7 +108,7 @@ function ScoreCard({
     <Card>
       <CardContent className="flex items-center gap-4">
         {value === null ? (
-          <div className="border-border-subtle text-muted mono flex size-16 items-center justify-center rounded-full border text-base">
+          <div className="border-border-subtle text-muted mono size-score-ring flex items-center justify-center rounded-full border text-base">
             {PLACEHOLDER}
           </div>
         ) : (

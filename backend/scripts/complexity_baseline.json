@@ -40,7 +40,7 @@
       "audit_to_csv": 8,
       "audit_to_markdown": 3
     },
-    "loc": 338,
+    "loc": 408,
     "max_cc": 9
   },
   "app/analysis/normalization.py": {
@@ -49,11 +49,10 @@
       "domain_matches": 4,
       "first_alias_offset": 3,
       "normalize_alias": 2,
-      "normalize_domain": 5,
-      "normalize_url": 7
+      "normalize_domain": 5
     },
-    "loc": 95,
-    "max_cc": 7
+    "loc": 77,
+    "max_cc": 5
   },
   "app/analysis/opportunities/__init__.py": {
     "functions": {},
@@ -77,7 +76,7 @@
       "detect_product_not_mentioned": 4,
       "detect_site_issue_opportunities": 7
     },
-    "loc": 316,
+    "loc": 506,
     "max_cc": 14
   },
   "app/analysis/opportunities/exports.py": {
@@ -152,7 +151,7 @@
   "app/analysis/scoring.py": {
     "functions": {
       "ScoringConfig.from_project": 12,
-      "_aggregate_cost": 7,
+      "_aggregate_cost": 3,
       "_aggregate_token_usage": 4,
       "_brand_injected": 3,
       "_citation_aggregates": 6,
@@ -166,12 +165,15 @@
       "_entity_alias_present": 6,
       "_fanout_features": 4,
       "_first_offset": 4,
+      "_gemini_token_rates": 3,
       "_headline_aggregates": 18,
       "_is_google_redirect": 8,
       "_optional_rate": 2,
+      "_paid_list_cost_estimate": 2,
       "_per_prompt_stability": 7,
       "_prompt_class": 5,
       "_prompt_signals": 3,
+      "_provider_reported_cost": 4,
       "_rate": 2,
       "_reported_cost_usd": 5,
       "_share_of_voice": 9,
@@ -185,7 +187,7 @@
       "classify_fanout": 7,
       "score_execution": 3
     },
-    "loc": 689,
+    "loc": 719,
     "max_cc": 18
   },
   "app/analysis/service.py": {
@@ -221,7 +223,7 @@
       "evaluate_hreflang_conflict": 4,
       "evaluate_sitemap_orphan": 3
     },
-    "loc": 155,
+    "loc": 157,
     "max_cc": 4
   },
   "app/analysis/site_health/page_types.py": {
@@ -234,7 +236,7 @@
       "classify": 14,
       "is_question_heading": 4
     },
-    "loc": 256,
+    "loc": 255,
     "max_cc": 19
   },
   "app/analysis/site_health/parser.py": {
@@ -262,7 +264,7 @@
       "_text": 3,
       "extract_page_facts": 17
     },
-    "loc": 843,
+    "loc": 853,
     "max_cc": 28
   },
   "app/analysis/site_health/rules.py": {
@@ -384,7 +386,7 @@
       "list_events_endpoint": 3,
       "list_executions_endpoint": 4
     },
-    "loc": 319,
+    "loc": 423,
     "max_cc": 7
   },
   "app/api/auth.py": {
@@ -429,7 +431,7 @@
       "post_topup": 3,
       "razorpay_webhook": 5
     },
-    "loc": 174,
+    "loc": 615,
     "max_cc": 5
   },
   "app/api/brand_suggestions.py": {
@@ -444,7 +446,7 @@
       "suggest_owned_domains_endpoint": 3,
       "suggest_prompts_endpoint": 6
     },
-    "loc": 236,
+    "loc": 262,
     "max_cc": 6
   },
   "app/api/commerce.py": {
@@ -456,7 +458,7 @@
       "get_catalog_health_endpoint": 1,
       "get_commerce_attribution_endpoint": 2
     },
-    "loc": 206,
+    "loc": 208,
     "max_cc": 3
   },
   "app/api/content.py": {
@@ -512,7 +514,7 @@
       "list_syncs_endpoint": 2,
       "test_integration_endpoint": 2
     },
-    "loc": 421,
+    "loc": 502,
     "max_cc": 8
   },
   "app/api/oauth.py": {
@@ -541,7 +543,7 @@
       "recompute_endpoint": 4,
       "update_status_endpoint": 4
     },
-    "loc": 273,
+    "loc": 277,
     "max_cc": 4
   },
   "app/api/products.py": {
@@ -566,7 +568,7 @@
       "update_competitor_product_endpoint": 3,
       "update_product_endpoint": 3
     },
-    "loc": 457,
+    "loc": 511,
     "max_cc": 6
   },
   "app/api/projects.py": {
@@ -594,7 +596,7 @@
       "suggest_brand_profile_endpoint": 3,
       "update_project_endpoint": 2
     },
-    "loc": 594,
+    "loc": 652,
     "max_cc": 5
   },
   "app/api/prompts.py": {
@@ -620,7 +622,7 @@
       "update_prompt_set_endpoint": 2,
       "update_topic_endpoint": 3
     },
-    "loc": 519,
+    "loc": 556,
     "max_cc": 11
   },
   "app/api/provider_connections.py": {
@@ -633,7 +635,7 @@
       "test_connection_endpoint": 4,
       "update_connection_endpoint": 4
     },
-    "loc": 188,
+    "loc": 202,
     "max_cc": 4
   },
   "app/api/request_bodies.py": {
@@ -674,7 +676,7 @@
       "replace_monitored_urls_endpoint": 3,
       "rerun_page_endpoint": 5
     },
-    "loc": 865,
+    "loc": 854,
     "max_cc": 10
   },
   "app/api/traffic.py": {
@@ -741,7 +743,7 @@
       "_raise_for_search_error": 11,
       "_web_search_tool": 2
     },
-    "loc": 199,
+    "loc": 237,
     "max_cc": 11
   },
   "app/connectors/answer_engines/anthropic_parser.py": {
@@ -753,12 +755,12 @@
       "normalize_anthropic_usage": 4,
       "parse_anthropic_message": 4
     },
-    "loc": 134,
+    "loc": 204,
     "max_cc": 16
   },
   "app/connectors/answer_engines/contracts.py": {
     "functions": {},
-    "loc": 59,
+    "loc": 119,
     "max_cc": 0
   },
   "app/connectors/answer_engines/errors.py": {
@@ -783,11 +785,11 @@
     "functions": {
       "GeminiAnswerEngineAdapter.__init__": 3,
       "GeminiAnswerEngineAdapter.execute": 8,
-      "_build_payload": 1,
+      "_build_payload": 2,
       "_grounding_fields": 2,
       "safe_quota_detail": 17
     },
-    "loc": 177,
+    "loc": 211,
     "max_cc": 17
   },
   "app/connectors/answer_engines/gemini_parser.py": {
@@ -802,7 +804,7 @@
       "parse_interaction": 13,
       "sanitize_metadata": 20
     },
-    "loc": 237,
+    "loc": 347,
     "max_cc": 20
   },
   "app/connectors/answer_engines/http_client.py": {
@@ -825,17 +827,18 @@
       "usage_count": 3,
       "usage_mapping": 2
     },
-    "loc": 61,
+    "loc": 196,
     "max_cc": 12
   },
   "app/connectors/answer_engines/openai.py": {
     "functions": {
       "OpenAIAnswerEngineAdapter.__init__": 3,
       "OpenAIAnswerEngineAdapter.execute": 6,
-      "_payload": 3,
+      "_add_optional_payload_fields": 4,
+      "_payload": 1,
       "_web_search_tool": 2
     },
-    "loc": 175,
+    "loc": 200,
     "max_cc": 6
   },
   "app/connectors/answer_engines/openai_parser.py": {
@@ -854,7 +857,7 @@
       "openai_raw_finish_reason": 3,
       "parse_openai_response": 7
     },
-    "loc": 308,
+    "loc": 389,
     "max_cc": 13
   },
   "app/connectors/billing/__init__.py": {
@@ -873,7 +876,7 @@
       "BillingProviderError.__init__": 1,
       "ProviderMetadata.as_notes": 1
     },
-    "loc": 49,
+    "loc": 160,
     "max_cc": 1
   },
   "app/connectors/billing/factory.py": {
@@ -912,7 +915,7 @@
       "_provider_bool": 2,
       "_require_price_ref": 2
     },
-    "loc": 186,
+    "loc": 278,
     "max_cc": 8
   },
   "app/connectors/discovery_models/__init__.py": {
@@ -945,7 +948,7 @@
   },
   "app/connectors/integrations/__init__.py": {
     "functions": {},
-    "loc": 12,
+    "loc": 23,
     "max_cc": 0
   },
   "app/connectors/integrations/_http.py": {
@@ -963,7 +966,7 @@
       "oauth_error_detail": 4,
       "parse_retry_after": 4
     },
-    "loc": 173,
+    "loc": 227,
     "max_cc": 6
   },
   "app/connectors/integrations/bing.py": {
@@ -995,7 +998,7 @@
       "_report_currency_code": 6,
       "build_ga4_client": 1
     },
-    "loc": 362,
+    "loc": 479,
     "max_cc": 23
   },
   "app/connectors/integrations/gsc.py": {
@@ -1005,7 +1008,7 @@
       "GscClient.query_search_analytics": 5,
       "build_gsc_client": 1
     },
-    "loc": 178,
+    "loc": 210,
     "max_cc": 11
   },
   "app/connectors/integrations/oauth.py": {
@@ -1026,7 +1029,7 @@
       "oauth_client_credentials": 4,
       "verify_shopify_callback_hmac": 6
     },
-    "loc": 407,
+    "loc": 408,
     "max_cc": 8
   },
   "app/connectors/integrations/shopify.py": {
@@ -1070,6 +1073,7 @@
       "fetch_brand_page": 6,
       "serialize_brand_evidence": 7
     },
+    "loc": 323,
     "max_cc": 8
   },
   "app/connectors/web_evidence/contracts.py": {
@@ -1191,12 +1195,12 @@
       "get_frontend_origins": 6,
       "validate_production_security": 11
     },
-    "loc": 344,
+    "loc": 399,
     "max_cc": 11
   },
   "app/core/config/abuse.py": {
     "functions": {},
-    "loc": 40,
+    "loc": 53,
     "max_cc": 0
   },
   "app/core/config/agent.py": {
@@ -1208,9 +1212,10 @@
   },
   "app/core/config/analysis.py": {
     "functions": {
+      "uses_gemini_flash_lite_pricing": 2,
       "uses_gemini_flash_pricing": 2
     },
-    "loc": 71,
+    "loc": 133,
     "max_cc": 2
   },
   "app/core/config/analytics.py": {
@@ -1239,14 +1244,17 @@
       "AuditSettings.worker_max_inflight": 1,
       "_audit_claim_order": 1,
       "_audit_model": 1,
+      "_is_finite_positive_number": 5,
+      "_is_frozen_policy": 11,
+      "_mode_fallback_policy": 3,
       "frozen_policy_configuration": 1,
       "max_run_seconds_from_configuration": 3,
       "measurement_policy_for_mode": 3,
-      "measurement_policy_from_configuration": 3,
+      "measurement_policy_from_configuration": 2,
       "system_instruction_for_mode": 5
     },
-    "loc": 267,
-    "max_cc": 5
+    "loc": 634,
+    "max_cc": 11
   },
   "app/core/config/billing.py": {
     "functions": {
@@ -1288,11 +1296,12 @@
       "scale_grant_specs": 3,
       "topup_grant_specs": 5
     },
-    "loc": 272,
+    "loc": 1032,
     "max_cc": 7
   },
   "app/core/config/brand_evidence.py": {
     "functions": {},
+    "loc": 96,
     "max_cc": 0
   },
   "app/core/config/brand_logos.py": {
@@ -1302,7 +1311,7 @@
   },
   "app/core/config/brand_profile.py": {
     "functions": {},
-    "loc": 53,
+    "loc": 68,
     "max_cc": 0
   },
   "app/core/config/commerce.py": {
@@ -1329,7 +1338,7 @@
       "pricing_version_known": 1,
       "route_pricing_for": 3
     },
-    "loc": 9,
+    "loc": 271,
     "max_cc": 7
   },
   "app/core/config/entitlements.py": {
@@ -1340,17 +1349,19 @@
       "CapabilityRegistry.require": 2,
       "_build_registry": 1
     },
+    "loc": 420,
     "max_cc": 13
   },
   "app/core/config/errors.py": {
     "functions": {
       "is_retryable_status": 2
     },
+    "loc": 72,
     "max_cc": 2
   },
   "app/core/config/http.py": {
     "functions": {},
-    "loc": 18,
+    "loc": 22,
     "max_cc": 0
   },
   "app/core/config/integrations.py": {
@@ -1377,7 +1388,7 @@
       "shopify_oauth_token_url": 1,
       "unpack_dimension_key": 3
     },
-    "loc": 875,
+    "loc": 947,
     "max_cc": 5
   },
   "app/core/config/measurement.py": {
@@ -1388,6 +1399,7 @@
       "route_fixture_path": 2,
       "route_reasoning_efforts": 1
     },
+    "loc": 247,
     "max_cc": 2
   },
   "app/core/config/oauth.py": {
@@ -1403,7 +1415,7 @@
       "OpportunityRule.__init__": 1,
       "validate_rule_id": 2
     },
-    "loc": 301,
+    "loc": 377,
     "max_cc": 2
   },
   "app/core/config/product_tour.py": {
@@ -1423,7 +1435,7 @@
   },
   "app/core/config/prompts.py": {
     "functions": {},
-    "loc": 141,
+    "loc": 345,
     "max_cc": 0
   },
   "app/core/config/provider_catalog.py": {
@@ -1442,7 +1454,7 @@
       "route_policy": 2,
       "validate_availability": 5
     },
-    "loc": 161,
+    "loc": 546,
     "max_cc": 5
   },
   "app/core/config/site_health.py": {
@@ -1459,7 +1471,7 @@
       "_site_task_claim_order": 1,
       "runtime_policy_for_allowance": 2
     },
-    "loc": 1893,
+    "loc": 1931,
     "max_cc": 12
   },
   "app/core/config/suggestions.py": {
@@ -1474,7 +1486,7 @@
     "functions": {
       "PostgresQueueSpec.model": 1
     },
-    "loc": 115,
+    "loc": 126,
     "max_cc": 1
   },
   "app/core/config/traffic.py": {
@@ -1509,13 +1521,14 @@
       "unhandled_exception_handler": 2,
       "validation_error_summary": 3
     },
+    "loc": 395,
     "max_cc": 15
   },
   "app/core/http_errors.py": {
     "functions": {
       "raise_not_found": 2
     },
-    "loc": 25,
+    "loc": 31,
     "max_cc": 2
   },
   "app/core/http_security.py": {
@@ -1589,7 +1602,7 @@
   },
   "app/domain/analysis/schemas.py": {
     "functions": {},
-    "loc": 302,
+    "loc": 325,
     "max_cc": 0
   },
   "app/domain/analysis/service.py": {
@@ -1645,7 +1658,7 @@
       "load_export_bundle": 2,
       "validate_shopping_surface": 3
     },
-    "loc": 1258,
+    "loc": 1484,
     "max_cc": 15
   },
   "app/domain/analytics/__init__.py": {
@@ -1806,9 +1819,13 @@
   },
   "app/domain/attribution/snapshot.py": {
     "functions": {
+      "_accumulate_line_item_revenue": 10,
+      "_aggregate_a2_for_currency": 14,
+      "_build_delta_rows": 13,
       "_classify_source_medium": 2,
       "_currency_by_artifact_id": 6,
       "_dimension_values": 3,
+      "_has_attribution_evidence": 3,
       "_metric_money": 3,
       "_metric_row_batch": 2,
       "_metric_set": 5,
@@ -1818,13 +1835,14 @@
       "_raise_if_task_terminal": 1,
       "_ratio": 2,
       "_select_latest": 4,
+      "_source_revenue_sort_key": 4,
       "_upsert_snapshot": 1,
       "build_a1_projection": 31,
-      "build_combined_projection": 48,
+      "build_combined_projection": 11,
       "refresh_attribution_snapshot": 8
     },
-    "loc": 930,
-    "max_cc": 48
+    "loc": 956,
+    "max_cc": 31
   },
   "app/domain/audits/__init__.py": {
     "functions": {},
@@ -1845,7 +1863,7 @@
       "normalize_optional_microusd": 8,
       "normalize_optional_non_negative_int": 12
     },
-    "loc": 58,
+    "loc": 374,
     "max_cc": 12
   },
   "app/domain/audits/planner.py": {
@@ -1855,11 +1873,13 @@
       "_admission_denied": 1,
       "_admit_funded_run": 7,
       "_apply_funded_credential": 3,
+      "_attach_transient_audit_provenance": 2,
       "_complete_execution_cost_microusd": 5,
       "_compose_system_instruction": 3,
       "_create_audit_tasks": 7,
+      "_enforce_prompt_count_policy": 5,
       "_entitlement_provenance": 2,
-      "_evaluate_prompt_admission": 8,
+      "_evaluate_prompt_admission": 1,
       "_expected_costs_by_engine": 2,
       "_freeze_credential_provenance": 7,
       "_freeze_plan": 2,
@@ -1882,6 +1902,7 @@
       "_route_policy_snapshot": 1,
       "_task_funding_block": 2,
       "_task_route_snapshot": 2,
+      "_validate_prompt_bindings": 6,
       "_validate_prompt_lengths": 5,
       "_validate_trigger": 2,
       "cancel_audit": 2,
@@ -1890,7 +1911,7 @@
       "list_audits": 2,
       "list_tasks": 1
     },
-    "loc": 597,
+    "loc": 1684,
     "max_cc": 16
   },
   "app/domain/audits/schemas.py": {
@@ -1906,7 +1927,7 @@
       "frozen_retrieval_enabled": 4,
       "model_provenance_for": 2
     },
-    "loc": 119,
+    "loc": 541,
     "max_cc": 5
   },
   "app/domain/audits/state_events.py": {
@@ -1956,6 +1977,7 @@
       "_verify_subscription": 4,
       "activate_pending": 5
     },
+    "loc": 357,
     "max_cc": 8
   },
   "app/domain/billing/bootstrap.py": {
@@ -1963,7 +1985,7 @@
       "ensure_user_billing": 4,
       "user_billing_bootstrap_complete": 2
     },
-    "loc": 105,
+    "loc": 96,
     "max_cc": 4
   },
   "app/domain/billing/idempotency.py": {
@@ -1985,6 +2007,7 @@
       "request_fingerprint": 1,
       "validate_idempotency_key": 5
     },
+    "loc": 536,
     "max_cc": 5
   },
   "app/domain/billing/reconciliation.py": {
@@ -1998,6 +2021,7 @@
       "_settle_claim": 9,
       "reconcile_pending_activations": 6
     },
+    "loc": 301,
     "max_cc": 9
   },
   "app/domain/billing/schemas.py": {
@@ -2006,7 +2030,7 @@
       "UsageItemResponse._check_limit_state_nullability": 11,
       "_normalized_country": 3
     },
-    "loc": 93,
+    "loc": 440,
     "max_cc": 11
   },
   "app/domain/billing/service.py": {
@@ -2055,7 +2079,7 @@
       "schedule_addon_cancellation": 2,
       "schedule_base_cancellation": 2
     },
-    "loc": 366,
+    "loc": 1256,
     "max_cc": 10
   },
   "app/domain/billing/webhooks.py": {
@@ -2078,7 +2102,7 @@
       "process_razorpay_webhook": 10,
       "verify_razorpay_signature": 4
     },
-    "loc": 150,
+    "loc": 373,
     "max_cc": 10
   },
   "app/domain/commerce/__init__.py": {
@@ -2232,12 +2256,20 @@
   "app/domain/dashboard/service.py": {
     "functions": {
       "_latest": 1,
+      "_runs_section": 7,
       "_section": 2,
+      "_site_health_metrics": 6,
+      "_site_health_state": 7,
       "_source": 2,
-      "get_dashboard": 51
+      "_visibility_section": 6,
+      "assemble_response": 14,
+      "build_analyze_sections": 8,
+      "build_improve_sections": 10,
+      "fetch_latest_sources": 1,
+      "get_dashboard": 1
     },
-    "loc": 285,
-    "max_cc": 51
+    "loc": 367,
+    "max_cc": 14
   },
   "app/domain/entitlements/__init__.py": {
     "functions": {},
@@ -2253,6 +2285,7 @@
       "invalidate_registry": 4,
       "put_cached": 2
     },
+    "loc": 84,
     "max_cc": 4
   },
   "app/domain/entitlements/enforcement.py": {
@@ -2269,6 +2302,7 @@
       "lock_billing_account_capacity": 3,
       "lock_workspace_capacity": 2
     },
+    "loc": 447,
     "max_cc": 9
   },
   "app/domain/entitlements/grants.py": {
@@ -2281,6 +2315,7 @@
       "issue_override_bundle": 3,
       "revoke_grants": 14
     },
+    "loc": 325,
     "max_cc": 14
   },
   "app/domain/entitlements/ledger.py": {
@@ -2298,6 +2333,7 @@
       "release_unused_reservation": 3,
       "reserve_funded_task": 11
     },
+    "loc": 524,
     "max_cc": 11
   },
   "app/domain/entitlements/resolver.py": {
@@ -2315,6 +2351,7 @@
       "resolve_flag": 4,
       "resolve_level": 3
     },
+    "loc": 271,
     "max_cc": 10
   },
   "app/domain/entitlements/service.py": {
@@ -2327,7 +2364,7 @@
       "resolve_account_entitlement": 4,
       "resolve_workspace_entitlement": 2
     },
-    "loc": 119,
+    "loc": 285,
     "max_cc": 4
   },
   "app/domain/entitlements/types.py": {
@@ -2337,6 +2374,7 @@
       "ResolvedEntitlement.has_flag": 1,
       "no_capability_entitlement": 1
     },
+    "loc": 123,
     "max_cc": 3
   },
   "app/domain/integrations/__init__.py": {
@@ -2364,12 +2402,12 @@
       "list_mappings": 2,
       "property_ref_host": 2
     },
-    "loc": 241,
+    "loc": 303,
     "max_cc": 8
   },
   "app/domain/integrations/schemas.py": {
     "functions": {},
-    "loc": 123,
+    "loc": 135,
     "max_cc": 0
   },
   "app/domain/integrations/service.py": {
@@ -2389,7 +2427,7 @@
       "run_connection_test": 5,
       "start_connect": 5
     },
-    "loc": 696,
+    "loc": 744,
     "max_cc": 18
   },
   "app/domain/integrations/sync.py": {
@@ -2416,10 +2454,12 @@
       "_store_rotated_bundle": 4,
       "fresh_access_token": 7
     },
+    "loc": 118,
     "max_cc": 7
   },
   "app/domain/measurement/__init__.py": {
     "functions": {},
+    "loc": 45,
     "max_cc": 0
   },
   "app/domain/measurement/harness.py": {
@@ -2459,6 +2499,7 @@
       "summarize_route_costs": 6,
       "write_measurement_outputs": 3
     },
+    "loc": 737,
     "max_cc": 12
   },
   "app/domain/opportunities/__init__.py": {
@@ -2470,7 +2511,7 @@
     "functions": {
       "OpportunityStatusPatch._known_status": 2
     },
-    "loc": 122,
+    "loc": 129,
     "max_cc": 2
   },
   "app/domain/opportunities/service.py": {
@@ -2503,7 +2544,7 @@
       "recompute": 20,
       "update_status": 4
     },
-    "loc": 967,
+    "loc": 1197,
     "max_cc": 20
   },
   "app/domain/products/__init__.py": {
@@ -2526,7 +2567,7 @@
       "_split_list": 6,
       "parse_product_csv": 26
     },
-    "loc": 146,
+    "loc": 201,
     "max_cc": 26
   },
   "app/domain/products/schemas.py": {
@@ -2539,7 +2580,7 @@
       "competitor_product_to_response": 1,
       "product_to_response": 1
     },
-    "loc": 358,
+    "loc": 400,
     "max_cc": 4
   },
   "app/domain/products/service.py": {
@@ -2561,7 +2602,7 @@
       "update_competitor_product": 2,
       "update_product": 2
     },
-    "loc": 369,
+    "loc": 454,
     "max_cc": 17
   },
   "app/domain/products/shim.py": {
@@ -2589,7 +2630,7 @@
       "product_visibility_csv": 25,
       "select_current_snapshots": 5
     },
-    "loc": 815,
+    "loc": 818,
     "max_cc": 25
   },
   "app/domain/projects/__init__.py": {
@@ -2610,6 +2651,7 @@
       "collect_brand_evidence": 12,
       "reset_brand_evidence_cache": 1
     },
+    "loc": 221,
     "max_cc": 12
   },
   "app/domain/projects/brand_profile.py": {
@@ -2618,12 +2660,16 @@
       "get_brand_profile": 2,
       "upsert_manual_brand_profile": 8
     },
-    "loc": 128,
+    "loc": 130,
     "max_cc": 8
   },
   "app/domain/projects/brand_profile_suggestions.py": {
     "functions": {
       "BrandEvidenceUnavailableError.__init__": 1,
+      "_evidence_and_instruction_sections": 3,
+      "_get_project_with_brand": 2,
+      "_has_curated_profile_context": 7,
+      "_raise_evidence_unavailable": 2,
       "accept_brand_profile_suggestion": 13,
       "brand_profile_suggestion_to_response": 1,
       "build_brand_profile_suggestion_message": 3,
@@ -2631,7 +2677,7 @@
       "suggest_brand_profile": 4,
       "validate_brand_profile_suggest_request": 2
     },
-    "loc": 247,
+    "loc": 370,
     "max_cc": 13
   },
   "app/domain/projects/knowledge_base.py": {
@@ -2668,7 +2714,7 @@
       "normalize_intent": 4,
       "normalize_prompt_rows": 10
     },
-    "loc": 69,
+    "loc": 88,
     "max_cc": 10
   },
   "app/domain/projects/schemas.py": {
@@ -2677,7 +2723,7 @@
       "_validate_brand_profile_field": 2,
       "_validate_brand_profile_source": 2
     },
-    "loc": 317,
+    "loc": 340,
     "max_cc": 2
   },
   "app/domain/projects/service.py": {
@@ -2696,7 +2742,7 @@
       "project_to_response": 13,
       "update_project": 29
     },
-    "loc": 266,
+    "loc": 319,
     "max_cc": 29
   },
   "app/domain/projects/shim.py": {
@@ -2726,7 +2772,7 @@
       "validate_prompt_suggestion_payload": 1,
       "validate_suggestion_payload": 4
     },
-    "loc": 468,
+    "loc": 554,
     "max_cc": 15
   },
   "app/domain/prompts/__init__.py": {
@@ -2762,7 +2808,7 @@
       "parse_generation_output": 10,
       "validate_generation_request": 1
     },
-    "loc": 734,
+    "loc": 824,
     "max_cc": 17
   },
   "app/domain/prompts/locks.py": {
@@ -2798,11 +2844,12 @@
       "issue_prompt_receipt": 1,
       "verify_prompt_receipt": 2
     },
+    "loc": 58,
     "max_cc": 2
   },
   "app/domain/prompts/schemas.py": {
     "functions": {},
-    "loc": 183,
+    "loc": 202,
     "max_cc": 0
   },
   "app/domain/prompts/service.py": {
@@ -2834,7 +2881,7 @@
       "update_prompt": 10,
       "update_prompt_set": 3
     },
-    "loc": 407,
+    "loc": 787,
     "max_cc": 10
   },
   "app/domain/prompts/topical_binding.py": {
@@ -2848,9 +2895,11 @@
       "build_project_vocabulary": 7,
       "build_vocabulary": 7,
       "enforce_prompt_binding": 2,
+      "has_project_binding_context": 8,
       "load_project_vocabulary": 1,
       "validate_prompt_binding": 10
     },
+    "loc": 340,
     "max_cc": 10
   },
   "app/domain/prompts/topics.py": {
@@ -2884,6 +2933,7 @@
       "pause_connection_after_key_failure": 3,
       "resolve_execution_credentials": 5
     },
+    "loc": 325,
     "max_cc": 6
   },
   "app/domain/providers/schemas.py": {
@@ -2910,7 +2960,7 @@
       "run_connection_test": 7,
       "update_connection": 13
     },
-    "loc": 345,
+    "loc": 597,
     "max_cc": 13
   },
   "app/domain/site_health/__init__.py": {
@@ -2920,7 +2970,7 @@
   },
   "app/domain/site_health/api_schemas.py": {
     "functions": {},
-    "loc": 442,
+    "loc": 486,
     "max_cc": 0
   },
   "app/domain/site_health/discovery.py": {
@@ -2937,7 +2987,7 @@
       "build_frontier_candidates": 2,
       "extract_discovery_links": 16
     },
-    "loc": 605,
+    "loc": 650,
     "max_cc": 20
   },
   "app/domain/site_health/entitlements.py": {
@@ -2949,7 +2999,7 @@
       "runtime_allows_monitored_analysis": 3,
       "runtime_policy_is_current": 5
     },
-    "loc": 227,
+    "loc": 186,
     "max_cc": 5
   },
   "app/domain/site_health/failure.py": {
@@ -2959,6 +3009,7 @@
       "load_root_errors": 7,
       "load_root_failure_summary": 11
     },
+    "loc": 202,
     "max_cc": 11
   },
   "app/domain/site_health/inventory_scope.py": {
@@ -2996,7 +3047,7 @@
       "create_page_rerun_crawl": 6,
       "get_crawl": 2
     },
-    "loc": 610,
+    "loc": 604,
     "max_cc": 9
   },
   "app/domain/site_health/schemas.py": {
@@ -3032,7 +3083,7 @@
       "rerun_page": 9,
       "seed_monitored_targets": 9
     },
-    "loc": 1013,
+    "loc": 1024,
     "max_cc": 28
   },
   "app/domain/site_health/service/__init__.py": {
@@ -3072,7 +3123,7 @@
       "load_crawl_for_stream": 1,
       "load_events": 2
     },
-    "loc": 267,
+    "loc": 321,
     "max_cc": 7
   },
   "app/domain/site_health/service/presentation.py": {
@@ -3092,7 +3143,7 @@
       "presentation_status_for": 12,
       "project_crawl": 12
     },
-    "loc": 421,
+    "loc": 422,
     "max_cc": 24
   },
   "app/domain/site_health/service/queries.py": {
@@ -3114,7 +3165,7 @@
       "get_pages": 29,
       "list_crawls": 6
     },
-    "loc": 830,
+    "loc": 907,
     "max_cc": 29
   },
   "app/domain/site_health/snapshot.py": {
@@ -3230,7 +3281,7 @@
       "product_tour_response": 4,
       "update_product_tour": 7
     },
-    "loc": 153,
+    "loc": 166,
     "max_cc": 7
   },
   "app/main.py": {
@@ -3239,12 +3290,12 @@
       "create_app": 4,
       "lifespan": 1
     },
-    "loc": 144,
+    "loc": 173,
     "max_cc": 5
   },
   "app/models/__init__.py": {
     "functions": {},
-    "loc": 193,
+    "loc": 199,
     "max_cc": 0
   },
   "app/models/abuse.py": {
@@ -3279,14 +3330,14 @@
     "functions": {
       "_utcnow": 1
     },
-    "loc": 542,
+    "loc": 745,
     "max_cc": 1
   },
   "app/models/billing.py": {
     "functions": {
       "_utcnow": 1
     },
-    "loc": 263,
+    "loc": 542,
     "max_cc": 1
   },
   "app/models/brand.py": {
@@ -3346,14 +3397,14 @@
   },
   "app/models/provider.py": {
     "functions": {},
-    "loc": 221,
+    "loc": 258,
     "max_cc": 0
   },
   "app/models/site_health.py": {
     "functions": {
       "_utcnow": 1
     },
-    "loc": 1095,
+    "loc": 1094,
     "max_cc": 1
   },
   "app/models/traffic.py": {
@@ -3370,7 +3421,7 @@
   },
   "app/models/workspace.py": {
     "functions": {},
-    "loc": 87,
+    "loc": 110,
     "max_cc": 0
   },
   "app/orchestration/__init__.py": {
@@ -3406,7 +3457,7 @@
       "PostgresTaskQueue.succeed": 1,
       "_utcnow": 1
     },
-    "loc": 435,
+    "loc": 464,
     "max_cc": 9
   },
   "app/orchestration/provider_capacity.py": {
@@ -3432,6 +3483,7 @@
       "acquire_provider_capacity": 4,
       "release_provider_capacity": 11
     },
+    "loc": 613,
     "max_cc": 11
   },
   "app/orchestration/task_queue.py": {
@@ -3446,7 +3498,7 @@
       "TaskQueue.retry": 1,
       "TaskQueue.succeed": 1
     },
-    "loc": 104,
+    "loc": 123,
     "max_cc": 1
   },
   "app/schemas/__init__.py": {
@@ -3479,22 +3531,26 @@
       "AuditWorker.__init__": 3,
       "AuditWorker._apply_funded_ledger": 4,
       "AuditWorker._build_adapter_or_fail": 2,
+      "AuditWorker._capacity_wait_already_recorded": 1,
+      "AuditWorker._claim_for_slot": 4,
       "AuditWorker._deadline_passed": 3,
       "AuditWorker._ensure_running": 2,
       "AuditWorker._execute_one_attempt": 2,
-      "AuditWorker._execute_task": 8,
+      "AuditWorker._execute_task": 7,
       "AuditWorker._execute_with_capacity": 2,
       "AuditWorker._fail_terminal": 4,
       "AuditWorker._finalize_analysis": 6,
-      "AuditWorker._finalize_audit": 12,
+      "AuditWorker._finalize_audit": 11,
       "AuditWorker._handle_failure": 11,
       "AuditWorker._has_soon_claimable_tasks": 2,
       "AuditWorker._heartbeat_loop": 4,
       "AuditWorker._load_execution_context": 12,
       "AuditWorker._lock_owned_running_task": 7,
-      "AuditWorker._park_capacity_wait": 6,
+      "AuditWorker._park_capacity_wait": 5,
       "AuditWorker._pause_frozen_credential_on_auth_failure": 3,
+      "AuditWorker._persist_attempt_outcome": 2,
       "AuditWorker._persist_success": 6,
+      "AuditWorker._progress_counts": 4,
       "AuditWorker._recompute_opportunities": 3,
       "AuditWorker._record_attempts": 5,
       "AuditWorker._record_cost_projection": 2,
@@ -3502,13 +3558,14 @@
       "AuditWorker._release_crashed_funded_task": 2,
       "AuditWorker._release_swept_funded_tasks": 2,
       "AuditWorker._release_terminalized_funded_task": 7,
+      "AuditWorker._run_claimed": 5,
       "AuditWorker._run_provider_call": 6,
       "AuditWorker._sweep_expired_leases": 4,
       "AuditWorker._sweep_queue": 1,
       "AuditWorker._wait_out_idle_pass": 4,
       "AuditWorker.run_forever": 3,
       "AuditWorker.run_once": 5,
-      "AuditWorker.run_pipelined": 10,
+      "AuditWorker.run_pipelined": 7,
       "AuditWorker.run_until_idle": 3,
       "CallAttempt.succeeded": 1,
       "_apply_response_to_task": 1,
@@ -3518,6 +3575,7 @@
       "_build_request_snapshot": 1,
       "_capacity_outcome": 4,
       "_capacity_request": 2,
+      "_capacity_wait_payload": 3,
       "_drain_horizon_seconds": 1,
       "_frozen_connection_id_from": 3,
       "_frozen_funding_from": 5,
@@ -3532,7 +3590,7 @@
       "main": 1,
       "pace_provider_request": 5
     },
-    "loc": 1161,
+    "loc": 2067,
     "max_cc": 12
   },
   "app/workers/content_worker.py": {
@@ -3557,7 +3615,7 @@
       "DrainableWorkerMixin.run_until_idle": 3,
       "_RunsOnce.run_once": 1
     },
-    "loc": 38,
+    "loc": 48,
     "max_cc": 3
   },
   "app/workers/integration_dispatcher.py": {
@@ -3613,7 +3671,7 @@
       "_utcnow": 1,
       "main": 1
     },
-    "loc": 1191,
+    "loc": 1231,
     "max_cc": 14
   },
   "app/workers/site_health/__init__.py": {
@@ -3653,20 +3711,29 @@
   "app/workers/site_health/lifecycle.py": {
     "functions": {
       "CrawlLifecycle.__init__": 1,
+      "CrawlLifecycle._evaluate_broken_internal_links": 7,
+      "CrawlLifecycle._evaluate_hreflang_conflicts": 3,
+      "CrawlLifecycle._evaluate_sitemap_orphans": 14,
+      "CrawlLifecycle._load_latest_analyses": 1,
+      "CrawlLifecycle._persist_evaluations": 7,
       "CrawlLifecycle._persist_snapshot": 1,
       "CrawlLifecycle._recompute_opportunities": 3,
-      "CrawlLifecycle._run_crawl_finalize_pass": 50,
+      "CrawlLifecycle._run_crawl_finalize_pass": 5,
       "CrawlLifecycle._task_counts": 3,
       "CrawlLifecycle.reconcile": 36,
       "CrawlLifecycle.reconcile_stalled": 4,
       "_canonical_or_empty": 2,
       "_count_disclosure": 1,
+      "_crawl_hreflang_indexes": 6,
+      "_cross_check_hreflang_alternates": 10,
+      "_evaluate_hreflang_for_page": 3,
       "_is_crawl_finalize_rule": 2,
+      "_pass_through_hreflang_evaluation": 1,
       "_utcnow": 1,
       "crawl_root_identity": 2
     },
-    "loc": 791,
-    "max_cc": 50
+    "loc": 884,
+    "max_cc": 36
   },
   "app/workers/site_health/outcomes.py": {
     "functions": {},
@@ -3689,7 +3756,7 @@
       "AnalyzePhaseMixin._run_analyze": 9,
       "AnalyzePhaseMixin._write_page_analysis": 25
     },
-    "loc": 627,
+    "loc": 626,
     "max_cc": 25
   },
   "app/workers/site_health/phases/discover.py": {
@@ -3710,7 +3777,7 @@
       "DiscoverPhaseMixin._write_sitemap_observations": 3,
       "_classify_robots_fetch": 4
     },
-    "loc": 864,
+    "loc": 892,
     "max_cc": 19
   },
   "app/workers/site_health/phases/link_check.py": {
@@ -3723,7 +3790,7 @@
       "LinkCheckPhaseMixin._run_link_check": 10,
       "LinkCheckPhaseMixin._write_link_reference": 4
     },
-    "loc": 306,
+    "loc": 369,
     "max_cc": 12
   },
   "app/workers/site_health/phases/support.py": {
@@ -3771,7 +3838,7 @@
       "SiteHealthWorker.run_once": 6,
       "main": 1
     },
-    "loc": 773,
+    "loc": 777,
     "max_cc": 16
   }
 }

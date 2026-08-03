@@ -14,8 +14,10 @@ describe('RotatingEngineLogos', () => {
 
   // Keeping the planned logos is an approved deviation from the "no provider
   // logo without a shipped adapter" gate. These assertions ARE the replacement
-  // gate: present, labelled coming-soon, and not connectable.
-  it('does not display coming soon badges on planned providers', () => {
+  // gate: planned providers must not display a visible coming-soon marker or
+  // visible "Coming soon" text, remain disclosed in the accessible name, and
+  // are never connectable.
+  it('shows no coming soon marker on planned providers', () => {
     const { container } = render(<RotatingEngineLogos />);
 
     expect(container.querySelectorAll('[data-coming-soon]')).toHaveLength(0);

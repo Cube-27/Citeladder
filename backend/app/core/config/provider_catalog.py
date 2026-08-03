@@ -121,13 +121,10 @@ ROUTE_POLICIES: Final[dict[tuple[str, str], RoutePolicy]] = {
         representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
         batch_enabled=False,
     ),
-    # OpenAI + Google now pin reasoning OFF. Both routes moved to a cheapest
-    # tier that exposes a documented disable value — ``reasoning.effort:
-    # "none"`` on ``gpt-5.6-luna`` and ``thinkingBudget: 0`` on
-    # ``gemini-2.5-flash-lite`` — so "no supported low value exists" (the
-    # reason these were ``unverified``) no longer holds. The pin is REQUIRED,
-    # not cosmetic: sending no control lets the route default apply, and
-    # Luna's default effort is NOT none.
+    # OpenAI pins its documented ``reasoning.effort: "none"`` control. Google
+    # pins the exact ``gemini-2.5-flash-lite`` model identity; that model has
+    # thinking disabled by default, so its adapter deliberately omits a
+    # generation_config rather than sending the incompatible ``minimal`` level.
     (ENGINE_CHATGPT, TRANSPORT_OPENAI): RoutePolicy(
         reasoning_effort=REASONING_EFFORT_OFF,
         reasoning_pinnable=True,

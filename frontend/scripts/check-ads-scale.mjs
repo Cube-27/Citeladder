@@ -52,6 +52,10 @@ const OFF_LADDER_CEILING = 0;
  * skip below and the docblock on `SIZE` in the file itself.
  */
 const CONTROL_HEIGHT_OWNER = 'components/marketing/primitives/button.tsx';
+const OFF_LADDER_ALLOWLIST = new Map([
+  // Optical continuation of the discovery row's icon + gap; not a reusable spacing rung.
+  ['components/onboarding/discovery-progress.tsx', new Set(['pl-14'])],
+]);
 
 const TRACKING_PATTERN = /\btracking-(?:tight|normal|wide|wider|\[)/g;
 const ARBITRARY_TEXT_PATTERN = /\btext-\[(?!length:)/g;
@@ -81,9 +85,14 @@ function sites(file, lines, pattern) {
   return hits;
 }
 
-function countMatches(lines, pattern) {
-  pattern.lastIndex = 0;
-  return lines.reduce((total, line) => total + (line.match(pattern)?.length ?? 0), 0);
+function countOffLadderMatches(file, lines) {
+  const allowed = OFF_LADDER_ALLOWLIST.get(file) ?? new Set();
+  return lines.reduce((total, line) => {
+    OFF_LADDER_PATTERN.lastIndex = 0;
+    return (
+      total + [...line.matchAll(OFF_LADDER_PATTERN)].filter(([match]) => !allowed.has(match)).length
+    );
+  }, 0);
 }
 
 const violations = [];
@@ -119,7 +128,7 @@ for (const root of SEARCH_ROOTS) {
     // still applies here: an arbitrary TYPE value in this file is a mistake
     // like anywhere else, and exempting the whole file would hide it.
     if (file === CONTROL_HEIGHT_OWNER) continue;
-    offLadderCount += countMatches(lines, OFF_LADDER_PATTERN);
+    offLadderCount += countOffLadderMatches(file, lines);
   }
 }
 

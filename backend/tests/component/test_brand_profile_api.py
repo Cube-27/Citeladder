@@ -7,14 +7,14 @@ import uuid
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 import app.api.projects as projects_api
 import app.domain.projects.brand_profile_suggestions as brand_profile_suggestions
 from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
 from app.domain.projects.brand_evidence import BrandEvidence
-from app.models.brand import BrandProfileSuggestion
+from app.models.brand import Brand, BrandProfileSuggestion
 
 
 class FakeAgent:
@@ -415,3 +415,55 @@ async def test_suggestion_artifact_is_workspace_isolated(
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_suggestion_aborts_when_brand_is_swapped_during_agent_call(
+    client: httpx.AsyncClient,
+    fake_evidence: None,
+    db_session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A project whose brand row is replaced mid-draft must NOT persist the
+    draft under the new brand id — the evidence was read for the OLD brand."""
+    await _register(client, "profile-swap@example.com")
+    project = await _create_project(client, "SwapMe")
+
+    class _SwappingAgent:
+        model = "fake-profile-model"
+        base_url_host = "agent.test"
+        calls: list[dict[str, str]] = []
+
+        async def complete_json(self, *, system: str, user: str) -> str:
+            self.calls.append({"system": system, "user": user})
+            # Swap the brand row DURING the network call: delete the original
+            # Brand and attach a fresh row to the same project_id.
+            await db_session.execute(
+                delete(Brand).where(Brand.project_id == uuid.UUID(project["id"]))
+            )
+            db_session.add(Brand(project_id=uuid.UUID(project["id"]), name="Surprise"))
+            await db_session.commit()
+            return json.dumps(
+                {
+                    "description": "Swapped description.",
+                    "positioning": "Swapped positioning.",
+                    "products_services": ["Widget"],
+                    "target_audience": "Swapped audience.",
+                }
+            )
+
+    agent = _SwappingAgent()
+    monkeypatch.setattr(projects_api, "DefaultAgentClient", lambda: agent)
+
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/brand-profile/suggest",
+        json={"confirm_send_evidence": True},
+    )
+
+    assert response.status_code == 404
+    persisted = await db_session.execute(
+        select(BrandProfileSuggestion).where(
+            BrandProfileSuggestion.project_id == uuid.UUID(project["id"])
+        )
+    )
+    assert persisted.scalars().all() == []

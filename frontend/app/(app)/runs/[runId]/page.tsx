@@ -46,7 +46,6 @@ export default function RunDetailPage() {
   const queryClient = useQueryClient();
   const executionParam = searchParams.get('execution');
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
-  const activeExecutionId = executionParam ?? selectedExecutionId;
 
   const auditQuery = useQuery({
     queryKey: queryKeys.runs.detail(runId),
@@ -82,6 +81,11 @@ export default function RunDetailPage() {
   });
 
   const executions = executionsQuery.data ?? [];
+  // The ?execution= URL param takes priority only while it matches a real
+  // execution; a stale/unknown id must not mask an in-table selection.
+  const activeExecutionId = executions.some((execution) => execution.id === executionParam)
+    ? executionParam
+    : selectedExecutionId;
   const selectedExecution =
     executions.find((execution) => execution.id === activeExecutionId) ?? null;
 

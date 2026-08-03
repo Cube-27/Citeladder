@@ -48,6 +48,7 @@ from app.connectors.answer_engines.openai_parser import (
 from app.core.config.provider_catalog import (
     REASONING_EFFORT_OFF,
     REASONING_EFFORT_UNVERIFIED,
+    default_model,
     is_reasoning_pinned_off,
     provider_catalog_settings,
     route_policy,
@@ -210,7 +211,7 @@ async def test_gemini_adapter_executes_and_records_provenance() -> None:
     request = AnswerEngineRequest(
         prompt="running shoes",
         system_instruction="",
-        model="gemini-flash-latest",
+        model=default_model("gemini", "google"),
         timeout_seconds=5,
     )
     adapter = GeminiAnswerEngineAdapter(
@@ -232,7 +233,7 @@ async def test_gemini_adapter_maps_http_error() -> None:
             AnswerEngineRequest(
                 prompt="x",
                 system_instruction="",
-                model="gemini-flash-latest",
+                model=default_model("gemini", "google"),
                 timeout_seconds=5,
             )
         )
@@ -829,7 +830,13 @@ def test_openai_payload_pins_reasoning_off() -> None:
     policy = route_policy("chatgpt", "openai")
     assert policy.reasoning_effort == REASONING_EFFORT_OFF
     payload = openai_payload(
-        _request(reasoning_effort=policy.reasoning_effort), country_code=""
+        # Pass the approved ChatGPT route model explicitly rather than relying
+        # on the _request default, so the test mirrors the real route identity.
+        _request(
+            model=default_model("chatgpt", "openai"),
+            reasoning_effort=policy.reasoning_effort,
+        ),
+        country_code="",
     )
     assert payload["reasoning"] == {"effort": "none"}
 
@@ -884,7 +891,7 @@ def test_anthropic_payload_disables_thinking_when_pinned_off() -> None:
 def test_gemini_payload_omits_grounding_tools_for_pulse() -> None:
     payload = gemini_payload(
         _request(
-            model="gemini-flash-latest",
+            model=default_model("gemini", "google"),
             retrieval_enabled=False,
             max_output_tokens=600,
         )
@@ -896,7 +903,7 @@ def test_gemini_payload_omits_grounding_tools_for_pulse() -> None:
 def test_gemini_payload_includes_grounding_tools_for_benchmark() -> None:
     payload = gemini_payload(
         _request(
-            model="gemini-flash-latest",
+            model=default_model("gemini", "google"),
             retrieval_enabled=True,
             max_output_tokens=4096,
         )
@@ -910,21 +917,58 @@ def test_gemini_payload_pins_thinking_off() -> None:
     assert policy.reasoning_effort == REASONING_EFFORT_OFF
     payload = gemini_payload(
         _request(
-            model="gemini-2.5-flash-lite", reasoning_effort=policy.reasoning_effort
+            model=default_model("gemini", "google"),
+            reasoning_effort=policy.reasoning_effort,
         )
     )
-    assert payload["thinking_config"] == {"thinking_budget": 0}
+    assert payload["model"] == "gemini-2.5-flash-lite"
+    assert "generation_config" not in payload
+    assert "thinking_config" not in payload
 
 
 def test_gemini_payload_sends_no_thinking_control_when_unpinned() -> None:
     payload = gemini_payload(
         _request(
-            model="gemini-2.5-flash-lite",
+            model=default_model("gemini", "google"),
             reasoning_effort=REASONING_EFFORT_UNVERIFIED,
         )
     )
-    assert "thinking" not in payload
+    assert "generation_config" not in payload
     assert "thinking_config" not in payload
+
+
+async def test_gemini_wire_request_uses_exact_model_without_thinking_config() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode())
+        captured["body"] = body
+        if (
+            body.get("model") != "gemini-2.5-flash-lite"
+            or "generation_config" in body
+            or "thinking_config" in body
+        ):
+            return httpx.Response(400, json={"error": {"status": "INVALID_ARGUMENT"}})
+        return httpx.Response(200, json=_GEMINI_GROUNDED)
+
+    policy = route_policy("gemini", "google")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        adapter = GeminiAnswerEngineAdapter(
+            api_key="secret-google-key",
+            client=client,
+        )
+        await adapter.execute(
+            _request(
+                model=default_model("gemini", "google"),
+                reasoning_effort=policy.reasoning_effort,
+                timeout_seconds=30,
+            )
+        )
+    body = captured["body"]
+    assert isinstance(body, dict)
+    assert body["model"] == "gemini-2.5-flash-lite"
+    assert "generation_config" not in body
+    assert "thinking_config" not in body
 
 
 async def test_openai_adapter_sends_the_frozen_cap_and_no_tools_for_pulse() -> None:

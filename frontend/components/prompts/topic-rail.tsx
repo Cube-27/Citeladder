@@ -83,7 +83,7 @@ export function TopicRail({
 
   return (
     <>
-      {/* Desktop rail: contained bordered surface that clips its own content
+      {/* Desktop rail: raised shadow-card surface that clips its own content
           so nothing from the right pane can overlap it. */}
       <nav
         aria-label="Topics"

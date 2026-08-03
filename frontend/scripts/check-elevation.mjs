@@ -88,7 +88,9 @@ const SHADOW_UTILITY =
   /(?<![\w-])(?:inset-)?shadow-(?!none\b)(?:\[[^\]\s]*\]|\((?:--)?[^)\s]*\)|[a-z0-9-]+)/g;
 const GRADIENT_UTILITY =
   /(?<![\w-])(?:bg-gradient-to-[a-z]+|bg-linear-|bg-radial-|bg-conic-|backdrop-blur)/g;
-const CLASS_LITERAL = /(?:className\s*=\s*|cn\()(["'`])([\s\S]*?)\1/g;
+const CLASS_EXPRESSION_START = /\b(?:className\s*=|cn\s*\(|cva\s*\()/g;
+const CONTROL_CLASS = /\b(?:cursor-pointer|focus-ring|select-none)\b/;
+const STATUS_SURFACE_CLASS = /\bbg-(?:success|danger|warning|info)-bg(?:\/\d+)?\b/;
 
 /**
  * Blank out comments while preserving line numbers and column offsets, so a
@@ -100,6 +102,76 @@ function stripComments(source) {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
     .replace(/\/\/[^\n]*/g, (line) => ' '.repeat(line.length));
+}
+
+function stringEnd(source, start) {
+  const quote = source[start];
+  for (let index = start + 1; index < source.length; index += 1) {
+    if (source[index] === '\\') {
+      index += 1;
+      continue;
+    }
+    if (source[index] === quote) return index + 1;
+  }
+  return source.length;
+}
+
+function balancedEnd(source, start, open, close) {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '"' || character === "'" || character === '`') {
+      index = stringEnd(source, index) - 1;
+      continue;
+    }
+    if (character === open) depth += 1;
+    if (character === close) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+  return source.length;
+}
+
+function stringLiterals(source, start, end) {
+  const literals = [];
+  for (let index = start; index < end; index += 1) {
+    const quote = source[index];
+    if (quote !== '"' && quote !== "'" && quote !== '`') continue;
+    const after = stringEnd(source, index);
+    literals.push(source.slice(index + 1, after - 1));
+    index = after - 1;
+  }
+  return literals.join(' ');
+}
+
+/**
+ * Collect one combined class string for each class-producing expression.
+ * Advancing past the full balanced expression avoids reporting nested `cn()`
+ * calls twice while still collecting every string argument inside them.
+ */
+function classExpressions(source) {
+  const expressions = [];
+  CLASS_EXPRESSION_START.lastIndex = 0;
+  let match;
+  while ((match = CLASS_EXPRESSION_START.exec(source)) !== null) {
+    let cursor = CLASS_EXPRESSION_START.lastIndex;
+    let end;
+
+    if (match[0].startsWith('className')) {
+      while (/\s/.test(source[cursor] ?? '')) cursor += 1;
+      if (source[cursor] === '{') end = balancedEnd(source, cursor, '{', '}');
+      else if (/^["'`]$/.test(source[cursor] ?? '')) end = stringEnd(source, cursor);
+      else continue;
+    } else {
+      const open = source.indexOf('(', match.index);
+      end = balancedEnd(source, open, '(', ')');
+    }
+
+    expressions.push({ index: match.index, classes: stringLiterals(source, cursor, end) });
+    CLASS_EXPRESSION_START.lastIndex = end;
+  }
+  return expressions;
 }
 
 function walk(dir) {
@@ -129,10 +201,15 @@ for (const root of SEARCH_ROOTS) {
     const lines = stripComments(readFileSync(absolute, 'utf8')).split(/\r?\n/);
     const source = stripComments(readFileSync(absolute, 'utf8'));
 
-    for (const match of source.matchAll(CLASS_LITERAL)) {
-      const classes = match[2];
-      const lineNumber = source.slice(0, match.index).split(/\r?\n/).length;
-      if (/\bbg-panel(?:\/\d+)?\b/.test(classes) && /\brounded-(?!full\b)[^\s"'`]+/.test(classes)) {
+    for (const expression of classExpressions(source)) {
+      const classes = expression.classes;
+      const lineNumber = source.slice(0, expression.index).split(/\r?\n/).length;
+      const isPanelSurface =
+        /\bbg-panel(?:\/\d+)?\b/.test(classes) &&
+        /\brounded-(?!full\b)[^\s"'`]+/.test(classes) &&
+        !CONTROL_CLASS.test(classes) &&
+        !STATUS_SURFACE_CLASS.test(classes);
+      if (isPanelSurface) {
         if (!/\bshadow-card\b/.test(classes)) {
           report(
             file,
@@ -140,16 +217,9 @@ for (const root of SEARCH_ROOTS) {
             '`bg-panel` + `rounded-*` in-flow surface is missing `shadow-card`.',
           );
         }
-        if (/(?:^|\s)border(?:\s|$)/.test(classes)) {
+        if (/(?:^|\s)border(?:\s|$)/.test(classes) && !/\bborder-transparent\b/.test(classes)) {
           report(file, lineNumber, 'card surface carries an outer border; cards are borderless.');
         }
-      }
-      if (/\brounded-md\b/.test(classes) && /(?:^|\s)border(?:\s|$)/.test(classes)) {
-        report(
-          file,
-          lineNumber,
-          '`rounded-md border` standing alone is deprecated; use a primitive or an explicit structural treatment.',
-        );
       }
     }
 

@@ -112,6 +112,7 @@ def collect() -> dict[str, dict]:
             rel = path.relative_to(BACKEND).as_posix()
             functions = measure(path)
             out[rel] = {
+                "loc": len(path.read_text(encoding="utf-8").splitlines()),
                 "max_cc": max(functions.values(), default=0),
                 # Per-FUNCTION budgets, keyed by qualified name. The module max
                 # alone let one function's improvement pay for another's
@@ -192,17 +193,6 @@ def main() -> int:
     current = collect()
 
     if args.update:
-        previous = (
-            json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
-            if BASELINE_PATH.exists()
-            else {}
-        )
-        # Keep legacy LOC fields readable without measuring or enforcing them.
-        # This avoids a noisy baseline migration while making future updates
-        # complexity-only for every current module.
-        for rel, entry in current.items():
-            if "loc" in previous.get(rel, {}):
-                entry["loc"] = previous[rel]["loc"]
         BASELINE_PATH.write_text(
             json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )

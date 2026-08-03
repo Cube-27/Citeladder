@@ -667,7 +667,14 @@ def test_a2_product_rows_tie_break_by_ai_source() -> None:
             occurred_at=datetime(2026, 7, 20, index, tzinfo=UTC),
             currency="USD",
             total_amount=Decimal("10.00"),
-            line_items=[{"sku": "SKU-1", "quantity": 1, "unit_price": "10.00"}],
+            line_items=[
+                {"sku": "SKU-1", "quantity": 1, "unit_price": "10.00"},
+                {
+                    "sku": f"SKU-NON-FINITE-{index}",
+                    "quantity": 1,
+                    "unit_price": "nan" if index == 1 else "inf",
+                },
+            ],
             attribution_keys={"referrer_url": f"https://{ai_source}.example"},
             source_artifact_id=artifact_id,
         )
@@ -702,3 +709,6 @@ def test_a2_product_rows_tie_break_by_ai_source() -> None:
         row["ai_source"]
         for row in projection.metrics["deterministic"]["a2"][0]["by_product"]
     ] == [AI_SOURCE_CHATGPT, AI_SOURCE_PERPLEXITY]
+    assert {
+        row["sku"] for row in projection.metrics["deterministic"]["a2"][0]["by_product"]
+    } == {"SKU-1"}

@@ -35,13 +35,10 @@ describe('DiscoveryProgress', () => {
   });
 
   it('labels an unconfigured agent clearly and does not offer a futile retry', () => {
-    const error = new ApiError(
-      'No default agent is configured.',
-      503,
-      '',
-      'req-onboarding-2',
-      { code: 'agent_not_configured', retryable: false },
-    );
+    const error = new ApiError('No default agent is configured.', 503, '', 'req-onboarding-2', {
+      code: 'agent_not_configured',
+      retryable: false,
+    });
 
     render(<DiscoveryProgress state={stateWithDomainError(error, true)} onRetry={vi.fn()} />);
 

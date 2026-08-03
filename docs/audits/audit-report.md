@@ -2,12 +2,27 @@
 
 **Date:** 2026-08-02 · **Branch:** `design/framer-design-system`
 **Scope:** `backend/app/**`, `frontend/{app,components,lib}/**`
+**Status:** ✅ Complete — all nine action items below were implemented and verified.
 
-This report lists only actionable cleanup items, ranked by impact. Each item includes the exact file, what to change, and why it matters.
+> Historical audit snapshot. The file excerpts, line numbers, and "Recommended
+> order"/effort sections below are preserved verbatim from the audit date and
+> are stale — code has since moved. Read them as the record of what was found,
+> not as open work. No items remain outstanding.
 
 ---
 
 ## Action items
+
+**Resolution (verified against current code):** 1 ✅ `normalize_url` deleted ·
+2 ✅ `build_combined_projection` split into `_aggregate_a2_for_currency` /
+`_build_delta_rows` / `_has_attribution_evidence` · 3 ✅ `_run_crawl_finalize_pass`
+split into the five named passes · 4 ✅ marketing `card.tsx` + `IconButton`
+removed · 5 ✅ consolidated into `components/traffic/metric-table.tsx`
+(`MetricTable`) · 6 ✅ shared `components/auth/auth-form.tsx` · 7 ✅
+`product-window.tsx` uses `FrameView`/`FrameCard` · 8 ✅ roster label hoisted to
+module `ENGINE_ROSTER_LABEL` · 9 ✅ `get_dashboard` split into
+`fetch_latest_sources` / `build_analyze_sections` / `build_improve_sections` /
+`assemble_response`.
 
 ### 1. Remove a dead utility function — XS
 **File:** `backend/app/analysis/normalization.py:68`

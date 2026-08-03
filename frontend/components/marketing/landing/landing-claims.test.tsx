@@ -77,7 +77,7 @@ describe('Landing claims', () => {
     expect(text).not.toMatch(/Start free|Free plan|no card/i);
   });
 
-  it('does not display coming soon badges on planned providers', () => {
+  it('displays no coming soon markers anywhere on the page', () => {
     const { container } = render(<Page />);
 
     expect(container.querySelectorAll('[data-coming-soon]')).toHaveLength(0);

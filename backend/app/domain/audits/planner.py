@@ -20,7 +20,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -601,7 +601,17 @@ def _evaluate_prompt_admission(
     trigger: str,
     credential_mode: str,
 ) -> None:
-    """Precompute topical-binding and selected-prompt count admission."""
+    """Precompute topical-binding and selected-prompt count admission.
+
+    Topical binding (``_validate_prompt_bindings``) is required for every
+    selected active prompt EXCEPT ``PROMPT_ORIGIN_GENERATED`` prompts, which are
+    admitted on verified persisted provenance instead: their writers either
+    verify the backend's HMAC generation receipt or ground and filter model
+    output before insert, so re-running the lexical-overlap gate would reject
+    valid brand-neutral synonyms. All other origins run the lexical binding
+    check. The selected active-prompt count policy is unchanged for all
+    origins.
+    """
     _validate_prompt_bindings(project, prompts)
     _enforce_prompt_count_policy(
         prompts, trigger=trigger, credential_mode=credential_mode
@@ -1551,12 +1561,25 @@ async def list_tasks(
         .order_by(AuditTask.randomized_position.asc())
     )
     tasks = list((await session.scalars(stmt)).all())
-    # Transient scalar fallbacks used by the response schema. They are copied
-    # from the already-loaded audit and never trigger relationship lazy loads.
-    for task in tasks:
-        task.audit_measurement_mode = audit.measurement_mode
-        task.audit_configuration = audit.configuration
+    _attach_transient_audit_provenance(tasks, audit)
     return tasks
+
+
+def _attach_transient_audit_provenance(
+    tasks: list[AuditTask],
+    audit: Audit,
+) -> None:
+    """Attach the audit's mode/configuration to each task as duck attributes.
+
+    The response schema reads these via ``getattr`` (schemas.py). They are
+    copied from the already-loaded audit, never trigger relationship lazy
+    loads, and exist only for the lifetime of the request — nothing else uses
+    them, so they intentionally live off the typed ORM surface.
+    """
+    for task in tasks:
+        row = cast(Any, task)  # widen so ruff+SIM prefer the direct form
+        row.audit_measurement_mode = audit.measurement_mode
+        row.audit_configuration = audit.configuration
 
 
 async def _release_funded_on_cancel(

@@ -153,22 +153,41 @@ async def fetch_latest_sources(
     )
 
 
-def build_analyze_sections(inputs: DashboardInputs) -> list[DashboardSection]:
+def _visibility_section(inputs: DashboardInputs) -> DashboardSection:
     metric = inputs.metric
-    audit = inputs.audit
-    audit_running = audit is not None and audit.status not in AUDIT_TERMINAL_STATUSES
     visibility_metrics = dict(metric.metrics or {}) if metric else {}
     visibility_metrics["visibility_score"] = metric.visibility_score if metric else None
     visibility_metrics["completed_answers"] = metric.total_completed if metric else None
+    return _section(
+        "visibility",
+        "Visibility",
+        "/visibility",
+        "ready" if metric else "empty",
+        visibility_metrics,
+        _source(metric, "metric_snapshot"),
+    )
+
+
+def _runs_section(inputs: DashboardInputs) -> DashboardSection:
+    audit = inputs.audit
+    audit_running = audit is not None and audit.status not in AUDIT_TERMINAL_STATUSES
+    return _section(
+        "runs",
+        "Runs",
+        "/runs",
+        "running" if audit_running else ("ready" if audit else "empty"),
+        {
+            "status": audit.status if audit else None,
+            "completed": audit.completed_count if audit else None,
+            "requested": audit.requested_count if audit else None,
+        },
+        _source(audit, "audit"),
+    )
+
+
+def build_analyze_sections(inputs: DashboardInputs) -> list[DashboardSection]:
     return [
-        _section(
-            "visibility",
-            "Visibility",
-            "/visibility",
-            "ready" if metric else "empty",
-            visibility_metrics,
-            _source(metric, "metric_snapshot"),
-        ),
+        _visibility_section(inputs),
         _section(
             "answers",
             "Answers",
@@ -200,40 +219,39 @@ def build_analyze_sections(inputs: DashboardInputs) -> list[DashboardSection]:
             inputs.commerce.metrics if inputs.commerce else {},
             _source(inputs.commerce, "product_metric_snapshot"),
         ),
-        _section(
-            "runs",
-            "Runs",
-            "/runs",
-            "running" if audit_running else ("ready" if audit else "empty"),
-            {
-                "status": audit.status if audit else None,
-                "completed": audit.completed_count if audit else None,
-                "requested": audit.requested_count if audit else None,
-            },
-            _source(audit, "audit"),
-        ),
+        _runs_section(inputs),
     ]
 
 
-def build_improve_sections(
-    inputs: DashboardInputs, *, active_work: list[str]
-) -> list[DashboardSection]:
-    crawl, health, content = inputs.crawl, inputs.health, inputs.content
+def _site_health_state(inputs: DashboardInputs) -> str:
+    crawl, health = inputs.crawl, inputs.health
     crawl_running = (
         crawl is not None and crawl.completed_at is None and crawl.status != "failed"
     )
-    site_health_state = "running" if crawl_running else "not_setup"
-    if not crawl_running and crawl and crawl.status == "failed":
-        site_health_state = "failed"
-    elif not crawl_running and health:
-        site_health_state = "ready"
-    health_metrics = {
+    if crawl_running:
+        return "running"
+    if crawl and crawl.status == "failed":
+        return "failed"
+    if health:
+        return "ready"
+    return "not_setup"
+
+
+def _site_health_metrics(inputs: DashboardInputs) -> dict:
+    crawl, health = inputs.crawl, inputs.health
+    return {
         "overall_score": health.overall_score if health else None,
         "technical_score": health.technical_score if health else None,
         "aeo_score": health.aeo_score if health else None,
         "issues": health.issue_count if health else None,
         "analyzed_urls": crawl.analyzed_url_count if crawl else None,
     }
+
+
+def build_improve_sections(
+    inputs: DashboardInputs, *, active_work: list[str]
+) -> list[DashboardSection]:
+    crawl, health, content = inputs.crawl, inputs.health, inputs.content
     return [
         _section(
             "content",
@@ -249,8 +267,8 @@ def build_improve_sections(
             "site_health",
             "Site Health",
             "/site-health",
-            site_health_state,
-            health_metrics,
+            _site_health_state(inputs),
+            _site_health_metrics(inputs),
             _source(
                 health or crawl, "site_health_snapshot" if health else "site_crawl"
             ),

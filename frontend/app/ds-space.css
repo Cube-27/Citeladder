@@ -29,6 +29,11 @@
   --radius-xl: var(--ds-radius-xlarge);
   --radius-2xl: var(--ds-radius-xlarge);
   --radius-full: var(--ds-radius-full);
+
+  /* Component geometry that is not part of the ADS spacing ladder. */
+  --spacing-dialog-scroll: 60vh;
+  --spacing-score-ring: 72px;
+  --container-tooltip: min(20rem, calc(100vw - var(--space-300)));
 }
 
 :root {

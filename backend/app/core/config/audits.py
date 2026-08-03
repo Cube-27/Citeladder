@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final, TypeGuard
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -527,6 +527,53 @@ def max_run_seconds_from_configuration(configuration: dict | None) -> float:
     return float(frozen)
 
 
+def _is_frozen_policy(value: object) -> TypeGuard[dict[str, Any]]:
+    """Whether ``value`` is a fully-shaped frozen measurement policy dict."""
+    if not isinstance(value, dict):
+        return False
+    required = {
+        "retrieval_enabled",
+        "max_output_tokens",
+        "timeout_seconds",
+        "repetitions",
+        "answer_instruction",
+    }
+    if not required.issubset(value):
+        return False
+    retrieval = value["retrieval_enabled"]
+    max_output_tokens = value["max_output_tokens"]
+    timeout_seconds = value["timeout_seconds"]
+    repetitions = value["repetitions"]
+    answer_instruction = value["answer_instruction"]
+    return (
+        isinstance(retrieval, bool)
+        and isinstance(max_output_tokens, int)
+        and not isinstance(max_output_tokens, bool)
+        and max_output_tokens > 0
+        and _is_finite_positive_number(timeout_seconds)
+        and isinstance(repetitions, int)
+        and not isinstance(repetitions, bool)
+        and repetitions > 0
+        and isinstance(answer_instruction, str)
+    )
+
+
+def _is_finite_positive_number(value: object) -> bool:
+    """Whether ``value`` is a finite positive int/float.
+
+    An arbitrary-precision int larger than ~128 bits raises ``OverflowError``
+    when converted to float by ``isfinite``; treat that as NOT finite so the
+    caller falls back to the mode default rather than crashing on a poisoned
+    frozen blob read back out of the DB.
+    """
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return False
+    try:
+        return isfinite(value) and value > 0
+    except OverflowError:
+        return False
+
+
 def measurement_policy_from_configuration(
     configuration: dict,
 ) -> MeasurementModePolicy:
@@ -538,34 +585,8 @@ def measurement_policy_from_configuration(
     audit planned from T3 onward returns exactly what the planner froze.
     """
     frozen = configuration.get(MEASUREMENT_POLICY_KEY)
-    required_fields = {
-        "retrieval_enabled",
-        "max_output_tokens",
-        "timeout_seconds",
-        "repetitions",
-        "answer_instruction",
-    }
-    compatible = (
-        isinstance(frozen, dict)
-        and required_fields.issubset(frozen)
-        and isinstance(frozen.get("retrieval_enabled"), bool)
-        and isinstance(frozen.get("max_output_tokens"), int)
-        and not isinstance(frozen.get("max_output_tokens"), bool)
-        and frozen["max_output_tokens"] > 0
-        and isinstance(frozen.get("timeout_seconds"), int | float)
-        and not isinstance(frozen.get("timeout_seconds"), bool)
-        and isfinite(frozen["timeout_seconds"])
-        and frozen["timeout_seconds"] > 0
-        and isinstance(frozen.get("repetitions"), int)
-        and not isinstance(frozen.get("repetitions"), bool)
-        and frozen["repetitions"] > 0
-        and isinstance(frozen.get("answer_instruction"), str)
-    )
-    if not compatible:
-        mode = str(configuration.get("measurement_mode") or MEASUREMENT_MODE_BENCHMARK)
-        if mode not in MEASUREMENT_MODES:
-            mode = MEASUREMENT_MODE_BENCHMARK
-        return measurement_policy_for_mode(mode)
+    if not _is_frozen_policy(frozen):
+        return _mode_fallback_policy(configuration)
     return MeasurementModePolicy(
         retrieval_enabled=bool(frozen["retrieval_enabled"]),
         max_output_tokens=int(frozen["max_output_tokens"]),
@@ -573,6 +594,14 @@ def measurement_policy_from_configuration(
         repetitions=int(frozen["repetitions"]),
         answer_instruction=str(frozen["answer_instruction"]),
     )
+
+
+def _mode_fallback_policy(configuration: dict) -> MeasurementModePolicy:
+    """Return the benchmark-mode default, resolved through the frozen mode."""
+    mode = str(configuration.get("measurement_mode") or MEASUREMENT_MODE_BENCHMARK)
+    if mode not in MEASUREMENT_MODES:
+        mode = MEASUREMENT_MODE_BENCHMARK
+    return measurement_policy_for_mode(mode)
 
 
 def _audit_model() -> type[AuditTask]:

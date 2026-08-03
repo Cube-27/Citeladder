@@ -68,6 +68,7 @@
 # transaction, so a cancelled run leaves no partial projection behind.
 from __future__ import annotations
 
+import math
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -461,6 +462,37 @@ def _has_attribution_evidence(order: OrderFact) -> bool:
     return any(keys.get(key) for key in ("referrer_url", "utm_source", "utm_medium"))
 
 
+def _accumulate_line_item_revenue(
+    product_groups: dict[tuple[str | None, str, str], dict[str, Any]],
+    order: OrderFact,
+    ai_source: str,
+) -> None:
+    """Roll one order's line items into ``product_groups`` for ``ai_source``.
+
+    Skips non-mapping or unpriceable items silently — partial data must not
+    poison the projection. Validation happens BEFORE the group is touched so a
+    bad item cannot leave a phantom ``orders`` entry behind.
+    """
+    for item in order.line_items or []:
+        if not isinstance(item, Mapping):
+            continue
+        sku = str(item.get("sku") or "")
+        product_id = item.get("product_id")
+        try:
+            price = float(item.get("unit_price") or 0)
+            quantity = int(item.get("quantity") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(price):
+            continue
+        group = product_groups.setdefault(
+            (str(product_id) if product_id else None, sku, ai_source),
+            {"orders": set(), "revenue": 0.0},
+        )
+        group["orders"].add(order.id)
+        group["revenue"] += price * quantity
+
+
 def _aggregate_a2_for_currency(
     currency: str,
     currency_orders: Sequence[OrderFact],
@@ -507,22 +539,7 @@ def _aggregate_a2_for_currency(
         )
         source_group["orders"] += 1
         source_group["revenue"] += float(link.revenue_amount)
-        for item in order.line_items or []:
-            if not isinstance(item, Mapping):
-                continue
-            sku = str(item.get("sku") or "")
-            product_id = item.get("product_id")
-            group = product_groups.setdefault(
-                (str(product_id) if product_id else None, sku, ai_source),
-                {"orders": set(), "revenue": 0.0},
-            )
-            group["orders"].add(order.id)
-            try:
-                group["revenue"] += float(item.get("unit_price") or 0) * int(
-                    item.get("quantity") or 0
-                )
-            except (TypeError, ValueError):
-                continue
+        _accumulate_line_item_revenue(product_groups, order, ai_source)
 
     by_ai_source = [
         {

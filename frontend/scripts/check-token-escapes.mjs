@@ -29,7 +29,8 @@ const SEARCH_ROOTS = ['app', 'components', 'lib'];
 const TOKEN_ESCAPE_PATTERN = /\b(?:bg|text|border|shadow|ring|fill|stroke)-(?:\[var\(--|\(--)/;
 const RAW_HEX_PATTERN = /#[0-9a-fA-F]{3,8}\b/;
 const RAW_NEUTRAL_PATTERN = /\b(?:bg|text)-(?:white|black)\b/g;
-const ARBITRARY_SIZE_PATTERN = /\b(?:w|h|size|min-w|max-w|min-h|max-h)-\[[0-9]+(?:px|vh|vw|rem)\]/g;
+const ARBITRARY_SIZE_PATTERN =
+  /\b(?:w|h|size|min-w|max-w|min-h|max-h)-\[[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|vh|vw|rem)\]/g;
 const PRODUCT_EXCLUDES = ['app/(marketing)/', 'components/marketing/'];
 
 /** Tailwind's built-in palette ramps — banned in favour of semantic tokens. */

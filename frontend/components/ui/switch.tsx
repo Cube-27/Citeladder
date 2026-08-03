@@ -41,7 +41,7 @@ export function Switch({
       className={cn(
         'focus-ring border-border inline-flex h-6 w-12 shrink-0 items-center rounded-full border',
         'transition-colors duration-100 ease-in-out disabled:cursor-not-allowed disabled:opacity-60',
-        // Checked takes the accent gradient — the same fill every primary
+        // Checked takes the accent fill — the same fill every primary
         // action carries, so "on" reads as the active state everywhere.
         checked ? 'bg-accent border-transparent' : 'bg-alt',
         className,

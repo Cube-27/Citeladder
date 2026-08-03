@@ -35,7 +35,8 @@ from app.domain.projects.schemas import (
     BrandProfileSuggestionResponse,
 )
 from app.domain.projects.service import get_project
-from app.models.brand import BrandProfile, BrandProfileSuggestion
+from app.models.brand import Brand, BrandProfile, BrandProfileSuggestion
+from app.models.project import Project
 
 
 class BrandProfileSuggestionValidationError(ValueError):
@@ -124,39 +125,49 @@ def build_brand_profile_suggestion_message(
     I/O outside the async greenlet context.
     """
     if not evidence.pages and not _has_curated_profile_context(knowledge):
-        raise BrandEvidenceUnavailableError(
-            BRAND_EVIDENCE_FAILURE_MESSAGES.get(
-                evidence.failure_reason,
-                BRAND_EVIDENCE_FAILURE_MESSAGES["website_unreachable"],
-            ),
-            reason=evidence.failure_reason or "website_unreachable",
-        )
+        _raise_evidence_unavailable(evidence)
     sections = [serialize_brand_knowledge_context(knowledge)]
+    sections.extend(_evidence_and_instruction_sections(evidence))
+    return "\n".join(sections)
+
+
+def _evidence_and_instruction_sections(evidence: BrandEvidence) -> list[str]:
+    """Serialize the evidence block and the closing instruction stanza."""
     if evidence.pages:
-        sections.append(evidence.serialize())
+        evidence_block = evidence.serialize()
         allowed_sources = "the curated profile and <brand_website_evidence>"
     else:
+        evidence_block = None
         allowed_sources = "the human-curated fields in <brand_knowledge_base>"
-    sections.append(
+    instruction = (
         "Draft the four requested profile fields for human review, using ONLY "
         f"{allowed_sources} above. Leave any field empty that those sources "
         "do not support."
     )
-    return "\n".join(sections)
+    return ([evidence_block] if evidence_block else []) + [instruction]
+
+
+def _raise_evidence_unavailable(evidence: BrandEvidence) -> None:
+    """Raise the typed evidence-unavailable error with its mapped message."""
+    raise BrandEvidenceUnavailableError(
+        BRAND_EVIDENCE_FAILURE_MESSAGES.get(
+            evidence.failure_reason,
+            BRAND_EVIDENCE_FAILURE_MESSAGES["website_unreachable"],
+        ),
+        reason=evidence.failure_reason or "website_unreachable",
+    )
 
 
 def _has_curated_profile_context(knowledge: dict[str, object]) -> bool:
     """Whether persisted human-authored fields can safely ground a draft."""
+    products_services = knowledge.get("products_services", [])
+    items = products_services if isinstance(products_services, list) else []
     return any(
         (
             str(knowledge.get("description") or "").strip(),
             str(knowledge.get("positioning") or "").strip(),
             str(knowledge.get("target_audience") or "").strip(),
-            any(
-                str(item).strip()
-                for item in knowledge.get("products_services", [])
-                if isinstance(item, str)
-            ),
+            any(str(item).strip() for item in items if isinstance(item, str)),
         )
     )
 
@@ -176,6 +187,23 @@ def brand_profile_suggestion_to_response(
     )
 
 
+async def _get_project_with_brand(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> tuple[Project, Brand]:
+    """Authorize + load the project, requiring an attached brand.
+
+    Returns the (project, brand) pair because downstream code reads both and
+    mypy cannot narrow ``project.brand`` past the helper call.
+    """
+    project = await get_project(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    brand = project.brand
+    if brand is None:
+        raise BrandProfileNotFoundError("Project brand not found")
+    return project, brand
+
+
 async def suggest_brand_profile(
     session: AsyncSession,
     *,
@@ -184,11 +212,10 @@ async def suggest_brand_profile(
     agent: DefaultAgentClient,
 ) -> BrandProfileSuggestion:
     """Call the default agent, then persist its immutable review artifact."""
-    project = await get_project(
+    project, original_brand = await _get_project_with_brand(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    if project.brand is None:
-        raise BrandProfileNotFoundError("Project brand not found")
+    original_brand_id = original_brand.id
     input_snapshot = build_brand_knowledge_data(project)
     website_url = project.website_url
 
@@ -201,14 +228,7 @@ async def suggest_brand_profile(
     # exactly the fabrication path this gate exists to close.
     evidence = await collect_brand_evidence(website_url)
     if not evidence.is_sufficient and not _has_curated_profile_context(input_snapshot):
-        raise BrandEvidenceUnavailableError(
-            BRAND_EVIDENCE_FAILURE_MESSAGES.get(
-                evidence.failure_reason,
-                "Could not read enough content from this brand's website to "
-                "draft a profile. Fill the profile in manually instead.",
-            ),
-            reason=evidence.failure_reason,
-        )
+        _raise_evidence_unavailable(evidence)
     user_message = build_brand_profile_suggestion_message(input_snapshot, evidence)
     # Record provenance AFTER building the message so the evidence block the
     # agent saw is exactly the curated knowledge, not the provenance stanza.
@@ -227,17 +247,22 @@ async def suggest_brand_profile(
     )
     draft = parse_brand_profile_draft(raw)
 
-    # Re-authorize after the network boundary. The project may have been
-    # deleted or moved out of scope while the provider call was in flight.
-    project = await get_project(
+    # Re-authorize after the network boundary, AND verify the brand identity
+    # is the same one the snapshot was built from. The project may have been
+    # deleted or re-pointed at a different brand while the provider call was
+    # in flight; persisting under the new brand id would attach the OLD
+    # brand's evidence-derived draft to the wrong record.
+    project, brand = await _get_project_with_brand(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    if project.brand is None:
-        raise BrandProfileNotFoundError("Project brand not found")
+    if brand.id != original_brand_id:
+        raise BrandProfileNotFoundError(
+            "Project brand changed during profile draft; aborting."
+        )
     suggestion = BrandProfileSuggestion(
         workspace_id=workspace_id,
         project_id=project_id,
-        brand_id=project.brand.id,
+        brand_id=brand.id,
         model_identity={
             "transport_host": agent.base_url_host,
             "transport_model": agent.model,

@@ -243,7 +243,7 @@ function HeaderCard({
       <CardContent className="grid gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
-            <h2 className={displayHeadingLgClasses}>{detail.title ?? detail.display_url}</h2>
+            <h1 className={displayHeadingLgClasses}>{detail.title ?? detail.display_url}</h1>
           </div>
           <Button
             size="sm"

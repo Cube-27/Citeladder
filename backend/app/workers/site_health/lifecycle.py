@@ -157,6 +157,104 @@ def crawl_root_identity(crawl: SiteCrawl) -> tuple[str, str]:
         return "", ""
 
 
+def _pass_through_hreflang_evaluation() -> RuleEvaluation:
+    """An unchecked evaluation — the sentence all empty/self-only pages get."""
+    return evaluate_hreflang_conflict(
+        alternate_count=0,
+        checked_count=0,
+        unchecked_count=0,
+        missing_return_tags=[],
+    )
+
+
+def _cross_check_hreflang_alternates(
+    alternates: list[dict],
+    source_canonical: str,
+    alternates_by_page: dict[str, list[dict]],
+) -> tuple[int, int, list[str]]:
+    """Walk each alternate and check the reciprocal link back.
+
+    A target with no analyzed artifact contributes to ``unchecked_count`` —
+    we cannot verify it (spec §5.3). A self-referencing alternate is fine.
+    Any checked target that fails to link back joins ``missing``.
+    """
+    checked_count = 0
+    unchecked_count = 0
+    missing: list[str] = []
+    for alternate in alternates:
+        target_url = str(alternate.get("url") or "")
+        target_canonical = _canonical_or_empty(target_url)
+        if not target_canonical:
+            unchecked_count += 1
+            continue
+        if target_canonical == source_canonical:
+            continue
+        target_alternates = alternates_by_page.get(target_canonical)
+        if target_alternates is None:
+            unchecked_count += 1
+            continue
+        checked_count += 1
+        return_tag_found = any(
+            _canonical_or_empty(str(back.get("url") or "")) == source_canonical
+            for back in target_alternates
+        )
+        if not return_tag_found and target_url not in missing:
+            missing.append(target_url)
+    return checked_count, unchecked_count, missing
+
+
+def _evaluate_hreflang_for_page(
+    alternates: list[dict],
+    source_canonical: str | None,
+    alternates_by_page: dict[str, list[dict]],
+) -> RuleEvaluation:
+    """Score one page's alternates against the crawl-wide alternates map."""
+    if not alternates or not source_canonical:
+        return _pass_through_hreflang_evaluation()
+    checked, unchecked, missing = _cross_check_hreflang_alternates(
+        alternates, source_canonical, alternates_by_page
+    )
+    return evaluate_hreflang_conflict(
+        alternate_count=len(alternates),
+        checked_count=checked,
+        unchecked_count=unchecked,
+        missing_return_tags=missing,
+    )
+
+
+async def _crawl_hreflang_indexes(
+    session: AsyncSession,
+    artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
+) -> tuple[
+    list[tuple[uuid.UUID, str, list[dict]]],
+    dict[str, list[dict]],
+    dict[uuid.UUID, str],
+]:
+    """One query → per-artifact alternates + the canonical->alternates index."""
+    artifacts = (
+        await session.execute(
+            select(
+                SiteFetchArtifact.id,
+                SiteFetchArtifact.final_url,
+                SiteFetchArtifact.normalized_facts,
+            )
+            .where(SiteFetchArtifact.id.in_(artifact_by_analysis.values()))
+            .order_by(SiteFetchArtifact.id)
+        )
+    ).all()
+    alternates_by_page: dict[str, list[dict]] = {}
+    canonical_by_artifact: dict[uuid.UUID, str] = {}
+    per_artifact: list[tuple[uuid.UUID, str, list[dict]]] = []
+    for artifact_id, final_url, facts in artifacts:
+        canonical = _canonical_or_empty(str(final_url or ""))
+        alternates = list((facts or {}).get("hreflang_alternates") or [])
+        if canonical:
+            canonical_by_artifact[artifact_id] = canonical
+            alternates_by_page.setdefault(canonical, alternates)
+        per_artifact.append((artifact_id, canonical, alternates))
+    return per_artifact, alternates_by_page, canonical_by_artifact
+
+
 class CrawlLifecycle:
     """Owns crawl status reconciliation, the finalize pass, and the snapshot."""
 
@@ -617,85 +715,23 @@ class CrawlLifecycle:
         artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
     ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
         """Evaluate reciprocal hreflang tags from persisted artifact facts."""
-        artifacts = (
-            await session.execute(
-                select(
-                    SiteFetchArtifact.id,
-                    SiteFetchArtifact.final_url,
-                    SiteFetchArtifact.normalized_facts,
-                )
-                .where(SiteFetchArtifact.id.in_(artifact_by_analysis.values()))
-                .order_by(SiteFetchArtifact.id)
-            )
-        ).all()
+        (
+            per_artifact,
+            alternates_by_page,
+            canonical_by_artifact,
+        ) = await _crawl_hreflang_indexes(session, artifact_by_analysis)
         analysis_by_artifact = {row.artifact_id: row.id for row in rows}
-        # canonical identity of each analyzed page's final URL -> alternates.
-        alternates_by_page: dict[str, list[dict]] = {}
-        canonical_by_artifact: dict[uuid.UUID, str] = {}
-        for artifact_id, final_url, facts in artifacts:
-            canonical = _canonical_or_empty(str(final_url or ""))
-            if not canonical:
-                continue
-            canonical_by_artifact[artifact_id] = canonical
-            alternates_by_page.setdefault(
-                canonical,
-                list((facts or {}).get("hreflang_alternates") or []),
+        return [
+            (
+                analysis_by_artifact[artifact_id],
+                _evaluate_hreflang_for_page(
+                    alternates,
+                    canonical_by_artifact.get(artifact_id),
+                    alternates_by_page,
+                ),
             )
-        evaluations: list[tuple[uuid.UUID, RuleEvaluation]] = []
-        for artifact_id, _final_url, facts in artifacts:
-            analysis_id = analysis_by_artifact[artifact_id]
-            alternates = list((facts or {}).get("hreflang_alternates") or [])
-            source_canonical = canonical_by_artifact.get(artifact_id)
-            if not alternates or not source_canonical:
-                evaluations.append(
-                    (
-                        analysis_id,
-                        evaluate_hreflang_conflict(
-                            alternate_count=0,
-                            checked_count=0,
-                            unchecked_count=0,
-                            missing_return_tags=[],
-                        ),
-                    )
-                )
-                continue
-            checked_count = 0
-            unchecked_count = 0
-            missing: list[str] = []
-            for alternate in alternates:
-                target_url = str(alternate.get("url") or "")
-                target_canonical = _canonical_or_empty(target_url)
-                if not target_canonical:
-                    unchecked_count += 1
-                    continue
-                # A self-referencing alternate is always fine.
-                if target_canonical == source_canonical:
-                    continue
-                target_alternates = alternates_by_page.get(target_canonical)
-                if target_alternates is None:
-                    # The target was not analyzed in this crawl: it cannot be
-                    # verified, so it neither passes nor fails (spec §5.3).
-                    unchecked_count += 1
-                    continue
-                checked_count += 1
-                return_tag_found = any(
-                    _canonical_or_empty(str(back.get("url") or "")) == source_canonical
-                    for back in target_alternates
-                )
-                if not return_tag_found and target_url not in missing:
-                    missing.append(target_url)
-            evaluations.append(
-                (
-                    analysis_id,
-                    evaluate_hreflang_conflict(
-                        alternate_count=len(alternates),
-                        checked_count=checked_count,
-                        unchecked_count=unchecked_count,
-                        missing_return_tags=missing,
-                    ),
-                )
-            )
-        return evaluations
+            for artifact_id, _canonical, alternates in per_artifact
+        ]
 
     async def _evaluate_sitemap_orphans(
         self,

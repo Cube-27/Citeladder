@@ -152,7 +152,7 @@ export function DiscoveryProgress({
             </div>
 
             {failure ? (
-              <div className="border-danger-border/40 mt-3 border-t pt-3 pl-12" role="alert">
+              <div className="border-danger-border/40 mt-3 border-t pt-3 pl-14" role="alert">
                 <p className="text-danger-text text-xs leading-5">{failure.message}</p>
                 {failure.references ? (
                   <p className="text-muted text-2xs mt-0.5">{failure.references}</p>

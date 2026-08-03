@@ -38,8 +38,8 @@ from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
-    REASONING_EFFORT_OFF,
     TRANSPORT_GOOGLE,
+    default_model,
     provider_catalog_settings,
 )
 
@@ -77,14 +77,19 @@ def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
     configured catalog cap when unsupplied (invariant 1). Nothing is re-read
     from live settings that the request already froze (invariant 9).
 
-    The ``gemini``/``google`` route pins reasoning OFF (``ROUTE_POLICIES``), so
-    a ``thinkingBudget`` of 0 is sent whenever the FROZEN request says off.
-    ``gemini-2.5-flash-lite`` already defaults to thinking-off, but stating it
-    keeps the pin visible in the persisted request snapshot and stops a future
-    model swap from silently re-enabling thinking. NOTE: 0 is only a valid
-    budget on Flash-Lite — the 3.1/3.5 Flash-Lite tiers floor at ``minimal``
-    and would reject it.
+    The approved ``gemini``/``google`` route pins the exact
+    ``gemini-2.5-flash-lite`` identity. That model defaults to thinking-off, so
+    an OFF request omits ``generation_config`` entirely. A future model may add
+    a model-specific control here only after that control is documented as
+    compatible with the Interactions endpoint.
     """
+    approved_model = default_model(ENGINE_GEMINI, TRANSPORT_GOOGLE)
+    if request.model != approved_model:
+        raise ProviderError(
+            f"Gemini route requires model {approved_model}",
+            error_code=ERROR_UNKNOWN,
+            retryable=False,
+        )
     return {
         "model": request.model,
         "input": request.prompt,
@@ -92,16 +97,8 @@ def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
         "store": False,
         # Frozen per-call output cap so one generation cannot run away.
         "max_output_tokens": output_token_cap(request),
-        **_thinking_fields(request),
         **_grounding_fields(request),
     }
-
-
-def _thinking_fields(request: AnswerEngineRequest) -> dict[str, Any]:
-    """The thinking-disable field, or no field at all when nothing is pinned."""
-    if request.reasoning_effort != REASONING_EFFORT_OFF:
-        return {}
-    return {"thinking_config": {"thinking_budget": 0}}
 
 
 def _grounding_fields(request: AnswerEngineRequest) -> dict[str, Any]:
