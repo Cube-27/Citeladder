@@ -162,8 +162,10 @@ class ProductResponse(BaseModel):
     currency: str
     url: str
     attributes: dict[str, Any]
-    # manual | imported | synced (config/products.py PRODUCT_ORIGINS).
-    origin: Literal["manual", "imported", "synced"]
+    # manual | imported | synced | discovered (config/products.py PRODUCT_ORIGINS).
+    origin: Literal["manual", "imported", "synced", "discovered"]
+    source_candidate_id: uuid.UUID | None
+    source_artifact_id: uuid.UUID | None
     # Feed provenance (commerce suite): required-nullable — null for
     # unbound manual/imported products. Never a token or PII field.
     connection_id: uuid.UUID | None
@@ -193,6 +195,9 @@ class CompetitorProductInput(BaseModel):
     price: float | None = Field(default=None, ge=0)
     currency: str = Field(default="", max_length=3)
     url: str = Field(default="", max_length=2048)
+    variants: list[ProductVariant] = Field(default_factory=list, max_length=50)
+    attributes: dict[str, Any] = Field(default_factory=dict, max_length=100)
+    availability: str = Field(default="", max_length=64)
 
     _aliases_clean = field_validator("aliases", mode="before")(_clean_aliases)
     _currency_upper = field_validator("currency", mode="before")(_clean_currency)
@@ -206,6 +211,9 @@ class CompetitorProductUpdate(BaseModel):
     price: float | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, max_length=3)
     url: str | None = Field(default=None, max_length=2048)
+    variants: list[ProductVariant] | None = Field(default=None, max_length=50)
+    attributes: dict[str, Any] | None = Field(default=None, max_length=100)
+    availability: str | None = Field(default=None, max_length=64)
 
     _aliases_clean = field_validator("aliases", mode="before")(_clean_optional_aliases)
     _currency_upper = field_validator("currency", mode="before")(_clean_currency)
@@ -222,6 +230,12 @@ class CompetitorProductResponse(BaseModel):
     price: float | None
     currency: str
     url: str
+    variants: list[ProductVariant]
+    attributes: dict[str, Any]
+    availability: str
+    extraction_fresh_at: datetime | None
+    source_candidate_id: uuid.UUID | None
+    source_artifact_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -303,6 +317,9 @@ class ProductVisibilityEntry(BaseModel):
     attribute_dimension_frequency: dict[str, dict[str, int]]
     buyer_destination_mix: BuyerDestinationMix
     competitor_co_placement: CompetitorCoPlacement
+    prompt_coverage: float | None = None
+    frozen_prompt_context: list[FrozenPromptContext] = Field(default_factory=list)
+    conversation_themes: list[str] = Field(default_factory=list)
 
 
 class CompetitorProductVisibilityEntry(BaseModel):
@@ -324,6 +341,18 @@ class CompetitorProductVisibilityEntry(BaseModel):
     attribute_dimension_frequency: dict[str, dict[str, int]]
     buyer_destination_mix: BuyerDestinationMix
     competitor_co_placement: CompetitorCoPlacement
+    prompt_coverage: float | None = None
+    frozen_prompt_context: list[FrozenPromptContext] = Field(default_factory=list)
+    conversation_themes: list[str] = Field(default_factory=list)
+
+
+class FrozenPromptContext(BaseModel):
+    """Frozen audit prompt context; no valence or sentiment inference."""
+
+    prompt_index: int
+    text: str
+    theme: str
+    intent: str
 
 
 class ProductVisibilityResponse(BaseModel):

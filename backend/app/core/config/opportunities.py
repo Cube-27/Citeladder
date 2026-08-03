@@ -29,7 +29,7 @@ from app.core.config.projects import (
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
 ANALYZER_VERSION: Final = "opp-analyzer-1"
-RULE_VERSION: Final = "opp-rules-2"
+RULE_VERSION: Final = "opp-rules-3"
 FORMULA_VERSION: Final = "opp-formula-1"
 
 # =========================================================================
@@ -89,6 +89,10 @@ OPPORTUNITY_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
 # Coded API failures (stable tokens returned to the client)
 # =========================================================================
 CODE_OPPORTUNITY_SUPERSEDED: Final = "opportunity_superseded"
+CODE_OPPORTUNITY_GUIDANCE_UNAVAILABLE: Final = "opportunity_guidance_unavailable"
+CODE_OPPORTUNITY_GUIDANCE_IDEMPOTENCY_CONFLICT: Final = (
+    "opportunity_guidance_idempotency_conflict"
+)
 
 # =========================================================================
 # Rule catalog
@@ -203,6 +207,48 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
         ),
     ),
     OpportunityRule(
+        rule_id="schema_properties_incomplete",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_MEDIUM,
+        title="Schema properties are incomplete",
+        remediation=(
+            "Complete the required and recommended properties for the page's "
+            "expected schema type, using the exact missing-property evidence "
+            "as the implementation checklist."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="schema_visible_content_conflict",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_HIGH,
+        title="Visible content conflicts with schema",
+        remediation=(
+            "Align the visible title, headings, and page claims with the "
+            "corresponding schema.org values; do not leave competing facts "
+            "for answer engines to resolve."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="content_structure_incomplete",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_LOW,
+        title="Answer-oriented content structure is incomplete",
+        remediation=(
+            "Strengthen the page's substantive content, answer-first opening, "
+            "and question-led headings using the persisted rule evidence."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="citability_trust_incomplete",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_MEDIUM,
+        title="Citability and trust signals are incomplete",
+        remediation=(
+            "Add the missing author, date, source, or organization identity "
+            "signals so readers and answer engines can assess provenance."
+        ),
+    ),
+    OpportunityRule(
         rule_id="product_not_mentioned",
         opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
         severity=SEVERITY_HIGH,
@@ -306,6 +352,26 @@ SITE_THIN_CONTENT_RULE_IDS: Final[frozenset[str]] = frozenset(
     {"technical.thin_content"}
 )
 
+# Every documented structured-data and content/citability failure maps to a
+# site opportunity rule.  The detector reads this one table so its mapping
+# remains total, reviewable, and config-owned as the Site Health catalog grows.
+SITE_ISSUE_TO_OPPORTUNITY_RULE_ID: Final[dict[str, str]] = {
+    "aeo.structured_data_present": "missing_structured_data",
+    "aeo.schema_expected_for_type": "schema_type_mismatch",
+    "aeo.schema_required_valid": "schema_properties_incomplete",
+    "aeo.schema_recommended_present": "schema_properties_incomplete",
+    "aeo.product_offer_details": "schema_properties_incomplete",
+    "aeo.schema_matches_content": "schema_visible_content_conflict",
+    "aeo.product_visible_schema_parity": "schema_visible_content_conflict",
+    "technical.thin_content": "thin_content",
+    "aeo.answer_first": "content_structure_incomplete",
+    "aeo.question_headings": "content_structure_incomplete",
+    "aeo.author_present": "citability_trust_incomplete",
+    "aeo.date_present": "citability_trust_incomplete",
+    "aeo.outbound_citations": "citability_trust_incomplete",
+    "aeo.organization_identity": "citability_trust_incomplete",
+}
+
 # =========================================================================
 # Deterministic scoring formula (config-owned tables, invariants 1 + 9)
 # =========================================================================
@@ -375,3 +441,24 @@ LIST_DEFAULT_LIMIT: Final = 50
 LIST_MAX_LIMIT: Final = 200
 # Hard cap on rows materialized for one export request.
 MAX_EXPORT_ITEMS: Final = 20000
+
+# =========================================================================
+# On-demand guidance policy (development-only, immutable records)
+# =========================================================================
+# Guidance is deliberately deterministic in this slice: it turns the already
+# persisted opportunity evidence into a bounded recommendation snapshot. No
+# provider is contacted by this write or its read projections (invariant 7).
+GUIDANCE_ENABLED_ENVIRONMENTS: Final[frozenset[str]] = frozenset(
+    {"", "development", "dev", "local", "test", "testing"}
+)
+GUIDANCE_GENERATOR_VERSION: Final = "opportunity-guidance-deterministic-v1"
+GUIDANCE_PROMPT_VERSION: Final = "opportunity-guidance-template-v1"
+GUIDANCE_PROVIDER: Final = "deterministic"
+GUIDANCE_MODEL: Final = "none"
+GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN: Final = 160
+GUIDANCE_HISTORY_DEFAULT_LIMIT: Final = 20
+GUIDANCE_HISTORY_MAX_LIMIT: Final = 100
+GUIDANCE_MAX_EVIDENCE_KEYS: Final = 24
+GUIDANCE_MAX_EVIDENCE_VALUE_CHARS: Final = 500
+GUIDANCE_MAX_EVIDENCE_LIST_ITEMS: Final = 20
+GUIDANCE_MAX_FINDINGS: Final = 8

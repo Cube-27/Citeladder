@@ -1,8 +1,8 @@
 /**
  * Products (agentic commerce) display helpers — pure, framework-free.
  *
- * The tab model for the `/products` Commerce workspace (Catalog | Visibility
- * | Attribution) plus the formatters the catalog table, the visibility
+ * The tab model for the `/products` Commerce workspace (Discover | Catalog |
+ * AI Conversations | Market Intelligence) plus the formatters the catalog table, the visibility
  * summary strip, and the rankings tables share. Every number rendered here
  * is derived from persisted backend values — never invented.
  */
@@ -20,16 +20,17 @@ import type {
   ProductVisibilityEntry,
 } from '@/lib/api/types';
 
-/** The three `/products` workspace tabs, in display order; Catalog is default. */
-export type ProductsTab = 'catalog' | 'visibility' | 'attribution';
+/** The four `/products` workspace tabs, in display order; Discover is default. */
+export type ProductsTab = 'discover' | 'catalog' | 'conversations' | 'market_intelligence';
 
 /** Engine filter value for the products surfaces (`all` = cross-engine). */
 export type ProductEngineFilter = LogicalEngine | 'all';
 
 export const PRODUCTS_TABS: readonly { id: ProductsTab; label: string }[] = [
+  { id: 'discover', label: 'Discover' },
   { id: 'catalog', label: 'Catalog' },
-  { id: 'visibility', label: 'Visibility' },
-  { id: 'attribution', label: 'Attribution' },
+  { id: 'conversations', label: 'AI Conversations' },
+  { id: 'market_intelligence', label: 'Market Intelligence' },
 ] as const;
 
 /**
@@ -56,7 +57,7 @@ export const PRODUCT_EVIDENCE_SUB_TABS: readonly { id: ProductEvidenceSubTab; la
   { id: 'destinations', label: 'Destinations' },
 ] as const;
 
-const DEFAULT_TAB: ProductsTab = 'catalog';
+const DEFAULT_TAB: ProductsTab = 'discover';
 
 /** Narrow an arbitrary `?tab=` value to a known tab, else the default. */
 export function normalizeProductsTab(value: string | null | undefined): ProductsTab {

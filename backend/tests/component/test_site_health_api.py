@@ -682,6 +682,16 @@ async def test_page_detail_and_history(
     assert history.status_code == 200
     assert len(history.json()["items"]) == 1
 
+    grouped_history = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/pages/{scn.issue_url_id}/issue-history?view=grouped",
+        headers=headers,
+    )
+    assert grouped_history.status_code == 200
+    grouped_body = grouped_history.json()
+    assert grouped_body["since_previous_crawl"]["has_previous_crawl"] is False
+    assert grouped_body["items"][0]["occurrence_count"] == 1
+    assert grouped_body["items"][0]["current_transition"] == "new"
+
 
 async def test_exports_media_type_and_filename(
     client: httpx.AsyncClient,

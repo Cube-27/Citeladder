@@ -11,6 +11,7 @@ the decoded-byte (gzip compression bomb) cap.
 from __future__ import annotations
 
 import gzip
+import logging
 import zlib
 
 import httpx
@@ -18,6 +19,7 @@ import pytest
 
 from app.connectors.web_evidence.contracts import FetchError, FetchRequest
 from app.connectors.web_evidence.fetcher import SecureFetcher, redact_headers
+from app.core.config.site_health import SiteHealthSettings
 
 _PUBLIC_IP = "93.184.216.34"
 
@@ -61,8 +63,23 @@ class _FakeResolver:
         return list(self._mapping.get(host, self._default))
 
 
-def _fetcher(handler, resolver) -> SecureFetcher:
-    return SecureFetcher(resolver=resolver, transport=httpx.MockTransport(handler))
+def _fetcher(
+    handler,
+    resolver,
+    *,
+    settings: SiteHealthSettings | None = None,
+    scraperapi_handler=None,
+    curl_pinned_resolution_supported: bool | None = None,
+) -> SecureFetcher:
+    return SecureFetcher(
+        resolver=resolver,
+        transport=httpx.MockTransport(handler),
+        scraperapi_transport=(
+            httpx.MockTransport(scraperapi_handler) if scraperapi_handler else None
+        ),
+        curl_pinned_resolution_supported=curl_pinned_resolution_supported,
+        settings=settings or SiteHealthSettings(),
+    )
 
 
 # --- redact_headers -------------------------------------------------------
@@ -562,3 +579,171 @@ async def test_fetch_missing_charset_is_empty():
             )
         )
     assert result.charset == ""
+
+
+# --- acquisition ladder ---------------------------------------------------
+
+
+async def test_hard_excluded_url_never_calls_any_acquisition_rung():
+    calls = {"httpx": 0, "scraperapi": 0}
+
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        calls["httpx"] += 1
+        return _html_response()
+
+    def scraper_handler(request: httpx.Request) -> httpx.Response:
+        calls["scraperapi"] += 1
+        return _html_response()
+
+    settings = SiteHealthSettings(
+        curl_cffi_enabled=True,
+        scraperapi_enabled=True,
+        scraperapi_api_key="server-only-secret",
+    )
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        scraperapi_handler=scraper_handler,
+        curl_pinned_resolution_supported=False,
+    ) as fetcher:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(url="https://example.com/login", purpose="discover")
+            )
+    assert exc.value.error_code == "url_admission_rejected"
+    assert exc.value.attempts == ()
+    assert calls == {"httpx": 0, "scraperapi": 0}
+
+
+async def test_challenge_uses_scraperapi_after_explicit_curl_unavailable(caplog):
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(403, body=b"<title>Just a moment...</title>")
+
+    seen: dict[str, str] = {}
+
+    def scraper_handler(request: httpx.Request) -> httpx.Response:
+        seen["api_key"] = request.headers["x-sapi-api_key"]
+        seen["target"] = request.url.params["url"]
+        seen["render"] = request.headers["x-sapi-render"]
+        seen["premium"] = request.headers["x-sapi-premium"]
+        seen["country_code"] = request.headers["x-sapi-country_code"]
+        assert "api_key" not in request.url.params
+        return _html_response(
+            body=b"<html><title>actual page</title><body>content</body></html>",
+            content_type="text/html; charset=utf-8",
+        )
+
+    settings = SiteHealthSettings(
+        curl_cffi_enabled=True,
+        scraperapi_enabled=True,
+        scraperapi_api_key="server-only-secret",
+        scraperapi_render=True,
+        scraperapi_premium=True,
+        scraperapi_country_code="us",
+    )
+    caplog.set_level(logging.INFO, logger="httpx")
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        scraperapi_handler=scraper_handler,
+        curl_pinned_resolution_supported=False,
+    ) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(
+                url="https://example.com/",
+                purpose="discover",
+                allowed_content_types=frozenset({"text/html"}),
+            )
+        )
+
+    assert result.status_code == 200
+    assert result.acquisition is not None
+    assert result.acquisition.transport == "scraperapi"
+    assert result.acquisition.rung == 3
+    assert result.acquisition.trigger == "curl_unavailable"
+    assert result.acquisition.scraperapi_options == {
+        "render": True,
+        "premium": True,
+        "follow_redirects": False,
+        "country_code": "us",
+    }
+    assert [entry.acquisition.transport for entry in result.attempts] == [
+        "httpx",
+        "scraperapi",
+    ]
+    assert all("server-only-secret" not in entry.url for entry in result.attempts)
+    assert "server-only-secret" not in repr(result)
+    assert seen == {
+        "api_key": "server-only-secret",
+        "target": "https://example.com/",
+        "render": "true",
+        "premium": "true",
+        "country_code": "us",
+    }
+    assert "server-only-secret" not in caplog.text
+
+
+async def test_scraperapi_rung_keeps_decoded_byte_cap():
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(403, body=b"cf-chl")
+
+    def scraper_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(body=b"x" * 5000)
+
+    settings = SiteHealthSettings(
+        curl_cffi_enabled=True,
+        scraperapi_enabled=True,
+        scraperapi_api_key="server-only-secret",
+    )
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        scraperapi_handler=scraper_handler,
+        curl_pinned_resolution_supported=False,
+    ) as fetcher:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(
+                    url="https://example.com/",
+                    purpose="discover",
+                    max_decoded_bytes=1000,
+                )
+            )
+    assert exc.value.error_code == "response_too_large"
+    assert [entry.acquisition.transport for entry in exc.value.attempts] == [
+        "httpx",
+        "scraperapi",
+    ]
+
+
+async def test_scraperapi_redirect_reuses_hard_admission_before_next_rung():
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(403, body=b"cf-chl")
+
+    def scraper_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"location": "/checkout"})
+
+    settings = SiteHealthSettings(
+        curl_cffi_enabled=True,
+        scraperapi_enabled=True,
+        scraperapi_api_key="server-only-secret",
+    )
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        scraperapi_handler=scraper_handler,
+        curl_pinned_resolution_supported=False,
+    ) as fetcher:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(url="https://example.com/", purpose="discover")
+            )
+    assert exc.value.error_code == "url_admission_rejected"
+    assert [entry.acquisition.transport for entry in exc.value.attempts] == [
+        "httpx",
+        "scraperapi",
+    ]

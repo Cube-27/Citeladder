@@ -26,7 +26,10 @@ from app.connectors.web_evidence.contracts import (
 )
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.connectors.web_evidence.sitemaps import SitemapCollector, SitemapParseError
-from app.connectors.web_evidence.url_policy import UrlPolicyError, is_admissible
+from app.connectors.web_evidence.url_policy import (
+    UrlPolicyError,
+    classify_url_admission,
+)
 from app.core.config.site_health import (
     AI_CRAWLER_BOTS,
     AI_CRAWLER_STANCE_ALLOW,
@@ -39,6 +42,7 @@ from app.core.config.site_health import (
     FETCH_PURPOSE_ROBOTS,
     FETCH_PURPOSE_SITEMAP,
     HTML_CONTENT_TYPES,
+    INPUT_MODE_EXACT_URLS,
     LLMS_TXT_PATH,
     OBSERVATION_SOURCE_ROOT,
     OBSERVATION_SOURCE_SITEMAP,
@@ -636,18 +640,16 @@ class DiscoverPhaseMixin(PhaseSupport):
         for raw in collector.urls:
             if len(page_urls) >= settings.max_sitemap_admitted_urls:
                 break
-            try:
-                canonical, url_hash_value = canonical_identity(raw)
-            except UrlPolicyError:
-                continue
-            if url_hash_value in seen_hashes:
-                continue
-            if not is_admissible(
-                canonical,
+            decision = classify_url_admission(
+                raw,
                 root_registrable_domain=root_registrable_domain,
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
-            ):
+            )
+            if not decision.accepted or not decision.canonical_url:
+                continue
+            canonical, url_hash_value = canonical_identity(decision.canonical_url)
+            if url_hash_value in seen_hashes:
                 continue
             seen_hashes.add(url_hash_value)
             page_urls.append(canonical)
@@ -711,7 +713,17 @@ class DiscoverPhaseMixin(PhaseSupport):
                 admission = await admit_candidates(
                     session,
                     crawl=crawl,
-                    candidates=self._candidates_for(outcome.output, depth),
+                    candidates=self._candidates_for(
+                        outcome.output,
+                        depth,
+                        input_mode=(crawl.configuration or {}).get(
+                            "input_mode", "auto"
+                        ),
+                    ),
+                    enqueue_children=(
+                        (crawl.configuration or {}).get("input_mode", "auto")
+                        != INPUT_MODE_EXACT_URLS
+                    ),
                 )
                 # v2 P2 (Starter only): admit the sitemap-ingested URLs AFTER
                 # the root's own admission, so the root's frontier priority
@@ -720,7 +732,13 @@ class DiscoverPhaseMixin(PhaseSupport):
                 # ``_add_free_sample``) so sitemap-sourced URLs appear in
                 # inventory. Free sample crawls never ingest sitemaps, so
                 # un-admitted URLs never leak into a Free inventory.
-                if depth == 0 and outcome.sitemap_urls and not crawl.sample_mode:
+                if (
+                    depth == 0
+                    and outcome.sitemap_urls
+                    and not crawl.sample_mode
+                    and (crawl.configuration or {}).get("input_mode", "auto")
+                    != INPUT_MODE_EXACT_URLS
+                ):
                     sitemap_candidates = self._sitemap_candidates(outcome.sitemap_urls)
                     sitemap_admission = await admit_candidates(
                         session,
@@ -790,10 +808,12 @@ class DiscoverPhaseMixin(PhaseSupport):
         )
 
     def _candidates_for(
-        self, output: DiscoveryOutput, depth: int
+        self, output: DiscoveryOutput, depth: int, *, input_mode: str
     ) -> list[FrontierCandidate]:
         # The discover task's own position is its randomized_position; children
         # inherit deterministic order via (parent_position, link_ordinal, hash).
+        if input_mode == INPUT_MODE_EXACT_URLS:
+            return []
         candidates = build_frontier_candidates(output, parent_position=0, depth=depth)
         if depth == 0:
             # The root/fetched identity itself must also go through admission
@@ -835,6 +855,7 @@ class DiscoverPhaseMixin(PhaseSupport):
                     url_hash=url_hash_value,
                     depth=1,
                     source_kind=OBSERVATION_SOURCE_SITEMAP,
+                    value_priority=classify_url_admission(canonical).priority,
                     parent_position=0,
                     link_ordinal=ordinal,
                 )

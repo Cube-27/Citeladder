@@ -28,6 +28,7 @@ import {
   siteHealthEntitlementSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
+  urlPreviewResponseSchema,
   strictValidate,
 } from './schemas';
 import { definedQuery, withQuery } from './shared';
@@ -44,10 +45,11 @@ import type {
   SiteHealthEntitlement,
   SiteIssueDetail,
   SiteIssuesPage,
+  UrlPreviewResponse,
 } from './types';
 
 /** `POST /site-crawls` body. Workspace is resolved from `X-Workspace-Id`. */
-type CreateCrawlInput = {
+export type CreateCrawlInput = {
   project_id: string;
   include_globs?: string[];
   exclude_globs?: string[];
@@ -57,6 +59,14 @@ type CreateCrawlInput = {
    * so the wire field must be `seed`.
    */
   seed?: string;
+  input_mode?: 'auto' | 'exact_urls' | 'discovery_seeds';
+  requested_page_limit?: number;
+  seed_urls?: string[];
+  page_types?: string[];
+};
+export type UrlPreviewInput = Pick<CreateCrawlInput, 'project_id' | 'include_globs' | 'exclude_globs'> & {
+  content: string | string[] | Record<string, unknown>;
+  input_format?: 'text' | 'csv' | 'json';
 };
 
 /** Keyset inventory query params. `limit<=200`, ordering is URL-only. */
@@ -127,6 +137,10 @@ export const siteHealthApi = {
   createCrawl: async (input: CreateCrawlInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
     return strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
+  },
+  previewUrls: async (input: UrlPreviewInput, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<UrlPreviewResponse>('/site-crawls/url-preview', input, options);
+    return strictValidate(urlPreviewResponseSchema, res, 'siteHealth.previewUrls');
   },
   listCrawls: async (params: CrawlListParams, options?: ApiRequestOptions) => {
     const path = withQuery('/site-crawls', definedQuery(params));

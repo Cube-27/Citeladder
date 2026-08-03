@@ -7,8 +7,8 @@ import { PRODUCTS_TABS, type ProductsTab } from '@/lib/products/catalog';
 import { NestedTabs } from './nested-tabs';
 
 /**
- * Accessible three-tab navigation for the Commerce workspace (WAI-ARIA tabs):
- * Catalog | Visibility | Attribution with roving tabindex, `aria-selected`,
+ * Accessible four-tab navigation for the Commerce workspace (WAI-ARIA tabs):
+ * Discover | Catalog | AI Conversations | Market Intelligence with roving tabindex, `aria-selected`,
  * and Arrow/Home/End keyboard navigation with focus transfer + automatic
  * activation. Only the active panel is rendered, wired to its tab via
  * `aria-controls` / `aria-labelledby`. URL sync (`?tab=`) lives in the

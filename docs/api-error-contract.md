@@ -139,3 +139,15 @@ fields and WARNs on undeclared additive ones.
 3. If the frontend must branch on it, handle the `code` in the calling module — do not
    match on `message` text.
 4. Cover it in `backend/tests/component/test_error_envelope_api.py`.
+# Staged Site Health and Commerce codes
+
+The shared error envelope includes the following stable coded failures for
+these routes: `url_hard_excluded`, `url_out_of_scope`,
+`url_preview_invalid`, `crawl_limit_not_available`, `acquisition_budget_exceeded`,
+`scraperapi_unavailable`, `opportunity_guidance_unavailable`,
+`opportunity_guidance_idempotency_conflict`,
+`commerce_candidate_not_found`, `commerce_candidate_already_accepted`,
+`competitor_match_requires_review`, and `comparison_snapshot_unavailable`.
+They use the existing `{ code, message, request_id, details? }` envelope; details
+contain only safe validation or aggregate information and never secrets, raw HTML,
+or provider request headers.

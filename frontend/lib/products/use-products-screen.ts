@@ -3,7 +3,7 @@
 /**
  * State + queries for the `/products` Commerce workspace.
  *
- * `useProductsTab` mirrors the active tab into `?tab=` (Catalog is default)
+ * `useProductsTab` mirrors the active tab into `?tab=` (Discover is default)
  * so refresh / back / forward preserve it. `useCatalogQueries` loads the
  * catalog + the commerce catalog-health projection. `useProductVisibilityQueries`
  * loads the project's dashboard-ready runs (for the Run selector) and the
@@ -83,7 +83,7 @@ export function useProductVisibilityQueries(projectId: string | null, enabled = 
   const auditsQuery = useQuery({
     queryKey: queryKeys.runs.list({ project_id: projectId ?? '' }),
     queryFn: ({ signal }) => runsApi.listAudits({ project_id: projectId! }, { signal }),
-    // Only fetch on the Visibility tab — the Catalog tab never reads these.
+    // Only fetch on the AI Conversations tab — inactive views never read these.
     enabled: Boolean(projectId) && enabled,
   });
   const runOptions = useMemo(() => toRunOptions(auditsQuery.data ?? []), [auditsQuery.data]);
@@ -127,6 +127,58 @@ export function useProductVisibilityQueries(projectId: string | null, enabled = 
     setSurface,
     visibilityQuery,
   };
+}
+
+/** Durable discovery evidence and candidate review. Acquisition is worker-owned. */
+export function useCommerceDiscovery(projectId: string | null, enabled = true) {
+  const queryClient = useQueryClient();
+  const [selectedRunId, setSelectedRunId] = useState<string | undefined>();
+  const runsQuery = useQuery({
+    queryKey: queryKeys.commerce.discoveryRuns(projectId ?? ''),
+    queryFn: ({ signal }) => commerceApi.listDiscoveryRuns(projectId!, { signal }),
+    enabled: Boolean(projectId) && enabled,
+  });
+  const candidatesQuery = useQuery({
+    queryKey: queryKeys.commerce.discoveryCandidates(projectId ?? '', selectedRunId),
+    queryFn: ({ signal }) => commerceApi.listDiscoveryCandidates(projectId!, selectedRunId, { signal }),
+    enabled: Boolean(projectId) && enabled,
+  });
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.commerce.discoveryRuns(projectId ?? '') }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.commerce.discoveryCandidates(projectId ?? '') }),
+    ]);
+  };
+  const previewMutation = useMutation({
+    mutationFn: (body: Parameters<typeof commerceApi.previewDiscovery>[1]) =>
+      commerceApi.previewDiscovery(projectId!, body),
+  });
+  const createMutation = useMutation({
+    mutationFn: (body: Parameters<typeof commerceApi.createDiscoveryRun>[1]) =>
+      commerceApi.createDiscoveryRun(projectId!, body),
+    onSuccess: async (run) => { setSelectedRunId(run.id); await refresh(); },
+  });
+  const decisionMutation = useMutation({
+    mutationFn: (input: { candidateId: string; body: Parameters<typeof commerceApi.decideCandidate>[1] }) =>
+      commerceApi.decideCandidate(input.candidateId, input.body),
+    onSuccess: refresh,
+  });
+  return { selectedRunId, setSelectedRunId, runsQuery, candidatesQuery, previewMutation, createMutation, decisionMutation };
+}
+
+/** Immutable competitor comparison snapshots and their history. */
+export function useMarketIntelligence(projectId: string | null, enabled = true) {
+  const queryClient = useQueryClient();
+  const comparisonsQuery = useQuery({
+    queryKey: queryKeys.commerce.comparisons(projectId ?? ''),
+    queryFn: ({ signal }) => commerceApi.listComparisons(projectId!, { signal }),
+    enabled: Boolean(projectId) && enabled,
+  });
+  const createMutation = useMutation({
+    mutationFn: (competitorId?: string) => commerceApi.createComparison(projectId!, competitorId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.commerce.comparisons(projectId ?? '') }),
+  });
+  return { comparisonsQuery, createMutation };
 }
 
 /**

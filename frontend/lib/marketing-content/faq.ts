@@ -27,7 +27,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
           'repeatable audits of your brand across ChatGPT, Gemini, and Claude using your own ' +
           'provider keys, scores the results deterministically, and keeps the persisted evidence ' +
           'behind every number. A built-in, security-bounded crawler also audits your site’s ' +
-          'technical and AEO health, with grouped issues and remediation guidance — so you can ' +
+          'Web Fundamentals and AEO health, with grouped issues and remediation guidance — so you can ' +
           'measure the answers and improve the pages they rely on.',
       },
       {
@@ -152,11 +152,11 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
           'URLs to monitor — that set is analyzed and dashboarded.',
       },
       {
-        q: 'What do the Technical and AEO scores mean?',
+        q: 'What do the Web Fundamentals and AEO scores mean?',
         a:
           'Each analyzed page is scored against 33 deterministic rules in 8 categories — ' +
           'indexability, content, metadata, structured data, citability, performance, security ' +
-          'and links. Technical and AEO are weighted 50/50 into the combined score, every rule ' +
+          'and links. Web Fundamentals and AEO are weighted 50/50 into the combined score, every rule ' +
           'outcome is inspectable, and a missing or failed score renders as — rather than a ' +
           'fabricated zero. Pages are classified into one of nine page types, and the expected ' +
           'schema and minimum depth are judged per type rather than by one global rule.',

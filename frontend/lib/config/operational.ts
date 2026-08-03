@@ -70,3 +70,8 @@ export const CONTENT_LIST_POLL_MS = 3_000;
 export const CONTENT_DETAIL_POLL_MS = 2_000;
 export const SYNC_RUN_POLL_MS = 3_000;
 export const ATTRIBUTION_RECOMPUTE_POLL_MS = 3_000;
+
+/** Development-only Site Health intake controls. Production remains automatic. */
+export function getSiteHealthAdvancedControlsEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_SITE_HEALTH_ADVANCED_CONTROLS === 'true';
+}

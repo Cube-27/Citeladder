@@ -25,9 +25,11 @@
 # ``crawl_already_active`` / ``CODE_CRAWL_ALREADY_ACTIVE``).
 from __future__ import annotations
 
+import csv
 import secrets
 import uuid
 from datetime import UTC, datetime
+from io import StringIO
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,11 +38,13 @@ from sqlalchemy.orm import selectinload
 from app.connectors.web_evidence.url_policy import (
     UrlPolicyError,
     canonicalize,
+    classify_url_admission,
     registrable_domain,
     split_host_port,
 )
 from app.core.config.site_health import (
     ANALYZER_VERSION,
+    CLASSIFIER_VERSION,
     CODE_CRAWL_ALREADY_ACTIVE,
     CRAWL_ACTIVE_STATUSES,
     CRAWL_STATUS_DRAFT,
@@ -52,14 +56,22 @@ from app.core.config.site_health import (
     EVENT_CRAWL_CREATED,
     EVENT_CRAWL_QUEUED,
     EXTRACTOR_VERSION,
+    INPUT_MODE_AUTO,
+    INPUT_MODE_EXACT_URLS,
+    INPUT_MODES,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
     OBSERVATION_SOURCE_ROOT,
+    PAGE_TYPES,
     RULE_CATALOG_VERSION,
     SCORING_VERSION,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
+    URL_ADMISSION_POLICY_VERSION,
+    URL_EXCLUSION_DUPLICATE,
+    URL_EXCLUSION_INVALID,
     site_health_settings,
 )
+from app.core.config.site_health_page_profiles import PAGE_PROFILE_RULE_VERSION
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.entitlements.service import (
     refresh_site_health_runtime_for_workspace,
@@ -82,12 +94,9 @@ from app.models.site_health import (
     SiteUrlObservation,
 )
 
+
 # Bound the number of include/exclude narrowing globs accepted at creation so a
 # request can never freeze an unbounded pattern list into the crawl config.
-MAX_NARROWING_GLOBS = 100
-MAX_GLOB_LENGTH = 512
-
-
 class CrawlPlanError(ValueError):
     """Raised when a crawl cannot be created (bad root/globs, missing project).
 
@@ -141,11 +150,16 @@ def _normalize_globs(globs: list[str] | None, *, label: str) -> list[str]:
         pattern = str(raw or "").strip()
         if not pattern:
             continue
-        if len(pattern) > MAX_GLOB_LENGTH:
-            raise CrawlPlanError(f"{label} glob exceeds max length {MAX_GLOB_LENGTH}")
+        if len(pattern) > site_health_settings.max_glob_length:
+            raise CrawlPlanError(
+                f"{label} glob exceeds max length "
+                f"{site_health_settings.max_glob_length}"
+            )
         cleaned.append(pattern)
-    if len(cleaned) > MAX_NARROWING_GLOBS:
-        raise CrawlPlanError(f"too many {label} globs (max {MAX_NARROWING_GLOBS})")
+    if len(cleaned) > site_health_settings.max_narrowing_globs:
+        raise CrawlPlanError(
+            f"too many {label} globs (max {site_health_settings.max_narrowing_globs})"
+        )
     return cleaned
 
 
@@ -232,6 +246,10 @@ def _frozen_configuration(
     include_globs: list[str],
     exclude_globs: list[str],
     runtime,
+    input_mode: str = INPUT_MODE_AUTO,
+    requested_page_limit: int | None = None,
+    seed_urls: list[str] | None = None,
+    page_types: list[str] | None = None,
 ) -> dict:
     """Freeze the operational settings + runtime projection (invariant 9).
 
@@ -255,6 +273,13 @@ def _frozen_configuration(
         "root_registrable_domain": root_registrable_domain,
         "include_globs": include_globs,
         "exclude_globs": exclude_globs,
+        "url_admission_policy_version": URL_ADMISSION_POLICY_VERSION,
+        "page_type_classifier_version": CLASSIFIER_VERSION,
+        "page_profile_rule_version": PAGE_PROFILE_RULE_VERSION,
+        "input_mode": input_mode,
+        "requested_page_limit": requested_page_limit,
+        "seed_urls": list(seed_urls or []),
+        "page_types": list(page_types or []),
         "max_frontier_urls": s.max_frontier_urls,
         "max_crawl_depth": s.max_crawl_depth,
         "admission_batch_size": s.admission_batch_size,
@@ -273,6 +298,171 @@ def _frozen_configuration(
     }
 
 
+def _controls_for_request(
+    *,
+    input_mode: str | None,
+    requested_page_limit: int | None,
+    seed_urls: list[str] | None,
+    page_types: list[str] | None,
+) -> tuple[str, int, list[str], list[str]]:
+    """Validate development-only crawl controls and return frozen values."""
+    mode = input_mode or INPUT_MODE_AUTO
+    if mode not in INPUT_MODES:
+        raise CrawlPlanError("unknown input_mode", code="invalid_crawl_request")
+    raw_seeds = list(seed_urls or [])
+    selected_types = list(page_types or [])
+    if len(raw_seeds) > site_health_settings.max_seed_urls:
+        raise CrawlPlanError("too many seed_urls", code="invalid_crawl_request")
+    if any(value not in PAGE_TYPES for value in selected_types):
+        raise CrawlPlanError("unknown page type", code="invalid_crawl_request")
+    advanced_requested = (
+        mode != INPUT_MODE_AUTO
+        or requested_page_limit is not None
+        or bool(raw_seeds)
+        or bool(selected_types)
+    )
+    if advanced_requested and not site_health_settings.advanced_controls_enabled:
+        raise CrawlPlanError(
+            "advanced crawl controls are unavailable",
+            code="advanced_controls_unavailable",
+        )
+    if mode == INPUT_MODE_EXACT_URLS and not raw_seeds:
+        raise CrawlPlanError(
+            "exact_urls requires seed_urls", code="invalid_crawl_request"
+        )
+    limit = (
+        requested_page_limit
+        if site_health_settings.advanced_controls_enabled
+        and requested_page_limit is not None
+        else site_health_settings.automatic_page_limit
+    )
+    if limit <= 0 or limit > site_health_settings.max_requested_page_limit:
+        raise CrawlPlanError(
+            "requested_page_limit is outside the allowed range",
+            code="invalid_crawl_request",
+        )
+    return mode, int(limit), raw_seeds, selected_types
+
+
+def _admit_seed_urls(
+    seed_urls: list[str], *, root_domain: str, includes: list[str], excludes: list[str]
+) -> list[str]:
+    """Normalize manual/upload seeds through the same hard admission gate."""
+    accepted: list[str] = []
+    seen: set[str] = set()
+    for raw in seed_urls:
+        decision = classify_url_admission(
+            raw,
+            root_registrable_domain=root_domain,
+            include_globs=includes,
+            exclude_globs=excludes,
+        )
+        if not decision.accepted or not decision.canonical_url:
+            raise CrawlPlanError(
+                "seed URL is not admissible",
+                code=decision.reason_code or "invalid_crawl_request",
+            )
+        if decision.canonical_url not in seen:
+            seen.add(decision.canonical_url)
+            accepted.append(decision.canonical_url)
+    return accepted
+
+
+def _preview_input_rows(content: object, input_format: str) -> list[str]:
+    """Parse bounded text/CSV/JSON preview input without any persistence."""
+    if isinstance(content, list):
+        return [str(value) for value in content]
+    if isinstance(content, dict):
+        values = content.get("urls", content.get("items", []))
+        if not isinstance(values, list):
+            raise CrawlPlanError("JSON preview input must contain a URL list")
+        return [
+            str(value.get("url", "")) if isinstance(value, dict) else str(value)
+            for value in values
+        ]
+    raw = str(content or "")
+    if len(raw.encode("utf-8")) > site_health_settings.max_preview_input_bytes:
+        raise CrawlPlanError("preview input is too large")
+    if input_format == "csv":
+        return [row[0] if row else "" for row in csv.reader(StringIO(raw))]
+    if input_format == "json":
+        import json
+
+        try:
+            return _preview_input_rows(json.loads(raw), "json")
+        except (TypeError, ValueError) as exc:
+            raise CrawlPlanError("invalid JSON preview input") from exc
+    return raw.splitlines()
+
+
+async def preview_crawl_urls(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    content: object,
+    input_format: str = "text",
+    include_globs: list[str] | None = None,
+    exclude_globs: list[str] | None = None,
+) -> dict:
+    """Build a bounded, workspace-authorized admission preview (no writes)."""
+    project = await _load_project(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    try:
+        root_url = canonicalize(str(project.website_url or ""))
+    except UrlPolicyError as exc:
+        raise CrawlPlanError(
+            "Project has no usable website_url", code="invalid_root"
+        ) from exc
+    root_domain = registrable_domain(root_url)
+    includes = _normalize_globs(include_globs, label="include")
+    excludes = _normalize_globs(exclude_globs, label="exclude")
+    rows: list[dict] = []
+    seen: set[str] = set()
+    aggregate: dict[str, int] = {"accepted": 0, "duplicate": 0, "rejected": 0}
+    for row_number, raw in enumerate(
+        _preview_input_rows(content, input_format), start=1
+    ):
+        if len(rows) >= site_health_settings.max_preview_rows:
+            break
+        decision = classify_url_admission(
+            raw,
+            root_registrable_domain=root_domain,
+            include_globs=includes,
+            exclude_globs=excludes,
+        )
+        reason = decision.reason_code
+        accepted = decision.accepted
+        if accepted and decision.canonical_url in seen:
+            accepted = False
+            reason = URL_EXCLUSION_DUPLICATE
+            aggregate["duplicate"] += 1
+        elif accepted:
+            seen.add(decision.canonical_url or "")
+            aggregate["accepted"] += 1
+        else:
+            aggregate["rejected"] += 1
+        rows.append(
+            {
+                "row": row_number,
+                "input": str(raw)[: site_health_settings.max_glob_length],
+                "accepted": accepted,
+                "canonical_url": decision.canonical_url,
+                "reason_code": reason
+                or (URL_EXCLUSION_INVALID if not accepted else None),
+                "value_kind": decision.value_kind,
+                "priority": decision.priority,
+            }
+        )
+    return {
+        "items": rows,
+        "truncated": len(rows) >= site_health_settings.max_preview_rows,
+        "counts": aggregate,
+        "policy_version": URL_ADMISSION_POLICY_VERSION,
+    }
+
+
 async def create_crawl(
     session: AsyncSession,
     *,
@@ -281,6 +471,10 @@ async def create_crawl(
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
     random_seed: str | None = None,
+    input_mode: str | None = None,
+    requested_page_limit: int | None = None,
+    seed_urls: list[str] | None = None,
+    page_types: list[str] | None = None,
 ) -> SiteCrawl:
     """Create + queue a Site Health crawl (freeze scope, seed the root task).
 
@@ -320,6 +514,26 @@ async def create_crawl(
 
     includes = _normalize_globs(include_globs, label="include")
     excludes = _normalize_globs(exclude_globs, label="exclude")
+    root_decision = classify_url_admission(
+        raw_root,
+        root_registrable_domain=root_registrable_domain,
+        include_globs=includes,
+        exclude_globs=excludes,
+    )
+    if not root_decision.accepted:
+        raise CrawlPlanError("crawl root is not admissible", code="invalid_root")
+    mode, page_limit, raw_seeds, selected_types = _controls_for_request(
+        input_mode=input_mode,
+        requested_page_limit=requested_page_limit,
+        seed_urls=seed_urls,
+        page_types=page_types,
+    )
+    accepted_seeds = _admit_seed_urls(
+        raw_seeds,
+        root_domain=root_registrable_domain,
+        includes=includes,
+        excludes=excludes,
+    )
 
     # Refresh (seed if missing) the runtime row BEFORE mutating the profile.
     # ``replace_monitored_set()`` locks the runtime row before profile, so
@@ -354,6 +568,10 @@ async def create_crawl(
         include_globs=includes,
         exclude_globs=excludes,
         runtime=runtime,
+        input_mode=mode,
+        requested_page_limit=page_limit,
+        seed_urls=accepted_seeds,
+        page_types=selected_types,
     )
 
     # Keep a full-inventory project's earlier discovered URLs visible while
@@ -395,22 +613,31 @@ async def create_crawl(
     session.add(crawl)
     await session.flush()  # assign crawl.id
 
-    # Seed the in-scope root discover task (generation 0). The worker claims it,
-    # fetches the root, and progressively admits the frontier from there.
-    _root_canonical, root_hash = canonical_identity(root_url)
-    root_task = SiteCrawlTask(
-        crawl_id=crawl.id,
-        workspace_id=workspace_id,
-        task_kind=TASK_KIND_DISCOVER,
-        requested_url=root_url,
-        url_hash=root_hash,
-        depth=0,
-        generation=0,
-        idempotency_key=f"{crawl.id}:{TASK_KIND_DISCOVER}:{root_hash}:0",
-        status=TASK_STATUS_QUEUED,
-        randomized_position=0,
-    )
-    session.add(root_task)
+    # All roots/manual seeds pass the same policy above. Exact mode deliberately
+    # creates only the accepted explicit tasks; it cannot discover descendants.
+    initial_urls = (
+        accepted_seeds if mode == INPUT_MODE_EXACT_URLS else [root_url, *accepted_seeds]
+    )[:page_limit]
+    seen_initial: set[str] = set()
+    for position, initial_url in enumerate(initial_urls):
+        if initial_url in seen_initial:
+            continue
+        seen_initial.add(initial_url)
+        _canonical, url_hash = canonical_identity(initial_url)
+        session.add(
+            SiteCrawlTask(
+                crawl_id=crawl.id,
+                workspace_id=workspace_id,
+                task_kind=TASK_KIND_DISCOVER,
+                requested_url=initial_url,
+                url_hash=url_hash,
+                depth=0,
+                generation=0,
+                idempotency_key=f"{crawl.id}:{TASK_KIND_DISCOVER}:{url_hash}:0",
+                status=TASK_STATUS_QUEUED,
+                randomized_position=position,
+            )
+        )
 
     # Re-seed the persistent monitored set: on a recrawl the active monitored
     # URLs get fresh analyze tasks so their facts/scores refresh. On a first
@@ -483,12 +710,24 @@ async def create_page_rerun_crawl(
     The caller owns the transaction boundary (flush, no commit), mirroring
     ``rerun_page``. Returns the new ``SiteCrawl`` (unrefreshed).
     """
+    rerun_admission = classify_url_admission(
+        site_url.normalized_url,
+        root_registrable_domain=profile.registrable_domain or None,
+        include_globs=list(profile.include_globs or []),
+        exclude_globs=list(profile.exclude_globs or []),
+    )
+    if not rerun_admission.accepted:
+        raise CrawlPlanError(
+            "page is not admissible for rerun",
+            code=rerun_admission.reason_code or "invalid_crawl_request",
+        )
     sample_mode = _is_sample_mode(runtime)
     configuration = _frozen_configuration(
         root_registrable_domain=profile.registrable_domain or "",
         include_globs=list(profile.include_globs or []),
         exclude_globs=list(profile.exclude_globs or []),
         runtime=runtime,
+        requested_page_limit=site_health_settings.automatic_page_limit,
     )
     seed = _normalize_seed(random_seed)
 

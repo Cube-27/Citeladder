@@ -20,11 +20,16 @@ from httpx import ASGITransport
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+import app.api.opportunities as opportunity_routes
 from app.core.config import settings
 from app.core.telemetry import (
     generate_correlation_id,
     reset_correlation_id,
     set_correlation_id,
+)
+from app.domain.opportunities.service import (
+    OpportunityGuidanceIdempotencyConflictError,
+    OpportunityGuidanceUnavailableError,
 )
 from app.main import app
 from app.models.site_health import SiteHealthProfile
@@ -280,6 +285,43 @@ async def test_opportunities_superseded_409_envelope(
     assert body["detail"]["code"] == "opportunity_superseded"
     assert body["detail"]["message"] == body["error"]["message"]
     _assert_envelope(body, code="opportunity_superseded", retryable=False)
+
+
+async def test_opportunity_guidance_error_envelopes(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client, "env-guidance@example.com")
+    opportunity_id = uuid.uuid4()
+
+    async def unavailable(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise OpportunityGuidanceUnavailableError("Guidance is unavailable")
+
+    monkeypatch.setattr(opportunity_routes.service, "create_guidance", unavailable)
+    unavailable_response = await client.post(
+        f"/api/v1/opportunities/{opportunity_id}/guidance"
+    )
+    assert unavailable_response.status_code == 403
+    _assert_envelope(
+        unavailable_response.json(),
+        code="opportunity_guidance_unavailable",
+        retryable=False,
+    )
+
+    async def conflict(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise OpportunityGuidanceIdempotencyConflictError("Key was already used")
+
+    monkeypatch.setattr(opportunity_routes.service, "create_guidance", conflict)
+    conflict_response = await client.post(
+        f"/api/v1/opportunities/{opportunity_id}/guidance"
+    )
+    assert conflict_response.status_code == 409
+    _assert_envelope(
+        conflict_response.json(),
+        code="opportunity_guidance_idempotency_conflict",
+        retryable=False,
+    )
 
 
 # =========================================================================

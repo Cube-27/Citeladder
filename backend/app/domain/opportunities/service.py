@@ -17,13 +17,16 @@
 # keyset-paginated via the shared cursor helpers (invariant 2).
 from __future__ import annotations
 
+import json
 import re
 import statistics
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
+from hashlib import sha256
 
 from sqlalchemy import and_, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.opportunities.detectors import (
@@ -45,6 +48,7 @@ from app.analysis.opportunities.detectors import (
 )
 from app.analysis.opportunities.scoring import priority_score
 from app.analysis.product_service import build_product_scoring_config
+from app.core.config import settings
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
@@ -53,6 +57,18 @@ from app.core.config.opportunities import (
     ANALYZER_VERSION,
     CODE_OPPORTUNITY_SUPERSEDED,
     FORMULA_VERSION,
+    GUIDANCE_ENABLED_ENVIRONMENTS,
+    GUIDANCE_GENERATOR_VERSION,
+    GUIDANCE_HISTORY_DEFAULT_LIMIT,
+    GUIDANCE_HISTORY_MAX_LIMIT,
+    GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN,
+    GUIDANCE_MAX_EVIDENCE_KEYS,
+    GUIDANCE_MAX_EVIDENCE_LIST_ITEMS,
+    GUIDANCE_MAX_EVIDENCE_VALUE_CHARS,
+    GUIDANCE_MAX_FINDINGS,
+    GUIDANCE_MODEL,
+    GUIDANCE_PROMPT_VERSION,
+    GUIDANCE_PROVIDER,
     LIST_DEFAULT_LIMIT,
     LIST_MAX_LIMIT,
     MAX_EXPORT_ITEMS,
@@ -88,7 +104,7 @@ from app.models.analysis import (
 )
 from app.models.audit import Audit, AuditPromptSnapshot
 from app.models.brand import OwnedDomain
-from app.models.opportunity import Opportunity, OpportunitySnapshot
+from app.models.opportunity import Opportunity, OpportunityGuidance, OpportunitySnapshot
 from app.models.product import ProductMetricSnapshot
 from app.models.project import Project
 from app.models.site_health import SiteCrawl, SiteIssue, SiteUrl
@@ -97,6 +113,8 @@ __all__ = [
     "OpportunityNotFoundError",
     "OpportunityValidationError",
     "OpportunitySupersededError",
+    "OpportunityGuidanceUnavailableError",
+    "OpportunityGuidanceIdempotencyConflictError",
     "InvalidCursorError",
     "recompute",
     "list_opportunities",
@@ -104,6 +122,10 @@ __all__ = [
     "update_status",
     "get_summary",
     "load_export_rows",
+    "create_guidance",
+    "get_latest_guidance",
+    "list_guidance_history",
+    "get_grouped_history",
 ]
 
 # Dashboard-ready audit statuses (mirrors ``_DASHBOARD_STATUSES`` in
@@ -143,6 +165,14 @@ class OpportunitySupersededError(Exception):
     """A mutation targeted a superseded row (maps to 409, coded)."""
 
     code = CODE_OPPORTUNITY_SUPERSEDED
+
+
+class OpportunityGuidanceUnavailableError(Exception):
+    """Guidance is intentionally unavailable outside the dev eligibility gate."""
+
+
+class OpportunityGuidanceIdempotencyConflictError(Exception):
+    """An idempotency key was replayed for a changed frozen input."""
 
 
 class InvalidCursorError(Exception):
@@ -924,6 +954,360 @@ async def update_status(
     row.status = status
     await session.commit()
     return _project_item(row)
+
+
+# =========================================================================
+# Development-only immutable guidance (persisted opportunity evidence only)
+# =========================================================================
+def _guidance_enabled() -> bool:
+    return str(settings.app_env or "").strip().lower() in GUIDANCE_ENABLED_ENVIRONMENTS
+
+
+def _require_guidance_enabled() -> None:
+    # Production eligibility fails closed. Production plan/tier entitlement is
+    # intentionally not inferred here: this development-only feature cannot
+    # accidentally become a trial/Tier-1 benefit before its billing policy is
+    # wired in the entitlement owner.
+    if not _guidance_enabled():
+        raise OpportunityGuidanceUnavailableError(
+            "Opportunity guidance is not available for this workspace"
+        )
+
+
+def _bounded_value(value: object, *, depth: int = 0) -> object:
+    """Return a stable, JSON-safe, size-bounded evidence representation."""
+    if depth >= 4:
+        return "[truncated]"
+    if isinstance(value, dict):
+        return {
+            str(key)[:GUIDANCE_MAX_EVIDENCE_VALUE_CHARS]: _bounded_value(
+                child, depth=depth + 1
+            )
+            for key, child in sorted(value.items(), key=lambda item: str(item[0]))[
+                :GUIDANCE_MAX_EVIDENCE_KEYS
+            ]
+        }
+    if isinstance(value, (list, tuple)):
+        return [
+            _bounded_value(child, depth=depth + 1)
+            for child in value[:GUIDANCE_MAX_EVIDENCE_LIST_ITEMS]
+        ]
+    if isinstance(value, str):
+        return value[:GUIDANCE_MAX_EVIDENCE_VALUE_CHARS]
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    return str(value)[:GUIDANCE_MAX_EVIDENCE_VALUE_CHARS]
+
+
+def _guidance_input(row: Opportunity) -> dict:
+    """Freeze only bounded, already persisted opportunity evidence."""
+    return {
+        "opportunity_id": str(row.id),
+        "project_id": str(row.project_id),
+        "rule_id": row.rule_id,
+        "title": row.title or "",
+        "severity": row.severity,
+        "status": row.status,
+        "target": {
+            "key": row.target_key,
+            "url": row.target_url,
+            "theme": row.target_theme,
+        },
+        "evidence": _bounded_value(row.evidence or {}),
+        "source_analysis_ids": sorted(
+            str(value) for value in row.source_analysis_ids or []
+        ),
+        "source_issue_ids": sorted(
+            str(value) for value in row.source_issue_ids or []
+        ),
+        "source_metric_ids": sorted(
+            str(value) for value in row.source_metric_ids or []
+        ),
+        "versions": {
+            "analyzer": row.analyzer_version,
+            "rule": row.rule_version,
+            "formula": row.formula_version,
+        },
+    }
+
+
+def _guidance_hash(snapshot: dict) -> str:
+    encoded = json.dumps(
+        snapshot, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    )
+    return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _guidance_findings(row: Opportunity, snapshot: dict) -> list[str]:
+    evidence = snapshot.get("evidence") or {}
+    findings = [f"{row.title or row.rule_id} is currently {row.status}."]
+    target = _target_label(row)
+    if target:
+        findings.append(f"Affected target: {target}.")
+    expected = (
+        evidence.get("expected_schema_types") if isinstance(evidence, dict) else None
+    )
+    if expected:
+        findings.append(f"Expected schema: {expected}.")
+    return findings[:GUIDANCE_MAX_FINDINGS]
+
+
+async def _guidance_opportunity(
+    session: AsyncSession, *, workspace_id: uuid.UUID, opportunity_id: uuid.UUID
+) -> Opportunity:
+    row = await session.scalar(
+        select(Opportunity).where(
+            Opportunity.id == opportunity_id,
+            Opportunity.workspace_id == workspace_id,
+        )
+    )
+    if row is None:
+        raise OpportunityNotFoundError(_OPPORTUNITY_NOT_FOUND)
+    return row
+
+
+async def create_guidance(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    opportunity_id: uuid.UUID,
+    idempotency_key: str,
+) -> tuple[OpportunityGuidance, bool]:
+    """Persist one deterministic guidance version or replay its exact key."""
+    _require_guidance_enabled()
+    key = idempotency_key.strip()
+    if not key or len(key) > GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN:
+        raise OpportunityValidationError("a bounded Idempotency-Key is required")
+    row = await _guidance_opportunity(
+        session, workspace_id=workspace_id, opportunity_id=opportunity_id
+    )
+    snapshot = _guidance_input(row)
+    input_hash = _guidance_hash(snapshot)
+    existing = await session.scalar(
+        select(OpportunityGuidance).where(
+            OpportunityGuidance.workspace_id == workspace_id,
+            OpportunityGuidance.opportunity_id == opportunity_id,
+            OpportunityGuidance.idempotency_key == key,
+        )
+    )
+    if existing is not None:
+        if existing.input_hash == input_hash:
+            return existing, False
+        raise OpportunityGuidanceIdempotencyConflictError(
+            "Idempotency-Key was already used for an earlier guidance input"
+        )
+
+    guidance = OpportunityGuidance(
+        workspace_id=workspace_id,
+        project_id=row.project_id,
+        opportunity_id=row.id,
+        idempotency_key=key,
+        input_snapshot=snapshot,
+        input_hash=input_hash,
+        findings=_guidance_findings(row, snapshot),
+        recommendations=[row.remediation or "Review the persisted evidence."],
+        source_analysis_ids=list(row.source_analysis_ids or []),
+        source_issue_ids=list(row.source_issue_ids or []),
+        source_metric_ids=list(row.source_metric_ids or []),
+        analyzer_version=row.analyzer_version,
+        rule_version=row.rule_version,
+        formula_version=row.formula_version,
+        generator_version=GUIDANCE_GENERATOR_VERSION,
+        prompt_version=GUIDANCE_PROMPT_VERSION,
+        provider=GUIDANCE_PROVIDER,
+        model=GUIDANCE_MODEL,
+    )
+    session.add(guidance)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        winner = await session.scalar(
+            select(OpportunityGuidance).where(
+                OpportunityGuidance.workspace_id == workspace_id,
+                OpportunityGuidance.opportunity_id == opportunity_id,
+                OpportunityGuidance.idempotency_key == key,
+            )
+        )
+        if winner is not None and winner.input_hash == input_hash:
+            return winner, False
+        if winner is not None:
+            raise OpportunityGuidanceIdempotencyConflictError(
+                "Idempotency-Key was already used for an earlier guidance input"
+            ) from None
+        raise
+    await session.refresh(guidance)
+    return guidance, True
+
+
+async def get_latest_guidance(
+    session: AsyncSession, *, workspace_id: uuid.UUID, opportunity_id: uuid.UUID
+) -> OpportunityGuidance | None:
+    _require_guidance_enabled()
+    await _guidance_opportunity(
+        session, workspace_id=workspace_id, opportunity_id=opportunity_id
+    )
+    return await session.scalar(
+        select(OpportunityGuidance)
+        .where(
+            OpportunityGuidance.workspace_id == workspace_id,
+            OpportunityGuidance.opportunity_id == opportunity_id,
+        )
+        .order_by(OpportunityGuidance.created_at.desc(), OpportunityGuidance.id.desc())
+        .limit(1)
+    )
+
+
+async def list_guidance_history(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    opportunity_id: uuid.UUID,
+    limit: int | None = None,
+) -> list[OpportunityGuidance]:
+    _require_guidance_enabled()
+    await _guidance_opportunity(
+        session, workspace_id=workspace_id, opportunity_id=opportunity_id
+    )
+    capped = max(
+        1, min(limit or GUIDANCE_HISTORY_DEFAULT_LIMIT, GUIDANCE_HISTORY_MAX_LIMIT)
+    )
+    rows = await session.scalars(
+        select(OpportunityGuidance)
+        .where(
+            OpportunityGuidance.workspace_id == workspace_id,
+            OpportunityGuidance.opportunity_id == opportunity_id,
+        )
+        .order_by(OpportunityGuidance.created_at.desc(), OpportunityGuidance.id.desc())
+        .limit(capped)
+    )
+    return list(rows.all())
+
+
+def _project_guidance(row: OpportunityGuidance) -> dict:
+    return {
+        "id": row.id,
+        "opportunity_id": row.opportunity_id,
+        "input_hash": row.input_hash,
+        "findings": list(row.findings or []),
+        "recommendations": list(row.recommendations or []),
+        "source_analysis_ids": list(row.source_analysis_ids or []),
+        "source_issue_ids": list(row.source_issue_ids or []),
+        "source_metric_ids": list(row.source_metric_ids or []),
+        "analyzer_version": row.analyzer_version,
+        "rule_version": row.rule_version,
+        "formula_version": row.formula_version,
+        "generator_version": row.generator_version,
+        "prompt_version": row.prompt_version,
+        "provider": row.provider,
+        "model": row.model,
+        "created_at": _iso(row.created_at),
+    }
+
+
+async def get_grouped_history(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> dict:
+    """Rule/target history compared with the two latest recompute snapshots."""
+    await _require_project(session, workspace_id=workspace_id, project_id=project_id)
+    snapshots = list(
+        (
+            await session.scalars(
+                select(OpportunitySnapshot)
+                .where(
+                    OpportunitySnapshot.workspace_id == workspace_id,
+                    OpportunitySnapshot.project_id == project_id,
+                )
+                .order_by(
+                    OpportunitySnapshot.created_at.desc(), OpportunitySnapshot.id.desc()
+                )
+                .limit(2)
+            )
+        ).all()
+    )
+    latest_snapshot = snapshots[0] if snapshots else None
+    previous_snapshot = snapshots[1] if len(snapshots) > 1 else None
+    rows = list(
+        (
+            await session.scalars(
+                select(Opportunity)
+                .where(
+                    Opportunity.workspace_id == workspace_id,
+                    Opportunity.project_id == project_id,
+                )
+                .order_by(Opportunity.created_at.asc(), Opportunity.id.asc())
+            )
+        ).all()
+    )
+    groups: dict[tuple[str, str], list[Opportunity]] = {}
+    for row in rows:
+        groups.setdefault((row.rule_id, row.target_key), []).append(row)
+
+    def active_at(
+        occurrences: list[Opportunity], timestamp: datetime | None
+    ) -> Opportunity | None:
+        if timestamp is None:
+            return next(
+                (row for row in reversed(occurrences) if row.superseded_at is None),
+                None,
+            )
+        return next(
+            (
+                row
+                for row in reversed(occurrences)
+                if row.created_at <= timestamp
+                and (row.superseded_at is None or row.superseded_at > timestamp)
+            ),
+            None,
+        )
+
+    projected: list[dict] = []
+    counts = {"new": 0, "continuing": 0, "resolved": 0}
+    for (rule_id, target_key), occurrences in groups.items():
+        current = active_at(
+            occurrences,
+            latest_snapshot.created_at if latest_snapshot is not None else None,
+        )
+        previous = active_at(
+            occurrences,
+            previous_snapshot.created_at if previous_snapshot is not None else None,
+        )
+        if current is not None and previous is not None:
+            transition = "continuing"
+        elif current is not None:
+            transition = "new"
+        elif previous is not None:
+            transition = "resolved"
+        else:
+            # Historical rows from before the comparison window stay visible,
+            # but must not be counted as a change since the prior recompute.
+            transition = "resolved"
+        if current is not None or previous is not None:
+            counts[transition] += 1
+        projected.append(
+            {
+                "rule_id": rule_id,
+                "target_key": target_key,
+                "title": occurrences[-1].title or "",
+                "current_state": current.status if current is not None else "resolved",
+                "transition": transition,
+                "occurrence_count": len(occurrences),
+                "first_seen": _iso(occurrences[0].created_at),
+                "last_seen": _iso(occurrences[-1].created_at),
+                "timeline": [
+                    {
+                        "id": row.id,
+                        "status": row.status,
+                        "seen_at": _iso(row.created_at),
+                    }
+                    for row in occurrences
+                ],
+            }
+        )
+    projected.sort(
+        key=lambda group: (group["last_seen"] or "", group["rule_id"]), reverse=True
+    )
+    return {"items": projected, "since_previous": counts}
 
 
 async def _resolve_scored_audit(

@@ -34,7 +34,7 @@ describe('labels', () => {
 
   it('maps dimensions to their catalog labels', () => {
     expect(dimensionLabel('aeo')).toBe('AEO');
-    expect(dimensionLabel('technical')).toBe('TECHNICAL');
+    expect(dimensionLabel('technical')).toBe('WEB FUNDAMENTALS');
   });
 });
 

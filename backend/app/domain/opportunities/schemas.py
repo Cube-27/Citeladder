@@ -43,6 +43,52 @@ class RecomputeRequest(_Model):
     site_crawl_id: uuid.UUID | None = None
 
 
+class OpportunityGuidanceItem(_Model):
+    id: uuid.UUID
+    opportunity_id: uuid.UUID
+    input_hash: str
+    findings: list[str]
+    recommendations: list[str]
+    source_analysis_ids: list[uuid.UUID]
+    source_issue_ids: list[uuid.UUID]
+    source_metric_ids: list[uuid.UUID]
+    analyzer_version: str
+    rule_version: str
+    formula_version: str
+    generator_version: str
+    prompt_version: str
+    provider: str
+    model: str
+    created_at: str
+
+
+class OpportunityGuidanceHistory(_Model):
+    items: list[OpportunityGuidanceItem]
+
+
+class OpportunityHistoryEvent(_Model):
+    id: uuid.UUID
+    status: str
+    seen_at: str
+
+
+class OpportunityHistoryGroup(_Model):
+    rule_id: str
+    target_key: str
+    title: str
+    current_state: str
+    transition: str
+    occurrence_count: int
+    first_seen: str
+    last_seen: str
+    timeline: list[OpportunityHistoryEvent]
+
+
+class OpportunityHistoryResponse(_Model):
+    items: list[OpportunityHistoryGroup]
+    since_previous: dict[str, int]
+
+
 # =========================================================================
 # Responses
 # =========================================================================

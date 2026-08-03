@@ -59,7 +59,7 @@ export function PageTypeScores({
               <TableRow>
                 <TableHead>Page Type</TableHead>
                 <TableHead numeric>Analyzed</TableHead>
-                <TableHead numeric>Technical</TableHead>
+                <TableHead numeric>Web Fundamentals</TableHead>
                 <TableHead numeric>AEO</TableHead>
                 <TableHead numeric>Overall</TableHead>
               </TableRow>

@@ -46,16 +46,12 @@ vi.mock('@/lib/products/use-products-screen', async (importOriginal) => {
       setSurface: vi.fn(),
       visibilityQuery: { isLoading: true },
     }),
-    useAttributionQueries: () => ({
-      range: 'latest',
-      setRange: vi.fn(),
-      granularity: 'week',
-      setGranularity: vi.fn(),
-      filters: { from: null, to: null, granularity: 'week' },
-      snapshotQuery: { isLoading: true },
-      recomputeMutation: { isPending: false, isError: false, mutate: vi.fn() },
-      recomputeTaskQuery: { data: undefined },
-      recomputeTerminal: false,
+    useCommerceDiscovery: () => ({
+      runsQuery: { isLoading: false, data: [] }, candidatesQuery: { isLoading: false, data: [] },
+      previewMutation: {}, createMutation: {}, decisionMutation: {}, setSelectedRunId: vi.fn(),
+    }),
+    useMarketIntelligence: () => ({
+      comparisonsQuery: { isLoading: false, data: [] }, createMutation: {},
     }),
   };
 });
@@ -68,31 +64,31 @@ vi.mock('./product-visibility-panel', () => ({
   ProductVisibilityPanel: () => <div data-testid="visibility-panel">Visibility panel</div>,
 }));
 
-vi.mock('./attribution-panel', () => ({
-  AttributionPanel: () => <div data-testid="attribution-panel">Attribution panel</div>,
-}));
-
 describe('ProductsScreen tabs', () => {
   beforeEach(() => {
     replaceStateSpy.mockClear();
     urlTab = null;
   });
 
-  it('defaults to the Catalog tab and renders exactly one panel', () => {
+  it('defaults to Discover and renders exactly one panel', () => {
     render(<ProductsScreen />);
 
-    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Visibility' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Discover' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveAttribute(
       'aria-selected',
       'false',
     );
-    expect(screen.getByRole('tab', { name: 'Attribution' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'AI Conversations' })).toHaveAttribute(
       'aria-selected',
       'false',
     );
-    expect(screen.getByTestId('catalog-panel')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Market Intelligence' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    expect(screen.getByTestId('commerce-discover-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('catalog-panel')).not.toBeInTheDocument();
     expect(screen.queryByTestId('visibility-panel')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('attribution-panel')).not.toBeInTheDocument();
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
   });
 
@@ -100,45 +96,45 @@ describe('ProductsScreen tabs', () => {
     const user = userEvent.setup();
     render(<ProductsScreen />);
 
-    await user.click(screen.getByRole('tab', { name: 'Visibility' }));
+    await user.click(screen.getByRole('tab', { name: 'AI Conversations' }));
     expect(screen.getByTestId('visibility-panel')).toBeInTheDocument();
-    expect(screen.queryByTestId('catalog-panel')).not.toBeInTheDocument();
-    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=visibility');
+    expect(screen.queryByTestId('commerce-discover-panel')).not.toBeInTheDocument();
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=conversations');
 
     await user.click(screen.getByRole('tab', { name: 'Catalog' }));
     expect(screen.getByTestId('catalog-panel')).toBeInTheDocument();
     expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=catalog');
   });
 
-  it('reads the initial tab from ?tab= (invalid values fall back to Catalog)', () => {
-    urlTab = 'visibility';
+  it('reads the initial tab from ?tab= (invalid values fall back to Discover)', () => {
+    urlTab = 'conversations';
     render(<ProductsScreen />);
     expect(screen.getByTestId('visibility-panel')).toBeInTheDocument();
   });
 
-  it('switches to the Attribution tab and mirrors it into ?tab=', async () => {
+  it('switches to Market Intelligence and mirrors it into ?tab=', async () => {
     const user = userEvent.setup();
     render(<ProductsScreen />);
 
-    await user.click(screen.getByRole('tab', { name: 'Attribution' }));
-    expect(screen.getByTestId('attribution-panel')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Market Intelligence' }));
+    expect(screen.getByTestId('commerce-market-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('catalog-panel')).not.toBeInTheDocument();
-    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=attribution');
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/products?tab=market_intelligence');
   });
 
-  it('reads the Attribution tab from ?tab=attribution', () => {
-    urlTab = 'attribution';
+  it('reads the Market Intelligence tab from ?tab=market_intelligence', () => {
+    urlTab = 'market_intelligence';
     render(<ProductsScreen />);
-    expect(screen.getByTestId('attribution-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('commerce-market-panel')).toBeInTheDocument();
   });
 
   it('supports ArrowRight keyboard navigation between tabs', async () => {
     const user = userEvent.setup();
     render(<ProductsScreen />);
 
-    screen.getByRole('tab', { name: 'Catalog' }).focus();
+    screen.getByRole('tab', { name: 'Discover' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Visibility' })).toHaveFocus();
-    expect(screen.getByTestId('visibility-panel')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveFocus();
+    expect(screen.getByTestId('catalog-panel')).toBeInTheDocument();
   });
 });

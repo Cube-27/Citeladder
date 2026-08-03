@@ -1,0 +1,142 @@
+"""Supplemental, config-owned page-analysis policy.
+
+``site_health.py`` remains the owner of crawl/fetch policy and the base page
+taxonomy.  This small companion owns only the product-page fields and rules
+that can evolve independently of the acquisition ladder.  Analysis modules
+read these tables; they do not embed product-schema policy inline.
+"""
+from __future__ import annotations
+
+from typing import Final
+
+from app.core.config.site_health import (
+    CATEGORY_CONTENT,
+    CATEGORY_STRUCTURED_DATA,
+    DIMENSION_AEO,
+    PAGE_TYPE_PRODUCT,
+    RULE_CATALOG_VERSION,
+    SEVERITY_HIGH,
+    SEVERITY_MEDIUM,
+    PageTypeSchemaExpectation,
+    SiteHealthRule,
+)
+
+PAGE_PROFILE_RULE_VERSION: Final = f"{RULE_CATALOG_VERSION}-product-1"
+
+# Product / Offer property paths retained by the bounded structured-data
+# extractor.  These are intentionally separate from the generic per-type
+# expectation table so fetch-ladder work does not need to touch it.
+PRODUCT_SCHEMA_PROPERTY_PATHS: Final[frozenset[str]] = frozenset(
+    {
+        "sku",
+        "gtin",
+        "gtin8",
+        "gtin12",
+        "gtin13",
+        "gtin14",
+        "mpn",
+        "brand",
+        "offers.price",
+        "offers.priceCurrency",
+        "offers.availability",
+        "offers.shippingDetails",
+        "offers.hasMerchantReturnPolicy",
+        "hasVariant",
+        "isVariantOf",
+        "aggregateRating",
+        "review",
+        "ratingValue",
+    }
+)
+PRODUCT_RECOGNIZED_SCHEMA_TYPES: Final[frozenset[str]] = frozenset(
+    {"Offer", "AggregateRating"}
+)
+PRODUCT_FACT_MAX_VALUES: Final = 12
+PRODUCT_FACT_MAX_VALUE_CHARS: Final = 256
+PRODUCT_NESTED_VALUE_KEYS: Final[tuple[str, ...]] = ("name", "ratingValue")
+
+# Product pages keep the base Product requirement but complete the documented
+# Product/Offer contract with identity, offer, variant, trust, and delivery
+# properties.  The generic rules consume this effective expectation.
+PRODUCT_SCHEMA_EXPECTATION: Final = PageTypeSchemaExpectation(
+    page_type=PAGE_TYPE_PRODUCT,
+    expected_types=("Product",),
+    required_properties=("name", "offers"),
+    recommended_properties=(
+        "sku",
+        "gtin",
+        "brand",
+        "offers.price",
+        "offers.priceCurrency",
+        "offers.availability",
+        "hasVariant",
+        "aggregateRating",
+        "offers.shippingDetails",
+        "offers.hasMerchantReturnPolicy",
+    ),
+)
+
+PRODUCT_PARITY_FIELDS: Final[tuple[str, ...]] = (
+    "name",
+    "sku",
+    "gtin",
+    "brand",
+    "price",
+    "availability",
+)
+PRODUCT_PARITY_NORMALIZATION_PATTERN: Final = r"[^a-z0-9]+"
+PRODUCT_SCHEMA_URI_SEPARATOR: Final = "/"
+PRODUCT_PARITY_SCHEMA_FACT_KEYS: Final[dict[str, str]] = {
+    "sku": "sku",
+    "gtin": "gtin",
+    "brand": "brand",
+    "price": "price",
+    "availability": "availability",
+}
+
+PRODUCT_ANALYSIS_RULES: Final[tuple[SiteHealthRule, ...]] = (
+    SiteHealthRule(
+        rule_id="aeo.product_offer_details",
+        rule_version=PAGE_PROFILE_RULE_VERSION,
+        dimension=DIMENSION_AEO,
+        category=CATEGORY_STRUCTURED_DATA,
+        severity=SEVERITY_MEDIUM,
+        weight=1.0,
+        applicability_key=f"page_type:{PAGE_TYPE_PRODUCT}",
+        description="Product pages expose complete Product/Offer facts.",
+        remediation=(
+            "Add Product and Offer properties for the identifiers, price, "
+            "currency, availability, variants, ratings, shipping, and returns "
+            "that this page makes available."
+        ),
+        display_label="Incomplete Product/Offer details",
+    ),
+    SiteHealthRule(
+        rule_id="aeo.product_visible_schema_parity",
+        rule_version=PAGE_PROFILE_RULE_VERSION,
+        dimension=DIMENSION_AEO,
+        category=CATEGORY_CONTENT,
+        severity=SEVERITY_HIGH,
+        weight=1.5,
+        applicability_key=f"page_type:{PAGE_TYPE_PRODUCT}",
+        description="Visible product claims agree with Product/Offer schema.",
+        remediation=(
+            "Make visible product identity, price, and availability claims "
+            "agree with Product/Offer structured data before publishing."
+        ),
+        display_label="Visible product claims conflict with schema",
+    ),
+)
+
+PRODUCT_ANALYSIS_RULES_BY_ID: Final[dict[str, SiteHealthRule]] = {
+    rule.rule_id: rule for rule in PRODUCT_ANALYSIS_RULES
+}
+
+# Stable reason tokens stored in classifier evidence.  They are config-owned
+# so a wording/policy revision is explicit and replayable.
+CLASSIFICATION_OTHER_REASON_NO_SIGNALS: Final = "no_classification_signals"
+CLASSIFICATION_OTHER_REASON_BELOW_THRESHOLD: Final = "confidence_below_threshold"
+CLASSIFICATION_MAX_ALTERNATIVES: Final = 8
+
+# Grouped issue history remains bounded even for a long-lived monitored URL.
+ISSUE_HISTORY_TIMELINE_MAX_CRAWLS: Final = 24

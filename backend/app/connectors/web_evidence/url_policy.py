@@ -28,6 +28,7 @@ from __future__ import annotations
 import fnmatch
 import ipaddress
 import re
+from dataclasses import dataclass
 from urllib.parse import (
     parse_qsl,
     quote,
@@ -48,7 +49,20 @@ from app.core.config.site_health import (
     ALLOWED_URL_SCHEMES,
     ERROR_DNS_RESOLUTION_FAILED,
     ERROR_SSRF_BLOCKED,
+    INFRASTRUCTURE_FETCH_EXACT_PATHS,
+    INFRASTRUCTURE_FETCH_PATH_SUFFIXES,
     TRACKING_QUERY_PARAMS,
+    URL_EXCLUSION_HARD_ASSET,
+    URL_EXCLUSION_HARD_PATH,
+    URL_EXCLUSION_HARD_QUERY,
+    URL_EXCLUSION_INVALID,
+    URL_EXCLUSION_NARROWED,
+    URL_EXCLUSION_OUT_OF_SCOPE,
+    URL_EXCLUSION_TRACKING,
+    URL_HARD_EXCLUSION_EXTENSIONS,
+    URL_HARD_EXCLUSION_PATH_PATTERNS,
+    URL_HARD_EXCLUSION_QUERY_KEYS,
+    URL_VALUE_PRIORITIES,
 )
 
 # The concrete address classes carry the ``is_loopback``/``is_private``/… flags
@@ -76,6 +90,129 @@ _METADATA_IPS: frozenset[str] = frozenset(
 
 class UrlPolicyError(ValueError):
     """A URL was rejected by canonicalization/scope/narrowing (not SSRF)."""
+
+
+@dataclass(frozen=True, slots=True)
+class UrlAdmission:
+    """Pure, safe URL-admission result used before queueing or fetching."""
+
+    accepted: bool
+    canonical_url: str | None
+    reason_code: str | None
+    value_kind: str
+    priority: int
+
+
+def _path_is_hard_excluded(path: str) -> bool:
+    normalized = path.lower().rstrip("/") or "/"
+    return any(
+        re.search(pattern, normalized) for pattern in URL_HARD_EXCLUSION_PATH_PATTERNS
+    )
+
+
+def _has_hard_excluded_query(query: str) -> bool:
+    return any(
+        key.lower() in URL_HARD_EXCLUSION_QUERY_KEYS
+        for key, _ in parse_qsl(query, keep_blank_values=True)
+    )
+
+
+def _has_tracking_query(query: str) -> bool:
+    return any(
+        key.lower() in TRACKING_QUERY_PARAMS
+        for key, _ in parse_qsl(query, keep_blank_values=True)
+    )
+
+
+def _is_hard_excluded_asset(path: str) -> bool:
+    return any(
+        path.lower().endswith(extension) for extension in URL_HARD_EXCLUSION_EXTENSIONS
+    )
+
+
+def _is_infrastructure_asset_exception(
+    path: str, infrastructure_purpose: str | None
+) -> bool:
+    """Allow only configured crawler infrastructure documents.
+
+    The exception is intentionally evaluated only for the asset-extension
+    rule. Transactional paths, query exclusions, canonicalization, scope, DNS
+    pinning, and redirect validation continue to apply unchanged.
+    """
+    if infrastructure_purpose is None:
+        return False
+    normalized = path.lower().rstrip("/") or "/"
+    if normalized in INFRASTRUCTURE_FETCH_EXACT_PATHS.get(
+        infrastructure_purpose, frozenset()
+    ):
+        return True
+    return normalized.endswith(
+        INFRASTRUCTURE_FETCH_PATH_SUFFIXES.get(infrastructure_purpose, ())
+    )
+
+
+def page_value_kind(url: str) -> str:
+    """Classify URL value deterministically for admission ordering only."""
+    path = urlsplit(url).path.lower().rstrip("/") or "/"
+    if path == "/":
+        return "root"
+    # The priority catalog is config-owned; keeping matching terms here would
+    # duplicate policy, so derive from its keys in descending value order.
+    for kind in sorted(
+        URL_VALUE_PRIORITIES, key=URL_VALUE_PRIORITIES.get, reverse=True
+    ):
+        if kind != "root" and kind.replace("_", "-") in path:
+            return kind
+    if any(token in path for token in ("product", "/p/", "shop")):
+        return "product"
+    if any(token in path for token in ("blog", "article", "news")):
+        return "article"
+    return "other"
+
+
+def classify_url_admission(
+    url: str,
+    *,
+    root_registrable_domain: str | None = None,
+    include_globs: list[str] | None = None,
+    exclude_globs: list[str] | None = None,
+    base_url: str | None = None,
+    infrastructure_purpose: str | None = None,
+) -> UrlAdmission:
+    """Return the single policy decision for any candidate URL.
+
+    Callers use this before creating tasks and before following a redirect.
+    Hard exclusions are intentionally not overridable by include globs.
+    """
+    raw = str(url or "").strip()
+    try:
+        resolved = _resolve_relative(base_url, raw) if base_url else raw
+        parts = urlsplit(resolved)
+        if _path_is_hard_excluded(parts.path):
+            return UrlAdmission(False, None, URL_EXCLUSION_HARD_PATH, "other", 0)
+        asset_is_infrastructure = _is_infrastructure_asset_exception(
+            parts.path, infrastructure_purpose
+        )
+        if _is_hard_excluded_asset(parts.path) and not asset_is_infrastructure:
+            return UrlAdmission(False, None, URL_EXCLUSION_HARD_ASSET, "other", 0)
+        if _has_hard_excluded_query(parts.query):
+            return UrlAdmission(False, None, URL_EXCLUSION_HARD_QUERY, "other", 0)
+        if _has_tracking_query(parts.query):
+            return UrlAdmission(False, None, URL_EXCLUSION_TRACKING, "other", 0)
+        canonical = canonicalize(resolved)
+    except UrlPolicyError:
+        return UrlAdmission(False, None, URL_EXCLUSION_INVALID, "other", 0)
+    kind = page_value_kind(canonical)
+    priority = URL_VALUE_PRIORITIES.get(kind, URL_VALUE_PRIORITIES["other"])
+    if root_registrable_domain and not is_in_scope(canonical, root_registrable_domain):
+        return UrlAdmission(
+            False, canonical, URL_EXCLUSION_OUT_OF_SCOPE, kind, priority
+        )
+    if root_registrable_domain and not narrow(
+        canonical, include_globs=include_globs, exclude_globs=exclude_globs
+    ):
+        return UrlAdmission(False, canonical, URL_EXCLUSION_NARROWED, kind, priority)
+    return UrlAdmission(True, canonical, None, kind, priority)
 
 
 def _idna_host(host: str) -> str:
@@ -296,9 +433,12 @@ def is_admissible(
     exclude_globs: list[str] | None,
 ) -> bool:
     """Scope + narrowing gate for a canonical URL (does NOT do DNS/SSRF)."""
-    if not is_in_scope(url, root_registrable_domain):
-        return False
-    return narrow(url, include_globs=include_globs, exclude_globs=exclude_globs)
+    return classify_url_admission(
+        url,
+        root_registrable_domain=root_registrable_domain,
+        include_globs=include_globs,
+        exclude_globs=exclude_globs,
+    ).accepted
 
 
 def _is_unsafe_ip(ip: IPAddress) -> bool:
@@ -380,6 +520,7 @@ async def resolve_target(
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
     enforce_scope: bool = True,
+    infrastructure_purpose: str | None = None,
 ) -> ResolvedTarget:
     """Canonicalize, scope-check, resolve DNS, SSRF-validate, and pin an IP.
 
@@ -388,11 +529,25 @@ async def resolve_target(
     glob-excluded URL raises ``UrlPolicyError`` (a redirect that escapes scope
     is rejected). DNS goes through the injected resolver only.
     """
-    canonical = canonicalize(url)
+    admission = classify_url_admission(
+        url,
+        root_registrable_domain=root_registrable_domain if enforce_scope else None,
+        include_globs=include_globs,
+        exclude_globs=exclude_globs,
+        infrastructure_purpose=infrastructure_purpose,
+    )
+    if not admission.accepted or admission.canonical_url is None:
+        raise UrlPolicyError(
+            f"URL rejected by admission policy: {admission.reason_code}"
+        )
+    canonical = admission.canonical_url
     if enforce_scope and root_registrable_domain:
-        if not is_admissible(
+        # Admission above already applied the hard page policy (including the
+        # narrow infrastructure-document exception). Recheck only scope and
+        # configured narrowing here so redirects cannot escape either without
+        # accidentally treating robots.txt/llms.txt as page assets again.
+        if not is_in_scope(canonical, root_registrable_domain) or not narrow(
             canonical,
-            root_registrable_domain=root_registrable_domain,
             include_globs=include_globs,
             exclude_globs=exclude_globs,
         ):

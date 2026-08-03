@@ -55,7 +55,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     pains: [
       'Leadership demands verified AI metrics, not ungrounded claims.',
       'Engine visibility shifts weekly without clear root cause.',
-      'Technical and AEO fixes live scattered across legacy tools.',
+      'Web Fundamentals and AEO fixes live scattered across legacy tools.',
     ],
     mappings: [
       'Multi-engine cross-run trend analysis with timeline controls.',

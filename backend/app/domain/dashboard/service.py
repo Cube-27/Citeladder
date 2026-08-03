@@ -2,13 +2,37 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.audits import AUDIT_TERMINAL_STATUSES
+from app.core.config.dashboard import (
+    AI_PRESENCE_FORMULA_VERSION,
+    BRAND_VISIBILITY_WEIGHTS,
+    COMMERCE_MIN_PRODUCT_EVIDENCE_ROWS,
+    COMMERCE_WEIGHTS,
+    COMPONENT_BRAND_MENTION_RATE,
+    COMPONENT_BRAND_VISIBILITY,
+    COMPONENT_NORMALIZED_SOV,
+    COMPONENT_OPPORTUNITY_EXECUTION,
+    COMPONENT_OWNED_CITATION_RATE,
+    COMPONENT_PRODUCT_PRESENCE,
+    COMPONENT_WEB_FUNDAMENTALS,
+    DASHBOARD_MAX_AI_PRESENCE_POINTS,
+    FORMULA_KIND_COMMERCE,
+    FORMULA_KIND_STANDARD,
+    MOMENTUM_WINDOW_DAYS,
+    PRODUCT_PRESENCE_WEIGHTS,
+    SCORE_ROUNDING_DECIMALS,
+    SCORE_SCALE,
+    STANDARD_WEIGHTS,
+)
 from app.domain.dashboard.schemas import (
+    AIPresenceComponent,
+    AIPresencePoint,
+    AIPresenceResponse,
     DashboardProject,
     DashboardResponse,
     DashboardSection,
@@ -19,12 +43,233 @@ from app.models.analytics import AnalyticsSnapshot
 from app.models.audit import Audit
 from app.models.brand import BrandProfile
 from app.models.content import ContentGeneration
-from app.models.opportunity import Opportunity
+from app.models.opportunity import Opportunity, OpportunitySnapshot
 from app.models.product import ProductMetricSnapshot
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.site_health import SiteCrawl, SiteHealthSnapshot
 from app.models.traffic import TrafficSnapshot
+
+
+def _bounded_rate(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        return min(1.0, max(0.0, float(value)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _score_rate(value: object) -> float | None:
+    rate = _bounded_rate(value)
+    if rate is None:
+        return None
+    return round(rate * SCORE_SCALE, SCORE_ROUNDING_DECIMALS)
+
+
+def _weighted_components(
+    values: dict[str, float | None], weights: dict[str, float]
+) -> tuple[float | None, dict[str, AIPresenceComponent], dict[str, bool]]:
+    coverage = {name: values.get(name) is not None for name in weights}
+    available_weight = sum(weight for name, weight in weights.items() if coverage[name])
+    components = {
+        name: AIPresenceComponent(
+            score=values.get(name), weight=weight, available=coverage[name]
+        )
+        for name, weight in weights.items()
+    }
+    if not available_weight:
+        return None, components, coverage
+    score = (
+        sum(
+            (values[name] or 0.0) * weight
+            for name, weight in weights.items()
+            if coverage[name]
+        )
+        / available_weight
+    )
+    return round(score, SCORE_ROUNDING_DECIMALS), components, coverage
+
+
+def _normalized_brand_sov(metric: MetricSnapshot, brand_name: str) -> float | None:
+    metrics = metric.metrics or {}
+    shares = (metrics.get("share_of_voice") or {}).get("share") or {}
+    raw = shares.get(brand_name)
+    if raw is None:
+        raw = shares.get("Brand")
+    return _score_rate(raw)
+
+
+def _product_presence(
+    snapshots: list[ProductMetricSnapshot], *, total_completed: int
+) -> tuple[float | None, dict[str, bool], dict[str, str]]:
+    """Aggregate only own, provenance-backed product snapshot rows."""
+    own = [
+        row
+        for row in snapshots
+        if row.product_id is not None and bool(row.source_analysis_ids)
+    ]
+    if len(own) < COMMERCE_MIN_PRODUCT_EVIDENCE_ROWS:
+        return None, {name: False for name in PRODUCT_PRESENCE_WEIGHTS}, {}
+    sov = _score_rate(sum(max(0.0, float(row.sov_share or 0.0)) for row in own))
+    mention_coverage = (
+        _score_rate(
+            sum(max(0, int(row.mention_count or 0)) for row in own)
+            / total_completed
+        )
+        if total_completed > 0
+        else None
+    )
+    ranks = [
+        float(row.avg_rank)
+        for row in own
+        if row.avg_rank is not None and row.avg_rank > 0
+    ]
+    rank = (
+        round(
+            sum(min(1.0, 1.0 / value) for value in ranks)
+            / len(ranks)
+            * SCORE_SCALE,
+            SCORE_ROUNDING_DECIMALS,
+        )
+        if ranks
+        else None
+    )
+    prices = [
+        float(row.price_accuracy_rate)
+        for row in own
+        if row.price_accuracy_rate is not None
+    ]
+    price = _score_rate(sum(prices) / len(prices)) if prices else None
+    score, _components, coverage = _weighted_components(
+        {
+            "product_share_of_voice": sov,
+            "product_prompt_mention_coverage": mention_coverage,
+            "normalized_rank_performance": rank,
+            "verifiable_price_accuracy": price,
+        },
+        PRODUCT_PRESENCE_WEIGHTS,
+    )
+    versions = {
+        "product_analyzer": ",".join(
+            sorted({row.product_analyzer_version for row in own})
+        ),
+        "product_scoring_rule": ",".join(
+            sorted({row.product_scoring_rule_version for row in own})
+        ),
+    }
+    return score, coverage, versions
+
+
+def build_ai_presence_point(
+    *,
+    metric: MetricSnapshot,
+    brand_name: str,
+    health: SiteHealthSnapshot | None,
+    products: list[ProductMetricSnapshot],
+    opportunity_snapshot: OpportunitySnapshot | None,
+) -> AIPresencePoint:
+    """Pure projection for one persisted metric snapshot; no I/O or re-score."""
+    metrics = metric.metrics or {}
+    mention = _score_rate(metrics.get("brand_mention_rate"))
+    sov = _normalized_brand_sov(metric, brand_name)
+    owned = _score_rate(metrics.get("owned_citation_rate"))
+    fundamentals = (
+        _score_rate((health.technical_score or 0.0) / SCORE_SCALE)
+        if health and health.technical_score is not None
+        else None
+    )
+    product_score, product_coverage, product_versions = _product_presence(
+        products, total_completed=int(metric.total_completed or 0)
+    )
+    commerce_active = product_score is not None
+    source_ids: dict[str, list[uuid.UUID]] = {"metric_snapshot": [metric.id]}
+    versions = {
+        "metric_analyzer": metric.analyzer_version,
+        "metric_scoring_rule": metric.scoring_rule_version,
+        "ai_presence_formula": AI_PRESENCE_FORMULA_VERSION,
+    }
+    if health is not None:
+        source_ids["site_health_snapshot"] = [health.id]
+        versions["site_health_analyzer"] = health.analyzer_version
+        versions["site_health_scoring"] = health.scoring_version
+    if products:
+        source_ids["product_metric_snapshot"] = [row.id for row in products]
+        versions.update(product_versions)
+    if opportunity_snapshot is not None:
+        source_ids["opportunity_snapshot"] = [opportunity_snapshot.id]
+        versions.update(
+            {
+                "opportunity_analyzer": opportunity_snapshot.analyzer_version,
+                "opportunity_rule": opportunity_snapshot.rule_version,
+                "opportunity_formula": opportunity_snapshot.formula_version,
+            }
+        )
+    if not commerce_active:
+        score, components, coverage = _weighted_components(
+            {
+                COMPONENT_BRAND_MENTION_RATE: mention,
+                COMPONENT_NORMALIZED_SOV: sov,
+                COMPONENT_OWNED_CITATION_RATE: owned,
+                COMPONENT_WEB_FUNDAMENTALS: fundamentals,
+            },
+            STANDARD_WEIGHTS,
+        )
+        return AIPresencePoint(
+            score=score,
+            formula_kind=FORMULA_KIND_STANDARD,
+            formula_version=AI_PRESENCE_FORMULA_VERSION,
+            provisional=not all(coverage.values()),
+            coverage=coverage,
+            components=components,
+            source_snapshot_ids=source_ids,
+            versions=versions,
+            timestamp=metric.created_at,
+        )
+
+    brand_visibility, _nested, _nested_coverage = _weighted_components(
+        {COMPONENT_BRAND_MENTION_RATE: mention, COMPONENT_NORMALIZED_SOV: sov},
+        BRAND_VISIBILITY_WEIGHTS,
+    )
+    execution: float | None = None
+    if opportunity_snapshot is not None:
+        counts = opportunity_snapshot.counts_by_status or {}
+        denominator = sum(
+            int(counts.get(name, 0) or 0)
+            for name in ("open", "in_progress", "resolved")
+        )
+        execution = (
+            _score_rate(int(counts.get("resolved", 0) or 0) / denominator)
+            if denominator
+            else None
+        )
+    score, components, coverage = _weighted_components(
+        {
+            COMPONENT_BRAND_VISIBILITY: brand_visibility,
+            COMPONENT_PRODUCT_PRESENCE: product_score,
+            COMPONENT_WEB_FUNDAMENTALS: fundamentals,
+            COMPONENT_OWNED_CITATION_RATE: owned,
+            COMPONENT_OPPORTUNITY_EXECUTION: execution,
+        },
+        COMMERCE_WEIGHTS,
+    )
+    coverage[COMPONENT_PRODUCT_PRESENCE] = all(product_coverage.values())
+    components[COMPONENT_PRODUCT_PRESENCE] = AIPresenceComponent(
+        score=product_score,
+        weight=COMMERCE_WEIGHTS[COMPONENT_PRODUCT_PRESENCE],
+        available=product_score is not None,
+    )
+    return AIPresencePoint(
+        score=score,
+        formula_kind=FORMULA_KIND_COMMERCE,
+        formula_version=AI_PRESENCE_FORMULA_VERSION,
+        provisional=not all(coverage.values()),
+        coverage=coverage,
+        components=components,
+        source_snapshot_ids=source_ids,
+        versions=versions,
+        timestamp=metric.created_at,
+    )
 
 
 async def _latest(session: AsyncSession, model, workspace_id, project_id, timestamp):
@@ -299,7 +544,12 @@ def build_improve_sections(
     ]
 
 
-def assemble_response(project: Project, inputs: DashboardInputs) -> DashboardResponse:
+def assemble_response(
+    project: Project,
+    inputs: DashboardInputs,
+    *,
+    ai_presence: AIPresenceResponse | None = None,
+) -> DashboardResponse:
     audit_running = (
         inputs.audit is not None and inputs.audit.status not in AUDIT_TERMINAL_STATUSES
     )
@@ -355,7 +605,161 @@ def assemble_response(project: Project, inputs: DashboardInputs) -> DashboardRes
         analyze=build_analyze_sections(inputs),
         improve=improve,
         active_work=active_work,
+        ai_presence=ai_presence,
     )
+
+
+def _latest_health_before(
+    health_rows: list[SiteHealthSnapshot], timestamp: datetime
+) -> SiteHealthSnapshot | None:
+    eligible = [row for row in health_rows if row.created_at <= timestamp]
+    return eligible[-1] if eligible else None
+
+
+def _latest_opportunity_before(
+    opportunity_rows: list[OpportunitySnapshot], timestamp: datetime
+) -> OpportunitySnapshot | None:
+    """Return the recompute projection available when a metric was written."""
+    eligible = [row for row in opportunity_rows if row.created_at <= timestamp]
+    return eligible[-1] if eligible else None
+
+
+def _version_identity(point: AIPresencePoint) -> tuple:
+    """Exact formula/coverage/version identity required for momentum."""
+    return (
+        point.formula_kind,
+        point.formula_version,
+        tuple(sorted(point.coverage.items())),
+        tuple(sorted(point.versions.items())),
+    )
+
+
+def finalize_ai_presence_points(
+    points: list[AIPresencePoint], *, now: datetime
+) -> AIPresenceResponse:
+    """Mark comparable points and calculate trailing-30-day momentum purely."""
+    if not points:
+        return AIPresenceResponse(current=None, momentum=None, trend_points=[])
+    ordered = sorted(
+        points, key=lambda point: (point.timestamp, str(point.source_snapshot_ids))
+    )
+    latest = ordered[-1]
+    identity = _version_identity(latest)
+    for point in ordered:
+        point.comparable_to_latest = (
+            point.score is not None
+            and latest.score is not None
+            and _version_identity(point) == identity
+        )
+    window_start = latest.timestamp - timedelta(days=MOMENTUM_WINDOW_DAYS)
+    comparable = [
+        point
+        for point in ordered
+        if point.comparable_to_latest and point.timestamp >= window_start
+    ]
+    momentum = None
+    if (
+        len(comparable) >= 2
+        and latest.score is not None
+        and comparable[0].score is not None
+    ):
+        momentum = round(latest.score - comparable[0].score, SCORE_ROUNDING_DECIMALS)
+    # ``now`` is accepted to make the projection clock explicit for tests; the
+    # selected run is the stable latest evidence point, never a clock-derived
+    # synthetic value.
+    del now
+    return AIPresenceResponse(current=latest, momentum=momentum, trend_points=ordered)
+
+
+async def get_ai_presence(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project: Project
+) -> AIPresenceResponse:
+    """Read the AI Presence series from persisted snapshot rows only."""
+    metric_rows = list(
+        (
+            await session.scalars(
+                select(MetricSnapshot)
+                .where(
+                    MetricSnapshot.workspace_id == workspace_id,
+                    MetricSnapshot.project_id == project.id,
+                )
+                .order_by(MetricSnapshot.created_at.desc(), MetricSnapshot.id.desc())
+                .limit(DASHBOARD_MAX_AI_PRESENCE_POINTS)
+            )
+        ).all()
+    )
+    if not metric_rows:
+        return AIPresenceResponse(current=None, momentum=None, trend_points=[])
+    metric_rows.reverse()
+    audit_ids = [row.audit_id for row in metric_rows]
+    health_rows = list(
+        (
+            await session.scalars(
+                select(SiteHealthSnapshot)
+                .where(
+                    SiteHealthSnapshot.workspace_id == workspace_id,
+                    SiteHealthSnapshot.project_id == project.id,
+                )
+                .order_by(
+                    SiteHealthSnapshot.created_at.asc(), SiteHealthSnapshot.id.asc()
+                )
+            )
+        ).all()
+    )
+    product_rows = list(
+        (
+            await session.scalars(
+                select(ProductMetricSnapshot).where(
+                    ProductMetricSnapshot.workspace_id == workspace_id,
+                    ProductMetricSnapshot.project_id == project.id,
+                    ProductMetricSnapshot.audit_id.in_(audit_ids),
+                )
+            )
+        ).all()
+    )
+    products_by_audit: dict[uuid.UUID, list[ProductMetricSnapshot]] = {}
+    for row in product_rows:
+        products_by_audit.setdefault(row.audit_id, []).append(row)
+    # A v1 + v2 product aggregate can coexist. The current projection chooses
+    # a single version per frozen entry before formula evaluation.
+    from app.domain.products.visibility import select_current_snapshots
+
+    selected_products = {
+        audit_id: list(select_current_snapshots(rows).values())
+        for audit_id, rows in products_by_audit.items()
+    }
+    opportunity_rows = list(
+        (
+            await session.scalars(
+                select(OpportunitySnapshot)
+                .where(
+                    OpportunitySnapshot.workspace_id == workspace_id,
+                    OpportunitySnapshot.project_id == project.id,
+                    OpportunitySnapshot.audit_id.in_(audit_ids),
+                )
+                .order_by(
+                    OpportunitySnapshot.created_at.asc(), OpportunitySnapshot.id.asc()
+                )
+            )
+        ).all()
+    )
+    opportunities_by_audit: dict[uuid.UUID, list[OpportunitySnapshot]] = {}
+    for row in opportunity_rows:
+        if row.audit_id is not None:
+            opportunities_by_audit.setdefault(row.audit_id, []).append(row)
+    points = [
+        build_ai_presence_point(
+            metric=metric,
+            brand_name=project.brand_name or project.name,
+            health=_latest_health_before(health_rows, metric.created_at),
+            products=selected_products.get(metric.audit_id, []),
+            opportunity_snapshot=_latest_opportunity_before(
+                opportunities_by_audit.get(metric.audit_id, []), metric.created_at
+            ),
+        )
+        for metric in metric_rows
+    ]
+    return finalize_ai_presence_points(points, now=datetime.now(UTC))
 
 
 async def get_dashboard(
@@ -364,4 +768,7 @@ async def get_dashboard(
     inputs = await fetch_latest_sources(
         session, workspace_id=workspace_id, project_id=project.id
     )
-    return assemble_response(project, inputs)
+    ai_presence = await get_ai_presence(
+        session, workspace_id=workspace_id, project=project
+    )
+    return assemble_response(project, inputs, ai_presence=ai_presence)

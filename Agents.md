@@ -50,11 +50,10 @@ documented in the architecture and roadmap references as they are designed and d
   Sentiment tabs and no disabled / "coming soon" tabs. **Sentiment + avg-position are still NOT
   computed** and render as an em-dash (`—`). Query Fanout has three states:
   `queries_available | count_only | no_search`.
-- `/products` is the **agentic commerce** sibling surface: a two-tab workspace — **Catalog**
-  (product + competitor-product CRUD, CSV import, per-SKU completeness badges) and
-  **Visibility** (product share-of-voice / mentions / rank distribution / price accuracy from
-  persisted `ProductMetricSnapshot` rows, engine-sliceable via `?engine=`) — plus a
-  `/products/[productId]` drill-down with mention evidence. The audit planner freezes the
+- `/products` is the **agentic commerce** sibling surface: **Discover**, **Catalog**, **AI
+  Conversations**, and **Market Intelligence**. Current persisted catalog and product-visibility
+  projections remain available while discovery and competitor-intelligence contracts roll out.
+  The audit planner freezes the
   catalog identity into `Audit.configuration` at creation; a **deterministic sibling analyzer
   pass** (`analysis/product_scoring.py`, no LLM) writes `ProductResponseAnalysis` /
   `ProductMention` / `ProductMetricSnapshot` rows from the same persisted raw artifacts.

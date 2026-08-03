@@ -9,7 +9,7 @@ import { PLACEHOLDER, formatScore } from '@/lib/site-health/status';
 /**
  * Always-mounted score section of the canonical Site Health screen.
  *
- * The three score cards (Site Health / Technical / AEO) render in every phase:
+ * The three score cards (Site Health / Web Fundamentals / AEO) render in every phase:
  * placeholders before any analysis has produced data, a live running mean
  * while analysis is in flight, and the final `score_summary` once it lands.
  * Scores appear IN PLACE — the section never unmounts, so finishing a crawl
@@ -56,7 +56,7 @@ export function ScoreSection({
         value={overall}
         sub={overallSub(summary, analyzing, crawl, selectedTotal)}
       />
-      <ScoreCard label="Technical" value={technical} sub="Response codes, headers, delivery" />
+      <ScoreCard label="Web Fundamentals" value={technical} sub="Response codes, headers, delivery" />
       <ScoreCard label="AEO" value={aeo} sub="Schema, structured data, AI-readiness" />
     </div>
   );

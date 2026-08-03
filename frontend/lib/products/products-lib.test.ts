@@ -23,11 +23,12 @@ import { parseProductCsv, validProductRows } from './csv';
 import { emptyProductForm, formValuesToProductUpdate } from './forms';
 
 describe('normalizeProductsTab', () => {
-  it('defaults to catalog and passes through known tabs', () => {
-    expect(normalizeProductsTab(null)).toBe('catalog');
-    expect(normalizeProductsTab('bogus')).toBe('catalog');
-    expect(normalizeProductsTab('visibility')).toBe('visibility');
-    expect(normalizeProductsTab('attribution')).toBe('attribution');
+  it('defaults to Discover and passes through known tabs', () => {
+    expect(normalizeProductsTab(null)).toBe('discover');
+    expect(normalizeProductsTab('bogus')).toBe('discover');
+    expect(normalizeProductsTab('discover')).toBe('discover');
+    expect(normalizeProductsTab('conversations')).toBe('conversations');
+    expect(normalizeProductsTab('market_intelligence')).toBe('market_intelligence');
     expect(normalizeProductsTab('catalog')).toBe('catalog');
   });
 });

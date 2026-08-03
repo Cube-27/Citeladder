@@ -1,7 +1,7 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
@@ -14,7 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/typography';
-import { opportunitiesQueries } from '@/lib/api/opportunities';
+import { opportunitiesMutations, opportunitiesQueries } from '@/lib/api/opportunities';
+import { queryKeys } from '@/lib/api/query-keys';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 
 /** Recommendation detail drawer backed by the persisted detail projection. */
@@ -34,6 +35,29 @@ export function EvidenceDrawer({
     enabled: open && opportunityId !== null,
   });
   const detail = detailQuery.data ?? null;
+  const queryClient = useQueryClient();
+  const guidanceQuery = useQuery({
+    ...opportunitiesQueries.guidance(opportunityId ?? ''),
+    enabled: open && opportunityId !== null,
+    retry: false,
+  });
+  const historyQuery = useQuery({
+    ...opportunitiesQueries.guidanceHistory(opportunityId ?? ''),
+    enabled: open && opportunityId !== null && guidanceQuery.data !== undefined,
+    retry: false,
+  });
+  const guidanceMutation = useMutation({
+    ...opportunitiesMutations.createGuidance(),
+    onSuccess: (guidance) => {
+      queryClient.setQueryData(queryKeys.opportunities.guidance(guidance.opportunity_id), guidance);
+      queryClient.invalidateQueries({ queryKey: queryKeys.opportunities.guidanceHistory(guidance.opportunity_id) });
+    },
+  });
+
+  const createGuidance = () => {
+    if (!opportunityId) return;
+    guidanceMutation.mutate({ opportunityId, idempotencyKey: crypto.randomUUID() });
+  };
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -71,9 +95,10 @@ export function EvidenceDrawer({
                     <OpportunityStatusBadge status={detail.status} />
                   </div>
                 </div>
+                <OpportunityEvidenceSection detail={detail} />
                 {detail.remediation ? (
                   <section className="grid gap-2">
-                    <Label>What to do</Label>
+                    <Label>Recommended improvements</Label>
                     <div className="border-border-subtle bg-background-alt rounded-lg border p-3">
                       <p className="text-foreground text-sm whitespace-pre-line">
                         {detail.remediation}
@@ -81,7 +106,25 @@ export function EvidenceDrawer({
                     </div>
                   </section>
                 ) : null}
-                <OpportunityEvidenceSection detail={detail} />
+                <section className="grid gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Tailored guidance</Label>
+                    <Button size="sm" variant="secondary" onClick={createGuidance} disabled={guidanceMutation.isPending}>
+                      {guidanceMutation.isPending ? 'Generating…' : guidanceQuery.data ? 'Regenerate' : 'Generate'}
+                    </Button>
+                  </div>
+                  {guidanceQuery.data ? (
+                    <div className="border-border-subtle bg-background-alt grid gap-3 rounded-lg border p-3">
+                      <div className="grid gap-1"><span className="text-2xs text-muted">What was found</span><ul className="text-foreground grid list-disc gap-1 pl-4 text-sm">{guidanceQuery.data.findings.map((item) => <li key={item}>{item}</li>)}</ul></div>
+                      <div className="grid gap-1"><span className="text-2xs text-muted">Recommended improvements</span><ul className="text-foreground grid list-disc gap-1 pl-4 text-sm">{guidanceQuery.data.recommendations.map((item) => <li key={item}>{item}</li>)}</ul></div>
+                      <details className="text-muted text-xs"><summary className="cursor-pointer">Provenance</summary><p className="mt-2">Generated {new Date(guidanceQuery.data.created_at).toLocaleString()} · {guidanceQuery.data.generator_version} · {guidanceQuery.data.prompt_version}</p></details>
+                    </div>
+                  ) : guidanceQuery.isError ? (
+                    <Alert tone="info">Tailored guidance is unavailable for this workspace.</Alert>
+                  ) : null}
+                  {guidanceMutation.isError ? <Alert tone="danger">Could not generate guidance. Please try again.</Alert> : null}
+                  {historyQuery.data && historyQuery.data.items.length > 1 ? <p className="text-muted text-xs">{historyQuery.data.items.length} immutable guidance versions are available.</p> : null}
+                </section>
                 <OpportunitySummarySection detail={detail} />
               </div>
             )}

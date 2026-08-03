@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/api/query-keys';
-import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthMutations, siteHealthQueries, type CreateCrawlInput } from '@/lib/api/site-health';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthEntitlement } from '@/lib/api/types';
 import {
   downloadCrawlExport,
@@ -189,7 +189,8 @@ export function useSiteHealthScreen(projectId: string | null) {
     },
   });
 
-  const startCrawl = () => projectId && createMutation.mutate({ project_id: projectId });
+  const startCrawl = (input?: CreateCrawlInput) =>
+    projectId && createMutation.mutate(input ?? { project_id: projectId });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
   // A create is genuinely in flight: the button says "Starting…" and a second

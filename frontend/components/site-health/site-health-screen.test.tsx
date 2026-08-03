@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -129,6 +129,7 @@ function inventoryRow(id: string, url: string) {
 function mockRoutes(crawlOverrides: Record<string, unknown> = {}) {
   mswServer.use(
     http.get('/api/v1/projects', () => HttpResponse.json([project])),
+    http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)),
     http.get('/api/v1/entitlements', () => HttpResponse.json(entitlement)),
     http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
       HttpResponse.json({
@@ -166,6 +167,14 @@ function renderScreen() {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  // ProjectProvider backfills a logo for fixtures without one. Keep the
+  // production refresh behavior enabled and satisfy it with the shared MSW
+  // pattern used by other project-screen tests.
+  mswServer.use(
+    http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)),
+  );
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -394,6 +403,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
     // layout container is the SAME DOM node at every step — data updates in
     // place, the screen never changes.
     const user = userEvent.setup();
+    let createBody: unknown = null;
     const NEW_CRAWL = '99999999-9999-4999-8999-999999999999';
     const URL_ID = '66666666-6666-4666-8666-666666666666';
     const summary = {
@@ -470,7 +480,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
         });
         return HttpResponse.json(serverCrawl);
       }),
-      http.post('/api/v1/site-crawls', () => {
+      http.post('/api/v1/site-crawls', async ({ request }) => {
         // The shape a real recrawl has for most of its life: discovery re-runs
         // while the seeded monitored-set analysis is still 'pending' (the
         // worker's reconcile flips it later). Resolving THIS shape back to the
@@ -484,6 +494,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
           score_summary: null,
           completed_at: null,
         });
+        createBody = await request.json();
         return HttpResponse.json(serverCrawl);
       }),
       http.get('/api/v1/site-crawls/:id/pages', () =>
@@ -519,6 +530,10 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
     const startAnalysis = screen.getByRole('button', { name: 'Start analysis' });
     await waitFor(() => expect(startAnalysis).toBeEnabled());
     await user.click(startAnalysis);
+
+    // The direct action must send the typed default payload, not React's
+    // click event (which would fail before the request reached this handler).
+    await waitFor(() => expect(createBody).toEqual({ project_id: PROJECT }));
 
     // The screen moves FORWARD to the analysis view in place — it must never
     // bounce back to the selection list (the reported regression), even though

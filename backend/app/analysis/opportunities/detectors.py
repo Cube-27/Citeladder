@@ -27,9 +27,7 @@ from app.core.config.opportunities import (
     COMMERCE_VALUE_FACTOR,
     OPPORTUNITY_RULES_BY_ID,
     SITE_GAP_FACTOR,
-    SITE_SCHEMA_TYPE_RULE_IDS,
-    SITE_STRUCTURED_DATA_RULE_IDS,
-    SITE_THIN_CONTENT_RULE_IDS,
+    SITE_ISSUE_TO_OPPORTUNITY_RULE_ID,
     SITE_VALUE_FACTOR,
     OpportunityRule,
 )
@@ -37,9 +35,6 @@ from app.core.config.opportunities import (
 # Catalog rule ids this module emits (validated by the catalog lookup itself).
 RULE_BRAND_ABSENT = "brand_absent_high_value_prompt"
 RULE_OWNED_PAGE_NOT_CITED = "owned_page_not_cited"
-RULE_MISSING_STRUCTURED_DATA = "missing_structured_data"
-RULE_THIN_CONTENT = "thin_content"
-RULE_SCHEMA_TYPE_MISMATCH = "schema_type_mismatch"
 RULE_PRODUCT_NOT_MENTIONED = "product_not_mentioned"
 RULE_COMPETITOR_PRODUCT_DOMINATES = "competitor_product_dominates"
 RULE_PRICE_MENTION_MISMATCH = "price_mention_mismatch"
@@ -304,22 +299,15 @@ def detect_owned_page_not_cited(evidence: VisibilityEvidence) -> list[DetectorHi
 # =========================================================================
 def _site_opportunity_rule_id(issue_rule_id: str) -> str | None:
     """Map a persisted SiteIssue rule id to its opportunity rule (config)."""
-    if issue_rule_id in SITE_STRUCTURED_DATA_RULE_IDS:
-        return RULE_MISSING_STRUCTURED_DATA
-    if issue_rule_id in SITE_THIN_CONTENT_RULE_IDS:
-        return RULE_THIN_CONTENT
-    if issue_rule_id in SITE_SCHEMA_TYPE_RULE_IDS:
-        return RULE_SCHEMA_TYPE_MISMATCH
-    return None
+    return SITE_ISSUE_TO_OPPORTUNITY_RULE_ID.get(issue_rule_id)
 
 
 def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]:
     """Project each mapped ``SiteIssue`` into a site-type opportunity hit.
 
-    One hit per issue whose ``rule_id`` is in the config mapping sets
-    (``missing_structured_data`` / ``thin_content``), targeted at the issue's
-    normalized URL. Issues whose URL identity is missing (cannot form the
-    deterministic target key) are skipped.
+    One hit per issue whose ``rule_id`` has a config-owned opportunity mapping,
+    targeted at the issue's normalized URL. Issues whose URL identity is
+    missing (cannot form the deterministic target key) are skipped.
     """
     urls = {u.site_url_id: u.normalized_url for u in evidence.urls}
     hits: list[DetectorHit] = []

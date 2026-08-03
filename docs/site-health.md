@@ -3,7 +3,7 @@
 Site Health is Searchify's in-house **on-page + AEO crawler**. It discovers a
 project's URLs with a first-party HTTP crawler (no headless browser, no
 PageSpeed/CrUX, no raw-HTML storage), analyzes each admitted page against a
-deterministic rule catalog, scores it on two dimensions (**Technical** and
+deterministic rule catalog, scores it on two dimensions (**Web Fundamentals** and
 **AEO**), and surfaces the result as a dashboard, a grouped issues catalog, and a
 per-URL detail view. Every persisted row is projected through a workspace-scoped
 service layer — the API never re-fetches, re-scores, or fabricates a metric.
@@ -85,15 +85,17 @@ All status/vocabulary constants are owned by
   `blocked`, `cancelled`, `not_selected`.
 - **Rule outcome**: `pass`, `fail`, `not_applicable`, `error`.
 - **Severity**: `critical`, `high`, `medium`, `low`, `info`.
-- **Dimension**: `technical`, `aeo`.
+- **Dimension**: `technical`, `aeo`. `technical` is an internal/API token; all
+  user-facing copy calls it **Web Fundamentals**.
 - **Page type** (`PageSummary.page_type`, per-URL detail, exports): the
-  deterministic classifier's page-type taxonomy — `homepage`, `article`,
-  `product`, `category`, `pricing`, `docs`, `faq`, `about_contact`, `other`.
+  deterministic classifier's page-type taxonomy is expanded in the canonical
+  matrix below. API tokens remain config-owned and stable; legacy categories
+  continue to map to the nearest expanded category.
   Assigned at analysis time (config-owned pattern tables +
   `PAGE_TYPE_PROFILES`); always present, `other` when no signal clears the
   confidence threshold. Classifier/classification rationale:
   [`roadmap/site-health-v2-page-aware.md`](roadmap/site-health-v2-page-aware.md).
-- **Scores.** Technical / AEO / overall scores are `0–100` floats. A missing or
+- **Scores.** Web Fundamentals / AEO / overall scores are `0–100` floats. A missing or
   failed score is **`null`** in the API and renders as an em dash (`—`) in the
   UI — never a fabricated `0`.
 
@@ -101,17 +103,17 @@ All status/vocabulary constants are owned by
 
 ## Fetching & bot-block classification
 
-Page evidence is fetched with **one plain HTTP request** per target through
-`SecureFetcher.fetch()` — `httpx`, identifying honestly as the crawler UA
+Page evidence begins with `SecureFetcher.fetch()` — `httpx`, identifying honestly as the crawler UA
 (`SearchifySiteHealthBot/1.0`), with the full SSRF posture: manual redirects
 revalidated per hop, pinned-IP dial, wire + decoded byte caps, response headers
 redacted to the config allowlist, per-host politeness, robots compliance.
 
-There is deliberately **no impersonation rung and no headless-browser rung**. A
-site that refuses a well-behaved, clearly-identified crawler is telling us it is
-not AEO-ready, and that answer is the finding we report — not something to work
-around. Evading bot protection would also mean shipping a crawler that lies
-about who it is.
+When frozen acquisition policy permits it, acquisition is an observable three-rung ladder:
+secure `httpx`, then `curl-cffi` for configured block/challenge or low-content evidence,
+then server-only ScraperAPI if the preceding rung remains unusable. This is not an evasion
+path: robots, SSRF controls, manual redirect validation, TLS verification, host pacing and
+byte/time limits apply to every rung. The impersonation profile is configuration and
+provenance, never user input; no raw HTML is returned by the API.
 
 Every real network call (every redirect hop) appends one immutable entry to the
 fetcher's per-call trace, and the worker persists **one `SiteFetchAttempt` row
@@ -163,6 +165,105 @@ typed `400`, never a `500`.
 | `GET /site-crawls/{crawl_id}/events?stream=` | Event replay (`stream=false`, default → ordered JSON list) or SSE (`stream=true`). Sample-mode payloads are redacted. |
 | `GET /site-crawls/{crawl_id}/export.csv?view=` | CSV export. |
 | `GET /site-crawls/{crawl_id}/export.md?view=` | Markdown export. |
+
+### Planned value-aware crawl contract
+
+The following contract is staged with the crawler implementation. Until then the
+production create route retains its automatic ten-page behavior. The UI must not
+send these fields to a backend that does not advertise the versioned contract.
+
+`POST /site-crawls` will accept `input_mode` (`auto`, `exact_urls`, or
+`discovery_seeds`), `requested_page_limit`, `seed_urls`, `page_types`, existing
+include/exclude globs, and a deterministic seed. `POST /site-crawls/preview`
+will accept bounded CSV, text, or JSON URL input and return normalized accepted
+rows, duplicates, hard exclusions, out-of-scope rows, safe reason codes, and
+row-level validation errors. Exact mode fetches only accepted URLs; seed mode
+may expand through admissible links and sitemaps. The creation projection freezes
+admission-policy, value-classifier, page-type-classifier, and acquisition-policy
+versions, together with the final budget and inputs.
+
+Hard exclusions apply before a task exists and can never be overridden: login,
+registration, account/profile, admin, cart, checkout, payment, order
+confirmation, wishlist and localized equivalents; search and facet/sort/filter
+URLs; tag/author archives, pagination duplicates, feeds, print/share and preview
+pages; tracking URLs, attachments, and non-HTML assets. The same admission gate
+applies to roots, redirects, links, sitemaps, uploads, recrawls, and manual
+selections. Excluded URLs never invoke a transport. Safe aggregate skip counts
+and reason codes may be shown, but no sensitive path detail is exposed.
+
+Value order is deterministic: root and explicit selections, products,
+comparison/service/local pages, category/pricing, article/guide/FAQ/docs, then
+trust and ambiguous pages. This ranking is a scheduling priority, not a claim
+that unselected content was fetched.
+
+Advanced URL count, upload, crawl-mode, and page-type controls are development
+configuration only. Production remains automatic ten pages. Future Tier 2 may
+increase limits; Tier 3 may permit page-type selection; crawl-limit add-ons are
+documented only and do not change billing behavior today.
+
+### Page-type and rule-family matrix
+
+Classification is deterministic and uses normalized URL, sitemap hints, visible
+content, metadata, structured data, and commerce signals. Each page stores the
+winning type, alternatives, confidence, conflicts, and classifier version. A
+low-confidence page remains `other` with its bounded reasons. All types receive
+crawlability/indexability, AI-crawler-access, metadata, delivery/security,
+content-structure, citability/trust, links/media, structured-data presence,
+required/recommended-property, and visible/schema-consistency checks when
+applicable. Evidence is a bounded URL, header, metadata field, visible excerpt,
+or JSON-LD path; remediation is an actionable change, not generated content.
+
+| Page type | Expected schema | Required properties | Recommended properties | Typical severity / remediation |
+|---|---|---|---|---|
+| Homepage | `Organization`, `WebSite` | name, url | logo, sameAs, SearchAction | High when absent; add authoritative identity/schema and align visible brand data. |
+| Product | `Product`, `Offer` | name, brand, offer price/currency/availability | sku, gtin, mpn, image, aggregateRating, shippingDetails, hasMerchantReturnPolicy | Critical for purchasable pages; publish complete offer facts and keep visible values identical. |
+| Category/listing | `CollectionPage`, `ItemList` | name, itemListElement | numberOfItems, breadcrumbs | High when listings lack indexable item context; add stable canonical list markup. |
+| Service | `Service`, `Organization` | name, provider | areaServed, serviceType, offers | High where a service cannot be identified; state provider, scope, and offer consistently. |
+| Local location | `LocalBusiness` | name, address, telephone | geo, openingHours, priceRange, sameAs | Critical for local conversion; reconcile NAP and operating facts. |
+| Article | `Article` or `NewsArticle` | headline, author/datePublished | dateModified, image, publisher | Medium; expose byline/date and cite primary sources. |
+| Guide/how-to | `HowTo` or `Article` | name/headline, steps where HowTo applies | supplies, tools, totalTime | Medium; use ordered, visible steps and matching markup. |
+| Comparison | `Article`, `ItemList` | headline, compared entities | author, dateModified, review evidence | High for unsupported comparisons; disclose criteria and source claims. |
+| FAQ | `FAQPage` | mainEntity with question/acceptedAnswer | author/dateModified | Medium; only mark up visible, answerable FAQs. |
+| Docs/support | `TechArticle`, `Article`, `WebPage` | headline, description | dateModified, about, breadcrumbs | Medium; make version and support scope explicit. |
+| Pricing | `Offer`, `Product` or `Service` | name, price/currency when a price is shown | availability, validThrough, priceSpecification | High; publish unambiguous terms and visible/schema parity. |
+| About/contact | `Organization`, `ContactPage` | name, url/contactPoint | logo, sameAs, address | Medium; complete first-party identity and reachable contacts. |
+| Case study/review | `Review`, `Article` | itemReviewed or headline, author | reviewRating, datePublished, evidence source | High for unsupported ratings; identify the subject and evidence. |
+| Trust/policy | `WebPage` | name/headline | dateModified, publisher | Low/medium; make policy owner, effective date, and linked terms clear. |
+| Other | `WebPage` when appropriate | title/canonical/indexability | description, breadcrumbs | Info/medium; classify only after evidence supports a more specific type. |
+
+Rule applicability is profile-owned. A missing `Offer` is not an issue for an
+article, and an unavailable rating is not fabricated for a product. Required
+property failures are critical/high where the page visibly makes the claim;
+recommended-property omissions are medium/low; unavailable evidence is
+`not_applicable` or `error`, never a failure. Product parity checks cover SKU/
+GTIN/brand, price/currency/availability, variants, ratings, shipping and returns
+only when present in visible content or schema. Every rule maps to an opportunity
+with page type, evidence, expected schema, missing properties, why it matters,
+and remediation.
+
+### Acquisition provenance, guidance, and history
+
+Every append-only attempt records its transport/rung, trigger, validated redirect
+chain, configuration versions, and safe error classification. curl-cffi uses
+`trust_env=False`, manual redirects, and validated pinned resolution; unsupported
+pinned-IP verification disables that rung and continues to ScraperAPI. ScraperAPI
+options (including render/premium/geo) come only from frozen server configuration;
+the request id and redacted options are provenance. Successful artifacts also
+carry the winning transport. Raw HTML remains worker-only Site Health input.
+
+Development-enabled `POST /opportunities/{id}/guidance`, latest, and history
+reads produce immutable `OpportunityGuidance` rows. Each stores source IDs,
+bounded input snapshot/hash, findings, recommendations, prompt/model/provider
+versions, timestamps, and an idempotency key. Regeneration creates a new row;
+guidance is unavailable to trial/Tier 1 in production and never changes a rule,
+priority, or score. The drawer presents what was found, affected page/type,
+bounded evidence, impact, expected schema/missing properties, recommendation,
+and collapsed provenance.
+
+Issue history is a persisted-evidence projection grouped by rule: current state,
+occurrence count, first/last seen, new/continuing/resolved transition, collapsed
+crawl timeline, and a “since previous crawl” summary. It does not repeat one
+visually identical row for every crawl and never recrawls to answer history.
 
 ### Key crawl-projection fields
 
@@ -237,7 +338,7 @@ Site Health and Issues are live MVP nav items.
 | Route | Screen |
 |---|---|
 | `/site-health` | The Site Health screen: discovery-in-progress, inventory selection, live analysis, and the completed dashboard (mockups 708 / 709 / 712 / 713). The phase is derived from the crawl + pages queries. |
-| `/site-health/crawls/[crawlId]/pages/[siteUrlId]` | Per-URL detail: metadata, Technical/AEO/overall score rings (`—` for null), delivery metrics, all issues by severity, and crawl-bounded issue history (mockup 711). |
+| `/site-health/crawls/[crawlId]/pages/[siteUrlId]` | Per-URL detail: metadata, Web Fundamentals/AEO/overall score rings (`—` for null), delivery metrics, all issues by severity, and crawl-bounded issue history (mockup 711). |
 
 **Unmeasured delivery timings render `—` (SH-6).** `0` and `null` are both
 treated as UI **sentinels for "no usable measurement"**. The fetcher records

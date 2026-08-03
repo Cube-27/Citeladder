@@ -565,7 +565,7 @@ mono score dict; Sentiment `—`.
 
 ### 11.8 Measurement + action surfaces
 
-**Site Health** (`/site-health`) — crawl/page detail: score presentation
+**Site Health** (`/site-health`) — crawl/page detail: Web Fundamentals/AEO score presentation
 (score-band tokens), issue grouping layout, page table. **Issues**, **Content**,
 **Knowledge Base** (description/positioning/products/audience editor + consent-gated "Draft
 with AI" review flow), **Products**, **Analytics**, **Traffic**, **Settings** (providers /

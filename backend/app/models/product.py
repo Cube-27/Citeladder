@@ -77,6 +77,20 @@ class Product(Base):
     attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
     # manual | imported | synced (config/products.py PRODUCT_ORIGIN_*).
     origin: Mapped[str] = mapped_column(String(32), default=DEFAULT_PRODUCT_ORIGIN)
+    # Discovery provenance is immutable evidence of how this row entered the
+    # catalog. A later manual edit changes catalog fields, never these links.
+    source_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("commerce_discovery_candidates.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("commerce_discovery_artifacts.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     # --- Feed provenance (commerce suite; all null/"" for manual|imported) ---
     # The integration connection whose feed last carried this SKU. SET NULL
     # keeps the catalog row when the connection disconnects.
@@ -141,6 +155,24 @@ class CompetitorProduct(Base):
     price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="")
     url: Mapped[str] = mapped_column(Text, default="")
+    variants: Mapped[list] = mapped_column(JSONB, default=list)
+    attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
+    availability: Mapped[str] = mapped_column(String(64), default="")
+    extraction_fresh_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    source_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("commerce_discovery_candidates.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("commerce_discovery_artifacts.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

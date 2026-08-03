@@ -53,3 +53,29 @@ class DashboardResponse(BaseModel):
     analyze: list[DashboardSection]
     improve: list[DashboardSection]
     active_work: list[str]
+    ai_presence: AIPresenceResponse | None = None
+
+
+class AIPresenceComponent(BaseModel):
+    score: float | None
+    weight: float
+    available: bool
+
+
+class AIPresencePoint(BaseModel):
+    score: float | None
+    formula_kind: str
+    formula_version: str
+    provisional: bool
+    coverage: dict[str, bool]
+    components: dict[str, AIPresenceComponent]
+    source_snapshot_ids: dict[str, list[uuid.UUID]]
+    versions: dict[str, str]
+    comparable_to_latest: bool | None = None
+    timestamp: datetime
+
+
+class AIPresenceResponse(BaseModel):
+    current: AIPresencePoint | None
+    momentum: float | None
+    trend_points: list[AIPresencePoint]

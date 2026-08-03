@@ -12,6 +12,7 @@ import {
   siteHealthEntitlementSchema,
   siteHealthErrorSchema,
   siteIssueSchema,
+  urlPreviewResponseSchema,
   strictValidate,
 } from './schemas';
 import { siteHealthApi } from './site-health';
@@ -140,6 +141,21 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
         'ent',
       ),
     ).toThrow();
+  });
+});
+
+describe('URL preview contract', () => {
+  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  afterEach(() => mswServer.resetHandlers());
+  afterAll(() => mswServer.close());
+  it('uses the same-origin preview endpoint and preserves exclusion reasons', async () => {
+    mswServer.use(http.post('/api/v1/site-crawls/url-preview', async ({ request }) => {
+      expect(await request.json()).toMatchObject({ project_id: UUID2, content: 'https://example.com/login' });
+      return HttpResponse.json({ items: [{ row: 1, input: 'https://example.com/login', accepted: false, canonical_url: null, reason_code: 'excluded_auth_path', value_kind: 'other', priority: 0 }], truncated: false, counts: { excluded_auth_path: 1 }, policy_version: 'admission-v1' });
+    }));
+    const preview = await siteHealthApi.previewUrls({ project_id: UUID2, content: 'https://example.com/login' });
+    expect(preview.items[0]?.reason_code).toBe('excluded_auth_path');
+    expect(strictValidate(urlPreviewResponseSchema, preview, 'preview').policy_version).toBe('admission-v1');
   });
 });
 

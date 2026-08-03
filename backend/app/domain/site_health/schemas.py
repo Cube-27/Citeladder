@@ -23,12 +23,18 @@ class FrontierCandidate:
     url_hash: str
     depth: int
     source_kind: str
+    value_priority: int = 0
     parent_position: int = 0
     link_ordinal: int = 0
 
     @property
-    def order_key(self) -> tuple[int, int, str]:
-        return (self.parent_position, self.link_ordinal, self.url_hash)
+    def order_key(self) -> tuple[int, int, int, str]:
+        return (
+            -self.value_priority,
+            self.parent_position,
+            self.link_ordinal,
+            self.url_hash,
+        )
 
 
 @dataclass(frozen=True, slots=True)

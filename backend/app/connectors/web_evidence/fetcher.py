@@ -39,7 +39,12 @@ from urllib.parse import urljoin, urlsplit
 
 import httpx
 
+from app.connectors.web_evidence.acquisition import (
+    curl_cffi_pinned_resolution_supported,
+    curl_trigger_for_result,
+)
 from app.connectors.web_evidence.contracts import (
+    AcquisitionProvenance,
     DnsResolver,
     FetchCallTrace,
     FetchError,
@@ -50,9 +55,15 @@ from app.connectors.web_evidence.contracts import (
 )
 from app.connectors.web_evidence.url_policy import (
     UrlPolicyError,
+    classify_url_admission,
     resolve_target,
 )
 from app.core.config.site_health import (
+    ACQUISITION_TRANSPORT_HTTPX,
+    ACQUISITION_TRANSPORT_SCRAPERAPI,
+    ACQUISITION_TRIGGER_CURL_UNAVAILABLE,
+    ACQUISITION_TRIGGER_CURL_UNUSABLE,
+    ACQUISITION_TRIGGER_INITIAL,
     BOT_BLOCK_BODY_MARKERS,
     BOT_BLOCK_MARKER_SCAN_BYTES,
     ERROR_CONNECTION_FAILED,
@@ -62,8 +73,16 @@ from app.core.config.site_health import (
     ERROR_SSRF_BLOCKED,
     ERROR_TIMEOUT,
     ERROR_UNSUPPORTED_CONTENT_TYPE,
+    ERROR_URL_ADMISSION_REJECTED,
+    FETCH_PURPOSE_ANALYZE,
+    FETCH_PURPOSE_DISCOVER,
+    FETCH_PURPOSE_LINK_CHECK,
     PERSISTED_RESPONSE_HEADERS,
     SITE_HEALTH_USER_AGENT,
+    URL_EXCLUSION_HARD_ASSET,
+    URL_EXCLUSION_HARD_PATH,
+    URL_EXCLUSION_HARD_QUERY,
+    URL_EXCLUSION_TRACKING,
     site_health_settings,
 )
 
@@ -72,6 +91,18 @@ _REDIRECT_STATUSES: frozenset[int] = frozenset({301, 302, 303, 307, 308})
 # Config-owned bot-block body markers as matchable bytes (ASCII-only tokens).
 _BOT_BLOCK_MARKER_BYTES: tuple[bytes, ...] = tuple(
     marker.encode("ascii") for marker in BOT_BLOCK_BODY_MARKERS
+)
+
+_ADMISSION_ENFORCED_PURPOSES = frozenset(
+    {FETCH_PURPOSE_DISCOVER, FETCH_PURPOSE_ANALYZE, FETCH_PURPOSE_LINK_CHECK}
+)
+_HARD_ADMISSION_EXCLUSION_CODES = frozenset(
+    {
+        URL_EXCLUSION_HARD_PATH,
+        URL_EXCLUSION_HARD_ASSET,
+        URL_EXCLUSION_HARD_QUERY,
+        URL_EXCLUSION_TRACKING,
+    }
 )
 
 
@@ -255,12 +286,20 @@ class SecureFetcher:
         resolver: DnsResolver,
         transport: httpx.AsyncBaseTransport | None = None,
         settings=site_health_settings,
+        scraperapi_transport: httpx.AsyncBaseTransport | None = None,
+        curl_pinned_resolution_supported: bool | None = None,
         user_agent: str = SITE_HEALTH_USER_AGENT,
     ) -> None:
         self._resolver = resolver
         self._settings = settings
         self._user_agent = user_agent
         self._injected_transport = transport
+        self._scraperapi_transport = scraperapi_transport
+        self._curl_pinned_resolution_supported = (
+            curl_cffi_pinned_resolution_supported()
+            if curl_pinned_resolution_supported is None
+            else curl_pinned_resolution_supported
+        )
         # In production we pin the IP ourselves, so the transport must never
         # re-resolve or read the host environment (invariant: trust_env=False).
         self._client = httpx.AsyncClient(
@@ -349,8 +388,30 @@ class SecureFetcher:
         ``FetchError.attempts`` (dual-field design), so the trace survives
         failure; the entry describing a returned result is always the last.
         """
+        admission = classify_url_admission(
+            request.url,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+            infrastructure_purpose=request.purpose,
+        )
+        if (
+            request.purpose in _ADMISSION_ENFORCED_PURPOSES
+            and admission.reason_code in _HARD_ADMISSION_EXCLUSION_CODES
+        ):
+            raise FetchError(
+                "URL rejected by admission policy",
+                error_code=ERROR_URL_ADMISSION_REJECTED,
+            )
+
         limits = self._limits(request)
         attempts: list[FetchCallTrace] = []
+        initial = AcquisitionProvenance(
+            transport=ACQUISITION_TRANSPORT_HTTPX,
+            rung=1,
+            trigger=ACQUISITION_TRIGGER_INITIAL,
+            policy_version=self._settings.acquisition_policy_version,
+        )
         try:
             result = await self._fetch_http(
                 request,
@@ -358,14 +419,294 @@ class SecureFetcher:
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
                 enforce_scope=enforce_scope,
+                purpose=request.purpose,
                 limits=limits,
                 attempts=attempts,
+                acquisition=initial,
             )
         except FetchError as exc:
             if not exc.attempts:
                 exc.attempts = tuple(attempts)
             raise
-        return replace(result, attempts=tuple(attempts))
+        result = replace(result, attempts=tuple(attempts), acquisition=initial)
+        trigger = curl_trigger_for_result(
+            result,
+            has_challenge_marker=is_bot_block_result(result),
+            trigger_statuses=self._settings.curl_cffi_trigger_statuses,
+            low_content_bytes=self._settings.curl_cffi_low_content_bytes,
+        )
+        if trigger is None or not self._settings.curl_cffi_enabled:
+            return result
+        return await self._continue_with_scraperapi(
+            request=request,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+            enforce_scope=enforce_scope,
+            limits=limits,
+            attempts=attempts,
+            trigger=(
+                ACQUISITION_TRIGGER_CURL_UNUSABLE
+                if self._curl_pinned_resolution_supported
+                else ACQUISITION_TRIGGER_CURL_UNAVAILABLE
+            ),
+            prior=result,
+        )
+
+    async def _continue_with_scraperapi(
+        self,
+        *,
+        request: FetchRequest,
+        root_registrable_domain: str | None,
+        include_globs: list[str] | None,
+        exclude_globs: list[str] | None,
+        enforce_scope: bool,
+        limits: tuple[int, int, float, int],
+        attempts: list[FetchCallTrace],
+        trigger: str,
+        prior: FetchResult,
+    ) -> FetchResult:
+        """Use the server-side final rung without exposing its credential.
+
+        The target is resolved locally before *each* provider request. The
+        provider is asked not to follow redirects, so every returned Location
+        remains subject to our canonicalization, scope, hard-admission, and
+        pinned-DNS checks. Provider request URLs are never placed in a trace.
+        The server-only credential and provider options use ScraperAPI's
+        ``x-sapi-*`` headers, so the request URL is safe for httpx access logs.
+        """
+
+        settings = self._settings
+        if not settings.scraperapi_enabled or not settings.scraperapi_api_key:
+            return replace(prior, attempts=tuple(attempts))
+
+        max_wire, max_decoded, timeout, max_redirects = limits
+        safe_options: dict[str, str | bool] = {
+            "render": settings.scraperapi_render,
+            "premium": settings.scraperapi_premium,
+            "follow_redirects": settings.scraperapi_follow_redirects,
+        }
+        if settings.scraperapi_country_code:
+            safe_options["country_code"] = settings.scraperapi_country_code
+        acquisition = AcquisitionProvenance(
+            transport=ACQUISITION_TRANSPORT_SCRAPERAPI,
+            rung=3,
+            trigger=trigger,
+            scraperapi_options=safe_options,
+            policy_version=settings.acquisition_policy_version,
+        )
+        current_url = request.url
+        redirect_chain: list[RedirectHop] = []
+        started = time.monotonic()
+        async with httpx.AsyncClient(
+            transport=self._scraperapi_transport,
+            follow_redirects=False,
+            trust_env=False,
+            timeout=httpx.Timeout(timeout),
+            headers={"user-agent": self._user_agent},
+        ) as client:
+            for hop in range(max_redirects + 1):
+                try:
+                    target = await self._resolve(
+                        current_url,
+                        root_registrable_domain=root_registrable_domain,
+                        include_globs=include_globs,
+                        exclude_globs=exclude_globs,
+                        enforce_scope=enforce_scope,
+                        purpose=request.purpose,
+                    )
+                except FetchError as exc:
+                    # Re-admission happens before a new provider request. A
+                    # rejected redirect must still carry every prior real
+                    # network call to the append-only worker writer.
+                    exc.attempts = tuple(attempts)
+                    raise
+
+                # ScraperAPI supports parameters as ``x-sapi-*`` headers.
+                # Keep the credential out of the query string so httpx's
+                # normal INFO access event cannot expose it. The target URL is
+                # the only required, non-secret query parameter.
+                params: dict[str, str] = {"url": target.url}
+                provider_headers = {
+                    "x-sapi-api_key": settings.scraperapi_api_key,
+                    "x-sapi-render": str(settings.scraperapi_render).lower(),
+                    "x-sapi-premium": str(settings.scraperapi_premium).lower(),
+                    "x-sapi-follow_redirects": str(
+                        settings.scraperapi_follow_redirects
+                    ).lower(),
+                }
+                if settings.scraperapi_country_code:
+                    provider_headers["x-sapi-country_code"] = (
+                        settings.scraperapi_country_code
+                    )
+                hop_started = time.monotonic()
+                try:
+                    provider_request = client.build_request(
+                        request.method,
+                        settings.scraperapi_endpoint,
+                        params=params,
+                        headers=provider_headers,
+                        timeout=timeout,
+                    )
+                    response = await client.send(provider_request, stream=True)
+                except httpx.TimeoutException as exc:
+                    self._trace(
+                        attempts,
+                        url=target.url,
+                        method=request.method,
+                        status_code=None,
+                        error_code=ERROR_TIMEOUT,
+                        wire_bytes=None,
+                        decoded_bytes=None,
+                        ttfb_ms=None,
+                        started=hop_started,
+                        acquisition=acquisition,
+                    )
+                    raise FetchError(
+                        "acquisition provider timed out",
+                        error_code=ERROR_TIMEOUT,
+                        retryable=True,
+                        attempts=tuple(attempts),
+                    ) from exc
+                except httpx.HTTPError as exc:
+                    self._trace(
+                        attempts,
+                        url=target.url,
+                        method=request.method,
+                        status_code=None,
+                        error_code=ERROR_CONNECTION_FAILED,
+                        wire_bytes=None,
+                        decoded_bytes=None,
+                        ttfb_ms=None,
+                        started=hop_started,
+                        acquisition=acquisition,
+                    )
+                    raise FetchError(
+                        "acquisition provider connection failed",
+                        error_code=ERROR_CONNECTION_FAILED,
+                        retryable=True,
+                        attempts=tuple(attempts),
+                    ) from exc
+
+                request_id = response.headers.get(
+                    settings.scraperapi_request_id_header, ""
+                )
+                acquisition = replace(
+                    acquisition, scraperapi_request_id=request_id[:255]
+                )
+                if response.status_code in _REDIRECT_STATUSES:
+                    location = response.headers.get("location")
+                    await response.aclose()
+                    if not location:
+                        self._trace(
+                            attempts,
+                            url=target.url,
+                            method=request.method,
+                            status_code=response.status_code,
+                            error_code=None,
+                            wire_bytes=0,
+                            decoded_bytes=0,
+                            ttfb_ms=None,
+                            started=hop_started,
+                            acquisition=acquisition,
+                        )
+                        return replace(
+                            self._finalize_no_body(
+                                request,
+                                target,
+                                response,
+                                redirect_chain,
+                                started,
+                                acquisition,
+                            ),
+                            attempts=tuple(attempts),
+                        )
+                    if hop >= max_redirects:
+                        self._trace(
+                            attempts,
+                            url=target.url,
+                            method=request.method,
+                            status_code=response.status_code,
+                            error_code=ERROR_REDIRECT_LIMIT,
+                            wire_bytes=None,
+                            decoded_bytes=None,
+                            ttfb_ms=None,
+                            started=hop_started,
+                            acquisition=acquisition,
+                        )
+                        raise FetchError(
+                            "too many redirects",
+                            error_code=ERROR_REDIRECT_LIMIT,
+                            attempts=tuple(attempts),
+                        )
+                    next_url = urljoin(target.url, location)
+                    redirect_chain.append(
+                        RedirectHop(
+                            from_url=target.url,
+                            to_url=next_url,
+                            status_code=response.status_code,
+                        )
+                    )
+                    self._trace(
+                        attempts,
+                        url=target.url,
+                        method=request.method,
+                        status_code=response.status_code,
+                        error_code=None,
+                        wire_bytes=None,
+                        decoded_bytes=None,
+                        ttfb_ms=None,
+                        started=hop_started,
+                        acquisition=acquisition,
+                    )
+                    current_url = next_url
+                    continue
+                try:
+                    result = await self._read_body(
+                        request=request,
+                        target=target,
+                        response=response,
+                        redirect_chain=redirect_chain,
+                        started=started,
+                        max_wire=max_wire,
+                        max_decoded=max_decoded,
+                        acquisition=acquisition,
+                    )
+                except FetchError as exc:
+                    self._trace(
+                        attempts,
+                        url=target.url,
+                        method=request.method,
+                        status_code=response.status_code,
+                        error_code=exc.error_code,
+                        wire_bytes=None,
+                        decoded_bytes=None,
+                        ttfb_ms=None,
+                        started=hop_started,
+                        acquisition=acquisition,
+                    )
+                    exc.attempts = tuple(attempts)
+                    raise
+                self._trace(
+                    attempts,
+                    url=target.url,
+                    method=request.method,
+                    status_code=result.status_code,
+                    error_code=None,
+                    wire_bytes=result.wire_bytes,
+                    decoded_bytes=result.decoded_bytes,
+                    ttfb_ms=result.ttfb_ms,
+                    started=hop_started,
+                    acquisition=acquisition,
+                )
+                return replace(
+                    result, attempts=tuple(attempts), acquisition=acquisition
+                )
+        raise FetchError(
+            "acquisition provider redirect limit",
+            error_code=ERROR_REDIRECT_LIMIT,
+            attempts=tuple(attempts),
+        )
 
     def _trace(
         self,
@@ -379,6 +720,7 @@ class SecureFetcher:
         decoded_bytes: int | None,
         ttfb_ms: int | None,
         started: float,
+        acquisition: AcquisitionProvenance,
     ) -> None:
         """Append ONE immutable trace entry for ONE real network call."""
         attempts.append(
@@ -392,6 +734,7 @@ class SecureFetcher:
                 decoded_bytes=decoded_bytes,
                 ttfb_ms=ttfb_ms,
                 latency_ms=int((time.monotonic() - started) * 1000),
+                acquisition=acquisition,
             )
         )
 
@@ -403,8 +746,10 @@ class SecureFetcher:
         include_globs: list[str] | None,
         exclude_globs: list[str] | None,
         enforce_scope: bool,
+        purpose: str,
         limits: tuple[int, int, float, int],
         attempts: list[FetchCallTrace],
+        acquisition: AcquisitionProvenance,
     ) -> FetchResult:
         """The httpx fetch. One trace entry per real network call."""
         (
@@ -425,6 +770,7 @@ class SecureFetcher:
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
                 enforce_scope=enforce_scope,
+                purpose=purpose,
             )
             httpx_request = self._build_httpx_request(
                 method=request.method,
@@ -446,6 +792,7 @@ class SecureFetcher:
                     decoded_bytes=None,
                     ttfb_ms=None,
                     started=hop_started,
+                    acquisition=acquisition,
                 )
                 raise FetchError(
                     "request timed out",
@@ -475,6 +822,7 @@ class SecureFetcher:
                     decoded_bytes=None,
                     ttfb_ms=None,
                     started=hop_started,
+                    acquisition=acquisition,
                 )
                 raise FetchError(
                     f"connection error: {type(exc).__name__}",
@@ -497,9 +845,15 @@ class SecureFetcher:
                         decoded_bytes=0,
                         ttfb_ms=None,
                         started=hop_started,
+                        acquisition=acquisition,
                     )
                     return self._finalize_no_body(
-                        request, target, response, redirect_chain, started
+                        request,
+                        target,
+                        response,
+                        redirect_chain,
+                        started,
+                        acquisition,
                     )
                 if hop >= max_redirects:
                     self._trace(
@@ -512,6 +866,7 @@ class SecureFetcher:
                         decoded_bytes=None,
                         ttfb_ms=None,
                         started=hop_started,
+                        acquisition=acquisition,
                     )
                     raise FetchError(
                         "too many redirects",
@@ -536,6 +891,7 @@ class SecureFetcher:
                     decoded_bytes=None,
                     ttfb_ms=None,
                     started=hop_started,
+                    acquisition=acquisition,
                 )
                 current_url = next_url
                 continue
@@ -550,6 +906,7 @@ class SecureFetcher:
                     started=started,
                     max_wire=max_wire,
                     max_decoded=max_decoded,
+                    acquisition=acquisition,
                 )
             except FetchError as exc:
                 self._trace(
@@ -562,6 +919,7 @@ class SecureFetcher:
                     decoded_bytes=None,
                     ttfb_ms=None,
                     started=hop_started,
+                    acquisition=acquisition,
                 )
                 raise
             self._trace(
@@ -574,6 +932,7 @@ class SecureFetcher:
                 decoded_bytes=result.decoded_bytes,
                 ttfb_ms=result.ttfb_ms,
                 started=hop_started,
+                acquisition=acquisition,
             )
             return result
 
@@ -587,7 +946,27 @@ class SecureFetcher:
         include_globs: list[str] | None,
         exclude_globs: list[str] | None,
         enforce_scope: bool,
+        purpose: str,
     ) -> ResolvedTarget:
+        # Redirects must use the same hard-admission policy as roots and
+        # discovered links. Well-known robots/sitemap documents are connector
+        # infrastructure rather than page candidates and are handled by their
+        # dedicated request purposes.
+        admission = classify_url_admission(
+            url,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+            infrastructure_purpose=purpose,
+        )
+        if (
+            purpose in _ADMISSION_ENFORCED_PURPOSES
+            and admission.reason_code in _HARD_ADMISSION_EXCLUSION_CODES
+        ):
+            raise FetchError(
+                "URL rejected by admission policy",
+                error_code=ERROR_URL_ADMISSION_REJECTED,
+            )
         try:
             return await resolve_target(
                 url,
@@ -596,6 +975,7 @@ class SecureFetcher:
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
                 enforce_scope=enforce_scope,
+                infrastructure_purpose=purpose,
             )
         except UrlPolicyError as exc:
             # Out-of-scope / disallowed scheme-port-userinfo on a redirect hop.
@@ -608,6 +988,7 @@ class SecureFetcher:
         response: httpx.Response,
         redirect_chain: list[RedirectHop],
         started: float,
+        acquisition: AcquisitionProvenance,
     ) -> FetchResult:
         latency = int((time.monotonic() - started) * 1000)
         return FetchResult(
@@ -624,6 +1005,7 @@ class SecureFetcher:
             latency_ms=latency,
             redirect_chain=tuple(redirect_chain),
             charset=_charset(response.headers),
+            acquisition=acquisition,
         )
 
     async def _read_body(
@@ -636,6 +1018,7 @@ class SecureFetcher:
         started: float,
         max_wire: int,
         max_decoded: int,
+        acquisition: AcquisitionProvenance,
     ) -> FetchResult:
         ttfb = int((time.monotonic() - started) * 1000)
         content_type = _content_type(response.headers)
@@ -750,4 +1133,5 @@ class SecureFetcher:
             latency_ms=latency,
             redirect_chain=tuple(redirect_chain),
             charset=_charset(response.headers),
+            acquisition=acquisition,
         )

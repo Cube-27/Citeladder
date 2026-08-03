@@ -59,6 +59,24 @@ class FetchRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class AcquisitionProvenance:
+    """Safe, frozen acquisition details for a fetch result or call trace.
+
+    This is deliberately metadata-only: it contains neither raw response
+    content nor server credentials. ``scraperapi_options`` has only the small
+    allowlisted option set used to reproduce the request shape.
+    """
+
+    transport: str
+    rung: int
+    trigger: str = "initial"
+    impersonation_profile: str = ""
+    scraperapi_options: dict[str, str | bool] = field(default_factory=dict)
+    scraperapi_request_id: str = ""
+    policy_version: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class RedirectHop:
     """One re-validated redirect hop (URLs only — never credentials)."""
 
@@ -98,6 +116,7 @@ class FetchCallTrace:
     decoded_bytes: int | None
     ttfb_ms: int | None
     latency_ms: int | None
+    acquisition: AcquisitionProvenance | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +146,7 @@ class FetchResult:
     # carries the same tuple so the trace survives failure; persisting it is
     # T8's job. Empty only for results built directly by tests/callers.
     attempts: tuple[FetchCallTrace, ...] = ()
+    acquisition: AcquisitionProvenance | None = None
 
 
 class FetchError(Exception):
@@ -172,3 +192,23 @@ class DnsResolver(Protocol):
         ``dns_resolution_failed``.
         """
         ...
+
+
+@runtime_checkable
+class AcquisitionTransport(Protocol):
+    """One rung in Site Health's server-owned acquisition ladder.
+
+    Implementations receive a target that the caller has already
+    canonicalized, scope-checked, DNS-resolved, and pinned. They must preserve
+    the limits and return only bounded, redacted ``FetchResult`` values.
+    """
+
+    async def fetch(
+        self,
+        request: FetchRequest,
+        target: ResolvedTarget,
+        *,
+        max_wire_bytes: int,
+        max_decoded_bytes: int,
+        timeout_seconds: float,
+    ) -> FetchResult: ...

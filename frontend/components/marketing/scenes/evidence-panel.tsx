@@ -66,12 +66,12 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
     ),
   },
   health: {
-    label: 'Site health — technical & AEO',
+    label: 'Site health — Web Fundamentals & AEO',
     body: (
       <>
         <div className="gap-mkt-20 grid">
           {[
-            { name: 'Technical Health', value: 88, status: 'Optimal' },
+            { name: 'Web Fundamentals', value: 88, status: 'Optimal' },
             { name: 'AEO Readiness', value: 74, status: 'Good' },
             { name: 'Schema Validation', value: 92, status: 'Validated' },
           ].map(({ name, value, status }) => (

@@ -31,6 +31,11 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from app.core.config import site_health as _config
+from app.core.config.site_health_page_profiles import (
+    CLASSIFICATION_MAX_ALTERNATIVES,
+    CLASSIFICATION_OTHER_REASON_BELOW_THRESHOLD,
+    CLASSIFICATION_OTHER_REASON_NO_SIGNALS,
+)
 
 # Bounded per-input caps so a hostile URL/body can never bloat the evidence
 # or the classification work (same bounding convention as parser.py).
@@ -67,6 +72,9 @@ class PageTypeAssessment:
     classifier_version: str
     classified_by: str
     schema_suggested_type: str | None
+    alternatives: tuple[dict[str, Any], ...]
+    conflicts: tuple[dict[str, Any], ...]
+    other_reason: str | None
 
     def to_evidence(self) -> dict[str, Any]:
         """Bounded, JSON-safe evidence dict persisted into the facts dict."""
@@ -77,6 +85,9 @@ class PageTypeAssessment:
             "confidence": self.confidence,
             "confidence_threshold": _config.PAGE_TYPE_CONFIDENCE_THRESHOLD,
             "signals": [dict(signal) for signal in self.signals],
+            "alternatives": [dict(item) for item in self.alternatives],
+            "conflicts": [dict(item) for item in self.conflicts],
+            "other_reason": self.other_reason,
         }
 
 
@@ -180,6 +191,58 @@ def _schema_suggestion(facts: dict) -> tuple[str | None, str | None]:
     return None, None
 
 
+def _alternatives(
+    matched: list[dict[str, Any]], *, winner_type: str | None
+) -> tuple[dict[str, Any], ...]:
+    """Aggregate non-winning candidate types into bounded evidence.
+
+    A candidate may have multiple supporting signals (for example a URL path
+    and structured data).  Aggregating them makes the runner-up explainable
+    without changing the priority-based winner policy.
+    """
+    candidates: dict[str, dict[str, Any]] = {}
+    for signal in matched:
+        page_type = str(signal["page_type"])
+        if page_type == winner_type:
+            continue
+        entry = candidates.setdefault(
+            page_type,
+            {"page_type": page_type, "confidence": 0.0, "signals": []},
+        )
+        entry["confidence"] += float(signal["weight"])
+        entry["signals"].append(str(signal["signal"]))
+    ordered = sorted(
+        candidates.values(), key=lambda item: (-item["confidence"], item["page_type"])
+    )[:CLASSIFICATION_MAX_ALTERNATIVES]
+    return tuple(
+        {
+            "page_type": item["page_type"],
+            "confidence": round(float(item["confidence"]), 4),
+            "signals": item["signals"],
+        }
+        for item in ordered
+    )
+
+
+def _conflicts(
+    matched: list[dict[str, Any]], *, winner_type: str | None
+) -> tuple[dict[str, Any], ...]:
+    """Record only material disagreements between classification signals."""
+    if winner_type is None:
+        return ()
+    conflicts = [
+        {
+            "winner_page_type": winner_type,
+            "conflicting_page_type": str(signal["page_type"]),
+            "signal": str(signal["signal"]),
+            "detail": str(signal["detail"]),
+        }
+        for signal in matched
+        if str(signal["page_type"]) != winner_type
+    ]
+    return tuple(conflicts[:CLASSIFICATION_MAX_ALTERNATIVES])
+
+
 def classify(final_url: str, facts: dict) -> PageTypeAssessment:
     """Classify one page into the config taxonomy (pure, deterministic).
 
@@ -245,6 +308,14 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
     classified_by = (
         winner["signal"] if winner is not None else _config.PAGE_TYPE_SIGNAL_NONE
     )
+    winner_type = str(winner["page_type"]) if winner is not None else None
+    other_reason = None
+    if page_type == _config.PAGE_TYPE_OTHER:
+        other_reason = (
+            CLASSIFICATION_OTHER_REASON_NO_SIGNALS
+            if winner is None
+            else CLASSIFICATION_OTHER_REASON_BELOW_THRESHOLD
+        )
     return PageTypeAssessment(
         page_type=page_type,
         confidence=confidence,
@@ -252,4 +323,7 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
         classifier_version=_config.CLASSIFIER_VERSION,
         classified_by=classified_by,
         schema_suggested_type=schema_page_type,
+        alternatives=_alternatives(matched, winner_type=winner_type),
+        conflicts=_conflicts(matched, winner_type=winner_type),
+        other_reason=other_reason,
     )

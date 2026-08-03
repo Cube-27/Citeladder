@@ -1,0 +1,66 @@
+"""Static guards for Searchify's pre-launch, single-revision baseline."""
+
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_VERSIONS_DIR = _BACKEND_ROOT.parent / "migrations" / "versions"
+_BASELINE = _VERSIONS_DIR / "0001_initial.py"
+
+
+def _created_tables(source: str) -> set[str]:
+    tree = ast.parse(source)
+    tables: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "create_table"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            continue
+        tables.add(node.args[0].value)
+    return tables
+
+
+def test_0001_initial_is_the_only_migration_revision() -> None:
+    revisions = sorted(_VERSIONS_DIR.glob("*.py"))
+
+    assert revisions == [_BASELINE]
+    source = _BASELINE.read_text(encoding="utf-8")
+    assert 'revision = "0001_initial"' in source
+    assert "down_revision = None" in source
+
+
+def test_baseline_contains_site_health_guidance_and_commerce_schema() -> None:
+    source = _BASELINE.read_text(encoding="utf-8")
+    tables = _created_tables(source)
+
+    assert {
+        "opportunity_guidance",
+        "commerce_discovery_runs",
+        "commerce_discovery_tasks",
+        "commerce_discovery_artifacts",
+        "commerce_discovery_candidates",
+        "commerce_candidate_reviews",
+        "competitor_comparison_snapshots",
+    } <= tables
+
+    for column in (
+        "acquisition_transport",
+        "acquisition_rung",
+        "acquisition_trigger",
+        "impersonation_profile",
+        "scraperapi_options",
+        "scraperapi_request_id",
+        "acquisition_policy_version",
+        "source_candidate_id",
+        "source_artifact_id",
+        "extraction_fresh_at",
+    ):
+        assert f'"{column}"' in source

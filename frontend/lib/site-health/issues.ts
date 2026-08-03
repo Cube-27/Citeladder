@@ -55,9 +55,9 @@ export function severityRank(severity: IssueSeverity): number {
   return SEVERITY_RANK[severity] ?? 99;
 }
 
-/** Short uppercase dimension label for a badge (TECHNICAL / AEO). */
+/** Short uppercase dimension label for a badge (WEB FUNDAMENTALS / AEO). */
 export function dimensionLabel(dimension: IssueDimension): string {
-  return dimension === 'aeo' ? 'AEO' : 'TECHNICAL';
+  return dimension === 'aeo' ? 'AEO' : 'WEB FUNDAMENTALS';
 }
 
 /**

@@ -14,7 +14,7 @@ import uuid
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,12 +25,23 @@ from app.core.config.errors import (
     CODE_NOT_FOUND,
     CODE_VALIDATION_ERROR,
 )
-from app.core.config.opportunities import LIST_DEFAULT_LIMIT, LIST_MAX_LIMIT
+from app.core.config.opportunities import (
+    CODE_OPPORTUNITY_GUIDANCE_IDEMPOTENCY_CONFLICT,
+    CODE_OPPORTUNITY_GUIDANCE_UNAVAILABLE,
+    GUIDANCE_HISTORY_DEFAULT_LIMIT,
+    GUIDANCE_HISTORY_MAX_LIMIT,
+    GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN,
+    LIST_DEFAULT_LIMIT,
+    LIST_MAX_LIMIT,
+)
 from app.core.errors import ApiException
 from app.domain.opportunities import service
 from app.domain.opportunities.schemas import (
     OpportunitiesPage,
     OpportunityDetail,
+    OpportunityGuidanceHistory,
+    OpportunityGuidanceItem,
+    OpportunityHistoryResponse,
     OpportunityItem,
     OpportunityStatusPatch,
     OpportunitySummary,
@@ -39,6 +50,8 @@ from app.domain.opportunities.schemas import (
 )
 from app.domain.opportunities.service import (
     InvalidCursorError,
+    OpportunityGuidanceIdempotencyConflictError,
+    OpportunityGuidanceUnavailableError,
     OpportunityNotFoundError,
     OpportunitySupersededError,
     OpportunityValidationError,
@@ -67,6 +80,22 @@ def _bad_cursor(exc: InvalidCursorError) -> ApiException:
 def _superseded(exc: OpportunitySupersededError) -> ApiException:
     # Coded dialect: the legacy ``detail`` dict keeps its exact shape (WS-A A1).
     return ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc))
+
+
+def _guidance_unavailable(exc: OpportunityGuidanceUnavailableError) -> ApiException:
+    return ApiException(
+        status.HTTP_403_FORBIDDEN, CODE_OPPORTUNITY_GUIDANCE_UNAVAILABLE, str(exc)
+    )
+
+
+def _guidance_conflict(
+    exc: OpportunityGuidanceIdempotencyConflictError,
+) -> ApiException:
+    return ApiException(
+        status.HTTP_409_CONFLICT,
+        CODE_OPPORTUNITY_GUIDANCE_IDEMPOTENCY_CONFLICT,
+        str(exc),
+    )
 
 
 # =========================================================================
@@ -149,6 +178,22 @@ async def recompute_endpoint(
     return RecomputeResponse.model_validate(snapshot)
 
 
+@router.get(
+    "/projects/{project_id}/opportunities/history",
+    response_model=OpportunityHistoryResponse,
+)
+async def get_grouped_history_endpoint(
+    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> OpportunityHistoryResponse:
+    try:
+        projection = await service.get_grouped_history(
+            session, workspace_id=ctx.workspace_id, project_id=project_id
+        )
+    except OpportunityNotFoundError as exc:
+        raise _not_found(exc) from exc
+    return OpportunityHistoryResponse.model_validate(projection)
+
+
 # =========================================================================
 # Row read + the one mutation (human workflow status)
 # =========================================================================
@@ -186,6 +231,89 @@ async def update_status_endpoint(
     except OpportunitySupersededError as exc:
         raise _superseded(exc) from exc
     return OpportunityItem.model_validate(item)
+
+
+# =========================================================================
+# Development-only tailored guidance, persisted as immutable versions
+# =========================================================================
+@router.post(
+    "/opportunities/{opportunity_id}/guidance",
+    response_model=OpportunityGuidanceItem,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_guidance_endpoint(
+    opportunity_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    idempotency_key: Annotated[
+        str | None,
+        Header(alias="Idempotency-Key", max_length=GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN),
+    ] = None,
+) -> OpportunityGuidanceItem:
+    try:
+        row, _created = await service.create_guidance(
+            session,
+            workspace_id=ctx.workspace_id,
+            opportunity_id=opportunity_id,
+            idempotency_key=(idempotency_key or "").strip(),
+        )
+    except OpportunityNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except OpportunityValidationError as exc:
+        raise _validation(exc) from exc
+    except OpportunityGuidanceUnavailableError as exc:
+        raise _guidance_unavailable(exc) from exc
+    except OpportunityGuidanceIdempotencyConflictError as exc:
+        raise _guidance_conflict(exc) from exc
+    return OpportunityGuidanceItem.model_validate(service._project_guidance(row))
+
+
+@router.get(
+    "/opportunities/{opportunity_id}/guidance",
+    response_model=OpportunityGuidanceItem | None,
+)
+async def get_latest_guidance_endpoint(
+    opportunity_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> OpportunityGuidanceItem | None:
+    try:
+        row = await service.get_latest_guidance(
+            session, workspace_id=ctx.workspace_id, opportunity_id=opportunity_id
+        )
+    except OpportunityNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except OpportunityGuidanceUnavailableError as exc:
+        raise _guidance_unavailable(exc) from exc
+    if row is None:
+        return None
+    return OpportunityGuidanceItem.model_validate(service._project_guidance(row))
+
+
+@router.get(
+    "/opportunities/{opportunity_id}/guidance/history",
+    response_model=OpportunityGuidanceHistory,
+)
+async def get_guidance_history_endpoint(
+    opportunity_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    limit: Annotated[
+        int, Query(ge=1, le=GUIDANCE_HISTORY_MAX_LIMIT)
+    ] = GUIDANCE_HISTORY_DEFAULT_LIMIT,
+) -> OpportunityGuidanceHistory:
+    try:
+        rows = await service.list_guidance_history(
+            session,
+            workspace_id=ctx.workspace_id,
+            opportunity_id=opportunity_id,
+            limit=limit,
+        )
+    except OpportunityNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except OpportunityGuidanceUnavailableError as exc:
+        raise _guidance_unavailable(exc) from exc
+    return OpportunityGuidanceHistory.model_validate(
+        {"items": [service._project_guidance(row) for row in rows]}
+    )
 
 
 # =========================================================================

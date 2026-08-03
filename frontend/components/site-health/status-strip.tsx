@@ -337,7 +337,7 @@ function AnalysisStrip({
   } else if (discovering) {
     narration = 'Auditing selected pages while discovery re-scans the site in the background';
   } else {
-    narration = 'Auditing selected pages for technical and AEO health issues';
+    narration = 'Auditing selected pages for Web Fundamentals and AEO health issues';
   }
 
   return (

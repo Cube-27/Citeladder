@@ -30,6 +30,11 @@ vi.mock('@tanstack/react-query', () => ({
         active_prompts: 8,
       },
       active_work: ['site_health'],
+      ai_presence: {
+        current: { score: 61.2, formula_kind: 'cross_industry', formula_version: 'ai-presence-v1', provisional: true, coverage: { web_fundamentals: false }, components: { web_fundamentals: { score: null, weight: 0.3, available: false } }, source_snapshot_ids: {}, versions: { formula: 'ai-presence-v1' }, comparable_to_latest: null, timestamp: '2026-07-28T00:00:00Z' },
+        momentum: null,
+        trend_points: [],
+      },
       analyze: [
         {
           id: 'visibility',
@@ -84,6 +89,8 @@ describe('DashboardScreen', () => {
       'href',
       '/site-health',
     );
+    expect(screen.getByLabelText('AI Presence Index')).toBeInTheDocument();
+    expect(screen.getByText(/provisional: incomplete evidence/i)).toBeInTheDocument();
   });
 
   it('downloads the authenticated report blob', async () => {

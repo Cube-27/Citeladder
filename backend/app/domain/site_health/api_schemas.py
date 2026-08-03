@@ -49,6 +49,35 @@ class CreateCrawlRequest(_Model):
     include_globs: list[str] | None = None
     exclude_globs: list[str] | None = None
     seed: str | None = None
+    input_mode: Literal["auto", "exact_urls", "discovery_seeds"] | None = None
+    requested_page_limit: int | None = Field(default=None, ge=1)
+    seed_urls: list[str] | None = None
+    page_types: list[str] | None = None
+
+
+class UrlPreviewRequest(_Model):
+    project_id: uuid.UUID
+    content: str | list[str] | dict
+    input_format: Literal["text", "csv", "json"] = "text"
+    include_globs: list[str] | None = None
+    exclude_globs: list[str] | None = None
+
+
+class UrlPreviewRow(_Model):
+    row: int
+    input: str
+    accepted: bool
+    canonical_url: str | None
+    reason_code: str | None
+    value_kind: str
+    priority: int
+
+
+class UrlPreviewResponse(_Model):
+    items: list[UrlPreviewRow]
+    truncated: bool
+    counts: dict[str, int]
+    policy_version: str
 
 
 class ReplaceMonitoredRequest(_Model):
@@ -453,6 +482,43 @@ class IssueHistoryRow(_Model):
 class IssueHistoryPage(_Model):
     items: list[IssueHistoryRow]
     next_cursor: str | None
+
+
+class IssueHistoryTimelineRow(_Model):
+    crawl_id: uuid.UUID
+    observed_at: str | None
+    outcome: RuleOutcome
+    transition: Literal["new", "continuing", "resolved", "unchanged"]
+
+
+class GroupedIssueHistoryRow(_Model):
+    rule_id: str
+    dimension: IssueDimension
+    category: str
+    severity: IssueSeverity
+    title: str
+    remediation: str
+    current_state: Literal["open", "resolved"]
+    current_transition: Literal["new", "continuing", "resolved", "unchanged"]
+    occurrence_count: int
+    first_seen_at: str | None
+    last_seen_at: str | None
+    analyzer_version: str
+    rule_version: str
+    timeline: list[IssueHistoryTimelineRow]
+
+
+class IssueHistorySincePreviousCrawl(_Model):
+    has_previous_crawl: bool
+    new: int
+    continuing: int
+    resolved: int
+
+
+class GroupedIssueHistoryPage(_Model):
+    items: list[GroupedIssueHistoryRow]
+    next_cursor: str | None
+    since_previous_crawl: IssueHistorySincePreviousCrawl
 
 
 # =========================================================================

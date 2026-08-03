@@ -24,6 +24,7 @@ from lxml import html as lxml_html
 from app.analysis.site_health.page_types import is_question_heading
 from app.analysis.site_health.structured_data import (
     parse_jsonld_blocks,
+    product_facts,
     validate_microdata_types,
 )
 from app.connectors.web_evidence.url_policy import registrable_domain
@@ -385,6 +386,7 @@ def _structured_data(root: Any, *, max_blocks: int) -> dict[str, Any]:
         "has_json_ld": bool(jsonld_facts),
         "has_microdata": bool(microdata_facts),
         "types": sorted({b["type"] for b in blocks}),
+        "product": product_facts(blocks),
     }
 
 
@@ -696,6 +698,7 @@ def _empty_facts() -> dict[str, Any]:
             "has_json_ld": False,
             "has_microdata": False,
             "types": [],
+            "product": product_facts([]),
         },
         "links": {
             "anchors": [],

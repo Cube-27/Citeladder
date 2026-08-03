@@ -113,7 +113,9 @@ then removed.** The evaluation is retained here only as the record of a decision
 that was reversed.
 
 **Settled decision: the crawler makes one plain, honestly-identified HTTP request
-per target — no impersonation, no headless browser.**
+per target — no headless browser. When the frozen acquisition policy allows it,
+curl-cffi impersonation and ScraperAPI are auditable fallback rungs, not browser
+automation.**
 
 Rationale:
 

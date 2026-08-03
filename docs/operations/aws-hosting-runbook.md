@@ -820,3 +820,21 @@ databases, KMS keys, or provider apps with staging.
 - [IAM OIDC identity providers](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)
 - [ECS deployment circuit breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html)
 - [AWS Backup restore testing](https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html)
+# ScraperAPI worker operations
+
+Site Health acquisition can use ScraperAPI only as a server-side fallback after
+the configured httpx/curl-cffi ladder. Store the credential as a dedicated
+Secrets Manager value (for example `searchify/<environment>/scraperapi-key`),
+grant read access only to the worker task role, and never inject it into Vercel,
+browser configuration, API responses, logs, traces, or artifacts. The API service
+does not need the secret unless it also performs worker duties.
+
+Workers require controlled NAT egress to ScraperAPI and DNS/HTTPS endpoints; keep
+private databases without public ingress. Monitor per-rung request count, credits,
+latency, fallback/error code, and cost. Configure server-owned ceilings for
+requests, premium/render/geo options, concurrency, and per-crawl budget; alert
+before credit exhaustion and make the next eligible rung fail with a redacted,
+coded error once a ceiling is reached. Rotate the secret through Secrets Manager,
+deploy/restart workers to load the new version, probe a disposable target, then
+revoke the old key. Provenance stores the safe option set and provider request ID,
+never the credential or raw response.

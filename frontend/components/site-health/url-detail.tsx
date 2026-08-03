@@ -46,7 +46,7 @@ const HISTORY_LIMIT = 25;
 /**
  * Per-URL Site Health detail (Slice 8, mockup 711).
  *
- * Renders URL metadata, overall/Technical/AEO score rings, persisted delivery
+ * Renders URL metadata, overall/Web Fundamentals/AEO score rings, persisted delivery
  * facts (HTTP-level, not field CWV), the page's current issues ordered by
  * severity, and paginated crawl-bounded issue history. A "Re-audit this page"
  * action re-queues analysis (persisted server-side). Missing scores render `—`,
@@ -180,7 +180,7 @@ export function UrlDetail({
       {rerunError ? <Alert tone="danger">{rerunError}</Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <ScoreTile label="Technical Health" value={detail.technical_score} />
+        <ScoreTile label="Web Fundamentals" value={detail.technical_score} />
         <ScoreTile label="AEO Health" value={detail.aeo_score} />
         <ScoreTile label="Combined" value={detail.overall_score} />
       </div>

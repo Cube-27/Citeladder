@@ -209,3 +209,67 @@ class OpportunitySnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
+
+
+class OpportunityGuidance(Base):
+    """Immutable, bounded guidance generated from one opportunity evidence set.
+
+    This is a record of what was shown to the user, not a mutable annotation
+    on ``Opportunity``. Regeneration always creates a new identity; an
+    idempotency key only replays the original record. The frozen input and its
+    digest make the result independently auditable without retaining unbounded
+    raw evidence.
+    """
+
+    __tablename__ = "opportunity_guidance"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "opportunity_id",
+            "idempotency_key",
+            name="uq_opportunity_guidance_idempotency",
+        ),
+        Index(
+            "ix_opportunity_guidance_opportunity_created",
+            "opportunity_id",
+            "created_at",
+            "id",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    opportunity_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_OPPORTUNITY, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(160))
+    input_snapshot: Mapped[dict] = mapped_column(JSONB)
+    input_hash: Mapped[str] = mapped_column(String(64), index=True)
+    findings: Mapped[list] = mapped_column(JSONB, default=list)
+    recommendations: Mapped[list] = mapped_column(JSONB, default=list)
+    source_analysis_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    source_issue_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    source_metric_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    analyzer_version: Mapped[str] = mapped_column(String(32), default="")
+    rule_version: Mapped[str] = mapped_column(String(32), default="")
+    formula_version: Mapped[str] = mapped_column(String(32), default="")
+    generator_version: Mapped[str] = mapped_column(String(64), default="")
+    prompt_version: Mapped[str] = mapped_column(String(64), default="")
+    provider: Mapped[str] = mapped_column(String(32), default="")
+    model: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )

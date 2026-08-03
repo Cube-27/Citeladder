@@ -31,6 +31,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.connectors.web_evidence.url_policy import classify_url_admission
 from app.core.config.site_health import (
     CODE_MONITORING_NOT_ALLOWED,
     CODE_QUOTA_EXCEEDED,
@@ -911,7 +912,31 @@ async def seed_monitored_targets(
 
     seeded: list[uuid.UUID] = []
     position = 0
+    requested_limit = (crawl.configuration or {}).get("requested_page_limit")
+    existing_task_count = await session.scalar(
+        select(func.count())
+        .select_from(SiteCrawlTask)
+        .where(SiteCrawlTask.crawl_id == crawl.id)
+    )
+    remaining_budget = (
+        max(int(requested_limit) - int(existing_task_count or 0), 0)
+        if requested_limit is not None
+        else None
+    )
     for _monitored, site_url in rows:
+        configuration = dict(crawl.configuration or {})
+        decision = classify_url_admission(
+            site_url.normalized_url,
+            root_registrable_domain=(
+                configuration.get("root_registrable_domain") or None
+            ),
+            include_globs=configuration.get("include_globs"),
+            exclude_globs=configuration.get("exclude_globs"),
+        )
+        # Legacy monitored rows retain history but never bypass the frozen
+        # admission policy on a fresh recrawl.
+        if not decision.accepted:
+            continue
         # Admit into the new crawl's observed set FOR EVERY active row (not
         # just newly-seeded tasks) so a pre-fix crawl retried through here
         # self-heals its missing observations. Sparse row; the analyze result
@@ -934,6 +959,8 @@ async def seed_monitored_targets(
         )
         if site_url.url_hash in already_seeded:
             continue
+        if remaining_budget is not None and len(seeded) >= remaining_budget:
+            break
         task = await _enqueue_analyze_task(
             session,
             crawl=crawl,

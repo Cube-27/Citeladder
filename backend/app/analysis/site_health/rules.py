@@ -20,6 +20,7 @@
 # the v1 analysis-owned ``MIN_SUFFICIENT_WORDS`` constant moved there in v2.
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -54,6 +55,15 @@ from app.core.config.site_health import (
     PageTypeProfile,
     PageTypeSchemaExpectation,
     SiteHealthRule,
+)
+from app.core.config.site_health_page_profiles import (
+    PRODUCT_ANALYSIS_RULES,
+    PRODUCT_ANALYSIS_RULES_BY_ID,
+    PRODUCT_PARITY_FIELDS,
+    PRODUCT_PARITY_NORMALIZATION_PATTERN,
+    PRODUCT_PARITY_SCHEMA_FACT_KEYS,
+    PRODUCT_SCHEMA_EXPECTATION,
+    PRODUCT_SCHEMA_URI_SEPARATOR,
 )
 
 
@@ -364,6 +374,8 @@ def _expectation_for(facts: dict) -> PageTypeSchemaExpectation:
     (same fallback convention as the thin-content minimum).
     """
     page_type = str(facts.get("page_type") or "").strip().lower()
+    if page_type == PRODUCT_SCHEMA_EXPECTATION.page_type:
+        return PRODUCT_SCHEMA_EXPECTATION
     return PAGE_TYPE_EXPECTED_SCHEMA.get(
         page_type, PAGE_TYPE_EXPECTED_SCHEMA[PAGE_TYPE_OTHER]
     )
@@ -470,6 +482,110 @@ def _check_schema_matches_content(facts: dict) -> tuple[str, dict]:
         "page_type": expectation.page_type,
         "candidates": [c[:256] for c in candidates],
         "matched_visible_content": matched,
+    }
+
+
+def _product_block(facts: dict) -> dict | None:
+    """The bounded Product fact, only when Product markup is actually present."""
+    product = (facts.get("structured_data") or {}).get("product") or {}
+    return product if int(product.get("schema_product_count", 0) or 0) else None
+
+
+def _check_product_offer_details(facts: dict) -> tuple[str, dict]:
+    """Validate Product/Offer completeness without inferring optional claims."""
+    product = _product_block(facts)
+    if product is None:
+        return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_product_schema"}
+    identity_present = bool(
+        product.get("sku") or product.get("gtin") or product.get("mpn")
+    )
+    missing: list[str] = []
+    if not identity_present:
+        missing.append("identifier")
+    if not product.get("brand"):
+        missing.append("brand")
+    sd = facts.get("structured_data") or {}
+    product_blocks = [
+        block for block in sd.get("blocks") or [] if block.get("type") == "Product"
+    ]
+    offer_declared = any(
+        "offers" in (block.get("props_present") or []) for block in product_blocks
+    )
+    if offer_declared:
+        for field, key in (
+            ("price", "price"),
+            ("priceCurrency", "price_currency"),
+            ("availability", "availability"),
+        ):
+            if not product.get(key):
+                missing.append(f"offers.{field}")
+    return _pass_fail(not missing), {
+        "schema_product_count": product["schema_product_count"],
+        "offer_declared": offer_declared,
+        "missing": missing,
+        "sku": product.get("sku") or [],
+        "gtin": product.get("gtin") or [],
+        "brand": product.get("brand") or [],
+        "price": product.get("price") or [],
+        "price_currency": product.get("price_currency") or [],
+        "availability": product.get("availability") or [],
+        "variants": product.get("variants") or [],
+        "ratings": product.get("ratings") or [],
+        "shipping": bool(product.get("shipping")),
+        "returns": bool(product.get("returns")),
+    }
+
+
+def _parity_text(facts: dict) -> str:
+    headings = facts.get("headings") or {}
+    visible = " ".join(
+        [str(facts.get("title") or "")]
+        + [str(value) for value in (headings.get("h1_texts") or [])]
+        + [str((facts.get("body") or {}).get("text") or "")]
+    )
+    return re.sub(PRODUCT_PARITY_NORMALIZATION_PATTERN, "", visible.lower())
+
+
+def _check_product_visible_schema_parity(facts: dict) -> tuple[str, dict]:
+    """Compare only populated Product claims with persisted visible facts."""
+    product = _product_block(facts)
+    if product is None:
+        return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_product_schema"}
+    visible = _parity_text(facts)
+    checks: list[dict[str, object]] = []
+    for parity_field in PRODUCT_PARITY_FIELDS:
+        values = (
+            product.get("name") or []
+            if parity_field == "name"
+            else product.get(PRODUCT_PARITY_SCHEMA_FACT_KEYS[parity_field]) or []
+        )
+        for value in values:
+            normalized = re.sub(
+                PRODUCT_PARITY_NORMALIZATION_PATTERN, "", str(value).lower()
+            )
+            if not normalized:
+                continue
+            comparable = re.sub(
+                PRODUCT_PARITY_NORMALIZATION_PATTERN,
+                "",
+                str(value).rsplit(PRODUCT_SCHEMA_URI_SEPARATOR, 1)[-1].lower(),
+            )
+            checks.append(
+                {
+                    "field": parity_field,
+                    "schema_value": str(value)[:256],
+                    "visible_match": normalized in visible or comparable in visible,
+                }
+            )
+    if not checks:
+        return RULE_OUTCOME_NOT_APPLICABLE, {
+            "reason": "no_comparable_product_claims"
+        }
+    mismatches = [check for check in checks if not check["visible_match"]]
+    return _pass_fail(not mismatches), {
+        "checked_claim_count": len(checks),
+        "mismatch_count": len(mismatches),
+        "checks": checks,
     }
 
 
@@ -632,6 +748,8 @@ _CHECKS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "aeo.question_headings": _check_question_headings,
     "aeo.server_rendered_content": _check_server_rendered_content,
     "aeo.no_expand_gating": _check_no_expand_gating,
+    "aeo.product_offer_details": _check_product_offer_details,
+    "aeo.product_visible_schema_parity": _check_product_visible_schema_parity,
 }
 
 
@@ -743,9 +861,20 @@ def evaluate_rule(rule: SiteHealthRule, facts: dict) -> RuleEvaluation:
 
 def evaluate_all(facts: dict) -> list[RuleEvaluation]:
     """Evaluate every catalog rule against ``facts`` (catalog order)."""
-    return [evaluate_rule(rule, facts) for rule in SITE_HEALTH_RULES]
+    supplemental = (
+        PRODUCT_ANALYSIS_RULES
+        if str(facts.get("page_type") or "").lower()
+        == PRODUCT_SCHEMA_EXPECTATION.page_type
+        else ()
+    )
+    return [
+        evaluate_rule(rule, facts)
+        for rule in (*SITE_HEALTH_RULES, *supplemental)
+    ]
 
 
 def rule_for(rule_id: str) -> SiteHealthRule | None:
     """Convenience lookup of a catalog rule by id (or None)."""
-    return SITE_HEALTH_RULES_BY_ID.get(rule_id)
+    return SITE_HEALTH_RULES_BY_ID.get(rule_id) or PRODUCT_ANALYSIS_RULES_BY_ID.get(
+        rule_id
+    )

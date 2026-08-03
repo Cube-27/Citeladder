@@ -1269,6 +1269,14 @@ def upgrade() -> None:
         sa.Column("price", sa.Numeric(precision=12, scale=2), nullable=True),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("variants", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("attributes", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("availability", sa.String(length=64), nullable=False),
+        sa.Column("extraction_fresh_at", sa.DateTime(timezone=True), nullable=True),
+        # The discovery tables are created later in this baseline. Their FKs
+        # are attached explicitly after all tables exist.
+        sa.Column("source_candidate_id", sa.UUID(), nullable=True),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
@@ -1290,6 +1298,18 @@ def upgrade() -> None:
         op.f("ix_competitor_products_project_id"),
         "competitor_products",
         ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_products_source_candidate_id"),
+        "competitor_products",
+        ["source_candidate_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_products_source_artifact_id"),
+        "competitor_products",
+        ["source_artifact_id"],
         unique=False,
     )
     op.create_table(
@@ -1908,6 +1928,83 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "opportunity_guidance",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("opportunity_id", sa.UUID(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
+        sa.Column(
+            "input_snapshot", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("input_hash", sa.String(length=64), nullable=False),
+        sa.Column("findings", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "recommendations", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column(
+            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_issue_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_metric_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
+        sa.Column("rule_version", sa.String(length=32), nullable=False),
+        sa.Column("formula_version", sa.String(length=32), nullable=False),
+        sa.Column("generator_version", sa.String(length=64), nullable=False),
+        sa.Column("prompt_version", sa.String(length=64), nullable=False),
+        sa.Column("provider", sa.String(length=32), nullable=False),
+        sa.Column("model", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["opportunity_id"], ["opportunities.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "opportunity_id",
+            "idempotency_key",
+            name="uq_opportunity_guidance_idempotency",
+        ),
+    )
+    op.create_index(
+        op.f("ix_opportunity_guidance_input_hash"),
+        "opportunity_guidance",
+        ["input_hash"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunity_guidance_opportunity_id"),
+        "opportunity_guidance",
+        ["opportunity_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_opportunity_guidance_opportunity_created",
+        "opportunity_guidance",
+        ["opportunity_id", "created_at", "id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunity_guidance_project_id"),
+        "opportunity_guidance",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunity_guidance_workspace_id"),
+        "opportunity_guidance",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
         "products",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
@@ -1920,6 +2017,9 @@ def upgrade() -> None:
         sa.Column("url", sa.Text(), nullable=False),
         sa.Column("attributes", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("origin", sa.String(length=32), nullable=False),
+        # FKs to the later discovery tables are attached at the end of upgrade.
+        sa.Column("source_candidate_id", sa.UUID(), nullable=True),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=True),
         sa.Column("connection_id", sa.UUID(), nullable=True),
         sa.Column("external_item_ref", sa.String(length=255), nullable=False),
         sa.Column("last_seen_sync_run_id", sa.UUID(), nullable=True),
@@ -1946,6 +2046,18 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_products_project_id"), "products", ["project_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_products_source_candidate_id"),
+        "products",
+        ["source_candidate_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_products_source_artifact_id"),
+        "products",
+        ["source_artifact_id"],
+        unique=False,
     )
     op.create_table(
         "site_crawl_events",
@@ -2961,6 +3073,17 @@ def upgrade() -> None:
         sa.Column("latency_ms", sa.Integer(), nullable=True),
         sa.Column("wire_bytes", sa.Integer(), nullable=True),
         sa.Column("decoded_bytes", sa.Integer(), nullable=True),
+        sa.Column("acquisition_transport", sa.String(length=32), nullable=False),
+        sa.Column("acquisition_rung", sa.Integer(), nullable=True),
+        sa.Column("acquisition_trigger", sa.String(length=32), nullable=False),
+        sa.Column("impersonation_profile", sa.String(length=64), nullable=False),
+        sa.Column(
+            "scraperapi_options", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("scraperapi_request_id", sa.String(length=255), nullable=False),
+        sa.Column(
+            "acquisition_policy_version", sa.String(length=32), nullable=False
+        ),
         sa.Column("extractor_version", sa.String(length=32), nullable=False),
         sa.Column(
             "normalized_facts", postgresql.JSONB(astext_type=Text()), nullable=True
@@ -3204,6 +3327,17 @@ def upgrade() -> None:
         sa.Column("latency_ms", sa.Integer(), nullable=True),
         sa.Column("wire_bytes", sa.Integer(), nullable=True),
         sa.Column("decoded_bytes", sa.Integer(), nullable=True),
+        sa.Column("acquisition_transport", sa.String(length=32), nullable=False),
+        sa.Column("acquisition_rung", sa.Integer(), nullable=True),
+        sa.Column("acquisition_trigger", sa.String(length=32), nullable=False),
+        sa.Column("impersonation_profile", sa.String(length=64), nullable=False),
+        sa.Column(
+            "scraperapi_options", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("scraperapi_request_id", sa.String(length=255), nullable=False),
+        sa.Column(
+            "acquisition_policy_version", sa.String(length=32), nullable=False
+        ),
         sa.Column("artifact_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
@@ -4035,6 +4169,404 @@ def upgrade() -> None:
         ["grant_id"],
         unique=False,
     )
+    op.create_table(
+        "commerce_discovery_runs",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("input_kind", sa.String(length=32), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column(
+            "configuration", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("discovery_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_runs_project_id"),
+        "commerce_discovery_runs",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_runs_status"),
+        "commerce_discovery_runs",
+        ["status"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_runs_workspace_id"),
+        "commerce_discovery_runs",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_discovery_tasks",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("task_kind", sa.String(length=32), nullable=False),
+        sa.Column("source_url", sa.Text(), nullable=False),
+        sa.Column("source_key", sa.String(length=128), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=180), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        # Deferred until the artifact table exists, mirroring site crawl tasks.
+        sa.Column("result_artifact_id", sa.UUID(), nullable=True),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["project_id"], ["projects.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["run_id"], ["commerce_discovery_runs.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "idempotency_key", name="uq_commerce_discovery_task_idempotency"
+        ),
+        sa.UniqueConstraint(
+            "run_id", "source_key", name="uq_commerce_discovery_task_source"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_tasks_available_at"),
+        "commerce_discovery_tasks",
+        ["available_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_commerce_discovery_tasks_claim",
+        "commerce_discovery_tasks",
+        ["status", "available_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_commerce_discovery_tasks_lease",
+        "commerce_discovery_tasks",
+        ["status", "lease_expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_tasks_project_id"),
+        "commerce_discovery_tasks",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_tasks_run_id"),
+        "commerce_discovery_tasks",
+        ["run_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_tasks_status"),
+        "commerce_discovery_tasks",
+        ["status"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_tasks_workspace_id"),
+        "commerce_discovery_tasks",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_discovery_artifacts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("evidence_kind", sa.String(length=32), nullable=False),
+        sa.Column("source_url", sa.Text(), nullable=False),
+        sa.Column("content_hash", sa.String(length=64), nullable=False),
+        sa.Column("extracted", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("acquisition", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("discovery_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["project_id"], ["projects.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["run_id"], ["commerce_discovery_runs.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["task_id"], ["commerce_discovery_tasks.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("task_id", name="uq_commerce_discovery_artifact_task"),
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_artifacts_project_id"),
+        "commerce_discovery_artifacts",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_artifacts_run_id"),
+        "commerce_discovery_artifacts",
+        ["run_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_artifacts_task_id"),
+        "commerce_discovery_artifacts",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_artifacts_workspace_id"),
+        "commerce_discovery_artifacts",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_discovery_candidates",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("candidate_kind", sa.String(length=16), nullable=False),
+        sa.Column("competitor_id", sa.UUID(), nullable=True),
+        sa.Column("candidate_hash", sa.String(length=64), nullable=False),
+        sa.Column("identity", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("extraction_confidence", sa.Float(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["commerce_discovery_artifacts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["competitor_id"], ["competitors.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_id"], ["projects.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["run_id"], ["commerce_discovery_runs.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["task_id"], ["commerce_discovery_tasks.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "run_id", "candidate_hash", name="uq_commerce_candidate_run_hash"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_candidates_artifact_id"),
+        "commerce_discovery_candidates",
+        ["artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_candidates_project_id"),
+        "commerce_discovery_candidates",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_commerce_discovery_candidates_project",
+        "commerce_discovery_candidates",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_candidates_run_id"),
+        "commerce_discovery_candidates",
+        ["run_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_candidates_task_id"),
+        "commerce_discovery_candidates",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_discovery_candidates_workspace_id"),
+        "commerce_discovery_candidates",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_candidate_reviews",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("candidate_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("target_product_id", sa.UUID(), nullable=True),
+        sa.Column("target_competitor_product_id", sa.UUID(), nullable=True),
+        sa.Column("match_reason", sa.String(length=64), nullable=False),
+        sa.Column("match_confidence", sa.Float(), nullable=False),
+        sa.Column("review_note", sa.Text(), nullable=False),
+        sa.Column("matcher_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["candidate_id"], ["commerce_discovery_candidates.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_id"], ["projects.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_competitor_product_id"],
+            ["competitor_products.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_product_id"], ["products.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_commerce_candidate_reviews_candidate_id"),
+        "commerce_candidate_reviews",
+        ["candidate_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_commerce_candidate_reviews_candidate",
+        "commerce_candidate_reviews",
+        ["candidate_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_candidate_reviews_project_id"),
+        "commerce_candidate_reviews",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_candidate_reviews_workspace_id"),
+        "commerce_candidate_reviews",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "competitor_comparison_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("competitor_id", sa.UUID(), nullable=True),
+        sa.Column(
+            "source_catalog_ids", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("matcher_version", sa.String(length=64), nullable=False),
+        sa.Column("comparison_version", sa.String(length=64), nullable=False),
+        sa.Column("comparison", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("truncated", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["competitor_id"], ["competitors.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_id"], ["projects.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_competitor_comparison_snapshots_competitor_id"),
+        "competitor_comparison_snapshots",
+        ["competitor_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_comparison_snapshots_project_id"),
+        "competitor_comparison_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_competitor_comparison_project",
+        "competitor_comparison_snapshots",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_competitor_comparison_snapshots_workspace_id"),
+        "competitor_comparison_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_foreign_key(
+        "fk_commerce_discovery_tasks_result_artifact_id",
+        "commerce_discovery_tasks",
+        "commerce_discovery_artifacts",
+        ["result_artifact_id"],
+        ["id"],
+        ondelete="SET NULL",
+        use_alter=True,
+    )
+    op.create_foreign_key(
+        "fk_products_source_candidate_id",
+        "products",
+        "commerce_discovery_candidates",
+        ["source_candidate_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_foreign_key(
+        "fk_products_source_artifact_id",
+        "products",
+        "commerce_discovery_artifacts",
+        ["source_artifact_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_foreign_key(
+        "fk_competitor_products_source_candidate_id",
+        "competitor_products",
+        "commerce_discovery_candidates",
+        ["source_candidate_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_foreign_key(
+        "fk_competitor_products_source_artifact_id",
+        "competitor_products",
+        "commerce_discovery_artifacts",
+        ["source_artifact_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
     op.create_foreign_key(
         "fk_audit_tasks_result_artifact_id",
         "audit_tasks",
@@ -4133,6 +4665,145 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # These FKs are attached after the referenced discovery tables exist.
+    # Drop them before the reverse walk removes those tables.
+    op.drop_constraint(
+        "fk_competitor_products_source_artifact_id",
+        "competitor_products",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "fk_competitor_products_source_candidate_id",
+        "competitor_products",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "fk_products_source_artifact_id", "products", type_="foreignkey"
+    )
+    op.drop_constraint(
+        "fk_products_source_candidate_id", "products", type_="foreignkey"
+    )
+    op.drop_constraint(
+        "fk_commerce_discovery_tasks_result_artifact_id",
+        "commerce_discovery_tasks",
+        type_="foreignkey",
+    )
+    op.drop_index(
+        op.f("ix_competitor_comparison_snapshots_workspace_id"),
+        table_name="competitor_comparison_snapshots",
+    )
+    op.drop_index(
+        "ix_competitor_comparison_project",
+        table_name="competitor_comparison_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_competitor_comparison_snapshots_project_id"),
+        table_name="competitor_comparison_snapshots",
+    )
+    op.drop_index(
+        op.f("ix_competitor_comparison_snapshots_competitor_id"),
+        table_name="competitor_comparison_snapshots",
+    )
+    op.drop_table("competitor_comparison_snapshots")
+    op.drop_index(
+        op.f("ix_commerce_candidate_reviews_workspace_id"),
+        table_name="commerce_candidate_reviews",
+    )
+    op.drop_index(
+        op.f("ix_commerce_candidate_reviews_project_id"),
+        table_name="commerce_candidate_reviews",
+    )
+    op.drop_index(
+        "ix_commerce_candidate_reviews_candidate",
+        table_name="commerce_candidate_reviews",
+    )
+    op.drop_index(
+        op.f("ix_commerce_candidate_reviews_candidate_id"),
+        table_name="commerce_candidate_reviews",
+    )
+    op.drop_table("commerce_candidate_reviews")
+    op.drop_index(
+        op.f("ix_commerce_discovery_candidates_workspace_id"),
+        table_name="commerce_discovery_candidates",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_candidates_task_id"),
+        table_name="commerce_discovery_candidates",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_candidates_run_id"),
+        table_name="commerce_discovery_candidates",
+    )
+    op.drop_index(
+        "ix_commerce_discovery_candidates_project",
+        table_name="commerce_discovery_candidates",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_candidates_project_id"),
+        table_name="commerce_discovery_candidates",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_candidates_artifact_id"),
+        table_name="commerce_discovery_candidates",
+    )
+    op.drop_table("commerce_discovery_candidates")
+    op.drop_index(
+        op.f("ix_commerce_discovery_artifacts_workspace_id"),
+        table_name="commerce_discovery_artifacts",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_artifacts_task_id"),
+        table_name="commerce_discovery_artifacts",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_artifacts_run_id"),
+        table_name="commerce_discovery_artifacts",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_artifacts_project_id"),
+        table_name="commerce_discovery_artifacts",
+    )
+    op.drop_table("commerce_discovery_artifacts")
+    op.drop_index(
+        op.f("ix_commerce_discovery_tasks_workspace_id"),
+        table_name="commerce_discovery_tasks",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_tasks_status"),
+        table_name="commerce_discovery_tasks",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_tasks_run_id"),
+        table_name="commerce_discovery_tasks",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_tasks_project_id"),
+        table_name="commerce_discovery_tasks",
+    )
+    op.drop_index(
+        "ix_commerce_discovery_tasks_lease", table_name="commerce_discovery_tasks"
+    )
+    op.drop_index(
+        "ix_commerce_discovery_tasks_claim", table_name="commerce_discovery_tasks"
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_tasks_available_at"),
+        table_name="commerce_discovery_tasks",
+    )
+    op.drop_table("commerce_discovery_tasks")
+    op.drop_index(
+        op.f("ix_commerce_discovery_runs_workspace_id"),
+        table_name="commerce_discovery_runs",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_runs_status"),
+        table_name="commerce_discovery_runs",
+    )
+    op.drop_index(
+        op.f("ix_commerce_discovery_runs_project_id"),
+        table_name="commerce_discovery_runs",
+    )
+    op.drop_table("commerce_discovery_runs")
     op.drop_table("brand_discoveries")
     op.drop_constraint(
         "fk_site_crawl_tasks_result_artifact_id", "site_crawl_tasks", type_="foreignkey"
@@ -4513,9 +5184,32 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_site_crawl_events_crawl_id"), table_name="site_crawl_events")
     op.drop_table("site_crawl_events")
     op.drop_index(op.f("ix_products_project_id"), table_name="products")
+    op.drop_index(op.f("ix_products_source_artifact_id"), table_name="products")
+    op.drop_index(op.f("ix_products_source_candidate_id"), table_name="products")
     op.drop_index(op.f("ix_products_last_seen_sync_run_id"), table_name="products")
     op.drop_index(op.f("ix_products_connection_id"), table_name="products")
     op.drop_table("products")
+    op.drop_index(
+        op.f("ix_opportunity_guidance_workspace_id"),
+        table_name="opportunity_guidance",
+    )
+    op.drop_index(
+        op.f("ix_opportunity_guidance_project_id"),
+        table_name="opportunity_guidance",
+    )
+    op.drop_index(
+        "ix_opportunity_guidance_opportunity_created",
+        table_name="opportunity_guidance",
+    )
+    op.drop_index(
+        op.f("ix_opportunity_guidance_opportunity_id"),
+        table_name="opportunity_guidance",
+    )
+    op.drop_index(
+        op.f("ix_opportunity_guidance_input_hash"),
+        table_name="opportunity_guidance",
+    )
+    op.drop_table("opportunity_guidance")
     op.drop_index(
         op.f("ix_opportunity_snapshots_workspace_id"),
         table_name="opportunity_snapshots",
@@ -4645,6 +5339,14 @@ def downgrade() -> None:
     )
     op.drop_index(
         op.f("ix_competitor_products_competitor_id"), table_name="competitor_products"
+    )
+    op.drop_index(
+        op.f("ix_competitor_products_source_artifact_id"),
+        table_name="competitor_products",
+    )
+    op.drop_index(
+        op.f("ix_competitor_products_source_candidate_id"),
+        table_name="competitor_products",
     )
     op.drop_table("competitor_products")
     op.drop_index(op.f("ix_brand_profiles_workspace_id"), table_name="brand_profiles")

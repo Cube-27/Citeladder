@@ -34,7 +34,7 @@ const FILTERS: ReadonlyArray<{ key: FilterKey; label: string }> = [
   { key: 'high', label: 'High' },
   { key: 'medium', label: 'Medium' },
   { key: 'low', label: 'Low' },
-  { key: 'technical', label: 'Technical' },
+  { key: 'technical', label: 'Web Fundamentals' },
   { key: 'aeo', label: 'AEO' },
 ];
 

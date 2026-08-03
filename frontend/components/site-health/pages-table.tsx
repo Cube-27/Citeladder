@@ -29,7 +29,7 @@ import {
  *
  * Renders one row per analyzed page: URL (+ path), the page-type badge (v2
  * P1), a per-page analysis status badge (queued/running/completed/error/
- * blocked), issue count, Technical / AEO scores, last audited, and a View
+ * blocked), issue count, Web Fundamentals / AEO scores, last audited, and a View
  * action. Missing / not-yet-analysed scores render the `—` placeholder —
  * never a fabricated zero (an error/blocked row shows `—`, not 0). The whole
  * row is clickable and navigates to the Slice 8 per-URL detail route
@@ -57,7 +57,7 @@ export function PagesTable({
           <TableHead>Type</TableHead>
           <TableHead>Status</TableHead>
           <TableHead numeric>Issues</TableHead>
-          <TableHead numeric>Technical</TableHead>
+          <TableHead numeric>Web Fundamentals</TableHead>
           <TableHead numeric>AEO</TableHead>
           <TableHead>Last Audit</TableHead>
           <TableHead className="w-16" />

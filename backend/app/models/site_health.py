@@ -675,6 +675,15 @@ class SiteFetchAttempt(Base):
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     wire_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     decoded_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Safe acquisition provenance for this exact real network call. Never
+    # carries provider credentials, a provider request URL, or raw response.
+    acquisition_transport: Mapped[str] = mapped_column(String(32), default="")
+    acquisition_rung: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    acquisition_trigger: Mapped[str] = mapped_column(String(32), default="")
+    impersonation_profile: Mapped[str] = mapped_column(String(64), default="")
+    scraperapi_options: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    scraperapi_request_id: Mapped[str] = mapped_column(String(255), default="")
+    acquisition_policy_version: Mapped[str] = mapped_column(String(32), default="")
     # Set on the succeeding attempt (SET NULL if the artifact is later removed).
     artifact_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -733,6 +742,16 @@ class SiteFetchArtifact(Base):
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     wire_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     decoded_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Provenance of the terminal successful acquisition rung. Attempt rows hold
+    # the complete ladder; this repeats the winning safe metadata for direct
+    # artifact reads without joining attempts.
+    acquisition_transport: Mapped[str] = mapped_column(String(32), default="")
+    acquisition_rung: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    acquisition_trigger: Mapped[str] = mapped_column(String(32), default="")
+    impersonation_profile: Mapped[str] = mapped_column(String(64), default="")
+    scraperapi_options: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    scraperapi_request_id: Mapped[str] = mapped_column(String(255), default="")
+    acquisition_policy_version: Mapped[str] = mapped_column(String(32), default="")
     extractor_version: Mapped[str] = mapped_column(String(32), default="")
     # Bounded normalized parsed facts (analyze tasks). Never a raw body.
     normalized_facts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

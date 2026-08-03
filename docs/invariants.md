@@ -128,3 +128,17 @@ Sentiment and average-position are **present in the schema but currently null**.
 would require an LLM/contextual judgement, which would break "no LLM for headline metrics"
 (invariant 9). They are deferred to the roadmap and surfaced as `—` in the UI. Do not
 back-fill them with a heuristic that pretends to be deterministic.
+# Site Health and Commerce extension rules
+
+- **Admission before transport.** Config-owned URL admission runs before every
+  fetch task. Hard-excluded transactional/authentication URLs never enqueue or
+  call a transport; redirects, uploads, sitemap entries, recrawls, and manual
+  selections use the same policy.
+- **Acquisition is auditable, not invisible.** httpx, curl-cffi, and ScraperAPI
+  are allowed only through the frozen server-owned ladder. Preserve robots, SSRF,
+  redirect, TLS, pacing, time/byte limit, redaction, and append-only attempt
+  provenance on every rung. Credentials and raw HTML never leave worker scope.
+- **Guidance and comparisons are projections.** Opportunity guidance, commerce
+  discovery, product matching, competitor comparisons, AI Presence, and Momentum
+  store versioned provenance and never mutate evidence, detection, priority, or
+  historical audit configuration.

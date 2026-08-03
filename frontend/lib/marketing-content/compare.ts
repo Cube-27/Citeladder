@@ -71,7 +71,7 @@ const OURS = {
   siteHealth: {
     dimension: 'Site health / AEO auditing',
     searchify:
-      'Built in — first-party SSRF-bounded crawler, Technical + AEO scores, grouped issues ' +
+      'Built in — first-party SSRF-bounded crawler, Web Fundamentals + AEO scores, grouped issues ' +
       'with remediation, per-URL diagnostics, and workspace-scoped CSV/Markdown exports.',
   },
   provenance: {
@@ -86,7 +86,7 @@ const OURS = {
   siteHealthDepth: {
     dimension: 'Site health depth',
     searchify:
-      '33 deterministic rules across 8 categories, Technical and AEO weighted 50/50, ' +
+      '33 deterministic rules across 8 categories, Web Fundamentals and AEO weighted 50/50, ' +
       'plus AI-crawler stance detection and an /llms.txt check.',
   },
   price: {
@@ -111,7 +111,7 @@ export const FACT_ROWS = [
   { key: 'Scoring', value: 'Deterministic rules, versioned projections' },
   { key: 'Evidence', value: 'Every metric drills to the raw run' },
   { key: 'Keys', value: 'BYOK · Fernet-encrypted at rest' },
-  { key: 'Site health', value: 'Technical + AEO auditing built in' },
+  { key: 'Site health', value: 'Web Fundamentals + AEO auditing built in' },
   { key: 'Provenance', value: 'Analyzer + rule version on every projection' },
 ] as const;
 

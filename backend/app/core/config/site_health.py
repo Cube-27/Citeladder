@@ -103,6 +103,96 @@ SAMPLE_URL_LIMIT: Final = 10
 # over it rather than being split mid-batch.
 SAMPLE_DISCOVERY_URL_CAP: Final = 200
 
+# =========================================================================
+# Value-aware URL admission (frozen per crawl)
+# =========================================================================
+# These are deliberately URL-only rules: they run before a queue row or a
+# transport request exists.  Reason codes are safe to expose in previews and
+# events; no rule includes a URL, credential, or provider detail.
+URL_ADMISSION_POLICY_VERSION: Final = "sh-url-admission-1"
+INPUT_MODE_AUTO: Final = "auto"
+INPUT_MODE_EXACT_URLS: Final = "exact_urls"
+INPUT_MODE_DISCOVERY_SEEDS: Final = "discovery_seeds"
+INPUT_MODES: Final[frozenset[str]] = frozenset(
+    {INPUT_MODE_AUTO, INPUT_MODE_EXACT_URLS, INPUT_MODE_DISCOVERY_SEEDS}
+)
+URL_EXCLUSION_HARD_PATH: Final = "hard_excluded_path"
+URL_EXCLUSION_HARD_ASSET: Final = "hard_excluded_asset"
+URL_EXCLUSION_HARD_QUERY: Final = "hard_excluded_query"
+URL_EXCLUSION_OUT_OF_SCOPE: Final = "out_of_scope"
+URL_EXCLUSION_NARROWED: Final = "narrowed"
+URL_EXCLUSION_INVALID: Final = "invalid_url"
+URL_EXCLUSION_DUPLICATE: Final = "duplicate"
+URL_EXCLUSION_PAGE_TYPE: Final = "page_type_filtered"
+URL_EXCLUSION_TRACKING: Final = "tracking_url"
+URL_HARD_EXCLUSION_PATH_PATTERNS: Final[tuple[str, ...]] = (
+    r"(?:^|/)(?:login|log-in|signin|sign-in|register|signup|sign-up)(?:/|$)",
+    r"(?:^|/)(?:account|profile|admin|wp-admin|dashboard)(?:/|$)",
+    r"(?:^|/)(?:cart|basket|checkout|payment|payments|order|orders|wishlist)(?:/|$)",
+    r"(?:^|/)(?:search|tag|tags|author|authors|feed)(?:/|$)",
+    r"(?:^|/)(?:preview|print|share)(?:/|$)",
+)
+URL_HARD_EXCLUSION_QUERY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "q",
+        "query",
+        "s",
+        "search",
+        "filter",
+        "filters",
+        "facet",
+        "sort",
+        "page",
+        "paged",
+        "preview",
+    }
+)
+URL_HARD_EXCLUSION_EXTENSIONS: Final[frozenset[str]] = frozenset(
+    {
+        ".pdf",
+        ".zip",
+        ".gz",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".svg",
+        ".ico",
+        ".css",
+        ".js",
+        ".mjs",
+        ".xml",
+        ".json",
+        ".csv",
+        ".txt",
+        ".mp3",
+        ".mp4",
+        ".webm",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+    }
+)
+# Higher values are more valuable.  Used only for deterministic frontier
+# ordering/preview grouping; it never changes an already-frozen crawl.
+URL_VALUE_PRIORITIES: Final[dict[str, int]] = {
+    "root": 100,
+    "product": 90,
+    "comparison": 85,
+    "service": 80,
+    "local": 80,
+    "category": 70,
+    "pricing": 70,
+    "article": 60,
+    "guide": 60,
+    "faq": 60,
+    "docs": 60,
+    "trust": 40,
+    "other": 20,
+}
+
 
 class SiteHealthRuntimePolicy:
     """The neutral crawl policy projected from a resolved allowance.
@@ -324,6 +414,21 @@ FETCH_PURPOSE_SITEMAP: Final = "sitemap"
 # v2 P2: the llms.txt probe at the site root (site_root rules / site_facts).
 FETCH_PURPOSE_LLMS: Final = "llms"
 
+# These narrowly identify crawler infrastructure documents that must be read
+# even though their extensions are never admissible as customer-facing pages.
+# URL policy applies this exception only when the matching internal fetch
+# purpose is supplied; it does not loosen user seeds or page admission.
+INFRASTRUCTURE_FETCH_EXACT_PATHS: Final[dict[str, frozenset[str]]] = {
+    FETCH_PURPOSE_ROBOTS: frozenset({"/robots.txt"}),
+    FETCH_PURPOSE_LLMS: frozenset({"/llms.txt"}),
+    FETCH_PURPOSE_SITEMAP: frozenset(),
+}
+INFRASTRUCTURE_FETCH_PATH_SUFFIXES: Final[dict[str, tuple[str, ...]]] = {
+    FETCH_PURPOSE_ROBOTS: (),
+    FETCH_PURPOSE_LLMS: (),
+    FETCH_PURPOSE_SITEMAP: (".xml", ".xml.gz"),
+}
+
 # =========================================================================
 # Rule dimensions / outcomes / severities / categories
 # =========================================================================
@@ -431,10 +536,20 @@ ROBOTS_FETCH_STATUS_FETCH_FAILED: Final = "fetch_failed"
 # =========================================================================
 # Bot-block signatures (spec §5.4)
 # =========================================================================
-# The crawler makes a plain, honestly-identified HTTP request and nothing more.
-# When a site blocks it we CLASSIFY that (``ERROR_BOT_BLOCKED``) and report it;
-# we never impersonate a browser to get around it. A site that refuses a
-# well-behaved crawler is not AEO-ready, and that is the finding.
+ACQUISITION_TRANSPORT_HTTPX: Final = "httpx"
+ACQUISITION_TRANSPORT_CURL_CFFI: Final = "curl_cffi"
+ACQUISITION_TRANSPORT_SCRAPERAPI: Final = "scraperapi"
+ACQUISITION_TRIGGER_INITIAL: Final = "initial"
+ACQUISITION_TRIGGER_CHALLENGE: Final = "challenge"
+ACQUISITION_TRIGGER_BLOCK_STATUS: Final = "block_status"
+ACQUISITION_TRIGGER_LOW_CONTENT: Final = "low_content"
+ACQUISITION_TRIGGER_CURL_UNAVAILABLE: Final = "curl_unavailable"
+ACQUISITION_TRIGGER_CURL_UNUSABLE: Final = "curl_unusable"
+# The initial crawler request is an honestly-identified HTTP request. A frozen,
+# server-owned acquisition ladder may use an impersonating fallback only after
+# these configured signatures provide evidence that the initial request was
+# challenged, blocked, or implausibly thin. The signatures remain deliberately
+# distinctive so ordinary pages never trigger an expensive fallback.
 #
 # A block is signalled by a challenge/block body marker within the first
 # BOT_BLOCK_MARKER_SCAN_BYTES of the DECODED body. Markers are matched
@@ -482,6 +597,8 @@ ERROR_HTTP_4XX: Final = "http_4xx"
 ERROR_HTTP_5XX: Final = "http_5xx"
 ERROR_CONNECTION_FAILED: Final = "connection_failed"
 ERROR_MALFORMED_RESPONSE: Final = "malformed_response"
+ERROR_URL_ADMISSION_REJECTED: Final = "url_admission_rejected"
+ERROR_ACQUISITION_UNAVAILABLE: Final = "acquisition_unavailable"
 # The fetch came back carrying a challenge-platform marker from
 # ``BOT_BLOCK_BODY_MARKERS`` — the body is the ONLY signal (status codes are
 # deliberately not one; see that table). Distinct from the generic ``http_4xx``
@@ -508,6 +625,8 @@ SITE_FETCH_ERROR_TOKENS: Final[frozenset[str]] = frozenset(
         ERROR_HTTP_5XX,
         ERROR_CONNECTION_FAILED,
         ERROR_MALFORMED_RESPONSE,
+        ERROR_URL_ADMISSION_REJECTED,
+        ERROR_ACQUISITION_UNAVAILABLE,
         ERROR_BOT_BLOCKED,
     }
 )
@@ -567,7 +686,7 @@ EXTRACTOR_VERSION: Final = "sh-extractor-2"
 ANALYZER_VERSION: Final = "sh-analyzer-2"
 RULE_CATALOG_VERSION: Final = "sh-rules-2"
 SCORING_VERSION: Final = "sh-scoring-2"
-CLASSIFIER_VERSION: Final = "sh-classifier-1"
+CLASSIFIER_VERSION: Final = "sh-classifier-2"
 
 # =========================================================================
 # Page-type classification (v2 P1 — spec §5.1)
@@ -585,6 +704,12 @@ PAGE_TYPE_DOCS: Final = "docs"
 PAGE_TYPE_FAQ: Final = "faq"
 PAGE_TYPE_ABOUT_CONTACT: Final = "about_contact"
 PAGE_TYPE_OTHER: Final = "other"
+PAGE_TYPE_SERVICE: Final = "service"
+PAGE_TYPE_LOCAL: Final = "local"
+PAGE_TYPE_GUIDE: Final = "guide"
+PAGE_TYPE_COMPARISON: Final = "comparison"
+PAGE_TYPE_CASE_STUDY_REVIEW: Final = "case_study_review"
+PAGE_TYPE_TRUST_POLICY: Final = "trust_policy"
 PAGE_TYPES: Final[tuple[str, ...]] = (
     PAGE_TYPE_HOMEPAGE,
     PAGE_TYPE_ARTICLE,
@@ -594,6 +719,12 @@ PAGE_TYPES: Final[tuple[str, ...]] = (
     PAGE_TYPE_DOCS,
     PAGE_TYPE_FAQ,
     PAGE_TYPE_ABOUT_CONTACT,
+    PAGE_TYPE_SERVICE,
+    PAGE_TYPE_LOCAL,
+    PAGE_TYPE_GUIDE,
+    PAGE_TYPE_COMPARISON,
+    PAGE_TYPE_CASE_STUDY_REVIEW,
+    PAGE_TYPE_TRUST_POLICY,
     PAGE_TYPE_OTHER,
 )
 
@@ -665,10 +796,16 @@ PAGE_TYPE_PATH_PATTERNS: Final[tuple[tuple[str, str], ...]] = (
     (PAGE_TYPE_ARTICLE, r"^/(blog|news|guides)(/|$)"),
     (PAGE_TYPE_PRODUCT, r"^/(products?|p|shop)(/|$)"),
     (PAGE_TYPE_CATEGORY, r"^/(category|collections)(/|$)"),
+    (PAGE_TYPE_SERVICE, r"^/(services?|solutions?)(/|$)"),
+    (PAGE_TYPE_LOCAL, r"^/(locations?|stores?|offices?)(/|$)"),
+    (PAGE_TYPE_GUIDE, r"^/(guides?|how-to)(/|$)"),
+    (PAGE_TYPE_COMPARISON, r"^/(compare|comparison|vs)(/|$)"),
     (PAGE_TYPE_PRICING, r"^/pricing(/|$)"),
     (PAGE_TYPE_DOCS, r"^/(docs|reference)(/|$)"),
     (PAGE_TYPE_FAQ, r"^/(faq|help)(/|$)"),
     (PAGE_TYPE_ABOUT_CONTACT, r"^/(about|contact)(/|$)"),
+    (PAGE_TYPE_CASE_STUDY_REVIEW, r"^/(case-studies|reviews?|testimonials?)(/|$)"),
+    (PAGE_TYPE_TRUST_POLICY, r"^/(privacy|terms|security|trust|policies?)(/|$)"),
 )
 
 # Signal 3: content/heading heuristics. Evaluated in a fixed sub-order
@@ -748,6 +885,10 @@ PAGE_TYPE_SCHEMA_TYPE_MAP: Final[dict[str, str]] = {
     "Product": PAGE_TYPE_PRODUCT,
     "FAQPage": PAGE_TYPE_FAQ,
     "TechArticle": PAGE_TYPE_DOCS,
+    "Service": PAGE_TYPE_SERVICE,
+    "LocalBusiness": PAGE_TYPE_LOCAL,
+    "HowTo": PAGE_TYPE_GUIDE,
+    "Review": PAGE_TYPE_CASE_STUDY_REVIEW,
 }
 
 # Signal names (recorded as bounded evidence: classified_by + signals).
@@ -834,6 +975,24 @@ PAGE_TYPE_PROFILES: Final[dict[str, PageTypeProfile]] = {
     PAGE_TYPE_FAQ: PageTypeProfile(page_type=PAGE_TYPE_FAQ, min_sufficient_words=120),
     PAGE_TYPE_ABOUT_CONTACT: PageTypeProfile(
         page_type=PAGE_TYPE_ABOUT_CONTACT, min_sufficient_words=60
+    ),
+    PAGE_TYPE_SERVICE: PageTypeProfile(
+        page_type=PAGE_TYPE_SERVICE, min_sufficient_words=100
+    ),
+    PAGE_TYPE_LOCAL: PageTypeProfile(
+        page_type=PAGE_TYPE_LOCAL, min_sufficient_words=80
+    ),
+    PAGE_TYPE_GUIDE: PageTypeProfile(
+        page_type=PAGE_TYPE_GUIDE, min_sufficient_words=200
+    ),
+    PAGE_TYPE_COMPARISON: PageTypeProfile(
+        page_type=PAGE_TYPE_COMPARISON, min_sufficient_words=150
+    ),
+    PAGE_TYPE_CASE_STUDY_REVIEW: PageTypeProfile(
+        page_type=PAGE_TYPE_CASE_STUDY_REVIEW, min_sufficient_words=150
+    ),
+    PAGE_TYPE_TRUST_POLICY: PageTypeProfile(
+        page_type=PAGE_TYPE_TRUST_POLICY, min_sufficient_words=80
     ),
     PAGE_TYPE_OTHER: PageTypeProfile(
         page_type=PAGE_TYPE_OTHER, min_sufficient_words=100
@@ -929,6 +1088,42 @@ PAGE_TYPE_EXPECTED_SCHEMA: Final[dict[str, PageTypeSchemaExpectation]] = {
         expected_types=("Organization", "LocalBusiness", "ContactPage"),
         required_properties=("name",),
         recommended_properties=("contactPoint", "address"),
+    ),
+    PAGE_TYPE_SERVICE: PageTypeSchemaExpectation(
+        page_type=PAGE_TYPE_SERVICE,
+        expected_types=("Service",),
+        required_properties=("name",),
+        recommended_properties=("provider", "areaServed"),
+    ),
+    PAGE_TYPE_LOCAL: PageTypeSchemaExpectation(
+        page_type=PAGE_TYPE_LOCAL,
+        expected_types=("LocalBusiness",),
+        required_properties=("name", "address"),
+        recommended_properties=("telephone", "geo"),
+    ),
+    PAGE_TYPE_GUIDE: PageTypeSchemaExpectation(
+        page_type=PAGE_TYPE_GUIDE,
+        expected_types=("HowTo", "Article"),
+        required_properties=("name",),
+        recommended_properties=("step", "image"),
+    ),
+    PAGE_TYPE_COMPARISON: PageTypeSchemaExpectation(
+        page_type=PAGE_TYPE_COMPARISON,
+        expected_types=("Article", "ItemList"),
+        required_properties=("name",),
+        recommended_properties=("itemListElement",),
+    ),
+    PAGE_TYPE_CASE_STUDY_REVIEW: PageTypeSchemaExpectation(
+        page_type=PAGE_TYPE_CASE_STUDY_REVIEW,
+        expected_types=("Article", "Review"),
+        required_properties=("name",),
+        recommended_properties=("author", "datePublished"),
+    ),
+    PAGE_TYPE_TRUST_POLICY: PageTypeSchemaExpectation(
+        page_type=PAGE_TYPE_TRUST_POLICY,
+        expected_types=("WebPage",),
+        required_properties=("name",),
+        recommended_properties=("dateModified",),
     ),
     PAGE_TYPE_OTHER: PageTypeSchemaExpectation(
         page_type=PAGE_TYPE_OTHER,
@@ -1676,6 +1871,17 @@ class SiteHealthSettings(BaseSettings):
     )
 
     # --- Neutral sample policy (dev-tunable) ---
+    # Production remains the intentionally small automatic crawl.  Local/dev
+    # environments may opt into the guided controls explicitly; callers never
+    # infer this from a request header or a plan name.
+    advanced_controls_enabled: bool = False
+    automatic_page_limit: int = SAMPLE_URL_LIMIT
+    max_requested_page_limit: int = 500
+    max_preview_rows: int = 500
+    max_preview_input_bytes: int = 262_144
+    max_seed_urls: int = 500
+    max_narrowing_globs: int = 100
+    max_glob_length: int = 512
     # Sample-mode crawl allowance used when the workspace's resolved
     # ``monitored_urls`` entitlement is zero: a deterministic automatic sample
     # of this many admitted URLs across the whole workspace; no user
@@ -1721,6 +1927,36 @@ class SiteHealthSettings(BaseSettings):
     max_response_decoded_bytes: int = 20_000_000
     # HTML size cap fed to the parser.
     max_html_bytes: int = 5_000_000
+
+    # --- Server-owned acquisition ladder ---
+    # Each crawl freezes these values in its configuration. They are kept here
+    # (not in a connector) because acquisition behavior is an operational
+    # policy, not application logic.
+    acquisition_policy_version: str = "sh-acquisition-1"
+    curl_cffi_enabled: bool = False
+    curl_cffi_impersonation_profile: str = "chrome"
+    # A successful but unusually small HTML document is commonly a challenge
+    # shell. Zero disables this signal for installations that prefer only
+    # explicit challenge/status evidence.
+    curl_cffi_low_content_bytes: int = 512
+    curl_cffi_trigger_statuses: tuple[int, ...] = (403, 429, 503)
+    # Only these curl-rung failure tokens may advance to the server-side
+    # provider. Policy/cap/redirect failures must never be bypassed.
+    scraperapi_continue_error_codes: tuple[str, ...] = (
+        ERROR_CONNECTION_FAILED,
+        ERROR_TIMEOUT,
+        ERROR_ACQUISITION_UNAVAILABLE,
+    )
+    scraperapi_enabled: bool = False
+    scraperapi_api_key: str = ""
+    scraperapi_endpoint: str = "https://api.scraperapi.com/"
+    scraperapi_render: bool = False
+    scraperapi_premium: bool = False
+    scraperapi_country_code: str = ""
+    scraperapi_request_id_header: str = "x-sapi-request-id"
+    # ScraperAPI must not follow target redirects invisibly: each target URL
+    # is separately canonicalized and resolved by this process.
+    scraperapi_follow_redirects: bool = False
 
     # --- Sitemap limits ---
     max_sitemap_index_depth: int = 3
@@ -1813,6 +2049,37 @@ class SiteHealthSettings(BaseSettings):
                 raise ValueError(f"{name} must be non-negative")
         if self.inventory_history_crawl_limit <= 0:
             raise ValueError("inventory_history_crawl_limit must be positive")
+        for name in (
+            "automatic_page_limit",
+            "max_requested_page_limit",
+            "max_preview_rows",
+            "max_preview_input_bytes",
+            "max_seed_urls",
+            "max_narrowing_globs",
+            "max_glob_length",
+        ):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_acquisition_ladder(self) -> SiteHealthSettings:
+        """Keep fallback behavior bounded, server-owned, and reproducible."""
+        if not self.acquisition_policy_version.strip():
+            raise ValueError("acquisition_policy_version must not be empty")
+        if not self.curl_cffi_impersonation_profile.strip():
+            raise ValueError("curl_cffi_impersonation_profile must not be empty")
+        if self.curl_cffi_low_content_bytes < 0:
+            raise ValueError("curl_cffi_low_content_bytes must not be negative")
+        if any(
+            status < 100 or status > 599
+            for status in self.curl_cffi_trigger_statuses
+        ):
+            raise ValueError("curl_cffi_trigger_statuses must be HTTP status codes")
+        if self.scraperapi_enabled and not self.scraperapi_api_key.strip():
+            raise ValueError("scraperapi_api_key is required when scraperapi_enabled")
+        if self.scraperapi_enabled and not self.scraperapi_endpoint.startswith("https://"):
+            raise ValueError("scraperapi_endpoint must use https")
         return self
 
     @model_validator(mode="after")

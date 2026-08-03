@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime
 
+from app.analysis.site_health.rules import rule_for
 from app.core.config.site_health import (
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PAGE_ANALYSIS_STATUS_PARTIALLY_COMPLETED,
@@ -23,7 +24,6 @@ from app.core.config.site_health import (
     SEVERITY_INFO,
     SEVERITY_LOW,
     SEVERITY_MEDIUM,
-    SITE_HEALTH_RULES_BY_ID,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
@@ -100,7 +100,7 @@ def display_label_for(rule_id: str, evidence: dict | None = None) -> str:
     rather than the both-cases-at-once "Missing or duplicate H1". Without
     evidence (or with an unmatched variant) the plain catalog title stands.
     """
-    rule = SITE_HEALTH_RULES_BY_ID.get(rule_id)
+    rule = rule_for(rule_id)
     if rule is None:
         return rule_id
     selector = _LABEL_VARIANT_KEY.get(rule_id)

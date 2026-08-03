@@ -34,7 +34,7 @@
 Searchify connects two workflows that are usually fragmented across separate tools:
 
 1. **Measure AI visibility.** Run repeatable audits across ChatGPT, Claude, and Gemini using your own provider keys. Compare your brand with competitors, track visibility and share of voice over time, and inspect persisted mention, citation, and query-fanout evidence.
-2. **Improve answer readiness.** Crawl your site with a first-party, security-bounded HTTP crawler. Choose the URLs that matter, score Technical and AEO health, investigate grouped issues, and drill into evidence and remediation for each page.
+2. **Improve answer readiness.** Crawl your site with a security-bounded acquisition ladder. Choose the URLs that matter, score Web Fundamentals and AEO health, investigate grouped issues, and drill into evidence and remediation for each page.
 
 Every report is built from persisted, versioned evidence. Searchify does not silently re-run providers, re-fetch pages, or invent missing metrics while rendering a dashboard.
 
@@ -57,7 +57,7 @@ Every report is built from persisted, versioned evidence. Searchify does not sil
 
 - **Progressive URL discovery** through an in-house HTTP crawler with SSRF and resource-bound protections.
 - **Free sample and Starter monitoring modes** with privacy-aware count disclosure and quota-controlled URL selection.
-- **Technical, AEO, and combined scores** with transparent rule outcomes and no fabricated zeros.
+- **Web Fundamentals, AEO, and combined scores** with transparent rule outcomes and no fabricated zeros.
 - **Live crawl and analysis progress** with resilient polling plus credentialed SSE invalidation.
 - **Grouped issue intelligence** with severity, dimension, remediation, and affected-page navigation.
 - **Per-URL diagnostics** including delivery facts, normalized page facts, evidence, links, and issue history.
@@ -111,7 +111,7 @@ Searchify is engineered as a modular monolith with strict security boundaries, i
 - **Database & Queue Engine (`PostgreSQL 15+`)**: Single source of truth for workspace data, immutable evidence artifacts, derived metrics, and task queue rows (`FOR UPDATE SKIP LOCKED`).
 - **Background Worker Fleet**:
   - **Audit Worker**: Claims queued audit tasks, executes BYOK provider requests (OpenAI, Anthropic, Google), and records raw response artifacts.
-  - **Site Health Worker**: Executes progressive HTTP crawling with SSRF protection, evaluates AEO & Technical SEO rules, and computes issue diagnostics.
+  - **Site Health Worker**: Executes progressive HTTP crawling with SSRF protection, evaluates AEO & Web Fundamentals rules, and computes issue diagnostics.
   - **Content Worker**: Handles asynchronous AI content generation requests using environment keys.
 
 ### Core Architectural Pillars

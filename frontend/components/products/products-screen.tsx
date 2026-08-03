@@ -5,14 +5,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProjectContext } from '@/lib/project/project-context';
 import {
-  useAttributionQueries,
   useCatalogQueries,
+  useCommerceDiscovery,
+  useMarketIntelligence,
   useProductsTab,
   useProductVisibilityQueries,
 } from '@/lib/products/use-products-screen';
 
-import { AttributionPanel } from './attribution-panel';
 import { CatalogPanel } from './catalog-panel';
+import { CommerceDiscoveryPanel } from './commerce-discovery-panel';
+import { MarketIntelligencePanel } from './market-intelligence-panel';
 import { ProductVisibilityPanel } from './product-visibility-panel';
 import { ProductsTabs } from './products-tabs';
 
@@ -32,8 +34,8 @@ export function ProductsScreenSkeleton() {
 
 /**
  * Commerce workspace container. Resolves the active project (F5 context) and
- * renders one shell: an accessible three-tab tablist (**Catalog** default |
- * **Visibility** | **Attribution**) with exactly one panel at a time; the
+ * renders one shell: an accessible four-tab tablist (**Discover** default |
+ * **Catalog** | **AI Conversations** | **Market Intelligence**) with exactly one panel at a time; the
  * active tab is mirrored in `?tab=` (mirror `visibility-dashboard.tsx`).
  * Every tab's query hooks are instantiated HERE with explicit `enabled`
  * flags, so only the active tab's queries run — hidden tabs stay inert.
@@ -44,8 +46,9 @@ export function ProductsScreen() {
 
   const { activeTab, selectTab } = useProductsTab();
   const catalogQueries = useCatalogQueries(projectId, activeTab === 'catalog');
-  const visibilityQueries = useProductVisibilityQueries(projectId, activeTab === 'visibility');
-  const attributionQueries = useAttributionQueries(projectId, activeTab === 'attribution');
+  const visibilityQueries = useProductVisibilityQueries(projectId, activeTab === 'conversations');
+  const discoveryQueries = useCommerceDiscovery(projectId, activeTab === 'discover');
+  const marketQueries = useMarketIntelligence(projectId, activeTab === 'market_intelligence');
 
   if (isProjectLoading) {
     return <ProductsScreenSkeleton />;
@@ -56,16 +59,18 @@ export function ProductsScreen() {
   }
 
   const panel =
-    activeTab === 'visibility' ? (
+    activeTab === 'conversations' ? (
       <ProductVisibilityPanel
         projectId={projectId}
         queries={visibilityQueries}
         onGoToCatalog={() => selectTab('catalog')}
       />
-    ) : activeTab === 'attribution' ? (
-      <AttributionPanel projectId={projectId} queries={attributionQueries} />
-    ) : (
+    ) : activeTab === 'catalog' ? (
       <CatalogPanel projectId={projectId} queries={catalogQueries} />
+    ) : activeTab === 'market_intelligence' ? (
+      <MarketIntelligencePanel projectId={projectId} queries={marketQueries} />
+    ) : (
+      <CommerceDiscoveryPanel projectId={projectId} queries={discoveryQueries} />
     );
 
   return <ProductsTabs activeTab={activeTab} onSelectTab={selectTab} panel={panel} />;

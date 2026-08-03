@@ -79,6 +79,7 @@ import type {
   rootErrorSchema,
   siteCrawlListPageSchema,
   siteCrawlSchema,
+  urlPreviewResponseSchema,
   siteHealthDashboardSchema,
   siteHealthEntitlementSchema,
   siteIssueDetailSchema,
@@ -120,6 +121,13 @@ import type {
   feedHealthStatusSchema,
   feedIssueSeveritySchema,
   productFeedHealthSchema,
+  commerceCandidateKindSchema,
+  commerceCandidateInputSchema,
+  commerceDiscoveryPreviewSchema,
+  commerceCandidateSchema,
+  commerceDiscoveryRunSchema,
+  commerceCandidateAcceptSchema,
+  competitorComparisonSnapshotSchema,
   // Attribution (A1/A2 snapshot + recompute)
   attributionDeltaSchema,
   attributionDeltaStateSchema,
@@ -147,6 +155,8 @@ import type {
   opportunitySummarySchema,
   opportunityTypeSchema,
   recomputeResponseSchema,
+  opportunityGuidanceHistorySchema,
+  opportunityGuidanceItemSchema,
 } from './schemas';
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
@@ -161,6 +171,8 @@ export type ProductTour = z.infer<typeof productTourSchema>;
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type DashboardSection = z.infer<typeof dashboardSectionSchema>;
 export type DashboardSectionState = z.infer<typeof dashboardSectionStateSchema>;
+export type AIPresence = NonNullable<Dashboard['ai_presence']>;
+export type AIPresencePoint = NonNullable<AIPresence['current']>;
 export type BrandProfileSource = z.infer<typeof brandProfileSourceSchema>;
 export type BrandProfileDraft = z.infer<typeof brandProfileDraftSchema>;
 export type BrandProfile = z.infer<typeof brandProfileSchema>;
@@ -209,6 +221,7 @@ export type SiteScoreSummary = z.infer<typeof siteScoreSummarySchema>;
 export type CrawlFailureSummary = z.infer<typeof crawlFailureSummarySchema>;
 export type RootError = z.infer<typeof rootErrorSchema>;
 export type SiteCrawl = z.infer<typeof siteCrawlSchema>;
+export type UrlPreviewResponse = z.infer<typeof urlPreviewResponseSchema>;
 export type InventoryRow = z.infer<typeof inventoryRowSchema>;
 export type InventoryPage = z.infer<typeof inventoryPageSchema>;
 export type SiteCrawlListPage = z.infer<typeof siteCrawlListPageSchema>;
@@ -271,6 +284,13 @@ export type CommerceSyncSummary = z.infer<typeof commerceSyncSummarySchema>;
 export type CommerceConnectionSummary = z.infer<typeof commerceConnectionSummarySchema>;
 export type ProductFeedHealth = z.infer<typeof productFeedHealthSchema>;
 export type CommerceCatalogHealth = z.infer<typeof commerceCatalogHealthSchema>;
+export type CommerceCandidateKind = z.infer<typeof commerceCandidateKindSchema>;
+export type CommerceCandidateInput = z.infer<typeof commerceCandidateInputSchema>;
+export type CommerceDiscoveryPreview = z.infer<typeof commerceDiscoveryPreviewSchema>;
+export type CommerceCandidate = z.infer<typeof commerceCandidateSchema>;
+export type CommerceDiscoveryRun = z.infer<typeof commerceDiscoveryRunSchema>;
+export type CommerceCandidateAccept = z.infer<typeof commerceCandidateAcceptSchema>;
+export type CompetitorComparisonSnapshot = z.infer<typeof competitorComparisonSnapshotSchema>;
 
 // --- Attribution (A1/A2 snapshot + recompute) ---
 export type AttributionMethod = z.infer<typeof attributionMethodSchema>;
@@ -300,3 +320,5 @@ export type OpportunityDetail = z.infer<typeof opportunityDetailSchema>;
 export type OpportunitiesPage = z.infer<typeof opportunitiesPageSchema>;
 export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;
 export type RecomputeResponse = z.infer<typeof recomputeResponseSchema>;
+export type OpportunityGuidanceItem = z.infer<typeof opportunityGuidanceItemSchema>;
+export type OpportunityGuidanceHistory = z.infer<typeof opportunityGuidanceHistorySchema>;

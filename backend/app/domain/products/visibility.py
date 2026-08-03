@@ -49,6 +49,7 @@ from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.domain.analysis.service import AnalysisNotFoundError, TrendQueryError
 from app.domain.products.schemas import (
     CompetitorProductVisibilityEntry,
+    FrozenPromptContext,
     ProductEvidenceItem,
     ProductEvidenceResponse,
     ProductVisibilityEntry,
@@ -99,6 +100,65 @@ _CSV_COLUMNS = [
 # Zero-value fallbacks for the strict JSONB shapes (v1 rows / no data).
 _EMPTY_DESTINATION_MIX: dict[str, Any] = {"total": 0, "by_kind": [], "by_domain": []}
 _EMPTY_CO_PLACEMENT: dict[str, Any] = {"items": [], "truncated": False}
+
+
+async def _conversation_context(
+    session: AsyncSession, *, audit_id: uuid.UUID, surface: str
+) -> dict[
+    tuple[str, uuid.UUID], tuple[float | None, list[FrozenPromptContext], list[str]]
+]:
+    """Persisted prompt coverage/context per catalog entry (never inferred).
+
+    The audit snapshot supplies frozen text/theme/intent, while mentions tell
+    us which prompt slots actually discussed an entry. This is a projection of
+    existing evidence rather than a new scoring pass.
+    """
+    prompt_count = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(AuditPromptSnapshot)
+            .where(AuditPromptSnapshot.audit_id == audit_id)
+        )
+        or 0
+    )
+    rows = (
+        await session.execute(
+            select(ProductMention, AuditPromptSnapshot)
+            .join(
+                ProductResponseAnalysis,
+                ProductResponseAnalysis.id == ProductMention.analysis_id,
+            )
+            .join(AuditTask, AuditTask.id == ProductResponseAnalysis.task_id)
+            .join(
+                AuditPromptSnapshot,
+                AuditPromptSnapshot.id == AuditTask.prompt_snapshot_id,
+            )
+            .where(ProductMention.audit_id == audit_id)
+            .where(ProductResponseAnalysis.shopping_surface == surface)
+        )
+    ).all()
+    grouped: dict[tuple[str, uuid.UUID], dict[int, FrozenPromptContext]] = {}
+    for mention, prompt in rows:
+        entry_id = mention.product_id or mention.competitor_product_id
+        if entry_id is None:
+            continue
+        kind = "product" if mention.product_id is not None else "competitor_product"
+        grouped.setdefault((kind, entry_id), {})[prompt.prompt_index] = (
+            FrozenPromptContext(
+                prompt_index=prompt.prompt_index,
+                text=prompt.text,
+                theme=prompt.theme,
+                intent=prompt.intent,
+            )
+        )
+    return {
+        key: (
+            round(len(prompts) / prompt_count, 4) if prompt_count else None,
+            [prompts[index] for index in sorted(prompts)],
+            sorted({prompt.theme for prompt in prompts.values() if prompt.theme}),
+        )
+        for key, prompts in grouped.items()
+    }
 
 
 def _project_price_relation(
@@ -295,6 +355,9 @@ async def get_product_visibility(
         entry_id: _entry_metrics(snapshot, engine, surface)
         for entry_id, snapshot in by_entry.items()
     }
+    conversation = await _conversation_context(
+        session, audit_id=audit.id, surface=surface
+    )
 
     products: list[ProductVisibilityEntry] = []
     for entry in config.products:
@@ -302,6 +365,11 @@ async def get_product_visibility(
         if snapshot is None:
             continue
         metrics = sliced[entry.id]
+        coverage, prompts, themes = (
+            conversation.get(("product", snapshot.product_id), (None, [], []))
+            if snapshot.product_id is not None
+            else (None, [], [])
+        )
         products.append(
             ProductVisibilityEntry(
                 product_id=snapshot.product_id,
@@ -320,6 +388,9 @@ async def get_product_visibility(
                 attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
                 buyer_destination_mix=metrics["buyer_destination_mix"],
                 competitor_co_placement=metrics["competitor_co_placement"],
+                prompt_coverage=coverage,
+                frozen_prompt_context=prompts,
+                conversation_themes=themes,
             )
         )
 
@@ -329,6 +400,13 @@ async def get_product_visibility(
         if snapshot is None:
             continue
         metrics = sliced[competitor_entry.id]
+        coverage, prompts, themes = (
+            conversation.get(
+                ("competitor_product", snapshot.competitor_product_id), (None, [], [])
+            )
+            if snapshot.competitor_product_id is not None
+            else (None, [], [])
+        )
         competitor_products.append(
             CompetitorProductVisibilityEntry(
                 competitor_product_id=snapshot.competitor_product_id,
@@ -347,6 +425,9 @@ async def get_product_visibility(
                 attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
                 buyer_destination_mix=metrics["buyer_destination_mix"],
                 competitor_co_placement=metrics["competitor_co_placement"],
+                prompt_coverage=coverage,
+                frozen_prompt_context=prompts,
+                conversation_themes=themes,
             )
         )
 

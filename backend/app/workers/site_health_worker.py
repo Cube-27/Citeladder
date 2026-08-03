@@ -39,6 +39,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.web_evidence.contracts import (
+    AcquisitionProvenance,
     DnsResolver,
     FetchResult,
 )
@@ -113,6 +114,40 @@ logger = logging.getLogger("app.workers.site_health_worker")
 # (``domain/site_health/failure.load_root_errors`` filters on the error one).
 _OUTCOME_SUCCESS = FETCH_ATTEMPT_OUTCOME_SUCCESS
 _OUTCOME_ERROR = FETCH_ATTEMPT_OUTCOME_ERROR
+
+
+def _acquisition_values(
+    acquisition: AcquisitionProvenance | None,
+) -> dict[str, object]:
+    """Return the safe acquisition columns for one immutable evidence row.
+
+    ``AcquisitionProvenance`` is credential-free by contract. Copying it while
+    constructing each row preserves the exact ladder used without mutating
+    previously persisted attempts or artifacts.
+    """
+    if acquisition is None:
+        return {
+            "acquisition_transport": "",
+            "acquisition_rung": None,
+            "acquisition_trigger": "",
+            "impersonation_profile": "",
+            "scraperapi_options": None,
+            "scraperapi_request_id": "",
+            "acquisition_policy_version": "",
+        }
+    return {
+        "acquisition_transport": acquisition.transport[:32],
+        "acquisition_rung": acquisition.rung,
+        "acquisition_trigger": acquisition.trigger[:32],
+        "impersonation_profile": acquisition.impersonation_profile[:64],
+        "scraperapi_options": (
+            dict(acquisition.scraperapi_options)
+            if acquisition.scraperapi_options
+            else None
+        ),
+        "scraperapi_request_id": acquisition.scraperapi_request_id[:255],
+        "acquisition_policy_version": acquisition.policy_version[:32],
+    }
 
 # Floor for the heartbeat cadence. The configured interval is the operative
 # value (validated positive and strictly below the lease TTL); this only stops
@@ -473,6 +508,7 @@ class SiteHealthWorker(
             latency_ms=result.latency_ms,
             wire_bytes=result.wire_bytes,
             decoded_bytes=result.decoded_bytes,
+            **_acquisition_values(result.acquisition),
             extractor_version=crawl.extractor_version or EXTRACTOR_VERSION,
             normalized_facts=normalized_facts,
         )
@@ -651,6 +687,11 @@ class SiteHealthWorker(
                         if outcome.result is not None
                         else None
                     ),
+                    **_acquisition_values(
+                        outcome.result.acquisition
+                        if outcome.result is not None
+                        else None
+                    ),
                     artifact_id=artifact_id,
                 )
             )
@@ -695,6 +736,7 @@ class SiteHealthWorker(
                     latency_ms=entry.latency_ms,
                     wire_bytes=entry.wire_bytes,
                     decoded_bytes=entry.decoded_bytes,
+                    **_acquisition_values(entry.acquisition),
                     # ONLY the successful terminal call links the artifact.
                     artifact_id=(artifact_id if (is_final and succeeded) else None),
                 )

@@ -287,7 +287,10 @@ export function InventorySelection({
               // no unsaved edits are pending.
               <Button
                 size="sm"
-                onClick={onStartAnalysis}
+                // `onStartAnalysis` accepts no DOM event. Calling it through a
+                // zero-argument wrapper prevents React's click event from
+                // becoming the create-crawl mutation payload.
+                onClick={() => onStartAnalysis()}
                 disabled={
                   startPending ||
                   !effectiveSelection ||

@@ -34,6 +34,13 @@ from app.core.config.site_health import (
     STRUCTURED_DATA_RECOGNIZED_TYPES,
     STRUCTURED_DATA_REQUIRED_PROPERTIES,
 )
+from app.core.config.site_health_page_profiles import (
+    PRODUCT_FACT_MAX_VALUE_CHARS,
+    PRODUCT_FACT_MAX_VALUES,
+    PRODUCT_NESTED_VALUE_KEYS,
+    PRODUCT_RECOGNIZED_SCHEMA_TYPES,
+    PRODUCT_SCHEMA_PROPERTY_PATHS,
+)
 
 # Absolute ceiling on how deep we descend into a JSON-LD object graph so a
 # deeply-nested (or self-referential) payload can never blow the stack.
@@ -125,7 +132,7 @@ def _path_value(obj: Any, path: str) -> Any:
 def _props_present(obj: dict) -> list[str]:
     """Sorted config ``SCHEMA_PROPERTY_PATHS`` present + non-empty on ``obj``."""
     present: list[str] = []
-    for path in sorted(SCHEMA_PROPERTY_PATHS):
+    for path in sorted(SCHEMA_PROPERTY_PATHS | PRODUCT_SCHEMA_PROPERTY_PATHS):
         value = _path_value(obj, path)
         if value is not None and value not in ("", [], {}):
             present.append(path)
@@ -167,6 +174,60 @@ def _enrichment(obj: dict) -> dict[str, Any]:
         "date_modified": date_modified[:_MAX_DATE_CHARS],
         "same_as": same_as,
         "props_present": _props_present(obj),
+        "product": _product_enrichment(obj),
+    }
+
+
+def _values(value: Any) -> list[str]:
+    """Bound a JSON-LD value into stable scalar evidence strings."""
+    values: list[str] = []
+    if isinstance(value, list):
+        for item in value:
+            values.extend(_values(item))
+    elif isinstance(value, dict):
+        for key in PRODUCT_NESTED_VALUE_KEYS:
+            text = _first_string(value.get(key))
+            if text:
+                values.append(text)
+    elif value not in (None, ""):
+        values.append(str(value).strip())
+    unique = dict.fromkeys(v[:PRODUCT_FACT_MAX_VALUE_CHARS] for v in values if v)
+    return list(unique)[:PRODUCT_FACT_MAX_VALUES]
+
+
+def _product_enrichment(obj: dict) -> dict[str, Any]:
+    """Extract Product/Offer claims without retaining raw JSON-LD.
+
+    The output is observational: optional fields are empty when absent rather
+    than inferred.  This lets downstream rules distinguish a missing claim
+    from a visible/schema disagreement.
+    """
+    offer = _path_value(obj, "offers")
+    if isinstance(offer, list):
+        offer = next((item for item in offer if isinstance(item, dict)), {})
+    if not isinstance(offer, dict):
+        offer = {}
+    return {
+        "sku": _values(obj.get("sku")),
+        "gtin": _values(
+            [
+                obj.get(key)
+                for key in ("gtin", "gtin8", "gtin12", "gtin13", "gtin14")
+            ]
+        ),
+        "brand": _values(obj.get("brand")),
+        "mpn": _values(obj.get("mpn")),
+        "price": _values(offer.get("price") if offer else obj.get("price")),
+        "price_currency": _values(
+            offer.get("priceCurrency") if offer else obj.get("priceCurrency")
+        ),
+        "availability": _values(
+            offer.get("availability") if offer else obj.get("availability")
+        ),
+        "variants": _values(obj.get("hasVariant")) + _values(obj.get("isVariantOf")),
+        "ratings": _values(obj.get("aggregateRating")) + _values(obj.get("review")),
+        "shipping": bool(offer.get("shippingDetails")),
+        "returns": bool(offer.get("hasMerchantReturnPolicy")),
     }
 
 
@@ -179,7 +240,9 @@ def _validate_object(obj: dict) -> dict | None:
     callers only record understood types).
     """
     schema_type = _clean_type(obj.get("@type"))
-    if not schema_type or schema_type not in STRUCTURED_DATA_RECOGNIZED_TYPES:
+    if not schema_type or schema_type not in (
+        STRUCTURED_DATA_RECOGNIZED_TYPES | PRODUCT_RECOGNIZED_SCHEMA_TYPES
+    ):
         return None
     # v1 back-compat: only the v1 map's types carry a required-property
     # contract; newly recognized types validate with an empty contract.
@@ -249,7 +312,9 @@ def validate_microdata_types(itemtypes: list[str], *, max_blocks: int) -> list[d
             if len(facts) >= max_blocks:
                 break
             schema_type = _clean_type(candidate)
-            if not schema_type or schema_type not in STRUCTURED_DATA_RECOGNIZED_TYPES:
+            if not schema_type or schema_type not in (
+                STRUCTURED_DATA_RECOGNIZED_TYPES | PRODUCT_RECOGNIZED_SCHEMA_TYPES
+            ):
                 continue
             # v1 back-compat: microdata property extraction stays shallow, so
             # v1-map types record their full required list as missing/invalid;
@@ -269,6 +334,62 @@ def validate_microdata_types(itemtypes: list[str], *, max_blocks: int) -> list[d
                     "date_modified": "",
                     "same_as": [],
                     "props_present": [],
+                    "product": {},
                 }
             )
     return facts
+
+
+def product_facts(blocks: list[dict]) -> dict[str, Any]:
+    """Merge bounded Product block observations into one deterministic fact."""
+    all_product_blocks = [
+        block for block in blocks if block.get("type") == "Product"
+    ]
+    # JSON-LD traversal also sees nested variant Products. Prefer Product
+    # nodes with identity/offer evidence; only fall back to all Product nodes
+    # when a minimal product schema carries none of those fields.
+    product_blocks = [
+        block
+        for block in all_product_blocks
+        if any(
+            (block.get("product") or {}).get(key)
+            for key in ("sku", "gtin", "mpn", "brand", "price")
+        )
+        or "offers" in (block.get("props_present") or [])
+    ] or all_product_blocks
+    values: dict[str, list[str]] = {
+        key: []
+        for key in (
+            "name",
+            "sku",
+            "gtin",
+            "brand",
+            "mpn",
+            "price",
+            "price_currency",
+            "availability",
+            "variants",
+            "ratings",
+        )
+    }
+    shipping = False
+    returns = False
+    for block in product_blocks:
+        product = block.get("product") or {}
+        product = {"name": [str(block.get("name") or "")], **product}
+        for key in values:
+            for value in product.get(key) or []:
+                if (
+                    value
+                    and value not in values[key]
+                    and len(values[key]) < PRODUCT_FACT_MAX_VALUES
+                ):
+                    values[key].append(str(value)[:PRODUCT_FACT_MAX_VALUE_CHARS])
+        shipping = shipping or bool(product.get("shipping"))
+        returns = returns or bool(product.get("returns"))
+    return {
+        "schema_product_count": len(product_blocks),
+        **values,
+        "shipping": shipping,
+        "returns": returns,
+    }

@@ -55,7 +55,16 @@ from app.models.brand import (
     OwnedDomain,
     UnintendedDomain,
 )
-from app.models.commerce import FeedIssue, OrderFact
+from app.models.commerce import (
+    CommerceCandidateReview,
+    CommerceDiscoveryArtifact,
+    CommerceDiscoveryCandidate,
+    CommerceDiscoveryRun,
+    CommerceDiscoveryTask,
+    CompetitorComparisonSnapshot,
+    FeedIssue,
+    OrderFact,
+)
 from app.models.content import ContentGeneration, ContentGenerationAttempt
 from app.models.discovery import BrandDiscovery
 from app.models.integrations import (
@@ -68,7 +77,7 @@ from app.models.integrations import (
     IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
-from app.models.opportunity import Opportunity, OpportunitySnapshot
+from app.models.opportunity import Opportunity, OpportunityGuidance, OpportunitySnapshot
 from app.models.product import (
     CompetitorProduct,
     MerchantMention,
@@ -132,10 +141,16 @@ __all__ = [
     "BillingWebhookEvent",
     "Citation",
     "Competitor",
+    "CompetitorComparisonSnapshot",
     "CompetitorMention",
     "CompetitorProduct",
     "ContentGeneration",
     "ContentGenerationAttempt",
+    "CommerceCandidateReview",
+    "CommerceDiscoveryArtifact",
+    "CommerceDiscoveryCandidate",
+    "CommerceDiscoveryRun",
+    "CommerceDiscoveryTask",
     "ConsumableLedger",
     "DiscoveryModelConfig",
     "ExecutionCostProjection",
@@ -153,6 +168,7 @@ __all__ = [
     "MerchantMention",
     "MetricSnapshot",
     "Opportunity",
+    "OpportunityGuidance",
     "OpportunitySnapshot",
     "OrderFact",
     "OwnedDomain",

@@ -6,7 +6,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ProductsScreen, ProductsScreenSkeleton } from '@/components/products/products-screen';
 
 /**
- * Products workspace (agentic commerce): one shell with two tabs —
+ * Commerce workspace: one shell with Discover, Catalog, AI Conversations,
+ * and Market Intelligence tabs —
  *   - **Catalog** (default): the project's own product catalog (CRUD + CSV
  *     import) with per-SKU completeness badges;
  *   - **Visibility**: the selected run's product-vs-competitor projection —

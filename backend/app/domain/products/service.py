@@ -373,11 +373,12 @@ async def _get_competitor_product(
 def _apply_competitor_product_fields(
     competitor_product: CompetitorProduct, data: dict[str, Any]
 ) -> None:
-    for field in ("name", "url", "currency"):
+    for field in ("name", "url", "currency", "availability"):
         if data.get(field) is not None:
             setattr(competitor_product, field, str(data[field]).strip())
-    if data.get("aliases") is not None:
-        competitor_product.aliases = data["aliases"]
+    for field in ("aliases", "variants", "attributes"):
+        if data.get(field) is not None:
+            setattr(competitor_product, field, data[field])
     # ``price`` is the one nullable field: an explicit JSON null clears it.
     if "price" in data:
         competitor_product.price = data["price"]

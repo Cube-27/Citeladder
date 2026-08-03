@@ -37,8 +37,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.web_evidence.url_policy import (
-    UrlPolicyError,
-    is_admissible,
+    classify_url_admission,
     split_host_port,
 )
 from app.core.config.site_health import (
@@ -148,18 +147,17 @@ def extract_discovery_links(
         href = href.strip()
         if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
             continue
-        try:
-            canonical, h = canonical_identity(href, base_url=base_url)
-        except UrlPolicyError:
-            continue
-        if h in seen:
-            continue
-        if not is_admissible(
-            canonical,
+        admission = classify_url_admission(
+            href,
+            base_url=base_url,
             root_registrable_domain=root_registrable_domain,
             include_globs=include_globs,
             exclude_globs=exclude_globs,
-        ):
+        )
+        if not admission.accepted or not admission.canonical_url:
+            continue
+        canonical, h = canonical_identity(admission.canonical_url)
+        if h in seen:
             continue
         seen.add(h)
         links.append(DiscoveredLink(url=canonical, url_hash=h, ordinal=ordinal))
@@ -186,6 +184,7 @@ def build_frontier_candidates(
             url_hash=link.url_hash,
             depth=depth + 1,
             source_kind=OBSERVATION_SOURCE_LINK,
+            value_priority=classify_url_admission(link.url).priority,
             parent_position=parent_position,
             link_ordinal=link.ordinal,
         )
@@ -552,8 +551,46 @@ async def admit_candidates(
 
     site_url_ids: dict[str, str] = {}
     for position, candidate in enumerate(ordered):
+        # Defense in depth: candidates normally passed the policy during link/
+        # sitemap/manual parsing, but admission is the last gate before a task
+        # can exist and therefore protects every producer uniformly.
+        configuration = dict(crawl.configuration or {})
+        decision = classify_url_admission(
+            candidate.url,
+            root_registrable_domain=configuration.get("root_registrable_domain")
+            or None,
+            include_globs=configuration.get("include_globs"),
+            exclude_globs=configuration.get("exclude_globs"),
+        )
+        if not decision.accepted:
+            continue
+        selected_page_types = set(configuration.get("page_types") or [])
+        if (
+            selected_page_types
+            and decision.value_kind not in {"root", "other"}
+            and decision.value_kind not in selected_page_types
+        ):
+            continue
         if candidate.depth > settings.max_crawl_depth:
             continue
+        requested_limit = configuration.get("requested_page_limit")
+        if requested_limit is not None:
+            task_count = await session.scalar(
+                select(func.count())
+                .select_from(SiteCrawlTask)
+                .where(SiteCrawlTask.crawl_id == crawl.id)
+            )
+            if int(task_count or 0) >= int(requested_limit):
+                # A fetched root/seed still needs an observation, but no new
+                # descendant may be queued after its frozen page budget fills.
+                existing_task = await session.scalar(
+                    select(SiteCrawlTask.id)
+                    .where(SiteCrawlTask.crawl_id == crawl.id)
+                    .where(SiteCrawlTask.url_hash == candidate.url_hash)
+                    .limit(1)
+                )
+                if existing_task is None:
+                    break
         # Sample-mode INVENTORY ceiling (not the analysis budget — see below).
         # This is what actually stops a sample-mode crawl: it keeps mapping the
         # site until the discovery cap is reached, analyzing only the sample

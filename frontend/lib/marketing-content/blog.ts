@@ -85,7 +85,7 @@ export const POSTS: readonly BlogPost[] = [
         text:
           'The site-health catalog is 33 deterministic rules in 8 categories — indexability, ' +
           'content, metadata, structured data, citability, performance, security and links. ' +
-          'Technical and AEO are weighted 50/50 into the combined score, each rule outcome ' +
+          'Web Fundamentals and AEO are weighted 50/50 into the combined score, each rule outcome ' +
           'is inspectable per page, and a missing or failed score renders as an em dash ' +
           'rather than a fabricated zero.',
       },

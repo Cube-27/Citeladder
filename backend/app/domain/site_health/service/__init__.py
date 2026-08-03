@@ -41,6 +41,7 @@ from app.domain.site_health.service.common import (
     SiteHealthNotFoundError,
 )
 from app.domain.site_health.service.issues import (
+    get_grouped_issue_history,
     get_issue_detail,
     get_issue_history,
     get_issues,
@@ -84,6 +85,7 @@ __all__ = [
     "issue_group_page_types",
     "get_issue_detail",
     "get_issue_history",
+    "get_grouped_issue_history",
     "get_dashboard",
     "load_events",
     "load_crawl_for_stream",

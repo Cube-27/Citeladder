@@ -15,6 +15,7 @@ from app.connectors.web_evidence.contracts import FetchError
 from app.connectors.web_evidence.url_policy import (
     UrlPolicyError,
     canonicalize,
+    classify_url_admission,
     is_admissible,
     is_in_scope,
     narrow,
@@ -171,6 +172,42 @@ def test_is_admissible_combines_scope_and_narrowing():
         include_globs=["*/blog/*"],
         exclude_globs=[],
     )
+
+
+@pytest.mark.parametrize(
+    "url,reason",
+    [
+        ("https://example.com/login", "hard_excluded_path"),
+        ("https://example.com/checkout/confirm", "hard_excluded_path"),
+        ("https://example.com/products/widget.pdf", "hard_excluded_asset"),
+        ("https://example.com/products/widget?filter=blue", "hard_excluded_query"),
+        ("https://example.com/products/widget?utm_source=mail", "tracking_url"),
+    ],
+)
+def test_value_aware_admission_hard_exclusions_are_not_overridable(url, reason):
+    decision = classify_url_admission(
+        url,
+        root_registrable_domain="example.com",
+        include_globs=["*"],
+        exclude_globs=[],
+    )
+    assert not decision.accepted
+    assert decision.reason_code == reason
+
+
+def test_value_aware_admission_returns_safe_scope_and_priority_details():
+    product = classify_url_admission(
+        "https://example.com/products/widget",
+        root_registrable_domain="example.com",
+    )
+    external = classify_url_admission(
+        "https://other.example/products/widget",
+        root_registrable_domain="example.com",
+    )
+    assert product.accepted
+    assert product.value_kind == "product"
+    assert product.priority > 0
+    assert external.reason_code == "out_of_scope"
     # In scope but excluded.
     assert not is_admissible(
         "https://example.com/blog/1",
@@ -178,6 +215,33 @@ def test_is_admissible_combines_scope_and_narrowing():
         include_globs=[],
         exclude_globs=["*/blog/*"],
     )
+
+
+@pytest.mark.asyncio
+async def test_infrastructure_txt_exception_is_purpose_scoped():
+    resolver = _FakeResolver({"example.com": ["93.184.216.34"]})
+
+    arbitrary_page = classify_url_admission("https://example.com/notes.txt")
+    assert not arbitrary_page.accepted
+    assert arbitrary_page.reason_code == "hard_excluded_asset"
+
+    robots = await resolve_target(
+        "https://example.com/robots.txt",
+        resolver=resolver,
+        root_registrable_domain="example.com",
+        enforce_scope=True,
+        infrastructure_purpose="robots",
+    )
+    assert robots.url == "https://example.com/robots.txt"
+
+    with pytest.raises(UrlPolicyError):
+        await resolve_target(
+            "https://example.com/notes.txt",
+            resolver=resolver,
+            root_registrable_domain="example.com",
+            enforce_scope=True,
+            infrastructure_purpose="robots",
+        )
     # Out of scope (glob can never authorize another registrable domain).
     assert not is_admissible(
         "https://evil.com/blog/1",

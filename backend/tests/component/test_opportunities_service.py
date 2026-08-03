@@ -10,7 +10,7 @@ can only be verified against a real database. Seed helpers live in
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import delete, func, select
@@ -191,6 +191,116 @@ async def test_recompute_without_sources_yields_empty_snapshot(
         )
         is not None
     )
+
+
+async def test_guidance_is_immutable_bounded_and_idempotent(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Guidance stores a frozen input and replays only an identical key/input."""
+    monkeypatch.setattr(service.settings, "app_env", "development")
+    scn = await _seed_scenario(db_session)
+    await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    opportunity = _by_rule(
+        await _live_rows(db_session, scn), "brand_absent_high_value_prompt"
+    )
+    grouped = await service.get_grouped_history(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    assert grouped["since_previous"] == {"new": 0, "continuing": 4, "resolved": 0}
+    assert all(item["occurrence_count"] == 1 for item in grouped["items"])
+    opportunity.evidence = {"long": "x" * 1000}
+    await db_session.commit()
+
+    first, created = await service.create_guidance(
+        db_session,
+        workspace_id=scn.workspace_id,
+        opportunity_id=opportunity.id,
+        idempotency_key="guidance-1",
+    )
+    assert created is True
+    assert first.provider == "deterministic"
+    assert len(first.input_snapshot["evidence"]["long"]) < 1000
+    assert len(first.input_hash) == 64
+
+    replay, created = await service.create_guidance(
+        db_session,
+        workspace_id=scn.workspace_id,
+        opportunity_id=opportunity.id,
+        idempotency_key="guidance-1",
+    )
+    assert created is False
+    assert replay.id == first.id
+    history = await service.list_guidance_history(
+        db_session, workspace_id=scn.workspace_id, opportunity_id=opportunity.id
+    )
+    assert [row.id for row in history] == [first.id]
+
+    opportunity.status = "in_progress"
+    await db_session.commit()
+    with pytest.raises(service.OpportunityGuidanceIdempotencyConflictError):
+        await service.create_guidance(
+            db_session,
+            workspace_id=scn.workspace_id,
+            opportunity_id=opportunity.id,
+            idempotency_key="guidance-1",
+        )
+
+    monkeypatch.setattr(service.settings, "app_env", "production")
+    with pytest.raises(service.OpportunityGuidanceUnavailableError):
+        await service.create_guidance(
+            db_session,
+            workspace_id=scn.workspace_id,
+            opportunity_id=opportunity.id,
+            idempotency_key="guidance-2",
+        )
+
+
+async def test_grouped_history_compares_the_latest_two_recompute_snapshots(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    first_snapshot = await db_session.scalar(
+        select(OpportunitySnapshot)
+        .where(OpportunitySnapshot.project_id == scn.project_id)
+        .order_by(OpportunitySnapshot.created_at.desc(), OpportunitySnapshot.id.desc())
+        .limit(1)
+    )
+    assert first_snapshot is not None
+    resolved = (await _live_rows(db_session, scn))[0]
+    second_snapshot_at = first_snapshot.created_at + timedelta(seconds=1)
+    resolved.superseded_at = second_snapshot_at
+    db_session.add(
+        OpportunitySnapshot(
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+            run_id=uuid.uuid4(),
+            created_at=second_snapshot_at + timedelta(microseconds=1),
+        )
+    )
+    await db_session.commit()
+
+    grouped = await service.get_grouped_history(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+
+    assert grouped["since_previous"] == {
+        "new": 0,
+        "continuing": 3,
+        "resolved": 1,
+    }
+    resolved_group = next(
+        item
+        for item in grouped["items"]
+        if item["rule_id"] == resolved.rule_id
+        and item["target_key"] == resolved.target_key
+    )
+    assert resolved_group["transition"] == "resolved"
+    assert resolved_group["current_state"] == "resolved"
 
 
 async def test_recompute_without_sources_preserves_an_existing_live_set(

@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import (
@@ -50,6 +50,7 @@ from app.domain.site_health.api_schemas import (
     CrawlResponse,
     CreateCrawlRequest,
     DashboardResponse,
+    GroupedIssueHistoryPage,
     InventoryPage,
     IssueHistoryPage,
     MonitoredUrlsResponse,
@@ -60,11 +61,14 @@ from app.domain.site_health.api_schemas import (
     SiteHealthEntitlementResponse,
     SiteIssueDetail,
     SiteIssuesPage,
+    UrlPreviewRequest,
+    UrlPreviewResponse,
 )
 from app.domain.site_health.planner import (
     CrawlAlreadyActiveError,
     CrawlPlanError,
     create_crawl,
+    preview_crawl_urls,
 )
 from app.domain.site_health.selection import (
     MonitoringNotAllowedError,
@@ -168,6 +172,10 @@ async def create_crawl_endpoint(
             include_globs=payload.include_globs,
             exclude_globs=payload.exclude_globs,
             random_seed=payload.seed,
+            input_mode=payload.input_mode,
+            requested_page_limit=payload.requested_page_limit,
+            seed_urls=payload.seed_urls,
+            page_types=payload.page_types,
         )
     except CrawlAlreadyActiveError as exc:
         raise ApiException.coded(
@@ -180,6 +188,30 @@ async def create_crawl_endpoint(
             status.HTTP_422_UNPROCESSABLE_ENTITY, exc.code, str(exc)
         ) from exc
     return CrawlResponse.model_validate(service.project_crawl(crawl))
+
+
+@router.post("/site-crawls/url-preview", response_model=UrlPreviewResponse)
+async def preview_crawl_urls_endpoint(
+    payload: UrlPreviewRequest, ctx: _WorkspaceDep, session: _SessionDep
+) -> UrlPreviewResponse:
+    """Preview admission only; it never creates a crawl, task, or fetch."""
+    try:
+        preview = await preview_crawl_urls(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=payload.project_id,
+            content=payload.content,
+            input_format=payload.input_format,
+            include_globs=payload.include_globs,
+            exclude_globs=payload.exclude_globs,
+        )
+    except CrawlPlanError as exc:
+        if exc.code == "project_not_found":
+            raise _not_found("Project not found") from exc
+        raise ApiException.coded(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, exc.code, str(exc)
+        ) from exc
+    return UrlPreviewResponse.model_validate(preview)
 
 
 @router.get("/site-crawls", response_model=CrawlListPage)
@@ -495,7 +527,7 @@ async def rerun_page_endpoint(
 
 @router.get(
     "/site-crawls/{crawl_id}/pages/{site_url_id}/issue-history",
-    response_model=IssueHistoryPage,
+    response_model=IssueHistoryPage | GroupedIssueHistoryPage,
 )
 async def get_issue_history_endpoint(
     crawl_id: uuid.UUID,
@@ -504,20 +536,33 @@ async def get_issue_history_endpoint(
     session: _SessionDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     cursor: Annotated[str | None, Query()] = None,
-) -> IssueHistoryPage:
+    view: Annotated[Literal["occurrences", "grouped"], Query()] = "occurrences",
+) -> IssueHistoryPage | GroupedIssueHistoryPage:
     try:
-        page = await service.get_issue_history(
-            session,
-            workspace_id=ctx.workspace_id,
-            crawl_id=crawl_id,
-            site_url_id=site_url_id,
-            limit=limit,
-            cursor=cursor,
-        )
+        if view == "grouped":
+            page = await service.get_grouped_issue_history(
+                session,
+                workspace_id=ctx.workspace_id,
+                crawl_id=crawl_id,
+                site_url_id=site_url_id,
+                limit=limit,
+                cursor=cursor,
+            )
+        else:
+            page = await service.get_issue_history(
+                session,
+                workspace_id=ctx.workspace_id,
+                crawl_id=crawl_id,
+                site_url_id=site_url_id,
+                limit=limit,
+                cursor=cursor,
+            )
     except SiteHealthNotFoundError as exc:
         raise _not_found(str(exc)) from exc
     except InvalidCursorError as exc:
         raise _bad_cursor(exc) from exc
+    if view == "grouped":
+        return GroupedIssueHistoryPage.model_validate(page)
     return IssueHistoryPage.model_validate(page)
 
 

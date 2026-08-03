@@ -8,6 +8,8 @@ import { ScreenHeader, ScreenSkeleton } from '@/components/site-health/screen-st
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
+import { CrawlIntakeDialog } from '@/components/site-health/crawl-intake-dialog';
+import { useState } from 'react';
 
 /**
  * Site Health screen container (Slice 7).
@@ -23,6 +25,7 @@ import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 export function SiteHealthScreen() {
   const { activeProject, isLoading: projectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
+  const [intakeOpen, setIntakeOpen] = useState(false);
 
   const screen = useSiteHealthScreen(projectId);
   const {
@@ -75,7 +78,7 @@ export function SiteHealthScreen() {
     switch (primaryAction) {
       case 'start':
         return (
-          <Button size="sm" onClick={startCrawl} disabled={startPending}>
+          <Button size="sm" onClick={() => setIntakeOpen(true)} disabled={startPending}>
             {startPending ? 'Starting…' : 'Start discovery'}
           </Button>
         );
@@ -85,7 +88,7 @@ export function SiteHealthScreen() {
         return null;
       case 'recrawl':
         return (
-          <Button size="sm" onClick={startCrawl} disabled={startPending || active}>
+          <Button size="sm" onClick={() => setIntakeOpen(true)} disabled={startPending || active}>
             {startPending
               ? 'Starting…'
               : phase === 'terminal'
@@ -144,6 +147,7 @@ export function SiteHealthScreen() {
           collected so far are shown below — refresh to check again, or start a new crawl.
         </Alert>
       ) : null}
+      <CrawlIntakeDialog projectId={projectId} open={intakeOpen} onClose={() => setIntakeOpen(false)} onStart={startCrawl} />
 
       <SiteHealthDashboardLayout
         screen={screen}

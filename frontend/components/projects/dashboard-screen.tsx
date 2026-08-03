@@ -38,7 +38,7 @@ import { scoreTextClass } from '@/components/ui/score-band';
 import { Skeleton } from '@/components/ui/skeleton';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { DashboardSection, DashboardSectionState, Project } from '@/lib/api/types';
+import type { AIPresence, DashboardSection, DashboardSectionState, Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -195,6 +195,22 @@ function DashboardSkeleton() {
       </div>
     </div>
   );
+}
+
+function AIPresenceCard({ presence }: Readonly<{ presence: AIPresence }>) {
+  const current = presence.current;
+  if (!current) return null;
+  const labels: Record<string, string> = {
+    brand_visibility: 'Brand visibility', brand_mention_rate: 'Brand mention rate', share_of_voice: 'Share of voice',
+    owned_citation_rate: 'Owned citation rate', web_fundamentals: 'Web Fundamentals', product_presence: 'Product presence', opportunity_execution: 'Opportunity execution',
+  };
+  return <Card aria-label="AI Presence Index">
+    <CardContent className="grid gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-muted text-xs">AI Presence Index</p><p className={cn('mono mt-1 text-2xl', scoreTextClass(current.score))}>{displayValue(current.score)}</p><p className="text-muted mt-1 text-xs">{current.formula_kind.replaceAll('_', ' ')} · {current.formula_version}</p></div><div className="text-right"><p className="text-muted text-xs">Momentum (30 days)</p><p className="mono text-foreground mt-1 text-lg">{presence.momentum === null ? '—' : `${presence.momentum > 0 ? '+' : ''}${presence.momentum.toFixed(1)}`}</p><p className="text-muted mt-1 text-xs">{current.provisional ? 'Provisional: incomplete evidence' : 'Comparable evidence complete'}</p></div></div>
+      <div className="grid gap-2 sm:grid-cols-2">{Object.entries(current.components).map(([key, component]) => <div key={key} className="bg-background-alt flex items-center justify-between rounded-md px-3 py-2"><span className="text-muted text-xs">{labels[key] ?? key.replaceAll('_', ' ')}</span><span className="mono text-foreground text-sm">{component.available ? `${displayValue(component.score)} · ${(component.weight * 100).toFixed(0)}%` : '—'}</span></div>)}</div>
+      <details className="text-muted text-xs"><summary className="cursor-pointer">Trend and provenance</summary><p className="mt-2">{presence.trend_points.length} persisted point{presence.trend_points.length === 1 ? '' : 's'} · {Object.values(current.source_snapshot_ids).flat().length} source snapshots · {Object.entries(current.versions).map(([key, value]) => `${key}: ${value}`).join(' · ') || '—'}</p></details>
+    </CardContent>
+  </Card>;
 }
 
 /** Active-project landing view backed exclusively by the persisted Dashboard projection. */
@@ -398,6 +414,8 @@ export function DashboardScreen({
           icon={ListChecks}
         />
       </div>
+
+      {data.ai_presence ? <AIPresenceCard presence={data.ai_presence} /> : null}
 
       {visibility?.state === 'empty' ? (
         <Card>
