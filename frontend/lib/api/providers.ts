@@ -30,7 +30,6 @@ export type { ProviderConnectionStates, ProviderConnectionStateEntry } from './t
 /** A route entry sent on create/update (B4 `ProviderRouteInput`). */
 export type ProviderRouteInput = {
   logical_engine: LogicalEngine;
-  transport_model?: string;
   is_default?: boolean;
 };
 

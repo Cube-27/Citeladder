@@ -10,6 +10,7 @@ function prompt(overrides: Partial<Prompt> = {}): Prompt {
     text: 'Best running shoes?',
     theme: 'Comfort',
     intent: 'discovery',
+    cohort: 'core',
     branded: false,
     enabled: true,
     origin: 'manual',

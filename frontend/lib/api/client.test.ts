@@ -69,7 +69,7 @@ describe('apiClient', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const { apiClient } = await import('./client');
-    await expect(apiClient.post('/brand-suggestions/competitors', {})).rejects.toMatchObject({
+    await expect(apiClient.post('/brand-discoveries', {})).rejects.toMatchObject({
       status: 429,
       retryAfterSeconds: 322,
       requestId: 'req-rate-limit',

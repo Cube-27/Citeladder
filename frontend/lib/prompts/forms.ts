@@ -8,14 +8,14 @@
 import { z } from 'zod';
 
 import type { PromptInput } from '@/lib/api/prompts';
-import { promptIntentSchema } from '@/lib/api/schemas';
+import { promptCohortSchema, promptIntentSchema } from '@/lib/api/schemas';
 import type { Prompt, PromptIntent } from '@/lib/api/types';
 
 export const promptFormSchema = z.object({
   text: z.string().trim().min(1, 'Prompt text is required.'),
   theme: z.string().trim().max(255, 'Theme is too long.'),
   intent: promptIntentSchema,
-  branded: z.boolean(),
+  cohort: promptCohortSchema,
   enabled: z.boolean(),
 });
 
@@ -37,7 +37,7 @@ export const emptyPromptForm: PromptFormValues = {
   text: '',
   theme: '',
   intent: '',
-  branded: false,
+  cohort: 'core',
   enabled: true,
 };
 
@@ -47,7 +47,7 @@ export function promptToFormValues(prompt: Prompt): PromptFormValues {
     text: prompt.text,
     theme: prompt.theme,
     intent: prompt.intent,
-    branded: prompt.branded,
+    cohort: prompt.cohort,
     enabled: prompt.enabled,
   };
 }
@@ -63,7 +63,7 @@ export function formValuesToPromptInput(values: PromptFormValues): PromptInput {
     text: values.text.trim(),
     theme: values.theme.trim(),
     intent: values.intent,
-    branded: values.branded,
+    cohort: values.cohort,
     enabled: values.enabled,
   };
 }

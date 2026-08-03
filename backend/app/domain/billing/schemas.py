@@ -104,6 +104,7 @@ class CapabilityValueResponse(_StrictResponse):
 
 class CatalogProviderRouteResponse(_StrictResponse):
     logical_engine: str
+    measurement_mode: Literal["pulse", "benchmark"]
     transport_provider: str
     model: str
 

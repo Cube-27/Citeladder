@@ -133,6 +133,8 @@ export function VisibilityDashboard() {
         onChangeRange={filters.setRange}
         granularity={filters.granularity}
         onChangeGranularity={filters.setGranularity}
+        cohort={filters.cohort}
+        onChangeCohort={filters.setCohort}
       />
       <VisibilityTabs activeTab={filters.activeTab} onSelectTab={filters.selectTab} panel={panel} />
     </div>

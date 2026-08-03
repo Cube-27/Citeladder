@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
+
 import {
   auditSchema,
   authResponseSchema,
@@ -192,24 +194,9 @@ describe('contract schemas', () => {
   });
 
   it('validates the direct-only provider catalog', () => {
-    const catalog = {
-      transports: ['openai', 'anthropic', 'google'],
-      engines: [
-        {
-          logical_engine: 'chatgpt',
-          routes: [{ transport_provider: 'openai', default_model: 'gpt-5.4' }],
-        },
-        {
-          logical_engine: 'gemini',
-          routes: [{ transport_provider: 'google', default_model: 'gemini-flash-latest' }],
-        },
-        {
-          logical_engine: 'claude',
-          routes: [{ transport_provider: 'anthropic', default_model: 'claude-sonnet-4-6' }],
-        },
-      ],
-    };
-    expect(strictValidate(providerCatalogSchema, catalog, 'catalog').transports).toHaveLength(3);
+    expect(
+      strictValidate(providerCatalogSchema, providerCatalogFixture, 'catalog').transports,
+    ).toHaveLength(3);
   });
 
   it('validates citation classification enum', () => {

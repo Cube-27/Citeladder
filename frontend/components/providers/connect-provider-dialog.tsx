@@ -152,12 +152,8 @@ function ConnectEngineForm({
       {route ? (
         <p className="text-muted text-sm">
           via {TRANSPORT_LABELS[route.transport_provider]}
-          {route.default_model ? (
-            <>
-              {' · '}
-              <span className="text-2xs font-mono">{route.default_model}</span>
-            </>
-          ) : null}
+          {' · '}Pulse <span className="text-2xs font-mono">{route.pulse_model}</span>
+          {' · '}Benchmark <span className="text-2xs font-mono">{route.benchmark_model}</span>
         </p>
       ) : (
         <p className="text-muted text-sm">No route available for this engine.</p>

@@ -54,7 +54,7 @@ from app.core.config.entitlements import (
 )
 from app.core.config.provider_catalog import (
     ACTIVE_TRANSPORTS,
-    APPROVED_ROUTES,
+    MEASUREMENT_ROUTES,
     PUBLIC_PROVIDER_CATALOG,
     public_provider_routes,
 )
@@ -572,13 +572,16 @@ def test_plan_period_grant_specs_reads_the_catalog_and_rejects_stale_revisions(
 
 def test_active_write_enums_stay_openai_anthropic_google_only() -> None:
     assert ACTIVE_TRANSPORTS == frozenset({"openai", "anthropic", "google"})
-    assert APPROVED_ROUTES == {
-        "chatgpt": {"openai": "gpt-5.6-luna"},
-        "claude": {"anthropic": "claude-haiku-4-5"},
-        "gemini": {"google": "gemini-2.5-flash-lite"},
+    assert set(MEASUREMENT_ROUTES) == {
+        ("chatgpt", "pulse"),
+        ("chatgpt", "benchmark"),
+        ("claude", "pulse"),
+        ("claude", "benchmark"),
+        ("gemini", "pulse"),
+        ("gemini", "benchmark"),
     }
     coming_soon = {"grok", "perplexity", "copilot"}
-    assert not coming_soon & set(APPROVED_ROUTES)
+    assert not coming_soon & {engine for engine, _ in MEASUREMENT_ROUTES}
     assert not coming_soon & ACTIVE_TRANSPORTS
     for key in coming_soon:
         assert public_provider_routes(key) == ()

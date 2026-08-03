@@ -52,10 +52,9 @@ from app.core.config.provider_catalog import (
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
     REASONING_EFFORT_OFF,
-    TRANSPORT_ANTHROPIC,
-    TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
     is_reasoning_pinned_off,
+    measurement_route,
     route_policy,
 )
 from app.models.audit import Audit, AuditTask, RawResponseArtifact
@@ -274,7 +273,7 @@ def test_answer_engine_request_carries_the_frozen_route_output_policy() -> None:
     request = AnswerEngineRequest(
         prompt="cheap baby clothes",
         system_instruction="",
-        model="claude-sonnet-4-6",
+        model=measurement_route(ENGINE_CLAUDE, MEASUREMENT_MODE_PULSE).transport_model,
         timeout_seconds=30.0,
         retrieval_enabled=False,
         max_output_tokens=600,
@@ -287,43 +286,36 @@ def test_answer_engine_request_carries_the_frozen_route_output_policy() -> None:
 
 
 def test_anthropic_reasoning_is_pinned_off() -> None:
-    policy = route_policy(ENGINE_CLAUDE, TRANSPORT_ANTHROPIC)
+    policy = route_policy(ENGINE_CLAUDE, MEASUREMENT_MODE_PULSE)
 
     assert policy.reasoning_pinnable is True
     assert policy.reasoning_effort == REASONING_EFFORT_OFF
-    assert is_reasoning_pinned_off(ENGINE_CLAUDE, TRANSPORT_ANTHROPIC) is True
+    assert is_reasoning_pinned_off(ENGINE_CLAUDE, MEASUREMENT_MODE_PULSE) is True
 
 
 @pytest.mark.parametrize(
-    ("engine", "transport"),
+    ("engine", "expected_effort"),
     [
-        (ENGINE_CHATGPT, TRANSPORT_OPENAI),
-        (ENGINE_GEMINI, TRANSPORT_GOOGLE),
+        (ENGINE_CHATGPT, REASONING_EFFORT_OFF),
+        (ENGINE_GEMINI, "minimal"),
     ],
 )
-def test_openai_and_google_reasoning_pins_are_off(engine: str, transport: str) -> None:
-    """Both routes moved to a tier with a documented disable value.
+def test_pulse_routes_pin_exact_reasoning(engine: str, expected_effort: str) -> None:
+    policy = route_policy(engine, MEASUREMENT_MODE_PULSE)
 
-    ``gpt-5.6-luna`` accepts ``reasoning.effort: "none"`` and
-    ``gemini-2.5-flash-lite`` accepts ``thinkingBudget: 0``, so the reason
-    these were ``unverified`` (no supported low value existed) no longer holds.
-    """
-    policy = route_policy(engine, transport)
-
-    assert policy.reasoning_effort == REASONING_EFFORT_OFF
+    assert policy.reasoning_effort == expected_effort
     assert policy.reasoning_pinnable is True
-    assert is_reasoning_pinned_off(engine, transport) is True
+    assert is_reasoning_pinned_off(engine, MEASUREMENT_MODE_PULSE) is (
+        expected_effort == REASONING_EFFORT_OFF
+    )
 
 
 def test_every_active_route_declares_a_policy_and_no_batch_path() -> None:
-    for engine, transport in (
-        (ENGINE_CHATGPT, TRANSPORT_OPENAI),
-        (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC),
-        (ENGINE_GEMINI, TRANSPORT_GOOGLE),
-    ):
-        policy = route_policy(engine, transport)
-        assert policy.representative_status == "unverified"
-        assert policy.batch_enabled is False
+    for engine in (ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI):
+        for mode in (MEASUREMENT_MODE_PULSE, MEASUREMENT_MODE_BENCHMARK):
+            policy = route_policy(engine, mode)
+            assert policy.representative_status == "unverified"
+            assert policy.batch_enabled is False
 
 
 def test_route_policy_fails_closed_on_unknown_route() -> None:
@@ -331,12 +323,12 @@ def test_route_policy_fails_closed_on_unknown_route() -> None:
         route_policy(ENGINE_CLAUDE, TRANSPORT_OPENAI)
 
 
-def test_audit_measurement_mode_column_defaults_to_benchmark() -> None:
+def test_audit_measurement_mode_column_defaults_to_pulse() -> None:
     column = Audit.__table__.c.measurement_mode
 
     assert column.type.length == 16
     assert column.nullable is False
-    assert column.default.arg == MEASUREMENT_MODE_BENCHMARK
+    assert column.default.arg == MEASUREMENT_MODE_PULSE
 
 
 @pytest.mark.parametrize("model", [AuditTask, RawResponseArtifact])

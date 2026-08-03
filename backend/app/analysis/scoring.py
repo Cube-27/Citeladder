@@ -25,19 +25,17 @@ from app.analysis.normalization import (
     normalize_alias,
     normalize_domain,
 )
-from app.core.config.analysis import (
-    AMBIGUOUS_ALIASES,
-    FANOUT_FEATURE_RULES,
-    GEMINI_25_FLASH_INPUT_PER_MILLION_USD,
-    GEMINI_25_FLASH_LITE_INPUT_PER_MILLION_USD,
-    GEMINI_25_FLASH_LITE_OUTPUT_PER_MILLION_USD,
-    GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD,
-    GEMINI_25_GROUNDED_PROMPT_USD,
+from app.core.config.analysis import AMBIGUOUS_ALIASES, FANOUT_FEATURE_RULES
+from app.core.config.costs import (
+    APPROVED_ROUTE_IDENTITIES,
+    MICRO_USD_PER_USD,
+    PRICING_CATALOG_VERSION,
+    PROJECTION_STATUS_COMPLETE,
+    PROJECTION_STATUS_PARTIAL,
+    PROJECTION_STATUS_UNKNOWN,
     TOKENS_PER_MILLION,
-    uses_gemini_flash_lite_pricing,
-    uses_gemini_flash_pricing,
+    route_pricing_for,
 )
-from app.core.config.costs import MICRO_USD_PER_USD
 
 
 @dataclass(frozen=True)
@@ -557,64 +555,102 @@ def _competitor_aggregates(scores, config, total):
     }
 
 
-def _reported_cost_usd(usage: dict[str, Any]) -> float:
+def _reported_cost_usd(usage: dict[str, Any]) -> float | None:
     """Provider-REPORTED cost for one execution, in dollars.
 
-    ``provider_cost_microusd`` is the canonical typed spelling (already
-    micro-USD) and wins; ``provider_cost_usd`` is the pre-T3 dollar spelling
-    kept readable for legacy artifacts. Parsing is float-tolerant so a decimal
-    micro-USD spelling from a legacy artifact still counts instead of zeroing
-    the whole execution. Nothing reported contributes nothing — no fabricated
-    cost.
+    Only the canonical micro-USD field is accepted. Missing or malformed data
+    contributes no reported cost; it is never inferred as free.
     """
     if usage.get("provider_cost_microusd") is not None:
         try:
             return float(usage["provider_cost_microusd"]) / MICRO_USD_PER_USD
         except (TypeError, ValueError):
-            return 0.0
-    try:
-        return float(usage.get("provider_cost_usd") or 0)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _provider_reported_cost(completed: list[dict[str, Any]]) -> float:
-    total = 0.0
-    for execution in completed:
-        usage = (execution.get("provider_metadata") or {}).get("usage") or {}
-        total += _reported_cost_usd(usage)
-    return total
-
-
-def _gemini_token_rates(config: ScoringConfig) -> tuple[float, float] | None:
-    if uses_gemini_flash_pricing(config.provider, config.model):
-        return (
-            GEMINI_25_FLASH_INPUT_PER_MILLION_USD,
-            GEMINI_25_FLASH_OUTPUT_PER_MILLION_USD,
-        )
-    if uses_gemini_flash_lite_pricing(config.provider, config.model):
-        return (
-            GEMINI_25_FLASH_LITE_INPUT_PER_MILLION_USD,
-            GEMINI_25_FLASH_LITE_OUTPUT_PER_MILLION_USD,
-        )
+            return None
     return None
+
+
+def _provider_reported_cost(
+    completed: list[dict[str, Any]],
+) -> tuple[float | None, int]:
+    reported: list[float] = []
+    for execution in completed:
+        usage = execution.get("usage") or {}
+        value = _reported_cost_usd(usage)
+        if value is not None:
+            reported.append(value)
+    return (sum(reported) if reported else None, len(reported))
+
+
+def _token_line_estimate(tokens: int, rate: int | None) -> int | None:
+    """Price one token line, keeping a used unknown-rate line unknown."""
+    if tokens == 0:
+        return 0
+    return tokens * rate if rate is not None else None
+
+
+def _token_cost_estimate(
+    token_usage: dict[str, int], pricing: Any | None
+) -> float | None:
+    token_lines = (
+        _token_line_estimate(
+            token_usage["uncached_input_tokens"],
+            pricing.uncached_input_microusd_per_million if pricing else None,
+        ),
+        _token_line_estimate(
+            token_usage["cached_input_tokens"],
+            pricing.cached_input_microusd_per_million if pricing else None,
+        ),
+        _token_line_estimate(
+            token_usage["output_tokens"],
+            pricing.output_microusd_per_million if pricing else None,
+        ),
+    )
+    if any(line is None for line in token_lines):
+        return None
+    return sum(line for line in token_lines if line is not None) / (
+        TOKENS_PER_MILLION * MICRO_USD_PER_USD
+    )
 
 
 def _paid_list_cost_estimate(
     token_usage: dict[str, int],
     config: ScoringConfig,
     grounded_requests: int,
-) -> tuple[float, float]:
-    rates = _gemini_token_rates(config)
-    if rates is None:
-        return 0.0, 0.0
-    input_rate, output_rate = rates
-    token_estimate = (
-        token_usage["input_tokens"] * input_rate / TOKENS_PER_MILLION
-        + token_usage["output_tokens"] * output_rate / TOKENS_PER_MILLION
+) -> tuple[float | None, float | None, str]:
+    identity = next(
+        (
+            route
+            for route in APPROVED_ROUTE_IDENTITIES
+            if route.logical_engine == config.provider
+            and route.transport_model == config.model
+        ),
+        None,
     )
-    grounding_if_billable = grounded_requests * GEMINI_25_GROUNDED_PROMPT_USD
-    return token_estimate, grounding_if_billable
+    pricing = route_pricing_for(identity, PRICING_CATALOG_VERSION) if identity else None
+    search_rate = pricing.search_fee_microusd if pricing else None
+    token_estimate = _token_cost_estimate(token_usage, pricing)
+    search_estimate = _search_cost_estimate(grounded_requests, search_rate)
+    known = sum(value is not None for value in (token_estimate, search_estimate))
+    status = _cost_estimate_status(known)
+    return token_estimate, search_estimate, status
+
+
+def _search_cost_estimate(
+    grounded_requests: int, search_rate_microusd: int | None
+) -> float | None:
+    if not grounded_requests:
+        return 0.0
+    if search_rate_microusd is None:
+        return None
+    return grounded_requests * search_rate_microusd / MICRO_USD_PER_USD
+
+
+def _cost_estimate_status(known_lines: int) -> str:
+    if known_lines == 2:
+        return PROJECTION_STATUS_COMPLETE
+    if known_lines:
+        return PROJECTION_STATUS_PARTIAL
+    return PROJECTION_STATUS_UNKNOWN
 
 
 def _aggregate_cost(
@@ -625,62 +661,62 @@ def _aggregate_cost(
     grounded_requests = sum(
         1 for execution in completed if execution["score"].get("search_used")
     )
-    # Flash and Flash-Lite are DIFFERENT price cards; the active Gemini route
-    # is Flash-Lite. Grounded-prompt pricing is shared between the two.
-    token_estimate, grounding_if_billable = _paid_list_cost_estimate(
+    token_estimate, grounding_if_billable, cost_status = _paid_list_cost_estimate(
         token_usage, config, grounded_requests
     )
+    reported_cost, reported_executions = _provider_reported_cost(completed)
     return {
         "currency": "USD",
         "grounded_requests": grounded_requests,
-        "paid_list_token_estimate_usd": round(token_estimate, 6),
-        "grounding_cost_if_billable_usd": round(grounding_if_billable, 6),
-        "provider_reported_cost_usd": round(_provider_reported_cost(completed), 6),
+        "paid_list_token_estimate_usd": (
+            round(token_estimate, 6) if token_estimate is not None else None
+        ),
+        "grounding_cost_if_billable_usd": (
+            round(grounding_if_billable, 6)
+            if grounding_if_billable is not None
+            else None
+        ),
+        "cost_status": cost_status,
+        "pricing_version": PRICING_CATALOG_VERSION,
+        "provider_reported_cost_usd": (
+            round(reported_cost, 6) if reported_cost is not None else None
+        ),
+        "provider_reported_cost_coverage": {
+            "reported_executions": reported_executions,
+            "total_executions": len(completed),
+        },
         "free_allowance_applied": False,
         "note": (
-            "Estimates use public paid-list prices. Actual cost may be zero or lower "
-            "within provider free allowances."
+            "Unknown official price lines remain null and are never inferred as zero."
         ),
     }
 
 
-def _usage_value(usage: dict[str, Any], *keys: str) -> int:
-    """First-present-key wins, coerced to a non-negative-ish int.
-
-    The canonical typed-usage spellings come first and the pre-T3 parser
-    spellings are the fallback, so a legacy persisted artifact keeps
-    aggregating. An absent counter contributes NOTHING to the sum — it is not
-    recorded anywhere as an observed zero.
-    """
-    for key in keys:
-        if key in usage:
-            try:
-                return int(usage.get(key) or 0)
-            except (TypeError, ValueError):
-                return 0
-    return 0
+def _usage_value(usage: dict[str, Any], key: str) -> int:
+    """Read one canonical usage counter; absent/malformed contributes nothing."""
+    try:
+        return int(usage.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _aggregate_token_usage(completed: list[dict[str, Any]]) -> dict[str, int]:
     """Sum provider token counts across completed executions.
 
-    Reads the ``usage`` block snapshotted into ``provider_metadata`` — the
-    canonical typed-usage keys (``uncached_input_tokens`` / ``output_tokens``)
-    with the pre-T3 ``total_*_tokens`` spellings as the legacy fallback, so
-    artifacts persisted before the typed contract still aggregate. This is a
-    SUM across executions, so the shape stays ``int``; an unknown per-execution
-    counter simply adds nothing rather than being reported as a measured zero.
+    Reads the immutable artifact's canonical typed-usage keys. This is a SUM
+    across executions, so an unknown per-execution counter contributes nothing.
     """
-    input_tokens = output_tokens = total_tokens = 0
+    uncached_input_tokens = cached_input_tokens = output_tokens = total_tokens = 0
     for e in completed:
-        usage = (e.get("provider_metadata") or {}).get("usage") or {}
-        input_tokens += _usage_value(
-            usage, "uncached_input_tokens", "total_input_tokens"
-        )
-        output_tokens += _usage_value(usage, "output_tokens", "total_output_tokens")
+        usage = e.get("usage") or {}
+        uncached_input_tokens += _usage_value(usage, "uncached_input_tokens")
+        cached_input_tokens += _usage_value(usage, "cached_input_tokens")
+        output_tokens += _usage_value(usage, "output_tokens")
         total_tokens += _usage_value(usage, "total_tokens")
     return {
-        "input_tokens": input_tokens,
+        "input_tokens": uncached_input_tokens + cached_input_tokens,
+        "uncached_input_tokens": uncached_input_tokens,
+        "cached_input_tokens": cached_input_tokens,
         "output_tokens": output_tokens,
         "total_tokens": total_tokens,
     }

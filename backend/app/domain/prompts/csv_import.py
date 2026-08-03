@@ -20,7 +20,7 @@ from app.domain.prompts.schemas import PromptInput
 _TEXT_KEYS = {"text", "prompt", "query", "question"}
 _THEME_KEYS = {"theme", "topic", "category"}
 _INTENT_KEYS = {"intent"}
-_BRANDED_KEYS = {"branded", "is_branded"}
+_COHORT_KEYS = {"cohort"}
 _ENABLED_KEYS = {"enabled", "is_enabled", "active"}
 
 _TRUTHY = {"1", "true", "yes", "y", "t"}
@@ -35,10 +35,14 @@ def _as_bool(value: str | None, *, default: bool) -> bool:
     return token in _TRUTHY
 
 
+def _cohort(value: str | None) -> str:
+    return "comparison" if (value or "").strip().lower() == "comparison" else "core"
+
+
 def parse_prompt_csv(content: str) -> list[PromptInput]:
     """Parse CSV text into ``PromptInput`` rows.
 
-    Supports a header row (``text,theme,intent,branded,enabled`` in any order,
+    Supports a header row (``text,theme,intent,cohort,enabled`` in any order,
     with common aliases) or a headerless single-column file of prompt texts.
     Empty rows are skipped; unknown intents are normalized to ``""`` downstream.
     """
@@ -80,7 +84,7 @@ def parse_prompt_csv(content: str) -> list[PromptInput]:
     text_i = _col(_TEXT_KEYS)
     theme_i = _col(_THEME_KEYS)
     intent_i = _col(_INTENT_KEYS)
-    branded_i = _col(_BRANDED_KEYS)
+    cohort_i = _col(_COHORT_KEYS)
     enabled_i = _col(_ENABLED_KEYS)
 
     def _cell(row: list[str], index: int | None) -> str | None:
@@ -98,7 +102,7 @@ def parse_prompt_csv(content: str) -> list[PromptInput]:
                 text=raw_text,
                 theme=(_cell(row, theme_i) or "").strip(),
                 intent=(_cell(row, intent_i) or "").strip(),
-                branded=_as_bool(_cell(row, branded_i), default=False),
+                cohort=_cohort(_cell(row, cohort_i)),
                 enabled=_as_bool(_cell(row, enabled_i), default=True),
             )
         )

@@ -40,7 +40,6 @@ from app.core.config.audits import (
     EVENT_AUDIT_CANCELLED,
     EVENT_AUDIT_CREATED,
     EVENT_AUDIT_QUEUED,
-    MEASUREMENT_MODE_BENCHMARK,
     MEASUREMENT_MODE_PULSE,
     MEASUREMENT_POLICY_KEY,
     TASK_STATUS_CANCELLED,
@@ -81,17 +80,15 @@ from app.core.config.projects import (
     DEFAULT_BENCHMARK_MODE,
     MAX_REPETITIONS,
     MIN_REPETITIONS,
-    PROMPT_ORIGIN_GENERATED,
 )
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.core.config.provider_catalog import (
-    APPROVED_ROUTES,
     CREDENTIAL_SOURCE_BYOK,
     LOGICAL_ENGINES,
     TELEMETRY_FUNDED_ADMISSION_DENIED,
-    default_model,
     is_endpoint_approved,
     is_route_approved,
+    measurement_route,
     route_policy,
 )
 from app.domain.abuse.service import reserve_workspace_capacity
@@ -368,6 +365,7 @@ async def _resolve_routes(
     *,
     workspace_id: uuid.UUID,
     engines: list[str],
+    measurement_mode: str,
 ) -> dict[str, _ResolvedRoute]:
     """Pick one active BYOK route + connection per requested logical engine.
 
@@ -407,7 +405,9 @@ async def _resolve_routes(
             _ResolvedRoute(
                 logical_engine=route.logical_engine,
                 transport_provider=route.transport_provider,
-                transport_model=route.transport_model,
+                transport_model=measurement_route(
+                    route.logical_engine, measurement_mode
+                ).transport_model,
                 connection_id=connection.id,
                 base_url=connection.base_url or "",
             ),
@@ -427,7 +427,9 @@ async def _resolve_routes(
     return resolved
 
 
-def _resolve_funded_routes(engines: list[str]) -> dict[str, _ResolvedRoute]:
+def _resolve_funded_routes(
+    engines: list[str], measurement_mode: str
+) -> dict[str, _ResolvedRoute]:
     """Resolve the catalog-approved funded route per requested engine.
 
     Exactly one approved transport per engine exists (invariant 10), so a
@@ -437,14 +439,17 @@ def _resolve_funded_routes(engines: list[str]) -> dict[str, _ResolvedRoute]:
     """
     resolved: dict[str, _ResolvedRoute] = {}
     for engine in _normalize_engines(engines):
-        transports = APPROVED_ROUTES.get(engine, {})
-        if not transports:
-            raise AuditValidationError(f"No approved funded route for engine: {engine}")
-        transport = next(iter(transports))
+        try:
+            catalog_route = measurement_route(engine, measurement_mode)
+        except ValueError as exc:
+            raise AuditValidationError(
+                f"No approved funded route for engine: {engine}"
+            ) from exc
+
         resolved[engine] = _ResolvedRoute(
             logical_engine=engine,
-            transport_provider=transport,
-            transport_model=default_model(engine, transport),
+            transport_provider=catalog_route.transport_provider,
+            transport_model=catalog_route.transport_model,
             connection_id=None,
             base_url="",
         )
@@ -457,13 +462,19 @@ async def _resolve_run_routes(
     workspace_id: uuid.UUID,
     engines: list[str],
     credential_mode: str,
+    measurement_mode: str,
 ) -> dict[str, _ResolvedRoute]:
     """Route resolution for one run: BYOK workspace routes or funded catalog."""
     if credential_mode == CREDENTIAL_MODE_FUNDED:
-        return _resolve_funded_routes(engines)
+        return _resolve_funded_routes(engines, measurement_mode)
     if credential_mode != CREDENTIAL_MODE_BYOK:
         raise AuditValidationError(f"Unsupported credential_mode: {credential_mode}")
-    return await _resolve_routes(session, workspace_id=workspace_id, engines=engines)
+    return await _resolve_routes(
+        session,
+        workspace_id=workspace_id,
+        engines=engines,
+        measurement_mode=measurement_mode,
+    )
 
 
 def _resolve_benchmark_mode(value: str | None, project: Project) -> str:
@@ -501,7 +512,7 @@ def _resolve_measurement_policy(value: str | None) -> tuple[str, MeasurementMode
     ``measurement_policy_for_mode`` raises rather than defaulting to a cheaper
     or costlier shape.
     """
-    mode = str(value or MEASUREMENT_MODE_BENCHMARK).strip().lower()
+    mode = str(value or MEASUREMENT_MODE_PULSE).strip().lower()
     try:
         return mode, measurement_policy_for_mode(mode)
     except ValueError as exc:
@@ -555,13 +566,6 @@ def _validate_prompt_bindings(project: Project, prompts: list[Prompt]) -> None:
         return
     vocabulary = build_project_vocabulary(project)
     for prompt in prompts:
-        # ``generated`` is trusted persisted provenance, not a client claim:
-        # its writers either verify the backend's HMAC generation receipt or
-        # ground and filter model output before insert. Re-running the lexical
-        # overlap heuristic here rejects valid brand-neutral synonyms that the
-        # proof-bearing writer deliberately admitted.
-        if prompt.origin == PROMPT_ORIGIN_GENERATED:
-            continue
         result = validate_prompt_binding(prompt.text or "", vocabulary)
         if not result.accepted:
             raise TopicalBindingError(
@@ -603,14 +607,8 @@ def _evaluate_prompt_admission(
 ) -> None:
     """Precompute topical-binding and selected-prompt count admission.
 
-    Topical binding (``_validate_prompt_bindings``) is required for every
-    selected active prompt EXCEPT ``PROMPT_ORIGIN_GENERATED`` prompts, which are
-    admitted on verified persisted provenance instead: their writers either
-    verify the backend's HMAC generation receipt or ground and filter model
-    output before insert, so re-running the lexical-overlap gate would reject
-    valid brand-neutral synonyms. All other origins run the lexical binding
-    check. The selected active-prompt count policy is unchanged for all
-    origins.
+    Topical binding is required for every selected active prompt. Generation
+    receipts record provenance only and never bypass relevance validation.
     """
     _validate_prompt_bindings(project, prompts)
     _enforce_prompt_count_policy(
@@ -618,9 +616,9 @@ def _evaluate_prompt_admission(
     )
 
 
-def _route_policy_snapshot(logical_engine: str, transport_provider: str) -> dict:
+def _route_policy_snapshot(logical_engine: str, measurement_mode: str) -> dict:
     """The frozen execution-time route policy for one approved route."""
-    policy = route_policy(logical_engine, transport_provider)
+    policy = route_policy(logical_engine, measurement_mode)
     return {
         "reasoning_effort": policy.reasoning_effort,
         "reasoning_pinnable": policy.reasoning_pinnable,
@@ -669,7 +667,7 @@ def _freeze_plan(
         repetitions=_resolve_repetitions(repetitions, policy),
         system_instruction=_compose_system_instruction(framing=framing, policy=policy),
         route_policies={
-            engine: _route_policy_snapshot(engine, route.transport_provider)
+            engine: _route_policy_snapshot(engine, mode)
             for engine, route in routes.items()
         },
     )
@@ -1297,11 +1295,13 @@ async def create_audit(
     # ONE admission instant shared by the rate evaluation, the entitlement
     # resolution, the budget period, and every reservation timestamp.
     admission_at = datetime.now(UTC)
+    normalized_measurement_mode, _ = _resolve_measurement_policy(measurement_mode)
     routes = await _resolve_run_routes(
         session,
         workspace_id=workspace_id,
         engines=engines,
         credential_mode=credential_mode,
+        measurement_mode=normalized_measurement_mode,
     )
 
     plan = _freeze_plan(
@@ -1381,6 +1381,7 @@ async def create_audit(
             "text": prompt.text or "",
             "theme": prompt.theme or "",
             "intent": prompt.intent or "",
+            "cohort": prompt.cohort,
         }
         for prompt in prompts
     ]
@@ -1418,6 +1419,7 @@ async def create_audit(
             text=prompt.text or "",
             theme=prompt.theme or "",
             intent=prompt.intent or "",
+            cohort=prompt.cohort,
         )
         session.add(snapshot)
         prompt_snapshots.append(snapshot)

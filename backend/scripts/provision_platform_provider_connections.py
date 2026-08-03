@@ -45,11 +45,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import encryption_key_configured, settings
 from app.core.config.provider_catalog import (
     ACTIVE_TRANSPORTS,
-    APPROVED_ROUTES,
     CREDENTIAL_SOURCE_PLATFORM,
     PLATFORM_CREDENTIAL_ENV_VARS,
     SYSTEM_WORKSPACE_NAME,
     TELEMETRY_PLATFORM_PROVISIONED,
+    engines_for_transport,
+    measurement_route,
 )
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret, encrypt_secret
@@ -143,10 +144,8 @@ async def _upsert_routes(
     session: AsyncSession, *, connection: ProviderConnection, transport: str
 ) -> None:
     """Converge the catalog-default route per engine for this transport."""
-    for engine, approved in APPROVED_ROUTES.items():
-        model = approved.get(transport)
-        if model is None:
-            continue
+    for engine in engines_for_transport(transport):
+        model = measurement_route(engine, "pulse").transport_model
         route = await session.scalar(
             select(ProviderRoute).where(
                 ProviderRoute.connection_id == connection.id,

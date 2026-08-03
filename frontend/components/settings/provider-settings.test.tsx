@@ -5,30 +5,14 @@ import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 
 import { ProviderSettings } from './provider-settings';
 
 const CONNECTION_ID = '11111111-1111-4111-8111-111111111111';
 const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
 
-// v2 direct-provider retirement: one direct transport per logical engine.
-const catalog = {
-  transports: ['openai', 'anthropic', 'google'],
-  engines: [
-    {
-      logical_engine: 'chatgpt',
-      routes: [{ transport_provider: 'openai', default_model: 'gpt-5.4' }],
-    },
-    {
-      logical_engine: 'gemini',
-      routes: [{ transport_provider: 'google', default_model: 'gemini-flash-latest' }],
-    },
-    {
-      logical_engine: 'claude',
-      routes: [{ transport_provider: 'anthropic', default_model: 'claude-sonnet-4-6' }],
-    },
-  ],
-};
+const catalog = providerCatalogFixture;
 
 function connection(overrides: Record<string, unknown> = {}) {
   return {
@@ -46,7 +30,7 @@ function connection(overrides: Record<string, unknown> = {}) {
         id: '33333333-3333-4333-8333-333333333333',
         logical_engine: 'chatgpt',
         transport_provider: 'openai',
-        transport_model: 'gpt-5.4',
+        transport_model: 'gpt-5.4-nano-2026-03-17',
         is_default: false,
         active: true,
       },
@@ -62,7 +46,14 @@ function catalogHandler() {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
-beforeEach(() => window.localStorage.clear());
+beforeEach(() => {
+  window.localStorage.clear();
+  mswServer.use(
+    http.get('/api/v1/provider-connections/states', () =>
+      HttpResponse.json({ workspace_id: WORKSPACE_ID, providers: [] }),
+    ),
+  );
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -154,7 +145,7 @@ describe('ProviderSettings', () => {
           latency_ms: 42,
           logical_engine: 'chatgpt',
           transport_provider: 'openai',
-          transport_model: 'gpt-5.4',
+          transport_model: 'gpt-5.4-nano-2026-03-17',
           tested_at: '2026-07-15T00:00:00Z',
         });
       }),
@@ -194,7 +185,7 @@ describe('ProviderSettings', () => {
           latency_ms: 10,
           logical_engine: 'chatgpt',
           transport_provider: 'openai',
-          transport_model: 'gpt-5.4',
+          transport_model: 'gpt-5.4-nano-2026-03-17',
           tested_at: '2026-07-15T00:00:00Z',
         }),
       ),

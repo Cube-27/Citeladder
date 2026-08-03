@@ -9,10 +9,7 @@ import {
   brandProfileAcceptResponseSchema,
   brandProfileSchema,
   brandProfileSuggestionSchema,
-  competitorSuggestResponseSchema,
-  ownedDomainSuggestResponseSchema,
   projectSchema,
-  promptSuggestResponseSchema,
   strictValidate,
   workspaceSchema,
   dashboardSchema,
@@ -44,42 +41,6 @@ export type ProjectInput = {
   competitors: Array<{ name: string; aliases: string[]; domains: string[] }>;
 };
 
-/** Shared brand context for the stateless `/brand-suggestions/*` endpoints. */
-type BrandSuggestBase = {
-  brand_name: string;
-  website_url?: string;
-  brand_aliases?: string[];
-  country_code?: string;
-  language_code?: string;
-  description?: string;
-  positioning?: string;
-  products_services?: string[];
-  target_audience?: string;
-  count?: number;
-  // Backend-enforced gate: brand evidence is only sent to the default agent
-  // when this is true (422 otherwise). The API still requires it, but the UI
-  // no longer asks per action — AI discovery is the product's core flow, so
-  // consent is product-level (sign-up terms) and callers always send true.
-  // See plan.md §10, resolved decision 13.
-  confirm_send_evidence: boolean;
-};
-
-export type CompetitorSuggestInput = BrandSuggestBase & {
-  existing_competitor_names?: string[];
-};
-
-export type OwnedDomainSuggestInput = BrandSuggestBase & {
-  existing_owned_domains?: string[];
-};
-
-export type PromptSuggestInput = BrandSuggestBase & {
-  competitor_names?: string[];
-  existing_prompt_texts?: string[];
-};
-
-export type CompetitorSuggestResponse = z.infer<typeof competitorSuggestResponseSchema>;
-export type OwnedDomainSuggestResponse = z.infer<typeof ownedDomainSuggestResponseSchema>;
-export type PromptSuggestResponse = z.infer<typeof promptSuggestResponseSchema>;
 export type BrandProfileField = keyof BrandProfileDraft;
 export type BrandProfileUpdateInput = Partial<BrandProfileDraft>;
 export type BrandProfileAcceptInput = {
@@ -140,10 +101,14 @@ export const projectsApi = {
     );
     return strictValidate(brandProfileSchema, res, 'projects.updateBrandProfile');
   },
-  suggestBrandProfile: async (projectId: string, options?: ApiRequestOptions) => {
+  suggestBrandProfile: async (
+    projectId: string,
+    input?: { manual_brand_context?: string },
+    options?: ApiRequestOptions,
+  ) => {
     const res = await apiClient.post<BrandProfileSuggestion>(
       `/projects/${projectId}/brand-profile/suggest`,
-      { confirm_send_evidence: true },
+      { confirm_send_evidence: true, manual_brand_context: input?.manual_brand_context },
       options,
     );
     return strictValidate(brandProfileSuggestionSchema, res, 'projects.suggestBrandProfile');
@@ -164,42 +129,5 @@ export const projectsApi = {
       res,
       'projects.acceptBrandProfileSuggestion',
     );
-  },
-  /**
-   * AI competitor / owned-domain suggestions for the setup form via the
-   * app-level default agent. Stateless: brand context travels in the body (the
-   * project may not exist yet) and nothing is persisted — suggestions fill the
-   * form for review and the normal save flow persists. The caller must set
-   * `confirm_send_evidence: true` after user consent — the backend enforces
-   * it. Errors: 422 invalid, 502 agent/output failure, 503 no default agent.
-   */
-  suggestCompetitors: async (input: CompetitorSuggestInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<CompetitorSuggestResponse>(
-      '/brand-suggestions/competitors',
-      input,
-      options,
-    );
-    return strictValidate(competitorSuggestResponseSchema, res, 'projects.suggestCompetitors');
-  },
-  suggestOwnedDomains: async (input: OwnedDomainSuggestInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<OwnedDomainSuggestResponse>(
-      '/brand-suggestions/owned-domains',
-      input,
-      options,
-    );
-    return strictValidate(ownedDomainSuggestResponseSchema, res, 'projects.suggestOwnedDomains');
-  },
-  /**
-   * Stateless starting prompt set for onboarding's discovery step. Mirrors the
-   * two siblings above: nothing is persisted, and the prompts come back for
-   * review before `POST /prompt-sets` writes any of them.
-   */
-  suggestPrompts: async (input: PromptSuggestInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<PromptSuggestResponse>(
-      '/brand-suggestions/prompts',
-      input,
-      options,
-    );
-    return strictValidate(promptSuggestResponseSchema, res, 'projects.suggestPrompts');
   },
 };

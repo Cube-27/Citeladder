@@ -73,6 +73,8 @@ class VisibilityResponse(BaseModel):
     audit_status: str
     analyzer_version: str
     scoring_rule_version: str
+    cohort: str = "core"
+    coverage: dict[str, int | float] = Field(default_factory=dict)
     total_completed: int
     total_failed: int
     visibility_score: float
@@ -201,6 +203,7 @@ class ExecutionEvidenceResponse(BaseModel):
     prompt_index: int
     repetition: int
     prompt_class: str = ""
+    cohort: str = "core"
     brand_mentioned: bool = False
     brand_first_offset: int | None = None
     owned_domain_cited: bool = False

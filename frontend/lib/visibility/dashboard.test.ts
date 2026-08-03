@@ -24,6 +24,8 @@ function makeVisibility(overrides: Partial<Visibility> = {}): Visibility {
     audit_status: 'completed',
     analyzer_version: 'v1',
     scoring_rule_version: 'v1',
+    cohort: 'core',
+    coverage: { completed: 6, requested: 6, rate: 1 },
     total_completed: 6,
     total_failed: 0,
     visibility_score: 66.7,

@@ -142,7 +142,7 @@ def test_ai_source_vocabulary_and_logical_engine_mapping() -> None:
         "gemini": "gemini",
         "claude": "claude",
     }
-    assert set(AI_SOURCE_TO_LOGICAL_ENGINE.values()) <= LOGICAL_ENGINES
+    assert set(AI_SOURCE_TO_LOGICAL_ENGINE.values()) <= set(LOGICAL_ENGINES)
     assert AI_SOURCE_OTHER not in AI_SOURCE_TO_LOGICAL_ENGINE
 
 

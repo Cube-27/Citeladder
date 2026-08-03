@@ -13,7 +13,7 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -266,8 +266,8 @@ def _brand_profile_drafting_failures_mapped() -> Iterator[None]:
     except (ProjectNotFoundError, BrandProfileNotFoundError) as exc:
         raise_not_found("Brand profile", cause=exc)
     except BrandEvidenceUnavailableError as exc:
-        # An actionable precondition, not a server fault: the brand's own site
-        # gave us nothing to ground a draft in, so the human fills it in.
+        # The agent returned an all-empty draft (correctly reporting no evidence
+        # supports any field). This is a grounding outcome, not a server fault.
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
@@ -317,6 +317,7 @@ async def suggest_brand_profile_endpoint(
             workspace_id=ctx.workspace_id,
             project_id=project_id,
             agent=agent,
+            manual_brand_context=payload.manual_brand_context,
         )
     return brand_profile_suggestion_to_response(suggestion)
 
@@ -366,6 +367,7 @@ async def get_visibility_trends_endpoint(
     measurement_mode: Annotated[str | None, Query()] = None,
     transport_model: Annotated[str | None, Query()] = None,
     retrieval_enabled: Annotated[bool | None, Query()] = None,
+    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
 ) -> list[VisibilityTrendPoint]:
     """Cross-run Visibility trend projection for a project (invariant 7).
 
@@ -398,6 +400,7 @@ async def get_visibility_trends_endpoint(
             measurement_mode=measurement_mode,
             transport_model=transport_model,
             retrieval_enabled=retrieval_enabled,
+            cohort=cohort,
         )
     except TrendQueryError as exc:
         raise HTTPException(
@@ -422,6 +425,7 @@ async def get_visibility_evidence_endpoint(
     limit: Annotated[
         int, Query(ge=1, le=VISIBILITY_EVIDENCE_MAX_LIMIT)
     ] = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
+    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
 ) -> VisibilityEvidenceResponse:
     """Persisted execution-evidence projection for a project (invariant 7).
 
@@ -450,6 +454,7 @@ async def get_visibility_evidence_endpoint(
             from_at=from_at,
             to_at=to_at,
             limit=limit,
+            cohort=cohort,
         )
     except AnalysisNotFoundError as exc:
         raise_not_found("Audit", cause=exc)
@@ -597,6 +602,7 @@ async def get_visibility_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
     audit_id: Annotated[uuid.UUID | None, Query()] = None,
+    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
 ) -> VisibilityResponse:
     """Selected-run dashboard projection for a project (invariant 7).
 
@@ -613,6 +619,7 @@ async def get_visibility_endpoint(
             workspace_id=ctx.workspace_id,
             project_id=project_id,
             audit_id=audit_id,
+            cohort=cohort,
         )
     except AnalysisNotFoundError as exc:
         raise HTTPException(

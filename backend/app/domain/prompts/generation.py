@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
+from difflib import SequenceMatcher
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
@@ -30,8 +32,10 @@ from app.connectors.agent.client import DefaultAgentClient
 from app.connectors.web_evidence.brand_evidence import evidence_block_lines
 from app.core.config.projects import PROMPT_INTENTS, PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
+    GENERATION_COMPARISON_SYSTEM_PROMPT,
     GENERATION_SYSTEM_PROMPT,
     GENERATOR_VERSION,
+    PROMPT_NEAR_DUPLICATE_SIMILARITY,
     PROMPT_STATUS_ACTIVE,
     PROMPT_STATUS_PROPOSED,
     TOPIC_ORIGIN_GENERATED,
@@ -236,14 +240,100 @@ async def _load_prompt_set_with_project(
 
 
 def _is_branded(text: str, brand_context: dict[str, Any]) -> bool:
-    """Deterministic branded detection: any brand/competitor name in the text."""
-    haystack = text.casefold()
+    """Boundary-safe tracked-name detection."""
     names = [brand_context.get("brand_name", "")]
     names += brand_context.get("brand_aliases", [])
     for competitor in brand_context.get("competitors", []):
         names.append(competitor.get("name", ""))
         names += competitor.get("aliases", [])
-    return any(name and name.casefold() in haystack for name in names)
+    return any(
+        name
+        and re.search(rf"(?<![\w]){re.escape(str(name))}(?![\w])", text, re.IGNORECASE)
+        for name in names
+    )
+
+
+def _drop_invalid_core_prompts(
+    suggestions: list[SuggestedTopic], brand_context: dict[str, Any]
+) -> list[SuggestedTopic]:
+    """Reject tracked names, missing intents, and near duplicates."""
+    accepted: list[str] = []
+    topics: list[SuggestedTopic] = []
+    for topic in suggestions:
+        rows: list[SuggestedPrompt] = []
+        for prompt in topic.prompts:
+            normalized = " ".join(prompt.text.casefold().split())
+            if (
+                not prompt.intent
+                or _is_branded(prompt.text, brand_context)
+                or any(
+                    SequenceMatcher(None, normalized, previous).ratio()
+                    >= PROMPT_NEAR_DUPLICATE_SIMILARITY
+                    for previous in accepted
+                )
+            ):
+                continue
+            accepted.append(normalized)
+            rows.append(prompt)
+        if rows:
+            topics.append(SuggestedTopic(name=topic.name, prompts=rows))
+    return topics
+
+
+def _drop_invalid_comparison_prompts(
+    suggestions: list[SuggestedTopic], brand_context: dict[str, Any]
+) -> list[SuggestedTopic]:
+    """Keep named comparisons only when brand and competitor are both named."""
+    brand_names = [
+        brand_context.get("brand_name", ""),
+        *brand_context.get("brand_aliases", []),
+    ]
+    competitor_names = [
+        name
+        for competitor in brand_context.get("competitors", [])
+        for name in [competitor.get("name", ""), *competitor.get("aliases", [])]
+    ]
+
+    def contains(text: str, names: list[str]) -> bool:
+        return any(
+            name
+            and re.search(
+                rf"(?<![\w]){re.escape(str(name))}(?![\w])", text, re.IGNORECASE
+            )
+            for name in names
+        )
+
+    return [
+        SuggestedTopic(
+            name=topic.name,
+            prompts=[
+                prompt
+                for prompt in topic.prompts
+                if prompt.intent == "comparison"
+                and contains(prompt.text, brand_names)
+                and contains(prompt.text, competitor_names)
+            ],
+        )
+        for topic in suggestions
+        if any(
+            prompt.intent == "comparison"
+            and contains(prompt.text, brand_names)
+            and contains(prompt.text, competitor_names)
+            for prompt in topic.prompts
+        )
+    ]
+
+
+def _prompt_count(suggestions: list[SuggestedTopic]) -> int:
+    return sum(len(topic.prompts) for topic in suggestions)
+
+
+def _filter_for_cohort(
+    suggestions: list[SuggestedTopic], cohort: str, brand_context: dict[str, Any]
+) -> list[SuggestedTopic]:
+    if cohort == "comparison":
+        return _drop_invalid_comparison_prompts(suggestions, brand_context)
+    return _drop_invalid_core_prompts(suggestions, brand_context)
 
 
 def _resolve_target_topic(prompt_set: PromptSet, payload: Any) -> Topic | None:
@@ -431,8 +521,8 @@ async def _insert_prompts_returning(
     prompt_set: PromptSet,
     topic: Topic,
     prompts: list[SuggestedPrompt],
-    brand_context: dict[str, Any],
     evidence_base: dict[str, Any],
+    cohort: str,
 ) -> tuple[list[uuid.UUID], int]:
     """Conflict-safe multi-row insert for one topic batch as ``proposed``.
 
@@ -452,7 +542,8 @@ async def _insert_prompts_returning(
             "normalized_text_hash": prompt_text_hash(prompt.text),
             "theme": topic.name,
             "intent": prompt.intent,
-            "branded": _is_branded(prompt.text, brand_context),
+            "cohort": cohort,
+            "branded": cohort == "comparison",
             "enabled": True,
             "status": PROMPT_STATUS_PROPOSED,
             "origin": PROMPT_ORIGIN_GENERATED,
@@ -620,9 +711,29 @@ async def generate_prompts(
     #    transaction first so no DB transaction is held across the network
     #    call (invariant 8's rule, applied to generation).
     await session.commit()
-    raw = await agent.complete_json(system=GENERATION_SYSTEM_PROMPT, user=user_message)
+    system_prompt = (
+        GENERATION_COMPARISON_SYSTEM_PROMPT
+        if payload.cohort == "comparison"
+        else GENERATION_SYSTEM_PROMPT
+    )
+    raw = await agent.complete_json(system=system_prompt, user=user_message)
     suggestions, intra_duplicates = parse_generation_output(raw)
-    # Enforce the requested output count before any persistence.
+    suggestions = _filter_for_cohort(suggestions, payload.cohort, brand_context)
+    # One bounded replacement call is allowed when validation removed rows.
+    if _prompt_count(suggestions) < payload.count:
+        missing = payload.count - _prompt_count(suggestions)
+        replacement_raw = await agent.complete_json(
+            system=system_prompt,
+            user=(
+                user_message
+                + f"\nThe first batch had {missing} rejected rows. Generate exactly "
+                f"{missing} replacement prompts satisfying every rule."
+            ),
+        )
+        replacements, replacement_duplicates = parse_generation_output(replacement_raw)
+        replacements = _filter_for_cohort(replacements, payload.cohort, brand_context)
+        suggestions.extend(replacements)
+        intra_duplicates += replacement_duplicates
     suggestions = _cap_suggestions_to_count(suggestions, payload.count)
 
     # 4. Re-open the write transaction. The objects loaded before the provider
@@ -669,6 +780,7 @@ async def generate_prompts(
         "brand_context_hash": _brand_context_hash(brand_context),
         "requested_count": payload.count,
         "requested_intents": [i for i in payload.intents if i],
+        "cohort": payload.cohort,
     }
 
     try:
@@ -709,8 +821,8 @@ async def generate_prompts(
                 prompt_set=prompt_set,
                 topic=topic,
                 prompts=suggestion.prompts,
-                brand_context=brand_context,
                 evidence_base=evidence_base,
+                cohort=payload.cohort,
             )
             inserted_ids.extend(batch_ids)
             dropped += batch_dropped

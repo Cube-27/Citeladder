@@ -77,6 +77,8 @@ export function VisibilityToolbar({
   onChangeRange,
   granularity,
   onChangeGranularity,
+  cohort,
+  onChangeCohort,
 }: Readonly<{
   activeTab: VisibilityTab;
   runs: RunOption[];
@@ -91,6 +93,8 @@ export function VisibilityToolbar({
   onChangeRange: (range: TrendRange) => void;
   granularity: TrendGranularity;
   onChangeGranularity: (granularity: TrendGranularity) => void;
+  cohort: 'core' | 'comparison';
+  onChangeCohort: (cohort: 'core' | 'comparison') => void;
 }>) {
   const evidence = isEvidenceTab(activeTab);
   const showRun = activeTab === 'overview' || evidence;
@@ -105,6 +109,31 @@ export function VisibilityToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="visibility-toolbar">
+      <Dropdown>
+        <DropdownTrigger asChild>
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label="Filter by prompt cohort"
+            className={cn(CHIP_CLASS, cohort !== 'core' && CHIP_ACTIVE_CLASS)}
+          >
+            <span className="font-medium">{cohort === 'core' ? 'Core' : 'Comparison'}</span>
+            <ChevronDown className="text-muted size-3" aria-hidden />
+          </Button>
+        </DropdownTrigger>
+        <DropdownContent>
+          <DropdownLabel>Prompt cohort</DropdownLabel>
+          <DropdownItem data-active={cohort === 'core'} onSelect={() => onChangeCohort('core')}>
+            Core visibility
+          </DropdownItem>
+          <DropdownItem
+            data-active={cohort === 'comparison'}
+            onSelect={() => onChangeCohort('comparison')}
+          >
+            Named comparisons
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
       {showRun ? (
         <Dropdown>
           <DropdownTrigger asChild>

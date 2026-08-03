@@ -165,6 +165,40 @@ describe('RunsPage', () => {
       http.get('/api/v1/provider-connections', () =>
         HttpResponse.json([connection(['gemini', 'claude'])]),
       ),
+      http.post('/api/v1/audits/estimate', () =>
+        HttpResponse.json({
+          measurement_mode: 'pulse',
+          retrieval_enabled: false,
+          prompt_count: 1,
+          engine_count: 1,
+          repetition_count: 1,
+          execution_count: 1,
+          maximum_attempt_count: 3,
+          maximum_wall_clock_seconds: 90,
+          cost_status: 'complete',
+          estimated_total_cost_microusd: 100,
+          engines: [
+            {
+              logical_engine: 'gemini',
+              transport_provider: 'google',
+              transport_model: 'gemini-3.5-flash-lite',
+              retrieval_enabled: false,
+              prompt_count: 1,
+              repetition_count: 1,
+              execution_count: 1,
+              maximum_attempt_count: 3,
+              estimated_input_tokens: 10,
+              estimated_output_tokens: 600,
+              estimated_search_calls: null,
+              estimated_token_cost_microusd: 100,
+              estimated_search_cost_microusd: null,
+              estimated_total_cost_microusd: 100,
+              cost_status: 'complete',
+              pricing_version: 'official-2026-08-03',
+            },
+          ],
+        }),
+      ),
       http.post('/api/v1/audits', async ({ request }) => {
         posted = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(audit({ status: 'queued' }), { status: 201 });
@@ -188,6 +222,7 @@ describe('RunsPage', () => {
       prompt_set_id: SET_ID,
       engines: ['gemini'],
       repetitions: 1,
+      measurement_mode: 'pulse',
     });
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${AUDIT_ID}`));
     expect(queryClient.getQueryData(queryKeys.runs.detail(AUDIT_ID))).toMatchObject(

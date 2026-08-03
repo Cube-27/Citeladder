@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { Check } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -15,26 +15,22 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { MarketSelect } from '@/components/ui/market-select';
 import { queryKeys } from '@/lib/api/query-keys';
 import { projectsApi } from '@/lib/api/projects';
+import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
 import {
   brandStepSchema,
-  deriveDomain,
   emptyBrandStep,
+  normalizeWebsiteUrl,
   onboardingErrorMessage,
   type BrandStepValues,
   type ReviewCompetitor,
   type ReviewDomain,
   type ReviewPrompt,
 } from '@/lib/onboarding/forms';
-import {
-  createProjectFromOnboarding,
-  type OnboardingProgress,
-} from '@/lib/onboarding/create-project';
-import { useDiscovery } from '@/lib/onboarding/use-discovery';
+import { useBrandDiscovery } from '@/lib/onboarding/use-brand-discovery';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 
-import { DiscoveryProgress } from './discovery-progress';
 import { ReviewStep } from './review-step';
 
 /**
@@ -93,92 +89,110 @@ export function OnboardingScreen() {
   const [competitors, setCompetitors] = useState<ReviewCompetitor[]>([]);
   const [prompts, setPrompts] = useState<ReviewPrompt[]>([]);
   const [createdProjectName, setCreatedProjectName] = useState<string | null>(null);
-  const [createdProgress, setCreatedProgress] = useState<OnboardingProgress>({});
-
+  const hasSelectedDomain = domains.some((item) => item.selected);
+  const hasSelectedPrompt = prompts.some((item) => item.selected);
   const form = useForm<BrandStepValues>({
     resolver: zodResolver(brandStepSchema),
     defaultValues: emptyBrandStep,
   });
 
-  const discovery = useDiscovery(step >= 1 ? brand : null);
-  const websiteUrl = useWatch({ control: form.control, name: 'website_url' });
-  const derivedDomain = deriveDomain(websiteUrl);
-
+  const discovery = useBrandDiscovery(
+    step >= 1 && brand
+      ? {
+          brand_name: brand.brand_name.trim(),
+          website_url: normalizeWebsiteUrl(brand.website_url),
+          industry: brand.industry,
+          country_code: brand.country_code,
+          language_code: brand.language_code,
+        }
+      : null,
+  );
   // Seed the editable review lists once each section lands. Guarded on length
   // so re-renders never clobber the user's selections mid-review.
-  const { state: discoveryState } = discovery;
+  const discoveryState = discovery.discovery;
   useEffect(() => {
-    if (discoveryState.domains.status === 'done') {
+    if (discoveryState && ['ready', 'needs_input'].includes(discoveryState.status)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setDomains((prev) =>
         prev.length > 0
           ? prev
-          : discoveryState.domains.data.map((domain, index) => ({
+          : discoveryState.domains.map((domain, index) => ({
               id: `domain:${index}:${domain}`,
               domain,
               selected: true,
             })),
       );
-    }
-  }, [discoveryState.domains]);
-
-  useEffect(() => {
-    if (discoveryState.competitors.status === 'done') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
-      setCompetitors((prev) =>
-        prev.length > 0
-          ? prev
-          : discoveryState.competitors.data.map((competitor, index) => ({
-              ...competitor,
-              id: `competitor:${index}:${competitor.name}`,
-              selected: true,
-            })),
-      );
-    }
-  }, [discoveryState.competitors]);
-
-  useEffect(() => {
-    if (discoveryState.prompts.status === 'done') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
-      setPrompts((prev) =>
-        prev.length > 0
-          ? prev
-          : discoveryState.prompts.data.map((prompt, index) => ({
+      setPrompts((previous) =>
+        previous.length > 0
+          ? previous
+          : discoveryState.prompt_suggestions.map((prompt, index) => ({
               ...prompt,
               id: `prompt:${index}:${prompt.text}`,
               selected: true,
             })),
       );
     }
-  }, [discoveryState.prompts]);
+  }, [discoveryState]);
+
+  useEffect(() => {
+    if (discoveryState && ['ready', 'needs_input'].includes(discoveryState.status)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
+      setCompetitors((prev) =>
+        prev.length > 0
+          ? prev
+          : discoveryState.competitors.map((competitor, index) => ({
+              ...competitor,
+              id: `competitor:${index}:${competitor.name}`,
+              selected: true,
+            })),
+      );
+    }
+  }, [discoveryState]);
 
   // Survives a failed confirm so "Create project" retries the writes that failed
   // instead of creating a second project. Cleared only when the brand changes
   // (see submitBrand) — that is a different project, not a retry.
   const confirm = useMutation({
-    mutationFn: () => {
-      if (!brand) throw new Error('Brand details are missing.');
-      return createProjectFromOnboarding({
-        brand,
-        competitors,
-        domains,
-        prompts,
-        progress: createdProgress,
-      });
+    mutationFn: async () => {
+      if (!brand || !discovery.discovery) throw new Error('Discovery details are missing.');
+      const confirmed = await brandDiscoveriesApi.confirm(
+        discovery.discovery.id,
+        {
+          profile: discovery.discovery.profile,
+          domains: domains.filter((item) => item.selected).map((item) => item.domain),
+          competitors: competitors
+            .filter((item) => item.selected && item.name.trim())
+            .map((item) => ({
+              name: item.name.trim(),
+              aliases: item.aliases,
+              domains: item.domains,
+            })),
+          topics: discovery.discovery.topics,
+          prompts: prompts
+            .filter((item) => item.selected)
+            .map(({ text, theme, intent, cohort }) => ({ text, theme, intent, cohort })),
+        },
+        `confirm:${discovery.discovery.id}`,
+      );
+      return brandDiscoveriesApi.createProject(
+        confirmed.id,
+        brand.brand_name.trim(),
+        `create-project:${confirmed.id}`,
+      );
     },
-    onSuccess: async (project) => {
-      setActiveProjectId(project.id);
+    onSuccess: async (result) => {
+      setActiveProjectId(result.project_id);
       // Logo hydration is best-effort and never blocks onboarding. The backend
       // checks its database cache before crawling; once it finishes, refresh
       // the project list so every shared BrandLogo instance updates together.
       void projectsApi
-        .refreshProjectLogos(project.id)
+        .refreshProjectLogos(result.project_id)
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
         .catch(() => undefined);
       // Refresh before showing the completion screen, so the dashboard is ready
       // as soon as the user leaves onboarding.
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      setCreatedProjectName(project.name);
+      setCreatedProjectName(brand?.brand_name ?? null);
       setStep(3);
     },
   });
@@ -187,18 +201,13 @@ export function OnboardingScreen() {
     // Correcting the brand starts a NEW discovery run, so the review lists must
     // be emptied first: the seeding effects bail out when `prev.length > 0` and
     // would otherwise leave the previous brand's results standing in front of
-    // the new ones. Keyed on the same brand_name|website_url pair useDiscovery
-    // re-fires on — Back → Continue with the values unchanged re-runs nothing,
+    // the new ones. Back → Continue with unchanged values re-runs nothing,
     // so clearing there would blank the review step for good.
-    const rediscovers =
-      brand !== null &&
-      (brand.brand_name !== values.brand_name || brand.website_url !== values.website_url);
+    const rediscovers = brand !== null && JSON.stringify(brand) !== JSON.stringify(values);
     if (rediscovers) {
       setDomains([]);
       setCompetitors([]);
       setPrompts([]);
-      // A different brand is a fresh creation, not a retry of the last confirm.
-      setCreatedProgress({});
     }
     setBrand(values);
     setStep(1);
@@ -212,6 +221,13 @@ export function OnboardingScreen() {
         ),
     [],
   );
+
+  let discoveryStatus = 'Evidence capture is ready for review.';
+  if (discovery.isRunning) {
+    discoveryStatus = `Working through ${discovery.discovery?.stage ?? 'the discovery queue'}…`;
+  } else if (discovery.discovery?.status === 'needs_input') {
+    discoveryStatus = 'Review needed — we kept everything editable.';
+  }
 
   return (
     // The viewport-height flex chain (min-h-dvh col → flex-1 overflow-y stage →
@@ -320,110 +336,84 @@ export function OnboardingScreen() {
                     {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
                   </h1>
                   <p className="text-muted text-sm">
-                    We&apos;ll discover your domains, competitors and starting prompts from this.
+                    We&apos;ll crawl your website to discover your brand, competitors, and starting
+                    prompts.
                   </p>
                 </div>
 
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
-                  {/* Identity column: the two fields the discovery keys on. */}
-                  <div className="grid gap-5">
-                    <Field
-                      label="Brand name"
-                      required
-                      error={form.formState.errors.brand_name?.message}
-                    >
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('brand_name')}
-                          placeholder="Acme"
-                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-panel"
-                        />
-                      )}
-                    </Field>
-
-                    <Field
-                      label="Website"
-                      required
-                      error={form.formState.errors.website_url?.message}
-                      hint={derivedDomain ? `We'll track ${derivedDomain}` : undefined}
-                    >
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('website_url')}
-                          placeholder="acme.com"
-                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-panel"
-                        />
-                      )}
-                    </Field>
-                  </div>
-
-                  {/* Context column: the readonly summary tile fills what was
-                      dead air next to the two inputs; the subtle slate keeps it
-                      clearly non-interactive while balancing the height. */}
-                  <div className="border-border-subtle bg-background/80 rounded-xl border px-5 py-5">
-                    <p className="text-2xs text-muted font-bold uppercase">
-                      Here&apos;s what we&apos;ll set up
-                    </p>
-                    <ul className="mt-3 grid gap-2">
-                      {[
-                        'Crawl your site to discover owned domains',
-                        'Identify the competitors AI engines compare you to',
-                        'Generate starting buyer prompts to track',
-                      ].map((item) => (
-                        <li key={item} className="text-secondary flex items-start gap-2 text-sm">
-                          <Check
-                            className="text-accent-text mt-0.5 size-4 shrink-0"
-                            strokeWidth={2.5}
-                            aria-hidden
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label="Brand name"
+                    required
+                    error={form.formState.errors.brand_name?.message}
+                  >
+                    {(props) => (
+                      <Input {...props} {...form.register('brand_name')} placeholder="Acme" />
+                    )}
+                  </Field>
+                  <Field
+                    label="Website"
+                    required
+                    error={form.formState.errors.website_url?.message}
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        {...form.register('website_url')}
+                        placeholder="acme.com"
+                        inputMode="url"
+                      />
+                    )}
+                  </Field>
+                  <Field
+                    label="Industry"
+                    hint="Optional — helps disambiguate similar names"
+                    error={form.formState.errors.industry?.message}
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        {...form.register('industry')}
+                        placeholder="Marketing analytics"
+                      />
+                    )}
+                  </Field>
+                  <Field label="Country" error={form.formState.errors.country_code?.message}>
+                    {(props) => (
+                      <Controller
+                        control={form.control}
+                        name="country_code"
+                        render={({ field }) => (
+                          <MarketSelect
+                            {...props}
+                            ariaLabel="Country"
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            options={COUNTRY_OPTIONS}
                           />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Market row spans back under both columns so the card reads
-                      wide instead of leaving a lone field pair beside the tile. */}
-                  <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2">
-                    <Field label="Country" error={form.formState.errors.country_code?.message}>
-                      {(props) => (
-                        <Controller
-                          control={form.control}
-                          name="country_code"
-                          render={({ field }) => (
-                            <MarketSelect
-                              {...props}
-                              ariaLabel="Country"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              options={COUNTRY_OPTIONS}
-                            />
-                          )}
-                        />
-                      )}
-                    </Field>
-                    <Field label="Language" error={form.formState.errors.language_code?.message}>
-                      {(props) => (
-                        <Controller
-                          control={form.control}
-                          name="language_code"
-                          render={({ field }) => (
-                            <MarketSelect
-                              {...props}
-                              ariaLabel="Language"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              options={LANGUAGE_OPTIONS}
-                            />
-                          )}
-                        />
-                      )}
-                    </Field>
-                  </div>
+                        )}
+                      />
+                    )}
+                  </Field>
+                  <Field label="Language" error={form.formState.errors.language_code?.message}>
+                    {(props) => (
+                      <Controller
+                        control={form.control}
+                        name="language_code"
+                        render={({ field }) => (
+                          <MarketSelect
+                            {...props}
+                            ariaLabel="Language"
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            options={LANGUAGE_OPTIONS}
+                          />
+                        )}
+                      />
+                    )}
+                  </Field>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -447,23 +437,61 @@ export function OnboardingScreen() {
                   Finding what to track
                 </h1>
                 <p className="text-muted text-sm">
-                  Three searches run in parallel for {brand?.brand_name || 'your brand'}.
+                  We&apos;re crawling the official site, verifying competitors, and generating
+                  evidence-grounded prompts for {brand?.brand_name || 'your brand'}.
                 </p>
               </div>
 
-              <DiscoveryProgress state={discovery.state} onRetry={discovery.retry} />
+              <div className="border-border-subtle bg-background/80 grid gap-2 rounded-xl border p-5">
+                <output className="text-foreground text-sm font-semibold">{discoveryStatus}</output>
+                <p className="text-muted text-xs">
+                  {discovery.discovery?.evidence.length ?? 0} evidence captures ·{' '}
+                  {discovery.discovery?.competitors.length ?? 0} verified competitors
+                </p>
+              </div>
 
-              {discovery.agentUnconfigured ? (
+              {discovery.discovery?.status === 'needs_input' ? (
                 <Alert tone="warning">
-                  AI discovery is unavailable. You can continue and add competitors and prompts
-                  yourself.
+                  <div className="flex items-center justify-between gap-3">
+                    <span>
+                      We could not verify: {discovery.discovery.gaps.join(', ')}. Retry discovery or
+                      review the verified results we did find.
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={discovery.retry}
+                      disabled={discovery.isRunning}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                </Alert>
+              ) : null}
+              {discovery.error ? (
+                <Alert tone="danger">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{onboardingErrorMessage(discovery.error)}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={discovery.retry}
+                      disabled={discovery.isRunning}
+                    >
+                      Retry
+                    </Button>
+                  </div>
                 </Alert>
               ) : null}
 
               <div className="flex items-center gap-3">
                 <Button
                   onClick={() => setStep(2)}
-                  disabled={discovery.isRunning}
+                  disabled={
+                    discovery.isRunning ||
+                    !discovery.discovery ||
+                    discovery.discovery.prompt_suggestions.length === 0
+                  }
                   className="font-semibold"
                 >
                   {discovery.isRunning ? 'Searching…' : 'Review'}
@@ -504,6 +532,7 @@ export function OnboardingScreen() {
                     {
                       id: `competitor:manual:${manualCompetitorId()}`,
                       name: '',
+                      aliases: [],
                       domains: [],
                       selected: true,
                     },
@@ -511,14 +540,28 @@ export function OnboardingScreen() {
                 }
               />
 
+              {discovery.discovery?.profile.description ? (
+                <div className="border-border-subtle bg-background/70 rounded-xl border p-4">
+                  <p className="text-2xs text-muted font-bold uppercase">Discovered profile</p>
+                  <p className="text-secondary mt-2 text-sm leading-relaxed">
+                    {discovery.discovery.profile.description}
+                  </p>
+                </div>
+              ) : null}
+
               {confirm.isError ? (
                 <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
+              ) : null}
+              {!hasSelectedDomain || !hasSelectedPrompt ? (
+                <Alert tone="warning">
+                  Keep at least one owned domain and one starting prompt selected.
+                </Alert>
               ) : null}
 
               <div className="flex items-center gap-3 pt-2">
                 <Button
                   onClick={() => confirm.mutate()}
-                  disabled={confirm.isPending}
+                  disabled={confirm.isPending || !hasSelectedDomain || !hasSelectedPrompt}
                   className="font-semibold"
                 >
                   {confirm.isPending ? 'Creating…' : 'Create project'}

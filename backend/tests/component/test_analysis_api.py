@@ -44,7 +44,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_GEMINI,
     TRANSPORT_GOOGLE,
-    default_model,
+    measurement_route,
 )
 from app.domain.analysis import service as analysis_service
 from app.domain.analysis.schemas import VisibilityFanoutState
@@ -81,7 +81,7 @@ from tests.component.audit_helpers import seed_audit_fixtures
 # than pinned as a literal: these assertions are about provenance travelling
 # intact from the frozen route to the projection, not about which Gemini build
 # is current, and a literal here goes stale on every model-version bump.
-GEMINI_MODEL = default_model(ENGINE_GEMINI, TRANSPORT_GOOGLE)
+GEMINI_MODEL = measurement_route(ENGINE_GEMINI, "pulse").transport_model
 
 
 def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
@@ -130,8 +130,12 @@ class _StubAdapter:
                 f"Acme Corp is a great option for {request.prompt}. "
                 "Globex is an alternative."
             ),
-            search_used=True,
-            search_events=(SearchEventResult(sequence=0, query=request.prompt),),
+            search_used=request.retrieval_enabled,
+            search_events=(
+                (SearchEventResult(sequence=0, query=request.prompt),)
+                if request.retrieval_enabled
+                else ()
+            ),
             citations=(
                 CitationResult(
                     ordinal=0,
@@ -172,6 +176,8 @@ def _stub_adapter(monkeypatch: pytest.MonkeyPatch):
 
 async def _run_completed_audit(
     session_factory: async_sessionmaker[AsyncSession],
+    *,
+    measurement_mode: str = MEASUREMENT_MODE_PULSE,
 ):
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=2)
@@ -185,10 +191,36 @@ async def _run_completed_audit(
             prompt_set_id=seed.prompt_set_id,
             repetitions=2,
             random_seed="1",
+            measurement_mode=measurement_mode,
         )
     worker = AuditWorker(session_factory=session_factory, owner="w-b6")
     await worker.run_until_idle()
     return seed, audit
+
+
+@pytest.mark.asyncio
+async def test_benchmark_fixture_persists_grounded_search_evidence(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+) -> None:
+    _seed, audit = await _run_completed_audit(
+        session_factory, measurement_mode=MEASUREMENT_MODE_BENCHMARK
+    )
+
+    async with session_factory() as session:
+        artifacts = list(
+            (
+                await session.scalars(
+                    select(RawResponseArtifact).where(
+                        RawResponseArtifact.audit_id == audit.id
+                    )
+                )
+            ).all()
+        )
+
+    assert artifacts
+    assert all(artifact.search_used is True for artifact in artifacts)
+    assert all(artifact.search_events for artifact in artifacts)
 
 
 @pytest.mark.asyncio
@@ -238,14 +270,13 @@ async def test_metrics_and_visibility_are_projections(
         assert vis.per_engine[0].logical_engine == ENGINE_GEMINI
         # Measurement provenance (invariants 4/7): the frozen mode column and
         # the stable aggregate model-provenance list — retrieval comes from
-        # the frozen policy block (benchmark froze retrieval ON).
-        assert vis.measurement_mode == MEASUREMENT_MODE_BENCHMARK
+        assert vis.measurement_mode == MEASUREMENT_MODE_PULSE
         assert [p.model_dump() for p in vis.model_provenance] == [
             {
                 "logical_engine": ENGINE_GEMINI,
                 "transport_provider": TRANSPORT_GOOGLE,
                 "transport_model": GEMINI_MODEL,
-                "retrieval_enabled": True,
+                "retrieval_enabled": False,
             }
         ]
         # Vocabulary lock: no ``mode`` alias is ever emitted.
@@ -338,8 +369,8 @@ async def test_execution_evidence_projection(
         # Execution-level provenance: the exact singular model plus the frozen
         # mode/retrieval state the call executed under (inv. 4/7, 10).
         assert evidence.transport_model == GEMINI_MODEL
-        assert evidence.measurement_mode == MEASUREMENT_MODE_BENCHMARK
-        assert evidence.retrieval_enabled is True
+        assert evidence.measurement_mode == MEASUREMENT_MODE_PULSE
+        assert evidence.retrieval_enabled is False
         assert "mode" not in evidence.model_dump()
         # Roadmap fields present but null.
         assert evidence.sentiment is None
@@ -456,18 +487,10 @@ async def test_snapshot_records_source_provenance(
 
 
 class _UsageStubAdapter(_StubAdapter):
-    """Like the base stub but reports a per-request token/cost usage block
-    nested under ``provider_metadata`` (as the real parsers do), so cost/token
-    aggregation has non-zero data to sum."""
+    """Like the base stub but reports canonical typed provider usage."""
 
     async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
         response = await super().execute(request)
-        usage = {
-            "total_input_tokens": 100,
-            "total_output_tokens": 50,
-            "total_tokens": 150,
-            "provider_cost_usd": 0.25,
-        }
         return AnswerEngineResponse(
             logical_engine=response.logical_engine,
             transport_provider=response.transport_provider,
@@ -476,10 +499,13 @@ class _UsageStubAdapter(_StubAdapter):
             search_used=response.search_used,
             search_events=response.search_events,
             citations=response.citations,
-            provider_metadata={
-                **dict(response.provider_metadata),
-                "usage": usage,
-            },
+            provider_metadata=dict(response.provider_metadata),
+            normalized_usage=NormalizedUsage(
+                uncached_input_tokens=100,
+                output_tokens=50,
+                total_tokens=150,
+                provider_cost_microusd=250_000,
+            ),
             latency_ms=response.latency_ms,
         )
 
@@ -491,8 +517,8 @@ async def test_aggregation_preserves_provider_usage(
 ) -> None:
     """Persisted provider usage flows into the aggregate (not dropped as zero).
 
-    Regression: the aggregate input was rebuilt with an empty
-    ``provider_metadata``, so token/cost metrics were always zero.
+    Regression: immutable artifact usage was dropped while rebuilding the
+    aggregate, so token/cost metrics were always zero.
     """
     monkeypatch.setattr(audit_worker, "build_adapter", lambda **_: _UsageStubAdapter())
     monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
@@ -512,7 +538,7 @@ async def test_aggregation_preserves_provider_usage(
 
         cost = metrics.metrics["cost"]
         # 4 executions * $0.25 provider-reported each — previously always zero
-        # because provider_metadata was dropped when rebuilding the aggregate.
+        # because artifact usage was dropped when rebuilding the aggregate.
         assert cost["provider_reported_cost_usd"] == pytest.approx(1.0)
 
 
@@ -1554,7 +1580,7 @@ async def test_evidence_projects_mentions_citations_and_queries(
     # Frozen measurement provenance (inv. 4/7): the frozen mode column, and
     # retrieval unrecorded when nothing froze it — never inferred from live
     # config. Vocabulary lock: no ``mode`` alias.
-    assert item.measurement_mode == MEASUREMENT_MODE_BENCHMARK
+    assert item.measurement_mode == MEASUREMENT_MODE_PULSE
     assert item.retrieval_enabled is None
     assert "mode" not in item.model_dump()
 

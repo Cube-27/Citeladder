@@ -30,12 +30,12 @@ documented in the architecture and roadmap references as they are designed and d
   scoping and no integer PKs**. Account billing alone uses `BillingAccount.owner_user_id`;
   `WorkspaceBillingLink` is its mandatory boundary into workspace capabilities.
 - **API prefix `/api/v1`** (the reference `/api/ai-visibility` prefix is dropped).
-- **Logical engines**: `chatgpt | gemini | claude` (what the user asked for). **Active
-  transports** (how we physically reach an engine) are **exactly** `openai | anthropic |
-  google`, one approved route per engine: `chatgpt → openai → gpt-5.4`, `claude → anthropic
-  → claude-sonnet-4-6`, `gemini → google → gemini-flash-latest`. ChatGPT runs through the
-  **direct OpenAI Responses API** (`backend/app/connectors/answer_engines/openai.py`). See
-  `backend/app/core/config/provider_catalog.py` (`ACTIVE_TRANSPORTS` / `APPROVED_ROUTES`).
+- **Logical engines**: `chatgpt | gemini | claude`; active transports are exactly `openai |
+  anthropic | google`. Routes are keyed by `(logical_engine, measurement_mode)` with no
+  aliases or fallback: Pulse uses `gpt-5.4-nano-2026-03-17`,
+  `claude-haiku-4-5-20251001`, and `gemini-3.5-flash-lite`; Benchmark uses `gpt-5.6-sol`,
+  `claude-sonnet-5`, and `gemini-3.6-flash`. ChatGPT uses the direct OpenAI Responses API.
+  See `backend/app/core/config/provider_catalog.py` (`MEASUREMENT_ROUTES`).
 - `benchmark_mode`: `consumer_like | controlled_localized | forced_grounded`.
 - Prompt `intent`: `discovery | comparison | purchase | service | local`.
 - Browser → backend is **same-origin** via Next.js `rewrites()` (`/api/:path*` → server-only
@@ -121,8 +121,9 @@ in-progress work that breaks the global build).
 uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
 uv run ruff check .
 
-# Migrations — 0001_initial is the frozen explicit production baseline.
-# Never edit it; schema changes require additive, reviewed revision files.
+# Migrations — Searchify is greenfield and keeps one explicit 0001_initial.
+# Fold schema changes into it, reset the disposable development DB, and verify
+# the complete baseline from scratch. Do not add 0002+ revisions pre-launch.
 # Verify both migration execution and ORM drift on a DISPOSABLE database.
 uv run alembic upgrade head   # migrations apply cleanly from scratch
 uv run alembic check          # no drift between the ORM models and head

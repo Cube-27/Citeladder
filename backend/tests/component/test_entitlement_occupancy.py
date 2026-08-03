@@ -297,6 +297,11 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
             json={"project_id": project["id"], "name": "Seed Set"},
         )
     ).json()["id"]
+    profile = await client.put(
+        f"/api/v1/projects/{project['id']}/brand-profile",
+        json={"products_services": ["running shoes"]},
+    )
+    assert profile.status_code == 200
     workspace_id = uuid.UUID(project["workspace_id"])
     async with session_factory() as session:
         await seed_occupancy_grants(
@@ -317,7 +322,12 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
                     {
                         "name": topic,
                         "prompts": [
-                            {"text": f"{topic} acme prompt {idx}", "intent": ""}
+                            {
+                                "text": (
+                                    f"{topic} running shoes for {chr(97 + idx) * 20}"
+                                ),
+                                "intent": "discovery",
+                            }
                             for idx in range(5)
                         ],
                     }

@@ -20,7 +20,7 @@ describe('EngineChip', () => {
   });
 
   it('pins the audited roster to exactly the three approved engines', () => {
-    // One approved transport per engine (provider_catalog.py APPROVED_ROUTES).
+    // One direct transport per engine across both measurement modes.
     expect(ENGINE_KEYS).toEqual(['openai', 'gemini', 'claude']);
   });
 });

@@ -109,6 +109,7 @@ async def get_visibility(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     audit_id: uuid.UUID | None = None,
+    cohort: str = "core",
 ) -> VisibilityResponse:
     """Serve the selected-run dashboard projection for a project.
 
@@ -137,7 +138,14 @@ async def get_visibility(
     snapshot = await _load_snapshot(
         session, workspace_id=workspace_id, audit_id=audit_id
     )
-    metrics = snapshot.metrics or {}
+    if cohort not in {"core", "comparison"}:
+        raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
+    stored_metrics = snapshot.metrics or {}
+    metrics = (
+        stored_metrics
+        if cohort == "core"
+        else dict(stored_metrics.get("comparison") or {})
+    )
     logo_urls, logo_identity_ids = await _project_logo_context(
         session, workspace_id=workspace_id, project_id=project_id
     )
@@ -148,9 +156,17 @@ async def get_visibility(
         audit_status=audit.status,
         analyzer_version=snapshot.analyzer_version,
         scoring_rule_version=snapshot.scoring_rule_version,
-        total_completed=snapshot.total_completed,
-        total_failed=snapshot.total_failed,
-        visibility_score=snapshot.visibility_score,
+        cohort=cohort,
+        coverage=dict(metrics.get("coverage") or {}),
+        total_completed=int(metrics.get("total_completed") or 0),
+        total_failed=max(
+            0,
+            int((metrics.get("coverage") or {}).get("requested") or 0)
+            - int(metrics.get("total_completed") or 0),
+        ),
+        visibility_score=round(
+            float(metrics.get("brand_mention_rate") or 0.0) * 100, 2
+        ),
         measurement_mode=provenance_mode,
         model_provenance=model_provenance,
         rankings=_rankings(
@@ -201,6 +217,7 @@ async def get_visibility_trends(
     measurement_mode: str | None = None,
     transport_model: str | None = None,
     retrieval_enabled: bool | None = None,
+    cohort: str = "core",
 ) -> list[VisibilityTrendPoint]:
     """Project the workspace-scoped cross-run Visibility trend (invariant 7).
 
@@ -239,10 +256,13 @@ async def get_visibility_trends(
         from_at=from_at,
         to_at=to_at,
     )
+    if cohort not in {"core", "comparison"}:
+        raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
     sources = [
         source
         for snapshot, audit in rows
-        if (source := _trend_source(snapshot, audit, logical_engine)) is not None
+        if (source := _trend_source(snapshot, audit, logical_engine, cohort))
+        is not None
     ]
     # An explicitly requested identity slice filters BEFORE any folding.
     sources = _slice_sources(
@@ -284,6 +304,7 @@ async def get_visibility_evidence(
     from_at: datetime | None = None,
     to_at: datetime | None = None,
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
+    cohort: str = "core",
 ) -> VisibilityEvidenceResponse:
     """Project the workspace-scoped execution evidence dataset (invariant 7).
 
@@ -301,6 +322,8 @@ async def get_visibility_evidence(
     _validate_engine_and_range(
         logical_engine=logical_engine, from_at=from_at, to_at=to_at
     )
+    if cohort not in {"core", "comparison"}:
+        raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
     if limit < 1 or limit > VISIBILITY_EVIDENCE_MAX_LIMIT:
         raise TrendQueryError(
             f"'limit' must be between 1 and {VISIBILITY_EVIDENCE_MAX_LIMIT}"
@@ -357,6 +380,7 @@ async def get_visibility_evidence(
         stmt = stmt.where(AuditPromptSnapshot.prompt_id == prompt_id)
     if logical_engine is not None:
         stmt = stmt.where(ResponseAnalysis.logical_engine == logical_engine)
+    stmt = stmt.where(ResponseAnalysis.cohort == cohort)
     if from_at is not None:
         stmt = stmt.where(Audit.completed_at >= from_at)
     if to_at is not None:
@@ -462,6 +486,7 @@ async def get_execution_evidence(
         prompt_index=analysis.prompt_index,
         repetition=analysis.repetition,
         prompt_class=analysis.prompt_class,
+        cohort=analysis.cohort,
         brand_mentioned=analysis.brand_mentioned,
         brand_first_offset=analysis.brand_first_offset,
         owned_domain_cited=analysis.owned_domain_cited,
@@ -1041,6 +1066,7 @@ def _trend_source(
     snapshot: MetricSnapshot,
     audit: Audit,
     logical_engine: str | None,
+    cohort: str = "core",
 ) -> _TrendSource | None:
     """Project one snapshot into a trend source, or ``None`` to skip it.
 
@@ -1050,7 +1076,12 @@ def _trend_source(
     frozen audit fields: the mode column, the frozen policy block (retrieval),
     and the frozen engine snapshots (models) — never from live config.
     """
-    metrics = snapshot.metrics or {}
+    stored_metrics = snapshot.metrics or {}
+    metrics = (
+        stored_metrics
+        if cohort == "core"
+        else dict(stored_metrics.get("comparison") or {})
+    )
     completed_at = audit.completed_at
     if completed_at is None:
         # Unreachable via the loader (it filters completed_at IS NOT NULL);
@@ -1060,7 +1091,8 @@ def _trend_source(
     visibility_score: float | None
     if logical_engine is None:
         engine_metrics = metrics
-        visibility_score = snapshot.visibility_score
+        rate = metrics.get("brand_mention_rate")
+        visibility_score = round(float(rate) * 100, 2) if rate is not None else None
     else:
         per_engine = metrics.get("per_engine") or {}
         engine_metrics = per_engine.get(logical_engine)

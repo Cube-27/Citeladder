@@ -54,7 +54,6 @@ LogicalEngine = Literal["chatgpt", "gemini", "claude"]
 
 class ProviderRouteInput(BaseModel):
     logical_engine: LogicalEngine
-    transport_model: str = Field(default="", max_length=255)
     is_default: bool = False
 
 
@@ -126,8 +125,11 @@ class ProviderConnectionTestResponse(BaseModel):
 
 
 class ProviderCatalogRoute(BaseModel):
+    measurement_mode: Literal["pulse", "benchmark"]
     transport_provider: str
-    default_model: str
+    transport_model: str
+    retrieval_enabled: bool
+    reasoning_effort: str
 
 
 class ProviderCatalogEngine(BaseModel):

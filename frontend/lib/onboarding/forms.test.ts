@@ -6,7 +6,6 @@ import {
   normalizeIntent,
   normalizeWebsiteUrl,
   onboardingErrorMessage,
-  onboardingToProjectInput,
   type BrandStepValues,
 } from './forms';
 
@@ -15,6 +14,7 @@ const brand: BrandStepValues = {
   website_url: 'acme.com',
   country_code: 'us',
   language_code: 'en',
+  industry: 'Analytics',
 };
 
 describe('normalizeWebsiteUrl', () => {
@@ -41,6 +41,7 @@ describe('deriveDomain', () => {
   it('returns empty for input that cannot parse', () => {
     expect(deriveDomain('')).toBe('');
     expect(deriveDomain('   ')).toBe('');
+    expect(deriveDomain('ftp://acme.com')).toBe('');
   });
 });
 
@@ -54,6 +55,15 @@ describe('brandStepSchema', () => {
 
   it('rejects a website with no dot', () => {
     expect(brandStepSchema.safeParse({ ...brand, website_url: 'acme' }).success).toBe(false);
+  });
+
+  it('rejects non-HTTP website schemes', () => {
+    expect(brandStepSchema.safeParse({ ...brand, website_url: 'ftp://acme.com' }).success).toBe(
+      false,
+    );
+    expect(brandStepSchema.safeParse({ ...brand, website_url: 'file://acme.com' }).success).toBe(
+      false,
+    );
   });
 
   it('requires a brand name', () => {
@@ -72,37 +82,6 @@ describe('normalizeIntent', () => {
     // enum, so an unknown value must not reach the API.
     expect(normalizeIntent('vibes')).toBe('');
     expect(normalizeIntent('')).toBe('');
-  });
-});
-
-describe('onboardingToProjectInput', () => {
-  it('maps only selected competitors and domains, trimming as it goes', () => {
-    const input = onboardingToProjectInput(
-      brand,
-      [
-        { id: 'globex', name: ' Globex ', domains: ['globex.com'], selected: true },
-        { id: 'initech', name: 'Initech', domains: [], selected: false },
-      ],
-      [
-        { id: 'acme-com', domain: 'acme.com', selected: true },
-        { id: 'acme-dev', domain: 'acme.dev', selected: false },
-      ],
-    );
-
-    expect(input.brand_name).toBe('Acme');
-    expect(input.name).toBe('Acme');
-    expect(input.website_url).toBe('https://acme.com');
-    expect(input.country_code).toBe('US');
-    expect(input.owned_domains).toEqual(['acme.com']);
-    expect(input.competitors).toEqual([{ name: 'Globex', aliases: [], domains: ['globex.com'] }]);
-  });
-
-  it('sends the defaults onboarding never asks about', () => {
-    const input = onboardingToProjectInput(brand, [], []);
-    expect(input.benchmark_mode).toBe('consumer_like');
-    expect(input.default_repetitions).toBe(1);
-    expect(input.brand).toEqual({ aliases: [] });
-    expect(input.unintended_domains).toEqual([]);
   });
 });
 

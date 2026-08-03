@@ -23,6 +23,7 @@ describe('form mapping', () => {
       text: 'Best shoes?',
       theme: '',
       intent: 'purchase',
+      cohort: 'comparison',
       branded: true,
       enabled: false,
       origin: 'manual',
@@ -32,7 +33,7 @@ describe('form mapping', () => {
       text: 'Best shoes?',
       theme: '',
       intent: 'purchase',
-      branded: true,
+      cohort: 'comparison',
       enabled: false,
     });
   });
@@ -45,14 +46,14 @@ describe('form mapping', () => {
         text: '  Best shoes?  ',
         theme: '   ',
         intent: 'discovery',
-        branded: false,
+        cohort: 'core',
         enabled: true,
       }),
     ).toEqual({
       text: 'Best shoes?',
       theme: '',
       intent: 'discovery',
-      branded: false,
+      cohort: 'core',
       enabled: true,
     });
   });

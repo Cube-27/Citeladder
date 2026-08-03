@@ -307,9 +307,8 @@ def serialize_brand_evidence(pages: list[BrandEvidencePage]) -> str:
 def evidence_block_lines(website_evidence: str, instruction: str) -> list[str]:
     """The serialized evidence block plus its grounding instruction, or [].
 
-    Shared by the two message builders that carry evidence (prompt generation
-    and the stateless setup-form suggestions) so the block is always emitted
-    the same way: as its own top-level section, never nested inside the
+    Shared by message builders that carry persisted evidence so the block is
+    always emitted the same way: as its own top-level section, never nested inside the
     knowledge JSON (where it would be an unreadable escaped string), and always
     paired with an instruction naming it as the primary source.
     """

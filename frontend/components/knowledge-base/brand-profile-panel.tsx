@@ -16,7 +16,7 @@ import {
 } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { BrandProfile, BrandProfileDraft, BrandProfileSuggestion } from '@/lib/api/types';
-import { setupErrorMessage } from '@/lib/setup/forms';
+import { formErrorMessage } from '@/lib/forms/error-message';
 
 import { GenerateBrandDialog } from './generate-brand-dialog';
 
@@ -138,8 +138,6 @@ export function BrandProfilePanel({
     },
   });
 
-  // Suggestions are review-only transient state; no server query is replaced.
-  // react-doctor-disable-next-line
   const suggestMutation = useMutation({
     mutationFn: () => projectsApi.suggestBrandProfile(projectId),
     onSuccess: (next) => {
@@ -202,7 +200,7 @@ export function BrandProfilePanel({
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="grid gap-1">
           <CardEyebrow>Brand profile</CardEyebrow>
-          <CardTitle id="brand-knowledge-title">Facts &amp; positioning</CardTitle>
+          <CardTitle id="brand-knowledge-title">Facts & positioning</CardTitle>
           <p className="text-secondary text-sm">
             Curated positioning and audience context used by competitor and prompt generation.
           </p>
@@ -217,7 +215,7 @@ export function BrandProfilePanel({
         </Button>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {pendingError ? <Alert tone="danger">{setupErrorMessage(pendingError)}</Alert> : null}
+        {pendingError ? <Alert tone="danger">{formErrorMessage(pendingError)}</Alert> : null}
         {notice ? <Alert tone="success">{notice}</Alert> : null}
         {suggestion ? (
           <Alert tone="info">
@@ -226,9 +224,7 @@ export function BrandProfilePanel({
           </Alert>
         ) : null}
 
-        {/* Two columns from lg. Four stacked textareas in one rail meant
-            scrolling to see fields that comfortably fit side by side once the
-            screen stopped being a narrow centred column. */}
+        {/* Editable profile fields */}
         <div className="grid gap-4 lg:grid-cols-2">
           <Field label="Description" hint="Core mission, value proposition, and brand summary.">
             {(field) => (

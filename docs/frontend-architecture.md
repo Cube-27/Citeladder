@@ -61,7 +61,7 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 | Brand/project setup (aliases, domains, competitors, benchmark_mode) | ✅ | full `/brand` suite, competitor profiles, E-E-A-T |
 | Curated Brand Knowledge editor and review-first AI drafting on persisted projects | ✅ (`/knowledge-base`) | broader writing suite, memory |
 | Prompts: manual entry + CSV import + AI-generated topics/prompts (proposed → accept/archive review) | ✅ | |
-| BYOK providers + connection test (direct OpenAI/Anthropic/Google, one route per engine) | ✅ | |
+| BYOK providers + connection test (direct OpenAI/Anthropic/Google, exact Pulse + Benchmark routes) | ✅ | |
 | Launch audit (multi-engine, repetitions) + cancel | ✅ | recurring schedules |
 | Visibility workspace | four tabs — Overview (selected-run score + per-engine + rankings), Trends (cross-run), Mentions & Citations + Query Fanout (persisted evidence) | Sources / Topics / Sentiment tabs (**not built**) |
 | Sentiment + avg-position columns | render `—` placeholder | computed |
@@ -74,11 +74,11 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 |---|---|---|
 | Shell + auth | `(auth)/*`, `(app)/layout.tsx`, `session-guard.tsx`, `app-shell`, `sidebar-nav`, `top-bar`, `project-switcher`, `components/auth/oauth-buttons.tsx`, `components/ui/logo-cube.tsx` | Session, guard, nav, project context, OAuth buttons (coming-soon), brand cube |
 | API contract layer | `lib/api/{client,errors,query-client,query-keys,schemas,types,index}.ts` + per-domain modules | Transport, zod contracts, retry policy |
-| Onboarding | `/onboarding` + `lib/api/projects.ts`, `lib/api/prompts.ts` | Project create (brand, discovered domains/competitors/prompts); backend best-effort queues the Free Site Health crawl |
+| Onboarding | `/onboarding` + `lib/api/brand-discoveries.ts` | Brand name + official website (required), optional industry/country/language hints, persisted crawl/search/synthesis, evidence review, and atomic project creation |
 | Projects | `/projects` + `components/projects/dashboard-screen.tsx` + `lib/api/projects.ts` | Active-project Dashboard, persisted PDF download, list/switch projects, add another |
 | Product tour | `components/tour/product-tour-provider.tsx` + `lib/api/workspaces.ts` | Versioned, workspace-member progress; route resume, Skip/Done, reduced-motion handling, and user-menu replay |
 | Prompts | `/prompts` (Your Prompts) + `/prompt-research` + `lib/api/prompts.ts` + `lib/api/topics.ts` | Your Prompts: topic-grouped read-only view with evidence-derived visibility scores. Prompt Research: prompt CRUD, CSV import, topic rail (create/delete/filter), AI generation dialog (consent-gated), proposed/active/archived status tabs with accept/archive actions |
-| Providers | `/providers` + `lib/api/providers.ts` | BYOK cards, connection test. One **direct** transport per engine (ChatGPT/OpenAI, Gemini/Google, Claude/Anthropic) — the old route toggle and the reserved "Direct OpenAI — coming soon" option are removed. |
+| Providers | `/providers` + `lib/api/providers.ts` | BYOK cards and connection test. Model identity is catalog-owned; the UI displays exact Pulse and Benchmark routes and never selects or aliases models. |
 | Billing | Settings Billing + `lib/api/billing.ts` + `lib/billing/entitlement-context.tsx` | Strict catalog/account/entitlement contracts, persisted country selection, Razorpay hosted checkout, webhook-confirmation state, cancellation, and fail-closed workspace capability context. |
 | Visibility | `/visibility` + `lib/api/visibility.ts` | Four-tab workspace with a shared filter bar (§7) |
 | Runs / executions | `/runs/*` + `lib/api/runs.ts` | Launch, progress, cancel, evidence, export |
@@ -107,7 +107,8 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
     `POST /billing/webhooks/razorpay` (server-only). Legacy routes
     (`/billing/me|profile|checkout|manage|cancel`, `/workspaces/{id}/entitlements`)
     are deleted and return 404.
-  - Setup → `/projects` (+ `/projects/{id}`), `GET/PUT /projects/{id}/brand-profile`,
+  - Onboarding → `/brand-discovery-catalog`, `/brand-discoveries` create/read/confirm/create-project; profile gaps remain editable `needs_input`.
+  - Projects → `/projects` (+ `/projects/{id}`), `GET/PUT /projects/{id}/brand-profile`,
     `POST /projects/{id}/brand-profile/suggest`, and explicit suggestion acceptance
   - Prompts → `/prompt-sets`, `/prompts/{id}`, `/prompt-sets/{id}/import` (CSV),
     `/prompt-sets/{id}/generate` (AI generation), `/prompt-sets/{id}/prompts/bulk-status`
@@ -116,7 +117,7 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
   - Visibility → `GET /projects/{id}/visibility?audit_id=` (Overview),
     `GET /projects/{id}/visibility/trends` (Trends),
     `GET /projects/{id}/visibility/evidence` (Mentions & Citations + Query Fanout, shared)
-  - Runs → `POST /audits`, `GET /audits`, `GET /audits/{id}`, `POST /audits/{id}/cancel`,
+  - Runs → `POST /audits/estimate`, `POST /audits`, `GET /audits`, `GET /audits/{id}`, `GET /audits/{id}/performance`, `POST /audits/{id}/cancel`,
     `GET /audits/{id}/executions`, `GET /executions/{id}`, `GET /audits/{id}/export.{csv,md}`,
     `GET /audits/{id}/events` (SSE, optional)
   - Content → `GET/POST /content/generations`, `GET /content/generations/{id}`,
@@ -161,6 +162,7 @@ hidden controls keep their state):
 |---|---|
 | Selected run (`audit_id`) | Overview + both evidence tabs |
 | Logical engine | all four tabs |
+| Cohort (`core|comparison`) | all four tabs; defaults to core |
 | Prompt | both evidence tabs |
 | Date range (`from`/`to`) | Trends + both evidence tabs |
 | Granularity (`run\|week\|month`) | Trends only |

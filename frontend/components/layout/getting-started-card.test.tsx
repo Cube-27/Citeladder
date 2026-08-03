@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { Project } from '@/lib/api/types';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -50,24 +51,7 @@ const connection = {
   updated_at: '2026-07-18T08:00:00Z',
 };
 
-// Served to the connect dialog that step 3 opens (v2 direct routes).
-const catalog = {
-  transports: ['openai', 'anthropic', 'google'],
-  engines: [
-    {
-      logical_engine: 'chatgpt',
-      routes: [{ transport_provider: 'openai', default_model: 'gpt-5.4' }],
-    },
-    {
-      logical_engine: 'gemini',
-      routes: [{ transport_provider: 'google', default_model: 'gemini-flash-latest' }],
-    },
-    {
-      logical_engine: 'claude',
-      routes: [{ transport_provider: 'anthropic', default_model: 'claude-sonnet-4-6' }],
-    },
-  ],
-};
+const catalog = providerCatalogFixture;
 
 const audit = {
   id: '66666666-6666-4666-8666-666666666666',

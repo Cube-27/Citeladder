@@ -499,19 +499,16 @@ theme toggle top-right. The pages own the single h1.
 ### 11.3 Onboarding (`/onboarding`) — Figma-styled, AI auto-discovery (OnboardingScreen.tsx)
 
 First-run route group **without** the app shell (SessionGuard + ProjectProvider; the layout
-redirects to `/projects` when projects exist). **Full-screen split**: left panel = logo
-header + sign-out, a top progress stepper, the step form, and a footer pager (Back/Continue
-
-- "Step N of M"); right panel = a **live preview** that summarizes the brand, then populates
-  discovered competitors/domains/prompts as they arrive, then mirrors the review selection.
-  Flow: **Brand** (name + website URL + derived-domain preview + explicit AI consent
-  checkbox) → **Discovery** (competitor + owned-domain + prompt suggestions fire in parallel;
-  animated staged progress; per-section status + retry) → **Review** (pre-filled **editable**
-  competitor rows, domain chips, prompt rows with theme/intent; market defaults US/en with
-  inline change) → **Finish** (create project + prompt set + prompts, refetch the projects query,
-  then confirm that the Free Site Health crawl is queued before the user opens `/projects`). When
-  the agent is unconfigured (503) the flow degrades
-  to a manual-entry fallback with an inline notice — onboarding never requires the agent.
+redirects to `/projects` when projects exist). A slim header carries the compact four-step
+progress indicator above a centered card. Flow: **Brand** (only brand name + official website
+are required; industry, country, and language are optional market hints) → **Discovery**
+(SSRF-safe crawl of the supplied official site, Firecrawl rendered evidence and competitor
+search, then one evidence-grounded profile/topic/prompt synthesis) → **Review** (editable,
+selectable owned domains, verified competitors with aliases, and generated prompts) →
+**Finish** (one idempotent confirmation/project-creation chain). Business type, products,
+audience, positioning, price tier, and free-form context are never onboarding questions; they
+are derived from first-party evidence. The supplied website is always the primary identity
+anchor and is never replaced by an LLM-guessed domain.
 
 ### 11.4 Active-project Dashboard and product tour (`/projects`)
 

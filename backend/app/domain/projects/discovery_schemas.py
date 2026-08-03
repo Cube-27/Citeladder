@@ -1,0 +1,124 @@
+"""Typed contracts for persisted onboarding discovery."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import Annotated, Literal, get_args
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.config.brand_discovery import (
+    DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS,
+    DISCOVERY_CONFIRM_MAX_DOMAINS,
+    DISCOVERY_CONFIRM_MAX_TOPICS,
+    DISCOVERY_CONFIRM_TOPIC_MAX_CHARS,
+    PRICE_TIERS,
+)
+from app.domain.projects.schemas import CompetitorInput
+
+ConfirmedDomain = Annotated[
+    str, Field(min_length=1, max_length=DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS)
+]
+ConfirmedTopic = Annotated[
+    str, Field(min_length=1, max_length=DISCOVERY_CONFIRM_TOPIC_MAX_CHARS)
+]
+PriceTier = Literal["budget", "mid_market", "premium", "luxury", "unknown"]
+assert set(get_args(PriceTier)) == set(PRICE_TIERS)
+
+
+class BrandDiscoveryCreate(BaseModel):
+    brand_name: str = Field(min_length=1, max_length=255)
+    website_url: str = Field(min_length=1, max_length=1024)
+    industry: str = Field(default="", max_length=255)
+    country_code: str = Field(default="", max_length=8)
+    language_code: str = Field(default="en", max_length=16)
+
+
+class DiscoveryEvidence(BaseModel):
+    source_url: str
+    capture_method: str
+    confidence: float = Field(ge=0, le=1)
+    captured_at: datetime
+    supports: list[str] = Field(default_factory=list)
+
+
+class DiscoveryProfile(BaseModel):
+    description: str = ""
+    positioning: str = ""
+    products_services: list[str] = Field(default_factory=list)
+    target_audience: str = ""
+    industry: str = ""
+    business_type: Literal["b2b", "b2c", "both"] = "both"
+    price_tier: PriceTier = "unknown"
+
+
+class DiscoveryPromptSuggestion(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    theme: str = Field(default="", max_length=255)
+    intent: Literal["discovery", "comparison", "purchase", "service", "local"]
+    cohort: Literal["core", "comparison"]
+
+
+class DiscoverySynthesis(BaseModel):
+    profile: DiscoveryProfile
+    competitors: list[CompetitorInput] = Field(default_factory=list, max_length=20)
+    topics: list[ConfirmedTopic] = Field(
+        min_length=1, max_length=DISCOVERY_CONFIRM_MAX_TOPICS
+    )
+    prompts: list[DiscoveryPromptSuggestion] = Field(min_length=1, max_length=50)
+
+
+class DiscoveryCompetitorCandidates(BaseModel):
+    competitors: list[CompetitorInput] = Field(default_factory=list, max_length=20)
+
+
+class BrandDiscoveryConfirm(BaseModel):
+    profile: DiscoveryProfile
+    domains: list[ConfirmedDomain] = Field(
+        min_length=1, max_length=DISCOVERY_CONFIRM_MAX_DOMAINS
+    )
+    competitors: list[CompetitorInput] = Field(default_factory=list)
+    topics: list[ConfirmedTopic] = Field(
+        default_factory=list, max_length=DISCOVERY_CONFIRM_MAX_TOPICS
+    )
+    prompts: list[DiscoveryPromptSuggestion] = Field(min_length=1, max_length=50)
+
+
+class BrandDiscoveryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    workspace_id: uuid.UUID
+    project_id: uuid.UUID | None
+    status: str
+    stage: str
+    input_data: dict
+    profile: DiscoveryProfile
+    domains: list[str]
+    competitors: list[CompetitorInput]
+    topics: list[str]
+    prompt_suggestions: list[DiscoveryPromptSuggestion]
+    evidence: list[DiscoveryEvidence]
+    gaps: list[str]
+    error_detail: str
+    attempt_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class BrandDiscoveryCatalogResponse(BaseModel):
+    business_types: list[str]
+    price_tiers: list[str]
+    required_fields: list[str]
+    optional_fields: list[str]
+    capture_methods: list[str]
+
+
+class BrandDiscoveryCreateProject(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
+
+
+class BrandDiscoveryProjectResponse(BaseModel):
+    discovery: BrandDiscoveryResponse
+    project_id: uuid.UUID

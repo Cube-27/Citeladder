@@ -214,7 +214,7 @@ SHOPPING_SURFACE_MEASUREMENT: Final = ""
 # identity keys (``logical_engine``, ``transport_provider``,
 # ``transport_model``); the planner then freezes one
 # ``AuditShoppingSurfaceSnapshot`` per configured surface. No entries in M2a
-# and ``APPROVED_ROUTES`` is unchanged, so no probe tasks/snapshots exist.
+# and ``MEASUREMENT_ROUTES`` is unchanged, so no probe tasks/snapshots exist.
 SHOPPING_SURFACES: Final[dict[str, dict[str, str]]] = {}
 
 # --- Product evidence projection --------------------------------------------

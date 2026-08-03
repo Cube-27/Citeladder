@@ -230,15 +230,16 @@ async def test_worker_runs_all_tasks_and_finalizes(
         )
         assert cost_projection is not None
         # Legacy total keys map to uncached-input/output; cache/reasoning
-        # splits and provider cost are unknown — null, never zero. With all
-        # catalogue rates unverified the observation is usage-only (partial).
+        # splits and provider cost are unknown — null, never zero. The Gemini
+        # Pulse token rates are verified, but its search-fee line is not, so
+        # the complete projection remains partial.
         assert cost_projection.uncached_input_tokens == 10
         assert cost_projection.output_tokens == 20
         assert cost_projection.total_tokens == 30
         assert cost_projection.search_requests == 1
         assert cost_projection.cached_input_tokens is None
         assert cost_projection.reasoning_tokens is None
-        assert cost_projection.uncached_input_cost_microusd is None
+        assert cost_projection.uncached_input_cost_microusd == 3
         assert cost_projection.projected_total_cost_microusd is None
         assert cost_projection.provider_reported_cost_microusd is None
         assert cost_projection.projection_status == PROJECTION_STATUS_PARTIAL
@@ -422,7 +423,7 @@ async def test_worker_persists_openai_provenance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A ChatGPT audit executes over the direct ``openai`` transport and freezes
-    # the chatgpt/openai/gpt-5.6-luna provenance triple on the task + attempt.
+    # the configured ChatGPT/OpenAI provenance triple on the task + attempt.
     async with session_factory() as session:
         seed = await seed_audit_fixtures(
             session, prompt_count=1, engines=[ENGINE_CHATGPT]
@@ -454,7 +455,7 @@ async def test_worker_persists_openai_provenance(
         assert task.status == "succeeded"
         assert task.logical_engine == ENGINE_CHATGPT
         assert task.transport_provider == TRANSPORT_OPENAI
-        assert task.transport_model == "gpt-5.6-luna"
+        assert task.transport_model == "gpt-5.4-nano-2026-03-17"
         assert task.result_artifact_id is not None
 
 
@@ -1131,7 +1132,7 @@ async def test_request_snapshot_records_the_frozen_policy_and_no_secret(
     assert snapshot["answer_instruction"] == frozen["answer_instruction"]
     assert snapshot["answer_instruction"] == PULSE_ANSWER_INSTRUCTION
     assert snapshot["reasoning_effort"] == (
-        route_policy(task.logical_engine, task.transport_provider).reasoning_effort
+        route_policy(task.logical_engine, MEASUREMENT_MODE_PULSE).reasoning_effort
     )
     # Invariant 6: no credential, in any field, at any depth.
     assert "api_key" not in snapshot

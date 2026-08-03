@@ -32,6 +32,9 @@ BRAND_EVIDENCE_MAX_HTML_BYTES: Final = 2_097_152
 BRAND_EVIDENCE_FALLBACK_PATHS: Final[tuple[str, ...]] = (
     "/about",
     "/about-us",
+    "/products",
+    "/services",
+    "/pricing",
 )
 
 # Text budget handed to the agent per page, and in total. Large enough to carry
@@ -47,12 +50,14 @@ BRAND_EVIDENCE_MAX_TOTAL_CHARS: Final = 12_000
 BRAND_EVIDENCE_MIN_WORDS: Final = 40
 
 # Short-lived in-process cache of collected evidence, keyed by canonical
-# homepage URL. Onboarding fires competitors, owned-domains, and prompts in
-# PARALLEL for one brand, so without this a single setup step crawls the same
-# site three times; a retry crawls it again. Deliberately brief — long enough
+# homepage URL. Concurrent discovery/profile reads share one crawl.
+# Deliberately brief — long enough
 # to cover one onboarding step, short enough that re-running later re-reads a
 # site that has since changed.
 BRAND_EVIDENCE_CACHE_SECONDS: Final = 300.0
+# Empty successful crawls are cached only long enough to collapse concurrent
+# callers. By the time a person can click Retry, the site is eligible again.
+BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS: Final = 1.0
 BRAND_EVIDENCE_CACHE_MAX_ENTRIES: Final = 256
 
 BRAND_EVIDENCE_CONTENT_TYPES: Final[frozenset[str]] = frozenset(
@@ -68,7 +73,7 @@ BRAND_EVIDENCE_VERSION: Final = "brand-evidence-v1"
 
 # Human-facing guidance per evidence-failure reason. The stable contract is the
 # reason TOKEN (mirroring ``BINDING_FAILURE_MESSAGES``); both the persisted
-# profile drafter and the stateless onboarding suggestions render these, so the
+# profile drafter and persisted onboarding discovery render these, so the
 # text lives here rather than in either caller.
 BRAND_EVIDENCE_FAILURE_MESSAGES: Final[dict[str, str]] = {
     "no_usable_website_url": (

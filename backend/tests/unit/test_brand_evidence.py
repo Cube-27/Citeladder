@@ -1,9 +1,8 @@
 """Unit tests for brand web-evidence extraction and the grounding gate.
 
-Deterministic fixtures only — no live network (mirrors
-``test_brand_suggestions.py``). The gate under test is the fix for fabricated
-profiles: a brand whose site yields nothing must produce "insufficient
-evidence", never a draft invented from the brand name.
+Deterministic fixtures only — no live network. The gate under test prevents
+fabricated profiles: a brand whose site yields nothing must produce
+"insufficient evidence", never a draft invented from the brand name.
 """
 
 from __future__ import annotations
@@ -234,11 +233,12 @@ class TestBrandEvidenceGate:
 
 
 class TestCollectBrandEvidenceFailureReasons:
-    """The reason TOKEN is the stable contract consumed by the API layer.
+    """The reason TOKEN is the stable contract for actual errors.
 
-    ``api/projects.py`` and ``api/brand_suggestions.py`` echo it as
-    ``detail["reason"]`` and ``BRAND_EVIDENCE_FAILURE_MESSAGES`` keys off it,
-    so these exact strings must not drift.
+    ``api/projects.py`` echoes it as ``detail["reason"]`` and
+    ``BRAND_EVIDENCE_FAILURE_MESSAGES`` keys off it.
+    Thin content / no pages no longer set a failure_reason — they are
+    reflected via ``is_sufficient=False`` instead.
     """
 
     @pytest.mark.asyncio
@@ -250,7 +250,7 @@ class TestCollectBrandEvidenceFailureReasons:
         assert evidence.failure_reason in BRAND_EVIDENCE_FAILURE_MESSAGES
 
     @pytest.mark.asyncio
-    async def test_thin_content_reports_insufficient_website_content(
+    async def test_thin_content_has_no_failure_reason_but_insufficient(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         async def _gather(homepage: str) -> list[BrandEvidencePage]:
@@ -266,23 +266,38 @@ class TestCollectBrandEvidenceFailureReasons:
         evidence = await collect_brand_evidence("https://cube27.example")
 
         assert not evidence.is_sufficient
-        assert evidence.failure_reason == "insufficient_website_content"
-        assert evidence.failure_reason in BRAND_EVIDENCE_FAILURE_MESSAGES
+        assert evidence.failure_reason is None
 
     @pytest.mark.asyncio
-    async def test_no_pages_reports_website_unreachable(
+    async def test_no_pages_has_no_failure_reason_but_insufficient(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        calls = 0
+
         async def _gather(homepage: str) -> list[BrandEvidencePage]:
+            nonlocal calls
+            calls += 1
             return []
 
         monkeypatch.setattr(brand_evidence_domain, "_gather", _gather)
         brand_evidence_domain.reset_brand_evidence_cache()
 
         evidence = await collect_brand_evidence("https://cube27.example")
+        cached = await collect_brand_evidence("https://cube27.example")
 
-        assert evidence.failure_reason == "website_unreachable"
-        assert evidence.failure_reason in BRAND_EVIDENCE_FAILURE_MESSAGES
+        homepage = brand_evidence_domain._homepage_url("https://cube27.example")
+        _, cached_evidence = brand_evidence_domain._cache[homepage]
+        brand_evidence_domain._cache[homepage] = (
+            asyncio.get_running_loop().time() - 1,
+            cached_evidence,
+        )
+        retried = await collect_brand_evidence("https://cube27.example")
+
+        assert not evidence.is_sufficient
+        assert evidence.failure_reason is None
+        assert not cached.is_sufficient
+        assert not retried.is_sufficient
+        assert calls == 2
 
     @pytest.mark.asyncio
     async def test_concurrent_callers_share_one_crawl(

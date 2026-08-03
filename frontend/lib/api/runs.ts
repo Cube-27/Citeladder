@@ -7,7 +7,13 @@
 import { z } from 'zod';
 
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
-import { auditSchema, executionEvidenceSchema, executionSchema, strictValidate } from './schemas';
+import {
+  auditEstimateSchema,
+  auditSchema,
+  executionEvidenceSchema,
+  executionSchema,
+  strictValidate,
+} from './schemas';
 import { definedQuery, withQuery } from './shared';
 import type { Audit, Execution, ExecutionEvidence, LogicalEngine } from './types';
 
@@ -27,11 +33,16 @@ export type LaunchAuditInput = {
   engines: LogicalEngine[];
   repetitions?: number;
   benchmark_mode?: string;
+  measurement_mode: 'pulse' | 'benchmark';
   /** Optional 64-bit seed as a decimal string; generated + stored when omitted. */
   random_seed?: string;
 };
 
 export const runsApi = {
+  estimateAudit: async (input: LaunchAuditInput, options?: ApiRequestOptions) => {
+    const res = await apiClient.post('/audits/estimate', input, options);
+    return strictValidate(auditEstimateSchema, res, 'runs.estimateAudit');
+  },
   launchAudit: async (input: LaunchAuditInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Audit>('/audits', input, options);
     return strictValidate(auditSchema, res, 'runs.launchAudit');

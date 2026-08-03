@@ -22,7 +22,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
-    default_model,
+    measurement_route,
 )
 from app.core.security import encrypt_secret
 from app.models.brand import Brand, BrandAlias, Competitor, OwnedDomain
@@ -142,7 +142,7 @@ async def seed_audit_fixtures(
                 connection_id=connection.id,
                 logical_engine=engine,
                 transport_provider=transport,
-                transport_model=default_model(engine, transport),
+                transport_model=measurement_route(engine, "pulse").transport_model,
                 is_default=True,
             )
         )
@@ -181,7 +181,7 @@ def _mark_connection_probed(
             latency_ms=12,
             logical_engine=engine,
             transport_provider=connection.transport_provider,
-            transport_model=default_model(engine, connection.transport_provider),
+            transport_model=measurement_route(engine, "pulse").transport_model,
             created_at=tested_at,
         )
     )
@@ -229,7 +229,7 @@ async def seed_platform_connection(
                 connection_id=connection.id,
                 logical_engine=engine,
                 transport_provider=transport,
-                transport_model=default_model(engine, transport),
+                transport_model=measurement_route(engine, "pulse").transport_model,
                 is_default=True,
             )
         )

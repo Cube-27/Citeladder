@@ -33,6 +33,7 @@ from app.core.config.provider_catalog import (
     ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
     TRANSPORT_GOOGLE,
+    measurement_route,
     route_policy,
 )
 from app.workers import audit_worker
@@ -42,8 +43,11 @@ def _request() -> AnswerEngineRequest:
     return AnswerEngineRequest(
         prompt="cheap baby clothes",
         system_instruction="Answer for Australia.",
-        model="claude-sonnet-4-6",
+        model=measurement_route("claude", "pulse").transport_model,
         timeout_seconds=30,
+        retrieval_enabled=False,
+        max_output_tokens=600,
+        reasoning_effort="off",
     )
 
 
@@ -178,9 +182,7 @@ async def test_call_provider_once_returns_the_single_success(
 def test_build_request_passes_every_frozen_policy_field_explicitly() -> None:
     """The adapter request is driven by the frozen policy, not by defaults.
 
-    The contract defaults exist so pre-T3 construction sites keep compiling;
-    relying on them here would silently un-freeze the planned policy (invariant
-    9), so each field is asserted against the policy value.
+    Each field is mandatory and asserted against the planned policy value.
     """
     policy = measurement_policy_for_mode(MEASUREMENT_MODE_PULSE)
     request = audit_worker._build_request(
@@ -188,7 +190,7 @@ def test_build_request_passes_every_frozen_policy_field_explicitly() -> None:
         system_instruction="Answer for Australia.",
         transport_model="gemini-3-pro",
         logical_engine=ENGINE_GEMINI,
-        transport_provider=TRANSPORT_GOOGLE,
+        measurement_mode=MEASUREMENT_MODE_PULSE,
         policy=policy,
     )
 
@@ -196,7 +198,7 @@ def test_build_request_passes_every_frozen_policy_field_explicitly() -> None:
     assert request.retrieval_enabled == policy.retrieval_enabled
     assert request.max_output_tokens == policy.max_output_tokens
     assert request.reasoning_effort == (
-        route_policy(ENGINE_GEMINI, TRANSPORT_GOOGLE).reasoning_effort
+        route_policy(ENGINE_GEMINI, "pulse").reasoning_effort
     )
     # A pulse run freezes retrieval OFF, so the request never buys a search.
     assert request.retrieval_enabled is False
@@ -214,7 +216,7 @@ def test_build_request_snapshot_records_policy_and_omits_the_brand_list() -> Non
         system_instruction="Answer for Australia. " + policy.answer_instruction,
         transport_model="gemini-3-pro",
         logical_engine=ENGINE_GEMINI,
-        transport_provider=TRANSPORT_GOOGLE,
+        measurement_mode=MEASUREMENT_MODE_PULSE,
         policy=policy,
     )
     snapshot = audit_worker._build_request_snapshot(
@@ -240,7 +242,7 @@ def test_build_request_snapshot_records_policy_and_omits_the_brand_list() -> Non
     assert snapshot["timeout_seconds"] == policy.timeout_seconds
     assert snapshot["answer_instruction"] == policy.answer_instruction
     assert snapshot["reasoning_effort"] == (
-        route_policy(ENGINE_GEMINI, TRANSPORT_GOOGLE).reasoning_effort
+        route_policy(ENGINE_GEMINI, "pulse").reasoning_effort
     )
     assert snapshot["stateless"] is True
     assert "brand_names" not in snapshot

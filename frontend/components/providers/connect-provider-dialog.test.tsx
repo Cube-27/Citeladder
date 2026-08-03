@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 
 import { ConnectProviderDialog } from './connect-provider-dialog';
 
@@ -18,24 +19,7 @@ const OTHER_ID = '11111111-1111-4111-8111-111111111112';
 const THIRD_ID = '11111111-1111-4111-8111-111111111113';
 const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
 
-// v2 direct-provider retirement: one direct transport per logical engine.
-const catalog = {
-  transports: ['openai', 'anthropic', 'google'],
-  engines: [
-    {
-      logical_engine: 'chatgpt',
-      routes: [{ transport_provider: 'openai', default_model: 'gpt-5.4' }],
-    },
-    {
-      logical_engine: 'gemini',
-      routes: [{ transport_provider: 'google', default_model: 'gemini-flash-latest' }],
-    },
-    {
-      logical_engine: 'claude',
-      routes: [{ transport_provider: 'anthropic', default_model: 'claude-sonnet-4-6' }],
-    },
-  ],
-};
+const catalog = providerCatalogFixture;
 
 function connection(overrides: Record<string, unknown> = {}) {
   return {
@@ -53,7 +37,7 @@ function connection(overrides: Record<string, unknown> = {}) {
         id: '33333333-3333-4333-8333-333333333333',
         logical_engine: 'chatgpt',
         transport_provider: 'openai',
-        transport_model: 'gpt-5.4',
+        transport_model: 'gpt-5.4-nano-2026-03-17',
         is_default: false,
         active: true,
       },
@@ -100,7 +84,7 @@ describe('ConnectProviderDialog', () => {
                 id: '44444444-4444-4444-8444-444444444444',
                 logical_engine: 'claude',
                 transport_provider: 'anthropic',
-                transport_model: 'claude-sonnet-4-6',
+                transport_model: 'claude-haiku-4-5-20251001',
                 is_default: false,
                 active: true,
               },
@@ -124,7 +108,7 @@ describe('ConnectProviderDialog', () => {
 
     await user.selectOptions(picker, 'claude');
     // The picked engine's direct route is shown before connecting.
-    expect(await within(dialog).findByText(/claude-sonnet-4-6/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/claude-haiku-4-5-20251001/)).toBeInTheDocument();
 
     await user.type(within(dialog).getByLabelText(/api key/i), 'sk-ant-key');
     await user.click(within(dialog).getByRole('button', { name: /save key/i }));
@@ -134,7 +118,10 @@ describe('ConnectProviderDialog', () => {
       transport_provider: 'anthropic',
       api_key: 'sk-ant-key',
       routes: [
-        { logical_engine: 'claude', transport_model: 'claude-sonnet-4-6', is_default: false },
+        {
+          logical_engine: 'claude',
+          is_default: false,
+        },
       ],
     });
     expect(onConnected).toHaveBeenCalledTimes(1);
@@ -157,7 +144,7 @@ describe('ConnectProviderDialog', () => {
           latency_ms: 42,
           logical_engine: 'chatgpt',
           transport_provider: 'openai',
-          transport_model: 'gpt-5.4',
+          transport_model: 'gpt-5.4-nano-2026-03-17',
           tested_at: '2026-07-15T00:00:00Z',
         }),
       ),
@@ -181,7 +168,7 @@ describe('ConnectProviderDialog', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /test connection/i }));
     expect(
-      await within(dialog).findByText(/connection succeeded \(gpt-5\.4\)\./i),
+      await within(dialog).findByText(/connection succeeded \(gpt-5\.4-nano-2026-03-17\)\./i),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: /update key/i }));
@@ -203,7 +190,7 @@ describe('ConnectProviderDialog', () => {
           latency_ms: 10,
           logical_engine: 'chatgpt',
           transport_provider: 'openai',
-          transport_model: 'gpt-5.4',
+          transport_model: 'gpt-5.4-nano-2026-03-17',
           tested_at: '2026-07-15T00:00:00Z',
         }),
       ),

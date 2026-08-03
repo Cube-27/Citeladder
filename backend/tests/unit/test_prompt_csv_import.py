@@ -14,18 +14,18 @@ from app.domain.prompts.csv_import import parse_prompt_csv
 
 def test_parse_headered_csv() -> None:
     csv_text = (
-        "text,theme,intent,branded,enabled\n"
-        "best running shoes,footwear,discovery,false,true\n"
-        "Acme vs Globex,compare,comparison,true,true\n"
+        "text,theme,intent,cohort,enabled\n"
+        "best running shoes,footwear,discovery,core,true\n"
+        "Acme vs Globex,compare,comparison,comparison,true\n"
     )
     rows = parse_prompt_csv(csv_text)
     assert len(rows) == 2
     assert rows[0].text == "best running shoes"
     assert rows[0].theme == "footwear"
     assert rows[0].intent == "discovery"
-    assert rows[0].branded is False
+    assert rows[0].cohort == "core"
     assert rows[0].enabled is True
-    assert rows[1].branded is True
+    assert rows[1].cohort == "comparison"
 
 
 def test_parse_header_aliases_and_reordered_columns() -> None:
@@ -36,7 +36,7 @@ def test_parse_header_aliases_and_reordered_columns() -> None:
     assert rows[0].theme == "shopping"
     # Absent columns fall back to defaults.
     assert rows[0].enabled is True
-    assert rows[0].branded is False
+    assert rows[0].cohort == "core"
 
 
 def test_parse_headerless_single_column() -> None:

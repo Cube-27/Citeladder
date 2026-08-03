@@ -2,12 +2,8 @@
 #
 # Orchestrates the connector: canonicalize the project's website URL, fetch the
 # homepage, fall back to the about pages only when the homepage is too thin,
-# and report whether what came back clears the grounding floor.
-#
-# The floor is the whole point of the fix. ``BrandEvidence.is_sufficient`` is
-# False when the site yielded too little text to draft from, and the caller
-# MUST NOT call the agent in that case: an unknown brand has to produce
-# "insufficient evidence", never a confident fabrication built from its name.
+# and report whether what came back clears the grounding floor. Thin evidence
+# never authorizes a model-memory fallback.
 from __future__ import annotations
 
 import asyncio
@@ -28,6 +24,7 @@ from app.core.config.brand_evidence import (
     BRAND_EVIDENCE_CACHE_SECONDS,
     BRAND_EVIDENCE_FALLBACK_PATHS,
     BRAND_EVIDENCE_MIN_WORDS,
+    BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS,
     BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS,
     BRAND_EVIDENCE_USER_AGENT,
     BRAND_EVIDENCE_VERSION,
@@ -42,7 +39,7 @@ class BrandEvidence:
 
     pages: tuple[BrandEvidencePage, ...] = ()
     # Why grounding failed, when it did (safe token for logs + API detail).
-    failure_reason: str = ""
+    failure_reason: str | None = None
 
     @property
     def word_count(self) -> int:
@@ -50,7 +47,7 @@ class BrandEvidence:
 
     @property
     def is_sufficient(self) -> bool:
-        """Whether there is enough real text to ground a profile draft."""
+        """Whether there is enough captured text to ground a profile draft."""
         return self.word_count >= BRAND_EVIDENCE_MIN_WORDS
 
     def serialize(self) -> str:
@@ -120,10 +117,9 @@ async def _gather(homepage: str) -> list[BrandEvidencePage]:
     return pages
 
 
-# Short-lived cache + single-flight, keyed by canonical homepage URL.
-# Onboarding fires three suggestion calls in PARALLEL for one brand; without
-# this each one crawls the same site independently. The lock makes concurrent
-# callers share ONE crawl rather than racing to populate the cache.
+# Short-lived cache + single-flight, keyed by canonical homepage URL. This
+# prevents concurrent profile/discovery reads from crawling the same site more
+# than once.
 _cache: dict[str, tuple[float, BrandEvidence]] = {}
 _cache_locks: dict[str, asyncio.Lock] = {}
 
@@ -139,7 +135,7 @@ def _cache_get(homepage: str) -> BrandEvidence | None:
     return evidence
 
 
-def _cache_put(homepage: str, evidence: BrandEvidence) -> None:
+def _cache_put(homepage: str, evidence: BrandEvidence, *, ttl_seconds: float) -> None:
     now = asyncio.get_running_loop().time()
     # Drop expired entries first, then bound the map so a long-lived process
     # crawling many brands cannot grow it without limit.
@@ -148,7 +144,17 @@ def _cache_put(homepage: str, evidence: BrandEvidence) -> None:
             _cache.pop(key, None)
     while len(_cache) >= BRAND_EVIDENCE_CACHE_MAX_ENTRIES:
         _cache.pop(next(iter(_cache)), None)
-    _cache[homepage] = (now + BRAND_EVIDENCE_CACHE_SECONDS, evidence)
+    _cache[homepage] = (now + ttl_seconds, evidence)
+
+
+def _cache_result(homepage: str, evidence: BrandEvidence) -> None:
+    """Cache useful content longer than transient empty crawl results."""
+    ttl = (
+        BRAND_EVIDENCE_CACHE_SECONDS
+        if evidence.pages
+        else BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS
+    )
+    _cache_put(homepage, evidence, ttl_seconds=ttl)
 
 
 def reset_brand_evidence_cache() -> None:
@@ -161,9 +167,8 @@ async def collect_brand_evidence(website_url: str) -> BrandEvidence:
     """Read the brand's own site, under a total wall-clock budget.
 
     Never raises: a missing/invalid URL, an unreachable site, or a timeout all
-    resolve to an insufficient ``BrandEvidence`` carrying a safe reason. The
-    caller turns that into a "fill the profile in yourself" response rather
-    than drafting from the brand name alone.
+    resolve to insufficient evidence with a safe reason. Callers must request
+    user input instead of asking a model to fill factual gaps from memory.
 
     Results are cached briefly per canonical homepage URL, and concurrent
     callers for the same URL share a single crawl.
@@ -195,23 +200,17 @@ async def collect_brand_evidence(website_url: str) -> BrandEvidence:
             async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
                 pages = await _gather(homepage)
             evidence = BrandEvidence(pages=tuple(pages))
-            if not evidence.is_sufficient:
-                evidence = BrandEvidence(
-                    pages=tuple(pages),
-                    failure_reason=(
-                        "website_unreachable"
-                        if not pages
-                        else "insufficient_website_content"
-                    ),
-                )
-            _cache_put(homepage, evidence)
+            # Cache empty crawls only for the short single-flight window. They
+            # must not make an explicit Retry replay a miss for the full
+            # positive-result cache duration.
+            _cache_result(homepage, evidence)
             return evidence
     except TimeoutError:
         logger.info("Brand evidence collection timed out", extra={"url": homepage})
         return BrandEvidence(failure_reason="evidence_fetch_timeout")
     except Exception:
-        # Grounding is best-effort: an unexpected crawl failure must degrade to
-        # "no evidence" (which blocks the draft) rather than 500 the request.
+        # Grounding is best-effort: an unexpected crawl failure returns empty
+        # evidence with a reason for telemetry; drafting still proceeds.
         logger.exception("Unexpected brand evidence failure", extra={"url": homepage})
         return BrandEvidence(failure_reason="evidence_fetch_failed")
     finally:

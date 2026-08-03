@@ -25,6 +25,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
+    REASONING_EFFORT_LOW,
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
@@ -71,7 +72,7 @@ RUN_MANIFEST_FILENAME: Final = "run-manifest.json"
 
 # --- Matrix dimensions ----------------------------------------------------
 # Route keys are the logical engines; the transport/model provenance triple is
-# resolved from ``provider_catalog.APPROVED_ROUTES`` at sweep time.
+# resolved from ``provider_catalog.MEASUREMENT_ROUTES`` at sweep time.
 MEASUREMENT_ROUTE_KEYS: Final[tuple[str, ...]] = (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
@@ -95,7 +96,6 @@ MEASUREMENT_SEARCH_STATES: Final[tuple[bool, ...]] = (False, True)
 # the measurement sweep's view of it and exists so unsupported combinations are
 # EMITTED as ``unsupported`` rather than silently dropped.
 REASONING_EFFORT_UNSET: Final = "unset"
-REASONING_EFFORT_LOW: Final = "low"
 REASONING_EFFORT_MEDIUM: Final = "medium"
 REASONING_EFFORT_HIGH: Final = "high"
 MEASUREMENT_REASONING_EFFORTS: Final[tuple[str, ...]] = (
