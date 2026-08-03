@@ -1,0 +1,43 @@
+{
+  "awsRegion": "ap-south-1",
+  "environment": "staging",
+  "projectName": "searchify",
+  "clusterName": "searchify-staging",
+  "backendRepository": "searchify/backend",
+  "frontendRepository": "searchify/frontend",
+  "vpcId": "REPLACE_WITH_EXISTING_VPC_ID",
+  "privateSubnetIds": [
+    "REPLACE_WITH_PRIVATE_SUBNET_A",
+    "REPLACE_WITH_PRIVATE_SUBNET_B"
+  ],
+  "ecsSecurityGroupId": "REPLACE_WITH_ECS_SECURITY_GROUP_ID",
+  "executionRoleArn": "arn:aws:iam::REPLACE_WITH_ACCOUNT_ID:role/searchify-ecs-execution-staging",
+  "serviceConnectNamespaceArn": "arn:aws:servicediscovery:ap-south-1:REPLACE_WITH_ACCOUNT_ID:namespace/REPLACE_WITH_NAMESPACE_ID",
+  "frontendTargetGroupArn": "arn:aws:elasticloadbalancing:ap-south-1:REPLACE_WITH_ACCOUNT_ID:targetgroup/searchify-frontend/REPLACE_WITH_TARGET_GROUP_ID",
+  "logsKmsKeyArn": "arn:aws:kms:ap-south-1:REPLACE_WITH_ACCOUNT_ID:key/REPLACE_WITH_LOGS_KEY_ID",
+  "frontendUrl": "https://staging.example.com",
+  "frontendOrigins": "https://staging.example.com",
+  "backendOrigin": "http://api:8000",
+  "integrationGoogleClientId": "",
+  "integrationMicrosoftClientId": "",
+  "integrationShopifyClientId": "",
+  "billingRazorpayKeyId": "",
+  "defaultAgentBaseUrl": "",
+  "defaultAgentModel": "",
+  "contentModel": "",
+  "dbPoolSize": 8,
+  "dbMaxOverflow": 4,
+  "auditWorkerConcurrency": 4,
+  "logRetentionDays": 30,
+  "desiredCounts": {
+    "api": 1,
+    "frontend": 1,
+    "audit-worker": 1,
+    "site-health-worker": 1,
+    "brand-discovery-worker": 1,
+    "content-worker": 1,
+    "analytics-worker": 1,
+    "integration-worker": 1,
+    "integration-dispatcher": 1
+  }
+}
