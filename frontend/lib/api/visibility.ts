@@ -22,6 +22,7 @@ import type { Visibility, VisibilityEvidenceResponse, VisibilityTrendPoint } fro
 
 /** Filters for the cross-run trend request (all optional; same-origin only). */
 type VisibilityTrendParams = {
+  cohort?: 'core' | 'comparison';
   /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
   /** Inclusive UTC lower bound (ISO 8601) for the completion window. */
@@ -38,6 +39,7 @@ type VisibilityTrendParams = {
  * audit must fall inside the inclusive window). Same-origin only.
  */
 type VisibilityEvidenceParams = {
+  cohort?: 'core' | 'comparison';
   /** Restrict to one audit in the authorized project. */
   audit_id?: string;
   /** Restrict by the source prompt frozen on `AuditPromptSnapshot.prompt_id`. */
@@ -55,7 +57,7 @@ type VisibilityEvidenceParams = {
 export const visibilityApi = {
   getProjectVisibility: async (
     projectId: string,
-    params?: { audit_id?: string },
+    params?: { audit_id?: string; cohort?: 'core' | 'comparison' },
     options?: ApiRequestOptions,
   ) => {
     const path = withQuery(`/projects/${projectId}/visibility`, definedQuery(params));

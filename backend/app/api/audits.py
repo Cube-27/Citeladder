@@ -59,6 +59,11 @@ from app.domain.analysis.service import (
     load_export_bundle,
     validate_shopping_surface,
 )
+from app.domain.audits.estimates import (
+    AuditEstimateError,
+    audit_performance,
+    estimate_audit,
+)
 from app.domain.audits.planner import (
     AuditNotFoundError,
     AuditValidationError,
@@ -72,7 +77,10 @@ from app.domain.audits.planner import (
 )
 from app.domain.audits.schemas import (
     AuditCreate,
+    AuditEstimateRequest,
+    AuditEstimateResponse,
     AuditEventResponse,
+    AuditPerformanceResponse,
     AuditResponse,
     AuditTaskResponse,
     audit_event_response,
@@ -163,6 +171,21 @@ async def create_audit_endpoint(
     return AuditResponse.model_validate(audit)
 
 
+@router.post("/estimate", response_model=AuditEstimateResponse)
+async def estimate_audit_endpoint(
+    payload: AuditEstimateRequest, ctx: _WorkspaceDep, session: _SessionDep
+) -> AuditEstimateResponse:
+    """Return a deterministic preview without calling any provider."""
+    try:
+        return await estimate_audit(
+            session, workspace_id=ctx.workspace_id, payload=payload
+        )
+    except AuditEstimateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+
 @router.get("", response_model=list[AuditResponse])
 async def list_audits_endpoint(
     ctx: _WorkspaceDep,
@@ -185,6 +208,18 @@ async def get_audit_endpoint(
 ) -> AuditResponse:
     audit = await _get_or_404(session, ctx.workspace_id, audit_id)
     return AuditResponse.model_validate(audit)
+
+
+@router.get("/{audit_id}/performance", response_model=AuditPerformanceResponse)
+async def audit_performance_endpoint(
+    audit_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> AuditPerformanceResponse:
+    try:
+        return await audit_performance(
+            session, workspace_id=ctx.workspace_id, audit_id=audit_id
+        )
+    except LookupError as exc:
+        raise_not_found("Audit", cause=exc)
 
 
 @router.post("/{audit_id}/cancel", response_model=AuditResponse)

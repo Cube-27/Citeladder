@@ -118,19 +118,17 @@ The products being measured:
 - Gemini / Google;
 - Claude / Anthropic.
 
-Each logical engine can use:
+Every logical engine uses its direct provider API. The executable catalog is keyed by
+`(logical_engine, measurement_mode)` and contains no aliases or fallbacks:
 
-- its direct provider API; or
-- a configured direct-provider route.
+| Engine | Pulse | Benchmark |
+|---|---|---|
+| ChatGPT / OpenAI | `gpt-5.4-nano-2026-03-17`, retrieval off | `gpt-5.6-sol`, native web search |
+| Claude / Anthropic | `claude-haiku-4-5-20251001`, thinking off | `claude-sonnet-5`, native web search |
+| Gemini / Google | `gemini-3.5-flash-lite`, minimal thinking | `gemini-3.6-flash`, Search grounding |
 
-**Shipped route matrix.** The direct-provider route matrix
-above is the *target-state* contract. As shipped, every engine runs through its **direct**
-transport and there is exactly one approved route per engine:
-
-- **Gemini / Google** — direct (`google`), model `gemini-flash-latest`.
-- **Claude / Anthropic** — direct (`anthropic`), model `claude-sonnet-4-6`.
-- **ChatGPT / OpenAI** — direct (`openai`) via the **OpenAI Responses API**, model `gpt-5.4`.
-  The direct OpenAI adapter (`backend/app/connectors/answer_engines/openai.py`) is **shipped**;
+The direct OpenAI adapter (`backend/app/connectors/answer_engines/openai.py`) uses the
+Responses API.
 
 #### Discovery and analysis model
 
@@ -150,7 +148,8 @@ transport (`openai | anthropic | google`):
 ```text
 logical_engine = gemini
 transport_provider = google           # active direct route
-transport_model = gemini-flash-latest
+transport_model = gemini-3.5-flash-lite
+measurement_mode = pulse
 ```
 
 ---

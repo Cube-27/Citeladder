@@ -116,6 +116,25 @@ services:
     healthcheck:
       disable: true
 
+  # Persisted onboarding discovery: secure crawler first, then the optional
+  # application-funded Firecrawl rendered/search fallback.
+  brand-discovery-worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment: *backend_env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["python", "-m", "app.workers.brand_discovery_worker"]
+    healthcheck:
+      disable: true
+
   # Content-generation worker: claims content_generations queue rows and calls
   # the env-configured provider (MISTRAL_API_KEY empty = provider disabled).
   content-worker:

@@ -79,14 +79,13 @@ The audit queue is Postgres via `FOR UPDATE SKIP LOCKED`. Rules:
   next provider call / analysis stage). No mid-call kills, no zombie tasks.
 
 ### 10. Logical vs transport identity
-Every route and every attempt records all three identities:
+Every route and every attempt records the measurement mode and all three identities:
 `logical_engine` (chatgpt|gemini|claude) + `transport_provider` + `transport_model` (the
 exact model id). A result missing any of the three is invalid. This is what lets the dashboard
 compare engines and gives unambiguous provenance. **Active** transports are exactly
-`openai | anthropic | google`, one approved route per engine
-(`chatgpt → openai → gpt-5.4`, `claude → anthropic → claude-sonnet-4-6`,
-`gemini → google → gemini-flash-latest`). Only these three direct transports are valid for
-new connections, routes, and executions.
+`openai | anthropic | google`. The only executable identities are the exact Pulse and
+Benchmark entries in `MEASUREMENT_ROUTES`; aliases, caller-selected models, single-route
+resolution, and model fallbacks are forbidden.
 
 ### 11. Gotcha 1 runbook — shell secrets override Docker Compose `${VAR}`
 **Symptom:** `docker compose up` connects Postgres/backend with the wrong

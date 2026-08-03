@@ -124,6 +124,7 @@ export const promptIntentSchema = z.enum([
 // Review lifecycle for a prompt: AI suggestions land `proposed`; only human
 // acceptance makes them `active` (audit-eligible); `archived` keeps history.
 export const promptStatusSchema = z.enum(['proposed', 'active', 'archived']);
+export const promptCohortSchema = z.enum(['core', 'comparison']);
 
 // Backend `PromptResponse.theme` is a non-null string (empty when unset), so
 // the wire value is always a string — never null.
@@ -134,6 +135,7 @@ export const promptSchema = responseObject({
   text: z.string(),
   theme: z.string(),
   intent: promptIntentSchema,
+  cohort: promptCohortSchema,
   branded: z.boolean(),
   enabled: z.boolean(),
   status: promptStatusSchema,
@@ -165,19 +167,6 @@ export const topicSchema = responseObject({
 export const promptGenerateResponseSchema = responseObject({
   generated: z.array(promptSchema),
   topics: z.array(topicSchema),
-  dropped_duplicates: z.number().int(),
-});
-
-// `POST /brand-suggestions/competitors` result: setup-form competitor
-// suggestions (stateless — nothing persisted until the user saves the form).
-export const competitorSuggestResponseSchema = responseObject({
-  competitors: z.array(
-    responseObject({
-      name: z.string(),
-      aliases: z.array(z.string()),
-      domains: z.array(z.string()),
-    }),
-  ),
   dropped_duplicates: z.number().int(),
 });
 
@@ -238,40 +227,6 @@ export const brandProfileAcceptResponseSchema = responseObject({
   profile: brandProfileSchema,
   accepted_fields: z.array(brandProfileFieldSchema),
   skipped_manual_fields: z.array(brandProfileFieldSchema),
-});
-
-// `POST /brand-suggestions/owned-domains` result: bare owned-domain strings.
-export const ownedDomainSuggestResponseSchema = responseObject({
-  domains: z.array(z.string()),
-  dropped_duplicates: z.number().int(),
-});
-
-// `POST /brand-suggestions/prompts` result. `theme` and `intent` default to ""
-// server-side (PromptSuggestionItem), so they are always present but may be
-// empty — the UI treats empty as "no theme" rather than hiding the row.
-const promptSuggestionItemSchema = responseObject({
-  text: z.string(),
-  theme: z.string(),
-  intent: z.string(),
-  // Backend proof that this text came from a real generation, echoed back on
-  // create so the prompt is stored as `generated` and skips topical binding.
-  // Optional so an older backend without receipts still validates.
-  generation_receipt: z.string().optional(),
-});
-
-export const promptSuggestResponseSchema = responseObject({
-  prompts: z.array(promptSuggestionItemSchema),
-  // The agent's own topic grouping, preserved rather than flattened. A caller
-  // that persists uses this to create the same Topic rows `/generate` does,
-  // so an onboarded prompt set is not left untopiced. Holds the same prompts
-  // as `prompts` above, just grouped.
-  topics: z.array(
-    responseObject({
-      name: z.string(),
-      prompts: z.array(promptSuggestionItemSchema),
-    }),
-  ),
-  dropped_duplicates: z.number().int(),
 });
 
 export const promptSetSchema = responseObject({
@@ -411,8 +366,11 @@ export const providerConnectionSchema = responseObject({
 });
 
 const providerCatalogRouteSchema = responseObject({
+  measurement_mode: z.enum(['pulse', 'benchmark']),
   transport_provider: transportProviderSchema,
-  default_model: z.string(),
+  transport_model: z.string(),
+  retrieval_enabled: z.boolean(),
+  reasoning_effort: z.string(),
 });
 
 const providerCatalogEngineSchema = responseObject({
@@ -518,6 +476,39 @@ export const auditSchema = responseObject({
   updated_at: z.string(),
   started_at: z.string().nullable(),
   completed_at: z.string().nullable(),
+});
+
+export const auditEngineEstimateSchema = responseObject({
+  logical_engine: logicalEngineSchema,
+  transport_provider: transportProviderSchema,
+  transport_model: z.string(),
+  retrieval_enabled: z.boolean(),
+  prompt_count: z.number().int(),
+  repetition_count: z.number().int(),
+  execution_count: z.number().int(),
+  maximum_attempt_count: z.number().int(),
+  estimated_input_tokens: z.number().int(),
+  estimated_output_tokens: z.number().int(),
+  estimated_search_calls: z.number().int().nullable(),
+  estimated_token_cost_microusd: z.number().int().nullable(),
+  estimated_search_cost_microusd: z.number().int().nullable(),
+  estimated_total_cost_microusd: z.number().int().nullable(),
+  cost_status: z.enum(['complete', 'partial', 'unknown']),
+  pricing_version: z.string(),
+});
+
+export const auditEstimateSchema = responseObject({
+  measurement_mode: measurementModeSchema,
+  retrieval_enabled: z.boolean(),
+  prompt_count: z.number().int(),
+  engine_count: z.number().int(),
+  repetition_count: z.number().int(),
+  execution_count: z.number().int(),
+  maximum_attempt_count: z.number().int(),
+  maximum_wall_clock_seconds: z.number().int(),
+  cost_status: z.enum(['complete', 'partial', 'unknown']),
+  estimated_total_cost_microusd: z.number().int().nullable(),
+  engines: z.array(auditEngineEstimateSchema),
 });
 
 // Deterministic citation classification (B6 `_classification`, invariant 4):
@@ -661,6 +652,8 @@ export const visibilitySchema = responseObject({
   audit_status: auditStatusSchema,
   analyzer_version: z.string(),
   scoring_rule_version: z.string(),
+  cohort: promptCohortSchema.default('core'),
+  coverage: z.record(z.string(), z.number()).default({}),
   total_completed: z.number().int(),
   total_failed: z.number().int(),
   visibility_score: z.number(),
@@ -672,6 +665,44 @@ export const visibilitySchema = responseObject({
   sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
   created_at: z.string(),
+});
+
+export const brandDiscoverySchema = responseObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  project_id: uuid().nullable(),
+  status: z.enum(['queued', 'running', 'needs_input', 'ready', 'confirmed', 'project_created']),
+  stage: z.string(),
+  input_data: z.record(z.string(), z.unknown()),
+  profile: z.record(z.string(), z.unknown()),
+  domains: z.array(z.string()),
+  competitors: z.array(
+    responseObject({
+      name: z.string(),
+      aliases: z.array(z.string()),
+      domains: z.array(z.string()),
+    }),
+  ),
+  topics: z.array(z.string()),
+  evidence: z.array(z.record(z.string(), z.unknown())),
+  gaps: z.array(z.string()),
+  error_detail: z.string(),
+  attempt_count: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const brandDiscoveryCatalogSchema = responseObject({
+  business_types: z.array(z.enum(['b2b', 'b2c', 'both'])),
+  price_tiers: z.array(z.string()),
+  required_fields: z.array(z.string()),
+  optional_fields: z.array(z.string()),
+  capture_methods: z.array(z.string()),
+});
+
+export const brandDiscoveryProjectSchema = responseObject({
+  discovery: brandDiscoverySchema,
+  project_id: uuid(),
 });
 
 // ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ from app.api.analytics import router as analytics_router
 from app.api.audits import router as audits_router
 from app.api.auth import router as auth_router
 from app.api.billing import router as billing_router
-from app.api.brand_suggestions import router as brand_suggestions_router
+from app.api.brand_discoveries import router as brand_discoveries_router
 from app.api.commerce import router as commerce_router
 from app.api.content import router as content_router
 from app.api.executions import router as executions_router
@@ -77,7 +77,7 @@ _ROUTERS = (
     oauth_router,
     workspaces_router,
     projects_router,
-    brand_suggestions_router,
+    brand_discoveries_router,
     prompts_router,
     products_router,
     provider_connections_router,

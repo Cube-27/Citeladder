@@ -68,7 +68,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
-    default_model,
+    measurement_route,
 )
 from app.core.database import SessionLocal
 from app.core.security import encrypt_secret
@@ -651,7 +651,7 @@ async def seed() -> None:
                     connection_id=connection.id,
                     logical_engine=engine,
                     transport_provider=transport,
-                    transport_model=default_model(engine, transport),
+                    transport_model=measurement_route(engine, "pulse").transport_model,
                     is_default=True,
                 )
             )
@@ -834,7 +834,9 @@ async def seed() -> None:
                 connection_id=connection2.id,
                 logical_engine=ENGINE_GEMINI,
                 transport_provider=TRANSPORT_GOOGLE,
-                transport_model=default_model(ENGINE_GEMINI, TRANSPORT_GOOGLE),
+                transport_model=measurement_route(
+                    ENGINE_GEMINI, "pulse"
+                ).transport_model,
                 is_default=True,
             )
         )

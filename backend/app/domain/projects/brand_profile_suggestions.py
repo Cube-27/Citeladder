@@ -48,13 +48,7 @@ class BrandProfileSuggestionOutputError(RuntimeError):
 
 
 class BrandEvidenceUnavailableError(RuntimeError):
-    """The brand's own website yielded too little content to draft from.
-
-    Raised BEFORE the agent is called. Drafting a profile from the brand name
-    alone is what produced fabricated positioning, competitors, and prompts for
-    brands with no training-data footprint; refusing to draft is the correct
-    outcome, and the human fills the profile in by hand instead.
-    """
+    """Captured/user evidence is insufficient; no model-memory fallback."""
 
     def __init__(self, message: str, *, reason: str) -> None:
         super().__init__(message)
@@ -107,48 +101,64 @@ def parse_brand_profile_draft(raw: str) -> BrandProfileDraft:
 
 
 def build_brand_profile_suggestion_message(
-    knowledge: dict[str, object], evidence: BrandEvidence
+    knowledge: dict[str, object],
+    evidence: BrandEvidence,
+    brand_name: str,
+    manual_brand_context: str | None = None,
 ) -> str:
-    """Assemble the drafter's user message: identity + real page evidence.
+    """Assemble the drafter's user message: identity + evidence + instruction.
 
-    The evidence block carries what the brand's own site says; the knowledge
-    block carries the curated identity rows. The instruction names the evidence
-    as the only admissible source so the two blocks can't be conflated.
-
-    Website evidence is preferred. If it is unavailable, persisted curated
-    profile fields are also admissible grounding; a brand name/URL alone is
-    still refused before this builder is called.
-
-    Takes the already-projected knowledge DATA (not the ORM ``Project``): the
-    caller snapshots it before ending its transaction, and this runs after the
-    evidence crawl, when touching an expired ORM attribute would attempt lazy
-    I/O outside the async greenlet context.
+    Only captured website evidence, curated fields, and explicit user context
+    are admissible factual sources.
     """
-    if not evidence.pages and not _has_curated_profile_context(knowledge):
+    if (
+        not evidence.pages
+        and not _has_curated_profile_context(knowledge)
+        and not (manual_brand_context or "").strip()
+    ):
         _raise_evidence_unavailable(evidence)
     sections = [serialize_brand_knowledge_context(knowledge)]
-    sections.extend(_evidence_and_instruction_sections(evidence))
+
+    # Add manual brand context if provided
+    if manual_brand_context and manual_brand_context.strip():
+        sections.append(
+            "<manual_brand_context>\n"
+            "The user provided the following description of the brand:\n"
+            f"{manual_brand_context.strip()}\n"
+            "</manual_brand_context>"
+        )
+
+    sections.extend(_evidence_and_instruction_sections(evidence, brand_name))
     return "\n".join(sections)
 
 
-def _evidence_and_instruction_sections(evidence: BrandEvidence) -> list[str]:
+def _evidence_and_instruction_sections(
+    evidence: BrandEvidence, brand_name: str
+) -> list[str]:
     """Serialize the evidence block and the closing instruction stanza."""
     if evidence.pages:
         evidence_block = evidence.serialize()
-        allowed_sources = "the curated profile and <brand_website_evidence>"
-    else:
-        evidence_block = None
-        allowed_sources = "the human-curated fields in <brand_knowledge_base>"
+        allowed_sources = (
+            "the curated profile, <brand_website_evidence>, and "
+            "<manual_brand_context> (if present)"
+        )
+        instruction = (
+            "Draft the four requested profile fields for human review, using ONLY "
+            f"{allowed_sources} above. Leave any field empty that those sources "
+            "do not support."
+        )
+        return [evidence_block, instruction]
+
+    allowed_sources = "the curated profile and <manual_brand_context> (if present)"
     instruction = (
-        "Draft the four requested profile fields for human review, using ONLY "
-        f"{allowed_sources} above. Leave any field empty that those sources "
-        "do not support."
+        "The website evidence was insufficient. Draft only from "
+        f"{allowed_sources}; do not use model memory about {brand_name}. "
+        "Leave unsupported fields empty."
     )
-    return ([evidence_block] if evidence_block else []) + [instruction]
+    return [instruction]
 
 
 def _raise_evidence_unavailable(evidence: BrandEvidence) -> None:
-    """Raise the typed evidence-unavailable error with its mapped message."""
     raise BrandEvidenceUnavailableError(
         BRAND_EVIDENCE_FAILURE_MESSAGES.get(
             evidence.failure_reason,
@@ -210,12 +220,14 @@ async def suggest_brand_profile(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     agent: DefaultAgentClient,
+    manual_brand_context: str | None = None,
 ) -> BrandProfileSuggestion:
     """Call the default agent, then persist its immutable review artifact."""
     project, original_brand = await _get_project_with_brand(
         session, workspace_id=workspace_id, project_id=project_id
     )
     original_brand_id = original_brand.id
+    brand_name = original_brand.name
     input_snapshot = build_brand_knowledge_data(project)
     website_url = project.website_url
 
@@ -223,23 +235,17 @@ async def suggest_brand_profile(
     # the evidence crawl as well as the provider call.
     await session.rollback()
 
-    # Ground the draft in the brand's own site BEFORE calling the agent. With
-    # no evidence there is nothing to draft from but the brand name, which is
-    # exactly the fabrication path this gate exists to close.
+    # Collect evidence before provider I/O; unsupported facts are never filled
+    # from model training memory.
     evidence = await collect_brand_evidence(website_url)
-    if not evidence.is_sufficient and not _has_curated_profile_context(input_snapshot):
-        _raise_evidence_unavailable(evidence)
-    user_message = build_brand_profile_suggestion_message(input_snapshot, evidence)
+    user_message = build_brand_profile_suggestion_message(
+        input_snapshot, evidence, brand_name, manual_brand_context
+    )
     # Record provenance AFTER building the message so the evidence block the
     # agent saw is exactly the curated knowledge, not the provenance stanza.
-    #
-    # Deliberately NOT ``website_evidence``: across the brand-context builders
-    # (``_brand_context_lines``, ``build_prompt_suggestion_user_message``,
-    # ``build_generation_user_message``) that key names the SERIALIZED evidence
-    # block — a string emitted as its own top-level section. This is the
-    # provenance mapping describing what was read, so it gets its own key
-    # rather than colliding on a name that means something else.
     input_snapshot["website_evidence_provenance"] = evidence.provenance()
+    if manual_brand_context:
+        input_snapshot["manual_brand_context"] = manual_brand_context
 
     raw = await agent.complete_json(
         system=BRAND_PROFILE_SUGGESTION_SYSTEM_PROMPT,

@@ -5,38 +5,20 @@ A projection row is a versioned, immutable observation: one row per
 appends a NEW row under a new pricing version; it never mutates an existing
 row (invariant 3).
 
-Usage-key vocabulary (pinned by tests — do not widen silently):
+Usage-key vocabulary is canonical-only:
 
-- Granular keys win when present: ``uncached_input_tokens``,
+- ``uncached_input_tokens``,
   ``cached_input_tokens``, ``output_tokens``, ``reasoning_tokens``,
   ``search_requests`` (the measurement-envelope shape; also the T3 parser
-  shape). A present-but-null/malformed granular key suppresses its fallback.
-- Legacy parser-shape fallbacks: ``total_input_tokens`` maps to
-  ``uncached_input_tokens`` and ``total_output_tokens`` maps to
-  ``output_tokens``. Since T3 the parsers emit the granular keys as well, so
-  these two only decide pre-T3 artifacts. Semantic claim: Searchify requests
-  never enable provider prompt caching, and reasoning is pinned off (or
-  unverified → ineligible) on
-  every approved route, so a provider response without an explicit
-  cache/reasoning split bills ALL input at the uncached rate and ALL output at
-  the non-reasoning output rate. When a split IS reported the granular keys
-  are present and take precedence.
+  shape). There are no historical-key fallbacks.
 - ``cached_input_tokens`` and ``reasoning_tokens`` have NO fallback: the T3
   parsers read them from the provider's usage detail fields where the provider
   reports a split, and project null when it does not. Unknown never becomes
   zero.
-- ``search_requests`` falls back to the legacy ``web_search_requests`` key and
-  is never inferred from ``search_used``: a known zero count is meaningful, a
-  missing count is unknown.
-- LEGACY pre-T3 Gemini artifacts carried provider-native pass-through keys
-  (``promptTokenCount`` …) which this builder deliberately does NOT map; on
-  those older artifacts the fields project as null. Since T3 the Gemini parser
-  normalizes the native aliases into the canonical keys above, so new artifacts
-  carry mapped usage. Unknown never becomes zero either way.
-- Provider-REPORTED per-request cost: ``provider_cost_microusd`` (ALREADY
-  micro-USD, the T3 typed-usage spelling) WINS, and ``provider_cost_usd`` (a
-  DOLLAR amount, converted here) is the legacy fallback for artifacts persisted
-  before T3. The live parsers emit neither key (no provider returns a cost), so
+- ``search_requests`` is never inferred from ``search_used``: a known zero
+  count is meaningful; a missing count is unknown.
+- Provider-reported per-request cost uses only ``provider_cost_microusd``.
+  The live parsers emit no cost when a provider returns none, so
   ``provider_reported_cost_microusd`` stays null unless a provider actually
   reported a cost — a fabricated placeholder zero would be indistinguishable
   from a real zero-cost report and would overstate completeness.
@@ -65,7 +47,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.costs import (
-    MICRO_USD_PER_USD,
     PROJECTION_STATUS_COMPLETE,
     PROJECTION_STATUS_PARTIAL,
     PROJECTION_STATUS_UNKNOWN,
@@ -103,27 +84,6 @@ def normalize_optional_non_negative_int(value: object) -> int | None:
     return None
 
 
-def normalize_optional_microusd(value: object) -> int | None:
-    """Normalize a USD-dollar cost to micro-USD: null for absent, non-finite,
-    malformed, or negative values; a literal zero stays zero.
-    """
-
-    if value is None or isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        dollars = float(value)
-    elif isinstance(value, str):
-        try:
-            dollars = float(value.strip())
-        except ValueError:
-            return None
-    else:
-        return None
-    if not math.isfinite(dollars) or dollars < 0:
-        return None
-    return round(dollars * MICRO_USD_PER_USD)
-
-
 @dataclass(frozen=True)
 class _UsageObservation:
     """Usage fields extracted from an artifact's raw usage payload."""
@@ -151,24 +111,19 @@ def _usage_int(usage: Mapping[str, object], *keys: str) -> int | None:
 def _reported_cost_microusd(usage: Mapping[str, object]) -> int | None:
     """Provider-reported cost in micro-USD; null when nothing was reported.
 
-    ``provider_cost_microusd`` is ALREADY micro-USD (the T3 typed-usage
-    spelling) and takes precedence with NO dollar conversion; a present key —
-    even malformed — suppresses the legacy dollar fallback so the two spellings
-    can never be mixed. ``provider_cost_usd`` is the pre-T3 artifact spelling
-    and is converted from dollars.
+    ``provider_cost_microusd`` is already micro-USD. No alternative spelling
+    is accepted.
     """
 
-    if "provider_cost_microusd" in usage:
-        return normalize_optional_non_negative_int(usage.get("provider_cost_microusd"))
-    return normalize_optional_microusd(usage.get("provider_cost_usd"))
+    return normalize_optional_non_negative_int(usage.get("provider_cost_microusd"))
 
 
 def _extract_usage(usage: Mapping[str, object]) -> _UsageObservation:
-    uncached = _usage_int(usage, "uncached_input_tokens", "total_input_tokens")
+    uncached = _usage_int(usage, "uncached_input_tokens")
     cached = _usage_int(usage, "cached_input_tokens")
-    output = _usage_int(usage, "output_tokens", "total_output_tokens")
+    output = _usage_int(usage, "output_tokens")
     reasoning = _usage_int(usage, "reasoning_tokens")
-    search_requests = _usage_int(usage, "search_requests", "web_search_requests")
+    search_requests = _usage_int(usage, "search_requests")
     total = _usage_int(usage, "total_tokens")
     if total is None:
         # Derived total: exact sum of the known components (never a coerced

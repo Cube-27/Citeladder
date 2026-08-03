@@ -58,6 +58,7 @@ export function useVisibilityFilters() {
   const [promptId, setPromptId] = useState<string | null>(null);
   const [range, setRange] = useState<TrendRange>('90d');
   const [granularity, setGranularity] = useState<TrendGranularity>('run');
+  const [cohort, setCohort] = useState<'core' | 'comparison'>('core');
 
   function selectTab(tab: VisibilityTab) {
     setActiveTab(tab);
@@ -96,6 +97,8 @@ export function useVisibilityFilters() {
     setRange,
     granularity,
     setGranularity,
+    cohort,
+    setCohort,
     isFiltered,
     isTrendFiltered,
     clearEvidenceFilters,
@@ -163,21 +166,24 @@ function useEvidenceQueries(
     promptId: string | null;
     engineParam: string | undefined;
     fromParam: string | undefined;
+    cohort: 'core' | 'comparison';
   }>,
 ) {
-  const { activeRunId, promptId, engineParam, fromParam } = scope;
+  const { activeRunId, promptId, engineParam, fromParam, cohort } = scope;
   const evidenceParams = {
     audit_id: activeRunId ?? undefined,
     prompt_id: promptId ?? undefined,
     engine: engineParam,
     from: fromParam,
     limit: EVIDENCE_LIMIT,
+    cohort,
   };
   const keyFilters = {
     audit_id: activeRunId ?? null,
     engine: engineParam ?? null,
     from: fromParam ?? null,
     limit: EVIDENCE_LIMIT,
+    cohort,
   };
 
   const evidenceQuery = useQuery({
@@ -223,7 +229,7 @@ export function useVisibilityQueries(
   projectId: string | null,
   filters: ReturnType<typeof useVisibilityFilters>,
 ) {
-  const { activeTab, selectedRunId, engine, promptId, range, granularity } = filters;
+  const { activeTab, selectedRunId, engine, promptId, range, granularity, cohort } = filters;
 
   const { auditsQuery, runOptions, activeRun, activeRunId, hasRuns } = useRunSelection(
     projectId,
@@ -242,11 +248,11 @@ export function useVisibilityQueries(
   // is deliberately absent from the key — including it would force a refetch of
   // identical data (and a skeleton flash) on every engine change.
   const visibilityQuery = useQuery({
-    queryKey: queryKeys.visibility.project(projectId ?? '', activeRunId ?? undefined),
+    queryKey: [...queryKeys.visibility.project(projectId ?? '', activeRunId ?? undefined), cohort],
     queryFn: ({ signal }) =>
       visibilityApi.getProjectVisibility(
         projectId!,
-        activeRunId ? { audit_id: activeRunId } : undefined,
+        { audit_id: activeRunId ?? undefined, cohort },
         { signal },
       ),
     enabled: Boolean(projectId) && hasRuns && activeTab === 'overview',
@@ -260,11 +266,12 @@ export function useVisibilityQueries(
       engine: engineParam ?? null,
       from: fromParam ?? null,
       granularity,
+      cohort,
     }),
     queryFn: ({ signal }) =>
       visibilityApi.getVisibilityTrends(
         projectId!,
-        { engine: engineParam, from: fromParam, granularity },
+        { engine: engineParam, from: fromParam, granularity, cohort },
         { signal },
       ),
     enabled: Boolean(projectId) && hasRuns && activeTab === 'trends',
@@ -282,6 +289,7 @@ export function useVisibilityQueries(
       engine: engineParam ?? null,
       from: fromParam ?? null,
       granularity,
+      cohort,
     }),
   );
   const brandHistory = useMemo(
@@ -293,7 +301,7 @@ export function useVisibilityQueries(
   const { evidenceQuery, promptOptions } = useEvidenceQueries(
     projectId,
     Boolean(projectId) && hasRuns && evidenceTab,
-    { activeRunId, promptId, engineParam, fromParam },
+    { activeRunId, promptId, engineParam, fromParam, cohort },
   );
 
   return {

@@ -39,7 +39,7 @@ from app.core.config.provider_catalog import (
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
     TRANSPORT_GOOGLE,
-    default_model,
+    is_approved_model,
     provider_catalog_settings,
 )
 
@@ -77,16 +77,11 @@ def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
     configured catalog cap when unsupplied (invariant 1). Nothing is re-read
     from live settings that the request already froze (invariant 9).
 
-    The approved ``gemini``/``google`` route pins the exact
-    ``gemini-2.5-flash-lite`` identity. That model defaults to thinking-off, so
-    an OFF request omits ``generation_config`` entirely. A future model may add
-    a model-specific control here only after that control is documented as
-    compatible with the Interactions endpoint.
+    Each mode pins an exact catalog identity and its explicit thinking level.
     """
-    approved_model = default_model(ENGINE_GEMINI, TRANSPORT_GOOGLE)
-    if request.model != approved_model:
+    if not is_approved_model(ENGINE_GEMINI, TRANSPORT_GOOGLE, request.model):
         raise ProviderError(
-            f"Gemini route requires model {approved_model}",
+            "Gemini route requires an exact catalog model",
             error_code=ERROR_UNKNOWN,
             retryable=False,
         )
@@ -97,6 +92,7 @@ def _build_payload(request: AnswerEngineRequest) -> dict[str, Any]:
         "store": False,
         # Frozen per-call output cap so one generation cannot run away.
         "max_output_tokens": output_token_cap(request),
+        **_thinking_fields(request),
         **_grounding_fields(request),
     }
 
@@ -110,6 +106,12 @@ def _grounding_fields(request: AnswerEngineRequest) -> dict[str, Any]:
     if not request.retrieval_enabled:
         return {}
     return {"tools": [{"type": "google_search"}]}
+
+
+def _thinking_fields(request: AnswerEngineRequest) -> dict[str, Any]:
+    if request.reasoning_effort not in {"minimal", "low"}:
+        return {}
+    return {"generation_config": {"thinking_level": request.reasoning_effort}}
 
 
 class GeminiAnswerEngineAdapter:

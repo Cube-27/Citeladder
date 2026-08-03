@@ -99,6 +99,8 @@ def _policy_fields(
         # Extended thinking is off by default, but stating it explicitly makes
         # the pinned policy visible in the persisted request snapshot.
         fields["thinking"] = {"type": "disabled"}
+    elif request.reasoning_effort == "low":
+        fields["output_config"] = {"effort": "low"}
     return fields
 
 

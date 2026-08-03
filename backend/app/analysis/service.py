@@ -45,7 +45,7 @@ from app.models.analysis import (
     MetricSnapshot,
     ResponseAnalysis,
 )
-from app.models.audit import Audit, AuditPromptSnapshot, AuditTask
+from app.models.audit import Audit, AuditPromptSnapshot, AuditTask, RawResponseArtifact
 
 # Deterministic classification labels for a source citation (invariant 4).
 CITATION_OWNED = "owned"
@@ -104,6 +104,9 @@ async def analyze_task(
         prompt_text=task.prompt_text or "",
         query_text_available=query_text_available,
     )
+    prompt_snapshot = await session.get(AuditPromptSnapshot, task.prompt_snapshot_id)
+    cohort = prompt_snapshot.cohort if prompt_snapshot is not None else "core"
+    score["cohort"] = cohort
 
     analysis = ResponseAnalysis(
         workspace_id=task.workspace_id,
@@ -122,6 +125,7 @@ async def analyze_task(
         # probe analysis into brand metrics.
         shopping_surface=task.shopping_surface,
         prompt_class=str(score.get("prompt_class", "")),
+        cohort=cohort,
         brand_mentioned=bool(score.get("brand_mentioned")),
         brand_first_offset=score.get("brand_first_offset"),
         owned_domain_cited=bool(score.get("owned_domain_cited")),
@@ -189,9 +193,8 @@ async def _execution_dicts(
     """Build the aggregate input from persisted analyses (invariant 7).
 
     Reads only persisted ``ResponseAnalysis`` + ``Citation`` + ``AuditTask``
-    rows — never a provider. Re-attaches each execution's persisted provider
-    usage (from ``AuditTask.provider_metadata``) so token/cost aggregation is
-    not lost. Returns
+    rows — never a provider. Re-attaches each execution's immutable artifact
+    usage and task metadata so token/cost aggregation is not lost. Returns
     ``(all_execution_dicts, per_engine_execution_dicts, analyses)``.
     """
     # Brand denominators are MEASUREMENT-ONLY (§7.1): probe analyses never
@@ -216,7 +219,9 @@ async def _execution_dicts(
             )
         ).all()
     )
-    prompt_meta = {snap.prompt_index: (snap.text, snap.theme) for snap in snapshots}
+    prompt_meta = {
+        snap.prompt_index: (snap.text, snap.theme, snap.cohort) for snap in snapshots
+    }
     # analysis_id -> classified citation dicts (reconstructed from persisted rows).
     citation_rows = list(
         (
@@ -234,8 +239,7 @@ async def _execution_dicts(
                 "matched_competitor": row.matched_competitor,
             }
         )
-    # task_id -> persisted provider_metadata (carries the usage block used by
-    # cost/token aggregation). Reading it back here is projection-only.
+    # Task metadata carries evidence flags; immutable artifacts own usage.
     provider_metadata_by_task: dict[uuid.UUID, dict] = {}
     for task_id, provider_metadata in (
         await session.execute(
@@ -248,23 +252,43 @@ async def _execution_dicts(
         )
     ).all():
         provider_metadata_by_task[task_id] = provider_metadata or {}
+    usage_by_task = await _artifact_usage_by_task(
+        session,
+        audit_id=audit_id,
+        analyses=analyses,
+    )
 
     all_dicts: list[dict] = []
     per_engine: dict[str, list[dict]] = {}
     for analysis in analyses:
-        text, theme = prompt_meta.get(analysis.prompt_index, ("", ""))
+        text, theme, cohort = prompt_meta.get(analysis.prompt_index, ("", "", "core"))
         execution = {
             "status": "completed",
             "prompt_index": analysis.prompt_index,
             "prompt_text_snapshot": text,
             "prompt_theme_snapshot": theme,
+            "cohort": cohort,
             "citations": citations_by_analysis.get(analysis.id, []),
             "score": analysis.score or {},
             "provider_metadata": provider_metadata_by_task.get(analysis.task_id, {}),
+            "usage": usage_by_task.get(analysis.task_id, {}),
         }
         all_dicts.append(execution)
         per_engine.setdefault(analysis.logical_engine, []).append(execution)
     return all_dicts, per_engine, analyses
+
+
+async def _artifact_usage_by_task(
+    session: AsyncSession, *, audit_id: uuid.UUID, analyses: list[ResponseAnalysis]
+) -> dict[uuid.UUID, dict]:
+    task_ids = [analysis.task_id for analysis in analyses]
+    rows = await session.execute(
+        select(RawResponseArtifact.task_id, RawResponseArtifact.usage).where(
+            RawResponseArtifact.audit_id == audit_id,
+            RawResponseArtifact.task_id.in_(task_ids),
+        )
+    )
+    return dict(rows.all())
 
 
 async def finalize_audit_analysis(
@@ -300,13 +324,64 @@ async def finalize_audit_analysis(
     await session.flush()
 
     all_dicts, per_engine, analyses = await _execution_dicts(session, audit_id=audit.id)
-    metrics = aggregate_run(all_dicts, config)
+    core_dicts = [row for row in all_dicts if row.get("cohort") == "core"]
+    comparison_dicts = [row for row in all_dicts if row.get("cohort") == "comparison"]
+    prompt_cohorts = list(
+        (
+            await session.scalars(
+                select(AuditPromptSnapshot.cohort).where(
+                    AuditPromptSnapshot.audit_id == audit.id
+                )
+            )
+        ).all()
+    )
+    engine_count = len(
+        (
+            await session.scalars(
+                select(AuditTask.logical_engine)
+                .where(AuditTask.audit_id == audit.id)
+                .distinct()
+            )
+        ).all()
+    )
+    metrics = aggregate_run(core_dicts, config)
+    metrics["cohort"] = "core"
+    metrics["coverage"] = {
+        "completed": len(core_dicts),
+        "requested": prompt_cohorts.count("core") * engine_count * audit.repetitions,
+    }
+    requested_core = metrics["coverage"]["requested"]
+    metrics["coverage"]["rate"] = (
+        round(len(core_dicts) / requested_core, 4) if requested_core else 0.0
+    )
+    metrics["comparison"] = aggregate_run(comparison_dicts, config)
+    metrics["comparison"]["cohort"] = "comparison"
+    requested_comparison = (
+        prompt_cohorts.count("comparison") * engine_count * audit.repetitions
+    )
+    metrics["comparison"]["coverage"] = {
+        "completed": len(comparison_dicts),
+        "requested": requested_comparison,
+        "rate": (
+            round(len(comparison_dicts) / requested_comparison, 4)
+            if requested_comparison
+            else 0.0
+        ),
+    }
+    metrics["comparison"]["per_engine"] = {
+        engine: aggregate_run(
+            [row for row in rows if row.get("cohort") == "comparison"], config
+        )
+        for engine, rows in sorted(per_engine.items())
+    }
     metrics["per_engine"] = {
-        engine: aggregate_run(rows, config)
+        engine: aggregate_run(
+            [row for row in rows if row.get("cohort") == "core"], config
+        )
         for engine, rows in sorted(per_engine.items())
     }
 
-    completed = metrics["total_completed"]
+    completed = len(all_dicts)
     total = int(audit.requested_count or len(all_dicts))
     failed = max(0, total - completed)
     visibility_score = round(float(metrics.get("brand_mention_rate") or 0.0) * 100, 2)

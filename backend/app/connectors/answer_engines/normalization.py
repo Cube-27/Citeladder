@@ -23,19 +23,17 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     NormalizedUsage,
 )
-from app.core.config.provider_catalog import provider_catalog_settings
 
 
 def output_token_cap(request: AnswerEngineRequest) -> int:
     """The frozen per-call output cap for a provider payload.
 
-    ``max_output_tokens == 0`` means "not supplied" (the pre-T3 construction
-    sites), in which case the configured catalog cap applies — the fallback
-    stays config-owned rather than an inline literal (invariant 1). An adapter
-    never re-reads live policy for a value the request already froze
-    (invariant 9).
+    An adapter never re-reads live policy for a value the request already froze
+    (invariant 9), and invalid callers fail instead of falling back.
     """
-    return request.max_output_tokens or provider_catalog_settings.max_output_tokens
+    if request.max_output_tokens <= 0:
+        raise ValueError("max_output_tokens must be frozen before execution")
+    return request.max_output_tokens
 
 
 def annotation_offset(annotation: dict[str, Any], *keys: str) -> int | None:

@@ -50,8 +50,8 @@ export function transportLabel(key: string): string {
 /** The single fixed direct route on an engine card. */
 export type EngineRouteOption = {
   transport_provider: TransportProvider;
-  /** The catalog default model for this (engine, transport). */
-  default_model: string;
+  pulse_model: string;
+  benchmark_model: string;
   /** Toggle-free label, e.g. "Direct (OpenAI)". */
   label: string;
 };
@@ -117,14 +117,17 @@ export function buildEngineCards(
 
   const shipped = ENGINE_ORDER.map((engine) => {
     const approved = byEngine.get(engine)?.routes ?? [];
-    const first = approved[0];
-    const route: EngineRouteOption | null = first
-      ? {
-          transport_provider: first.transport_provider,
-          default_model: first.default_model,
-          label: directLabel(first.transport_provider),
-        }
-      : null;
+    const pulse = approved.find((entry) => entry.measurement_mode === 'pulse');
+    const benchmark = approved.find((entry) => entry.measurement_mode === 'benchmark');
+    const route: EngineRouteOption | null =
+      pulse && benchmark
+        ? {
+            transport_provider: pulse.transport_provider,
+            pulse_model: pulse.transport_model,
+            benchmark_model: benchmark.transport_model,
+            label: directLabel(pulse.transport_provider),
+          }
+        : null;
     const entry = byKey.get(engine) ?? byKey.get(`provider.${engine}`);
     return {
       logical_engine: engine,
@@ -186,15 +189,13 @@ export function isConfigured(connection: ProviderConnection | undefined): boolea
 export function mergeRoutePayload(
   existing: ProviderConnection | undefined,
   logical_engine: LogicalEngine,
-  default_model: string,
-): { logical_engine: LogicalEngine; transport_model: string; is_default: boolean }[] {
+): { logical_engine: LogicalEngine; is_default: boolean }[] {
   const routes = (existing?.routes ?? []).map((r) => ({
     logical_engine: r.logical_engine,
-    transport_model: r.transport_model,
     is_default: r.is_default,
   }));
   if (!routes.some((r) => r.logical_engine === logical_engine)) {
-    routes.push({ logical_engine, transport_model: default_model, is_default: false });
+    routes.push({ logical_engine, is_default: false });
   }
   return routes;
 }
@@ -215,8 +216,8 @@ export function discoveryModelOptions(
     engine.routes.map((route) => ({
       logical_engine: engine.logical_engine,
       transport_provider: route.transport_provider,
-      transport_model: route.default_model,
-      label: `${ENGINE_LABELS[engine.logical_engine]} · ${TRANSPORT_LABELS[route.transport_provider]} · ${route.default_model}`,
+      transport_model: route.transport_model,
+      label: `${ENGINE_LABELS[engine.logical_engine]} · ${route.measurement_mode} · ${TRANSPORT_LABELS[route.transport_provider]} · ${route.transport_model}`,
     })),
   );
 }

@@ -25,7 +25,6 @@ from app.core.config.audits import (
     EVENT_TASK_FAILED,
     EVENT_TASK_RETRY,
     EVENT_TASK_SUCCEEDED,
-    MEASUREMENT_MODE_BENCHMARK,
     MEASUREMENT_POLICY_KEY,
 )
 
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
     from app.models.audit import AuditEvent
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
 from app.core.config.projects import MAX_REPETITIONS, MIN_REPETITIONS
-from app.core.config.provider_catalog import APPROVED_ROUTES
+from app.core.config.provider_catalog import LOGICAL_ENGINES
 
 BenchmarkModeStr = str
 
@@ -69,7 +68,7 @@ class ModelProvenance(BaseModel):
 # Stable catalog order: the engine order of the approved-route catalog
 # (config-owned; unknown/retired engines sort after it, deterministically).
 _ENGINE_CATALOG_ORDER: dict[str, int] = {
-    engine: index for index, engine in enumerate(APPROVED_ROUTES)
+    engine: index for index, engine in enumerate(sorted(LOGICAL_ENGINES))
 }
 
 
@@ -195,10 +194,81 @@ class AuditCreate(BaseModel):
     # ``Literal[...]``. The constants remain the DEFAULT and the value the rest
     # of the code compares against, so a drift between the two sides shows up
     # here as a type error instead of passing silently.
-    measurement_mode: Literal["pulse", "benchmark"] = MEASUREMENT_MODE_BENCHMARK
+    measurement_mode: Literal["pulse", "benchmark"] = "pulse"
     # Optional explicit 64-bit seed (decimal string). Generated + stored when
     # omitted so the slot shuffle is reproducible (invariant 9).
     random_seed: str | None = None
+
+
+class AuditEstimateRequest(BaseModel):
+    project_id: uuid.UUID
+    prompt_set_id: uuid.UUID | None = None
+    prompt_ids: list[uuid.UUID] = Field(default_factory=list)
+    engines: list[str] = Field(min_length=1)
+    repetitions: int | None = Field(
+        default=None, ge=MIN_REPETITIONS, le=MAX_REPETITIONS
+    )
+    measurement_mode: Literal["pulse", "benchmark"] = "pulse"
+
+
+class AuditEngineEstimate(BaseModel):
+    logical_engine: str
+    transport_provider: str
+    transport_model: str
+    retrieval_enabled: bool
+    prompt_count: int
+    repetition_count: int
+    execution_count: int
+    maximum_attempt_count: int
+    estimated_input_tokens: int
+    estimated_output_tokens: int
+    estimated_search_calls: int | None
+    estimated_token_cost_microusd: int | None
+    estimated_search_cost_microusd: int | None
+    estimated_total_cost_microusd: int | None
+    cost_status: Literal["complete", "partial", "unknown"]
+    pricing_version: str
+
+
+class AuditEstimateResponse(BaseModel):
+    measurement_mode: Literal["pulse", "benchmark"]
+    retrieval_enabled: bool
+    prompt_count: int
+    engine_count: int
+    repetition_count: int
+    execution_count: int
+    maximum_attempt_count: int
+    maximum_wall_clock_seconds: int
+    cost_status: Literal["complete", "partial", "unknown"]
+    estimated_total_cost_microusd: int | None
+    engines: list[AuditEngineEstimate]
+
+
+class AuditEnginePerformance(BaseModel):
+    logical_engine: str
+    execution_count: int
+    completed_count: int
+    failed_count: int
+    retry_count: int
+    search_calls: int
+    average_provider_latency_ms: float | None
+    projected_cost_microusd: int | None
+
+
+class AuditPerformanceResponse(BaseModel):
+    audit_id: uuid.UUID
+    queue_wait_ms: int | None
+    total_run_duration_ms: int | None
+    time_to_first_result_ms: int | None
+    execution_count: int
+    completed_count: int
+    failed_count: int
+    coverage: float
+    retry_count: int
+    usage: dict[str, int | None]
+    search_calls: int
+    projected_cost_microusd: int | None
+    engines: list[AuditEnginePerformance]
 
 
 class AuditTaskResponse(BaseModel):

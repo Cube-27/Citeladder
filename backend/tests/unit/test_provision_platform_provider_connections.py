@@ -20,10 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
 from app.core.config.provider_catalog import (
-    APPROVED_ROUTES,
     CREDENTIAL_SOURCE_PLATFORM,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
+    MEASUREMENT_ROUTES,
     TELEMETRY_PLATFORM_PROVISIONED,
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
@@ -102,16 +102,14 @@ async def test_provision_creates_system_workspace_connections_and_routes(
 
         # One catalog-default route per engine on the matching transport.
         routes = (await session.execute(select(ProviderRoute))).scalars().all()
-        for engine, approved in APPROVED_ROUTES.items():
-            for transport, model in approved.items():
-                route = next(
-                    r
-                    for r in routes
-                    if r.logical_engine == engine and r.transport_provider == transport
-                )
-                assert route.transport_model == model
-                assert route.is_default is True
-                assert route.workspace_id == system.id
+        for (engine, mode), approved in MEASUREMENT_ROUTES.items():
+            if mode != "pulse":
+                continue
+            route = next(r for r in routes if r.logical_engine == engine)
+            assert route.transport_provider == approved.transport_provider
+            assert route.transport_model == approved.transport_model
+            assert route.is_default is True
+            assert route.workspace_id == system.id
 
     # Telemetry carries transport/row ids/status only — never secret material.
     provisioned = [m for m in events if TELEMETRY_PLATFORM_PROVISIONED in m]

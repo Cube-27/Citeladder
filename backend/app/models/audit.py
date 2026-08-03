@@ -39,7 +39,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.connectors.answer_engines.contracts import FinishReason
 from app.core.config.audits import (
     AUDIT_STATUS_DRAFT,
-    MEASUREMENT_MODE_BENCHMARK,
+    MEASUREMENT_MODE_PULSE,
     TASK_STATUS_QUEUED,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
@@ -90,9 +90,12 @@ class Audit(Base):
     benchmark_mode: Mapped[str] = mapped_column(String(32), default="")
     # Measurement mode (pulse | benchmark) — an axis INDEPENDENT of
     # ``benchmark_mode`` (prompt framing). Defaults to ``benchmark`` so an
-    # explicit manual run keeps its pre-existing full-run shape.
+    # new run starts with the fast, low-cost monitoring contract.
     measurement_mode: Mapped[str] = mapped_column(
-        String(16), default=MEASUREMENT_MODE_BENCHMARK, nullable=False
+        String(16),
+        default=MEASUREMENT_MODE_PULSE,
+        server_default=MEASUREMENT_MODE_PULSE,
+        nullable=False,
     )
     # Funded-execution provenance. Null for BYOK runs. The billing account that
     # funds this run (SET NULL so account removal never erases audit history),
@@ -212,6 +215,9 @@ class AuditPromptSnapshot(Base):
     text: Mapped[str] = mapped_column(Text)
     theme: Mapped[str] = mapped_column(String(255), default="")
     intent: Mapped[str] = mapped_column(String(32), default="")
+    cohort: Mapped[str] = mapped_column(
+        String(16), default="core", server_default="core", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

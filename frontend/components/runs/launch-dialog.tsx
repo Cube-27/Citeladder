@@ -82,6 +82,7 @@ export function LaunchDialog({
   const [promptSetId, setPromptSetId] = useState<string | null>(null);
   const [engines, setEngines] = useState<LogicalEngine[]>([]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
+  const [measurementMode, setMeasurementMode] = useState<'pulse' | 'benchmark'>('pulse');
   const [connectOpen, setConnectOpen] = useState(false);
 
   // Resolve the effective prompt set: the explicit selection, else the first.
@@ -92,8 +93,15 @@ export function LaunchDialog({
     promptSetId: effectivePromptSetId,
     engines,
     repetitions,
+    measurementMode,
   };
   const ready = canLaunch(selection);
+
+  const estimateQuery = useQuery({
+    queryKey: ['audit-estimate', selection],
+    queryFn: () => runsApi.estimateAudit(buildLaunchPayload(selection)),
+    enabled: open && ready,
+  });
 
   const launchMutation = useMutation({
     mutationFn: () => runsApi.launchAudit(buildLaunchPayload(selection)),
@@ -104,6 +112,7 @@ export function LaunchDialog({
       setEngines([]);
       setPromptSetId(null);
       setRepetitions(DEFAULT_REPETITIONS);
+      setMeasurementMode('pulse');
       onLaunched?.(audit);
     },
   });
@@ -170,6 +179,26 @@ export function LaunchDialog({
           </Field>
 
           <fieldset className="grid gap-2">
+            <legend className="text-secondary text-xs font-medium">Measurement mode</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(['pulse', 'benchmark'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={measurementMode === mode}
+                  onClick={() => {
+                    setMeasurementMode(mode);
+                    setRepetitions(mode === 'pulse' ? 1 : 3);
+                  }}
+                  className={filterChipClasses(measurementMode === mode)}
+                >
+                  {mode === 'pulse' ? 'Pulse · fast and inexpensive' : 'Benchmark · web grounded'}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="grid gap-2">
             <legend className="text-secondary text-xs font-medium">
               Engines <span className="text-danger">*</span>
             </legend>
@@ -222,6 +251,22 @@ export function LaunchDialog({
               />
             )}
           </Field>
+
+          {estimateQuery.data ? (
+            <div className="border-border-subtle bg-well grid gap-1 rounded-lg border p-3 text-xs">
+              <span className="text-foreground font-semibold">
+                {estimateQuery.data.execution_count} executions · up to{' '}
+                {estimateQuery.data.maximum_attempt_count} attempts
+              </span>
+              <span className="text-muted">
+                Maximum wall-clock budget {estimateQuery.data.maximum_wall_clock_seconds}s · cost{' '}
+                {estimateQuery.data.cost_status}
+                {estimateQuery.data.estimated_total_cost_microusd !== null
+                  ? ` · ~$${(estimateQuery.data.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
+                  : ' · unavailable'}
+              </span>
+            </div>
+          ) : null}
         </div>
       </Dialog>
 

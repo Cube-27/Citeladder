@@ -57,6 +57,7 @@ from app.models.brand import (
 )
 from app.models.commerce import FeedIssue, OrderFact
 from app.models.content import ContentGeneration, ContentGenerationAttempt
+from app.models.discovery import BrandDiscovery
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationEvent,
@@ -124,6 +125,7 @@ __all__ = [
     "BrandProfile",
     "BrandProfileSuggestion",
     "BrandMention",
+    "BrandDiscovery",
     "BillingAccount",
     "BillingCustomer",
     "BillingSubscription",

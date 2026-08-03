@@ -62,15 +62,11 @@ class AnswerEngineRequest:
     timeout_seconds: float
     # Frozen measurement-mode policy the adapter must obey verbatim: whether to
     # attach retrieval/search tools, the output-token cap, and the reasoning pin
-    # (``off`` | ``unverified`` | an explicit effort — see
-    # ``config/provider_catalog.RoutePolicy``). Defaults keep the pre-T3
-    # construction sites compiling; the planner/worker pass all three
-    # explicitly. ``max_output_tokens=0`` means "not supplied": no cap literal
-    # is invented here (invariant 1 — caps are config-owned), so an adapter
-    # reading a zero falls back to the configured catalog cap.
-    retrieval_enabled: bool = True
-    max_output_tokens: int = 0
-    reasoning_effort: str = ""
+    # (``off`` | an explicit effort — see ``config/provider_catalog.RoutePolicy``).
+    # All fields are mandatory; no adapter invents a route-policy fallback.
+    retrieval_enabled: bool
+    max_output_tokens: int
+    reasoning_effort: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,10 +106,7 @@ class AnswerEngineResponse:
     finish_reason: FinishReason = FinishReason.UNKNOWN
     raw_finish_reason: str = ""
     # Typed, all-nullable usage counters and the ONLY usage contract on this
-    # response (unknown never becomes zero). The legacy untyped ``usage`` bag is
-    # gone: persistence serializes THIS through ``normalized_usage_dict``, so
-    # there is exactly one in-memory source of truth. ``RawResponseArtifact.usage``
-    # remains the persisted JSON column (it still holds pre-T3 rows, which the
-    # cost projection reads through its legacy-key fallbacks).
+    # response (unknown never becomes zero). Persistence serializes this typed
+    # object through ``normalized_usage_dict``; there is one source of truth.
     normalized_usage: NormalizedUsage = field(default_factory=NormalizedUsage)
     latency_ms: int = 0

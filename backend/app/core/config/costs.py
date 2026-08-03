@@ -5,16 +5,11 @@ This module is the SOLE owner of expected execution costs (invariant 1): the
 Part B funded-admission path imports ``expected_execution_cost`` from here
 rather than defining a duplicate catalogue.
 
-Two pricing surfaces coexist deliberately — do not "unify" them:
-
-- ``app.core.config.analysis`` owns the Gemini paid-list rates used ONLY by
-  the scoring visibility estimate (``_aggregate_cost``): a reporting
-  projection answering "what would this traffic cost at public list prices".
-- THIS module owns (a) the versioned unit-rate ``RoutePricing`` catalogue
+This module owns (a) the versioned unit-rate ``RoutePricing`` catalogue
   consumed by the append-only execution-cost projection, and (b) the
   route/mode-keyed ``ExpectedExecutionCost`` catalogue consumed by funded
   admission ("what do we expect ONE execution of this route+mode to cost").
-  They version independently and answer different questions.
+  Both audit estimates and persisted execution projections read this one catalog.
 
 Catalogue rate fields stay null until externally verified (frozen v8 plan): no
 provider unit rates are invented from the aggregate T1 observations. With
@@ -26,6 +21,7 @@ funded admission reads ``ExpectedExecutionCost.complete`` and fails closed.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import ceil
 from typing import Final
 
 from app.core.config.audits import (
@@ -36,10 +32,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
-    TRANSPORT_ANTHROPIC,
-    TRANSPORT_GOOGLE,
-    TRANSPORT_OPENAI,
-    default_model,
+    measurement_route,
 )
 
 # Shared currency conversion: 1 USD = 1_000_000 micro-USD. Funded admission
@@ -58,7 +51,7 @@ EXECUTION_COST_FORMULA_VERSION: Final = "line-sum-v1"
 
 # Version of the current unit-rate catalogue. ``unverified-rates-v1`` carries
 # no verified rates — every rate field is null.
-PRICING_CATALOG_VERSION: Final = "unverified-rates-v1"
+PRICING_CATALOG_VERSION: Final = "official-2026-08-03-v1"
 
 # Projection completeness vocabulary (persisted; do not reuse for anything
 # else). ``unknown`` never coerces to zero anywhere.
@@ -134,21 +127,47 @@ class _ExpectedCostEstimate:
     expected_searches: int | None
 
 
-def _approved_route(logical_engine: str, transport_provider: str) -> RouteIdentity:
+def _approved_route(logical_engine: str, measurement_mode: str) -> RouteIdentity:
     """Rebuild the immutable identity of an approved catalogue route."""
 
+    route = measurement_route(logical_engine, measurement_mode)
     return RouteIdentity(
         logical_engine=logical_engine,
-        transport_provider=transport_provider,
-        transport_model=default_model(logical_engine, transport_provider),
+        transport_provider=route.transport_provider,
+        transport_model=route.transport_model,
     )
 
 
-ROUTE_CHATGPT: Final = _approved_route(ENGINE_CHATGPT, TRANSPORT_OPENAI)
-ROUTE_CLAUDE: Final = _approved_route(ENGINE_CLAUDE, TRANSPORT_ANTHROPIC)
-ROUTE_GEMINI: Final = _approved_route(ENGINE_GEMINI, TRANSPORT_GOOGLE)
+ROUTE_CHATGPT_PULSE: Final = _approved_route(ENGINE_CHATGPT, MEASUREMENT_MODE_PULSE)
+ROUTE_CHATGPT_BENCHMARK: Final = _approved_route(
+    ENGINE_CHATGPT, MEASUREMENT_MODE_BENCHMARK
+)
+
+# Conservative, provider-free audit preview assumptions. They are estimate
+# inputs, not runtime tuning knobs and never affect provider requests.
+ESTIMATE_INPUT_CHARS_PER_TOKEN: Final = 4
+ESTIMATE_SEARCH_CALLS: Final[dict[str, int]] = {
+    ENGINE_CHATGPT: 1,
+    ENGINE_CLAUDE: 3,
+    ENGINE_GEMINI: 1,
+}
+ROUTE_CLAUDE_PULSE: Final = _approved_route(ENGINE_CLAUDE, MEASUREMENT_MODE_PULSE)
+ROUTE_CLAUDE_BENCHMARK: Final = _approved_route(
+    ENGINE_CLAUDE, MEASUREMENT_MODE_BENCHMARK
+)
+ROUTE_GEMINI_PULSE: Final = _approved_route(ENGINE_GEMINI, MEASUREMENT_MODE_PULSE)
+ROUTE_GEMINI_BENCHMARK: Final = _approved_route(
+    ENGINE_GEMINI, MEASUREMENT_MODE_BENCHMARK
+)
 APPROVED_ROUTE_IDENTITIES: Final[frozenset[RouteIdentity]] = frozenset(
-    {ROUTE_CHATGPT, ROUTE_CLAUDE, ROUTE_GEMINI}
+    {
+        ROUTE_CHATGPT_PULSE,
+        ROUTE_CHATGPT_BENCHMARK,
+        ROUTE_CLAUDE_PULSE,
+        ROUTE_CLAUDE_BENCHMARK,
+        ROUTE_GEMINI_PULSE,
+        ROUTE_GEMINI_BENCHMARK,
+    }
 )
 
 
@@ -167,43 +186,45 @@ def _unverified_pricing(pricing_version: str) -> RoutePricing:
     )
 
 
+def _pricing(
+    input_rate: int | None,
+    output_rate: int | None,
+    *,
+    cached_input_rate: int | None = None,
+    search_fee: int | None = None,
+) -> RoutePricing:
+    return RoutePricing(
+        uncached_input_microusd_per_million=input_rate,
+        cached_input_microusd_per_million=cached_input_rate,
+        output_microusd_per_million=output_rate,
+        reasoning_microusd_per_million=None,
+        search_fee_microusd=search_fee,
+        currency="USD",
+        effective_date="2026-08-03",
+        pricing_version=PRICING_CATALOG_VERSION,
+    )
+
+
 # Unit-rate catalogues keyed by pricing version, then immutable route identity.
-# PR1 ships exactly one version with all rates null.
+# Exact lines are populated only where the official card is complete.
 _ROUTE_PRICING_CATALOGS: Final[dict[str, dict[RouteIdentity, RoutePricing]]] = {
     PRICING_CATALOG_VERSION: {
-        route: _unverified_pricing(PRICING_CATALOG_VERSION)
-        for route in APPROVED_ROUTE_IDENTITIES
+        ROUTE_CHATGPT_PULSE: _pricing(200_000, 1_250_000, cached_input_rate=20_000),
+        # GPT-5.6-sol pricing/search lines are intentionally unknown until the
+        # complete official card is available.
+        ROUTE_CHATGPT_BENCHMARK: _unverified_pricing(PRICING_CATALOG_VERSION),
+        ROUTE_CLAUDE_PULSE: _pricing(1_000_000, 5_000_000),
+        ROUTE_CLAUDE_BENCHMARK: _pricing(3_000_000, 15_000_000, search_fee=10_000),
+        ROUTE_GEMINI_PULSE: _pricing(300_000, 2_500_000),
+        ROUTE_GEMINI_BENCHMARK: _pricing(1_500_000, 7_500_000, search_fee=14_000),
     }
 }
 
-# Frozen T1 aggregate observations (Anthropic route only). These are TOTAL
-# expected costs per execution — NOT unit rates — so no provider rate card is
-# derived from them. OpenAI/Google token estimates and every per-search fee
-# stay None: funded admission reads ``complete`` and fails closed there.
-#
-# STALE AND NOT-TO-BE-TRUSTED AS ADMISSION BOUNDS: these were measured on
-# ``claude-sonnet-4-6``, and the Claude route now runs ``claude-haiku-4-5``. The
-# model changed, so they are NOT observations of the current route and must NOT
-# be treated as safe admission bounds or rescaled by the published price ratio
-# (a number derived from a rate card is not an observation). They are retained
-# for historical reference only. NOTE: the catalog entries below still resolve
-# ``complete=True`` today; they must be REPLACED with a LIVE Claude Haiku 4.5
-# measurement on the current route before ROUTE_CLAUDE may be relied on for
-# funded admission.
+# Expected per-execution costs stay empty until staging measurements exist.
+# Published unit prices are not substituted for observed execution envelopes.
 _EXPECTED_COST_CATALOG: Final[
     dict[tuple[RouteIdentity, str], _ExpectedCostEstimate]
-] = {
-    (ROUTE_CLAUDE, MEASUREMENT_MODE_PULSE): _ExpectedCostEstimate(
-        token_cost_microusd=2_890,
-        search_fee_microusd=None,
-        expected_searches=None,
-    ),
-    (ROUTE_CLAUDE, MEASUREMENT_MODE_BENCHMARK): _ExpectedCostEstimate(
-        token_cost_microusd=146_600,
-        search_fee_microusd=None,
-        expected_searches=3,
-    ),
-}
+] = {}
 
 
 def pricing_version_known(pricing_version: str) -> bool:
@@ -218,10 +239,8 @@ def route_pricing_for(
     """Look up the rate card for one route under one pricing version.
 
     Returns None only when the pricing VERSION is unknown (nothing can be
-    honestly stamped with it). A known version with no entry for the route —
-    e.g. repricing an old artifact whose route has since retired — yields an
-    all-null unverified card stamped with that version: rates unverified,
-    never zero-cost.
+    honestly stamped with it). A known version without a route entry yields an
+    all-null unverified card: rates remain unknown, never zero-cost.
     """
 
     catalog = _ROUTE_PRICING_CATALOGS.get(pricing_version)
@@ -231,6 +250,11 @@ def route_pricing_for(
     if pricing is None:
         return _unverified_pricing(pricing_version)
     return pricing
+
+
+def estimate_token_count(text: str) -> int:
+    """Deterministic conservative token approximation for previews only."""
+    return max(1, ceil(len(text) / ESTIMATE_INPUT_CHARS_PER_TOKEN))
 
 
 def expected_execution_cost(

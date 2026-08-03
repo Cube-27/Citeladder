@@ -19,13 +19,13 @@ from app.core.config.costs import (
     PRICING_CATALOG_VERSION,
     PROJECTION_STATUS_COMPLETE,
     PROJECTION_STATUS_PARTIAL,
-    ROUTE_CLAUDE,
+    ROUTE_CLAUDE_PULSE,
     RoutePricing,
 )
 from app.core.config.provider_catalog import (
     ENGINE_CLAUDE,
     TRANSPORT_ANTHROPIC,
-    default_model,
+    measurement_route,
 )
 from app.domain.audits.cost_projection import append_repricing
 from app.domain.audits.planner import create_audit
@@ -38,10 +38,10 @@ from app.models.audit import (
 from tests.component.audit_helpers import seed_audit_fixtures
 
 _USAGE = {
-    "total_input_tokens": 1_000,
-    "total_output_tokens": 500,
+    "uncached_input_tokens": 1_000,
+    "output_tokens": 500,
     "total_tokens": 1_500,
-    "web_search_requests": 2,
+    "search_requests": 2,
 }
 
 _PRICED_V2 = RoutePricing(
@@ -55,7 +55,7 @@ _PRICED_V2 = RoutePricing(
     pricing_version="test-priced-v2",
 )
 
-_MODEL = default_model(ENGINE_CLAUDE, TRANSPORT_ANTHROPIC)
+_MODEL = measurement_route(ENGINE_CLAUDE, "pulse").transport_model
 
 
 @pytest.fixture
@@ -147,15 +147,15 @@ async def test_append_repricing_inserts_once_by_composite_identity(
     assert first.raw_response_artifact_id == artifact_id
     assert first.formula_version == EXECUTION_COST_FORMULA_VERSION
     assert first.pricing_version == PRICING_CATALOG_VERSION
-    # Legacy total keys map to uncached-input/output; every rate in the
-    # current catalogue is unverified, so the observation is usage-only.
+    # Canonical usage is priced only where the exact route card is verified.
     assert first.uncached_input_tokens == 1_000
     assert first.output_tokens == 500
     assert first.total_tokens == 1_500
     assert first.search_requests == 2
     assert first.cached_input_tokens is None
     assert first.reasoning_tokens is None
-    assert first.uncached_input_cost_microusd is None
+    assert first.uncached_input_cost_microusd == 1_000
+    assert first.output_cost_microusd == 2_500
     assert first.projected_total_cost_microusd is None
     assert first.provider_reported_cost_microusd is None
     assert first.projection_status == PROJECTION_STATUS_PARTIAL
@@ -171,7 +171,7 @@ async def test_two_pricing_versions_coexist_for_one_artifact(
     monkeypatch.setitem(
         costs_config._ROUTE_PRICING_CATALOGS,
         "test-priced-v2",
-        {ROUTE_CLAUDE: _PRICED_V2},
+        {ROUTE_CLAUDE_PULSE: _PRICED_V2},
     )
     _, _, artifact_id = seeded_artifact
     async with session_factory() as session:

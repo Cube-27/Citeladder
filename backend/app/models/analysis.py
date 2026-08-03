@@ -113,6 +113,9 @@ class ResponseAnalysis(DerivedRowProvenanceMixin, Base):
     prompt_index: Mapped[int] = mapped_column(Integer, default=0)
     repetition: Mapped[int] = mapped_column(Integer, default=0)
     prompt_class: Mapped[str] = mapped_column(String(32), default="")
+    cohort: Mapped[str] = mapped_column(
+        String(16), default="core", server_default="core", index=True
+    )
     # Shopping-surface slot identity (§7.1): brand metric denominators filter
     # on this column (defense-in-depth beside the AuditTask filter) so
     # direct/retry/legacy write paths cannot contaminate brand metrics.

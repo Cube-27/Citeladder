@@ -19,7 +19,8 @@ from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
 from app.core.config.provider_catalog import (
     ACTIVE_TRANSPORTS,
-    APPROVED_ROUTES,
+    LOGICAL_ENGINES,
+    measurement_routes_for_engine,
 )
 from app.domain.billing.schemas import ProviderConnectionStatesResponse
 from app.domain.providers.schemas import (
@@ -186,16 +187,22 @@ catalog_router = APIRouter(prefix="/provider-catalog", tags=["providers"])
 
 @catalog_router.get("", response_model=ProviderCatalogResponse)
 async def get_provider_catalog() -> ProviderCatalogResponse:
-    """Approved active transports and per-engine routes with default models."""
+    """Exact Pulse and Benchmark routes; no aliases or model fallback."""
     engines = [
         ProviderCatalogEngine(
             logical_engine=engine,
             routes=[
-                ProviderCatalogRoute(transport_provider=transport, default_model=model)
-                for transport, model in routes.items()
+                ProviderCatalogRoute(
+                    measurement_mode=route.measurement_mode,
+                    transport_provider=route.transport_provider,
+                    transport_model=route.transport_model,
+                    retrieval_enabled=route.retrieval_enabled,
+                    reasoning_effort=route.reasoning_effort,
+                )
+                for route in measurement_routes_for_engine(engine)
             ],
         )
-        for engine, routes in APPROVED_ROUTES.items()
+        for engine in sorted(LOGICAL_ENGINES)
     ]
     return ProviderCatalogResponse(
         transports=sorted(ACTIVE_TRANSPORTS), engines=engines

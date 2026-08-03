@@ -48,14 +48,16 @@ from app.connectors.answer_engines.openai_parser import (
 from app.core.config.provider_catalog import (
     REASONING_EFFORT_OFF,
     REASONING_EFFORT_UNVERIFIED,
-    default_model,
     is_reasoning_pinned_off,
-    provider_catalog_settings,
+    measurement_route,
     route_policy,
 )
 from app.domain.audits.cost_projection import _extract_usage
 
 _FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures"
+_CHATGPT_BENCHMARK_MODEL = measurement_route("chatgpt", "benchmark").transport_model
+_CLAUDE_BENCHMARK_MODEL = measurement_route("claude", "benchmark").transport_model
+_GEMINI_BENCHMARK_MODEL = measurement_route("gemini", "benchmark").transport_model
 
 
 def _load_fixture(name: str) -> dict:
@@ -211,8 +213,11 @@ async def test_gemini_adapter_executes_and_records_provenance() -> None:
     request = AnswerEngineRequest(
         prompt="running shoes",
         system_instruction="",
-        model=default_model("gemini", "google"),
+        model=_GEMINI_BENCHMARK_MODEL,
         timeout_seconds=5,
+        retrieval_enabled=True,
+        max_output_tokens=4096,
+        reasoning_effort="minimal",
     )
     adapter = GeminiAnswerEngineAdapter(
         api_key="k", client=httpx.AsyncClient(transport=transport)
@@ -233,8 +238,11 @@ async def test_gemini_adapter_maps_http_error() -> None:
             AnswerEngineRequest(
                 prompt="x",
                 system_instruction="",
-                model=default_model("gemini", "google"),
+                model=measurement_route("gemini", "pulse").transport_model,
                 timeout_seconds=5,
+                retrieval_enabled=False,
+                max_output_tokens=600,
+                reasoning_effort="minimal",
             )
         )
     assert excinfo.value.error_code == "rate_limit"
@@ -254,8 +262,11 @@ def test_anthropic_payload_uses_native_web_search_and_top_level_system() -> None
     request = AnswerEngineRequest(
         prompt="cheap baby clothes",
         system_instruction="Answer for Australia.",
-        model="claude-sonnet-4-6",
+        model=_CLAUDE_BENCHMARK_MODEL,
         timeout_seconds=30,
+        retrieval_enabled=True,
+        max_output_tokens=4096,
+        reasoning_effort="low",
     )
     payload = anthropic_payload(request, country_code="AU")
     assert payload["system"] == "Answer for Australia."
@@ -270,8 +281,11 @@ def test_anthropic_payload_omits_system_and_location_when_absent() -> None:
     request = AnswerEngineRequest(
         prompt="school uniforms",
         system_instruction="",
-        model="claude-sonnet-4-6",
+        model=_CLAUDE_BENCHMARK_MODEL,
         timeout_seconds=30,
+        retrieval_enabled=True,
+        max_output_tokens=4096,
+        reasoning_effort="low",
     )
     payload = anthropic_payload(request, country_code="")
     assert "system" not in payload
@@ -371,8 +385,11 @@ async def test_anthropic_http_error_surfaces_safe_detail() -> None:
             AnswerEngineRequest(
                 prompt="x",
                 system_instruction="",
-                model="claude-sonnet-4-6",
+                model=_CLAUDE_BENCHMARK_MODEL,
                 timeout_seconds=5,
+                retrieval_enabled=True,
+                max_output_tokens=4096,
+                reasoning_effort="low",
             )
         )
     assert "HTTP 400" in str(excinfo.value)
@@ -426,8 +443,11 @@ async def test_anthropic_adapter_executes_and_records_provenance() -> None:
         AnswerEngineRequest(
             prompt="x",
             system_instruction="",
-            model="claude-sonnet-4-6",
+            model=_CLAUDE_BENCHMARK_MODEL,
             timeout_seconds=5,
+            retrieval_enabled=True,
+            max_output_tokens=4096,
+            reasoning_effort="low",
         )
     )
     assert result.transport_provider == "anthropic"
@@ -442,14 +462,17 @@ def test_openai_payload_is_stateless_brand_free_with_country() -> None:
     request = AnswerEngineRequest(
         prompt="cheap baby clothes",
         system_instruction="Answer for Australia.",
-        model="gpt-5.4",
+        model=_CHATGPT_BENCHMARK_MODEL,
         timeout_seconds=30,
+        retrieval_enabled=True,
+        max_output_tokens=4096,
+        reasoning_effort="none",
     )
     payload = openai_payload(request, country_code="AU")
     # Only the user prompt goes in ``input``; no brand/competitor/domain list.
     assert payload["input"] == "cheap baby clothes"
     assert payload["instructions"] == "Answer for Australia."
-    assert payload["model"] == "gpt-5.4"
+    assert payload["model"] == _CHATGPT_BENCHMARK_MODEL
     assert payload["store"] is False
     assert "max_output_tokens" in payload
     tool = payload["tools"][0]
@@ -464,8 +487,11 @@ def test_openai_payload_omits_instructions_and_location_when_absent() -> None:
     request = AnswerEngineRequest(
         prompt="school uniforms",
         system_instruction="",
-        model="gpt-5.4",
+        model=_CHATGPT_BENCHMARK_MODEL,
         timeout_seconds=30,
+        retrieval_enabled=True,
+        max_output_tokens=4096,
+        reasoning_effort="none",
     )
     payload = openai_payload(request, country_code="")
     assert "instructions" not in payload
@@ -536,8 +562,11 @@ async def test_openai_http_error_surfaces_safe_detail() -> None:
             AnswerEngineRequest(
                 prompt="x",
                 system_instruction="",
-                model="gpt-5.4",
+                model=_CHATGPT_BENCHMARK_MODEL,
                 timeout_seconds=5,
+                retrieval_enabled=True,
+                max_output_tokens=4096,
+                reasoning_effort="none",
             )
         )
     assert "HTTP 429" in str(excinfo.value)
@@ -643,8 +672,11 @@ async def test_openai_adapter_sends_bearer_auth_only_and_records_provenance() ->
         AnswerEngineRequest(
             prompt="running shoes",
             system_instruction="",
-            model="gpt-5.4",
+            model=_CHATGPT_BENCHMARK_MODEL,
             timeout_seconds=5,
+            retrieval_enabled=True,
+            max_output_tokens=4096,
+            reasoning_effort="none",
         )
     )
     # BYOK key travels only in the Authorization header, never the body.
@@ -668,8 +700,11 @@ async def test_openai_adapter_maps_http_status_to_error_code() -> None:
             AnswerEngineRequest(
                 prompt="x",
                 system_instruction="",
-                model="gpt-5.4",
+                model=_CHATGPT_BENCHMARK_MODEL,
                 timeout_seconds=5,
+                retrieval_enabled=True,
+                max_output_tokens=4096,
+                reasoning_effort="none",
             )
         )
     assert excinfo.value.error_code == "rate_limit"
@@ -690,8 +725,11 @@ async def test_openai_adapter_maps_timeout() -> None:
             AnswerEngineRequest(
                 prompt="x",
                 system_instruction="",
-                model="gpt-5.4",
+                model=_CHATGPT_BENCHMARK_MODEL,
                 timeout_seconds=1,
+                retrieval_enabled=True,
+                max_output_tokens=4096,
+                reasoning_effort="none",
             )
         )
     assert excinfo.value.error_code == "timeout"
@@ -790,12 +828,15 @@ def test_openai_parser_tolerates_non_numeric_usage_tokens() -> None:
 # T3 — frozen request policy drives tools / caps / reasoning (invariant 9)
 # ---------------------------------------------------------------------------
 def _request(**overrides) -> AnswerEngineRequest:
-    """A frozen request with the pre-T3 defaults, overridable per assertion."""
+    """A complete frozen request, overridable per assertion."""
     fields: dict = {
         "prompt": "cheap baby clothes",
         "system_instruction": "",
-        "model": "gpt-5.4",
+        "model": "gpt-5.4-nano-2026-03-17",
         "timeout_seconds": 30,
+        "retrieval_enabled": False,
+        "max_output_tokens": 600,
+        "reasoning_effort": "off",
     }
     fields.update(overrides)
     return AnswerEngineRequest(**fields)
@@ -818,22 +859,17 @@ def test_openai_payload_includes_search_tools_for_benchmark() -> None:
     assert payload["max_output_tokens"] == 4096
 
 
-def test_openai_payload_cap_falls_back_to_config_when_unsupplied() -> None:
-    payload = openai_payload(_request(), country_code="")
-    assert payload["max_output_tokens"] == provider_catalog_settings.max_output_tokens
-
-
 def test_openai_payload_pins_reasoning_off() -> None:
     # The chatgpt/openai route pins reasoning OFF, and the pin must be STATED:
     # omitting the key lets the model's own default effort apply, which is not
     # none.
-    policy = route_policy("chatgpt", "openai")
+    policy = route_policy("chatgpt", "pulse")
     assert policy.reasoning_effort == REASONING_EFFORT_OFF
     payload = openai_payload(
         # Pass the approved ChatGPT route model explicitly rather than relying
         # on the _request default, so the test mirrors the real route identity.
         _request(
-            model=default_model("chatgpt", "openai"),
+            model=measurement_route("chatgpt", "pulse").transport_model,
             reasoning_effort=policy.reasoning_effort,
         ),
         country_code="",
@@ -874,24 +910,23 @@ def test_anthropic_payload_includes_search_tools_for_benchmark() -> None:
 def test_anthropic_payload_disables_thinking_when_pinned_off() -> None:
     # The claude/anthropic route pins reasoning OFF, so thinking is explicitly
     # disabled on the wire.
-    assert is_reasoning_pinned_off("claude", "anthropic")
-    policy = route_policy("claude", "anthropic")
+    assert is_reasoning_pinned_off("claude", "pulse")
+    policy = route_policy("claude", "pulse")
     assert policy.reasoning_effort == REASONING_EFFORT_OFF
     payload = anthropic_payload(
-        _request(model="claude-sonnet-4-6", reasoning_effort=policy.reasoning_effort),
+        _request(
+            model=measurement_route("claude", "pulse").transport_model,
+            reasoning_effort=policy.reasoning_effort,
+        ),
         country_code="",
     )
     assert payload["thinking"] == {"type": "disabled"}
-    # No pin supplied (pre-T3 construction site) => no thinking key invented.
-    assert "thinking" not in anthropic_payload(
-        _request(model="claude-sonnet-4-6"), country_code=""
-    )
 
 
 def test_gemini_payload_omits_grounding_tools_for_pulse() -> None:
     payload = gemini_payload(
         _request(
-            model=default_model("gemini", "google"),
+            model=measurement_route("gemini", "pulse").transport_model,
             retrieval_enabled=False,
             max_output_tokens=600,
         )
@@ -903,7 +938,7 @@ def test_gemini_payload_omits_grounding_tools_for_pulse() -> None:
 def test_gemini_payload_includes_grounding_tools_for_benchmark() -> None:
     payload = gemini_payload(
         _request(
-            model=default_model("gemini", "google"),
+            model=measurement_route("gemini", "pulse").transport_model,
             retrieval_enabled=True,
             max_output_tokens=4096,
         )
@@ -912,24 +947,24 @@ def test_gemini_payload_includes_grounding_tools_for_benchmark() -> None:
     assert payload["max_output_tokens"] == 4096
 
 
-def test_gemini_payload_pins_thinking_off() -> None:
-    policy = route_policy("gemini", "google")
-    assert policy.reasoning_effort == REASONING_EFFORT_OFF
+def test_gemini_payload_pins_minimal_thinking() -> None:
+    policy = route_policy("gemini", "pulse")
+    assert policy.reasoning_effort == "minimal"
     payload = gemini_payload(
         _request(
-            model=default_model("gemini", "google"),
+            model=measurement_route("gemini", "pulse").transport_model,
             reasoning_effort=policy.reasoning_effort,
         )
     )
-    assert payload["model"] == "gemini-2.5-flash-lite"
-    assert "generation_config" not in payload
+    assert payload["model"] == "gemini-3.5-flash-lite"
+    assert payload["generation_config"] == {"thinking_level": "minimal"}
     assert "thinking_config" not in payload
 
 
 def test_gemini_payload_sends_no_thinking_control_when_unpinned() -> None:
     payload = gemini_payload(
         _request(
-            model=default_model("gemini", "google"),
+            model=measurement_route("gemini", "pulse").transport_model,
             reasoning_effort=REASONING_EFFORT_UNVERIFIED,
         )
     )
@@ -937,21 +972,21 @@ def test_gemini_payload_sends_no_thinking_control_when_unpinned() -> None:
     assert "thinking_config" not in payload
 
 
-async def test_gemini_wire_request_uses_exact_model_without_thinking_config() -> None:
+async def test_gemini_wire_request_uses_exact_model_and_minimal_thinking() -> None:
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode())
         captured["body"] = body
         if (
-            body.get("model") != "gemini-2.5-flash-lite"
-            or "generation_config" in body
+            body.get("model") != "gemini-3.5-flash-lite"
+            or body.get("generation_config") != {"thinking_level": "minimal"}
             or "thinking_config" in body
         ):
             return httpx.Response(400, json={"error": {"status": "INVALID_ARGUMENT"}})
         return httpx.Response(200, json=_GEMINI_GROUNDED)
 
-    policy = route_policy("gemini", "google")
+    policy = route_policy("gemini", "pulse")
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         adapter = GeminiAnswerEngineAdapter(
             api_key="secret-google-key",
@@ -959,15 +994,15 @@ async def test_gemini_wire_request_uses_exact_model_without_thinking_config() ->
         )
         await adapter.execute(
             _request(
-                model=default_model("gemini", "google"),
+                model=measurement_route("gemini", "pulse").transport_model,
                 reasoning_effort=policy.reasoning_effort,
                 timeout_seconds=30,
             )
         )
     body = captured["body"]
     assert isinstance(body, dict)
-    assert body["model"] == "gemini-2.5-flash-lite"
-    assert "generation_config" not in body
+    assert body["model"] == "gemini-3.5-flash-lite"
+    assert body["generation_config"] == {"thinking_level": "minimal"}
     assert "thinking_config" not in body
 
 

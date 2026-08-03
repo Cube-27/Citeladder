@@ -1,4 +1,5 @@
 import { expect, test, type Request } from '@playwright/test';
+import { providerCatalogFixture } from '../test/provider-catalog-fixture';
 
 /**
  * F8 direct-provider Provider Settings e2e (Task 4).
@@ -45,24 +46,7 @@ const project = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
-// v2 direct-provider retirement: exactly one direct transport per engine.
-const catalog = {
-  transports: ['openai', 'anthropic', 'google'],
-  engines: [
-    {
-      logical_engine: 'chatgpt',
-      routes: [{ transport_provider: 'openai', default_model: 'gpt-5.4' }],
-    },
-    {
-      logical_engine: 'gemini',
-      routes: [{ transport_provider: 'google', default_model: 'gemini-flash-latest' }],
-    },
-    {
-      logical_engine: 'claude',
-      routes: [{ transport_provider: 'anthropic', default_model: 'claude-sonnet-4-6' }],
-    },
-  ],
-};
+const catalog = providerCatalogFixture;
 
 function connection() {
   return {

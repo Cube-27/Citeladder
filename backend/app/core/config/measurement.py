@@ -71,7 +71,7 @@ RUN_MANIFEST_FILENAME: Final = "run-manifest.json"
 
 # --- Matrix dimensions ----------------------------------------------------
 # Route keys are the logical engines; the transport/model provenance triple is
-# resolved from ``provider_catalog.APPROVED_ROUTES`` at sweep time.
+# resolved from ``provider_catalog.MEASUREMENT_ROUTES`` at sweep time.
 MEASUREMENT_ROUTE_KEYS: Final[tuple[str, ...]] = (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,

@@ -27,6 +27,7 @@ PromptStatus = Literal["proposed", "active", "archived"]
 # and ``PROMPT_ORIGIN_GENERATED`` in ``config/projects.py``. ``imported`` is not
 # offered here — CSV import sets its own origin server-side.
 PromptOrigin = Literal["manual", "generated"]
+PromptCohort = Literal["core", "comparison"]
 assert set(get_args(PromptStatus)) == PROMPT_STATUSES
 
 
@@ -47,6 +48,7 @@ class PromptInput(BaseModel):
     text: str = Field(min_length=1, max_length=PROMPT_TEXT_MAX_CHARS)
     theme: str = Field(default="", max_length=255)
     intent: str = Field(default="", max_length=PROMPT_INTENT_MAX_CHARS)
+    cohort: PromptCohort = "core"
     branded: bool = False
     enabled: bool = True
     topic_id: uuid.UUID | None = None
@@ -78,6 +80,7 @@ class PromptUpdate(BaseModel):
     theme: str | None = Field(default=None, max_length=255)
     intent: str | None = Field(default=None, max_length=PROMPT_INTENT_MAX_CHARS)
     branded: bool | None = None
+    cohort: PromptCohort | None = None
     enabled: bool | None = None
     status: PromptStatus | None = None
     topic_id: uuid.UUID | None = None
@@ -105,6 +108,7 @@ class PromptResponse(BaseModel):
     text: str
     theme: str
     intent: str
+    cohort: PromptCohort
     branded: bool
     enabled: bool
     status: str
@@ -183,6 +187,7 @@ class PromptGenerateRequest(BaseModel):
     )
     topic_id: uuid.UUID | None = None
     intents: list[PromptIntent] = Field(default_factory=list)
+    cohort: PromptCohort = "core"
     confirm_send_evidence: bool = False
 
 

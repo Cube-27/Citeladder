@@ -353,20 +353,7 @@ async def prepare_prompt_inserts(
 
 
 def _receipt_proves_generated(payload: Any, text: str) -> bool:
-    """Whether the backend can PROVE it generated ``text`` (binding exemption).
-
-    Topical binding applies to free text a human typed. A prompt the backend
-    itself generated from verified brand-website evidence is exempt: binding is
-    word-overlap against the project's stored vocabulary, but a correct
-    measurement prompt is brand-NEUTRAL by design (the same text is run for the
-    brand AND its competitors), so it can only ever bind on category wording —
-    and a legitimate synonym shares no literal token.
-
-    The exemption is proof-gated, never taken on the client's word: ``origin``
-    arrives in the request body, so it is honoured only alongside a valid
-    backend-issued receipt over this exact text. An unverified claim returns
-    False and falls through to the ordinary gate.
-    """
+    """Whether a backend receipt proves generation provenance for ``text``."""
     claimed_generated = getattr(payload, "origin", PROMPT_ORIGIN_MANUAL) == (
         PROMPT_ORIGIN_GENERATED
     )
@@ -383,18 +370,9 @@ async def _resolve_origin_through_binding_gate(
     payload: Any,
     text: str,
 ) -> str:
-    """The prompt's origin — enforcing topical binding unless generation is proven.
-
-    The origin and the gate are ONE decision, not two: ``generated`` is exactly
-    the case the gate does not apply to, so resolving them apart invites a
-    caller to record an origin the gate never agreed with. Returns
-    ``generated`` only when a backend receipt covers this exact text;
-    everything else is ``manual`` and must clear the gate first (which raises
-    rather than returning on failure).
-    """
-    if _receipt_proves_generated(payload, text):
-        return PROMPT_ORIGIN_GENERATED
-    # Bind against the PERSISTED topic, never the request body's ``theme``
+    """Validate relevance for every prompt, then resolve provenance."""
+    # Generation provenance never bypasses relevance validation. Bind against
+    # the PERSISTED topic, never the request body's free-form theme.
     # (free text the caller chooses — binding against it would let any
     # client supply its own prompt's wording as the vocabulary).
     await enforce_prompt_binding(
@@ -409,7 +387,11 @@ async def _resolve_origin_through_binding_gate(
             topic_id=getattr(payload, "topic_id", None),
         ),
     )
-    return PROMPT_ORIGIN_MANUAL
+    return (
+        PROMPT_ORIGIN_GENERATED
+        if _receipt_proves_generated(payload, text)
+        else PROMPT_ORIGIN_MANUAL
+    )
 
 
 def _require_insertable(approved: frozenset[str], text_hash: str) -> None:
@@ -452,7 +434,8 @@ async def create_prompt(
         text=text,
         theme=payload.theme.strip(),
         intent=normalize_intent(payload.intent),
-        branded=payload.branded,
+        cohort=payload.cohort,
+        branded=payload.cohort == "comparison",
         enabled=payload.enabled,
         origin=origin,
     )
@@ -619,8 +602,9 @@ async def update_prompt(
         prompt.theme = data["theme"].strip()
     if "intent" in data and data["intent"] is not None:
         prompt.intent = normalize_intent(data["intent"])
-    if data.get("branded") is not None:
-        prompt.branded = data["branded"]
+    if data.get("cohort") is not None:
+        prompt.cohort = data["cohort"]
+        prompt.branded = data["cohort"] == "comparison"
     if data.get("enabled") is not None:
         prompt.enabled = data["enabled"]
     if data.get("status") is not None:

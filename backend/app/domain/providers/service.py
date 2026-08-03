@@ -31,11 +31,11 @@ from app.core.config.provider_catalog import (
     TEST_STATUS_OK,
     ProviderCatalogEntry,
     configured_endpoint,
-    default_model,
     default_probe_engine,
     is_active_transport,
     is_endpoint_approved,
     is_route_approved,
+    measurement_route,
     provider_catalog_settings,
     public_provider_routes,
 )
@@ -138,9 +138,7 @@ def _build_routes(
             raise InvalidRouteError(
                 f"Route not approved: {logical_engine} via {transport_provider}"
             )
-        model = (item.transport_model or "").strip() or default_model(
-            logical_engine, transport_provider
-        )
+        model = measurement_route(logical_engine, "pulse").transport_model
         routes.append(
             ProviderRoute(
                 workspace_id=workspace_id,
@@ -314,13 +312,12 @@ async def run_connection_test(
             "read-only; create a new direct connection instead."
         )
     _require_approved_endpoint(transport, connection.base_url)
-    # Prefer a configured route's engine/model; else fall back to a catalog
-    # default engine for the transport.
+    # Connectivity probes always use the exact cheap Pulse route.
     logical_engine = default_probe_engine(transport)
-    model = default_model(logical_engine, transport)
+    model = measurement_route(logical_engine, "pulse").transport_model
     for route in connection.routes:
         logical_engine = route.logical_engine
-        model = route.transport_model or model
+        model = measurement_route(logical_engine, "pulse").transport_model
         break
 
     status = TEST_STATUS_OK
@@ -352,6 +349,9 @@ async def run_connection_test(
                 # measurement policy, so it must not invent one.
                 retrieval_enabled=provider_catalog_settings.test_retrieval_enabled,
                 max_output_tokens=provider_catalog_settings.test_max_output_tokens,
+                reasoning_effort=measurement_route(
+                    logical_engine, "pulse"
+                ).reasoning_effort,
             )
         )
         latency_ms = response.latency_ms

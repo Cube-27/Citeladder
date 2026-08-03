@@ -15,6 +15,13 @@ const brand: BrandStepValues = {
   website_url: 'acme.com',
   country_code: 'us',
   language_code: 'en',
+  industry: 'Analytics',
+  business_type: 'b2b',
+  products_services: 'Monitoring',
+  target_audience: 'Marketing teams',
+  positioning: 'Fast',
+  price_tier: 'mid_market',
+  additional_context: '',
 };
 
 describe('normalizeWebsiteUrl', () => {

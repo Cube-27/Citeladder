@@ -1,7 +1,7 @@
 # Searchify Docker stack
 
 Services: `db` (Postgres 16), `migrate` (one-shot `alembic upgrade head`),
-`web` (FastAPI/uvicorn), `worker` (audit worker — real impl in B5),
+`web` (FastAPI/uvicorn), `worker` (audit worker), `brand-discovery-worker`,
 `content-worker` (content-generation worker, `python -m app.workers.content_worker`).
 
 ## Content generation env
@@ -16,6 +16,11 @@ disabled**; the API returns 409 `provider_not_configured` on enqueue),
 On **Railway**, run the content worker as a **separate service** with start
 command `python -m app.workers.content_worker`, sharing the same env
 (including `MISTRAL_API_KEY`) as the web + audit-worker services.
+
+Run brand discovery as a separate service with start command
+`python -m app.workers.brand_discovery_worker`. Its optional rendered/search
+fallback reads the application-funded `BRAND_DISCOVERY_FIRECRAWL_API_KEY`;
+without it, evidence gaps become editable `needs_input` rather than failures.
 
 
 ## Bring the stack up (gotcha 1 workaround — use verbatim)

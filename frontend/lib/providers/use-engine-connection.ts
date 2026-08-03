@@ -62,7 +62,7 @@ export function useEngineConnection({
       if (!isConnectable(model) || !transport || !route) {
         throw new Error('No route available.');
       }
-      const routes = mergeRoutePayload(connection, model.logical_engine, route.default_model);
+      const routes = mergeRoutePayload(connection, model.logical_engine);
       if (connection) {
         return providersApi.updateConnection(connection.id, {
           api_key: apiKey || undefined,

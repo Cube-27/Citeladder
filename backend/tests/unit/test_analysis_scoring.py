@@ -349,7 +349,8 @@ def _completed_with_usage(usage: dict) -> dict:
         "prompt_text_snapshot": "school uniforms",
         "prompt_theme_snapshot": "Schoolwear",
         "citations": [],
-        "provider_metadata": {"usage": usage},
+        "provider_metadata": {},
+        "usage": usage,
         "score": score_execution(
             answer_text="Best&Less is great",
             search_events=[],
@@ -362,14 +363,14 @@ def _completed_with_usage(usage: dict) -> dict:
 
 def test_aggregate_run_sums_token_usage() -> None:
     config = ScoringConfig.from_project(
-        {**BEST_AND_LESS_PROJECT, "provider": "gemini", "model": "gemini-2.5-flash"}
+        {**BEST_AND_LESS_PROJECT, "provider": "gemini", "model": "gemini-3.6-flash"}
     )
     executions = [
         _completed_with_usage(
-            {"total_input_tokens": 10, "total_output_tokens": 500, "total_tokens": 800}
+            {"uncached_input_tokens": 10, "output_tokens": 500, "total_tokens": 800}
         ),
         _completed_with_usage(
-            {"total_input_tokens": 20, "total_output_tokens": 300, "total_tokens": 600}
+            {"uncached_input_tokens": 20, "output_tokens": 300, "total_tokens": 600}
         ),
     ]
 
@@ -380,8 +381,8 @@ def test_aggregate_run_sums_token_usage() -> None:
     assert usage["total_tokens"] == 1400
     cost = summary["cost"]
     assert cost["grounded_requests"] == 2
-    assert cost["paid_list_token_estimate_usd"] == pytest.approx(0.002009)
-    assert cost["grounding_cost_if_billable_usd"] == pytest.approx(0.07)
+    assert cost["paid_list_token_estimate_usd"] == pytest.approx(0.006045)
+    assert cost["grounding_cost_if_billable_usd"] == pytest.approx(0.028)
 
 
 def test_aggregate_run_token_usage_defaults_to_zero() -> None:

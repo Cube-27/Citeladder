@@ -148,6 +148,7 @@ class BrandProfileResponse(BaseModel):
 
 class BrandProfileSuggestRequest(BaseModel):
     confirm_send_evidence: bool = False
+    manual_brand_context: str | None = Field(default=None, max_length=5000)
 
 
 class BrandProfileDraft(BaseModel):

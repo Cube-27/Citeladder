@@ -24,6 +24,22 @@ PROMPT_STATUSES: Final[frozenset[str]] = frozenset(
 )
 DEFAULT_PROMPT_STATUS: Final = PROMPT_STATUS_ACTIVE
 
+PROMPT_COHORT_CORE: Final = "core"
+PROMPT_COHORT_COMPARISON: Final = "comparison"
+PROMPT_COHORTS: Final[frozenset[str]] = frozenset(
+    {PROMPT_COHORT_CORE, PROMPT_COHORT_COMPARISON}
+)
+PROMPT_NEAR_DUPLICATE_SIMILARITY: Final = 0.9
+ONBOARDING_PROMPT_SET_NAME: Final = "AI Visibility"
+ONBOARDING_CORE_TEMPLATES: Final[tuple[tuple[str, str], ...]] = (
+    ("What are the best {topic} options for {audience}?", "discovery"),
+    ("How should I compare {topic} providers?", "comparison"),
+    ("What should I look for when choosing {topic}?", "purchase"),
+)
+ONBOARDING_COMPARISON_TEMPLATE: Final = (
+    "How does {brand} compare with {competitor} for {topic}?"
+)
+
 # --- Topic origin ----------------------------------------------------------
 TOPIC_ORIGIN_MANUAL: Final = "manual"
 TOPIC_ORIGIN_GENERATED: Final = "generated"
@@ -32,7 +48,7 @@ TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
 )
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
-GENERATOR_VERSION: Final = "prompt-gen-v2"
+GENERATOR_VERSION: Final = "prompt-gen-v3"
 
 # --- Topical binding (project-identity prompt admission) -------------------
 # Outcome codes for ``BindingResult`` / the coded API errors built from it.
@@ -249,15 +265,9 @@ GENERATION_SYSTEM_PROMPT: Final = (
     "Rules:\n"
     "- Prompts must read like natural consumer questions or requests, not "
     "marketing copy.\n"
-    "- Prompts must be predominantly UNBRANDED discovery queries: questions a "
-    "consumer would ask before knowing any specific brand. At least 8 in "
-    "every 10 prompts must NOT contain the brand's name, its aliases, or any "
-    "competitor's name. Measuring unaided visibility is the whole point — a "
-    "prompt that names the brand trivially guarantees a mention and corrupts "
-    "the score.\n"
-    "- At most 2 in every 10 prompts may be branded/comparison queries, and "
-    "only where a real consumer would naturally name a brand (e.g. an "
-    "explicit head-to-head comparison).\n"
+    "- Generate only UNBRANDED core discovery queries. A prompt must never "
+    "contain the tracked brand, any alias, a competitor, or competitor alias. "
+    "Named comparisons are generated through a separate cohort.\n"
     "- Reuse an existing topic name verbatim when a prompt fits it; only "
     "invent a new topic when none fits.\n"
     "- Ground every prompt in the supplied brand knowledge, market, products, "

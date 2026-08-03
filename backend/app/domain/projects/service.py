@@ -184,7 +184,11 @@ def _seed_manual_brand_profile(
 
 
 async def create_project(
-    session: AsyncSession, *, workspace_id: uuid.UUID, payload: Any
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    payload: Any,
+    commit: bool = True,
 ) -> Project:
     """Create a project + its normalized brand identity in one transaction.
 
@@ -221,6 +225,8 @@ async def create_project(
     session.add(project)
     await session.flush()
     _seed_manual_brand_profile(project, workspace_id=workspace_id, payload=payload)
+    if not commit:
+        return project
     await session.commit()
     return await get_project(session, workspace_id=workspace_id, project_id=project.id)
 

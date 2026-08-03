@@ -71,12 +71,9 @@ export const CONTRACT_SCHEMA_MAP = {
   brandProfileDraftSchema: 'BrandProfileDraft',
   brandProfileSuggestionSchema: 'BrandProfileSuggestionResponse',
   brandProfileAcceptResponseSchema: 'BrandProfileAcceptResponse',
-  competitorSuggestResponseSchema: 'CompetitorSuggestResponse',
-  ownedDomainSuggestResponseSchema: 'OwnedDomainSuggestResponse',
   // Prompts / topics
   promptSchema: 'PromptResponse',
   promptSetSchema: 'PromptSetResponse',
-  promptSuggestResponseSchema: 'PromptSuggestResponse',
   promptGenerateResponseSchema: 'PromptGenerateResponse',
   topicSchema: 'TopicResponse',
   // Providers

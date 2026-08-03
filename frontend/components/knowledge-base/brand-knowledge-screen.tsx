@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useActiveProject } from '@/lib/project/project-context';
-import { setupErrorMessage } from '@/lib/setup/forms';
+import { formErrorMessage } from '@/lib/forms/error-message';
 
 import { BrandProfilePanel } from './brand-profile-panel';
 
@@ -58,7 +58,7 @@ export function BrandKnowledgeScreen() {
     );
   }
   if (profileQuery.error) {
-    return <Alert tone="danger">{setupErrorMessage(profileQuery.error)}</Alert>;
+    return <Alert tone="danger">{formErrorMessage(profileQuery.error)}</Alert>;
   }
   if (!profileQuery.data) return null;
 

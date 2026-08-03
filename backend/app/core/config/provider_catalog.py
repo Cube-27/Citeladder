@@ -1,14 +1,14 @@
 # BYOK provider catalog + answer-engine guardrails (invariant 1: config lives
 # in core/config, never inline in service/adapter code).
 #
-# Owns the approved logical-engine -> transport -> model catalog, the
+# Owns the approved (logical-engine, measurement-mode) route catalog, the
 # transport/engine enumerations, and the provider-agnostic guardrail knobs
 # (token caps, timeouts, endpoint URLs, retry classification tokens). Adapters,
 # services, and routers READ these values; they never hard-code them.
 #
 # ChatGPT is executable through the direct OpenAI Responses API (transport
 # ``openai``). Active transports are exactly ``openai | anthropic | google`` and
-# each logical engine has exactly one approved route.
+# each logical engine has one Pulse route and one Benchmark route.
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,41 +40,101 @@ ACTIVE_TRANSPORTS: Final[frozenset[str]] = frozenset(
     {TRANSPORT_OPENAI, TRANSPORT_ANTHROPIC, TRANSPORT_GOOGLE}
 )
 
-# --- Approved routes: logical engine -> {transport: default model} --------
-# One catalog, the single source of truth for which (engine, transport, model)
-# tuples are allowed. The ``/provider-catalog`` endpoint projects this;
-# adapters validate their requested model against it. Exactly one approved
-# transport per engine (v2 direct-only).
-# Every model here is the CHEAPEST non-reasoning tier its transport offers, and
-# every id is an EXPLICIT version rather than a moving alias: a floating alias
-# (the former ``gemini-flash-latest``) silently re-points the measured model
-# under a frozen snapshot, which breaks measurement identity (invariant 7).
-APPROVED_ROUTES: Final[dict[str, dict[str, str]]] = {
-    ENGINE_CHATGPT: {
-        # Cheapest CURRENT-generation OpenAI tier ($0.20/$1.20 per Mtok).
-        # ``gpt-5-nano`` is cheaper still but is a reasoning model, so it
-        # cannot satisfy the no-reasoning requirement; Luna exposes an
-        # explicit ``none`` effort and the route pins it below.
-        TRANSPORT_OPENAI: "gpt-5.6-luna",
-    },
-    ENGINE_CLAUDE: {
-        # Cheapest Anthropic tier ($1/$5 per Mtok); thinking off by default.
-        TRANSPORT_ANTHROPIC: "claude-haiku-4-5",
-    },
-    ENGINE_GEMINI: {
-        # Cheapest Gemini tier ($0.10/$0.40 per Mtok) AND the only Flash-Lite
-        # that can disable thinking outright — 3.1/3.5 Flash-Lite floor at
-        # ``minimal`` and cost 2.5-3x more.
-        TRANSPORT_GOOGLE: "gemini-2.5-flash-lite",
-    },
+# --- Measurement routes ---------------------------------------------------
+MEASUREMENT_MODE_PULSE: Final = "pulse"
+MEASUREMENT_MODE_BENCHMARK: Final = "benchmark"
+MEASUREMENT_MODES: Final[tuple[str, str]] = (
+    MEASUREMENT_MODE_PULSE,
+    MEASUREMENT_MODE_BENCHMARK,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MeasurementRoute:
+    logical_engine: str
+    measurement_mode: str
+    transport_provider: str
+    transport_model: str
+    retrieval_enabled: bool
+    reasoning_effort: str
+
+
+# Exact model identity is frozen here. There is intentionally no provider
+# alias, default-model fallback, or single-route compatibility view.
+MEASUREMENT_ROUTES: Final[dict[tuple[str, str], MeasurementRoute]] = {
+    (ENGINE_CHATGPT, MEASUREMENT_MODE_PULSE): MeasurementRoute(
+        ENGINE_CHATGPT,
+        MEASUREMENT_MODE_PULSE,
+        TRANSPORT_OPENAI,
+        "gpt-5.4-nano-2026-03-17",
+        False,
+        "off",
+    ),
+    (ENGINE_CHATGPT, MEASUREMENT_MODE_BENCHMARK): MeasurementRoute(
+        ENGINE_CHATGPT,
+        MEASUREMENT_MODE_BENCHMARK,
+        TRANSPORT_OPENAI,
+        "gpt-5.6-sol",
+        True,
+        "off",
+    ),
+    (ENGINE_CLAUDE, MEASUREMENT_MODE_PULSE): MeasurementRoute(
+        ENGINE_CLAUDE,
+        MEASUREMENT_MODE_PULSE,
+        TRANSPORT_ANTHROPIC,
+        "claude-haiku-4-5-20251001",
+        False,
+        "off",
+    ),
+    (ENGINE_CLAUDE, MEASUREMENT_MODE_BENCHMARK): MeasurementRoute(
+        ENGINE_CLAUDE,
+        MEASUREMENT_MODE_BENCHMARK,
+        TRANSPORT_ANTHROPIC,
+        "claude-sonnet-5",
+        True,
+        "low",
+    ),
+    (ENGINE_GEMINI, MEASUREMENT_MODE_PULSE): MeasurementRoute(
+        ENGINE_GEMINI,
+        MEASUREMENT_MODE_PULSE,
+        TRANSPORT_GOOGLE,
+        "gemini-3.5-flash-lite",
+        False,
+        "minimal",
+    ),
+    (ENGINE_GEMINI, MEASUREMENT_MODE_BENCHMARK): MeasurementRoute(
+        ENGINE_GEMINI,
+        MEASUREMENT_MODE_BENCHMARK,
+        TRANSPORT_GOOGLE,
+        "gemini-3.6-flash",
+        True,
+        "low",
+    ),
 }
 
 
+def measurement_route(logical_engine: str, measurement_mode: str) -> MeasurementRoute:
+    """Return one exact executable route; unknown identities fail closed."""
+    route = MEASUREMENT_ROUTES.get((logical_engine, measurement_mode))
+    if route is None:
+        raise ValueError(
+            f"no measurement route for ({logical_engine!r}, {measurement_mode!r})"
+        )
+    return route
+
+
+def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute, ...]:
+    return tuple(
+        measurement_route(logical_engine, mode)
+        for mode in MEASUREMENT_MODES
+        if (logical_engine, mode) in MEASUREMENT_ROUTES
+    )
+
+
 # --- Execution-time route policy -----------------------------------------
-# Keyed on the SAME approved (engine, transport) identity as ``APPROVED_ROUTES``
-# above — this is the execution-time policy for those routes, not a second
-# catalog: the model id is never repeated here (read it through
-# ``default_model``). ``config/measurement.py`` owns the offline SWEEP
+# Keyed on the approved (engine, mode) identity. This is execution policy for
+# those routes, not a second catalog: the model id is never repeated here.
+# ``config/measurement.py`` owns the offline sweep
 # vocabulary (``REASONING_EFFORT_UNSET|LOW|MEDIUM|HIGH``); the two tokens below
 # are the execution-time PIN states, which the sweep has no equivalent for.
 #
@@ -112,45 +172,28 @@ class RoutePolicy:
     batch_enabled: bool
 
 
-# One entry per approved route in ``APPROVED_ROUTES`` (same keys).
 ROUTE_POLICIES: Final[dict[tuple[str, str], RoutePolicy]] = {
-    # Anthropic exposes an explicit thinking control, so reasoning is PINNED OFF.
-    (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC): RoutePolicy(
-        reasoning_effort=REASONING_EFFORT_OFF,
+    key: RoutePolicy(
+        reasoning_effort=route.reasoning_effort,
         reasoning_pinnable=True,
         representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
         batch_enabled=False,
-    ),
-    # OpenAI pins its documented ``reasoning.effort: "none"`` control. Google
-    # pins the exact ``gemini-2.5-flash-lite`` model identity; that model has
-    # thinking disabled by default, so its adapter deliberately omits a
-    # generation_config rather than sending the incompatible ``minimal`` level.
-    (ENGINE_CHATGPT, TRANSPORT_OPENAI): RoutePolicy(
-        reasoning_effort=REASONING_EFFORT_OFF,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-        batch_enabled=False,
-    ),
-    (ENGINE_GEMINI, TRANSPORT_GOOGLE): RoutePolicy(
-        reasoning_effort=REASONING_EFFORT_OFF,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-        batch_enabled=False,
-    ),
+    )
+    for key, route in MEASUREMENT_ROUTES.items()
 }
 
 
-def route_policy(logical_engine: str, transport_provider: str) -> RoutePolicy:
+def route_policy(logical_engine: str, measurement_mode: str) -> RoutePolicy:
     """Execution-time policy for an approved route (fails closed).
 
     Raises ``ValueError`` for a route with no policy entry rather than assuming
     a permissive default: an unknown route must never silently execute with
     reasoning treated as off or batch treated as allowed.
     """
-    policy = ROUTE_POLICIES.get((logical_engine, transport_provider))
+    policy = ROUTE_POLICIES.get((logical_engine, measurement_mode))
     if policy is None:
         raise ValueError(
-            f"no route policy for ({logical_engine!r}, {transport_provider!r}); "
+            f"no route policy for ({logical_engine!r}, {measurement_mode!r}); "
             "approved routes must declare one"
         )
     return policy
@@ -183,7 +226,8 @@ class RouteCapacityPolicy:
     max_cooldown_seconds: float
 
 
-# One entry per approved route in ``APPROVED_ROUTES`` (same keys).
+# Capacity remains transport-scoped because both measurement modes share a
+# provider quota bucket. Rates stay unset until staging measurements exist.
 ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
     (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC): RouteCapacityPolicy(
         capacity=None,
@@ -221,15 +265,29 @@ def route_capacity_policy(
     return policy
 
 
-def is_reasoning_pinned_off(logical_engine: str, transport_provider: str) -> bool:
+def is_reasoning_pinned_off(logical_engine: str, measurement_mode: str) -> bool:
     """True only when the route pins reasoning explicitly OFF."""
-    policy = route_policy(logical_engine, transport_provider)
+    policy = route_policy(logical_engine, measurement_mode)
     return policy.reasoning_pinnable and policy.reasoning_effort == REASONING_EFFORT_OFF
 
 
 def is_route_approved(logical_engine: str, transport_provider: str) -> bool:
     """True when (engine, transport) is an approved active route."""
-    return transport_provider in APPROVED_ROUTES.get(logical_engine, {})
+    return any(
+        route.transport_provider == transport_provider
+        for route in measurement_routes_for_engine(logical_engine)
+    )
+
+
+def is_approved_model(
+    logical_engine: str, transport_provider: str, transport_model: str
+) -> bool:
+    """Validate an exact model against either shipped measurement mode."""
+    return any(
+        route.transport_provider == transport_provider
+        and route.transport_model == transport_model
+        for route in measurement_routes_for_engine(logical_engine)
+    )
 
 
 def is_active_transport(transport_provider: str) -> bool:
@@ -237,17 +295,15 @@ def is_active_transport(transport_provider: str) -> bool:
     return transport_provider in ACTIVE_TRANSPORTS
 
 
-def default_model(logical_engine: str, transport_provider: str) -> str:
-    """The catalog default model for an approved (engine, transport) route."""
-    return APPROVED_ROUTES.get(logical_engine, {}).get(transport_provider, "")
-
-
 def engines_for_transport(transport_provider: str) -> tuple[str, ...]:
     """Logical engines reachable through a transport, in catalog order."""
     return tuple(
         engine
-        for engine, routes in APPROVED_ROUTES.items()
-        if transport_provider in routes
+        for engine in (ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI)
+        if any(
+            route.transport_provider == transport_provider
+            for route in measurement_routes_for_engine(engine)
+        )
     )
 
 
@@ -287,8 +343,8 @@ def is_endpoint_approved(transport_provider: str, base_url: str) -> bool:
 # --- Public provider catalog (display surface, NOT a write enum) ----------
 # The public/commercial surface shows more providers than Searchify can
 # execute: shipped BYOK engines plus explicitly COMING-SOON ones. This catalog
-# is display-only. ``ACTIVE_TRANSPORTS`` and ``APPROVED_ROUTES`` above stay
-# OpenAI/Anthropic/Google only, so a create/test/audit routing path can never
+# is display-only. ``ACTIVE_TRANSPORTS`` stays OpenAI/Anthropic/Google only, so
+# a create/test/audit routing path can never
 # accept a coming-soon key just because it appears here.
 PROVIDER_GROK: Final = "grok"
 PROVIDER_PERPLEXITY: Final = "perplexity"
@@ -423,12 +479,12 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
 def public_provider_routes(provider_key: str) -> tuple[tuple[str, str, str], ...]:
     """Approved (engine, transport, model) routes for a public catalog row.
 
-    Reads ``APPROVED_ROUTES`` only, so a coming-soon key resolves to no routes
-    by construction rather than by a hand-maintained exception list.
+    Each tuple is one exact mode-specific route. Coming-soon providers have no
+    executable entries by construction.
     """
     return tuple(
-        (provider_key, transport, model)
-        for transport, model in APPROVED_ROUTES.get(provider_key, {}).items()
+        (provider_key, route.transport_provider, route.transport_model)
+        for route in measurement_routes_for_engine(provider_key)
     )
 
 

@@ -22,7 +22,8 @@ full-product surface is marked below.
 | Audit execution + queue + worker | `orchestration` + `workers` | **MVP — coded** |
 | Analysis + metrics + dashboard projection | `analysis` | **MVP — coded** |
 | Run/Executions evidence + CSV/MD export | `api/audits` + `analysis/exports` | **MVP — coded** |
-| AI-suggested prompt generation (`/generate`) | `domain/prompts` + `connectors/agent` | **Coded** — `prompt-gen-v2` reads the curated BrandProfile plus topic descriptions with grounding rules; topic-driven generation via the `.env` default agent fills a set-wide pool of `GENERATION_ACTIVE_THRESHOLD` (default 20) `active` prompts, with later rows `proposed` until human promotion |
+| AI-suggested prompt generation (`/generate`) | `domain/prompts` + `connectors/agent` | **Coded** — `prompt-gen-v3` validates every result for tracked-name exclusion/relevance/intent/deduplication/diversity; core and named-comparison prompts are separate cohorts |
+| Persisted brand discovery | `domain/projects` + `connectors/web_evidence` + `workers/brand_discovery_worker.py` | **Coded** — SSRF-safe crawl first, Firecrawl rendered/search fallback, evidence provenance, editable `needs_input`, confirmation, then atomic idempotent project/profile/domain/competitor/topic/prompt creation |
 | Discovery/analysis model (`DiscoveryModelConfig`) | `domain/providers` | Plumbing-only (stored, not invoked) |
 | Cross-run Visibility trend history | `analysis` | **Coded** — `GET /projects/{id}/visibility/trends` (Trends tab) |
 | Persisted execution evidence (mentions/citations + query fanout) | `analysis` | **Coded** — `GET /projects/{id}/visibility/evidence` |
@@ -81,11 +82,13 @@ webhook. Thin routers delegate to `domain/*` services.
 | `app/api/provider_connections.py` | `GET/POST /provider-connections`, `PATCH/DELETE /provider-connections/{id}`, `POST /provider-connections/{id}/test`; `GET /provider-catalog` |
 | `app/api/audits.py` | `POST /audits`, `GET /audits`, `GET /audits/{id}`, `POST /audits/{id}/cancel`, `GET /audits/{id}/events` (SSE), `GET /audits/{id}/executions` |
 | `app/api/audits.py` (cont.) | `GET /audits/{id}/metrics`, `GET /executions/{id}`, `GET /audits/{id}/export.csv`, `GET /audits/{id}/export.md` |
+| `app/api/brand_discoveries.py` | `GET /brand-discovery-catalog`, queued discovery create/read/confirm, atomic project creation |
+| `app/api/audits.py` (planning/performance) | `POST /audits/estimate` (provider-free cost/count preview), `GET /audits/{id}/performance` |
 | `app/api/content.py` | `GET/POST /content/generations` (idempotent enqueue via `Idempotency-Key`), `GET /content/generations/{id}`, `POST /content/generations/{id}/regenerate` (new record, fresh context), `POST /content/generations/{id}/try-again` (new record, frozen context snapshot), `POST /content/generations/{id}/cancel` |
 | `app/api/products.py` | `GET/POST /projects/{id}/products`, `GET/PATCH/DELETE /products/{id}`, `POST /projects/{id}/products/import` (CSV upload **or** `{ products: [...] }` JSON rows), `GET/POST /projects/{id}/competitor-products`, `PATCH/DELETE /competitor-products/{id}`, `GET /projects/{id}/products/visibility?audit_id=&engine=`, `GET /products/{id}/visibility/evidence?audit_id=&engine=&limit=`, `GET /projects/{id}/products/visibility/export.csv` |
 | `app/api/opportunities.py` | `GET /projects/{id}/opportunities`, `GET /projects/{id}/opportunities/summary`, `POST /projects/{id}/opportunities/recompute`, `GET /projects/{id}/opportunities/export.csv`, `GET /projects/{id}/opportunities/export.md`, `GET /opportunities/{id}`, `PATCH /opportunities/{id}` (status only; a superseded row is a coded 409) |
 
-> The `brands/analyze`, `audits/estimate`, `audits/{id}/reports`, and
+> The `brands/analyze`, `audits/{id}/reports`, and
 > `reports/{id}/download` endpoints from [architecture.md](architecture.md) §14 remain
 > roadmap. The Dashboard PDF is served directly from the persisted project
 > projection at `/projects/{id}/dashboard/report.pdf`.
@@ -121,7 +124,8 @@ keys or provider cards.
   "project_id": "<uuid>",
   "prompt_set_id": "<uuid>",          // or explicit prompt_ids[]
   "engines": ["chatgpt", "gemini", "claude"],   // logical engines to measure
-  "repetitions": 3,                    // overrides project default_repetitions
+  "repetitions": 1,                    // Pulse default; explicit override allowed
+  "measurement_mode": "pulse",        // pulse | benchmark
   "benchmark_mode": "consumer_like",   // consumer_like | controlled_localized | forced_grounded
   "random_seed": "<optional 64-bit; generated + stored if omitted>"
 }
@@ -133,7 +137,7 @@ retryable error classes, max attempts, request timeout. These are frozen into
 `Audit.configuration` at creation and never re-read from live config after that (determinism,
 invariant 9).
 
-Grounded benchmark executions use one provider-neutral concise-answer policy across OpenAI,
+Pulse disables retrieval and uses the low-cost exact route. Grounded Benchmark executions use one provider-neutral concise-answer policy across OpenAI,
 Anthropic, and Google: retrieval stays enabled for citation evidence, while output is capped at
 800 tokens, the call timeout is 60 seconds, and the neutral instruction requests a direct
 150–250 word answer with only the most relevant sources. The planner freezes this policy into
@@ -231,19 +235,16 @@ The execution row (`AiVisibilityExecution`, UUID-keyed) carries:
 ```
 logical_engine     = gemini | chatgpt | claude
 transport_provider = google | anthropic | openai   # active direct transports
-transport_model    = <exact model id, e.g. gemini-flash-latest>
+transport_model    = <exact model id from MEASUREMENT_ROUTES>
 ```
 
-**Active engine transports (v2 direct-only, `provider_catalog.py`):** exactly one approved
-route per engine —
-- `gemini` → direct `google`, model `gemini-flash-latest`. Working direct adapter (grounding +
-  citation parsing).
-- `claude` → direct `anthropic`, model `claude-sonnet-4-6`. Working direct adapter.
-- `chatgpt` → direct `openai` via the **OpenAI Responses API** (`openai.py` +
-  `openai_parser.py`), model `gpt-5.4`.
+**Active measurement routes (`provider_catalog.py`):** each engine has exactly one Pulse and
+one Benchmark route. Pulse: ChatGPT `gpt-5.4-nano-2026-03-17`, Claude
+`claude-haiku-4-5-20251001`, Gemini `gemini-3.5-flash-lite`, retrieval off. Benchmark:
+ChatGPT `gpt-5.6-sol`, Claude `claude-sonnet-5`, Gemini `gemini-3.6-flash`, native search on.
 
-`ACTIVE_TRANSPORTS` is `{openai, anthropic, google}`. Each logical engine has one approved
-direct route in `APPROVED_ROUTES`; retired routes are never executable.
+`ACTIVE_TRANSPORTS` is `{openai, anthropic, google}`. `MEASUREMENT_ROUTES` is the only route
+catalog; retired routes and aliases do not exist at runtime.
 
 **BYOK** (invariant 6): the decrypted key is resolved from `ProviderConnection` at execution
 time, never from env, never persisted into snapshots/logs. `POST /provider-connections/{id}/test`
@@ -327,7 +328,8 @@ Deterministic analysis (`analysis/normalization.py`, `analysis/scoring.py`):
 - URL canonicalization + tracking-param removal; **citation classification**: owned /
   competitor / third-party (+ unintended domain).
 - Ordered-list/table/rank detection; deterministic mention detection.
-- **Metrics**: brand-mention rate, owned-citation rate, mention→owned conversion,
+- **Metrics**: core visibility (unbranded prompts only), separately reported comparison
+  visibility, mandatory coverage, brand-mention rate, owned-citation rate, mention→owned conversion,
   share-of-voice (response-level + mention-level), fanout injection rates, repeat stability.
 - **Sentiment + average position are NOT computed** at MVP — exposed as nullable/absent and
   marked roadmap (would need an LLM; breaks invariant 9).
@@ -374,7 +376,7 @@ projections, a sibling analyzer pass in `workers/audit_worker.py`) have shipped;
 - **Sentiment/avg-position are nullable** at MVP; every aggregate must tolerate null and never
   back-fill a fake heuristic (invariant 9).
 - **`request_snapshot` must exclude the API key and brand list** (invariant 6).
-- **[architecture.md](architecture.md) §14 lists roadmap endpoints** (`brands/analyze`, `audits/estimate`, reports/download).
+- **[architecture.md](architecture.md) §14 lists roadmap endpoints** (`brands/analyze`, reports/download).
   They are intentionally absent from the MVP surface (§3) — do not add them without a plan.
 - **SSE `/events` is MVP on the backend**, but the frontend polls first and consumes SSE
   optionally; keep the endpoint stable even if the UI does not depend on it yet.

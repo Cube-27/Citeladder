@@ -36,13 +36,6 @@ export type ReviewPrompt = {
   theme: string;
   intent: string;
   selected: boolean;
-  /**
-   * Backend proof that this text came from a real generation. Echoed back on
-   * create so the prompt is stored as `generated` and skips topical binding,
-   * which cannot judge a deliberately brand-neutral measurement prompt.
-   * Opaque; absent for anything the user typed themselves.
-   */
-  generation_receipt?: string;
 };
 
 export type ReviewDomain = {
@@ -69,6 +62,13 @@ export const brandStepSchema = z.object({
     }),
   country_code: z.string().trim().length(2, 'Pick a country'),
   language_code: z.string().trim().min(2, 'Pick a language'),
+  industry: z.string().trim().min(2, 'Enter your industry').max(255),
+  business_type: z.enum(['b2b', 'b2c', 'both']),
+  products_services: z.string().max(2000),
+  target_audience: z.string().max(2000),
+  positioning: z.string().max(2000),
+  price_tier: z.enum(['budget', 'mid_market', 'premium', 'luxury', 'unknown']),
+  additional_context: z.string().max(5000),
 });
 
 export type BrandStepValues = z.infer<typeof brandStepSchema>;
@@ -78,6 +78,13 @@ export const emptyBrandStep: BrandStepValues = {
   website_url: '',
   country_code: 'US',
   language_code: 'en',
+  industry: '',
+  business_type: 'b2b',
+  products_services: '',
+  target_audience: '',
+  positioning: '',
+  price_tier: 'unknown',
+  additional_context: '',
 };
 
 /**

@@ -71,9 +71,10 @@ export function EngineCard({
           <div className="grid gap-1.5">
             <span className={eyebrowClasses}>Route</span>
             <span className="text-foreground text-sm">{route.label}</span>
-            {route.default_model ? (
-              <span className="text-2xs text-muted font-mono">Model: {route.default_model}</span>
-            ) : null}
+            <span className="text-2xs text-muted font-mono">Pulse: {route.pulse_model}</span>
+            <span className="text-2xs text-muted font-mono">
+              Benchmark: {route.benchmark_model}
+            </span>
           </div>
         ) : null}
 

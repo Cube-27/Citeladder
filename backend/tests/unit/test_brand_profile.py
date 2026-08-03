@@ -150,6 +150,7 @@ def test_suggestion_message_uses_shared_knowledge_context() -> None:
                 ),
             )
         ),
+        "Acme",
     )
 
     assert "<brand_knowledge_base" in message
@@ -157,11 +158,12 @@ def test_suggestion_message_uses_shared_knowledge_context() -> None:
     assert '"country_code":"AU"' in message
 
 
-def test_suggestion_message_refuses_to_instruct_without_evidence() -> None:
-    """The evidence-only instruction must never point at an absent block."""
+def test_suggestion_message_refuses_without_grounded_evidence() -> None:
     with pytest.raises(BrandEvidenceUnavailableError):
         build_brand_profile_suggestion_message(
-            {"brand_name": "Acme"}, BrandEvidence(failure_reason="website_unreachable")
+            {"brand_name": "Acme"},
+            BrandEvidence(failure_reason="website_unreachable"),
+            "Acme",
         )
 
 
@@ -172,10 +174,11 @@ def test_suggestion_message_uses_curated_profile_when_site_is_unreadable() -> No
             "description": "Human-authored retail analytics platform.",
         },
         BrandEvidence(failure_reason="website_unreachable"),
+        "Acme",
     )
 
     assert "Human-authored retail analytics platform" in message
-    assert "human-curated fields" in message
+    assert "do not use model memory about Acme" in message
     assert "<brand_website_evidence>" not in message
 
 
@@ -192,7 +195,7 @@ def test_suggestion_message_embeds_website_evidence() -> None:
         )
     )
 
-    message = build_brand_profile_suggestion_message(knowledge, evidence)
+    message = build_brand_profile_suggestion_message(knowledge, evidence, "Cube27")
 
     assert "<brand_website_evidence>" in message
     assert "cloud data platforms" in message
