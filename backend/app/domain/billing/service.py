@@ -521,9 +521,12 @@ def _provider_response(provider: ProviderCatalogEntry) -> CatalogProviderRespons
         issuable=provider.issuable,
         routes=[
             CatalogProviderRouteResponse(
-                logical_engine=engine, transport_provider=transport, model=model
+                logical_engine=route.logical_engine,
+                measurement_mode=route.measurement_mode,
+                transport_provider=route.transport_provider,
+                model=route.transport_model,
             )
-            for engine, transport, model in public_provider_routes(provider.key)
+            for route in public_provider_routes(provider.key)
         ],
     )
 

@@ -24,7 +24,7 @@ export type PromptInput = {
   // null. Send an empty string (never null) when unset.
   theme?: string;
   intent: Prompt['intent'];
-  branded: boolean;
+  cohort: Prompt['cohort'];
   enabled: boolean;
   // Files the prompt under an existing topic at creation time. Onboarding
   // creates its topics first and passes this, rather than creating every

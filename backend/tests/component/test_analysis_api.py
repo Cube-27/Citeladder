@@ -130,8 +130,12 @@ class _StubAdapter:
                 f"Acme Corp is a great option for {request.prompt}. "
                 "Globex is an alternative."
             ),
-            search_used=True,
-            search_events=(SearchEventResult(sequence=0, query=request.prompt),),
+            search_used=request.retrieval_enabled,
+            search_events=(
+                (SearchEventResult(sequence=0, query=request.prompt),)
+                if request.retrieval_enabled
+                else ()
+            ),
             citations=(
                 CitationResult(
                     ordinal=0,
@@ -172,6 +176,8 @@ def _stub_adapter(monkeypatch: pytest.MonkeyPatch):
 
 async def _run_completed_audit(
     session_factory: async_sessionmaker[AsyncSession],
+    *,
+    measurement_mode: str = MEASUREMENT_MODE_PULSE,
 ):
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=2)
@@ -185,10 +191,36 @@ async def _run_completed_audit(
             prompt_set_id=seed.prompt_set_id,
             repetitions=2,
             random_seed="1",
+            measurement_mode=measurement_mode,
         )
     worker = AuditWorker(session_factory=session_factory, owner="w-b6")
     await worker.run_until_idle()
     return seed, audit
+
+
+@pytest.mark.asyncio
+async def test_benchmark_fixture_persists_grounded_search_evidence(
+    session_factory: async_sessionmaker[AsyncSession],
+    _stub_adapter,
+) -> None:
+    _seed, audit = await _run_completed_audit(
+        session_factory, measurement_mode=MEASUREMENT_MODE_BENCHMARK
+    )
+
+    async with session_factory() as session:
+        artifacts = list(
+            (
+                await session.scalars(
+                    select(RawResponseArtifact).where(
+                        RawResponseArtifact.audit_id == audit.id
+                    )
+                )
+            ).all()
+        )
+
+    assert artifacts
+    assert all(artifact.search_used is True for artifact in artifacts)
+    assert all(artifact.search_events for artifact in artifacts)
 
 
 @pytest.mark.asyncio

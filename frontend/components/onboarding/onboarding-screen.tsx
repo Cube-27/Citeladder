@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { Check } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -18,7 +18,6 @@ import { projectsApi } from '@/lib/api/projects';
 import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
 import {
   brandStepSchema,
-  deriveDomain,
   emptyBrandStep,
   normalizeWebsiteUrl,
   onboardingErrorMessage,
@@ -90,13 +89,8 @@ export function OnboardingScreen() {
   const [competitors, setCompetitors] = useState<ReviewCompetitor[]>([]);
   const [prompts, setPrompts] = useState<ReviewPrompt[]>([]);
   const [createdProjectName, setCreatedProjectName] = useState<string | null>(null);
-  const [profileDraft, setProfileDraft] = useState({
-    description: '',
-    positioning: '',
-    products_services: [] as string[],
-    target_audience: '',
-  });
-
+  const hasSelectedDomain = domains.some((item) => item.selected);
+  const hasSelectedPrompt = prompts.some((item) => item.selected);
   const form = useForm<BrandStepValues>({
     resolver: zodResolver(brandStepSchema),
     defaultValues: emptyBrandStep,
@@ -108,23 +102,11 @@ export function OnboardingScreen() {
           brand_name: brand.brand_name.trim(),
           website_url: normalizeWebsiteUrl(brand.website_url),
           industry: brand.industry,
-          business_type: brand.business_type,
-          products_services: brand.products_services
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean),
-          target_audience: brand.target_audience,
-          positioning: brand.positioning,
-          price_tier: brand.price_tier,
-          additional_context: brand.additional_context,
           country_code: brand.country_code,
           language_code: brand.language_code,
         }
       : null,
   );
-  const websiteUrl = useWatch({ control: form.control, name: 'website_url' });
-  const derivedDomain = deriveDomain(websiteUrl);
-
   // Seed the editable review lists once each section lands. Guarded on length
   // so re-renders never clobber the user's selections mid-review.
   const discoveryState = discovery.discovery;
@@ -140,17 +122,14 @@ export function OnboardingScreen() {
               selected: true,
             })),
       );
-      setProfileDraft((previous) =>
-        previous.description
+      setPrompts((previous) =>
+        previous.length > 0
           ? previous
-          : {
-              description: String(discoveryState.profile.description ?? ''),
-              positioning: String(discoveryState.profile.positioning ?? ''),
-              products_services: Array.isArray(discoveryState.profile.products_services)
-                ? discoveryState.profile.products_services.map(String)
-                : [],
-              target_audience: String(discoveryState.profile.target_audience ?? ''),
-            },
+          : discoveryState.prompt_suggestions.map((prompt, index) => ({
+              ...prompt,
+              id: `prompt:${index}:${prompt.text}`,
+              selected: true,
+            })),
       );
     }
   }, [discoveryState]);
@@ -176,19 +155,25 @@ export function OnboardingScreen() {
   const confirm = useMutation({
     mutationFn: async () => {
       if (!brand || !discovery.discovery) throw new Error('Discovery details are missing.');
-      const confirmed = await brandDiscoveriesApi.confirm(discovery.discovery.id, {
-        profile: {
-          ...profileDraft,
-          industry: brand.industry,
-          business_type: brand.business_type,
-          price_tier: brand.price_tier,
+      const confirmed = await brandDiscoveriesApi.confirm(
+        discovery.discovery.id,
+        {
+          profile: discovery.discovery.profile,
+          domains: domains.filter((item) => item.selected).map((item) => item.domain),
+          competitors: competitors
+            .filter((item) => item.selected && item.name.trim())
+            .map((item) => ({
+              name: item.name.trim(),
+              aliases: item.aliases,
+              domains: item.domains,
+            })),
+          topics: discovery.discovery.topics,
+          prompts: prompts
+            .filter((item) => item.selected)
+            .map(({ text, theme, intent, cohort }) => ({ text, theme, intent, cohort })),
         },
-        domains: domains.filter((item) => item.selected).map((item) => item.domain),
-        competitors: competitors
-          .filter((item) => item.selected && item.name.trim())
-          .map((item) => ({ name: item.name.trim(), aliases: [], domains: item.domains })),
-        topics: [brand.industry, ...profileDraft.products_services],
-      });
+        `confirm:${discovery.discovery.id}`,
+      );
       return brandDiscoveriesApi.createProject(
         confirmed.id,
         brand.brand_name.trim(),
@@ -216,23 +201,13 @@ export function OnboardingScreen() {
     // Correcting the brand starts a NEW discovery run, so the review lists must
     // be emptied first: the seeding effects bail out when `prev.length > 0` and
     // would otherwise leave the previous brand's results standing in front of
-    // the new ones. Keyed on the same brand_name|website_url pair useDiscovery
-    // re-fires on — Back → Continue with the values unchanged re-runs nothing,
+    // the new ones. Back → Continue with unchanged values re-runs nothing,
     // so clearing there would blank the review step for good.
-    const rediscovers =
-      brand !== null &&
-      (brand.brand_name !== values.brand_name || brand.website_url !== values.website_url);
+    const rediscovers = brand !== null && JSON.stringify(brand) !== JSON.stringify(values);
     if (rediscovers) {
       setDomains([]);
       setCompetitors([]);
       setPrompts([]);
-      // A different brand is a fresh creation, not a retry of the last confirm.
-      setProfileDraft({
-        description: '',
-        positioning: '',
-        products_services: [],
-        target_audience: '',
-      });
     }
     setBrand(values);
     setStep(1);
@@ -354,187 +329,84 @@ export function OnboardingScreen() {
                     {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
                   </h1>
                   <p className="text-muted text-sm">
-                    We&apos;ll discover your domains, competitors and starting prompts from this.
+                    We&apos;ll crawl your website to discover your brand, competitors, and starting
+                    prompts.
                   </p>
                 </div>
 
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
-                  {/* Identity column: the two fields the discovery keys on. */}
-                  <div className="grid gap-5">
-                    <Field
-                      label="Brand name"
-                      required
-                      error={form.formState.errors.brand_name?.message}
-                    >
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('brand_name')}
-                          placeholder="Acme"
-                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-panel"
-                        />
-                      )}
-                    </Field>
-
-                    <Field
-                      label="Website"
-                      required
-                      error={form.formState.errors.website_url?.message}
-                      hint={derivedDomain ? `We'll track ${derivedDomain}` : undefined}
-                    >
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('website_url')}
-                          placeholder="acme.com"
-                          className="border-border-subtle bg-background/80 text-foreground placeholder:text-muted focus:bg-panel"
-                        />
-                      )}
-                    </Field>
-                  </div>
-
-                  {/* Context column: the readonly summary tile fills what was
-                      dead air next to the two inputs; the subtle slate keeps it
-                      clearly non-interactive while balancing the height. */}
-                  <div className="border-border-subtle bg-background/80 rounded-xl border px-5 py-5">
-                    <p className="text-2xs text-muted font-bold uppercase">
-                      Here&apos;s what we&apos;ll set up
-                    </p>
-                    <ul className="mt-3 grid gap-2">
-                      {[
-                        'Crawl your site to discover owned domains',
-                        'Identify the competitors AI engines compare you to',
-                        'Generate starting buyer prompts to track',
-                      ].map((item) => (
-                        <li key={item} className="text-secondary flex items-start gap-2 text-sm">
-                          <Check
-                            className="text-accent-text mt-0.5 size-4 shrink-0"
-                            strokeWidth={2.5}
-                            aria-hidden
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label="Brand name"
+                    required
+                    error={form.formState.errors.brand_name?.message}
+                  >
+                    {(props) => (
+                      <Input {...props} {...form.register('brand_name')} placeholder="Acme" />
+                    )}
+                  </Field>
+                  <Field
+                    label="Website"
+                    required
+                    error={form.formState.errors.website_url?.message}
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        {...form.register('website_url')}
+                        placeholder="acme.com"
+                        inputMode="url"
+                      />
+                    )}
+                  </Field>
+                  <Field
+                    label="Industry"
+                    hint="Optional — helps disambiguate similar names"
+                    error={form.formState.errors.industry?.message}
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        {...form.register('industry')}
+                        placeholder="Marketing analytics"
+                      />
+                    )}
+                  </Field>
+                  <Field label="Country" error={form.formState.errors.country_code?.message}>
+                    {(props) => (
+                      <Controller
+                        control={form.control}
+                        name="country_code"
+                        render={({ field }) => (
+                          <MarketSelect
+                            {...props}
+                            ariaLabel="Country"
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            options={COUNTRY_OPTIONS}
                           />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Market row spans back under both columns so the card reads
-                      wide instead of leaving a lone field pair beside the tile. */}
-                  <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2">
-                    <Field
-                      label="Industry"
-                      required
-                      error={form.formState.errors.industry?.message}
-                    >
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('industry')}
-                          placeholder="e.g. Marketing analytics"
-                        />
-                      )}
-                    </Field>
-                    <Field label="Business type" required>
-                      {(props) => (
-                        <select
-                          {...props}
-                          {...form.register('business_type')}
-                          className="border-border-subtle bg-background text-foreground h-10 rounded-lg border px-3 text-sm"
-                        >
-                          <option value="b2b">B2B</option>
-                          <option value="b2c">B2C</option>
-                          <option value="both">B2B and B2C</option>
-                        </select>
-                      )}
-                    </Field>
-                    <Field label="Country" error={form.formState.errors.country_code?.message}>
-                      {(props) => (
-                        <Controller
-                          control={form.control}
-                          name="country_code"
-                          render={({ field }) => (
-                            <MarketSelect
-                              {...props}
-                              ariaLabel="Country"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              options={COUNTRY_OPTIONS}
-                            />
-                          )}
-                        />
-                      )}
-                    </Field>
-                    <Field label="Language" error={form.formState.errors.language_code?.message}>
-                      {(props) => (
-                        <Controller
-                          control={form.control}
-                          name="language_code"
-                          render={({ field }) => (
-                            <MarketSelect
-                              {...props}
-                              ariaLabel="Language"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              options={LANGUAGE_OPTIONS}
-                            />
-                          )}
-                        />
-                      )}
-                    </Field>
-                    <Field label="Products or services" hint="Comma separated">
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('products_services')}
-                          placeholder="Analytics, reporting, monitoring"
-                        />
-                      )}
-                    </Field>
-                    <Field label="Target audience">
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('target_audience')}
-                          placeholder="Marketing teams at mid-market companies"
-                        />
-                      )}
-                    </Field>
-                    <Field label="Positioning">
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('positioning')}
-                          placeholder="What makes the brand distinct"
-                        />
-                      )}
-                    </Field>
-                    <Field label="Price tier">
-                      {(props) => (
-                        <select
-                          {...props}
-                          {...form.register('price_tier')}
-                          className="border-border-subtle bg-background text-foreground h-10 rounded-lg border px-3 text-sm"
-                        >
-                          <option value="unknown">Not specified</option>
-                          <option value="budget">Budget</option>
-                          <option value="mid_market">Mid-market</option>
-                          <option value="premium">Premium</option>
-                          <option value="luxury">Luxury</option>
-                        </select>
-                      )}
-                    </Field>
-                    <Field label="Additional context">
-                      {(props) => (
-                        <Input
-                          {...props}
-                          {...form.register('additional_context')}
-                          placeholder="Anything the site may not explain clearly"
-                        />
-                      )}
-                    </Field>
-                  </div>
+                        )}
+                      />
+                    )}
+                  </Field>
+                  <Field label="Language" error={form.formState.errors.language_code?.message}>
+                    {(props) => (
+                      <Controller
+                        control={form.control}
+                        name="language_code"
+                        render={({ field }) => (
+                          <MarketSelect
+                            {...props}
+                            ariaLabel="Language"
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            options={LANGUAGE_OPTIONS}
+                          />
+                        )}
+                      />
+                    )}
+                  </Field>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -558,7 +430,8 @@ export function OnboardingScreen() {
                   Finding what to track
                 </h1>
                 <p className="text-muted text-sm">
-                  Three searches run in parallel for {brand?.brand_name || 'your brand'}.
+                  We&apos;re crawling the official site, verifying competitors, and generating
+                  evidence-grounded prompts for {brand?.brand_name || 'your brand'}.
                 </p>
               </div>
 
@@ -578,18 +451,36 @@ export function OnboardingScreen() {
 
               {discovery.discovery?.status === 'needs_input' ? (
                 <Alert tone="warning">
-                  We could not verify: {discovery.discovery.gaps.join(', ')}. Add or correct these
-                  details in the next step; onboarding remains available.
+                  <div className="flex items-center justify-between gap-3">
+                    <span>
+                      We could not verify: {discovery.discovery.gaps.join(', ')}. Retry discovery or
+                      review the verified results we did find.
+                    </span>
+                    <Button size="sm" variant="ghost" onClick={discovery.retry}>
+                      Retry
+                    </Button>
+                  </div>
                 </Alert>
               ) : null}
               {discovery.error ? (
-                <Alert tone="danger">{onboardingErrorMessage(discovery.error)}</Alert>
+                <Alert tone="danger">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{onboardingErrorMessage(discovery.error)}</span>
+                    <Button size="sm" variant="ghost" onClick={discovery.retry}>
+                      Retry
+                    </Button>
+                  </div>
+                </Alert>
               ) : null}
 
               <div className="flex items-center gap-3">
                 <Button
                   onClick={() => setStep(2)}
-                  disabled={discovery.isRunning || !discovery.discovery}
+                  disabled={
+                    discovery.isRunning ||
+                    !discovery.discovery ||
+                    discovery.discovery.prompt_suggestions.length === 0
+                  }
                   className="font-semibold"
                 >
                   {discovery.isRunning ? 'Searching…' : 'Review'}
@@ -630,6 +521,7 @@ export function OnboardingScreen() {
                     {
                       id: `competitor:manual:${manualCompetitorId()}`,
                       name: '',
+                      aliases: [],
                       domains: [],
                       selected: true,
                     },
@@ -637,78 +529,28 @@ export function OnboardingScreen() {
                 }
               />
 
-              <div className="border-border-subtle grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
-                <Field label="Brand description">
-                  {(props) => (
-                    <textarea
-                      {...props}
-                      value={profileDraft.description}
-                      onChange={(event) =>
-                        setProfileDraft((value) => ({
-                          ...value,
-                          description: event.target.value,
-                        }))
-                      }
-                      className="border-border-subtle bg-background text-foreground min-h-24 rounded-lg border p-3 text-sm"
-                    />
-                  )}
-                </Field>
-                <Field label="Positioning">
-                  {(props) => (
-                    <textarea
-                      {...props}
-                      value={profileDraft.positioning}
-                      onChange={(event) =>
-                        setProfileDraft((value) => ({
-                          ...value,
-                          positioning: event.target.value,
-                        }))
-                      }
-                      className="border-border-subtle bg-background text-foreground min-h-24 rounded-lg border p-3 text-sm"
-                    />
-                  )}
-                </Field>
-                <Field label="Products or services" hint="Comma separated">
-                  {(props) => (
-                    <Input
-                      {...props}
-                      value={profileDraft.products_services.join(', ')}
-                      onChange={(event) =>
-                        setProfileDraft((value) => ({
-                          ...value,
-                          products_services: event.target.value
-                            .split(',')
-                            .map((item) => item.trim())
-                            .filter(Boolean),
-                        }))
-                      }
-                    />
-                  )}
-                </Field>
-                <Field label="Target audience">
-                  {(props) => (
-                    <Input
-                      {...props}
-                      value={profileDraft.target_audience}
-                      onChange={(event) =>
-                        setProfileDraft((value) => ({
-                          ...value,
-                          target_audience: event.target.value,
-                        }))
-                      }
-                    />
-                  )}
-                </Field>
-              </div>
+              {discovery.discovery?.profile.description ? (
+                <div className="border-border-subtle bg-background/70 rounded-xl border p-4">
+                  <p className="text-2xs text-muted font-bold uppercase">Discovered profile</p>
+                  <p className="text-secondary mt-2 text-sm leading-relaxed">
+                    {discovery.discovery.profile.description}
+                  </p>
+                </div>
+              ) : null}
 
               {confirm.isError ? (
                 <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
+              ) : null}
+              {!hasSelectedDomain || !hasSelectedPrompt ? (
+                <Alert tone="warning">
+                  Keep at least one owned domain and one starting prompt selected.
+                </Alert>
               ) : null}
 
               <div className="flex items-center gap-3 pt-2">
                 <Button
                   onClick={() => confirm.mutate()}
-                  disabled={confirm.isPending}
+                  disabled={confirm.isPending || !hasSelectedDomain || !hasSelectedPrompt}
                   className="font-semibold"
                 >
                   {confirm.isPending ? 'Creating…' : 'Create project'}

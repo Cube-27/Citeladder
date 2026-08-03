@@ -74,7 +74,7 @@ The sidebar renders only live items (no disabled/"soon" placeholders); Traffic a
 |---|---|---|
 | Shell + auth | `(auth)/*`, `(app)/layout.tsx`, `session-guard.tsx`, `app-shell`, `sidebar-nav`, `top-bar`, `project-switcher`, `components/auth/oauth-buttons.tsx`, `components/ui/logo-cube.tsx` | Session, guard, nav, project context, OAuth buttons (coming-soon), brand cube |
 | API contract layer | `lib/api/{client,errors,query-client,query-keys,schemas,types,index}.ts` + per-domain modules | Transport, zod contracts, retry policy |
-| Onboarding | `/onboarding` + `lib/api/brand-discoveries.ts` | One persisted discovery workflow; required profile input, evidence/gap review, confirmation, atomic project creation |
+| Onboarding | `/onboarding` + `lib/api/brand-discoveries.ts` | Brand name + official website (required), optional industry/country/language hints, persisted crawl/search/synthesis, evidence review, and atomic project creation |
 | Projects | `/projects` + `components/projects/dashboard-screen.tsx` + `lib/api/projects.ts` | Active-project Dashboard, persisted PDF download, list/switch projects, add another |
 | Product tour | `components/tour/product-tour-provider.tsx` + `lib/api/workspaces.ts` | Versioned, workspace-member progress; route resume, Skip/Done, reduced-motion handling, and user-menu replay |
 | Prompts | `/prompts` (Your Prompts) + `/prompt-research` + `lib/api/prompts.ts` + `lib/api/topics.ts` | Your Prompts: topic-grouped read-only view with evidence-derived visibility scores. Prompt Research: prompt CRUD, CSV import, topic rail (create/delete/filter), AI generation dialog (consent-gated), proposed/active/archived status tabs with accept/archive actions |

@@ -12,13 +12,7 @@ export type BrandDiscovery = z.infer<typeof brandDiscoverySchema>;
 export type BrandDiscoveryInput = {
   brand_name: string;
   website_url: string;
-  industry: string;
-  business_type: 'b2b' | 'b2c' | 'both';
-  products_services?: string[];
-  target_audience?: string;
-  positioning?: string;
-  price_tier?: 'budget' | 'mid_market' | 'premium' | 'luxury' | 'unknown';
-  additional_context?: string;
+  industry?: string;
   country_code?: string;
   language_code?: string;
 };
@@ -36,6 +30,12 @@ export type BrandDiscoveryConfirmation = {
   domains: string[];
   competitors: Array<{ name: string; aliases: string[]; domains: string[] }>;
   topics: string[];
+  prompts: Array<{
+    text: string;
+    theme: string;
+    intent: 'discovery' | 'comparison' | 'purchase' | 'service' | 'local';
+    cohort: 'core' | 'comparison';
+  }>;
 };
 
 export const brandDiscoveriesApi = {
@@ -54,8 +54,11 @@ export const brandDiscoveriesApi = {
     const value = await apiClient.get(`/brand-discoveries/${id}`, options);
     return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.get');
   },
-  confirm: async (id: string, input: BrandDiscoveryConfirmation) => {
-    const value = await apiClient.post(`/brand-discoveries/${id}/confirm`, input);
+  confirm: async (id: string, input: BrandDiscoveryConfirmation, idempotencyKey: string) => {
+    const value = await apiClient.post(`/brand-discoveries/${id}/confirm`, input, {
+      idempotencyKey,
+      retryNetworkFailures: true,
+    });
     return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.confirm');
   },
   createProject: async (id: string, name: string, idempotencyKey: string) => {

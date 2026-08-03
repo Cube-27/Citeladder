@@ -33,6 +33,7 @@ from app.domain.audits.schemas import (
     AuditEstimateRequest,
     AuditEstimateResponse,
     AuditPerformanceResponse,
+    AuditUsageSummary,
 )
 from app.models.audit import Audit, AuditTask, ExecutionCostProjection
 from app.models.project import Project
@@ -47,6 +48,15 @@ def _line_cost(tokens: int, rate: int | None) -> int | None:
     if rate is None:
         return None
     return math.ceil(tokens * rate / TOKENS_PER_MILLION)
+
+
+def _estimated_searches(engine: str, executions: int) -> int:
+    calls_per_execution = ESTIMATE_SEARCH_CALLS.get(engine)
+    if calls_per_execution is None:
+        raise AuditEstimateError(
+            f"Search-call estimate is unavailable for engine: {engine}"
+        )
+    return executions * calls_per_execution
 
 
 def _cost_status(*, required: list[int | None]) -> str:
@@ -128,11 +138,10 @@ async def estimate_audit(
             if input_cost is not None and output_cost is not None
             else None
         )
-        searches = (
-            executions * ESTIMATE_SEARCH_CALLS[engine]
-            if policy.retrieval_enabled
-            else None
-        )
+        if policy.retrieval_enabled:
+            searches = _estimated_searches(engine, executions)
+        else:
+            searches = None
         search_cost = (
             searches * pricing.search_fee_microusd
             if searches is not None
@@ -285,15 +294,22 @@ async def audit_performance(
         failed_count=sum(row.status == TASK_STATUS_FAILED for row in tasks),
         coverage=completed / len(tasks) if tasks else 0.0,
         retry_count=sum(max(0, row.attempt_count - 1) for row in tasks),
-        usage={
-            "input_tokens": sum(
-                (row.uncached_input_tokens or 0) + (row.cached_input_tokens or 0)
-                for row in costs
-            )
-            or None,
-            "output_tokens": sum(row.output_tokens or 0 for row in costs) or None,
-            "total_tokens": sum(row.total_tokens or 0 for row in costs) or None,
-        },
+        usage=AuditUsageSummary(
+            input_tokens=(
+                sum(
+                    (row.uncached_input_tokens or 0) + (row.cached_input_tokens or 0)
+                    for row in costs
+                )
+                if costs
+                else None
+            ),
+            output_tokens=(
+                sum(row.output_tokens or 0 for row in costs) if costs else None
+            ),
+            total_tokens=(
+                sum(row.total_tokens or 0 for row in costs) if costs else None
+            ),
+        ),
         search_calls=sum(len(row.search_events or []) for row in tasks),
         projected_cost_microusd=sum(projected_all) if projected_all else None,
         engines=engine_rows,

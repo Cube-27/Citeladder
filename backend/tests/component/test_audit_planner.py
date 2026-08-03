@@ -557,7 +557,7 @@ async def test_full_frozen_configuration_for_pulse_mode(
         # The route policy is frozen alongside the route identity.
         engine = seed.engines[0]
         route = configuration["engine_routes"][engine]
-        policy = route_policy(engine, route["transport_provider"])
+        policy = route_policy(engine, MEASUREMENT_MODE_PULSE)
         assert route["reasoning_effort"] == policy.reasoning_effort
         assert route["reasoning_pinnable"] == policy.reasoning_pinnable
         assert route["representative_status"] == policy.representative_status

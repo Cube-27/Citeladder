@@ -38,6 +38,8 @@ from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
+    REASONING_EFFORT_LOW,
+    REASONING_EFFORT_MINIMAL,
     TRANSPORT_GOOGLE,
     is_approved_model,
     provider_catalog_settings,
@@ -109,7 +111,10 @@ def _grounding_fields(request: AnswerEngineRequest) -> dict[str, Any]:
 
 
 def _thinking_fields(request: AnswerEngineRequest) -> dict[str, Any]:
-    if request.reasoning_effort not in {"minimal", "low"}:
+    if request.reasoning_effort not in {
+        REASONING_EFFORT_MINIMAL,
+        REASONING_EFFORT_LOW,
+    }:
         return {}
     return {"generation_config": {"thinking_level": request.reasoning_effort}}
 

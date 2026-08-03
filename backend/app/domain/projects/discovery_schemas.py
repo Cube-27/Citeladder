@@ -4,25 +4,30 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.config.brand_discovery import (
+    DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS,
+    DISCOVERY_CONFIRM_MAX_DOMAINS,
+    DISCOVERY_CONFIRM_MAX_TOPICS,
+    DISCOVERY_CONFIRM_TOPIC_MAX_CHARS,
+)
 from app.domain.projects.schemas import CompetitorInput
+
+ConfirmedDomain = Annotated[
+    str, Field(min_length=1, max_length=DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS)
+]
+ConfirmedTopic = Annotated[
+    str, Field(min_length=1, max_length=DISCOVERY_CONFIRM_TOPIC_MAX_CHARS)
+]
 
 
 class BrandDiscoveryCreate(BaseModel):
     brand_name: str = Field(min_length=1, max_length=255)
     website_url: str = Field(min_length=1, max_length=1024)
-    industry: str = Field(min_length=2, max_length=255)
-    business_type: Literal["b2b", "b2c", "both"]
-    products_services: list[str] = Field(default_factory=list, max_length=30)
-    target_audience: str = Field(default="", max_length=2000)
-    positioning: str = Field(default="", max_length=2000)
-    price_tier: Literal["budget", "mid_market", "premium", "luxury", "unknown"] = (
-        "unknown"
-    )
-    additional_context: str = Field(default="", max_length=5000)
+    industry: str = Field(default="", max_length=255)
     country_code: str = Field(default="", max_length=8)
     language_code: str = Field(default="en", max_length=16)
 
@@ -41,15 +46,40 @@ class DiscoveryProfile(BaseModel):
     products_services: list[str] = Field(default_factory=list)
     target_audience: str = ""
     industry: str = ""
-    business_type: Literal["b2b", "b2c", "both"]
+    business_type: Literal["b2b", "b2c", "both"] = "both"
     price_tier: str = "unknown"
+
+
+class DiscoveryPromptSuggestion(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    theme: str = Field(default="", max_length=255)
+    intent: Literal["discovery", "comparison", "purchase", "service", "local"]
+    cohort: Literal["core", "comparison"]
+
+
+class DiscoverySynthesis(BaseModel):
+    profile: DiscoveryProfile
+    competitors: list[CompetitorInput] = Field(default_factory=list, max_length=20)
+    topics: list[ConfirmedTopic] = Field(
+        min_length=1, max_length=DISCOVERY_CONFIRM_MAX_TOPICS
+    )
+    prompts: list[DiscoveryPromptSuggestion] = Field(min_length=1, max_length=50)
+
+
+class DiscoveryCompetitorCandidates(BaseModel):
+    competitors: list[CompetitorInput] = Field(default_factory=list, max_length=20)
 
 
 class BrandDiscoveryConfirm(BaseModel):
     profile: DiscoveryProfile
-    domains: list[str] = Field(min_length=1)
+    domains: list[ConfirmedDomain] = Field(
+        min_length=1, max_length=DISCOVERY_CONFIRM_MAX_DOMAINS
+    )
     competitors: list[CompetitorInput] = Field(default_factory=list)
-    topics: list[str] = Field(default_factory=list)
+    topics: list[ConfirmedTopic] = Field(
+        default_factory=list, max_length=DISCOVERY_CONFIRM_MAX_TOPICS
+    )
+    prompts: list[DiscoveryPromptSuggestion] = Field(min_length=1, max_length=50)
 
 
 class BrandDiscoveryResponse(BaseModel):
@@ -61,12 +91,13 @@ class BrandDiscoveryResponse(BaseModel):
     status: str
     stage: str
     input_data: dict
-    profile: dict
-    domains: list
-    competitors: list
-    topics: list
-    evidence: list
-    gaps: list
+    profile: DiscoveryProfile
+    domains: list[str]
+    competitors: list[CompetitorInput]
+    topics: list[str]
+    prompt_suggestions: list[DiscoveryPromptSuggestion]
+    evidence: list[DiscoveryEvidence]
+    gaps: list[str]
     error_detail: str
     attempt_count: int
     created_at: datetime

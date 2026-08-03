@@ -110,16 +110,16 @@ export function PromptFormDialog({
         <div className="flex flex-wrap gap-6">
           <Controller
             control={control}
-            name="branded"
+            name="cohort"
             render={({ field }) => (
               <label className="text-foreground flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={field.value}
-                  onChange={(event) => field.onChange(event.target.checked)}
+                  checked={field.value === 'comparison'}
+                  onChange={(event) => field.onChange(event.target.checked ? 'comparison' : 'core')}
                   className="focus-ring accent-accent size-4 shrink-0"
                 />
-                Branded
+                Named comparison
               </label>
             )}
           />

@@ -367,7 +367,7 @@ async def get_visibility_trends_endpoint(
     measurement_mode: Annotated[str | None, Query()] = None,
     transport_model: Annotated[str | None, Query()] = None,
     retrieval_enabled: Annotated[bool | None, Query()] = None,
-    cohort: Annotated[str, Query()] = "core",
+    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
 ) -> list[VisibilityTrendPoint]:
     """Cross-run Visibility trend projection for a project (invariant 7).
 
@@ -425,7 +425,7 @@ async def get_visibility_evidence_endpoint(
     limit: Annotated[
         int, Query(ge=1, le=VISIBILITY_EVIDENCE_MAX_LIMIT)
     ] = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-    cohort: Annotated[str, Query()] = "core",
+    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
 ) -> VisibilityEvidenceResponse:
     """Persisted execution-evidence projection for a project (invariant 7).
 

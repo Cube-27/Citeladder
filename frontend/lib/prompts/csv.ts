@@ -17,7 +17,7 @@ import type { PromptIntent } from '@/lib/api/types';
 const THEME_KEYS = new Set(['theme', 'topic', 'category']);
 const TEXT_KEYS = new Set(['text', 'prompt', 'query', 'question']);
 const INTENT_KEYS = new Set(['intent']);
-const BRANDED_KEYS = new Set(['branded', 'is_branded']);
+const COHORT_KEYS = new Set(['cohort']);
 const ENABLED_KEYS = new Set(['enabled', 'is_enabled', 'active']);
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 't']);
@@ -114,7 +114,7 @@ type ColumnMap = {
   text: number;
   theme: number;
   intent: number;
-  branded: number;
+  cohort: number;
   enabled: number;
 };
 
@@ -125,7 +125,7 @@ function detectColumns(headerCells: string[]): ColumnMap | null {
     text: find(TEXT_KEYS),
     theme: find(THEME_KEYS),
     intent: find(INTENT_KEYS),
-    branded: find(BRANDED_KEYS),
+    cohort: find(COHORT_KEYS),
     enabled: find(ENABLED_KEYS),
   };
   // A header row is recognized only if it names at least the text column.
@@ -136,7 +136,7 @@ function detectColumns(headerCells: string[]): ColumnMap | null {
  * Parse CSV text into previewable prompt rows. With a header row, columns are
  * matched by name (any order); without one, the first column is the prompt
  * text and the remaining columns follow the canonical
- * `text,theme,intent,branded,enabled` order.
+ * `text,theme,intent,cohort,enabled` order.
  */
 export function parsePromptCsv(raw: string): ParsedCsv {
   const matrix = tokenizeCsv(raw);
@@ -150,7 +150,7 @@ export function parsePromptCsv(raw: string): ParsedCsv {
     text: 0,
     theme: 1,
     intent: 2,
-    branded: 3,
+    cohort: 3,
     enabled: 4,
   };
   const dataRows = hasHeader ? matrix.slice(1) : matrix;
@@ -173,7 +173,7 @@ export function parsePromptCsv(raw: string): ParsedCsv {
         text,
         theme,
         intent,
-        branded: asBool(cell(map.branded), false),
+        cohort: cell(map.cohort)?.trim().toLowerCase() === 'comparison' ? 'comparison' : 'core',
         enabled: asBool(cell(map.enabled), true),
       },
       warnings,

@@ -32,6 +32,7 @@ from app.connectors.agent.client import DefaultAgentClient
 from app.connectors.web_evidence.brand_evidence import evidence_block_lines
 from app.core.config.projects import PROMPT_INTENTS, PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
+    GENERATION_COMPARISON_SYSTEM_PROMPT,
     GENERATION_SYSTEM_PROMPT,
     GENERATOR_VERSION,
     PROMPT_NEAR_DUPLICATE_SIMILARITY,
@@ -711,13 +712,11 @@ async def generate_prompts(
     #    transaction first so no DB transaction is held across the network
     #    call (invariant 8's rule, applied to generation).
     await session.commit()
-    system_prompt = GENERATION_SYSTEM_PROMPT
-    if payload.cohort == "comparison":
-        system_prompt += (
-            "\nGenerate named head-to-head comparisons only. Every prompt must name "
-            "the tracked brand and at least one confirmed competitor and use the "
-            "comparison intent."
-        )
+    system_prompt = (
+        GENERATION_COMPARISON_SYSTEM_PROMPT
+        if payload.cohort == "comparison"
+        else GENERATION_SYSTEM_PROMPT
+    )
     raw = await agent.complete_json(system=system_prompt, user=user_message)
     suggestions, intra_duplicates = parse_generation_output(raw)
     suggestions = _filter_for_cohort(suggestions, payload.cohort, brand_context)

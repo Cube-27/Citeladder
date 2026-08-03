@@ -44,13 +44,21 @@ VALID_AGENT_RESPONSE = json.dumps(
                 "name": "Footwear",
                 "prompts": [
                     {"text": "best running shoes in australia", "intent": "discovery"},
-                    {"text": "acme vs globex running shoes", "intent": "comparison"},
+                    {
+                        "text": (
+                            "affordable running shoes for budget conscious families"
+                        ),
+                        "intent": "purchase",
+                    },
                 ],
             },
             {
                 "name": "Sizing",
                 "prompts": [
-                    {"text": "how do running shoe sizes work", "intent": "category"},
+                    {
+                        "text": "how to choose the right running shoe size",
+                        "intent": "service",
+                    },
                 ],
             },
         ]
@@ -157,21 +165,20 @@ async def test_generate_creates_proposed_prompts_and_topics(
     assert body["dropped_duplicates"] == 0
     assert len(body["generated"]) == 3
     by_status = {p["text"]: p["status"] for p in body["generated"]}
-    # Fresh set, 3 < the 20-active pool -> unbranded prompts promoted to
-    # active. The branded comparison prompt stays proposed: the branded cap
-    # applies to the post-activation pool (int(2 * 0.2) = 0 slots), not the
-    # configured threshold.
+    # Fresh core set, 3 < the 20-active pool -> all unbranded prompts activate.
     assert by_status["best running shoes in australia"] == "active"
-    assert by_status["how do running shoe sizes work"] == "active"
-    assert by_status["acme vs globex running shoes"] == "proposed"
+    assert by_status["how to choose the right running shoe size"] == "active"
+    assert (
+        by_status["affordable running shoes for budget conscious families"] == "active"
+    )
     for prompt in body["generated"]:
         assert prompt["origin"] == "generated"
         assert prompt["topic_id"] is not None
     assert {t["name"] for t in body["topics"]} == {"Footwear", "Sizing"}
     footwear = next(t for t in body["topics"] if t["name"] == "Footwear")
     assert footwear["origin"] == "generated"
-    assert footwear["active_count"] == 1
-    assert footwear["proposed_count"] == 1
+    assert footwear["active_count"] == 2
+    assert footwear["proposed_count"] == 0
 
     # The brand evidence went to the agent (confirmed above), and the
     # request embedded identity + count instructions.
@@ -186,10 +193,10 @@ async def test_generate_creates_proposed_prompts_and_topics(
     # any credential material — only host + model identity.
     listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
     assert len(listed["prompts"]) == 3
-    # comparison prompt names both brands -> branded classification
+    # Core generation excludes tracked and competitor names.
     branded = {p["text"]: p["branded"] for p in listed["prompts"]}
-    assert branded["acme vs globex running shoes"] is True
-    assert branded["how do running shoe sizes work"] is False
+    assert branded["affordable running shoes for budget conscious families"] is False
+    assert branded["how to choose the right running shoe size"] is False
 
 
 @pytest.mark.asyncio
@@ -222,7 +229,7 @@ async def test_generate_persists_provenance_evidence(
     for prompt in prompts:
         evidence = prompt.generation_evidence
         assert evidence is not None
-        assert evidence["generator_version"] == "prompt-gen-v2"
+        assert evidence["generator_version"] == "prompt-gen-v3"
         assert evidence["model_identity"] == {
             "transport_host": "agent.test",
             "transport_model": "fake-model",
@@ -397,7 +404,12 @@ async def test_generate_into_target_topic(
                 "topics": [
                     {
                         "name": "Whatever The Model Said",
-                        "prompts": [{"text": "acme pricing plans", "intent": "brand"}],
+                        "prompts": [
+                            {
+                                "text": "how much do running shoe plans cost",
+                                "intent": "purchase",
+                            }
+                        ],
                     }
                 ]
             }
@@ -486,7 +498,7 @@ def _agent_response_with_n_prompts(n: int, *, topic: str = "Bulk") -> str:
                     "name": topic,
                     "prompts": [
                         {
-                            "text": f"{topic} running shoes prompt {i}",
+                            "text": (f"{topic} running shoes for {chr(97 + i) * 20}"),
                             "intent": "discovery",
                         }
                         for i in range(n)
@@ -554,29 +566,35 @@ async def test_generate_caps_branded_share_of_active_pool(
     the slots they would have taken go to later unbranded prompts, and the
     skipped branded rows stay proposed."""
     _, prompt_set_id = await _make_project_and_set(client, "brandcap@example.com")
-    # 10 branded prompts first, then 10 unbranded. Pool lands at 12 active
-    # (2 branded + 10 unbranded): cap iterates to int(12 * 0.2) = 2.
-    branded_prompts = [
-        {"text": f"is Acme Corp good for use case {i}", "intent": "discovery"}
+    # Ten existing core prompts plus ten named comparisons settle at 12 active:
+    # 10 core + 2 comparison, because int(12 * 0.2) == 2.
+    for i in range(10):
+        created = await client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+            json={"text": f"best Acme running shoes for terrain {i}"},
+        )
+        assert created.status_code == 201
+    comparison_prompts = [
+        {
+            "text": f"Acme Corp vs Globex for running shoe use case {i}",
+            "intent": "comparison",
+        }
         for i in range(10)
     ]
-    unbranded_prompts = [
-        {"text": f"best running shoes for terrain {i}", "intent": "discovery"}
-        for i in range(10)
-    ]
-    all_prompts = branded_prompts + unbranded_prompts
     agent = FakeAgent(
-        response=json.dumps({"topics": [{"name": "Mix", "prompts": all_prompts}]})
+        response=json.dumps(
+            {"topics": [{"name": "Comparisons", "prompts": comparison_prompts}]}
+        )
     )
     monkeypatch.setattr(prompts_api, "DefaultAgentClient", lambda: agent)
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 20, "confirm_send_evidence": True},
+        json={"count": 10, "cohort": "comparison", "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
     body = resp.json()
-    assert len(body["generated"]) == 20
+    assert len(body["generated"]) == 10
 
     by_text = {p["text"]: p for p in body["generated"]}
     active_branded = [
@@ -586,13 +604,16 @@ async def test_generate_caps_branded_share_of_active_pool(
     # first 2 branded rows take the slots.
     assert len(active_branded) == 2
     for i in range(2):
-        assert by_text[f"is Acme Corp good for use case {i}"]["status"] == "active"
+        assert (
+            by_text[f"Acme Corp vs Globex for running shoe use case {i}"]["status"]
+            == "active"
+        )
     # Branded rows beyond the cap stay proposed even though pool slots remained.
     for i in range(2, 10):
-        assert by_text[f"is Acme Corp good for use case {i}"]["status"] == "proposed"
-    # Every unbranded row is activated (2 branded + 10 unbranded = 12 <= 20).
-    for i in range(10):
-        assert by_text[f"best running shoes for terrain {i}"]["status"] == "active"
+        assert (
+            by_text[f"Acme Corp vs Globex for running shoe use case {i}"]["status"]
+            == "proposed"
+        )
 
 
 @pytest.mark.asyncio
@@ -603,16 +624,20 @@ async def test_generate_branded_cap_holds_for_undersized_pool(
     branded share against the pool that actually exists after activation, not
     the configured threshold."""
     _, prompt_set_id = await _make_project_and_set(client, "brandcap2@example.com")
-    # Only 5 prompts (3 branded + 2 unbranded) into an empty pool. Capping
-    # against threshold alone (int(20 * 0.2) = 4) would activate all 3 branded
-    # -> a 5-row pool at 60% branded. Against the projected pool the cap
-    # iterates down to int(2 * 0.2) = 0: no branded row auto-activates.
+    # Two existing core prompts plus three comparisons still permit zero
+    # comparison rows: int(2 * 0.2) == 0.
+    for i in range(2):
+        created = await client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+            json={"text": f"best Acme daily running shoe {i}"},
+        )
+        assert created.status_code == 201
     prompts = [
-        {"text": f"is Acme Corp good for use case {i}", "intent": "discovery"}
+        {
+            "text": f"Acme Corp vs Globex for running shoe use case {i}",
+            "intent": "comparison",
+        }
         for i in range(3)
-    ] + [
-        {"text": f"best running shoes for terrain {i}", "intent": "discovery"}
-        for i in range(2)
     ]
     agent = FakeAgent(
         response=json.dumps({"topics": [{"name": "Mix", "prompts": prompts}]})
@@ -621,14 +646,15 @@ async def test_generate_branded_cap_holds_for_undersized_pool(
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 5, "confirm_send_evidence": True},
+        json={"count": 3, "cohort": "comparison", "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
     by_text = {p["text"]: p for p in resp.json()["generated"]}
     for i in range(3):
-        assert by_text[f"is Acme Corp good for use case {i}"]["status"] == "proposed"
-    for i in range(2):
-        assert by_text[f"best running shoes for terrain {i}"]["status"] == "active"
+        assert (
+            by_text[f"Acme Corp vs Globex for running shoe use case {i}"]["status"]
+            == "proposed"
+        )
 
 
 @pytest.mark.asyncio
@@ -637,14 +663,20 @@ async def test_generate_branded_cap_allows_share_of_undersized_pool(
 ) -> None:
     """A pool below threshold still admits branded rows up to its own share."""
     _, prompt_set_id = await _make_project_and_set(client, "brandcap3@example.com")
-    # 4 branded + 6 unbranded into an empty pool. Fixed point: 1 branded + 6
-    # unbranded = 7 active, int(7 * 0.2) = 1 branded allowed.
+    # Six existing core prompts permit one of four new named comparisons:
+    # int(7 * 0.2) == 1.
+    for i in range(6):
+        created = await client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
+            json={"text": f"best Acme road running shoe {i}"},
+        )
+        assert created.status_code == 201
     prompts = [
-        {"text": f"is Acme Corp good for use case {i}", "intent": "discovery"}
+        {
+            "text": f"Acme Corp vs Globex for running shoe use case {i}",
+            "intent": "comparison",
+        }
         for i in range(4)
-    ] + [
-        {"text": f"best running shoes for terrain {i}", "intent": "discovery"}
-        for i in range(6)
     ]
     agent = FakeAgent(
         response=json.dumps({"topics": [{"name": "Mix", "prompts": prompts}]})
@@ -653,15 +685,18 @@ async def test_generate_branded_cap_allows_share_of_undersized_pool(
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 10, "confirm_send_evidence": True},
+        json={"count": 4, "cohort": "comparison", "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
     by_text = {p["text"]: p for p in resp.json()["generated"]}
-    assert by_text["is Acme Corp good for use case 0"]["status"] == "active"
+    assert (
+        by_text["Acme Corp vs Globex for running shoe use case 0"]["status"] == "active"
+    )
     for i in range(1, 4):
-        assert by_text[f"is Acme Corp good for use case {i}"]["status"] == "proposed"
-    for i in range(6):
-        assert by_text[f"best running shoes for terrain {i}"]["status"] == "active"
+        assert (
+            by_text[f"Acme Corp vs Globex for running shoe use case {i}"]["status"]
+            == "proposed"
+        )
 
 
 @pytest.mark.asyncio
@@ -720,7 +755,10 @@ async def test_generate_counts_intra_response_duplicates(
     assert resp.status_code == 201
     body = resp.json()
     assert len(body["generated"]) == 2  # the collapsed duplicate is gone
-    assert body["dropped_duplicates"] == 1
+    # The bounded replacement call receives the same fake response: one
+    # duplicate is collapsed in each model batch, then its two surviving
+    # rows duplicate the first batch at persistence time.
+    assert body["dropped_duplicates"] == 4
 
 
 @pytest.mark.asyncio

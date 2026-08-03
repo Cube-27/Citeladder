@@ -167,7 +167,14 @@ describe('providerMarketingState', () => {
             adapter_shipped: true,
             grant_key: 'provider.openai',
             issuable: true,
-            routes: [{ logical_engine: 'chatgpt', transport_provider: 'openai', model: 'gpt-5' }],
+            routes: [
+              {
+                logical_engine: 'chatgpt',
+                measurement_mode: 'pulse',
+                transport_provider: 'openai',
+                model: 'gpt-5',
+              },
+            ],
           },
           {
             key: 'provider.grok',

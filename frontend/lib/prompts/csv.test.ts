@@ -19,26 +19,26 @@ describe('tokenizeCsv', () => {
 
 describe('parsePromptCsv', () => {
   it('parses a header row with columns in any order', () => {
-    const parsed = parsePromptCsv('intent,text,branded\ndiscovery,Best shoes?,yes');
+    const parsed = parsePromptCsv('intent,text,cohort\ndiscovery,Best shoes?,comparison');
     expect(parsed.hasHeader).toBe(true);
     expect(parsed.rows).toHaveLength(1);
     expect(parsed.rows[0].input).toMatchObject({
       text: 'Best shoes?',
       intent: 'discovery',
-      branded: true,
+      cohort: 'comparison',
       enabled: true,
     });
     expect(parsed.rows[0].errors).toEqual([]);
   });
 
   it('treats a file without a recognized header as positional', () => {
-    const parsed = parsePromptCsv('Best shoes?,Comfort,purchase,true,false');
+    const parsed = parsePromptCsv('Best shoes?,Comfort,purchase,comparison,false');
     expect(parsed.hasHeader).toBe(false);
     expect(parsed.rows[0].input).toMatchObject({
       text: 'Best shoes?',
       theme: 'Comfort',
       intent: 'purchase',
-      branded: true,
+      cohort: 'comparison',
       enabled: false,
     });
   });

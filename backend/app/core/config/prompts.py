@@ -258,16 +258,15 @@ TOPICAL_BINDING_STOPWORDS: Final[frozenset[str]] = frozenset(
 # Neutral instruction for the default agent. The brand context is supplied in
 # the *user* message by the request builder; the response contract is strict
 # JSON so the parser stays deterministic and unit-testable.
-GENERATION_SYSTEM_PROMPT: Final = (
+_GENERATION_PROMPT_PREAMBLE: Final = (
     "You are an AEO (answer-engine optimization) research assistant. Given a "
     "brand's context, you propose realistic consumer search prompts a person "
     "might ask an AI assistant, organized under topical categories.\n"
     "Rules:\n"
     "- Prompts must read like natural consumer questions or requests, not "
     "marketing copy.\n"
-    "- Generate only UNBRANDED core discovery queries. A prompt must never "
-    "contain the tracked brand, any alias, a competitor, or competitor alias. "
-    "Named comparisons are generated through a separate cohort.\n"
+)
+_GENERATION_SHARED_RULES: Final = (
     "- Reuse an existing topic name verbatim when a prompt fits it; only "
     "invent a new topic when none fits.\n"
     "- Ground every prompt in the supplied brand knowledge, market, products, "
@@ -282,6 +281,19 @@ GENERATION_SYSTEM_PROMPT: Final = (
     "service, local.\n"
     'Respond with ONLY a JSON object of the shape: {"topics": [{"name": str, '
     '"prompts": [{"text": str, "intent": str}]}]}. No prose, no markdown.'
+)
+GENERATION_SYSTEM_PROMPT: Final = (
+    _GENERATION_PROMPT_PREAMBLE
+    + "- Generate only UNBRANDED core discovery queries. A prompt must never "
+    "contain the tracked brand, any alias, a competitor, or competitor alias. "
+    "Named comparisons are generated through a separate cohort.\n"
+    + _GENERATION_SHARED_RULES
+)
+GENERATION_COMPARISON_SYSTEM_PROMPT: Final = (
+    _GENERATION_PROMPT_PREAMBLE
+    + "- Generate named head-to-head comparisons only. Every prompt must name "
+    "the tracked brand and at least one confirmed competitor and use the "
+    "comparison intent.\n" + _GENERATION_SHARED_RULES
 )
 
 

@@ -1,7 +1,7 @@
 # Prompt-set + prompt request/response schemas (Q3=A; ids string UUID).
 #
 # The dedicated prompt resource: prompt sets group prompts; each prompt carries
-# text/theme/intent + branded/enabled/origin flags. Adapted from the reference
+# text/theme/intent + cohort/enabled/origin fields. Adapted from the reference
 # ``PromptInput`` and extended with the columns Searchify's prompt model adds.
 from __future__ import annotations
 
@@ -45,11 +45,12 @@ class PromptInput(BaseModel):
     update path does; ``None`` leaves the prompt untopiced.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     text: str = Field(min_length=1, max_length=PROMPT_TEXT_MAX_CHARS)
     theme: str = Field(default="", max_length=255)
     intent: str = Field(default="", max_length=PROMPT_INTENT_MAX_CHARS)
     cohort: PromptCohort = "core"
-    branded: bool = False
     enabled: bool = True
     topic_id: uuid.UUID | None = None
     # Provenance. ``manual`` (the default) is free text a human typed and stays
@@ -74,12 +75,13 @@ class PromptCreate(PromptInput):
 
 
 class PromptUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     text: str | None = Field(
         default=None, min_length=1, max_length=PROMPT_TEXT_MAX_CHARS
     )
     theme: str | None = Field(default=None, max_length=255)
     intent: str | None = Field(default=None, max_length=PROMPT_INTENT_MAX_CHARS)
-    branded: bool | None = None
     cohort: PromptCohort | None = None
     enabled: bool | None = None
     status: PromptStatus | None = None

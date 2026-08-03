@@ -185,14 +185,14 @@ Searchify/
 # 1. Copy the env template
 cp infra/docker/.env.example infra/docker/.env    # then edit secrets for anything non-local
 
-# 2. Bring the stack up (Postgres + backend web + audit worker + content worker)
+# 2. Apply migrations (from backend/)
+cd backend && uv run alembic upgrade head
+
+# 3. Bring the stack up (Postgres + backend web + audit worker + content worker)
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD=searchify_dev_password \
   docker compose -f infra/docker/docker-compose.yml up -d --force-recreate
   docker compose -f infra/docker/docker-compose.yml up -d --build web
-
-# 3. Apply migrations (from backend/)
-cd backend && uv run alembic upgrade head
 
 # 4. Start the frontend (from frontend/)
 cd ../frontend

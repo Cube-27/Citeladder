@@ -75,13 +75,14 @@ export function useVisibilityFilters() {
 
   // A narrowing filter (engine, bounded range, or a specific prompt) is active —
   // used to explain a filtered-empty result vs a genuinely empty history.
-  const isFiltered = engine !== 'all' || range !== 'all' || promptId !== null;
-  const isTrendFiltered = engine !== 'all' || range !== 'all';
+  const isFiltered = engine !== 'all' || range !== 'all' || promptId !== null || cohort !== 'core';
+  const isTrendFiltered = engine !== 'all' || range !== 'all' || cohort !== 'core';
 
   function clearEvidenceFilters() {
     setEngine('all');
     setRange('all');
     setPromptId(null);
+    setCohort('core');
   }
 
   return {

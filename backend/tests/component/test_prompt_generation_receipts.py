@@ -75,7 +75,7 @@ async def test_generated_prompts_bypass_binding_with_a_valid_receipt(
                 "text": text,
                 "theme": theme,
                 "intent": "discovery",
-                "branded": False,
+                "cohort": "core",
                 "enabled": True,
                 "origin": "generated",
                 "generation_receipt": issue_prompt_receipt(text),
@@ -98,7 +98,7 @@ async def test_forged_receipt_cannot_bypass_binding(
             "text": OFF_DOMAIN,
             "theme": "",
             "intent": "discovery",
-            "branded": False,
+            "cohort": "core",
             "enabled": True,
             "origin": "generated",
             "generation_receipt": "deadbeef" * 8,
@@ -122,7 +122,7 @@ async def test_receipt_does_not_transfer_to_different_text(
             "text": OFF_DOMAIN,
             "theme": "",
             "intent": "discovery",
-            "branded": False,
+            "cohort": "core",
             "enabled": True,
             "origin": "generated",
             # Valid receipt, but issued for a DIFFERENT prompt.
@@ -153,7 +153,7 @@ async def test_client_theme_cannot_widen_the_binding_vocabulary(
             # Every significant token of the off-domain prompt.
             "theme": "hiking boots alpine trekking winter",
             "intent": "discovery",
-            "branded": False,
+            "cohort": "core",
             "enabled": True,
         },
     )
@@ -173,7 +173,7 @@ async def test_manual_free_text_is_still_gated(client: httpx.AsyncClient) -> Non
             "text": OFF_DOMAIN,
             "theme": "",
             "intent": "discovery",
-            "branded": False,
+            "cohort": "core",
             "enabled": True,
         },
     )

@@ -168,7 +168,7 @@
       "_headline_aggregates": 18,
       "_is_google_redirect": 8,
       "_optional_rate": 2,
-      "_paid_list_cost_estimate": 16,
+      "_paid_list_cost_estimate": 12,
       "_per_prompt_stability": 7,
       "_prompt_class": 5,
       "_prompt_signals": 3,
@@ -177,6 +177,8 @@
       "_reported_cost_usd": 3,
       "_share_of_voice": 9,
       "_stability": 2,
+      "_token_cost_estimate": 8,
+      "_token_line_estimate": 3,
       "_top_domain_share": 4,
       "_url_domain": 5,
       "_usage_value": 3,
@@ -186,7 +188,7 @@
       "classify_fanout": 7,
       "score_execution": 3
     },
-    "loc": 720,
+    "loc": 749,
     "max_cc": 18
   },
   "app/analysis/service.py": {
@@ -444,7 +446,7 @@
       "get_brand_discovery": 2,
       "get_brand_discovery_catalog": 1
     },
-    "loc": 130,
+    "loc": 133,
     "max_cc": 5
   },
   "app/api/commerce.py": {
@@ -788,7 +790,7 @@
       "_thinking_fields": 2,
       "safe_quota_detail": 17
     },
-    "loc": 213,
+    "loc": 218,
     "max_cc": 17
   },
   "app/connectors/answer_engines/gemini_parser.py": {
@@ -826,7 +828,7 @@
       "usage_count": 3,
       "usage_mapping": 2
     },
-    "loc": 194,
+    "loc": 200,
     "max_cc": 12
   },
   "app/connectors/answer_engines/openai.py": {
@@ -1124,11 +1126,13 @@
   "app/connectors/web_evidence/firecrawl.py": {
     "functions": {
       "_headers": 3,
-      "competitor_search": 11,
-      "rendered_scrape": 7
+      "_post": 14,
+      "_search": 10,
+      "competitor_search": 1,
+      "rendered_scrape": 6
     },
-    "loc": 75,
-    "max_cc": 11
+    "loc": 133,
+    "max_cc": 14
   },
   "app/connectors/web_evidence/resolver.py": {
     "functions": {
@@ -1306,7 +1310,7 @@
   },
   "app/core/config/brand_discovery.py": {
     "functions": {},
-    "loc": 49,
+    "loc": 119,
     "max_cc": 0
   },
   "app/core/config/brand_evidence.py": {
@@ -1447,7 +1451,7 @@
   },
   "app/core/config/prompts.py": {
     "functions": {},
-    "loc": 355,
+    "loc": 367,
     "max_cc": 0
   },
   "app/core/config/provider_catalog.py": {
@@ -1463,12 +1467,12 @@
       "is_route_approved": 2,
       "measurement_route": 2,
       "measurement_routes_for_engine": 3,
-      "public_provider_routes": 2,
+      "public_provider_routes": 1,
       "route_capacity_policy": 2,
       "route_policy": 2,
       "validate_availability": 5
     },
-    "loc": 603,
+    "loc": 616,
     "max_cc": 5
   },
   "app/core/config/site_health.py": {
@@ -1883,11 +1887,12 @@
     "functions": {
       "_cost_status": 4,
       "_estimate_prompts": 7,
+      "_estimated_searches": 2,
       "_line_cost": 2,
       "audit_performance": 41,
       "estimate_audit": 28
     },
-    "loc": 300,
+    "loc": 316,
     "max_cc": 41
   },
   "app/domain/audits/planner.py": {
@@ -1951,7 +1956,7 @@
       "frozen_retrieval_enabled": 4,
       "model_provenance_for": 2
     },
-    "loc": 611,
+    "loc": 617,
     "max_cc": 5
   },
   "app/domain/audits/state_events.py": {
@@ -2054,7 +2059,7 @@
       "UsageItemResponse._check_limit_state_nullability": 11,
       "_normalized_country": 3
     },
-    "loc": 440,
+    "loc": 441,
     "max_cc": 11
   },
   "app/domain/billing/service.py": {
@@ -2103,7 +2108,7 @@
       "schedule_addon_cancellation": 2,
       "schedule_base_cancellation": 2
     },
-    "loc": 1256,
+    "loc": 1259,
     "max_cc": 10
   },
   "app/domain/billing/webhooks.py": {
@@ -2669,14 +2674,15 @@
       "BrandEvidence.serialize": 1,
       "BrandEvidence.word_count": 2,
       "_cache_get": 3,
+      "_cache_positive_result": 2,
       "_cache_put": 4,
       "_gather": 9,
       "_homepage_url": 5,
-      "collect_brand_evidence": 12,
+      "collect_brand_evidence": 10,
       "reset_brand_evidence_cache": 1
     },
     "loc": 215,
-    "max_cc": 12
+    "max_cc": 10
   },
   "app/domain/projects/brand_profile.py": {
     "functions": {
@@ -2701,32 +2707,60 @@
       "suggest_brand_profile": 3,
       "validate_brand_profile_suggest_request": 2
     },
-    "loc": 376,
+    "loc": 377,
     "max_cc": 13
   },
   "app/domain/projects/discovery.py": {
     "functions": {
+      "_agent_competitor_candidates": 7,
+      "_apply_confirmation": 2,
+      "_apply_discovery_result": 5,
       "_approve_vendor_url": 1,
+      "_candidate_identity_present": 1,
       "_candidate_name": 2,
+      "_collect_owned_site": 10,
+      "_commit_new_discovery": 3,
+      "_competitor_domain": 6,
+      "_complete_synthesis": 4,
+      "_confirmation_already_applied": 4,
       "_confirmed_competitors": 9,
+      "_confirmed_domains": 3,
+      "_discover_competitors": 4,
+      "_discovery_statement": 2,
       "_evidence_item": 1,
+      "_firecrawl_competitor_candidates": 2,
+      "_industry_terms": 3,
       "_is_valid_domain_hostname": 3,
       "_normalized_url": 5,
+      "_prompt_identity_is_valid": 7,
+      "_read_competitor_site": 6,
+      "_relevant_competitor_page": 6,
+      "_rendered_site_evidence": 3,
+      "_safe_agent_competitor_candidates": 2,
+      "_synthesize_discovery": 4,
+      "_synthesize_output": 4,
+      "_try_verify_competitor_candidate": 2,
       "_validate_public_hostname": 5,
+      "_validated_prompt_suggestions": 8,
+      "_verified_candidate_identity": 2,
+      "_verified_synthesized_competitors": 7,
+      "_verify_competitor_candidate": 4,
+      "_verify_competitor_candidates": 6,
       "claim_discovery": 2,
       "confirm_discovery": 4,
       "create_discovery": 3,
       "create_project_from_discovery": 21,
       "discovery_catalog": 1,
       "get_discovery": 2,
-      "process_discovery": 33
+      "process_discovery": 4,
+      "reap_exhausted_discoveries": 3
     },
-    "loc": 533,
-    "max_cc": 33
+    "loc": 1104,
+    "max_cc": 21
   },
   "app/domain/projects/discovery_schemas.py": {
     "functions": {},
-    "loc": 90,
+    "loc": 121,
     "max_cc": 0
   },
   "app/domain/projects/knowledge_base.py": {
@@ -2809,9 +2843,10 @@
   "app/domain/prompts/csv_import.py": {
     "functions": {
       "_as_bool": 3,
+      "_cohort": 3,
       "parse_prompt_csv": 27
     },
-    "loc": 105,
+    "loc": 109,
     "max_cc": 27
   },
   "app/domain/prompts/generation.py": {
@@ -2838,7 +2873,7 @@
       "parse_generation_output": 10,
       "validate_generation_request": 1
     },
-    "loc": 939,
+    "loc": 938,
     "max_cc": 19
   },
   "app/domain/prompts/locks.py": {
@@ -2879,7 +2914,7 @@
   },
   "app/domain/prompts/schemas.py": {
     "functions": {},
-    "loc": 207,
+    "loc": 209,
     "max_cc": 0
   },
   "app/domain/prompts/service.py": {
@@ -2911,7 +2946,7 @@
       "update_prompt": 10,
       "update_prompt_set": 3
     },
-    "loc": 771,
+    "loc": 770,
     "max_cc": 10
   },
   "app/domain/prompts/topical_binding.py": {
@@ -3398,7 +3433,7 @@
     "functions": {
       "_utcnow": 1
     },
-    "loc": 68,
+    "loc": 84,
     "max_cc": 1
   },
   "app/models/integrations.py": {
@@ -3632,11 +3667,13 @@
   },
   "app/workers/brand_discovery_worker.py": {
     "functions": {
-      "main": 3,
+      "_install_shutdown_handler": 2,
+      "_run_loop": 6,
+      "main": 1,
       "run_once": 3
     },
-    "loc": 35,
-    "max_cc": 3
+    "loc": 69,
+    "max_cc": 6
   },
   "app/workers/content_worker.py": {
     "functions": {

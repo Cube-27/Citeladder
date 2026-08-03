@@ -269,7 +269,12 @@ async def test_activation_transition_rejects_off_domain_proposed_prompt(
 async def test_generation_drops_off_domain_model_output(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "bind-gen@example.com")
+    project, prompt_set_id = await _make_project_and_set(client, "bind-gen@example.com")
+    profile = await client.put(
+        f"/api/v1/projects/{project['id']}/brand-profile",
+        json={"products_services": ["running shoes"]},
+    )
+    assert profile.status_code == 200
 
     class _MixedAgent:
         model = "fake-model"
@@ -278,7 +283,8 @@ async def test_generation_drops_off_domain_model_output(
         async def complete_json(self, *, system: str, user: str) -> str:
             return (
                 '{"topics": [{"name": "Mix", "prompts": ['
-                '{"text": "best acme running shoes", "intent": "discovery"},'
+                '{"text": "best running shoes for daily training", '
+                '"intent": "discovery"},'
                 '{"text": "best laptops for programming", "intent": "discovery"}'
                 "]}]}"
             )
@@ -290,9 +296,11 @@ async def test_generation_drops_off_domain_model_output(
     )
     assert resp.status_code == 201
     generated = resp.json()["generated"]
-    assert [p["text"] for p in generated] == ["best acme running shoes"]
+    assert [p["text"] for p in generated] == ["best running shoes for daily training"]
     listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert [p["text"] for p in listed["prompts"]] == ["best acme running shoes"]
+    assert [p["text"] for p in listed["prompts"]] == [
+        "best running shoes for daily training"
+    ]
 
 
 # ---------------------------------------------------------------------------

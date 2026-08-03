@@ -587,7 +587,7 @@ async def get_connection_states(
     providers: list[ProviderConnectionStateResponse] = []
     for entry in PUBLIC_PROVIDER_CATALOG:
         routes = public_provider_routes(entry.key)
-        connection = by_transport.get(routes[0][1]) if routes else None
+        connection = by_transport.get(routes[0].transport_provider) if routes else None
         probe = latest_probes.get(connection.id) if connection is not None else None
         providers.append(
             derive_connection_state(entry, connection, probe, at=derived_at)

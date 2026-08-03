@@ -27,8 +27,10 @@ from app.core.config.entitlements import (
 ENGINE_CHATGPT: Final = "chatgpt"
 ENGINE_GEMINI: Final = "gemini"
 ENGINE_CLAUDE: Final = "claude"
-LOGICAL_ENGINES: Final[frozenset[str]] = frozenset(
-    {ENGINE_CHATGPT, ENGINE_GEMINI, ENGINE_CLAUDE}
+LOGICAL_ENGINES: Final[tuple[str, str, str]] = (
+    ENGINE_CHATGPT,
+    ENGINE_CLAUDE,
+    ENGINE_GEMINI,
 )
 
 # --- Transport providers (how we physically reach the engine) -------------
@@ -48,8 +50,19 @@ MEASUREMENT_MODES: Final[tuple[str, str]] = (
     MEASUREMENT_MODE_BENCHMARK,
 )
 
+# Execution-time reasoning values used by exact measurement routes and adapters.
+REASONING_EFFORT_OFF: Final = "off"
+REASONING_EFFORT_MINIMAL: Final = "minimal"
+REASONING_EFFORT_LOW: Final = "low"
+REASONING_EFFORT_UNVERIFIED: Final = "unverified"
 
-@dataclass(frozen=True, slots=True)
+# Whether the pinned transport model is known to match the corresponding
+# consumer product. Every active route remains unverified until evidence exists.
+REPRESENTATIVE_STATUS_UNVERIFIED: Final = "unverified"
+REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MeasurementRoute:
     logical_engine: str
     measurement_mode: str
@@ -57,58 +70,72 @@ class MeasurementRoute:
     transport_model: str
     retrieval_enabled: bool
     reasoning_effort: str
+    reasoning_pinnable: bool
+    representative_status: str
 
 
 # Exact model identity is frozen here. There is intentionally no provider
 # alias, default-model fallback, or single-route compatibility view.
 MEASUREMENT_ROUTES: Final[dict[tuple[str, str], MeasurementRoute]] = {
     (ENGINE_CHATGPT, MEASUREMENT_MODE_PULSE): MeasurementRoute(
-        ENGINE_CHATGPT,
-        MEASUREMENT_MODE_PULSE,
-        TRANSPORT_OPENAI,
-        "gpt-5.4-nano-2026-03-17",
-        False,
-        "off",
+        logical_engine=ENGINE_CHATGPT,
+        measurement_mode=MEASUREMENT_MODE_PULSE,
+        transport_provider=TRANSPORT_OPENAI,
+        transport_model="gpt-5.4-nano-2026-03-17",
+        retrieval_enabled=False,
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
     (ENGINE_CHATGPT, MEASUREMENT_MODE_BENCHMARK): MeasurementRoute(
-        ENGINE_CHATGPT,
-        MEASUREMENT_MODE_BENCHMARK,
-        TRANSPORT_OPENAI,
-        "gpt-5.6-sol",
-        True,
-        "off",
+        logical_engine=ENGINE_CHATGPT,
+        measurement_mode=MEASUREMENT_MODE_BENCHMARK,
+        transport_provider=TRANSPORT_OPENAI,
+        transport_model="gpt-5.6-sol",
+        retrieval_enabled=True,
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
     (ENGINE_CLAUDE, MEASUREMENT_MODE_PULSE): MeasurementRoute(
-        ENGINE_CLAUDE,
-        MEASUREMENT_MODE_PULSE,
-        TRANSPORT_ANTHROPIC,
-        "claude-haiku-4-5-20251001",
-        False,
-        "off",
+        logical_engine=ENGINE_CLAUDE,
+        measurement_mode=MEASUREMENT_MODE_PULSE,
+        transport_provider=TRANSPORT_ANTHROPIC,
+        transport_model="claude-haiku-4-5-20251001",
+        retrieval_enabled=False,
+        reasoning_effort=REASONING_EFFORT_OFF,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
     (ENGINE_CLAUDE, MEASUREMENT_MODE_BENCHMARK): MeasurementRoute(
-        ENGINE_CLAUDE,
-        MEASUREMENT_MODE_BENCHMARK,
-        TRANSPORT_ANTHROPIC,
-        "claude-sonnet-5",
-        True,
-        "low",
+        logical_engine=ENGINE_CLAUDE,
+        measurement_mode=MEASUREMENT_MODE_BENCHMARK,
+        transport_provider=TRANSPORT_ANTHROPIC,
+        transport_model="claude-sonnet-5",
+        retrieval_enabled=True,
+        reasoning_effort=REASONING_EFFORT_LOW,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
     (ENGINE_GEMINI, MEASUREMENT_MODE_PULSE): MeasurementRoute(
-        ENGINE_GEMINI,
-        MEASUREMENT_MODE_PULSE,
-        TRANSPORT_GOOGLE,
-        "gemini-3.5-flash-lite",
-        False,
-        "minimal",
+        logical_engine=ENGINE_GEMINI,
+        measurement_mode=MEASUREMENT_MODE_PULSE,
+        transport_provider=TRANSPORT_GOOGLE,
+        transport_model="gemini-3.5-flash-lite",
+        retrieval_enabled=False,
+        reasoning_effort=REASONING_EFFORT_MINIMAL,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
     (ENGINE_GEMINI, MEASUREMENT_MODE_BENCHMARK): MeasurementRoute(
-        ENGINE_GEMINI,
-        MEASUREMENT_MODE_BENCHMARK,
-        TRANSPORT_GOOGLE,
-        "gemini-3.6-flash",
-        True,
-        "low",
+        logical_engine=ENGINE_GEMINI,
+        measurement_mode=MEASUREMENT_MODE_BENCHMARK,
+        transport_provider=TRANSPORT_GOOGLE,
+        transport_model="gemini-3.6-flash",
+        retrieval_enabled=True,
+        reasoning_effort=REASONING_EFFORT_LOW,
+        reasoning_pinnable=True,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
 }
 
@@ -132,27 +159,17 @@ def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute
 
 
 # --- Execution-time route policy -----------------------------------------
-# Keyed on the approved (engine, mode) identity. This is execution policy for
-# those routes, not a second catalog: the model id is never repeated here.
-# ``config/measurement.py`` owns the offline sweep
-# vocabulary (``REASONING_EFFORT_UNSET|LOW|MEDIUM|HIGH``); the two tokens below
-# are the execution-time PIN states, which the sweep has no equivalent for.
+# The approved route catalogue above is the sole owner of executable identity.
+# This policy view is keyed by that same (engine, mode) identity; it is not a
+# second catalogue, and no model id is repeated here. ``config/measurement.py``
+# separately owns the offline SWEEP vocabulary; the values above are the
+# execution-time pin states consumed by adapters.
 #
 # ``off``: reasoning/thinking is explicitly disabled on the request.
 # ``unverified``: no supported low reasoning value has been established for the
 # route (no fixture and no live evidence), so the route stays UNPINNED and its
 # cost-sensitive funded variant is ineligible. Fails closed — never treated as
 # "off".
-REASONING_EFFORT_OFF: Final = "off"
-REASONING_EFFORT_UNVERIFIED: Final = "unverified"
-
-# Whether the pinned transport model is known to match what a consumer of the
-# logical engine actually gets. Consumer-representativeness is DEFERRED: every
-# active route is ``unverified`` today.
-REPRESENTATIVE_STATUS_UNVERIFIED: Final = "unverified"
-REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
-
-
 @dataclass(frozen=True, slots=True)
 class RoutePolicy:
     """Execution-time policy for one approved (engine, transport) route.
@@ -175,8 +192,8 @@ class RoutePolicy:
 ROUTE_POLICIES: Final[dict[tuple[str, str], RoutePolicy]] = {
     key: RoutePolicy(
         reasoning_effort=route.reasoning_effort,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        reasoning_pinnable=route.reasoning_pinnable,
+        representative_status=route.representative_status,
         batch_enabled=False,
     )
     for key, route in MEASUREMENT_ROUTES.items()
@@ -299,7 +316,7 @@ def engines_for_transport(transport_provider: str) -> tuple[str, ...]:
     """Logical engines reachable through a transport, in catalog order."""
     return tuple(
         engine
-        for engine in (ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI)
+        for engine in LOGICAL_ENGINES
         if any(
             route.transport_provider == transport_provider
             for route in measurement_routes_for_engine(engine)
@@ -476,16 +493,13 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
 )
 
 
-def public_provider_routes(provider_key: str) -> tuple[tuple[str, str, str], ...]:
-    """Approved (engine, transport, model) routes for a public catalog row.
+def public_provider_routes(provider_key: str) -> tuple[MeasurementRoute, ...]:
+    """Approved mode-specific routes for a public catalog row.
 
     Each tuple is one exact mode-specific route. Coming-soon providers have no
     executable entries by construction.
     """
-    return tuple(
-        (provider_key, route.transport_provider, route.transport_model)
-        for route in measurement_routes_for_engine(provider_key)
-    )
+    return measurement_routes_for_engine(provider_key)
 
 
 # --- Credential source vocabulary (T11) ------------------------------------

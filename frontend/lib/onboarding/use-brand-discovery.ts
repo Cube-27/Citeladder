@@ -36,10 +36,17 @@ export function useBrandDiscovery(input: BrandDiscoveryInput | null) {
         : false,
   });
   const discovery = query.data ?? create.data;
+  const retry = () => {
+    if (!input) return;
+    key.current = operationKey();
+    createdFor.current = fingerprint;
+    create.mutate(input);
+  };
   return {
     discovery,
     isRunning:
       create.isPending || discovery?.status === 'queued' || discovery?.status === 'running',
     error: create.error ?? query.error,
+    retry,
   };
 }

@@ -38,7 +38,7 @@ class BrandEvidence:
 
     pages: tuple[BrandEvidencePage, ...] = ()
     # Why grounding failed, when it did (safe token for logs + API detail).
-    failure_reason: str = ""
+    failure_reason: str | None = None
 
     @property
     def word_count(self) -> int:
@@ -146,6 +146,12 @@ def _cache_put(homepage: str, evidence: BrandEvidence) -> None:
     _cache[homepage] = (now + BRAND_EVIDENCE_CACHE_SECONDS, evidence)
 
 
+def _cache_positive_result(homepage: str, evidence: BrandEvidence) -> None:
+    """Cache useful content while leaving transient empty results retryable."""
+    if evidence.pages:
+        _cache_put(homepage, evidence)
+
+
 def reset_brand_evidence_cache() -> None:
     """Drop all cached evidence (tests; never called in request paths)."""
     _cache.clear()
@@ -189,16 +195,10 @@ async def collect_brand_evidence(website_url: str) -> BrandEvidence:
             async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
                 pages = await _gather(homepage)
             evidence = BrandEvidence(pages=tuple(pages))
-            if not evidence.is_sufficient:
-                evidence = BrandEvidence(
-                    pages=tuple(pages),
-                    failure_reason=(
-                        "website_unreachable"
-                        if not pages
-                        else "insufficient_website_content"
-                    ),
-                )
-            _cache_put(homepage, evidence)
+            # Never cache a negative crawl. A transient DNS/network/WAF miss
+            # must not make the user's explicit Retry action replay the same
+            # empty result for the full cache window.
+            _cache_positive_result(homepage, evidence)
             return evidence
     except TimeoutError:
         logger.info("Brand evidence collection timed out", extra={"url": homepage})

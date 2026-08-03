@@ -13,12 +13,11 @@
  */
 import { z } from 'zod';
 
-import type { ProjectInput } from '@/lib/api/projects';
-
 /** A competitor as it appears in the review step — always editable. */
 export type ReviewCompetitor = {
   id: string;
   name: string;
+  aliases: string[];
   domains: string[];
   /** False when the user has deselected it; kept in the list so it can return. */
   selected: boolean;
@@ -34,7 +33,8 @@ export type ReviewPrompt = {
    * topic, and the prompt is created untopiced.
    */
   theme: string;
-  intent: string;
+  intent: 'discovery' | 'comparison' | 'purchase' | 'service' | 'local';
+  cohort: 'core' | 'comparison';
   selected: boolean;
 };
 
@@ -45,10 +45,8 @@ export type ReviewDomain = {
 };
 
 /**
- * Step 1 input. `website_url` is required here where setup treated it as
- * optional: discovery is only as good as the site it starts from, and an
- * onboarding flow with nothing to crawl produces suggestions the user will
- * reject. Asking for it once up front is cheaper than a bad first result.
+ * Step 1 input. Brand name and official website are required; market hints
+ * improve disambiguation but all business/profile data is discovered.
  */
 export const brandStepSchema = z.object({
   brand_name: z.string().trim().min(1, 'Enter your brand name').max(255, 'Brand name is too long'),
@@ -56,19 +54,18 @@ export const brandStepSchema = z.object({
     .string()
     .trim()
     .min(1, 'Enter your website')
-    .max(2048, 'URL is too long')
-    .refine((value) => /^https?:\/\/.+\./.test(value) || /^[^\s/]+\.[^\s/]+/.test(value), {
-      message: 'Enter a valid website, e.g. example.com',
-    }),
+    .max(1024, 'Website is too long')
+    .refine((value) => {
+      try {
+        const url = new URL(value.includes('://') ? value : `https://${value}`);
+        return Boolean(url.hostname.includes('.'));
+      } catch {
+        return false;
+      }
+    }, 'Enter a valid website'),
   country_code: z.string().trim().length(2, 'Pick a country'),
   language_code: z.string().trim().min(2, 'Pick a language'),
-  industry: z.string().trim().min(2, 'Enter your industry').max(255),
-  business_type: z.enum(['b2b', 'b2c', 'both']),
-  products_services: z.string().max(2000),
-  target_audience: z.string().max(2000),
-  positioning: z.string().max(2000),
-  price_tier: z.enum(['budget', 'mid_market', 'premium', 'luxury', 'unknown']),
-  additional_context: z.string().max(5000),
+  industry: z.string().trim().max(255, 'Industry is too long'),
 });
 
 export type BrandStepValues = z.infer<typeof brandStepSchema>;
@@ -79,68 +76,20 @@ export const emptyBrandStep: BrandStepValues = {
   country_code: 'US',
   language_code: 'en',
   industry: '',
-  business_type: 'b2b',
-  products_services: '',
-  target_audience: '',
-  positioning: '',
-  price_tier: 'unknown',
-  additional_context: '',
 };
 
-/**
- * Normalise whatever the user typed into an absolute URL. They will type
- * `example.com` far more often than `https://example.com`, and rejecting that
- * would be pedantry — the backend wants a URL, so we add the scheme.
- */
-export function normalizeWebsiteUrl(input: string): string {
-  const trimmed = input.trim();
+export function normalizeWebsiteUrl(value: string): string {
+  const trimmed = value.trim();
   if (!trimmed) return '';
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return trimmed.includes('://') ? trimmed : `https://${trimmed}`;
 }
 
-/** Registrable host, used for the derived-domain preview under the URL field. */
-export function deriveDomain(input: string): string {
-  const normalized = normalizeWebsiteUrl(input);
-  if (!normalized) return '';
+export function deriveDomain(value: string): string {
   try {
-    return new URL(normalized).hostname.replace(/^www\./i, '');
+    return new URL(normalizeWebsiteUrl(value)).hostname.toLowerCase().replace(/^www\./, '');
   } catch {
     return '';
   }
-}
-
-/**
- * Build the `POST /projects` payload from the brand step plus the reviewed
- * selections. Unintended domains and per-competitor aliases are not collected —
- * nothing in onboarding produces them, and inventing empty arrays for fields the
- * user never saw is how the old form grew to five steps.
- */
-export function onboardingToProjectInput(
-  brand: BrandStepValues,
-  competitors: ReviewCompetitor[],
-  domains: ReviewDomain[],
-): ProjectInput {
-  const brandName = brand.brand_name.trim();
-  return {
-    name: brandName,
-    brand_name: brandName,
-    website_url: normalizeWebsiteUrl(brand.website_url),
-    country_code: brand.country_code.trim().toUpperCase(),
-    language_code: brand.language_code.trim(),
-    // Onboarding does not ask for these — the old setup form's benchmark and
-    // repetition steps are gone (decision 14). Both take the same defaults the
-    // create form used, and both are editable later.
-    benchmark_mode: 'consumer_like',
-    default_repetitions: 1,
-    brand: { aliases: [] },
-    owned_domains: domains.flatMap((domain) => (domain.selected ? [domain.domain] : [])),
-    unintended_domains: [],
-    competitors: competitors.flatMap((competitor) =>
-      competitor.selected
-        ? [{ name: competitor.name.trim(), aliases: [], domains: competitor.domains }]
-        : [],
-    ),
-  };
 }
 
 /**

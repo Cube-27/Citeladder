@@ -150,6 +150,33 @@ def _pin_audit_prompt_count(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(audit_settings, "audit_prompt_count", 500)
 
 
+@pytest.fixture(autouse=True)
+def _seed_test_funded_cost_observation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep funded mechanics testable without enabling them in production.
+
+    Production intentionally ships no current-route execution observation and
+    therefore fails funded admission closed. Component tests that exercise
+    reservations, settlement, and concurrency need one explicit test-only Pulse
+    observation; Benchmark and every other route remain unresolved.
+    """
+    from app.core.config.audits import MEASUREMENT_MODE_PULSE
+    from app.core.config.costs import (
+        _EXPECTED_COST_CATALOG,
+        ROUTE_CLAUDE_PULSE,
+        _ExpectedCostEstimate,
+    )
+
+    monkeypatch.setitem(
+        _EXPECTED_COST_CATALOG,
+        (ROUTE_CLAUDE_PULSE, MEASUREMENT_MODE_PULSE),
+        _ExpectedCostEstimate(
+            token_cost_microusd=2_890,
+            search_fee_microusd=None,
+            expected_searches=None,
+        ),
+    )
+
+
 @pytest.fixture(scope="session")
 def test_database_url() -> Iterator[str]:
     """Create a throwaway session database on the dev Postgres server.

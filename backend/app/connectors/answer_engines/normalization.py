@@ -23,6 +23,8 @@ from app.connectors.answer_engines.contracts import (
     AnswerEngineRequest,
     NormalizedUsage,
 )
+from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.provider_catalog import ERROR_UNKNOWN
 
 
 def output_token_cap(request: AnswerEngineRequest) -> int:
@@ -32,7 +34,11 @@ def output_token_cap(request: AnswerEngineRequest) -> int:
     (invariant 9), and invalid callers fail instead of falling back.
     """
     if request.max_output_tokens <= 0:
-        raise ValueError("max_output_tokens must be frozen before execution")
+        raise ProviderError(
+            "max_output_tokens must be frozen before execution",
+            error_code=ERROR_UNKNOWN,
+            retryable=False,
+        )
     return request.max_output_tokens
 
 

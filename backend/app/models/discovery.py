@@ -5,7 +5,16 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,6 +33,13 @@ class BrandDiscovery(Base):
         UniqueConstraint(
             "workspace_id", "idempotency_key", name="uq_brand_discovery_idempotency"
         ),
+        Index(
+            "ix_brand_discoveries_claim",
+            "status",
+            "available_at",
+            "created_at",
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -32,7 +48,6 @@ class BrandDiscovery(Base):
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
-        index=True,
     )
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -48,6 +63,7 @@ class BrandDiscovery(Base):
     domains: Mapped[list] = mapped_column(JSONB, default=list)
     competitors: Mapped[list] = mapped_column(JSONB, default=list)
     topics: Mapped[list] = mapped_column(JSONB, default=list)
+    prompt_suggestions: Mapped[list] = mapped_column(JSONB, default=list)
     evidence: Mapped[list] = mapped_column(JSONB, default=list)
     gaps: Mapped[list] = mapped_column(JSONB, default=list)
     error_detail: Mapped[str] = mapped_column(Text, default="")

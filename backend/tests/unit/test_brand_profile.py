@@ -146,7 +146,7 @@ def test_suggestion_message_uses_shared_knowledge_context() -> None:
                     url="https://acme.example/",
                     title="Acme",
                     meta_description="",
-                    text="Acme sells homewares.",
+                    text=" ".join(["Acme sells practical homewares."] * 12),
                 ),
             )
         ),
@@ -190,7 +190,7 @@ def test_suggestion_message_embeds_website_evidence() -> None:
                 url="https://cube27.example/",
                 title="Cube27",
                 meta_description="Data engineering consultancy.",
-                text="Cube27 builds cloud data platforms.",
+                text=" ".join(["Cube27 builds cloud data platforms."] * 10),
             ),
         )
     )

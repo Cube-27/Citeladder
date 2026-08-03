@@ -938,7 +938,7 @@ def test_gemini_payload_omits_grounding_tools_for_pulse() -> None:
 def test_gemini_payload_includes_grounding_tools_for_benchmark() -> None:
     payload = gemini_payload(
         _request(
-            model=measurement_route("gemini", "pulse").transport_model,
+            model=measurement_route("gemini", "benchmark").transport_model,
             retrieval_enabled=True,
             max_output_tokens=4096,
         )

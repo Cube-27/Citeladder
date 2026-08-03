@@ -371,10 +371,13 @@ async def _resolve_origin_through_binding_gate(
     text: str,
 ) -> str:
     """Validate relevance for every prompt, then resolve provenance."""
-    # Generation provenance never bypasses relevance validation. Bind against
-    # the PERSISTED topic, never the request body's free-form theme.
+    # A valid backend-issued receipt proves the text already passed the
+    # generation pipeline's evidence and cohort validation. Free text still
+    # binds against the PERSISTED topic, never the request body's theme.
     # (free text the caller chooses — binding against it would let any
     # client supply its own prompt's wording as the vocabulary).
+    if _receipt_proves_generated(payload, text):
+        return PROMPT_ORIGIN_GENERATED
     await enforce_prompt_binding(
         session,
         workspace_id=workspace_id,
@@ -387,11 +390,7 @@ async def _resolve_origin_through_binding_gate(
             topic_id=getattr(payload, "topic_id", None),
         ),
     )
-    return (
-        PROMPT_ORIGIN_GENERATED
-        if _receipt_proves_generated(payload, text)
-        else PROMPT_ORIGIN_MANUAL
-    )
+    return PROMPT_ORIGIN_MANUAL
 
 
 def _require_insertable(approved: frozenset[str], text_hash: str) -> None:
@@ -658,7 +657,7 @@ async def _insert_imported_row(
             normalized_text_hash=prompt_text_hash(text),
             theme=str(row.theme or "").strip(),
             intent=normalize_intent(row.intent),
-            branded=bool(row.branded),
+            branded=row.cohort == "comparison",
             enabled=bool(row.enabled),
             origin=PROMPT_ORIGIN_IMPORTED,
         )

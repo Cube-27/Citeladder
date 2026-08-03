@@ -667,6 +667,31 @@ export const visibilitySchema = responseObject({
   created_at: z.string(),
 });
 
+const discoveryProfileSchema = responseObject({
+  description: z.string(),
+  positioning: z.string(),
+  products_services: z.array(z.string()),
+  target_audience: z.string(),
+  industry: z.string(),
+  business_type: z.enum(['b2b', 'b2c', 'both']),
+  price_tier: z.string(),
+});
+
+const discoveryPromptSuggestionSchema = responseObject({
+  text: z.string(),
+  theme: z.string(),
+  intent: z.enum(['discovery', 'comparison', 'purchase', 'service', 'local']),
+  cohort: promptCohortSchema,
+});
+
+const discoveryEvidenceSchema = responseObject({
+  source_url: z.string(),
+  capture_method: z.string(),
+  confidence: z.number(),
+  captured_at: z.string(),
+  supports: z.array(z.string()),
+});
+
 export const brandDiscoverySchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
@@ -674,7 +699,7 @@ export const brandDiscoverySchema = responseObject({
   status: z.enum(['queued', 'running', 'needs_input', 'ready', 'confirmed', 'project_created']),
   stage: z.string(),
   input_data: z.record(z.string(), z.unknown()),
-  profile: z.record(z.string(), z.unknown()),
+  profile: discoveryProfileSchema,
   domains: z.array(z.string()),
   competitors: z.array(
     responseObject({
@@ -684,7 +709,8 @@ export const brandDiscoverySchema = responseObject({
     }),
   ),
   topics: z.array(z.string()),
-  evidence: z.array(z.record(z.string(), z.unknown())),
+  prompt_suggestions: z.array(discoveryPromptSuggestionSchema),
+  evidence: z.array(discoveryEvidenceSchema),
   gaps: z.array(z.string()),
   error_detail: z.string(),
   attempt_count: z.number().int(),
@@ -2482,6 +2508,7 @@ export const capabilityValueSchema = responseObject({
 
 export const catalogProviderRouteSchema = responseObject({
   logical_engine: z.string(),
+  measurement_mode: measurementModeSchema,
   transport_provider: z.string(),
   model: z.string(),
 });

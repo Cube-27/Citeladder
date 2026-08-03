@@ -569,14 +569,47 @@ def _reported_cost_usd(usage: dict[str, Any]) -> float | None:
     return None
 
 
-def _provider_reported_cost(completed: list[dict[str, Any]]) -> float | None:
+def _provider_reported_cost(
+    completed: list[dict[str, Any]],
+) -> tuple[float | None, int]:
     reported: list[float] = []
     for execution in completed:
         usage = execution.get("usage") or {}
         value = _reported_cost_usd(usage)
         if value is not None:
             reported.append(value)
-    return sum(reported) if reported else None
+    return (sum(reported) if reported else None, len(reported))
+
+
+def _token_line_estimate(tokens: int, rate: int | None) -> int | None:
+    """Price one token line, keeping a used unknown-rate line unknown."""
+    if tokens == 0:
+        return 0
+    return tokens * rate if rate is not None else None
+
+
+def _token_cost_estimate(
+    token_usage: dict[str, int], pricing: Any | None
+) -> float | None:
+    token_lines = (
+        _token_line_estimate(
+            token_usage["uncached_input_tokens"],
+            pricing.uncached_input_microusd_per_million if pricing else None,
+        ),
+        _token_line_estimate(
+            token_usage["cached_input_tokens"],
+            pricing.cached_input_microusd_per_million if pricing else None,
+        ),
+        _token_line_estimate(
+            token_usage["output_tokens"],
+            pricing.output_microusd_per_million if pricing else None,
+        ),
+    )
+    if any(line is None for line in token_lines):
+        return None
+    return sum(line for line in token_lines if line is not None) / (
+        TOKENS_PER_MILLION * MICRO_USD_PER_USD
+    )
 
 
 def _paid_list_cost_estimate(
@@ -594,19 +627,8 @@ def _paid_list_cost_estimate(
         None,
     )
     pricing = route_pricing_for(identity, PRICING_CATALOG_VERSION) if identity else None
-    input_rate = pricing.uncached_input_microusd_per_million if pricing else None
-    output_rate = pricing.output_microusd_per_million if pricing else None
     search_rate = pricing.search_fee_microusd if pricing else None
-    token_estimate = (
-        (
-            token_usage["input_tokens"] * input_rate
-            + token_usage["output_tokens"] * output_rate
-        )
-        / TOKENS_PER_MILLION
-        / MICRO_USD_PER_USD
-        if input_rate is not None and output_rate is not None
-        else None
-    )
+    token_estimate = _token_cost_estimate(token_usage, pricing)
     search_estimate = (
         grounded_requests * search_rate / MICRO_USD_PER_USD
         if grounded_requests and search_rate is not None
@@ -636,7 +658,7 @@ def _aggregate_cost(
     token_estimate, grounding_if_billable, cost_status = _paid_list_cost_estimate(
         token_usage, config, grounded_requests
     )
-    reported_cost = _provider_reported_cost(completed)
+    reported_cost, reported_executions = _provider_reported_cost(completed)
     return {
         "currency": "USD",
         "grounded_requests": grounded_requests,
@@ -653,6 +675,10 @@ def _aggregate_cost(
         "provider_reported_cost_usd": (
             round(reported_cost, 6) if reported_cost is not None else None
         ),
+        "provider_reported_cost_coverage": {
+            "reported_executions": reported_executions,
+            "total_executions": len(completed),
+        },
         "free_allowance_applied": False,
         "note": (
             "Unknown official price lines remain null and are never inferred as zero."
@@ -674,14 +700,17 @@ def _aggregate_token_usage(completed: list[dict[str, Any]]) -> dict[str, int]:
     Reads the immutable artifact's canonical typed-usage keys. This is a SUM
     across executions, so an unknown per-execution counter contributes nothing.
     """
-    input_tokens = output_tokens = total_tokens = 0
+    uncached_input_tokens = cached_input_tokens = output_tokens = total_tokens = 0
     for e in completed:
         usage = e.get("usage") or {}
-        input_tokens += _usage_value(usage, "uncached_input_tokens")
+        uncached_input_tokens += _usage_value(usage, "uncached_input_tokens")
+        cached_input_tokens += _usage_value(usage, "cached_input_tokens")
         output_tokens += _usage_value(usage, "output_tokens")
         total_tokens += _usage_value(usage, "total_tokens")
     return {
-        "input_tokens": input_tokens,
+        "input_tokens": uncached_input_tokens + cached_input_tokens,
+        "uncached_input_tokens": uncached_input_tokens,
+        "cached_input_tokens": cached_input_tokens,
         "output_tokens": output_tokens,
         "total_tokens": total_tokens,
     }

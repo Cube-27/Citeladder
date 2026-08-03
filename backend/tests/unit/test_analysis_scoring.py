@@ -392,8 +392,57 @@ def test_aggregate_run_token_usage_defaults_to_zero() -> None:
     summary = aggregate_run(executions, config)
     assert summary["token_usage"] == {
         "input_tokens": 0,
+        "uncached_input_tokens": 0,
+        "cached_input_tokens": 0,
         "output_tokens": 0,
         "total_tokens": 0,
+    }
+
+
+def test_aggregate_run_prices_cached_input_at_the_cached_route_rate() -> None:
+    config = ScoringConfig.from_project(
+        {
+            **BEST_AND_LESS_PROJECT,
+            "provider": "chatgpt",
+            "model": "gpt-5.4-nano-2026-03-17",
+        }
+    )
+    execution = _completed_with_usage(
+        {
+            "uncached_input_tokens": 1_000_000,
+            "cached_input_tokens": 1_000_000,
+            "output_tokens": 1_000_000,
+            "total_tokens": 3_000_000,
+        }
+    )
+
+    summary = aggregate_run([execution], config)
+
+    assert summary["token_usage"]["cached_input_tokens"] == 1_000_000
+    assert summary["cost"]["paid_list_token_estimate_usd"] == pytest.approx(1.47)
+
+
+def test_provider_reported_cost_publishes_partial_and_missing_coverage() -> None:
+    config = _config()
+    partial = aggregate_run(
+        [
+            _completed_with_usage({"provider_cost_microusd": 250_000}),
+            _completed_with_usage({}),
+        ],
+        config,
+    )["cost"]
+
+    assert partial["provider_reported_cost_usd"] == pytest.approx(0.25)
+    assert partial["provider_reported_cost_coverage"] == {
+        "reported_executions": 1,
+        "total_executions": 2,
+    }
+
+    missing = aggregate_run([_completed_with_usage({})], config)["cost"]
+    assert missing["provider_reported_cost_usd"] is None
+    assert missing["provider_reported_cost_coverage"] == {
+        "reported_executions": 0,
+        "total_executions": 1,
     }
 
 

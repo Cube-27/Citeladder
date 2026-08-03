@@ -205,8 +205,8 @@ def _pricing(
     )
 
 
-# Unit-rate catalogues keyed by pricing version, then immutable route identity.
-# Exact lines are populated only where the official card is complete.
+# PR1 ships one unit-rate catalogue with concrete rates for five approved routes.
+# Only ROUTE_CHATGPT_BENCHMARK retains an unverified card with null rate lines.
 _ROUTE_PRICING_CATALOGS: Final[dict[str, dict[RouteIdentity, RoutePricing]]] = {
     PRICING_CATALOG_VERSION: {
         ROUTE_CHATGPT_PULSE: _pricing(200_000, 1_250_000, cached_input_rate=20_000),

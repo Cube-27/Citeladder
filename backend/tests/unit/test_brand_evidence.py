@@ -266,22 +266,29 @@ class TestCollectBrandEvidenceFailureReasons:
         evidence = await collect_brand_evidence("https://cube27.example")
 
         assert not evidence.is_sufficient
-        assert evidence.failure_reason == "insufficient_website_content"
+        assert evidence.failure_reason is None
 
     @pytest.mark.asyncio
     async def test_no_pages_has_no_failure_reason_but_insufficient(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        calls = 0
+
         async def _gather(homepage: str) -> list[BrandEvidencePage]:
+            nonlocal calls
+            calls += 1
             return []
 
         monkeypatch.setattr(brand_evidence_domain, "_gather", _gather)
         brand_evidence_domain.reset_brand_evidence_cache()
 
         evidence = await collect_brand_evidence("https://cube27.example")
+        retried = await collect_brand_evidence("https://cube27.example")
 
         assert not evidence.is_sufficient
-        assert evidence.failure_reason == "website_unreachable"
+        assert evidence.failure_reason is None
+        assert not retried.is_sufficient
+        assert calls == 2
 
     @pytest.mark.asyncio
     async def test_concurrent_callers_share_one_crawl(

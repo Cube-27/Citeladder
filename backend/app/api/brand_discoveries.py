@@ -81,6 +81,7 @@ async def confirm_brand_discovery(
     payload: BrandDiscoveryConfirm,
     ctx: _WorkspaceDep,
     session: _SessionDep,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
 ) -> BrandDiscoveryResponse:
     try:
         row = await confirm_discovery(
@@ -88,6 +89,7 @@ async def confirm_brand_discovery(
             workspace_id=ctx.workspace_id,
             discovery_id=discovery_id,
             payload=payload,
+            idempotency_key=idempotency_key,
         )
     except LookupError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
@@ -124,7 +126,8 @@ async def create_discovered_project(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     except BrandDiscoveryError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
-    assert row.project_id is not None
+    if row.project_id is None:
+        raise RuntimeError("Project creation completed without a project_id")
     return BrandDiscoveryProjectResponse(
         discovery=BrandDiscoveryResponse.model_validate(row), project_id=row.project_id
     )

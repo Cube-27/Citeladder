@@ -288,7 +288,7 @@ async def _artifact_usage_by_task(
             RawResponseArtifact.task_id.in_(task_ids),
         )
     )
-    return dict(rows.all())
+    return dict(rows.tuples().all())
 
 
 async def finalize_audit_analysis(

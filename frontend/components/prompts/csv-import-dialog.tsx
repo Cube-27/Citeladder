@@ -83,7 +83,7 @@ export function CsvImportDialog({
       open={open}
       onOpenChange={handleOpenChange}
       title="Import prompts from CSV"
-      description="Columns: text, theme, intent, branded, enabled (header row optional)."
+      description="Columns: text, theme, intent, cohort, enabled (header row optional)."
       className="w-205"
       footer={
         <>
@@ -144,7 +144,7 @@ export function CsvImportDialog({
                     <TableHead>Text</TableHead>
                     <TableHead>Theme</TableHead>
                     <TableHead>Intent</TableHead>
-                    <TableHead>Branded</TableHead>
+                    <TableHead>Cohort</TableHead>
                     <TableHead>Enabled</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -160,7 +160,9 @@ export function CsvImportDialog({
                         <TableCell className="max-w-70 truncate">{row.input.text || '—'}</TableCell>
                         <TableCell>{row.input.theme || '—'}</TableCell>
                         <TableCell>{intentLabels[row.input.intent]}</TableCell>
-                        <TableCell>{row.input.branded ? 'Yes' : 'No'}</TableCell>
+                        <TableCell>
+                          {row.input.cohort === 'comparison' ? 'Comparison' : 'Core'}
+                        </TableCell>
                         <TableCell>{row.input.enabled ? 'Yes' : 'No'}</TableCell>
                         <TableCell>
                           {invalid ? (

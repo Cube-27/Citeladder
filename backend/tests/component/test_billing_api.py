@@ -630,14 +630,21 @@ async def test_public_provider_rows_mark_coming_soon_engines_unavailable(
         assert row["routes"] == []
     assert providers["copilot"]["issuable"] is False
     assert providers["grok"]["issuable"] is True
-    # Shipped engines carry their approved route triple.
+    # Shipped engines carry both exact mode-specific routes.
     assert providers["chatgpt"]["availability"] == "available"
     assert providers["chatgpt"]["routes"] == [
         {
             "logical_engine": "chatgpt",
+            "measurement_mode": "pulse",
             "transport_provider": "openai",
-            "model": "gpt-5.6-luna",
-        }
+            "model": "gpt-5.4-nano-2026-03-17",
+        },
+        {
+            "logical_engine": "chatgpt",
+            "measurement_mode": "benchmark",
+            "transport_provider": "openai",
+            "model": "gpt-5.6-sol",
+        },
     ]
     # Public availability vocabulary only — never a connection state.
     assert {row["availability"] for row in body["providers"]} <= {

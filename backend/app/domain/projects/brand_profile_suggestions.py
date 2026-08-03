@@ -112,7 +112,7 @@ def build_brand_profile_suggestion_message(
     are admissible factual sources.
     """
     if (
-        not evidence.pages
+        not evidence.is_sufficient
         and not _has_curated_profile_context(knowledge)
         and not (manual_brand_context or "").strip()
     ):
@@ -159,12 +159,13 @@ def _evidence_and_instruction_sections(
 
 
 def _raise_evidence_unavailable(evidence: BrandEvidence) -> None:
+    reason = evidence.failure_reason or "website_unreachable"
     raise BrandEvidenceUnavailableError(
         BRAND_EVIDENCE_FAILURE_MESSAGES.get(
-            evidence.failure_reason,
+            reason,
             BRAND_EVIDENCE_FAILURE_MESSAGES["website_unreachable"],
         ),
-        reason=evidence.failure_reason or "website_unreachable",
+        reason=reason,
     )
 
 

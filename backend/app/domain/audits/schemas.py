@@ -255,6 +255,12 @@ class AuditEnginePerformance(BaseModel):
     projected_cost_microusd: int | None
 
 
+class AuditUsageSummary(BaseModel):
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
+
+
 class AuditPerformanceResponse(BaseModel):
     audit_id: uuid.UUID
     queue_wait_ms: int | None
@@ -265,7 +271,7 @@ class AuditPerformanceResponse(BaseModel):
     failed_count: int
     coverage: float
     retry_count: int
-    usage: dict[str, int | None]
+    usage: AuditUsageSummary
     search_calls: int
     projected_cost_microusd: int | None
     engines: list[AuditEnginePerformance]
