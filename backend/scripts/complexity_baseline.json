@@ -66,7 +66,7 @@
       "_has_provenance": 2,
       "_is_unmentioned_product": 3,
       "_prompt_target": 5,
-      "_site_opportunity_rule_id": 4,
+      "_site_opportunity_rule_id": 1,
       "_sorted_commerce_hits": 1,
       "_visibility_gap_hits": 14,
       "detect_brand_absent_high_value_prompt": 4,
@@ -76,7 +76,7 @@
       "detect_product_not_mentioned": 4,
       "detect_site_issue_opportunities": 7
     },
-    "loc": 506,
+    "loc": 494,
     "max_cc": 14
   },
   "app/analysis/opportunities/exports.py": {
@@ -233,15 +233,19 @@
   },
   "app/analysis/site_health/page_types.py": {
     "functions": {
-      "PageTypeAssessment.to_evidence": 2,
+      "PageTypeAssessment.to_evidence": 4,
+      "_alternatives": 4,
+      "_classification_outcome": 7,
+      "_classification_signals": 8,
+      "_conflicts": 4,
       "_content_heuristic": 19,
       "_normalized_path": 5,
       "_schema_suggestion": 6,
       "_signal": 1,
-      "classify": 14,
+      "classify": 4,
       "is_question_heading": 4
     },
-    "loc": 255,
+    "loc": 341,
     "max_cc": 19
   },
   "app/analysis/site_health/parser.py": {
@@ -269,7 +273,7 @@
       "_text": 3,
       "extract_page_facts": 17
     },
-    "loc": 853,
+    "loc": 856,
     "max_cc": 28
   },
   "app/analysis/site_health/rules.py": {
@@ -291,6 +295,8 @@
       "_check_open_graph_present": 5,
       "_check_organization_identity": 11,
       "_check_outbound_citations": 5,
+      "_check_product_offer_details": 2,
+      "_check_product_visible_schema_parity": 12,
       "_check_question_headings": 2,
       "_check_render_blocking": 5,
       "_check_schema_expected_for_type": 4,
@@ -305,23 +311,28 @@
       "_check_title_present": 2,
       "_check_ttfb_band": 3,
       "_check_uncompressed_html": 2,
-      "_expectation_for": 2,
+      "_expectation_for": 3,
       "_expected_blocks": 6,
       "_is_social_domain": 3,
       "_length_band_check": 3,
       "_missing_paths": 4,
+      "_missing_product_offer_fields": 8,
       "_normalized_url_for_compare": 18,
+      "_parity_text": 7,
       "_pass_fail": 2,
+      "_product_block": 5,
+      "_product_offer_declared": 6,
+      "_product_offer_evidence": 9,
       "_profile_for": 2,
       "_schema_property_check": 12,
       "_server_render_signals": 6,
       "_sufficient_word_minimum": 2,
       "_weight_for": 3,
-      "evaluate_all": 2,
+      "evaluate_all": 4,
       "evaluate_rule": 5,
-      "rule_for": 1
+      "rule_for": 2
     },
-    "loc": 751,
+    "loc": 888,
     "max_cc": 18
   },
   "app/analysis/site_health/scoring.py": {
@@ -343,18 +354,24 @@
   "app/analysis/site_health/structured_data.py": {
     "functions": {
       "_clean_type": 8,
+      "_empty_product_values": 2,
       "_enrichment": 7,
       "_first_string": 6,
       "_iter_jsonld_objects": 8,
+      "_merge_product_values": 9,
       "_path_value": 7,
+      "_preferred_product_blocks": 10,
       "_present_properties": 4,
+      "_product_enrichment": 9,
       "_props_present": 4,
       "_validate_object": 5,
+      "_values": 9,
       "parse_jsonld_blocks": 9,
+      "product_facts": 4,
       "validate_microdata_types": 8
     },
-    "loc": 274,
-    "max_cc": 9
+    "loc": 403,
+    "max_cc": 10
   },
   "app/api/__init__.py": {
     "functions": {},
@@ -455,14 +472,21 @@
   "app/api/commerce.py": {
     "functions": {
       "_get_project_or_404": 2,
+      "accept_commerce_discovery_candidate_endpoint": 4,
+      "create_commerce_discovery_run_endpoint": 3,
+      "create_competitor_comparison_endpoint": 2,
       "enqueue_attribution_recompute_endpoint": 3,
       "get_attribution_orders_endpoint": 3,
       "get_attribution_recompute_endpoint": 2,
       "get_catalog_health_endpoint": 1,
-      "get_commerce_attribution_endpoint": 2
+      "get_commerce_attribution_endpoint": 2,
+      "list_commerce_discovery_candidates_endpoint": 2,
+      "list_commerce_discovery_runs_endpoint": 2,
+      "list_competitor_comparisons_endpoint": 2,
+      "preview_commerce_discovery_endpoint": 1
     },
-    "loc": 208,
-    "max_cc": 3
+    "loc": 381,
+    "max_cc": 4
   },
   "app/api/content.py": {
     "functions": {
@@ -535,19 +559,25 @@
     "functions": {
       "_bad_cursor": 1,
       "_export_response": 3,
+      "_guidance_conflict": 1,
+      "_guidance_unavailable": 1,
       "_not_found": 1,
       "_superseded": 1,
       "_validation": 1,
+      "create_guidance_endpoint": 6,
       "export_csv_endpoint": 1,
       "export_markdown_endpoint": 1,
+      "get_grouped_history_endpoint": 2,
+      "get_guidance_history_endpoint": 4,
+      "get_latest_guidance_endpoint": 4,
       "get_opportunity_endpoint": 2,
       "get_summary_endpoint": 2,
       "list_opportunities_endpoint": 4,
       "recompute_endpoint": 4,
       "update_status_endpoint": 4
     },
-    "loc": 277,
-    "max_cc": 4
+    "loc": 405,
+    "max_cc": 6
   },
   "app/api/products.py": {
     "functions": {
@@ -670,16 +700,17 @@
       "get_events_endpoint": 10,
       "get_inventory_endpoint": 3,
       "get_issue_detail_endpoint": 3,
-      "get_issue_history_endpoint": 3,
+      "get_issue_history_endpoint": 5,
       "get_issues_endpoint": 3,
       "get_monitored_urls_endpoint": 2,
       "get_page_detail_endpoint": 2,
       "get_pages_endpoint": 3,
       "list_crawls_endpoint": 3,
+      "preview_crawl_urls_endpoint": 3,
       "replace_monitored_urls_endpoint": 3,
       "rerun_page_endpoint": 5
     },
-    "loc": 854,
+    "loc": 899,
     "max_cc": 10
   },
   "app/api/traffic.py": {
@@ -1062,6 +1093,14 @@
     "loc": 0,
     "max_cc": 0
   },
+  "app/connectors/web_evidence/acquisition.py": {
+    "functions": {
+      "curl_cffi_pinned_resolution_supported": 4,
+      "curl_trigger_for_result": 6
+    },
+    "loc": 68,
+    "max_cc": 6
+  },
   "app/connectors/web_evidence/brand_evidence.py": {
     "functions": {
       "BrandEvidencePage.word_count": 2,
@@ -1082,11 +1121,27 @@
   },
   "app/connectors/web_evidence/contracts.py": {
     "functions": {
+      "AcquisitionTransport.fetch": 1,
       "DnsResolver.resolve": 1,
       "FetchError.__init__": 1
     },
-    "loc": 174,
+    "loc": 214,
     "max_cc": 1
+  },
+  "app/connectors/web_evidence/curl_transport.py": {
+    "functions": {
+      "CurlCffiTransport.__init__": 1,
+      "CurlCffiTransport._bounded_body": 4,
+      "CurlCffiTransport.fetch": 12,
+      "_charset": 3,
+      "_content_type": 1,
+      "_curl_resolve_entry": 2,
+      "_header_items": 4,
+      "_header_value": 3,
+      "_redacted_headers": 3
+    },
+    "loc": 194,
+    "max_cc": 12
   },
   "app/connectors/web_evidence/favicon.py": {
     "functions": {
@@ -1102,16 +1157,20 @@
     "functions": {
       "SecureFetcher.__aenter__": 1,
       "SecureFetcher.__aexit__": 1,
-      "SecureFetcher.__init__": 1,
+      "SecureFetcher.__init__": 5,
       "SecureFetcher._build_httpx_request": 4,
+      "SecureFetcher._continue_acquisition_ladder": 6,
+      "SecureFetcher._continue_with_scraperapi": 14,
+      "SecureFetcher._fetch_curl": 7,
       "SecureFetcher._fetch_http": 8,
       "SecureFetcher._finalize_no_body": 2,
       "SecureFetcher._limits": 5,
       "SecureFetcher._read_body": 18,
-      "SecureFetcher._resolve": 2,
+      "SecureFetcher._resolve": 4,
       "SecureFetcher._trace": 1,
+      "SecureFetcher._trace_curl_result": 1,
       "SecureFetcher.aclose": 1,
-      "SecureFetcher.fetch": 3,
+      "SecureFetcher.fetch": 7,
       "_DeflateDecoder.__init__": 1,
       "_DeflateDecoder.decompress": 4,
       "_DeflateDecoder.eof": 1,
@@ -1123,7 +1182,7 @@
       "is_bot_block_result": 3,
       "redact_headers": 4
     },
-    "loc": 753,
+    "loc": 1328,
     "max_cc": 18
   },
   "app/connectors/web_evidence/firecrawl.py": {
@@ -1180,23 +1239,30 @@
   "app/connectors/web_evidence/url_policy.py": {
     "functions": {
       "_decode_unreserved_escapes": 2,
+      "_has_hard_excluded_query": 2,
+      "_has_tracking_query": 2,
       "_idna_host": 3,
+      "_is_hard_excluded_asset": 2,
+      "_is_infrastructure_asset_exception": 4,
       "_is_unsafe_ip": 12,
       "_normalize_globs": 4,
       "_normalize_path": 2,
       "_normalize_query": 5,
+      "_path_is_hard_excluded": 3,
       "_resolve_relative": 1,
       "canonicalize": 16,
-      "is_admissible": 2,
+      "classify_url_admission": 13,
+      "is_admissible": 1,
       "is_in_scope": 6,
       "narrow": 5,
+      "page_value_kind": 10,
       "pick_connect_ip": 3,
       "registrable_domain": 7,
-      "resolve_target": 6,
+      "resolve_target": 10,
       "split_host_port": 3,
       "validate_address": 3
     },
-    "loc": 418,
+    "loc": 575,
     "max_cc": 16
   },
   "app/core/__init__.py": {
@@ -1337,9 +1403,13 @@
     "max_cc": 0
   },
   "app/core/config/commerce.py": {
-    "functions": {},
-    "loc": 353,
-    "max_cc": 0
+    "functions": {
+      "CommerceIntelligenceSettings.retry_delay": 2,
+      "_commerce_discovery_claim_order": 1,
+      "_commerce_discovery_task_model": 1
+    },
+    "loc": 519,
+    "max_cc": 2
   },
   "app/core/config/content.py": {
     "functions": {
@@ -1364,6 +1434,11 @@
     },
     "loc": 295,
     "max_cc": 7
+  },
+  "app/core/config/dashboard.py": {
+    "functions": {},
+    "loc": 50,
+    "max_cc": 0
   },
   "app/core/config/entitlements.py": {
     "functions": {
@@ -1439,7 +1514,7 @@
       "OpportunityRule.__init__": 1,
       "validate_rule_id": 2
     },
-    "loc": 377,
+    "loc": 464,
     "max_cc": 2
   },
   "app/core/config/product_tour.py": {
@@ -1449,7 +1524,7 @@
   },
   "app/core/config/products.py": {
     "functions": {},
-    "loc": 95,
+    "loc": 101,
     "max_cc": 0
   },
   "app/core/config/projects.py": {
@@ -1489,16 +1564,22 @@
       "PageTypeSchemaExpectation.__init__": 1,
       "SiteHealthRule.__init__": 3,
       "SiteHealthRuntimePolicy.__init__": 1,
+      "SiteHealthSettings._validate_acquisition_ladder": 11,
       "SiteHealthSettings._validate_discovery_cap": 2,
       "SiteHealthSettings._validate_lease_and_heartbeat": 12,
-      "SiteHealthSettings._validate_sample_limits": 4,
+      "SiteHealthSettings._validate_sample_limits": 6,
       "SiteHealthSettings.retry_delay": 2,
       "_site_crawl_task_model": 1,
       "_site_task_claim_order": 1,
       "runtime_policy_for_allowance": 2
     },
-    "loc": 1931,
+    "loc": 2199,
     "max_cc": 12
+  },
+  "app/core/config/site_health_page_profiles.py": {
+    "functions": {},
+    "loc": 143,
+    "max_cc": 0
   },
   "app/core/config/suggestions.py": {
     "functions": {
@@ -2185,6 +2266,75 @@
     "loc": 120,
     "max_cc": 8
   },
+  "app/domain/commerce/intelligence.py": {
+    "functions": {
+      "_add_discovery_source": 7,
+      "_candidate_identity": 1,
+      "_candidate_in_workspace": 2,
+      "_candidate_matches": 5,
+      "_candidate_response": 2,
+      "_canonical": 1,
+      "_comparison_artifact_ids": 5,
+      "_comparison_differences": 13,
+      "_comparison_inputs": 2,
+      "_comparison_metric_maps": 5,
+      "_comparison_response": 7,
+      "_comparison_row": 8,
+      "_competitor_entry": 5,
+      "_csv_candidate": 6,
+      "_digest": 1,
+      "_discovery_configuration": 1,
+      "_discovery_sources": 3,
+      "_existing_acceptance": 3,
+      "_matched_own_product": 6,
+      "_materialize_candidate": 4,
+      "_new_competitor_product": 8,
+      "_new_own_product": 6,
+      "_persist_candidate_acceptance": 3,
+      "_product_entry": 6,
+      "_project": 2,
+      "_reject_candidate": 1,
+      "_safe_source_key": 1,
+      "_snapshot_metrics": 5,
+      "_utcnow": 1,
+      "accept_candidate": 8,
+      "create_comparison_snapshot": 8,
+      "create_discovery_run": 9,
+      "finalize_discovery_failure": 9,
+      "finalize_discovery_success": 12,
+      "list_comparison_snapshots": 2,
+      "list_discovery_candidates": 3,
+      "list_discovery_runs": 4,
+      "mark_discovery_run_running": 3,
+      "preview_discovery": 10,
+      "reconcile_discovery_run": 10
+    },
+    "loc": 1213,
+    "max_cc": 13
+  },
+  "app/domain/commerce/intelligence_schemas.py": {
+    "functions": {
+      "CommerceCandidateInput._aliases": 4,
+      "CommerceCandidateInput._currency": 2,
+      "CommerceDiscoveryCreateRequest._bounded": 2
+    },
+    "loc": 136,
+    "max_cc": 4
+  },
+  "app/domain/commerce/matching.py": {
+    "functions": {
+      "_attribute": 4,
+      "_exact_identifier_score": 7,
+      "_family_variant_score": 7,
+      "_score": 3,
+      "_similarity_score": 6,
+      "_variant": 5,
+      "match_candidate": 10,
+      "normalized": 2
+    },
+    "loc": 160,
+    "max_cc": 10
+  },
   "app/domain/commerce/orders.py": {
     "functions": {
       "_delete_expired_orders_batch": 2,
@@ -2296,25 +2446,43 @@
   },
   "app/domain/dashboard/schemas.py": {
     "functions": {},
-    "loc": 55,
+    "loc": 81,
     "max_cc": 0
   },
   "app/domain/dashboard/service.py": {
     "functions": {
+      "_average_price_accuracy": 4,
+      "_bounded_rate": 3,
+      "_commerce_presence_point": 1,
       "_latest": 1,
+      "_latest_health_before": 4,
+      "_latest_opportunity_before": 4,
+      "_normalized_brand_sov": 5,
+      "_normalized_rank_performance": 6,
+      "_opportunity_execution": 7,
+      "_own_product_snapshots": 4,
+      "_presence_provenance": 5,
+      "_product_presence": 10,
       "_runs_section": 7,
+      "_score_rate": 2,
       "_section": 2,
       "_site_health_metrics": 6,
       "_site_health_state": 7,
       "_source": 2,
+      "_standard_presence_point": 1,
+      "_version_identity": 1,
       "_visibility_section": 6,
+      "_weighted_components": 9,
       "assemble_response": 14,
+      "build_ai_presence_point": 7,
       "build_analyze_sections": 8,
       "build_improve_sections": 10,
       "fetch_latest_sources": 1,
+      "finalize_ai_presence_points": 11,
+      "get_ai_presence": 9,
       "get_dashboard": 1
     },
-    "loc": 367,
+    "loc": 851,
     "max_cc": 14
   },
   "app/domain/entitlements/__init__.py": {
@@ -2557,15 +2725,23 @@
     "functions": {
       "OpportunityStatusPatch._known_status": 2
     },
-    "loc": 129,
+    "loc": 175,
     "max_cc": 2
   },
   "app/domain/opportunities/service.py": {
     "functions": {
+      "_active_opportunity_at": 8,
+      "_bounded_value": 9,
       "_build_snapshot": 13,
       "_clamp_limit": 2,
       "_cursor_filters": 5,
       "_filter_clauses": 6,
+      "_guidance_enabled": 2,
+      "_guidance_findings": 6,
+      "_guidance_hash": 1,
+      "_guidance_input": 9,
+      "_guidance_opportunity": 2,
+      "_history_transition": 4,
       "_humanize_theme": 2,
       "_iso": 2,
       "_latest_evidence_at": 8,
@@ -2575,22 +2751,29 @@
       "_load_visibility_evidence": 14,
       "_project_detail": 7,
       "_project_export_row": 6,
+      "_project_guidance": 6,
+      "_project_history_group": 5,
       "_project_item": 2,
       "_project_snapshot": 4,
+      "_require_guidance_enabled": 2,
       "_require_project": 2,
       "_resolve_scored_audit": 3,
       "_resolve_source": 3,
       "_target_label": 9,
       "_utcnow": 1,
       "_validate_filters": 9,
+      "create_guidance": 13,
+      "get_grouped_history": 9,
+      "get_latest_guidance": 1,
       "get_opportunity": 2,
       "get_summary": 7,
+      "list_guidance_history": 2,
       "list_opportunities": 5,
       "load_export_rows": 2,
       "recompute": 20,
       "update_status": 4
     },
-    "loc": 1197,
+    "loc": 1594,
     "max_cc": 20
   },
   "app/domain/products/__init__.py": {
@@ -2626,12 +2809,12 @@
       "competitor_product_to_response": 1,
       "product_to_response": 1
     },
-    "loc": 400,
+    "loc": 429,
     "max_cc": 4
   },
   "app/domain/products/service.py": {
     "functions": {
-      "_apply_competitor_product_fields": 5,
+      "_apply_competitor_product_fields": 6,
       "_apply_product_fields": 6,
       "_competitor_in_project": 2,
       "_get_competitor_product": 2,
@@ -2648,7 +2831,7 @@
       "update_competitor_product": 2,
       "update_product": 2
     },
-    "loc": 454,
+    "loc": 455,
     "max_cc": 17
   },
   "app/domain/products/shim.py": {
@@ -2662,21 +2845,24 @@
   "app/domain/products/visibility.py": {
     "functions": {
       "_available_surfaces": 4,
+      "_competitor_visibility_entries": 4,
+      "_conversation_context": 11,
       "_entry_metrics": 13,
       "_evidence_common": 2,
       "_is_current_version": 2,
       "_latest_product_audit_id": 1,
       "_load_audit_and_snapshots": 5,
       "_normalize_aggregate": 11,
+      "_own_visibility_entries": 4,
       "_project_price_relation": 4,
       "_snapshot_entry_id": 5,
       "get_product_evidence": 22,
-      "get_product_visibility": 16,
+      "get_product_visibility": 12,
       "load_product_visibility_export_bundle": 1,
       "product_visibility_csv": 25,
       "select_current_snapshots": 5
     },
-    "loc": 818,
+    "loc": 927,
     "max_cc": 25
   },
   "app/domain/projects/__init__.py": {
@@ -3065,25 +3251,31 @@
   },
   "app/domain/site_health/api_schemas.py": {
     "functions": {},
-    "loc": 486,
+    "loc": 552,
     "max_cc": 0
   },
   "app/domain/site_health/discovery.py": {
     "functions": {
       "_active_free_sample_count": 2,
       "_add_free_sample": 3,
+      "_candidate_allowed": 6,
       "_enqueue_task": 2,
+      "_frontier_full": 2,
+      "_ordered_unique_candidates": 2,
+      "_record_admission": 8,
+      "_requested_budget_exhausted": 4,
       "_safe_parser_encoding": 4,
+      "_sample_remaining": 3,
       "_task_idempotency_key": 1,
       "_upsert_free_sample_membership": 1,
       "_upsert_site_url": 4,
       "_utcnow": 1,
-      "admit_candidates": 20,
+      "admit_candidates": 8,
       "build_frontier_candidates": 2,
       "extract_discovery_links": 16
     },
-    "loc": 650,
-    "max_cc": 20
+    "loc": 691,
+    "max_cc": 16
   },
   "app/domain/site_health/entitlements.py": {
     "functions": {
@@ -3131,25 +3323,32 @@
   "app/domain/site_health/planner.py": {
     "functions": {
       "CrawlPlanError.__init__": 2,
-      "_frozen_configuration": 1,
+      "_admit_seed_urls": 6,
+      "_advanced_controls_requested": 4,
+      "_controls_for_request": 8,
+      "_frozen_configuration": 3,
       "_has_active_crawl": 2,
       "_is_sample_mode": 1,
       "_load_project": 3,
       "_normalize_globs": 7,
       "_normalize_seed": 4,
+      "_preview_input_rows": 14,
+      "_resolved_page_limit": 5,
       "_upsert_profile": 4,
-      "create_crawl": 9,
-      "create_page_rerun_crawl": 6,
-      "get_crawl": 2
+      "_validate_control_values": 5,
+      "create_crawl": 13,
+      "create_page_rerun_crawl": 11,
+      "get_crawl": 2,
+      "preview_crawl_urls": 11
     },
-    "loc": 604,
-    "max_cc": 9
+    "loc": 867,
+    "max_cc": 14
   },
   "app/domain/site_health/schemas.py": {
     "functions": {
       "FrontierCandidate.order_key": 1
     },
-    "loc": 94,
+    "loc": 100,
     "max_cc": 1
   },
   "app/domain/site_health/selection.py": {
@@ -3160,6 +3359,7 @@
       "_active_count_in_project": 1,
       "_active_count_other_projects": 1,
       "_active_crawl": 1,
+      "_already_seeded_hashes": 3,
       "_analyze_idempotency_key": 1,
       "_cancel_pending_analyze_tasks": 3,
       "_enqueue_analyze_task": 1,
@@ -3167,8 +3367,12 @@
       "_load_project_site_urls": 3,
       "_lock_profile": 1,
       "_lock_project": 1,
+      "_monitored_seed_rows": 1,
       "_next_generations": 5,
+      "_remaining_seed_budget": 4,
+      "_seed_url_is_admissible": 3,
       "_utcnow": 1,
+      "_write_seed_observation": 4,
       "bulk_select_monitored_set": 12,
       "crawl_is_active": 2,
       "evaluate_task_guard": 5,
@@ -3176,14 +3380,14 @@
       "monitored_is_active": 2,
       "replace_monitored_set": 28,
       "rerun_page": 9,
-      "seed_monitored_targets": 9
+      "seed_monitored_targets": 7
     },
-    "loc": 1024,
+    "loc": 1070,
     "max_cc": 28
   },
   "app/domain/site_health/service/__init__.py": {
     "functions": {},
-    "loc": 98,
+    "loc": 100,
     "max_cc": 0
   },
   "app/domain/site_health/service/common.py": {
@@ -3200,15 +3404,17 @@
   },
   "app/domain/site_health/service/issues.py": {
     "functions": {
+      "_group_issue_history": 13,
       "_issue_filter_clause": 9,
       "_issues_summary": 9,
       "_load_issue_groups": 4,
+      "get_grouped_issue_history": 14,
       "get_issue_detail": 14,
       "get_issue_history": 6,
       "get_issues": 16,
       "issue_group_page_types": 5
     },
-    "loc": 650,
+    "loc": 875,
     "max_cc": 16
   },
   "app/domain/site_health/service/lifecycle.py": {
@@ -3390,7 +3596,7 @@
   },
   "app/models/__init__.py": {
     "functions": {},
-    "loc": 201,
+    "loc": 217,
     "max_cc": 0
   },
   "app/models/abuse.py": {
@@ -3444,7 +3650,7 @@
     "functions": {
       "_utcnow": 1
     },
-    "loc": 212,
+    "loc": 522,
     "max_cc": 1
   },
   "app/models/constants.py": {
@@ -3477,12 +3683,12 @@
     "functions": {
       "_utcnow": 1
     },
-    "loc": 211,
+    "loc": 275,
     "max_cc": 1
   },
   "app/models/product.py": {
     "functions": {},
-    "loc": 473,
+    "loc": 505,
     "max_cc": 0
   },
   "app/models/project.py": {
@@ -3506,7 +3712,7 @@
     "functions": {
       "_utcnow": 1
     },
-    "loc": 1094,
+    "loc": 1113,
     "max_cc": 1
   },
   "app/models/traffic.py": {
@@ -3712,6 +3918,46 @@
     "loc": 147,
     "max_cc": 5
   },
+  "app/workers/commerce_discovery_worker.py": {
+    "functions": {
+      "CommerceDiscoveryWorker.__init__": 4,
+      "CommerceDiscoveryWorker._ack_upload_or_existing": 8,
+      "CommerceDiscoveryWorker._acquire_and_finalize": 14,
+      "CommerceDiscoveryWorker._execute": 9,
+      "CommerceDiscoveryWorker._finalize_failure": 5,
+      "CommerceDiscoveryWorker._heartbeat_loop": 4,
+      "CommerceDiscoveryWorker._leased": 2,
+      "CommerceDiscoveryWorker._new_fetcher": 1,
+      "CommerceDiscoveryWorker._reconcile": 2,
+      "CommerceDiscoveryWorker.run_forever": 4,
+      "CommerceDiscoveryWorker.run_once": 4,
+      "_bounded_schema_nodes": 3,
+      "_candidate_conflict_identity": 2,
+      "_configured_candidate_target": 7,
+      "_evidence_kind": 5,
+      "_extract_product": 3,
+      "_first": 3,
+      "_has_type": 3,
+      "_host_matches": 4,
+      "_mapping_value": 2,
+      "_meta_values": 7,
+      "_price": 3,
+      "_product_and_offer": 10,
+      "_product_attributes": 3,
+      "_product_identity": 3,
+      "_product_variants": 9,
+      "_safe_acquisition": 3,
+      "_safe_provenance": 2,
+      "_schema_documents_and_root": 10,
+      "_schema_nodes": 8,
+      "_schema_type_names": 5,
+      "_text": 8,
+      "_visible_product_name": 3,
+      "main": 1
+    },
+    "loc": 714,
+    "max_cc": 14
+  },
   "app/workers/content_worker.py": {
     "functions": {
       "AttemptOutcome.succeeded": 1,
@@ -3881,13 +4127,16 @@
   "app/workers/site_health/phases/discover.py": {
     "functions": {
       "DiscoverPhaseMixin._cached_robots_entry": 3,
-      "DiscoverPhaseMixin._candidates_for": 2,
+      "DiscoverPhaseMixin._candidates_for": 3,
       "DiscoverPhaseMixin._ensure_robots_policy": 11,
+      "DiscoverPhaseMixin._failure_retry_state": 2,
       "DiscoverPhaseMixin._fetch_discover": 11,
       "DiscoverPhaseMixin._fetch_well_known": 3,
       "DiscoverPhaseMixin._forget_robots": 3,
       "DiscoverPhaseMixin._ingest_sitemaps": 19,
-      "DiscoverPhaseMixin._persist_discover": 12,
+      "DiscoverPhaseMixin._persist_discover": 8,
+      "DiscoverPhaseMixin._persist_discover_success": 4,
+      "DiscoverPhaseMixin._persist_sitemap_candidates": 5,
       "DiscoverPhaseMixin._persisted_discover_artifact_id": 2,
       "DiscoverPhaseMixin._prune_robots_cache": 7,
       "DiscoverPhaseMixin._run_discover": 9,
@@ -3896,7 +4145,7 @@
       "DiscoverPhaseMixin._write_sitemap_observations": 3,
       "_classify_robots_fetch": 4
     },
-    "loc": 892,
+    "loc": 933,
     "max_cc": 19
   },
   "app/workers/site_health/phases/link_check.py": {
@@ -3937,6 +4186,8 @@
   "app/workers/site_health_worker.py": {
     "functions": {
       "SiteHealthWorker.__init__": 4,
+      "SiteHealthWorker._attempt_host": 2,
+      "SiteHealthWorker._diagnostic_attempt": 5,
       "SiteHealthWorker._ensure_running": 3,
       "SiteHealthWorker._execute_claimed": 3,
       "SiteHealthWorker._execute_task": 10,
@@ -3950,14 +4201,17 @@
       "SiteHealthWorker._record_crash": 1,
       "SiteHealthWorker._resolve_site_url_id": 5,
       "SiteHealthWorker._robots_crawl_delay": 2,
+      "SiteHealthWorker._trace_outcome": 6,
+      "SiteHealthWorker._traced_attempt": 4,
       "SiteHealthWorker._write_artifact": 4,
-      "SiteHealthWorker._write_attempt": 16,
+      "SiteHealthWorker._write_attempt": 3,
       "SiteHealthWorker._write_observation": 8,
       "SiteHealthWorker.run_forever": 4,
       "SiteHealthWorker.run_once": 6,
+      "_acquisition_values": 3,
       "main": 1
     },
-    "loc": 777,
-    "max_cc": 16
+    "loc": 854,
+    "max_cc": 10
   }
 }
