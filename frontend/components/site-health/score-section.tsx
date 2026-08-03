@@ -56,7 +56,11 @@ export function ScoreSection({
         value={overall}
         sub={overallSub(summary, analyzing, crawl, selectedTotal)}
       />
-      <ScoreCard label="Web Fundamentals" value={technical} sub="Response codes, headers, delivery" />
+      <ScoreCard
+        label="Web Fundamentals"
+        value={technical}
+        sub="Response codes, headers, delivery"
+      />
       <ScoreCard label="AEO" value={aeo} sub="Schema, structured data, AI-readiness" />
     </div>
   );

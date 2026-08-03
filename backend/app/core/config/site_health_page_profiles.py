@@ -5,6 +5,7 @@ taxonomy.  This small companion owns only the product-page fields and rules
 that can evolve independently of the acquisition ladder.  Analysis modules
 read these tables; they do not embed product-schema policy inline.
 """
+
 from __future__ import annotations
 
 from typing import Final

@@ -496,21 +496,28 @@ def _check_product_offer_details(facts: dict) -> tuple[str, dict]:
     product = _product_block(facts)
     if product is None:
         return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_product_schema"}
-    identity_present = bool(
-        product.get("sku") or product.get("gtin") or product.get("mpn")
+    offer_declared = _product_offer_declared(facts)
+    missing = _missing_product_offer_fields(product, offer_declared=offer_declared)
+    return _pass_fail(not missing), _product_offer_evidence(
+        product, offer_declared=offer_declared, missing=missing
     )
+
+
+def _product_offer_declared(facts: dict) -> bool:
+    blocks = (facts.get("structured_data") or {}).get("blocks") or []
+    return any(
+        block.get("type") == "Product"
+        and "offers" in (block.get("props_present") or [])
+        for block in blocks
+    )
+
+
+def _missing_product_offer_fields(product: dict, *, offer_declared: bool) -> list[str]:
     missing: list[str] = []
-    if not identity_present:
+    if not (product.get("sku") or product.get("gtin") or product.get("mpn")):
         missing.append("identifier")
     if not product.get("brand"):
         missing.append("brand")
-    sd = facts.get("structured_data") or {}
-    product_blocks = [
-        block for block in sd.get("blocks") or [] if block.get("type") == "Product"
-    ]
-    offer_declared = any(
-        "offers" in (block.get("props_present") or []) for block in product_blocks
-    )
     if offer_declared:
         for field, key in (
             ("price", "price"),
@@ -519,7 +526,13 @@ def _check_product_offer_details(facts: dict) -> tuple[str, dict]:
         ):
             if not product.get(key):
                 missing.append(f"offers.{field}")
-    return _pass_fail(not missing), {
+    return missing
+
+
+def _product_offer_evidence(
+    product: dict, *, offer_declared: bool, missing: list[str]
+) -> dict:
+    return {
         "schema_product_count": product["schema_product_count"],
         "offer_declared": offer_declared,
         "missing": missing,
@@ -578,9 +591,7 @@ def _check_product_visible_schema_parity(facts: dict) -> tuple[str, dict]:
                 }
             )
     if not checks:
-        return RULE_OUTCOME_NOT_APPLICABLE, {
-            "reason": "no_comparable_product_claims"
-        }
+        return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_comparable_product_claims"}
     mismatches = [check for check in checks if not check["visible_match"]]
     return _pass_fail(not mismatches), {
         "checked_claim_count": len(checks),
@@ -867,10 +878,7 @@ def evaluate_all(facts: dict) -> list[RuleEvaluation]:
         == PRODUCT_SCHEMA_EXPECTATION.page_type
         else ()
     )
-    return [
-        evaluate_rule(rule, facts)
-        for rule in (*SITE_HEALTH_RULES, *supplemental)
-    ]
+    return [evaluate_rule(rule, facts) for rule in (*SITE_HEALTH_RULES, *supplemental)]
 
 
 def rule_for(rule_id: str) -> SiteHealthRule | None:

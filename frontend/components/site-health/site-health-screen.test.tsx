@@ -171,9 +171,7 @@ beforeEach(() => {
   // ProjectProvider backfills a logo for fixtures without one. Keep the
   // production refresh behavior enabled and satisfy it with the shared MSW
   // pattern used by other project-screen tests.
-  mswServer.use(
-    http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)),
-  );
+  mswServer.use(http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)));
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());

@@ -45,6 +45,7 @@ from app.connectors.web_evidence.acquisition import (
 )
 from app.connectors.web_evidence.contracts import (
     AcquisitionProvenance,
+    AcquisitionTransport,
     DnsResolver,
     FetchCallTrace,
     FetchError,
@@ -53,19 +54,20 @@ from app.connectors.web_evidence.contracts import (
     RedirectHop,
     ResolvedTarget,
 )
+from app.connectors.web_evidence.curl_transport import CurlCffiTransport
 from app.connectors.web_evidence.url_policy import (
     UrlPolicyError,
     classify_url_admission,
     resolve_target,
 )
 from app.core.config.site_health import (
+    ACQUISITION_TRANSPORT_CURL_CFFI,
     ACQUISITION_TRANSPORT_HTTPX,
     ACQUISITION_TRANSPORT_SCRAPERAPI,
-    ACQUISITION_TRIGGER_CURL_UNAVAILABLE,
-    ACQUISITION_TRIGGER_CURL_UNUSABLE,
     ACQUISITION_TRIGGER_INITIAL,
     BOT_BLOCK_BODY_MARKERS,
     BOT_BLOCK_MARKER_SCAN_BYTES,
+    ERROR_ACQUISITION_UNAVAILABLE,
     ERROR_CONNECTION_FAILED,
     ERROR_MALFORMED_RESPONSE,
     ERROR_REDIRECT_LIMIT,
@@ -287,6 +289,7 @@ class SecureFetcher:
         transport: httpx.AsyncBaseTransport | None = None,
         settings=site_health_settings,
         scraperapi_transport: httpx.AsyncBaseTransport | None = None,
+        curl_transport: AcquisitionTransport | None = None,
         curl_pinned_resolution_supported: bool | None = None,
         user_agent: str = SITE_HEALTH_USER_AGENT,
     ) -> None:
@@ -300,6 +303,16 @@ class SecureFetcher:
             if curl_pinned_resolution_supported is None
             else curl_pinned_resolution_supported
         )
+        self._curl_transport = curl_transport
+        if (
+            self._curl_transport is None
+            and settings.curl_cffi_enabled
+            and self._curl_pinned_resolution_supported
+        ):
+            self._curl_transport = CurlCffiTransport(
+                impersonation_profile=settings.curl_cffi_impersonation_profile,
+                user_agent=user_agent,
+            )
         # In production we pin the IP ourselves, so the transport must never
         # re-resolve or read the host environment (invariant: trust_env=False).
         self._client = httpx.AsyncClient(
@@ -437,6 +450,60 @@ class SecureFetcher:
         )
         if trigger is None or not self._settings.curl_cffi_enabled:
             return result
+        return await self._continue_acquisition_ladder(
+            request=request,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+            enforce_scope=enforce_scope,
+            limits=limits,
+            attempts=attempts,
+            trigger=trigger,
+            prior=result,
+        )
+
+    async def _continue_acquisition_ladder(
+        self,
+        *,
+        request: FetchRequest,
+        root_registrable_domain: str | None,
+        include_globs: list[str] | None,
+        exclude_globs: list[str] | None,
+        enforce_scope: bool,
+        limits: tuple[int, int, float, int],
+        attempts: list[FetchCallTrace],
+        trigger: str,
+        prior: FetchResult,
+    ) -> FetchResult:
+        """Run curl when available, then the configured provider if needed."""
+
+        curl_result = prior
+        if self._curl_transport is not None:
+            try:
+                curl_result = await self._fetch_curl(
+                    request=request,
+                    root_registrable_domain=root_registrable_domain,
+                    include_globs=include_globs,
+                    exclude_globs=exclude_globs,
+                    enforce_scope=enforce_scope,
+                    limits=limits,
+                    attempts=attempts,
+                    trigger=trigger,
+                )
+            except FetchError as exc:
+                if exc.error_code not in self._settings.scraperapi_continue_error_codes:
+                    if not exc.attempts:
+                        exc.attempts = tuple(attempts)
+                    raise
+            else:
+                curl_still_blocked = curl_trigger_for_result(
+                    curl_result,
+                    has_challenge_marker=is_bot_block_result(curl_result),
+                    trigger_statuses=self._settings.curl_cffi_trigger_statuses,
+                    low_content_bytes=self._settings.curl_cffi_low_content_bytes,
+                )
+                if curl_still_blocked is None:
+                    return curl_result
         return await self._continue_with_scraperapi(
             request=request,
             root_registrable_domain=root_registrable_domain,
@@ -445,12 +512,136 @@ class SecureFetcher:
             enforce_scope=enforce_scope,
             limits=limits,
             attempts=attempts,
-            trigger=(
-                ACQUISITION_TRIGGER_CURL_UNUSABLE
-                if self._curl_pinned_resolution_supported
-                else ACQUISITION_TRIGGER_CURL_UNAVAILABLE
-            ),
-            prior=result,
+            trigger=trigger,
+            prior=curl_result,
+        )
+
+    async def _fetch_curl(
+        self,
+        *,
+        request: FetchRequest,
+        root_registrable_domain: str | None,
+        include_globs: list[str] | None,
+        exclude_globs: list[str] | None,
+        enforce_scope: bool,
+        limits: tuple[int, int, float, int],
+        attempts: list[FetchCallTrace],
+        trigger: str,
+    ) -> FetchResult:
+        """Run the pinned curl transport with manual redirect validation."""
+
+        transport = self._curl_transport
+        if transport is None:
+            raise FetchError(
+                "curl acquisition transport unavailable",
+                error_code=ERROR_ACQUISITION_UNAVAILABLE,
+            )
+        max_wire, max_decoded, timeout, max_redirects = limits
+        acquisition = AcquisitionProvenance(
+            transport=ACQUISITION_TRANSPORT_CURL_CFFI,
+            rung=2,
+            trigger=trigger,
+            impersonation_profile=self._settings.curl_cffi_impersonation_profile,
+            policy_version=self._settings.acquisition_policy_version,
+        )
+        current_url = request.url
+        redirect_chain: list[RedirectHop] = []
+        for hop in range(max_redirects + 1):
+            target = await self._resolve(
+                current_url,
+                root_registrable_domain=root_registrable_domain,
+                include_globs=include_globs,
+                exclude_globs=exclude_globs,
+                enforce_scope=enforce_scope,
+                purpose=request.purpose,
+            )
+            hop_started = time.monotonic()
+            try:
+                result = await transport.fetch(
+                    request,
+                    target,
+                    max_wire_bytes=max_wire,
+                    max_decoded_bytes=max_decoded,
+                    timeout_seconds=timeout,
+                )
+            except FetchError as exc:
+                self._trace(
+                    attempts,
+                    url=target.url,
+                    method=request.method,
+                    status_code=exc.status_code,
+                    error_code=exc.error_code,
+                    wire_bytes=None,
+                    decoded_bytes=None,
+                    ttfb_ms=None,
+                    started=hop_started,
+                    acquisition=acquisition,
+                )
+                exc.attempts = tuple(attempts)
+                raise
+            location = result.redacted_headers.get("location")
+            if result.status_code not in _REDIRECT_STATUSES or not location:
+                self._trace_curl_result(
+                    attempts, request, result, hop_started, acquisition
+                )
+                return replace(
+                    result,
+                    requested_url=request.url,
+                    redirect_chain=tuple(redirect_chain),
+                    attempts=tuple(attempts),
+                    acquisition=acquisition,
+                )
+            if hop >= max_redirects:
+                self._trace_curl_result(
+                    attempts,
+                    request,
+                    result,
+                    hop_started,
+                    acquisition,
+                    error_code=ERROR_REDIRECT_LIMIT,
+                )
+                raise FetchError(
+                    "curl acquisition redirect limit",
+                    error_code=ERROR_REDIRECT_LIMIT,
+                    attempts=tuple(attempts),
+                )
+            next_url = urljoin(target.url, location)
+            redirect_chain.append(
+                RedirectHop(
+                    from_url=target.url,
+                    to_url=next_url,
+                    status_code=result.status_code,
+                )
+            )
+            self._trace_curl_result(attempts, request, result, hop_started, acquisition)
+            current_url = next_url
+        raise FetchError(
+            "curl acquisition redirect limit",
+            error_code=ERROR_REDIRECT_LIMIT,
+            attempts=tuple(attempts),
+        )
+
+    def _trace_curl_result(
+        self,
+        attempts: list[FetchCallTrace],
+        request: FetchRequest,
+        result: FetchResult,
+        started: float,
+        acquisition: AcquisitionProvenance,
+        *,
+        error_code: str | None = None,
+    ) -> None:
+        self._trace(
+            attempts,
+            url=result.final_url,
+            method=request.method,
+            status_code=result.status_code,
+            error_code=error_code,
+            wire_bytes=result.wire_bytes,
+            decoded_bytes=result.decoded_bytes,
+            ttfb_ms=result.ttfb_ms,
+            started=started,
+            acquisition=acquisition,
         )
 
     async def _continue_with_scraperapi(

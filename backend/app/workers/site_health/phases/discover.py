@@ -62,7 +62,11 @@ from app.domain.site_health.discovery import (
     extract_discovery_links,
 )
 from app.domain.site_health.normalization import canonical_identity
-from app.domain.site_health.schemas import DiscoveryOutput, FrontierCandidate
+from app.domain.site_health.schemas import (
+    AdmissionResult,
+    DiscoveryOutput,
+    FrontierCandidate,
+)
 from app.domain.site_health.state_events import (
     apply_discovery_status,
     record_crawl_event,
@@ -694,67 +698,13 @@ class DiscoverPhaseMixin(PhaseSupport):
 
             artifact_id: uuid.UUID | None = None
             if outcome.output is not None and outcome.result is not None:
-                # Success: write the immutable artifact + observation, admit the
-                # frontier, and bump counters — all in this one transaction.
-                artifact_id = await self._write_artifact(
+                artifact_id, admission = await self._persist_discover_success(
                     session,
                     crawl=crawl,
                     task=task,
-                    result=outcome.result,
-                )
-                await self._write_observation(
-                    session,
-                    crawl=crawl,
-                    task=task,
-                    output=outcome.output,
+                    outcome=outcome,
                     depth=depth,
-                    artifact_id=artifact_id,
                 )
-                admission = await admit_candidates(
-                    session,
-                    crawl=crawl,
-                    candidates=self._candidates_for(
-                        outcome.output,
-                        depth,
-                        input_mode=(crawl.configuration or {}).get(
-                            "input_mode", "auto"
-                        ),
-                    ),
-                    enqueue_children=(
-                        (crawl.configuration or {}).get("input_mode", "auto")
-                        != INPUT_MODE_EXACT_URLS
-                    ),
-                )
-                # v2 P2 (Starter only): admit the sitemap-ingested URLs AFTER
-                # the root's own admission, so the root's frontier priority
-                # holds and admission order stays deterministic; then write
-                # their sparse admission-time observation rows (mirrors
-                # ``_add_free_sample``) so sitemap-sourced URLs appear in
-                # inventory. Free sample crawls never ingest sitemaps, so
-                # un-admitted URLs never leak into a Free inventory.
-                if (
-                    depth == 0
-                    and outcome.sitemap_urls
-                    and not crawl.sample_mode
-                    and (crawl.configuration or {}).get("input_mode", "auto")
-                    != INPUT_MODE_EXACT_URLS
-                ):
-                    sitemap_candidates = self._sitemap_candidates(outcome.sitemap_urls)
-                    sitemap_admission = await admit_candidates(
-                        session,
-                        crawl=crawl,
-                        candidates=sitemap_candidates,
-                    )
-                    await self._write_sitemap_observations(
-                        session,
-                        crawl=crawl,
-                        candidates=sitemap_candidates,
-                        admission=sitemap_admission,
-                    )
-                crawl.discovered_url_count += 1
-                # Link the queue row to its immutable artifact (mirrors the
-                # audit worker's result_artifact_id contract).
-                task.result_artifact_id = artifact_id
                 succeeded_artifact_id = artifact_id
                 if admission.sample_capped:
                     # Free stop-at-10: terminate discovery at the cap. No
@@ -778,11 +728,7 @@ class DiscoverPhaseMixin(PhaseSupport):
                 # task table (every kind, every route to terminal), which is the
                 # only place that can count an analyze failure or a sweeper
                 # reclaim too.
-                exhausted = task.attempt_count + 1 >= task.max_attempts
-                should_retry = outcome.retryable and not exhausted
-                # Attempt number this failure represents (1-based), used to
-                # grow the backoff deterministically across retries.
-                retry_attempt = task.attempt_count + 1
+                should_retry, retry_attempt = self._failure_retry_state(task, outcome)
 
             self._write_attempt(
                 session,
@@ -806,6 +752,80 @@ class DiscoverPhaseMixin(PhaseSupport):
             error_detail=outcome.error_detail,
             retry_after_seconds=outcome.retry_after_seconds,
         )
+
+    async def _persist_discover_success(
+        self,
+        session: AsyncSession,
+        *,
+        crawl: SiteCrawl,
+        task: SiteCrawlTask,
+        outcome: _DiscoverOutcome,
+        depth: int,
+    ) -> tuple[uuid.UUID, AdmissionResult]:
+        assert outcome.output is not None and outcome.result is not None
+        artifact_id = await self._write_artifact(
+            session, crawl=crawl, task=task, result=outcome.result
+        )
+        await self._write_observation(
+            session,
+            crawl=crawl,
+            task=task,
+            output=outcome.output,
+            depth=depth,
+            artifact_id=artifact_id,
+        )
+        input_mode = (crawl.configuration or {}).get("input_mode", "auto")
+        admission = await admit_candidates(
+            session,
+            crawl=crawl,
+            candidates=self._candidates_for(
+                outcome.output, depth, input_mode=input_mode
+            ),
+            enqueue_children=input_mode != INPUT_MODE_EXACT_URLS,
+        )
+        await self._persist_sitemap_candidates(
+            session,
+            crawl=crawl,
+            outcome=outcome,
+            depth=depth,
+            input_mode=input_mode,
+        )
+        crawl.discovered_url_count += 1
+        task.result_artifact_id = artifact_id
+        return artifact_id, admission
+
+    async def _persist_sitemap_candidates(
+        self,
+        session: AsyncSession,
+        *,
+        crawl: SiteCrawl,
+        outcome: _DiscoverOutcome,
+        depth: int,
+        input_mode: str,
+    ) -> None:
+        if (
+            depth != 0
+            or not outcome.sitemap_urls
+            or crawl.sample_mode
+            or input_mode == INPUT_MODE_EXACT_URLS
+        ):
+            return
+        candidates = self._sitemap_candidates(outcome.sitemap_urls)
+        admission = await admit_candidates(session, crawl=crawl, candidates=candidates)
+        await self._write_sitemap_observations(
+            session,
+            crawl=crawl,
+            candidates=candidates,
+            admission=admission,
+        )
+
+    @staticmethod
+    def _failure_retry_state(
+        task: SiteCrawlTask, outcome: _DiscoverOutcome
+    ) -> tuple[bool, int]:
+        retry_attempt = task.attempt_count + 1
+        exhausted = retry_attempt >= task.max_attempts
+        return outcome.retryable and not exhausted, retry_attempt
 
     def _candidates_for(
         self, output: DiscoveryOutput, depth: int, *, input_mode: str

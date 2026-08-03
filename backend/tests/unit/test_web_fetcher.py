@@ -17,7 +17,13 @@ import zlib
 import httpx
 import pytest
 
-from app.connectors.web_evidence.contracts import FetchError, FetchRequest
+from app.connectors.web_evidence.contracts import (
+    AcquisitionTransport,
+    FetchError,
+    FetchRequest,
+    FetchResult,
+    ResolvedTarget,
+)
 from app.connectors.web_evidence.fetcher import SecureFetcher, redact_headers
 from app.core.config.site_health import SiteHealthSettings
 
@@ -63,12 +69,51 @@ class _FakeResolver:
         return list(self._mapping.get(host, self._default))
 
 
+class _FakeAcquisitionTransport(AcquisitionTransport):
+    def __init__(self, result: FetchResult) -> None:
+        self.result = result
+        self.targets: list[ResolvedTarget] = []
+
+    async def fetch(
+        self,
+        request: FetchRequest,
+        target: ResolvedTarget,
+        *,
+        max_wire_bytes: int,
+        max_decoded_bytes: int,
+        timeout_seconds: float,
+    ) -> FetchResult:
+        self.targets.append(target)
+        return self.result
+
+
+def _acquisition_result(
+    *,
+    status: int = 200,
+    body: bytes = b"<html><body>curl content</body></html>",
+) -> FetchResult:
+    return FetchResult(
+        requested_url="https://example.com/",
+        final_url="https://example.com/",
+        status_code=status,
+        redacted_headers={"content-type": "text/html"},
+        content_type="text/html",
+        http_version="2",
+        body=body,
+        wire_bytes=len(body),
+        decoded_bytes=len(body),
+        ttfb_ms=1,
+        latency_ms=2,
+    )
+
+
 def _fetcher(
     handler,
     resolver,
     *,
     settings: SiteHealthSettings | None = None,
     scraperapi_handler=None,
+    curl_transport: AcquisitionTransport | None = None,
     curl_pinned_resolution_supported: bool | None = None,
 ) -> SecureFetcher:
     return SecureFetcher(
@@ -77,6 +122,7 @@ def _fetcher(
         scraperapi_transport=(
             httpx.MockTransport(scraperapi_handler) if scraperapi_handler else None
         ),
+        curl_transport=curl_transport,
         curl_pinned_resolution_supported=curl_pinned_resolution_supported,
         settings=settings or SiteHealthSettings(),
     )
@@ -662,7 +708,7 @@ async def test_challenge_uses_scraperapi_after_explicit_curl_unavailable(caplog)
     assert result.acquisition is not None
     assert result.acquisition.transport == "scraperapi"
     assert result.acquisition.rung == 3
-    assert result.acquisition.trigger == "curl_unavailable"
+    assert result.acquisition.trigger == "challenge"
     assert result.acquisition.scraperapi_options == {
         "render": True,
         "premium": True,
@@ -683,6 +729,80 @@ async def test_challenge_uses_scraperapi_after_explicit_curl_unavailable(caplog)
         "country_code": "us",
     }
     assert "server-only-secret" not in caplog.text
+
+
+async def test_challenge_uses_pinned_curl_rung_when_available():
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(403, body=b"<title>Just a moment...</title>")
+
+    curl_transport = _FakeAcquisitionTransport(_acquisition_result())
+    settings = SiteHealthSettings(curl_cffi_enabled=True)
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        curl_transport=curl_transport,
+        curl_pinned_resolution_supported=True,
+    ) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(
+                url="https://example.com/",
+                purpose="discover",
+                allowed_content_types=frozenset({"text/html"}),
+            )
+        )
+
+    assert result.acquisition is not None
+    assert result.acquisition.transport == "curl_cffi"
+    assert result.acquisition.rung == 2
+    assert result.acquisition.trigger == "challenge"
+    assert result.acquisition.impersonation_profile == "chrome"
+    assert [entry.acquisition.transport for entry in result.attempts] == [
+        "httpx",
+        "curl_cffi",
+    ]
+    assert curl_transport.targets[0].connect_ip == _PUBLIC_IP
+
+
+@pytest.mark.parametrize(
+    ("direct_status", "direct_body", "low_content_bytes", "expected_trigger"),
+    [
+        (429, b"rate limited", 0, "block_status"),
+        (200, b"tiny", 512, "low_content"),
+    ],
+)
+async def test_scraperapi_keeps_evidence_trigger_when_curl_is_unavailable(
+    direct_status: int,
+    direct_body: bytes,
+    low_content_bytes: int,
+    expected_trigger: str,
+):
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(direct_status, body=direct_body)
+
+    def scraper_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(body=b"<html>provider result</html>")
+
+    settings = SiteHealthSettings(
+        curl_cffi_enabled=True,
+        curl_cffi_low_content_bytes=low_content_bytes,
+        scraperapi_enabled=True,
+        scraperapi_api_key="server-only-secret",
+    )
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        scraperapi_handler=scraper_handler,
+        curl_pinned_resolution_supported=False,
+    ) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(url="https://example.com/", purpose="discover")
+        )
+
+    assert result.acquisition is not None
+    assert result.acquisition.transport == "scraperapi"
+    assert result.acquisition.trigger == expected_trigger
 
 
 async def test_scraperapi_rung_keeps_decoded_byte_cap():

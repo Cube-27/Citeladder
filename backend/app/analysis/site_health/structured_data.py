@@ -210,10 +210,7 @@ def _product_enrichment(obj: dict) -> dict[str, Any]:
     return {
         "sku": _values(obj.get("sku")),
         "gtin": _values(
-            [
-                obj.get(key)
-                for key in ("gtin", "gtin8", "gtin12", "gtin13", "gtin14")
-            ]
+            [obj.get(key) for key in ("gtin", "gtin8", "gtin12", "gtin13", "gtin14")]
         ),
         "brand": _values(obj.get("brand")),
         "mpn": _values(obj.get("mpn")),
@@ -342,13 +339,28 @@ def validate_microdata_types(itemtypes: list[str], *, max_blocks: int) -> list[d
 
 def product_facts(blocks: list[dict]) -> dict[str, Any]:
     """Merge bounded Product block observations into one deterministic fact."""
-    all_product_blocks = [
-        block for block in blocks if block.get("type") == "Product"
-    ]
+    product_blocks = _preferred_product_blocks(blocks)
+    values = _empty_product_values()
+    shipping = False
+    returns = False
+    for block in product_blocks:
+        block_shipping, block_returns = _merge_product_values(values, block)
+        shipping = shipping or block_shipping
+        returns = returns or block_returns
+    return {
+        "schema_product_count": len(product_blocks),
+        **values,
+        "shipping": shipping,
+        "returns": returns,
+    }
+
+
+def _preferred_product_blocks(blocks: list[dict]) -> list[dict]:
+    all_product_blocks = [block for block in blocks if block.get("type") == "Product"]
     # JSON-LD traversal also sees nested variant Products. Prefer Product
     # nodes with identity/offer evidence; only fall back to all Product nodes
     # when a minimal product schema carries none of those fields.
-    product_blocks = [
+    return [
         block
         for block in all_product_blocks
         if any(
@@ -357,7 +369,10 @@ def product_facts(blocks: list[dict]) -> dict[str, Any]:
         )
         or "offers" in (block.get("props_present") or [])
     ] or all_product_blocks
-    values: dict[str, list[str]] = {
+
+
+def _empty_product_values() -> dict[str, list[str]]:
+    return {
         key: []
         for key in (
             "name",
@@ -372,24 +387,17 @@ def product_facts(blocks: list[dict]) -> dict[str, Any]:
             "ratings",
         )
     }
-    shipping = False
-    returns = False
-    for block in product_blocks:
-        product = block.get("product") or {}
-        product = {"name": [str(block.get("name") or "")], **product}
-        for key in values:
-            for value in product.get(key) or []:
-                if (
-                    value
-                    and value not in values[key]
-                    and len(values[key]) < PRODUCT_FACT_MAX_VALUES
-                ):
-                    values[key].append(str(value)[:PRODUCT_FACT_MAX_VALUE_CHARS])
-        shipping = shipping or bool(product.get("shipping"))
-        returns = returns or bool(product.get("returns"))
-    return {
-        "schema_product_count": len(product_blocks),
-        **values,
-        "shipping": shipping,
-        "returns": returns,
+
+
+def _merge_product_values(
+    values: dict[str, list[str]], block: dict
+) -> tuple[bool, bool]:
+    product = {
+        "name": [str(block.get("name") or "")],
+        **(block.get("product") or {}),
     }
+    for key, target in values.items():
+        for value in product.get(key) or []:
+            if value and value not in target and len(target) < PRODUCT_FACT_MAX_VALUES:
+                target.append(str(value)[:PRODUCT_FACT_MAX_VALUE_CHARS])
+    return bool(product.get("shipping")), bool(product.get("returns"))

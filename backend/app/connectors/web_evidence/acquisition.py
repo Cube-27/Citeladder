@@ -22,15 +22,26 @@ def curl_cffi_pinned_resolution_supported() -> bool:
 
     The current Windows worker platform cannot reliably bind curl-cffi's DNS
     override, TLS SNI, and peer verification to the IP selected by
-    ``resolve_target``. Returning false is intentional and fail-closed: the
-    ladder records curl as unavailable and may continue to ScraperAPI; it never
-    lets curl-cffi independently resolve a user-supplied hostname.
-
-    A future platform implementation must replace this predicate alongside a
-    verified pinned resolver adapter, rather than merely flipping a setting.
+    ``resolve_target``. Other platforms are supported only when the installed
+    binding accepts libcurl's ``RESOLVE`` option. The probe performs no network
+    I/O and fails closed on an absent or incompatible binding.
     """
 
-    return not sys.platform.startswith("win") and False
+    if sys.platform.startswith("win"):
+        return False
+    try:
+        from curl_cffi import Curl, CurlError, CurlOpt
+    except ImportError:
+        return False
+    try:
+        curl = Curl()
+        try:
+            curl.setopt(CurlOpt.RESOLVE, ["searchify.invalid:443:127.0.0.1"])
+        finally:
+            curl.close()
+    except (CurlError, RuntimeError, TypeError, ValueError):
+        return False
+    return True
 
 
 def curl_trigger_for_result(

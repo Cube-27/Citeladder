@@ -61,6 +61,18 @@ class MatchResult:
 def _score(
     candidate: Mapping[str, Any], target: Mapping[str, Any]
 ) -> tuple[float, tuple[str, ...]]:
+    exact = _exact_identifier_score(candidate, target)
+    if exact is not None:
+        return exact
+    family = _family_variant_score(candidate, target)
+    if family is not None:
+        return family
+    return _similarity_score(candidate, target)
+
+
+def _exact_identifier_score(
+    candidate: Mapping[str, Any], target: Mapping[str, Any]
+) -> tuple[float, tuple[str, ...]] | None:
     candidate_gtin = _attribute(candidate, COMMERCE_GTIN_KEYS)
     target_gtin = _attribute(target, COMMERCE_GTIN_KEYS)
     if candidate_gtin and candidate_gtin == target_gtin:
@@ -77,7 +89,12 @@ def _score(
         and candidate_model == target_model
     ):
         return 0.96, (COMMERCE_MATCH_BRAND_MODEL,)
+    return None
 
+
+def _family_variant_score(
+    candidate: Mapping[str, Any], target: Mapping[str, Any]
+) -> tuple[float, tuple[str, ...]] | None:
     candidate_family = _attribute(candidate, COMMERCE_FAMILY_KEYS) or normalized(
         candidate.get("name")
     )
@@ -93,7 +110,12 @@ def _score(
         and candidate_variant == target_variant
     ):
         return 0.90, (COMMERCE_MATCH_FAMILY_VARIANT,)
+    return None
 
+
+def _similarity_score(
+    candidate: Mapping[str, Any], target: Mapping[str, Any]
+) -> tuple[float, tuple[str, ...]]:
     title_ratio = SequenceMatcher(
         None, normalized(candidate.get("name")), normalized(target.get("name"))
     ).ratio()

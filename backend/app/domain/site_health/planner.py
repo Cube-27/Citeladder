@@ -307,21 +307,15 @@ def _controls_for_request(
 ) -> tuple[str, int, list[str], list[str]]:
     """Validate development-only crawl controls and return frozen values."""
     mode = input_mode or INPUT_MODE_AUTO
-    if mode not in INPUT_MODES:
-        raise CrawlPlanError("unknown input_mode", code="invalid_crawl_request")
     raw_seeds = list(seed_urls or [])
     selected_types = list(page_types or [])
-    if len(raw_seeds) > site_health_settings.max_seed_urls:
-        raise CrawlPlanError("too many seed_urls", code="invalid_crawl_request")
-    if any(value not in PAGE_TYPES for value in selected_types):
-        raise CrawlPlanError("unknown page type", code="invalid_crawl_request")
-    advanced_requested = (
-        mode != INPUT_MODE_AUTO
-        or requested_page_limit is not None
-        or bool(raw_seeds)
-        or bool(selected_types)
-    )
-    if advanced_requested and not site_health_settings.advanced_controls_enabled:
+    _validate_control_values(mode, raw_seeds, selected_types)
+    if (
+        _advanced_controls_requested(
+            mode, requested_page_limit, raw_seeds, selected_types
+        )
+        and not site_health_settings.advanced_controls_enabled
+    ):
         raise CrawlPlanError(
             "advanced crawl controls are unavailable",
             code="advanced_controls_unavailable",
@@ -330,6 +324,36 @@ def _controls_for_request(
         raise CrawlPlanError(
             "exact_urls requires seed_urls", code="invalid_crawl_request"
         )
+    limit = _resolved_page_limit(requested_page_limit)
+    return mode, limit, raw_seeds, selected_types
+
+
+def _validate_control_values(
+    mode: str, raw_seeds: list[str], selected_types: list[str]
+) -> None:
+    if mode not in INPUT_MODES:
+        raise CrawlPlanError("unknown input_mode", code="invalid_crawl_request")
+    if len(raw_seeds) > site_health_settings.max_seed_urls:
+        raise CrawlPlanError("too many seed_urls", code="invalid_crawl_request")
+    if any(value not in PAGE_TYPES for value in selected_types):
+        raise CrawlPlanError("unknown page type", code="invalid_crawl_request")
+
+
+def _advanced_controls_requested(
+    mode: str,
+    requested_page_limit: int | None,
+    raw_seeds: list[str],
+    selected_types: list[str],
+) -> bool:
+    return (
+        mode != INPUT_MODE_AUTO
+        or requested_page_limit is not None
+        or bool(raw_seeds)
+        or bool(selected_types)
+    )
+
+
+def _resolved_page_limit(requested_page_limit: int | None) -> int:
     limit = (
         requested_page_limit
         if site_health_settings.advanced_controls_enabled
@@ -341,7 +365,7 @@ def _controls_for_request(
             "requested_page_limit is outside the allowed range",
             code="invalid_crawl_request",
         )
-    return mode, int(limit), raw_seeds, selected_types
+    return int(limit)
 
 
 def _admit_seed_urls(

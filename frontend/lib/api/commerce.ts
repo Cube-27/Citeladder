@@ -10,20 +10,33 @@
  */
 import { apiClient, type ApiRequestOptions } from './client';
 import {
-  commerceCandidateAcceptSchema, commerceCandidateSchema, commerceCatalogHealthSchema,
-  commerceDiscoveryPreviewSchema, commerceDiscoveryRunSchema, competitorComparisonSnapshotSchema,
+  commerceCandidateAcceptSchema,
+  commerceCandidateSchema,
+  commerceCatalogHealthSchema,
+  commerceDiscoveryPreviewSchema,
+  commerceDiscoveryRunSchema,
+  competitorComparisonSnapshotSchema,
   strictValidate,
 } from './schemas';
 import type {
-  CommerceCandidateAccept, CommerceCandidateInput, CommerceCatalogHealth, CommerceDiscoveryPreview,
-  CommerceDiscoveryRun, CompetitorComparisonSnapshot,
+  CommerceCandidateAccept,
+  CommerceCandidateInput,
+  CommerceCatalogHealth,
+  CommerceDiscoveryPreview,
+  CommerceDiscoveryRun,
+  CompetitorComparisonSnapshot,
 } from './types';
 
 export type CommerceDiscoveryCreateInput = {
-  input_kind: 'upload' | 'url'; rows?: CommerceCandidateInput[]; source_urls?: string[];
+  input_kind: 'upload' | 'url';
+  rows?: CommerceCandidateInput[];
+  source_urls?: string[];
 };
 export type CommerceCandidateDecisionInput = {
-  status: 'accepted' | 'rejected'; target_id?: string | null; competitor_id?: string | null; review_note?: string;
+  status: 'accepted' | 'rejected';
+  target_id?: string | null;
+  competitor_id?: string | null;
+  review_note?: string;
 };
 
 export const commerceApi = {
@@ -36,27 +49,85 @@ export const commerceApi = {
     return strictValidate(commerceCatalogHealthSchema, res, 'commerce.getCatalogHealth');
   },
   previewDiscovery: async (
-    projectId: string, body: { rows?: CommerceCandidateInput[]; csv_text?: string }, options?: ApiRequestOptions,
-  ) => strictValidate(commerceDiscoveryPreviewSchema, await apiClient.post<CommerceDiscoveryPreview>(
-    `/projects/${projectId}/commerce/discovery/preview`, body, options), 'commerce.previewDiscovery'),
-  createDiscoveryRun: async (projectId: string, body: CommerceDiscoveryCreateInput, options?: ApiRequestOptions) =>
-    strictValidate(commerceDiscoveryRunSchema, await apiClient.post<CommerceDiscoveryRun>(
-      `/projects/${projectId}/commerce/discovery/runs`, body, options), 'commerce.createDiscoveryRun'),
+    projectId: string,
+    body: { rows?: CommerceCandidateInput[]; csv_text?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      commerceDiscoveryPreviewSchema,
+      await apiClient.post<CommerceDiscoveryPreview>(
+        `/projects/${projectId}/commerce/discovery/preview`,
+        body,
+        options,
+      ),
+      'commerce.previewDiscovery',
+    ),
+  createDiscoveryRun: async (
+    projectId: string,
+    body: CommerceDiscoveryCreateInput,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      commerceDiscoveryRunSchema,
+      await apiClient.post<CommerceDiscoveryRun>(
+        `/projects/${projectId}/commerce/discovery/runs`,
+        body,
+        options,
+      ),
+      'commerce.createDiscoveryRun',
+    ),
   listDiscoveryRuns: async (projectId: string, options?: ApiRequestOptions) =>
-    strictValidate(commerceDiscoveryRunSchema.array(), await apiClient.get<CommerceDiscoveryRun[]>(
-      `/projects/${projectId}/commerce/discovery/runs`, options), 'commerce.listDiscoveryRuns'),
-  listDiscoveryCandidates: async (projectId: string, runId?: string, options?: ApiRequestOptions) => {
+    strictValidate(
+      commerceDiscoveryRunSchema.array(),
+      await apiClient.get<CommerceDiscoveryRun[]>(
+        `/projects/${projectId}/commerce/discovery/runs`,
+        options,
+      ),
+      'commerce.listDiscoveryRuns',
+    ),
+  listDiscoveryCandidates: async (
+    projectId: string,
+    runId?: string,
+    options?: ApiRequestOptions,
+  ) => {
     const query = runId ? `?run_id=${encodeURIComponent(runId)}` : '';
-    return strictValidate(commerceCandidateSchema.array(), await apiClient.get(
-      `/projects/${projectId}/commerce/discovery/candidates${query}`, options), 'commerce.listDiscoveryCandidates');
+    return strictValidate(
+      commerceCandidateSchema.array(),
+      await apiClient.get(`/projects/${projectId}/commerce/discovery/candidates${query}`, options),
+      'commerce.listDiscoveryCandidates',
+    );
   },
-  decideCandidate: async (candidateId: string, body: CommerceCandidateDecisionInput, options?: ApiRequestOptions) =>
-    strictValidate(commerceCandidateAcceptSchema, await apiClient.post<CommerceCandidateAccept>(
-      `/commerce/discovery/candidates/${candidateId}/accept`, body, options), 'commerce.decideCandidate'),
+  decideCandidate: async (
+    candidateId: string,
+    body: CommerceCandidateDecisionInput,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      commerceCandidateAcceptSchema,
+      await apiClient.post<CommerceCandidateAccept>(
+        `/commerce/discovery/candidates/${candidateId}/accept`,
+        body,
+        options,
+      ),
+      'commerce.decideCandidate',
+    ),
   createComparison: async (projectId: string, competitorId?: string, options?: ApiRequestOptions) =>
-    strictValidate(competitorComparisonSnapshotSchema, await apiClient.post<CompetitorComparisonSnapshot>(
-      `/projects/${projectId}/commerce/comparisons`, { competitor_id: competitorId ?? null }, options), 'commerce.createComparison'),
+    strictValidate(
+      competitorComparisonSnapshotSchema,
+      await apiClient.post<CompetitorComparisonSnapshot>(
+        `/projects/${projectId}/commerce/comparisons`,
+        { competitor_id: competitorId ?? null },
+        options,
+      ),
+      'commerce.createComparison',
+    ),
   listComparisons: async (projectId: string, options?: ApiRequestOptions) =>
-    strictValidate(competitorComparisonSnapshotSchema.array(), await apiClient.get<CompetitorComparisonSnapshot[]>(
-      `/projects/${projectId}/commerce/comparisons`, options), 'commerce.listComparisons'),
+    strictValidate(
+      competitorComparisonSnapshotSchema.array(),
+      await apiClient.get<CompetitorComparisonSnapshot[]>(
+        `/projects/${projectId}/commerce/comparisons`,
+        options,
+      ),
+      'commerce.listComparisons',
+    ),
 };

@@ -23,6 +23,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.csv_cells import csv_cell
+from app.analysis.product_scoring import ProductScoringConfig
 from app.analysis.product_service import build_product_scoring_config
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
@@ -316,6 +317,100 @@ async def _available_surfaces(
     )
 
 
+ConversationContext = dict[
+    tuple[str, uuid.UUID], tuple[float | None, list[FrozenPromptContext], list[str]]
+]
+
+
+def _own_visibility_entries(
+    config: ProductScoringConfig,
+    by_entry: dict[str, ProductMetricSnapshot],
+    sliced: dict[str, dict[str, Any]],
+    conversation: ConversationContext,
+) -> list[ProductVisibilityEntry]:
+    projected: list[ProductVisibilityEntry] = []
+    for entry in config.products:
+        snapshot = by_entry.get(entry.id)
+        if snapshot is None:
+            continue
+        metrics = sliced[entry.id]
+        coverage, prompts, themes = (
+            conversation.get(("product", snapshot.product_id), (None, [], []))
+            if snapshot.product_id is not None
+            else (None, [], [])
+        )
+        projected.append(
+            ProductVisibilityEntry(
+                product_id=snapshot.product_id,
+                sku=entry.sku,
+                name=entry.name,
+                product_analyzer_version=snapshot.product_analyzer_version,
+                mention_count=metrics["mention_count"],
+                sov_share=metrics["sov_share"],
+                avg_rank=metrics["avg_rank"],
+                rank_distribution=metrics["rank_distribution"],
+                price_mention_count=metrics["price_mention_count"],
+                price_accuracy_rate=metrics["price_accuracy_rate"],
+                win_rate=metrics["win_rate"],
+                price_mismatch_rate=metrics["price_mismatch_rate"],
+                price_relation_counts=metrics["price_relation_counts"],
+                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
+                buyer_destination_mix=metrics["buyer_destination_mix"],
+                competitor_co_placement=metrics["competitor_co_placement"],
+                prompt_coverage=coverage,
+                frozen_prompt_context=prompts,
+                conversation_themes=themes,
+            )
+        )
+    return projected
+
+
+def _competitor_visibility_entries(
+    config: ProductScoringConfig,
+    by_entry: dict[str, ProductMetricSnapshot],
+    sliced: dict[str, dict[str, Any]],
+    conversation: ConversationContext,
+) -> list[CompetitorProductVisibilityEntry]:
+    projected: list[CompetitorProductVisibilityEntry] = []
+    for entry in config.competitor_products:
+        snapshot = by_entry.get(entry.id)
+        if snapshot is None:
+            continue
+        metrics = sliced[entry.id]
+        coverage, prompts, themes = (
+            conversation.get(
+                ("competitor_product", snapshot.competitor_product_id),
+                (None, [], []),
+            )
+            if snapshot.competitor_product_id is not None
+            else (None, [], [])
+        )
+        projected.append(
+            CompetitorProductVisibilityEntry(
+                competitor_product_id=snapshot.competitor_product_id,
+                competitor_name=entry.competitor,
+                name=entry.name,
+                product_analyzer_version=snapshot.product_analyzer_version,
+                mention_count=metrics["mention_count"],
+                sov_share=metrics["sov_share"],
+                avg_rank=metrics["avg_rank"],
+                rank_distribution=metrics["rank_distribution"],
+                price_mention_count=metrics["price_mention_count"],
+                price_accuracy_rate=metrics["price_accuracy_rate"],
+                win_rate=metrics["win_rate"],
+                price_mismatch_rate=metrics["price_mismatch_rate"],
+                price_relation_counts=metrics["price_relation_counts"],
+                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
+                buyer_destination_mix=metrics["buyer_destination_mix"],
+                competitor_co_placement=metrics["competitor_co_placement"],
+                prompt_coverage=coverage,
+                frozen_prompt_context=prompts,
+                conversation_themes=themes,
+            )
+        )
+    return projected
+
+
 async def get_product_visibility(
     session: AsyncSession,
     *,
@@ -359,77 +454,10 @@ async def get_product_visibility(
         session, audit_id=audit.id, surface=surface
     )
 
-    products: list[ProductVisibilityEntry] = []
-    for entry in config.products:
-        snapshot = by_entry.get(entry.id)
-        if snapshot is None:
-            continue
-        metrics = sliced[entry.id]
-        coverage, prompts, themes = (
-            conversation.get(("product", snapshot.product_id), (None, [], []))
-            if snapshot.product_id is not None
-            else (None, [], [])
-        )
-        products.append(
-            ProductVisibilityEntry(
-                product_id=snapshot.product_id,
-                sku=entry.sku,
-                name=entry.name,
-                product_analyzer_version=snapshot.product_analyzer_version,
-                mention_count=metrics["mention_count"],
-                sov_share=metrics["sov_share"],
-                avg_rank=metrics["avg_rank"],
-                rank_distribution=metrics["rank_distribution"],
-                price_mention_count=metrics["price_mention_count"],
-                price_accuracy_rate=metrics["price_accuracy_rate"],
-                win_rate=metrics["win_rate"],
-                price_mismatch_rate=metrics["price_mismatch_rate"],
-                price_relation_counts=metrics["price_relation_counts"],
-                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
-                buyer_destination_mix=metrics["buyer_destination_mix"],
-                competitor_co_placement=metrics["competitor_co_placement"],
-                prompt_coverage=coverage,
-                frozen_prompt_context=prompts,
-                conversation_themes=themes,
-            )
-        )
-
-    competitor_products: list[CompetitorProductVisibilityEntry] = []
-    for competitor_entry in config.competitor_products:
-        snapshot = by_entry.get(competitor_entry.id)
-        if snapshot is None:
-            continue
-        metrics = sliced[competitor_entry.id]
-        coverage, prompts, themes = (
-            conversation.get(
-                ("competitor_product", snapshot.competitor_product_id), (None, [], [])
-            )
-            if snapshot.competitor_product_id is not None
-            else (None, [], [])
-        )
-        competitor_products.append(
-            CompetitorProductVisibilityEntry(
-                competitor_product_id=snapshot.competitor_product_id,
-                competitor_name=competitor_entry.competitor,
-                name=competitor_entry.name,
-                product_analyzer_version=snapshot.product_analyzer_version,
-                mention_count=metrics["mention_count"],
-                sov_share=metrics["sov_share"],
-                avg_rank=metrics["avg_rank"],
-                rank_distribution=metrics["rank_distribution"],
-                price_mention_count=metrics["price_mention_count"],
-                price_accuracy_rate=metrics["price_accuracy_rate"],
-                win_rate=metrics["win_rate"],
-                price_mismatch_rate=metrics["price_mismatch_rate"],
-                price_relation_counts=metrics["price_relation_counts"],
-                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
-                buyer_destination_mix=metrics["buyer_destination_mix"],
-                competitor_co_placement=metrics["competitor_co_placement"],
-                prompt_coverage=coverage,
-                frozen_prompt_context=prompts,
-                conversation_themes=themes,
-            )
-        )
+    products = _own_visibility_entries(config, by_entry, sliced, conversation)
+    competitor_products = _competitor_visibility_entries(
+        config, by_entry, sliced, conversation
+    )
 
     total_analyses = await session.scalar(
         select(func.count())

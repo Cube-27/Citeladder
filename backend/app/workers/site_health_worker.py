@@ -41,6 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.connectors.web_evidence.contracts import (
     AcquisitionProvenance,
     DnsResolver,
+    FetchCallTrace,
     FetchResult,
 )
 from app.connectors.web_evidence.fetcher import SecureFetcher
@@ -148,6 +149,7 @@ def _acquisition_values(
         "scraperapi_request_id": acquisition.scraperapi_request_id[:255],
         "acquisition_policy_version": acquisition.policy_version[:32],
     }
+
 
 # Floor for the heartbeat cadence. The configured interval is the operative
 # value (validated positive and strictly below the lease TTL); this only stops
@@ -660,39 +662,15 @@ class SiteHealthWorker(
         attempt_number = task.attempt_count + 1
         trace = outcome.attempts
         if not trace:
-            try:
-                host, _port = split_host_port(requested_url)
-            except Exception:
-                host = ""
             session.add(
-                SiteFetchAttempt(
-                    task_id=task.id,
-                    crawl_id=crawl.id,
-                    workspace_id=crawl.workspace_id,
-                    attempt_number=attempt_number,
-                    request_ordinal=0,
-                    method="GET",
-                    target_host=host[:255],
-                    outcome=_OUTCOME_SUCCESS if succeeded else _OUTCOME_ERROR,
-                    error_code=outcome.error_code,
-                    status_code=outcome.status_code,
-                    latency_ms=outcome.latency_ms,
-                    wire_bytes=(
-                        outcome.result.wire_bytes
-                        if outcome.result is not None
-                        else None
-                    ),
-                    decoded_bytes=(
-                        outcome.result.decoded_bytes
-                        if outcome.result is not None
-                        else None
-                    ),
-                    **_acquisition_values(
-                        outcome.result.acquisition
-                        if outcome.result is not None
-                        else None
-                    ),
+                self._diagnostic_attempt(
+                    crawl=crawl,
+                    task=task,
+                    outcome=outcome,
+                    succeeded=succeeded,
+                    requested_url=requested_url,
                     artifact_id=artifact_id,
+                    attempt_number=attempt_number,
                 )
             )
             return
@@ -700,47 +678,104 @@ class SiteHealthWorker(
         last_index = len(trace) - 1
         for index, entry in enumerate(trace):
             is_final = index == last_index
-            if entry.error_code:
-                # The call itself failed (timeout / cap abort / transport).
-                row_outcome = _OUTCOME_ERROR
-                row_error = entry.error_code
-            elif is_final and not succeeded:
-                # The terminal call of an unsuccessful fetch carries the
-                # classified task-level token (e.g. http_4xx / bot_blocked).
-                row_outcome = _OUTCOME_ERROR
-                row_error = outcome.error_code
-            elif entry.status_code is not None and entry.status_code >= 400:
-                # A non-terminal call that received an HTTP error status
-                # (e.g. the blocked rung-1 response before escalation).
-                row_outcome = _OUTCOME_ERROR
-                row_error = ""
-            else:
-                row_outcome = _OUTCOME_SUCCESS
-                row_error = ""
-            try:
-                host, _port = split_host_port(entry.url)
-            except Exception:
-                host = ""
             session.add(
-                SiteFetchAttempt(
-                    task_id=task.id,
-                    crawl_id=crawl.id,
-                    workspace_id=crawl.workspace_id,
+                self._traced_attempt(
+                    crawl=crawl,
+                    task=task,
+                    outcome=outcome,
+                    entry=entry,
+                    succeeded=succeeded,
+                    is_final=is_final,
+                    artifact_id=artifact_id,
                     attempt_number=attempt_number,
-                    request_ordinal=entry.request_ordinal,
-                    method=(entry.method or "GET")[:8],
-                    target_host=host[:255],
-                    outcome=row_outcome,
-                    error_code=row_error,
-                    status_code=entry.status_code,
-                    latency_ms=entry.latency_ms,
-                    wire_bytes=entry.wire_bytes,
-                    decoded_bytes=entry.decoded_bytes,
-                    **_acquisition_values(entry.acquisition),
-                    # ONLY the successful terminal call links the artifact.
-                    artifact_id=(artifact_id if (is_final and succeeded) else None),
                 )
             )
+
+    @staticmethod
+    def _attempt_host(url: str) -> str:
+        try:
+            host, _port = split_host_port(url)
+        except Exception:
+            return ""
+        return host[:255]
+
+    @staticmethod
+    def _trace_outcome(
+        entry: FetchCallTrace, *, is_final: bool, succeeded: bool, error_code: str
+    ) -> tuple[str, str]:
+        if entry.error_code:
+            return _OUTCOME_ERROR, entry.error_code
+        if is_final and not succeeded:
+            return _OUTCOME_ERROR, error_code
+        if entry.status_code is not None and entry.status_code >= 400:
+            return _OUTCOME_ERROR, ""
+        return _OUTCOME_SUCCESS, ""
+
+    def _diagnostic_attempt(
+        self,
+        *,
+        crawl: SiteCrawl,
+        task: SiteCrawlTask,
+        outcome: _DiscoverOutcome | _AnalyzeOutcome,
+        succeeded: bool,
+        requested_url: str,
+        artifact_id: uuid.UUID | None,
+        attempt_number: int,
+    ) -> SiteFetchAttempt:
+        result = outcome.result
+        return SiteFetchAttempt(
+            task_id=task.id,
+            crawl_id=crawl.id,
+            workspace_id=crawl.workspace_id,
+            attempt_number=attempt_number,
+            request_ordinal=0,
+            method="GET",
+            target_host=self._attempt_host(requested_url),
+            outcome=_OUTCOME_SUCCESS if succeeded else _OUTCOME_ERROR,
+            error_code=outcome.error_code,
+            status_code=outcome.status_code,
+            latency_ms=outcome.latency_ms,
+            wire_bytes=result.wire_bytes if result is not None else None,
+            decoded_bytes=result.decoded_bytes if result is not None else None,
+            **_acquisition_values(result.acquisition if result is not None else None),
+            artifact_id=artifact_id,
+        )
+
+    def _traced_attempt(
+        self,
+        *,
+        crawl: SiteCrawl,
+        task: SiteCrawlTask,
+        outcome: _DiscoverOutcome | _AnalyzeOutcome,
+        entry: FetchCallTrace,
+        succeeded: bool,
+        is_final: bool,
+        artifact_id: uuid.UUID | None,
+        attempt_number: int,
+    ) -> SiteFetchAttempt:
+        row_outcome, row_error = self._trace_outcome(
+            entry,
+            is_final=is_final,
+            succeeded=succeeded,
+            error_code=outcome.error_code,
+        )
+        return SiteFetchAttempt(
+            task_id=task.id,
+            crawl_id=crawl.id,
+            workspace_id=crawl.workspace_id,
+            attempt_number=attempt_number,
+            request_ordinal=entry.request_ordinal,
+            method=(entry.method or "GET")[:8],
+            target_host=self._attempt_host(entry.url),
+            outcome=row_outcome,
+            error_code=row_error,
+            status_code=entry.status_code,
+            latency_ms=entry.latency_ms,
+            wire_bytes=entry.wire_bytes,
+            decoded_bytes=entry.decoded_bytes,
+            **_acquisition_values(entry.acquisition),
+            artifact_id=artifact_id if is_final and succeeded else None,
+        )
 
     async def _record_crash(self, task_id: uuid.UUID, exc: Exception) -> None:
         detail = f"{type(exc).__name__}: {exc}"

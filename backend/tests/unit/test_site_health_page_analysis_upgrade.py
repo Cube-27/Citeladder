@@ -1,4 +1,5 @@
 """Focused fixtures for page-type evidence, Product/Offer rules, and history."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -36,9 +37,10 @@ def test_classification_evidence_has_alternatives_conflicts_and_other_reason() -
         }
     ]
     assert evidence["conflicts"][0]["conflicting_page_type"] == "article"
-    assert classify("https://example.test/unclassified", {}).to_evidence()[
-        "other_reason"
-    ] == "no_classification_signals"
+    assert (
+        classify("https://example.test/unclassified", {}).to_evidence()["other_reason"]
+        == "no_classification_signals"
+    )
 
 
 def test_all_configured_page_types_have_profile_and_schema_contract() -> None:
@@ -64,7 +66,7 @@ def test_all_configured_page_types_have_profile_and_schema_contract() -> None:
 
 def test_product_offer_facts_and_visible_schema_parity_fixture() -> None:
     facts = extract_page_facts(
-        b'''<html><head><title>Widget Pro</title>
+        b"""<html><head><title>Widget Pro</title>
         <script type="application/ld+json">{
           "@context":"https://schema.org", "@type":"Product", "name":"Widget Pro",
           "sku":"W-100", "gtin13":"1234567890123",
@@ -78,7 +80,7 @@ def test_product_offer_facts_and_visible_schema_parity_fixture() -> None:
         }</script></head><body><h1>Widget Pro</h1>
         <p>Acme Widget Pro, SKU W-100, GTIN 1234567890123, is in stock
         for 19.99 USD.</p>
-        </body></html>''',
+        </body></html>""",
         final_url="https://example.test/products/widget-pro",
     )
     facts["page_type"] = "product"
@@ -97,12 +99,12 @@ def test_product_offer_facts_and_visible_schema_parity_fixture() -> None:
 
 def test_product_visible_schema_parity_fails_on_persisted_conflict() -> None:
     facts = extract_page_facts(
-        b'''<html><head><title>Widget Pro</title><script type="application/ld+json">
+        b"""<html><head><title>Widget Pro</title><script type="application/ld+json">
         {"@context":"https://schema.org","@type":"Product","name":"Widget Pro",
         "sku":"W-100","brand":"Acme","offers":{"@type":"Offer","price":"19.99",
         "priceCurrency":"USD","availability":"InStock"}}</script></head>
         <body><h1>Widget Pro</h1><p>Acme Widget Pro is currently unavailable
-        for 29.99 USD.</p></body></html>''',
+        for 29.99 USD.</p></body></html>""",
         final_url="https://example.test/products/widget-pro",
     )
     facts["page_type"] = "product"

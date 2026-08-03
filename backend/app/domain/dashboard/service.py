@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,7 +53,7 @@ from app.models.traffic import TrafficSnapshot
 
 
 def _bounded_rate(value: object) -> float | None:
-    if not isinstance(value, (int, float, str)):
+    if not isinstance(value, (int, float, str, Decimal)):
         return None
     try:
         return min(1.0, max(0.0, float(value)))
@@ -104,43 +105,19 @@ def _product_presence(
     snapshots: list[ProductMetricSnapshot], *, total_completed: int
 ) -> tuple[float | None, dict[str, bool], dict[str, str]]:
     """Aggregate only own, provenance-backed product snapshot rows."""
-    own = [
-        row
-        for row in snapshots
-        if row.product_id is not None and bool(row.source_analysis_ids)
-    ]
+    own = _own_product_snapshots(snapshots)
     if len(own) < COMMERCE_MIN_PRODUCT_EVIDENCE_ROWS:
         return None, {name: False for name in PRODUCT_PRESENCE_WEIGHTS}, {}
     sov = _score_rate(sum(max(0.0, float(row.sov_share or 0.0)) for row in own))
     mention_coverage = (
         _score_rate(
-            sum(max(0, int(row.mention_count or 0)) for row in own)
-            / total_completed
+            sum(max(0, int(row.mention_count or 0)) for row in own) / total_completed
         )
         if total_completed > 0
         else None
     )
-    ranks = [
-        float(row.avg_rank)
-        for row in own
-        if row.avg_rank is not None and row.avg_rank > 0
-    ]
-    rank = (
-        round(
-            sum(min(1.0, 1.0 / value) for value in ranks)
-            / len(ranks)
-            * SCORE_SCALE,
-            SCORE_ROUNDING_DECIMALS,
-        )
-        if ranks
-        else None
-    )
-    prices = [
-        float(row.price_accuracy_rate)
-        for row in own
-        if row.price_accuracy_rate is not None
-    ]
-    price = _score_rate(sum(prices) / len(prices)) if prices else None
+    rank = _normalized_rank_performance(own)
+    price = _average_price_accuracy(own)
     score, _components, coverage = _weighted_components(
         {
             "product_share_of_voice": sov,
@@ -159,6 +136,37 @@ def _product_presence(
         ),
     }
     return score, coverage, versions
+
+
+def _own_product_snapshots(
+    snapshots: list[ProductMetricSnapshot],
+) -> list[ProductMetricSnapshot]:
+    return [
+        row
+        for row in snapshots
+        if row.product_id is not None and bool(row.source_analysis_ids)
+    ]
+
+
+def _normalized_rank_performance(rows: list[ProductMetricSnapshot]) -> float | None:
+    ranks = [
+        float(row.avg_rank)
+        for row in rows
+        if row.avg_rank is not None and row.avg_rank > 0
+    ]
+    if not ranks:
+        return None
+    score = sum(min(1.0, 1.0 / value) for value in ranks) / len(ranks)
+    return round(score * SCORE_SCALE, SCORE_ROUNDING_DECIMALS)
+
+
+def _average_price_accuracy(rows: list[ProductMetricSnapshot]) -> float | None:
+    prices = [
+        float(row.price_accuracy_rate)
+        for row in rows
+        if row.price_accuracy_rate is not None
+    ]
+    return _score_rate(sum(prices) / len(prices)) if prices else None
 
 
 def build_ai_presence_point(
@@ -183,7 +191,46 @@ def build_ai_presence_point(
         products, total_completed=int(metric.total_completed or 0)
     )
     commerce_active = product_score is not None
-    source_ids: dict[str, list[uuid.UUID]] = {"metric_snapshot": [metric.id]}
+    source_ids, versions = _presence_provenance(
+        metric=metric,
+        health=health,
+        products=products,
+        product_versions=product_versions,
+        opportunity_snapshot=opportunity_snapshot,
+    )
+    if not commerce_active:
+        return _standard_presence_point(
+            metric=metric,
+            mention=mention,
+            sov=sov,
+            owned=owned,
+            fundamentals=fundamentals,
+            source_ids=source_ids,
+            versions=versions,
+        )
+    return _commerce_presence_point(
+        metric=metric,
+        mention=mention,
+        sov=sov,
+        owned=owned,
+        fundamentals=fundamentals,
+        product_score=product_score,
+        product_coverage=product_coverage,
+        opportunity_snapshot=opportunity_snapshot,
+        source_ids=source_ids,
+        versions=versions,
+    )
+
+
+def _presence_provenance(
+    *,
+    metric: MetricSnapshot,
+    health: SiteHealthSnapshot | None,
+    products: list[ProductMetricSnapshot],
+    product_versions: dict[str, str],
+    opportunity_snapshot: OpportunitySnapshot | None,
+) -> tuple[dict[str, list[uuid.UUID]], dict[str, str]]:
+    source_ids = {"metric_snapshot": [metric.id]}
     versions = {
         "metric_analyzer": metric.analyzer_version,
         "metric_scoring_rule": metric.scoring_rule_version,
@@ -191,65 +238,93 @@ def build_ai_presence_point(
     }
     if health is not None:
         source_ids["site_health_snapshot"] = [health.id]
-        versions["site_health_analyzer"] = health.analyzer_version
-        versions["site_health_scoring"] = health.scoring_version
+        versions.update(
+            site_health_analyzer=health.analyzer_version,
+            site_health_scoring=health.scoring_version,
+        )
     if products:
         source_ids["product_metric_snapshot"] = [row.id for row in products]
         versions.update(product_versions)
     if opportunity_snapshot is not None:
         source_ids["opportunity_snapshot"] = [opportunity_snapshot.id]
         versions.update(
-            {
-                "opportunity_analyzer": opportunity_snapshot.analyzer_version,
-                "opportunity_rule": opportunity_snapshot.rule_version,
-                "opportunity_formula": opportunity_snapshot.formula_version,
-            }
+            opportunity_analyzer=opportunity_snapshot.analyzer_version,
+            opportunity_rule=opportunity_snapshot.rule_version,
+            opportunity_formula=opportunity_snapshot.formula_version,
         )
-    if not commerce_active:
-        score, components, coverage = _weighted_components(
-            {
-                COMPONENT_BRAND_MENTION_RATE: mention,
-                COMPONENT_NORMALIZED_SOV: sov,
-                COMPONENT_OWNED_CITATION_RATE: owned,
-                COMPONENT_WEB_FUNDAMENTALS: fundamentals,
-            },
-            STANDARD_WEIGHTS,
-        )
-        return AIPresencePoint(
-            score=score,
-            formula_kind=FORMULA_KIND_STANDARD,
-            formula_version=AI_PRESENCE_FORMULA_VERSION,
-            provisional=not all(coverage.values()),
-            coverage=coverage,
-            components=components,
-            source_snapshot_ids=source_ids,
-            versions=versions,
-            timestamp=metric.created_at,
-        )
+    return source_ids, versions
 
+
+def _standard_presence_point(
+    *,
+    metric: MetricSnapshot,
+    mention: float | None,
+    sov: float | None,
+    owned: float | None,
+    fundamentals: float | None,
+    source_ids: dict[str, list[uuid.UUID]],
+    versions: dict[str, str],
+) -> AIPresencePoint:
+    score, components, coverage = _weighted_components(
+        {
+            COMPONENT_BRAND_MENTION_RATE: mention,
+            COMPONENT_NORMALIZED_SOV: sov,
+            COMPONENT_OWNED_CITATION_RATE: owned,
+            COMPONENT_WEB_FUNDAMENTALS: fundamentals,
+        },
+        STANDARD_WEIGHTS,
+    )
+    return AIPresencePoint(
+        score=score,
+        formula_kind=FORMULA_KIND_STANDARD,
+        formula_version=AI_PRESENCE_FORMULA_VERSION,
+        provisional=not all(coverage.values()),
+        coverage=coverage,
+        components=components,
+        source_snapshot_ids=source_ids,
+        versions=versions,
+        timestamp=metric.created_at,
+    )
+
+
+def _opportunity_execution(snapshot: OpportunitySnapshot | None) -> float | None:
+    if snapshot is None:
+        return None
+    counts = snapshot.counts_by_status or {}
+    denominator = sum(
+        int(counts.get(name, 0) or 0) for name in ("open", "in_progress", "resolved")
+    )
+    if not denominator:
+        return None
+    return _score_rate(int(counts.get("resolved", 0) or 0) / denominator)
+
+
+def _commerce_presence_point(
+    *,
+    metric: MetricSnapshot,
+    mention: float | None,
+    sov: float | None,
+    owned: float | None,
+    fundamentals: float | None,
+    product_score: float | None,
+    product_coverage: dict[str, bool],
+    opportunity_snapshot: OpportunitySnapshot | None,
+    source_ids: dict[str, list[uuid.UUID]],
+    versions: dict[str, str],
+) -> AIPresencePoint:
     brand_visibility, _nested, _nested_coverage = _weighted_components(
         {COMPONENT_BRAND_MENTION_RATE: mention, COMPONENT_NORMALIZED_SOV: sov},
         BRAND_VISIBILITY_WEIGHTS,
     )
-    execution: float | None = None
-    if opportunity_snapshot is not None:
-        counts = opportunity_snapshot.counts_by_status or {}
-        denominator = sum(
-            int(counts.get(name, 0) or 0)
-            for name in ("open", "in_progress", "resolved")
-        )
-        execution = (
-            _score_rate(int(counts.get("resolved", 0) or 0) / denominator)
-            if denominator
-            else None
-        )
     score, components, coverage = _weighted_components(
         {
             COMPONENT_BRAND_VISIBILITY: brand_visibility,
             COMPONENT_PRODUCT_PRESENCE: product_score,
             COMPONENT_WEB_FUNDAMENTALS: fundamentals,
             COMPONENT_OWNED_CITATION_RATE: owned,
-            COMPONENT_OPPORTUNITY_EXECUTION: execution,
+            COMPONENT_OPPORTUNITY_EXECUTION: _opportunity_execution(
+                opportunity_snapshot
+            ),
         },
         COMMERCE_WEIGHTS,
     )

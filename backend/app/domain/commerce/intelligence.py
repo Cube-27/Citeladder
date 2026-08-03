@@ -265,9 +265,7 @@ async def finalize_discovery_success(
                 identity=identity,
                 extraction_confidence=extraction_confidence,
             )
-            .on_conflict_do_nothing(
-                constraint="uq_commerce_candidate_run_hash"
-            )
+            .on_conflict_do_nothing(constraint="uq_commerce_candidate_run_hash")
         )
     task.attempt_count += 1
     task.result_artifact_id = artifact.id
@@ -494,78 +492,29 @@ async def create_discovery_run(
         for row in preview.accepted
     ):
         raise ValueError("discovery candidate evidence exceeds the configured bound")
-    configuration = {
-        "discovery_version": COMMERCE_DISCOVERY_VERSION,
-        "matcher_version": COMMERCE_MATCHER_VERSION,
-        "similarity_threshold": (
-            commerce_intelligence_settings.title_attribute_similarity_threshold
-        ),
-        "ambiguity_margin": commerce_intelligence_settings.match_ambiguity_margin,
-        "max_candidates": (
-            commerce_intelligence_settings.discovery_max_candidates_per_run
-        ),
-    }
     run = CommerceDiscoveryRun(
         workspace_id=workspace_id,
         project_id=project_id,
         input_kind=request.input_kind,
-        configuration=configuration,
+        configuration=_discovery_configuration(),
     )
     session.add(run)
     await session.flush()
     candidates: list[CommerceDiscoveryCandidate] = []
-    sources: list[tuple[str, CommerceCandidateInput | None]] = [
-        (row.url, row) for row in preview.accepted
-    ]
-    sources.extend((source_url, None) for source_url in request.source_urls)
-    for position, (source_url, row) in enumerate(sources):
-        source_key = _safe_source_key(
-            source_url or _canonical(_candidate_identity(row)) if row else source_url
-        )
-        task = CommerceDiscoveryTask(
-            run_id=run.id,
+    for position, (source_url, row) in enumerate(
+        _discovery_sources(preview.accepted, request.source_urls)
+    ):
+        candidate = await _add_discovery_source(
+            session,
+            run=run,
             workspace_id=workspace_id,
             project_id=project_id,
+            input_kind=request.input_kind,
             source_url=source_url,
-            source_key=source_key,
-            idempotency_key=f"commerce-discovery:{run.id}:{source_key}",
-            randomized_position=position,
+            row=row,
+            position=position,
         )
-        session.add(task)
-        await session.flush()
-        # Upload rows already ARE bounded, reviewed evidence. URL tasks must
-        # not receive a mutable placeholder: their one immutable artifact is
-        # written by the claiming worker after secured acquisition succeeds.
-        if request.input_kind == COMMERCE_DISCOVERY_INPUT_UPLOAD:
-            extracted = _candidate_identity(row) if row is not None else {}
-            artifact = CommerceDiscoveryArtifact(
-                task_id=task.id,
-                run_id=run.id,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                evidence_kind=COMMERCE_EVIDENCE_KIND_UPLOAD,
-                source_url=source_url,
-                content_hash=_digest(extracted or {"source_url": source_url}),
-                extracted=extracted,
-                acquisition={"state": COMMERCE_ACQUISITION_STATE_QUEUE_READY},
-            )
-            session.add(artifact)
-            await session.flush()
-            task.result_artifact_id = artifact.id
-        if row is not None and request.input_kind == COMMERCE_DISCOVERY_INPUT_UPLOAD:
-            candidate = CommerceDiscoveryCandidate(
-                run_id=run.id,
-                task_id=task.id,
-                artifact_id=artifact.id,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                candidate_kind=row.candidate_kind,
-                competitor_id=row.competitor_id,
-                candidate_hash=_digest(extracted),
-                identity=extracted,
-                extraction_confidence=row.extraction_confidence,
-            )
-            session.add(candidate)
+        if candidate is not None:
             candidates.append(candidate)
     await session.commit()
     for candidate in candidates:
@@ -584,6 +533,91 @@ async def create_discovery_run(
             await _candidate_response(session, candidate) for candidate in candidates
         ],
     )
+
+
+def _discovery_configuration() -> dict[str, Any]:
+    return {
+        "discovery_version": COMMERCE_DISCOVERY_VERSION,
+        "matcher_version": COMMERCE_MATCHER_VERSION,
+        "similarity_threshold": (
+            commerce_intelligence_settings.title_attribute_similarity_threshold
+        ),
+        "ambiguity_margin": commerce_intelligence_settings.match_ambiguity_margin,
+        "max_candidates": (
+            commerce_intelligence_settings.discovery_max_candidates_per_run
+        ),
+    }
+
+
+def _discovery_sources(
+    rows: list[CommerceCandidateInput], source_urls: list[str]
+) -> list[tuple[str, CommerceCandidateInput | None]]:
+    sources: list[tuple[str, CommerceCandidateInput | None]] = [
+        (row.url, row) for row in rows
+    ]
+    sources.extend((source_url, None) for source_url in source_urls)
+    return sources
+
+
+async def _add_discovery_source(
+    session: AsyncSession,
+    *,
+    run: CommerceDiscoveryRun,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    input_kind: str,
+    source_url: str,
+    row: CommerceCandidateInput | None,
+    position: int,
+) -> CommerceDiscoveryCandidate | None:
+    source_identity = source_url or (
+        _canonical(_candidate_identity(row)) if row else ""
+    )
+    source_key = _safe_source_key(source_identity)
+    task = CommerceDiscoveryTask(
+        run_id=run.id,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        source_url=source_url,
+        source_key=source_key,
+        idempotency_key=f"commerce-discovery:{run.id}:{source_key}",
+        randomized_position=position,
+    )
+    session.add(task)
+    await session.flush()
+    if input_kind != COMMERCE_DISCOVERY_INPUT_UPLOAD:
+        return None
+    extracted = _candidate_identity(row) if row is not None else {}
+    artifact = CommerceDiscoveryArtifact(
+        task_id=task.id,
+        run_id=run.id,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        evidence_kind=COMMERCE_EVIDENCE_KIND_UPLOAD,
+        source_url=source_url,
+        content_hash=_digest(extracted or {"source_url": source_url}),
+        extracted=extracted,
+        acquisition={"state": COMMERCE_ACQUISITION_STATE_QUEUE_READY},
+    )
+    session.add(artifact)
+    await session.flush()
+    task.result_artifact_id = artifact.id
+    if row is None:
+        return None
+    candidate = CommerceDiscoveryCandidate(
+        run_id=run.id,
+        task_id=task.id,
+        artifact_id=artifact.id,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        candidate_kind=row.candidate_kind,
+        competitor_id=row.competitor_id,
+        candidate_hash=_digest(extracted),
+        identity=extracted,
+        extraction_confidence=row.extraction_confidence,
+    )
+    session.add(candidate)
+    return candidate
 
 
 async def list_discovery_candidates(
@@ -694,39 +728,10 @@ async def accept_candidate(
         .order_by(CommerceCandidateReview.created_at.asc())
     )
     if existing is not None:
-        if request.status == COMMERCE_REVIEW_ACCEPTED and request.target_id in {
-            None,
-            existing.target_product_id,
-            existing.target_competitor_product_id,
-        }:
-            return CommerceCandidateAcceptResponse(
-                review_id=existing.id,
-                candidate_id=candidate.id,
-                status=existing.status,
-                product_id=existing.target_product_id,
-                competitor_product_id=existing.target_competitor_product_id,
-                match_reason=existing.match_reason,
-                match_confidence=existing.match_confidence,
-            )
-        raise CommerceConflictError("An accepted candidate mapping is immutable")
+        return _existing_acceptance(candidate, existing, request)
     if request.status == COMMERCE_REVIEW_REJECTED:
-        review = CommerceCandidateReview(
-            candidate_id=candidate.id,
-            workspace_id=workspace_id,
-            project_id=candidate.project_id,
-            status=request.status,
-            review_note=request.review_note,
-        )
-        session.add(review)
-        await session.commit()
-        return CommerceCandidateAcceptResponse(
-            review_id=review.id,
-            candidate_id=candidate.id,
-            status=review.status,
-            product_id=None,
-            competitor_product_id=None,
-            match_reason="",
-            match_confidence=0.0,
+        return await _reject_candidate(
+            session, candidate=candidate, workspace_id=workspace_id, request=request
         )
 
     matches = await _candidate_matches(session, candidate)
@@ -737,70 +742,176 @@ async def accept_candidate(
     selected = next(
         (item for item in matches if item.target_id == request.target_id), None
     )
-    identity = dict(candidate.identity or {})
-    product_id: uuid.UUID | None = None
-    competitor_product_id: uuid.UUID | None = None
+    product_id, competitor_product_id = await _materialize_candidate(
+        session, candidate=candidate, request=request, selected=selected
+    )
+    review = await _persist_candidate_acceptance(
+        session,
+        candidate=candidate,
+        workspace_id=workspace_id,
+        request=request,
+        selected=selected,
+        product_id=product_id,
+        competitor_product_id=competitor_product_id,
+    )
+    return CommerceCandidateAcceptResponse(
+        review_id=review.id,
+        candidate_id=candidate.id,
+        status=review.status,
+        product_id=product_id,
+        competitor_product_id=competitor_product_id,
+        match_reason=review.match_reason,
+        match_confidence=review.match_confidence,
+    )
+
+
+def _existing_acceptance(
+    candidate: CommerceDiscoveryCandidate,
+    existing: CommerceCandidateReview,
+    request: CommerceCandidateAcceptRequest,
+) -> CommerceCandidateAcceptResponse:
+    accepted_targets = {
+        None,
+        existing.target_product_id,
+        existing.target_competitor_product_id,
+    }
+    if (
+        request.status != COMMERCE_REVIEW_ACCEPTED
+        or request.target_id not in accepted_targets
+    ):
+        raise CommerceConflictError("An accepted candidate mapping is immutable")
+    return CommerceCandidateAcceptResponse(
+        review_id=existing.id,
+        candidate_id=candidate.id,
+        status=existing.status,
+        product_id=existing.target_product_id,
+        competitor_product_id=existing.target_competitor_product_id,
+        match_reason=existing.match_reason,
+        match_confidence=existing.match_confidence,
+    )
+
+
+async def _reject_candidate(
+    session: AsyncSession,
+    *,
+    candidate: CommerceDiscoveryCandidate,
+    workspace_id: uuid.UUID,
+    request: CommerceCandidateAcceptRequest,
+) -> CommerceCandidateAcceptResponse:
+    review = CommerceCandidateReview(
+        candidate_id=candidate.id,
+        workspace_id=workspace_id,
+        project_id=candidate.project_id,
+        status=request.status,
+        review_note=request.review_note,
+    )
+    session.add(review)
+    await session.commit()
+    return CommerceCandidateAcceptResponse(
+        review_id=review.id,
+        candidate_id=candidate.id,
+        status=review.status,
+        product_id=None,
+        competitor_product_id=None,
+        match_reason="",
+        match_confidence=0.0,
+    )
+
+
+async def _materialize_candidate(
+    session: AsyncSession,
+    *,
+    candidate: CommerceDiscoveryCandidate,
+    request: CommerceCandidateAcceptRequest,
+    selected: CommerceMatchDecision | None,
+) -> tuple[uuid.UUID | None, uuid.UUID | None]:
     if candidate.candidate_kind == COMMERCE_CANDIDATE_KIND_COMPETITOR:
         if selected is not None:
-            competitor_product_id = selected.target_id
-        else:
-            competitor_id = request.competitor_id or candidate.competitor_id
-            competitor = (
-                await session.scalar(
-                    select(Competitor).where(
-                        Competitor.id == competitor_id,
-                        Competitor.project_id == candidate.project_id,
-                    )
-                )
-                if competitor_id
-                else None
+            return None, selected.target_id
+        return None, await _new_competitor_product(
+            session, candidate=candidate, request=request
+        )
+    if selected is not None:
+        return selected.target_id, None
+    return await _new_own_product(session, candidate=candidate), None
+
+
+async def _new_competitor_product(
+    session: AsyncSession,
+    *,
+    candidate: CommerceDiscoveryCandidate,
+    request: CommerceCandidateAcceptRequest,
+) -> uuid.UUID:
+    competitor_id = request.competitor_id or candidate.competitor_id
+    competitor = (
+        await session.scalar(
+            select(Competitor).where(
+                Competitor.id == competitor_id,
+                Competitor.project_id == candidate.project_id,
             )
-            if competitor is None:
-                raise CommerceDiscoveryNotFoundError(
-                    "Competitor not found in this project"
-                )
-            competitor_product = CompetitorProduct(
-                project_id=candidate.project_id,
-                competitor_id=competitor.id,
-                name=str(identity.get("name", "")),
-                aliases=list(identity.get("aliases") or []),
-                variants=list(identity.get("variants") or []),
-                price=identity.get("price"),
-                currency=str(identity.get("currency", "")),
-                url=str(identity.get("url", "")),
-                attributes=dict(identity.get("attributes") or {}),
-                availability=str(identity.get("availability", "")),
-                extraction_fresh_at=_utcnow(),
-                source_candidate_id=candidate.id,
-                source_artifact_id=candidate.artifact_id,
-            )
-            session.add(competitor_product)
-            await session.flush()
-            competitor_product_id = competitor_product.id
-    else:
-        if selected is not None:
-            product_id = selected.target_id
-        else:
-            sku = str(identity.get("sku", "")) or (
-                f"{COMMERCE_DISCOVERED_SKU_PREFIX}{candidate.id.hex[:12]}"
-            )
-            own_product = Product(
-                project_id=candidate.project_id,
-                sku=sku,
-                name=str(identity.get("name", "")),
-                aliases=list(identity.get("aliases") or []),
-                variants=list(identity.get("variants") or []),
-                price=identity.get("price"),
-                currency=str(identity.get("currency", "")),
-                url=str(identity.get("url", "")),
-                attributes=dict(identity.get("attributes") or {}),
-                origin=PRODUCT_ORIGIN_DISCOVERED,
-                source_candidate_id=candidate.id,
-                source_artifact_id=candidate.artifact_id,
-            )
-            session.add(own_product)
-            await session.flush()
-            product_id = own_product.id
+        )
+        if competitor_id
+        else None
+    )
+    if competitor is None:
+        raise CommerceDiscoveryNotFoundError("Competitor not found in this project")
+    identity = dict(candidate.identity or {})
+    product = CompetitorProduct(
+        project_id=candidate.project_id,
+        competitor_id=competitor.id,
+        name=str(identity.get("name", "")),
+        aliases=list(identity.get("aliases") or []),
+        variants=list(identity.get("variants") or []),
+        price=identity.get("price"),
+        currency=str(identity.get("currency", "")),
+        url=str(identity.get("url", "")),
+        attributes=dict(identity.get("attributes") or {}),
+        availability=str(identity.get("availability", "")),
+        extraction_fresh_at=_utcnow(),
+        source_candidate_id=candidate.id,
+        source_artifact_id=candidate.artifact_id,
+    )
+    session.add(product)
+    await session.flush()
+    return product.id
+
+
+async def _new_own_product(
+    session: AsyncSession, *, candidate: CommerceDiscoveryCandidate
+) -> uuid.UUID:
+    identity = dict(candidate.identity or {})
+    sku = str(identity.get("sku", "")) or (
+        f"{COMMERCE_DISCOVERED_SKU_PREFIX}{candidate.id.hex[:12]}"
+    )
+    product = Product(
+        project_id=candidate.project_id,
+        sku=sku,
+        name=str(identity.get("name", "")),
+        aliases=list(identity.get("aliases") or []),
+        variants=list(identity.get("variants") or []),
+        price=identity.get("price"),
+        currency=str(identity.get("currency", "")),
+        url=str(identity.get("url", "")),
+        attributes=dict(identity.get("attributes") or {}),
+        origin=PRODUCT_ORIGIN_DISCOVERED,
+        source_candidate_id=candidate.id,
+        source_artifact_id=candidate.artifact_id,
+    )
+    session.add(product)
+    await session.flush()
+    return product.id
+
+
+async def _persist_candidate_acceptance(
+    session: AsyncSession,
+    *,
+    candidate: CommerceDiscoveryCandidate,
+    workspace_id: uuid.UUID,
+    request: CommerceCandidateAcceptRequest,
+    selected: CommerceMatchDecision | None,
+    product_id: uuid.UUID | None,
+    competitor_product_id: uuid.UUID | None,
+) -> CommerceCandidateReview:
     review = CommerceCandidateReview(
         candidate_id=candidate.id,
         workspace_id=workspace_id,
@@ -820,15 +931,7 @@ async def accept_candidate(
     )
     session.add(review)
     await session.commit()
-    return CommerceCandidateAcceptResponse(
-        review_id=review.id,
-        candidate_id=candidate.id,
-        status=review.status,
-        product_id=product_id,
-        competitor_product_id=competitor_product_id,
-        match_reason=review.match_reason,
-        match_confidence=review.match_confidence,
-    )
+    return review
 
 
 def _snapshot_metrics(snapshot: ProductMetricSnapshot | None) -> dict[str, Any]:
@@ -860,6 +963,58 @@ async def create_comparison_snapshot(
     competitor_id: uuid.UUID | None,
 ) -> CompetitorComparisonSnapshotResponse:
     await _project(session, workspace_id, project_id)
+    own, competitors, snapshots = await _comparison_inputs(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        competitor_id=competitor_id,
+    )
+    own_metrics, competitor_metrics = _comparison_metric_maps(snapshots)
+    rows = [
+        _comparison_row(
+            competitor_product,
+            own=own,
+            own_metrics=own_metrics,
+            competitor_metrics=competitor_metrics,
+        )
+        for competitor_product in competitors[
+            : commerce_intelligence_settings.comparison_max_entries
+        ]
+    ]
+    truncated = len(competitors) > len(rows)
+    comparison = {
+        "coverage": {
+            "own_total": len(own),
+            "competitor_total": len(competitors),
+            "matched": sum(1 for row in rows if row["own_product_id"]),
+            "unmatched": sum(1 for row in rows if not row["own_product_id"]),
+        },
+        "items": rows,
+    }
+    snapshot = CompetitorComparisonSnapshot(
+        workspace_id=workspace_id,
+        project_id=project_id,
+        competitor_id=competitor_id,
+        source_catalog_ids={
+            "products": [str(product.id) for product in own],
+            "competitor_products": [str(product.id) for product in competitors],
+        },
+        source_artifact_ids=_comparison_artifact_ids(own, competitors),
+        comparison=json.loads(_canonical(comparison)),
+        truncated=truncated,
+    )
+    session.add(snapshot)
+    await session.commit()
+    return _comparison_response(snapshot)
+
+
+async def _comparison_inputs(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    competitor_id: uuid.UUID | None,
+) -> tuple[list[Product], list[CompetitorProduct], list[ProductMetricSnapshot]]:
     own = list(
         (
             await session.scalars(
@@ -896,6 +1051,14 @@ async def create_comparison_snapshot(
             )
         ).all()
     )
+    return own, competitors, snapshots
+
+
+def _comparison_metric_maps(
+    snapshots: list[ProductMetricSnapshot],
+) -> tuple[
+    dict[uuid.UUID, ProductMetricSnapshot], dict[uuid.UUID, ProductMetricSnapshot]
+]:
     own_metrics = {
         item.product_id: item for item in snapshots if item.product_id is not None
     }
@@ -904,98 +1067,99 @@ async def create_comparison_snapshot(
         for item in snapshots
         if item.competitor_product_id is not None
     }
-    rows: list[dict[str, Any]] = []
-    for competitor_product in competitors[
-        : commerce_intelligence_settings.comparison_max_entries
-    ]:
-        match = match_candidate(
-            _competitor_entry(competitor_product),
-            [_product_entry(product) for product in own],
-        )
-        selected = match[0] if match else None
-        own_product = next(
-            (
-                product
-                for product in own
-                if selected and product.id == selected.target_id
-            ),
-            None,
-        )
-        rows.append(
-            {
-                "competitor_product_id": str(competitor_product.id),
-                "own_product_id": str(own_product.id) if own_product else None,
-                "match": {
-                    "confidence": selected.confidence if selected else 0.0,
-                    "reasons": list(selected.reasons) if selected else [],
-                    "review_required": selected.review_required if selected else False,
-                },
-                "competitor": _competitor_entry(competitor_product),
-                "own": _product_entry(own_product) if own_product else None,
-                "differences": {
-                    "price": [
-                        float(own_product.price)
-                        if own_product and own_product.price is not None
-                        else None,
-                        float(competitor_product.price)
-                        if competitor_product.price is not None
-                        else None,
-                    ],
-                    "availability": [
-                        str((own_product.attributes or {}).get("availability", ""))
-                        if own_product
-                        else "",
-                        competitor_product.availability,
-                    ],
-                    "variants": [
-                        list(own_product.variants or []) if own_product else [],
-                        list(competitor_product.variants or []),
-                    ],
-                    "identifiers": [
-                        dict(own_product.attributes or {}) if own_product else {},
-                        dict(competitor_product.attributes or {}),
-                    ],
-                    "attributes": [
-                        dict(own_product.attributes or {}) if own_product else {},
-                        dict(competitor_product.attributes or {}),
-                    ],
-                    "schema_readiness": product_completeness(own_product)
-                    if own_product
-                    else None,
-                    "freshness": [
-                        own_product.updated_at.isoformat() if own_product else None,
-                        competitor_product.extraction_fresh_at.isoformat()
-                        if competitor_product.extraction_fresh_at
-                        else None,
-                    ],
-                },
-                "ai_conversation": {
-                    "own": _snapshot_metrics(
-                        own_metrics.get(own_product.id) if own_product else None
-                    ),
-                    "competitor": _snapshot_metrics(
-                        competitor_metrics.get(competitor_product.id)
-                    ),
-                },
-                "evidence_kind": {
-                    "own": COMMERCE_EVIDENCE_LABEL_CATALOG,
-                    "competitor": COMMERCE_EVIDENCE_LABEL_DISCOVERY
-                    if competitor_product.source_artifact_id
-                    else COMMERCE_EVIDENCE_LABEL_CATALOG,
-                },
-            }
-        )
-    truncated = len(competitors) > len(rows)
-    comparison = {
-        "coverage": {
-            "own_total": len(own),
-            "competitor_total": len(competitors),
-            "matched": sum(1 for row in rows if row["own_product_id"]),
-            "unmatched": sum(1 for row in rows if not row["own_product_id"]),
-        },
-        "items": rows,
+    return own_metrics, competitor_metrics
+
+
+def _matched_own_product(
+    competitor_product: CompetitorProduct, own: list[Product]
+) -> tuple[Product | None, Any | None]:
+    matches = match_candidate(
+        _competitor_entry(competitor_product),
+        [_product_entry(product) for product in own],
+    )
+    selected = matches[0] if matches else None
+    product = next(
+        (item for item in own if selected and item.id == selected.target_id), None
+    )
+    return product, selected
+
+
+def _comparison_differences(
+    own_product: Product | None, competitor_product: CompetitorProduct
+) -> dict[str, Any]:
+    own_attributes = dict(own_product.attributes or {}) if own_product else {}
+    competitor_attributes = dict(competitor_product.attributes or {})
+    return {
+        "price": [
+            float(own_product.price)
+            if own_product and own_product.price is not None
+            else None,
+            float(competitor_product.price)
+            if competitor_product.price is not None
+            else None,
+        ],
+        "availability": [
+            str(own_attributes.get("availability", "")),
+            competitor_product.availability,
+        ],
+        "variants": [
+            list(own_product.variants or []) if own_product else [],
+            list(competitor_product.variants or []),
+        ],
+        "identifiers": [own_attributes, competitor_attributes],
+        "attributes": [own_attributes, competitor_attributes],
+        "schema_readiness": product_completeness(own_product) if own_product else None,
+        "freshness": [
+            own_product.updated_at.isoformat() if own_product else None,
+            competitor_product.extraction_fresh_at.isoformat()
+            if competitor_product.extraction_fresh_at
+            else None,
+        ],
     }
-    source_artifact_ids = [
+
+
+def _comparison_row(
+    competitor_product: CompetitorProduct,
+    *,
+    own: list[Product],
+    own_metrics: dict[uuid.UUID, ProductMetricSnapshot],
+    competitor_metrics: dict[uuid.UUID, ProductMetricSnapshot],
+) -> dict[str, Any]:
+    own_product, selected = _matched_own_product(competitor_product, own)
+    return {
+        "competitor_product_id": str(competitor_product.id),
+        "own_product_id": str(own_product.id) if own_product else None,
+        "match": {
+            "confidence": selected.confidence if selected else 0.0,
+            "reasons": list(selected.reasons) if selected else [],
+            "review_required": selected.review_required if selected else False,
+        },
+        "competitor": _competitor_entry(competitor_product),
+        "own": _product_entry(own_product) if own_product else None,
+        "differences": _comparison_differences(own_product, competitor_product),
+        "ai_conversation": {
+            "own": _snapshot_metrics(
+                own_metrics.get(own_product.id) if own_product else None
+            ),
+            "competitor": _snapshot_metrics(
+                competitor_metrics.get(competitor_product.id)
+            ),
+        },
+        "evidence_kind": {
+            "own": COMMERCE_EVIDENCE_LABEL_CATALOG,
+            "competitor": (
+                COMMERCE_EVIDENCE_LABEL_DISCOVERY
+                if competitor_product.source_artifact_id
+                else COMMERCE_EVIDENCE_LABEL_CATALOG
+            ),
+        },
+    }
+
+
+def _comparison_artifact_ids(
+    own: list[Product], competitors: list[CompetitorProduct]
+) -> list[str]:
+    return [
         str(value)
         for value in {
             *(product.source_artifact_id for product in own),
@@ -1003,24 +1167,6 @@ async def create_comparison_snapshot(
         }
         if value is not None
     ]
-    snapshot = CompetitorComparisonSnapshot(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        competitor_id=competitor_id,
-        source_catalog_ids={
-            "products": [str(product.id) for product in own],
-            "competitor_products": [str(product.id) for product in competitors],
-        },
-        source_artifact_ids=source_artifact_ids,
-        # JSONB must be serializable independently of SQLAlchemy's UUID
-        # bind processor. Keep UUIDs in the human-visible projection as
-        # strings; the source columns retain typed UUID provenance.
-        comparison=json.loads(_canonical(comparison)),
-        truncated=truncated,
-    )
-    session.add(snapshot)
-    await session.commit()
-    return _comparison_response(snapshot)
 
 
 def _comparison_response(
