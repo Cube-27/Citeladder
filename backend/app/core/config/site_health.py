@@ -686,7 +686,7 @@ EXTRACTOR_VERSION: Final = "sh-extractor-2"
 ANALYZER_VERSION: Final = "sh-analyzer-2"
 RULE_CATALOG_VERSION: Final = "sh-rules-2"
 SCORING_VERSION: Final = "sh-scoring-2"
-CLASSIFIER_VERSION: Final = "sh-classifier-2"
+CLASSIFIER_VERSION: Final = "sh-classifier-1"
 
 # =========================================================================
 # Page-type classification (v2 P1 — spec §5.1)

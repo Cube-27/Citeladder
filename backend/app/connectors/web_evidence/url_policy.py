@@ -159,7 +159,9 @@ def page_value_kind(url: str) -> str:
     # The priority catalog is config-owned; keeping matching terms here would
     # duplicate policy, so derive from its keys in descending value order.
     for kind in sorted(
-        URL_VALUE_PRIORITIES, key=URL_VALUE_PRIORITIES.get, reverse=True
+        URL_VALUE_PRIORITIES,
+        key=lambda kind: URL_VALUE_PRIORITIES[kind],
+        reverse=True,
     ):
         if kind != "root" and kind.replace("_", "-") in path:
             return kind

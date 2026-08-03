@@ -232,9 +232,14 @@ def _extract_product(
             )
         except (etree.ParserError, ValueError):
             return None
-        for script in root.xpath('//script[@type="application/ld+json"]')[
+        schema_scripts = root.xpath('//script[@type="application/ld+json"]')
+        if not isinstance(schema_scripts, list):
+            return None
+        for script in schema_scripts[
             : commerce_intelligence_settings.discovery_max_schema_blocks
         ]:
+            if not isinstance(script, etree._Element):
+                continue
             raw = script.text or ""
             try:
                 documents.append(json.loads(raw))
@@ -323,20 +328,19 @@ def _extract_product(
         "attributes": attributes,
         "availability": availability,
     }
+    schema_types: set[str] = set()
+    for node in nodes:
+        raw_type = node.get("@type")
+        raw_types = raw_type if isinstance(raw_type, list) else [raw_type]
+        for raw_type_value in raw_types:
+            schema_type = _text(raw_type_value)
+            if schema_type:
+                schema_types.add(schema_type)
     extracted = {
         "identity": identity,
-        "schema_types": sorted(
-            {
-                value
-                for node in nodes
-                for value in (
-                    node.get("@type")
-                    if isinstance(node.get("@type"), list)
-                    else [node.get("@type")]
-                )
-                if _text(value)
-            }
-        )[: commerce_intelligence_settings.discovery_max_schema_nodes],
+        "schema_types": sorted(schema_types)[
+            : commerce_intelligence_settings.discovery_max_schema_nodes
+        ],
         "content_type": result.content_type,
         "status_code": result.status_code,
     }

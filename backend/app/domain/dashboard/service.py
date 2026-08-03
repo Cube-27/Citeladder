@@ -52,7 +52,7 @@ from app.models.traffic import TrafficSnapshot
 
 
 def _bounded_rate(value: object) -> float | None:
-    if value is None:
+    if not isinstance(value, (int, float, str)):
         return None
     try:
         return min(1.0, max(0.0, float(value)))
@@ -718,8 +718,8 @@ async def get_ai_presence(
         ).all()
     )
     products_by_audit: dict[uuid.UUID, list[ProductMetricSnapshot]] = {}
-    for row in product_rows:
-        products_by_audit.setdefault(row.audit_id, []).append(row)
+    for product_row in product_rows:
+        products_by_audit.setdefault(product_row.audit_id, []).append(product_row)
     # A v1 + v2 product aggregate can coexist. The current projection chooses
     # a single version per frozen entry before formula evaluation.
     from app.domain.products.visibility import select_current_snapshots
@@ -744,9 +744,11 @@ async def get_ai_presence(
         ).all()
     )
     opportunities_by_audit: dict[uuid.UUID, list[OpportunitySnapshot]] = {}
-    for row in opportunity_rows:
-        if row.audit_id is not None:
-            opportunities_by_audit.setdefault(row.audit_id, []).append(row)
+    for opportunity_row in opportunity_rows:
+        if opportunity_row.audit_id is not None:
+            opportunities_by_audit.setdefault(opportunity_row.audit_id, []).append(
+                opportunity_row
+            )
     points = [
         build_ai_presence_point(
             metric=metric,

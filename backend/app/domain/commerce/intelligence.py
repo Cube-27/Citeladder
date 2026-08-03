@@ -108,7 +108,9 @@ def _candidate_identity(row: CommerceCandidateInput) -> dict[str, Any]:
 
 def _csv_candidate(raw: dict[str | None, str | None]) -> CommerceCandidateInput:
     """Parse the two structured CSV columns without accepting arbitrary JSON."""
-    values = {str(key): value for key, value in raw.items() if key is not None}
+    values: dict[str, Any] = {
+        str(key): value for key, value in raw.items() if key is not None
+    }
     for key, fallback in (("aliases", []), ("variants", []), ("attributes", {})):
         value = values.get(key)
         if value not in (None, ""):
@@ -417,7 +419,7 @@ async def _candidate_matches(
     session: AsyncSession, candidate: CommerceDiscoveryCandidate
 ) -> list[CommerceMatchDecision]:
     if candidate.candidate_kind == COMMERCE_CANDIDATE_KIND_COMPETITOR:
-        targets = list(
+        competitor_targets = list(
             (
                 await session.scalars(
                     select(CompetitorProduct)
@@ -430,9 +432,9 @@ async def _candidate_matches(
             ).all()
         )
         target_kind = "competitor_product"
-        entries = [_competitor_entry(item) for item in targets]
+        entries = [_competitor_entry(item) for item in competitor_targets]
     else:
-        targets = list(
+        product_targets = list(
             (
                 await session.scalars(
                     select(Product)
@@ -445,7 +447,7 @@ async def _candidate_matches(
             ).all()
         )
         target_kind = "product"
-        entries = [_product_entry(item) for item in targets]
+        entries = [_product_entry(item) for item in product_targets]
     return [
         CommerceMatchDecision(
             target_id=result.target_id,
@@ -757,7 +759,7 @@ async def accept_candidate(
                 raise CommerceDiscoveryNotFoundError(
                     "Competitor not found in this project"
                 )
-            product = CompetitorProduct(
+            competitor_product = CompetitorProduct(
                 project_id=candidate.project_id,
                 competitor_id=competitor.id,
                 name=str(identity.get("name", "")),
@@ -772,9 +774,9 @@ async def accept_candidate(
                 source_candidate_id=candidate.id,
                 source_artifact_id=candidate.artifact_id,
             )
-            session.add(product)
+            session.add(competitor_product)
             await session.flush()
-            competitor_product_id = product.id
+            competitor_product_id = competitor_product.id
     else:
         if selected is not None:
             product_id = selected.target_id
@@ -782,7 +784,7 @@ async def accept_candidate(
             sku = str(identity.get("sku", "")) or (
                 f"{COMMERCE_DISCOVERED_SKU_PREFIX}{candidate.id.hex[:12]}"
             )
-            product = Product(
+            own_product = Product(
                 project_id=candidate.project_id,
                 sku=sku,
                 name=str(identity.get("name", "")),
@@ -796,9 +798,9 @@ async def accept_candidate(
                 source_candidate_id=candidate.id,
                 source_artifact_id=candidate.artifact_id,
             )
-            session.add(product)
+            session.add(own_product)
             await session.flush()
-            product_id = product.id
+            product_id = own_product.id
     review = CommerceCandidateReview(
         candidate_id=candidate.id,
         workspace_id=workspace_id,
