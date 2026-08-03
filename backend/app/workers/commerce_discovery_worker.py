@@ -277,7 +277,7 @@ def _bounded_schema_nodes(documents: list[Any]) -> list[dict[str, Any]]:
         nodes.extend(_schema_nodes(document))
         if len(nodes) >= commerce_intelligence_settings.discovery_max_schema_nodes:
             break
-    return nodes[: commerce_intelligence_settings.discovery_max_schema_nodes]
+    return nodes
 
 
 def _product_and_offer(
