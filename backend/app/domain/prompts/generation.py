@@ -521,7 +521,6 @@ async def _insert_prompts_returning(
     prompt_set: PromptSet,
     topic: Topic,
     prompts: list[SuggestedPrompt],
-    brand_context: dict[str, Any],
     evidence_base: dict[str, Any],
     cohort: str,
 ) -> tuple[list[uuid.UUID], int]:
@@ -822,7 +821,6 @@ async def generate_prompts(
                 prompt_set=prompt_set,
                 topic=topic,
                 prompts=suggestion.prompts,
-                brand_context=brand_context,
                 evidence_base=evidence_base,
                 cohort=payload.cohort,
             )

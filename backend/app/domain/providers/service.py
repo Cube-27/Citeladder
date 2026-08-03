@@ -29,6 +29,7 @@ from app.core.config.provider_catalog import (
     REASON_VERIFICATION_REQUIRED,
     TEST_STATUS_FAILED,
     TEST_STATUS_OK,
+    MeasurementRoute,
     ProviderCatalogEntry,
     configured_endpoint,
     default_probe_engine,
@@ -587,7 +588,8 @@ async def get_connection_states(
     providers: list[ProviderConnectionStateResponse] = []
     for entry in PUBLIC_PROVIDER_CATALOG:
         routes = public_provider_routes(entry.key)
-        connection = by_transport.get(routes[0].transport_provider) if routes else None
+        transport = _catalog_transport(entry.key, routes)
+        connection = by_transport.get(transport) if transport is not None else None
         probe = latest_probes.get(connection.id) if connection is not None else None
         providers.append(
             derive_connection_state(entry, connection, probe, at=derived_at)
@@ -595,3 +597,14 @@ async def get_connection_states(
     return ProviderConnectionStatesResponse(
         workspace_id=workspace_id, providers=providers
     )
+
+
+def _catalog_transport(
+    provider_key: str, routes: tuple[MeasurementRoute, ...]
+) -> str | None:
+    transports = {route.transport_provider for route in routes}
+    if len(transports) > 1:
+        raise RuntimeError(
+            f"provider {provider_key!r} has routes across multiple transports"
+        )
+    return next(iter(transports), None)

@@ -55,6 +55,9 @@ BRAND_EVIDENCE_MIN_WORDS: Final = 40
 # to cover one onboarding step, short enough that re-running later re-reads a
 # site that has since changed.
 BRAND_EVIDENCE_CACHE_SECONDS: Final = 300.0
+# Empty successful crawls are cached only long enough to collapse concurrent
+# callers. By the time a person can click Retry, the site is eligible again.
+BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS: Final = 1.0
 BRAND_EVIDENCE_CACHE_MAX_ENTRIES: Final = 256
 
 BRAND_EVIDENCE_CONTENT_TYPES: Final[frozenset[str]] = frozenset(

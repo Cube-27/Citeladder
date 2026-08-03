@@ -13,6 +13,8 @@ the client's word, and free text is still gated exactly as before.
 
 from __future__ import annotations
 
+import uuid
+
 import httpx
 import pytest
 
@@ -36,7 +38,9 @@ GENERATED = [
 OFF_DOMAIN = "What are the best hiking boots for alpine trekking in winter?"
 
 
-async def _project_and_set(client: httpx.AsyncClient, email: str) -> str:
+async def _project_and_set(
+    client: httpx.AsyncClient, email: str
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
     resp = await client.post(
         "/api/v1/auth/register", json={"email": email, "password": "password123"}
     )
@@ -59,14 +63,32 @@ async def _project_and_set(client: httpx.AsyncClient, email: str) -> str:
             json={"project_id": project["id"], "name": "Starting prompts"},
         )
     ).json()
-    return prompt_set["id"]
+    return (
+        uuid.UUID(project["workspace_id"]),
+        uuid.UUID(project["id"]),
+        uuid.UUID(prompt_set["id"]),
+    )
+
+
+def _receipt(
+    scope: tuple[uuid.UUID, uuid.UUID, uuid.UUID], text: str, cohort: str = "core"
+) -> str:
+    workspace_id, project_id, prompt_set_id = scope
+    return issue_prompt_receipt(
+        workspace_id=workspace_id,
+        project_id=project_id,
+        prompt_set_id=prompt_set_id,
+        cohort=cohort,
+        text=text,
+    )
 
 
 @pytest.mark.asyncio
 async def test_generated_prompts_bypass_binding_with_a_valid_receipt(
     client: httpx.AsyncClient,
 ) -> None:
-    set_id = await _project_and_set(client, "receipt-ok@example.com")
+    scope = await _project_and_set(client, "receipt-ok@example.com")
+    set_id = scope[2]
 
     for text, theme in GENERATED:
         resp = await client.post(
@@ -78,7 +100,7 @@ async def test_generated_prompts_bypass_binding_with_a_valid_receipt(
                 "cohort": "core",
                 "enabled": True,
                 "origin": "generated",
-                "generation_receipt": issue_prompt_receipt(text),
+                "generation_receipt": _receipt(scope, text),
             },
         )
         assert resp.status_code == 201, resp.text
@@ -90,7 +112,7 @@ async def test_forged_receipt_cannot_bypass_binding(
     client: httpx.AsyncClient,
 ) -> None:
     """The exemption is proof-gated: claiming ``generated`` is not enough."""
-    set_id = await _project_and_set(client, "receipt-forged@example.com")
+    set_id = (await _project_and_set(client, "receipt-forged@example.com"))[2]
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{set_id}/prompts",
@@ -114,7 +136,8 @@ async def test_receipt_does_not_transfer_to_different_text(
     client: httpx.AsyncClient,
 ) -> None:
     """A real receipt for one prompt cannot launder a different one."""
-    set_id = await _project_and_set(client, "receipt-swap@example.com")
+    scope = await _project_and_set(client, "receipt-swap@example.com")
+    set_id = scope[2]
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{set_id}/prompts",
@@ -126,7 +149,7 @@ async def test_receipt_does_not_transfer_to_different_text(
             "enabled": True,
             "origin": "generated",
             # Valid receipt, but issued for a DIFFERENT prompt.
-            "generation_receipt": issue_prompt_receipt(GENERATED[0][0]),
+            "generation_receipt": _receipt(scope, GENERATED[0][0]),
         },
     )
 
@@ -144,7 +167,7 @@ async def test_client_theme_cannot_widen_the_binding_vocabulary(
     back as the "category" and pass the gate unconditionally. Only a PERSISTED
     topic of the prompt's own project may widen the vocabulary.
     """
-    set_id = await _project_and_set(client, "receipt-theme@example.com")
+    set_id = (await _project_and_set(client, "receipt-theme@example.com"))[2]
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{set_id}/prompts",
@@ -165,7 +188,7 @@ async def test_client_theme_cannot_widen_the_binding_vocabulary(
 @pytest.mark.asyncio
 async def test_manual_free_text_is_still_gated(client: httpx.AsyncClient) -> None:
     """The protection the gate was built for is unchanged."""
-    set_id = await _project_and_set(client, "receipt-manual@example.com")
+    set_id = (await _project_and_set(client, "receipt-manual@example.com"))[2]
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{set_id}/prompts",

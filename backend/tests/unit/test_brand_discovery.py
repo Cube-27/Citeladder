@@ -1,10 +1,17 @@
 """Unit coverage for the greenfield brand-discovery boundary."""
 
+import uuid
+from types import SimpleNamespace
+
 import pytest
 from pydantic import ValidationError
 
 from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
 from app.connectors.web_evidence.firecrawl import FirecrawlPage
+from app.core.config.brand_discovery import (
+    BrandDiscoverySettings,
+    brand_discovery_settings,
+)
 from app.domain.projects import discovery as discovery_domain
 from app.domain.projects.brand_evidence import BrandEvidence
 from app.domain.projects.discovery import (
@@ -12,6 +19,7 @@ from app.domain.projects.discovery import (
     _candidate_name,
     _collect_owned_site,
     _confirmed_competitors,
+    _discovery_topic_rows,
     _normalized_url,
     _validated_prompt_suggestions,
     discovery_catalog,
@@ -50,8 +58,9 @@ async def test_owned_site_collection_crawls_the_user_supplied_website(
 ) -> None:
     crawled_urls: list[str] = []
 
-    async def approve(url: str) -> None:
+    async def approve(url: str) -> SimpleNamespace:
         crawled_urls.append(f"approved:{url}")
+        return SimpleNamespace(url=url)
 
     async def collect(url: str) -> BrandEvidence:
         crawled_urls.append(f"secure:{url}")
@@ -73,6 +82,7 @@ async def test_owned_site_collection_crawls_the_user_supplied_website(
     monkeypatch.setattr(discovery_domain, "_approve_vendor_url", approve)
     monkeypatch.setattr(discovery_domain, "collect_brand_evidence", collect)
     monkeypatch.setattr(discovery_domain, "rendered_scrape", render)
+    monkeypatch.setattr(brand_discovery_settings, "minimum_evidence_words", 5)
     row = BrandDiscovery(
         input_data={"brand_name": "Acme", "website_url": "www.acme.example/products"}
     )
@@ -88,6 +98,42 @@ async def test_owned_site_collection_crawls_the_user_supplied_website(
     ]
     assert "First-party product evidence" in result.captured_text
     assert "Rendered product evidence" in result.captured_text
+    assert result.gaps == []
+
+
+@pytest.mark.asyncio
+async def test_owned_site_collection_marks_evidence_below_configured_word_floor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def no_op(url: str) -> SimpleNamespace:
+        return SimpleNamespace(url=url)
+
+    async def collect(url: str) -> BrandEvidence:
+        return BrandEvidence(
+            pages=(
+                BrandEvidencePage(
+                    url=url,
+                    title="Acme",
+                    meta_description="",
+                    text="Too little evidence",
+                ),
+            )
+        )
+
+    async def render(url: str) -> FirecrawlPage:
+        return FirecrawlPage(url=url, title="Acme", text="")
+
+    monkeypatch.setattr(discovery_domain, "_approve_vendor_url", no_op)
+    monkeypatch.setattr(discovery_domain, "collect_brand_evidence", collect)
+    monkeypatch.setattr(discovery_domain, "rendered_scrape", render)
+    monkeypatch.setattr(brand_discovery_settings, "minimum_evidence_words", 4)
+    row = BrandDiscovery(
+        input_data={"brand_name": "Acme", "website_url": "acme.example"}
+    )
+
+    result = await _collect_owned_site(row, row.input_data)
+
+    assert result.gaps == ["official_site_evidence"]
 
 
 @pytest.mark.parametrize(
@@ -169,6 +215,72 @@ def test_discovery_prompt_validation_enforces_core_and_comparison_identity() -> 
     ]
 
 
+def test_discovery_prompt_limit_reserves_comparison_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    synthesis = DiscoverySynthesis.model_validate(
+        {
+            "profile": {},
+            "topics": ["Analytics"],
+            "prompts": [
+                {
+                    "text": f"Which analytics platform supports capability {index}?",
+                    "theme": "Analytics",
+                    "intent": "discovery",
+                    "cohort": "core",
+                }
+                for index in range(3)
+            ]
+            + [
+                {
+                    "text": "How does Acme compare with Globex for analytics?",
+                    "theme": "Analytics",
+                    "intent": "comparison",
+                    "cohort": "comparison",
+                }
+            ],
+        }
+    )
+    monkeypatch.setattr(brand_discovery_settings, "synthesis_prompt_count", 2)
+
+    prompts = _validated_prompt_suggestions(
+        synthesis,
+        brand_name="Acme",
+        competitors=[{"name": "Globex", "aliases": [], "domains": ["globex.com"]}],
+    )
+
+    assert [prompt["cohort"] for prompt in prompts] == ["core", "comparison"]
+
+
+def test_discovery_topics_are_deduplicated_case_insensitively() -> None:
+    row = BrandDiscovery(topics=["Analytics", "analytics", "Commerce"])
+
+    topics = _discovery_topic_rows(row, uuid.uuid4())
+
+    assert [topic.name for topic in topics] == ["Analytics", "Commerce"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("firecrawl_max_attempts", 0),
+        ("synthesis_max_attempts", 0),
+        ("firecrawl_timeout_seconds", 0),
+        ("synthesis_prompt_count", 0),
+    ],
+)
+def test_brand_discovery_numeric_settings_reject_non_positive_values(
+    field: str, value: int
+) -> None:
+    with pytest.raises(ValidationError):
+        BrandDiscoverySettings.model_validate({field: value})
+
+
+def test_discovery_profile_rejects_unsupported_price_tier() -> None:
+    with pytest.raises(ValidationError):
+        DiscoveryProfile(price_tier="affordable")
+
+
 def _confirmation(competitor: CompetitorInput) -> BrandDiscoveryConfirm:
     return BrandDiscoveryConfirm(
         profile=DiscoveryProfile(
@@ -188,15 +300,21 @@ def _confirmation(competitor: CompetitorInput) -> BrandDiscoveryConfirm:
 
 
 def test_confirmed_competitors_reject_brand_identity_and_owned_domain() -> None:
+    tracked_brand = _confirmation(
+        CompetitorInput(name="Acme", domains=["other.example"])
+    )
     with pytest.raises(BrandDiscoveryError, match="tracked brand"):
         _confirmed_competitors(
-            _confirmation(CompetitorInput(name="Acme", domains=["other.example"])),
+            tracked_brand,
             brand_name="Acme",
             owned_domains=["acme.example"],
         )
+    owned_domain = _confirmation(
+        CompetitorInput(name="Globex", domains=["acme.example"])
+    )
     with pytest.raises(BrandDiscoveryError, match="owned domain"):
         _confirmed_competitors(
-            _confirmation(CompetitorInput(name="Globex", domains=["acme.example"])),
+            owned_domain,
             brand_name="Acme",
             owned_domains=["acme.example"],
         )

@@ -41,6 +41,7 @@ describe('deriveDomain', () => {
   it('returns empty for input that cannot parse', () => {
     expect(deriveDomain('')).toBe('');
     expect(deriveDomain('   ')).toBe('');
+    expect(deriveDomain('ftp://acme.com')).toBe('');
   });
 });
 
@@ -54,6 +55,15 @@ describe('brandStepSchema', () => {
 
   it('rejects a website with no dot', () => {
     expect(brandStepSchema.safeParse({ ...brand, website_url: 'acme' }).success).toBe(false);
+  });
+
+  it('rejects non-HTTP website schemes', () => {
+    expect(brandStepSchema.safeParse({ ...brand, website_url: 'ftp://acme.com' }).success).toBe(
+      false,
+    );
+    expect(brandStepSchema.safeParse({ ...brand, website_url: 'file://acme.com' }).success).toBe(
+      false,
+    );
   });
 
   it('requires a brand name', () => {

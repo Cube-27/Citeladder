@@ -334,7 +334,6 @@ def _build_call_request(
         system_instruction=context.system_instruction,
         transport_model=context.transport_model,
         logical_engine=context.logical_engine,
-        transport_provider=context.transport_provider,
         measurement_mode=str(context.configuration.get("measurement_mode") or ""),
         policy=context.policy,
     )
@@ -458,7 +457,6 @@ def _build_request(
     system_instruction: str,
     transport_model: str,
     logical_engine: str,
-    transport_provider: str,
     measurement_mode: str,
     policy: MeasurementModePolicy,
 ) -> AnswerEngineRequest:

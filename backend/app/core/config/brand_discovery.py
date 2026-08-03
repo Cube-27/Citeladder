@@ -92,10 +92,13 @@ DISCOVERY_COMPETITOR_SYSTEM_PROMPT: Final = (
 class BrandDiscoverySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="BRAND_DISCOVERY_", extra="ignore")
 
-    lease_seconds: int = 120
-    poll_seconds: float = 1.0
-    maximum_attempts: int = 5
-    minimum_evidence_words: int = 80
+    lease_seconds: int = Field(default=120, ge=1)
+    poll_seconds: float = Field(default=1.0, gt=0)
+    reaper_interval_seconds: float = Field(default=30.0, gt=0)
+    reaper_batch_size: int = Field(default=100, ge=1)
+    failure_backoff_max_seconds: float = Field(default=30.0, gt=0)
+    maximum_attempts: int = Field(default=5, ge=1)
+    minimum_evidence_words: int = Field(default=80, ge=1)
     firecrawl_api_url: str = "https://api.firecrawl.dev/v2"
     firecrawl_api_key: SecretStr | None = Field(
         default=None,
@@ -105,17 +108,17 @@ class BrandDiscoverySettings(BaseSettings):
             "firecrawl_api_key",
         ),
     )
-    firecrawl_timeout_seconds: float = 45.0
-    firecrawl_max_attempts: int = 3
-    firecrawl_retry_backoff_seconds: float = 1.0
-    firecrawl_retry_after_max_seconds: float = 60.0
-    firecrawl_search_limit: int = 8
-    maximum_competitors: int = 8
-    target_competitors: int = 6
-    synthesis_evidence_max_chars: int = 24_000
-    synthesis_prompt_count: int = 12
-    synthesis_topic_count: int = 10
-    synthesis_max_attempts: int = 2
+    firecrawl_timeout_seconds: float = Field(default=45.0, gt=0)
+    firecrawl_max_attempts: int = Field(default=3, ge=1)
+    firecrawl_retry_backoff_seconds: float = Field(default=1.0, ge=0)
+    firecrawl_retry_after_max_seconds: float = Field(default=60.0, gt=0)
+    firecrawl_search_limit: int = Field(default=8, ge=1)
+    maximum_competitors: int = Field(default=8, ge=1)
+    target_competitors: int = Field(default=6, ge=1)
+    synthesis_evidence_max_chars: int = Field(default=24_000, ge=1)
+    synthesis_prompt_count: int = Field(default=12, ge=1)
+    synthesis_topic_count: int = Field(default=10, ge=1)
+    synthesis_max_attempts: int = Field(default=2, ge=1)
 
 
 brand_discovery_settings = BrandDiscoverySettings()

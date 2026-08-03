@@ -171,7 +171,7 @@ async def create_audit_endpoint(
     return AuditResponse.model_validate(audit)
 
 
-@router.post("/estimate", response_model=AuditEstimateResponse)
+@router.post("/estimate")
 async def estimate_audit_endpoint(
     payload: AuditEstimateRequest, ctx: _WorkspaceDep, session: _SessionDep
 ) -> AuditEstimateResponse:
@@ -210,7 +210,7 @@ async def get_audit_endpoint(
     return AuditResponse.model_validate(audit)
 
 
-@router.get("/{audit_id}/performance", response_model=AuditPerformanceResponse)
+@router.get("/{audit_id}/performance")
 async def audit_performance_endpoint(
     audit_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> AuditPerformanceResponse:

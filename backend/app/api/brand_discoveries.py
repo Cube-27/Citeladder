@@ -31,14 +31,13 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-@router.get("/brand-discovery-catalog", response_model=BrandDiscoveryCatalogResponse)
+@router.get("/brand-discovery-catalog")
 async def get_brand_discovery_catalog() -> BrandDiscoveryCatalogResponse:
     return BrandDiscoveryCatalogResponse(**discovery_catalog())
 
 
 @router.post(
     "/brand-discoveries",
-    response_model=BrandDiscoveryResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def create_brand_discovery(
@@ -59,7 +58,7 @@ async def create_brand_discovery(
     return BrandDiscoveryResponse.model_validate(row)
 
 
-@router.get("/brand-discoveries/{discovery_id}", response_model=BrandDiscoveryResponse)
+@router.get("/brand-discoveries/{discovery_id}")
 async def get_brand_discovery(
     discovery_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> BrandDiscoveryResponse:
@@ -74,7 +73,6 @@ async def get_brand_discovery(
 
 @router.post(
     "/brand-discoveries/{discovery_id}/confirm",
-    response_model=BrandDiscoveryResponse,
 )
 async def confirm_brand_discovery(
     discovery_id: uuid.UUID,
@@ -100,7 +98,6 @@ async def confirm_brand_discovery(
 
 @router.post(
     "/brand-discoveries/{discovery_id}/create-project",
-    response_model=BrandDiscoveryProjectResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_discovered_project(

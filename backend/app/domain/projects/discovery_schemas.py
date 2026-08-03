@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,6 +13,7 @@ from app.core.config.brand_discovery import (
     DISCOVERY_CONFIRM_MAX_DOMAINS,
     DISCOVERY_CONFIRM_MAX_TOPICS,
     DISCOVERY_CONFIRM_TOPIC_MAX_CHARS,
+    PRICE_TIERS,
 )
 from app.domain.projects.schemas import CompetitorInput
 
@@ -22,6 +23,8 @@ ConfirmedDomain = Annotated[
 ConfirmedTopic = Annotated[
     str, Field(min_length=1, max_length=DISCOVERY_CONFIRM_TOPIC_MAX_CHARS)
 ]
+PriceTier = Literal["budget", "mid_market", "premium", "luxury", "unknown"]
+assert set(get_args(PriceTier)) == set(PRICE_TIERS)
 
 
 class BrandDiscoveryCreate(BaseModel):
@@ -47,7 +50,7 @@ class DiscoveryProfile(BaseModel):
     target_audience: str = ""
     industry: str = ""
     business_type: Literal["b2b", "b2c", "both"] = "both"
-    price_tier: str = "unknown"
+    price_tier: PriceTier = "unknown"
 
 
 class DiscoveryPromptSuggestion(BaseModel):

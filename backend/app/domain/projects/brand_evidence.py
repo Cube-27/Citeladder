@@ -24,6 +24,7 @@ from app.core.config.brand_evidence import (
     BRAND_EVIDENCE_CACHE_SECONDS,
     BRAND_EVIDENCE_FALLBACK_PATHS,
     BRAND_EVIDENCE_MIN_WORDS,
+    BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS,
     BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS,
     BRAND_EVIDENCE_USER_AGENT,
     BRAND_EVIDENCE_VERSION,
@@ -134,7 +135,7 @@ def _cache_get(homepage: str) -> BrandEvidence | None:
     return evidence
 
 
-def _cache_put(homepage: str, evidence: BrandEvidence) -> None:
+def _cache_put(homepage: str, evidence: BrandEvidence, *, ttl_seconds: float) -> None:
     now = asyncio.get_running_loop().time()
     # Drop expired entries first, then bound the map so a long-lived process
     # crawling many brands cannot grow it without limit.
@@ -143,13 +144,17 @@ def _cache_put(homepage: str, evidence: BrandEvidence) -> None:
             _cache.pop(key, None)
     while len(_cache) >= BRAND_EVIDENCE_CACHE_MAX_ENTRIES:
         _cache.pop(next(iter(_cache)), None)
-    _cache[homepage] = (now + BRAND_EVIDENCE_CACHE_SECONDS, evidence)
+    _cache[homepage] = (now + ttl_seconds, evidence)
 
 
-def _cache_positive_result(homepage: str, evidence: BrandEvidence) -> None:
-    """Cache useful content while leaving transient empty results retryable."""
-    if evidence.pages:
-        _cache_put(homepage, evidence)
+def _cache_result(homepage: str, evidence: BrandEvidence) -> None:
+    """Cache useful content longer than transient empty crawl results."""
+    ttl = (
+        BRAND_EVIDENCE_CACHE_SECONDS
+        if evidence.pages
+        else BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS
+    )
+    _cache_put(homepage, evidence, ttl_seconds=ttl)
 
 
 def reset_brand_evidence_cache() -> None:
@@ -195,10 +200,10 @@ async def collect_brand_evidence(website_url: str) -> BrandEvidence:
             async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
                 pages = await _gather(homepage)
             evidence = BrandEvidence(pages=tuple(pages))
-            # Never cache a negative crawl. A transient DNS/network/WAF miss
-            # must not make the user's explicit Retry action replay the same
-            # empty result for the full cache window.
-            _cache_positive_result(homepage, evidence)
+            # Cache empty crawls only for the short single-flight window. They
+            # must not make an explicit Retry replay a miss for the full
+            # positive-result cache duration.
+            _cache_result(homepage, evidence)
             return evidence
     except TimeoutError:
         logger.info("Brand evidence collection timed out", extra={"url": homepage})

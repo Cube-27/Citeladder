@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -288,7 +289,18 @@ async def _artifact_usage_by_task(
             RawResponseArtifact.task_id.in_(task_ids),
         )
     )
-    return dict(rows.tuples().all())
+    return _unique_artifact_usage(rows.tuples().all())
+
+
+def _unique_artifact_usage(
+    rows: Sequence[tuple[uuid.UUID, dict | None]],
+) -> dict[uuid.UUID, dict]:
+    usage_by_task: dict[uuid.UUID, dict] = {}
+    for task_id, usage in rows:
+        if task_id in usage_by_task:
+            raise RuntimeError(f"multiple raw artifacts found for task {task_id}")
+        usage_by_task[task_id] = usage or {}
+    return usage_by_task
 
 
 async def finalize_audit_analysis(

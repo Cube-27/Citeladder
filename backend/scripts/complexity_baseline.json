@@ -161,6 +161,7 @@
       "_competitor_aggregates": 8,
       "_competitor_configs": 10,
       "_competitor_signals": 6,
+      "_cost_estimate_status": 3,
       "_domain_in": 2,
       "_entity_alias_present": 6,
       "_fanout_features": 4,
@@ -168,13 +169,14 @@
       "_headline_aggregates": 18,
       "_is_google_redirect": 8,
       "_optional_rate": 2,
-      "_paid_list_cost_estimate": 12,
+      "_paid_list_cost_estimate": 7,
       "_per_prompt_stability": 7,
       "_prompt_class": 5,
       "_prompt_signals": 3,
       "_provider_reported_cost": 5,
       "_rate": 2,
       "_reported_cost_usd": 3,
+      "_search_cost_estimate": 3,
       "_share_of_voice": 9,
       "_stability": 2,
       "_token_cost_estimate": 8,
@@ -188,7 +190,7 @@
       "classify_fanout": 7,
       "score_execution": 3
     },
-    "loc": 749,
+    "loc": 755,
     "max_cc": 18
   },
   "app/analysis/service.py": {
@@ -196,11 +198,12 @@
       "_artifact_usage_by_task": 2,
       "_classification": 4,
       "_execution_dicts": 7,
+      "_unique_artifact_usage": 4,
       "analyze_task": 18,
       "build_scoring_config": 2,
       "finalize_audit_analysis": 22
     },
-    "loc": 449,
+    "loc": 461,
     "max_cc": 22
   },
   "app/analysis/site_health/__init__.py": {
@@ -446,7 +449,7 @@
       "get_brand_discovery": 2,
       "get_brand_discovery_catalog": 1
     },
-    "loc": 133,
+    "loc": 130,
     "max_cc": 5
   },
   "app/api/commerce.py": {
@@ -1125,14 +1128,19 @@
   },
   "app/connectors/web_evidence/firecrawl.py": {
     "functions": {
+      "_backoff": 1,
+      "_bounded_backoff": 1,
       "_headers": 3,
-      "_post": 14,
+      "_post": 7,
+      "_request_attempt": 3,
+      "_response_payload": 3,
+      "_retry_response": 6,
       "_search": 10,
       "competitor_search": 1,
       "rendered_scrape": 6
     },
-    "loc": 133,
-    "max_cc": 14
+    "loc": 170,
+    "max_cc": 10
   },
   "app/connectors/web_evidence/resolver.py": {
     "functions": {
@@ -1310,12 +1318,12 @@
   },
   "app/core/config/brand_discovery.py": {
     "functions": {},
-    "loc": 119,
+    "loc": 124,
     "max_cc": 0
   },
   "app/core/config/brand_evidence.py": {
     "functions": {},
-    "loc": 98,
+    "loc": 101,
     "max_cc": 0
   },
   "app/core/config/brand_logos.py": {
@@ -1885,15 +1893,24 @@
   },
   "app/domain/audits/estimates.py": {
     "functions": {
+      "_combined_token_cost": 3,
       "_cost_status": 4,
+      "_elapsed_ms": 2,
+      "_engine_performance": 13,
+      "_estimate_engine": 6,
       "_estimate_prompts": 7,
       "_estimated_searches": 2,
+      "_known_total": 4,
       "_line_cost": 2,
-      "audit_performance": 41,
-      "estimate_audit": 28
+      "_overall_cost_status": 4,
+      "_search_cost": 3,
+      "_search_count": 2,
+      "_usage_summary": 9,
+      "audit_performance": 16,
+      "estimate_audit": 8
     },
-    "loc": 316,
-    "max_cc": 41
+    "loc": 342,
+    "max_cc": 16
   },
   "app/domain/audits/planner.py": {
     "functions": {
@@ -2674,14 +2691,14 @@
       "BrandEvidence.serialize": 1,
       "BrandEvidence.word_count": 2,
       "_cache_get": 3,
-      "_cache_positive_result": 2,
       "_cache_put": 4,
+      "_cache_result": 2,
       "_gather": 9,
       "_homepage_url": 5,
       "collect_brand_evidence": 10,
       "reset_brand_evidence_cache": 1
     },
-    "loc": 215,
+    "loc": 220,
     "max_cc": 10
   },
   "app/domain/projects/brand_profile.py": {
@@ -2718,6 +2735,7 @@
       "_approve_vendor_url": 1,
       "_candidate_identity_present": 1,
       "_candidate_name": 2,
+      "_capacity_approved_prompt_rows": 4,
       "_collect_owned_site": 10,
       "_commit_new_discovery": 3,
       "_competitor_domain": 6,
@@ -2726,22 +2744,32 @@
       "_confirmed_competitors": 9,
       "_confirmed_domains": 3,
       "_discover_competitors": 4,
+      "_discovered_project_payload": 9,
+      "_discovery_prompt_rows": 2,
       "_discovery_statement": 2,
+      "_discovery_topic_rows": 4,
       "_evidence_item": 1,
+      "_existing_discovery_gaps": 2,
       "_firecrawl_competitor_candidates": 2,
+      "_has_prompt_cohort_gap": 4,
       "_industry_terms": 3,
       "_is_valid_domain_hostname": 3,
       "_normalized_url": 5,
+      "_project_creation_key": 7,
       "_prompt_identity_is_valid": 7,
       "_read_competitor_site": 6,
       "_relevant_competitor_page": 6,
       "_rendered_site_evidence": 3,
       "_safe_agent_competitor_candidates": 2,
+      "_select_prompt_cohorts": 11,
+      "_suggestion_topic_id": 3,
       "_synthesize_discovery": 4,
       "_synthesize_output": 4,
       "_try_verify_competitor_candidate": 2,
-      "_validate_public_hostname": 5,
-      "_validated_prompt_suggestions": 8,
+      "_unique_topic_names": 2,
+      "_valid_prompt_candidates": 4,
+      "_validate_public_hostname": 4,
+      "_validated_prompt_suggestions": 4,
       "_verified_candidate_identity": 2,
       "_verified_synthesized_competitors": 7,
       "_verify_competitor_candidate": 4,
@@ -2749,18 +2777,18 @@
       "claim_discovery": 2,
       "confirm_discovery": 4,
       "create_discovery": 3,
-      "create_project_from_discovery": 21,
+      "create_project_from_discovery": 3,
       "discovery_catalog": 1,
       "get_discovery": 2,
       "process_discovery": 4,
       "reap_exhausted_discoveries": 3
     },
-    "loc": 1104,
-    "max_cc": 21
+    "loc": 1246,
+    "max_cc": 11
   },
   "app/domain/projects/discovery_schemas.py": {
     "functions": {},
-    "loc": 121,
+    "loc": 124,
     "max_cc": 0
   },
   "app/domain/projects/knowledge_base.py": {
@@ -2873,7 +2901,7 @@
       "parse_generation_output": 10,
       "validate_generation_request": 1
     },
-    "loc": 938,
+    "loc": 936,
     "max_cc": 19
   },
   "app/domain/prompts/locks.py": {
@@ -2906,10 +2934,11 @@
   },
   "app/domain/prompts/receipts.py": {
     "functions": {
+      "_receipt_message": 2,
       "issue_prompt_receipt": 1,
       "verify_prompt_receipt": 2
     },
-    "loc": 58,
+    "loc": 103,
     "max_cc": 2
   },
   "app/domain/prompts/schemas.py": {
@@ -2946,7 +2975,7 @@
       "update_prompt": 10,
       "update_prompt_set": 3
     },
-    "loc": 770,
+    "loc": 788,
     "max_cc": 10
   },
   "app/domain/prompts/topical_binding.py": {
@@ -3011,6 +3040,7 @@
   "app/domain/providers/service.py": {
     "functions": {
       "_build_routes": 4,
+      "_catalog_transport": 3,
       "_connection_query": 1,
       "_latest_probes": 3,
       "_paused_state_response": 4,
@@ -3025,7 +3055,7 @@
       "run_connection_test": 6,
       "update_connection": 13
     },
-    "loc": 597,
+    "loc": 610,
     "max_cc": 13
   },
   "app/domain/site_health/__init__.py": {
@@ -3662,18 +3692,25 @@
       "main": 1,
       "pace_provider_request": 5
     },
-    "loc": 2067,
+    "loc": 2065,
     "max_cc": 12
   },
   "app/workers/brand_discovery_worker.py": {
     "functions": {
+      "_attempt_iteration": 3,
+      "_claim_after_optional_reap": 2,
+      "_idle_delay": 2,
+      "_install_fallback_shutdown_handler": 2,
+      "_install_loop_shutdown_handlers": 2,
       "_install_shutdown_handler": 2,
-      "_run_loop": 6,
+      "_log_iteration_failure": 2,
+      "_run_loop": 5,
+      "_set_fallback_signal": 1,
       "main": 1,
       "run_once": 3
     },
-    "loc": 69,
-    "max_cc": 6
+    "loc": 147,
+    "max_cc": 5
   },
   "app/workers/content_worker.py": {
     "functions": {

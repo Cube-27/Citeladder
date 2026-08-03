@@ -629,22 +629,28 @@ def _paid_list_cost_estimate(
     pricing = route_pricing_for(identity, PRICING_CATALOG_VERSION) if identity else None
     search_rate = pricing.search_fee_microusd if pricing else None
     token_estimate = _token_cost_estimate(token_usage, pricing)
-    search_estimate = (
-        grounded_requests * search_rate / MICRO_USD_PER_USD
-        if grounded_requests and search_rate is not None
-        else 0.0
-        if not grounded_requests
-        else None
-    )
+    search_estimate = _search_cost_estimate(grounded_requests, search_rate)
     known = sum(value is not None for value in (token_estimate, search_estimate))
-    status = (
-        PROJECTION_STATUS_COMPLETE
-        if known == 2
-        else PROJECTION_STATUS_PARTIAL
-        if known
-        else PROJECTION_STATUS_UNKNOWN
-    )
+    status = _cost_estimate_status(known)
     return token_estimate, search_estimate, status
+
+
+def _search_cost_estimate(
+    grounded_requests: int, search_rate_microusd: int | None
+) -> float | None:
+    if not grounded_requests:
+        return 0.0
+    if search_rate_microusd is None:
+        return None
+    return grounded_requests * search_rate_microusd / MICRO_USD_PER_USD
+
+
+def _cost_estimate_status(known_lines: int) -> str:
+    if known_lines == 2:
+        return PROJECTION_STATUS_COMPLETE
+    if known_lines:
+        return PROJECTION_STATUS_PARTIAL
+    return PROJECTION_STATUS_UNKNOWN
 
 
 def _aggregate_cost(

@@ -352,13 +352,25 @@ async def prepare_prompt_inserts(
     return approved
 
 
-def _receipt_proves_generated(payload: Any, text: str) -> bool:
+def _receipt_proves_generated(
+    payload: Any,
+    text: str,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+) -> bool:
     """Whether a backend receipt proves generation provenance for ``text``."""
     claimed_generated = getattr(payload, "origin", PROMPT_ORIGIN_MANUAL) == (
         PROMPT_ORIGIN_GENERATED
     )
     return claimed_generated and verify_prompt_receipt(
-        text, getattr(payload, "generation_receipt", None)
+        workspace_id=workspace_id,
+        project_id=project_id,
+        prompt_set_id=prompt_set_id,
+        cohort=str(getattr(payload, "cohort", "")),
+        text=text,
+        receipt=getattr(payload, "generation_receipt", None),
     )
 
 
@@ -376,7 +388,13 @@ async def _resolve_origin_through_binding_gate(
     # binds against the PERSISTED topic, never the request body's theme.
     # (free text the caller chooses — binding against it would let any
     # client supply its own prompt's wording as the vocabulary).
-    if _receipt_proves_generated(payload, text):
+    if _receipt_proves_generated(
+        payload,
+        text,
+        workspace_id=workspace_id,
+        project_id=prompt_set.project_id,
+        prompt_set_id=prompt_set.id,
+    ):
         return PROMPT_ORIGIN_GENERATED
     await enforce_prompt_binding(
         session,

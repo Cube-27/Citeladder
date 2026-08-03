@@ -58,7 +58,9 @@ export const brandStepSchema = z.object({
     .refine((value) => {
       try {
         const url = new URL(value.includes('://') ? value : `https://${value}`);
-        return Boolean(url.hostname.includes('.'));
+        return (
+          (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname.includes('.')
+        );
       } catch {
         return false;
       }
@@ -86,7 +88,9 @@ export function normalizeWebsiteUrl(value: string): string {
 
 export function deriveDomain(value: string): string {
   try {
-    return new URL(normalizeWebsiteUrl(value)).hostname.toLowerCase().replace(/^www\./, '');
+    const url = new URL(normalizeWebsiteUrl(value));
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+    return url.hostname.toLowerCase().replace(/^www\./, '');
   } catch {
     return '';
   }

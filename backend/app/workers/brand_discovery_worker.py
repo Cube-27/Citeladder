@@ -9,6 +9,8 @@ import signal
 import socket
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config.brand_discovery import brand_discovery_settings
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.projects.discovery import (
@@ -16,43 +18,119 @@ from app.domain.projects.discovery import (
     process_discovery,
     reap_exhausted_discoveries,
 )
+from app.models.discovery import BrandDiscovery
 
 logger = logging.getLogger(__name__)
 
 
-async def run_once(worker_id: str) -> bool:
-    async with SessionLocal() as session:
+async def _claim_after_optional_reap(
+    session: AsyncSession, *, worker_id: str, reap: bool
+) -> BrandDiscovery | None:
+    if reap:
         await reap_exhausted_discoveries(session)
-        row = await claim_discovery(session, worker_id=worker_id)
+    return await claim_discovery(session, worker_id=worker_id)
+
+
+async def run_once(worker_id: str, *, reap: bool = False) -> bool:
+    async with SessionLocal() as session:
+        row = await _claim_after_optional_reap(session, worker_id=worker_id, reap=reap)
         if row is None:
             return False
         await process_discovery(session, row)
         return True
 
 
+def _set_fallback_signal(
+    loop: asyncio.AbstractEventLoop,
+    shutdown: asyncio.Event,
+    shutdown_signal: signal.Signals,
+) -> None:
+    signal.signal(
+        shutdown_signal,
+        lambda *_: loop.call_soon_threadsafe(shutdown.set),
+    )
+
+
+def _install_fallback_shutdown_handler(
+    loop: asyncio.AbstractEventLoop, shutdown: asyncio.Event
+) -> None:
+    try:
+        _set_fallback_signal(loop, shutdown, signal.SIGTERM)
+        _set_fallback_signal(loop, shutdown, signal.SIGINT)
+    except ValueError:
+        logger.warning("SIGTERM handler unavailable outside the main thread")
+
+
+def _install_loop_shutdown_handlers(
+    loop: asyncio.AbstractEventLoop, shutdown: asyncio.Event
+) -> None:
+    for shutdown_signal in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(shutdown_signal, shutdown.set)
+
+
 def _install_shutdown_handler(shutdown: asyncio.Event) -> None:
     loop = asyncio.get_running_loop()
     try:
-        loop.add_signal_handler(signal.SIGTERM, shutdown.set)
-    except (NotImplementedError, RuntimeError):
-        signal.signal(
-            signal.SIGTERM,
-            lambda *_: loop.call_soon_threadsafe(shutdown.set),
-        )
+        _install_loop_shutdown_handlers(loop, shutdown)
+    except RuntimeError:
+        _install_fallback_shutdown_handler(loop, shutdown)
+
+
+def _log_iteration_failure(consecutive_failures: int) -> None:
+    if consecutive_failures == 1:
+        logger.exception("Brand discovery worker iteration failed")
+        return
+    logger.error(
+        "Brand discovery worker iteration still failing",
+        extra={"consecutive_failures": consecutive_failures},
+    )
+
+
+async def _attempt_iteration(
+    worker_id: str,
+    shutdown: asyncio.Event,
+    *,
+    reap: bool,
+    consecutive_failures: int,
+) -> tuple[bool, int]:
+    try:
+        return await run_once(worker_id, reap=reap), 0
+    except asyncio.CancelledError:
+        shutdown.set()
+        raise
+    except Exception:
+        failures = consecutive_failures + 1
+        _log_iteration_failure(failures)
+        return False, failures
+
+
+def _idle_delay(consecutive_failures: int) -> float:
+    if not consecutive_failures:
+        return brand_discovery_settings.poll_seconds
+    return min(
+        brand_discovery_settings.poll_seconds * 2 ** (consecutive_failures - 1),
+        brand_discovery_settings.failure_backoff_max_seconds,
+    )
 
 
 async def _run_loop(worker_id: str, shutdown: asyncio.Event) -> None:
+    loop = asyncio.get_running_loop()
+    next_reap_at = 0.0
+    consecutive_failures = 0
     while not shutdown.is_set():
-        try:
-            processed = await run_once(worker_id)
-        except asyncio.CancelledError:
-            shutdown.set()
-            break
-        except Exception:
-            logger.exception("Brand discovery worker iteration failed")
-            processed = False
+        reap = loop.time() >= next_reap_at
+        if reap:
+            next_reap_at = (
+                loop.time() + brand_discovery_settings.reaper_interval_seconds
+            )
+        processed, consecutive_failures = await _attempt_iteration(
+            worker_id,
+            shutdown,
+            reap=reap,
+            consecutive_failures=consecutive_failures,
+        )
         if not processed and not shutdown.is_set():
-            await asyncio.sleep(brand_discovery_settings.poll_seconds)
+            await asyncio.sleep(_idle_delay(consecutive_failures))
 
 
 async def main() -> None:
@@ -62,7 +140,7 @@ async def main() -> None:
     try:
         await _run_loop(worker_id, shutdown)
     finally:
-        await dispose_engine()
+        await asyncio.shield(dispose_engine())
 
 
 if __name__ == "__main__":

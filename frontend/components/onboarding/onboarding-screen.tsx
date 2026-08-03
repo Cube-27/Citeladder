@@ -222,6 +222,13 @@ export function OnboardingScreen() {
     [],
   );
 
+  let discoveryStatus = 'Evidence capture is ready for review.';
+  if (discovery.isRunning) {
+    discoveryStatus = `Working through ${discovery.discovery?.stage ?? 'the discovery queue'}…`;
+  } else if (discovery.discovery?.status === 'needs_input') {
+    discoveryStatus = 'Review needed — we kept everything editable.';
+  }
+
   return (
     // The viewport-height flex chain (min-h-dvh col → flex-1 overflow-y stage →
     // h-full step) keeps short steps floating on the ambient background with
@@ -436,13 +443,7 @@ export function OnboardingScreen() {
               </div>
 
               <div className="border-border-subtle bg-background/80 grid gap-2 rounded-xl border p-5">
-                <p className="text-foreground text-sm font-semibold" role="status">
-                  {discovery.isRunning
-                    ? `Working through ${discovery.discovery?.stage ?? 'the discovery queue'}…`
-                    : discovery.discovery?.status === 'needs_input'
-                      ? 'Review needed — we kept everything editable.'
-                      : 'Evidence capture is ready for review.'}
-                </p>
+                <output className="text-foreground text-sm font-semibold">{discoveryStatus}</output>
                 <p className="text-muted text-xs">
                   {discovery.discovery?.evidence.length ?? 0} evidence captures ·{' '}
                   {discovery.discovery?.competitors.length ?? 0} verified competitors
@@ -456,7 +457,12 @@ export function OnboardingScreen() {
                       We could not verify: {discovery.discovery.gaps.join(', ')}. Retry discovery or
                       review the verified results we did find.
                     </span>
-                    <Button size="sm" variant="ghost" onClick={discovery.retry}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={discovery.retry}
+                      disabled={discovery.isRunning}
+                    >
                       Retry
                     </Button>
                   </div>
@@ -466,7 +472,12 @@ export function OnboardingScreen() {
                 <Alert tone="danger">
                   <div className="flex items-center justify-between gap-3">
                     <span>{onboardingErrorMessage(discovery.error)}</span>
-                    <Button size="sm" variant="ghost" onClick={discovery.retry}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={discovery.retry}
+                      disabled={discovery.isRunning}
+                    >
                       Retry
                     </Button>
                   </div>

@@ -37,7 +37,7 @@ export function useBrandDiscovery(input: BrandDiscoveryInput | null) {
   });
   const discovery = query.data ?? create.data;
   const retry = () => {
-    if (!input) return;
+    if (!input || create.isPending) return;
     key.current = operationKey();
     createdFor.current = fingerprint;
     create.mutate(input);

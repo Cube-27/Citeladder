@@ -283,10 +283,19 @@ class TestCollectBrandEvidenceFailureReasons:
         brand_evidence_domain.reset_brand_evidence_cache()
 
         evidence = await collect_brand_evidence("https://cube27.example")
+        cached = await collect_brand_evidence("https://cube27.example")
+
+        homepage = brand_evidence_domain._homepage_url("https://cube27.example")
+        _, cached_evidence = brand_evidence_domain._cache[homepage]
+        brand_evidence_domain._cache[homepage] = (
+            asyncio.get_running_loop().time() - 1,
+            cached_evidence,
+        )
         retried = await collect_brand_evidence("https://cube27.example")
 
         assert not evidence.is_sufficient
         assert evidence.failure_reason is None
+        assert not cached.is_sufficient
         assert not retried.is_sufficient
         assert calls == 2
 
