@@ -190,7 +190,6 @@ def test_build_request_passes_every_frozen_policy_field_explicitly() -> None:
         system_instruction="Answer for Australia.",
         transport_model="gemini-3-pro",
         logical_engine=ENGINE_GEMINI,
-        transport_provider=TRANSPORT_GOOGLE,
         measurement_mode=MEASUREMENT_MODE_PULSE,
         policy=policy,
     )
@@ -217,7 +216,6 @@ def test_build_request_snapshot_records_policy_and_omits_the_brand_list() -> Non
         system_instruction="Answer for Australia. " + policy.answer_instruction,
         transport_model="gemini-3-pro",
         logical_engine=ENGINE_GEMINI,
-        transport_provider=TRANSPORT_GOOGLE,
         measurement_mode=MEASUREMENT_MODE_PULSE,
         policy=policy,
     )
