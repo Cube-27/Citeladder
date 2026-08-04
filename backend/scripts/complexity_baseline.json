@@ -2941,6 +2941,7 @@
       "_candidate_name": 2,
       "_capacity_approved_prompt_rows": 5,
       "_collect_owned_site": 10,
+      "_commit_discovery_attempt": 4,
       "_commit_new_discovery": 3,
       "_commit_progress": 1,
       "_competitor_domain": 6,
@@ -2983,9 +2984,9 @@
       "create_discovery": 3,
       "discovery_catalog": 1,
       "get_discovery": 2,
-      "process_discovery": 8
+      "process_discovery": 6
     },
-    "loc": 1390,
+    "loc": 1401,
     "max_cc": 13
   },
   "app/domain/projects/discovery_schemas.py": {
@@ -3989,7 +3990,7 @@
       "_visible_product_name": 3,
       "main": 1
     },
-    "loc": 719,
+    "loc": 717,
     "max_cc": 14
   },
   "app/workers/content_worker.py": {
