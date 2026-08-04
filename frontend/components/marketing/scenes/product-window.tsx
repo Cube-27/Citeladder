@@ -21,7 +21,6 @@ import { ICONS } from '@/lib/icons';
 import { useTourAutoplay } from '@/lib/hooks/use-tour-autoplay';
 import { Meta } from '../primitives/label';
 import { TourStepper } from '../primitives/tour-stepper';
-import { ExampleDataNote } from './wallpaper-panel';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -262,7 +261,10 @@ export function ProductWindow() {
   const currentStep = STORY_STEPS[activeStep];
 
   return (
-    <div ref={containerRef} className="citeladder-snapshot mx-auto max-w-5xl p-4 sm:p-5">
+    <div
+      ref={containerRef}
+      className="citeladder-snapshot bg-panel shadow-card mx-auto max-w-5xl rounded-lg p-4 sm:p-5"
+    >
       {/* Storytelling Tour Stepper */}
       <div className="bg-background-alt border-border-subtle mb-5 rounded-lg border p-4 sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -274,9 +276,6 @@ export function ProductWindow() {
             onTogglePlay={togglePlay}
             compact
           />
-          <div className="hidden sm:block">
-            <ExampleDataNote />
-          </div>
         </div>
 
         <div className="border-border-subtle mt-4 flex items-center justify-between border-t pt-3 text-xs">
@@ -288,9 +287,6 @@ export function ProductWindow() {
             <span className="text-muted truncate font-medium">
               {currentStep.productSolution} — every score opens to the answer behind it.
             </span>
-          </div>
-          <div className="ml-3 shrink-0 sm:hidden">
-            <ExampleDataNote />
           </div>
         </div>
       </div>
