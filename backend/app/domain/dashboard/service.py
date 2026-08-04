@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import SupportsFloat, SupportsIndex, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +56,8 @@ def _bounded_rate(value: object) -> float | None:
     if value is None:
         return None
     try:
-        return min(1.0, max(0.0, float(value)))
+        float_value = float(cast(str | SupportsFloat | SupportsIndex, value))
+        return min(1.0, max(0.0, float_value))
     except (OverflowError, TypeError, ValueError):
         return None
 
