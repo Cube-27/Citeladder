@@ -1186,7 +1186,7 @@
       "is_bot_block_result": 3,
       "redact_headers": 4
     },
-    "loc": 1331,
+    "loc": 1336,
     "max_cc": 18
   },
   "app/connectors/web_evidence/firecrawl.py": {
@@ -3289,7 +3289,8 @@
       "_enqueue_task": 2,
       "_frontier_full": 2,
       "_ordered_unique_candidates": 2,
-      "_record_admission": 14,
+      "_record_admission": 7,
+      "_record_sample_admission": 8,
       "_requested_budget_exhausted": 4,
       "_safe_parser_encoding": 4,
       "_sample_remaining": 3,
@@ -3302,7 +3303,7 @@
       "build_frontier_candidates": 2,
       "extract_discovery_links": 16
     },
-    "loc": 769,
+    "loc": 788,
     "max_cc": 16
   },
   "app/domain/site_health/entitlements.py": {
@@ -3871,6 +3872,7 @@
       "AuditWorker._capacity_wait_already_recorded": 1,
       "AuditWorker._claim_for_slot": 4,
       "AuditWorker._deadline_passed": 3,
+      "AuditWorker._enqueue_opportunity_refresh": 3,
       "AuditWorker._ensure_running": 2,
       "AuditWorker._execute_one_attempt": 2,
       "AuditWorker._execute_task": 7,
@@ -3926,7 +3928,7 @@
       "main": 1,
       "pace_provider_request": 5
     },
-    "loc": 2036,
+    "loc": 2064,
     "max_cc": 12
   },
   "app/workers/brand_discovery_worker.py": {
@@ -3941,11 +3943,11 @@
       "_log_iteration_failure": 2,
       "_run_loop": 5,
       "_set_fallback_signal": 1,
-      "_stop_heartbeat": 3,
+      "_stop_heartbeat": 2,
       "main": 1,
       "run_once": 10
     },
-    "loc": 239,
+    "loc": 236,
     "max_cc": 10
   },
   "app/workers/commerce_discovery_worker.py": {
