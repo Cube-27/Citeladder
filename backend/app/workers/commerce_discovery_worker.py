@@ -239,35 +239,40 @@ def _schema_documents_and_root(
     result: FetchResult,
 ) -> tuple[list[Any], Any | None] | None:
     body = result.body[: commerce_intelligence_settings.discovery_max_extraction_bytes]
-    root: Any | None = None
-    documents: list[Any] = []
     if result.content_type in {"application/json", "application/ld+json"}:
-        try:
-            documents.append(
-                json.loads(body.decode(result.charset or "utf-8", "replace"))
-            )
-        except json.JSONDecodeError:
-            return None
-    else:
-        try:
-            root = lxml_html.document_fromstring(
-                body, parser=lxml_html.HTMLParser(recover=True, no_network=True)
-            )
-        except (etree.ParserError, ValueError):
-            return None
-        schema_scripts = root.xpath('//script[@type="application/ld+json"]')
-        if not isinstance(schema_scripts, list):
-            return None
-        for script in schema_scripts[
-            : commerce_intelligence_settings.discovery_max_schema_blocks
-        ]:
-            if not isinstance(script, etree._Element):
-                continue
-            raw = script.text or ""
-            try:
-                documents.append(json.loads(raw))
-            except json.JSONDecodeError:
-                continue
+        document = _decode_json_document(body, result.charset)
+        return ([document], None) if document is not None else None
+    return _html_schema_documents(body)
+
+
+def _decode_json_document(body: bytes, charset: str | None) -> Any | None:
+    try:
+        return json.loads(body.decode(charset or "utf-8", "replace"))
+    except json.JSONDecodeError:
+        return None
+
+
+def _html_schema_documents(body: bytes) -> tuple[list[Any], Any] | None:
+    try:
+        root = lxml_html.document_fromstring(
+            body, parser=lxml_html.HTMLParser(recover=True, no_network=True)
+        )
+    except (etree.ParserError, ValueError):
+        return None
+    schema_scripts = root.xpath('//script[@type="application/ld+json"]')
+    if not isinstance(schema_scripts, list):
+        return None
+    documents: list[Any] = []
+    for script in schema_scripts[
+        : commerce_intelligence_settings.discovery_max_schema_blocks
+    ]:
+        if not isinstance(script, etree._Element):
+            continue
+        document = _decode_json_document(
+            (script.text or "").encode("utf-8"), "utf-8"
+        )
+        if document is not None:
+            documents.append(document)
     return documents, root
 
 

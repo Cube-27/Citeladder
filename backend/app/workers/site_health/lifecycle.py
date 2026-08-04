@@ -74,7 +74,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
-from app.domain.opportunities.service import recompute as recompute_opportunities
+from app.domain.opportunities.service import enqueue_opportunity_refresh
 from app.domain.site_health.failure import load_root_failure_summary
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.selection import crawl_is_active
@@ -281,11 +281,9 @@ class CrawlLifecycle:
         raise ``InvalidSiteCrawlTransition`` — all terminal states are empty
         sets in the transition tables).
 
-        On the call that actually drives the crawl terminal, the project's
-        Opportunities are recomputed from the fresh evidence — see
-        ``_recompute_opportunities``.
+        On the call that actually drives the crawl terminal, a durable analytics
+        task is queued to refresh the project's Opportunities from fresh evidence.
         """
-        terminalized_for: tuple[uuid.UUID, uuid.UUID] | None = None
         async with self._session_factory() as session:
             crawl = await session.get(SiteCrawl, crawl_id, with_for_update=True)
             if crawl is None or not crawl_is_active(crawl):
@@ -403,8 +401,8 @@ class CrawlLifecycle:
             # draft/validating/queued (a crawl whose work all failed or was
             # swept before the worker ever flipped it to RUNNING): it stayed
             # ACTIVE forever, so the UI kept offering Cancel on a run that had
-            # long since stopped, and the opportunities recompute below never
-            # fired. The transition table has no queued -> completed edge, so
+            # long since stopped, and the Opportunities refresh was never queued.
+            # The transition table has no queued -> completed edge, so
             # walk the crawl through its legal intermediate states first.
             if crawl_is_active(crawl) and crawl.status != CRAWL_STATUS_RUNNING:
                 for step in _RUNNING_PATH.get(crawl.status, ()):
@@ -451,45 +449,14 @@ class CrawlLifecycle:
                         payload={"status": crawl.status},
                         count_disclosure=_count_disclosure(crawl),
                     )
-                terminalized_for = (crawl.workspace_id, crawl.project_id)
+                    await enqueue_opportunity_refresh(
+                        session,
+                        workspace_id=crawl.workspace_id,
+                        project_id=crawl.project_id,
+                        trigger_kind="site_crawl",
+                        trigger_id=crawl.id,
+                    )
             await session.commit()
-
-        # AFTER the commit, deliberately: the crawl's terminal state and its
-        # snapshot are already durable, so a recompute failure can never leave
-        # the crawl un-terminalized.
-        if terminalized_for is not None:
-            workspace_id, project_id = terminalized_for
-            await self._recompute_opportunities(
-                workspace_id=workspace_id, project_id=project_id
-            )
-
-    async def _recompute_opportunities(
-        self, *, workspace_id: uuid.UUID, project_id: uuid.UUID
-    ) -> None:
-        """Refresh the project's Opportunities from the just-finished crawl.
-
-        Nothing used to trigger this: ``recompute`` ran only when a user pressed
-        "Refresh recommendations", so the catalog kept showing findings derived
-        from a PREVIOUS crawl while the dashboard showed the new one — two
-        screens disagreeing about the same site with no way to tell which was
-        current.
-
-        Best-effort by construction. It runs in its own session after the
-        terminalization commit, and any failure is logged and swallowed: stale
-        opportunities are a far better outcome than a crawl that cannot finish
-        because scoring hit a snag, and the user's manual refresh (and the next
-        crawl) both retry it anyway.
-        """
-        try:
-            async with self._session_factory() as session:
-                await recompute_opportunities(
-                    session, workspace_id=workspace_id, project_id=project_id
-                )
-        except Exception:
-            logger.exception(
-                "opportunities recompute after crawl terminalization failed",
-                extra={"project_id": str(project_id)},
-            )
 
     async def reconcile_stalled(self) -> int:
         """Force-reconcile active crawls that have no outstanding work left.

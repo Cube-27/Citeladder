@@ -66,9 +66,9 @@ export function CrawlIntakeDialog({
     onClose();
   };
   return (
-    <div
+    <dialog
+      open
       className="bg-overlay-scrim z-modal fixed inset-0 grid place-items-center p-4"
-      role="dialog"
       aria-modal="true"
       aria-labelledby="crawl-intake-title"
     >
@@ -190,6 +190,6 @@ export function CrawlIntakeDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

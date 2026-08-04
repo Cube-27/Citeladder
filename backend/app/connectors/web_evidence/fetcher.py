@@ -478,6 +478,7 @@ class SecureFetcher:
         """Run curl when available, then the configured provider if needed."""
 
         curl_result = prior
+        trigger_for_scraperapi = trigger
         if self._curl_transport is not None:
             try:
                 curl_result = await self._fetch_curl(
@@ -504,6 +505,7 @@ class SecureFetcher:
                 )
                 if curl_still_blocked is None:
                     return curl_result
+                trigger_for_scraperapi = curl_still_blocked
         return await self._continue_with_scraperapi(
             request=request,
             root_registrable_domain=root_registrable_domain,
@@ -512,7 +514,7 @@ class SecureFetcher:
             enforce_scope=enforce_scope,
             limits=limits,
             attempts=attempts,
-            trigger=trigger,
+            trigger=trigger_for_scraperapi,
             prior=curl_result,
         )
 
@@ -584,13 +586,14 @@ class SecureFetcher:
                 self._trace_curl_result(
                     attempts, request, result, hop_started, acquisition
                 )
-                return replace(
+                updated_result: FetchResult = replace(
                     result,
                     requested_url=request.url,
                     redirect_chain=tuple(redirect_chain),
                     attempts=tuple(attempts),
                     acquisition=acquisition,
                 )
+                return updated_result
             if hop >= max_redirects:
                 self._trace_curl_result(
                     attempts,

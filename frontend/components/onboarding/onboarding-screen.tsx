@@ -1,13 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Check } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { ActivityProgress } from '@/components/ui/activity-progress';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ import {
   type ReviewPrompt,
 } from '@/lib/onboarding/forms';
 import { useBrandDiscovery } from '@/lib/onboarding/use-brand-discovery';
+import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
@@ -37,7 +39,7 @@ import { ReviewStep } from './review-step';
  * Onboarding — the only way a project gets created (plan.md §10, decision 11;
  * `/setup` is retired).
  *
- * Four steps: Brand → Discovery → Review → Finish, framed by a slim header
+ * Three steps: Brand → Discovery → Review, framed by a slim header
  * (logo + compact inline stepper) and a centered card per step. The review
  * step widens to a two-column grid so the whole review fits without a nested-
  * card scroll. Discovery fires all three suggestion calls automatically on
@@ -49,8 +51,8 @@ import { ReviewStep } from './review-step';
  * the welcome framing, and Cancel returns to `/projects` instead of leaving the
  * user nowhere.
  */
-const STEPS = ['Brand', 'Discovery', 'Review', 'Finish'] as const;
-type StepIndex = 0 | 1 | 2 | 3;
+const STEPS = ['Brand', 'Discovery', 'Review'] as const;
+type StepIndex = 0 | 1 | 2;
 
 /**
  * Per-step stage geometry. The short form/progress/congrats steps are narrow
@@ -61,11 +63,6 @@ const STEP_STAGE: Record<StepIndex, { maxWidth: string; centerY: string; stageAl
   0: { maxWidth: 'max-w-3xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
   1: { maxWidth: 'max-w-3xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
   2: { maxWidth: 'max-w-4xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
-  3: {
-    maxWidth: 'max-w-lg',
-    centerY: 'justify-center text-center',
-    stageAlign: 'sm:justify-center',
-  },
 };
 
 function manualCompetitorId(): string {
@@ -82,15 +79,36 @@ export function OnboardingScreen() {
   const searchParams = useSearchParams();
   const { setActiveProjectId } = useProjectContext();
   const isAdditional = searchParams?.get('new') === '1';
+  const initialDiscoveryId = searchParams?.get('discovery') ?? null;
 
-  const [step, setStep] = useState<StepIndex>(0);
+  const [step, setStep] = useState<StepIndex>(() => {
+    if (!initialDiscoveryId) return 0;
+    return searchParams?.get('step') === 'review' ? 2 : 1;
+  });
+  const [resumeDiscoveryId, setResumeDiscoveryId] = useState<string | null>(initialDiscoveryId);
   const [brand, setBrand] = useState<BrandStepValues | null>(null);
   const [domains, setDomains] = useState<ReviewDomain[]>([]);
   const [competitors, setCompetitors] = useState<ReviewCompetitor[]>([]);
   const [prompts, setPrompts] = useState<ReviewPrompt[]>([]);
-  const [createdProjectName, setCreatedProjectName] = useState<string | null>(null);
   const hasSelectedDomain = domains.some((item) => item.selected);
   const hasSelectedPrompt = prompts.some((item) => item.selected);
+  const selectedPromptCount = prompts.filter((item) => item.selected).length;
+  const selectedComparisonCount = prompts.filter(
+    (item) => item.selected && item.cohort === 'comparison',
+  ).length;
+  const hasBalancedPromptPortfolio =
+    selectedComparisonCount <= Math.floor(selectedPromptCount * 0.2);
+  const selectedCompetitorNames = competitors
+    .filter((item) => item.selected && item.name.trim())
+    .flatMap((item) => [item.name, ...item.aliases])
+    .map((name) => name.trim().toLocaleLowerCase())
+    .filter(Boolean);
+  const comparisonsMatchSelectedCompetitors = prompts
+    .filter((item) => item.selected && item.cohort === 'comparison')
+    .every((prompt) => {
+      const text = prompt.text.toLocaleLowerCase();
+      return selectedCompetitorNames.some((name) => text.includes(name));
+    });
   const form = useForm<BrandStepValues>({
     resolver: zodResolver(brandStepSchema),
     defaultValues: emptyBrandStep,
@@ -106,10 +124,45 @@ export function OnboardingScreen() {
           language_code: brand.language_code,
         }
       : null,
+    resumeDiscoveryId,
   );
+  const discoveryCatalog = useQuery({
+    queryKey: ['brand-discovery-catalog'],
+    queryFn: ({ signal }) => brandDiscoveriesApi.catalog({ signal }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const maximumCompetitors = discoveryCatalog.data?.maximum_competitors;
   // Seed the editable review lists once each section lands. Guarded on length
   // so re-renders never clobber the user's selections mid-review.
   const discoveryState = discovery.discovery;
+  useEffect(() => {
+    if (brand || !discoveryState) return;
+    const value = discoveryState.input_data;
+    const text = (key: string, fallback = '') =>
+      typeof value[key] === 'string' ? (value[key] as string) : fallback;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the persisted discovery after reload/back navigation.
+    setBrand({
+      brand_name: text('brand_name'),
+      website_url: text('website_url'),
+      industry: text('industry'),
+      country_code: text('country_code', 'US'),
+      language_code: text('language_code', 'en'),
+    });
+  }, [brand, discoveryState]);
+
+  useEffect(() => {
+    const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
+    if (!discoveryId) return;
+    if (resumeDiscoveryId !== discoveryId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- retain the server identity so later navigation never creates a duplicate discovery.
+      setResumeDiscoveryId(discoveryId);
+    }
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.set('discovery', discoveryId);
+    params.set('step', step === 2 ? 'review' : step === 1 ? 'discovery' : 'brand');
+    const next = params.toString();
+    if (next !== searchParams?.toString()) router.replace(`/onboarding?${next}`, { scroll: false });
+  }, [discoveryState?.id, resumeDiscoveryId, router, searchParams, step]);
   useEffect(() => {
     if (discoveryState && ['ready', 'needs_input'].includes(discoveryState.status)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
@@ -135,7 +188,11 @@ export function OnboardingScreen() {
   }, [discoveryState]);
 
   useEffect(() => {
-    if (discoveryState && ['ready', 'needs_input'].includes(discoveryState.status)) {
+    if (
+      maximumCompetitors !== undefined &&
+      discoveryState &&
+      ['ready', 'needs_input'].includes(discoveryState.status)
+    ) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable state from a completed discovery result.
       setCompetitors((prev) =>
         prev.length > 0
@@ -143,21 +200,28 @@ export function OnboardingScreen() {
           : discoveryState.competitors.map((competitor, index) => ({
               ...competitor,
               id: `competitor:${index}:${competitor.name}`,
-              selected: true,
+              selected: index < maximumCompetitors,
             })),
       );
     }
-  }, [discoveryState]);
+  }, [discoveryState, maximumCompetitors]);
 
-  // Survives a failed confirm so "Create project" retries the writes that failed
-  // instead of creating a second project. Cleared only when the brand changes
-  // (see submitBrand) — that is a different project, not a retry.
-  const confirm = useMutation({
+  // One idempotent request owns every write, including the first site review.
+  // A retry therefore cannot leave behind or duplicate a partial project.
+  const complete = useMutation({
     mutationFn: async () => {
       if (!brand || !discovery.discovery) throw new Error('Discovery details are missing.');
-      const confirmed = await brandDiscoveriesApi.confirm(
+      const selectedPrompts = prompts.filter((item) => item.selected);
+      const groupedPrompts = new Map<string, typeof selectedPrompts>();
+      for (const prompt of selectedPrompts) {
+        const topic = (prompt.theme ?? '').trim() || brand.industry.trim() || 'General';
+        groupedPrompts.set(topic, [...(groupedPrompts.get(topic) ?? []), prompt]);
+      }
+
+      return brandDiscoveriesApi.complete(
         discovery.discovery.id,
         {
+          name: brand.brand_name.trim(),
           profile: discovery.discovery.profile,
           domains: domains.filter((item) => item.selected).map((item) => item.domain),
           competitors: competitors
@@ -167,17 +231,12 @@ export function OnboardingScreen() {
               aliases: item.aliases,
               domains: item.domains,
             })),
-          topics: discovery.discovery.topics,
-          prompts: prompts
-            .filter((item) => item.selected)
-            .map(({ text, theme, intent, cohort }) => ({ text, theme, intent, cohort })),
+          prompt_groups: [...groupedPrompts.entries()].map(([topic, topicPrompts]) => ({
+            topic,
+            prompts: topicPrompts.map(({ text, intent, cohort }) => ({ text, intent, cohort })),
+          })),
         },
-        `confirm:${discovery.discovery.id}`,
-      );
-      return brandDiscoveriesApi.createProject(
-        confirmed.id,
-        brand.brand_name.trim(),
-        `create-project:${confirmed.id}`,
+        `complete:${discovery.discovery.id}`,
       );
     },
     onSuccess: async (result) => {
@@ -189,11 +248,10 @@ export function OnboardingScreen() {
         .refreshProjectLogos(result.project_id)
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
         .catch(() => undefined);
-      // Refresh before showing the completion screen, so the dashboard is ready
-      // as soon as the user leaves onboarding.
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      setCreatedProjectName(brand?.brand_name ?? null);
-      setStep(3);
+      router.replace(
+        `/projects?activation=1&project=${encodeURIComponent(result.project_id)}&crawl=${encodeURIComponent(result.crawl_id)}&limit=${result.page_limit}`,
+      );
     },
   });
 
@@ -208,6 +266,7 @@ export function OnboardingScreen() {
       setDomains([]);
       setCompetitors([]);
       setPrompts([]);
+      setResumeDiscoveryId(null);
     }
     setBrand(values);
     setStep(1);
@@ -221,13 +280,6 @@ export function OnboardingScreen() {
         ),
     [],
   );
-
-  let discoveryStatus = 'Evidence capture is ready for review.';
-  if (discovery.isRunning) {
-    discoveryStatus = `Working through ${discovery.discovery?.stage ?? 'the discovery queue'}…`;
-  } else if (discovery.discovery?.status === 'needs_input') {
-    discoveryStatus = 'Review needed — we kept everything editable.';
-  }
 
   return (
     // The viewport-height flex chain (min-h-dvh col → flex-1 overflow-y stage →
@@ -336,8 +388,8 @@ export function OnboardingScreen() {
                     {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
                   </h1>
                   <p className="text-muted text-sm">
-                    We&apos;ll crawl your website to discover your brand, competitors, and starting
-                    prompts.
+                    We&apos;ll review your website, suggest comparable brands, and prepare balanced
+                    questions.
                   </p>
                 </div>
 
@@ -437,25 +489,24 @@ export function OnboardingScreen() {
                   Finding what to track
                 </h1>
                 <p className="text-muted text-sm">
-                  We&apos;re crawling the official site, verifying competitors, and generating
-                  evidence-grounded prompts for {brand?.brand_name || 'your brand'}.
+                  We&apos;re learning about {brand?.brand_name || 'your brand'} and preparing useful
+                  questions. You can review everything before the project is created.
                 </p>
               </div>
 
-              <div className="border-border-subtle bg-background/80 grid gap-2 rounded-xl border p-5">
-                <output className="text-foreground text-sm font-semibold">{discoveryStatus}</output>
-                <p className="text-muted text-xs">
-                  {discovery.discovery?.evidence.length ?? 0} evidence captures ·{' '}
-                  {discovery.discovery?.competitors.length ?? 0} verified competitors
-                </p>
+              <div className="border-border-subtle bg-background/80 rounded-xl border p-5">
+                <ActivityProgress
+                  label="Discovering your brand"
+                  steps={discoveryActivity(discovery.discovery)}
+                />
               </div>
 
               {discovery.discovery?.status === 'needs_input' ? (
                 <Alert tone="warning">
                   <div className="flex items-center justify-between gap-3">
                     <span>
-                      We could not verify: {discovery.discovery.gaps.join(', ')}. Retry discovery or
-                      review the verified results we did find.
+                      Some details could not be confirmed. Retry, or review the useful results we
+                      found and fill in anything that is missing.
                     </span>
                     <Button
                       size="sm"
@@ -519,7 +570,21 @@ export function OnboardingScreen() {
                 competitors={competitors}
                 prompts={prompts}
                 onToggleDomain={toggle(setDomains)}
-                onToggleCompetitor={toggle(setCompetitors)}
+                onToggleCompetitor={(index) =>
+                  setCompetitors((previous) => {
+                    const selectedCount = previous.filter((item) => item.selected).length;
+                    return previous.map((item, itemIndex) => {
+                      if (itemIndex !== index) return item;
+                      if (
+                        !item.selected &&
+                        (maximumCompetitors === undefined || selectedCount >= maximumCompetitors)
+                      ) {
+                        return item;
+                      }
+                      return { ...item, selected: !item.selected };
+                    });
+                  })
+                }
                 onTogglePrompt={toggle(setPrompts)}
                 onRenameCompetitor={(index, name) =>
                   setCompetitors((prev) =>
@@ -527,18 +592,36 @@ export function OnboardingScreen() {
                   )
                 }
                 onAddCompetitor={() =>
-                  setCompetitors((prev) => [
-                    ...prev,
-                    {
-                      id: `competitor:manual:${manualCompetitorId()}`,
-                      name: '',
-                      aliases: [],
-                      domains: [],
-                      selected: true,
-                    },
-                  ])
+                  setCompetitors((prev) => {
+                    const selectedCount = prev.filter((item) => item.selected).length;
+                    if (maximumCompetitors === undefined || selectedCount >= maximumCompetitors) {
+                      return prev;
+                    }
+                    return [
+                      ...prev,
+                      {
+                        id: `competitor:manual:${manualCompetitorId()}`,
+                        name: '',
+                        aliases: [],
+                        domains: [],
+                        selected: true,
+                      },
+                    ];
+                  })
                 }
+                maximumCompetitors={maximumCompetitors}
               />
+
+              {discoveryCatalog.isError ? (
+                <Alert tone="warning">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>We could not load the competitor limit.</span>
+                    <Button size="sm" variant="ghost" onClick={() => discoveryCatalog.refetch()}>
+                      Try again
+                    </Button>
+                  </div>
+                </Alert>
+              ) : null}
 
               {discovery.discovery?.profile.description ? (
                 <div className="border-border-subtle bg-background/70 rounded-xl border p-4">
@@ -549,48 +632,41 @@ export function OnboardingScreen() {
                 </div>
               ) : null}
 
-              {confirm.isError ? (
-                <Alert tone="danger">{onboardingErrorMessage(confirm.error)}</Alert>
+              {complete.isError ? (
+                <Alert tone="danger">{onboardingErrorMessage(complete.error)}</Alert>
               ) : null}
               {!hasSelectedDomain || !hasSelectedPrompt ? (
                 <Alert tone="warning">
-                  Keep at least one owned domain and one starting prompt selected.
+                  Keep at least one website address and one starting question selected.
+                </Alert>
+              ) : null}
+              {hasSelectedPrompt && !hasBalancedPromptPortfolio ? (
+                <Alert tone="warning">
+                  Keep at least four general questions selected for each named comparison.
+                </Alert>
+              ) : null}
+              {hasSelectedPrompt && !comparisonsMatchSelectedCompetitors ? (
+                <Alert tone="warning">
+                  Deselect named comparisons for competitors you are not tracking.
                 </Alert>
               ) : null}
 
               <div className="flex items-center gap-3 pt-2">
                 <Button
-                  onClick={() => confirm.mutate()}
-                  disabled={confirm.isPending || !hasSelectedDomain || !hasSelectedPrompt}
+                  onClick={() => complete.mutate()}
+                  disabled={
+                    complete.isPending ||
+                    !hasSelectedDomain ||
+                    !hasSelectedPrompt ||
+                    !hasBalancedPromptPortfolio ||
+                    !comparisonsMatchSelectedCompetitors
+                  }
                   className="font-semibold"
                 >
-                  {confirm.isPending ? 'Creating…' : 'Create project'}
+                  {complete.isPending ? 'Creating…' : 'Create project'}
                 </Button>
-                <Button variant="ghost" onClick={() => setStep(1)} disabled={confirm.isPending}>
+                <Button variant="ghost" onClick={() => setStep(1)} disabled={complete.isPending}>
                   Back
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          {step === 3 ? (
-            <div className="bg-panel shadow-card grid justify-items-center gap-6 rounded-2xl p-8 text-center sm:p-10">
-              <div className="grid justify-items-center gap-2">
-                <div className="bg-success-bg text-success-text mb-2 inline-flex size-12 items-center justify-center rounded-2xl">
-                  <Check className="size-6" strokeWidth={2.5} aria-hidden />
-                </div>
-                <h1 className="font-mkt-display text-foreground text-2xl font-bold sm:text-3xl">
-                  Your workspace is ready
-                </h1>
-                <p className="text-muted text-sm leading-relaxed">
-                  {createdProjectName ?? 'Your project'} is set up. We&apos;ve queued a Site Health
-                  crawl in the background; how much of your site it covers follows your
-                  monitored-URL allowance. Its status and results will appear on your dashboard.
-                </p>
-              </div>
-              <div className="pt-2">
-                <Button onClick={() => router.replace('/projects')} className="font-semibold">
-                  Open dashboard
                 </Button>
               </div>
             </div>

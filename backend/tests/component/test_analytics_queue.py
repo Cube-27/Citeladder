@@ -28,6 +28,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
@@ -208,13 +209,14 @@ async def test_analytics_queue_claims_by_task_kind(
     )
 
     # An unrestricted claim picks up whatever kinds remain.
-    rest = await queue.claim(owner="analytics-a", limit=10)
+    rest = await queue.claim(owner="analytics-a", limit=20)
     assert {t.id for t in rest} == set(
         seeded[ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH]
         + seeded[ANALYTICS_TASK_KIND_ANALYTICS_SNAPSHOT_REFRESH]
         + seeded[ANALYTICS_TASK_KIND_ATTRIBUTION_LINK]
         + seeded[ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT]
         + seeded[ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP]
+        + seeded[ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH]
     )
 
 

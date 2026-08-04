@@ -16,6 +16,7 @@ const { project, getDashboard, downloadDashboardReport } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
@@ -91,7 +92,7 @@ describe('DashboardScreen', () => {
     // 72.5 renders twice: the executive metric tile and the Visibility
     // section card's primary metric both carry the persisted score.
     expect(screen.getAllByText('72.5')).toHaveLength(2);
-    expect(screen.getByText(/active work: site health/i)).toBeInTheDocument();
+    expect(screen.getByText(/currently reviewing your website/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open visibility/i })).toHaveAttribute(
       'href',
       '/visibility',
@@ -101,7 +102,8 @@ describe('DashboardScreen', () => {
       '/site-health',
     );
     expect(screen.getByLabelText('AI Presence Index')).toBeInTheDocument();
-    expect(screen.getByText(/provisional: incomplete evidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/more results will improve this view/i)).toBeInTheDocument();
+    expect(screen.queryByText(/formula|provenance|snapshot/i)).not.toBeInTheDocument();
   });
 
   it('downloads the authenticated report blob', async () => {

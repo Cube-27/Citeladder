@@ -56,6 +56,7 @@ const detail = {
 };
 
 const summary = {
+  activation_state: 'ready',
   computed: true,
   run_id: AUDIT,
   audit_id: AUDIT,
@@ -153,6 +154,7 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
   it('accepts the pre-recompute summary (computed=false, nulls)', () => {
     const empty = {
       ...summary,
+      activation_state: 'waiting_for_evidence',
       computed: false,
       run_id: null,
       audit_id: null,

@@ -41,18 +41,10 @@ export function EvidenceDrawer({
     enabled: open && opportunityId !== null,
     retry: false,
   });
-  const historyQuery = useQuery({
-    ...opportunitiesQueries.guidanceHistory(opportunityId ?? ''),
-    enabled: open && opportunityId !== null && guidanceQuery.data !== undefined,
-    retry: false,
-  });
   const guidanceMutation = useMutation({
     ...opportunitiesMutations.createGuidance(),
     onSuccess: (guidance) => {
       queryClient.setQueryData(queryKeys.opportunities.guidance(guidance.opportunity_id), guidance);
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.opportunities.guidanceHistory(guidance.opportunity_id),
-      });
     },
   });
 
@@ -60,6 +52,9 @@ export function EvidenceDrawer({
     if (!opportunityId) return;
     guidanceMutation.mutate({ opportunityId, idempotencyKey: crypto.randomUUID() });
   };
+  let guidanceActionLabel = 'Generate';
+  if (guidanceQuery.data) guidanceActionLabel = 'Regenerate';
+  if (guidanceMutation.isPending) guidanceActionLabel = 'Generating…';
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -117,11 +112,7 @@ export function EvidenceDrawer({
                       onClick={createGuidance}
                       disabled={guidanceMutation.isPending}
                     >
-                      {guidanceMutation.isPending
-                        ? 'Generating…'
-                        : guidanceQuery.data
-                          ? 'Regenerate'
-                          : 'Generate'}
+                      {guidanceActionLabel}
                     </Button>
                   </div>
                   {guidanceQuery.data ? (
@@ -142,25 +133,15 @@ export function EvidenceDrawer({
                           ))}
                         </ul>
                       </div>
-                      <details className="text-muted text-xs">
-                        <summary className="cursor-pointer">Provenance</summary>
-                        <p className="mt-2">
-                          Generated {new Date(guidanceQuery.data.created_at).toLocaleString()} ·{' '}
-                          {guidanceQuery.data.generator_version} ·{' '}
-                          {guidanceQuery.data.prompt_version}
-                        </p>
-                      </details>
+                      <p className="text-muted text-xs">
+                        Updated {new Date(guidanceQuery.data.created_at).toLocaleString()}
+                      </p>
                     </div>
                   ) : guidanceQuery.isError ? (
                     <Alert tone="info">Tailored guidance is unavailable for this workspace.</Alert>
                   ) : null}
                   {guidanceMutation.isError ? (
                     <Alert tone="danger">Could not generate guidance. Please try again.</Alert>
-                  ) : null}
-                  {historyQuery.data && historyQuery.data.items.length > 1 ? (
-                    <p className="text-muted text-xs">
-                      {historyQuery.data.items.length} immutable guidance versions are available.
-                    </p>
                   ) : null}
                 </section>
                 <OpportunitySummarySection detail={detail} />

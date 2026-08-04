@@ -6,15 +6,17 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal, get_args
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.config.brand_discovery import (
     DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS,
     DISCOVERY_CONFIRM_MAX_DOMAINS,
+    DISCOVERY_CONFIRM_MAX_PROMPTS,
     DISCOVERY_CONFIRM_MAX_TOPICS,
     DISCOVERY_CONFIRM_TOPIC_MAX_CHARS,
     PRICE_TIERS,
 )
+from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.domain.projects.schemas import CompetitorInput
 
 ConfirmedDomain = Annotated[
@@ -60,9 +62,28 @@ class DiscoveryPromptSuggestion(BaseModel):
     cohort: Literal["core", "comparison"]
 
 
+class BrandDiscoveryProgress(BaseModel):
+    phase: Literal[
+        "opening_website",
+        "understanding_business",
+        "finding_competitors",
+        "building_questions",
+        "preparing_review",
+        "complete",
+    ]
+    completed_steps: int = Field(ge=0)
+    total_steps: int = Field(ge=1)
+    pages_read: int = Field(default=0, ge=0)
+    competitors_found: int = Field(default=0, ge=0)
+    prompts_prepared: int = Field(default=0, ge=0)
+    updated_at: datetime
+
+
 class DiscoverySynthesis(BaseModel):
     profile: DiscoveryProfile
-    competitors: list[CompetitorInput] = Field(default_factory=list, max_length=20)
+    competitors: list[CompetitorInput] = Field(
+        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
+    )
     topics: list[ConfirmedTopic] = Field(
         min_length=1, max_length=DISCOVERY_CONFIRM_MAX_TOPICS
     )
@@ -70,19 +91,43 @@ class DiscoverySynthesis(BaseModel):
 
 
 class DiscoveryCompetitorCandidates(BaseModel):
-    competitors: list[CompetitorInput] = Field(default_factory=list, max_length=20)
+    competitors: list[CompetitorInput] = Field(
+        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
+    )
 
 
-class BrandDiscoveryConfirm(BaseModel):
+class GroupedDiscoveryPrompt(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    intent: Literal["discovery", "comparison", "purchase", "service", "local"]
+    cohort: Literal["core", "comparison"]
+
+
+class DiscoveryPromptGroup(BaseModel):
+    topic: ConfirmedTopic
+    prompts: list[GroupedDiscoveryPrompt] = Field(
+        min_length=1, max_length=DISCOVERY_CONFIRM_MAX_PROMPTS
+    )
+
+
+class BrandDiscoveryComplete(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
     profile: DiscoveryProfile
     domains: list[ConfirmedDomain] = Field(
         min_length=1, max_length=DISCOVERY_CONFIRM_MAX_DOMAINS
     )
-    competitors: list[CompetitorInput] = Field(default_factory=list)
-    topics: list[ConfirmedTopic] = Field(
-        default_factory=list, max_length=DISCOVERY_CONFIRM_MAX_TOPICS
+    competitors: list[CompetitorInput] = Field(
+        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
     )
-    prompts: list[DiscoveryPromptSuggestion] = Field(min_length=1, max_length=50)
+    prompt_groups: list[DiscoveryPromptGroup] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def _bounded_prompt_total(self) -> BrandDiscoveryComplete:
+        total = sum(len(group.prompts) for group in self.prompt_groups)
+        if total > DISCOVERY_CONFIRM_MAX_PROMPTS:
+            raise ValueError(
+                f"Reviewed prompt total cannot exceed {DISCOVERY_CONFIRM_MAX_PROMPTS}"
+            )
+        return self
 
 
 class BrandDiscoveryResponse(BaseModel):
@@ -92,7 +137,7 @@ class BrandDiscoveryResponse(BaseModel):
     workspace_id: uuid.UUID
     project_id: uuid.UUID | None
     status: str
-    stage: str
+    progress: BrandDiscoveryProgress
     input_data: dict
     profile: DiscoveryProfile
     domains: list[str]
@@ -100,9 +145,6 @@ class BrandDiscoveryResponse(BaseModel):
     topics: list[str]
     prompt_suggestions: list[DiscoveryPromptSuggestion]
     evidence: list[DiscoveryEvidence]
-    gaps: list[str]
-    error_detail: str
-    attempt_count: int
     created_at: datetime
     updated_at: datetime
 
@@ -113,12 +155,11 @@ class BrandDiscoveryCatalogResponse(BaseModel):
     required_fields: list[str]
     optional_fields: list[str]
     capture_methods: list[str]
+    maximum_competitors: int
 
 
-class BrandDiscoveryCreateProject(BaseModel):
-    name: str | None = Field(default=None, max_length=255)
-
-
-class BrandDiscoveryProjectResponse(BaseModel):
-    discovery: BrandDiscoveryResponse
+class BrandDiscoveryCompleteResponse(BaseModel):
     project_id: uuid.UUID
+    crawl_id: uuid.UUID
+    activation_state: Literal["queued"] = "queued"
+    page_limit: int

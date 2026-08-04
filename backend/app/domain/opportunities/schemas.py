@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -155,6 +156,9 @@ class OpportunitySummary(_Model):
     # evidence timestamp, and whether it post-dates the latest snapshot.
     evidence_updated_at: str | None
     stale: bool
+    activation_state: Literal[
+        "waiting_for_evidence", "queued", "refreshing", "ready", "delayed"
+    ]
 
 
 class RecomputeResponse(_Model):

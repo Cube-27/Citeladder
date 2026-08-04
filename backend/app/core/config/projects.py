@@ -60,3 +60,8 @@ DEFAULT_PROMPT_ORIGIN: Final = PROMPT_ORIGIN_MANUAL
 DEFAULT_REPETITIONS: Final = 1
 MIN_REPETITIONS: Final = 1
 MAX_REPETITIONS: Final = 10
+
+# A project compares the tracked brand with a deliberately small, reviewable
+# peer set.  Every project/discovery mutation imports this one ceiling; no
+# endpoint owns a second, drifting competitor limit.
+MAX_PROJECT_COMPETITORS: Final = 5

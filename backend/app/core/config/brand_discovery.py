@@ -7,19 +7,21 @@ from typing import Final
 from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.config.projects import MAX_PROJECT_COMPETITORS
+from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
+
 DISCOVERY_STATUS_QUEUED: Final = "queued"
 DISCOVERY_STATUS_RUNNING: Final = "running"
 DISCOVERY_STATUS_NEEDS_INPUT: Final = "needs_input"
 DISCOVERY_STATUS_READY: Final = "ready"
-DISCOVERY_STATUS_CONFIRMED: Final = "confirmed"
 DISCOVERY_STATUS_PROJECT_CREATED: Final = "project_created"
+ERROR_BRAND_DISCOVERY: Final = "brand_discovery_failed"
 DISCOVERY_STATUSES: Final = frozenset(
     {
         DISCOVERY_STATUS_QUEUED,
         DISCOVERY_STATUS_RUNNING,
         DISCOVERY_STATUS_NEEDS_INPUT,
         DISCOVERY_STATUS_READY,
-        DISCOVERY_STATUS_CONFIRMED,
         DISCOVERY_STATUS_PROJECT_CREATED,
     }
 )
@@ -32,10 +34,13 @@ CAPTURE_METHOD_FIRECRAWL_SEARCH: Final = "firecrawl_search"
 CAPTURE_METHOD_USER: Final = "user_input"
 BRAND_DISCOVERY_VERSION: Final = "brand-discovery-v1"
 BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v1"
+DISCOVERY_PROGRESS_TOTAL_STEPS: Final = 5
+DISCOVERY_MAX_COMPARISON_SHARE: Final = 0.2
 DISCOVERY_CONFIRM_MAX_DOMAINS: Final = 50
 DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS: Final = 1024
 DISCOVERY_CONFIRM_MAX_TOPICS: Final = 100
 DISCOVERY_CONFIRM_TOPIC_MAX_CHARS: Final = 255
+DISCOVERY_CONFIRM_MAX_PROMPTS: Final = 50
 COMPETITOR_EXCLUDED_DOMAINS: Final[frozenset[str]] = frozenset(
     {
         "amazon.com",
@@ -93,6 +98,7 @@ class BrandDiscoverySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="BRAND_DISCOVERY_", extra="ignore")
 
     lease_seconds: int = Field(default=120, ge=1)
+    heartbeat_interval_seconds: float = Field(default=30.0, gt=0)
     poll_seconds: float = Field(default=1.0, gt=0)
     reaper_interval_seconds: float = Field(default=30.0, gt=0)
     reaper_batch_size: int = Field(default=100, ge=1)
@@ -113,12 +119,36 @@ class BrandDiscoverySettings(BaseSettings):
     firecrawl_retry_backoff_seconds: float = Field(default=1.0, ge=0)
     firecrawl_retry_after_max_seconds: float = Field(default=60.0, gt=0)
     firecrawl_search_limit: int = Field(default=8, ge=1)
-    maximum_competitors: int = Field(default=8, ge=1)
-    target_competitors: int = Field(default=6, ge=1)
+    maximum_competitors: int = Field(
+        default=MAX_PROJECT_COMPETITORS, ge=1, le=MAX_PROJECT_COMPETITORS
+    )
+    target_competitors: int = Field(
+        default=MAX_PROJECT_COMPETITORS, ge=1, le=MAX_PROJECT_COMPETITORS
+    )
     synthesis_evidence_max_chars: int = Field(default=24_000, ge=1)
     synthesis_prompt_count: int = Field(default=12, ge=1)
+    synthesis_min_core_prompts: int = Field(default=4, ge=1, le=50)
     synthesis_topic_count: int = Field(default=10, ge=1)
     synthesis_max_attempts: int = Field(default=2, ge=1)
 
 
 brand_discovery_settings = BrandDiscoverySettings()
+
+
+def _discovery_task_model():
+    from app.models.discovery import BrandDiscoveryTask
+
+    return BrandDiscoveryTask
+
+
+def _discovery_claim_order(model) -> tuple:
+    return (model.priority.desc(), model.available_at.asc(), model.created_at.asc())
+
+
+BRAND_DISCOVERY_QUEUE_SPEC: Final = PostgresQueueSpec(
+    model_ref=_discovery_task_model,
+    lease_ttl=lambda: brand_discovery_settings.lease_seconds,
+    claim_order=_discovery_claim_order,
+    max_attempts_error=ERROR_MAX_ATTEMPTS,
+    parent_id_attr="discovery_id",
+)

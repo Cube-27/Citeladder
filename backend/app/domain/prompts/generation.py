@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import uuid
 from difflib import SequenceMatcher
 from typing import Any
@@ -48,6 +47,10 @@ from app.domain.projects.knowledge_base import (
 from app.domain.projects.shim import project_scoring_identity
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.prompts.portfolio import (
+    contains_tracked_name,
+    prompt_identity_is_valid,
+)
 from app.domain.prompts.service import PromptSetNotFoundError, prepare_prompt_inserts
 from app.domain.prompts.topical_binding import (
     BindingVocabulary,
@@ -246,11 +249,7 @@ def _is_branded(text: str, brand_context: dict[str, Any]) -> bool:
     for competitor in brand_context.get("competitors", []):
         names.append(competitor.get("name", ""))
         names += competitor.get("aliases", [])
-    return any(
-        name
-        and re.search(rf"(?<![\w]){re.escape(str(name))}(?![\w])", text, re.IGNORECASE)
-        for name in names
-    )
+    return contains_tracked_name(text, (str(name) for name in names))
 
 
 def _drop_invalid_core_prompts(
@@ -294,34 +293,24 @@ def _drop_invalid_comparison_prompts(
         for name in [competitor.get("name", ""), *competitor.get("aliases", [])]
     ]
 
-    def contains(text: str, names: list[str]) -> bool:
-        return any(
-            name
-            and re.search(
-                rf"(?<![\w]){re.escape(str(name))}(?![\w])", text, re.IGNORECASE
-            )
-            for name in names
-        )
-
-    return [
-        SuggestedTopic(
-            name=topic.name,
-            prompts=[
-                prompt
-                for prompt in topic.prompts
-                if prompt.intent == "comparison"
-                and contains(prompt.text, brand_names)
-                and contains(prompt.text, competitor_names)
-            ],
-        )
-        for topic in suggestions
-        if any(
-            prompt.intent == "comparison"
-            and contains(prompt.text, brand_names)
-            and contains(prompt.text, competitor_names)
+    retained_topics: list[SuggestedTopic] = []
+    for topic in suggestions:
+        retained_prompts = [
+            prompt
             for prompt in topic.prompts
-        )
-    ]
+            if prompt_identity_is_valid(
+                text=prompt.text,
+                cohort="comparison",
+                intent=prompt.intent,
+                brand_terms=(str(name) for name in brand_names),
+                competitor_terms=(str(name) for name in competitor_names),
+            )
+        ]
+        if retained_prompts:
+            retained_topics.append(
+                SuggestedTopic(name=topic.name, prompts=retained_prompts)
+            )
+    return retained_topics
 
 
 def _prompt_count(suggestions: list[SuggestedTopic]) -> int:

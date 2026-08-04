@@ -32,7 +32,7 @@ AccessMode = Literal["sample", "full", "unresolved"]
 IssueSeverity = Literal["critical", "high", "medium", "low", "info"]
 IssueDimension = Literal["technical", "aeo"]
 SiteUrlSource = Literal["root", "link", "sitemap", "redirect"]
-SelectionSource = Literal["user", "free_sample"]
+SelectionSource = Literal["user", "free_sample", "bootstrap"]
 
 
 class _Model(BaseModel):

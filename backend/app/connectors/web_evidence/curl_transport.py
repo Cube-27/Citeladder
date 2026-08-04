@@ -122,6 +122,12 @@ def _validate_resolved_target(target: ResolvedTarget) -> None:
         )
 
 
+def _request_headers(request: FetchRequest, default_user_agent: str) -> dict[str, str]:
+    headers = {name.lower(): value for name, value in request.headers.items()}
+    headers.setdefault("user-agent", default_user_agent)
+    return headers
+
+
 def _transport_error_code(exc: RequestException) -> int | None:
     try:
         return int(exc.code)
@@ -154,7 +160,7 @@ class CurlCffiTransport:
 
         _validate_resolved_target(target)
         started = time.monotonic()
-        headers = {"user-agent": self._user_agent, **request.headers}
+        headers = _request_headers(request, self._user_agent)
         options = {
             CurlOpt.RESOLVE: [_curl_resolve_entry(target)],
             CurlOpt.MAXFILESIZE_LARGE: max_wire_bytes,

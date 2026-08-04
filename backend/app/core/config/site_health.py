@@ -83,6 +83,10 @@ DISCOVERY_MODE_FULL: Final = "full"
 # URLs do not disappear while the new crawl is still re-discovering them.
 INVENTORY_SOURCE_CRAWL_IDS_KEY: Final = "inventory_source_crawl_ids"
 
+# Marks a product-owned onboarding crawl. The discovery pipeline uses the
+# frozen value to auto-monitor and analyze the first bounded set of pages.
+AUTOMATIC_MONITOR_LIMIT_KEY: Final = "automatic_monitor_limit"
+
 # Neutral sample cap DEFAULT. The operative value is env-overridable via
 # ``SiteHealthSettings.sample_url_limit`` (``SITE_HEALTH_SAMPLE_URL_LIMIT``) so
 # development can lift it without a code change; ``runtime_policy_for_allowance``
@@ -274,8 +278,9 @@ def runtime_policy_for_allowance(
 # Free sample membership.
 SELECTION_SOURCE_USER: Final = "user"
 SELECTION_SOURCE_FREE_SAMPLE: Final = "free_sample"
+SELECTION_SOURCE_BOOTSTRAP: Final = "bootstrap"
 SELECTION_SOURCES: Final[frozenset[str]] = frozenset(
-    {SELECTION_SOURCE_USER, SELECTION_SOURCE_FREE_SAMPLE}
+    {SELECTION_SOURCE_USER, SELECTION_SOURCE_FREE_SAMPLE, SELECTION_SOURCE_BOOTSTRAP}
 )
 
 # =========================================================================

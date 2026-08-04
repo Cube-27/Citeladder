@@ -32,6 +32,7 @@ ANALYZER_VERSION: Final = "opp-analyzer-1"
 RULE_VERSION: Final = "opp-rules-3"
 FORMULA_VERSION: Final = "opp-formula-1"
 
+
 # =========================================================================
 # Vocabularies
 # =========================================================================

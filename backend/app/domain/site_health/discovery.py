@@ -42,9 +42,12 @@ from app.connectors.web_evidence.url_policy import (
     split_host_port,
 )
 from app.core.config.site_health import (
+    AUTOMATIC_MONITOR_LIMIT_KEY,
     CRAWL_ACTIVE_STATUSES,
     DISCOVERY_STATUS_RUNNING,
     OBSERVATION_SOURCE_LINK,
+    OBSERVATION_SOURCE_ROOT,
+    SELECTION_SOURCE_BOOTSTRAP,
     SELECTION_SOURCE_FREE_SAMPLE,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
@@ -352,12 +355,13 @@ async def _enqueue_task(
     return await session.scalar(stmt)
 
 
-async def _upsert_free_sample_membership(
+async def _upsert_system_membership(
     session: AsyncSession,
     *,
     crawl: SiteCrawl,
     site_url_id: uuid.UUID,
     now: datetime,
+    selection_source: str,
 ) -> uuid.UUID | None:
     """Insert/reactivate the system-managed sample membership for a URL.
 
@@ -374,14 +378,14 @@ async def _upsert_free_sample_membership(
             profile_id=crawl.profile_id,
             site_url_id=site_url_id,
             active=True,
-            selection_source=SELECTION_SOURCE_FREE_SAMPLE,
+            selection_source=selection_source,
             selected_at=now,
         )
         .on_conflict_do_update(
             index_elements=["project_id", "site_url_id"],
             set_={
                 "active": True,
-                "selection_source": SELECTION_SOURCE_FREE_SAMPLE,
+                "selection_source": selection_source,
                 "selected_at": now,
                 "deselected_at": None,
             },
@@ -401,6 +405,7 @@ async def _add_free_sample(
     depth: int,
     source_kind: str = OBSERVATION_SOURCE_LINK,
     analyze: bool = True,
+    selection_source: str = SELECTION_SOURCE_FREE_SAMPLE,
 ) -> tuple[bool, bool]:
     """Admit a Free URL into the inventory; optionally monitor + analyze it.
 
@@ -444,8 +449,12 @@ async def _add_free_sample(
     """
     now = _utcnow()
     activated_id = (
-        await _upsert_free_sample_membership(
-            session, crawl=crawl, site_url_id=site_url_id, now=now
+        await _upsert_system_membership(
+            session,
+            crawl=crawl,
+            site_url_id=site_url_id,
+            now=now,
+            selection_source=selection_source,
         )
         if analyze
         else None
@@ -520,6 +529,52 @@ async def _sample_remaining(session: AsyncSession, crawl: SiteCrawl) -> int | No
     return max(0, int(sample_limit) - used)
 
 
+async def _automatic_remaining(session: AsyncSession, crawl: SiteCrawl) -> int | None:
+    requested = int((crawl.configuration or {}).get(AUTOMATIC_MONITOR_LIMIT_KEY) or 0)
+    if requested <= 0:
+        return await _sample_remaining(session, crawl) if crawl.sample_mode else None
+    await session.scalar(
+        select(SiteCrawl.id).where(SiteCrawl.id == crawl.id).with_for_update()
+    )
+    used_by_crawl = await session.scalar(
+        select(func.count(func.distinct(SiteCrawlTask.url_hash))).where(
+            SiteCrawlTask.crawl_id == crawl.id,
+            SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
+        )
+    )
+    return max(0, requested - int(used_by_crawl or 0))
+
+
+async def add_automatic_root(session: AsyncSession, crawl: SiteCrawl) -> None:
+    """Persist and queue analysis for the onboarding crawl root."""
+    remaining = await _automatic_remaining(session, crawl)
+    if remaining is None or remaining <= 0:
+        return
+    canonical_url, url_hash_value = canonical_identity(crawl.root_url)
+    candidate = FrontierCandidate(
+        url=canonical_url,
+        url_hash=url_hash_value,
+        depth=0,
+        source_kind=OBSERVATION_SOURCE_ROOT,
+        value_priority=0,
+        parent_position=0,
+        link_ordinal=0,
+    )
+    site_url_id, _created = await _upsert_site_url(
+        session, crawl=crawl, candidate=candidate
+    )
+    await _add_free_sample(
+        session,
+        crawl=crawl,
+        site_url_id=site_url_id,
+        url=canonical_url,
+        url_hash_value=url_hash_value,
+        depth=0,
+        source_kind=OBSERVATION_SOURCE_ROOT,
+        selection_source=SELECTION_SOURCE_BOOTSTRAP,
+    )
+
+
 def _candidate_allowed(
     crawl: SiteCrawl,
     candidate: FrontierCandidate,
@@ -554,7 +609,10 @@ async def _requested_budget_exhausted(
     task_count = await session.scalar(
         select(func.count())
         .select_from(SiteCrawlTask)
-        .where(SiteCrawlTask.crawl_id == crawl.id)
+        .where(
+            SiteCrawlTask.crawl_id == crawl.id,
+            SiteCrawlTask.task_kind == TASK_KIND_DISCOVER,
+        )
     )
     if int(task_count or 0) < int(requested_limit):
         return False
@@ -591,6 +649,12 @@ async def _record_admission(
 
     if crawl.sample_mode:
         analyze = progress.remaining is not None and progress.remaining > 0
+        selection_source = (
+            SELECTION_SOURCE_BOOTSTRAP
+            if int((crawl.configuration or {}).get(AUTOMATIC_MONITOR_LIMIT_KEY) or 0)
+            > 0
+            else SELECTION_SOURCE_FREE_SAMPLE
+        )
         newly_activated, newly_observed = await _add_free_sample(
             session,
             crawl=crawl,
@@ -600,12 +664,26 @@ async def _record_admission(
             depth=candidate.depth,
             source_kind=candidate.source_kind,
             analyze=analyze,
+            selection_source=selection_source,
         )
         if newly_activated and progress.remaining is not None:
             progress.remaining -= 1
         if newly_observed:
             progress.admitted += 1
         return
+    if progress.remaining is not None and progress.remaining > 0:
+        newly_activated, _newly_observed = await _add_free_sample(
+            session,
+            crawl=crawl,
+            site_url_id=site_url_id,
+            url=candidate.url,
+            url_hash_value=candidate.url_hash,
+            depth=candidate.depth,
+            source_kind=candidate.source_kind,
+            selection_source=SELECTION_SOURCE_BOOTSTRAP,
+        )
+        if newly_activated:
+            progress.remaining -= 1
     if enqueue_children:
         task_id = await _enqueue_task(
             session,
@@ -647,7 +725,7 @@ async def admit_candidates(
     Caller owns the commit (progressive batches commit per admission call).
     """
     configuration = dict(crawl.configuration or {})
-    progress = _AdmissionProgress(remaining=await _sample_remaining(session, crawl))
+    progress = _AdmissionProgress(remaining=await _automatic_remaining(session, crawl))
     for position, candidate in enumerate(_ordered_unique_candidates(candidates)):
         # Defense in depth: candidates normally passed the policy during link/
         # sitemap/manual parsing, but admission is the last gate before a task

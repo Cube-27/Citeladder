@@ -31,6 +31,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_health import (
+    SELECTION_SOURCE_BOOTSTRAP,
     SELECTION_SOURCE_FREE_SAMPLE,
     SELECTION_SOURCE_USER,
     SiteHealthRuntimePolicy,
@@ -183,4 +184,7 @@ def runtime_allows_monitored_analysis(
         return False
     if runtime.monitored_url_limit > 0:
         return True
-    return selection_source == SELECTION_SOURCE_FREE_SAMPLE
+    return selection_source in {
+        SELECTION_SOURCE_FREE_SAMPLE,
+        SELECTION_SOURCE_BOOTSTRAP,
+    }

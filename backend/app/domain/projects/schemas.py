@@ -23,6 +23,7 @@ from app.core.config.brand_profile import (
 from app.core.config.projects import (
     DEFAULT_BENCHMARK_MODE,
     DEFAULT_REPETITIONS,
+    MAX_PROJECT_COMPETITORS,
     MAX_REPETITIONS,
     MIN_REPETITIONS,
 )
@@ -200,7 +201,9 @@ class ProjectCreate(BrandKnowledgeFields):
     website_url: str = Field(default="", max_length=1024)
     owned_domains: list[str] = Field(default_factory=list)
     unintended_domains: list[str] = Field(default_factory=list)
-    competitors: list[CompetitorInput] = Field(default_factory=list)
+    competitors: list[CompetitorInput] = Field(
+        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
+    )
     country_code: str = Field(default="", max_length=8)
     language_code: str = Field(default="", max_length=16)
     benchmark_mode: BenchmarkMode = DEFAULT_BENCHMARK_MODE
@@ -220,7 +223,9 @@ class ProjectUpdate(BaseModel):
     website_url: str | None = Field(default=None, max_length=1024)
     owned_domains: list[str] | None = None
     unintended_domains: list[str] | None = None
-    competitors: list[CompetitorInput] | None = None
+    competitors: list[CompetitorInput] | None = Field(
+        default=None, max_length=MAX_PROJECT_COMPETITORS
+    )
     country_code: str | None = Field(default=None, max_length=8)
     language_code: str | None = Field(default=None, max_length=16)
     benchmark_mode: BenchmarkMode | None = None

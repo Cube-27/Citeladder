@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Project } from '@/lib/api/types';
 import { mswServer } from '@/test/msw-server';
@@ -10,6 +10,20 @@ import { renderWithProviders } from '@/test/render';
 import { ProjectEditPanel } from './project-edit-panel';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  mswServer.use(
+    http.get('/api/v1/brand-discovery-catalog', () =>
+      HttpResponse.json({
+        business_types: ['b2b', 'b2c', 'both'],
+        price_tiers: ['unknown'],
+        required_fields: [],
+        optional_fields: [],
+        capture_methods: [],
+        maximum_competitors: 5,
+      }),
+    ),
+  );
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -80,5 +94,26 @@ describe('ProjectEditPanel', () => {
 
     await waitFor(() => expect(body).toBeDefined());
     expect(body?.owned_domains).toEqual(['acme.com', 'shop.acme.com']);
+  });
+
+  it('does not allow a sixth competitor', async () => {
+    const fiveCompetitors = Array.from({ length: 5 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      name: `Competitor ${index + 1}`,
+      aliases: [],
+      domains: [],
+    }));
+
+    renderWithProviders(
+      <ProjectEditPanel
+        project={{ ...project, competitors: fiveCompetitors }}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('5 of 5')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add competitor' })).toBeDisabled();
+    expect(screen.getAllByLabelText(/Competitor \d+ name/)).toHaveLength(5);
   });
 });

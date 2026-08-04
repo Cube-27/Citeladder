@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from app.models.analytics import AnalyticsTask
     from app.models.audit import AuditTask
     from app.models.content import ContentGeneration
+    from app.models.discovery import BrandDiscoveryTask
     from app.models.integrations import IntegrationSyncRun
     from app.models.site_health import SiteCrawlTask
 
@@ -80,6 +81,7 @@ class PostgresQueueSpec[
         "AuditTask",
         "SiteCrawlTask",
         "ContentGeneration",
+        "BrandDiscoveryTask",
         "IntegrationSyncRun",
         "AnalyticsTask",
     )

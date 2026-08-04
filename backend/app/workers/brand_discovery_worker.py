@@ -8,36 +8,128 @@ import os
 import signal
 import socket
 import uuid
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.core.config.brand_discovery import brand_discovery_settings
-from app.core.database import SessionLocal, dispose_engine
-from app.domain.projects.discovery import (
-    claim_discovery,
-    process_discovery,
-    reap_exhausted_discoveries,
+from app.core.config.brand_discovery import (
+    BRAND_DISCOVERY_QUEUE_SPEC,
+    DISCOVERY_STATUS_NEEDS_INPUT,
+    DISCOVERY_STATUS_RUNNING,
+    ERROR_BRAND_DISCOVERY,
+    brand_discovery_settings,
 )
-from app.models.discovery import BrandDiscovery
+from app.core.config.task_queue import (
+    TASK_STATUS_FAILED,
+    TASK_STATUS_RETRY_WAIT,
+    TASK_STATUS_SUCCEEDED,
+    TASK_TERMINAL_STATUSES,
+)
+from app.core.database import SessionLocal, dispose_engine
+from app.domain.projects.discovery import process_discovery
+from app.models.discovery import BrandDiscovery, BrandDiscoveryTask
+from app.orchestration.postgres_task_queue import PostgresTaskQueue
 
 logger = logging.getLogger(__name__)
 
 
-async def _claim_after_optional_reap(
-    session: AsyncSession, *, worker_id: str, reap: bool
-) -> BrandDiscovery | None:
-    if reap:
-        await reap_exhausted_discoveries(session)
-    return await claim_discovery(session, worker_id=worker_id)
+_queue = PostgresTaskQueue(SessionLocal, BRAND_DISCOVERY_QUEUE_SPEC)
+
+
+async def _heartbeat(task_id, worker_id: str) -> None:
+    while True:
+        await asyncio.sleep(brand_discovery_settings.heartbeat_interval_seconds)
+        await _queue.heartbeat(task_id=task_id, owner=worker_id)
+
+
+async def _stop_heartbeat(heartbeat: asyncio.Task[None]) -> None:
+    """Stop a lease heartbeat without letting cleanup failures skip finalize."""
+    heartbeat.cancel()
+    try:
+        await heartbeat
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        logger.exception("Brand discovery heartbeat cleanup failed")
+
+
+async def _finalize(task_id, *, worker_id: str, error: Exception | None) -> None:
+    now = datetime.now(UTC)
+    async with SessionLocal() as session:
+        task = await session.get(BrandDiscoveryTask, task_id, with_for_update=True)
+        if task is None or task.lease_owner != worker_id:
+            return
+        if task.status in TASK_TERMINAL_STATUSES:
+            return
+        task.attempt_count += 1
+        if error is None:
+            task.status = TASK_STATUS_SUCCEEDED
+            task.completed_at = now
+            task.error_code = ""
+            task.error_detail = ""
+        elif task.attempt_count < task.max_attempts:
+            task.status = TASK_STATUS_RETRY_WAIT
+            task.available_at = now + timedelta(
+                seconds=brand_discovery_settings.failure_backoff_max_seconds
+            )
+            task.error_code = ERROR_BRAND_DISCOVERY
+            task.error_detail = str(error)[:2000]
+        else:
+            task.status = TASK_STATUS_FAILED
+            task.completed_at = now
+            task.error_code = BRAND_DISCOVERY_QUEUE_SPEC.max_attempts_error
+            task.error_detail = str(error)[:2000]
+        task.lease_owner = None
+        task.lease_expires_at = None
+        await session.commit()
 
 
 async def run_once(worker_id: str, *, reap: bool = False) -> bool:
-    async with SessionLocal() as session:
-        row = await _claim_after_optional_reap(session, worker_id=worker_id, reap=reap)
-        if row is None:
-            return False
-        await process_discovery(session, row)
+    if reap:
+        sweep = await _queue.release_expired_detailed(
+            batch_size=brand_discovery_settings.reaper_batch_size
+        )
+        if sweep.failed_parent_ids:
+            async with SessionLocal() as session:
+                rows = list(
+                    (
+                        await session.scalars(
+                            select(BrandDiscovery).where(
+                                BrandDiscovery.id.in_(sweep.failed_parent_ids)
+                            )
+                        )
+                    ).all()
+                )
+                for row in rows:
+                    row.status = DISCOVERY_STATUS_NEEDS_INPUT
+                    row.stage = "review"
+                    row.gaps = list(dict.fromkeys([*row.gaps, "discovery_unavailable"]))
+                    row.error_detail = BRAND_DISCOVERY_QUEUE_SPEC.max_attempts_error
+                await session.commit()
+    tasks = await _queue.claim(owner=worker_id, limit=1)
+    if not tasks:
+        return False
+    task = tasks[0]
+    if not await _queue.mark_running(task_id=task.id, owner=worker_id):
         return True
+    heartbeat = asyncio.create_task(_heartbeat(task.id, worker_id))
+    error: Exception | None = None
+    try:
+        async with SessionLocal() as session:
+            discovery = await session.get(BrandDiscovery, task.discovery_id)
+            if discovery is None:
+                raise RuntimeError("Brand discovery task has no discovery")
+            discovery.status = DISCOVERY_STATUS_RUNNING
+            await session.commit()
+            await process_discovery(session, discovery)
+    except Exception as exc:
+        error = exc
+    finally:
+        try:
+            await _stop_heartbeat(heartbeat)
+        finally:
+            await _finalize(task.id, worker_id=worker_id, error=error)
+    return True
 
 
 def _set_fallback_signal(

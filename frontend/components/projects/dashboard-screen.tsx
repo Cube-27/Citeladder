@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -43,21 +43,44 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
 import { ICONS } from '@/lib/icons';
+import { ActivationProgress } from './activation-progress';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function displayValue(value: unknown): string {
   if (value === null || value === undefined) return '—';
   if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(1);
   if (typeof value === 'boolean') return value ? 'Configured' : 'Not configured';
-  if (typeof value === 'string') return value.replaceAll('_', ' ');
+  if (typeof value === 'string') return value;
   return 'Available';
+}
+
+function formatMomentum(value: number | null): string {
+  if (value === null) return '—';
+  const prefix = value > 0 ? '+' : '';
+  return `${prefix}${value.toFixed(1)}`;
 }
 
 /** The first non-null metric, split into label + value for the stat layout. */
 function primaryMetric(section: DashboardSection): { label: string; value: unknown } | null {
-  const entries = Object.entries(section.metrics).filter(([, value]) => value !== null);
-  if (entries.length === 0) return null;
-  const [name, value] = entries[0];
-  return { label: name.replaceAll('_', ' '), value };
+  const preferred: Partial<Record<DashboardSection['id'], { key: string; label: string }>> = {
+    visibility: { key: 'visibility_score', label: 'visibility score' },
+    prompts: { key: 'active', label: 'active prompts' },
+    runs: { key: 'completed', label: 'answers completed' },
+    site_health: { key: 'overall_score', label: 'site health score' },
+    issues: { key: 'count', label: 'issues' },
+    opportunities: { key: 'open', label: 'open' },
+    brand_knowledge: { key: 'configured', label: 'profile' },
+  };
+  const metric = preferred[section.id];
+  if (
+    !metric ||
+    section.metrics[metric.key] === null ||
+    section.metrics[metric.key] === undefined
+  ) {
+    return null;
+  }
+  return { label: metric.label, value: section.metrics[metric.key] };
 }
 
 function hasDashboardSignal(section: DashboardSection) {
@@ -94,11 +117,19 @@ const SECTION_STATE_BADGE: Record<
   empty: { variant: 'neutral' },
 };
 
+const SECTION_STATE_LABEL: Record<DashboardSectionState, string> = {
+  ready: 'Ready',
+  running: 'In progress',
+  not_setup: 'Needs setup',
+  failed: 'Needs attention',
+  empty: 'No results yet',
+};
+
 function SectionRow({ section }: Readonly<{ section: DashboardSection }>) {
   const Icon = SECTION_ICONS[section.id];
   const metric = primaryMetric(section);
   const badge = SECTION_STATE_BADGE[section.state];
-  const stateLabel = section.state.replaceAll('_', ' ');
+  const stateLabel = SECTION_STATE_LABEL[section.state];
   return (
     <Link
       href={section.href}
@@ -219,49 +250,32 @@ function AIPresenceCard({ presence }: Readonly<{ presence: AIPresence }>) {
               {displayValue(current.score)}
             </p>
             <p className="text-muted mt-1 text-xs">
-              {current.formula_kind.replaceAll('_', ' ')} · {current.formula_version}
+              {current.provisional ? 'Still gathering results' : 'Based on your latest results'}
             </p>
           </div>
           <div className="text-right">
             <p className="text-muted text-xs">Momentum (30 days)</p>
-            <p className="mono text-foreground mt-1 text-lg">
-              {presence.momentum === null
-                ? '—'
-                : `${presence.momentum > 0 ? '+' : ''}${presence.momentum.toFixed(1)}`}
-            </p>
+            <p className="mono text-foreground mt-1 text-lg">{formatMomentum(presence.momentum)}</p>
             <p className="text-muted mt-1 text-xs">
-              {current.provisional
-                ? 'Provisional: incomplete evidence'
-                : 'Comparable evidence complete'}
+              {current.provisional ? 'More results will improve this view' : 'Ready to compare'}
             </p>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          {Object.entries(current.components).map(([key, component]) => (
-            <div
-              key={key}
-              className="bg-background-alt flex items-center justify-between rounded-md px-3 py-2"
-            >
-              <span className="text-muted text-xs">{labels[key] ?? key.replaceAll('_', ' ')}</span>
-              <span className="mono text-foreground text-sm">
-                {component.available
-                  ? `${displayValue(component.score)} · ${(component.weight * 100).toFixed(0)}%`
-                  : '—'}
-              </span>
-            </div>
-          ))}
+          {Object.entries(current.components)
+            .filter(([key]) => key in labels)
+            .map(([key, component]) => (
+              <div
+                key={key}
+                className="bg-background-alt flex items-center justify-between rounded-md px-3 py-2"
+              >
+                <span className="text-muted text-xs">{labels[key]}</span>
+                <span className="mono text-foreground text-sm">
+                  {component.available ? displayValue(component.score) : '—'}
+                </span>
+              </div>
+            ))}
         </div>
-        <details className="text-muted text-xs">
-          <summary className="cursor-pointer">Trend and provenance</summary>
-          <p className="mt-2">
-            {presence.trend_points.length} persisted point
-            {presence.trend_points.length === 1 ? '' : 's'} ·{' '}
-            {Object.values(current.source_snapshot_ids).flat().length} source snapshots ·{' '}
-            {Object.entries(current.versions)
-              .map(([key, value]) => `${key}: ${value}`)
-              .join(' · ') || '—'}
-          </p>
-        </details>
       </CardContent>
     </Card>
   );
@@ -276,6 +290,7 @@ export function DashboardScreen({
   // `setEditing` unassignable.
 }: Readonly<{ onEditProject?: (project: Project) => void }> = {}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     projects = [],
     activeProject,
@@ -289,6 +304,8 @@ export function DashboardScreen({
     queryKey: queryKeys.projects.dashboard(activeProject?.id ?? ''),
     queryFn: ({ signal }) => projectsApi.getDashboard(activeProject!.id, { signal }),
     enabled: Boolean(activeProject),
+    refetchInterval: (query) =>
+      query.state.data && query.state.data.active_work.length > 0 ? 2000 : false,
   });
 
   const downloadReport = async () => {
@@ -353,6 +370,26 @@ export function DashboardScreen({
     (section) => section.id !== 'projects' && hasDashboardSignal(section),
   );
   const generatedAt = new Date(data.generated_at);
+  const requestedCrawlId =
+    searchParams?.get('activation') === '1' ? searchParams.get('crawl') : null;
+  const activationProjectId = searchParams?.get('project');
+  const activationCrawlId =
+    activationProjectId === activeProject.id &&
+    requestedCrawlId &&
+    UUID_PATTERN.test(requestedCrawlId)
+      ? requestedCrawlId
+      : null;
+  const requestedPageLimit = Number(searchParams?.get('limit'));
+  const activationPageLimit =
+    Number.isSafeInteger(requestedPageLimit) && requestedPageLimit > 0 ? requestedPageLimit : null;
+  const activeWorkLabels: Record<string, string> = {
+    runs: 'measuring brand visibility',
+    site_health: 'reviewing your website',
+    content: 'preparing content guidance',
+  };
+  const activeWork = data.active_work
+    .map((item) => activeWorkLabels[item])
+    .filter((item): item is string => Boolean(item));
   return (
     <div className="grid gap-6" data-tour="dashboard-overview">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -367,7 +404,7 @@ export function DashboardScreen({
               {data.project.brand_name || data.project.name}
             </h2>
             <p className="text-muted mt-1 text-sm">
-              A live summary of your Searchify results · Snapshot{' '}
+              A live summary of your Searchify results · Updated{' '}
               {generatedAt.toLocaleString('en-US', {
                 dateStyle: 'medium',
                 timeStyle: 'short',
@@ -444,6 +481,14 @@ export function DashboardScreen({
         <Alert tone="danger">Could not download the report. Please try again.</Alert>
       ) : null}
 
+      {activationCrawlId ? (
+        <ActivationProgress
+          projectId={activeProject.id}
+          crawlId={activationCrawlId}
+          pageLimit={activationPageLimit}
+        />
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
           label="Visibility score"
@@ -491,10 +536,8 @@ export function DashboardScreen({
         </Card>
       ) : null}
 
-      {data.active_work.length > 0 ? (
-        <Alert tone="info">
-          Active work: {data.active_work.map((item) => item.replaceAll('_', ' ')).join(', ')}.
-        </Alert>
+      {activeWork.length > 0 && !activationCrawlId ? (
+        <Alert tone="info">We&apos;re currently {activeWork.join(' and ')}.</Alert>
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">

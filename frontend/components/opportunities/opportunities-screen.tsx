@@ -23,14 +23,22 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { formatAudited } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 
+export function opportunitySummaryPollingInterval(state: {
+  status: string;
+  data?: OpportunitySummary;
+}): number | false {
+  if (state.status === 'error' && !state.data) return false;
+  return state.data?.activation_state === 'ready' || state.data?.activation_state === 'delayed'
+    ? false
+    : 1500;
+}
+
 /**
  * Opportunities screen container: compact recommendation queue + catalog.
  *
- * Resolves the active project, renders the latest recompute snapshot as the
- * queue summary (API-owned counts — never a client re-count) with refresh and
- * export actions, then the priority-sorted recommendation catalog. A
- * project that has never been recomputed gets the empty state with a
- * Recompute CTA (and copy pointing at running an audit/crawl first).
+ * Resolves the active project and follows the server-owned recommendation
+ * refresh. Normal completion is automatic; a retry is offered only after a
+ * delayed terminal failure.
  */
 export function OpportunitiesScreen() {
   const { activeProject, isLoading: projectLoading } = useProjectContext();
@@ -39,6 +47,7 @@ export function OpportunitiesScreen() {
   const summaryQuery = useQuery({
     ...opportunitiesQueries.summary(projectId ?? ''),
     enabled: Boolean(projectId),
+    refetchInterval: (query) => opportunitySummaryPollingInterval(query.state),
   });
   const summary = summaryQuery.data ?? null;
   const loading = projectLoading || (Boolean(projectId) && summaryQuery.isPending && !summary);
@@ -55,7 +64,7 @@ export function OpportunitiesScreen() {
       ) : summaryQuery.isError && !summary ? (
         <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>
       ) : projectId && summary && !summary.computed ? (
-        <NeverComputed projectId={projectId} />
+        <PreparingRecommendations projectId={projectId} summary={summary} />
       ) : projectId && summary ? (
         <>
           <SummaryStrip projectId={projectId} summary={summary} />
@@ -79,7 +88,7 @@ function useRecompute() {
   });
 }
 
-function RecomputeButton({
+function RetryButton({
   projectId,
   variant = 'primary',
 }: Readonly<{ projectId: string; variant?: 'primary' | 'secondary' }>) {
@@ -93,22 +102,31 @@ function RecomputeButton({
       onClick={() => recompute.mutate({ projectId })}
     >
       <RefreshCw className={cn('size-4', recompute.isPending && 'animate-spin')} aria-hidden />
-      Refresh recommendations
+      Try recommendations again
     </Button>
   );
 }
 
-function NeverComputed({ projectId }: Readonly<{ projectId: string }>) {
+function PreparingRecommendations({
+  projectId,
+  summary,
+}: Readonly<{ projectId: string; summary: OpportunitySummary }>) {
+  const delayed = summary.activation_state === 'delayed';
   return (
     <Card>
       <CardContent className="grid justify-items-center gap-3 py-10 text-center">
         <AccentEyebrow>Recommendations</AccentEyebrow>
-        <h2 className={displayHeadingLgClasses}>No recommendations yet</h2>
+        <h2 className={displayHeadingLgClasses}>
+          {delayed ? 'Recommendations need another try' : 'Preparing recommendations'}
+        </h2>
         <p className="text-secondary max-w-md text-sm">
-          Run a visibility audit or Site Health crawl first, then refresh this page to turn the
-          latest findings into prioritized actions.
+          {summary.activation_state === 'waiting_for_evidence'
+            ? 'We need a completed visibility or website review before we can prioritize actions.'
+            : delayed
+              ? 'The latest findings are safe. Try preparing the recommendations again.'
+              : 'We are turning your latest findings into prioritized actions automatically.'}
         </p>
-        <RecomputeButton projectId={projectId} variant="secondary" />
+        {delayed ? <RetryButton projectId={projectId} variant="secondary" /> : null}
       </CardContent>
     </Card>
   );
@@ -169,7 +187,7 @@ function SummaryStrip({
               </DropdownItem>
             </DropdownContent>
           </Dropdown>
-          <RecomputeButton projectId={projectId} />
+          {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
         </div>
       </CardContent>
     </Card>
