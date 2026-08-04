@@ -96,6 +96,40 @@ async def _seed_ready_discovery(
 
 
 @pytest.mark.asyncio
+async def test_discovery_failure_persists_safe_state_and_reaches_queue_retry(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "discovery-retry@example.com")
+    async with session_factory() as session:
+        workspace_id = await session.scalar(select(Workspace.id).limit(1))
+        assert workspace_id is not None
+        discovery = await _seed_ready_discovery(session, workspace_id)
+        await session.commit()
+        discovery_id = discovery.id
+
+    async def _fail_acquisition(*args, **kwargs):
+        raise RuntimeError("transport unavailable")
+
+    monkeypatch.setattr(
+        discovery_domain, "_collect_owned_site", _fail_acquisition
+    )
+    async with session_factory() as session:
+        discovery = await session.get(BrandDiscovery, discovery_id)
+        assert discovery is not None
+        with pytest.raises(RuntimeError, match="transport unavailable"):
+            await discovery_domain.process_discovery(session, discovery)
+
+    async with session_factory() as session:
+        persisted = await session.get(BrandDiscovery, discovery_id)
+        assert persisted is not None
+        assert persisted.status == "needs_input"
+        assert "discovery_unavailable" in persisted.gaps
+        assert persisted.error_detail == "RuntimeError"
+
+
+@pytest.mark.asyncio
 async def test_complete_is_atomic_idempotent_and_workspace_scoped(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],

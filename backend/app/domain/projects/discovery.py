@@ -1006,6 +1006,21 @@ def _existing_discovery_gaps(
     return list(dict.fromkeys([*collected_gaps, *persisted_gaps]))
 
 
+async def _commit_discovery_attempt(
+    session: AsyncSession, *, original_error: Exception | None
+) -> None:
+    """Commit user-safe state, then surface failures to the queue owner."""
+    try:
+        await session.commit()
+    except Exception as commit_error:
+        await session.rollback()
+        if original_error is not None:
+            raise original_error from commit_error
+        raise
+    if original_error is not None:
+        raise original_error
+
+
 async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
     """Discover a complete evidence-grounded brand profile from minimal input."""
     original_error: Exception | None = None
@@ -1111,13 +1126,9 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
         row.gaps = list(dict.fromkeys([*existing_gaps, "discovery_unavailable"]))
         row.error_detail = type(exc).__name__
     finally:
-        try:
-            await session.commit()
-        except Exception as commit_error:
-            await session.rollback()
-            if original_error is not None:
-                raise original_error from commit_error
-            raise
+        # The user-safe recovery state is durable before the original failure
+        # reaches the queue owner and schedules retry/backoff.
+        await _commit_discovery_attempt(session, original_error=original_error)
 
 
 def _confirmed_domains(values: list[str]) -> list[str]:
