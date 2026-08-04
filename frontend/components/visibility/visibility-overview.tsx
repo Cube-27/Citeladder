@@ -8,7 +8,8 @@ import { DashboardSkeleton } from '@/components/visibility/dashboard-skeleton';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { OverviewSummary } from '@/components/visibility/overview-summary';
 import { RankingsTable } from '@/components/visibility/rankings-table';
-import type { Visibility } from '@/lib/api/types';
+import { PromptInsights } from '@/components/visibility/prompt-insights';
+import type { ObservedCompetitor, PromptMetricItem, Visibility } from '@/lib/api/types';
 import type { VisibilityFilters } from '@/lib/visibility/dashboard';
 
 /**
@@ -35,6 +36,9 @@ export function VisibilityOverview({
   engineFilter,
   brandName,
   brandHistory,
+  projectId,
+  promptQuery,
+  suggestionsQuery,
 }: Readonly<{
   query: UseQueryResult<Visibility, unknown>;
   engineFilter: VisibilityFilters['engine'];
@@ -45,6 +49,9 @@ export function VisibilityOverview({
    * cross-run series is already cached. Undefined simply hides the column.
    */
   brandHistory?: ReadonlyMap<string, number[]>;
+  projectId: string;
+  promptQuery: UseQueryResult<PromptMetricItem[], unknown>;
+  suggestionsQuery: UseQueryResult<ObservedCompetitor[], unknown>;
 }>) {
   const visibility = query.data;
 
@@ -57,6 +64,11 @@ export function VisibilityOverview({
         <OverviewSummary visibility={visibility} brandName={brandName} />
         <RankingsTable visibility={visibility} history={brandHistory} />
         <EngineComparison visibility={visibility} filter={engineFilter} />
+        <PromptInsights
+          projectId={projectId}
+          promptQuery={promptQuery}
+          suggestionsQuery={suggestionsQuery}
+        />
       </>
     );
   } else if (query.isError) {
