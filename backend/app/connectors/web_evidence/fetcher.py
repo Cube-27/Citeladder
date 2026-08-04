@@ -579,7 +579,7 @@ class SecureFetcher:
                 )
                 exc.attempts = tuple(attempts)
                 raise
-            location = result.redacted_headers.get("location")
+            location = result.redirect_location
             if result.status_code not in _REDIRECT_STATUSES or not location:
                 self._trace_curl_result(
                     attempts, request, result, hop_started, acquisition

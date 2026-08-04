@@ -3,7 +3,6 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,11 +52,11 @@ from app.models.traffic import TrafficSnapshot
 
 
 def _bounded_rate(value: object) -> float | None:
-    if not isinstance(value, (int, float, str, Decimal)):
+    if value is None:
         return None
     try:
         return min(1.0, max(0.0, float(value)))
-    except (TypeError, ValueError):
+    except (OverflowError, TypeError, ValueError):
         return None
 
 

@@ -671,13 +671,15 @@ export const visibilityEngineSchema = responseObject({
   visibility_score: z.number().nullable(),
 });
 
-// One brand-vs-competitor rankings-table row (B6 `RankingRow`). `mention_rate`
-// is the Visibility% and `share_of_voice` the SOV%; `sentiment` / `avg_position`
-// are present but null until the roadmap computes them (decision B-2).
+// One brand-vs-competitor rankings-table row (B6 `RankingRow`). `website_url`
+// lets BrandLogo use its Logo.dev fallback when the cached `logo_url` is absent.
+// `mention_rate` is the Visibility% and `share_of_voice` the SOV%; `sentiment`
+// / `avg_position` are null until the roadmap computes them (decision B-2).
 export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
   logo_url: z.string().nullable().optional(),
+  website_url: z.string().nullable().optional(),
   mention_rate: z.number().nullable(),
   citation_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),

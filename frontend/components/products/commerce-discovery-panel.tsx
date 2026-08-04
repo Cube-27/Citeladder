@@ -48,8 +48,7 @@ export function CommerceDiscoveryPanel({
   const previewSource = async () => {
     if (sourceKind === 'url') return;
     const fingerprint = inputFingerprint;
-    const body =
-      sourceKind === 'json' ? { rows: parsedJsonRows ?? [] } : { csv_text: source };
+    const body = sourceKind === 'json' ? { rows: parsedJsonRows ?? [] } : { csv_text: source };
     await queries.previewMutation.mutateAsync(body);
     setPreviewFingerprint(fingerprint);
   };
@@ -217,9 +216,11 @@ export function CommerceDiscoveryPanel({
                       {candidate.matches
                         .filter((match) => match.target_id)
                         .map((match) => (
-                          <option key={match.target_id ?? match.target_kind} value={match.target_id!}>
-                            {match.target_kind} · {match.target_id} ·{' '}
-                            {match.confidence.toFixed(2)}
+                          <option
+                            key={match.target_id ?? match.target_kind}
+                            value={match.target_id!}
+                          >
+                            {match.target_kind} · {match.target_id} · {match.confidence.toFixed(2)}
                             {match.review_required ? ' · review required' : ''}
                           </option>
                         ))}

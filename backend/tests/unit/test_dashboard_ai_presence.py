@@ -22,6 +22,14 @@ def test_bounded_rate_accepts_decimal_values() -> None:
     assert _bounded_rate(Decimal("0.25")) == 0.25
 
 
+def test_bounded_rate_accepts_float_compatible_numeric_objects() -> None:
+    class NumericLike:
+        def __float__(self) -> float:
+            return 0.75
+
+    assert _bounded_rate(NumericLike()) == 0.75
+
+
 def _metric(
     *, created_at: datetime, mention: float, owned: float = 0.25
 ) -> MetricSnapshot:

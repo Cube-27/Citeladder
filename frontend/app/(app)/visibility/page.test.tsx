@@ -149,6 +149,7 @@ function makeTrendPoint(auditId: string, completedAt: string, score: number | nu
       {
         name: 'Acme',
         is_brand: true,
+        website_url: 'https://acme.com',
         mention_rate: 0.5,
         citation_rate: 0.3,
         share_of_voice: 0.6,
@@ -263,6 +264,7 @@ beforeEach(() => {
 afterEach(() => {
   mswServer.resetHandlers();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 afterAll(() => mswServer.close());
 
@@ -645,6 +647,7 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
 
 describe('VisibilityPage — Trends tab', () => {
   it('renders the trend charts and sends granularity + date bounds', async () => {
+    vi.stubEnv('NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE', 'pk_test');
     currentSearch = new URLSearchParams('tab=trends');
     const params: URL[] = [];
     useBaseHandlers([
@@ -660,6 +663,13 @@ describe('VisibilityPage — Trends tab', () => {
 
     expect(await screen.findByTestId('trend-chart-visibility_score')).toBeInTheDocument();
     expect(screen.getByTestId('trend-chart-sov')).toBeInTheDocument();
+    const latestRankings = screen
+      .getByRole('heading', { name: 'Rankings (Latest)' })
+      .closest('section')!;
+    expect(latestRankings.querySelector('img')?.getAttribute('src')).toContain(
+      'img.logo.dev/acme.com',
+    );
+    expect(latestRankings.querySelector('.size-2')).toBeNull();
     // Default granularity=run and a bounded 90d `from` are sent.
     expect(params[0].searchParams.get('granularity')).toBe('run');
     expect(params[0].searchParams.get('from')).toBeTruthy();

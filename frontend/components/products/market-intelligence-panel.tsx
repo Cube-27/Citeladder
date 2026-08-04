@@ -126,9 +126,7 @@ export function MarketIntelligencePanel({
           />
           <Button
             variant="primary"
-            onClick={() =>
-              void queries.createMutation.mutateAsync(competitorId.trim() || undefined)
-            }
+            onClick={() => queries.createMutation.mutate(competitorId.trim() || undefined)}
             disabled={queries.createMutation.isPending}
           >
             {queries.createMutation.isPending ? 'Creating…' : 'Create comparison'}

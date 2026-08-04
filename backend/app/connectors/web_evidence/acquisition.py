@@ -30,8 +30,8 @@ def curl_cffi_pinned_resolution_supported() -> bool:
     if sys.platform.startswith("win"):
         return False
     try:
-        from curl_cffi import Curl, CurlError, CurlOpt
-    except ImportError:
+        from curl_cffi import Curl, CurlOpt
+    except Exception:  # noqa: BLE001 - incompatible optional bindings fail closed
         return False
     try:
         curl = Curl()
@@ -39,7 +39,7 @@ def curl_cffi_pinned_resolution_supported() -> bool:
             curl.setopt(CurlOpt.RESOLVE, ["searchify.invalid:443:127.0.0.1"])
         finally:
             curl.close()
-    except (CurlError, RuntimeError, TypeError, ValueError):
+    except Exception:  # noqa: BLE001 - capability probe, not application work
         return False
     return True
 

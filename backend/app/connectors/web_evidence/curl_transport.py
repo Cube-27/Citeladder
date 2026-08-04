@@ -8,7 +8,7 @@ validated before curl receives it.
 from __future__ import annotations
 
 import time
-from collections.abc import Mapping
+from urllib.parse import urlsplit
 
 from curl_cffi import CurlOpt
 from curl_cffi.requests import AsyncSession
@@ -20,9 +20,11 @@ from app.connectors.web_evidence.contracts import (
     FetchResult,
     ResolvedTarget,
 )
+from app.connectors.web_evidence.url_policy import split_host_port
 from app.core.config.site_health import (
     ERROR_ACQUISITION_UNAVAILABLE,
     ERROR_CONNECTION_FAILED,
+    ERROR_MALFORMED_RESPONSE,
     ERROR_RESPONSE_TOO_LARGE,
     ERROR_TIMEOUT,
     ERROR_UNSUPPORTED_CONTENT_TYPE,
@@ -31,34 +33,59 @@ from app.core.config.site_health import (
 )
 
 
-def _header_items(headers: object) -> list[tuple[str, str]]:
-    if not isinstance(headers, Mapping) and not hasattr(headers, "items"):
+def _header_values(headers: object, name: str) -> list[str]:
+    """Read a header case-insensitively without losing repeated values."""
+
+    get_list = getattr(headers, "get_list", None)
+    if callable(get_list):
+        return [str(value) for value in get_list(name) if value is not None]
+
+    items = getattr(headers, "multi_items", None)
+    if not callable(items):
+        items = getattr(headers, "items", None)
+    if not callable(items):
         return []
-    return [(str(key), str(value)) for key, value in headers.items()]
+    wanted = name.casefold()
+    return [
+        str(value)
+        for key, value in items()
+        if str(key).casefold() == wanted and value is not None
+    ]
 
 
 def _header_value(headers: object, name: str) -> str:
-    wanted = name.lower()
-    for key, value in _header_items(headers):
-        if key.lower() == wanted:
-            return value
-    return ""
+    return ", ".join(_header_values(headers, name))
+
+
+def _singleton_header_value(headers: object, name: str) -> str:
+    values = _header_values(headers, name)
+    if len(values) > 1:
+        raise FetchError(
+            f"curl response contained repeated {name.lower()} headers",
+            error_code=ERROR_MALFORMED_RESPONSE,
+        )
+    return values[0] if values else ""
 
 
 def _redacted_headers(headers: object) -> dict[str, str]:
     return {
-        key.lower(): value
-        for key, value in _header_items(headers)
-        if key.lower() in PERSISTED_RESPONSE_HEADERS
+        key: value
+        for key in sorted(PERSISTED_RESPONSE_HEADERS)
+        if (value := _header_value(headers, key))
     }
 
 
 def _content_type(headers: object) -> str:
-    return _header_value(headers, "content-type").split(";", 1)[0].strip().lower()
+    return (
+        _singleton_header_value(headers, "content-type")
+        .split(";", 1)[0]
+        .strip()
+        .lower()
+    )
 
 
 def _charset(headers: object) -> str:
-    content_type = _header_value(headers, "content-type")
+    content_type = _singleton_header_value(headers, "content-type")
     for part in content_type.split(";")[1:]:
         key, _, value = part.strip().partition("=")
         if key.lower() == "charset":
@@ -71,6 +98,35 @@ def _curl_resolve_entry(target: ResolvedTarget) -> str:
         f"[{target.connect_ip}]" if ":" in target.connect_ip else target.connect_ip
     )
     return f"{target.host}:{target.port}:{address}"
+
+
+def _validate_resolved_target(target: ResolvedTarget) -> None:
+    """Fail closed unless the requested authority is exactly the pinned one."""
+
+    try:
+        requested_host, requested_port = split_host_port(target.url)
+    except (TypeError, ValueError) as exc:
+        raise FetchError(
+            "curl acquisition received an invalid resolved target",
+            error_code=ERROR_ACQUISITION_UNAVAILABLE,
+        ) from exc
+    requested_scheme = urlsplit(target.url).scheme.casefold()
+    if (
+        requested_host != target.host.casefold().rstrip(".")
+        or requested_port != target.port
+        or requested_scheme != target.scheme.casefold()
+    ):
+        raise FetchError(
+            "curl acquisition target did not match its validated authority",
+            error_code=ERROR_ACQUISITION_UNAVAILABLE,
+        )
+
+
+def _transport_error_code(exc: RequestException) -> int | None:
+    try:
+        return int(exc.code)
+    except (AttributeError, TypeError, ValueError):
+        return None
 
 
 class CurlCffiTransport:
@@ -96,6 +152,7 @@ class CurlCffiTransport:
     ) -> FetchResult:
         """Fetch one admitted target with DNS pinning and bounded streaming."""
 
+        _validate_resolved_target(target)
         started = time.monotonic()
         headers = {"user-agent": self._user_agent, **request.headers}
         options = {
@@ -132,6 +189,7 @@ class CurlCffiTransport:
                 "curl acquisition connection failed",
                 error_code=ERROR_CONNECTION_FAILED,
                 retryable=True,
+                transport_error_code=_transport_error_code(exc),
             ) from exc
 
         if response.primary_ip != target.connect_ip:
@@ -172,6 +230,7 @@ class CurlCffiTransport:
             ttfb_ms=ttfb_ms,
             latency_ms=latency_ms,
             charset=_charset(response.headers),
+            redirect_location=_singleton_header_value(response.headers, "location"),
         )
 
     @staticmethod

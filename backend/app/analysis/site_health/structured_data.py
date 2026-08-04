@@ -338,7 +338,12 @@ def validate_microdata_types(itemtypes: list[str], *, max_blocks: int) -> list[d
 
 
 def product_facts(blocks: list[dict]) -> dict[str, Any]:
-    """Merge bounded Product block observations into one deterministic fact."""
+    """Merge the preferred Product observations into one deterministic fact.
+
+    ``schema_product_count`` intentionally counts this same preferred set, not
+    every nested variant node visited by JSON-LD traversal. That is the stable
+    rule-evidence contract; the helper extraction does not change its meaning.
+    """
     product_blocks = _preferred_product_blocks(blocks)
     values = _empty_product_values()
     shipping = False

@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/table';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
-import { seriesBg } from '@/components/ui/series-palette';
 import { Sparkline } from '@/components/ui/sparkline';
 import { cn } from '@/lib/utils';
 import type { RankingRow } from '@/lib/api/types';
@@ -21,14 +20,10 @@ export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorde
  * Shared brand-vs-competitor rankings table (design.md §9.6), used by both the
  * selected-run Competitors card and the trend-mode ranking-history cards.
  *
- * Columns are `#`, Brand (colour square + name + a "You" chip on the own
- * brand), Visibility% (mono + score-band colour), Share%, Sentiment and
+ * Columns are `#`, Brand (logo + name + a "You" chip on the own brand),
+ * Visibility% (mono + score-band colour), Share%, Sentiment and
  * Position — the last two render the "—" not-yet-computed placeholder
  * (decision B-2). The user's own row is `highlight`ed.
- *
- * The colour square reuses the chart series palette so a brand keeps one
- * identity between this table and the trend chart above it. Identity is never
- * colour-alone: the name is always beside the square.
  *
  * `history` is optional real per-brand visibility series (see
  * `brandVisibilityHistory`). When supplied, a brand with at least two readable
@@ -39,15 +34,10 @@ export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorde
 export function RankingRowsTable({
   rows,
   history,
-  showSeriesMarkers = true,
 }: Readonly<{
   rows: readonly RankingRow[];
   history?: ReadonlyMap<string, number[]>;
-  showSeriesMarkers?: boolean;
 }>) {
-  // Slot assignment mirrors the visibility chart palette: the brand takes slot 1, others
-  // follow in row order and are never cycled past the last slot.
-  let nextSlot = 1;
   const showTrend = Boolean(
     history && rows.some((row) => (history.get(row.name)?.length ?? 0) > 1),
   );
@@ -71,7 +61,6 @@ export function RankingRowsTable({
             row.mention_rate === null ? null : Math.round(row.mention_rate * 100);
           const bandClass =
             visibilityPct === null ? 'text-muted' : scoreBandText[scoreBand(visibilityPct)];
-          const slot = row.is_brand ? 0 : nextSlot++;
           return (
             <TableRow
               key={`${row.is_brand ? 'brand' : 'competitor'}-${row.name}`}
@@ -82,13 +71,12 @@ export function RankingRowsTable({
               </TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
-                  <BrandLogo name={row.name} logoUrl={row.logo_url} size="sm" />
-                  {showSeriesMarkers ? (
-                    <span
-                      aria-hidden
-                      className={cn('size-2 shrink-0 rounded-xs', seriesBg(slot))}
-                    />
-                  ) : null}
+                  <BrandLogo
+                    name={row.name}
+                    logoUrl={row.logo_url}
+                    websiteUrl={row.website_url}
+                    size="sm"
+                  />
                   <span className="text-foreground font-medium">{row.name}</span>
                   {row.is_brand ? (
                     <span className="bg-well text-secondary text-2xs inline-flex items-center rounded-sm px-1.5 py-0.5 font-medium">

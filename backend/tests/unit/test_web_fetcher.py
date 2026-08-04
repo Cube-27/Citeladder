@@ -13,6 +13,7 @@ from __future__ import annotations
 import gzip
 import logging
 import zlib
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -85,6 +86,24 @@ class _FakeAcquisitionTransport(AcquisitionTransport):
     ) -> FetchResult:
         self.targets.append(target)
         return self.result
+
+
+class _SequenceAcquisitionTransport(AcquisitionTransport):
+    def __init__(self, results: list[FetchResult]) -> None:
+        self.results = iter(results)
+        self.targets: list[ResolvedTarget] = []
+
+    async def fetch(
+        self,
+        request: FetchRequest,
+        target: ResolvedTarget,
+        *,
+        max_wire_bytes: int,
+        max_decoded_bytes: int,
+        timeout_seconds: float,
+    ) -> FetchResult:
+        self.targets.append(target)
+        return next(self.results)
 
 
 def _acquisition_result(
@@ -762,6 +781,42 @@ async def test_challenge_uses_pinned_curl_rung_when_available():
         "curl_cffi",
     ]
     assert curl_transport.targets[0].connect_ip == _PUBLIC_IP
+
+
+async def test_curl_redirect_uses_transient_location_and_revalidates_next_hop():
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        return _html_response(403, body=b"<title>Just a moment...</title>")
+
+    first = replace(
+        _acquisition_result(status=302, body=b""),
+        redirect_location="/next",
+        redacted_headers={"content-type": "text/html"},
+    )
+    second = replace(
+        _acquisition_result(),
+        final_url="https://example.com/next",
+    )
+    curl_transport = _SequenceAcquisitionTransport([first, second])
+    settings = SiteHealthSettings(curl_cffi_enabled=True)
+
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        curl_transport=curl_transport,
+        curl_pinned_resolution_supported=True,
+    ) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(url="https://example.com/", purpose="discover")
+        )
+
+    assert [target.url for target in curl_transport.targets] == [
+        "https://example.com/",
+        "https://example.com/next",
+    ]
+    assert [hop.to_url for hop in result.redirect_chain] == [
+        "https://example.com/next"
+    ]
 
 
 @pytest.mark.parametrize(

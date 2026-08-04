@@ -39,6 +39,7 @@ class RankingRow(BaseModel):
     name: str
     is_brand: bool = False
     logo_url: str | None = None
+    website_url: str | None = None
     mention_rate: float | None = None
     citation_rate: float | None = None
     share_of_voice: float | None = None
@@ -115,6 +116,7 @@ class VisibilityTrendRankingRow(BaseModel):
     name: str
     is_brand: bool = False
     logo_url: str | None = None
+    website_url: str | None = None
     mention_rate: float | None = None
     citation_rate: float | None = None
     share_of_voice: float | None = None
