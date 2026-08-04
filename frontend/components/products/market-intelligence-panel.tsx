@@ -12,12 +12,16 @@ import type { useMarketIntelligence } from '@/lib/products/use-products-screen';
 
 type Market = ReturnType<typeof useMarketIntelligence>;
 type RecordValue = Record<string, unknown>;
-const dash = (value: unknown) =>
-  value === null || value === undefined || value === ''
-    ? '—'
-    : typeof value === 'object'
-      ? JSON.stringify(value)
-      : String(value);
+const dash = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'object') return JSON.stringify(value) ?? '—';
+  if (['string', 'number', 'boolean', 'bigint'].includes(typeof value)) {
+    return `${value as string | number | boolean | bigint}`;
+  }
+  return '—';
+};
+const comparisonItemKey = (value: unknown, index: number): string =>
+  typeof value === 'string' || typeof value === 'number' ? String(value) : `comparison-${index}`;
 const record = (value: unknown): RecordValue =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as RecordValue) : {};
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
@@ -48,7 +52,7 @@ function ComparisonDetails({ snapshot }: Readonly<{ snapshot: CompetitorComparis
         const conversation = record(item.ai_conversation);
         return (
           <section
-            key={String(item.competitor_product_id ?? index)}
+            key={comparisonItemKey(item.competitor_product_id, index)}
             className="border-border grid gap-2 rounded-sm border p-3 text-sm"
           >
             <div className="flex items-center justify-between gap-2">

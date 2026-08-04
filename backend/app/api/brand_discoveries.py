@@ -9,26 +9,34 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.core.errors import ApiException
+from app.domain.entitlements.enforcement import OccupancyError
 from app.domain.projects.discovery import (
     BrandDiscoveryError,
-    confirm_discovery,
+    complete_discovery,
     create_discovery,
-    create_project_from_discovery,
     discovery_catalog,
     get_discovery,
 )
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryCatalogResponse,
-    BrandDiscoveryConfirm,
+    BrandDiscoveryComplete,
+    BrandDiscoveryCompleteResponse,
     BrandDiscoveryCreate,
-    BrandDiscoveryCreateProject,
-    BrandDiscoveryProjectResponse,
     BrandDiscoveryResponse,
 )
+from app.domain.site_health.planner import CrawlPlanError
 
 router = APIRouter(tags=["brand-discoveries"])
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
+
+
+def _page_limit(configuration: dict) -> int:
+    value = configuration.get("requested_page_limit")
+    if not isinstance(value, int):
+        raise RuntimeError("Initial crawl is missing its page limit")
+    return value
 
 
 @router.get("/brand-discovery-catalog")
@@ -72,47 +80,18 @@ async def get_brand_discovery(
 
 
 @router.post(
-    "/brand-discoveries/{discovery_id}/confirm",
-)
-async def confirm_brand_discovery(
-    discovery_id: uuid.UUID,
-    payload: BrandDiscoveryConfirm,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
-) -> BrandDiscoveryResponse:
-    try:
-        row = await confirm_discovery(
-            session,
-            workspace_id=ctx.workspace_id,
-            discovery_id=discovery_id,
-            payload=payload,
-            idempotency_key=idempotency_key,
-        )
-    except LookupError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-    except BrandDiscoveryError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
-    return BrandDiscoveryResponse.model_validate(row)
-
-
-@router.post(
-    "/brand-discoveries/{discovery_id}/create-project",
+    "/brand-discoveries/{discovery_id}/complete",
     status_code=status.HTTP_201_CREATED,
 )
-async def create_discovered_project(
+async def complete_brand_discovery(
     discovery_id: uuid.UUID,
-    payload: BrandDiscoveryCreateProject,
+    payload: BrandDiscoveryComplete,
     ctx: _WorkspaceDep,
     session: _SessionDep,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
-) -> BrandDiscoveryProjectResponse:
-    if not idempotency_key.strip():
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Idempotency-Key is required"
-        )
+) -> BrandDiscoveryCompleteResponse:
     try:
-        row = await create_project_from_discovery(
+        row, crawl = await complete_discovery(
             session,
             workspace_id=ctx.workspace_id,
             discovery_id=discovery_id,
@@ -120,11 +99,25 @@ async def create_discovered_project(
             idempotency_key=idempotency_key,
         )
     except LookupError as exc:
+        await session.rollback()
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     except BrandDiscoveryError as exc:
+        await session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except OccupancyError as exc:
+        await session.rollback()
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
+    except CrawlPlanError as exc:
+        await session.rollback()
+        raise ApiException.coded(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, exc.code, str(exc)
+        ) from exc
     if row.project_id is None:
-        raise RuntimeError("Project creation completed without a project_id")
-    return BrandDiscoveryProjectResponse(
-        discovery=BrandDiscoveryResponse.model_validate(row), project_id=row.project_id
+        raise RuntimeError("Discovery completion is missing its project identity")
+    return BrandDiscoveryCompleteResponse(
+        project_id=row.project_id,
+        crawl_id=crawl.id,
+        page_limit=_page_limit(crawl.configuration or {}),
     )

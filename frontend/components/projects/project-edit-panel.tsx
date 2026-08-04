@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -12,6 +12,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MarketSelect } from '@/components/ui/market-select';
 import { projectsApi } from '@/lib/api/projects';
+import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project } from '@/lib/api/types';
 import { onboardingErrorMessage } from '@/lib/onboarding/forms';
@@ -59,6 +60,12 @@ export function ProjectEditPanel({
   onOpenChange,
 }: Readonly<{ project: Project; open: boolean; onOpenChange: (open: boolean) => void }>) {
   const queryClient = useQueryClient();
+  const discoveryCatalog = useQuery({
+    queryKey: ['brand-discovery-catalog'],
+    queryFn: ({ signal }) => brandDiscoveriesApi.catalog({ signal }),
+    enabled: open,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
 
   const [brandName, setBrandName] = useState(project.brand_name);
   const [websiteUrl, setWebsiteUrl] = useState(project.website_url);
@@ -79,6 +86,9 @@ export function ProjectEditPanel({
       domains: competitor.domains.join(', '),
     })),
   );
+  const maximumCompetitors = discoveryCatalog.data?.maximum_competitors;
+  const competitorLimitReached =
+    maximumCompetitors === undefined || competitors.length >= maximumCompetitors;
 
   const save = useMutation({
     mutationFn: () =>
@@ -220,10 +230,15 @@ export function ProjectEditPanel({
         <div className="grid gap-2">
           <div className="flex items-center gap-2">
             <p className={eyebrowClasses}>Competitors</p>
+            <span className="text-muted text-xs">
+              {competitors.length} of {maximumCompetitors ?? '…'}
+            </span>
             <Button
               variant="ghost"
               size="sm"
               className="ms-auto"
+              aria-label="Add competitor"
+              disabled={competitorLimitReached}
               onClick={() =>
                 setCompetitors((prev) => [
                   ...prev,

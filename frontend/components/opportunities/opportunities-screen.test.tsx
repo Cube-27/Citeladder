@@ -6,13 +6,17 @@ import userEvent from '@testing-library/user-event';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { ProjectProvider, useProjectContext } from '@/lib/project/project-context';
-import { OpportunitiesScreen } from './opportunities-screen';
+import { OpportunitiesScreen, opportunitySummaryPollingInterval } from './opportunities-screen';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const OPP_A = '22222222-2222-4222-8222-222222222222';
 const OPP_B = '33333333-3333-4333-8333-333333333333';
 const RUN = '44444444-4444-4444-8444-444444444444';
+
+it('stops summary polling after an uncached request error', () => {
+  expect(opportunitySummaryPollingInterval({ status: 'error' })).toBe(false);
+});
 
 const project = {
   id: PROJECT,
@@ -69,6 +73,7 @@ const siteRow = opportunity({
 });
 
 const summary = {
+  activation_state: 'ready',
   computed: true,
   run_id: RUN,
   audit_id: RUN,
@@ -149,12 +154,13 @@ function mockBase() {
 }
 
 describe('OpportunitiesScreen', () => {
-  it('shows the never-computed empty state with a Recompute CTA', async () => {
+  it('shows automatic preparation without a normal refresh action', async () => {
     mockBase();
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
         HttpResponse.json({
           ...summary,
+          activation_state: 'queued',
           computed: false,
           run_id: null,
           audit_id: null,
@@ -171,9 +177,11 @@ describe('OpportunitiesScreen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText('No recommendations yet')).toBeInTheDocument();
-    expect(screen.getByText(/Run a visibility audit/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh recommendations' })).toBeInTheDocument();
+    expect(await screen.findByText('Preparing recommendations')).toBeInTheDocument();
+    expect(screen.getByText(/automatically/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /recommendations again/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders the compact summary strip + prioritized recommendations when computed', async () => {
@@ -206,6 +214,9 @@ describe('OpportunitiesScreen', () => {
 
     // Export has been collapsed into a dropdown trigger.
     expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /recommendations again/i }),
+    ).not.toBeInTheDocument();
 
     // Catalog rows: title, backend-owned target label, impact/area badges.
     await screen.findByText('Brand absent from high-value prompt');
@@ -310,14 +321,14 @@ describe('OpportunitiesScreen', () => {
     await waitFor(() => expect(seen.some((params) => params.get('severity') === 'low')).toBe(true));
   });
 
-  it('recompute posts and invalidates (summary + list refetch)', async () => {
+  it('offers retry only after recommendation preparation is delayed', async () => {
     mockBase();
     let summaryCalls = 0;
     let recomputeCalls = 0;
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () => {
         summaryCalls += 1;
-        return HttpResponse.json(summary);
+        return HttpResponse.json({ ...summary, activation_state: 'delayed' });
       }),
       http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
         HttpResponse.json({ items: [opportunity()], next_cursor: null }),
@@ -333,7 +344,7 @@ describe('OpportunitiesScreen', () => {
     await screen.findByText('Brand absent from high-value prompt');
     const before = summaryCalls;
 
-    await user.click(screen.getByRole('button', { name: 'Refresh recommendations' }));
+    await user.click(screen.getByRole('button', { name: 'Try recommendations again' }));
     await waitFor(() => expect(recomputeCalls).toBe(1));
     await waitFor(() => expect(summaryCalls).toBeGreaterThan(before));
   });
@@ -404,18 +415,16 @@ describe('OpportunitiesScreen', () => {
     expect(within(drawer).getByText('Globex')).toBeInTheDocument();
     expect(within(drawer).getByText('Publish a comparison page.')).toBeInTheDocument();
 
-    // C2: the Source section renders the persisted provenance with deep-links.
-    const runLink = within(drawer).getByRole('link', { name: 'View run' });
+    const runLink = within(drawer).getByRole('link', { name: 'View result' });
     expect(runLink).toHaveAttribute('href', `/runs/${RUN}`);
     const promptLink = within(drawer).getByRole('link', { name: 'Open prompt library' });
     expect(promptLink).toHaveAttribute('href', '/prompts');
-    expect(within(drawer).getByText('1 analysis · 1 metric snapshot')).toBeInTheDocument();
-    // C2: priority score with a plain-language formula note + version tokens.
-    expect(within(drawer).getByText('120')).toBeInTheDocument();
-    expect(within(drawer).getByText(/impact weight × target value/)).toBeInTheDocument();
-    expect(within(drawer).getByText('opp-analyzer-1')).toBeInTheDocument();
-    expect(within(drawer).getByText('opp-rules-1')).toBeInTheDocument();
-    expect(within(drawer).getByText('opp-formula-1')).toBeInTheDocument();
+    expect(
+      within(drawer).queryByText(/metric snapshot|formula|analyzer|rule version/i),
+    ).not.toBeInTheDocument();
+    expect(
+      within(drawer).queryByText(/opp-analyzer|opp-rules|opp-formula/),
+    ).not.toBeInTheDocument();
 
     // Footer workflow: Mark in progress patches the row.
     await user.click(screen.getByRole('button', { name: 'Mark in progress' }));
@@ -465,14 +474,16 @@ describe('OpportunitiesScreen', () => {
     await user.click(within(row!).getByRole('button', { name: /Review/ }));
 
     const drawer = await screen.findByRole('dialog', { name: 'Opportunity detail' });
-    const pageLink = within(drawer).getByRole('link', { name: 'View page detail' });
+    const pageLink = within(drawer).getByRole('link', { name: 'View page' });
     expect(pageLink).toHaveAttribute('href', `/site-health/crawls/${RUN}/pages/${SITE_URL}`);
     // No visibility-run or prompt link for a site-sourced row.
-    expect(within(drawer).queryByRole('link', { name: 'View run' })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole('link', { name: 'View result' })).not.toBeInTheDocument();
     expect(
       within(drawer).queryByRole('link', { name: 'Open prompt library' }),
     ).not.toBeInTheDocument();
-    expect(within(drawer).getByText('1 site issue')).toBeInTheDocument();
+    expect(
+      within(drawer).queryByText(/site issue|snapshot|formula|analyzer/i),
+    ).not.toBeInTheDocument();
   });
 
   it('clears prior project data and selections during project switch', async () => {

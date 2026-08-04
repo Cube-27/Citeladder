@@ -16,6 +16,7 @@ import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
 from app.core.config.audits import AUDIT_STATUS_COMPLETED, AUDIT_STATUS_RUNNING
 from app.core.config.opportunities import (
     ANALYZER_VERSION,
@@ -29,6 +30,7 @@ from app.core.config.products import (
     PRODUCT_SCORING_RULE_VERSION,
 )
 from app.core.config.site_health import CRAWL_STATUS_RUNNING
+from app.core.config.task_queue import TASK_STATUS_FAILED
 from app.domain.opportunities import service
 from app.domain.opportunities.service import (
     InvalidCursorError,
@@ -37,6 +39,7 @@ from app.domain.opportunities.service import (
     OpportunityValidationError,
 )
 from app.models.analysis import Citation, MetricSnapshot
+from app.models.analytics import AnalyticsTask
 from app.models.audit import Audit
 from app.models.opportunity import OpportunitySnapshot
 from app.models.product import ProductMetricSnapshot
@@ -58,6 +61,51 @@ from tests.component.opportunity_helpers import (
 )
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_automatic_refresh_task_is_unique_and_manual_success_is_ready(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    for _ in range(2):
+        await service.enqueue_opportunity_refresh(
+            db_session,
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+            trigger_kind="audit",
+            trigger_id=scn.audit_id,
+        )
+    await db_session.commit()
+    tasks = list(
+        (
+            await db_session.scalars(
+                select(AnalyticsTask).where(
+                    AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
+                )
+            )
+        ).all()
+    )
+    assert len(tasks) == 1
+    tasks[0].status = TASK_STATUS_FAILED
+    await db_session.commit()
+    assert (
+        await service.get_summary(
+            db_session,
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+        )
+    )["activation_state"] == "delayed"
+
+    await service.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    assert (
+        await service.get_summary(
+            db_session,
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+        )
+    )["activation_state"] == "ready"
 
 
 # =========================================================================

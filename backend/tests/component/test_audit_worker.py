@@ -967,10 +967,10 @@ async def test_probe_rows_skip_brand_analysis_and_keep_denominators(
 
 
 # =========================================================================
-# C4(a): the audit-finalize Opportunities recompute hook
+# C4(a): the audit-finalize Opportunities refresh task
 # =========================================================================
 @pytest.mark.asyncio
-async def test_completed_audit_fires_opportunities_recompute_hook(
+async def test_completed_audit_enqueues_opportunities_refresh(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
@@ -978,10 +978,17 @@ async def test_completed_audit_fires_opportunities_recompute_hook(
     seed, audit = await _make_audit(session_factory, prompts=2, reps=1)
     calls: list[dict[str, object]] = []
 
-    async def _record(session, *, workspace_id, project_id):
-        calls.append({"workspace_id": workspace_id, "project_id": project_id})
+    async def _record(session, *, workspace_id, project_id, trigger_kind, trigger_id):
+        calls.append(
+            {
+                "workspace_id": workspace_id,
+                "project_id": project_id,
+                "trigger_kind": trigger_kind,
+                "trigger_id": trigger_id,
+            }
+        )
 
-    monkeypatch.setattr(audit_worker, "recompute_opportunities", _record)
+    monkeypatch.setattr(audit_worker, "enqueue_opportunity_refresh", _record)
     worker = AuditWorker(session_factory=session_factory, owner="w-hook")
     await worker.run_until_idle()
 
@@ -989,13 +996,18 @@ async def test_completed_audit_fires_opportunities_recompute_hook(
         refreshed = await session.get(Audit, audit.id)
         assert refreshed is not None
         assert refreshed.status == AUDIT_STATUS_COMPLETED
-    # The hook fired exactly once, after terminalization, with the audit's
-    # workspace/project identity.
-    assert calls == [{"workspace_id": seed.workspace_id, "project_id": seed.project_id}]
+    assert calls == [
+        {
+            "workspace_id": seed.workspace_id,
+            "project_id": seed.project_id,
+            "trigger_kind": "audit",
+            "trigger_id": audit.id,
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_failed_audit_never_fires_opportunities_hook(
+async def test_failed_audit_never_enqueues_opportunities_refresh(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
@@ -1020,10 +1032,10 @@ async def test_failed_audit_never_fires_opportunities_hook(
 
     calls: list[dict[str, object]] = []
 
-    async def _record(session, *, workspace_id, project_id):
-        calls.append({"workspace_id": workspace_id, "project_id": project_id})
+    async def _record(session, *, workspace_id, project_id, trigger_kind, trigger_id):
+        calls.append({"trigger_id": trigger_id})
 
-    monkeypatch.setattr(audit_worker, "recompute_opportunities", _record)
+    monkeypatch.setattr(audit_worker, "enqueue_opportunity_refresh", _record)
     worker = AuditWorker(session_factory=session_factory, owner="w-hook-fail")
     await worker.run_until_idle()
 
@@ -1035,17 +1047,17 @@ async def test_failed_audit_never_fires_opportunities_hook(
 
 
 @pytest.mark.asyncio
-async def test_opportunities_hook_failure_never_blocks_terminalization(
+async def test_opportunities_enqueue_failure_never_blocks_terminalization(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
 
-    async def _boom(session, *, workspace_id, project_id):
-        raise RuntimeError("recompute exploded")
+    async def _boom(session, *, workspace_id, project_id, trigger_kind, trigger_id):
+        raise RuntimeError("enqueue exploded")
 
-    monkeypatch.setattr(audit_worker, "recompute_opportunities", _boom)
+    monkeypatch.setattr(audit_worker, "enqueue_opportunity_refresh", _boom)
     worker = AuditWorker(session_factory=session_factory, owner="w-hook-boom")
     # Best-effort: the raise is logged + swallowed; the audit still
     # terminalizes.

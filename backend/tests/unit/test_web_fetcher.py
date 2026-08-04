@@ -814,9 +814,7 @@ async def test_curl_redirect_uses_transient_location_and_revalidates_next_hop():
         "https://example.com/",
         "https://example.com/next",
     ]
-    assert [hop.to_url for hop in result.redirect_chain] == [
-        "https://example.com/next"
-    ]
+    assert [hop.to_url for hop in result.redirect_chain] == ["https://example.com/next"]
 
 
 @pytest.mark.parametrize(

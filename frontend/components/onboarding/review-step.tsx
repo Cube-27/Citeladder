@@ -131,6 +131,7 @@ export function ReviewStep({
   onTogglePrompt,
   onRenameCompetitor,
   onAddCompetitor,
+  maximumCompetitors,
 }: Readonly<{
   domains: ReviewDomain[];
   competitors: ReviewCompetitor[];
@@ -140,12 +141,15 @@ export function ReviewStep({
   onTogglePrompt: (index: number) => void;
   onRenameCompetitor: (index: number, name: string) => void;
   onAddCompetitor: () => void;
+  maximumCompetitors: number | undefined;
 }>) {
   const [activeTab, setActiveTab] = useState<TabValue>('entities');
 
   const selectedDomains = domains.filter((d) => d.selected).length;
   const selectedCompetitors = competitors.filter((c) => c.selected).length;
   const selectedPrompts = prompts.filter((p) => p.selected).length;
+  const competitorLimitReached =
+    maximumCompetitors === undefined || selectedCompetitors >= maximumCompetitors;
 
   /**
    * Arrow-key navigation between the two tabs (WAI-ARIA Tabs pattern).
@@ -230,11 +234,20 @@ export function ReviewStep({
             {/* Card: the raised rung separates it from the panel, not an outline (docs/design.md §4a). */}
             <div className="bg-panel shadow-card rounded-lg p-4">
               <div className="mb-3 flex items-center justify-between">
-                <SectionHead label="Competitors" count={`${selectedCompetitors} selected`} />
+                <SectionHead
+                  label="Competitors"
+                  count={`${selectedCompetitors} of ${maximumCompetitors ?? '…'}`}
+                />
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onAddCompetitor}
+                  disabled={competitorLimitReached}
+                  title={
+                    maximumCompetitors !== undefined && competitorLimitReached
+                      ? `You can track up to ${maximumCompetitors} competitors`
+                      : undefined
+                  }
                   className="text-accent-text hover:bg-accent-soft gap-1 px-2 text-xs font-semibold"
                 >
                   <Plus className="size-4" aria-hidden />

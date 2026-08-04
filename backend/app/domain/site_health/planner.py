@@ -499,6 +499,7 @@ async def create_crawl(
     requested_page_limit: int | None = None,
     seed_urls: list[str] | None = None,
     page_types: list[str] | None = None,
+    commit: bool = True,
 ) -> SiteCrawl:
     """Create + queue a Site Health crawl (freeze scope, seed the root task).
 
@@ -694,6 +695,8 @@ async def create_crawl(
         count_disclosure=count_disclosure,
     )
 
+    if not commit:
+        return crawl
     await session.commit()
     return await get_crawl(session, workspace_id=workspace_id, crawl_id=crawl.id)
 

@@ -118,7 +118,7 @@ from app.domain.entitlements.ledger import (
     record_billable_attempt,
     release_terminal_funded_task,
 )
-from app.domain.opportunities.service import recompute as recompute_opportunities
+from app.domain.opportunities.service import enqueue_opportunity_refresh
 from app.domain.providers.credentials import pause_connection_after_key_failure
 from app.models.audit import (
     Audit,
@@ -2001,11 +2001,10 @@ class AuditWorker(DrainableWorkerMixin):
         only (invariant 7 — no provider call) and drives ANALYZING -> REPORTING
         -> COMPLETED / PARTIALLY_COMPLETED. Guarded with ``FOR UPDATE`` so
         concurrent workers don't double-finalize. After the terminal commit it
-        best-effort refreshes the project's Opportunities (C4a) — this is the
+        best-effort queues the project's Opportunities refresh — this is the
         ONLY audit-side hook: ``_finalize_audit`` never fires it (execution
         boundary, no snapshots yet) and failed audits never reach ANALYZING.
         """
-        terminalized_for: tuple[uuid.UUID, uuid.UUID] | None = None
         async with self._session_factory() as session:
             audit = await session.get(Audit, audit_id, with_for_update=True)
             if audit is None or audit.status != AUDIT_STATUS_ANALYZING:
@@ -2017,41 +2016,41 @@ class AuditWorker(DrainableWorkerMixin):
             # product analyses; the brand finalize below stays untouched.
             await finalize_audit_product_analysis(session, audit=audit)
             await finalize_audit_analysis(session, audit=audit)
-            terminalized_for = (audit.workspace_id, audit.project_id)
+            workspace_id = audit.workspace_id
+            project_id = audit.project_id
             await session.commit()
 
-        # AFTER the commit, deliberately (mirrors the crawl hook in
-        # ``workers/site_health/lifecycle.py``): the audit's terminal status
-        # and its snapshots are already durable, so a recompute failure can
-        # never leave the audit un-terminalized.
-        if terminalized_for is not None:
-            workspace_id, project_id = terminalized_for
-            await self._recompute_opportunities(
-                workspace_id=workspace_id, project_id=project_id
-            )
+        await self._enqueue_opportunity_refresh(
+            audit_id=audit_id,
+            workspace_id=workspace_id,
+            project_id=project_id,
+        )
 
-    async def _recompute_opportunities(
-        self, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+    async def _enqueue_opportunity_refresh(
+        self,
+        *,
+        audit_id: uuid.UUID,
+        workspace_id: uuid.UUID,
+        project_id: uuid.UUID,
     ) -> None:
-        """Refresh the project's Opportunities from the just-finished audit.
+        """Queue downstream work without reopening the terminal audit write."""
 
-        Without this hook, new brand-visibility evidence never refreshed the
-        catalog until the next crawl or a manual refresh. Best-effort by
-        construction (same contract as the crawl hook): it runs in its own
-        session after the terminalization commit, and any failure is logged
-        and swallowed — stale opportunities surface as the read-time
-        staleness badge instead of blocking terminalization, and the next
-        crawl/audit or the user's manual refresh retries anyway.
-        """
+        # Queue work only after the source audit is durably terminal. A queue
+        # outage must never roll back the evidence and snapshot above.
         try:
             async with self._session_factory() as session:
-                await recompute_opportunities(
-                    session, workspace_id=workspace_id, project_id=project_id
+                await enqueue_opportunity_refresh(
+                    session,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    trigger_kind="audit",
+                    trigger_id=audit_id,
                 )
+                await session.commit()
         except Exception:
             logger.exception(
-                "opportunities recompute after audit terminalization failed",
-                extra={"project_id": str(project_id)},
+                "opportunity refresh enqueue failed",
+                extra={"audit_id": str(audit_id)},
             )
 
 

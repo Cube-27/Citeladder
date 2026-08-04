@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   brandDiscoveryCatalogSchema,
-  brandDiscoveryProjectSchema,
+  brandDiscoveryCompleteSchema,
   brandDiscoverySchema,
   strictValidate,
 } from './schemas';
@@ -17,24 +17,31 @@ export type BrandDiscoveryInput = {
   language_code?: string;
 };
 
-export type BrandDiscoveryConfirmation = {
-  profile: {
-    description: string;
-    positioning: string;
-    products_services: string[];
-    target_audience: string;
-    industry: string;
-    business_type: 'b2b' | 'b2c' | 'both';
-    price_tier: string;
-  };
+type DiscoveryProfile = {
+  description: string;
+  positioning: string;
+  products_services: string[];
+  target_audience: string;
+  industry: string;
+  business_type: 'b2b' | 'b2c' | 'both';
+  price_tier: string;
+};
+
+type DiscoveryCompetitor = { name: string; aliases: string[]; domains: string[] };
+type DiscoveryPrompt = {
+  text: string;
+  intent: 'discovery' | 'comparison' | 'purchase' | 'service' | 'local';
+  cohort: 'core' | 'comparison';
+};
+
+export type BrandDiscoveryCompletion = {
+  name: string;
+  profile: DiscoveryProfile;
   domains: string[];
-  competitors: Array<{ name: string; aliases: string[]; domains: string[] }>;
-  topics: string[];
-  prompts: Array<{
-    text: string;
-    theme: string;
-    intent: 'discovery' | 'comparison' | 'purchase' | 'service' | 'local';
-    cohort: 'core' | 'comparison';
+  competitors: DiscoveryCompetitor[];
+  prompt_groups: Array<{
+    topic: string;
+    prompts: DiscoveryPrompt[];
   }>;
 };
 
@@ -54,19 +61,11 @@ export const brandDiscoveriesApi = {
     const value = await apiClient.get(`/brand-discoveries/${id}`, options);
     return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.get');
   },
-  confirm: async (id: string, input: BrandDiscoveryConfirmation, idempotencyKey: string) => {
-    const value = await apiClient.post(`/brand-discoveries/${id}/confirm`, input, {
+  complete: async (id: string, input: BrandDiscoveryCompletion, idempotencyKey: string) => {
+    const value = await apiClient.post(`/brand-discoveries/${id}/complete`, input, {
       idempotencyKey,
       retryNetworkFailures: true,
     });
-    return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.confirm');
-  },
-  createProject: async (id: string, name: string, idempotencyKey: string) => {
-    const value = await apiClient.post(
-      `/brand-discoveries/${id}/create-project`,
-      { name },
-      { idempotencyKey, retryNetworkFailures: true },
-    );
-    return strictValidate(brandDiscoveryProjectSchema, value, 'brandDiscovery.createProject');
+    return strictValidate(brandDiscoveryCompleteSchema, value, 'brandDiscovery.complete');
   },
 };

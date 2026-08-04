@@ -1,5 +1,7 @@
 """Unit coverage for the greenfield brand-discovery boundary."""
 
+import asyncio
+import json
 import uuid
 from types import SimpleNamespace
 
@@ -16,22 +18,28 @@ from app.domain.projects import discovery as discovery_domain
 from app.domain.projects.brand_evidence import BrandEvidence
 from app.domain.projects.discovery import (
     BrandDiscoveryError,
+    _apply_grouped_completion,
     _candidate_name,
+    _capacity_approved_prompt_rows,
     _collect_owned_site,
-    _confirmed_competitors,
+    _complete_synthesis,
+    _confirmed_competitor_items,
     _discovery_topic_rows,
     _normalized_url,
+    _progress,
     _validated_prompt_suggestions,
     discovery_catalog,
 )
 from app.domain.projects.discovery_schemas import (
-    BrandDiscoveryConfirm,
+    BrandDiscoveryComplete,
     BrandDiscoveryCreate,
     DiscoveryProfile,
     DiscoverySynthesis,
 )
 from app.domain.projects.schemas import CompetitorInput
 from app.models.discovery import BrandDiscovery
+from app.models.prompt import Prompt
+from app.workers import brand_discovery_worker
 
 
 def test_discovery_catalog_declares_required_inputs_and_evidence_methods() -> None:
@@ -211,11 +219,10 @@ def test_discovery_prompt_validation_enforces_core_and_comparison_identity() -> 
 
     assert [prompt["text"] for prompt in prompts] == [
         "Which analytics platforms support marketing attribution?",
-        "How does Acme compare with Globex for attribution?",
     ]
 
 
-def test_discovery_prompt_limit_reserves_comparison_capacity(
+def test_discovery_prompt_limit_preserves_final_core_share(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     synthesis = DiscoverySynthesis.model_validate(
@@ -249,13 +256,11 @@ def test_discovery_prompt_limit_reserves_comparison_capacity(
         competitors=[{"name": "Globex", "aliases": [], "domains": ["globex.com"]}],
     )
 
-    assert [prompt["cohort"] for prompt in prompts] == ["core", "comparison"]
+    assert [prompt["cohort"] for prompt in prompts] == ["core", "core"]
 
 
 def test_discovery_topics_are_deduplicated_case_insensitively() -> None:
-    row = BrandDiscovery(topics=["Analytics", "analytics", "Commerce"])
-
-    topics = _discovery_topic_rows(row, uuid.uuid4())
+    topics = _discovery_topic_rows(["Analytics", "analytics", "Commerce"], uuid.uuid4())
 
     assert [topic.name for topic in topics] == ["Analytics", "Commerce"]
 
@@ -281,54 +286,203 @@ def test_discovery_profile_rejects_unsupported_price_tier() -> None:
         DiscoveryProfile(price_tier="affordable")
 
 
-def _confirmation(competitor: CompetitorInput) -> BrandDiscoveryConfirm:
-    return BrandDiscoveryConfirm(
-        profile=DiscoveryProfile(
-            industry="Retail", business_type="b2c", description="Confirmed"
-        ),
-        domains=["acme.example"],
-        competitors=[competitor],
-        prompts=[
-            {
-                "text": "Which products solve this need?",
-                "theme": "General",
-                "intent": "discovery",
-                "cohort": "core",
-            }
-        ],
-    )
-
-
 def test_confirmed_competitors_reject_brand_identity_and_owned_domain() -> None:
-    tracked_brand = _confirmation(
-        CompetitorInput(name="Acme", domains=["other.example"])
-    )
+    matching_brand = CompetitorInput(name="Acme", domains=["other.example"])
     with pytest.raises(BrandDiscoveryError, match="tracked brand"):
-        _confirmed_competitors(
-            tracked_brand,
+        _confirmed_competitor_items(
+            [matching_brand],
             brand_name="Acme",
             owned_domains=["acme.example"],
         )
-    owned_domain = _confirmation(
-        CompetitorInput(name="Globex", domains=["acme.example"])
-    )
+
+    matching_domain = CompetitorInput(name="Globex", domains=["acme.example"])
     with pytest.raises(BrandDiscoveryError, match="owned domain"):
-        _confirmed_competitors(
-            owned_domain,
+        _confirmed_competitor_items(
+            [matching_domain],
             brand_name="Acme",
             owned_domains=["acme.example"],
         )
 
 
 def test_confirmed_competitors_normalize_domains_and_reject_duplicates() -> None:
-    confirmed = _confirmed_competitors(
-        _confirmation(
+    confirmed = _confirmed_competitor_items(
+        [
             CompetitorInput(
                 name="Globex",
                 domains=["https://www.globex.example/pricing", "globex.example"],
             )
-        ),
+        ],
         brand_name="Acme",
         owned_domains=["acme.example"],
     )
     assert confirmed[0]["domains"] == ["globex.example"]
+
+
+def test_sixth_competitor_and_unbounded_grouped_prompts_are_rejected() -> None:
+    competitors = [
+        {"name": f"Peer {index}", "domains": [f"peer{index}.example"]}
+        for index in range(6)
+    ]
+    with pytest.raises(ValidationError):
+        BrandDiscoveryComplete.model_validate(
+            {
+                "profile": {},
+                "domains": ["acme.example"],
+                "competitors": competitors,
+                "prompt_groups": [
+                    {
+                        "topic": "General",
+                        "prompts": [
+                            {
+                                "text": "Which platform solves this need?",
+                                "intent": "discovery",
+                                "cohort": "core",
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+
+def test_progress_counters_never_decrease_across_terminal_transition() -> None:
+    previous = {
+        "completed_steps": 3,
+        "pages_read": 7,
+        "competitors_found": 4,
+        "prompts_prepared": 9,
+    }
+    result = _progress(phase="complete", completed_steps=99, previous=previous)
+
+    assert result["completed_steps"] == result["total_steps"] == 5
+    assert result["pages_read"] == 7
+    assert result["competitors_found"] == 4
+    assert result["prompts_prepared"] == 9
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_cleanup_isolates_non_cancellation_failure() -> None:
+    async def fail_heartbeat() -> None:
+        raise RuntimeError("heartbeat failed")
+
+    heartbeat = asyncio.create_task(fail_heartbeat())
+    await asyncio.sleep(0)
+
+    await brand_discovery_worker._stop_heartbeat(heartbeat)
+
+
+def test_grouped_completion_revalidates_cohort_identity() -> None:
+    row = BrandDiscovery(
+        input_data={"brand_name": "Acme", "website_url": "https://acme.example"}
+    )
+    payload = BrandDiscoveryComplete.model_validate(
+        {
+            "profile": {},
+            "domains": ["acme.example"],
+            "competitors": [{"name": "Globex", "domains": ["globex.example"]}],
+            "prompt_groups": [
+                {
+                    "topic": "Analytics",
+                    "prompts": [
+                        {
+                            "text": "Is Acme the best analytics platform?",
+                            "intent": "discovery",
+                            "cohort": "core",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(BrandDiscoveryError, match="cohort"):
+        _apply_grouped_completion(row, payload=payload, key="complete-1")
+
+
+@pytest.mark.asyncio
+async def test_capacity_filter_retains_first_duplicate_prompt_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prompt_set_id = uuid.uuid4()
+    prompts = [
+        Prompt(prompt_set_id=prompt_set_id, text="Which platform is best?"),
+        Prompt(prompt_set_id=prompt_set_id, text="  which PLATFORM is best?  "),
+    ]
+
+    async def approve(*_args, **_kwargs) -> frozenset[str]:
+        return frozenset({prompts[0].normalized_text_hash})
+
+    monkeypatch.setattr(discovery_domain, "prepare_prompt_inserts", approve)
+    retained = await _capacity_approved_prompt_rows(
+        SimpleNamespace(),
+        workspace_id=uuid.uuid4(),
+        prompt_set_id=prompt_set_id,
+        prompt_rows=prompts,
+    )
+
+    assert retained == [prompts[0]]
+
+
+@pytest.mark.asyncio
+async def test_synthesis_retries_branded_heavy_prompt_portfolio() -> None:
+    class FakeAgent:
+        def __init__(self) -> None:
+            self.users: list[dict] = []
+
+        async def complete_json(self, *, system: str, user: str) -> str:
+            del system
+            payload = json.loads(user)
+            self.users.append(payload)
+            prompts = (
+                [
+                    {
+                        "text": f"Why choose Acme for analytics {index}?",
+                        "theme": "Analytics",
+                        "intent": "discovery",
+                        "cohort": "core",
+                    }
+                    for index in range(5)
+                ]
+                if len(self.users) == 1
+                else [
+                    {
+                        "text": f"Which analytics platform supports need {index}?",
+                        "theme": "Analytics",
+                        "intent": "discovery",
+                        "cohort": "core",
+                    }
+                    for index in range(4)
+                ]
+                + [
+                    {
+                        "text": "How does Acme compare with Globex for analytics?",
+                        "theme": "Analytics",
+                        "intent": "comparison",
+                        "cohort": "comparison",
+                    }
+                ]
+            )
+            return json.dumps(
+                {
+                    "profile": {},
+                    "competitors": [],
+                    "topics": ["Analytics"],
+                    "prompts": prompts,
+                }
+            )
+
+    agent = FakeAgent()
+    result = await _complete_synthesis(
+        agent,
+        user_payload={
+            "brand_name": "Acme",
+            "verified_competitors": [
+                {"name": "Globex", "aliases": [], "domains": ["globex.example"]}
+            ],
+        },
+        attempts_remaining=2,
+    )
+
+    assert len(agent.users) == 2
+    assert agent.users[1]["previous_validation_errors"]
+    assert len(result.prompts) == 5

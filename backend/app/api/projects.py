@@ -52,6 +52,7 @@ from app.domain.dashboard.report import render_dashboard_pdf
 from app.domain.dashboard.schemas import DashboardResponse
 from app.domain.dashboard.service import get_dashboard
 from app.domain.entitlements.enforcement import OccupancyError
+from app.domain.projects.activation import start_initial_site_review
 from app.domain.projects.brand_profile import (
     BrandProfileNotFoundError,
     brand_profile_to_response,
@@ -96,7 +97,6 @@ from app.domain.projects.service import (
 from app.domain.site_health.planner import (
     CrawlAlreadyActiveError,
     CrawlPlanError,
-    create_crawl,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -201,7 +201,7 @@ async def create_project_endpoint(
         )
 
     try:
-        await create_crawl(
+        await start_initial_site_review(
             session,
             workspace_id=workspace_id,
             project_id=project_id,

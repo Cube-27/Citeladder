@@ -31,7 +31,8 @@ def curl_cffi_pinned_resolution_supported() -> bool:
         return False
     try:
         from curl_cffi import Curl, CurlOpt
-    except Exception:  # noqa: BLE001 - incompatible optional bindings fail closed
+    # An incompatible optional binding must fail closed regardless of error type.
+    except Exception:  # noqa: BLE001
         return False
     try:
         curl = Curl()
@@ -39,7 +40,8 @@ def curl_cffi_pinned_resolution_supported() -> bool:
             curl.setopt(CurlOpt.RESOLVE, ["searchify.invalid:443:127.0.0.1"])
         finally:
             curl.close()
-    except Exception:  # noqa: BLE001 - capability probe, not application work
+    # Capability probing is intentionally isolated from application work.
+    except Exception:  # noqa: BLE001
         return False
     return True
 

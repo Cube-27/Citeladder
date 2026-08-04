@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.core.config.api import API_V1_PREFIX
 from app.core.config.brand_profile import BRAND_PROFILE_SOURCE_MANUAL
 from app.core.config.entitlements import KEY_PROJECT_SLOTS
+from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.domain.entitlements.enforcement import (
     enforce_occupancy,
     lock_workspace_capacity,
@@ -134,6 +135,10 @@ def _apply_brand(project: Project, brand_name: str, aliases: list[str]) -> None:
 
 
 def _build_competitors(items: list[Any] | None) -> list[Competitor]:
+    if len(items or []) > MAX_PROJECT_COMPETITORS:
+        raise ValueError(
+            f"A project can have at most {MAX_PROJECT_COMPETITORS} competitors"
+        )
     competitors: list[Competitor] = []
     for item in items or []:
         name = str(getattr(item, "name", "") or "").strip()

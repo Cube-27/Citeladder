@@ -4592,6 +4592,7 @@ def upgrade() -> None:
         sa.Column("project_id", sa.UUID(), nullable=True),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("stage", sa.String(length=32), nullable=False),
+        sa.Column("progress", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("input_data", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("profile", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("domains", postgresql.JSONB(astext_type=Text()), nullable=False),
@@ -4603,14 +4604,14 @@ def upgrade() -> None:
         sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("gaps", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("initial_crawl_id", sa.UUID(), nullable=True),
         sa.Column("idempotency_key", sa.String(length=128), nullable=False),
-        sa.Column("attempt_count", sa.Integer(), nullable=False),
-        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("lease_owner", sa.String(length=64), nullable=True),
-        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["initial_crawl_id"], ["site_crawls.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
@@ -4622,16 +4623,60 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_brand_discoveries_status"), "brand_discoveries", ["status"]
     )
-    op.create_index(
-        op.f("ix_brand_discoveries_available_at"),
-        "brand_discoveries",
-        ["available_at"],
+    op.create_table(
+        "brand_discovery_tasks",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("discovery_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("task_kind", sa.String(length=32), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("randomized_position", sa.Integer(), nullable=False),
+        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("lease_owner", sa.String(length=64), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("error_code", sa.String(length=32), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["discovery_id"], ["brand_discoveries.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "discovery_id", name="uq_brand_discovery_task_discovery"
+        ),
+        sa.UniqueConstraint(
+            "idempotency_key", name="uq_brand_discovery_task_key"
+        ),
     )
     op.create_index(
-        "ix_brand_discoveries_claim",
-        "brand_discoveries",
-        ["status", "available_at", "created_at"],
-        postgresql_where=sa.text("status IN ('queued', 'running')"),
+        "ix_brand_discovery_tasks_claim",
+        "brand_discovery_tasks",
+        ["status", "available_at"],
+    )
+    op.create_index(
+        "ix_brand_discovery_tasks_lease",
+        "brand_discovery_tasks",
+        ["status", "lease_expires_at"],
+    )
+    op.create_index(
+        op.f("ix_brand_discovery_tasks_status"),
+        "brand_discovery_tasks",
+        ["status"],
+    )
+    op.create_index(
+        op.f("ix_brand_discovery_tasks_available_at"),
+        "brand_discovery_tasks",
+        ["available_at"],
     )
     op.add_column(
         "prompts",
@@ -4804,6 +4849,7 @@ def downgrade() -> None:
         table_name="commerce_discovery_runs",
     )
     op.drop_table("commerce_discovery_runs")
+    op.drop_table("brand_discovery_tasks")
     op.drop_table("brand_discoveries")
     op.drop_constraint(
         "fk_site_crawl_tasks_result_artifact_id", "site_crawl_tasks", type_="foreignkey"

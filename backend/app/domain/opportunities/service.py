@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 
 from sqlalchemy import and_, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,6 +50,10 @@ from app.analysis.opportunities.detectors import (
 from app.analysis.opportunities.scoring import priority_score
 from app.analysis.product_service import build_product_scoring_config
 from app.core.config import settings
+from app.core.config.analytics import (
+    ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
+    analytics_settings,
+)
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
@@ -90,6 +95,13 @@ from app.core.config.site_health import (
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
 )
+from app.core.config.task_queue import (
+    TASK_STATUS_FAILED,
+    TASK_STATUS_LEASED,
+    TASK_STATUS_QUEUED,
+    TASK_STATUS_RETRY_WAIT,
+    TASK_STATUS_RUNNING,
+)
 from app.domain.products.visibility import select_current_snapshots
 from app.domain.prompts.locks import acquire_project_lock
 from app.domain.site_health.normalization import (
@@ -102,6 +114,7 @@ from app.models.analysis import (
     MetricSnapshot,
     ResponseAnalysis,
 )
+from app.models.analytics import AnalyticsTask
 from app.models.audit import Audit, AuditPromptSnapshot
 from app.models.brand import OwnedDomain
 from app.models.opportunity import Opportunity, OpportunityGuidance, OpportunitySnapshot
@@ -126,7 +139,37 @@ __all__ = [
     "get_latest_guidance",
     "list_guidance_history",
     "get_grouped_history",
+    "enqueue_opportunity_refresh",
 ]
+
+
+async def enqueue_opportunity_refresh(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    trigger_kind: str,
+    trigger_id: uuid.UUID,
+) -> None:
+    """Transactionally enqueue one versioned automatic projection refresh."""
+    idempotency_key = (
+        f"opportunity:{trigger_kind}:{trigger_id}:"
+        f"{ANALYZER_VERSION}:{RULE_VERSION}:{FORMULA_VERSION}"
+    )
+    await session.execute(
+        pg_insert(AnalyticsTask)
+        .values(
+            workspace_id=workspace_id,
+            project_id=project_id,
+            task_kind=ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
+            payload={"trigger_kind": trigger_kind, "trigger_id": str(trigger_id)},
+            idempotency_key=idempotency_key,
+            status=TASK_STATUS_QUEUED,
+            max_attempts=analytics_settings.task_max_attempts,
+        )
+        .on_conflict_do_nothing(index_elements=["idempotency_key"])
+    )
+
 
 # Dashboard-ready audit statuses (mirrors ``_DASHBOARD_STATUSES`` in
 # ``domain/analysis/service.py``; the constants themselves are config-owned).
@@ -536,6 +579,7 @@ async def recompute(
     project_id: uuid.UUID,
     audit_id: uuid.UUID | None = None,
     site_crawl_id: uuid.UUID | None = None,
+    skip_if_current: bool = False,
 ) -> dict:
     """Recompute the project's opportunities and return the new snapshot.
 
@@ -631,6 +675,19 @@ async def recompute(
 
     # Write path: ONE transaction, serialized per project.
     await acquire_project_lock(session, project_id)
+    current = await _latest_snapshot(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    if (
+        skip_if_current
+        and current is not None
+        and current.audit_id == (audit.id if audit is not None else None)
+        and current.site_crawl_id == (crawl.id if crawl is not None else None)
+        and current.analyzer_version == ANALYZER_VERSION
+        and current.rule_version == RULE_VERSION
+        and current.formula_version == FORMULA_VERSION
+    ):
+        return _project_snapshot(current)
     live_rows = list(
         (
             await session.scalars(
@@ -1408,6 +1465,34 @@ async def get_summary(
         and evidence_at is not None
         and evidence_at > snapshot.created_at
     )
+    refresh_task = await session.scalar(
+        select(AnalyticsTask)
+        .where(
+            AnalyticsTask.workspace_id == workspace_id,
+            AnalyticsTask.project_id == project_id,
+            AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
+        )
+        .order_by(AnalyticsTask.created_at.desc(), AnalyticsTask.id.desc())
+        .limit(1)
+    )
+    if evidence_at is None:
+        activation_state = "waiting_for_evidence"
+    elif snapshot is not None and not stale:
+        activation_state = "ready"
+    elif refresh_task is not None and refresh_task.status in {
+        TASK_STATUS_LEASED,
+        TASK_STATUS_RUNNING,
+    }:
+        activation_state = "refreshing"
+    elif refresh_task is not None and refresh_task.status in {
+        TASK_STATUS_RETRY_WAIT,
+        TASK_STATUS_FAILED,
+    }:
+        activation_state = "delayed"
+    elif refresh_task is not None and refresh_task.status == TASK_STATUS_QUEUED:
+        activation_state = "queued"
+    else:
+        activation_state = "queued"
     if snapshot is None:
         return {
             "computed": False,
@@ -1425,6 +1510,7 @@ async def get_summary(
             "computed_at": None,
             "evidence_updated_at": _iso(evidence_at),
             "stale": False,
+            "activation_state": activation_state,
         }
     return {
         "computed": True,
@@ -1442,6 +1528,7 @@ async def get_summary(
         "computed_at": _iso(snapshot.created_at),
         "evidence_updated_at": _iso(evidence_at),
         "stale": stale,
+        "activation_state": activation_state,
     }
 
 

@@ -725,7 +725,7 @@ const discoveryProfileSchema = responseObject({
 
 const discoveryPromptSuggestionSchema = responseObject({
   text: z.string(),
-  theme: z.string(),
+  theme: z.string().default(''),
   intent: z.enum(['discovery', 'comparison', 'purchase', 'service', 'local']),
   cohort: promptCohortSchema,
 });
@@ -743,7 +743,21 @@ export const brandDiscoverySchema = responseObject({
   workspace_id: uuid(),
   project_id: uuid().nullable(),
   status: z.enum(['queued', 'running', 'needs_input', 'ready', 'confirmed', 'project_created']),
-  stage: z.string(),
+  progress: responseObject({
+    phase: z.enum([
+      'opening_website',
+      'understanding_business',
+      'finding_competitors',
+      'building_questions',
+      'preparing_review',
+      'complete',
+    ]),
+    completed_steps: z.number().int().nonnegative(),
+    total_steps: z.number().int().positive(),
+    pages_read: z.number().int().nonnegative(),
+    competitors_found: z.number().int().nonnegative(),
+    prompts_prepared: z.number().int().nonnegative(),
+  }),
   input_data: z.record(z.string(), z.unknown()),
   profile: discoveryProfileSchema,
   domains: z.array(z.string()),
@@ -757,9 +771,6 @@ export const brandDiscoverySchema = responseObject({
   topics: z.array(z.string()),
   prompt_suggestions: z.array(discoveryPromptSuggestionSchema),
   evidence: z.array(discoveryEvidenceSchema),
-  gaps: z.array(z.string()),
-  error_detail: z.string(),
-  attempt_count: z.number().int(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -770,11 +781,14 @@ export const brandDiscoveryCatalogSchema = responseObject({
   required_fields: z.array(z.string()),
   optional_fields: z.array(z.string()),
   capture_methods: z.array(z.string()),
+  maximum_competitors: z.number().int().positive(),
 });
 
-export const brandDiscoveryProjectSchema = responseObject({
-  discovery: brandDiscoverySchema,
+export const brandDiscoveryCompleteSchema = responseObject({
   project_id: uuid(),
+  crawl_id: uuid(),
+  activation_state: z.enum(['queued', 'reviewing_site', 'preparing_recommendations', 'ready']),
+  page_limit: z.number().int().positive(),
 });
 
 // ---------------------------------------------------------------------------
@@ -2467,6 +2481,7 @@ export const opportunitiesPageSchema = cursorPageSchema(opportunitySchema);
 // Latest recompute snapshot projection. `computed=false` (with empty counts +
 // null ids) before the first recompute — a 200, never a 404.
 export const opportunitySummarySchema = responseObject({
+  activation_state: z.enum(['waiting_for_evidence', 'queued', 'refreshing', 'ready', 'delayed']),
   computed: z.boolean(),
   run_id: uuid().nullable(),
   audit_id: uuid().nullable(),

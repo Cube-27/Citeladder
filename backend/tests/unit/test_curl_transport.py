@@ -80,8 +80,10 @@ async def _fetch(monkeypatch, response: _Response | Exception, *, target=None):
 async def test_fetch_rejects_url_host_that_does_not_match_resolve_host(
     monkeypatch,
 ) -> None:
+    response = _Response()
+    target = _target(host="attacker.example")
     with pytest.raises(FetchError) as exc:
-        await _fetch(monkeypatch, _Response(), target=_target(host="attacker.example"))
+        await _fetch(monkeypatch, response, target=target)
 
     assert exc.value.error_code == "acquisition_unavailable"
 
@@ -147,8 +149,39 @@ async def test_repeated_content_type_header_fails_closed(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_connection_failure_retains_safe_curl_error_code(monkeypatch) -> None:
+    failure = RequestException("request URL omitted", code=7)
     with pytest.raises(FetchError) as exc:
-        await _fetch(monkeypatch, RequestException("request URL omitted", code=7))
+        await _fetch(monkeypatch, failure)
 
     assert str(exc.value) == "curl acquisition connection failed"
     assert exc.value.transport_error_code == 7
+
+
+@pytest.mark.asyncio
+async def test_request_headers_override_defaults_case_insensitively(
+    monkeypatch,
+) -> None:
+    captured: dict[str, str] = {}
+
+    def session_factory(**kwargs):
+        captured.update(kwargs["headers"])
+        return _Session(_Response())
+
+    monkeypatch.setattr(curl_transport, "AsyncSession", session_factory)
+    transport = curl_transport.CurlCffiTransport(
+        impersonation_profile="chrome", user_agent="Searchify default"
+    )
+    await transport.fetch(
+        FetchRequest(
+            url="https://example.com/",
+            purpose="discover",
+            headers={"User-Agent": "Workspace crawler"},
+        ),
+        _target(),
+        max_wire_bytes=1_000,
+        max_decoded_bytes=1_000,
+        timeout_seconds=5,
+    )
+
+    assert captured["user-agent"] == "Workspace crawler"
+    assert "User-Agent" not in captured

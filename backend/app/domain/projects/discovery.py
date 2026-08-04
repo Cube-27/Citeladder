@@ -7,12 +7,12 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
 from pydantic import ValidationError
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
@@ -39,31 +39,33 @@ from app.core.config.brand_discovery import (
     CAPTURE_METHOD_USER,
     COMPETITOR_EXCLUDED_DOMAINS,
     DISCOVERY_COMPETITOR_SYSTEM_PROMPT,
-    DISCOVERY_STATUS_CONFIRMED,
+    DISCOVERY_MAX_COMPARISON_SHARE,
+    DISCOVERY_PROGRESS_TOTAL_STEPS,
     DISCOVERY_STATUS_NEEDS_INPUT,
     DISCOVERY_STATUS_PROJECT_CREATED,
-    DISCOVERY_STATUS_QUEUED,
     DISCOVERY_STATUS_READY,
-    DISCOVERY_STATUS_RUNNING,
     DISCOVERY_SYNTHESIS_SYSTEM_PROMPT,
     PRICE_TIERS,
     brand_discovery_settings,
 )
+from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.core.config.prompts import ONBOARDING_PROMPT_SET_NAME
+from app.domain.projects.activation import start_initial_site_review
 from app.domain.projects.brand_evidence import collect_brand_evidence
 from app.domain.projects.discovery_schemas import (
-    BrandDiscoveryConfirm,
+    BrandDiscoveryComplete,
     BrandDiscoveryCreate,
-    BrandDiscoveryCreateProject,
     DiscoveryCompetitorCandidates,
     DiscoveryEvidence,
     DiscoverySynthesis,
 )
 from app.domain.projects.schemas import BrandInput, CompetitorInput, ProjectCreate
 from app.domain.projects.service import create_project
+from app.domain.prompts.portfolio import prompt_identity_is_valid
 from app.domain.prompts.service import prepare_prompt_inserts
-from app.models.discovery import BrandDiscovery
+from app.models.discovery import BrandDiscovery, BrandDiscoveryTask
 from app.models.prompt import Prompt, PromptSet, Topic
+from app.models.site_health import SiteCrawl
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +77,59 @@ class BrandDiscoveryError(ValueError):
 IDEMPOTENCY_KEY_REQUIRED = "Idempotency-Key is required"
 
 
-def discovery_catalog() -> dict[str, list[str]]:
+def _progress(
+    *,
+    phase: str,
+    completed_steps: int,
+    pages_read: int = 0,
+    competitors_found: int = 0,
+    prompts_prepared: int = 0,
+    previous: dict | None = None,
+) -> dict:
+    """Safe, persisted progress projection consumed by onboarding."""
+    prior = previous or {}
+    return {
+        "phase": phase,
+        "completed_steps": min(
+            DISCOVERY_PROGRESS_TOTAL_STEPS,
+            max(completed_steps, int(prior.get("completed_steps") or 0)),
+        ),
+        "total_steps": DISCOVERY_PROGRESS_TOTAL_STEPS,
+        "pages_read": max(pages_read, int(prior.get("pages_read") or 0)),
+        "competitors_found": max(
+            competitors_found, int(prior.get("competitors_found") or 0)
+        ),
+        "prompts_prepared": max(
+            prompts_prepared, int(prior.get("prompts_prepared") or 0)
+        ),
+        "updated_at": datetime.now(UTC).isoformat(),
+    }
+
+
+async def _commit_progress(
+    session: AsyncSession,
+    row: BrandDiscovery,
+    stage: str,
+    *,
+    phase: str,
+    completed_steps: int,
+    pages_read: int = 0,
+    competitors_found: int = 0,
+    prompts_prepared: int = 0,
+) -> None:
+    row.stage = stage
+    row.progress = _progress(
+        phase=phase,
+        completed_steps=completed_steps,
+        pages_read=pages_read,
+        competitors_found=competitors_found,
+        prompts_prepared=prompts_prepared,
+        previous=row.progress,
+    )
+    await session.commit()
+
+
+def discovery_catalog() -> dict[str, object]:
     return {
         "business_types": list(BUSINESS_TYPES),
         "price_tiers": list(PRICE_TIERS),
@@ -87,6 +141,7 @@ def discovery_catalog() -> dict[str, list[str]]:
             CAPTURE_METHOD_FIRECRAWL_SEARCH,
             CAPTURE_METHOD_USER,
         ],
+        "maximum_competitors": MAX_PROJECT_COMPETITORS,
     }
 
 
@@ -148,8 +203,18 @@ async def create_discovery(
             "discovery_version": BRAND_DISCOVERY_VERSION,
         },
         idempotency_key=key,
+        stage="queued",
+        progress=_progress(phase="opening_website", completed_steps=0),
     )
     session.add(row)
+    await session.flush()
+    session.add(
+        BrandDiscoveryTask(
+            discovery_id=row.id,
+            workspace_id=workspace_id,
+            idempotency_key=f"brand-discovery:{row.id}",
+        )
+    )
     return await _commit_new_discovery(
         session, row=row, workspace_id=workspace_id, idempotency_key=key
     )
@@ -209,74 +274,6 @@ def _discovery_statement(
     return statement
 
 
-async def reap_exhausted_discoveries(session: AsyncSession) -> int:
-    """Terminalize expired running rows that exhausted their retry budget."""
-    now = datetime.now(UTC)
-    rows = list(
-        (
-            await session.scalars(
-                select(BrandDiscovery)
-                .where(
-                    BrandDiscovery.status == DISCOVERY_STATUS_RUNNING,
-                    BrandDiscovery.attempt_count
-                    >= brand_discovery_settings.maximum_attempts,
-                    BrandDiscovery.lease_expires_at < now,
-                )
-                .limit(brand_discovery_settings.reaper_batch_size)
-                .with_for_update(skip_locked=True)
-            )
-        ).all()
-    )
-    for row in rows:
-        row.status = DISCOVERY_STATUS_NEEDS_INPUT
-        row.stage = "review"
-        row.gaps = list(dict.fromkeys([*row.gaps, "discovery_unavailable"]))
-        row.error_detail = "maximum_attempts_exhausted"
-        row.lease_owner = None
-        row.lease_expires_at = None
-    if rows:
-        await session.commit()
-    return len(rows)
-
-
-async def claim_discovery(
-    session: AsyncSession, *, worker_id: str
-) -> BrandDiscovery | None:
-    now = datetime.now(UTC)
-    row = await session.scalar(
-        select(BrandDiscovery)
-        .where(
-            or_(
-                BrandDiscovery.status == DISCOVERY_STATUS_QUEUED,
-                (
-                    (BrandDiscovery.status == DISCOVERY_STATUS_RUNNING)
-                    & (BrandDiscovery.lease_expires_at < now)
-                ),
-            ),
-            BrandDiscovery.attempt_count < brand_discovery_settings.maximum_attempts,
-            BrandDiscovery.available_at <= now,
-            or_(
-                BrandDiscovery.lease_expires_at.is_(None),
-                BrandDiscovery.lease_expires_at < now,
-            ),
-        )
-        .order_by(BrandDiscovery.created_at)
-        .with_for_update(skip_locked=True)
-        .limit(1)
-    )
-    if row is None:
-        return None
-    row.status = DISCOVERY_STATUS_RUNNING
-    row.stage = "normalize_url"
-    row.lease_owner = worker_id
-    row.lease_expires_at = now + timedelta(
-        seconds=brand_discovery_settings.lease_seconds
-    )
-    row.attempt_count += 1
-    await session.commit()
-    return row
-
-
 def _evidence_item(
     url: str, method: str, confidence: float, supports: list[str]
 ) -> DiscoveryEvidence:
@@ -332,10 +329,10 @@ def _valid_prompt_candidates(
         normalized = normalize_alias(prompt.text)
         if normalized in seen:
             continue
-        if not _prompt_identity_is_valid(
-            prompt.cohort,
-            prompt.intent,
-            normalized,
+        if not prompt_identity_is_valid(
+            text=prompt.text,
+            cohort=prompt.cohort,
+            intent=prompt.intent,
             brand_terms=brand_terms,
             competitor_terms=competitor_terms,
         ):
@@ -348,52 +345,42 @@ def _valid_prompt_candidates(
 def _select_prompt_cohorts(
     accepted: list[dict], *, expect_comparison: bool, limit: int
 ) -> list[dict]:
+    comparison_limit = (
+        int(limit * DISCOVERY_MAX_COMPARISON_SHARE) if expect_comparison else 0
+    )
+    core_limit = limit - comparison_limit
+    core_candidates = [item for item in accepted if item.get("cohort") == "core"]
+    core_count = min(len(core_candidates), core_limit)
+    # The ratio applies to what we actually retain, not the requested capacity.
+    # c / (core + c) <= 20% is equivalent to c <= floor(core / 4).
+    comparison_limit = min(comparison_limit, core_count // 4)
     selected: set[str] = set()
-    # Reserve a slot for every expected cohort before filling the remaining
-    # capacity in model order. Comparison comes first so a very small limit
-    # still retains measurement prompts when competitors were verified.
-    expected_cohorts = ["comparison", "core"] if expect_comparison else ["core"]
-    for cohort in expected_cohorts:
-        candidate = next(
-            (item for item in accepted if item.get("cohort") == cohort), None
-        )
-        if candidate is not None and len(selected) < limit:
-            selected.add(normalize_alias(str(candidate["text"])))
+    retained_core = 0
+    retained_comparison = 0
     for item in accepted:
-        if len(selected) >= limit:
-            break
+        cohort = item.get("cohort")
+        if cohort == "core" and retained_core < core_count:
+            retained_core += 1
+        elif cohort == "comparison" and retained_comparison < comparison_limit:
+            retained_comparison += 1
+        else:
+            continue
         selected.add(normalize_alias(str(item["text"])))
     return [item for item in accepted if normalize_alias(str(item["text"])) in selected]
 
 
-def _prompt_identity_is_valid(
-    cohort: str,
-    intent: str,
-    normalized_text: str,
-    *,
-    brand_terms: list[str],
-    competitor_terms: list[str],
-) -> bool:
-    names_brand = any(
-        alias_present(normalize_alias(term), normalized_text) for term in brand_terms
-    )
-    names_competitor = any(
-        alias_present(normalize_alias(term), normalized_text)
-        for term in competitor_terms
-    )
-    if cohort == "core":
-        return not names_brand and not names_competitor
-    return intent == "comparison" and names_brand and names_competitor
-
-
-def _confirmed_competitors(
-    payload: BrandDiscoveryConfirm, *, brand_name: str, owned_domains: list[str]
+def _confirmed_competitor_items(
+    items: list[CompetitorInput], *, brand_name: str, owned_domains: list[str]
 ) -> list[dict]:
+    if len(items) > MAX_PROJECT_COMPETITORS:
+        raise BrandDiscoveryError(
+            f"A project can have at most {MAX_PROJECT_COMPETITORS} competitors"
+        )
     tracked_brand_names = {brand_name.casefold()}
     owned = set(owned_domains)
     confirmed: list[dict] = []
     seen_names: set[str] = set()
-    for item in payload.competitors:
+    for item in items:
         name_key = item.name.strip().casefold()
         aliases = {alias.strip().casefold() for alias in item.aliases if alias.strip()}
         if name_key in tracked_brand_names or aliases & tracked_brand_names:
@@ -459,7 +446,7 @@ async def _complete_synthesis(
         user=json.dumps(user_payload, ensure_ascii=False),
     )
     try:
-        return DiscoverySynthesis.model_validate_json(raw)
+        synthesis = DiscoverySynthesis.model_validate_json(raw)
     except ValidationError as exc:
         if attempts_remaining <= 1:
             raise
@@ -472,6 +459,44 @@ async def _complete_synthesis(
             user_payload={**user_payload, "previous_validation_errors": feedback},
             attempts_remaining=attempts_remaining - 1,
         )
+    competitors = list(user_payload.get("verified_competitors") or [])
+    retained = _validated_prompt_suggestions(
+        synthesis,
+        brand_name=str(user_payload.get("brand_name") or ""),
+        competitors=competitors,
+    )
+    core_count = sum(prompt.get("cohort") == "core" for prompt in retained)
+    comparison_count = sum(prompt.get("cohort") == "comparison" for prompt in retained)
+    minimum_core = min(
+        brand_discovery_settings.synthesis_min_core_prompts,
+        brand_discovery_settings.synthesis_prompt_count,
+    )
+    portfolio_errors: list[dict] = []
+    if core_count < minimum_core:
+        portfolio_errors.append(
+            {
+                "location": ["prompts"],
+                "message": (
+                    f"provide at least {minimum_core} brand-neutral core prompts"
+                ),
+            }
+        )
+    if competitors and comparison_count < 1:
+        portfolio_errors.append(
+            {
+                "location": ["prompts"],
+                "message": "provide a valid named comparison prompt after core breadth",
+            }
+        )
+    if not portfolio_errors:
+        return synthesis
+    if attempts_remaining <= 1:
+        raise BrandDiscoveryError("Discovery could not prepare a balanced prompt set")
+    return await _complete_synthesis(
+        agent,
+        user_payload={**user_payload, "previous_validation_errors": portfolio_errors},
+        attempts_remaining=attempts_remaining - 1,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -844,6 +869,27 @@ class _SynthesisOutput:
     gaps: list[str]
 
 
+def _grouped_prompt_output(
+    prompts: list[dict], *, suggested_topics: list[str], fallback_topic: str
+) -> tuple[list[str], list[dict]]:
+    """Give every generated prompt one canonical topic and drop orphan topics."""
+    canonical = {
+        topic.strip().casefold(): topic.strip()
+        for topic in suggested_topics
+        if topic.strip()
+    }
+    default_topic = next(iter(canonical.values()), fallback_topic.strip() or "General")
+    grouped: list[dict] = []
+    topic_names: dict[str, str] = {}
+    for prompt in prompts:
+        requested = str(prompt.get("theme") or "").strip()
+        topic = canonical.get(requested.casefold()) if requested else None
+        topic = topic or requested or default_topic
+        topic_names.setdefault(topic.casefold(), topic)
+        grouped.append({**prompt, "theme": topic})
+    return list(topic_names.values()), grouped
+
+
 def _verified_synthesized_competitors(
     synthesis: DiscoverySynthesis, verified: list[dict]
 ) -> list[dict]:
@@ -894,17 +940,23 @@ async def _synthesize_output(
         )
 
     normalized_competitors = _verified_synthesized_competitors(synthesis, competitors)
+    prompts = _validated_prompt_suggestions(
+        synthesis,
+        brand_name=str(data["brand_name"]),
+        competitors=normalized_competitors,
+    )
+    topics, prompts = _grouped_prompt_output(
+        prompts,
+        suggested_topics=list(dict.fromkeys(synthesis.topics))[
+            : brand_discovery_settings.synthesis_topic_count
+        ],
+        fallback_topic=industry,
+    )
     return _SynthesisOutput(
         profile=synthesis.profile.model_dump(),
         competitors=normalized_competitors,
-        topics=list(dict.fromkeys(synthesis.topics))[
-            : brand_discovery_settings.synthesis_topic_count
-        ],
-        prompts=_validated_prompt_suggestions(
-            synthesis,
-            brand_name=str(data["brand_name"]),
-            competitors=normalized_competitors,
-        ),
+        topics=topics,
+        prompts=prompts,
         gaps=[],
     )
 
@@ -954,6 +1006,21 @@ def _existing_discovery_gaps(
     return list(dict.fromkeys([*collected_gaps, *persisted_gaps]))
 
 
+async def _commit_discovery_attempt(
+    session: AsyncSession, *, original_error: Exception | None
+) -> None:
+    """Commit user-safe state, then surface failures to the queue owner."""
+    try:
+        await session.commit()
+    except Exception as commit_error:
+        await session.rollback()
+        if original_error is not None:
+            raise original_error from commit_error
+        raise
+    if original_error is not None:
+        raise original_error
+
+
 async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
     """Discover a complete evidence-grounded brand profile from minimal input."""
     original_error: Exception | None = None
@@ -961,8 +1028,41 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
     discovery_id = row.id
     collected_gaps: list[str] = []
     try:
+        await _commit_progress(
+            session,
+            row,
+            "normalize_url",
+            phase="opening_website",
+            completed_steps=0,
+        )
         owned = await _collect_owned_site(row, row.input_data)
         collected_gaps = list(owned.gaps)
+        pages_read = len(
+            {
+                item.source_url
+                for item in owned.evidence
+                if not item.source_url.startswith("user://")
+            }
+        )
+        row.input_data = owned.data
+        row.domains = [owned.owned_domain]
+        row.evidence = [item.model_dump(mode="json") for item in owned.evidence]
+        await _commit_progress(
+            session,
+            row,
+            "crawl_owned_site",
+            phase="understanding_business",
+            completed_steps=1,
+            pages_read=pages_read,
+        )
+        await _commit_progress(
+            session,
+            row,
+            "competitor_verification",
+            phase="finding_competitors",
+            completed_steps=2,
+            pages_read=pages_read,
+        )
         competitors, competitor_evidence, competitor_gaps = await _discover_competitors(
             row,
             data=owned.data,
@@ -971,6 +1071,20 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
             captured_text=owned.captured_text,
         )
         collected_gaps.extend(competitor_gaps)
+        row.competitors = competitors
+        row.evidence = [
+            item.model_dump(mode="json")
+            for item in [*owned.evidence, *competitor_evidence]
+        ]
+        await _commit_progress(
+            session,
+            row,
+            "synthesize_profile_and_prompts",
+            phase="building_questions",
+            completed_steps=3,
+            pages_read=pages_read,
+            competitors_found=len(competitors),
+        )
         output = await _synthesize_output(
             row,
             data=owned.data,
@@ -984,6 +1098,14 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
             evidence=[*owned.evidence, *competitor_evidence],
             output=output,
             gaps=[*owned.gaps, *competitor_gaps],
+        )
+        row.progress = _progress(
+            phase="preparing_review",
+            completed_steps=DISCOVERY_PROGRESS_TOTAL_STEPS - 1,
+            previous=row.progress,
+            pages_read=pages_read,
+            competitors_found=len(output.competitors),
+            prompts_prepared=len(output.prompts),
         )
     except Exception as exc:
         original_error = exc
@@ -1004,83 +1126,9 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
         row.gaps = list(dict.fromkeys([*existing_gaps, "discovery_unavailable"]))
         row.error_detail = type(exc).__name__
     finally:
-        row.lease_owner = None
-        row.lease_expires_at = None
-        try:
-            await session.commit()
-        except Exception as commit_error:
-            await session.rollback()
-            if original_error is not None:
-                raise original_error from commit_error
-            raise
-
-
-async def confirm_discovery(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    discovery_id: uuid.UUID,
-    payload: BrandDiscoveryConfirm,
-    idempotency_key: str,
-) -> BrandDiscovery:
-    key = idempotency_key.strip()
-    if not key:
-        raise BrandDiscoveryError(IDEMPOTENCY_KEY_REQUIRED)
-    row = await get_discovery(
-        session,
-        workspace_id=workspace_id,
-        discovery_id=discovery_id,
-        for_update=True,
-    )
-    if _confirmation_already_applied(row, key):
-        return row
-    if row.status not in {DISCOVERY_STATUS_NEEDS_INPUT, DISCOVERY_STATUS_READY}:
-        raise BrandDiscoveryError("Discovery is not ready for confirmation")
-    domains = _confirmed_domains(payload.domains)
-    competitors = _confirmed_competitors(
-        payload,
-        brand_name=str(row.input_data["brand_name"]),
-        owned_domains=domains,
-    )
-    _apply_confirmation(
-        row,
-        payload=payload,
-        key=key,
-        domains=domains,
-        competitors=competitors,
-    )
-    await session.commit()
-    return row
-
-
-def _apply_confirmation(
-    row: BrandDiscovery,
-    *,
-    payload: BrandDiscoveryConfirm,
-    key: str,
-    domains: list[str],
-    competitors: list[dict],
-) -> None:
-    row.profile = payload.profile.model_dump()
-    row.domains = domains
-    row.competitors = competitors
-    row.topics = list(dict.fromkeys(payload.topics))
-    row.prompt_suggestions = [prompt.model_dump() for prompt in payload.prompts]
-    row.input_data = {**row.input_data, "confirmation_idempotency_key": key}
-    row.gaps = []
-    row.status = DISCOVERY_STATUS_CONFIRMED
-    row.stage = "confirmed"
-
-
-def _confirmation_already_applied(row: BrandDiscovery, key: str) -> bool:
-    existing_key = str(row.input_data.get("confirmation_idempotency_key") or "")
-    if existing_key:
-        if existing_key != key:
-            raise BrandDiscoveryError(
-                "This discovery was already confirmed with a different Idempotency-Key"
-            )
-        return True
-    return False
+        # The user-safe recovery state is durable before the original failure
+        # reaches the queue owner and schedules retry/backoff.
+        await _commit_discovery_attempt(session, original_error=original_error)
 
 
 def _confirmed_domains(values: list[str]) -> list[str]:
@@ -1097,22 +1145,6 @@ def _suggestion_topic_id(
 ) -> uuid.UUID | None:
     topic = topics_by_name.get(str(suggestion.get("theme") or "").casefold())
     return topic.id if topic is not None else None
-
-
-def _project_creation_key(row: BrandDiscovery, idempotency_key: str) -> str | None:
-    if row.status == DISCOVERY_STATUS_PROJECT_CREATED:
-        return None
-    if row.status != DISCOVERY_STATUS_CONFIRMED:
-        raise BrandDiscoveryError("Confirm discovery before creating the project")
-    key = idempotency_key.strip()
-    if not key:
-        raise BrandDiscoveryError(IDEMPOTENCY_KEY_REQUIRED)
-    existing_key = str(row.input_data.get("project_idempotency_key") or "")
-    if existing_key and existing_key != key:
-        raise BrandDiscoveryError(
-            "This discovery was already submitted with a different Idempotency-Key"
-        )
-    return key
 
 
 def _discovered_project_payload(
@@ -1143,8 +1175,7 @@ def _unique_topic_names(names: list[str]) -> list[str]:
     return list(names_by_key.values())
 
 
-def _discovery_topic_rows(row: BrandDiscovery, project_id: uuid.UUID) -> list[Topic]:
-    names = list(row.topics) or [str(row.profile.get("industry") or "General")]
+def _discovery_topic_rows(names: list[str], project_id: uuid.UUID) -> list[Topic]:
     return [
         Topic(
             id=uuid.uuid4(),
@@ -1194,53 +1225,177 @@ async def _capacity_approved_prompt_rows(
         prompt_set_id=prompt_set_id,
         texts=[prompt.text for prompt in prompt_rows],
     )
-    return [prompt for prompt in prompt_rows if prompt.normalized_text_hash in approved]
+    retained: list[Prompt] = []
+    seen: set[str] = set()
+    for prompt in prompt_rows:
+        prompt_hash = prompt.normalized_text_hash
+        if prompt_hash not in approved or prompt_hash in seen:
+            continue
+        seen.add(prompt_hash)
+        retained.append(prompt)
+    return retained
 
 
-async def create_project_from_discovery(
+async def _persist_project_resources(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
-    discovery_id: uuid.UUID,
-    payload: BrandDiscoveryCreateProject,
-    idempotency_key: str,
-) -> BrandDiscovery:
-    row = await get_discovery(
-        session,
-        workspace_id=workspace_id,
-        discovery_id=discovery_id,
-        for_update=True,
-    )
-    key = _project_creation_key(row, idempotency_key)
-    if key is None:
-        return row
-    row.input_data = {**row.input_data, "project_idempotency_key": key}
+    row: BrandDiscovery,
+    requested_name: str | None,
+) -> tuple[uuid.UUID, SiteCrawl]:
+    """Persist project, grouped prompts, and initial crawl in one transaction."""
     project = await create_project(
         session,
         workspace_id=workspace_id,
-        payload=_discovered_project_payload(row, payload.name),
+        payload=_discovered_project_payload(row, requested_name),
         commit=False,
     )
     prompt_set = PromptSet(
         id=uuid.uuid4(), project_id=project.id, name=ONBOARDING_PROMPT_SET_NAME
     )
     session.add(prompt_set)
-    topic_rows = _discovery_topic_rows(row, project.id)
+    prompt_rows = _discovery_prompt_rows(
+        row, prompt_set_id=prompt_set.id, topics_by_name={}
+    )
+    approved_prompts = await _capacity_approved_prompt_rows(
+        session,
+        workspace_id=workspace_id,
+        prompt_set_id=prompt_set.id,
+        prompt_rows=prompt_rows,
+    )
+    if not approved_prompts:
+        raise BrandDiscoveryError("No reviewed prompts remain after deduplication")
+    approved_comparisons = sum(
+        prompt.cohort == "comparison" for prompt in approved_prompts
+    )
+    if approved_comparisons > int(
+        len(approved_prompts) * DISCOVERY_MAX_COMPARISON_SHARE
+    ):
+        raise BrandDiscoveryError(
+            "Comparison prompts cannot exceed 20% after deduplication"
+        )
+    topic_rows = _discovery_topic_rows(
+        _unique_topic_names([prompt.theme for prompt in approved_prompts]), project.id
+    )
     session.add_all(topic_rows)
     topics_by_name = {topic.name.casefold(): topic for topic in topic_rows}
-    prompt_rows = _discovery_prompt_rows(
-        row, prompt_set_id=prompt_set.id, topics_by_name=topics_by_name
+    for prompt in approved_prompts:
+        topic = topics_by_name.get(prompt.theme.casefold())
+        if topic is None:
+            raise RuntimeError("Approved onboarding prompt is missing its topic")
+        prompt.topic_id = topic.id
+    session.add_all(approved_prompts)
+    crawl = await start_initial_site_review(
+        session,
+        workspace_id=workspace_id,
+        project_id=project.id,
+        commit=False,
     )
-    session.add_all(
-        await _capacity_approved_prompt_rows(
-            session,
-            workspace_id=workspace_id,
-            prompt_set_id=prompt_set.id,
-            prompt_rows=prompt_rows,
+    return project.id, crawl
+
+
+def _apply_grouped_completion(
+    row: BrandDiscovery,
+    *,
+    payload: BrandDiscoveryComplete,
+    key: str,
+) -> None:
+    domains = _confirmed_domains(payload.domains)
+    competitors = _confirmed_competitor_items(
+        payload.competitors,
+        brand_name=str(row.input_data["brand_name"]),
+        owned_domains=domains,
+    )
+    prompts = [
+        {**prompt.model_dump(), "theme": group.topic}
+        for group in payload.prompt_groups
+        for prompt in group.prompts
+    ]
+    comparison_count = sum(prompt["cohort"] == "comparison" for prompt in prompts)
+    if comparison_count > int(len(prompts) * DISCOVERY_MAX_COMPARISON_SHARE):
+        raise BrandDiscoveryError(
+            "Comparison prompts cannot exceed 20% of the reviewed prompt set"
         )
+    if comparison_count and not competitors:
+        raise BrandDiscoveryError("Comparison prompts require a confirmed competitor")
+    brand_terms = [str(row.input_data["brand_name"])]
+    competitor_terms = [
+        term
+        for competitor in competitors
+        for term in [competitor["name"], *competitor.get("aliases", [])]
+    ]
+    for prompt in prompts:
+        if not prompt_identity_is_valid(
+            text=str(prompt["text"]),
+            cohort=str(prompt["cohort"]),
+            intent=str(prompt["intent"]),
+            brand_terms=brand_terms,
+            competitor_terms=competitor_terms,
+        ):
+            raise BrandDiscoveryError(
+                "Reviewed prompt does not match its core or comparison cohort"
+            )
+    row.profile = payload.profile.model_dump()
+    row.domains = domains
+    row.competitors = competitors
+    row.topics = _unique_topic_names([group.topic for group in payload.prompt_groups])
+    row.prompt_suggestions = prompts
+    row.input_data = {**row.input_data, "completion_idempotency_key": key}
+    row.gaps = []
+
+
+async def complete_discovery(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    discovery_id: uuid.UUID,
+    payload: BrandDiscoveryComplete,
+    idempotency_key: str,
+) -> tuple[BrandDiscovery, SiteCrawl]:
+    """Atomically finalize reviewed discovery and queue its first site review."""
+    key = idempotency_key.strip()
+    if not key:
+        raise BrandDiscoveryError(IDEMPOTENCY_KEY_REQUIRED)
+    row = await get_discovery(
+        session,
+        workspace_id=workspace_id,
+        discovery_id=discovery_id,
+        for_update=True,
     )
-    row.project_id = project.id
+    existing_key = str(row.input_data.get("completion_idempotency_key") or "")
+    if existing_key:
+        if existing_key != key:
+            raise BrandDiscoveryError(
+                "This discovery was already completed with a different Idempotency-Key"
+            )
+        if row.project_id is None or row.initial_crawl_id is None:
+            raise BrandDiscoveryError(
+                "Discovery completion is missing activation identity"
+            )
+        crawl = await session.get(SiteCrawl, row.initial_crawl_id)
+        if crawl is None or crawl.workspace_id != workspace_id:
+            raise BrandDiscoveryError("Discovery activation could not be found")
+        return row, crawl
+    if row.status not in {DISCOVERY_STATUS_NEEDS_INPUT, DISCOVERY_STATUS_READY}:
+        raise BrandDiscoveryError("Discovery is not ready for completion")
+
+    _apply_grouped_completion(row, payload=payload, key=key)
+    project_id, crawl = await _persist_project_resources(
+        session,
+        workspace_id=workspace_id,
+        row=row,
+        requested_name=payload.name,
+    )
+    row.project_id = project_id
+    row.initial_crawl_id = crawl.id
     row.status = DISCOVERY_STATUS_PROJECT_CREATED
     row.stage = "complete"
+    row.progress = _progress(
+        phase="complete",
+        completed_steps=DISCOVERY_PROGRESS_TOTAL_STEPS,
+        competitors_found=len(row.competitors),
+        prompts_prepared=len(row.prompt_suggestions),
+        previous=row.progress,
+    )
     await session.commit()
-    return row
+    return row, crawl

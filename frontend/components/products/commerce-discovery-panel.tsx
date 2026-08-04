@@ -18,6 +18,18 @@ const message = (error: unknown) =>
 const identityName = (identity: Record<string, unknown>) =>
   typeof identity.name === 'string' ? identity.name : undefined;
 
+function sourcePlaceholder(kind: 'csv' | 'json' | 'url'): string {
+  if (kind === 'url') return 'One product or category URL per line';
+  if (kind === 'json') return '[{ "name": "Product", "sku": "SKU-1" }]';
+  return 'name,sku,price,currency,url\nProduct,SKU-1,99,USD,https://example.com/product';
+}
+
+function groupCandidates(candidateData: CommerceCandidate[] | undefined) {
+  const groups = { own: [] as CommerceCandidate[], competitor: [] as CommerceCandidate[] };
+  for (const candidate of candidateData ?? []) groups[candidate.candidate_kind].push(candidate);
+  return groups;
+}
+
 function parseJsonRows(value: string): CommerceCandidateInput[] | null {
   try {
     const parsed: unknown = JSON.parse(value);
@@ -40,11 +52,7 @@ export function CommerceDiscoveryPanel({
   const currentPreview = previewFingerprint === inputFingerprint ? preview : undefined;
   const parsedJsonRows = sourceKind === 'json' ? parseJsonRows(source) : null;
   const candidateData = queries.candidatesQuery.data;
-  const candidates = useMemo(() => {
-    const groups = { own: [] as CommerceCandidate[], competitor: [] as CommerceCandidate[] };
-    for (const candidate of candidateData ?? []) groups[candidate.candidate_kind].push(candidate);
-    return groups;
-  }, [candidateData]);
+  const candidates = useMemo(() => groupCandidates(candidateData), [candidateData]);
   const previewSource = async () => {
     if (sourceKind === 'url') return;
     const fingerprint = inputFingerprint;
@@ -77,7 +85,7 @@ export function CommerceDiscoveryPanel({
         </CardHeader>
         <CardContent className="grid gap-3">
           <label className="text-foreground grid gap-1 text-sm">
-            Input type
+            <span>Input type</span>
             <select
               className="border-border bg-input h-[var(--control-height)] rounded-sm border px-2 text-sm"
               value={sourceKind}
@@ -92,13 +100,7 @@ export function CommerceDiscoveryPanel({
             aria-label="Discovery input"
             value={source}
             onChange={(event) => setSource(event.target.value)}
-            placeholder={
-              sourceKind === 'url'
-                ? 'One product or category URL per line'
-                : sourceKind === 'json'
-                  ? '[{ "name": "Product", "sku": "SKU-1" }]'
-                  : 'name,sku,price,currency,url\nProduct,SKU-1,99,USD,https://example.com/product'
-            }
+            placeholder={sourcePlaceholder(sourceKind)}
           />
           {sourceKind !== 'url' ? (
             <Button
@@ -200,7 +202,7 @@ export function CommerceDiscoveryPanel({
                 ))}
                 {candidate.matches.some((match) => match.target_id) ? (
                   <label className="text-foreground grid gap-1">
-                    Catalog target
+                    <span>Catalog target</span>
                     <select
                       aria-label={`Match target for ${identityName(candidate.identity) ?? 'candidate'}`}
                       className="border-border bg-input h-[var(--control-height)] rounded-sm border px-2 text-sm"
