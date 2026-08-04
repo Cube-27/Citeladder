@@ -38,7 +38,13 @@ import { scoreTextClass } from '@/components/ui/score-band';
 import { Skeleton } from '@/components/ui/skeleton';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { AIPresence, DashboardSection, DashboardSectionState, Project } from '@/lib/api/types';
+import type {
+  AIPresence,
+  Dashboard,
+  DashboardSection,
+  DashboardSectionState,
+  Project,
+} from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -281,47 +287,226 @@ function AIPresenceCard({ presence }: Readonly<{ presence: AIPresence }>) {
   );
 }
 
-/** Active-project landing view backed exclusively by the persisted Dashboard projection. */
-export function DashboardScreen({
+type SearchParameterReader = Pick<URLSearchParams, 'get'>;
+
+function dashboardPollingInterval(data: Dashboard | undefined): number | false {
+  if (data && data.active_work.length > 0) return 2000;
+  return false;
+}
+
+function activationRequest(
+  searchParams: SearchParameterReader | null,
+  projectId: string,
+): { crawlId: string | null; pageLimit: number | null } {
+  const requestedPageLimit = Number(searchParams?.get('limit'));
+  let pageLimit: number | null = null;
+  if (Number.isSafeInteger(requestedPageLimit) && requestedPageLimit > 0) {
+    pageLimit = requestedPageLimit;
+  }
+  if (searchParams?.get('activation') !== '1' || searchParams.get('project') !== projectId) {
+    return { crawlId: null, pageLimit };
+  }
+  const crawlId = searchParams.get('crawl');
+  if (!crawlId || !UUID_PATTERN.test(crawlId)) return { crawlId: null, pageLimit };
+  return { crawlId, pageLimit };
+}
+
+function visibleAnalyzeSection(section: DashboardSection): boolean {
+  if (section.id === 'visibility' && section.state === 'empty') return false;
+  return hasDashboardSignal(section);
+}
+
+function visibleImproveSection(section: DashboardSection): boolean {
+  if (section.id === 'projects') return false;
+  return hasDashboardSignal(section);
+}
+
+const ACTIVE_WORK_LABELS: Record<string, string> = {
+  runs: 'measuring brand visibility',
+  site_health: 'reviewing your website',
+  content: 'preparing content guidance',
+};
+
+function activeWorkDescriptions(activeWork: string[]): string[] {
+  return activeWork
+    .map((item) => ACTIVE_WORK_LABELS[item])
+    .filter((item): item is string => Boolean(item));
+}
+
+function triggerReportDownload(blob: Blob, project: Project): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `searchify-${project.brand_name || project.name}-report.pdf`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function DashboardHeader({
+  data,
+  projects,
+  activeProject,
+  activeProjectId,
+  setActiveProjectId,
   onEditProject,
-  // The callback only ever receives `activeProject` straight from the project
-  // context, so it carries the whole `Project`. Narrowing it to a structural
-  // subset here dropped the fields the edit panel needs and made the caller's
-  // `setEditing` unassignable.
-}: Readonly<{ onEditProject?: (project: Project) => void }> = {}) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const {
-    projects = [],
-    activeProject,
-    activeProjectId,
-    setActiveProjectId,
-    isLoading,
-  } = useProjectContext();
+  onAddProject,
+  downloading,
+  onDownloadReport,
+}: Readonly<{
+  data: Dashboard;
+  projects: Project[];
+  activeProject: Project;
+  activeProjectId?: string | null;
+  setActiveProjectId: (projectId: string) => void;
+  onEditProject?: (project: Project) => void;
+  onAddProject: () => void;
+  downloading: boolean;
+  onDownloadReport: () => void;
+}>) {
+  const generatedAt = new Date(data.generated_at);
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <BrandLogo
+          name={data.project.brand_name || data.project.name}
+          websiteUrl={data.project.website_url}
+          size="md"
+        />
+        <div>
+          <h2 className="text-foreground text-xl">
+            {data.project.brand_name || data.project.name}
+          </h2>
+          <p className="text-muted mt-1 text-sm">
+            A live summary of your Searchify results · Updated{' '}
+            {generatedAt.toLocaleString('en-US', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+              timeZone: 'UTC',
+            })}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <Button variant="secondary" size="sm">
+              <FolderOpen className="size-4" aria-hidden />
+              Manage projects
+              <ChevronDown className="size-4" aria-hidden />
+            </Button>
+          </DropdownTrigger>
+          <DropdownContent align="end" className="w-56">
+            <DropdownLabel>Workspace Brands</DropdownLabel>
+            {projects.map((project) => {
+              const selected = project.id === activeProjectId;
+              const label = project.brand_name || project.name;
+              return (
+                <DropdownItem
+                  key={project.id}
+                  onSelect={() => setActiveProjectId(project.id)}
+                  className={selected ? 'text-accent-text font-medium' : undefined}
+                >
+                  <BrandLogo
+                    name={label}
+                    logoUrl={project.brand?.logo_url}
+                    websiteUrl={project.website_url}
+                    size="sm"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+                </DropdownItem>
+              );
+            })}
+            <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+            {onEditProject ? (
+              <DropdownItem onSelect={() => onEditProject(activeProject)}>
+                <Pencil className="size-4 shrink-0" aria-hidden />
+                <span>Edit active brand</span>
+              </DropdownItem>
+            ) : null}
+            <DropdownItem onSelect={onAddProject}>
+              <Plus className="size-4 shrink-0" aria-hidden />
+              <span>Add new project</span>
+            </DropdownItem>
+          </DropdownContent>
+        </Dropdown>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onDownloadReport}
+          disabled={downloading}
+          data-tour="dashboard-report"
+        >
+          {downloading ? (
+            <LoaderCircle className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <Download className="size-4" aria-hidden />
+          )}
+          {downloading ? 'Preparing…' : 'Download report'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DashboardSectionGroup({
+  id,
+  title,
+  sections,
+}: Readonly<{ id: string; title: string; sections: DashboardSection[] }>) {
+  if (sections.length === 0) return null;
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-2">
+      <h2 id={id} className="text-foreground text-heading-sm">
+        {title}
+      </h2>
+      <Card className="overflow-hidden">
+        <div className="divide-border grid content-start divide-y">
+          {sections.map((section) => (
+            <SectionRow key={section.id} section={section} />
+          ))}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+function VisibilityEmptyState() {
+  return (
+    <Card>
+      <CardContent className="flex flex-wrap items-center justify-between gap-4">
+        <div className="grid gap-1">
+          <h2 className="text-foreground text-heading-sm">Start measuring visibility</h2>
+          <p className="text-secondary text-sm">
+            Connect an answer-engine provider, then launch your first audit to populate this
+            dashboard.
+          </p>
+        </div>
+        <Button asChild variant="secondary" className="shrink-0">
+          <Link href="/settings?tab=providers">
+            Connect providers
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function useDashboardReport(project: Project | null | undefined) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
-  const dashboard = useQuery({
-    queryKey: queryKeys.projects.dashboard(activeProject?.id ?? ''),
-    queryFn: ({ signal }) => projectsApi.getDashboard(activeProject!.id, { signal }),
-    enabled: Boolean(activeProject),
-    refetchInterval: (query) =>
-      query.state.data && query.state.data.active_work.length > 0 ? 2000 : false,
-  });
 
   const downloadReport = async () => {
-    if (!activeProject) return;
+    if (!project) return;
     setDownloadError(false);
     setDownloading(true);
     try {
-      const blob = await projectsApi.downloadDashboardReport(activeProject.id);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `searchify-${activeProject.brand_name || activeProject.name}-report.pdf`;
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      const blob = await projectsApi.downloadDashboardReport(project.id);
+      triggerReportDownload(blob, project);
     } catch {
       setDownloadError(true);
     } finally {
@@ -329,163 +514,63 @@ export function DashboardScreen({
     }
   };
 
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
-  if (!activeProject) {
-    return (
-      <Card>
-        <CardContent className="grid gap-3">
-          <CardTitle>Start with a project</CardTitle>
-          <CardDescription>Create a brand to activate your Dashboard.</CardDescription>
-          <Button asChild className="w-fit">
-            <Link href="/onboarding?new=1">
-              <Plus className="size-4" aria-hidden />
-              Add project
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  if (dashboard.isLoading) return <DashboardSkeleton />;
-  if (dashboard.isError || !dashboard.data) {
-    return (
-      <Alert tone="danger">
-        Could not load the Dashboard.{' '}
-        <Button variant="ghost" size="sm" onClick={() => dashboard.refetch()}>
-          Try again
-        </Button>
-      </Alert>
-    );
-  }
+  return { downloading, downloadError, downloadReport };
+}
 
-  const { data } = dashboard;
+function DashboardContent({
+  data,
+  projects,
+  activeProject,
+  activeProjectId,
+  setActiveProjectId,
+  onEditProject,
+  onAddProject,
+  searchParams,
+  downloading,
+  downloadError,
+  onDownloadReport,
+}: Readonly<{
+  data: Dashboard;
+  projects: Project[];
+  activeProject: Project;
+  activeProjectId?: string | null;
+  setActiveProjectId: (projectId: string) => void;
+  onEditProject?: (project: Project) => void;
+  onAddProject: () => void;
+  searchParams: SearchParameterReader | null;
+  downloading: boolean;
+  downloadError: boolean;
+  onDownloadReport: () => void;
+}>) {
   const visibility = data.analyze.find((section) => section.id === 'visibility');
-  const analyzeSections = data.analyze.filter(
-    (section) =>
-      !(section.id === 'visibility' && section.state === 'empty') && hasDashboardSignal(section),
-  );
-  const improveSections = data.improve.filter(
-    (section) => section.id !== 'projects' && hasDashboardSignal(section),
-  );
-  const generatedAt = new Date(data.generated_at);
-  const requestedCrawlId =
-    searchParams?.get('activation') === '1' ? searchParams.get('crawl') : null;
-  const activationProjectId = searchParams?.get('project');
-  const activationCrawlId =
-    activationProjectId === activeProject.id &&
-    requestedCrawlId &&
-    UUID_PATTERN.test(requestedCrawlId)
-      ? requestedCrawlId
-      : null;
-  const requestedPageLimit = Number(searchParams?.get('limit'));
-  const activationPageLimit =
-    Number.isSafeInteger(requestedPageLimit) && requestedPageLimit > 0 ? requestedPageLimit : null;
-  const activeWorkLabels: Record<string, string> = {
-    runs: 'measuring brand visibility',
-    site_health: 'reviewing your website',
-    content: 'preparing content guidance',
-  };
-  const activeWork = data.active_work
-    .map((item) => activeWorkLabels[item])
-    .filter((item): item is string => Boolean(item));
+  const analyzeSections = data.analyze.filter(visibleAnalyzeSection);
+  const improveSections = data.improve.filter(visibleImproveSection);
+  const activation = activationRequest(searchParams, activeProject.id);
+  const activeWork = activeWorkDescriptions(data.active_work);
+
   return (
     <div className="grid gap-6" data-tour="dashboard-overview">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BrandLogo
-            name={data.project.brand_name || data.project.name}
-            websiteUrl={data.project.website_url}
-            size="md"
-          />
-          <div>
-            <h2 className="text-foreground text-xl">
-              {data.project.brand_name || data.project.name}
-            </h2>
-            <p className="text-muted mt-1 text-sm">
-              A live summary of your Searchify results · Updated{' '}
-              {generatedAt.toLocaleString('en-US', {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-                timeZone: 'UTC',
-              })}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Dropdown>
-            <DropdownTrigger asChild>
-              <Button variant="secondary" size="sm">
-                <FolderOpen className="size-4" aria-hidden />
-                Manage projects
-                <ChevronDown className="size-4" aria-hidden />
-              </Button>
-            </DropdownTrigger>
-            <DropdownContent align="end" className="w-56">
-              <DropdownLabel>Workspace Brands</DropdownLabel>
-              {(projects ?? []).map((project) => {
-                const selected = project.id === activeProjectId;
-                const label = project.brand_name || project.name;
-                return (
-                  <DropdownItem
-                    key={project.id}
-                    onSelect={() => setActiveProjectId(project.id)}
-                    className={selected ? 'text-accent-text font-medium' : undefined}
-                  >
-                    <BrandLogo
-                      name={label}
-                      logoUrl={project.brand?.logo_url}
-                      websiteUrl={project.website_url}
-                      size="sm"
-                    />
-                    <span className="min-w-0 flex-1 truncate">{label}</span>
-                    {selected ? (
-                      <Check className="text-accent size-4 shrink-0" aria-hidden />
-                    ) : null}
-                  </DropdownItem>
-                );
-              })}
-              <DropdownSeparator className="bg-border-subtle my-1 h-px" />
-              {onEditProject && activeProject ? (
-                <DropdownItem onSelect={() => onEditProject(activeProject)}>
-                  <Pencil className="size-4 shrink-0" aria-hidden />
-                  <span>Edit active brand</span>
-                </DropdownItem>
-              ) : null}
-              <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
-                <Plus className="size-4 shrink-0" aria-hidden />
-                <span>Add new project</span>
-              </DropdownItem>
-            </DropdownContent>
-          </Dropdown>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={downloadReport}
-            disabled={downloading}
-            data-tour="dashboard-report"
-          >
-            {downloading ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Download className="size-4" aria-hidden />
-            )}
-            {downloading ? 'Preparing…' : 'Download report'}
-          </Button>
-        </div>
-      </div>
+      <DashboardHeader
+        data={data}
+        projects={projects}
+        activeProject={activeProject}
+        activeProjectId={activeProjectId}
+        setActiveProjectId={setActiveProjectId}
+        onEditProject={onEditProject}
+        onAddProject={onAddProject}
+        downloading={downloading}
+        onDownloadReport={onDownloadReport}
+      />
 
       {downloadError ? (
         <Alert tone="danger">Could not download the report. Please try again.</Alert>
       ) : null}
 
-      {activationCrawlId ? (
+      {activation.crawlId ? (
         <ActivationProgress
           projectId={activeProject.id}
-          crawlId={activationCrawlId}
-          pageLimit={activationPageLimit}
+          crawlId={activation.crawlId}
+          pageLimit={activation.pageLimit}
         />
       ) : null}
 
@@ -515,62 +600,82 @@ export function DashboardScreen({
       </div>
 
       {data.ai_presence ? <AIPresenceCard presence={data.ai_presence} /> : null}
-
-      {visibility?.state === 'empty' ? (
-        <Card>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4">
-            <div className="grid gap-1">
-              <h2 className="text-foreground text-heading-sm">Start measuring visibility</h2>
-              <p className="text-secondary text-sm">
-                Connect an answer-engine provider, then launch your first audit to populate this
-                dashboard.
-              </p>
-            </div>
-            <Button asChild variant="secondary" className="shrink-0">
-              <Link href="/settings?tab=providers">
-                Connect providers
-                <ArrowRight className="size-4" aria-hidden />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {activeWork.length > 0 && !activationCrawlId ? (
+      {visibility?.state === 'empty' ? <VisibilityEmptyState /> : null}
+      {activeWork.length > 0 && !activation.crawlId ? (
         <Alert tone="info">We&apos;re currently {activeWork.join(' and ')}.</Alert>
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        {analyzeSections.length > 0 ? (
-          <section aria-labelledby="dashboard-analyze" className="flex flex-col gap-2">
-            <h2 id="dashboard-analyze" className="text-foreground text-heading-sm">
-              Analyze
-            </h2>
-            <Card className="overflow-hidden">
-              <div className="divide-border grid content-start divide-y">
-                {analyzeSections.map((section) => (
-                  <SectionRow key={section.id} section={section} />
-                ))}
-              </div>
-            </Card>
-          </section>
-        ) : null}
-
-        {improveSections.length > 0 ? (
-          <section aria-labelledby="dashboard-improve" className="flex flex-col gap-2">
-            <h2 id="dashboard-improve" className="text-foreground text-heading-sm">
-              Improve
-            </h2>
-            <Card className="overflow-hidden">
-              <div className="divide-border grid content-start divide-y">
-                {improveSections.map((section) => (
-                  <SectionRow key={section.id} section={section} />
-                ))}
-              </div>
-            </Card>
-          </section>
-        ) : null}
+        <DashboardSectionGroup id="dashboard-analyze" title="Analyze" sections={analyzeSections} />
+        <DashboardSectionGroup id="dashboard-improve" title="Improve" sections={improveSections} />
       </div>
     </div>
+  );
+}
+
+/** Active-project landing view backed exclusively by the persisted Dashboard projection. */
+export function DashboardScreen({
+  onEditProject,
+}: Readonly<{ onEditProject?: (project: Project) => void }> = {}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const {
+    projects = [],
+    activeProject,
+    activeProjectId,
+    setActiveProjectId,
+    isLoading,
+  } = useProjectContext();
+  const report = useDashboardReport(activeProject);
+  const dashboard = useQuery({
+    queryKey: queryKeys.projects.dashboard(activeProject?.id ?? ''),
+    queryFn: ({ signal }) => projectsApi.getDashboard(activeProject!.id, { signal }),
+    enabled: Boolean(activeProject),
+    refetchInterval: (query) => dashboardPollingInterval(query.state.data),
+  });
+
+  if (isLoading) return <DashboardSkeleton />;
+  if (!activeProject) {
+    return (
+      <Card>
+        <CardContent className="grid gap-3">
+          <CardTitle>Start with a project</CardTitle>
+          <CardDescription>Create a brand to activate your Dashboard.</CardDescription>
+          <Button asChild className="w-fit">
+            <Link href="/onboarding?new=1">
+              <Plus className="size-4" aria-hidden />
+              Add project
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (dashboard.isLoading) return <DashboardSkeleton />;
+  if (dashboard.isError || !dashboard.data) {
+    return (
+      <Alert tone="danger">
+        Could not load the Dashboard.{' '}
+        <Button variant="ghost" size="sm" onClick={() => dashboard.refetch()}>
+          Try again
+        </Button>
+      </Alert>
+    );
+  }
+
+  return (
+    <DashboardContent
+      data={dashboard.data}
+      projects={projects}
+      activeProject={activeProject}
+      activeProjectId={activeProjectId}
+      setActiveProjectId={setActiveProjectId}
+      onEditProject={onEditProject}
+      onAddProject={() => router.push('/onboarding?new=1')}
+      searchParams={searchParams}
+      downloading={report.downloading}
+      downloadError={report.downloadError}
+      onDownloadReport={report.downloadReport}
+    />
   );
 }

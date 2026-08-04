@@ -65,6 +65,12 @@ const STEP_STAGE: Record<StepIndex, { maxWidth: string; centerY: string; stageAl
   2: { maxWidth: 'max-w-4xl', centerY: 'justify-center', stageAlign: 'sm:justify-center' },
 };
 
+function stepQueryValue(step: StepIndex): 'brand' | 'discovery' | 'review' {
+  if (step === 2) return 'review';
+  if (step === 1) return 'discovery';
+  return 'brand';
+}
+
 function manualCompetitorId(): string {
   return (
     globalThis.crypto?.randomUUID?.() ??
@@ -159,7 +165,7 @@ export function OnboardingScreen() {
     }
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('discovery', discoveryId);
-    params.set('step', step === 2 ? 'review' : step === 1 ? 'discovery' : 'brand');
+    params.set('step', stepQueryValue(step));
     const next = params.toString();
     if (next !== searchParams?.toString()) router.replace(`/onboarding?${next}`, { scroll: false });
   }, [discoveryState?.id, resumeDiscoveryId, router, searchParams, step]);

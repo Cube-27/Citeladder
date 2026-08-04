@@ -3,7 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 
-import { ActivityProgress, type ActivityStep } from '@/components/ui/activity-progress';
+import {
+  ActivityProgress,
+  type ActivityStep,
+  type ActivityStepState,
+} from '@/components/ui/activity-progress';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,6 +37,51 @@ export function recommendationPollingInterval(
   return 1500;
 }
 
+function pageReviewLabel(pageLimit: number | null): string {
+  if (pageLimit) return `Reviewing up to ${pageLimit} useful pages`;
+  return 'Reviewing useful pages';
+}
+
+function pageStepState(
+  crawlUnsuccessful: boolean,
+  discoveryComplete: boolean,
+  crawlTerminal: boolean,
+): ActivityStepState {
+  if (crawlUnsuccessful && !discoveryComplete) return 'attention';
+  if (discoveryComplete || crawlTerminal) return 'complete';
+  return 'active';
+}
+
+function analyzedPageDetail(crawl: ActivationFacts['crawl'], crawlUnsuccessful: boolean) {
+  if (crawlUnsuccessful) return 'The website review needs attention.';
+  if (!crawl || crawl.analyzed_count === 0) return undefined;
+  const noun = crawl.analyzed_count === 1 ? 'page' : 'pages';
+  return `${crawl.analyzed_count} ${noun} checked`;
+}
+
+function clarityStepState(
+  crawlUnsuccessful: boolean,
+  crawlTerminal: boolean,
+  discoveryComplete: boolean,
+): ActivityStepState {
+  if (crawlUnsuccessful) return 'attention';
+  if (crawlTerminal) return 'complete';
+  if (discoveryComplete) return 'active';
+  return 'pending';
+}
+
+function recommendationStepState(
+  ready: boolean,
+  delayed: boolean,
+  crawlTerminal: boolean,
+  crawlUnsuccessful: boolean,
+): ActivityStepState {
+  if (ready) return 'complete';
+  if (delayed) return 'attention';
+  if (crawlTerminal && !crawlUnsuccessful) return 'active';
+  return 'pending';
+}
+
 export function activationSteps({
   pageLimit,
   crawl,
@@ -50,41 +99,20 @@ export function activationSteps({
     { id: 'project', label: 'Project created', state: 'complete' },
     {
       id: 'pages',
-      label: pageLimit ? `Reviewing up to ${pageLimit} useful pages` : 'Reviewing useful pages',
+      label: pageReviewLabel(pageLimit),
       detail: crawl ? `${crawl.visible_url_count} useful pages found` : undefined,
-      state:
-        crawlUnsuccessful && !discoveryComplete
-          ? 'attention'
-          : discoveryComplete || crawlTerminal
-            ? 'complete'
-            : 'active',
+      state: pageStepState(crawlUnsuccessful, discoveryComplete, crawlTerminal),
     },
     {
       id: 'clarity',
       label: 'Checking how clearly pages explain the business',
-      detail: crawlUnsuccessful
-        ? 'The website review needs attention.'
-        : crawl && crawl.analyzed_count > 0
-          ? `${crawl.analyzed_count} ${crawl.analyzed_count === 1 ? 'page' : 'pages'} checked`
-          : undefined,
-      state: crawlUnsuccessful
-        ? 'attention'
-        : crawlTerminal
-          ? 'complete'
-          : discoveryComplete
-            ? 'active'
-            : 'pending',
+      detail: analyzedPageDetail(crawl, crawlUnsuccessful),
+      state: clarityStepState(crawlUnsuccessful, crawlTerminal, discoveryComplete),
     },
     {
       id: 'recommendations',
       label: 'Prioritizing recommendations',
-      state: ready
-        ? 'complete'
-        : delayed
-          ? 'attention'
-          : crawlTerminal && !crawlUnsuccessful
-            ? 'active'
-            : 'pending',
+      state: recommendationStepState(ready, delayed, crawlTerminal, crawlUnsuccessful),
       detail: delayed ? 'This is taking longer than expected.' : undefined,
     },
     { id: 'ready', label: 'Ready', state: ready ? 'complete' : 'pending' },

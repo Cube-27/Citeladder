@@ -11,6 +11,18 @@ export type ActivityStep = {
   state: ActivityStepState;
 };
 
+function StepIndicator({ state }: Readonly<{ state: ActivityStepState }>) {
+  if (state === 'complete') return <Check className="size-4" strokeWidth={3} />;
+  if (state === 'attention') return <CircleAlert className="size-4" />;
+  if (state === 'active') return <span className="activity-dot bg-accent size-2" />;
+  return <span className="bg-border-subtle size-1.5 rounded-full" />;
+}
+
+function progressAnnouncement(activeStep: ActivityStep | undefined, completed: number): string {
+  if (!activeStep) return `${completed} steps complete`;
+  return `${activeStep.label}. ${activeStep.detail ?? ''}`;
+}
+
 /**
  * A compact, factual timeline for background product work.
  *
@@ -27,22 +39,19 @@ export function ActivityProgress({
 }>) {
   const completed = steps.filter((step) => step.state === 'complete').length;
   const activeStep = steps.find((step) => step.state === 'active' || step.state === 'attention');
+  const progressLabel = `${completed} of ${steps.length} steps complete`;
 
   return (
     <section aria-label={label} className="grid gap-4">
-      <div
-        className="bg-neutral-bg h-1.5 w-full overflow-hidden rounded-full"
-        role="progressbar"
-        aria-label={`${completed} of ${steps.length} steps complete`}
+      <progress
+        className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent h-1.5 w-full appearance-none overflow-hidden rounded-full border-0"
+        aria-label={progressLabel}
         aria-valuemin={0}
         aria-valuemax={steps.length}
         aria-valuenow={completed}
-      >
-        <div
-          className="bg-accent h-full rounded-full transition-[width] motion-reduce:transition-none"
-          style={{ width: `${steps.length === 0 ? 0 : (completed / steps.length) * 100}%` }}
-        />
-      </div>
+        value={completed}
+        max={Math.max(steps.length, 1)}
+      />
 
       <ol className="grid list-none gap-0 p-0">
         {steps.map((step, index) => (
@@ -57,15 +66,7 @@ export function ActivityProgress({
                   step.state === 'pending' && 'border-border-subtle bg-panel text-muted border',
                 )}
               >
-                {step.state === 'complete' ? (
-                  <Check className="size-4" strokeWidth={3} />
-                ) : step.state === 'attention' ? (
-                  <CircleAlert className="size-4" />
-                ) : step.state === 'active' ? (
-                  <span className="activity-dot bg-accent size-2" />
-                ) : (
-                  <span className="bg-border-subtle size-1.5 rounded-full" />
-                )}
+                <StepIndicator state={step.state} />
               </span>
               {index < steps.length - 1 ? (
                 <span className="bg-border-subtle min-h-5 w-px flex-1" />
@@ -88,9 +89,7 @@ export function ActivityProgress({
       </ol>
 
       <span className="sr-only" aria-live="polite">
-        {activeStep
-          ? `${activeStep.label}. ${activeStep.detail ?? ''}`
-          : `${completed} steps complete`}
+        {progressAnnouncement(activeStep, completed)}
       </span>
     </section>
   );

@@ -289,15 +289,18 @@ def test_discovery_profile_rejects_unsupported_price_tier() -> None:
 
 
 def test_confirmed_competitors_reject_brand_identity_and_owned_domain() -> None:
+    matching_brand = CompetitorInput(name="Acme", domains=["other.example"])
     with pytest.raises(BrandDiscoveryError, match="tracked brand"):
         _confirmed_competitor_items(
-            [CompetitorInput(name="Acme", domains=["other.example"])],
+            [matching_brand],
             brand_name="Acme",
             owned_domains=["acme.example"],
         )
+
+    matching_domain = CompetitorInput(name="Globex", domains=["acme.example"])
     with pytest.raises(BrandDiscoveryError, match="owned domain"):
         _confirmed_competitor_items(
-            [CompetitorInput(name="Globex", domains=["acme.example"])],
+            [matching_domain],
             brand_name="Acme",
             owned_domains=["acme.example"],
         )

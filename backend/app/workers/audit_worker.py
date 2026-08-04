@@ -2001,7 +2001,7 @@ class AuditWorker(DrainableWorkerMixin):
         only (invariant 7 — no provider call) and drives ANALYZING -> REPORTING
         -> COMPLETED / PARTIALLY_COMPLETED. Guarded with ``FOR UPDATE`` so
         concurrent workers don't double-finalize. After the terminal commit it
-        best-effort refreshes the project's Opportunities (C4a) — this is the
+        best-effort queues the project's Opportunities refresh — this is the
         ONLY audit-side hook: ``_finalize_audit`` never fires it (execution
         boundary, no snapshots yet) and failed audits never reach ANALYZING.
         """
@@ -2016,14 +2016,42 @@ class AuditWorker(DrainableWorkerMixin):
             # product analyses; the brand finalize below stays untouched.
             await finalize_audit_product_analysis(session, audit=audit)
             await finalize_audit_analysis(session, audit=audit)
-            await enqueue_opportunity_refresh(
-                session,
-                workspace_id=audit.workspace_id,
-                project_id=audit.project_id,
-                trigger_kind="audit",
-                trigger_id=audit.id,
-            )
+            workspace_id = audit.workspace_id
+            project_id = audit.project_id
             await session.commit()
+
+        await self._enqueue_opportunity_refresh(
+            audit_id=audit_id,
+            workspace_id=workspace_id,
+            project_id=project_id,
+        )
+
+    async def _enqueue_opportunity_refresh(
+        self,
+        *,
+        audit_id: uuid.UUID,
+        workspace_id: uuid.UUID,
+        project_id: uuid.UUID,
+    ) -> None:
+        """Queue downstream work without reopening the terminal audit write."""
+
+        # Queue work only after the source audit is durably terminal. A queue
+        # outage must never roll back the evidence and snapshot above.
+        try:
+            async with self._session_factory() as session:
+                await enqueue_opportunity_refresh(
+                    session,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    trigger_kind="audit",
+                    trigger_id=audit_id,
+                )
+                await session.commit()
+        except Exception:
+            logger.exception(
+                "opportunity refresh enqueue failed",
+                extra={"audit_id": str(audit_id)},
+            )
 
 
 def main() -> None:  # pragma: no cover - process entrypoint

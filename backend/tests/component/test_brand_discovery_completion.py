@@ -168,7 +168,8 @@ async def test_complete_is_atomic_idempotent_and_workspace_scoped(
     assert rejected.status_code == 409
     async with session_factory() as session:
         invalid_row = await session.get(BrandDiscovery, invalid_id)
-        assert invalid_row is not None and invalid_row.project_id is None
+        assert invalid_row is not None
+        assert invalid_row.project_id is None
         assert await session.scalar(select(func.count()).select_from(Project)) == 1
 
         crawl_failure = await _seed_ready_discovery(session, workspace_id)
@@ -187,7 +188,8 @@ async def test_complete_is_atomic_idempotent_and_workspace_scoped(
     assert failed_activation.status_code == 422
     async with session_factory() as session:
         failed_row = await session.get(BrandDiscovery, crawl_failure_id)
-        assert failed_row is not None and failed_row.project_id is None
+        assert failed_row is not None
+        assert failed_row.project_id is None
         assert await session.scalar(select(func.count()).select_from(Project)) == 1
         assert await session.scalar(select(func.count()).select_from(SiteCrawl)) == 1
 
@@ -239,4 +241,5 @@ async def test_discovery_task_uses_generic_claim_heartbeat_and_retry(
     assert sweep.reclaimed == 1
     async with session_factory() as session:
         retried = await session.get(BrandDiscoveryTask, claimed[0].id)
-        assert retried is not None and retried.status == TASK_STATUS_RETRY_WAIT
+        assert retried is not None
+        assert retried.status == TASK_STATUS_RETRY_WAIT

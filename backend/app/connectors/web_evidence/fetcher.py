@@ -35,6 +35,7 @@ import time
 import zlib
 from collections.abc import Iterable
 from dataclasses import replace
+from typing import cast
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -586,14 +587,18 @@ class SecureFetcher:
                 self._trace_curl_result(
                     attempts, request, result, hop_started, acquisition
                 )
-                updated_result: FetchResult = replace(
-                    result,
-                    requested_url=request.url,
-                    redirect_chain=tuple(redirect_chain),
-                    attempts=tuple(attempts),
-                    acquisition=acquisition,
+                # Sonar models dataclasses.replace as DataclassInstance rather than
+                # preserving the concrete dataclass type; narrow that analyzer gap.
+                return cast(  # type: ignore[redundant-cast]
+                    FetchResult,
+                    replace(
+                        result,
+                        requested_url=request.url,
+                        redirect_chain=tuple(redirect_chain),
+                        attempts=tuple(attempts),
+                        acquisition=acquisition,
+                    ),
                 )
-                return updated_result
             if hop >= max_redirects:
                 self._trace_curl_result(
                     attempts,

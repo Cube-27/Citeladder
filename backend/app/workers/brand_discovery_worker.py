@@ -45,12 +45,9 @@ async def _heartbeat(task_id, worker_id: str) -> None:
 async def _stop_heartbeat(heartbeat: asyncio.Task[None]) -> None:
     """Stop a lease heartbeat without letting cleanup failures skip finalize."""
     heartbeat.cancel()
-    try:
-        await heartbeat
-    except asyncio.CancelledError:
-        pass
-    except Exception:
-        logger.exception("Brand discovery heartbeat cleanup failed")
+    cleanup_error = (await asyncio.gather(heartbeat, return_exceptions=True))[0]
+    if isinstance(cleanup_error, Exception):
+        logger.error("Brand discovery heartbeat cleanup failed", exc_info=cleanup_error)
 
 
 async def _finalize(task_id, *, worker_id: str, error: Exception | None) -> None:

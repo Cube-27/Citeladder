@@ -632,6 +632,40 @@ def _frontier_full(crawl: SiteCrawl, admitted: int) -> bool:
     return current >= site_health_settings.max_frontier_urls
 
 
+async def _record_sample_admission(
+    session: AsyncSession,
+    *,
+    crawl: SiteCrawl,
+    candidate: FrontierCandidate,
+    site_url_id: uuid.UUID,
+    progress: _AdmissionProgress,
+) -> None:
+    analyze = progress.remaining is not None and progress.remaining > 0
+    automatic_limit = int(
+        (crawl.configuration or {}).get(AUTOMATIC_MONITOR_LIMIT_KEY) or 0
+    )
+    selection_source = (
+        SELECTION_SOURCE_BOOTSTRAP
+        if automatic_limit > 0
+        else SELECTION_SOURCE_FREE_SAMPLE
+    )
+    newly_activated, newly_observed = await _add_free_sample(
+        session,
+        crawl=crawl,
+        site_url_id=site_url_id,
+        url=candidate.url,
+        url_hash_value=candidate.url_hash,
+        depth=candidate.depth,
+        source_kind=candidate.source_kind,
+        analyze=analyze,
+        selection_source=selection_source,
+    )
+    if newly_activated and progress.remaining is not None:
+        progress.remaining -= 1
+    if newly_observed:
+        progress.admitted += 1
+
+
 async def _record_admission(
     session: AsyncSession,
     *,
@@ -648,28 +682,13 @@ async def _record_admission(
     progress.observed += 1
 
     if crawl.sample_mode:
-        analyze = progress.remaining is not None and progress.remaining > 0
-        selection_source = (
-            SELECTION_SOURCE_BOOTSTRAP
-            if int((crawl.configuration or {}).get(AUTOMATIC_MONITOR_LIMIT_KEY) or 0)
-            > 0
-            else SELECTION_SOURCE_FREE_SAMPLE
-        )
-        newly_activated, newly_observed = await _add_free_sample(
+        await _record_sample_admission(
             session,
             crawl=crawl,
+            candidate=candidate,
             site_url_id=site_url_id,
-            url=candidate.url,
-            url_hash_value=candidate.url_hash,
-            depth=candidate.depth,
-            source_kind=candidate.source_kind,
-            analyze=analyze,
-            selection_source=selection_source,
+            progress=progress,
         )
-        if newly_activated and progress.remaining is not None:
-            progress.remaining -= 1
-        if newly_observed:
-            progress.admitted += 1
         return
     if progress.remaining is not None and progress.remaining > 0:
         newly_activated, _newly_observed = await _add_free_sample(

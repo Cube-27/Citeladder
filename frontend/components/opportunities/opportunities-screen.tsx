@@ -28,9 +28,20 @@ export function opportunitySummaryPollingInterval(state: {
   data?: OpportunitySummary;
 }): number | false {
   if (state.status === 'error' && !state.data) return false;
-  return state.data?.activation_state === 'ready' || state.data?.activation_state === 'delayed'
-    ? false
-    : 1500;
+  if (state.data?.activation_state === 'ready' || state.data?.activation_state === 'delayed') {
+    return false;
+  }
+  return 1500;
+}
+
+function preparationMessage(state: OpportunitySummary['activation_state']): string {
+  if (state === 'waiting_for_evidence') {
+    return 'We need a completed visibility or website review before we can prioritize actions.';
+  }
+  if (state === 'delayed') {
+    return 'The latest findings are safe. Try preparing the recommendations again.';
+  }
+  return 'We are turning your latest findings into prioritized actions automatically.';
 }
 
 /**
@@ -120,11 +131,7 @@ function PreparingRecommendations({
           {delayed ? 'Recommendations need another try' : 'Preparing recommendations'}
         </h2>
         <p className="text-secondary max-w-md text-sm">
-          {summary.activation_state === 'waiting_for_evidence'
-            ? 'We need a completed visibility or website review before we can prioritize actions.'
-            : delayed
-              ? 'The latest findings are safe. Try preparing the recommendations again.'
-              : 'We are turning your latest findings into prioritized actions automatically.'}
+          {preparationMessage(summary.activation_state)}
         </p>
         {delayed ? <RetryButton projectId={projectId} variant="secondary" /> : null}
       </CardContent>
