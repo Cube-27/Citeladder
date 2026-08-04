@@ -70,6 +70,7 @@ from app.models.audit import (
     AuditTask,
     RawResponseArtifact,
 )
+from app.models.project import Project
 
 # A run is "completed" (dashboard-eligible) when fully or partially completed.
 _DASHBOARD_STATUSES = (
@@ -798,9 +799,16 @@ async def _project_logo_context(
     )
     logo_urls = get_project_logo_urls(project)
     identity_ids: dict[tuple[bool, str], uuid.UUID] = {}
-    website_urls: dict[tuple[bool, str], str] = {}
     if project.brand is not None:
         identity_ids[(True, project.brand.name)] = project.brand.id
+    for competitor in project.competitors:
+        identity_ids[(False, competitor.name)] = competitor.id
+    return logo_urls, identity_ids, _project_website_urls(project)
+
+
+def _project_website_urls(project: Project) -> dict[tuple[bool, str], str]:
+    website_urls: dict[tuple[bool, str], str] = {}
+    if project.brand is not None:
         brand_website = _normalized_logo_website_url(
             project.website_url
             or next((item.domain for item in project.owned_domains if item.domain), "")
@@ -808,7 +816,6 @@ async def _project_logo_context(
         if brand_website:
             website_urls[(True, project.brand.name)] = brand_website
     for competitor in project.competitors:
-        identity_ids[(False, competitor.name)] = competitor.id
         competitor_website = _normalized_logo_website_url(
             next(
                 (str(domain) for domain in competitor.domains or [] if str(domain)),
@@ -817,7 +824,7 @@ async def _project_logo_context(
         )
         if competitor_website:
             website_urls[(False, competitor.name)] = competitor_website
-    return logo_urls, identity_ids, website_urls
+    return website_urls
 
 
 def _rankings(
@@ -846,7 +853,7 @@ def _rankings(
             logo_url=_logo_url_for_name(
                 brand_name, True, logo_urls or {}, logo_identity_ids or {}
             ),
-            website_url=_website_url_for_name(brand_name, True, website_urls or {}),
+            website_url=_website_url_for_name(brand_name, True, website_urls),
             mention_rate=metrics.get("brand_mention_rate"),
             citation_rate=metrics.get("owned_citation_rate"),
             share_of_voice=share.get(brand_name),
@@ -861,7 +868,7 @@ def _rankings(
                 logo_url=_logo_url_for_name(
                     name, False, logo_urls or {}, logo_identity_ids or {}
                 ),
-                website_url=_website_url_for_name(name, False, website_urls or {}),
+                website_url=_website_url_for_name(name, False, website_urls),
                 mention_rate=competitor_mention.get(name),
                 citation_rate=competitor_citation.get(name),
                 share_of_voice=share.get(name),
@@ -886,9 +893,9 @@ def _logo_url_for_name(
 def _website_url_for_name(
     name: str,
     is_brand: bool,
-    website_urls: dict[tuple[bool, str], str],
+    website_urls: dict[tuple[bool, str], str] | None,
 ) -> str | None:
-    return website_urls.get((is_brand, name))
+    return website_urls.get((is_brand, name)) if website_urls is not None else None
 
 
 def _normalized_logo_website_url(value: object) -> str | None:

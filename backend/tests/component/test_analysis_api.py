@@ -120,6 +120,7 @@ def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
         analysis_service._website_url_for_name("Shared name", False, website_urls)
         == "competitor.example"
     )
+    assert analysis_service._website_url_for_name("Missing", False, None) is None
 
 
 @pytest.mark.parametrize(
