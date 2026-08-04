@@ -10,8 +10,8 @@ WORKDIR /app
 RUN corepack enable \
     && corepack prepare pnpm@11.9.0 --activate
 
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM dependencies AS builder
 

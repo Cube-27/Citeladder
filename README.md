@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/abhij1306/CiteLadder/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/abhij1306/CiteLadder?style=flat-square"></a>
-  <a href="https://github.com/abhij1306/CiteLadder/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/abhij1306/CiteLadder?style=flat-square"></a>
-  <a href="https://github.com/abhij1306/CiteLadder/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/abhij1306/CiteLadder?style=flat-square"></a>
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white&style=flat-square">
-  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white&style=flat-square">
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&logoColor=white&style=flat-square">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white&style=flat-square">
+  <a href="https://github.com/abhij1306/Citeladder/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/abhij1306/Citeladder?style=flat-square" /></a>
+  <a href="https://github.com/abhij1306/Citeladder/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/abhij1306/Citeladder?style=flat-square" /></a>
+  <a href="https://github.com/abhij1306/Citeladder/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/abhij1306/Citeladder?style=flat-square" /></a>
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white&amp;style=flat-square" />
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&amp;logoColor=white&amp;style=flat-square" />
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&amp;logoColor=white&amp;style=flat-square" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
 </p>
 
 <p align="center">
