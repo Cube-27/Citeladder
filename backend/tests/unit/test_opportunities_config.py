@@ -53,7 +53,7 @@ def test_catalog_uses_known_types_and_severities() -> None:
         assert rule.remediation.strip()
 
 
-def test_v1_enabled_rule_set() -> None:
+def test_v2_enabled_rule_set() -> None:
     enabled = {rule.rule_id for rule in OPPORTUNITY_RULES if rule.enabled}
     assert enabled == {
         "brand_absent_high_value_prompt",
@@ -61,6 +61,10 @@ def test_v1_enabled_rule_set() -> None:
         "missing_structured_data",
         "thin_content",
         "schema_type_mismatch",
+        "schema_properties_incomplete",
+        "schema_visible_content_conflict",
+        "content_structure_incomplete",
+        "citability_trust_incomplete",
         "product_not_mentioned",
         "competitor_product_dominates",
         "price_mention_mismatch",

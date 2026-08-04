@@ -1017,9 +1017,7 @@ def _guidance_input(row: Opportunity) -> dict:
         "source_analysis_ids": sorted(
             str(value) for value in row.source_analysis_ids or []
         ),
-        "source_issue_ids": sorted(
-            str(value) for value in row.source_issue_ids or []
-        ),
+        "source_issue_ids": sorted(str(value) for value in row.source_issue_ids or []),
         "source_metric_ids": sorted(
             str(value) for value in row.source_metric_ids or []
         ),
@@ -1205,6 +1203,65 @@ def _project_guidance(row: OpportunityGuidance) -> dict:
     }
 
 
+def _active_opportunity_at(
+    occurrences: list[Opportunity], timestamp: datetime | None
+) -> Opportunity | None:
+    if timestamp is None:
+        return next(
+            (row for row in reversed(occurrences) if row.superseded_at is None), None
+        )
+    return next(
+        (
+            row
+            for row in reversed(occurrences)
+            if row.created_at <= timestamp
+            and (row.superseded_at is None or row.superseded_at > timestamp)
+        ),
+        None,
+    )
+
+
+def _history_transition(
+    current: Opportunity | None, previous: Opportunity | None
+) -> str:
+    if current is not None and previous is not None:
+        return "continuing"
+    if current is not None:
+        return "new"
+    return "resolved"
+
+
+def _project_history_group(
+    *,
+    rule_id: str,
+    target_key: str,
+    occurrences: list[Opportunity],
+    latest_at: datetime | None,
+    previous_at: datetime | None,
+) -> tuple[dict, str, bool]:
+    current = _active_opportunity_at(occurrences, latest_at)
+    previous = _active_opportunity_at(occurrences, previous_at)
+    transition = _history_transition(current, previous)
+    return (
+        {
+            "rule_id": rule_id,
+            "target_key": target_key,
+            "title": occurrences[-1].title or "",
+            "current_state": current.status if current is not None else "resolved",
+            "transition": transition,
+            "occurrence_count": len(occurrences),
+            "first_seen": _iso(occurrences[0].created_at),
+            "last_seen": _iso(occurrences[-1].created_at),
+            "timeline": [
+                {"id": row.id, "status": row.status, "seen_at": _iso(row.created_at)}
+                for row in occurrences
+            ],
+        },
+        transition,
+        current is not None or previous is not None,
+    )
+
+
 async def get_grouped_history(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> dict:
@@ -1243,67 +1300,23 @@ async def get_grouped_history(
     for row in rows:
         groups.setdefault((row.rule_id, row.target_key), []).append(row)
 
-    def active_at(
-        occurrences: list[Opportunity], timestamp: datetime | None
-    ) -> Opportunity | None:
-        if timestamp is None:
-            return next(
-                (row for row in reversed(occurrences) if row.superseded_at is None),
-                None,
-            )
-        return next(
-            (
-                row
-                for row in reversed(occurrences)
-                if row.created_at <= timestamp
-                and (row.superseded_at is None or row.superseded_at > timestamp)
-            ),
-            None,
-        )
-
     projected: list[dict] = []
     counts = {"new": 0, "continuing": 0, "resolved": 0}
+    latest_at = latest_snapshot.created_at if latest_snapshot is not None else None
+    previous_at = (
+        previous_snapshot.created_at if previous_snapshot is not None else None
+    )
     for (rule_id, target_key), occurrences in groups.items():
-        current = active_at(
-            occurrences,
-            latest_snapshot.created_at if latest_snapshot is not None else None,
+        group, transition, changed = _project_history_group(
+            rule_id=rule_id,
+            target_key=target_key,
+            occurrences=occurrences,
+            latest_at=latest_at,
+            previous_at=previous_at,
         )
-        previous = active_at(
-            occurrences,
-            previous_snapshot.created_at if previous_snapshot is not None else None,
-        )
-        if current is not None and previous is not None:
-            transition = "continuing"
-        elif current is not None:
-            transition = "new"
-        elif previous is not None:
-            transition = "resolved"
-        else:
-            # Historical rows from before the comparison window stay visible,
-            # but must not be counted as a change since the prior recompute.
-            transition = "resolved"
-        if current is not None or previous is not None:
+        if changed:
             counts[transition] += 1
-        projected.append(
-            {
-                "rule_id": rule_id,
-                "target_key": target_key,
-                "title": occurrences[-1].title or "",
-                "current_state": current.status if current is not None else "resolved",
-                "transition": transition,
-                "occurrence_count": len(occurrences),
-                "first_seen": _iso(occurrences[0].created_at),
-                "last_seen": _iso(occurrences[-1].created_at),
-                "timeline": [
-                    {
-                        "id": row.id,
-                        "status": row.status,
-                        "seen_at": _iso(row.created_at),
-                    }
-                    for row in occurrences
-                ],
-            }
-        )
+        projected.append(group)
     projected.sort(
         key=lambda group: (group["last_seen"] or "", group["rule_id"]), reverse=True
     )

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import codecs
 import uuid
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from lxml import etree
@@ -489,6 +490,140 @@ async def _add_free_sample(
     return newly_activated, observation_id is not None
 
 
+@dataclass
+class _AdmissionProgress:
+    admitted: int = 0
+    observed: int = 0
+    remaining: int | None = None
+    site_url_ids: dict[str, str] = field(default_factory=dict)
+
+
+def _ordered_unique_candidates(
+    candidates: list[FrontierCandidate],
+) -> list[FrontierCandidate]:
+    by_hash: dict[str, FrontierCandidate] = {}
+    for candidate in sorted(candidates, key=lambda item: item.order_key):
+        by_hash.setdefault(candidate.url_hash, candidate)
+    return list(by_hash.values())
+
+
+async def _sample_remaining(session: AsyncSession, crawl: SiteCrawl) -> int | None:
+    if not crawl.sample_mode:
+        return None
+    runtime = await session.scalar(
+        select(WorkspaceSiteHealthRuntime)
+        .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
+        .with_for_update()
+    )
+    sample_limit = runtime.sample_url_limit if runtime is not None else 0
+    used = await _active_free_sample_count(session, crawl.workspace_id)
+    return max(0, int(sample_limit) - used)
+
+
+def _candidate_allowed(
+    crawl: SiteCrawl,
+    candidate: FrontierCandidate,
+    configuration: dict,
+) -> bool:
+    decision = classify_url_admission(
+        candidate.url,
+        root_registrable_domain=configuration.get("root_registrable_domain") or None,
+        include_globs=configuration.get("include_globs"),
+        exclude_globs=configuration.get("exclude_globs"),
+    )
+    if not decision.accepted or candidate.depth > site_health_settings.max_crawl_depth:
+        return False
+    selected_page_types = set(configuration.get("page_types") or [])
+    return not selected_page_types or decision.value_kind in {
+        "root",
+        "other",
+        *selected_page_types,
+    }
+
+
+async def _requested_budget_exhausted(
+    session: AsyncSession,
+    *,
+    crawl: SiteCrawl,
+    candidate: FrontierCandidate,
+    configuration: dict,
+) -> bool:
+    requested_limit = configuration.get("requested_page_limit")
+    if requested_limit is None:
+        return False
+    task_count = await session.scalar(
+        select(func.count())
+        .select_from(SiteCrawlTask)
+        .where(SiteCrawlTask.crawl_id == crawl.id)
+    )
+    if int(task_count or 0) < int(requested_limit):
+        return False
+    existing_task = await session.scalar(
+        select(SiteCrawlTask.id)
+        .where(SiteCrawlTask.crawl_id == crawl.id)
+        .where(SiteCrawlTask.url_hash == candidate.url_hash)
+        .limit(1)
+    )
+    return existing_task is None
+
+
+def _frontier_full(crawl: SiteCrawl, admitted: int) -> bool:
+    current = crawl.admitted_url_count + admitted
+    if crawl.sample_mode:
+        return current >= site_health_settings.sample_discovery_url_cap
+    return current >= site_health_settings.max_frontier_urls
+
+
+async def _record_admission(
+    session: AsyncSession,
+    *,
+    crawl: SiteCrawl,
+    candidate: FrontierCandidate,
+    position: int,
+    enqueue_children: bool,
+    progress: _AdmissionProgress,
+) -> None:
+    site_url_id, _created = await _upsert_site_url(
+        session, crawl=crawl, candidate=candidate
+    )
+    progress.site_url_ids[candidate.url_hash] = str(site_url_id)
+    progress.observed += 1
+
+    if crawl.sample_mode:
+        analyze = progress.remaining is not None and progress.remaining > 0
+        newly_activated, newly_observed = await _add_free_sample(
+            session,
+            crawl=crawl,
+            site_url_id=site_url_id,
+            url=candidate.url,
+            url_hash_value=candidate.url_hash,
+            depth=candidate.depth,
+            source_kind=candidate.source_kind,
+            analyze=analyze,
+        )
+        if newly_activated and progress.remaining is not None:
+            progress.remaining -= 1
+        if newly_observed:
+            progress.admitted += 1
+        return
+    if enqueue_children:
+        task_id = await _enqueue_task(
+            session,
+            crawl=crawl,
+            site_url_id=site_url_id,
+            url=candidate.url,
+            url_hash_value=candidate.url_hash,
+            task_kind=TASK_KIND_DISCOVER,
+            depth=candidate.depth,
+            randomized_position=position,
+            parent_site_url_id=None,
+        )
+        if task_id is not None:
+            progress.admitted += 1
+        return
+    progress.admitted += 1
+
+
 async def admit_candidates(
     session: AsyncSession,
     *,
@@ -511,164 +646,31 @@ async def admit_candidates(
 
     Caller owns the commit (progressive batches commit per admission call).
     """
-    # Deterministic order (invariant 9).
-    ordered = sorted(candidates, key=lambda c: c.order_key)
-    # ...then collapse repeats of the same identity WITHIN this batch, keeping
-    # the first (lowest order_key) so the choice stays deterministic. A page
-    # that links to itself, or a root re-appended alongside its own extracted
-    # links, otherwise consumed TWO admission slots for one identity: the
-    # counter and the frontier ceiling counted two while the conflict-safe
-    # inserts produced a single observation row and a single task.
-    #
-    # This is only intra-batch dedup. Counting a re-observation across CRAWLS
-    # is deliberate (see the counter comment below) — a recrawl of a known site
-    # must still show progress — so that behavior is untouched.
-    by_hash: dict[str, FrontierCandidate] = {}
-    for candidate in ordered:
-        by_hash.setdefault(candidate.url_hash, candidate)
-    ordered = list(by_hash.values())
-    admitted = 0
-    observed = 0
-    settings = site_health_settings
-
-    remaining: int | None = None
-    if crawl.sample_mode:
-        # Lock the runtime row so the workspace-wide sample allowance is
-        # serialized across concurrent crawls in different projects.
-        runtime = await session.scalar(
-            select(WorkspaceSiteHealthRuntime)
-            .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
-            .with_for_update()
-        )
-        sample_limit = runtime.sample_url_limit if runtime is not None else 0
-        used = await _active_free_sample_count(session, crawl.workspace_id)
-        remaining = max(0, int(sample_limit) - used)
-        # NOTE: an exhausted ANALYSIS allowance no longer ends admission. The
-        # sample budget governs how many URLs get a monitored membership + an
-        # analyze task; the inventory keeps growing to the discovery cap so the
-        # user sees the real shape of their site instead of the first 10 URLs.
-        # ``remaining <= 0`` now simply means "admit as inventory only".
-
-    site_url_ids: dict[str, str] = {}
-    for position, candidate in enumerate(ordered):
+    configuration = dict(crawl.configuration or {})
+    progress = _AdmissionProgress(remaining=await _sample_remaining(session, crawl))
+    for position, candidate in enumerate(_ordered_unique_candidates(candidates)):
         # Defense in depth: candidates normally passed the policy during link/
         # sitemap/manual parsing, but admission is the last gate before a task
         # can exist and therefore protects every producer uniformly.
-        configuration = dict(crawl.configuration or {})
-        decision = classify_url_admission(
-            candidate.url,
-            root_registrable_domain=configuration.get("root_registrable_domain")
-            or None,
-            include_globs=configuration.get("include_globs"),
-            exclude_globs=configuration.get("exclude_globs"),
-        )
-        if not decision.accepted:
+        if not _candidate_allowed(crawl, candidate, configuration):
             continue
-        selected_page_types = set(configuration.get("page_types") or [])
-        if (
-            selected_page_types
-            and decision.value_kind not in {"root", "other"}
-            and decision.value_kind not in selected_page_types
-        ):
-            continue
-        if candidate.depth > settings.max_crawl_depth:
-            continue
-        requested_limit = configuration.get("requested_page_limit")
-        if requested_limit is not None:
-            task_count = await session.scalar(
-                select(func.count())
-                .select_from(SiteCrawlTask)
-                .where(SiteCrawlTask.crawl_id == crawl.id)
-            )
-            if int(task_count or 0) >= int(requested_limit):
-                # A fetched root/seed still needs an observation, but no new
-                # descendant may be queued after its frozen page budget fills.
-                existing_task = await session.scalar(
-                    select(SiteCrawlTask.id)
-                    .where(SiteCrawlTask.crawl_id == crawl.id)
-                    .where(SiteCrawlTask.url_hash == candidate.url_hash)
-                    .limit(1)
-                )
-                if existing_task is None:
-                    break
-        # Sample-mode INVENTORY ceiling (not the analysis budget — see below).
-        # This is what actually stops a sample-mode crawl: it keeps mapping the
-        # site until the discovery cap is reached, analyzing only the sample
-        # allowance.
-        if (
-            crawl.sample_mode
-            and crawl.admitted_url_count + admitted >= settings.sample_discovery_url_cap
+        if await _requested_budget_exhausted(
+            session,
+            crawl=crawl,
+            candidate=candidate,
+            configuration=configuration,
         ):
             break
-        # Full-discovery frontier ceiling.
-        if (
-            not crawl.sample_mode
-            and crawl.admitted_url_count + admitted >= settings.max_frontier_urls
-        ):
+        if _frontier_full(crawl, progress.admitted):
             break
-
-        site_url_id, _created = await _upsert_site_url(
-            session, crawl=crawl, candidate=candidate
+        await _record_admission(
+            session,
+            crawl=crawl,
+            candidate=candidate,
+            position=position,
+            enqueue_children=enqueue_children,
+            progress=progress,
         )
-        if site_url_id is None:
-            continue
-        site_url_ids[candidate.url_hash] = str(site_url_id)
-        # Every resolved identity is an OBSERVATION (progress/telemetry).
-        observed += 1
-
-        # Per-crawl admission must not be limited to newly-created child
-        # identities: a complete recrawl re-observes URLs that already have a
-        # SiteUrl identity from an earlier crawl, and a Free crawl's sample
-        # allowance must keep filling from EXISTING identities too (otherwise
-        # a recrawl of an already-discovered site can admit nothing and Free
-        # sites end up with an undersized sample). Both branches below run
-        # for every candidate whose identity resolved, not just new ones; the
-        # task/membership inserts are themselves conflict-safe so a
-        # re-observation of an already-scheduled URL is a safe no-op.
-        #
-        # ``admitted`` counts only the FIRST time this crawl claims an identity
-        # — a new per-crawl observation (sample) or a new queue slot (Starter).
-        # Uniqueness is per CRAWL, so a recrawl still counts every URL; the old
-        # per-PROJECT-identity counting is what reported zero on a recrawl.
-        if crawl.sample_mode:
-            # Two independent budgets. Every candidate is admitted into the
-            # INVENTORY (identity + per-crawl observation) so the user sees the
-            # real site map; only the first ``sample_url_limit`` URLs also get a
-            # monitored membership + an analyze task. Past that the URL is
-            # recorded and left unanalyzed rather than dropped.
-            analyze = remaining is not None and remaining > 0
-            newly_activated, newly_observed = await _add_free_sample(
-                session,
-                crawl=crawl,
-                site_url_id=site_url_id,
-                url=candidate.url,
-                url_hash_value=candidate.url_hash,
-                depth=candidate.depth,
-                source_kind=candidate.source_kind,
-                analyze=analyze,
-            )
-            if newly_activated and remaining is not None:
-                remaining -= 1
-            if newly_observed:
-                admitted += 1
-        elif enqueue_children:
-            task_id = await _enqueue_task(
-                session,
-                crawl=crawl,
-                site_url_id=site_url_id,
-                url=candidate.url,
-                url_hash_value=candidate.url_hash,
-                task_kind=TASK_KIND_DISCOVER,
-                depth=candidate.depth,
-                randomized_position=position,
-                parent_site_url_id=None,
-            )
-            if task_id is not None:
-                admitted += 1
-        else:
-            # No queue slot is claimed on this path (the caller writes the
-            # observations itself), so the resolved identity IS the admission.
-            admitted += 1
 
     # Live delta so the frontier ceiling above and the progress event advance
     # within a task. ``CrawlLifecycle.reconcile`` then re-derives this counter
@@ -677,11 +679,13 @@ async def admit_candidates(
     # observation) is what keeps the live value and the re-derived one in
     # agreement, so the ceiling stops the crawl at the real frontier size
     # instead of counting a twice-seen URL twice.
-    crawl.admitted_url_count += admitted
-    sample_capped = bool(crawl.sample_mode and remaining is not None and remaining <= 0)
+    crawl.admitted_url_count += progress.admitted
+    sample_capped = bool(
+        crawl.sample_mode and progress.remaining is not None and progress.remaining <= 0
+    )
     return AdmissionResult(
-        admitted=admitted,
+        admitted=progress.admitted,
         sample_capped=sample_capped,
-        site_url_ids=site_url_ids,
-        observed=observed,
+        site_url_ids=progress.site_url_ids,
+        observed=progress.observed,
     )

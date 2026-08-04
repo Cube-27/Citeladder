@@ -1,10 +1,13 @@
 """Pure AI Presence formula and momentum coverage."""
+
 from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from app.domain.dashboard.service import (
+    _bounded_rate,
     _latest_opportunity_before,
     build_ai_presence_point,
     finalize_ai_presence_points,
@@ -13,6 +16,18 @@ from app.models.analysis import MetricSnapshot
 from app.models.opportunity import OpportunitySnapshot
 from app.models.product import ProductMetricSnapshot
 from app.models.site_health import SiteHealthSnapshot
+
+
+def test_bounded_rate_accepts_decimal_values() -> None:
+    assert _bounded_rate(Decimal("0.25")) == 0.25
+
+
+def test_bounded_rate_accepts_float_compatible_numeric_objects() -> None:
+    class NumericLike:
+        def __float__(self) -> float:
+            return 0.75
+
+    assert _bounded_rate(NumericLike()) == 0.75
 
 
 def _metric(

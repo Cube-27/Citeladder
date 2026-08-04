@@ -24,7 +24,7 @@ export function RankingsTable({
         {rows.length === 0 ? (
           <p className="text-secondary p-[var(--card-padding)] text-sm">{NO_RANKINGS_MESSAGE}</p>
         ) : (
-          <RankingRowsTable rows={rows} history={history} showSeriesMarkers={false} />
+          <RankingRowsTable rows={rows} history={history} />
         )}
       </CardContent>
     </Card>

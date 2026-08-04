@@ -140,13 +140,18 @@ export function useCommerceDiscovery(projectId: string | null, enabled = true) {
   });
   const candidatesQuery = useQuery({
     queryKey: queryKeys.commerce.discoveryCandidates(projectId ?? '', selectedRunId),
-    queryFn: ({ signal }) => commerceApi.listDiscoveryCandidates(projectId!, selectedRunId, { signal }),
+    queryFn: ({ signal }) =>
+      commerceApi.listDiscoveryCandidates(projectId!, selectedRunId, { signal }),
     enabled: Boolean(projectId) && enabled,
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.commerce.discoveryRuns(projectId ?? '') }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.commerce.discoveryCandidates(projectId ?? '') }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.commerce.discoveryRuns(projectId ?? ''),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.commerce.discoveryCandidates(projectId ?? ''),
+      }),
     ]);
   };
   const previewMutation = useMutation({
@@ -156,14 +161,27 @@ export function useCommerceDiscovery(projectId: string | null, enabled = true) {
   const createMutation = useMutation({
     mutationFn: (body: Parameters<typeof commerceApi.createDiscoveryRun>[1]) =>
       commerceApi.createDiscoveryRun(projectId!, body),
-    onSuccess: async (run) => { setSelectedRunId(run.id); await refresh(); },
+    onSuccess: async (run) => {
+      setSelectedRunId(run.id);
+      await refresh();
+    },
   });
   const decisionMutation = useMutation({
-    mutationFn: (input: { candidateId: string; body: Parameters<typeof commerceApi.decideCandidate>[1] }) =>
-      commerceApi.decideCandidate(input.candidateId, input.body),
+    mutationFn: (input: {
+      candidateId: string;
+      body: Parameters<typeof commerceApi.decideCandidate>[1];
+    }) => commerceApi.decideCandidate(input.candidateId, input.body),
     onSuccess: refresh,
   });
-  return { selectedRunId, setSelectedRunId, runsQuery, candidatesQuery, previewMutation, createMutation, decisionMutation };
+  return {
+    selectedRunId,
+    setSelectedRunId,
+    runsQuery,
+    candidatesQuery,
+    previewMutation,
+    createMutation,
+    decisionMutation,
+  };
 }
 
 /** Immutable competitor comparison snapshots and their history. */
@@ -176,7 +194,8 @@ export function useMarketIntelligence(projectId: string | null, enabled = true) 
   });
   const createMutation = useMutation({
     mutationFn: (competitorId?: string) => commerceApi.createComparison(projectId!, competitorId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.commerce.comparisons(projectId ?? '') }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.commerce.comparisons(projectId ?? '') }),
   });
   return { comparisonsQuery, createMutation };
 }

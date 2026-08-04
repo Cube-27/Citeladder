@@ -2072,13 +2072,14 @@ class SiteHealthSettings(BaseSettings):
         if self.curl_cffi_low_content_bytes < 0:
             raise ValueError("curl_cffi_low_content_bytes must not be negative")
         if any(
-            status < 100 or status > 599
-            for status in self.curl_cffi_trigger_statuses
+            status < 100 or status > 599 for status in self.curl_cffi_trigger_statuses
         ):
             raise ValueError("curl_cffi_trigger_statuses must be HTTP status codes")
         if self.scraperapi_enabled and not self.scraperapi_api_key.strip():
             raise ValueError("scraperapi_api_key is required when scraperapi_enabled")
-        if self.scraperapi_enabled and not self.scraperapi_endpoint.startswith("https://"):
+        if self.scraperapi_enabled and not self.scraperapi_endpoint.startswith(
+            "https://"
+        ):
             raise ValueError("scraperapi_endpoint must use https")
         return self
 

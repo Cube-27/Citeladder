@@ -252,7 +252,28 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
     falls back to ``other``. Never raises on malformed facts (partial facts
     simply match fewer signals).
     """
-    facts = facts or {}
+    matched, schema_page_type = _classification_signals(final_url, facts or {})
+    confidence, winner, page_type, other_reason = _classification_outcome(matched)
+    winner_type = str(winner["page_type"]) if winner is not None else None
+    classified_by = (
+        winner["signal"] if winner is not None else _config.PAGE_TYPE_SIGNAL_NONE
+    )
+    return PageTypeAssessment(
+        page_type=page_type,
+        confidence=confidence,
+        signals=tuple(matched),
+        classifier_version=_config.CLASSIFIER_VERSION,
+        classified_by=classified_by,
+        schema_suggested_type=schema_page_type,
+        alternatives=_alternatives(matched, winner_type=winner_type),
+        conflicts=_conflicts(matched, winner_type=winner_type),
+        other_reason=other_reason,
+    )
+
+
+def _classification_signals(
+    final_url: str, facts: dict
+) -> tuple[list[dict[str, Any]], str | None]:
     path = _normalized_path(final_url)
     matched: list[dict[str, Any]] = []
 
@@ -294,7 +315,12 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
                 schema_type or "",
             )
         )
+    return matched, schema_page_type
 
+
+def _classification_outcome(
+    matched: list[dict[str, Any]],
+) -> tuple[float, dict[str, Any] | None, str, str | None]:
     # Fixed priority order: signals were appended in priority order already;
     # the winner is the first matched signal (signals 1-3 outrank 4).
     confidence = round(sum(signal["weight"] for signal in matched), 4)
@@ -305,10 +331,6 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
         if winner is not None and not below_threshold
         else _config.PAGE_TYPE_OTHER
     )
-    classified_by = (
-        winner["signal"] if winner is not None else _config.PAGE_TYPE_SIGNAL_NONE
-    )
-    winner_type = str(winner["page_type"]) if winner is not None else None
     other_reason = None
     if page_type == _config.PAGE_TYPE_OTHER:
         other_reason = (
@@ -316,14 +338,4 @@ def classify(final_url: str, facts: dict) -> PageTypeAssessment:
             if winner is None
             else CLASSIFICATION_OTHER_REASON_BELOW_THRESHOLD
         )
-    return PageTypeAssessment(
-        page_type=page_type,
-        confidence=confidence,
-        signals=tuple(matched),
-        classifier_version=_config.CLASSIFIER_VERSION,
-        classified_by=classified_by,
-        schema_suggested_type=schema_page_type,
-        alternatives=_alternatives(matched, winner_type=winner_type),
-        conflicts=_conflicts(matched, winner_type=winner_type),
-        other_reason=other_reason,
-    )
+    return confidence, winner, page_type, other_reason

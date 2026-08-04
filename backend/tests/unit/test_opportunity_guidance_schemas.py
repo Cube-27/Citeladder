@@ -1,4 +1,5 @@
 """Guidance response DTO provenance must preserve the UUID-only ID contract."""
+
 from __future__ import annotations
 
 import uuid

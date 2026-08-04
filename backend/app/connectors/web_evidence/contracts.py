@@ -125,7 +125,9 @@ class FetchResult:
 
     ``body`` holds the decoded bytes (already capped) for in-process parsing;
     it is never persisted as-is. ``redacted_headers`` contains only the config
-    allowlist. ``redirect_chain`` records every re-validated hop.
+    allowlist. ``redirect_location`` is transient control data used only by
+    manual redirect orchestration and is never copied into persisted headers.
+    ``redirect_chain`` records every re-validated hop.
     """
 
     requested_url: str
@@ -141,6 +143,7 @@ class FetchResult:
     latency_ms: int | None
     redirect_chain: tuple[RedirectHop, ...] = ()
     charset: str = ""
+    redirect_location: str = ""
     # Per-network-call trace (T7): one entry per REAL network call made while
     # serving this fetch, in call order (see ``FetchCallTrace``). ``FetchError``
     # carries the same tuple so the trace survives failure; persisting it is
@@ -156,7 +159,9 @@ class FetchError(Exception):
     ``ssrf_blocked``, ``redirect_limit``, ``response_too_large``, ``timeout``).
     The message is safe for logs/diagnostics: it never contains a raw body or a
     sensitive header. ``status_code``/``retry_after_seconds`` are populated when
-    known (HTTP errors).
+    known (HTTP errors). ``transport_error_code`` may carry a provider-neutral,
+    numeric transport diagnostic; raw exception messages are deliberately not
+    copied because they can contain request URLs.
     """
 
     def __init__(
@@ -168,12 +173,14 @@ class FetchError(Exception):
         retry_after_seconds: float | None = None,
         retryable: bool = False,
         attempts: tuple[FetchCallTrace, ...] = (),
+        transport_error_code: int | None = None,
     ) -> None:
         super().__init__(message)
         self.error_code = error_code
         self.status_code = status_code
         self.retry_after_seconds = retry_after_seconds
         self.retryable = retryable
+        self.transport_error_code = transport_error_code
         # The same per-network-call trace ``FetchResult`` carries, so a
         # failed fetch (transport failure, cap abort) does not lose the
         # record of the calls it made (T7).

@@ -95,6 +95,10 @@ def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
         (True, "Shared name"): brand_id,
         (False, "Shared name"): competitor_id,
     }
+    website_urls = {
+        (True, "Shared name"): "brand.example",
+        (False, "Shared name"): "competitor.example",
+    }
 
     assert (
         analysis_service._logo_url_for_name(
@@ -108,6 +112,27 @@ def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
         )
         == "/competitor-logo"
     )
+    assert (
+        analysis_service._website_url_for_name("Shared name", True, website_urls)
+        == "brand.example"
+    )
+    assert (
+        analysis_service._website_url_for_name("Shared name", False, website_urls)
+        == "competitor.example"
+    )
+    assert analysis_service._website_url_for_name("Missing", False, None) is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("Acme.COM/path", "https://acme.com"),
+        ("https://www.acme.com/products", "https://acme.com"),
+        ("", None),
+    ],
+)
+def test_logo_website_urls_are_normalized(value: str, expected: str | None) -> None:
+    assert analysis_service._normalized_logo_website_url(value) == expected
 
 
 class _StubAdapter:

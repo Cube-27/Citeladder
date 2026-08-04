@@ -50,7 +50,9 @@ export function EvidenceDrawer({
     ...opportunitiesMutations.createGuidance(),
     onSuccess: (guidance) => {
       queryClient.setQueryData(queryKeys.opportunities.guidance(guidance.opportunity_id), guidance);
-      queryClient.invalidateQueries({ queryKey: queryKeys.opportunities.guidanceHistory(guidance.opportunity_id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.guidanceHistory(guidance.opportunity_id),
+      });
     },
   });
 
@@ -109,21 +111,57 @@ export function EvidenceDrawer({
                 <section className="grid gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <Label>Tailored guidance</Label>
-                    <Button size="sm" variant="secondary" onClick={createGuidance} disabled={guidanceMutation.isPending}>
-                      {guidanceMutation.isPending ? 'Generating…' : guidanceQuery.data ? 'Regenerate' : 'Generate'}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={createGuidance}
+                      disabled={guidanceMutation.isPending}
+                    >
+                      {guidanceMutation.isPending
+                        ? 'Generating…'
+                        : guidanceQuery.data
+                          ? 'Regenerate'
+                          : 'Generate'}
                     </Button>
                   </div>
                   {guidanceQuery.data ? (
                     <div className="border-border-subtle bg-background-alt grid gap-3 rounded-lg border p-3">
-                      <div className="grid gap-1"><span className="text-2xs text-muted">What was found</span><ul className="text-foreground grid list-disc gap-1 pl-4 text-sm">{guidanceQuery.data.findings.map((item) => <li key={item}>{item}</li>)}</ul></div>
-                      <div className="grid gap-1"><span className="text-2xs text-muted">Recommended improvements</span><ul className="text-foreground grid list-disc gap-1 pl-4 text-sm">{guidanceQuery.data.recommendations.map((item) => <li key={item}>{item}</li>)}</ul></div>
-                      <details className="text-muted text-xs"><summary className="cursor-pointer">Provenance</summary><p className="mt-2">Generated {new Date(guidanceQuery.data.created_at).toLocaleString()} · {guidanceQuery.data.generator_version} · {guidanceQuery.data.prompt_version}</p></details>
+                      <div className="grid gap-1">
+                        <span className="text-2xs text-muted">What was found</span>
+                        <ul className="text-foreground grid list-disc gap-1 pl-4 text-sm">
+                          {guidanceQuery.data.findings.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="grid gap-1">
+                        <span className="text-2xs text-muted">Recommended improvements</span>
+                        <ul className="text-foreground grid list-disc gap-1 pl-4 text-sm">
+                          {guidanceQuery.data.recommendations.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <details className="text-muted text-xs">
+                        <summary className="cursor-pointer">Provenance</summary>
+                        <p className="mt-2">
+                          Generated {new Date(guidanceQuery.data.created_at).toLocaleString()} ·{' '}
+                          {guidanceQuery.data.generator_version} ·{' '}
+                          {guidanceQuery.data.prompt_version}
+                        </p>
+                      </details>
                     </div>
                   ) : guidanceQuery.isError ? (
                     <Alert tone="info">Tailored guidance is unavailable for this workspace.</Alert>
                   ) : null}
-                  {guidanceMutation.isError ? <Alert tone="danger">Could not generate guidance. Please try again.</Alert> : null}
-                  {historyQuery.data && historyQuery.data.items.length > 1 ? <p className="text-muted text-xs">{historyQuery.data.items.length} immutable guidance versions are available.</p> : null}
+                  {guidanceMutation.isError ? (
+                    <Alert tone="danger">Could not generate guidance. Please try again.</Alert>
+                  ) : null}
+                  {historyQuery.data && historyQuery.data.items.length > 1 ? (
+                    <p className="text-muted text-xs">
+                      {historyQuery.data.items.length} immutable guidance versions are available.
+                    </p>
+                  ) : null}
                 </section>
                 <OpportunitySummarySection detail={detail} />
               </div>

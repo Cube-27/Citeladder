@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.analysis.normalization import normalize_domain
 from app.core.config import commerce as commerce_config
 from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
@@ -69,6 +70,7 @@ from app.models.audit import (
     AuditTask,
     RawResponseArtifact,
 )
+from app.models.project import Project
 
 # A run is "completed" (dashboard-eligible) when fully or partially completed.
 _DASHBOARD_STATUSES = (
@@ -146,7 +148,7 @@ async def get_visibility(
         if cohort == "core"
         else dict(stored_metrics.get("comparison") or {})
     )
-    logo_urls, logo_identity_ids = await _project_logo_context(
+    logo_urls, logo_identity_ids, website_urls = await _project_logo_context(
         session, workspace_id=workspace_id, project_id=project_id
     )
     provenance_mode, model_provenance = _aggregate_provenance(audit)
@@ -173,6 +175,7 @@ async def get_visibility(
             metrics,
             logo_urls=logo_urls,
             logo_identity_ids=logo_identity_ids,
+            website_urls=website_urls,
         ),
         per_engine=_engine_rows(metrics),
         sentiment=metrics.get("sentiment"),
@@ -282,13 +285,16 @@ async def get_visibility_trends(
         points = [_raw_point(source) for source in sources]
     else:
         points = _bucket_points(sources, granularity)
-    logo_urls, logo_identity_ids = await _project_logo_context(
+    logo_urls, logo_identity_ids, website_urls = await _project_logo_context(
         session, workspace_id=workspace_id, project_id=project_id
     )
     for point in points:
         for ranking in point.rankings:
             ranking.logo_url = _logo_url_for_name(
                 ranking.name, ranking.is_brand, logo_urls, logo_identity_ids
+            )
+            ranking.website_url = _website_url_for_name(
+                ranking.name, ranking.is_brand, website_urls
             )
     return points
 
@@ -783,7 +789,11 @@ async def _project_logo_context(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-) -> tuple[dict[uuid.UUID, str], dict[tuple[bool, str], uuid.UUID]]:
+) -> tuple[
+    dict[uuid.UUID, str],
+    dict[tuple[bool, str], uuid.UUID],
+    dict[tuple[bool, str], str],
+]:
     project = await get_project(
         session, workspace_id=workspace_id, project_id=project_id
     )
@@ -793,7 +803,28 @@ async def _project_logo_context(
         identity_ids[(True, project.brand.name)] = project.brand.id
     for competitor in project.competitors:
         identity_ids[(False, competitor.name)] = competitor.id
-    return logo_urls, identity_ids
+    return logo_urls, identity_ids, _project_website_urls(project)
+
+
+def _project_website_urls(project: Project) -> dict[tuple[bool, str], str]:
+    website_urls: dict[tuple[bool, str], str] = {}
+    if project.brand is not None:
+        brand_website = _normalized_logo_website_url(
+            project.website_url
+            or next((item.domain for item in project.owned_domains if item.domain), "")
+        )
+        if brand_website:
+            website_urls[(True, project.brand.name)] = brand_website
+    for competitor in project.competitors:
+        competitor_website = _normalized_logo_website_url(
+            next(
+                (str(domain) for domain in competitor.domains or [] if str(domain)),
+                "",
+            )
+        )
+        if competitor_website:
+            website_urls[(False, competitor.name)] = competitor_website
+    return website_urls
 
 
 def _rankings(
@@ -801,6 +832,7 @@ def _rankings(
     *,
     logo_urls: dict[uuid.UUID, str] | None = None,
     logo_identity_ids: dict[tuple[bool, str], uuid.UUID] | None = None,
+    website_urls: dict[tuple[bool, str], str] | None = None,
 ) -> list[RankingRow]:
     """Build the brand-vs-competitor rankings table from the aggregate.
 
@@ -821,6 +853,7 @@ def _rankings(
             logo_url=_logo_url_for_name(
                 brand_name, True, logo_urls or {}, logo_identity_ids or {}
             ),
+            website_url=_website_url_for_name(brand_name, True, website_urls),
             mention_rate=metrics.get("brand_mention_rate"),
             citation_rate=metrics.get("owned_citation_rate"),
             share_of_voice=share.get(brand_name),
@@ -835,6 +868,7 @@ def _rankings(
                 logo_url=_logo_url_for_name(
                     name, False, logo_urls or {}, logo_identity_ids or {}
                 ),
+                website_url=_website_url_for_name(name, False, website_urls),
                 mention_rate=competitor_mention.get(name),
                 citation_rate=competitor_citation.get(name),
                 share_of_voice=share.get(name),
@@ -854,6 +888,19 @@ def _logo_url_for_name(
 ) -> str | None:
     identity_id = identity_ids.get((is_brand, name))
     return logo_urls.get(identity_id) if identity_id is not None else None
+
+
+def _website_url_for_name(
+    name: str,
+    is_brand: bool,
+    website_urls: dict[tuple[bool, str], str] | None,
+) -> str | None:
+    return website_urls.get((is_brand, name)) if website_urls is not None else None
+
+
+def _normalized_logo_website_url(value: object) -> str | None:
+    domain = normalize_domain(value)
+    return f"https://{domain}" if domain else None
 
 
 def _brand_name(counts: dict, metrics: dict) -> str:

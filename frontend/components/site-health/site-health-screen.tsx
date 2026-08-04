@@ -147,7 +147,12 @@ export function SiteHealthScreen() {
           collected so far are shown below — refresh to check again, or start a new crawl.
         </Alert>
       ) : null}
-      <CrawlIntakeDialog projectId={projectId} open={intakeOpen} onClose={() => setIntakeOpen(false)} onStart={startCrawl} />
+      <CrawlIntakeDialog
+        projectId={projectId}
+        open={intakeOpen}
+        onClose={() => setIntakeOpen(false)}
+        onStart={startCrawl}
+      />
 
       <SiteHealthDashboardLayout
         screen={screen}

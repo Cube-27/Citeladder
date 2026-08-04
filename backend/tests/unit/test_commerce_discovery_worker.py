@@ -6,6 +6,7 @@ import contextlib
 import hashlib
 import json
 import uuid
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -132,6 +133,37 @@ def test_safe_acquisition_is_bounded_and_excludes_raw_html_and_secrets() -> None
     assert "authorization" not in serialized
     assert "body" not in persisted
     assert persisted["provenance"]["transport"] == "scraperapi"
+
+
+def test_extract_product_preserves_late_node_from_final_schema_document() -> None:
+    limit = commerce_intelligence_settings.discovery_max_schema_nodes
+    first_document = {"@graph": [{"@type": "Thing"}] * (limit // 2)}
+    second_document = {
+        "@graph": [
+            *([{"@type": "Thing"}] * (limit // 2)),
+            {"@type": "Product", "name": "Late Widget", "sku": "LATE-1"},
+        ]
+    }
+    body = (
+        "<html><script type='application/ld+json'>"
+        + json.dumps(first_document)
+        + "</script><script type='application/ld+json'>"
+        + json.dumps(second_document)
+        + "</script></html>"
+    ).encode()
+    result = replace(
+        _result(url="https://example.com/late-widget"),
+        body=body,
+        wire_bytes=len(body),
+        decoded_bytes=len(body),
+    )
+
+    extracted = worker_module._extract_product(result)
+
+    assert extracted is not None
+    identity, _evidence = extracted
+    assert identity["name"] == "Late Widget"
+    assert identity["sku"] == "LATE-1"
 
 
 @pytest.mark.parametrize(

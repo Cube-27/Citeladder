@@ -323,21 +323,48 @@ export const dashboardSchema = responseObject({
   improve: z.array(dashboardSectionSchema),
   active_work: z.array(z.string()),
   ai_presence: responseObject({
-    current: z.object({
-      score: z.number().nullable(), formula_kind: z.string(), formula_version: z.string(),
-      provisional: z.boolean(), coverage: z.record(z.string(), z.boolean()),
-      components: z.record(z.string(), z.object({ score: z.number().nullable(), weight: z.number(), available: z.boolean() }).strict()),
-      source_snapshot_ids: z.record(z.string(), z.array(uuid())), versions: z.record(z.string(), z.string()),
-      comparable_to_latest: z.boolean().nullable(), timestamp: z.string(),
-    }).strict().nullable(),
+    current: z
+      .object({
+        score: z.number().nullable(),
+        formula_kind: z.string(),
+        formula_version: z.string(),
+        provisional: z.boolean(),
+        coverage: z.record(z.string(), z.boolean()),
+        components: z.record(
+          z.string(),
+          z
+            .object({ score: z.number().nullable(), weight: z.number(), available: z.boolean() })
+            .strict(),
+        ),
+        source_snapshot_ids: z.record(z.string(), z.array(uuid())),
+        versions: z.record(z.string(), z.string()),
+        comparable_to_latest: z.boolean().nullable(),
+        timestamp: z.string(),
+      })
+      .strict()
+      .nullable(),
     momentum: z.number().nullable(),
-    trend_points: z.array(z.object({
-      score: z.number().nullable(), formula_kind: z.string(), formula_version: z.string(),
-      provisional: z.boolean(), coverage: z.record(z.string(), z.boolean()),
-      components: z.record(z.string(), z.object({ score: z.number().nullable(), weight: z.number(), available: z.boolean() }).strict()),
-      source_snapshot_ids: z.record(z.string(), z.array(uuid())), versions: z.record(z.string(), z.string()),
-      comparable_to_latest: z.boolean().nullable(), timestamp: z.string(),
-    }).strict()),
+    trend_points: z.array(
+      z
+        .object({
+          score: z.number().nullable(),
+          formula_kind: z.string(),
+          formula_version: z.string(),
+          provisional: z.boolean(),
+          coverage: z.record(z.string(), z.boolean()),
+          components: z.record(
+            z.string(),
+            z
+              .object({ score: z.number().nullable(), weight: z.number(), available: z.boolean() })
+              .strict(),
+          ),
+          source_snapshot_ids: z.record(z.string(), z.array(uuid())),
+          versions: z.record(z.string(), z.string()),
+          comparable_to_latest: z.boolean().nullable(),
+          timestamp: z.string(),
+        })
+        .strict(),
+    ),
   }).nullable(),
 });
 
@@ -644,13 +671,15 @@ export const visibilityEngineSchema = responseObject({
   visibility_score: z.number().nullable(),
 });
 
-// One brand-vs-competitor rankings-table row (B6 `RankingRow`). `mention_rate`
-// is the Visibility% and `share_of_voice` the SOV%; `sentiment` / `avg_position`
-// are present but null until the roadmap computes them (decision B-2).
+// One brand-vs-competitor rankings-table row (B6 `RankingRow`). `website_url`
+// lets BrandLogo use its Logo.dev fallback when the cached `logo_url` is absent.
+// `mention_rate` is the Visibility% and `share_of_voice` the SOV%; `sentiment`
+// / `avg_position` are null until the roadmap computes them (decision B-2).
 export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
   logo_url: z.string().nullable().optional(),
+  website_url: z.string().nullable().optional(),
   mention_rate: z.number().nullable(),
   citation_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),
@@ -938,11 +967,19 @@ export const siteCrawlSchema = responseObject({
 });
 
 export const urlPreviewRowSchema = responseObject({
-  row: z.number().int(), input: z.string(), accepted: z.boolean(), canonical_url: z.string().nullable(),
-  reason_code: z.string().nullable(), value_kind: z.string(), priority: z.number().int(),
+  row: z.number().int(),
+  input: z.string(),
+  accepted: z.boolean(),
+  canonical_url: z.string().nullable(),
+  reason_code: z.string().nullable(),
+  value_kind: z.string(),
+  priority: z.number().int(),
 });
 export const urlPreviewResponseSchema = responseObject({
-  items: z.array(urlPreviewRowSchema), truncated: z.boolean(), counts: z.record(z.string(), z.number().int()), policy_version: z.string(),
+  items: z.array(urlPreviewRowSchema),
+  truncated: z.boolean(),
+  counts: z.record(z.string(), z.number().int()),
+  policy_version: z.string(),
 });
 
 // Opaque, filter-bound keyset cursor page envelope. `next_cursor` is null on
@@ -2506,39 +2543,71 @@ export const commerceMatchDecisionSchema = responseObject({
   review_required: z.boolean(),
 });
 export const commerceCandidateSchema = responseObject({
-  id: uuid(), run_id: uuid(), task_id: uuid(), artifact_id: uuid(),
+  id: uuid(),
+  run_id: uuid(),
+  task_id: uuid(),
+  artifact_id: uuid(),
   candidate_kind: commerceCandidateKindSchema,
   competitor_id: uuid().nullable(),
   identity: z.record(z.string(), z.unknown()),
-  extraction_confidence: z.number(), created_at: z.string(),
+  extraction_confidence: z.number(),
+  created_at: z.string(),
   matches: z.array(commerceMatchDecisionSchema),
 });
 export const commerceDiscoveryRunSchema = responseObject({
-  id: uuid(), project_id: uuid(), input_kind: commerceDiscoveryInputKindSchema,
-  status: z.string(), configuration: z.record(z.string(), z.unknown()),
-  discovery_version: z.string(), created_at: z.string(), completed_at: z.string().nullable(),
+  id: uuid(),
+  project_id: uuid(),
+  input_kind: commerceDiscoveryInputKindSchema,
+  status: z.string(),
+  configuration: z.record(z.string(), z.unknown()),
+  discovery_version: z.string(),
+  created_at: z.string(),
+  completed_at: z.string().nullable(),
   candidates: z.array(commerceCandidateSchema),
 });
 export const commerceCandidateAcceptSchema = responseObject({
-  review_id: uuid(), candidate_id: uuid(), status: z.enum(['accepted', 'rejected']),
-  product_id: uuid().nullable(), competitor_product_id: uuid().nullable(),
-  match_reason: z.string(), match_confidence: z.number(),
+  review_id: uuid(),
+  candidate_id: uuid(),
+  status: z.enum(['accepted', 'rejected']),
+  product_id: uuid().nullable(),
+  competitor_product_id: uuid().nullable(),
+  match_reason: z.string(),
+  match_confidence: z.number(),
 });
 export const competitorComparisonSnapshotSchema = responseObject({
-  id: uuid(), project_id: uuid(), competitor_id: uuid().nullable(),
+  id: uuid(),
+  project_id: uuid(),
+  competitor_id: uuid().nullable(),
   source_catalog_ids: z.record(z.string(), z.array(uuid())),
-  source_artifact_ids: z.array(uuid()), matcher_version: z.string(),
-  comparison_version: z.string(), comparison: z.record(z.string(), z.unknown()),
-  truncated: z.boolean(), created_at: z.string(),
+  source_artifact_ids: z.array(uuid()),
+  matcher_version: z.string(),
+  comparison_version: z.string(),
+  comparison: z.record(z.string(), z.unknown()),
+  truncated: z.boolean(),
+  created_at: z.string(),
 });
 
 export const opportunityGuidanceItemSchema = responseObject({
-  id: uuid(), opportunity_id: uuid(), input_hash: z.string(), findings: z.array(z.string()), recommendations: z.array(z.string()),
-  source_analysis_ids: z.array(uuid()), source_issue_ids: z.array(uuid()), source_metric_ids: z.array(uuid()),
-  analyzer_version: z.string(), rule_version: z.string(), formula_version: z.string(), generator_version: z.string(), prompt_version: z.string(),
-  provider: z.string(), model: z.string(), created_at: z.string(),
+  id: uuid(),
+  opportunity_id: uuid(),
+  input_hash: z.string(),
+  findings: z.array(z.string()),
+  recommendations: z.array(z.string()),
+  source_analysis_ids: z.array(uuid()),
+  source_issue_ids: z.array(uuid()),
+  source_metric_ids: z.array(uuid()),
+  analyzer_version: z.string(),
+  rule_version: z.string(),
+  formula_version: z.string(),
+  generator_version: z.string(),
+  prompt_version: z.string(),
+  provider: z.string(),
+  model: z.string(),
+  created_at: z.string(),
 });
-export const opportunityGuidanceHistorySchema = responseObject({ items: z.array(opportunityGuidanceItemSchema) });
+export const opportunityGuidanceHistorySchema = responseObject({
+  items: z.array(opportunityGuidanceItemSchema),
+});
 
 // ---------------------------------------------------------------------------
 // Billing (provider ids, plan ids, secrets, and billing PII never cross wire)

@@ -64,7 +64,10 @@ export type CreateCrawlInput = {
   seed_urls?: string[];
   page_types?: string[];
 };
-export type UrlPreviewInput = Pick<CreateCrawlInput, 'project_id' | 'include_globs' | 'exclude_globs'> & {
+export type UrlPreviewInput = Pick<
+  CreateCrawlInput,
+  'project_id' | 'include_globs' | 'exclude_globs'
+> & {
   content: string | string[] | Record<string, unknown>;
   input_format?: 'text' | 'csv' | 'json';
 };
@@ -139,7 +142,11 @@ export const siteHealthApi = {
     return strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
   },
   previewUrls: async (input: UrlPreviewInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<UrlPreviewResponse>('/site-crawls/url-preview', input, options);
+    const res = await apiClient.post<UrlPreviewResponse>(
+      '/site-crawls/url-preview',
+      input,
+      options,
+    );
     return strictValidate(urlPreviewResponseSchema, res, 'siteHealth.previewUrls');
   },
   listCrawls: async (params: CrawlListParams, options?: ApiRequestOptions) => {

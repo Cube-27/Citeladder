@@ -47,11 +47,16 @@ vi.mock('@/lib/products/use-products-screen', async (importOriginal) => {
       visibilityQuery: { isLoading: true },
     }),
     useCommerceDiscovery: () => ({
-      runsQuery: { isLoading: false, data: [] }, candidatesQuery: { isLoading: false, data: [] },
-      previewMutation: {}, createMutation: {}, decisionMutation: {}, setSelectedRunId: vi.fn(),
+      runsQuery: { isLoading: false, data: [] },
+      candidatesQuery: { isLoading: false, data: [] },
+      previewMutation: {},
+      createMutation: {},
+      decisionMutation: {},
+      setSelectedRunId: vi.fn(),
     }),
     useMarketIntelligence: () => ({
-      comparisonsQuery: { isLoading: false, data: [] }, createMutation: {},
+      comparisonsQuery: { isLoading: false, data: [] },
+      createMutation: {},
     }),
   };
 });
@@ -74,10 +79,7 @@ describe('ProductsScreen tabs', () => {
     render(<ProductsScreen />);
 
     expect(screen.getByRole('tab', { name: 'Discover' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveAttribute(
-      'aria-selected',
-      'false',
-    );
+    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('tab', { name: 'AI Conversations' })).toHaveAttribute(
       'aria-selected',
       'false',

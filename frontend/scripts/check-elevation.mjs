@@ -42,6 +42,7 @@ const OVERLAY_ALLOWLIST = new Set([
   'components/ui/market-select.tsx',
   'components/opportunities/evidence-drawer.tsx',
   'components/runs/execution-evidence-drawer.tsx',
+  'components/site-health/crawl-intake-dialog.tsx',
   // Marketing nav dropdown — the one floating surface on the landing.
   'components/marketing/chrome/nav.tsx',
 ]);

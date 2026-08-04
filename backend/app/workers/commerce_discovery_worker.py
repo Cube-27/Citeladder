@@ -215,6 +215,29 @@ def _extract_product(
     result: FetchResult,
 ) -> tuple[dict[str, Any], dict[str, Any]] | None:
     """Extract a bounded Product/Offer identity from in-memory response bytes."""
+    parsed = _schema_documents_and_root(result)
+    if parsed is None:
+        return None
+    documents, root = parsed
+    nodes = _bounded_schema_nodes(documents)
+    product, offer = _product_and_offer(nodes)
+    meta = _meta_values(root)
+    name = _visible_product_name(root, product, meta)
+    if not name:
+        return None
+    identity = _product_identity(result, product=product, offer=offer, name=name)
+    extracted = {
+        "identity": identity,
+        "schema_types": _schema_type_names(nodes),
+        "content_type": result.content_type,
+        "status_code": result.status_code,
+    }
+    return identity, extracted
+
+
+def _schema_documents_and_root(
+    result: FetchResult,
+) -> tuple[list[Any], Any | None] | None:
     body = result.body[: commerce_intelligence_settings.discovery_max_extraction_bytes]
     root: Any | None = None
     documents: list[Any] = []
@@ -232,20 +255,34 @@ def _extract_product(
             )
         except (etree.ParserError, ValueError):
             return None
-        for script in root.xpath('//script[@type="application/ld+json"]')[
+        schema_scripts = root.xpath('//script[@type="application/ld+json"]')
+        if not isinstance(schema_scripts, list):
+            return None
+        for script in schema_scripts[
             : commerce_intelligence_settings.discovery_max_schema_blocks
         ]:
+            if not isinstance(script, etree._Element):
+                continue
             raw = script.text or ""
             try:
                 documents.append(json.loads(raw))
             except json.JSONDecodeError:
                 continue
+    return documents, root
 
+
+def _bounded_schema_nodes(documents: list[Any]) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
     for document in documents:
         nodes.extend(_schema_nodes(document))
         if len(nodes) >= commerce_intelligence_settings.discovery_max_schema_nodes:
             break
+    return nodes
+
+
+def _product_and_offer(
+    nodes: list[dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any]]:
     product = next((node for node in nodes if _has_type(node, "Product")), {})
     offer = next((node for node in nodes if _has_type(node, "Offer")), {})
     offers = product.get("offers") if product else None
@@ -253,10 +290,13 @@ def _extract_product(
         offer = next((item for item in offers if isinstance(item, dict)), offer)
     elif isinstance(offers, dict):
         offer = offers
-    meta = _meta_values(root)
+    return product, offer
+
+
+def _visible_product_name(root: Any | None, product: dict, meta: dict[str, str]) -> str:
     h1 = _first(root.xpath("//h1[1]//text()") if root is not None else ())
     title = _first(root.xpath("//title[1]//text()") if root is not None else ())
-    name = _first(
+    return _first(
         (
             _mapping_value(product, "name"),
             meta.get("product:name", ""),
@@ -265,17 +305,9 @@ def _extract_product(
             title,
         )
     )
-    if not name:
-        return None
 
-    brand = _mapping_value(product, "brand")
-    gtin = _mapping_value(product, "gtin", "gtin13", "gtin12", "gtin14")
-    mpn = _mapping_value(product, "mpn")
-    model = _mapping_value(product, "model")
-    sku = _mapping_value(product, "sku")
-    price = _price(_mapping_value(offer, "price", "lowPrice"))
-    currency = _mapping_value(offer, "priceCurrency")
-    availability = _mapping_value(offer, "availability").rsplit("/", 1)[-1]
+
+def _product_variants(product: dict) -> list[dict[str, str]]:
     variants: list[dict[str, str]] = []
     raw_variants = product.get("hasVariant") if product else None
     for item in raw_variants if isinstance(raw_variants, list) else [raw_variants]:
@@ -293,54 +325,65 @@ def _extract_product(
             variants.append(variant)
         if len(variants) >= commerce_intelligence_settings.discovery_max_variants:
             break
+    return variants
+
+
+def _product_attributes(product: dict) -> dict[str, str]:
     attributes = {
         key: value
         for key, value in {
-            "brand": brand,
-            "gtin": gtin,
-            "mpn": mpn,
-            "model": model,
+            "brand": _mapping_value(product, "brand"),
+            "gtin": _mapping_value(product, "gtin", "gtin13", "gtin12", "gtin14"),
+            "mpn": _mapping_value(product, "mpn"),
+            "model": _mapping_value(product, "model"),
             "description": _mapping_value(product, "description"),
         }.items()
         if value
     }
-    attributes = dict(
+    return dict(
         list(attributes.items())[
             : commerce_intelligence_settings.discovery_max_attribute_items
         ]
     )
+
+
+def _product_identity(
+    result: FetchResult, *, product: dict, offer: dict, name: str
+) -> dict[str, Any]:
+    mpn = _mapping_value(product, "mpn")
+    model = _mapping_value(product, "model")
+    sku = _mapping_value(product, "sku")
+    price = _price(_mapping_value(offer, "price", "lowPrice"))
+    currency = _mapping_value(offer, "priceCurrency")
+    availability = _mapping_value(offer, "availability").rsplit("/", 1)[-1]
     aliases = [value for value in (model, mpn) if value][
         : commerce_intelligence_settings.discovery_max_aliases
     ]
-    identity: dict[str, Any] = {
+    return {
         "name": name,
         "sku": sku,
         "aliases": aliases,
-        "variants": variants,
+        "variants": _product_variants(product),
         "price": price,
         "currency": currency,
         "url": result.final_url,
-        "attributes": attributes,
+        "attributes": _product_attributes(product),
         "availability": availability,
     }
-    extracted = {
-        "identity": identity,
-        "schema_types": sorted(
-            {
-                value
-                for node in nodes
-                for value in (
-                    node.get("@type")
-                    if isinstance(node.get("@type"), list)
-                    else [node.get("@type")]
-                )
-                if _text(value)
-            }
-        )[: commerce_intelligence_settings.discovery_max_schema_nodes],
-        "content_type": result.content_type,
-        "status_code": result.status_code,
-    }
-    return identity, extracted
+
+
+def _schema_type_names(nodes: list[dict[str, Any]]) -> list[str]:
+    schema_types: set[str] = set()
+    for node in nodes:
+        raw_type = node.get("@type")
+        raw_types = raw_type if isinstance(raw_type, list) else [raw_type]
+        for raw_type_value in raw_types:
+            schema_type = _text(raw_type_value)
+            if schema_type:
+                schema_types.add(schema_type)
+    return sorted(schema_types)[
+        : commerce_intelligence_settings.discovery_max_schema_nodes
+    ]
 
 
 def _safe_provenance(provenance: AcquisitionProvenance | None) -> dict[str, Any]:

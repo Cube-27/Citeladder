@@ -398,7 +398,7 @@ async def test_analyze_persists_page_type_classifier_and_v2_versions(
 ) -> None:
     """v2 P1: the analyze task classifies the page, injects page_type into
     the facts before rule evaluation, and stamps the P1 versions on the
-    persisted rows (sh-analyzer-2 / sh-scoring-2 / sh-classifier-1)."""
+    persisted rows (sh-analyzer-2 / sh-scoring-2 / sh-classifier-2)."""
     from app.core.config.site_health import (
         CLASSIFIER_VERSION,
     )
@@ -406,7 +406,7 @@ async def test_analyze_persists_page_type_classifier_and_v2_versions(
     assert (ANALYZER_VERSION, SCORING_VERSION, CLASSIFIER_VERSION) == (
         "sh-analyzer-2",
         "sh-scoring-2",
-        "sh-classifier-1",
+        "sh-classifier-2",
     )
 
     seed, _site_url_id, _task_id = await _seed_analyze_ready(
@@ -426,7 +426,7 @@ async def test_analyze_persists_page_type_classifier_and_v2_versions(
         ).scalar_one()
         # The /blog/ path pattern classified the page as an article.
         assert analysis.page_type == "article"
-        assert analysis.classifier_version == "sh-classifier-1"
+        assert analysis.classifier_version == "sh-classifier-2"
         assert analysis.analyzer_version == "sh-analyzer-2"
         assert analysis.scoring_version == "sh-scoring-2"
 

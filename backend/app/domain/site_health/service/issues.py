@@ -731,7 +731,7 @@ def _group_issue_history(
     groups.sort(
         key=lambda row: (str(row["last_seen_at"]), str(row["rule_id"])), reverse=True
     )
-    summary = {
+    summary: dict[str, object] = {
         "has_previous_crawl": len({row.crawl_id for row in observations}) > 1,
         **transition_counts,
     }

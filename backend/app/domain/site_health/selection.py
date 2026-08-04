@@ -886,77 +886,17 @@ async def seed_monitored_targets(
     the analysis counters already move. Same pattern as the system sample
     admission and the single-page rerun crawl.
     """
-    result = await session.execute(
-        select(MonitoredSiteUrl, SiteUrl)
-        .join(SiteUrl, SiteUrl.id == MonitoredSiteUrl.site_url_id)
-        .where(
-            MonitoredSiteUrl.project_id == crawl.project_id,
-            MonitoredSiteUrl.active.is_(True),
-        )
-        .order_by(SiteUrl.normalized_url.asc())
-    )
-    rows = result.all()
+    rows = await _monitored_seed_rows(session, crawl.project_id)
     if not rows:
         return []
-
-    url_hashes = [site_url.url_hash for _monitored, site_url in rows]
-    existing = await session.execute(
-        select(SiteCrawlTask.url_hash).where(
-            SiteCrawlTask.crawl_id == crawl.id,
-            SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
-            SiteCrawlTask.generation == INITIAL_TASK_GENERATION,
-            SiteCrawlTask.url_hash.in_(url_hashes),
-        )
-    )
-    already_seeded = {row[0] for row in existing.all()}
-
+    already_seeded = await _already_seeded_hashes(session, crawl_id=crawl.id, rows=rows)
+    remaining_budget = await _remaining_seed_budget(session, crawl)
     seeded: list[uuid.UUID] = []
     position = 0
-    requested_limit = (crawl.configuration or {}).get("requested_page_limit")
-    existing_task_count = await session.scalar(
-        select(func.count())
-        .select_from(SiteCrawlTask)
-        .where(SiteCrawlTask.crawl_id == crawl.id)
-    )
-    remaining_budget = (
-        max(int(requested_limit) - int(existing_task_count or 0), 0)
-        if requested_limit is not None
-        else None
-    )
     for _monitored, site_url in rows:
-        configuration = dict(crawl.configuration or {})
-        decision = classify_url_admission(
-            site_url.normalized_url,
-            root_registrable_domain=(
-                configuration.get("root_registrable_domain") or None
-            ),
-            include_globs=configuration.get("include_globs"),
-            exclude_globs=configuration.get("exclude_globs"),
-        )
-        # Legacy monitored rows retain history but never bypass the frozen
-        # admission policy on a fresh recrawl.
-        if not decision.accepted:
+        if not _seed_url_is_admissible(crawl, site_url):
             continue
-        # Admit into the new crawl's observed set FOR EVERY active row (not
-        # just newly-seeded tasks) so a pre-fix crawl retried through here
-        # self-heals its missing observations. Sparse row; the analyze result
-        # enriches status/title later.
-        await session.execute(
-            pg_insert(SiteUrlObservation)
-            .values(
-                workspace_id=crawl.workspace_id,
-                project_id=crawl.project_id,
-                crawl_id=crawl.id,
-                site_url_id=site_url.id,
-                source_kind=site_url.latest_source_kind or OBSERVATION_SOURCE_LINK,
-                depth=site_url.depth,
-                observed_url=site_url.normalized_url,
-                final_url=site_url.normalized_url,
-                content_type=site_url.latest_content_type or "",
-                title=site_url.latest_title or "",
-            )
-            .on_conflict_do_nothing(index_elements=["crawl_id", "site_url_id"])
-        )
+        await _write_seed_observation(session, crawl=crawl, site_url=site_url)
         if site_url.url_hash in already_seeded:
             continue
         if remaining_budget is not None and len(seeded) >= remaining_budget:
@@ -973,6 +913,85 @@ async def seed_monitored_targets(
         await session.flush()
         seeded.append(task.id)
     return seeded
+
+
+async def _monitored_seed_rows(
+    session: AsyncSession, project_id: uuid.UUID
+) -> list[tuple[MonitoredSiteUrl, SiteUrl]]:
+    result = await session.execute(
+        select(MonitoredSiteUrl, SiteUrl)
+        .join(SiteUrl, SiteUrl.id == MonitoredSiteUrl.site_url_id)
+        .where(
+            MonitoredSiteUrl.project_id == project_id,
+            MonitoredSiteUrl.active.is_(True),
+        )
+        .order_by(SiteUrl.normalized_url.asc())
+    )
+    return list(result.tuples().all())
+
+
+async def _already_seeded_hashes(
+    session: AsyncSession,
+    *,
+    crawl_id: uuid.UUID,
+    rows: list[tuple[MonitoredSiteUrl, SiteUrl]],
+) -> set[str]:
+    url_hashes = [site_url.url_hash for _monitored, site_url in rows]
+    existing = await session.execute(
+        select(SiteCrawlTask.url_hash).where(
+            SiteCrawlTask.crawl_id == crawl_id,
+            SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
+            SiteCrawlTask.generation == INITIAL_TASK_GENERATION,
+            SiteCrawlTask.url_hash.in_(url_hashes),
+        )
+    )
+    return {row[0] for row in existing.all()}
+
+
+async def _remaining_seed_budget(session: AsyncSession, crawl: SiteCrawl) -> int | None:
+    requested_limit = (crawl.configuration or {}).get("requested_page_limit")
+    existing_task_count = await session.scalar(
+        select(func.count())
+        .select_from(SiteCrawlTask)
+        .where(SiteCrawlTask.crawl_id == crawl.id)
+    )
+    return (
+        max(int(requested_limit) - int(existing_task_count or 0), 0)
+        if requested_limit is not None
+        else None
+    )
+
+
+def _seed_url_is_admissible(crawl: SiteCrawl, site_url: SiteUrl) -> bool:
+    configuration = dict(crawl.configuration or {})
+    decision = classify_url_admission(
+        site_url.normalized_url,
+        root_registrable_domain=configuration.get("root_registrable_domain") or None,
+        include_globs=configuration.get("include_globs"),
+        exclude_globs=configuration.get("exclude_globs"),
+    )
+    return decision.accepted
+
+
+async def _write_seed_observation(
+    session: AsyncSession, *, crawl: SiteCrawl, site_url: SiteUrl
+) -> None:
+    await session.execute(
+        pg_insert(SiteUrlObservation)
+        .values(
+            workspace_id=crawl.workspace_id,
+            project_id=crawl.project_id,
+            crawl_id=crawl.id,
+            site_url_id=site_url.id,
+            source_kind=site_url.latest_source_kind or OBSERVATION_SOURCE_LINK,
+            depth=site_url.depth,
+            observed_url=site_url.normalized_url,
+            final_url=site_url.normalized_url,
+            content_type=site_url.latest_content_type or "",
+            title=site_url.latest_title or "",
+        )
+        .on_conflict_do_nothing(index_elements=["crawl_id", "site_url_id"])
+    )
 
 
 # =========================================================================
