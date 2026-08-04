@@ -1,7 +1,7 @@
 [project]
-name = "searchify-backend"
+name = "citeladder-backend"
 version = "0.1.0"
-description = "Searchify AI-Visibility backend"
+description = "CiteLadder AI-Visibility backend"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.16.5,<2",
@@ -33,6 +33,7 @@ dev = [
   "pytest-asyncio>=1.1.0,<2",
   "ruff>=0.6.0,<1",
   "types-defusedxml>=0.7.0,<1",
+  "types-reportlab>=4.5.1.20260728",
 ]
 
 [build-system]
