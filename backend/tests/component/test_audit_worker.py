@@ -978,9 +978,7 @@ async def test_completed_audit_enqueues_opportunities_refresh(
     seed, audit = await _make_audit(session_factory, prompts=2, reps=1)
     calls: list[dict[str, object]] = []
 
-    async def _record(
-        session, *, workspace_id, project_id, trigger_kind, trigger_id
-    ):
+    async def _record(session, *, workspace_id, project_id, trigger_kind, trigger_id):
         calls.append(
             {
                 "workspace_id": workspace_id,
@@ -1034,9 +1032,7 @@ async def test_failed_audit_never_enqueues_opportunities_refresh(
 
     calls: list[dict[str, object]] = []
 
-    async def _record(
-        session, *, workspace_id, project_id, trigger_kind, trigger_id
-    ):
+    async def _record(session, *, workspace_id, project_id, trigger_kind, trigger_id):
         calls.append({"trigger_id": trigger_id})
 
     monkeypatch.setattr(audit_worker, "enqueue_opportunity_refresh", _record)
@@ -1058,9 +1054,7 @@ async def test_opportunities_enqueue_failure_never_blocks_terminalization(
 ) -> None:
     _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
 
-    async def _boom(
-        session, *, workspace_id, project_id, trigger_kind, trigger_id
-    ):
+    async def _boom(session, *, workspace_id, project_id, trigger_kind, trigger_id):
         raise RuntimeError("enqueue exploded")
 
     monkeypatch.setattr(audit_worker, "enqueue_opportunity_refresh", _boom)

@@ -260,9 +260,7 @@ def test_discovery_prompt_limit_preserves_final_core_share(
 
 
 def test_discovery_topics_are_deduplicated_case_insensitively() -> None:
-    topics = _discovery_topic_rows(
-        ["Analytics", "analytics", "Commerce"], uuid.uuid4()
-    )
+    topics = _discovery_topic_rows(["Analytics", "analytics", "Commerce"], uuid.uuid4())
 
     assert [topic.name for topic in topics] == ["Analytics", "Commerce"]
 

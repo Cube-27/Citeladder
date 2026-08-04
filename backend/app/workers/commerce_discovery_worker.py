@@ -268,9 +268,7 @@ def _html_schema_documents(body: bytes) -> tuple[list[Any], Any] | None:
     ]:
         if not isinstance(script, etree._Element):
             continue
-        document = _decode_json_document(
-            (script.text or "").encode("utf-8"), "utf-8"
-        )
+        document = _decode_json_document((script.text or "").encode("utf-8"), "utf-8")
         if document is not None:
             documents.append(document)
     return documents, root
