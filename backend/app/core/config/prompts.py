@@ -48,7 +48,7 @@ TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
 )
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
-GENERATOR_VERSION: Final = "prompt-gen-v3"
+GENERATOR_VERSION: Final = "prompt-gen-v4"
 
 # --- Topical binding (project-identity prompt admission) -------------------
 # Outcome codes for ``BindingResult`` / the coded API errors built from it.
@@ -260,11 +260,11 @@ TOPICAL_BINDING_STOPWORDS: Final[frozenset[str]] = frozenset(
 # JSON so the parser stays deterministic and unit-testable.
 _GENERATION_PROMPT_PREAMBLE: Final = (
     "You are an AEO (answer-engine optimization) research assistant. Given a "
-    "brand's context, you propose realistic consumer search prompts a person "
+    "brand's context, you propose realistic consumer searches a person "
     "might ask an AI assistant, organized under topical categories.\n"
     "Rules:\n"
-    "- Prompts must read like natural consumer questions or requests, not "
-    "marketing copy.\n"
+    "- Prompts must be concise, standalone consumer questions or requests, not "
+    "marketing copy, keyword lists, or research instructions.\n"
 )
 _GENERATION_SHARED_RULES: Final = (
     "- Reuse an existing topic name verbatim when a prompt fits it; only "
@@ -276,6 +276,12 @@ _GENERATION_SHARED_RULES: Final = (
     "- Keep prompts specific to the brand's real competitive segment and "
     "customer needs; avoid generic category prompts that could describe an "
     "unrelated price tier or audience.\n"
+    "- Use specific product/service categories or customer needs as topic names. "
+    "Do not use generic funnel-stage topics such as Product Selection, Pricing, "
+    "Returns, or Local Availability when a more concrete subject is known.\n"
+    "- Never make a complete search awkward by appending a redundant market, "
+    "audience, or use-case clause. The rigid fallback standard also applies here: "
+    "every generated row must sound like something a real user would type.\n"
     "- Never duplicate any of the existing prompts you are shown.\n"
     "- Each prompt's intent must be one of: discovery, comparison, purchase, "
     "service, local.\n"
@@ -286,8 +292,13 @@ GENERATION_SYSTEM_PROMPT: Final = (
     _GENERATION_PROMPT_PREAMBLE
     + "- Generate only UNBRANDED core discovery queries. A prompt must never "
     "contain the tracked brand, any alias, a competitor, or competitor alias. "
-    "Named comparisons are generated through a separate cohort.\n"
-    + _GENERATION_SHARED_RULES
+    "Topic names must exclude those tracked names too. Named comparisons are "
+    "generated through a separate cohort.\n"
+    "- Split the requested batch as evenly as possible: one half should be "
+    "brand-relevant searches grounded in the tracked brand's verified offerings, "
+    "audience, positioning, or use cases; the other half should be broader searches "
+    "for the surrounding industry or competitive category. Both halves remain "
+    "fully unbranded.\n" + _GENERATION_SHARED_RULES
 )
 GENERATION_COMPARISON_SYSTEM_PROMPT: Final = (
     _GENERATION_PROMPT_PREAMBLE

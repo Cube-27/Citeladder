@@ -6,31 +6,67 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import asyncpg
 from dotenv import dotenv_values
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
+DOCKER_ENV_FILE = PROJECT_ROOT / "infra" / "docker" / ".env"
 PROTECTED_DATABASES = frozenset({"postgres", "template0", "template1"})
+DEVELOPMENT_ENVS = frozenset({"development", "dev", "local", "test", "testing"})
+
+
+def _configuration() -> dict[str, str]:
+    """Load repository env files, with the process environment taking priority."""
+    values = _read_env_file(DOCKER_ENV_FILE)
+    docker_database_url = _docker_database_url(values)
+    if docker_database_url:
+        values["DATABASE_URL"] = docker_database_url
+
+    for env_file in (PROJECT_ROOT / ".env", BACKEND_DIR / ".env"):
+        if env_file.is_file():
+            values.update(_read_env_file(env_file))
+    values.update(os.environ)
+    return values
+
+
+def _read_env_file(env_file: Path) -> dict[str, str]:
+    if not env_file.is_file():
+        return {}
+    return {
+        key: str(value)
+        for key, value in dotenv_values(env_file).items()
+        if value is not None
+    }
+
+
+def _docker_database_url(values: dict[str, str]) -> str:
+    required = (
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_DB",
+        "POSTGRES_HOST",
+        "POSTGRES_HOST_PORT",
+    )
+    if not all(values.get(key, "").strip() for key in required):
+        return ""
+    user = quote(values["POSTGRES_USER"].strip(), safe="")
+    password = quote(values["POSTGRES_PASSWORD"].strip(), safe="")
+    database = quote(values["POSTGRES_DB"].strip(), safe="")
+    host = values["POSTGRES_HOST"].strip()
+    port = values["POSTGRES_HOST_PORT"].strip()
+    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{database}"
 
 
 def _database_url() -> str:
     """Resolve DATABASE_URL with the same precedence as the backend settings."""
-    environment_url = os.environ.get("DATABASE_URL", "").strip()
-    if environment_url:
-        return environment_url
-
-    values: dict[str, object] = {}
-    for env_file in (PROJECT_ROOT / ".env", BACKEND_DIR / ".env"):
-        if env_file.is_file():
-            values.update(dotenv_values(env_file))
-
-    database_url = str(values.get("DATABASE_URL") or "").strip()
+    database_url = _configuration().get("DATABASE_URL", "").strip()
     if not database_url:
         raise RuntimeError(
-            "DATABASE_URL is required in the environment, .env, or backend/.env"
+            "DATABASE_URL is required in the environment, .env, backend/.env, "
+            "or infra/docker/.env"
         )
     return database_url
 
@@ -106,6 +142,51 @@ def run_migrations(database_url: str) -> None:
     print("Migrations complete.")
 
 
+def provision_dev_login(database_url: str) -> None:
+    """Provision the configured local-development login after every reset."""
+    configuration = _configuration()
+    app_env = configuration.get("APP_ENV", "").strip().lower()
+    if app_env not in DEVELOPMENT_ENVS:
+        return
+
+    email = configuration.get("DEV_LOGIN_EMAIL", "").strip()
+    password = configuration.get("DEV_LOGIN_PASSWORD", "").strip()
+    counter_allowance = configuration.get("DEV_LOGIN_COUNTER_ALLOWANCE", "").strip()
+    if not email or not password or not counter_allowance:
+        raise RuntimeError(
+            "DEV_LOGIN_EMAIL, DEV_LOGIN_PASSWORD, and DEV_LOGIN_COUNTER_ALLOWANCE "
+            "are required for a development database reset"
+        )
+
+    print("Provisioning development login...")
+    provision_environment = os.environ.copy()
+    provision_environment.update(configuration)
+    provision_environment["DATABASE_URL"] = database_url
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "scripts.provision_dev_login",
+            "--email",
+            email,
+            "--password",
+            password,
+            "--counter-allowance",
+            counter_allowance,
+        ],
+        cwd=BACKEND_DIR,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=provision_environment,
+    )
+    if result.returncode != 0:
+        print(f"Development login provisioning failed:\n{result.stderr}")
+        raise SystemExit(1)
+    print(result.stdout)
+    print("Development login ready.")
+
+
 def main() -> None:
     print("=" * 50)
     print("CiteLadder Database Reset")
@@ -115,6 +196,7 @@ def main() -> None:
         database_url = _database_url()
         asyncio.run(reset_database(database_url))
         run_migrations(database_url)
+        provision_dev_login(database_url)
     except (RuntimeError, ValueError, OSError, asyncpg.PostgresError) as exc:
         print(f"Database reset failed: {exc}", file=sys.stderr)
         raise SystemExit(1) from None

@@ -22,6 +22,15 @@ Run brand discovery as a separate service with start command
 homepage request and uses the application model with a deterministic industry
 fallback. Research gaps are warnings and always remain editable at review.
 
+## Default application model
+
+Assisted onboarding and prompt generation default to Mistral Small 4 through
+`https://api.mistral.ai/v1` with model `mistral-small-2603`. The client selects
+`MISTRAL_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, or
+`AWS_BEARER_TOKEN_BEDROCK` only when `DEFAULT_AGENT_BASE_URL` matches that
+provider; `DEFAULT_AGENT_API_KEY` remains the explicit fallback for other
+OpenAI-compatible gateways.
+
 
 ## Bring the stack up (gotcha 1 workaround — use verbatim)
 

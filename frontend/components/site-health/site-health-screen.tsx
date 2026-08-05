@@ -45,15 +45,8 @@ export function SiteHealthScreen() {
     exportError,
   } = screen;
 
-  // A 'resolving' phase means one of the three inputs the phase reads has not
-  // settled yet. Holding the skeleton for that beat is the whole point of the
-  // explicit phase: rendering a guess and correcting it is what made the screen
-  // visibly flip between the URL list and the analysis view.
-  if (
-    projectLoading ||
-    (projectId && (entitlementQuery.isLoading || dashboardQuery.isLoading || phase === 'resolving'))
-  ) {
-    return <ScreenSkeleton />;
+  if (projectLoading) {
+    return <ScreenSkeleton label="Loading your Site Health project…" />;
   }
 
   if (!projectId) {
@@ -65,6 +58,10 @@ export function SiteHealthScreen() {
     );
   }
 
+  // Error states must precede the resolving skeleton. A failed entitlement
+  // query deliberately resolves to no access mode, which also produces the
+  // fail-closed `resolving` phase. Checking the phase first made this branch
+  // unreachable and left the route looking as though it was loading forever.
   if (entitlementQuery.isError || dashboardQuery.isError) {
     return (
       <div className="grid gap-6">
@@ -72,6 +69,29 @@ export function SiteHealthScreen() {
         <Alert tone="danger">Could not load Site Health. Please refresh.</Alert>
       </div>
     );
+  }
+
+  if (entitlementQuery.data?.resolver_status === 'entitlement_unresolved') {
+    return (
+      <div className="grid gap-6">
+        <ScreenHeader />
+        <Alert tone="warning">
+          Site Health access could not be resolved. Refresh to try again, or contact your workspace
+          administrator if this continues.
+        </Alert>
+      </div>
+    );
+  }
+
+  // A 'resolving' phase means one of the three inputs the phase reads has not
+  // settled yet. Holding the skeleton for that beat is the whole point of the
+  // explicit phase: rendering a guess and correcting it is what made the screen
+  // visibly flip between the URL list and the analysis view.
+  if (entitlementQuery.isLoading || dashboardQuery.isLoading || phase === 'resolving') {
+    const label = entitlementQuery.isLoading
+      ? 'Checking Site Health access…'
+      : 'Loading your latest Site Health crawl…';
+    return <ScreenSkeleton label={label} />;
   }
 
   const primaryButton = (() => {

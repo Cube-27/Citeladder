@@ -40,12 +40,12 @@ def _completion_payload() -> dict:
         "Which analytics platform offers strong integrations for US businesses?",
         "Where can US companies find analytics software with good support?",
     ]
-    diagnostic = [
-        "What analytics products does Acme provide to marketing teams in US?",
-        "Who is Acme best suited for among analytics buyers in US?",
-        "How does Acme support marketing attribution use cases in US?",
-        "What should buyers know before choosing Acme for analytics in US?",
-        "Where is Acme available for analytics customers across US?",
+    brand_relevant = [
+        "Which analytics tools support marketing teams with attribution in US?",
+        "What analytics software is best suited to marketing buyers in US?",
+        "How can marketing teams improve attribution reporting in US?",
+        "What should buyers compare when choosing analytics software in US?",
+        "Who offers dependable analytics reporting tools to US customers?",
     ]
     return {
         "name": "Acme Visibility",
@@ -71,9 +71,9 @@ def _completion_payload() -> dict:
                     {
                         "text": text,
                         "intent": intents[index],
-                        "cohort": "brand_diagnostic",
+                        "cohort": "brand_relevant",
                     }
-                    for index, text in enumerate(diagnostic)
+                    for index, text in enumerate(brand_relevant)
                 ],
             }
         ],

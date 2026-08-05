@@ -95,7 +95,7 @@ function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['prog
         text: `How does Acme support analytics buyer need ${index} in US?`,
         theme: 'Comparisons',
         intent: 'service' as const,
-        cohort: 'brand_diagnostic' as const,
+        cohort: 'brand_relevant' as const,
       })),
     ],
     evidence: [],
@@ -118,7 +118,7 @@ function catalogHandler() {
       maximum_competitors: 5,
       industries: ['General', 'Software'],
       subindustries: { General: [], Software: ['Analytics'] },
-      prompt_cohorts: ['market_visibility', 'brand_diagnostic'],
+      prompt_cohorts: ['market_visibility', 'brand_relevant'],
     }),
   );
 }
@@ -193,9 +193,7 @@ describe('OnboardingScreen', () => {
         },
         {
           topic: 'Comparisons',
-          prompts: expect.arrayContaining([
-            expect.objectContaining({ cohort: 'brand_diagnostic' }),
-          ]),
+          prompts: expect.arrayContaining([expect.objectContaining({ cohort: 'brand_relevant' })]),
         },
       ],
     });

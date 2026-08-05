@@ -60,7 +60,7 @@ class DefaultAgentClient:
         if not self._settings.configured:
             raise AgentNotConfiguredError(
                 "No default agent API key configured "
-                "(set DEFAULT_AGENT_API_KEY, NVIDIA_API_KEY, or MISTRALAI_API_KEY)"
+                "(set DEFAULT_AGENT_API_KEY or the key for the configured provider)"
             )
 
     @property

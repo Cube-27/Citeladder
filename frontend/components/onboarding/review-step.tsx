@@ -41,6 +41,12 @@ type TabValue = 'entities' | 'prompts';
 const tabId = (value: TabValue) => `review-tab-${value}`;
 const tabPanelId = (value: TabValue) => `review-tabpanel-${value}`;
 
+function competitorUrl(competitor: ReviewCompetitor): string {
+  const domain = competitor.domains.find(Boolean);
+  if (!domain) return '';
+  return /^https?:\/\//i.test(domain) ? domain : `https://${domain}`;
+}
+
 function TabButton({
   value,
   icon: Icon,
@@ -297,11 +303,15 @@ export function ReviewStep({
                           />
                         </Button>
                       </div>
-                      {competitor.reasoning ? (
-                        <p className="text-2xs text-muted px-1 leading-relaxed">
-                          {competitor.reasoning}
-                          {competitor.evidence_urls?.length ? ' · Supporting links available' : ''}
-                        </p>
+                      {competitorUrl(competitor) ? (
+                        <a
+                          href={competitorUrl(competitor)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-2xs text-accent-text w-fit px-1 hover:underline"
+                        >
+                          {competitorUrl(competitor)}
+                        </a>
                       ) : null}
                     </li>
                   ))}
@@ -362,7 +372,7 @@ export function ReviewStep({
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <Badge variant="neutral">
-                        {prompt.cohort === 'market_visibility' ? 'Market' : 'Brand diagnostic'}
+                        {prompt.cohort === 'market_visibility' ? 'Industry' : 'Brand relevant'}
                       </Badge>
                       {prompt.theme ? <Badge variant="neutral">{prompt.theme}</Badge> : null}
                     </div>

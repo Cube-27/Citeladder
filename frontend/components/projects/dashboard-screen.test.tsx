@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { project, downloadExecutiveReport } = vi.hoisted(() => ({
+const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
   project: {
     id: '00000000-0000-4000-8000-000000000001',
     workspace_id: '00000000-0000-4000-8000-000000000002',
@@ -11,6 +11,13 @@ const { project, downloadExecutiveReport } = vi.hoisted(() => ({
     website_url: 'https://acme.com',
   },
   downloadExecutiveReport: vi.fn().mockResolvedValue(new Blob(['pdf'])),
+  queryResult: {
+    data: undefined as unknown,
+    error: null as unknown,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  },
 }));
 
 const commandCenter = {
@@ -45,12 +52,13 @@ const commandCenter = {
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: commandCenter, isLoading: false, isError: false, refetch: vi.fn() }),
+  useQuery: () => queryResult,
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveProject: () => project,
   useProjectContext: () => ({
     projects: [project],
     activeProject: project,
@@ -71,6 +79,14 @@ vi.mock('@/lib/api/opportunities', () => ({
 import { DashboardScreen } from './dashboard-screen';
 
 describe('DashboardScreen', () => {
+  beforeEach(() => {
+    queryResult.data = commandCenter;
+    queryResult.error = null;
+    queryResult.isLoading = false;
+    queryResult.isError = false;
+    queryResult.refetch.mockReset();
+  });
+
   it('renders state, comparable movement, actions, and report proof', () => {
     render(<DashboardScreen />);
 
@@ -122,5 +138,22 @@ describe('DashboardScreen', () => {
     );
     click.mockRestore();
     vi.unstubAllGlobals();
+  });
+
+  it('treats a missing first measurement as an actionable empty state', async () => {
+    const onEditProject = vi.fn();
+    queryResult.data = undefined;
+    queryResult.error = { status: 404 };
+    queryResult.isError = true;
+    const user = userEvent.setup();
+
+    render(<DashboardScreen onEditProject={onEditProject} />);
+
+    expect(screen.getByRole('heading', { name: 'No completed runs yet' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Launch your first audit' })).toBeVisible();
+    expect(screen.queryByText(/command center could not be loaded/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Review project' }));
+    expect(onEditProject).toHaveBeenCalledWith(project);
   });
 });

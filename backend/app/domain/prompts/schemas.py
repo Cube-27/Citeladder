@@ -29,6 +29,7 @@ PromptStatus = Literal["proposed", "active", "archived"]
 PromptOrigin = Literal["manual", "generated"]
 PromptCohort = Literal[
     "market_visibility",
+    "brand_relevant",
     "brand_diagnostic",
     "core",
     "comparison",

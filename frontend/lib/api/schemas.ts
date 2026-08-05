@@ -126,6 +126,7 @@ export const promptIntentSchema = z.enum([
 export const promptStatusSchema = z.enum(['proposed', 'active', 'archived']);
 export const promptCohortSchema = z.enum([
   'market_visibility',
+  'brand_relevant',
   'brand_diagnostic',
   'core',
   'comparison',
@@ -706,7 +707,7 @@ const discoveryPromptSuggestionSchema = responseObject({
   text: z.string(),
   theme: z.string().default(''),
   intent: z.enum(['discovery', 'comparison', 'purchase', 'service', 'local']),
-  cohort: z.enum(['market_visibility', 'brand_diagnostic']),
+  cohort: z.enum(['market_visibility', 'brand_relevant']),
 });
 
 const discoveryEvidenceSchema = responseObject({
@@ -802,10 +803,11 @@ export const brandDiscoveryCompleteSchema = responseObject({
 // ---------------------------------------------------------------------------
 
 // Capability access mode: a zero-allowance account gets a server-selected
-// `sample`; an account with a monitored allowance gets user `selection` of a
-// persistent monitored set. This is a NEUTRAL capability, not a plan name —
-// there is deliberately no `plan_key` here to branch on.
-export const siteHealthAccessModeSchema = z.enum(['sample', 'selection']);
+// `sample`; an account with a monitored allowance gets `full` discovery plus
+// user selection of a persistent monitored set. `unresolved` is the explicit
+// fail-closed state. This is a NEUTRAL capability, not a plan name — there is
+// deliberately no `plan_key` here to branch on.
+export const siteHealthAccessModeSchema = z.enum(['sample', 'full', 'unresolved']);
 
 // `GET /entitlements` — the workspace's neutral Site Health runtime
 // projection. `monitored_url_limit` is the ONLY authority for the selection
@@ -896,6 +898,12 @@ export const pageTypeSchema = z.enum([
   'docs',
   'faq',
   'about_contact',
+  'service',
+  'local',
+  'guide',
+  'comparison',
+  'case_study_review',
+  'trust_policy',
   'other',
 ]);
 
@@ -1049,7 +1057,7 @@ export const monitoredUrlSchema = responseObject({
   display_url: z.string(),
   title: z.string().nullable(),
   active: z.boolean(),
-  selection_source: z.enum(['user', 'free_sample']),
+  selection_source: z.enum(['user', 'free_sample', 'bootstrap']),
   selected_at: z.string().nullable(),
   deselected_at: z.string().nullable(),
 });

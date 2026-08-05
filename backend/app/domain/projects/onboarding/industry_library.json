@@ -1,11 +1,11 @@
 {
   "version": "industry-library-v1",
-  "brand_diagnostic_archetypes": [
-    "What products or services does {brand} offer for {use_case} in {market}?",
-    "Who is {brand} best suited for when buyers need {category} in {market}?",
-    "How does {brand} address {use_case} for {audience}?",
-    "What should buyers know about {brand} before choosing a {category} provider in {market}?",
-    "Where is {brand} available, and what makes it relevant for {category} buyers in {market}?"
+  "brand_relevant_archetypes": [
+    "Where can I find {quality} {category} in {market}?",
+    "Which {category} choices best suit {audience}?",
+    "Looking for reliable {category} in {market}",
+    "How do I compare {category} options on price and quality?",
+    "Who offers dependable {category} for {audience}?"
   ],
   "industries": {
     "General": {
@@ -29,7 +29,7 @@
         "What are the best online stores for {category} in {market}?",
         "Which retailers offer good value for {category} in {market}?",
         "Where can shoppers buy {category} with reliable delivery in {market}?",
-        "How do shoppers compare online retailers for {use_case} in {market}?",
+        "How do shoppers compare {category} retailers on price, delivery, and returns in {market}?",
         "Which stores are trusted for {category} and easy returns in {market}?"
       ]
     },

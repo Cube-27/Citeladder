@@ -45,11 +45,11 @@ class ResearchEnvelope(BaseModel):
     prompts: list[DiscoveryPromptSuggestion] = Field(
         min_length=(
             brand_discovery_settings.market_prompt_count
-            + brand_discovery_settings.diagnostic_prompt_count
+            + brand_discovery_settings.brand_relevant_prompt_count
         ),
         max_length=(
             brand_discovery_settings.market_prompt_count
-            + brand_discovery_settings.diagnostic_prompt_count
+            + brand_discovery_settings.brand_relevant_prompt_count
         ),
     )
 
@@ -180,12 +180,12 @@ async def research_brand(
     if not verified:
         warnings.append("competitors_not_found")
     fallback = fallback_portfolio(
-        brand_name=brand_name,
         primary_market=primary_market,
         industry=industry,
         industry_context=industry_context,
         products_services=profile.products_services,
         target_audience=profile.target_audience,
+        price_tier=profile.price_tier,
     )
     model_prompts = (
         [item.model_dump() for item in model_result.prompts]
@@ -207,12 +207,7 @@ async def research_brand(
         ],
     )
     warnings.extend(prompt_warnings)
-    topics = list(
-        dict.fromkeys(
-            (model_result.topics if model_result is not None else [])
-            or list(industry_context.get("topics") or [industry])
-        )
-    )
+    topics = list(dict.fromkeys(str(prompt["theme"]) for prompt in prompts))
     evidence = _research_evidence(site, model_result, provider, model)
     return ResearchResult(
         profile=profile.model_dump(),

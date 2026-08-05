@@ -6,11 +6,12 @@ import re
 
 from app.core.config.brand_discovery import (
     MARKET_CONTEXT_TERMS,
+    PRICE_TIER_QUERY_MODIFIERS,
     brand_discovery_settings,
 )
 from app.domain.projects.onboarding.industry_library import load_industry_library
 from app.domain.projects.onboarding.prompt_validation import (
-    BRAND_DIAGNOSTIC,
+    BRAND_RELEVANT,
     MARKET_VISIBILITY,
     PromptQualityResult,
     validate_portfolio,
@@ -19,101 +20,118 @@ from app.domain.projects.onboarding.prompt_validation import (
 _INTENTS = ("discovery", "service", "comparison", "purchase", "local")
 
 
-def _localized_question(template: str, values: dict[str, str]) -> str:
-    question = _ensure_use_case(template.format(**values), values["use_case"])
-    return _ensure_market(question, values["market_code"])
-
-
-def _ensure_use_case(question: str, use_case: str) -> str:
-    if use_case.casefold() in question.casefold():
-        return question
-    return question.removesuffix("?") + f" for {use_case}?"
-
-
-def _ensure_market(question: str, market: str) -> str:
-    terms = MARKET_CONTEXT_TERMS.get(market, (market,))
-    if any(
-        re.search(rf"\b{re.escape(term)}\b", question, re.IGNORECASE) for term in terms
-    ):
-        return question
-    return question.removesuffix("?") + f" in {terms[0]}?"
+def _render_search(template: str, values: dict[str, str]) -> str:
+    """Render one complete search without bolting extra clauses onto it."""
+    rendered = " ".join(template.format(**values).split())
+    return re.sub(r"\b(\w+)\s+\1\b", r"\1", rendered, flags=re.IGNORECASE)
 
 
 def fallback_portfolio(
     *,
-    brand_name: str,
     primary_market: str,
     industry: str,
     industry_context: dict,
     products_services: list[str],
     target_audience: str,
+    price_tier: str = "unknown",
 ) -> list[dict]:
     """Build a complete editable portfolio when application-model research fails."""
-    categories, audience, uses = _fallback_context(
+    categories, audiences, uses = _fallback_context(
         industry, industry_context, products_services, target_audience
     )
 
     market_templates = list(industry_context.get("archetypes") or [])
-    diagnostic_templates = list(
-        load_industry_library().get("brand_diagnostic_archetypes") or []
+    brand_templates = list(
+        load_industry_library().get("brand_relevant_archetypes") or []
     )
     market_count = brand_discovery_settings.market_prompt_count
-    diagnostic_count = brand_discovery_settings.diagnostic_prompt_count
-    topics = list(industry_context.get("topics") or [industry])
+    brand_relevant_count = brand_discovery_settings.brand_relevant_prompt_count
     market = [
         {
-            "text": _localized_question(
+            "text": _render_search(
                 template,
                 _fallback_values(
-                    index, brand_name, primary_market, categories, audience, uses
+                    index,
+                    primary_market,
+                    categories,
+                    audiences,
+                    uses,
+                    price_tier,
                 ),
             ),
-            "theme": str(topics[index % len(topics)]),
+            "theme": _topic_name(categories[index % len(categories)]),
             "intent": _INTENTS[index % len(_INTENTS)],
             "cohort": MARKET_VISIBILITY,
         }
         for index in range(market_count)
         for template in [market_templates[index % len(market_templates)]]
     ]
-    diagnostic = [
+    brand_relevant = [
         {
-            "text": _localized_question(
+            "text": _render_search(
                 template,
                 _fallback_values(
-                    index, brand_name, primary_market, categories, audience, uses
+                    index,
+                    primary_market,
+                    categories,
+                    audiences,
+                    uses,
+                    price_tier,
                 ),
             ),
-            "theme": str(topics[index % len(topics)]),
+            "theme": _topic_name(categories[index % len(categories)]),
             "intent": _INTENTS[index % len(_INTENTS)],
-            "cohort": BRAND_DIAGNOSTIC,
+            "cohort": BRAND_RELEVANT,
         }
-        for index in range(diagnostic_count)
-        for template in [diagnostic_templates[index % len(diagnostic_templates)]]
+        for index in range(brand_relevant_count)
+        for template in [brand_templates[index % len(brand_templates)]]
     ]
-    return [*market, *diagnostic]
+    return [*market, *brand_relevant]
 
 
-def _fallback_values(index, brand, market, categories, audience, uses):
+def _fallback_values(index, market, categories, audiences, uses, price_tier):
     return {
-        "brand": brand,
         "market": MARKET_CONTEXT_TERMS.get(market, (market,))[0],
-        "market_code": market,
         "category": categories[index % len(categories)],
-        "audience": audience,
+        "audience": audiences[index % len(audiences)],
         "use_case": uses[index % len(uses)],
+        "quality": PRICE_TIER_QUERY_MODIFIERS.get(
+            price_tier, PRICE_TIER_QUERY_MODIFIERS["unknown"]
+        ),
     }
 
 
 def _fallback_context(industry, industry_context, products_services, target_audience):
-    categories = [str(item).strip() for item in products_services if str(item).strip()]
+    categories = [
+        _natural_category(str(item).strip())
+        for item in products_services
+        if str(item).strip()
+    ]
     if not categories:
         categories = [
             industry.casefold() if industry != "General" else "products and services"
         ]
-    audiences = list(industry_context.get("customer_types") or [])
+    industry_audiences = list(industry_context.get("customer_types") or [])
     uses = _values_or_default(industry_context.get("use_cases"), "their needs")
-    audience = target_audience.strip() or next(iter(audiences), "buyers")
-    return categories, audience, uses
+    supplied_audience = target_audience.strip().rstrip(".?!")
+    audiences = (
+        [supplied_audience]
+        if 0 < len(supplied_audience.split()) <= 6
+        else industry_audiences or ["buyers"]
+    )
+    return categories, audiences, uses
+
+
+def _natural_category(category: str) -> str:
+    category = re.sub(r"\bwomens\b", "women's", category, flags=re.IGNORECASE)
+    category = re.sub(r"\bmens\b", "men's", category, flags=re.IGNORECASE)
+    category = re.sub(r"\bchildrens\b", "children's", category, flags=re.IGNORECASE)
+    return category
+
+
+def _topic_name(category: str) -> str:
+    """Turn a verified offering into a concise topic label for the review rail."""
+    return category.strip().rstrip(".?!").title().replace("'S", "'s")
 
 
 def _values_or_default(values, fallback):
@@ -130,21 +148,16 @@ def validated_portfolio(
     competitor_terms: list[str],
     context_terms: list[str],
 ) -> tuple[list[dict], list[str]]:
-    localized_model_prompts = [
-        {
-            **prompt,
-            "text": _ensure_market(str(prompt.get("text", "")), primary_market),
-        }
-        for prompt in model_prompts
-    ]
     result: PromptQualityResult = validate_portfolio(
-        localized_model_prompts,
+        model_prompts,
         brand_terms=[brand_name],
         competitor_terms=competitor_terms,
         primary_market=primary_market,
         context_terms=context_terms,
         expected_market_count=brand_discovery_settings.market_prompt_count,
-        expected_diagnostic_count=brand_discovery_settings.diagnostic_prompt_count,
+        expected_brand_relevant_count=(
+            brand_discovery_settings.brand_relevant_prompt_count
+        ),
     )
     if not result.errors:
         return list(result.accepted), []
@@ -155,7 +168,9 @@ def validated_portfolio(
         primary_market=primary_market,
         context_terms=context_terms,
         expected_market_count=brand_discovery_settings.market_prompt_count,
-        expected_diagnostic_count=brand_discovery_settings.diagnostic_prompt_count,
+        expected_brand_relevant_count=(
+            brand_discovery_settings.brand_relevant_prompt_count
+        ),
     )
     if fallback_result.errors:
         raise RuntimeError(

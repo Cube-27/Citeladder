@@ -7,24 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { getSiteHealthAdvancedControlsEnabled } from '@/lib/config/operational';
 import { siteHealthApi, type CreateCrawlInput } from '@/lib/api/site-health';
-
-const PAGE_TYPES = [
-  'homepage',
-  'product',
-  'category',
-  'service',
-  'local',
-  'article',
-  'guide',
-  'comparison',
-  'faq',
-  'docs',
-  'pricing',
-  'about_contact',
-  'case_study_review',
-  'trust_policy',
-  'other',
-];
+import { PAGE_TYPES } from '@/lib/site-health/page-types';
 
 /** Development-only guided admission flow. The preview endpoint owns validation. */
 export function CrawlIntakeDialog({

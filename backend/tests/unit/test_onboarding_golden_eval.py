@@ -7,7 +7,7 @@ import json
 import httpx
 
 from app.evaluations.onboarding_golden import (
-    BRAND_DIAGNOSTIC_COUNT,
+    BRAND_RELEVANT_COUNT,
     GOLDEN_ONBOARDING_CASES,
     MARKET_VISIBILITY_COUNT,
     PORTFOLIO_SIZE,
@@ -44,27 +44,24 @@ def _valid_portfolio(case) -> list[PortfolioPrompt]:
             "market_visibility",
         ),
         PortfolioPrompt(
-            f"How does {case.brand_name} support {use_cases[2]} in {market}?",
-            "brand_diagnostic",
+            f"Which providers support {use_cases[2]} in {market}?",
+            "brand_relevant",
         ),
         PortfolioPrompt(
-            f"Is {case.brand_name} good for {products[0]} in {market}?",
-            "brand_diagnostic",
+            f"Where can buyers find {products[0]} in {market}?",
+            "brand_relevant",
         ),
         PortfolioPrompt(
-            (
-                f"When should a buyer choose {case.brand_name} for "
-                f"{products[1]} in {market}?"
-            ),
-            "brand_diagnostic",
+            (f"When should a buyer choose a provider for {products[1]} in {market}?"),
+            "brand_relevant",
         ),
         PortfolioPrompt(
-            f"What {products[2]} strengths does {case.brand_name} offer in {market}?",
-            "brand_diagnostic",
+            f"What strengths matter for {products[2]} buyers in {market}?",
+            "brand_relevant",
         ),
         PortfolioPrompt(
-            f"Can {case.brand_name} help customers {use_cases[0]} in {market}?",
-            "brand_diagnostic",
+            f"Which options help customers with {use_cases[0]} in {market}?",
+            "brand_relevant",
         ),
     ]
 
@@ -86,7 +83,7 @@ def test_portfolio_evaluation_accepts_a_balanced_market_aware_portfolio() -> Non
         result = evaluate_portfolio(case, _valid_portfolio(case))
         assert result.valid, (case.slug, result.issues)
         assert result.market_visibility_count == MARKET_VISIBILITY_COUNT
-        assert result.brand_diagnostic_count == BRAND_DIAGNOSTIC_COUNT
+        assert result.brand_relevant_count == BRAND_RELEVANT_COUNT
 
 
 def test_portfolio_evaluation_rejects_identity_duplicates_and_missing_coverage() -> (
@@ -97,14 +94,11 @@ def test_portfolio_evaluation_rejects_identity_duplicates_and_missing_coverage()
     prompts[0] = PortfolioPrompt(
         "Is Flipkart better than Amazon India in India?", "market_visibility"
     )
-    prompts[-1] = PortfolioPrompt(prompts[-2].text, "brand_diagnostic")
+    prompts[-1] = PortfolioPrompt(prompts[-2].text, "brand_relevant")
     result = evaluate_portfolio(case, prompts)
     assert not result.valid
     assert "prompt portfolio contains duplicate questions" in result.issues
-    assert (
-        "market_visibility prompts must be brand and competitor neutral"
-        in result.issues
-    )
+    assert "all prompts must be brand and competitor neutral" in result.issues
 
 
 def test_competitor_evaluation_reports_overlap_and_unexpected_names() -> None:
@@ -118,15 +112,6 @@ def test_competitor_evaluation_reports_overlap_and_unexpected_names() -> None:
 
 async def test_nvidia_evaluation_skips_without_a_key(monkeypatch) -> None:
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "app.evaluations.onboarding_golden.default_agent_settings.api_key", ""
-    )
-    monkeypatch.setattr(
-        "app.evaluations.onboarding_golden.default_agent_settings.nvidia_api_key", ""
-    )
-    monkeypatch.setattr(
-        "app.evaluations.onboarding_golden.default_agent_settings.mistral_api_key", ""
-    )
     result = await evaluate_with_nvidia(
         GOLDEN_ONBOARDING_CASES[0], _valid_portfolio(GOLDEN_ONBOARDING_CASES[0])
     )

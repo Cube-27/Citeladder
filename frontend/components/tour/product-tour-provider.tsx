@@ -153,6 +153,12 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     if (!target) {
       if (targetRetry < 12) {
         retryTimeout = window.setTimeout(() => setTargetRetry((value) => value + 1), 100);
+      } else {
+        // Empty/new workspaces may not render a step's target yet (for example,
+        // Command Center has no dashboard cards before the first audit). Do not
+        // leave the tour in_progress: its route-aware effect would otherwise
+        // force every later sidebar navigation back to this unavailable step.
+        persist('skipped');
       }
       return cleanup;
     }

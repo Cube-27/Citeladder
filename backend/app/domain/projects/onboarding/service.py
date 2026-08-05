@@ -41,7 +41,7 @@ from app.domain.projects.onboarding.normalization import (
     normalize_website_url,
 )
 from app.domain.projects.onboarding.prompt_validation import (
-    BRAND_DIAGNOSTIC,
+    BRAND_RELEVANT,
     MARKET_VISIBILITY,
     validate_portfolio,
 )
@@ -111,7 +111,7 @@ def discovery_catalog() -> dict[str, object]:
         "maximum_competitors": brand_discovery_settings.maximum_competitors,
         "industries": industry_names(),
         "subindustries": subindustries_by_industry(),
-        "prompt_cohorts": [MARKET_VISIBILITY, BRAND_DIAGNOSTIC],
+        "prompt_cohorts": [MARKET_VISIBILITY, BRAND_RELEVANT],
     }
 
 
@@ -346,8 +346,8 @@ def _reviewed_prompts(
     )
     if quality.errors:
         raise BrandDiscoveryError(
-            "Reviewed prompt portfolio must contain five neutral market and "
-            "five branded diagnostic questions"
+            "Reviewed prompt portfolio must contain five neutral market queries and "
+            "five unbranded, brand-relevant queries"
         )
     return list(quality.accepted)
 
@@ -413,7 +413,7 @@ async def _persist_project(
             theme=str(item["theme"]),
             intent=str(item["intent"]),
             cohort=str(item["cohort"]),
-            branded=item["cohort"] == BRAND_DIAGNOSTIC,
+            branded=False,
             origin="generated",
             generation_evidence={
                 "generator_version": BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,

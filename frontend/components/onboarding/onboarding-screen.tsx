@@ -115,13 +115,13 @@ export function OnboardingScreen() {
   const selectedMarketCount = prompts.filter(
     (item) => item.selected && item.cohort === 'market_visibility',
   ).length;
-  const selectedDiagnosticCount = prompts.filter(
-    (item) => item.selected && item.cohort === 'brand_diagnostic',
+  const selectedBrandRelevantCount = prompts.filter(
+    (item) => item.selected && item.cohort === 'brand_relevant',
   ).length;
   const hasCompletePromptPortfolio =
     selectedPromptCount === 10 &&
     selectedMarketCount === 5 &&
-    selectedDiagnosticCount === 5 &&
+    selectedBrandRelevantCount === 5 &&
     prompts.filter((item) => item.selected).every((item) => item.text.trim().length > 0);
   const form = useForm<BrandStepValues>({
     resolver: zodResolver(brandStepSchema),

@@ -17,18 +17,13 @@ from dataclasses import dataclass
 import httpx
 
 from app.analysis.normalization import normalize_alias
-from app.core.config.agent import (
-    DEFAULT_AGENT_BASE_URL,
-    DEFAULT_AGENT_MODEL,
-    default_agent_settings,
-)
 from app.domain.prompts.portfolio import contains_tracked_name
 
 PORTFOLIO_SIZE = 10
 MARKET_VISIBILITY_COUNT = 5
-BRAND_DIAGNOSTIC_COUNT = 5
-NVIDIA_DEFAULT_ENDPOINT = f"{DEFAULT_AGENT_BASE_URL}/chat/completions"
-NVIDIA_DEFAULT_MODEL = DEFAULT_AGENT_MODEL
+BRAND_RELEVANT_COUNT = 5
+NVIDIA_DEFAULT_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
+NVIDIA_DEFAULT_MODEL = "meta/llama-3.1-8b-instruct"
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,7 +151,7 @@ class PortfolioEvaluation:
     valid: bool
     issues: tuple[str, ...]
     market_visibility_count: int
-    brand_diagnostic_count: int
+    brand_relevant_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,34 +192,34 @@ def evaluate_portfolio(
 ) -> PortfolioEvaluation:
     """Apply the deterministic 50/50, market-aware prompt-quality contract."""
     neutral = [prompt for prompt in prompts if prompt.cohort == "market_visibility"]
-    diagnostic = [prompt for prompt in prompts if prompt.cohort == "brand_diagnostic"]
+    brand_relevant = [prompt for prompt in prompts if prompt.cohort == "brand_relevant"]
     issues = [
-        *_cohort_issues(prompts, neutral, diagnostic),
-        *_identity_issues(case, prompts, neutral, diagnostic),
+        *_cohort_issues(prompts, neutral, brand_relevant),
+        *_identity_issues(case, prompts),
         *_coverage_issues(case, prompts),
     ]
     return PortfolioEvaluation(
         valid=not issues,
         issues=tuple(issues),
         market_visibility_count=len(neutral),
-        brand_diagnostic_count=len(diagnostic),
+        brand_relevant_count=len(brand_relevant),
     )
 
 
-def _cohort_issues(prompts, neutral, diagnostic):
+def _cohort_issues(prompts, neutral, brand_relevant):
     issues = []
     if len(prompts) != PORTFOLIO_SIZE:
         issues.append(f"expected exactly {PORTFOLIO_SIZE} prompts, got {len(prompts)}")
     if len(neutral) != MARKET_VISIBILITY_COUNT:
         issues.append("expected exactly five market_visibility prompts")
-    if len(diagnostic) != BRAND_DIAGNOSTIC_COUNT:
-        issues.append("expected exactly five brand_diagnostic prompts")
-    if len(neutral) + len(diagnostic) != len(prompts):
-        issues.append("prompt cohorts must be market_visibility or brand_diagnostic")
+    if len(brand_relevant) != BRAND_RELEVANT_COUNT:
+        issues.append("expected exactly five brand_relevant prompts")
+    if len(neutral) + len(brand_relevant) != len(prompts):
+        issues.append("prompt cohorts must be market_visibility or brand_relevant")
     return issues
 
 
-def _identity_issues(case, prompts, neutral, diagnostic):
+def _identity_issues(case, prompts):
     issues = []
     normalized = [_normalized(prompt.text) for prompt in prompts]
     if len(set(normalized)) != len(normalized):
@@ -234,13 +229,9 @@ def _identity_issues(case, prompts, neutral, diagnostic):
     if any(
         contains_tracked_name(prompt.text, brand_terms)
         or contains_tracked_name(prompt.text, competitor_terms)
-        for prompt in neutral
+        for prompt in prompts
     ):
-        issues.append("market_visibility prompts must be brand and competitor neutral")
-    if any(
-        not contains_tracked_name(prompt.text, brand_terms) for prompt in diagnostic
-    ):
-        issues.append("brand_diagnostic prompts must name the tracked brand")
+        issues.append("all prompts must be brand and competitor neutral")
     return issues
 
 
@@ -270,11 +261,7 @@ async def evaluate_with_nvidia(
     A missing key is an expected local-development condition, so this returns a
     skipped result rather than making tests or CI depend on a paid network call.
     """
-    resolved_key = (
-        api_key
-        or os.environ.get("NVIDIA_API_KEY", "")
-        or default_agent_settings.resolved_api_key
-    )
+    resolved_key = api_key or os.environ.get("NVIDIA_API_KEY", "")
     resolved_model = model or os.environ.get(
         "ONBOARDING_EVAL_NVIDIA_MODEL", NVIDIA_DEFAULT_MODEL
     )

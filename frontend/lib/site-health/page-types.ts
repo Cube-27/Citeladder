@@ -28,6 +28,12 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   docs: 'Docs',
   faq: 'FAQ',
   about_contact: 'About / Contact',
+  service: 'Service',
+  local: 'Local',
+  guide: 'Guide',
+  comparison: 'Comparison',
+  case_study_review: 'Case Study / Review',
+  trust_policy: 'Trust / Policy',
   other: 'Other',
 };
 

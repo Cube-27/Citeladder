@@ -12,6 +12,7 @@ import {
   LoaderCircle,
   Pencil,
   Plus,
+  Rocket,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -22,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import {
   Dropdown,
   DropdownContent,
@@ -32,6 +35,7 @@ import {
 } from '@/components/ui/dropdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { opportunitiesApi } from '@/lib/api/opportunities';
+import { httpErrorStatus } from '@/lib/api/errors';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommandCenter, Opportunity, Project } from '@/lib/api/types';
@@ -522,6 +526,26 @@ export function DashboardScreen({
 
   if (isLoading || (activeProject && commandCenter.isLoading)) return <CommandCenterSkeleton />;
   if (!activeProject) return null;
+  if (commandCenter.isError && httpErrorStatus(commandCenter.error) === 404) {
+    return (
+      <EmptyState
+        icon={Rocket}
+        heading="No completed runs yet"
+        description="Launch an audit to turn your saved brand, competitors, and prompts into a command-center measurement."
+        action={
+          <>
+            <LaunchAuditButton size="md">Launch your first audit</LaunchAuditButton>
+            {onEditProject ? (
+              <Button variant="secondary" size="md" onClick={() => onEditProject(activeProject)}>
+                <Pencil className="size-4" aria-hidden />
+                Review project
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+    );
+  }
   if (commandCenter.isError || !commandCenter.data) {
     return (
       <Alert tone="danger">

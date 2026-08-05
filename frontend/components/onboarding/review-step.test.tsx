@@ -5,6 +5,40 @@ import { describe, expect, it, vi } from 'vitest';
 import { ReviewStep } from './review-step';
 
 describe('ReviewStep competitor limit', () => {
+  it('shows only the competitor URL beneath its name', () => {
+    render(
+      <ReviewStep
+        domains={[]}
+        competitors={[
+          {
+            id: 'competitor-1',
+            name: 'Kmart Australia',
+            aliases: [],
+            domains: ['kmart.com.au'],
+            reasoning: 'A long generated competitor explanation.',
+            evidence_urls: ['https://example.com/evidence'],
+            selected: true,
+          },
+        ]}
+        prompts={[]}
+        maximumCompetitors={5}
+        onToggleDomain={vi.fn()}
+        onToggleCompetitor={vi.fn()}
+        onTogglePrompt={vi.fn()}
+        onEditPrompt={vi.fn()}
+        onRenameCompetitor={vi.fn()}
+        onAddCompetitor={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('A long generated competitor explanation.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Supporting links available/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://kmart.com.au' })).toHaveAttribute(
+      'href',
+      'https://kmart.com.au',
+    );
+  });
+
   it('shows the backend limit and disables additions at five selected competitors', async () => {
     const add = vi.fn();
     render(

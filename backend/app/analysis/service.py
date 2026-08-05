@@ -589,7 +589,7 @@ def _group_observed_citations(citations, analysis_by_id, excluded):
             not domain
             or _domain_matches_any(domain, excluded)
             or analysis is None
-            or analysis.cohort not in {"core", "market_visibility"}
+            or analysis.cohort not in {"core", "market_visibility", "brand_relevant"}
         ):
             continue
         bucket = grouped.setdefault(
@@ -679,7 +679,7 @@ def _cohort_metrics(rows, config, cohort, requested):
 def _finalized_metrics(
     all_rows, per_engine, prompt_cohorts, engine_count, repetitions, config
 ):
-    organic_cohorts = {"core", "market_visibility"}
+    organic_cohorts = {"core", "market_visibility", "brand_relevant"}
     organic = [row for row in all_rows if row.get("cohort") in organic_cohorts]
     diagnostic = [row for row in all_rows if row.get("cohort") == "brand_diagnostic"]
     comparison = [row for row in all_rows if row.get("cohort") == "comparison"]

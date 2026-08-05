@@ -4,11 +4,10 @@
  * Credentialed Site Health crawl-event stream (Slice 7).
  *
  * SSE is ONLY an invalidation accelerator — polling (in the screen) is the
- * reliable baseline. When a `crawl_updated` / page / event arrives on the
- * stream we invalidate the relevant Site Health queries so rows move
- * queued → running → completed/error/blocked without waiting for the next poll
- * tick. A dropped, timed-out, or disconnected stream MUST NOT stop progress:
- * this hook never surfaces a fatal error and the screen keeps polling.
+ * reliable baseline. Lifecycle and terminal events refresh the dashboard
+ * immediately; high-frequency per-page progress stays on the bounded poll.
+ * A dropped, timed-out, or disconnected stream MUST NOT stop progress: this
+ * hook never surfaces a fatal error and the screen keeps polling.
  *
  * We use an abortable credentialed `fetch` + `ReadableStream` reader rather than
  * the native `EventSource`, because `EventSource` cannot send the
@@ -19,13 +18,9 @@
  *
  * Two properties keep the stream from becoming a load problem of its own:
  *
- *   - Invalidations are COALESCED. The backend emits an `analysis.progress`
- *     event per analyzed URL, so a 500-URL crawl would otherwise fire ~2,500
- *     invalidation rounds over 5 query keys, each racing the screen's poll
- *     timers. Overlapping refetches then resolve out of order and panels render
- *     state from different moments (counts ticking backwards, a score appearing
- *     then vanishing). One trailing invalidation per burst gives the same
- *     freshness for a fraction of the requests.
+ *   - Per-page progress events do not invalidate queries. The dashboard's
+ *     bounded poll already observes them; lifecycle events are coalesced and
+ *     refresh only that single subscription, which fans out once on change.
  *   - The stream RECONNECTS. The server closes it at `sse_max_duration_seconds`
  *     (300s), so without this a crawl under 5 minutes felt instant while a
  *     longer one silently degraded to poll-only partway through — identical
@@ -36,21 +31,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { API_BASE_URL, getActiveWorkspaceId } from '@/lib/api/client';
+import { queryKeys } from '@/lib/api/query-keys';
+import {
+  SITE_HEALTH_STREAM_INVALIDATE_DEBOUNCE_MS,
+  SITE_HEALTH_STREAM_RECONNECT_BASE_MS,
+  SITE_HEALTH_STREAM_RECONNECT_MAX_MS,
+} from '@/lib/config/site-health';
 import { invalidateCrawlViews } from '@/lib/site-health/invalidate';
 
-/** Trailing-edge window for coalescing a burst of stream events. */
-export const INVALIDATE_DEBOUNCE_MS = 500;
-
-/** Reconnect backoff bounds after a stream closes. */
-export const RECONNECT_BASE_MS = 1_000;
-export const RECONNECT_MAX_MS = 15_000;
-
 /**
- * Subscribe to a crawl's SSE event stream while `enabled`. Bursts of events are
- * coalesced into one invalidation of the crawl + pages + inventory + issues +
- * dashboard queries, and the stream reconnects (resuming from the last event
- * id) until the effect is torn down. All failures are swallowed — polling
- * remains the source of progress.
+ * Subscribe to a crawl's SSE event stream while `enabled`. Lifecycle bursts
+ * coalesce into one dashboard invalidation, and the stream reconnects (resuming
+ * from the last event id) until the effect is torn down. All failures are
+ * swallowed — polling remains the source of progress.
  */
 export function useCrawlEvents(
   crawlId: string | null | undefined,
@@ -70,27 +63,43 @@ export function useCrawlEvents(
 
     const invalidateNow = () => {
       invalidateTimer = null;
-      // Move page rows through their lifecycle and refresh the crawl summary +
-      // dashboard scores. Shared with the screen's poll path so a stream frame
-      // and a poll tick refresh exactly the same set (`invalidateCrawlViews`).
-      invalidateCrawlViews(queryClient, crawlId, projectId);
+      // The dashboard projection is the single subscription. Once it lands,
+      // useSiteHealthScreen compares its progress fingerprint and refreshes
+      // the derived first-page views exactly once. Invalidating every list here
+      // as well doubled the request fan-out for each stream event.
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.dashboard(projectId) });
+      } else {
+        invalidateCrawlViews(queryClient, crawlId);
+      }
     };
 
     /** Coalesce a burst of events into ONE trailing invalidation. */
     const scheduleInvalidate = () => {
       if (invalidateTimer !== null) return;
-      invalidateTimer = setTimeout(invalidateNow, INVALIDATE_DEBOUNCE_MS);
+      invalidateTimer = setTimeout(invalidateNow, SITE_HEALTH_STREAM_INVALIDATE_DEBOUNCE_MS);
     };
 
     /** Track `id:` lines so a reconnect resumes instead of replaying. */
     const readFrame = (frame: string) => {
       let sawData = false;
+      let eventType: string | null = null;
       for (const line of frame.split('\n')) {
         // Ignore keep-alive comments (":" prefix); invalidate on any data.
-        if (line.startsWith('data:')) sawData = true;
-        else if (line.startsWith('id:')) lastEventId = line.slice(3).trim();
+        if (line.startsWith('data:')) {
+          sawData = true;
+          try {
+            const payload = JSON.parse(line.slice(5).trim()) as { event_type?: unknown };
+            if (typeof payload.event_type === 'string') eventType = payload.event_type;
+          } catch {
+            // Unknown frames still trigger a conservative lifecycle refresh.
+          }
+        } else if (line.startsWith('id:')) lastEventId = line.slice(3).trim();
       }
-      if (sawData) scheduleInvalidate();
+      // Per-page progress is already covered by the dashboard's bounded poll.
+      // Refetch immediately only for lifecycle/terminal events, where waiting
+      // for the next poll would leave stale controls or completion state.
+      if (sawData && !eventType?.endsWith('.progress')) scheduleInvalidate();
     };
 
     // Frames delivered by the connection currently being read. A clean close is
@@ -99,7 +108,7 @@ export function useCrawlEvents(
     // did something. Otherwise an immediately-closing stream (terminal crawl
     // already flushed, a proxy that will not hold streams open, an empty body)
     // is indistinguishable from the 300s cap and reconnects forever at
-    // RECONNECT_BASE_MS with no backoff.
+    // the base reconnect interval with no backoff.
     let framesThisConnection = 0;
 
     /** One connection. Resolves true when the server closed it cleanly. */
@@ -167,8 +176,11 @@ export function useCrawlEvents(
       // instantly-closing stream becomes a permanent 1 req/s loop.
       const hitDurationCap = closedCleanly && framesThisConnection > 0;
       const delay = hitDurationCap
-        ? RECONNECT_BASE_MS
-        : Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_MAX_MS);
+        ? SITE_HEALTH_STREAM_RECONNECT_BASE_MS
+        : Math.min(
+            SITE_HEALTH_STREAM_RECONNECT_BASE_MS * 2 ** attempt,
+            SITE_HEALTH_STREAM_RECONNECT_MAX_MS,
+          );
       reconnectTimer = setTimeout(() => void run(hitDurationCap ? 0 : attempt + 1), delay);
     };
 

@@ -12,7 +12,7 @@ For every valid, existing website, onboarding must create a complete and trustwo
 - A correctly normalized brand identity.
 - Industry selection, defaulting to `General`.
 - An optional subindustry when the user selects a non-General industry.
-- Ten editable high-value prompts: five neutral market-visibility questions and five brand-strategy diagnostics.
+- Ten editable high-value prompts: five neutral market/industry searches and five unbranded searches grounded in the brand's verified offerings.
 - Zero to five evidence-backed competitor suggestions.
 - A project capable of immediately running an AI Visibility audit.
 - Explicit evidence, provenance, and confidence when information is uncertain.
@@ -33,7 +33,7 @@ Website bot protection, malformed LLM output, incomplete research, and lack of d
 - Industry defaults to `General`.
 - Subindustry is optional and appears only for a non-General industry.
 - Onboarding generates ten prompts once; users manage the portfolio afterward.
-- The portfolio is split 50/50 between brand-neutral market questions and brand-naming strategy diagnostics based on actual products, services, customers, use cases, and the required primary market.
+- The portfolio is split 50/50 between wider market/industry searches and searches based on the brand's actual products, services, customers, and use cases. Every prompt remains brand- and competitor-neutral.
 - Prompt generation uses a repository industry library plus LLM personalization. Pure static JSON generation is not sufficient.
 - Onboarding makes one SSRF-safe homepage request and uses the default application model plus deterministic fallbacks; crawl vendors are removed.
 - Competitors must satisfy product substitutability, customer/use-case overlap, geographic relevance, and visibility for the same market questions.
@@ -59,14 +59,12 @@ The system must not insert a startup's name into market prompts merely to produc
 | --- | --- |
 | Provider completed and brand was absent | Valid zero visibility |
 | Competitors appeared but brand was absent | Valid competitive visibility gap |
-| Brand appeared only in branded diagnostics | Brand is understood but organically absent |
-| Brand was absent even in branded diagnostics | Entity/indexing/knowledge problem |
 | Provider or prompt execution failed | No data for that execution |
 
 ### 3.3 Prompt cohorts
 
-- `market_visibility`: neutral prompts used for headline scoring.
-- `brand_diagnostic`: branded questions used to test entity understanding; excluded from organic scoring.
+- `market_visibility`: unbranded searches about the wider industry.
+- `brand_relevant`: unbranded searches grounded in the tracked brand's verified offerings and audience.
 
 Existing non-onboarding prompt cohorts remain readable for compatibility, but
 new onboarding portfolios contain only the two cohorts above.
@@ -226,7 +224,7 @@ After review, create the following in one transaction:
 - Brand aliases and owned domains.
 - Confirmed competitors and their aliases/domains.
 - Prompt portfolio version 1.
-- Exactly five `market_visibility` and five `brand_diagnostic` prompts.
+- Exactly five `market_visibility` and five `brand_relevant` prompts.
 - Research and calibration provenance.
 
 Use an idempotency key so repeated completion requests return the same project.

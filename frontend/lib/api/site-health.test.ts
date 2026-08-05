@@ -24,7 +24,7 @@ const UUID2 = '22222222-2222-4222-8222-222222222222';
 
 const entitlement = {
   workspace_id: UUID,
-  access_mode: 'selection' as const,
+  access_mode: 'full' as const,
   sample_url_limit: 10,
   monitored_url_limit: 50,
   count_disclosure: true,
@@ -141,6 +141,22 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
         'ent',
       ),
     ).toThrow();
+  });
+
+  it('accepts the backend fail-closed access mode', () => {
+    const parsed = strictValidate(
+      siteHealthEntitlementSchema,
+      {
+        ...entitlement,
+        access_mode: 'unresolved',
+        monitored_url_limit: 0,
+        count_disclosure: false,
+        resolver_status: 'entitlement_unresolved',
+        contributing_grant_ids: [],
+      },
+      'ent',
+    );
+    expect(parsed.access_mode).toBe('unresolved');
   });
 });
 
@@ -329,6 +345,15 @@ describe('inventoryRowSchema (nullable analysis summaries)', () => {
     expect(parsed.page_type).toBe('article');
   });
 
+  it('accepts the expanded page-type taxonomy emitted by the classifier', () => {
+    const parsed = strictValidate(
+      inventoryRowSchema,
+      { ...inventoryRow, page_type: 'service' },
+      'row',
+    );
+    expect(parsed.page_type).toBe('service');
+  });
+
   it('rejects an unknown page_type vocabulary value', () => {
     expect(() =>
       strictValidate(inventoryRowSchema, { ...inventoryRow, page_type: 'landing_page' }, 'row'),
@@ -358,6 +383,33 @@ describe('cursorPageSchema', () => {
     // No count side channel: a leaked total is stripped from parsed output.
     const parsed = strictValidate(page, { items: [], next_cursor: null, total: 25000 }, 'page');
     expect('total' in parsed).toBe(false);
+  });
+});
+
+describe('monitoredUrlSchema', () => {
+  it('accepts bootstrap selections created during onboarding', () => {
+    const parsed = strictValidate(
+      monitoredUrlsResponseSchema,
+      {
+        project_id: UUID,
+        selection_version: 1,
+        monitored_urls: [
+          {
+            site_url_id: UUID2,
+            normalized_url: 'https://example.com/',
+            display_url: 'https://example.com/',
+            title: null,
+            active: true,
+            selection_source: 'bootstrap',
+            selected_at: null,
+            deselected_at: null,
+          },
+        ],
+        quota: { used: 1, limit: 50 },
+      },
+      'monitored',
+    );
+    expect(parsed.monitored_urls[0]?.selection_source).toBe('bootstrap');
   });
 });
 

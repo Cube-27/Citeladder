@@ -42,7 +42,7 @@ const project = {
 
 const entitlement = {
   workspace_id: WORKSPACE,
-  access_mode: 'selection',
+  access_mode: 'full',
   sample_url_limit: 10,
   monitored_url_limit: 50,
   count_disclosure: true,
@@ -178,6 +178,34 @@ beforeEach(() => {
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
+
+describe('SiteHealthScreen — loading failures', () => {
+  it('shows an error instead of an endless skeleton when entitlement loading fails', async () => {
+    mockRoutes();
+    mswServer.use(
+      http.get('/api/v1/entitlements', () =>
+        HttpResponse.json({ detail: 'Access unavailable' }, { status: 403 }),
+      ),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByText('Could not load Site Health. Please refresh.')).toBeVisible();
+  });
+
+  it('shows a recoverable warning when entitlement resolution fails closed', async () => {
+    mockRoutes();
+    mswServer.use(
+      http.get('/api/v1/entitlements', () =>
+        HttpResponse.json({ ...entitlement, resolver_status: 'entitlement_unresolved' }),
+      ),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByText(/Site Health access could not be resolved/)).toBeVisible();
+  });
+});
 
 describe('SiteHealthScreen — terminal states on the canonical screen', () => {
   it('renders an explicit terminal notice (not the active-progress UI) for a failed crawl', async () => {
@@ -321,12 +349,19 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
   });
 
   it('offers Cancel beside the inventory controls while a crawl is discovering', async () => {
+    let hiddenPagesRequests = 0;
     mockRoutes({
       status: 'running',
       discovery_status: 'running',
       analysis_status: 'pending',
       score_summary: null,
     });
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/pages`, () => {
+        hiddenPagesRequests += 1;
+        return HttpResponse.json({ items: [], next_cursor: null, root_errors: [] });
+      }),
+    );
 
     renderScreen();
 
@@ -337,6 +372,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     const cancel = screen.getByRole('button', { name: 'Cancel' });
     expect(screen.getByTestId('inventory-section')).toContainElement(cancel);
     expect(screen.queryByRole('button', { name: /Re-crawl now/ })).not.toBeInTheDocument();
+    expect(hiddenPagesRequests).toBe(0);
   });
 
   it('keeps the dashboard + partial scores and labels the run Cancelled (with Re-crawl)', async () => {

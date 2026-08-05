@@ -203,7 +203,7 @@ export function InventorySelection({
           ) : null}
         </form>
 
-        {effectiveSelection && entitlement.access_mode === 'selection' ? (
+        {effectiveSelection && entitlement.access_mode === 'full' ? (
           <QuickSelectBar
             maxCount={entitlement.monitored_url_limit}
             pending={bulkSelectMutation.isPending}

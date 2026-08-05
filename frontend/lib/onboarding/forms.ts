@@ -37,7 +37,7 @@ export type ReviewPrompt = {
    */
   theme: string;
   intent: 'discovery' | 'comparison' | 'purchase' | 'service' | 'local';
-  cohort: 'market_visibility' | 'brand_diagnostic';
+  cohort: 'market_visibility' | 'brand_relevant';
   selected: boolean;
 };
 

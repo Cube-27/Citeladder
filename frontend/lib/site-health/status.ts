@@ -295,7 +295,7 @@ export function resolveSiteHealthPhase(
     | undefined,
   /**
    * The neutral access mode, or `null` while the entitlement has not settled.
-   * `'selection'` means the account has a monitored allowance and stages its
+   * `'full'` means the account has a monitored allowance and stages its
    * own set; `'sample'` means the server picks. This is a capability, never a
    * plan name — a zero-allowance account fails closed to `'sample'`.
    */
@@ -346,7 +346,7 @@ export function resolveSiteHealthPhase(
   // 7. Cancelled with no data: selection mode keeps the discovered inventory (
   // survives a cancel and re-seeds the next crawl); everyone else dead-ends.
   if (crawl.status === 'cancelled') {
-    return accessMode === 'selection' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
+    return accessMode === 'full' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
   }
 
   // 8. Every remaining status is ACTIVE (draft/validating/queued/running). An
@@ -366,7 +366,7 @@ export function resolveSiteHealthPhase(
   // selected sample; a selection-mode account stages a monitored set unless
   // analysis has already started.
   if (crawl.analysis_status === 'running') return 'analyzing';
-  if (accessMode === 'selection' && crawl.analysis_status === 'pending') return 'selection';
+  if (accessMode === 'full' && crawl.analysis_status === 'pending') return 'selection';
   return 'analyzing';
 }
 

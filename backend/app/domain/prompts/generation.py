@@ -259,6 +259,8 @@ def _drop_invalid_core_prompts(
     accepted: list[str] = []
     topics: list[SuggestedTopic] = []
     for topic in suggestions:
+        if _is_branded(topic.name, brand_context):
+            continue
         rows: list[SuggestedPrompt] = []
         for prompt in topic.prompts:
             normalized = " ".join(prompt.text.casefold().split())

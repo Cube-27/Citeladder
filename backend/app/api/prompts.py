@@ -402,8 +402,8 @@ async def generate_prompts_endpoint(
             detail={
                 "code": "agent_not_configured",
                 "message": (
-                    "No default agent is configured. Set DEFAULT_AGENT_API_KEY "
-                    "(or MISTRALAI_API_KEY) in the backend environment."
+                    "No default agent is configured. Set the configured provider's "
+                    "API key in the backend environment."
                 ),
             },
         ) from exc

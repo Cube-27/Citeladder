@@ -233,8 +233,10 @@ From the repository root, reset and recreate the database configured by `DATABAS
 uv run --project backend python reset-db.py
 ```
 
-`reset-db.py` drops and recreates the target database, then runs migrations. Never run it
-against shared, staging, or production data.
+`reset-db.py` resolves the Docker development env as a fallback, drops and recreates the
+target database, then runs migrations. For a development `APP_ENV`, it also provisions the
+env-driven `DEV_LOGIN_EMAIL` / `DEV_LOGIN_PASSWORD` account with the configured
+`DEV_LOGIN_COUNTER_ALLOWANCE`. Never run it against shared, staging, or production data.
 
 ## Backend tests and checks
 

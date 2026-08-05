@@ -22,14 +22,43 @@ export function ScreenHeader({ actions }: Readonly<{ actions?: ReactNode }>) {
   );
 }
 
-export function ScreenSkeleton() {
+export function ScreenSkeleton({ label = 'Loading Site Health…' }: Readonly<{ label?: string }>) {
   return (
-    <div className="grid gap-6" aria-hidden>
-      <Skeleton className="h-8 w-48" />
+    <div className="grid gap-6" aria-busy="true" data-testid="site-health-skeleton">
+      <div role="status" className="flex min-h-8 items-center gap-3">
+        <Skeleton className="size-2 shrink-0 rounded-full" />
+        <p className="text-secondary text-sm font-medium">{label}</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3" aria-hidden>
+        {Array.from({ length: 3 }, (_, index) => (
+          <Card key={index}>
+            <CardContent className="flex items-center gap-4">
+              <Skeleton className="size-score-ring shrink-0 rounded-full" />
+              <div className="grid flex-1 gap-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-3 w-full max-w-44" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card>
-        <CardContent className="grid gap-3">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-40 w-full" />
+        <CardContent className="grid gap-5" aria-hidden>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-2">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-3 w-64 max-w-full" />
+            </div>
+            <Skeleton className="h-8 w-28 rounded-full" />
+          </div>
+          <div className="border-border-subtle grid gap-3 border-t pt-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} className="h-10 w-full" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

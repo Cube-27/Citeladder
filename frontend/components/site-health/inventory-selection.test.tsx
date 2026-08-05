@@ -15,7 +15,7 @@ const URL_B = 'bbbbbbbb-1111-4111-8111-111111111111';
 
 const entitlement: SiteHealthEntitlement = {
   workspace_id: '33333333-3333-4333-8333-333333333333',
-  access_mode: 'selection',
+  access_mode: 'full',
   sample_url_limit: 10,
   monitored_url_limit: 50,
   count_disclosure: true,

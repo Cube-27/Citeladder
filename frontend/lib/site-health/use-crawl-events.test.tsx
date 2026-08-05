@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { setActiveWorkspaceId } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-keys';
-import { RECONNECT_BASE_MS, useCrawlEvents } from './use-crawl-events';
+import { SITE_HEALTH_STREAM_RECONNECT_BASE_MS } from '@/lib/config/site-health';
+import { useCrawlEvents } from './use-crawl-events';
 
 const CRAWL = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
@@ -55,12 +56,11 @@ describe('useCrawlEvents', () => {
     expect(init.credentials).toBe('include');
     expect(init.headers['X-Workspace-Id']).toBe('99999999-9999-4999-8999-999999999999');
 
-    // A data frame invalidates the crawl + pages queries (progress accelerator).
-    // The list views carry a first-page predicate (`invalidateCrawlViews`), so
-    // the assertion is on the key, not the whole filter object.
+    // A lifecycle frame refreshes the dashboard subscription. Its progress
+    // fingerprint owns the one downstream list invalidation round.
     await waitFor(() =>
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: queryKeys.siteHealth.pages(CRAWL) }),
+        expect.objectContaining({ queryKey: queryKeys.siteHealth.dashboard(PROJECT) }),
       ),
     );
     vi.unstubAllGlobals();
@@ -81,7 +81,8 @@ describe('useCrawlEvents', () => {
     // racing the screen's poll timers into out-of-order renders.
     const frames = Array.from(
       { length: 40 },
-      (_, i) => `event: analysis.progress\nid: ${i}\ndata: {"analyzed":${i}}\n\n`,
+      (_, i) =>
+        `event: crawl.status\nid: ${i}\ndata: {"event_type":"crawl.status","sequence":${i}}\n\n`,
     );
     const fetchMock = vi.fn().mockResolvedValue(makeStreamResponse(frames));
     vi.stubGlobal('fetch', fetchMock);
@@ -95,7 +96,7 @@ describe('useCrawlEvents', () => {
 
     await waitFor(() =>
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: queryKeys.siteHealth.pages(CRAWL) }),
+        expect.objectContaining({ queryKey: queryKeys.siteHealth.dashboard(PROJECT) }),
       ),
     );
     // Tear the hook down BEFORE counting. This test runs on real timers, and
@@ -104,13 +105,35 @@ describe('useCrawlEvents', () => {
     // the second connection's frames added another invalidation round and the
     // count was no longer 1.
     unmount();
-    // 40 events, 5 query keys: un-debounced that is 200 invalidate calls.
-    const pagesCalls = invalidateSpy.mock.calls.filter(
+    // Forty lifecycle frames collapse to one dashboard refresh.
+    const dashboardCalls = invalidateSpy.mock.calls.filter(
       ([arg]) =>
         JSON.stringify((arg as { queryKey: unknown }).queryKey) ===
-        JSON.stringify(queryKeys.siteHealth.pages(CRAWL)),
+        JSON.stringify(queryKeys.siteHealth.dashboard(PROJECT)),
     );
-    expect(pagesCalls.length).toBe(1);
+    expect(dashboardCalls.length).toBe(1);
+  });
+
+  it('leaves per-page progress to the bounded dashboard poll', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        makeStreamResponse([
+          'event: analysis.progress\nid: 1\ndata: {"event_type":"analysis.progress"}\n\n',
+          'event: discovery.progress\nid: 2\ndata: {"event_type":"discovery.progress"}\n\n',
+        ]),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { unmount } = renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), {
+      wrapper: wrapper(client),
+    });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(invalidateSpy).not.toHaveBeenCalled();
+    unmount();
   });
 
   it('reconnects after a clean close, resuming from the last event id', async () => {
@@ -127,7 +150,7 @@ describe('useCrawlEvents', () => {
     renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), { wrapper: wrapper(client) });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_MS + 50);
+    await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS + 50);
     await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
 
     const [, retryInit] = fetchMock.mock.calls[1];
@@ -153,14 +176,14 @@ describe('useCrawlEvents', () => {
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     // First retry is still one base interval away.
-    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_MS + 50);
+    await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS + 50);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
     // The second wait is DOUBLE the base — one more base interval is not
     // enough. Without backoff this would already be the third connection.
-    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_MS);
+    await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_MS + 50);
+    await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS + 50);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
 
     unmount();
@@ -180,7 +203,7 @@ describe('useCrawlEvents', () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     unmount();
     const afterUnmount = fetchMock.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_MS * 5);
+    await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS * 5);
     expect(fetchMock.mock.calls.length).toBe(afterUnmount);
 
     vi.unstubAllGlobals();

@@ -22,6 +22,7 @@ import {
   crawlProgressVersion,
   inventoryModeForPhase,
   isCrawlStalled,
+  PAGE_LIMIT,
   primaryActionForPhase,
   resolveSiteHealthPhase,
   shouldPollCrawl,
@@ -93,18 +94,6 @@ export function useSiteHealthScreen(projectId: string | null) {
   // stream open for it is the same waste by another route.
   useCrawlEvents(crawl?.id, projectId, active && !stalled);
 
-  // Per-page rows for the table + live score preview, scoped to
-  // `monitored: true` so only selected rows show. This is a bounded WINDOW
-  // (first 200 by URL order) — with env-raised limits the monitored set may be
-  // far larger, so the progress COUNTS come from server counters (crawl
-  // `analyzed_count` / `failed_count` and the dashboard quota), never from this
-  // page fetch. No timer of its own: the crawl-version effect below refreshes
-  // it whenever the polled crawl actually moved.
-  const pagesQuery = useQuery({
-    ...siteHealthQueries.pages(crawl?.id ?? '', { limit: 200, monitored: true }),
-    enabled: Boolean(crawl?.id),
-  });
-
   // THE single subscription's fan-out: when the dashboard's poll (or an SSE
   // invalidation) lands a crawl that actually moved, refresh every list derived
   // from it. Keyed on a progress fingerprint rather than object identity, so a
@@ -148,6 +137,16 @@ export function useSiteHealthScreen(projectId: string | null) {
     () => resolveSiteHealthPhase(crawlInput, accessModeInput, monitoredInput),
     [crawlInput, accessModeInput, monitoredInput],
   );
+
+  // The live score preview shares the exact first-page query key rendered by
+  // ScoredInventory. React Query therefore issues ONE request for both
+  // consumers. Discovery does not render or score page analyses, so keeping
+  // this disabled until analysis/dashboard avoids fetching a hidden 200-row
+  // projection on every progress event.
+  const pagesQuery = useQuery({
+    ...siteHealthQueries.pages(crawl?.id ?? '', { limit: PAGE_LIMIT, monitored: true }),
+    enabled: Boolean(crawl?.id) && (phase === 'analyzing' || phase === 'dashboard'),
+  });
 
   // Canonical-screen view-model: the same layout stays mounted through the
   // whole discover → select → analyze → scored flow; these two modifiers are

@@ -134,34 +134,72 @@ def test_missing_key_is_rejected() -> None:
         DefaultAgentClient(_settings(api_key=""))
 
 
-def test_nvidia_defaults_and_legacy_key_aliases(
+def test_mistral_configuration_is_entirely_env_driven(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("DEFAULT_AGENT_API_KEY", raising=False)
-    monkeypatch.delenv("DEFAULT_AGENT_BASE_URL", raising=False)
-    monkeypatch.delenv("DEFAULT_AGENT_MODEL", raising=False)
-    monkeypatch.setenv("NVIDIA_API_KEY", "nvidia-key")
+    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://api.mistral.ai/v1")
+    monkeypatch.setenv("DEFAULT_AGENT_MODEL", "mistral-small-2603")
+    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-key")
     settings = DefaultAgentSettings(_env_file=None)
-    assert settings.resolved_api_key == "nvidia-key"
-    assert settings.base_url == "https://integrate.api.nvidia.com/v1"
-    assert settings.model == "deepseek-ai/deepseek-v4-flash"
+    assert settings.resolved_api_key == "mistral-key"
+    assert settings.base_url == "https://api.mistral.ai/v1"
+    assert settings.model == "mistral-small-2603"
 
 
-def test_application_key_precedes_provider_key(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("missing", ["base_url", "model"])
+def test_endpoint_and_model_are_required_for_configuration(missing: str) -> None:
+    settings = _settings().model_copy(update={missing: ""})
+
+    assert not settings.configured
+    with pytest.raises(AgentNotConfiguredError):
+        DefaultAgentClient(settings)
+
+
+def test_matching_provider_key_precedes_generic_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("DEFAULT_AGENT_API_KEY", "application-key")
-    monkeypatch.setenv("NVIDIA_API_KEY", "provider-key")
+    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://api.mistral.ai/v1")
+    monkeypatch.setenv("MISTRAL_API_KEY", "provider-key")
     settings = DefaultAgentSettings(_env_file=None)
-    assert settings.resolved_api_key == "application-key"
+    assert settings.resolved_api_key == "provider-key"
 
 
-def test_nvidia_key_requires_an_exact_or_subdomain_host(
+@pytest.mark.parametrize(
+    ("base_url", "provider_variable", "expected"),
+    [
+        ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY", "nvidia-key"),
+        ("https://api.groq.com/openai/v1", "GROQ_API_KEY", "groq-key"),
+        (
+            "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1",
+            "AWS_BEARER_TOKEN_BEDROCK",
+            "bedrock-key",
+        ),
+    ],
+)
+def test_provider_keys_are_selected_only_for_matching_hosts(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+    provider_variable: str,
+    expected: str,
+) -> None:
+    monkeypatch.delenv("DEFAULT_AGENT_API_KEY", raising=False)
+    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", base_url)
+    monkeypatch.setenv(provider_variable, expected)
+
+    settings = DefaultAgentSettings(_env_file=None)
+
+    assert settings.resolved_api_key == expected
+
+
+def test_provider_key_does_not_leak_to_lookalike_host(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("DEFAULT_AGENT_API_KEY", raising=False)
-    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://evilnvidia.com/v1")
-    monkeypatch.setenv("NVIDIA_API_KEY", "nvidia-key")
-    monkeypatch.setenv("MISTRALAI_API_KEY", "fallback-key")
+    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://evilgroq.com/v1")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-key")
 
     settings = DefaultAgentSettings(_env_file=None)
 
-    assert settings.resolved_api_key == "fallback-key"
+    assert settings.resolved_api_key == ""

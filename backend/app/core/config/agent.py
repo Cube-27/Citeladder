@@ -22,14 +22,29 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config import BASE_DIR, PROJECT_ROOT
 
-DEFAULT_AGENT_BASE_URL = "https://integrate.api.nvidia.com/v1"
-DEFAULT_AGENT_MODEL = "deepseek-ai/deepseek-v4-flash"
 STRUCTURED_OUTPUT_PROMPT_JSON = "prompt_json"
 STRUCTURED_OUTPUT_JSON_SCHEMA = "json_schema"
 
 
 def _is_nvidia_host(host: str) -> bool:
     return host == "nvidia.com" or host.endswith(".nvidia.com")
+
+
+def _is_provider_host(host: str, domain: str) -> bool:
+    return host == domain or host.endswith(f".{domain}")
+
+
+def _is_bedrock_host(host: str) -> bool:
+    parts = host.split(".")
+    return (
+        len(parts) >= 4
+        and parts[0] == "bedrock-runtime"
+        and parts[-2:]
+        == [
+            "amazonaws",
+            "com",
+        ]
+    )
 
 
 class DefaultAgentSettings(BaseSettings):
@@ -51,15 +66,22 @@ class DefaultAgentSettings(BaseSettings):
         validation_alias=AliasChoices("DEFAULT_AGENT_API_KEY", "default_agent_api_key"),
     )
     nvidia_api_key: str = Field(default="", validation_alias="NVIDIA_API_KEY")
-    mistral_api_key: str = Field(default="", validation_alias="MISTRALAI_API_KEY")
+    mistral_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("MISTRAL_API_KEY", "MISTRALAI_API_KEY"),
+    )
+    groq_api_key: str = Field(default="", validation_alias="GROQ_API_KEY")
+    bedrock_bearer_token: str = Field(
+        default="", validation_alias="AWS_BEARER_TOKEN_BEDROCK"
+    )
     base_url: str = Field(
-        default=DEFAULT_AGENT_BASE_URL,
+        default="",
         validation_alias=AliasChoices(
             "DEFAULT_AGENT_BASE_URL", "default_agent_base_url"
         ),
     )
     model: str = Field(
-        default=DEFAULT_AGENT_MODEL,
+        default="",
         validation_alias=AliasChoices("DEFAULT_AGENT_MODEL", "default_agent_model"),
     )
     structured_output_mode: str = Field(
@@ -87,16 +109,22 @@ class DefaultAgentSettings(BaseSettings):
 
     @property
     def configured(self) -> bool:
-        return bool(self.resolved_api_key)
+        return bool(
+            self.base_url.strip() and self.model.strip() and self.resolved_api_key
+        )
 
     @property
     def resolved_api_key(self) -> str:
-        if self.api_key.strip():
-            return self.api_key.strip()
         host = (urlsplit(self.base_url).hostname or "").casefold()
         if _is_nvidia_host(host) and self.nvidia_api_key.strip():
             return self.nvidia_api_key.strip()
-        return self.mistral_api_key.strip()
+        if _is_provider_host(host, "mistral.ai") and self.mistral_api_key.strip():
+            return self.mistral_api_key.strip()
+        if _is_provider_host(host, "groq.com") and self.groq_api_key.strip():
+            return self.groq_api_key.strip()
+        if _is_bedrock_host(host) and self.bedrock_bearer_token.strip():
+            return self.bedrock_bearer_token.strip()
+        return self.api_key.strip()
 
 
 default_agent_settings = DefaultAgentSettings()

@@ -124,7 +124,7 @@ describe('ProductTourProvider', () => {
     vi.unstubAllGlobals();
   });
 
-  it('does not open a tour overlay when its target never mounts', async () => {
+  it('skips the tour when its target never mounts', async () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       'matchMedia',
@@ -132,11 +132,14 @@ describe('ProductTourProvider', () => {
     );
     renderTour(false);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_300);
-    });
+    for (let attempt = 0; attempt < 13; attempt += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+    }
 
     expect(state.driverCalls).toHaveLength(0);
+    expect(state.updates).toContainEqual({ status: 'skipped', step_id: undefined });
     vi.unstubAllGlobals();
   });
 

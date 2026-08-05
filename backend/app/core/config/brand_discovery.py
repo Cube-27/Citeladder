@@ -29,14 +29,21 @@ DISCOVERY_STATUSES: Final = frozenset(
 
 BUSINESS_TYPES: Final = ("b2b", "b2c", "both")
 PRICE_TIERS: Final = ("budget", "mid_market", "premium", "luxury", "unknown")
+PRICE_TIER_QUERY_MODIFIERS: Final[dict[str, str]] = {
+    "budget": "affordable",
+    "mid_market": "good-value",
+    "premium": "premium",
+    "luxury": "luxury",
+    "unknown": "reliable",
+}
 CAPTURE_METHOD_CRAWLER: Final = "secure_crawler"
 CAPTURE_METHOD_APPLICATION_MODEL: Final = "application_model"
 CAPTURE_METHOD_USER: Final = "user_input"
 BRAND_DISCOVERY_VERSION: Final = "brand-discovery-v2"
-BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v2"
+BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v3"
 DISCOVERY_PROGRESS_TOTAL_STEPS: Final = 5
 DISCOVERY_MARKET_PROMPT_COUNT: Final = 5
-DISCOVERY_DIAGNOSTIC_PROMPT_COUNT: Final = 5
+DISCOVERY_BRAND_RELEVANT_PROMPT_COUNT: Final = 5
 DISCOVERY_CONFIRM_MAX_DOMAINS: Final = 50
 DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS: Final = 1024
 DISCOVERY_CONFIRM_MAX_TOPICS: Final = 100
@@ -75,10 +82,21 @@ DISCOVERY_RESEARCH_SYSTEM_PROMPT: Final = (
     "requested strict JSON. Be conservative: leave uncertain facts empty and omit "
     "uncertain competitors. Competitors must be substitutable, serve overlapping "
     "customers/use cases, operate in the primary market, and plausibly appear for "
-    "the same buyer questions. Produce exactly ten natural questions: five neutral "
-    "market_visibility questions that name no tracked company, and five "
-    "brand_diagnostic questions that name the tracked brand. Cover the brand's real "
-    "products or services, use cases, evaluation, purchase, and location context."
+    "the same buyer questions. Produce exactly ten natural consumer searches: five "
+    "market_visibility queries about the wider industry and five brand_relevant "
+    "queries derived from the tracked brand's verified products, services, audience, "
+    "and use cases. No prompt in either cohort may name the tracked brand, an alias, "
+    "a competitor, or a competitor alias. Use the cohort label brand_relevant for the "
+    "second group. Write the way a real person searches: concise questions or "
+    "requests, "
+    "not SEO copy, research instructions, or generic 'products and services' wording. "
+    "Do not mechanically append a market or use-case phrase to an already complete "
+    "query. Make topic names specific customer needs or product/service categories, "
+    "not funnel stages such as product selection or local availability. Across the "
+    "portfolio, cover the brand's real products or services, buyer use cases, "
+    "evaluation, "
+    "purchase, and primary-market context. Topic names must also exclude all tracked "
+    "brand, alias, and competitor names."
     " For every competitor include its official domain, evidence URLs, concise "
     "reasoning, confidence, and numeric scores for all four qualification dimensions."
 )
@@ -103,8 +121,8 @@ class BrandDiscoverySettings(BaseSettings):
     )
     synthesis_evidence_max_chars: int = Field(default=24_000, ge=1)
     market_prompt_count: int = Field(default=DISCOVERY_MARKET_PROMPT_COUNT, ge=1)
-    diagnostic_prompt_count: int = Field(
-        default=DISCOVERY_DIAGNOSTIC_PROMPT_COUNT, ge=1
+    brand_relevant_prompt_count: int = Field(
+        default=DISCOVERY_BRAND_RELEVANT_PROMPT_COUNT, ge=1
     )
     synthesis_topic_count: int = Field(default=10, ge=1)
     synthesis_max_attempts: int = Field(default=2, ge=1)

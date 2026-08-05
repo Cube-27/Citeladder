@@ -18,7 +18,7 @@ from app.domain.projects.onboarding.normalization import (
 )
 from app.domain.projects.onboarding.prompt_generation import fallback_portfolio
 from app.domain.projects.onboarding.prompt_validation import (
-    BRAND_DIAGNOSTIC,
+    BRAND_RELEVANT,
     MARKET_VISIBILITY,
     validate_portfolio,
 )
@@ -89,10 +89,9 @@ async def test_https_to_http_redirect_is_not_used_as_research(
     assert resolved.warning == "research_degraded"
 
 
-def test_fallback_portfolio_is_exactly_five_neutral_and_five_branded() -> None:
+def test_fallback_portfolio_is_balanced_and_all_prompts_are_unbranded() -> None:
     industry, context = industry_context("Ecommerce")
     prompts = fallback_portfolio(
-        brand_name="Flipkart",
         primary_market="IN",
         industry=industry,
         industry_context=context,
@@ -105,18 +104,22 @@ def test_fallback_portfolio_is_exactly_five_neutral_and_five_branded() -> None:
         brand_terms=["Flipkart"],
         competitor_terms=["Amazon"],
         primary_market="IN",
-        context_terms=["online marketplace", *(context.get("use_cases") or [])],
+        context_terms=[
+            "online marketplace",
+            *(context.get("use_cases") or []),
+            *(context.get("topics") or []),
+        ],
     )
     assert quality.errors == ()
     assert [item["cohort"] for item in prompts].count(MARKET_VISIBILITY) == 5
-    assert [item["cohort"] for item in prompts].count(BRAND_DIAGNOSTIC) == 5
-    assert all("India" in item["text"] or "Indian" in item["text"] for item in prompts)
+    assert [item["cohort"] for item in prompts].count(BRAND_RELEVANT) == 5
+    assert all("flipkart" not in item["text"].casefold() for item in prompts)
+    assert any("India" in item["text"] or "Indian" in item["text"] for item in prompts)
 
 
-def test_prompt_gate_rejects_brand_leak_and_missing_brand() -> None:
+def test_prompt_gate_rejects_tracked_names_in_both_cohorts() -> None:
     _, context = industry_context("Software")
     prompts = fallback_portfolio(
-        brand_name="Acme",
         primary_market="US",
         industry="Software",
         industry_context=context,
@@ -124,11 +127,12 @@ def test_prompt_gate_rejects_brand_leak_and_missing_brand() -> None:
         target_audience="marketing teams",
     )
     assert prompts[0]["cohort"] == MARKET_VISIBILITY
-    assert prompts[5]["cohort"] == BRAND_DIAGNOSTIC
+    assert prompts[5]["cohort"] == BRAND_RELEVANT
     prompts[0] = {**prompts[0], "text": "Is Acme the best analytics software in US?"}
+    prompts[1] = {**prompts[1], "theme": "Acme pricing"}
     prompts[5] = {
         **prompts[5],
-        "text": "What analytics software helps marketing teams in US?",
+        "text": "Which Acme analytics tools help marketing teams in US?",
     }
 
     result = validate_portfolio(
@@ -137,15 +141,48 @@ def test_prompt_gate_rejects_brand_leak_and_missing_brand() -> None:
         competitor_terms=[],
     )
 
-    assert "prompt[0].neutrality" in result.errors
-    assert "prompt[5].brand_required" in result.errors
+    assert "prompt[0].tracked_name" in result.errors
+    assert "prompt[1].tracked_topic_name" in result.errors
+    assert "prompt[5].tracked_name" in result.errors
+
+
+def test_best_less_fallback_produces_real_searches_when_research_degrades() -> None:
+    industry, context = industry_context("Ecommerce")
+    prompts = fallback_portfolio(
+        primary_market="AU",
+        industry=industry,
+        industry_context=context,
+        products_services=[
+            "womens clothing",
+            "mens clothing",
+            "kids clothing",
+            "baby clothing",
+            "homewares",
+        ],
+        target_audience=(
+            "Value-conscious Australian shoppers and families seeking affordable "
+            "clothing and homewares"
+        ),
+        price_tier="budget",
+    )
+
+    assert len(prompts) == 10
+    assert prompts[5]["text"] == (
+        "Where can I find affordable women's clothing in Australia?"
+    )
+    assert prompts[5]["theme"] == "Women's Clothing"
+    assert all("best&less" not in item["text"].casefold() for item in prompts)
+    assert all(
+        "for buying products online in Australia" not in item["text"]
+        for item in prompts
+    )
+    assert all(len(item["text"].split()) >= 6 for item in prompts)
 
 
 @pytest.mark.parametrize("industry", industry_names())
 def test_fallback_portfolio_validates_for_every_industry(industry: str) -> None:
     _, context = industry_context(industry)
     prompts = fallback_portfolio(
-        brand_name="Acme",
         primary_market="US",
         industry=industry,
         industry_context=context,
@@ -176,7 +213,7 @@ def test_catalog_exposes_only_current_research_methods_and_cohorts() -> None:
     catalog = discovery_catalog()
 
     assert "firecrawl_rendered" not in catalog["capture_methods"]
-    assert catalog["prompt_cohorts"] == [MARKET_VISIBILITY, BRAND_DIAGNOSTIC]
+    assert catalog["prompt_cohorts"] == [MARKET_VISIBILITY, BRAND_RELEVANT]
     assert catalog["required_fields"] == [
         "brand_name",
         "website_url",

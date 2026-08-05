@@ -33,7 +33,7 @@ type DiscoveryCompetitor = { name: string; aliases: string[]; domains: string[] 
 type DiscoveryPrompt = {
   text: string;
   intent: 'discovery' | 'comparison' | 'purchase' | 'service' | 'local';
-  cohort: 'market_visibility' | 'brand_diagnostic';
+  cohort: 'market_visibility' | 'brand_relevant';
 };
 
 export type BrandDiscoveryCompletion = {

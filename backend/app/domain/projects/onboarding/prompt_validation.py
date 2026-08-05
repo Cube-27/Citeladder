@@ -11,10 +11,10 @@ from app.core.config.brand_discovery import (
     MARKET_CONTEXT_TERMS,
     REQUIRED_ONBOARDING_PROMPT_INTENTS,
 )
-from app.domain.prompts.portfolio import prompt_identity_is_valid
+from app.domain.prompts.portfolio import contains_tracked_name
 
 MARKET_VISIBILITY = "market_visibility"
-BRAND_DIAGNOSTIC = "brand_diagnostic"
+BRAND_RELEVANT = "brand_relevant"
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,16 +39,16 @@ def validate_portfolio(
     primary_market: str = "",
     context_terms: list[str] | None = None,
     expected_market_count: int = 5,
-    expected_diagnostic_count: int = 5,
+    expected_brand_relevant_count: int = 5,
 ) -> PromptQualityResult:
     accepted: list[dict] = []
     accepted_text: list[str] = []
     errors: list[str] = []
-    counts = {MARKET_VISIBILITY: 0, BRAND_DIAGNOSTIC: 0}
+    counts = {MARKET_VISIBILITY: 0, BRAND_RELEVANT: 0}
     intents: set[str] = set()
     expected_counts = {
         MARKET_VISIBILITY: expected_market_count,
-        BRAND_DIAGNOSTIC: expected_diagnostic_count,
+        BRAND_RELEVANT: expected_brand_relevant_count,
     }
     for index, prompt in enumerate(prompts):
         text = str(prompt.get("text") or "").strip()
@@ -56,6 +56,7 @@ def validate_portfolio(
         error = _prompt_error(
             index=index,
             text=text,
+            theme=str(prompt.get("theme") or "").strip(),
             cohort=cohort,
             intent=str(prompt.get("intent") or ""),
             brand_terms=brand_terms,
@@ -87,6 +88,7 @@ def _prompt_error(
     *,
     index,
     text,
+    theme,
     cohort,
     intent,
     brand_terms,
@@ -94,23 +96,21 @@ def _prompt_error(
     accepted_text,
     primary_market,
 ) -> str:
-    if cohort not in {MARKET_VISIBILITY, BRAND_DIAGNOSTIC}:
+    if cohort not in {MARKET_VISIBILITY, BRAND_RELEVANT}:
         return f"prompt[{index}].cohort"
-    if len(text.split()) < 6 or not text.endswith("?"):
-        return f"prompt[{index}].natural_question"
+    if not theme:
+        return f"prompt[{index}].topic"
+    if len(text.split()) < 6:
+        return f"prompt[{index}].natural_search"
     if _is_near_duplicate(text, accepted_text):
         return f"prompt[{index}].duplicate"
-    if not prompt_identity_is_valid(
-        text=text,
-        cohort=cohort,
-        intent=intent,
-        brand_terms=brand_terms,
-        competitor_terms=competitor_terms,
-    ):
-        reason = "neutrality" if cohort == MARKET_VISIBILITY else "brand_required"
-        return f"prompt[{index}].{reason}"
-    if primary_market and not _mentions_market(text, primary_market):
-        return f"prompt[{index}].market"
+    if intent not in REQUIRED_ONBOARDING_PROMPT_INTENTS:
+        return f"prompt[{index}].intent"
+    tracked_terms = [*brand_terms, *competitor_terms]
+    if contains_tracked_name(text, tracked_terms):
+        return f"prompt[{index}].tracked_name"
+    if contains_tracked_name(theme, tracked_terms):
+        return f"prompt[{index}].tracked_topic_name"
     return ""
 
 
@@ -124,6 +124,10 @@ def _portfolio_errors(
     ]
     if len(accepted_text) != sum(expected_counts.values()):
         errors.append(f"portfolio.count:{len(accepted_text)}")
+    if primary_market and not any(
+        _mentions_market(text, primary_market) for text in accepted_text
+    ):
+        errors.append("portfolio.market_coverage")
     if primary_market and not REQUIRED_ONBOARDING_PROMPT_INTENTS.issubset(intents):
         errors.append("portfolio.intent_coverage")
     if context_terms and not _has_context_coverage(accepted_text, context_terms):
@@ -147,6 +151,9 @@ def _has_context_coverage(prompts: list[str], context_terms: list[str]) -> bool:
     normalized_terms = {
         normalize_alias(term) for term in context_terms if normalize_alias(term)
     }
-    required = min(3, len(normalized_terms))
+    # Requiring every supplied phrase made otherwise natural searches repeat
+    # mechanical context clauses. Two distinct verified concepts are enough
+    # to prove grounding while leaving the portfolio conversational.
+    required = min(2, len(normalized_terms))
     covered = sum(term in combined for term in normalized_terms)
     return covered >= required

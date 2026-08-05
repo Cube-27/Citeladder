@@ -95,7 +95,7 @@ class DiscoveryPromptSuggestion(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
     theme: str = Field(default="", max_length=255)
     intent: Literal["discovery", "comparison", "purchase", "service", "local"]
-    cohort: Literal["market_visibility", "brand_diagnostic"]
+    cohort: Literal["market_visibility", "brand_relevant"]
 
 
 class BrandDiscoveryProgress(BaseModel):
@@ -135,7 +135,7 @@ class DiscoveryCompetitorCandidates(BaseModel):
 class GroupedDiscoveryPrompt(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
     intent: Literal["discovery", "comparison", "purchase", "service", "local"]
-    cohort: Literal["market_visibility", "brand_diagnostic"]
+    cohort: Literal["market_visibility", "brand_relevant"]
 
 
 class DiscoveryPromptGroup(BaseModel):

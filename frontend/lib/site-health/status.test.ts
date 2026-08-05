@@ -251,18 +251,18 @@ describe('resolveSiteHealthPhase', () => {
   };
 
   it('resolves the active flow phases', () => {
-    expect(resolveSiteHealthPhase(null, 'selection')).toBe('empty');
-    expect(resolveSiteHealthPhase(base, 'selection')).toBe('discovering');
-    expect(resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'selection')).toBe(
+    expect(resolveSiteHealthPhase(null, 'full')).toBe('empty');
+    expect(resolveSiteHealthPhase(base, 'full')).toBe('discovering');
+    expect(resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'full')).toBe(
       'selection',
     );
     expect(
       resolveSiteHealthPhase(
         { ...base, discovery_status: 'completed', analysis_status: 'running' },
-        'selection',
+        'full',
       ),
     ).toBe('analyzing');
-    expect(resolveSiteHealthPhase({ ...base, status: 'completed' }, 'selection')).toBe('dashboard');
+    expect(resolveSiteHealthPhase({ ...base, status: 'completed' }, 'full')).toBe('dashboard');
   });
 
   it('keeps a cancelled Starter crawl with discovered URLs in the selection phase', () => {
@@ -276,7 +276,7 @@ describe('resolveSiteHealthPhase', () => {
           discovery_status: 'cancelled',
           analysis_status: 'cancelled',
         },
-        'selection',
+        'full',
       ),
     ).toBe('selection');
   });
@@ -291,7 +291,7 @@ describe('resolveSiteHealthPhase', () => {
           analysis_status: 'cancelled',
           visible_url_count: 0,
         },
-        'selection',
+        'full',
       ),
     ).toBe('terminal');
   });
@@ -314,7 +314,7 @@ describe('resolveSiteHealthPhase', () => {
     expect(
       resolveSiteHealthPhase(
         { ...base, status: 'failed', discovery_status: 'failed', analysis_status: 'cancelled' },
-        'selection',
+        'full',
       ),
     ).toBe('terminal');
   });
@@ -341,7 +341,7 @@ describe('resolveSiteHealthPhase', () => {
           analysis_status: 'cancelled',
           score_summary: summary,
         },
-        'selection',
+        'full',
       ),
     ).toBe('dashboard');
     // Free too — a cancelled-with-data crawl always keeps its results.
@@ -373,7 +373,7 @@ describe('resolveSiteHealthPhase', () => {
     expect(
       resolveSiteHealthPhase(
         { ...base, status: 'failed', discovery_status: 'failed', score_summary: summary },
-        'selection',
+        'full',
       ),
     ).toBe('dashboard');
   });
@@ -403,7 +403,7 @@ describe('resolveSiteHealthPhase', () => {
           analyzed_count: 0,
           score_summary: emptySummary,
         },
-        'selection',
+        'full',
       ),
     ).toBe('terminal');
   });
@@ -433,7 +433,7 @@ describe('resolveSiteHealthPhase', () => {
           analyzed_count: 0,
           score_summary: emptySummary,
         },
-        'selection',
+        'full',
       ),
     ).toBe('dashboard');
   });
@@ -460,7 +460,7 @@ describe('resolveSiteHealthPhase', () => {
           analyzed_count: 2,
           score_summary: summary,
         },
-        'selection',
+        'full',
       ),
     ).toBe('dashboard');
   });
@@ -481,7 +481,7 @@ describe('resolveSiteHealthPhase', () => {
     expect(
       resolveSiteHealthPhase(
         { ...base, status: 'running', discovery_status: 'running', score_summary: summary },
-        'selection',
+        'full',
       ),
     ).toBe('dashboard');
   });
@@ -501,18 +501,18 @@ describe('resolveSiteHealthPhase', () => {
     // 'pending' (and discovery re-runs) until the worker's first reconcile.
     // Resolving that shape to 'discovering'/'selection' threw the user back to
     // the URL list — with a monitored set, an active crawl IS an analysis run.
-    expect(resolveSiteHealthPhase(base, 'selection', true)).toBe('analyzing');
+    expect(resolveSiteHealthPhase(base, 'full', true)).toBe('analyzing');
     expect(
       resolveSiteHealthPhase(
         { ...base, status: 'queued', discovery_status: 'pending' },
-        'selection',
+        'full',
         true,
       ),
     ).toBe('analyzing');
     // Discovery done + analysis still pending: never bounce back to selection.
-    expect(
-      resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'selection', true),
-    ).toBe('analyzing');
+    expect(resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'full', true)).toBe(
+      'analyzing',
+    );
   });
 
   it('keeps the monitored-set rule BELOW terminal outcomes (cancel/fail/dashboard win)', () => {
@@ -526,27 +526,27 @@ describe('resolveSiteHealthPhase', () => {
           discovery_status: 'cancelled',
           analysis_status: 'cancelled',
         },
-        'selection',
+        'full',
         true,
       ),
     ).toBe('selection');
     expect(
       resolveSiteHealthPhase(
         { ...base, status: 'failed', discovery_status: 'failed' },
-        'selection',
+        'full',
         true,
       ),
     ).toBe('terminal');
-    expect(resolveSiteHealthPhase({ ...base, status: 'completed' }, 'selection', true)).toBe(
+    expect(resolveSiteHealthPhase({ ...base, status: 'completed' }, 'full', true)).toBe(
       'dashboard',
     );
   });
 
   it('still resolves a first crawl (no monitored set) to the discovery/selection flow', () => {
-    expect(resolveSiteHealthPhase(base, 'selection', false)).toBe('discovering');
-    expect(
-      resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'selection', false),
-    ).toBe('selection');
+    expect(resolveSiteHealthPhase(base, 'full', false)).toBe('discovering');
+    expect(resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'full', false)).toBe(
+      'selection',
+    );
   });
 
   it('is TOTAL over loading state: any unsettled input resolves to "resolving"', () => {
@@ -554,13 +554,13 @@ describe('resolveSiteHealthPhase', () => {
     // from whichever landed first and correcting afterwards is what made the
     // phase visibly flip (e.g. selection → analyzing once the monitored set
     // arrived), which the `crawlStarting` flag existed to hide.
-    expect(resolveSiteHealthPhase(undefined, 'selection', true)).toBe('resolving');
+    expect(resolveSiteHealthPhase(undefined, 'full', true)).toBe('resolving');
     expect(resolveSiteHealthPhase(base, null, true)).toBe('resolving');
-    expect(
-      resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'selection', null),
-    ).toBe('resolving');
+    expect(resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'full', null)).toBe(
+      'resolving',
+    );
     // A settled "no crawl" (null, not undefined) is still the empty state.
-    expect(resolveSiteHealthPhase(null, 'selection', false)).toBe('empty');
+    expect(resolveSiteHealthPhase(null, 'full', false)).toBe('empty');
   });
 });
 
