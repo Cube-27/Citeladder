@@ -17,6 +17,7 @@ const entitlement: SiteHealthEntitlement = {
   entitlement_lifecycle_version: 1,
   valid_until: null,
   contributing_grant_ids: [],
+  advanced_controls_enabled: false,
 };
 
 function page(overrides: Partial<PageSummary> = {}): PageSummary {
@@ -75,6 +76,18 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
     visible_url_count: 3,
     analyzed_count: 1,
     failed_count: 0,
+    discovery_requested_count: 3,
+    analysis_requested_count: 3,
+    counters: {
+      discovered: 3,
+      selected: 3,
+      queued: 2,
+      running: 0,
+      analyzed: 1,
+      errors: 0,
+      blocked: 0,
+      by_page_type: {},
+    },
     discovered_count: 3,
     total_url_count: 3,
     has_more_site_urls: false,

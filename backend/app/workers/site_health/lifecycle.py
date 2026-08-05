@@ -42,6 +42,7 @@ from app.core.config.site_health import (
     ANALYSIS_STATUS_PARTIALLY_COMPLETED,
     ANALYSIS_STATUS_PENDING,
     ANALYSIS_STATUS_RUNNING,
+    ANALYSIS_STATUS_STOPPED,
     ANALYZER_VERSION,
     APPLICABILITY_CRAWL_FINALIZE,
     CRAWL_ACTIVE_STATUSES,
@@ -49,18 +50,24 @@ from app.core.config.site_health import (
     CRAWL_STATUS_DRAFT,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
+    CRAWL_STATUS_PAUSED,
     CRAWL_STATUS_QUEUED,
     CRAWL_STATUS_RUNNING,
     CRAWL_STATUS_VALIDATING,
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
+    DISCOVERY_STATUS_STOPPED,
     EVENT_CRAWL_COMPLETED,
     EVENT_CRAWL_FAILED,
     EXTRACTOR_VERSION,
     LINK_KIND_ANCHOR,
     OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
+    PHASE_ANALYSIS,
+    PHASE_DISCOVERY,
+    PHASE_RUN_COMPLETED,
+    PHASE_RUN_RUNNING,
     RULE_OUTCOME_FAIL,
     SITE_HEALTH_RULES_BY_ID,
     TASK_KIND_ANALYZE,
@@ -87,6 +94,7 @@ from app.domain.site_health.state_events import (
 )
 from app.models.site_health import (
     SiteCrawl,
+    SiteCrawlPhaseRun,
     SiteCrawlTask,
     SiteFetchArtifact,
     SiteIssue,
@@ -123,6 +131,18 @@ _RUNNING_PATH: Final[dict[str, tuple[str, ...]]] = {
 def _count_disclosure(crawl: SiteCrawl) -> bool:
     """Free crawls never disclose absolute counts in event payloads."""
     return not crawl.sample_mode
+
+
+def _start_planned_analysis(crawl: SiteCrawl, *, analyze_total: int) -> None:
+    """Enter the analysis lifecycle once its first task has been admitted."""
+    if analyze_total > 0 and crawl.analysis_status == ANALYSIS_STATUS_PENDING:
+        apply_analysis_status(crawl, ANALYSIS_STATUS_RUNNING)
+
+
+def _pause_running_crawl(crawl: SiteCrawl) -> None:
+    """Park a drained advanced-control crawl until another phase is started."""
+    if crawl.status == CRAWL_STATUS_RUNNING:
+        apply_crawl_status(crawl, CRAWL_STATUS_PAUSED)
 
 
 def _is_crawl_finalize_rule(rule_id: str) -> bool:
@@ -329,6 +349,12 @@ class CrawlLifecycle:
                 or 0
             )
 
+            if await self._reconcile_advanced_phase_runs(
+                session, crawl=crawl, counts=counts
+            ):
+                await session.commit()
+                return
+
             # Discovery sub-state: terminalize progressively once discover
             # tasks drain, independent of analyze/link_check work.
             fully_failed = crawl.discovered_url_count == 0
@@ -348,8 +374,7 @@ class CrawlLifecycle:
             # Analysis lifecycle: move pending -> running once any analyze task
             # exists (work has been admitted), so a later terminal transition
             # is legal.
-            if analyze_total > 0 and crawl.analysis_status == ANALYSIS_STATUS_PENDING:
-                apply_analysis_status(crawl, ANALYSIS_STATUS_RUNNING)
+            _start_planned_analysis(crawl, analyze_total=analyze_total)
 
             all_drained = (
                 discover_remaining == 0
@@ -458,6 +483,96 @@ class CrawlLifecycle:
                     )
             await session.commit()
 
+    async def _reconcile_advanced_phase_runs(
+        self,
+        session: AsyncSession,
+        *,
+        crawl: SiteCrawl,
+        counts: dict[str, int],
+    ) -> bool:
+        if not (crawl.configuration or {}).get("advanced_controls_enabled"):
+            return False
+        phase_runs = list(
+            (
+                await session.scalars(
+                    select(SiteCrawlPhaseRun)
+                    .where(
+                        SiteCrawlPhaseRun.crawl_id == crawl.id,
+                        SiteCrawlPhaseRun.status == PHASE_RUN_RUNNING,
+                    )
+                    .order_by(SiteCrawlPhaseRun.ordinal.desc())
+                    .with_for_update()
+                )
+            ).all()
+        )
+        for phase_run in phase_runs:
+            if phase_run.phase == PHASE_DISCOVERY:
+                phase_run.processed_count = int(
+                    await session.scalar(
+                        select(func.count())
+                        .select_from(SiteUrlObservation)
+                        .where(
+                            SiteUrlObservation.crawl_id == crawl.id,
+                            SiteUrlObservation.phase_run_id == phase_run.id,
+                        )
+                    )
+                    or 0
+                )
+                drained = counts["discover_non_terminal"] == 0
+            else:
+                phase_run.processed_count = int(
+                    await session.scalar(
+                        select(func.count())
+                        .select_from(SiteCrawlTask)
+                        .where(
+                            SiteCrawlTask.phase_run_id == phase_run.id,
+                            SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
+                            SiteCrawlTask.status.in_(
+                                [TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED]
+                            ),
+                        )
+                    )
+                    or 0
+                )
+                remaining_phase_tasks = await session.scalar(
+                    select(func.count())
+                    .select_from(SiteCrawlTask)
+                    .where(
+                        SiteCrawlTask.phase_run_id == phase_run.id,
+                        SiteCrawlTask.task_kind.in_(
+                            [TASK_KIND_ANALYZE, TASK_KIND_LINK_CHECK]
+                        ),
+                        SiteCrawlTask.status.not_in(list(TASK_TERMINAL_STATUSES)),
+                    )
+                )
+                drained = int(remaining_phase_tasks or 0) == 0
+            if drained:
+                phase_run.status = PHASE_RUN_COMPLETED
+                phase_run.completed_at = _utcnow()
+                if (
+                    phase_run.phase == PHASE_DISCOVERY
+                    and crawl.discovery_status == DISCOVERY_STATUS_RUNNING
+                ):
+                    apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
+                elif (
+                    phase_run.phase == PHASE_ANALYSIS
+                    and crawl.analysis_status == ANALYSIS_STATUS_RUNNING
+                ):
+                    apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
+
+        outstanding = sum(
+            counts[key]
+            for key in (
+                "discover_non_terminal",
+                "analyze_non_terminal",
+                "link_non_terminal",
+            )
+        )
+        if outstanding:
+            return False
+        _pause_running_crawl(crawl)
+        return True
+
     async def reconcile_stalled(self) -> int:
         """Force-reconcile active crawls that have no outstanding work left.
 
@@ -491,6 +606,7 @@ class CrawlLifecycle:
                     await session.scalars(
                         select(SiteCrawl.id)
                         .where(SiteCrawl.status.in_(list(CRAWL_ACTIVE_STATUSES)))
+                        .where(SiteCrawl.status != CRAWL_STATUS_PAUSED)
                         .where(SiteCrawl.updated_at < cutoff)
                         .where(~outstanding.exists())
                         .order_by(SiteCrawl.updated_at.asc())
