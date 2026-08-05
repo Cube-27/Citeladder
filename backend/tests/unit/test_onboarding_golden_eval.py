@@ -24,43 +24,43 @@ def _valid_portfolio(case) -> list[PortfolioPrompt]:
     use_cases = case.use_cases
     return [
         PortfolioPrompt(
-            f"What are the best {products[0]} options in {market}?",
+            f"What are my best options for {products[0]} in {market}?",
             "market_visibility",
         ),
         PortfolioPrompt(
-            f"Which {products[1]} providers serve buyers in {market}?",
+            f"Which provider should I choose for {products[1]} in {market}?",
             "market_visibility",
         ),
         PortfolioPrompt(
-            f"How should buyers in {market} evaluate {products[2]}?",
+            f"How do I compare {products[2]} options in {market}?",
             "market_visibility",
         ),
         PortfolioPrompt(
-            f"What is the best way to {use_cases[0]} in {market}?",
+            f"What is the best way for me to {use_cases[0]} in {market}?",
             "market_visibility",
         ),
         PortfolioPrompt(
-            f"Which tools help people {use_cases[1]} in {market}?",
+            f"Which tools can help me {use_cases[1]} in {market}?",
             "market_visibility",
         ),
         PortfolioPrompt(
-            f"Which providers support {use_cases[2]} in {market}?",
+            f"Which provider can help me {use_cases[2]} in {market}?",
             "brand_relevant",
         ),
         PortfolioPrompt(
-            f"Where can buyers find {products[0]} in {market}?",
+            f"Where can I find {products[0]} in {market}?",
             "brand_relevant",
         ),
         PortfolioPrompt(
-            (f"When should a buyer choose a provider for {products[1]} in {market}?"),
+            f"When should I choose a provider for {products[1]} in {market}?",
             "brand_relevant",
         ),
         PortfolioPrompt(
-            f"What strengths matter for {products[2]} buyers in {market}?",
+            f"What should I look for when choosing {products[2]} in {market}?",
             "brand_relevant",
         ),
         PortfolioPrompt(
-            f"Which options help customers with {use_cases[0]} in {market}?",
+            f"Which options can help me {use_cases[0]} in {market}?",
             "brand_relevant",
         ),
     ]

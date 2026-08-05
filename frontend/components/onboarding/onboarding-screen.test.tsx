@@ -86,13 +86,13 @@ function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['prog
     topics: ['Product feeds', 'Comparisons'],
     prompt_suggestions: [
       ...Array.from({ length: 5 }, (_, index) => ({
-        text: `Which analytics platform supports retail need ${index} in US?`,
+        text: `Which analytics platform should I use for retail need ${index} in US?`,
         theme: 'Product feeds',
         intent: 'discovery' as const,
         cohort: 'market_visibility' as const,
       })),
       ...Array.from({ length: 5 }, (_, index) => ({
-        text: `How does Acme support analytics buyer need ${index} in US?`,
+        text: `Which retail analytics tool should I use for buyer need ${index} in US?`,
         theme: 'Comparisons',
         intent: 'service' as const,
         cohort: 'brand_relevant' as const,

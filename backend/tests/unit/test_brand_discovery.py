@@ -6,7 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.core.config.brand_discovery import _discovery_research_system_prompt
 from app.domain.projects.discovery_schemas import BrandDiscoveryCreate
+from app.domain.projects.onboarding import prompt_generation
 from app.domain.projects.onboarding.industry_library import (
     industry_context,
     industry_names,
@@ -22,6 +24,7 @@ from app.domain.projects.onboarding.prompt_validation import (
     MARKET_VISIBILITY,
     validate_portfolio,
 )
+from app.domain.projects.onboarding.research import _prompt_topics
 from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 
@@ -54,6 +57,35 @@ def test_general_industry_is_deterministic_fallback() -> None:
 
     assert selected == "General"
     assert len(context["archetypes"]) == 5
+
+    prompts = fallback_portfolio(
+        primary_market="US",
+        industry=selected,
+        industry_context=context,
+        products_services=[],
+    )
+    assert prompts[0]["theme"] == "Professional Help"
+    assert all("products and services" not in item["text"] for item in prompts)
+
+
+def test_research_prompt_uses_configured_cohort_counts() -> None:
+    prompt = _discovery_research_system_prompt(3, 4)
+
+    assert "exactly 7 natural consumer searches" in prompt
+    assert "3 market_visibility queries" in prompt
+    assert "4 brand_relevant queries" in prompt
+
+
+def test_research_topics_drop_blanks_and_preserve_first_seen_order() -> None:
+    assert _prompt_topics(
+        [
+            {"theme": " Analytics "},
+            {"theme": ""},
+            {"theme": "Pricing"},
+            {"theme": "Analytics"},
+            {"theme": "   "},
+        ]
+    ) == ["Analytics", "Pricing"]
 
 
 @pytest.mark.asyncio
@@ -96,7 +128,6 @@ def test_fallback_portfolio_is_balanced_and_all_prompts_are_unbranded() -> None:
         industry=industry,
         industry_context=context,
         products_services=["online marketplace"],
-        target_audience="Indian shoppers",
     )
 
     quality = validate_portfolio(
@@ -113,8 +144,52 @@ def test_fallback_portfolio_is_balanced_and_all_prompts_are_unbranded() -> None:
     assert quality.errors == ()
     assert [item["cohort"] for item in prompts].count(MARKET_VISIBILITY) == 5
     assert [item["cohort"] for item in prompts].count(BRAND_RELEVANT) == 5
+    assert all(
+        "online marketplace" not in item["text"].casefold()
+        for item in prompts
+        if item["cohort"] == MARKET_VISIBILITY
+    )
+    assert all(
+        "online marketplace" in item["text"].casefold()
+        for item in prompts
+        if item["cohort"] == BRAND_RELEVANT
+    )
     assert all("flipkart" not in item["text"].casefold() for item in prompts)
     assert any("India" in item["text"] or "Indian" in item["text"] for item in prompts)
+
+
+def test_fallback_uses_general_templates_when_industry_archetypes_are_empty() -> None:
+    _, context = industry_context("Software")
+    prompts = fallback_portfolio(
+        primary_market="US",
+        industry="Software",
+        industry_context={**context, "archetypes": []},
+        products_services=["analytics software"],
+    )
+
+    assert len(prompts) == 10
+    assert prompts[0]["text"].startswith(
+        "What are my best options for analytics software"
+    )
+
+
+def test_fallback_reports_missing_brand_relevant_templates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, context = industry_context("Software")
+    monkeypatch.setattr(
+        prompt_generation,
+        "load_industry_library",
+        lambda: {"brand_relevant_archetypes": [], "industries": {}},
+    )
+
+    with pytest.raises(RuntimeError, match="brand-relevant archetypes"):
+        fallback_portfolio(
+            primary_market="US",
+            industry="Software",
+            industry_context=context,
+            products_services=["analytics software"],
+        )
 
 
 def test_prompt_gate_rejects_tracked_names_in_both_cohorts() -> None:
@@ -124,12 +199,12 @@ def test_prompt_gate_rejects_tracked_names_in_both_cohorts() -> None:
         industry="Software",
         industry_context=context,
         products_services=["analytics software"],
-        target_audience="marketing teams",
     )
     assert prompts[0]["cohort"] == MARKET_VISIBILITY
     assert prompts[5]["cohort"] == BRAND_RELEVANT
     prompts[0] = {**prompts[0], "text": "Is Acme the best analytics software in US?"}
     prompts[1] = {**prompts[1], "theme": "Acme pricing"}
+    prompts[2] = {**prompts[2], "theme": ""}
     prompts[5] = {
         **prompts[5],
         "text": "Which Acme analytics tools help marketing teams in US?",
@@ -143,7 +218,59 @@ def test_prompt_gate_rejects_tracked_names_in_both_cohorts() -> None:
 
     assert "prompt[0].tracked_name" in result.errors
     assert "prompt[1].tracked_topic_name" in result.errors
+    assert "prompt[2].topic" in result.errors
     assert "prompt[5].tracked_name" in result.errors
+
+
+def test_brand_relevant_prompts_must_carry_context_coverage() -> None:
+    _, context = industry_context("Software")
+    prompts = fallback_portfolio(
+        primary_market="US",
+        industry="Software",
+        industry_context=context,
+        products_services=["analytics software"],
+    )
+    replacements = [
+        "Where can I find dependable business tools in US?",
+        "Which business tools best suit my growing team in US?",
+        "I'm looking for reliable digital options for my team in US",
+        "How do I compare business tools on price and quality?",
+        "Where can I find dependable digital tools for my team in US?",
+    ]
+    for index, text in enumerate(replacements, start=5):
+        prompts[index] = {**prompts[index], "text": text}
+
+    result = validate_portfolio(
+        prompts,
+        brand_terms=["Acme"],
+        competitor_terms=[],
+        primary_market="US",
+        context_terms=["analytics software", "integrations"],
+    )
+
+    assert "portfolio.context_coverage" in result.errors
+
+
+def test_prompt_gate_rejects_third_person_buyer_language() -> None:
+    _, context = industry_context("Ecommerce")
+    prompts = fallback_portfolio(
+        primary_market="US",
+        industry="Ecommerce",
+        industry_context=context,
+        products_services=["kids clothing"],
+    )
+    prompts[0] = {
+        **prompts[0],
+        "text": "Where can shoppers buy kids clothing online in US?",
+    }
+
+    result = validate_portfolio(
+        prompts,
+        brand_terms=["Best&Less"],
+        competitor_terms=[],
+    )
+
+    assert "prompt[0].buyer_perspective" in result.errors
 
 
 def test_best_less_fallback_produces_real_searches_when_research_degrades() -> None:
@@ -159,16 +286,12 @@ def test_best_less_fallback_produces_real_searches_when_research_degrades() -> N
             "baby clothing",
             "homewares",
         ],
-        target_audience=(
-            "Value-conscious Australian shoppers and families seeking affordable "
-            "clothing and homewares"
-        ),
         price_tier="budget",
     )
 
     assert len(prompts) == 10
     assert prompts[5]["text"] == (
-        "Where can I find affordable women's clothing in Australia?"
+        "Which affordable women's clothing options should I consider in Australia?"
     )
     assert prompts[5]["theme"] == "Women's Clothing"
     assert all("best&less" not in item["text"].casefold() for item in prompts)
@@ -187,7 +310,6 @@ def test_fallback_portfolio_validates_for_every_industry(industry: str) -> None:
         industry=industry,
         industry_context=context,
         products_services=[],
-        target_audience="",
     )
     result = validate_portfolio(
         prompts,

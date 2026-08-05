@@ -66,6 +66,17 @@ class ResearchResult:
     model: str
 
 
+def _prompt_topics(prompts: list[dict]) -> list[str]:
+    """Return non-blank prompt themes once, preserving first-seen order."""
+    return list(
+        dict.fromkeys(
+            theme
+            for prompt in prompts
+            if (theme := str(prompt.get("theme") or "").strip())
+        )
+    )
+
+
 def _site_text(page) -> str:
     if page is None:
         return ""
@@ -184,7 +195,6 @@ async def research_brand(
         industry=industry,
         industry_context=industry_context,
         products_services=profile.products_services,
-        target_audience=profile.target_audience,
         price_tier=profile.price_tier,
     )
     model_prompts = (
@@ -207,7 +217,7 @@ async def research_brand(
         ],
     )
     warnings.extend(prompt_warnings)
-    topics = list(dict.fromkeys(str(prompt["theme"]) for prompt in prompts))
+    topics = _prompt_topics(prompts)
     evidence = _research_evidence(site, model_result, provider, model)
     return ResearchResult(
         profile=profile.model_dump(),

@@ -1328,11 +1328,14 @@
   "app/core/config/agent.py": {
     "functions": {
       "DefaultAgentSettings.configured": 1,
-      "DefaultAgentSettings.resolved_api_key": 5,
-      "_is_nvidia_host": 2
+      "DefaultAgentSettings.resolved_api_key": 3,
+      "_first_provider_key": 4,
+      "_is_bedrock_host": 3,
+      "_is_nvidia_host": 2,
+      "_is_provider_host": 2
     },
-    "loc": 102,
-    "max_cc": 5
+    "loc": 137,
+    "max_cc": 4
   },
   "app/core/config/analysis.py": {
     "functions": {},
@@ -1428,9 +1431,10 @@
   "app/core/config/brand_discovery.py": {
     "functions": {
       "_discovery_claim_order": 1,
+      "_discovery_research_system_prompt": 1,
       "_discovery_task_model": 1
     },
-    "loc": 140,
+    "loc": 183,
     "max_cc": 1
   },
   "app/core/config/brand_evidence.py": {
@@ -1580,7 +1584,7 @@
   },
   "app/core/config/prompts.py": {
     "functions": {},
-    "loc": 367,
+    "loc": 381,
     "max_cc": 0
   },
   "app/core/config/provider_catalog.py": {
@@ -2554,7 +2558,7 @@
       "to_list_item": 1,
       "try_again": 3
     },
-    "loc": 592,
+    "loc": 590,
     "max_cc": 11
   },
   "app/domain/content/website_context.py": {
@@ -3096,34 +3100,44 @@
   },
   "app/domain/projects/onboarding/prompt_generation.py": {
     "functions": {
-      "_ensure_market": 3,
-      "_ensure_use_case": 2,
-      "_fallback_context": 7,
+      "_build_fallback_cohort": 2,
+      "_fallback_context": 4,
+      "_fallback_prompt": 1,
+      "_fallback_templates": 9,
       "_fallback_values": 1,
-      "_localized_question": 1,
+      "_natural_category": 1,
+      "_normalized_categories": 4,
+      "_render_search": 1,
+      "_topic_name": 1,
       "_values_or_default": 3,
-      "fallback_portfolio": 8,
-      "validated_portfolio": 4
+      "fallback_portfolio": 1,
+      "validated_portfolio": 3
     },
-    "loc": 165,
-    "max_cc": 8
+    "loc": 218,
+    "max_cc": 9
   },
   "app/domain/projects/onboarding/prompt_validation.py": {
     "functions": {
+      "_accepted_portfolio_rows": 9,
       "_has_context_coverage": 4,
       "_is_near_duplicate": 3,
+      "_lacks_context_coverage": 3,
+      "_lacks_intent_coverage": 2,
+      "_lacks_market_coverage": 3,
       "_mentions_market": 4,
-      "_portfolio_errors": 8,
+      "_portfolio_errors": 7,
       "_prompt_error": 9,
-      "validate_portfolio": 7
+      "_uses_buyer_perspective": 3,
+      "validate_portfolio": 1
     },
-    "loc": 152,
+    "loc": 229,
     "max_cc": 9
   },
   "app/domain/projects/onboarding/research.py": {
     "functions": {
       "_fallback_profile": 1,
       "_model_research": 4,
+      "_prompt_topics": 4,
       "_research_evidence": 3,
       "_research_model": 2,
       "_research_request": 1,
@@ -3131,10 +3145,10 @@
       "_verified_competitor": 8,
       "_verified_from_model": 2,
       "_verify_competitors": 4,
-      "research_brand": 15
+      "research_brand": 12
     },
-    "loc": 314,
-    "max_cc": 15
+    "loc": 319,
+    "max_cc": 12
   },
   "app/domain/projects/onboarding/service.py": {
     "functions": {
@@ -3220,8 +3234,9 @@
       "_apply_insert_capacity": 7,
       "_brand_context_hash": 1,
       "_cap_suggestions_to_count": 5,
+      "_core_prompt_is_valid": 4,
       "_drop_invalid_comparison_prompts": 9,
-      "_drop_invalid_core_prompts": 8,
+      "_drop_invalid_core_prompts": 6,
       "_drop_unbound_suggestions": 5,
       "_filter_for_cohort": 2,
       "_get_or_create_topic": 4,
@@ -3238,7 +3253,7 @@
       "parse_generation_output": 10,
       "validate_generation_request": 1
     },
-    "loc": 925,
+    "loc": 936,
     "max_cc": 19
   },
   "app/domain/prompts/locks.py": {
@@ -3289,7 +3304,7 @@
   },
   "app/domain/prompts/schemas.py": {
     "functions": {},
-    "loc": 214,
+    "loc": 215,
     "max_cc": 0
   },
   "app/domain/prompts/service.py": {
@@ -3758,15 +3773,15 @@
       "_cohort_issues": 5,
       "_coverage_issues": 6,
       "_covers_all": 2,
-      "_identity_issues": 8,
+      "_identity_issues": 6,
       "_normalized": 1,
       "_nvidia_review_input": 2,
       "evaluate_competitors": 8,
       "evaluate_portfolio": 5,
-      "evaluate_with_nvidia": 12
+      "evaluate_with_nvidia": 11
     },
-    "loc": 347,
-    "max_cc": 12
+    "loc": 334,
+    "max_cc": 11
   },
   "app/main.py": {
     "functions": {
@@ -3852,7 +3867,7 @@
     "functions": {
       "_utcnow": 1
     },
-    "loc": 236,
+    "loc": 234,
     "max_cc": 1
   },
   "app/models/discovery.py": {

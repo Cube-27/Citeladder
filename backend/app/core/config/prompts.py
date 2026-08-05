@@ -265,6 +265,9 @@ _GENERATION_PROMPT_PREAMBLE: Final = (
     "Rules:\n"
     "- Prompts must be concise, standalone consumer questions or requests, not "
     "marketing copy, keyword lists, or research instructions.\n"
+    "- Write from the buyer's first-person perspective using I, me, my, we, us, "
+    "or our. Never describe shoppers, buyers, customers, users, or audiences from "
+    "the outside. Adapt the buyer persona to the supplied industry and audience.\n"
 )
 _GENERATION_SHARED_RULES: Final = (
     "- Reuse an existing topic name verbatim when a prompt fits it; only "

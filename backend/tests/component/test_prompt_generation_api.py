@@ -301,7 +301,7 @@ async def test_generate_unconfigured_agent_returns_503(
     assert resp.status_code == 503
     detail = resp.json()["detail"]
     assert detail["code"] == "agent_not_configured"
-    assert "DEFAULT_AGENT_API_KEY" in detail["message"]
+    assert "configured provider's API key" in detail["message"]
 
 
 @pytest.mark.asyncio

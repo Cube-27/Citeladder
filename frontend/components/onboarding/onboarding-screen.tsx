@@ -711,7 +711,7 @@ export function OnboardingScreen() {
               {hasSelectedPrompt && !hasCompletePromptPortfolio ? (
                 <Alert tone="warning">
                   Keep all ten questions selected with non-empty text: five neutral market questions
-                  and five brand diagnostics.
+                  and five unbranded, brand-relevant questions.
                 </Alert>
               ) : null}
 

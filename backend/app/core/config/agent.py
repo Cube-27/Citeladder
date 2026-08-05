@@ -47,6 +47,15 @@ def _is_bedrock_host(host: str) -> bool:
     )
 
 
+def _first_provider_key(candidates: tuple[tuple[bool, str], ...]) -> str:
+    for matches_host, key in candidates:
+        if matches_host:
+            normalized = key.strip()
+            if normalized:
+                return normalized
+    return ""
+
+
 class DefaultAgentSettings(BaseSettings):
     """Env-overridable default-agent knobs (``DEFAULT_AGENT_*``).
 
@@ -109,22 +118,20 @@ class DefaultAgentSettings(BaseSettings):
 
     @property
     def configured(self) -> bool:
-        return bool(
-            self.base_url.strip() and self.model.strip() and self.resolved_api_key
-        )
+        return all((self.base_url.strip(), self.model.strip(), self.resolved_api_key))
 
     @property
     def resolved_api_key(self) -> str:
         host = (urlsplit(self.base_url).hostname or "").casefold()
-        if _is_nvidia_host(host) and self.nvidia_api_key.strip():
-            return self.nvidia_api_key.strip()
-        if _is_provider_host(host, "mistral.ai") and self.mistral_api_key.strip():
-            return self.mistral_api_key.strip()
-        if _is_provider_host(host, "groq.com") and self.groq_api_key.strip():
-            return self.groq_api_key.strip()
-        if _is_bedrock_host(host) and self.bedrock_bearer_token.strip():
-            return self.bedrock_bearer_token.strip()
-        return self.api_key.strip()
+        provider_key = _first_provider_key(
+            (
+                (_is_nvidia_host(host), self.nvidia_api_key),
+                (_is_provider_host(host, "mistral.ai"), self.mistral_api_key),
+                (_is_provider_host(host, "groq.com"), self.groq_api_key),
+                (_is_bedrock_host(host), self.bedrock_bearer_token),
+            )
+        )
+        return provider_key or self.api_key.strip()
 
 
 default_agent_settings = DefaultAgentSettings()

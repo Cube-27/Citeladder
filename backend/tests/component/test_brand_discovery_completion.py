@@ -34,18 +34,18 @@ async def _register(client: httpx.AsyncClient, email: str) -> None:
 def _completion_payload() -> dict:
     intents = ["discovery", "service", "comparison", "purchase", "local"]
     market = [
-        "Which analytics platforms are best for automating workflows in US?",
-        "What analytics software supports integrating business data in US?",
-        "How should US teams compare analytics tools for improving team performance?",
-        "Which analytics platform offers strong integrations for US businesses?",
-        "Where can US companies find analytics software with good support?",
+        "Which analytics platform should I use to automate workflows in US?",
+        "What analytics software can I use to integrate business data in US?",
+        "How do I compare analytics tools for improving my team's performance?",
+        "Which analytics platform gives my business strong integrations in US?",
+        "Where can I find analytics software with good support in US?",
     ]
     brand_relevant = [
-        "Which analytics tools support marketing teams with attribution in US?",
-        "What analytics software is best suited to marketing buyers in US?",
-        "How can marketing teams improve attribution reporting in US?",
-        "What should buyers compare when choosing analytics software in US?",
-        "Who offers dependable analytics reporting tools to US customers?",
+        "Which analytics tools can I use for automating workflows in US?",
+        "What analytics software is best for my marketing team in US?",
+        "How can I improve my team's attribution reporting in US?",
+        "What should I compare when choosing analytics software in US?",
+        "Where can I find dependable analytics reporting tools in US?",
     ]
     return {
         "name": "Acme Visibility",

@@ -252,6 +252,23 @@ def _is_branded(text: str, brand_context: dict[str, Any]) -> bool:
     return contains_tracked_name(text, (str(name) for name in names))
 
 
+def _core_prompt_is_valid(
+    prompt: SuggestedPrompt,
+    normalized: str,
+    brand_context: dict[str, Any],
+    accepted: list[str],
+) -> bool:
+    return (
+        bool(prompt.intent)
+        and not _is_branded(prompt.text, brand_context)
+        and not any(
+            SequenceMatcher(None, normalized, previous).ratio()
+            >= PROMPT_NEAR_DUPLICATE_SIMILARITY
+            for previous in accepted
+        )
+    )
+
+
 def _drop_invalid_core_prompts(
     suggestions: list[SuggestedTopic], brand_context: dict[str, Any]
 ) -> list[SuggestedTopic]:
@@ -264,15 +281,7 @@ def _drop_invalid_core_prompts(
         rows: list[SuggestedPrompt] = []
         for prompt in topic.prompts:
             normalized = " ".join(prompt.text.casefold().split())
-            if (
-                not prompt.intent
-                or _is_branded(prompt.text, brand_context)
-                or any(
-                    SequenceMatcher(None, normalized, previous).ratio()
-                    >= PROMPT_NEAR_DUPLICATE_SIMILARITY
-                    for previous in accepted
-                )
-            ):
+            if not _core_prompt_is_valid(prompt, normalized, brand_context, accepted):
                 continue
             accepted.append(normalized)
             rows.append(prompt)
