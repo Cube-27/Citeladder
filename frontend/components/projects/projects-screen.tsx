@@ -1,7 +1,7 @@
 'use client';
 
 import { FolderOpen, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,6 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const router = useRouter();
   const { projects, isLoading } = useProjectContext();
   const [editing, setEditing] = useState<Project | null>(null);
 
@@ -47,9 +46,11 @@ export function ProjectsScreen() {
         heading="No projects yet"
         description="Add a brand to start tracking how AI answers describe it."
         action={
-          <Button onClick={() => router.push('/onboarding?new=1')}>
-            <Plus className="size-4" aria-hidden />
-            Add project
+          <Button asChild>
+            <Link href="/onboarding?new=1">
+              <Plus className="size-4" aria-hidden />
+              Add project
+            </Link>
           </Button>
         }
       />

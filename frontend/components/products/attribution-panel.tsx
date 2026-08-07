@@ -27,7 +27,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { IconChip } from '@/components/ui/icon-chip';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { formatUtcTimestamp } from '@/lib/format';
+import { formatCount, formatUtcTimestamp } from '@/lib/format';
 import { formatPercent } from '@/lib/products/catalog';
 import {
   ATTRIBUTION_SUB_TABS,
@@ -299,10 +299,10 @@ function AttributionCoverageCard({
   >['metrics']['deterministic']['coverage'];
 }>) {
   const metrics = [
-    ['Latest orders', coverage.total_latest_orders.toLocaleString()],
-    ['Orders with evidence', coverage.orders_with_evidence.toLocaleString()],
-    ['Linked AI orders', coverage.linked_ai_orders.toLocaleString()],
-    ['Unattributed orders', coverage.unattributed_orders.toLocaleString()],
+    ['Latest orders', formatCount(coverage.total_latest_orders)],
+    ['Orders with evidence', formatCount(coverage.orders_with_evidence)],
+    ['Linked AI orders', formatCount(coverage.linked_ai_orders)],
+    ['Unattributed orders', formatCount(coverage.unattributed_orders)],
     ['Evidence coverage', formatPercent(coverage.evidence_coverage_rate)],
     ['Attributed share', formatPercent(coverage.attributed_share)],
   ] as const;

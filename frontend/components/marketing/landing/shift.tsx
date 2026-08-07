@@ -18,7 +18,7 @@ export function Shift() {
           const Icon = LANDING_ICONS[fact.icon];
           return (
             <StaggerItem key={fact.label} className="h-full">
-              <article className="bg-panel border-border shadow-card hover:shadow-card-hover group flex h-full flex-col justify-between rounded-xl border p-6 transition-all duration-300 hover:-translate-y-0.5 md:p-7">
+              <article className="bg-panel border-border shadow-card hover:shadow-card-hover group flex h-full flex-col justify-between rounded-xl border p-6 transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 md:p-7">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="bg-accent-subtle/80 text-accent-text border-accent-border/60 flex size-9 items-center justify-center rounded-lg border shadow-xs">

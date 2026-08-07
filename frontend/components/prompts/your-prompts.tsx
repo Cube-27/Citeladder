@@ -224,7 +224,7 @@ export function YourPrompts() {
           type="search"
           role="searchbox"
           aria-label="Search prompts"
-          placeholder="Search prompts..."
+          placeholder="Search prompts…"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="pl-8"

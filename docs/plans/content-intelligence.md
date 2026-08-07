@@ -1,26 +1,28 @@
 # Content Intelligence and Creation
 
-> **Status:** proposed implementation plan, 2026-08-05.
+> **Status:** canonical implementation plan.
 >
 > **Parent architecture:** [`growth-intelligence-platform.md`](growth-intelligence-platform.md).
 >
-> **Outcome:** prove the complete evidence-to-improvement loop first through industry-aware FAQ
-> gap detection, frozen briefs, grounded generation, review, and recrawl verification; then extend
-> the same contracts into broader content strategy and creation. Content Intelligence is more
-> than a writer and never becomes an unbounded chat box.
+> **Outcome:** prove the complete evidence-to-improvement loop — industry-aware gap detection,
+> frozen briefs, grounded generation, automatic validation, user edit and save, and recrawl
+> verification — then extend the same contracts across every content kind. Content Intelligence is
+> more than a writer and never becomes an unbounded chat box.
+>
+> **User decision in this layer:** save. Everything before it runs automatically.
 
 ## 1. Scope
 
 This plan owns:
 
 - required-question and observed-answer coverage by page role and journey;
-- FAQ-first gap detection, briefs, visible content, matching structured-data drafts, and verification;
+- gap detection, briefs, visible content, matching structured-data drafts, and verification;
 - content inventory and portfolio analysis;
 - content gaps and prioritized strategy;
 - deterministic task specifications and evidence-grounded briefs;
 - task-scoped context assembly for content work;
 - skill/template selection and provider-neutral generation;
-- validation, immutable outputs, revisions, approvals, and exports;
+- automatic validation, immutable outputs, user edit and save, and exports;
 - publication-state recording without automatic CMS mutation;
 - recrawl and later demand/visibility verification.
 
@@ -49,10 +51,10 @@ Current gaps:
 - prompt-box-first UX instead of an evidence-backed strategy;
 - one generic `website_page` output;
 - no content inventory, reusable brief, or page/section objective;
-- no revision/review workflow or approved-memory promotion;
+- no revision/save workflow and no correction path;
 - no unsupported-claim, fact-consistency, or schema/visible-content validator;
 - no recrawl-based verification;
-- `BrandKnowledgeArtifact` is not yet a shared governed memory system.
+- `BrandKnowledgeArtifact` is not yet the shared project-facts owner.
 
 ## 3. Canonical workflow
 
@@ -60,40 +62,57 @@ Current gaps:
 flowchart LR
   Site["Site Intelligence snapshot"] --> Strategy["ContentStrategySnapshot"]
   Demand["Demand signals"] --> Strategy
-  Memory["Approved brand memory"] --> Strategy
+  Facts["Project facts + corrections"] --> Strategy
   Strategy --> Action["Opportunity bundle"]
   Action --> Brief["ContentBrief"]
   Brief --> Context["TaskContextPackage"]
   Context --> Generate["ContentGeneration"]
-  Generate --> Validate["ContentValidation"]
-  Validate --> Revision["ContentRevision"]
-  Revision --> Approval["approved / publish_ready"]
-  Approval --> Observe["recrawl + analytics + visibility"]
+  Generate --> Validate["ContentValidation (automatic)"]
+  Validate --> Edit["User edits and saves"]
+  Edit --> Observe["recrawl + analytics + visibility"]
   Observe --> Verify["ContentVerification"]
 ```
 
-No generated draft changes knowledge, site scores, opportunities, demand signals, or visibility
-metrics. Only user approval can promote selected facts/style guidance into durable memory, and
-only later observed evidence can verify publication or impact.
+Everything up to and including validation is automatic. **Save is the user decision** — the single
+point in this layer where a human is required, because a saved draft is the product's only durable
+outward-facing output.
 
-### First vertical slice — FAQ
+No generated draft changes project facts, site scores, opportunities, demand signals, or visibility
+metrics. Only later observed evidence verifies publication.
 
-FAQ is the first complete product workflow, not merely one content skill. Site Intelligence and
-the active industry profile provide required questions for a page role or journey. Deterministic
-coverage identifies questions that are absent, weak, stale, contradictory, unsupported, or not
-linked to an appropriate next action. The user selects a bounded set and creates a frozen FAQ
-brief containing only current verified assertions, approved memory, source references, prohibited
-claims, required caveats, and verification criteria.
+### Worked example — FAQ
 
-The first output types are:
+FAQ is **one worked example** of this workflow, useful because it exercises every contract in a
+small space: pack-required questions, deterministic coverage, verified facts, bounded context,
+validation, and recrawl verification. It is not a required first slice and the architecture does
+not depend on it shipping first.
 
-1. a visible FAQ section for an existing page;
-2. a standalone FAQ/support page;
-3. optional `FAQPage` JSON-LD that exactly mirrors visible reviewed questions and answers.
+Site Intelligence and the active pack provide required questions for a page role or journey.
+Coverage identifies questions that are absent, weak, stale, contradictory, unsupported, or not
+linked to an appropriate next action, and assigns each one a state:
 
-Generation cannot fill an unknown value merely to complete an answer. Conflicting or historical
-facts block authoritative output until review. A modified fixture/recrawl must later prove that
-visible answers and any markup were observed before the source action is resolved.
+```text
+answered_strong | answered_weak | missing | conflicting
+unsupported | historical_only | not_applicable | unavailable_evidence
+match_unverified
+```
+
+`match_unverified` exists because matching a differently-worded visible question to a pack
+archetype is a semantic judgement code cannot make. A match that **dismisses** a gap needs higher
+confidence than one that **detects** it — a false detection costs a duplicate draft, a false
+dismissal silently hides the thing the product exists to find. Only `missing` with no candidate
+match is eligible for automatic brief creation.
+
+Output types:
+
+1. a visible FAQ section on an existing page;
+2. a standalone FAQ or support page;
+3. optional `FAQPage` JSON-LD mirroring the visible, saved questions and answers.
+
+Generation cannot fill an unknown value to complete an answer. Conflicting or historical facts
+block authoritative output. Markup is generated from saved visible content, never as a substitute
+for it. A later recrawl must observe the visible answers and any markup before the source action
+resolves.
 
 ## 4. Content inventory and strategy
 
@@ -151,10 +170,10 @@ Required fields:
 - target page/entity/offering/audience/journey/topic and intended outcome;
 - primary question/intent and supporting questions;
 - required sections, content units, schema, calls to action, and internal links;
-- verified facts and approved-memory items allowed for use;
+- verified facts and corrections allowed for use;
 - conflicting, stale, prohibited, regulated, or unverified claims;
 - source evidence and demand/visibility/opportunity ids;
-- tone/style constraints selected from approved memory;
+- tone and style constraints selected from project facts and corrections;
 - success and post-publication verification criteria;
 - industry-pack, brief-builder, rule, and evidence versions;
 - evidence snapshot/hash and idempotency identity.
@@ -167,7 +186,7 @@ it never mutates the frozen evidence behind an earlier generation.
 Replace the current ten-page Website-context cap with a task-aware `TaskContextPackage` builder.
 The content policy selects only evidence relevant to the brief:
 
-- approved identity, offering, audience, positioning, style, and factual constraints;
+- identity, offering, audience, positioning, style, and factual constraints;
 - target page and directly related pages/documents;
 - supporting questions, claims, citations, proof, and internal-link targets;
 - relevant Demand Signals and Visibility evidence;
@@ -177,12 +196,12 @@ The content policy selects only evidence relevant to the brief:
 
 Retrieval uses structured eligibility first, optional semantic reranking second, and config-owned
 section/token budgets last. The frozen manifest records included/omitted counts and source ids.
-The full site, raw analytics rows, raw HTML, secrets, and unrelated approved memory never enter a
+The full site, raw analytics rows, raw HTML, secrets, and unrelated project facts never enter a
 generation request.
 
 ## 7. Skills and generation
 
-Content skills are versioned task policies, not model memory. A skill defines:
+Content skills are versioned task policies, not model state. A skill defines:
 
 - compatible brief kinds and industry roles;
 - required context sections and capability requirements;
@@ -214,35 +233,38 @@ arbitrary provider string.
 Measurement-engine BYOK remains separate. Content generation cannot use a measurement result as
 if it were brand truth or silently send the entire competitor/brand registry.
 
-## 8. Validation and review
+## 8. Validation and save
 
-Every generation produces an immutable output and an append-only attempt. Run deterministic
-validation before presenting it as reviewable:
+Every generation produces an immutable output and an append-only attempt. Deterministic validation
+runs **automatically**, before the draft is shown:
 
-- output/schema structure and required-section coverage;
+- output and schema structure, and required-section coverage;
 - unsupported numeric, product, institutional, medical, regulatory, or time-sensitive claims;
-- conflicts with verified facts or approved memory;
+- conflicts with verified facts or corrections;
 - omission of required caveats or evidence;
-- unsafe links/markup and sanitized rendering;
+- unsafe links or markup, and sanitized rendering;
 - JSON-LD syntax, allowed properties, and visible-content parity;
-- duplicated sections/questions and brief non-compliance;
-- internal-link target validity.
+- duplicated sections or questions, and brief non-compliance;
+- internal-link target validity;
+- citation resolution — a provider cannot cite an artifact absent from its context package.
 
-Validation flags do not rewrite the output. A regeneration creates a new immutable generation.
+Validation never rewrites the output. Blocking failures prevent saving at the API as well as in the
+UI. A regeneration creates a new immutable generation.
 
-`ContentRevision` is the mutable human layer:
+`ContentRevision` is the human layer, and it is deliberately short:
 
 ```text
-draft -> in_review -> edited -> approved -> publish_ready -> published_claimed
-  \-------------------------> rejected
+draft -> edited -> saved -> published_claimed
+  \--------------> discarded
 ```
 
-`published_claimed` records user intent only. The system marks `publication_observed` separately
-after a recrawl finds compatible content evidence.
+There is no `in_review` or `approved` state, because there is no reviewer separate from the author.
+The user who generates is the user who edits and saves. `published_claimed` records user intent;
+`publication_observed` is set separately after a recrawl finds compatible evidence.
 
-Only explicit save/approve actions may promote style rules, approved facts, reusable messaging,
-or editorial preferences into Approved Brand Memory. The generated body itself does not become
-memory automatically.
+Saved content never becomes a project fact. Where a saved draft states something the business
+should treat as true, the user makes that a `Correction` on the fact itself — a separate, explicit,
+one-click action taken where the fact is displayed.
 
 ## 9. Verification
 
@@ -300,7 +322,7 @@ HTML, unbounded context, and private evidence not selected for display.
 2. **Inventory** — pages/assets by role, topic, journey, status, and action.
 3. **Briefs** — evidence, requirements, facts, constraints, and generation readiness.
 4. **Drafts** — immutable outputs, validation, regeneration, and provenance.
-5. **Reviews** — revisions, approval, export, and publication claim.
+5. **Drafts** — revisions, save, export, and publication claim.
 6. **Verification** — recrawl, demand, and visibility observations.
 
 The first guided entry is a question/answer gap that creates an FAQ brief. The existing free-prompt
@@ -315,7 +337,7 @@ artifacts rather than maintaining a chat-only workflow.
 - document the shipped queue/provider/context contracts;
 - remove roadmap assumptions that duplicate `ContentGeneration`;
 - define shared brief, skill, validation, revision, verification, strategy, and inventory schemas;
-- freeze the FAQ-first output/claim/visible-schema parity contract.
+- freeze the output, claim, and visible/schema parity contract.
 
 **Gate:** one owner exists for every content artifact and queue transition; FAQ output cannot
 bypass a brief, context package, validation, or review.
@@ -328,7 +350,7 @@ bypass a brief, context package, validation, or review.
 - add idempotent FAQ briefs and version history;
 - implement FAQ-specific context eligibility, budgeting, redaction, prohibited-claim handling, and
   manifest hashes;
-- link source findings, page/journey roles, approved memory, and evidence.
+- link source findings, page/journey roles, corrections, and evidence.
 
 **Gate:** The Asian School and Commerce fixtures reproduce expected question coverage; unrelated
 project/site evidence never enters a brief or provider request; unknown/conflicting facts remain
@@ -347,13 +369,12 @@ reproducible context manifest, zero invented facts, and JSON-LD only for matchin
 
 ### C3 — FAQ review and recrawl verification
 
-- add revisions, transitions, approval/export, and publication claim;
-- require explicit save/approval for any reusable memory proposal;
-- compare later page evidence with the approved brief/revision and classify each requirement as
+- add revisions, transitions, save/export, and publication claim;
+- compare later page evidence with the saved brief/revision and classify each requirement as
   observed, partial, absent, or materially different;
 - resolve source actions only from observed passing evidence.
 
-**Gate:** a user can move from an evidence-backed question gap to approved visible FAQ content and
+**Gate:** a user can move from an evidence-backed question gap to saved visible content and
 a later recrawl verification without generated material changing knowledge or a score by itself.
 
 ### C4 — Inventory, strategy, and broader skills
@@ -374,8 +395,8 @@ claim and verification boundary proven by FAQ.
 - compare later Site, Demand, and Visibility evidence using aligned windows and explicit coverage;
 - surface FAQ and broader program changes without asserting unsupported causality.
 
-**Gate:** the complete interface exposes evidence, limitations, validation, approval, and observed
-verification for both FAQ-first and broader workflows.
+**Gate:** the complete interface exposes evidence, limitations, validation, save, and observed
+verification.
 
 ## 14. Acceptance scenarios
 
@@ -390,7 +411,7 @@ From The Asian School fixture and Site Intelligence snapshot:
 5. block unknown fee/date, historical-as-current, unresolved conflict, unsupported result or
    affiliation, and any answer outside the context manifest;
 6. generate `FAQPage` JSON-LD only from the reviewed visible answers;
-7. approve a revision without automatically promoting its body to memory;
+7. save a revision without its body becoming a project fact;
 8. recrawl a modified fixture and verify the required questions, answers, links, and markup.
 
 After this passes, create an admissions content strategy, existing-page refresh brief, and one
@@ -409,7 +430,7 @@ from the reviewer or omitted. Then prove reuse with a category or PDP enhancemen
   skill selection, claim validation, visible/JSON-LD parity, and comparison;
 - queue/worker tests for lease, cancellation, retry, immutable attempts/output, and provider
   normalization;
-- component tests for workspace isolation, coded errors, revisions, approval, memory promotion,
+- component tests for workspace isolation, coded errors, revisions, save, correction durability,
   publication claim, and recrawl verification;
 - frontend tests for question-gap-to-review flow, safe rendering, null/conflict/coverage states,
   evidence, and accessible mobile operation;

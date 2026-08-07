@@ -53,7 +53,7 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <LandingSessionRedirect>
-      <main>
+      <main id="main">
         <Hero />
         <Shift />
         <Platform />

@@ -24,10 +24,14 @@ export function AuthEmailField({
             {...inputProps}
             type="email"
             autoComplete="email"
+            spellCheck={false}
             placeholder="you@company.com"
             className="border-border-subtle bg-background-alt text-foreground placeholder:text-muted focus:border-accent focus:ring-accent-border focus:bg-panel pl-10"
           />
-          <Mail className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Mail
+            aria-hidden
+            className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          />
         </div>
       )}
     </MktField>
@@ -62,14 +66,17 @@ export function AuthPasswordField({
             placeholder={placeholder}
             className="border-border-subtle bg-background-alt text-foreground placeholder:text-muted focus:border-accent focus:ring-accent-border focus:bg-panel pr-10 pl-10"
           />
-          <Lock className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Lock
+            aria-hidden
+            className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          />
           <button
             type="button"
             onClick={() => setVisible((current) => !current)}
             className="text-muted hover:text-muted absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
             aria-label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
           >
-            {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
           </button>
         </div>
       )}
@@ -109,7 +116,7 @@ export function AuthFormShell({
       <div className="bg-panel shadow-card relative rounded-2xl p-8 sm:p-10">
         <div className="mb-8 space-y-2 text-center sm:text-left">
           <div className="border-accent-border bg-background-alt text-accent-text mb-2 inline-flex size-10 items-center justify-center rounded-xl border">
-            <Icon className="size-5" />
+            <Icon className="size-5" aria-hidden />
           </div>
           <h1 className="font-display text-foreground text-2xl font-medium sm:text-3xl">{title}</h1>
           <p className="text-muted text-sm">{description}</p>

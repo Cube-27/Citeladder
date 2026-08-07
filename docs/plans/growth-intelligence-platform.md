@@ -1,424 +1,284 @@
 # CiteLadder Growth Intelligence Platform
 
-> **Status:** canonical proposed architecture and implementation map, 2026-08-05.
+> **Status:** canonical program architecture and implementation map.
 >
-> **Product decision:** CiteLadder is an evidence-grounded growth intelligence platform, not
-> primarily an AI-visibility tracker. Visibility remains a measurement loop. The product's
-> durable advantage is a project-specific knowledge system that powers a provider-neutral
-> Growth Agent across Site Intelligence, Content Intelligence, and Demand Intelligence.
+> **Parent:** [`../architecture.md`](../architecture.md) defines the product. This document defines
+> what gets built, in what order, how the layers interact, and what existing work is deleted.
 >
-> **First customer and validation pack:** The Asian School (`theasianschool.net`) through a
-> K-12 Education industry pack. Commerce is the second industry pack. Large marketplaces are
-> acquisition stress tests, not the initial customer model.
+> **Companion plans:** [`site-intelligence-primary-product.md`](site-intelligence-primary-product.md),
+> [`content-intelligence.md`](content-intelligence.md),
+> [`demand-intelligence.md`](demand-intelligence.md), [`growth-agent.md`](growth-agent.md),
+> [`knowledge-kernel-and-industry-pack-spec.md`](knowledge-kernel-and-industry-pack-spec.md),
+> [`frontend-growth-intelligence.md`](frontend-growth-intelligence.md).
+>
+> **This document owns delivery sequence.** No other document restates it.
 
 ## 1. Product thesis
 
-CiteLadder becomes the growth partner that can answer four connected questions:
+CiteLadder answers four connected questions over one governed knowledge system:
 
-1. **What does the company currently say and prove?**
-2. **What knowledge, content, journeys, and machine-readable evidence are missing or weak?**
-3. **What are people demonstrably looking for and doing?**
-4. **What should the company create, improve, and measure next?**
+1. What does the company currently say and prove?
+2. What knowledge, content, journeys, and machine-readable evidence are missing or weak?
+3. What are people demonstrably looking for and doing?
+4. What should the company create, improve, and measure next?
 
-The product is organized around three primary workspaces:
+Four layers. Three own data; the fourth is the conversation:
 
-- **Site Intelligence** acquires the owned corpus, builds the evidence-backed company
-  knowledge model, evaluates page roles and journeys, and produces the first roadmap.
-- **Content Intelligence** converts verified knowledge and prioritized gaps into strategy,
-  briefs, drafts, reviewable revisions, and recrawl-based verification.
-- **Demand Intelligence** combines GSC, GA4, business context, site evidence, and answer-engine
-  observations into demand signals, prompt portfolios, priorities, and outcome tracking.
+- **Site Intelligence** acquires the owned corpus, builds the evidence-backed knowledge model,
+  evaluates page roles and journeys, and produces the first roadmap.
+- **Content Intelligence** converts verified facts and prioritized gaps into strategy, briefs,
+  drafts, and recrawl-based verification.
+- **Demand Intelligence** combines GSC, GA4, site evidence, and answer-engine observations into
+  demand signals, prompt portfolios, priorities, and outcome tracking.
+- **Growth Agent** is how the user talks to the other three. It plans bounded tasks, calls typed
+  tools, and assembles inspectable context. It owns no data.
 
-The **Growth Agent** sits above those domains. It plans bounded tasks, calls typed tools, and
-assembles selective context. It does not own a second copy of project knowledge and cannot turn
-unreviewed model output into durable brand memory.
+## 2. The simplification that governs every plan
 
-### Resolved product decisions
+The system runs itself. There are exactly two human decisions:
 
-| Decision | Resolution |
+| Decision | Scope |
 |---|---|
-| Initial customer | The Asian School; K-12 education is the first real industry pack |
-| Primary first-customer outcome | Improve the quality and measurability of admission demand, content, and visibility—not generic traffic |
-| Platform shape | One master architecture with separate Site, Content, Demand, and Agent implementation plans |
-| Canonical truth | Versioned evidence plus explicit derived assertions; model output is never raw truth |
-| Knowledge architecture | Stable core ontology + versioned industry packs + isolated project knowledge |
-| Industry order | Education first, Commerce second; no marketplace-specific architecture |
-| Prompt lifecycle | Provisional → evidence-prioritized → user-edited/approved → active measurement |
-| Agent shape | Bounded orchestrator over three intelligence domains, not a fourth data owner |
-| Durable memory | Only explicitly saved or approved knowledge enters cross-task brand memory |
-| Model strategy | Provider-neutral gateway configured from the environment; memory remains in CiteLadder |
-| Reporting | Versioned in-product snapshot plus exportable executive report and evidence-backed roadmap |
+| **Generate and save content** | Which briefs become drafts, what the draft says after editing, and whether it is kept or exported. |
+| **Run and schedule audits** | When crawls, integration syncs, and answer-engine audits execute, and on what cadence. |
+
+Everything else is automatic: crawling within a schedule, page classification, knowledge
+extraction, assertion and contradiction detection, gap detection, opportunity creation and
+grouping, demand signals, prompt generation, prioritization, and roadmap construction.
+
+**Why this is safe without gates.** Every automatic output is a projection over immutable evidence
+that records exactly what produced it. A wrong output is fixed by correcting the input or the rule
+and recomputing. Nothing in the automatic set spends money, leaves the system, or destroys an
+earlier observation. Approval gates exist for cost and for external effect — not as a substitute
+for correctness.
+
+**Corrections replace approvals.** Where a derived fact is wrong, the user corrects it. The
+correction is durable, wins over later derivations, and is attributable. This inverts the friction:
+the user touches the knowledge layer when something is wrong, not to bless each thing that is
+right. `CorrectionRate` becomes a first-class quality metric — falling correction rate is the
+honest signal that derivation is improving.
+
+## 3. How the layers interact
 
 ```mermaid
 flowchart TB
-  User["User / growth team"] --> Agent["Growth Agent"]
-  Agent --> Context["TaskContextPackage"]
-  Context --> Memory["Approved Brand Memory"]
-  Context --> Working["Working Knowledge"]
-  Context --> Evidence["Immutable Evidence Store"]
-  Agent --> Site["Site Intelligence"]
-  Agent --> Content["Content Intelligence"]
-  Agent --> Demand["Demand Intelligence"]
-  Site --> Evidence
-  Site --> Working
-  Content --> Working
-  Demand --> Working
-  User -->|save / approve| Memory
-  Evidence --> Verify["Recrawl, analytics, and visibility verification"]
-  Verify --> Site
-  Verify --> Demand
+  Schedule["Schedule (user decision)"] --> Site
+  Site["Site Intelligence"] --> Facts["Project facts"]
+  Site --> Evidence["Immutable evidence"]
+  Demand["Demand Intelligence"] --> Facts
+  Demand --> Evidence
+  Facts --> Gaps["Gaps + opportunities"]
+  Demand --> Gaps
+  Gaps --> Brief["ContentBrief"]
+  Brief --> Draft["Draft (user edits + saves)"]
+  Draft --> Verify["Recrawl / resync / audit"]
+  Verify --> Evidence
+  Agent["Growth Agent"] -->|typed tools| Site
+  Agent -->|typed tools| Content["Content Intelligence"]
+  Agent -->|typed tools| Demand
+  Facts --> Agent
+  User["User"] --> Agent
+  User -->|correction| Facts
 ```
 
-## 2. First-customer outcome
+The contracts between layers, stated once:
 
-The Asian School currently spends heavily on keyword optimization while reporting roughly one
-percent conversion. CiteLadder must not claim the cause of that conversion rate without
-behavioral evidence. Its first complete report must instead:
+| From → To | Contract |
+|---|---|
+| Site → Facts | Page understanding, entities, assertions, relations, contradictions — each carrying source artifact IDs and analyzer/pack versions. |
+| Site → Gaps | Role, question, journey, schema, and trust coverage compared against the active pack's expectations. |
+| Demand → Facts | Normalized query, landing, event, and visibility observations joined to pages and journeys. |
+| Demand → Gaps | Demand signals that raise or lower the priority of an existing gap. Demand never *creates* a content gap on its own, and its absence never fabricates low demand — it lowers coverage. |
+| Gaps → Content | One `OpportunityBundle` per target and action family, which a brief consumes. Content never re-derives gaps. |
+| Content → Verify | An approved draft records what it claimed; a later compatible snapshot observes whether it appeared. |
+| Verify → Site/Demand | Descriptive before/after observation. Never a causal claim. |
+| Any layer → Agent | Bounded projection DTOs with evidence IDs, through typed tools. The agent never reads the database directly. |
 
-- inventory and classify the current owned corpus;
-- distinguish current, historical, duplicate, irrelevant, and unavailable material;
-- model the school, its offerings, audiences, proof, and admissions journey;
-- identify page-, topic-, schema-, trust-, and journey-level gaps;
-- produce a prioritized content and site-improvement roadmap;
-- propose a valid, editable prompt portfolio from current evidence;
-- state what GSC, GA4, and Visibility must measure next;
-- preserve every conclusion's evidence, coverage, confidence, and version.
-
-The public site is a suitable real-world corpus: it has hundreds of current URLs, a separate
-blog, admissions flows, compliance evidence, events, results, and hundreds of historical
-documents. The acceptance corpus must be captured as redacted, versioned fixtures so normal
-tests never depend on the live site.
-
-## 3. Product boundaries
-
-### Included in the target architecture
-
-- owned-site and document acquisition;
-- reusable core knowledge contracts;
-- Education and Commerce industry packs;
-- business-context expansion with low-friction onboarding;
-- deterministic and model-assisted, evidence-grounded analysis;
-- content strategy, briefs, generation, and review;
-- GSC/GA4 demand and journey analysis;
-- generated, reviewed, and tracked prompt portfolios;
-- existing multi-engine Visibility measurement;
-- a bounded, provider-neutral Growth Agent;
-- in-product reports plus reproducible exports.
-
-### Not promised by these plans
-
-- causal conversion diagnosis without adequate analytics evidence;
-- paid advertising, CRM, email, or social-channel optimization in the first loop;
-- autonomous publishing or external mutations;
-- unrestricted self-running agents;
-- a model trained on private customer data;
-- automatic sharing of one customer's facts with another;
-- one universal score that hides coverage or industry differences;
-- replacing measurement-engine APIs with the Growth Agent model.
+**The rule that keeps this coherent:** each arrow is one direction. Content does not write to
+Site's knowledge. Demand does not write content. The agent writes nothing that a domain service
+does not own.
 
 ## 4. Canonical data layers
 
-The term **knowledge base** refers to the complete governed system below, not a vector store or
-a table of model-written summaries.
+### 4.1 Immutable evidence
 
-### 4.1 Immutable evidence store
+Persisted automatically: crawl attempts and normalized page/document artifacts; integration import
+artifacts and normalized metric rows; answer-engine raw artifacts, analyses, and citations;
+generation request snapshots and append-only attempts; user actions.
 
-Automatically persisted evidence required for reproducibility:
+Evidence may be unavailable, contradictory, or stale. Persistence means "observed", never "true".
 
-- crawl attempts, normalized page/document artifacts, and rule evidence;
-- integration import artifacts and normalized metric rows;
-- answer-engine raw artifacts, analyses, citations, and metric snapshots;
-- generation request snapshots and append-only attempts;
-- user actions and approval events.
+### 4.2 Project facts
 
-Evidence may be unavailable, contradictory, or stale. Persistence means “observed,” never
-“approved as true.” Existing immutable-artifact and provenance invariants remain unchanged.
+Versioned, recomputable projections: entities, relationships, claims, questions, topics, audiences,
+offerings, journeys, page roles, content units, schema assertions, contradictions, gaps, demand
+signals, opportunity bundles, prompt candidates, briefs, and agent plans — each with confidence,
+effective dates, source coverage, analyzer versions, and limitations.
 
-### 4.2 Working knowledge
+A **correction** is a typed user override on any fact. It is durable across recomputation,
+outranks the derived value, records author and timestamp, and is withdrawable.
 
-Versioned, replaceable projections produced from evidence:
-
-- entities, relationships, claims, questions, topics, audiences, offerings, and journeys;
-- page roles, content units, schema assertions, contradictions, and gaps;
-- demand signals, opportunity bundles, prompt candidates, briefs, and agent plans;
-- confidence, effective dates, source coverage, analyzer versions, and limitations.
-
-Working knowledge may be recomputed or superseded. It can inform the current report, but it is
-not automatically durable agent memory.
-
-### 4.3 Approved brand memory
-
-Only information a workspace member explicitly saves or approves is promoted into durable
-cross-task memory. Approved memory:
-
-- references its supporting evidence or records that it is user-supplied;
-- records approver, timestamp, validity, and supersession;
-- outranks inferred working knowledge when assembling context;
-- remains workspace/project scoped;
-- is never silently rewritten after a recrawl or analytics sync.
-
-Raw chat is interaction history, not brand truth. A conversation can propose a memory item but
-cannot promote it without the explicit save/approve transition.
+There is no third "approved memory" layer. Generated content is never automatically promoted into
+project facts.
 
 ## 5. Shared artifact vocabulary
 
-Later implementation may consolidate storage where appropriate, but it must preserve these
-public concepts and ownership boundaries.
-
 | Artifact | Purpose | Required provenance |
 |---|---|---|
-| `EvidenceArtifact` | Immutable observation from a crawl, integration, audit, or generation | source run/task, content hash, acquisition/import version |
-| `KnowledgeEntity` | Project-scoped organization, offering, person, location, audience, topic, product, category, or other typed entity | evidence ids, pack id/version, extractor/analyzer version |
-| `KnowledgeAssertion` | A typed claim about an entity or relationship, including contradictions and effective dates | exact source spans/paths, confidence, state, analyzer version |
-| `KnowledgeRelation` | Typed connection between entities, pages, journeys, questions, prompts, and evidence | source ids and relation version |
-| `PageUnderstanding` | Generic page kind, industry role, purpose, audience, content units, and disposition | site analysis/artifact id, classifier versions |
-| `JourneyDefinition` | A business journey and its configured outcomes, stages, supporting pages, and events | user/pack source, version, approval state |
-| `IntelligenceSnapshot` | Immutable, bounded projection for one Site, Content, or Demand run | source ids, coverage, formula/analyzer versions |
-| `OpportunityBundle` | Prioritized, traceable improvement targeting one entity/page/journey/action family | source snapshot/finding/signal ids, rule/formula versions |
-| `ContentBrief` | Frozen task specification containing verified facts, gaps, audience, intent, constraints, and sources | knowledge/signal/opportunity ids, brief version/hash |
-| `DemandSignal` | Time-bounded evidence of demand, behavior, visibility, or an unmet question | integration/traffic/visibility/site ids, time window, formula version |
-| `PromptCandidate` | Proposed measurable prompt linked to audience, intent, evidence, and target knowledge | demand/site/knowledge ids, generator and validation versions |
-| `TaskContextPackage` | Bounded context frozen for one agent or generation task | selected artifact ids, selection policy, token budget, manifest hash |
-| `AgentTaskRun` | Persisted bounded plan, tool calls, approvals, results, and model provenance | context package, tool versions, provider/model, task policy version |
+| `EvidenceArtifact` | Immutable observation from a crawl, integration, audit, or generation | source run/task, content hash, acquisition version |
+| `PageUnderstanding` | Public DTO for the append-only `SitePageAnalysis` row: generic kind, industry role, purpose, audience, content units, disposition | artifact ID, classifier and pack versions |
+| `KnowledgeEntity` | Project-scoped typed entity | evidence IDs, pack ID/version, extractor version |
+| `KnowledgeAssertion` | Typed claim about an entity or relationship, including contradictions and effective dates | source spans, confidence, state, analyzer version |
+| `KnowledgeRelation` | Typed connection between entities, pages, journeys, questions, prompts, and evidence | source IDs, relation version |
+| `Correction` | Durable user override of a derived fact | target fact ID, author, timestamp, prior derived value |
+| `JourneyDefinition` | A business journey with configured outcomes, stages, supporting pages, and events | user/pack source, version |
+| `IntelligenceSnapshot` | Immutable bounded projection for one Site, Content, or Demand run | source IDs, coverage, formula versions |
+| `OpportunityBundle` | Prioritized, traceable improvement for one target and action family | source snapshot/finding/signal IDs, rule and formula versions |
+| `ContentBrief` | Frozen task specification: verified facts, gaps, audience, intent, constraints, sources | fact/signal/opportunity IDs, brief version and hash |
+| `DemandSignal` | Time-bounded evidence of demand, behaviour, visibility, or an unmet question | integration/traffic/visibility/site IDs, window, formula version |
+| `PromptCandidate` | Measurable prompt linked to audience, intent, and evidence | demand/site/fact IDs, generator and validation versions |
+| `TaskContextPackage` | Bounded context frozen for one agent or generation task | selected artifact IDs, selection policy, budget, manifest hash |
+| `AgentTaskRun` | Persisted bounded plan, tool calls, results, and model provenance | context package, tool versions, provider/model, policy version |
+| `GrowthProgram` | Versioned schedule for recurring crawls, syncs, and audits | scope, cadence, cost limits, policy version |
 
-Do not create a generic untyped “memory blob” that bypasses these contracts.
+Do not create a generic untyped "memory blob" that bypasses these contracts.
 
-## 6. Core taxonomy and industry packs
+## 6. Industry packs
 
-### 6.1 Stable core
+The active analysis contract:
 
-The core stays industry-neutral:
+```text
+stable core + one primary industry pack + reviewed capabilities + versioned project overlay
+```
 
-- generic page kinds: identity, informational, conversion, trust, support, listing, detail,
-  editorial, utility, and other;
-- reusable entities, assertions, relations, topics, questions, audiences, offerings, journeys,
-  content units, evidence, demand signals, prompts, and actions;
-- common analyzers for crawlability, schema, entity consistency, answerability, evidence,
-  freshness, duplication, internal relationships, and journey support.
+This is the contract the pack validator enforces
+([`EXTENSION_CONTRACT.md`](../../backend/app/core/config/industry_packs/EXTENSION_CONTRACT.md),
+`capabilities.json`). Capabilities are cross-cutting modules a pack opts into; they strengthen
+requirements and never weaken shared controls.
 
-### 6.2 Versioned `IndustryPack`
+- **Education v1** — K-12 identity, admissions, academics, curriculum, faculty, boarding,
+  facilities, fees, results, activities, events, compliance, parent resources, editorial content.
+- **Commerce v1** — store identity, category, product detail, offers, variants, comparison, buying
+  guides, policies, reviews, and product/category journeys.
 
-An industry pack is an executable, reviewed configuration package rather than a customer-data
-dump. It defines:
+Both are **validated candidates**: ready for controlled shadow evaluation, not automatically
+authoritative production findings. Promotion past that tier requires classifier accuracy measured
+against at least two corpora not used during pack authoring, reported separately for authoring and
+held-out sets. [`EVALUATION_CONTRACT.md`](../../backend/app/core/config/industry_packs/EVALUATION_CONTRACT.md)
+owns the threshold.
 
-- industry-specific page roles and classifier signals;
-- expected entity and relationship types;
-- expected schema types and properties;
-- journey templates and business outcomes;
-- content-section and question expectations;
-- trust/proof requirements;
-- rule mappings, priority modifiers, report modules, brief templates, and prompt archetypes;
-- fixture corpus and acceptance expectations;
-- pack id, semantic version, compatibility range, and migration notes.
+Composite businesses with two genuine industry identities have no composition path today; see
+[`../architecture.md`](../architecture.md) §6 for the forward-compatible mechanism and why it is
+deferred.
 
-Project evidence never trains or mutates a shared pack automatically. Generalized improvements
-enter a reviewed pack release with fixtures and tests.
+## 7. Progressive business context
 
-### 6.3 Education first, Commerce second
+Project creation requires only what is needed to start: organization name, owned domain, and
+locale defaults. Onboarding is not a strategy questionnaire.
 
-- **Education v1:** K-12 school identity, admissions, academics, curriculum, grades/classes,
-  faculty/leadership, boarding, facilities, fees, results, activities, events, compliance,
-  parent/student resources, contact, and editorial discovery content.
-- **Commerce v1:** organization/store identity, category/collection, product detail, offers,
-  variants, comparison, buying guides, FAQs, policies, reviews, and product/category journeys.
-
-Commerce reuses the knowledge and content contracts. Its existing catalog remains a specialized
-identity source; it must not become the universal knowledge model.
-
-## 7. Progressive Business Knowledge
-
-Project creation requires only the minimum needed to begin safely: organization/brand name,
-owned domain, and locale/market defaults. Do not turn initial onboarding into a strategy
-questionnaire.
-
-The **Business Knowledge** workspace progressively captures optional structured context:
-
-- offerings and strategic priorities;
-- audiences/personas and locations/markets;
-- primary and secondary business outcomes;
-- journeys and conversion actions;
-- differentiators, proof, tone/style, and regulated or prohibited claims;
-- known competitors and comparison boundaries;
-- editorial preferences and approved reusable messaging.
-
-Site and Demand evidence may produce suggestions for missing context. The Growth Agent may explain
-and propose values, but each value becomes Approved Brand Memory only after a user saves or
-accepts it. Missing optional context reduces coverage or confidence; it does not block the first
-crawl or fabricate defaults.
+Everything else — offerings, audiences, markets, outcomes, journeys, differentiators, tone,
+prohibited claims, competitors — is **derived from the corpus first** and corrected by the user
+where wrong. Site Intelligence proposes; the user edits. Missing optional context reduces coverage
+or confidence; it never blocks a crawl and never fabricates a default.
 
 ## 8. Analysis policy
 
-### Deterministic ownership
+**Deterministic ownership.** Code owns URL admission, parsing, canonicalization, exact identifiers,
+schema syntax, metric aggregation, joins, lifecycle state, validation, deduplication, scoring
+formulas, and hard policy gates.
 
-Code owns URL admission, parsing, canonicalization, exact identifiers, schema syntax, metric
-aggregation, joins, lifecycle state, validation, deduplication, scoring formulas, and hard
-policy gates.
+**Model ownership.** Models classify nuanced intent, match differently-worded pages and questions
+to pack archetypes, reconcile bounded claims, summarize evidence, create task plans, generate
+prompts, and draft content. Each output persists selected evidence, context hash, provider, model,
+template and analyzer versions, confidence, limitations, and deterministic validation results.
 
-### Model-assisted ownership
+**The asymmetry rule.** A model judgement that dismisses a gap needs higher confidence than one
+that detects it. A false detection produces recoverable extra work; a false dismissal silently
+hides the thing the product exists to find. Thresholds are config-owned and separate.
 
-Configured models may classify nuanced intent, extract or reconcile bounded claims, summarize
-evidence, map questions and content gaps, create task plans, generate prompts, and draft content.
-These outputs are derived assertions, never raw truth. Each carries:
+No model output changes a headline metric, a score, or a correction.
 
-- selected evidence and context-package hash;
-- provider, model, prompt/template, skill, and analyzer versions;
-- confidence and limitations;
-- deterministic validation results;
-- review and memory-promotion state.
+## 9. Debt to delete
 
-No model output changes a headline metric or approved memory merely because it was generated.
+The next implementation session removes these rather than carrying them forward.
 
-## 9. Growth Agent architecture
+| Debt | Action |
+|---|---|
+| Approval classes `confirm_task`, `review_artifact`, `promote_memory`, `external_mutation` | Delete. Replace with the two decisions in §2. Nothing publishes externally, so `external_mutation` has no subject. |
+| "Approved Brand Memory" as a third data layer | Delete. Project facts plus `Correction` replace it. `BrandProfile` remains only as a compatibility read model until its consumers move. |
+| Memory-proposal / promotion state machines | Delete. There is no promotion; there are derivations and corrections. |
+| Prompt `proposed → active` review gate | Delete. Prompts are generated and active; the user edits or removes them. Scheduling the audit is the decision. |
+| FAQ-first sequencing as an architectural mandate | Delete. FAQ is one worked example of the content loop, not the required first slice. See §10. |
+| `docs/plans/faq-intelligence-first-slice.md` | Archived. Its durable content — question coverage states, brief contract, validation list — is folded into [`content-intelligence.md`](content-intelligence.md). |
+| Second page-analysis row (`PageUnderstanding` as a table) | Never create it. `SitePageAnalysis` becomes append-only; `PageUnderstanding` is its DTO name. |
+| Composite score renormalization over observed dimensions | Delete. Full denominator plus explicit coverage. |
+| "Precision" in product-facing success measures | Replace with acceptance rate. Reserve precision for held-out fixtures. |
+| Duplicate delivery sequences in `architecture.md` and elsewhere | Deleted. §10 below is the only one. |
+| `/issues` and `/opportunities` as standalone destinations | Fold into the owning workspace as filtered views; findings are contextual to their artifact. |
 
-The Growth Agent is a bounded application layer over typed domain tools:
+## 10. Delivery sequence
 
-```text
-request
-  -> classify task and required approvals
-  -> create AgentTaskRun
-  -> build/freeze TaskContextPackage
-  -> create bounded plan from allowed tools
-  -> execute tools through domain APIs
-  -> validate and persist working result
-  -> present evidence and requested approvals
-  -> promote only explicitly saved/approved memory
-```
-
-The model gateway is provider-neutral. Environment configuration selects an approved adapter,
-model, endpoint, and credential reference. The gateway exposes normalized capabilities for
-structured output, tool use, context size, usage, errors, and provenance. Arbitrary provider
-strings never leak into domain code, and a model may run only workflows matching its declared
-capabilities.
-
-The existing direct BYOK measurement routes remain separate. The Growth Agent cannot impersonate
-ChatGPT, Gemini, or Claude measurements or rewrite their persisted evidence.
-
-## 10. Selective context contract
-
-Every substantial generative or agent task uses a frozen `TaskContextPackage`, never an
-unbounded dump of the knowledge base.
-
-Context assembly is config-owned and task-specific:
-
-1. enforce workspace/project boundary;
-2. select eligible artifact types for the requested task;
-3. filter by entity, page, journey, audience, topic, industry pack, freshness, and approval;
-4. rank using structured relevance plus optional semantic retrieval;
-5. surface contradictions and unavailable evidence rather than hiding them;
-6. allocate section and total token budgets;
-7. record selected and omitted artifact counts, ids, versions, and hashes;
-8. redact secrets and disallowed personal data;
-9. freeze the manifest before provider I/O.
-
-Vector embeddings are disposable retrieval projections. They are never authorization filters,
-truth stores, or the only link back to evidence.
-
-## 11. Product workflow and UI
-
-The primary navigation becomes:
-
-1. **Site Intelligence** — Overview, Pages, Knowledge, Schema, Journeys, Evidence.
-2. **Content Intelligence** — Strategy, Inventory, Briefs, Drafts, Reviews, Verification.
-3. **Demand Intelligence** — Demand, Journeys, Prompts and Schedules, AI Visibility, Evidence.
-
-Visibility remains intact inside the Demand outcome loop while its current deep links continue
-to work. Recommended Actions become contextual action bundles across the three workspaces rather
-than a disconnected product.
-
-The Growth Agent has a project-level workspace and contextual entry points throughout the app:
-“Explain,” “Build roadmap,” “Create FAQ brief,” “Generate prompts,” and “Compare evidence.” The UI
-always shows which sources were used, which data was unavailable, and which changes need approval.
-
-## 12. Implementation plans and dependency graph
-
-| Plan | Outcome | Depends on |
-|---|---|---|
-| [`site-intelligence-primary-product.md`](site-intelligence-primary-product.md) | Reliable acquisition, shared knowledge foundation, Education v1, Commerce v1, first complete report | existing Site Health and project foundations |
-| [`content-intelligence.md`](content-intelligence.md) | FAQ-first briefs/generation/verification followed by broader strategy and content workflows | shared artifacts and Site Intelligence snapshots |
-| [`demand-intelligence.md`](demand-intelligence.md) | Correct GSC/GA4 projections, Demand Signals, prompt portfolios, schedules, and Visibility loop | shared artifacts; existing integrations, prompts, Traffic, Analytics, Visibility |
-| [`growth-agent.md`](growth-agent.md) | Bounded orchestration, selective context, approval-gated memory, and contextual UI | typed tools from all three intelligence domains |
-
-Recommended delivery order:
+**The dependency that governs everything: project facts precede content generation.** A brief
+cannot be assembled from assertions that do not exist.
 
 ```mermaid
 flowchart LR
-  F["Foundation contracts + lifecycle correctness"] --> E["Education Site Intelligence"]
-  E --> R["The Asian School complete report"]
-  F --> C["Commerce industry profile"]
-  E --> FAQ["FAQ-first Content loop"]
-  FAQ --> CI["Broader Content Intelligence"]
-  F --> D["Demand data correctness"]
-  D --> P["Prompt strategy + scheduled Visibility loop"]
-  E --> A["Growth Agent foundation"]
-  FAQ --> A
-  CI --> A
-  P --> A
+  F["0. Foundation contracts + lifecycle"] --> K["1. Knowledge contracts"]
+  K --> E["2. Education pack + first report"]
+  K --> D["3. Demand correctness"]
+  E --> C["4. Content loop"]
+  D --> C
+  E --> A["5. Growth Agent"]
+  C --> A
+  D --> A
+  A --> S["6. Schedules + Commerce + rollout"]
 ```
 
-The agent foundation can begin after the shared contracts exist, but broad orchestration ships
-only when the underlying typed tools are trustworthy.
+| # | Stage | Contains | Done when |
+|---|---|---|---|
+| 0 | Foundation | Queue/lifecycle reconciliation, pack loader, `page_kind`/`industry_role` split, append-only `SitePageAnalysis` | No drained task set renders as live; pack manifests freeze on the crawl |
+| 1 | Knowledge | Corpus inventory, entities, assertions, relations, contradictions, effective dates, coverage, corrections | Identical artifacts reproduce identical facts and scores |
+| 2 | Education + report | Education pack activation, The Asian School inventory and snapshot, opportunity bundles, first complete report | The report answers the §1 questions with traceable evidence and no live provider call from a read endpoint |
+| 3 | Demand correctness | GSC/GA4 report families, identity joins, journeys, demand signals, priorities | Signals trace to source rows and windows; unavailable ≠ zero |
+| 4 | Content loop | Inventory, strategy, gap→brief→draft→validate→edit→save→verify. FAQ is the first worked example | A user goes from a gap to a saved, validated draft and sees recrawl verification |
+| 5 | Growth Agent | Gateway, context packages, typed tools, task runs, agent workspace | No tool executes outside its task policy or project scope |
+| 6 | Rollout | Schedules, Commerce pack, contextual agent actions, exports | Commerce introduces no second knowledge model, fetcher, queue, or content pipeline |
 
-## 13. Cross-plan implementation rules
+Frontend work tracks these stages in
+[`frontend-growth-intelligence.md`](frontend-growth-intelligence.md) §10; three of its steps have
+no backend dependency and can start immediately.
 
-- Preserve UUIDs, workspace authorization, immutable artifacts, single-writer queue behavior,
-  coded errors, same-origin APIs, and version provenance.
-- Continue using the modular monolith and shared Postgres queue. Specialist intelligence
-  systems are modules and tools, not autonomous microservices.
-- Extend existing owners before adding storage or queues: Site Health, Content, Integrations,
-  Traffic, Analytics, Prompts, Opportunities, Schedules, and Visibility already ship useful
-  foundations.
-- Read APIs only project persisted artifacts. They never crawl, sync, call a model, or repair
-  state.
-- Configuration, catalogs, thresholds, templates, context budgets, industry registry data, and
-  model capabilities live under `core/config/*` or frontend config owners.
-- Greenfield schema changes fold into `0001_initial`; future sessions must reset and verify a
-  disposable database.
-- Every plan must include offline fixtures, deterministic validations, component tests,
-  workspace-isolation tests, and an opt-in live acceptance procedure.
-
-## 14. Program-level acceptance
+## 11. Program acceptance
 
 The architecture is accepted when one project can:
 
-1. create a low-friction project using only brand name and domain;
-2. optionally expand Business Knowledge over time;
-3. acquire and classify its relevant owned corpus using a frozen industry profile;
-4. produce a versioned Site Intelligence snapshot and complete report;
-5. save selected findings or facts into approved brand memory;
-6. detect role/journey question gaps and create a frozen evidence-grounded FAQ brief;
-7. generate, validate, review, and approve visible FAQ content plus optional matching JSON-LD;
-8. recrawl and verify the approved FAQ requirements without mutating earlier evidence;
-9. create broader content strategy and brief types through the same contracts;
-10. import GSC/GA4 data and create traceable Demand Signals;
-11. generate, edit, approve, and activate a prompt portfolio;
-12. run manual and scheduled Visibility measurement without blending results into site truth;
-13. resync/rerun and show what changed without mutating earlier evidence;
-14. ask the Growth Agent to explain and execute bounded tasks using a visible context manifest.
+1. create a project from name and domain alone;
+2. acquire and classify its relevant owned corpus under a frozen industry pack;
+3. produce a versioned Site Intelligence snapshot and complete report;
+4. show derived project facts, and let a user correct one and see the correction survive a recrawl;
+5. detect role, question, and journey gaps and group them into opportunities;
+6. build a frozen evidence-grounded brief from a gap;
+7. generate, automatically validate, edit, and save visible content, with unsupported claims blocked;
+8. recrawl and verify what was claimed, without mutating earlier evidence;
+9. import GSC/GA4 data and create traceable demand signals;
+10. generate a prompt portfolio and run manual and scheduled visibility measurement without blending
+    results into site truth;
+11. rerun and show what changed;
+12. ask the Growth Agent to explain and execute bounded tasks with a visible context manifest.
 
-## 15. Success measures
+## 12. Cross-plan implementation rules
 
-- **Knowledge:** relevant-corpus coverage, page-role confidence, entity/assertion provenance,
-  contradiction resolution, industry-profile eval maturity, and approved-memory reuse.
-- **Site:** actionable finding precision, journey coverage, schema/content/trust improvement,
-  and verified resolution after recrawl.
-- **Content:** FAQ-gap precision, brief acceptance, unsupported-claim rate, visible/schema parity,
-  draft-to-approved rate, time to useful revision, and post-publication verification.
-- **Demand:** query-to-page coverage, landing/event join coverage, demand-signal precision,
-  prompt acceptance, scheduled-run reliability, and priority stability under new data.
-- **Outcome:** qualified conversion signals when configured, organic demand growth, owned
-  citations, brand/product mentions, and share of voice. Outcome metrics validate strategy;
-  they do not rewrite evidence.
-- **Agent:** context precision, evidence citation rate, approval rate, tool success, cost and
-  latency per task, and zero unauthorized memory promotion or external mutation.
-
-## 16. Documentation transition
-
-This document and its four companion plans supersede the historical visibility-first and
-commerce-first planning retained under [`../archive/plans/`](../archive/plans/), including the
-former Site Health/Commerce foundation plan and old Content and Opportunities roadmaps. Archived
-files are migration context only; current shipped behavior is governed by the concise subsystem
-documents and code until each gated implementation slice lands.
-
-The first implementation session begins with [`../../Agents.md`](../../Agents.md),
-[`../README.md`](../README.md), architecture, invariants, backend/frontend ownership, the relevant
-canonical plan, and the current error contract. No plan text alone changes runtime behavior.
+- Preserve UUIDs, workspace authorization, immutable artifacts, single-writer queue behaviour,
+  coded errors, same-origin APIs, and version provenance.
+- Keep the modular monolith and the shared Postgres queue. Intelligence layers are modules and
+  tools, not microservices.
+- Extend existing owners before adding storage or queues. Site Health, Content, Integrations,
+  Traffic, Analytics, Prompts, Opportunities, Schedules, and Visibility already ship useful
+  foundations.
+- Read APIs project persisted artifacts only.
+- Configuration, catalogs, thresholds, templates, context budgets, confidence thresholds, and
+  registry data live under `core/config/*` or frontend config owners.
+- Schema changes fold into `0001_initial`; reset and verify a disposable database. Longitudinal
+  behaviour is proven against re-ingestable fixtures, not accumulated local state.
+- Every slice includes offline fixtures, deterministic validations, component tests,
+  workspace-isolation tests, and an opt-in live acceptance procedure.

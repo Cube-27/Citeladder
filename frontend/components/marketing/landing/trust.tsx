@@ -19,7 +19,7 @@ export function Trust() {
           <Eyebrow>{trust.kicker}</Eyebrow>
           <h2
             id="trust-title"
-            className="font-display text-foreground mt-6 max-w-[20ch] text-2xl font-semibold tracking-tight"
+            className="font-display text-foreground mt-6 max-w-[20ch] text-2xl font-semibold tracking-tight text-balance"
           >
             {trust.title}
           </h2>
@@ -30,7 +30,7 @@ export function Trust() {
               return (
                 <div
                   key={feature.title}
-                  className="bg-panel border-border shadow-card hover:shadow-card-hover flex gap-3.5 rounded-xl border p-4.5 transition-all duration-300"
+                  className="bg-panel border-border shadow-card hover:shadow-card-hover flex gap-3.5 rounded-xl border p-4.5 transition-shadow duration-300"
                 >
                   <span className="bg-accent-subtle/80 text-accent-text border-accent-border/60 flex size-9 shrink-0 items-center justify-center rounded-lg border shadow-xs">
                     <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />

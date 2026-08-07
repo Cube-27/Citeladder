@@ -3,7 +3,8 @@
 > **Status:** current runtime authority and migration boundary
 > **Shape:** FastAPI modular monolith plus separate workers
 > **Durable state and queue:** PostgreSQL
-> **Target product:** Site, Content, and Demand Intelligence orchestrated by the Growth Agent
+> **Target product:** four layers — Site, Content, and Demand Intelligence, orchestrated by the Growth Agent
+> **User decisions:** save content; run and schedule audits. Everything else is automatic.
 
 The backend already contains valuable foundations built during the visibility-first phase. Those
 foundations are retained where they have a clear owner and extended into the Growth Intelligence
@@ -41,15 +42,15 @@ not a reason to put business logic in routers, connectors, workers, or generic u
 | Subsystem | Current state | Growth Intelligence role |
 |---|---|---|
 | Auth/workspaces/projects | Shipped | Tenant and project boundary |
-| Brand identity/profile | Shipped/partial | Transitional curated summary; evolves into approved typed memory |
+| Brand identity/profile | Shipped/partial | Transitional curated summary; evolves into project facts plus corrections |
 | Site Health | Shipped | Acquisition and deterministic foundation for Site Intelligence |
 | Content generation | Basic v1 shipped | Retained queue/result owner; extended with strategy, briefs, FAQ-first workflows, review, and verification |
 | Integrations/Traffic/Analytics | Shipped | Persisted source evidence and projections for Demand Intelligence |
 | Prompts/Audits/Visibility | Shipped | Reviewed prompt resources and answer-engine measurement loop inside Demand Intelligence |
 | Opportunities | Shipped | One action store and supersede-not-mutate history across all intelligence systems |
 | Commerce catalog/product analysis | Shipped/partial | Specialized identity source consumed by the shared Commerce industry profile |
-| Knowledge domain | Planned | Entities, assertions, relations, contradictions, approved memory, and selective retrieval |
-| Growth Agent domain | Planned | Task runs, typed tools, context packages, approvals, and conversations |
+| Knowledge domain | Planned | Entities, assertions, relations, contradictions, corrections, and selective retrieval |
+| Growth Agent domain | Planned | Task runs, typed tools, context packages, and conversations |
 
 ## Canonical data layers
 
@@ -65,11 +66,12 @@ Current `SitePageAnalysis`, snapshots, metrics, opportunities, traffic/analytics
 generation evidence, and content outputs are extended rather than duplicated. New projections
 carry direct source IDs and all relevant pack/analyzer/rule/formula/model versions.
 
-### Approved memory
+### Corrections
 
-`BrandProfile` remains a compatibility summary. The target knowledge owner stores typed approved
-items and transition history. Crawls and models create proposals; only an explicit user transition
-promotes durable memory.
+`BrandProfile` remains a compatibility read model. The target knowledge owner stores derived facts
+plus typed `Correction` rows. Facts are recomputable projections; a correction is the one durable
+user override, and no crawl, import, or model output may overwrite it. There is no separate
+approved-memory store and no promotion state machine.
 
 ## Site Intelligence migration
 
@@ -79,6 +81,9 @@ promotes durable memory.
 - Separate corpus inventory admission from HTML analysis admission so supported documents such as
   PDFs can be inventoried and selectively extracted.
 - Split `SitePageAnalysis.page_type` into generic `page_kind` and pack-specific `industry_role`.
+- Make `SitePageAnalysis` append-only on `(artifact_id, analyzer_version, pack_id, pack_version)`
+  with one `is_current` row per corpus item. It stays the single page-understanding owner;
+  `PageUnderstanding` is its DTO name, never a second table.
 - Freeze industry registry/version and classifier evidence on the crawl and derived rows.
 - Add typed knowledge only when cross-page query, contradiction, approval, or context selection
   cannot be represented cleanly by current projections.
@@ -90,8 +95,8 @@ promotes durable memory.
 1. persisted content inventory and strategy snapshot;
 2. immutable `ContentBrief`;
 3. frozen `TaskContextPackage`;
-4. FAQ-first skill and validation;
-5. mutable review revision with append-only transitions;
+4. content skills and automatic validation;
+5. mutable revision with append-only transitions, ending in the user's save;
 6. publication claim separate from publication observation;
 7. recrawl, demand, and visibility verification.
 
@@ -104,8 +109,9 @@ time-bounded observations and `DemandSignal` projections over GSC, GA4, Site, Co
 Visibility sources. Page identity and event/journey configuration must be correct before signal
 or conversion interpretation.
 
-Prompt resources retain proposed/active/archived lifecycle. Generated candidates carry source
-signal/knowledge/context provenance and require review before activation. Scheduled Visibility
+Prompt resources reduce to active and archived. Generated candidates carry source signal,
+knowledge, and context provenance and become active directly — nothing is measured until the user
+runs or schedules an audit, so a second gate on the prompt buys no safety. Scheduled Visibility
 runs create new immutable audits through the existing queue.
 
 ## Growth Agent migration
@@ -113,7 +119,7 @@ runs create new immutable audits through the existing queue.
 The agent does not call arbitrary internal URLs or query the database directly. A typed tool
 registry wraps domain services. Every substantial task persists:
 
-- task type, scope, policy version, and approvals;
+- task type, scope, policy version, and user decisions taken;
 - frozen context package;
 - bounded plan and steps;
 - provider/model/capability versions;
@@ -143,6 +149,8 @@ never replaces canonical PostgreSQL task state.
 - All routes are `/api/v1` and workspace-authorized.
 - Read routes project persisted data only.
 - Mutations that can be retried use idempotency keys and coded errors.
+- Exactly two mutation families require a user decision: saving content, and running or scheduling
+  an audit. Analysis and derivation endpoints never gate.
 - Lists are bounded and paginated; coverage/truncation are explicit.
 - DTOs never expose secrets, raw unbounded bodies, or unrelated private evidence.
 - The canonical error envelope is documented in [`api-error-contract.md`](api-error-contract.md).

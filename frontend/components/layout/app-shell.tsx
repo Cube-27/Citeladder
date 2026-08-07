@@ -80,7 +80,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             <div aria-hidden className="hidden md:block" />
           </header>
 
-          <main className="content-scroll min-h-0 flex-1 overflow-y-auto pb-16 md:pb-0">
+          <main
+            id="main"
+            className="content-scroll safe-bottom min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0"
+          >
             <div className="mx-auto grid w-full max-w-[var(--content-max-width)] gap-[var(--card-gap)] p-[var(--content-gutter)]">
               <PageHeader />
               {children}
@@ -88,7 +91,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           </main>
 
           <nav
-            className="border-border bg-panel fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t md:hidden"
+            className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t md:hidden"
             aria-label="Primary mobile navigation"
           >
             {[

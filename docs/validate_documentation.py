@@ -11,8 +11,10 @@ Run from the repository root:
 
 from __future__ import annotations
 
+import os
 import re
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import unquote
@@ -24,7 +26,6 @@ ACTIVE_EXACT = {
     "Agents.md",
     "COMMANDS.md",
     "CONTRIBUTING.md",
-    "PRODUCT.md",
     "README.md",
     "Review.md",
     "docs/DEVELOPMENT.md",
@@ -47,7 +48,7 @@ ACTIVE_EXACT = {
     "docs/plans/growth-agent.md",
     "docs/plans/knowledge-kernel-and-industry-pack-spec.md",
     "docs/plans/codex-site-intelligence-wiring-handoff.md",
-    "docs/plans/faq-intelligence-first-slice.md",
+    "docs/plans/frontend-growth-intelligence.md",
     "docs/plans/industry-packs/README.md",
 }
 ACTIVE_PREFIXES = (
@@ -57,11 +58,27 @@ ACTIVE_PREFIXES = (
     ".github/",
 )
 DOCUMENT_SUFFIXES = {".md", ".mdx", ".rst", ".txt"}
+# Generated trees. None of these are repository documents, and all of them are
+# git-ignored, so anything found inside is build output rather than authored
+# content. `frontend/.next/` matters most: its `standalone/` bundle vendors a
+# second node_modules whose symlinks raise PermissionError on Windows, which
+# made this guard unrunnable on any machine with a built frontend. Playwright's
+# `test-results/` writes `error-context.md` files, which otherwise get reported
+# as unclassified authorities on every failed visual run.
 SKIP_PREFIXES = (
     ".git/",
-    "frontend/node_modules/",
+    "node_modules/",
     ".venv/",
     "backend/.venv/",
+    "frontend/node_modules/",
+    "frontend/.next/",
+    "frontend/out/",
+    "frontend/build/",
+    "frontend/dist/",
+    "frontend/coverage/",
+    "frontend/test-results/",
+    "frontend/playwright-report/",
+    "frontend/.playwright/",
 )
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\((?P<target>[^)]+)\)")
 
@@ -94,14 +111,29 @@ def _is_repository_document(path: Path) -> bool:
     return len(parts) == 1 or rel.startswith(("docs/", "backend/docs/", "frontend/"))
 
 
+def _iter_files() -> Iterator[Path]:
+    """Walk the repository, pruning skipped trees before touching them.
+
+    `Path.rglob` descends into every directory and only then lets the caller
+    filter, so a vendored `node_modules` under `frontend/.next/standalone/`
+    gets stat'ed and raises `PermissionError` on Windows. Pruning in `os.walk`
+    keeps the guard runnable on a machine with a built frontend, and skips a
+    large amount of pointless I/O everywhere else.
+    """
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        rel_dir = Path(dirpath).relative_to(ROOT).as_posix()
+        prefix = "" if rel_dir == "." else f"{rel_dir}/"
+        dirnames[:] = [
+            name
+            for name in dirnames
+            if not f"{prefix}{name}/".startswith(SKIP_PREFIXES + (ARCHIVE_PREFIX,))
+        ]
+        for name in filenames:
+            yield Path(dirpath) / name
+
+
 def _markdown_files() -> list[Path]:
-    return sorted(
-        path
-        for path in ROOT.rglob("*.md")
-        if path.is_file()
-        and not _relative(path).startswith(SKIP_PREFIXES)
-        and not _relative(path).startswith(ARCHIVE_PREFIX)
-    )
+    return sorted(path for path in _iter_files() if path.suffix.lower() == ".md")
 
 
 def _link_path(source: Path, raw_target: str) -> Path | None:
@@ -131,8 +163,8 @@ def validate() -> list[Issue]:
         if directory.exists():
             issues.append(Issue(_relative(directory), "superseded documentation directory is active"))
 
-    for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or not _is_repository_document(path):
+    for path in sorted(_iter_files()):
+        if not _is_repository_document(path):
             continue
         if not _is_active_document(path):
             issues.append(
@@ -172,7 +204,6 @@ def validate() -> list[Issue]:
         required_fragments = (
             "architecture.md",
             "growth-intelligence-platform.md",
-            "faq-intelligence-first-slice.md",
             "../backend/app/core/config/industry_packs/README.md",
             "codex-site-intelligence-wiring-handoff.md",
         )
@@ -197,8 +228,8 @@ def main() -> int:
         return 1
     active_count = sum(
         1
-        for path in ROOT.rglob("*")
-        if path.is_file() and _is_repository_document(path) and _is_active_document(path)
+        for path in _iter_files()
+        if _is_repository_document(path) and _is_active_document(path)
     )
     archived_count = sum(1 for path in (ROOT / "docs/archive").rglob("*") if path.is_file())
     print(f"Documentation boundary valid: {active_count} active documents, {archived_count} archived files.")

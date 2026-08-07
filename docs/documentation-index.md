@@ -21,20 +21,19 @@ states the migration starting point.
 |---|---|
 | [`../Agents.md`](../Agents.md) | Mandatory agent bootstrap, invariants, and read-on-demand map |
 | [`README.md`](README.md) | Documentation read order and active-plan overview |
-| [`../PRODUCT.md`](../PRODUCT.md) | Design-tool product-positioning context; subordinate to this architecture and current code |
 | [`architecture.md`](architecture.md) | Canonical product architecture and long-term vision |
 | [`plans/growth-intelligence-platform.md`](plans/growth-intelligence-platform.md) | Master program architecture, boundaries, and dependency graph |
 | [`plans/site-intelligence-primary-product.md`](plans/site-intelligence-primary-product.md) | Crawler, corpus, page understanding, knowledge, reports, Education and Commerce |
-| [`plans/content-intelligence.md`](plans/content-intelligence.md) | Strategy, briefs, generation, validation, review, and verification |
+| [`plans/content-intelligence.md`](plans/content-intelligence.md) | Strategy, briefs, generation, automatic validation, save, and verification |
 | [`plans/demand-intelligence.md`](plans/demand-intelligence.md) | GSC/GA4, journeys, demand signals, prompts, and Visibility |
-| [`plans/growth-agent.md`](plans/growth-agent.md) | Typed tools, selective context, approvals, memory, orchestration, and schedules |
+| [`plans/growth-agent.md`](plans/growth-agent.md) | Typed tools, selective context, corrections, orchestration, and schedules |
+| [`plans/frontend-growth-intelligence.md`](plans/frontend-growth-intelligence.md) | App IA migration, shared insight/evidence components, landing page, website content, and UI debt |
 
-## Knowledge and first implementation slice
+## Knowledge and industry packs
 
 | Document | Role |
 |---|---|
 | [`plans/knowledge-kernel-and-industry-pack-spec.md`](plans/knowledge-kernel-and-industry-pack-spec.md) | Stable knowledge contracts, persistence, pack lifecycle, and migration mapping |
-| [`plans/faq-intelligence-first-slice.md`](plans/faq-intelligence-first-slice.md) | First complete classify → gap → generate → review → verify workflow |
 | [`../backend/app/core/config/industry_packs/README.md`](../backend/app/core/config/industry_packs/README.md) | Canonical executable catalog authority, layout, maturity, source snapshot, and validation |
 | [`../backend/app/core/config/industry_packs/schema/industry-pack.schema.json`](../backend/app/core/config/industry_packs/schema/industry-pack.schema.json) | Normative machine-readable pack schema |
 | [`../backend/app/core/config/industry_packs/PAGE_ANALYSIS_AUDIT.md`](../backend/app/core/config/industry_packs/PAGE_ANALYSIS_AUDIT.md) | Audit of the shipped generic classifier and exact migration boundary |
@@ -69,7 +68,7 @@ operations, or design constraints. They are not alternate product roadmaps.
 | [`frontend-architecture.md`](frontend-architecture.md) | Shipped frontend ownership, API-contract layer, and route behavior |
 | [`invariants.md`](invariants.md) | Hard cross-cutting runtime invariants |
 | [`api-error-contract.md`](api-error-contract.md) | Canonical error envelope and coded failures |
-| [`design.md`](design.md) | Design tokens and interaction rules |
+| [`design.md`](design.md) | Design tokens, screen geometry, the insight object, and interaction rules |
 | [`site-health.md`](site-health.md) | Shipped generic Site Health behavior until Site Intelligence slices replace it |
 | [`commerce-intelligence.md`](commerce-intelligence.md) | Current Commerce specialization boundary within the shared intelligence architecture |
 | [`integrations-traffic-analytics.md`](integrations-traffic-analytics.md) | Current persisted integration/traffic evidence and Demand migration boundary |

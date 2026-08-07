@@ -23,7 +23,7 @@ export function Hero() {
         <HeroEntrance className="mx-auto max-w-5xl text-center">
           <div className="flex justify-center">
             <div className="bg-accent-subtle/80 text-accent-text border-accent-border/80 inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium shadow-xs backdrop-blur-sm">
-              <span className="bg-accent size-1.5 animate-pulse rounded-full" />
+              <span className="bg-accent size-1.5 animate-pulse rounded-full" aria-hidden />
               <span>{hook.eyebrow}</span>
             </div>
           </div>
@@ -40,7 +40,7 @@ export function Hero() {
             <ButtonLink
               href={DEMO_HREF}
               variant="primary"
-              className="hover:shadow-card-hover w-full shadow-sm transition-all sm:w-auto"
+              className="hover:shadow-card-hover w-full shadow-sm transition-shadow sm:w-auto"
             >
               {hook.primaryCta}
               <ArrowRight aria-hidden />

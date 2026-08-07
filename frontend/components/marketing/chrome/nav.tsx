@@ -19,10 +19,11 @@ import {
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
+import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
+
 import { Wordmark } from '../primitives/wordmark';
 import { DropItemLink, MobileItemLink } from './nav-items';
 
-const ACTIVE_PROJECT_STORAGE_KEY = 'citeladder.active-project-id';
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 function hasStoredActiveProject(): boolean {
@@ -193,7 +194,7 @@ export function MarketingNav() {
       data-marketing-nav
       data-scrolled={scrolled ? 'true' : undefined}
       className={cn(
-        'fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300',
+        'safe-top fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300',
         // Tesla frosted-glass nav: transparent over the hero, then a
         // three-quarter white with a backdrop blur once the page scrolls.
         surfaceVisible
@@ -373,7 +374,7 @@ export function MarketingNav() {
       {mobileOpen && (
         <div
           id="mobile-menu"
-          className="border-border-subtle bg-background-alt max-h-[calc(100dvh-4rem)] overflow-y-auto border-t px-6 py-5 lg:hidden"
+          className="border-border-subtle bg-background-alt safe-bottom max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t px-6 py-5 lg:hidden"
         >
           {NAV_DROPS.map(({ key, label, href, groups }) => (
             <div key={key} className="border-border-subtle border-b last:border-b-0">

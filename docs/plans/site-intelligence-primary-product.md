@@ -1,6 +1,9 @@
 # Site Intelligence and Knowledge Foundation
 
-> **Status:** proposed implementation plan, 2026-08-05.
+> **Status:** canonical implementation plan.
+>
+> **User decision in this layer:** run and schedule crawls. Classification, knowledge extraction,
+> gap detection, and prioritization all run automatically.
 >
 > **Parent architecture:** [`growth-intelligence-platform.md`](growth-intelligence-platform.md).
 >
@@ -139,7 +142,9 @@ Persist classifier evidence, confidence, pack id/version, and analyzer version. 
 path/schema/structure signals run first. A bounded semantic analyzer may adjudicate ambiguous
 roles from a frozen evidence package, but cannot invent an unsupported role.
 
-Extend normalized artifacts and `SitePageAnalysis` rather than adding a competing analysis row.
+`SitePageAnalysis` is the single page-understanding owner. Make it append-only, keyed by
+`(artifact_id, analyzer_version, pack_id, pack_version)` with one `is_current` row per corpus item,
+and project it as `PageUnderstanding`. Never add a competing per-page analysis table.
 Required generic projections include:
 
 - document identity, canonical/indexability, language, titles, headings, and dates;
@@ -172,8 +177,12 @@ Expose stable dimension scores plus coverage:
   continuity;
 - **Machine clarity** — schema graph quality, visible/schema parity, and entity consistency.
 
-Missing inputs renormalize any composite and always expose coverage. An industry pack may define
-a versioned readiness score, but no universal number may hide unavailable evidence.
+Composites are reported over the **full** denominator with coverage shown beside them. Never
+renormalize over only the observed dimensions: missing evidence correlates with weakness, so a site
+with no schema graph, no policy pages, and no author attribution is missing exactly the dimensions
+it would have failed, and renormalizing would score it above a site that published all three and
+scored badly. Low coverage is itself the finding. An industry pack may define a versioned readiness
+score, but no universal number may hide unavailable evidence.
 
 ### Findings and action bundles
 
@@ -290,7 +299,7 @@ Prefer extensions to current rows and add only contracts without an existing own
 
 - extend `SiteCrawl.configuration` with acquisition policy and frozen registry/core/module/industry-profile snapshots;
 - extend `SiteUrl`/observation projections with disposition and document metadata;
-- extend `SitePageAnalysis` with page kind, industry role, content/knowledge/schema/journey
+- extend the append-only `SitePageAnalysis` with page kind, industry role, content/knowledge/schema/journey
   summaries, coverage, and component scores;
 - extend `SiteHealthSnapshot` into the versioned Site Intelligence projection;
 - add generic knowledge entity/assertion/relation projections only after proving they cannot be

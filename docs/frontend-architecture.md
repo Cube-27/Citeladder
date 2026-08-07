@@ -2,7 +2,8 @@
 
 > **Status:** current frontend authority
 > **Framework:** Next.js App Router and TypeScript
-> **Product hierarchy:** Site Intelligence, Content Intelligence, Demand Intelligence, Growth Agent
+> **Product hierarchy:** four layers — Site, Content, Demand Intelligence, and the Growth Agent
+> **User decisions:** save content; run and schedule audits. No other blocking UI exists.
 
 The frontend is a projection and workflow layer over workspace-scoped backend contracts. It owns
 interaction, validation, accessibility, navigation, and local ephemeral state; it does not own
@@ -20,48 +21,27 @@ business truth, scoring, knowledge, authorization, or lifecycle decisions.
 
 ## Target information architecture
 
-### Site Intelligence
+Six destinations, flat. Sub-surfaces are tabs on the layer route, never sidebar children — two
+levels of navigation is the limit. The screen geometry every route uses is owned by
+[`design.md`](design.md).
 
-- Overview
-- Pages and documents
-- Knowledge
-- Schema and machine clarity
-- Journeys
-- Evidence
+```text
+Overview   /projects   project state, ranked insights, what changed
+Site       /site       corpus, pages, facts, schema, journeys, evidence
+Content    /content    strategy, inventory, briefs, drafts, verification
+Demand     /demand     search demand, journeys, prompts, visibility, coverage
+Agent      /agent      conversation, tasks, roadmap
+Reports    /reports    snapshots and exports
+Settings   /settings   project, integrations, providers, billing
+```
 
-Existing `/site-health`, `/issues`, page detail, and crawl history remain compatible while the
-navigation and projections migrate.
+Existing `/site-health`, `/issues`, `/traffic`, `/analytics`, `/prompt-research`, `/prompts`,
+`/visibility`, and `/runs` deep links stay usable through the migration. `/issues` and
+`/opportunities` do not survive as destinations: findings are insights attached to the artifact
+they concern.
 
-### Content Intelligence
-
-- Strategy
-- Inventory
-- Briefs
-- Drafts
-- Reviews
-- Verification
-
-The primary entry becomes an evidence-backed gap or strategy item. The current free-prompt
-composer remains an advanced custom task rather than the default workflow. FAQ brief and generation
-is the first complete path.
-
-### Demand Intelligence
-
-- Overview
-- Search demand
-- Journeys and configured outcomes
-- Prompts and schedules
-- AI Visibility
-- Evidence and integration coverage
-
-Existing `/traffic`, `/analytics`, `/prompt-research`, `/prompts`, `/visibility`, and `/runs` deep
-links remain usable while their navigation is grouped under Demand Intelligence.
-
-### Growth Agent
-
-A project-level workspace plus contextual actions: explain, compare, build roadmap, create FAQ
-brief, generate from approved brief, propose prompts, and recommend the next measurement. Every
-result shows sources, unavailable inputs, artifacts created, and approvals still required.
+The migration order lives in
+[`plans/frontend-growth-intelligence.md`](plans/frontend-growth-intelligence.md).
 
 ## Current route ownership
 
@@ -88,33 +68,36 @@ accelerate invalidation and presentation but never replaces persisted task state
 ## Evidence and knowledge UX
 
 - Every conclusion can open persisted evidence.
-- Approved, proposed, observed, historical, conflicting, unknown, unavailable, and rejected states
-  have distinct text labels and are not communicated by colour alone.
+- Observed, derived, corrected, historical, conflicting, unknown, unavailable, and excluded states
+  have distinct text labels and are never communicated by colour alone.
 - Context drawers show included sources and important omissions.
-- Memory approval cards state the exact typed item, evidence, scope, effective dates, and effect of
-  approval.
-- Industry role classification shows winning signals, alternatives, confidence, pack/version, and
-  any user override.
+- Derived facts are edited inline. A correction shows its author and timestamp, survives
+  recomputation, and can be withdrawn to restore the derived value. There is no approval card and
+  no review inbox.
+- Industry role classification shows winning signals, alternatives, confidence, pack and version,
+  and any correction.
+- Composites render over the full denominator with coverage beside them; never renormalize over
+  only the observed dimensions.
 
-## FAQ-first workflow
-
-The first Content Intelligence flow is:
+## Content workflow
 
 ```text
-page/journey gap
-  -> required and observed questions
-  -> select missing questions
-  -> inspect verified facts and limitations
-  -> create frozen FAQ brief
-  -> generate draft
-  -> show unsupported-claim/brief validation
-  -> human edit and approve
-  -> export or claim publication
-  -> show later recrawl verification
+insight
+  -> verified facts and limitations
+  -> frozen brief
+  -> generated draft
+  -> automatic validation, with unsupported claims blocked
+  -> user edits
+  -> SAVE            <- the user decision in this layer
+  -> export or publication claim
+  -> later recrawl verification
 ```
 
-Visible FAQ content and `FAQPage` JSON-LD are separate reviewable outputs. Markup cannot be approved
-when it does not match visible questions and answers.
+Everything before `SAVE` is automatic. There is no `in_review` or `approved` state: the user who
+generates is the user who edits and saves. Visible content and any mirroring structured data are
+separate outputs, and markup cannot be saved when it does not match the visible content.
+
+FAQ is one worked example of this flow, not a required first slice.
 
 ## Mobile and accessibility
 

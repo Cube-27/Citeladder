@@ -77,7 +77,7 @@ function TabButton({
       onClick={onSelect}
       onKeyDown={onKeyDown}
       className={cn(
-        'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 sm:text-sm',
+        'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-[background-color,color,box-shadow] duration-200 sm:text-sm',
         active
           ? 'text-foreground bg-panel font-medium'
           : 'text-muted hover:text-foreground hover:bg-panel/50',
@@ -110,7 +110,7 @@ function Chip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
+        'inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-[background-color,border-color,color] duration-200',
         selected
           ? 'border-accent-border/60 bg-accent-soft/80 text-accent-hover hover:bg-accent-subtle/80'
           : 'border-border-subtle text-muted hover:bg-background hover:text-secondary hover:border-border-bold/30 bg-panel',
@@ -276,7 +276,7 @@ export function ReviewStep({
                           aria-label={`Competitor ${index + 1} name`}
                           placeholder="Competitor name"
                           className={cn(
-                            'border-border-subtle bg-background/60 text-foreground focus:border-accent focus:ring-accent/20 focus:bg-panel text-sm transition-all focus:ring-1',
+                            'border-border-subtle bg-background/60 text-foreground focus:border-accent focus:ring-accent/20 focus:bg-panel text-sm transition-[background-color,border-color,box-shadow] focus:ring-1',
                             !competitor.selected && 'bg-well/40 line-through opacity-50',
                           )}
                         />
@@ -346,7 +346,7 @@ export function ReviewStep({
                 <li key={prompt.id}>
                   <div
                     className={cn(
-                      'flex items-center justify-between gap-3 rounded-xl border p-3 transition-all duration-200',
+                      'flex items-center justify-between gap-3 rounded-xl border p-3 transition-[background-color,border-color] duration-200',
                       prompt.selected
                         ? 'border-accent-border/60 bg-accent-soft/30 hover:bg-accent-soft/50'
                         : 'border-border-subtle bg-panel hover:bg-background/80 hover:border-border-bold/20',

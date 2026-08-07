@@ -37,7 +37,7 @@ export const metadata: Metadata = {
  */
 export default function FaqPage() {
   return (
-    <main>
+    <main id="main">
       <JsonLd data={faqPageJsonLd(FAQ_GROUPS)} />
       <PageHero
         centered

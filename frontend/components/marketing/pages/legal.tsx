@@ -27,7 +27,7 @@ function formatUpdated(iso: string): string {
  */
 export function LegalDocumentView({ document }: Readonly<{ document: LegalDocument }>) {
   return (
-    <main>
+    <main id="main">
       <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
         <div className="px-6-phone md:px-6-tablet mx-auto w-full max-w-3xl xl:px-6">
           <Reveal>

@@ -43,6 +43,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${publicSans.variable} ${manrope.variable}`}>
       <body>
         <span hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
+        {/* First tab stop on every route. Visually hidden until focused, so
+            keyboard and screen-reader users can skip repeated chrome. Each
+            layout marks its own landmark with `id="main"`. */}
+        <a href="#main" className="skip-link">
+          Skip to main content
+        </a>
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

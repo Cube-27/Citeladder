@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -533,8 +534,8 @@ export function OnboardingScreen() {
                     Continue
                   </Button>
                   {isAdditional ? (
-                    <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
-                      Cancel
+                    <Button asChild variant="ghost">
+                      <Link href="/projects">Cancel</Link>
                     </Button>
                   ) : null}
                 </div>

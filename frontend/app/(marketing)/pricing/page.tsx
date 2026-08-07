@@ -44,7 +44,7 @@ export const metadata: Metadata = {
  */
 export default function PricingPage() {
   return (
-    <main>
+    <main id="main">
       <PageHero
         centered
         eyebrow="Pricing"

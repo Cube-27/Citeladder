@@ -13,9 +13,11 @@ import { Panel, WallpaperPanel } from './wallpaper-panel';
 function Bar({ width, own = false }: Readonly<{ width: number; own?: boolean }>) {
   return (
     <span className="bg-background-alt block h-2 flex-1 overflow-hidden rounded-full">
+      {/* Scaled rather than sized: animating `width` relayouts the row on every
+          frame, while `transform` stays on the compositor. */}
       <span
-        style={{ width: `${width}%` }}
-        className={`block h-full rounded-full transition-all duration-300 ${
+        style={{ transform: `scaleX(${width / 100})` }}
+        className={`block h-full w-full origin-left rounded-full transition-transform duration-300 ${
           own ? 'bg-accent' : 'bg-border'
         }`}
       />

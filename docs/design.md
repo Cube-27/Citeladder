@@ -102,13 +102,98 @@ desktop).
 
 - Use sections, ledgers, tables, and split workspaces as page architecture. Cards
   support a section; they do not replace one. Avoid nested decorative cards.
-- A command-centre view uses a movement-and-actions split: project state first, a
-  dominant movement chart beside a ranked action queue, then a proof ledger.
 - Recommendations show impact, deterministic priority factors, affected scope,
   status, and links to persisted evidence. Do not invent confidence, effort,
   ownership, or causality.
 - Mobile retains every critical action. Tables become labelled records; filters
   and evidence use full-height sheets.
+
+#### Screen geometry
+
+Every product screen uses one geometry. Learning it once should mean knowing where
+to look on every page in the app.
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Project / context      Date · Compare      Search    Agent   │
+├────────────┬─────────────────────────────────────────────────┤
+│            │                                                 │
+│ Overview   │  Page title                          Actions    │
+│ Site       │  Supporting context                             │
+│ Content    │                                                 │
+│ Demand     │  ┌─────────┐ ┌─────────┐ ┌─────────┐            │
+│ Growth     │  │ Metric  │ │ Metric  │ │ Metric  │            │
+│            │  └─────────┘ └─────────┘ └─────────┘            │
+│ Reports    │                                                 │
+│            │  Primary analytical surface                     │
+│ Settings   │  ──────────────────────────────────────         │
+│            │                                                 │
+│            │  Insights / findings / table                    │
+└────────────┴─────────────────────────────────────────────────┘
+```
+
+Fixed responsibilities per region:
+
+| Region | Owns | Never |
+|---|---|---|
+| Top bar | Project and context switching, date range and comparison window, global search, agent entry | Page-specific actions |
+| Sidebar | The four layers plus Reports and Settings, flat and always visible | Nested trees or disabled future items |
+| Page header | Title, one line of supporting context, and this page's actions | Metrics |
+| Metric row | Three to five headline numbers, each with coverage | More than five, or a metric without provenance |
+| Analytical surface | The one chart, table, or comparison this page exists for | Competing equal-weight surfaces |
+| Insight list | Ranked insight objects (below) | Ad-hoc card shapes |
+
+Date range and comparison live in the top bar because they apply to the whole
+context, not to one chart. A page that needs its own time control is a page whose
+scope is wrong.
+
+#### The insight object
+
+The product model is *acquire evidence → understand → detect gaps → create
+opportunities → improve → verify → recommend next*. The reusable unit that model
+produces is not a dashboard card — it is an **insight**, and it is the single most
+important component in the system.
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ HIGH PRIORITY                              SITE          │
+│                                                          │
+│ 47 product pages have weak buying-intent coverage        │
+│                                                          │
+│ Evidence                                                 │
+│ 47 pages · /products/* · detected 2h ago                 │
+│                                                          │
+│ Why this matters                                         │
+│ Pack expects purchase questions on product detail roles  │
+│                                                          │
+│ Potential impact                         High            │
+│                                                          │
+│ [View evidence]                         [Resolve →]      │
+└─────────────────────────────────────────────────────────┘
+```
+
+Required anatomy, in this order:
+
+1. **Priority** and **source layer** — the layer chip is how the user learns which
+   system found this without reading the body.
+2. **Claim** — one sentence, specific, quantified where a count exists.
+3. **Evidence** — scope, selector, and observation time. Always resolves to
+   persisted evidence.
+4. **Why this matters** — grounded in a pack expectation, a demand signal, or a
+   contradiction. Never a causal claim, never an invented benchmark.
+5. **Potential impact** — from the deterministic priority formula, not a model.
+6. **Two actions** — inspect, and act.
+
+Rules:
+
+- One insight component, used identically in Site, Content, Demand, and the Growth
+  Agent. A layer that invents its own finding card breaks the product's coherence.
+- The same insight in two places is the same server ID and the same cache identity.
+- An insight with no resolvable evidence does not render.
+- Coverage and unknown states use their text labels; an insight never implies
+  completeness it does not have.
+- Insights are ranked by the deterministic formula. The agent may group and explain
+  them; it does not reorder them.
 
 ### Marketing and auth
 

@@ -1,6 +1,8 @@
 # Demand Intelligence, Prompt Strategy, and Visibility
 
-> **Status:** proposed implementation plan, 2026-08-05.
+> **Status:** canonical implementation plan.
+>
+> **User decision in this layer:** run and schedule audits. Everything else runs automatically.
 >
 > **Parent architecture:** [`growth-intelligence-platform.md`](growth-intelligence-platform.md).
 >
@@ -15,7 +17,7 @@ Demand Intelligence answers:
 - what audiences are asking or searching for;
 - which pages/entities/journeys currently serve that demand;
 - where demand, engagement, conversion actions, content, and AI visibility disagree;
-- which prompts should be proposed, prioritized, approved, measured, and scheduled;
+- which prompts should be generated, prioritized, measured, and scheduled;
 - whether later evidence changed after site/content work or recurring measurement.
 
 It does not claim causal conversion diagnosis from aggregate data, scrape search results, replace
@@ -133,7 +135,7 @@ low-friction `JourneyDefinition` configuration under Business Knowledge:
 - configured GA4 key events and optional supporting events;
 - attribution/observation window policy;
 - industry-pack origin or user-defined origin;
-- approval state, version, and effective dates.
+- version and effective dates.
 
 Education v1 proposes an admissions journey, but the user confirms event mappings. Commerce v1
 proposes product discovery, product consideration, checkout, and purchase journeys. Missing
@@ -197,15 +199,22 @@ to a compatible prior snapshot.
 
 ## 7. Prompt strategy
 
-### 7.1 Three maturity states
+### 7.1 Two states, not three
 
-1. **Provisional:** generated from approved business context, Site knowledge, industry-pack
-   archetypes, and current content/questions.
-2. **Evidence-prioritized:** rescored or proposed from Demand Signals when GSC/GA4 evidence exists.
-3. **Active:** user-edited/approved prompts included in Visibility measurement.
+1. **Active:** generated automatically from project facts, Site knowledge, pack archetypes, and
+   current content, then continuously rescored as GSC/GA4 evidence arrives. Active prompts are
+   eligible for measurement.
+2. **Archived:** removed by the user or superseded, and retained for historical audit
+   comparability.
 
-New evidence never silently rewrites active prompt text. It proposes a new candidate, priority,
-or archive recommendation.
+There is no proposed-then-approved gate. A prompt costs nothing until an audit runs, and **running
+or scheduling the audit is the user decision** — so gating the prompt as well is friction that buys
+no safety. The user edits or removes any prompt at any time, and the portfolio surface shows what
+would be measured on the next run before that run is scheduled.
+
+New evidence never silently rewrites active prompt text. It changes priority, or proposes a new
+candidate alongside the existing one. Historical audits keep the exact text they measured
+([`../invariants.md`](../invariants.md) §18).
 
 ### 7.2 `PromptCandidate` validity
 
@@ -219,16 +228,16 @@ Every candidate records:
 - why it is measurable and valuable;
 - generation context hash, provider/model, skill/template, and generator version;
 - deterministic validation, relevance, policy, normalized-hash dedupe, and diversity results;
-- proposed priority and its formula inputs;
-- review status and user edits.
+- priority and its formula inputs;
+- state and any user edits.
 
 Prompt generation is model-driven because natural, useful prompts cannot be produced by metrics
 alone. The knowledge/demand layer determines eligible context and evidence; the provider-neutral
 model proposes text; deterministic and semantic validators enforce grounding, topical relevance,
 cohort rules, deduplication, and portfolio coverage.
 
-Extend the existing `Prompt`/`Topic` workflow. Accepted candidates create or update proposed
-prompt resources through explicit user action, then existing status transitions activate them.
+Extend the existing `Prompt`/`Topic` workflow. Validated candidates become active prompt resources
+directly; the existing status transitions are reduced to active and archived.
 
 ### 7.3 Portfolio design
 
@@ -302,7 +311,7 @@ provider payload details in existing JSONB artifacts. All ids are UUIDs and work
 - Demand snapshot list/detail/recompute;
 - signal list/detail with filters for source, audience, intent, journey, entity, page, confidence,
   and status;
-- journey definitions and explicit approval/versioning;
+- journey definitions and versioning;
 - prompt-candidate generate/list/detail/edit/accept/archive;
 - portfolio coverage and recommendation projection;
 - linked Site/Content/Visibility comparison;
@@ -364,12 +373,12 @@ rendered as zero conversion.
 
 ### D4 — Prompt strategist
 
-- build task context, prompt-generation skill, validators, candidate review, portfolio coverage,
-  and existing Prompt activation links;
-- generate provisional prompts without integrations and evidence-prioritized prompts with them.
+- build task context, prompt-generation skill, validators, portfolio coverage, and the existing
+  Prompt links;
+- generate prompts without integrations, and rescore them from Demand Signals once they exist.
 
-**Gate:** candidates are grounded, non-duplicative, editable, and cannot become active without
-user approval.
+**Gate:** generated prompts are grounded, non-duplicative, and editable, and no prompt is measured
+until the user runs or schedules an audit.
 
 ### D5 — Visibility schedules, outcome loop, and product experience
 
@@ -378,7 +387,7 @@ user approval.
 - add outcome comparisons and the Demand Intelligence workspace;
 - surface contextual Growth Agent tools.
 
-**Gate:** a user can trace demand → approved prompt portfolio → manual or scheduled audit evidence
+**Gate:** a user can trace demand → active prompt portfolio → manual or scheduled audit evidence
 → later demand/site evidence; every schedule slot is idempotent, creates a new frozen audit, and no
 read path makes an external call or comparison asserts unsupported causality.
 
@@ -395,13 +404,13 @@ read path makes an external call or comparison asserts unsupported causality.
 
 ### The Asian School
 
-- create provisional education prompts from approved context and Site knowledge before Google
+- create education prompts from project facts and Site knowledge before Google
   integrations;
 - after GSC/GA4 sync, create demand-to-page signals and reprioritize candidate prompts;
 - configure the admissions journey and required key events;
 - show measurement gaps until the relevant events/data exist;
-- approve an admissions prompt portfolio, schedule recurring Visibility measurement, and prove
-  each due slot freezes the active prompts/provider configuration into a new audit;
+- review the generated admissions prompt portfolio, schedule recurring Visibility measurement, and
+  prove each due slot freezes the active prompts and provider configuration into a new audit;
 - relate later Visibility and site/content snapshots descriptively.
 
 ## 14. Verification matrix
@@ -411,9 +420,9 @@ read path makes an external call or comparison asserts unsupported causality.
 - projection tests for cross-provider idempotency, complete provenance, joins, aggregates, and
   windows;
 - pure signal/prioritization tests and semantic-mapping fixtures;
-- prompt context, grounding, validation, dedupe, portfolio, approval, frozen-audit, and scheduled-slot
+- prompt context, grounding, validation, dedupe, portfolio, frozen-audit, and scheduled-slot
   idempotency/pause/resume tests;
 - component tests for workspace isolation, coded errors, queues, snapshots, schedules, and exports;
-- frontend tests for coverage, unavailable states, prompt review, journey configuration, and
+- frontend tests for coverage, unavailable states, prompt editing, journey configuration, and
   evidence drilldowns;
 - live Google sync remains opt-in; CI uses sanitized fixtures.

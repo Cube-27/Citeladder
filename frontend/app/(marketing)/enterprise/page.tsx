@@ -42,7 +42,7 @@ export const metadata: Metadata = {
  */
 export default function EnterprisePage() {
   return (
-    <main>
+    <main id="main">
       <EnterpriseHero />
       <EnterpriseOps />
       <EnterpriseLimits />

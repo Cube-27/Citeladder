@@ -555,4 +555,48 @@ samp {
   }
 }
 
+/* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
+   until focused, then it lands as a normal control against the panel fill. */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-text);
+  padding: 0.5rem 0.875rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-elevated);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* In-page anchors must clear the fixed marketing nav, otherwise `#platform`
+   and friends land underneath it. */
+[id] {
+  scroll-margin-top: calc(var(--topbar-height) + 1.5rem);
+}
+
+/* Fixed chrome respects the home indicator and notch on mobile. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Removes the 300ms tap delay without disabling pinch zoom. */
+a,
+button,
+[role='button'],
+summary,
+label {
+  touch-action: manipulation;
+}
+
 @media print { body { background: white !important; color: black !important; } }

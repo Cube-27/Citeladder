@@ -10,7 +10,7 @@
 This document converts the current growth-intelligence plans into implementable contracts for:
 
 - the stable project-scoped knowledge kernel;
-- immutable evidence, versioned working intelligence, and approved memory;
+- immutable evidence, versioned project facts, and durable user corrections;
 - executable, reviewed `IndustryPack` configuration;
 - Education and Commerce role/entity/journey/rule definitions;
 - selective context for content, prompts, reports, and the Growth Agent;
@@ -120,7 +120,14 @@ A PDF may be excluded from the HTML analyzer, but it must not be excluded from c
 
 ### `PageUnderstanding`
 
-One immutable understanding per source artifact and analyzer/pack version:
+**`PageUnderstanding` is the public API/DTO name for a `SitePageAnalysis` row. It is not a second
+table.** `SitePageAnalysis` becomes append-only, keyed by
+`(artifact_id, analyzer_version, pack_id, pack_version)`, with one `is_current` row per corpus
+item. Recomputing under a new pack version writes a new row instead of mutating the old one —
+which is what recrawl comparison needs — and satisfies both immutability and
+[`../invariants.md`](../invariants.md) §1 with one owner.
+
+One row per source artifact and analyzer/pack version:
 
 - source artifact and corpus item IDs;
 - generic `page_kind`;
@@ -174,17 +181,24 @@ Rules:
 
 Examples: campus `part_of` institution; program `offered_by` institution; variant `variant_of` product family; offer `applies_to` product.
 
-### `ApprovedMemoryItem`
+### `Correction`
 
-- typed entity/assertion/relation reference or strategy/guidance payload;
+A durable user override of one derived fact. There is no separate "approved memory" layer: facts
+are derived automatically and a correction is the only thing that survives recomputation.
+
+- target fact reference (entity, assertion, or relation);
+- typed subject, predicate, and value;
+- the derived value it replaces;
 - scope: `project | entity | journey | content | prompt`;
-- state and transition history;
-- approval actor/time/reason;
-- proposal/evidence refs;
-- effective dates and supersession link;
-- safe summary for context selection.
+- optional effective dates;
+- author and timestamp;
+- withdrawn flag, which restores the derived value.
 
-The existing `BrandProfile` remains a backward-compatible curated summary projection; it is not the long-term source of truth for typed memory.
+A crawl, import, or model output may supersede a derived fact. None of them may overwrite a
+correction. Generated content never becomes a fact automatically.
+
+`BrandProfile` remains a backward-compatible curated summary projection over facts and corrections
+during the transition; it is not a source of truth.
 
 ### `JourneyDefinition` and immutable versions
 
@@ -265,8 +279,13 @@ The registry contains:
 Use exactly:
 
 ```text
-core contract + reusable modules + one active industry profile + project-owned overrides
+stable core + one primary industry pack + reviewed capabilities + versioned project overlay
 ```
+
+This is the contract the pack validator enforces
+([`EXTENSION_CONTRACT.md`](../../backend/app/core/config/industry_packs/EXTENSION_CONTRACT.md),
+`capabilities.json`). Capabilities are cross-cutting modules a pack opts into — they strengthen
+requirements and never weaken shared controls.
 
 Avoid arbitrary multi-level inheritance. Project overrides are versioned and reviewable; they do
 not mutate shared registry data.
@@ -294,9 +313,9 @@ Profile maturity gates behavior:
 |---|---|
 | `SiteFetchArtifact` | Remains immutable site/document evidence owner |
 | `SiteUrl`/observations | Identity/admission base for corpus-item projection |
-| `SitePageAnalysis` | Extend; do not create a competing per-page analysis table |
+| `SitePageAnalysis` | The single page-understanding owner. Becomes append-only; `PageUnderstanding` is its DTO name, never a second table |
 | `SiteHealthSnapshot` | Keep as crawl projection; add intelligence snapshot only where lifecycle/scope differs |
-| `BrandProfile` | Keep as curated summary/read model projected from approved memory during transition |
+| `BrandProfile` | Keep as a curated read model projected from facts and corrections during transition |
 | `BrandProfileSuggestion` | Immutable proposal source; acceptance creates memory transitions and updates the summary projection |
 | `Opportunity`/`OpportunitySnapshot` | Reuse for deterministic actions; add role/journey evidence instead of parallel recommendation storage |
 | `Prompt`/`Topic` | Reuse for provisional/evidence-prioritized/active lifecycle |
@@ -310,9 +329,12 @@ Profile maturity gates behavior:
 2. Backfill `page_kind = page_type` for existing rows.
 3. Add `industry_role`, `industry_pack_id`, `industry_pack_version`, and `industry_role_evidence`.
 4. Add bounded `knowledge_summary` for initial extracted candidates/content units.
-5. Update analyzers/DTOs to use `page_kind` and role separately.
-6. Keep API `page_type` as a deprecated alias for one compatibility window.
-7. Do not reinterpret historical `page_type` values under a new pack.
+5. Add `is_current` and make the row append-only on
+   `(artifact_id, analyzer_version, pack_id, pack_version)`.
+6. Update analyzers and DTOs to use `page_kind` and role separately, and to project the row as
+   `PageUnderstanding`.
+7. Keep API `page_type` as a deprecated alias for one compatibility window.
+8. Do not reinterpret historical `page_type` values under a new pack.
 
 Per `Agents.md`, fold schema changes into `migrations/versions/0001_initial.py`; do not create a 0002 pre-launch migration.
 
@@ -411,7 +433,7 @@ Select by task, not by dumping the knowledge base.
 Order:
 
 1. explicit subject/task scope;
-2. relevant approved memory;
+2. relevant corrections;
 3. current assertions with strongest direct evidence;
 4. relevant page/document understandings;
 5. aligned demand/visibility observations;
@@ -472,7 +494,7 @@ A canonical growth-intelligence report includes:
 - aligned before/after observations;
 - limitations and provenance appendix.
 
-Every section distinguishes observed evidence, deterministic calculation, model/analyst interpretation, approved memory, and recommended action.
+Every section distinguishes observed evidence, deterministic calculation, model interpretation, user corrections, and recommended action.
 
 ## Testing contract
 
@@ -493,7 +515,7 @@ Every section distinguishes observed evidence, deterministic calculation, model/
 - workspace isolation;
 - crawl → understanding → snapshot persistence;
 - PDF inventory without HTML analysis;
-- proposal acceptance → approved memory + `BrandProfile` projection;
+- proposal acceptance → `Correction` + `BrandProfile` projection;
 - report reads persisted projections only;
 - frozen inspectable context package;
 - superseded history remains queryable.

@@ -377,7 +377,7 @@ function UnifiedPerformanceCard({
                 }
               }}
               className={cn(
-                'border-border grid cursor-pointer gap-1 p-4 transition-all select-none',
+                'border-border grid cursor-pointer gap-1 p-4 transition-[background-color,border-color] select-none',
                 accentBorder,
                 activeBg,
               )}
