@@ -377,7 +377,7 @@ function UnifiedPerformanceCard({
                 }
               }}
               className={cn(
-                'border-border grid cursor-pointer gap-1 p-4 transition-all select-none',
+                'border-border grid cursor-pointer gap-1 p-4 transition-[background-color,border-color] select-none',
                 accentBorder,
                 activeBg,
               )}
@@ -388,7 +388,7 @@ function UnifiedPerformanceCard({
                     <span className={eyebrowClasses}>{stat.label}</span>
                     <span
                       className={cn(
-                        'text-3xs inline-flex size-4 items-center justify-center rounded border font-bold transition-colors',
+                        'text-3xs inline-flex size-4 items-center justify-center rounded border font-medium transition-colors',
                         // Token classes, not an inline hex: the swatch has to
                         // follow the theme like every other mark.
                         isChecked
@@ -399,7 +399,7 @@ function UnifiedPerformanceCard({
                       ✓
                     </span>
                   </div>
-                  <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
+                  <span className={cn('mono text-xl font-medium', valueClass)}>{stat.value}</span>
                   <div className={cn('text-xs', deltaClass)}>{stat.delta}</div>
 
                   {stat.key === 'ctr' ? (
@@ -414,7 +414,7 @@ function UnifiedPerformanceCard({
               ) : (
                 <>
                   <span className={eyebrowClasses}>{stat.label}</span>
-                  <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
+                  <span className={cn('mono text-xl font-medium', valueClass)}>{stat.value}</span>
                   <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
                 </>
               )}

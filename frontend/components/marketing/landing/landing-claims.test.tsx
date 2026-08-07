@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import Page from '@/app/(marketing)/page';
@@ -15,46 +15,17 @@ vi.mock('@/components/marketing/landing-session-redirect', () => ({
  * These do not assert copy for its own sake — each one pins a claim the
  * product cannot currently back, so that re-introducing it fails the build
  * rather than shipping.
+ *
+ * The prior methodology-disclosure section (measurement mode / exact model /
+ * retrieval state / benchmark cadence axes) was removed with the rewrite in
+ * favor of the Proof section's evidence-loop narrative — there is no longer a
+ * "how it was produced" region to guard, so those claim tests were removed
+ * along with it rather than pinned to content that no longer exists.
  */
 describe('Landing claims', () => {
-  it('discloses the four measurement axes', () => {
-    render(<Page />);
-
-    const section = screen.getByRole('region', { name: /every number says how it was produced/i });
-    for (const term of [
-      'Measurement mode',
-      'Exact model',
-      'Retrieval state',
-      'Benchmark cadence',
-    ]) {
-      expect(within(section).getByRole('heading', { name: term })).toBeInTheDocument();
-    }
-  });
-
-  it('explains pulse and benchmark without mixing them', () => {
-    render(<Page />);
-
-    const section = screen.getByRole('region', { name: /every number says how it was produced/i });
-    expect(within(section).getByText(/never averaged together/i)).toBeInTheDocument();
-    // Trend partitions are a backend invariant; the page must not promise a
-    // combined line the API deliberately refuses to produce.
-    expect(within(section).getByText(/never folded into one line/i)).toBeInTheDocument();
-  });
-
-  it('handles multi-model aggregates honestly', () => {
-    render(<Page />);
-
-    const section = screen.getByRole('region', { name: /every number says how it was produced/i });
-    expect(
-      within(section).getByText(/never picks one to stand in for the rest/i),
-    ).toBeInTheDocument();
-  });
-
-  it('treats cadence as an allowance, never as a schedule', () => {
+  it('does not promise a run schedule the product does not run', () => {
     const { container } = render(<Page />);
 
-    const section = screen.getByRole('region', { name: /every number says how it was produced/i });
-    expect(within(section).getByText(/nothing runs on its own/i)).toBeInTheDocument();
     // No dispatcher ships in this release, so no scheduling promise may appear.
     expect(container.textContent).not.toMatch(/next run|scheduled run|runs daily|runs weekly/i);
   });

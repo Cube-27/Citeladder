@@ -155,16 +155,13 @@ function PageTypeAccordionRow({
         <TableCell numeric className="mono text-secondary">
           {row.analyzed_count}
         </TableCell>
-        <TableCell
-          numeric
-          className={cn('mono font-semibold', scoreTextClass(row.technical_score))}
-        >
+        <TableCell numeric className={cn('mono font-medium', scoreTextClass(row.technical_score))}>
           {formatScore(row.technical_score)}
         </TableCell>
-        <TableCell numeric className={cn('mono font-semibold', scoreTextClass(row.aeo_score))}>
+        <TableCell numeric className={cn('mono font-medium', scoreTextClass(row.aeo_score))}>
           {formatScore(row.aeo_score)}
         </TableCell>
-        <TableCell numeric className={cn('mono font-semibold', scoreTextClass(row.overall_score))}>
+        <TableCell numeric className={cn('mono font-medium', scoreTextClass(row.overall_score))}>
           {formatScore(row.overall_score)}
         </TableCell>
       </TableRow>
@@ -244,9 +241,7 @@ function PageTypeDetails({
               <Badge variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
                 {statusLabel(page.analysis_status)}
               </Badge>
-              <span
-                className={cn('mono text-xs font-semibold', scoreTextClass(page.overall_score))}
-              >
+              <span className={cn('mono text-xs font-medium', scoreTextClass(page.overall_score))}>
                 {formatScore(page.overall_score)}
               </span>
             </label>

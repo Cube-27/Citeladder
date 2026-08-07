@@ -254,7 +254,7 @@ export function LaunchDialog({
 
           {estimateQuery.data ? (
             <div className="border-border-subtle bg-well grid gap-1 rounded-lg border p-3 text-xs">
-              <span className="text-foreground font-semibold">
+              <span className="text-foreground font-medium">
                 {estimateQuery.data.execution_count} executions · up to{' '}
                 {estimateQuery.data.maximum_attempt_count} attempts
               </span>

@@ -14,9 +14,9 @@ import { Container } from '../primitives/section';
  * without any of the ARIA a hand-rolled accordion would need.
  */
 const GROUP_ANCHORS: Record<string, string> = {
-  Product: 'faq-product',
-  'Privacy & keys': 'faq-privacy',
-  'Site health': 'faq-site-health',
+  Platform: 'faq-platform',
+  'Industry packs': 'faq-packs',
+  'Data & security': 'faq-security',
   'Account & billing': 'faq-billing',
 };
 
@@ -24,7 +24,8 @@ function groupAnchor(group: FaqGroup): string {
   const fallback = group.heading
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/^-/, '')
+    .replace(/-$/, '');
   return GROUP_ANCHORS[group.heading] ?? `faq-${fallback}`;
 }
 
@@ -95,7 +96,7 @@ export function FaqGroups() {
             </div>
             {group.items.map((item) => (
               <details key={item.q} className="border-border-subtle group border-b">
-                <summary className="text-foreground hover:text-accent-text flex cursor-pointer list-none items-center justify-between gap-8 py-5 text-base font-semibold transition-colors [&::-webkit-details-marker]:hidden">
+                <summary className="text-foreground hover:text-accent-text flex cursor-pointer list-none items-center justify-between gap-8 py-5 text-base font-medium transition-colors [&::-webkit-details-marker]:hidden">
                   {item.q}
                   <Plus
                     aria-hidden

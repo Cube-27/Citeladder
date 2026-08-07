@@ -103,7 +103,7 @@ function LogoFace({
   return (
     <span className={cn('engine-rotor-face', alternate && 'engine-rotor-face-alternate')}>
       <ProviderLogo logo={logo.key} />
-      <span className="text-foreground text-base font-semibold">{logo.label}</span>
+      <span className="text-foreground text-base font-medium">{logo.label}</span>
     </span>
   );
 }
@@ -132,7 +132,7 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
         {LOGO_PAIRS.flat().map((logo) => (
           <li key={logo.key} className="engine-roster-static-item">
             <ProviderLogo logo={logo.key} />
-            <span className="text-base font-semibold">{logo.label}</span>
+            <span className="text-base font-medium">{logo.label}</span>
           </li>
         ))}
       </ul>

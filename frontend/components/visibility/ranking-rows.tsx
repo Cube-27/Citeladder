@@ -85,7 +85,7 @@ export function RankingRowsTable({
                   ) : null}
                 </span>
               </TableCell>
-              <TableCell numeric className={cn('mono font-semibold', bandClass)}>
+              <TableCell numeric className={cn('mono font-medium', bandClass)}>
                 {formatRate(row.mention_rate)}
               </TableCell>
               {showTrend ? (

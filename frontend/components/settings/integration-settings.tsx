@@ -70,8 +70,8 @@ function CallbackNotice({
     if (family === 'google') {
       return (
         <Alert tone="success">
-          <strong className="font-semibold">Google connected.</strong> Search Console and Analytics
-          4 are now linked on one shared OAuth grant. Initial syncs are queued and will appear in
+          <strong className="font-medium">Google connected.</strong> Search Console and Analytics 4
+          are now linked on one shared OAuth grant. Initial syncs are queued and will appear in
           Traffic and LLM Analytics once they complete.
         </Alert>
       );
@@ -79,23 +79,23 @@ function CallbackNotice({
     if (family === 'microsoft') {
       return (
         <Alert tone="success">
-          <strong className="font-semibold">Microsoft connected.</strong> Bing Webmaster Tools is
-          now linked. Initial syncs are queued and will appear in Traffic and LLM Analytics once
-          they complete.
+          <strong className="font-medium">Microsoft connected.</strong> Bing Webmaster Tools is now
+          linked. Initial syncs are queued and will appear in Traffic and LLM Analytics once they
+          complete.
         </Alert>
       );
     }
     return (
       <Alert tone="success">
-        <strong className="font-semibold">Integration connected.</strong> Initial syncs are queued
-        and will appear in Traffic and LLM Analytics once they complete.
+        <strong className="font-medium">Integration connected.</strong> Initial syncs are queued and
+        will appear in Traffic and LLM Analytics once they complete.
       </Alert>
     );
   }
   if (notice.error) {
     return (
       <Alert tone="danger">
-        <strong className="font-semibold">Connection failed.</strong> The provider did not complete
+        <strong className="font-medium">Connection failed.</strong> The provider did not complete
         the connect flow (<code className="font-mono text-xs">{notice.error}</code>). No grant was
         created and nothing was stored — you can retry whenever you&rsquo;re ready.
       </Alert>

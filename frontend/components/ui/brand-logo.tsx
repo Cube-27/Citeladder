@@ -51,7 +51,7 @@ export function BrandLogo({
     <span
       aria-hidden
       className={cn(
-        'bg-accent-soft text-accent-text relative grid shrink-0 place-items-center overflow-hidden font-semibold uppercase',
+        'bg-accent-soft text-accent-text relative grid shrink-0 place-items-center overflow-hidden font-medium uppercase',
         spec.className,
         className,
       )}

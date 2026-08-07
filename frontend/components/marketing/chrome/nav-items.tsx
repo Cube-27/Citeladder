@@ -15,12 +15,12 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         <span className="text-accent-text pt-2 font-mono text-xs tabular-nums">{item.num}</span>
       )}
       <span className="min-w-0">
-        <span className="text-foreground block text-sm leading-snug font-semibold">
+        <span className="text-foreground block text-base leading-snug font-semibold">
           {item.title}
         </span>
         {/* One line, always: a menu row that wraps turns the panel into a
             wall of paragraphs and doubles its height. */}
-        <span className="text-muted mt-2 block truncate text-sm leading-snug">{item.desc}</span>
+        <span className="text-muted mt-1 block truncate text-sm leading-snug">{item.desc}</span>
       </span>
     </>
   );

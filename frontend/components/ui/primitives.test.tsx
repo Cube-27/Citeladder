@@ -154,11 +154,11 @@ describe('Card', () => {
     render(<CardEyebrow>Visibility score</CardEyebrow>);
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
-    // ADS font.heading.xxsmall: 12/16 @600, muted — no uppercase, no
-    // tracking (design.md §7), and never the mono face (reserved for values).
+    // Micro-label: 12/16 @500, muted — no uppercase, no tracking, and never the
+    // mono face (reserved for values).
     expect(eyebrow.className).toContain('text-xs');
     expect(eyebrow.className).toContain('text-muted');
-    expect(eyebrow.className).toContain('font-semibold');
+    expect(eyebrow.className).toContain('font-medium');
     expect(eyebrow.className).not.toContain('uppercase');
     expect(eyebrow.className).not.toContain('tracking-');
     expect(eyebrow.className).not.toContain('font-mono');
@@ -188,10 +188,10 @@ describe('Table (dense)', () => {
     // Sticky header at the dense height, sentence-case sans micro-label.
     expect(headers[0].className).toContain('h-[var(--table-header-height)]');
     expect(headers[0].className).toContain('sticky');
-    // Table headers share the ADS eyebrow recipe (12/16 @600, no uppercase,
+    // Table headers share the eyebrow recipe (12/16 @500, no uppercase,
     // no tracking); mono stays for values.
     expect(headers[0].className).toContain('text-xs');
-    expect(headers[0].className).toContain('font-semibold');
+    expect(headers[0].className).toContain('font-medium');
     expect(headers[0].className).not.toContain('uppercase');
     expect(headers[0].className).not.toContain('font-mono');
     // Flat grid: header sits on the panel and is left-aligned even when numeric.

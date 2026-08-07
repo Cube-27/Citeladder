@@ -91,7 +91,7 @@ export function SegmentedControl<T extends string>({
               // Horizontal padding stays on the ADS ladder, which has no 10px rung.
               'focus-ring inline-flex h-full items-center justify-center rounded-full px-3 text-xs font-medium transition-colors',
               selected
-                ? 'bg-panel text-foreground shadow-card font-semibold'
+                ? 'bg-panel text-foreground shadow-card font-medium'
                 : 'text-secondary hover:text-foreground',
             )}
           >

@@ -27,12 +27,12 @@ function formatUpdated(iso: string): string {
  */
 export function LegalDocumentView({ document }: Readonly<{ document: LegalDocument }>) {
   return (
-    <main>
+    <main id="main">
       <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
         <div className="px-6-phone md:px-6-tablet mx-auto w-full max-w-3xl xl:px-6">
           <Reveal>
-            <p className="text-muted text-xs font-semibold tracking-wide uppercase">Legal</p>
-            <h1 className="font-display text-foreground mt-3 text-4xl md:text-5xl">
+            <p className="text-muted text-xs font-medium tracking-wide uppercase">Legal</p>
+            <h1 className="font-display text-foreground mt-3 text-2xl md:text-3xl">
               {document.title}
             </h1>
             <p className="text-muted mt-3 max-w-[60ch] text-base">{document.description}</p>
@@ -46,7 +46,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
       <Section tone="paper" rhythm="tight" dense>
         <div className="mx-auto grid max-w-3xl gap-10 lg:max-w-5xl lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-14">
           <nav aria-label="On this page" className="lg:sticky lg:top-24 lg:self-start">
-            <p className="text-muted mb-3 text-xs font-semibold tracking-wide uppercase">
+            <p className="text-muted mb-3 text-xs font-medium tracking-wide uppercase">
               On this page
             </p>
             <ol className="grid gap-2">
@@ -103,7 +103,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-accent-text hover:text-accent-hover text-sm font-semibold"
+                    className="text-accent-text hover:text-accent-hover text-sm font-medium"
                   >
                     {link.label}
                   </Link>

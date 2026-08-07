@@ -37,7 +37,7 @@ export const metadata: Metadata = {
  */
 export default function BlogPage() {
   return (
-    <main>
+    <main id="main">
       <BlogIndex />
     </main>
   );

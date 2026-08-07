@@ -29,9 +29,9 @@ describe('FAQ page (public marketing `/faq`)', () => {
     render(<Page />);
 
     expect(FAQ_GROUPS.map((group) => group.heading)).toEqual([
-      'Product',
-      'Privacy & keys',
-      'Site health',
+      'Platform',
+      'Industry packs',
+      'Data & security',
       'Account & billing',
     ]);
     for (const group of FAQ_GROUPS) {
@@ -106,19 +106,6 @@ describe('FAQ page (public marketing `/faq`)', () => {
     const billing = screen.getByRole('region', { name: 'Account & billing' });
     expect(within(billing).getByText('Do you mark up model usage?')).toBeInTheDocument();
     expect(within(billing).getByText(/never passes through us/i)).toBeInTheDocument();
-  });
-
-  it('names Perplexity, Copilot and AI Overview only as referral sources', () => {
-    render(<Page />);
-
-    // The one allowed mention of non-audited engines: the AI-referral
-    // classification answer, framed as detected referral traffic sources.
-    const product = screen.getByRole('region', { name: 'Product' });
-    const answer = within(product).getByText(/not audited engines/i);
-    expect(answer).toHaveTextContent(/Perplexity/);
-    expect(answer).toHaveTextContent(/Microsoft Copilot/);
-    expect(answer).toHaveTextContent(/Google AI Overview/);
-    expect(answer).toHaveTextContent(/referral/);
   });
 
   it('emits FAQPage JSON-LD that parses and covers every module item', () => {

@@ -70,7 +70,7 @@ export function EngineComparison({
                     <TableCell className="text-foreground font-medium">
                       {engineLabel(engine.logical_engine)}
                     </TableCell>
-                    <TableCell numeric className="mono text-foreground font-semibold">
+                    <TableCell numeric className="mono text-foreground font-medium">
                       {engine.visibility_score === null
                         ? PLACEHOLDER
                         : `${Math.round(engine.visibility_score)}%`}
@@ -150,7 +150,7 @@ function ShareOfVoiceRow({ row }: Readonly<{ row: RankingRow }>) {
       <span
         className={cn(
           'truncate text-sm',
-          row.is_brand ? 'text-foreground font-semibold' : 'text-secondary font-medium',
+          row.is_brand ? 'text-foreground font-medium' : 'text-secondary font-medium',
         )}
       >
         {row.name}

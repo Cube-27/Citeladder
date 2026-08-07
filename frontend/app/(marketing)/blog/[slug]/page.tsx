@@ -57,7 +57,7 @@ export default async function BlogPostPage({
   const post = POSTS.find((candidate) => candidate.slug === slug);
   if (!post) notFound();
   return (
-    <main>
+    <main id="main">
       <BlogPostView post={post} />
     </main>
   );

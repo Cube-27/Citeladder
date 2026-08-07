@@ -41,7 +41,7 @@ export const metadata: Metadata = {
  */
 export default function SolutionsPage() {
   return (
-    <main>
+    <main id="main">
       <SolutionsHero />
       <SolutionSegments />
       <SolutionsCta />

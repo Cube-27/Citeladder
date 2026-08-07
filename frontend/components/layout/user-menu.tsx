@@ -23,6 +23,8 @@ import { cn, emailInitials } from '@/lib/utils';
  * confirmed cookie revocation. A failed request keeps the authenticated UI and
  * offers a retry instead of pretending the session ended.
  */
+const SettingsIcon = ICONS.settings;
+
 export function UserMenu({ className }: Readonly<{ className?: string }>) {
   const { user, clearSession } = useSession();
 
@@ -39,7 +41,7 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
         <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors">
           <span
             aria-hidden
-            className="bg-background-alt text-2xs text-secondary flex size-6 shrink-0 items-center justify-center rounded-full font-semibold uppercase"
+            className="bg-background-alt text-2xs text-secondary flex size-6 shrink-0 items-center justify-center rounded-full font-medium uppercase"
           >
             {emailInitials(user.email)}
           </span>
@@ -50,7 +52,7 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           <DropdownSeparator className="bg-border-subtle my-1 h-px" />
           <DropdownItem asChild>
             <Link href="/settings">
-              <ICONS.settings className="size-4 shrink-0" aria-hidden />
+              <SettingsIcon className="size-4 shrink-0" aria-hidden />
               <span>Settings</span>
             </Link>
           </DropdownItem>

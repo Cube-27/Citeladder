@@ -51,7 +51,7 @@ export default function DemoPage() {
   const actionHref = bookingUrl ?? (salesEmail ? `mailto:${salesEmail}` : null);
 
   return (
-    <main>
+    <main id="main">
       <PageHero
         centered
         eyebrow={DEMO_HERO.eyebrow}

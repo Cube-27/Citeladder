@@ -143,28 +143,37 @@ export function SectionHeader({
   as?: 'h1' | 'h2' | 'h3';
   className?: string;
 }>) {
+  // Tesla ramp under the 40px ceiling: h1 hero (40), h2 section (28), h3
+  // compact (22). Never text-4xl/5xl — those exceed the ceiling.
   const HEADING = {
-    h1: 'text-5xl',
-    h2: 'text-4xl',
-    h3: 'text-3xl',
+    h1: 'text-3xl',
+    h2: 'text-2xl',
+    h3: 'text-xl',
   } as const;
 
   return (
     <Reveal
       className={cn(
-        'flex flex-col gap-4',
+        'flex flex-col gap-3',
         align === 'center' && 'items-center text-center',
         className,
       )}
     >
+      {/* The parent Reveal already centres this block when align==='center';
+          the Eyebrow is inline-flex, so an inner justify-center did nothing. */}
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
       <Heading
         id={headingId}
-        className={cn('font-display text-foreground max-w-[32ch] text-balance', HEADING[size])}
+        className={cn(
+          'font-display text-foreground max-w-[32ch] font-semibold tracking-tight text-balance',
+          HEADING[size],
+        )}
       >
         {title}
       </Heading>
-      {lead && <p className="text-muted max-w-[65ch] text-lg">{lead}</p>}
+      {lead && (
+        <p className="text-muted max-w-[65ch] text-base leading-relaxed md:text-lg">{lead}</p>
+      )}
     </Reveal>
   );
 }

@@ -40,8 +40,11 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-1.5 rounded-sm px-1.5 text-sm transition-colors',
+        // Active reads through the light-blue fill, the blue leading rail, and
+        // a Carbon-Dark label — not through weight. Every nav row stays at 500,
+        // so the sidebar holds the Tesla two-weight discipline.
         active
-          ? 'bg-accent-border text-accent-hover font-semibold'
+          ? 'bg-accent-border text-foreground font-medium'
           : 'text-secondary hover:text-foreground hover:bg-background-alt font-medium',
       )}
     >

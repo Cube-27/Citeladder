@@ -229,7 +229,7 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden rounded-lg border focus:outline-none"
+            className="border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg border focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border-subtle flex items-center gap-3 border-b px-4">
@@ -262,7 +262,7 @@ export function CommandPalette() {
               id={listboxId}
               role="listbox"
               aria-label="Commands"
-              className="content-scroll min-h-0 flex-1 overflow-y-auto p-1"
+              className="content-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
             >
               {results.length === 0 ? (
                 <p className={cn(ROW, 'text-muted')}>No matches for “{query}”</p>

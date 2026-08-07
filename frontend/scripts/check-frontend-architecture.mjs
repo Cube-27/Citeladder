@@ -5,7 +5,10 @@ const root = process.cwd();
 const failures = [];
 const budgets = [
   ['app/layout.tsx', 120],
-  ['app/globals.css', 560],
+  // Raised from 560 for the shared a11y primitives (skip link, anchor
+  // scroll-margin, safe-area helpers, touch-action). Token/recipe sprawl is
+  // still what this budget guards.
+  ['app/globals.css', 620],
   ['components/layout/app-shell.tsx', 150],
   ['app/(app)/layout.tsx', 100],
 ];

@@ -68,7 +68,7 @@ function StatusValue({ status }: Readonly<{ status: number | null }>) {
   if (status === null) {
     return <span className="mono text-muted text-sm font-medium">—</span>;
   }
-  return <span className="mono text-foreground text-sm font-semibold">{status}</span>;
+  return <span className="mono text-foreground text-sm font-medium">{status}</span>;
 }
 
 /**

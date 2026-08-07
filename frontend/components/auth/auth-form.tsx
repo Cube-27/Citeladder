@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff, Lock, Mail, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { type ComponentProps, type FormEventHandler, type ReactNode, useState } from 'react';
+import { type ComponentProps, type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/marketing/primitives/button';
 import { Alert as MktAlert } from '@/components/ui/alert';
@@ -24,10 +24,14 @@ export function AuthEmailField({
             {...inputProps}
             type="email"
             autoComplete="email"
+            spellCheck={false}
             placeholder="you@company.com"
             className="border-border-subtle bg-background-alt text-foreground placeholder:text-muted focus:border-accent focus:ring-accent-border focus:bg-panel pl-10"
           />
-          <Mail className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Mail
+            aria-hidden
+            className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          />
         </div>
       )}
     </MktField>
@@ -62,14 +66,17 @@ export function AuthPasswordField({
             placeholder={placeholder}
             className="border-border-subtle bg-background-alt text-foreground placeholder:text-muted focus:border-accent focus:ring-accent-border focus:bg-panel pr-10 pl-10"
           />
-          <Lock className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Lock
+            aria-hidden
+            className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          />
           <button
             type="button"
             onClick={() => setVisible((current) => !current)}
             className="text-muted hover:text-muted absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
             aria-label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
           >
-            {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
           </button>
         </div>
       )}
@@ -95,7 +102,7 @@ export function AuthFormShell({
   title: string;
   description: string;
   error?: string;
-  onSubmit: FormEventHandler<HTMLFormElement>;
+  onSubmit: ComponentProps<'form'>['onSubmit'];
   pending: boolean;
   submitLabel: string;
   pendingLabel: string;
@@ -109,9 +116,9 @@ export function AuthFormShell({
       <div className="bg-panel shadow-card relative rounded-2xl p-8 sm:p-10">
         <div className="mb-8 space-y-2 text-center sm:text-left">
           <div className="border-accent-border bg-background-alt text-accent-text mb-2 inline-flex size-10 items-center justify-center rounded-xl border">
-            <Icon className="size-5" />
+            <Icon className="size-5" aria-hidden />
           </div>
-          <h1 className="font-display text-foreground text-2xl font-bold sm:text-3xl">{title}</h1>
+          <h1 className="font-display text-foreground text-2xl font-medium sm:text-3xl">{title}</h1>
           <p className="text-muted text-sm">{description}</p>
         </div>
         {error ? (
@@ -121,7 +128,7 @@ export function AuthFormShell({
         ) : null}
         <form noValidate onSubmit={onSubmit} className="grid gap-5">
           {children}
-          <Button type="submit" className="mt-2 w-full font-semibold" disabled={pending}>
+          <Button type="submit" className="mt-2 w-full font-medium" disabled={pending}>
             {pending ? pendingLabel : submitLabel}
           </Button>
         </form>
@@ -129,7 +136,7 @@ export function AuthFormShell({
           {footerPrompt}{' '}
           <Link
             href={footerHref}
-            className="text-accent-text hover:text-accent-text font-semibold transition-colors"
+            className="text-accent-text hover:text-accent-text font-medium transition-colors"
           >
             {footerLabel}
           </Link>

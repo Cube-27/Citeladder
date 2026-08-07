@@ -154,11 +154,11 @@ function SummaryStrip({
         <div className="grid gap-1">
           <AccentEyebrow>Recommendation queue</AccentEyebrow>
           <p className="text-foreground text-sm">
-            <span className="mono font-semibold">{openCount}</span> open recommendations
+            <span className="mono font-medium">{openCount}</span> open recommendations
             <span className="text-muted"> · </span>
-            <span className="mono font-semibold">{highImpactCount}</span> high impact
+            <span className="mono font-medium">{highImpactCount}</span> high impact
             <span className="text-muted"> · </span>
-            <span className="mono font-semibold">{inProgressCount}</span> in progress
+            <span className="mono font-medium">{inProgressCount}</span> in progress
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-muted text-xs">

@@ -302,7 +302,7 @@ function TrendCard({
   domainMax?: number;
 }>) {
   const firstLabel = points[0]?.label ?? '';
-  const lastLabel = points[points.length - 1]?.label ?? '';
+  const lastLabel = points.at(-1)?.label ?? '';
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-2">
@@ -416,7 +416,7 @@ function CorrelationCard({
       <CardContent className="grid gap-3">
         <span
           className={cn(
-            'mono text-xl font-semibold',
+            'mono text-xl font-medium',
             display.insufficient ? 'text-subtle' : 'text-foreground',
           )}
         >
@@ -463,7 +463,7 @@ function EngineTile({ engine }: Readonly<{ engine: LlmAnalytics['engine_visibili
   const latest = latestValue(engine.series);
   const points = toCountChartPoints(engine.series);
   const firstLabel = points[0]?.label ?? '';
-  const lastLabel = points[points.length - 1]?.label ?? '';
+  const lastLabel = points.at(-1)?.label ?? '';
   return (
     <div className="border-border-subtle bg-background-alt grid gap-2 rounded-lg border p-4">
       <div className="flex items-center gap-2">
@@ -474,12 +474,12 @@ function EngineTile({ engine }: Readonly<{ engine: LlmAnalytics['engine_visibili
           )}
           aria-hidden
         />
-        <span className="text-foreground text-sm font-semibold">
+        <span className="text-foreground text-sm font-medium">
           {engineLabel(engine.logical_engine)}
         </span>
         <span
           className={cn(
-            'mono ms-auto text-base font-semibold',
+            'mono ms-auto text-base font-medium',
             latest === null ? 'text-subtle' : 'text-foreground',
           )}
         >

@@ -212,7 +212,7 @@ function EvidenceStat({
       <span className="text-muted text-xs">{label}</span>
       <span
         className={cn(
-          'truncate text-sm font-semibold',
+          'truncate text-sm font-medium',
           positive === true
             ? 'text-score-high'
             : positive === false

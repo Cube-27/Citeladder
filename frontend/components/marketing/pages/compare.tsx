@@ -47,17 +47,17 @@ export function CompareIndex() {
                 >
                   <span
                     aria-hidden
-                    className="bg-accent-soft text-accent-text font-display grid size-9 shrink-0 place-items-center rounded-md text-sm font-semibold"
+                    className="bg-accent-soft text-accent-text font-display grid size-9 shrink-0 place-items-center rounded-md text-sm font-medium"
                   >
                     {competitor.name.charAt(0)}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="text-foreground block text-base font-semibold">
+                    <span className="text-foreground block text-base font-medium">
                       {competitor.name}
                     </span>
                     <span className="text-muted mt-1 block text-sm">{competitor.tagline}</span>
                   </span>
-                  <span className="text-accent-text hidden items-center gap-2 text-sm font-semibold sm:inline-flex">
+                  <span className="text-accent-text hidden items-center gap-2 text-sm font-medium sm:inline-flex">
                     vs {competitor.name}
                     <ArrowRight
                       className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -74,7 +74,7 @@ export function CompareIndex() {
 
       <Section tone="sunken" rhythm="tight" aria-labelledby="compare-fair-title">
         <Reveal className="mb-6 max-w-3xl">
-          <h2 id="compare-fair-title" className="font-display text-foreground text-3xl">
+          <h2 id="compare-fair-title" className="font-display text-foreground text-2xl">
             Compared honestly.
           </h2>
           <p className="text-muted mt-3 text-base">
@@ -118,7 +118,7 @@ export function CompareIndex() {
 
       <Section tone="paper" rhythm="base" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-3xl">
+          <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-2xl">
             Don’t compare pages. Compare evidence.
           </h2>
           <p className="text-muted mx-auto max-w-[56ch] text-base">

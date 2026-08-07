@@ -1,56 +1,62 @@
 @import 'tailwindcss';
 
-@font-face {
-  font-family: 'Apfel Grotezk';
-  src: url('/fonts/ApfelGrotezk-Mittel.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Apfel Grotezk';
-  src: url('/fonts/ApfelGrotezk-Fett.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 600 700;
-  font-display: swap;
-}
-
-/* CiteLadder's single light-only design-system owner. */
+/*
+ * CiteLadder's single design-system owner (Tesla-derived).
+ *
+ * One typeface (Public Sans, self-hosted by next/font as the Universal Sans
+ * substitute), one chromatic accent (Electric Blue #3E6AE1), a four-stop
+ * neutral ramp, white + Light Ash surfaces, near-zero elevation, weights 400/500
+ * only, normal letter-spacing, and a 40px display ceiling. Marketing is
+ * monochrome-plus-blue; the authenticated app reuses the same chrome but keeps
+ * functional status/score/run/citation/chart colour because a data view has to
+ * stay legible at a glance. See docs/design.md.
+ *
+ * No @theme, raw hex, shared control recipe, or unregistered animation lives
+ * outside this file; `pnpm check:policy` enforces that.
+ */
 @theme {
-  --font-sans: var(--font-geist), system-ui, sans-serif;
-  --font-mono: var(--font-geist), system-ui, sans-serif;
-  --font-display: 'Apfel Grotezk', var(--font-geist), system-ui, sans-serif;
+  --font-sans: var(--font-public-sans), -apple-system, Arial, sans-serif;
+  --font-mono: var(--font-public-sans), -apple-system, Arial, sans-serif;
+  --font-display: var(--font-manrope), var(--font-public-sans), -apple-system, Arial, sans-serif;
 
-  --color-background: #f5f8f7;
-  --color-background-alt: #eef3f2;
+  /* Surfaces — Untitled UI Gray-50 canvas, white panels, crisp contrast. */
+  --color-background: #f9fafb;
+  --color-background-alt: #f2f4f7;
   --color-panel: #ffffff;
   --color-elevated: #ffffff;
-  --color-well: #e8efed;
-  --color-active: #dce7e5;
+  --color-well: #f2f4f7;
+  --color-active: #e4e7ec;
   --color-input: #ffffff;
-  --color-sidebar: #f9fbfa;
-  --color-surface-inverse: #162322;
-  --color-border: #cbd8d5;
-  --color-border-subtle: #dce5e3;
-  --color-border-strong: #9cafab;
-  --color-foreground: #162322;
-  --color-secondary: #405451;
-  --color-muted: #617370;
-  --color-subtle: #869591;
+  --color-sidebar: #ffffff;
+  --color-surface-inverse: #101828;
+
+  /* Borders — Untitled UI Gray-200 / Gray-300 crisp hairlines. */
+  --color-border: #e4e7ec;
+  --color-border-subtle: #f2f4f7;
+  --color-border-strong: #d0d5dd;
+
+  /* Text — Untitled UI Gray-900 Ink → Gray-700 Slate → Gray-600 → Gray-500. */
+  --color-foreground: #101828;
+  --color-secondary: #344054;
+  --color-muted: #475467;
+  --color-subtle: #667085;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
-  --color-link: #006d77;
+  --color-link: #2f57cc;
 
-  --color-accent: #006d77;
-  --color-accent-hover: #005a63;
-  --color-accent-active: #00444b;
+  /* Accent — Electric Blue, the sole chromatic move (UNCHANGED). White label on fill
+     clears AA (4.8:1); `-text` is a darker blue for accent-coloured text/icons
+     so small sizes stay AA on white. */
+  --color-accent: #3e6ae1;
+  --color-accent-hover: #3962cf;
+  --color-accent-active: #355bc1;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #e6f4f3;
-  --color-accent-soft: #eef8f7;
-  --color-accent-border: #a8dadc;
-  --color-accent-text: #005a63;
+  --color-accent-subtle: #eaf1fd;
+  --color-accent-soft: #f3f7fe;
+  --color-accent-border: #c8d6f6;
+  --color-accent-text: #2f57cc;
 
+  /* Answer-engine brand marks (functional identity, marketing engine chips). */
   --color-brand-openai: #10a37f;
   --color-brand-gemini: #4285f4;
   --color-brand-claude: #d97757;
@@ -60,6 +66,7 @@
   --color-brand-copilot-cyan: #00a4ef;
   --color-brand-copilot-green: #35c759;
 
+  /* Status — app-only functional colour; never carries meaning alone. */
   --color-success: #19724b;
   --color-success-bg: #e9f6ee;
   --color-success-border: #9fd2b4;
@@ -75,41 +82,43 @@
   --color-danger-bg: #fff0f0;
   --color-danger-border: #e7aaaa;
   --color-danger-text: #8f292e;
-  --color-info: #006d77;
-  --color-info-bg: #e6f4f3;
-  --color-info-border: #a8dadc;
-  --color-info-text: #005a63;
-  --color-neutral-bg: #eef3f2;
+  /* Info tracks the accent — informational == the brand's blue. */
+  --color-info: #3e6ae1;
+  --color-info-bg: #eaf1fd;
+  --color-info-border: #c8d6f6;
+  --color-info-text: #2f57cc;
+  --color-neutral-bg: #eeeeee;
 
   --color-sentiment-positive: #19724b;
   --color-sentiment-positive-bg: #e9f6ee;
   --color-sentiment-positive-text: #135d3d;
-  --color-sentiment-neutral: #617370;
-  --color-sentiment-neutral-bg: #eef3f2;
-  --color-sentiment-neutral-text: #405451;
+  --color-sentiment-neutral: #5c5e62;
+  --color-sentiment-neutral-bg: #eeeeee;
+  --color-sentiment-neutral-text: #393c41;
   --color-sentiment-negative: #b33a3a;
   --color-sentiment-negative-bg: #fff0f0;
   --color-sentiment-negative-text: #8f292e;
 
-  --color-citation-owned: #006d77;
-  --color-citation-owned-bg: #e6f4f3;
-  --color-citation-owned-border: #a8dadc;
-  --color-citation-owned-text: #005a63;
+  /* Owned evidence tracks the brand blue; competitor/third-party stay distinct. */
+  --color-citation-owned: #3e6ae1;
+  --color-citation-owned-bg: #eaf1fd;
+  --color-citation-owned-border: #c8d6f6;
+  --color-citation-owned-text: #2f57cc;
   --color-citation-competitor: #7a5477;
   --color-citation-competitor-bg: #f5eef4;
   --color-citation-competitor-border: #d6bfd3;
   --color-citation-competitor-text: #634360;
-  --color-citation-third-party: #617370;
-  --color-citation-third-party-bg: #eef3f2;
-  --color-citation-third-party-border: #cbd8d5;
-  --color-citation-third-party-text: #405451;
+  --color-citation-third-party: #5c5e62;
+  --color-citation-third-party-bg: #eeeeee;
+  --color-citation-third-party-border: #d0d1d2;
+  --color-citation-third-party-text: #393c41;
 
-  --color-run-draft: #617370;
-  --color-run-draft-bg: #eef3f2;
-  --color-run-queued: #617370;
-  --color-run-queued-bg: #eef3f2;
-  --color-run-running: #006d77;
-  --color-run-running-bg: #e6f4f3;
+  --color-run-draft: #5c5e62;
+  --color-run-draft-bg: #eeeeee;
+  --color-run-queued: #5c5e62;
+  --color-run-queued-bg: #eeeeee;
+  --color-run-running: #3e6ae1;
+  --color-run-running-bg: #eaf1fd;
   --color-run-analyzing: #67558a;
   --color-run-analyzing-bg: #f1edf8;
   --color-run-completed: #19724b;
@@ -118,9 +127,10 @@
   --color-run-partial-bg: #fff5df;
   --color-run-failed: #b33a3a;
   --color-run-failed-bg: #fff0f0;
-  --color-run-cancelled: #617370;
-  --color-run-cancelled-bg: #eef3f2;
+  --color-run-cancelled: #5c5e62;
+  --color-run-cancelled-bg: #eeeeee;
 
+  /* Score bands — low/mid escalate red→amber; good is the brand blue; high is green. */
   --color-score-low: #b33a3a;
   --color-score-low-bg: #fff0f0;
   --color-score-low-border: #e7aaaa;
@@ -131,63 +141,76 @@
   --color-score-mid-border: #e7c47c;
   --color-score-mid-text: #754500;
   --color-score-mid-ring: #9a5b00;
-  --color-score-good: #006d77;
-  --color-score-good-bg: #e6f4f3;
-  --color-score-good-border: #a8dadc;
-  --color-score-good-text: #005a63;
-  --color-score-good-ring: #006d77;
+  --color-score-good: #3e6ae1;
+  --color-score-good-bg: #eaf1fd;
+  --color-score-good-border: #c8d6f6;
+  --color-score-good-text: #2f57cc;
+  --color-score-good-ring: #3e6ae1;
   --color-score-high: #19724b;
   --color-score-high-bg: #e9f6ee;
   --color-score-high-border: #9fd2b4;
   --color-score-high-text: #135d3d;
   --color-score-high-ring: #19724b;
 
-  --color-chart-1: #006d77;
+  /* Charts — the brand blue is the first series; the rest stay categorical. */
+  --color-chart-1: #3e6ae1;
   --color-chart-2: #19724b;
   --color-chart-3: #9a5b00;
   --color-chart-4: #b33a3a;
   --color-chart-5: #67558a;
-  --color-chart-6: #317f86;
+  --color-chart-6: #0f8a9b;
   --color-chart-7: #9b761c;
   --color-chart-8: #7a5477;
-  --color-series-1: #006d77;
+  --color-series-1: #3e6ae1;
   --color-series-2: #19724b;
   --color-series-3: #9a5b00;
   --color-series-4: #b33a3a;
   --color-series-5: #67558a;
-  --color-series-other: #869591;
-  --color-chart-tooltip: #162322;
+  --color-series-other: #8e8e8e;
+  --color-chart-tooltip: #101828;
   --color-chart-tooltip-fg: #ffffff;
-  --color-overlay-scrim: rgb(22 35 34 / 40%);
+  --color-overlay-scrim: rgb(16 24 40 / 40%);
 
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 8px;
-  --radius-2xl: 8px;
+  /* Radius — Untitled UI refined scale: 4px xs, 6px sm, 8px md, 12px lg, 16px xl. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
   --radius-full: 9999px;
-  --shadow-xs: none;
-  --shadow-sm: none;
-  --shadow-card: 0 10px 28px rgb(22 35 34 / 14%);
-  --shadow-card-hover: 0 14px 36px rgb(22 35 34 / 18%);
-  --shadow-elevated: 0 12px 32px rgb(22 35 34 / 16%);
-  --shadow-lg: 0 12px 32px rgb(22 35 34 / 16%);
-  --shadow-modal-value: 0 18px 48px rgb(22 35 34 / 20%);
 
-  --text-2xs: 0.6875rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
-  --text-3xl: 2.5rem;
-  --text-heading-sm: 0.9375rem;
+  /* Elevation — Untitled UI crisp micro-shadows layered with hairline borders. */
+  --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(16 24 40 / 0.1), 0 1px 2px -1px rgb(16 24 40 / 0.1);
+  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 0 0 1px #e4e7ec;
+  --shadow-card-hover: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-elevated: 0 4px 6px -2px rgb(16 24 40 / 0.03), 0 12px 16px -4px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08), 0 4px 6px -2px rgb(16 24 40 / 0.03);
+  --shadow-modal-value: 0 20px 24px -4px rgb(16 24 40 / 0.1), 0 8px 8px -4px rgb(16 24 40 / 0.04);
 
-  --transition-fast: 100ms;
-  --transition-base: 180ms;
-  --transition-slow: 280ms;
+  /* Type scale — Tesla px mapped onto the token names. 14px is the baseline
+     (text-sm); the display tiers stay restrained and cap at 40px (text-3xl). */
+  --text-2xs: 0.6875rem; /* 11px — micro / fine print */
+  --text-xs: 0.75rem; /* 12px — small UI labels */
+  --text-sm: 0.875rem; /* 14px — body, nav, button, link baseline */
+  --text-base: 1rem; /* 16px — category label / comfortable body */
+  --text-lg: 1.0625rem; /* 17px — product name */
+  --text-xl: 1.375rem; /* 22px — promo / sub-heading */
+  --text-2xl: 2rem; /* 32px — section heading */
+  --text-3xl: 2.5rem; /* 40px — hero on small/base screens */
+  --text-4xl: 2.75rem; /* 44px — hero at md */
+  --text-5xl: 3rem; /* 48px — hero at lg, the display ceiling */
+  --text-heading-sm: 0.9375rem; /* 15px — compact headings */
+
+  --leading-tight: 1.2;
+  --leading-body: 1.43;
+
+  /* Motion — one universal 0.33s curve; a 0.25s micro for feedback. */
+  --transition-fast: 250ms;
+  --transition-base: 330ms;
+  --transition-slow: 450ms;
+  --ease-standard: cubic-bezier(0.5, 0, 0, 0.75);
   --z-index-overlay: 40;
   --z-index-modal: 50;
   --z-index-toast: 60;
@@ -199,22 +222,29 @@
   --topbar-height: 48px;
   --nav-item-height: 32px;
   --content-gutter: 20px;
-  --content-max-width: 1440px;
+  --content-max-width: 1383px;
+  --container-max: 1383px;
   --card-padding: 16px;
   --card-gap: 16px;
   --control-height-sm: 32px;
   --control-height: 32px;
-  --control-height-lg: 44px;
+  --control-height-lg: 40px;
   --table-row-height: 36px;
   --table-header-height: 32px;
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 6px;
   --dialog-scroll: 60vh;
   --score-ring: 72px;
-  --focus-ring: 0 0 0 2px #007f87;
-  --skeleton-base: #e4ecea;
-  --skeleton-highlight: #f7faf9;
-  --value-placeholder: #617370;
+  /* Section rhythm — whitespace as a luxury signal (marketing consumes these). */
+  --section-y-desktop: 120px;
+  --section-y-tablet: 72px;
+  --section-y-phone: 48px;
+  /* A 2px panel gap then a solid, opaque accent ring — the accent clears 3:1
+     against every surface role, unlike a mostly-transparent tint. */
+  --focus-ring: 0 0 0 2px var(--color-panel), 0 0 0 4px var(--color-accent);
+  --skeleton-base: #e6e6e6;
+  --skeleton-highlight: #f9fafb;
+  --value-placeholder: #667085;
 }
 
 *,
@@ -225,18 +255,19 @@
 
 html {
   min-height: 100%;
-  background: #f5f8f7;
+  background: #f9fafb;
   scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background: #f5f8f7;
-  color: #162322;
-  font-family: var(--font-geist), system-ui, sans-serif;
+  background: #f9fafb;
+  color: #101828;
+  font-family: var(--font-public-sans), -apple-system, Arial, sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
+  letter-spacing: normal;
   -webkit-font-smoothing: antialiased;
   text-size-adjust: 100%;
 }
@@ -249,8 +280,13 @@ body {
   h5,
   h6 {
     margin: 0;
-    font-family: 'Apfel Grotezk', var(--font-geist), system-ui, sans-serif;
-    color: #162322;
+    /* One family, medium weight, normal tracking — Tesla's restraint, applied
+       centrally so no page can drift into bold or negative letter-spacing. */
+    font-family: var(--font-public-sans), -apple-system, Arial, sans-serif;
+    font-weight: 500;
+    letter-spacing: normal;
+    line-height: 1.2;
+    color: #101828;
   }
 
   p {
@@ -259,7 +295,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #007f87;
+  outline: 2px solid #3e6ae1;
   outline-offset: 2px;
 }
 
@@ -268,13 +304,13 @@ body {
 }
 
 .focus-ring:focus-visible {
-  border-color: #007f87 !important;
+  border-color: #3e6ae1 !important;
   box-shadow: var(--focus-ring);
 }
 
 ::selection {
-  background: #a8dadc;
-  color: #162322;
+  background: #c8d6f6;
+  color: #171a20;
 }
 
 .mono,
@@ -283,7 +319,7 @@ code,
 pre,
 kbd,
 samp {
-  font-family: var(--font-geist), system-ui, sans-serif;
+  font-family: var(--font-public-sans), -apple-system, Arial, sans-serif;
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }
@@ -296,7 +332,7 @@ samp {
   display: inline-grid;
   flex: none;
   place-items: center;
-  color: #006d77;
+  color: #3e6ae1;
 }
 
 .logo-mark svg {
@@ -309,8 +345,12 @@ samp {
 }
 
 @keyframes skeleton-shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .skeleton {
@@ -328,7 +368,7 @@ samp {
 
 .sidebar-scroll,
 .content-scroll {
-  scrollbar-color: #cbd8d5 transparent;
+  scrollbar-color: #d0d1d2 transparent;
   scrollbar-width: thin;
 }
 
@@ -351,80 +391,88 @@ samp {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+  /* SMIL <animateMotion> ignores the CSS rule above; hide the moving pipeline
+     dots directly (platform.tsx). The static conduit paths remain. */
+  .pipeline-stream circle {
+    display: none;
+  }
 }
 
-/* Shared CiteLadder atmosphere: one image, restrained intensity levels. */
-.brand-atmosphere {
-  position: absolute;
+/* Marketing atmosphere — two very-low-opacity accent auras that drift slowly
+   behind the whole public surface, giving the page quiet life. They sit above
+   the Light Ash canvas and below the content; paper sections let them show,
+   sunken bands cover them for rhythm. Kept subtle enough to preserve text
+   contrast, and frozen under reduced motion. */
+.marketing-atmosphere {
+  position: fixed;
   inset: 0;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
 }
 
-.brand-atmosphere-image {
+.marketing-atmosphere::before,
+.marketing-atmosphere::after {
+  content: '';
   position: absolute;
-  inset: -12%;
-  background: url('/brand/wallpaper.svg') center / cover no-repeat;
-  transform: scale(1.08);
-  animation: citeladder-atmosphere-drift 22s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
-}
-
-.brand-atmosphere-signal {
-  position: absolute;
-  inset: 12% 8% auto auto;
-  width: min(32vw, 28rem);
-  aspect-ratio: 1;
-  border: 1px solid rgb(0 109 119 / 16%);
+  width: 52rem;
+  height: 52rem;
   border-radius: 50%;
-  box-shadow:
-    0 0 0 3rem rgb(0 109 119 / 5%),
-    0 0 0 7rem rgb(0 109 119 / 3%);
-  animation: citeladder-signal-pulse 9s ease-in-out infinite alternate;
+  filter: blur(50px);
+  will-change: transform;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in oklab, var(--color-accent), transparent 78%),
+    color-mix(in oklab, #818cf8, transparent 88%) 50%,
+    transparent 70%
+  );
 }
 
-.brand-atmosphere-site {
-  position: fixed;
-  opacity: 0.48;
+.marketing-atmosphere::before {
+  top: -12rem;
+  left: -8rem;
+  animation: citeladder-aura-a 28s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
 }
 
-.brand-atmosphere-site .brand-atmosphere-image {
-  inset: -14%;
-  animation-duration: 22s;
+.marketing-atmosphere::after {
+  top: 32%;
+  right: -10rem;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in oklab, var(--color-accent), transparent 82%),
+    color-mix(in oklab, #38bdf8, transparent 90%) 50%,
+    transparent 70%
+  );
+  animation: citeladder-aura-b 34s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
 }
 
-.brand-atmosphere-app {
-  position: fixed;
-  inset: var(--topbar-height) 0 0 var(--sidebar-width);
-  opacity: 0.62;
-}
-
-.brand-atmosphere-app .brand-atmosphere-image {
-  inset: -20%;
-  animation-duration: 32s;
-}
-
-@keyframes citeladder-atmosphere-drift {
+@keyframes citeladder-aura-a {
   from {
-    transform: translate3d(-2%, -1%, 0) scale(1.08);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   to {
-    transform: translate3d(3%, 2%, 0) scale(1.16);
+    transform: translate3d(6%, 8%, 0) scale(1.12);
   }
 }
 
-@keyframes citeladder-signal-pulse {
+@keyframes citeladder-aura-b {
   from {
-    transform: translate3d(0, 0, 0) scale(0.9);
-    opacity: 0.36;
+    transform: translate3d(0, 0, 0) scale(1.06);
   }
   to {
-    transform: translate3d(-8%, 6%, 0) scale(1.06);
-    opacity: 0.68;
+    transform: translate3d(-8%, -6%, 0) scale(1);
   }
 }
 
-/* Six-engine rotating wordmarks: no cards or implied availability states. */
+@media (prefers-reduced-motion: reduce) {
+  .marketing-atmosphere::before,
+  .marketing-atmosphere::after {
+    animation: none;
+  }
+}
 
+/* Six-engine rotating wordmarks — a restrained content rotation, kept from the
+   prior system. No cards or implied availability states; motion only. */
 .engine-rotor-slot {
   height: 4rem;
   perspective: 48rem;
@@ -436,7 +484,7 @@ samp {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  animation: citeladder-engine-flip 8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation: citeladder-engine-flip 8s cubic-bezier(0.5, 0, 0, 0.75) infinite;
 }
 
 .engine-rotor-face {
@@ -481,10 +529,6 @@ samp {
 }
 
 @media (max-width: 767px) {
-  .brand-atmosphere-app {
-    inset: var(--topbar-height) 0 4rem;
-  }
-
   .engine-rotor-face {
     gap: 0.375rem;
     padding-inline: 0.375rem;
@@ -492,8 +536,6 @@ samp {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-atmosphere-image,
-  .brand-atmosphere-signal,
   .engine-rotor-inner {
     animation: none;
   }
@@ -513,9 +555,48 @@ samp {
   }
 }
 
-@media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
+/* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
+   until focused, then it lands as a normal control against the panel fill. */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-text);
+  padding: 0.5rem 0.875rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-elevated);
 }
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* In-page anchors must clear the fixed marketing nav, otherwise `#platform`
+   and friends land underneath it. */
+[id] {
+  scroll-margin-top: calc(var(--topbar-height) + 1.5rem);
+}
+
+/* Fixed chrome respects the home indicator and notch on mobile. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Removes the 300ms tap delay without disabling pinch zoom. */
+a,
+button,
+[role='button'],
+summary,
+label {
+  touch-action: manipulation;
+}
+
+@media print { body { background: white !important; color: black !important; } }

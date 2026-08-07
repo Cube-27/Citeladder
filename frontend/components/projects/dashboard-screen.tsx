@@ -188,7 +188,7 @@ function ActionRow({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/opportunities?selected=${action.id}`}
-            className="text-foreground hover:text-accent-text text-sm font-semibold"
+            className="text-foreground hover:text-accent-text text-sm font-medium"
           >
             {action.title}
           </Link>
@@ -373,7 +373,7 @@ function CommandCenterContent({
           />
           <div className="min-w-0">
             <p className="text-muted text-xs font-medium">Command center</p>
-            <h2 className="font-display text-foreground truncate text-xl font-semibold">
+            <h2 className="font-display text-foreground truncate text-xl font-medium">
               {data.project.brand_name || data.project.name}
             </h2>
             <p className="text-muted mt-1 text-xs">
@@ -417,7 +417,7 @@ function CommandCenterContent({
 
       <section aria-labelledby="project-state" className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="project-state" className="text-foreground text-sm font-semibold">
+          <h2 id="project-state" className="text-foreground text-sm font-medium">
             Project state
           </h2>
           <Badge>{data.measurement.measurement_mode}</Badge>
@@ -432,7 +432,7 @@ function CommandCenterContent({
       <Card className="p-4">
         <section aria-labelledby="movement" className="grid gap-3">
           <div>
-            <h2 id="movement" className="text-foreground text-sm font-semibold">
+            <h2 id="movement" className="text-foreground text-sm font-medium">
               Movement
             </h2>
             <p className="text-muted mt-1 text-xs">
@@ -447,7 +447,7 @@ function CommandCenterContent({
         <section aria-labelledby="ranked-actions">
           <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
             <div>
-              <h2 id="ranked-actions" className="text-foreground text-sm font-semibold">
+              <h2 id="ranked-actions" className="text-foreground text-sm font-medium">
                 Ranked actions
               </h2>
               <p className="text-muted mt-1 text-xs">
@@ -491,7 +491,7 @@ function CommandCenterContent({
           className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"
         >
           <div>
-            <h2 id="progress-proof" className="text-foreground text-sm font-semibold">
+            <h2 id="progress-proof" className="text-foreground text-sm font-medium">
               Progress and report proof
             </h2>
             <p className="text-muted mt-1 text-xs">

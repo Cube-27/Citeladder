@@ -27,7 +27,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { IconChip } from '@/components/ui/icon-chip';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { formatUtcTimestamp } from '@/lib/format';
+import { formatCount, formatUtcTimestamp } from '@/lib/format';
 import { formatPercent } from '@/lib/products/catalog';
 import {
   ATTRIBUTION_SUB_TABS,
@@ -299,10 +299,10 @@ function AttributionCoverageCard({
   >['metrics']['deterministic']['coverage'];
 }>) {
   const metrics = [
-    ['Latest orders', coverage.total_latest_orders.toLocaleString()],
-    ['Orders with evidence', coverage.orders_with_evidence.toLocaleString()],
-    ['Linked AI orders', coverage.linked_ai_orders.toLocaleString()],
-    ['Unattributed orders', coverage.unattributed_orders.toLocaleString()],
+    ['Latest orders', formatCount(coverage.total_latest_orders)],
+    ['Orders with evidence', formatCount(coverage.orders_with_evidence)],
+    ['Linked AI orders', formatCount(coverage.linked_ai_orders)],
+    ['Unattributed orders', formatCount(coverage.unattributed_orders)],
     ['Evidence coverage', formatPercent(coverage.evidence_coverage_rate)],
     ['Attributed share', formatPercent(coverage.attributed_share)],
   ] as const;
@@ -320,7 +320,7 @@ function AttributionCoverageCard({
         {metrics.map(([label, value]) => (
           <div key={label} className="grid gap-1">
             <span className="text-muted text-xs">{label}</span>
-            <span className="text-foreground mono text-sm font-semibold tabular-nums">{value}</span>
+            <span className="text-foreground mono text-sm font-medium tabular-nums">{value}</span>
           </div>
         ))}
       </CardContent>
@@ -345,7 +345,7 @@ function CurrencyBlockSection({
   if (!showHeading) return <>{children}</>;
   return (
     <section className="grid gap-3" aria-label={currency ?? 'Unavailable methods'}>
-      <h3 className="text-muted text-xs font-semibold">{currency ?? 'Unavailable methods'}</h3>
+      <h3 className="text-muted text-xs font-medium">{currency ?? 'Unavailable methods'}</h3>
       {children}
     </section>
   );

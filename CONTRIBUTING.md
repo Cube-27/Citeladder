@@ -1,117 +1,110 @@
 # Contributing to CiteLadder
 
-Thanks for contributing. This guide covers the workflow, conventions, and the review bar
-for changes to CiteLadder. Read [`Agents.md`](Agents.md) and
-[`docs/invariants.md`](docs/invariants.md) first — they define the contract every change
-must respect.
+Thanks for contributing. Read [`Agents.md`](Agents.md),
+[`docs/README.md`](docs/README.md), and [`docs/invariants.md`](docs/invariants.md) before making a
+change. `docs/archive/` is historical and is not an implementation authority.
 
-## Before you start
+## Before starting
 
-1. **Read the one companion doc for the subsystem you're touching** (see the table in
-   [`Agents.md`](Agents.md)). Don't read the whole `docs/` tree up front.
-2. **Grep before you add.** Search for the resource / function / schema / token / component
-   first. Duplication is a review failure (invariant 2). One concept → one owner.
-3. **Set up your environment** per [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md), including
-   the two environment gotchas (Docker `${VAR}` override, tunnel double-CORS).
+1. Search for the current owner of the model, route, schema, config, industry entry, queue,
+   component, test, and documentation. One concept has one owner.
+2. Read only the current subsystem authority and the relevant gated plan slice.
+3. Confirm whether the requested behavior is shipped, planned, or an evaluation requirement.
+4. Preserve workspace authorization, evidence immutability, provenance/versioning, unknown-state
+   semantics, and approval boundaries in the design—not as cleanup after implementation.
 
 ## Development workflow
 
-1. Create a feature branch off the base branch:
-   ```bash
-   git checkout -b feat/<short-description>
-   ```
-2. Make the **minimal scoped change**. Put code in the owning subsystem, not wherever is
-   convenient:
-   - Backend: `api / core / models / schemas / domain / connectors / orchestration / analysis / workers`
-   - Frontend: `shell+auth / API-contract / setup / prompts / providers / visibility / runs / UI+tokens`
-3. Add or adjust tests in the existing framework (pytest for backend, Vitest for frontend).
-4. Run the verify commands below for what you changed.
-5. Open a pull request with a clear description and a **detailed `## Testing` section**
-   (what you ran, what passed, evidence). A PR without a Testing section is not ready for
-   review.
+1. Create a scoped branch such as `feat/<description>`, `fix/<description>`,
+   `docs/<description>`, or `refactor/<description>`.
+2. Put code in the owning layer:
+   - backend: `api / core / models / schemas / domain / connectors / orchestration / analysis /
+     workers`;
+   - frontend: app shell/auth, API-contract layer, domain workspaces, shared primitives/tokens.
+3. Make the smallest complete gated change. Do not add parallel stores or hidden partial
+   architecture.
+4. Add deterministic/unit, component/workspace-isolation, API/UI contract, and evaluation fixture
+   tests as applicable.
+5. Update the current owner documentation. Move superseded plans or design records into
+   `docs/archive/` instead of maintaining two authorities.
+6. Open a pull request with a clear summary and exact `## Testing` evidence.
 
-## Branch & commit conventions
+## Configuration and industry knowledge
 
-- **Branches:** `feat/…`, `fix/…`, `docs/…`, `refactor/…`, `chore/…` with a short kebab-case
-  description.
-- **Commits:** conventional-commit style, e.g.
-  `fix(frontend): unwrap auth response { user } to match backend DTO`. Reference the
-  invariant number when a change enforces one (e.g. "enforces invariant 5").
-- Keep commits scoped to one subsystem where possible; when multiple agents/people work the
-  same tree, stage explicit pathspecs rather than `git add -A`.
+Operational settings and product policy do not live in service code. Models, transports, limits,
+timeouts, retries, thresholds, page roles, classifier signals, entity/predicate registries,
+journeys, FAQ expectations, claim policies, context budgets, prompt archetypes, and creative brief
+constraints belong under `backend/app/core/config/*` or a documented frontend config owner.
 
-## Configuration rule (invariant 1 — Zero Tolerance)
+The shared industry registry is reviewed product data. Project/customer evidence never mutates it.
+A generalized change requires a registry version, migration note where needed, validation, and
+labelled evaluation coverage. Do not create industry-specific tables or service branches when the
+shared core and profile can represent the concept.
 
-Configuration MUST NOT live in business logic or presentation code. Tokens, thresholds, model
-ids, transport catalogs, guardrail knobs, timeouts, batch sizes, retry counts, and rate
-limits live **only** in `backend/app/core/config/*` (backend) or `process.env` / `lib/config/*`
-(frontend). Service / domain / worker / analysis / API / UI code *reads* config — it never
-hard-codes these values inline. Hardcoding configuration values is an **automatic review failure**.
+## Evidence, knowledge, and generation
+
+- Source artifacts are immutable and are not automatically true.
+- Every derived row records exact source IDs and relevant versions.
+- Reports and reads use persisted projections only.
+- Model output remains proposed/derived until deterministic validation and explicit user approval.
+- Approved memory requires an audited transition; raw chat and generated bodies are not memory.
+- FAQ or other generated content must use a frozen brief/context package and cannot invent unknown,
+  historical-as-current, conflicting, numeric, regulated, safety, price, fee, date, policy, or
+  availability claims.
+- `FAQPage` JSON-LD must match visible reviewed content.
 
 ## Database migrations
 
-Migrations are **hand-written** (Alembic autogenerate is disabled in this repo). Write the
-migration by hand, keep it in the numbered chain, and verify:
+CiteLadder currently maintains one hand-written greenfield baseline at
+`migrations/versions/0001_initial.py`. Fold schema changes into it while this policy remains
+active and verify only against a disposable database:
 
 ```bash
 cd backend
-uv run alembic upgrade head    # applies cleanly on a fresh DB
-uv run alembic check           # "No new upgrade operations detected"
+uv run alembic upgrade head
+uv run alembic check
 ```
 
-## Verify commands
+Never downgrade or reset a shared, staging, or production database.
 
-Run the **focused** subset for what you changed; run the full suite before opening the PR.
+## API and frontend contracts
+
+The backend is the wire-contract source of truth. Update matching Zod schemas, API functions,
+query keys, MSW fixtures, null/coverage states, and UI tests with a DTO change. The browser uses
+relative `/api/*` through same-origin Next.js rewrites; do not expose a browser-visible backend
+origin.
+
+## Verification
+
+Run focused checks while working and the full relevant suite before review:
 
 ```bash
-# Backend (from backend/)
-uv run pytest -q
-uv run ruff check .
+# Backend, from backend/
+uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
+uv run ruff check <changed paths>
 uv run alembic upgrade head
+uv run alembic check
 
-# Frontend (from frontend/)
-pnpm test              # Vitest
-pnpm check:policy      # architecture + token guards
-pnpm exec tsc --noEmit # type check
-pnpm build             # next build
+# Frontend, from frontend/
+pnpm test -- <file>
+pnpm check:contract
+pnpm check:policy
+pnpm exec tsc --noEmit
+pnpm build
 ```
 
-## Frontend/backend contract discipline
+Industry-profile work also runs the registry validator, onboarding fallback tests, labelled
+classification/gap fixtures, FAQ validation fixtures, and a before/after verification case.
+Live sites, provider APIs, and connected analytics are opt-in acceptance sources, not CI
+requirements.
 
-The frontend `lib/api/` layer mirrors the backend DTOs (`backend/app/domain/*/schemas.py`)
-with zod schemas. **The backend is the source of truth.** When you change a DTO:
+## Commits and review
 
-- Update the matching zod schema in `frontend/lib/api/schemas.ts` and any MSW fixtures.
-- Prefer `.strict()` response schemas so contract drift fails loud — but only when the
-  schema fully models the backend response. A `.strict()` schema that omits a field the
-  backend actually returns will fail validation at runtime (fixtures won't catch it — test
-  against the real backend).
+Use conventional, scoped commit messages. When other work exists in the tree, stage explicit
+pathspecs rather than `git add -A`. A change fails review when it violates any current invariant,
+even if its happy path appears to work.
 
-## The review bar (the 12 invariants)
+Report bugs with reproduction, expected/actual behavior, versions, and safe logs or screenshots.
+Disclose secret-handling or other security issues privately.
 
-A change that violates any invariant in [`docs/invariants.md`](docs/invariants.md) is a
-review failure regardless of whether it "works". The most commonly hit:
-
-- **Config zero-tolerance** (1) — configuration must NEVER live in code; use `app/core/config/*` or `env`.
-- **Workspace auth on every query** (5) — every project-owned read/write goes through
-  `require_workspace_member`; never scope by `user_id`; all ids are string UUIDs.
-- **BYOK secrets never returned/logged** (6) — Fernet-encrypted at rest; never in a DTO,
-  log, or prompt.
-- **Provenance + version on every derived row** (4) and **reports are projections** (7) —
-  metrics/reports render persisted evidence; they never re-call a provider.
-- **Immutable artifacts / single-writer** (3) and **queue leasing rules** (8).
-- **Determinism** (9) — headline metrics use deterministic matching; no LLM. Don't back-fill
-  sentiment/avg-position with a fake-deterministic heuristic.
-- **Logical vs transport identity** (10) — every result records logical engine + transport
-  provider + exact model.
-
-## Reporting issues
-
-Open an issue with reproduction steps, expected vs actual behavior, and the relevant logs or
-screenshots. For security-sensitive reports (e.g. secret handling), please disclose
-privately rather than in a public issue.
-
-## License
-
-By contributing, you agree that your contributions are licensed under the
-[MIT License](LICENSE).
+Contributions are licensed under the [MIT License](LICENSE).

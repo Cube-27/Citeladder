@@ -1,144 +1,178 @@
-# Invariants — CiteLadder
+# CiteLadder invariants
 
-> Hard rules. A change that violates any of these is a review failure regardless of whether
-> it "works". Numbered so reviews and commits can cite them (e.g. "violates invariant 5").
-> Companion docs: [`../Agents.md`](../Agents.md), [`backend-architecture.md`](backend-architecture.md),
-> [`frontend-architecture.md`](frontend-architecture.md), [`design.md`](design.md).
+> Review-blocking rules. A change that violates any rule fails review even when it appears to
+> work. These are deliberately few. A rule that needs a paragraph of exceptions is a design
+> problem, not an invariant.
 
-## The 12 hard rules
+## 1. One concept, one owner
 
-### 1. Config zero-tolerance (Configuration MUST NOT live in code)
-Tokens, thresholds, model ids, transport catalogs, guardrail knobs, timeouts, rate limits,
-batch page sizes, retry limits, and any tunable magic numbers/strings live **only** in
-`backend/app/core/config/*` (e.g. `config/__init__.py` `Settings`, `config/provider_catalog.py`).
-Service, domain, worker, analysis, and API code **reads** config; it never hard-codes these
-values inline. Frontend: no magic endpoints, feature flags, or hardcoded limits scattered in
-components — they belong in `process.env`, `lib/config/*`, or the API-contract layer. Any PR or
-commit that hardcodes configuration values directly in business logic is an **automatic review failure**.
+Search before adding. Extend the owning model, service, config, queue, artifact, API, component,
+or registry. Do not create a second crawler, page analysis, opportunity store, prompt resource,
+content queue, knowledge store, or industry taxonomy.
 
-### 2. Grep before add / no duplication
-Before adding a resource, function, schema, endpoint, token, or component, **grep for it
-first**. If an equivalent exists, extend or reuse it. Two functions that do the same thing,
-two tokens for the same colour, or two modules that own the same concept are all failures.
-One concept → one owner.
+`SitePageAnalysis` is the single page-understanding owner. `PageUnderstanding` is its public
+DTO name, never a second table.
 
-### 3. Immutable artifacts / single-writer
-`RawResponseArtifact`, `ProviderAttempt`, executions, and `AuditEvent` rows are **written
-once and never mutated** after their terminal write. Exactly one writer owns each row (the
-worker that claimed the task). No later stage edits a raw artifact or "repairs" it in place.
-Re-running produces a **new** task/artifact identity, never an overwrite.
+## 2. Configuration and industry knowledge are data, not service literals
 
-### 4. Provenance + version on every derived row
-Every derived row (`ResponseAnalysis`, `BrandMention`, `CompetitorMention`, `Citation`,
-`MetricSnapshot`) references the `RawResponseArtifact` it was computed from **and** the
-`analyzer_version` (plus formula/rule version where applicable). A derived row with no
-traceable source + version is invalid. This is what makes every metric traceable to raw
-evidence.
+Thresholds, models, transports, limits, schemas, page roles, classifier signals, entity and
+predicate registries, journey templates, question expectations, claim policies, context budgets,
+confidence thresholds, and prompt/content archetypes live in `backend/app/core/config/*` or the
+versioned industry registry. Domain and worker code reads frozen configuration; it does not embed
+it.
 
-### 5. Workspace auth on every query
-Every project-owned read and write goes through the `require_workspace_member` dependency and
-filters by `workspace_id`. **Never** scope project data by `user_id`, never trust an id alone,
-never add an "admin" shortcut that bypasses workspace scoping. Cross-workspace access returns
-403/404, not data. All ids are string UUIDs and there are no integer PKs. Account billing is the
-only ownership exception: `BillingAccount.owner_user_id` identifies the payer, and
-`WorkspaceBillingLink` is the required boundary into workspace-scoped capabilities.
+## 3. Workspace authorization on every project-owned operation
 
-### 6. BYOK secrets: Fernet-encrypted, never returned, never logged
-Provider API keys are **Fernet-encrypted at rest** (`encrypt_secret`/`decrypt_secret`). The
-decrypted key is resolved from the `ProviderConnection` at execution time only, **never from
-env**, and is **never** placed in a Response DTO, a log line, a `request_snapshot`, or a raw
-artifact. Redact credentials + authorization headers from logs. **The brand/competitor list
-is never sent to a provider** as part of a prompt.
+All project-owned reads and writes verify active workspace membership and filter by
+`workspace_id`. IDs alone are never authorization. Project data is not scoped by `user_id`. All
+IDs are UUIDs. Billing ownership may use an account owner only through the explicit workspace
+billing boundary.
 
-### 7. Reports / metrics are projections
-A report renderer or metrics endpoint **renders versioned, persisted evidence**. It never
-performs a second extraction, never calls a provider, and never silently repairs analysis.
-Aggregates (`MetricSnapshot`, `/visibility`, exports) read persisted analysis rows only. If
-the data is not persisted, it does not appear in a report.
+## 4. Evidence is immutable and is not truth
 
-### 8. Postgres-queue leasing rules
-The audit queue is Postgres via `FOR UPDATE SKIP LOCKED`. Rules:
-- **Commit the claim before any network I/O.** Never hold a DB transaction open across a
-  provider call.
-- A claim sets `lease_owner` + `lease_expires_at`; the worker **heartbeats** to extend it.
-- A **sweeper** returns expired leased/running tasks to `retry_wait` (or `failed` after
-  `max_attempts`).
-- **No double-claim**: two workers must never execute the same task (SKIP LOCKED guarantees
-  it; the unique `(audit_id, prompt_index, repetition)` + unique `idempotency_key` back it up).
-- A succeeded task is not re-executed; a rerun creates a new task identity.
-- Orchestration depends on the `TaskQueue` Protocol so a future Redis impl needs no
-  domain/reporting rewrite.
+Raw crawl, document, integration, answer-engine, generation, and external-source artifacts are
+written once. Attempts and source observations are append-only. Persistence means "observed", not
+"true". Reruns produce new identities.
 
-### 9. Determinism
-- Slots are shuffled with the audit's **stored 64-bit `random_seed`** — the same seed
-  reproduces the same order.
-- Scoring is **deterministic alias/domain matching**. **No LLM is used for headline metrics.**
-  (Sentiment + avg-position, which would need an LLM/context, are therefore NOT computed in
-  the current deterministic scoring model — see invariant-adjacent note below.)
-- Cancellation is **cooperative only**: the worker stops at the execution boundary (before the
-  next provider call / analysis stage). No mid-call kills, no zombie tasks.
+## 5. Every derived artifact records what produced it
 
-### 10. Logical vs transport identity
-Every route and every attempt records the measurement mode and all three identities:
-`logical_engine` (chatgpt|gemini|claude) + `transport_provider` + `transport_model` (the
-exact model id). A result missing any of the three is invalid. This is what lets the dashboard
-compare engines and gives unambiguous provenance. **Active** transports are exactly
-`openai | anthropic | google`. The only executable identities are the exact Pulse and
-Benchmark entries in `MEASUREMENT_ROUTES`; aliases, caller-selected models, single-route
-resolution, and model fallbacks are forbidden.
+Page understanding, assertions, relations, findings, scores, demand signals, opportunities,
+briefs, prompts, validations, verifications, and agent results reference exact source IDs plus the
+relevant extractor, analyzer, pack, rule, formula, template, provider, and model versions.
 
-### 11. Gotcha 1 runbook — shell secrets override Docker Compose `${VAR}`
-**Symptom:** `docker compose up` connects Postgres/backend with the wrong
-credentials/database even though `.env` looks correct.
-**Cause:** this machine exports `POSTGRES_PASSWORD`, `POSTGRES_USER`, `POSTGRES_DB`, and
-`DATABASE_URL` into **every shell**. Compose resolves `${VAR}` in `docker-compose.yml` from
-the **shell environment before `.env`** (`env_file:` only injects vars **inside** the
-container, not into `${VAR}` interpolation). So the shell values win and silently override the
-repo values.
-**Workaround (use verbatim):**
-```bash
-env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
-  POSTGRES_PASSWORD=<repo-.env-value> \
-  docker compose -f infra/docker/docker-compose.yml up -d --force-recreate
-```
-Unset the four inherited vars for the Compose invocation and re-supply the repo `.env` value
-explicitly. The `docker-compose.yml` carries this note as a baked-in comment.
+The requirement is that a result can be **re-inspected**: the manifest names exactly what went in.
+Re-*deriving* a result bit-for-bit is required only for evaluation fixtures, where the retrieval
+model and index version are pinned. Do not conflate the two — a semantic reranker in the path does
+not invalidate an artifact whose manifest is complete.
 
-### 12. Gotcha 2 runbook — tunnel double CORS header → same-origin rewrites
-**Symptom:** frontend network calls fail in the browser with a CORS error about **duplicate**
-`Access-Control-Allow-Origin` headers — but `curl` against the same backend succeeds.
-**Cause:** the Vorflux preview/tunnel proxy injects its own `Access-Control-Allow-Origin: *`.
-A FastAPI backend that also sets a specific ACAO (required when `allow_credentials=True`)
-produces **two** ACAO headers, which browsers reject. `curl` does not enforce CORS, so it
-cannot reproduce the failure.
-**Fix:** the browser never talks cross-origin to the backend. Next.js `rewrites()` proxy
-`/api/:path*` → the server-only `BACKEND_ORIGIN`, so all browser calls are **same-origin**
-(`/api/...` relative). The API client uses a **relative base** (`/api/v1`), `cache:'no-store'`,
-`credentials:'include'`.
-```ts
-// frontend/next.config.ts
-async rewrites() {
-  return [{ source: '/api/:path*', destination: `${process.env.BACKEND_ORIGIN}/api/:path*` }];
-}
-```
-**Always test this in a real browser, not curl.**
+## 6. Reads are persisted projections
 
-## Note on not-yet-computed metrics (roadmap, keeps invariants 7 + 9 intact)
-Sentiment and average-position are **present in the schema but currently null**. Computing them
-would require an LLM/contextual judgement, which would break "no LLM for headline metrics"
-(invariant 9). They are deferred to the roadmap and surfaced as `—` in the UI. Do not
-back-fill them with a heuristic that pretends to be deterministic.
-# Site Health and Commerce extension rules
+Read endpoints and report renderers never crawl, sync, call a model or provider, or silently
+repair state. They render persisted evidence and projections. Missing evidence stays missing.
 
-- **Admission before transport.** Config-owned URL admission runs before every
-  fetch task. Hard-excluded transactional/authentication URLs never enqueue or
-  call a transport; redirects, uploads, sitemap entries, recrawls, and manual
-  selections use the same policy.
-- **Acquisition is auditable, not invisible.** httpx, curl-cffi, and ScraperAPI
-  are allowed only through the frozen server-owned ladder. Preserve robots, SSRF,
-  redirect, TLS, pacing, time/byte limit, redaction, and append-only attempt
-  provenance on every rung. Credentials and raw HTML never leave worker scope.
-- **Guidance and comparisons are projections.** Opportunity guidance, commerce
-  discovery, product matching, competitor comparisons, AI Presence, and Momentum
-  store versioned provenance and never mutate evidence, detection, priority, or
-  historical audit configuration.
+## 7. Unknown states remain distinct
+
+`unknown`, `unavailable`, `not_applicable`, `historical`, `future`, `conflicting`, `excluded`,
+`failed`, and observed zero have different meanings. Do not collapse them into zero, false,
+neutral, current, or pass.
+
+Composite scores are reported over the **full** denominator with coverage shown beside them. Never
+renormalize a composite over only the observed dimensions: missing evidence correlates with
+weakness, so renormalizing rewards the sites with the least to show.
+
+## 8. Generic page kind and industry role are separate
+
+`page_kind` is a stable cross-industry structural classification. `industry_role` is defined by a
+frozen industry pack. No industry extends the generic enum to encode its business roles, and no
+industry gets a parallel page-analysis table.
+
+## 9. Deterministic code owns facts; models own judgement, and say so
+
+Code owns URL and media disposition, parsing, exact identifiers, dates, units, schema syntax,
+deduplication, configured signal scoring, validation, and lifecycle state.
+
+Models may make semantic judgements code cannot — matching a differently-worded page or question
+to a pack archetype, reconciling bounded claims, drafting. Every such judgement persists its
+confidence, model, and template version with the result.
+
+A model judgement that **dismisses** a gap requires higher confidence than one that **detects**
+it, because a false detection is visible and recoverable while a false dismissal is neither.
+Thresholds are config-owned.
+
+## 10. Customer knowledge never mutates shared industry knowledge
+
+Project evidence, conversations, corrections, analytics, and model output stay tenant-scoped.
+Generalized improvements enter a reviewed industry-registry release with version, migration notes,
+fixtures, and tests. There is no automatic cross-customer training or pack mutation.
+
+## 11. The system runs itself except at two decisions
+
+Human decisions exist at exactly two points:
+
+- **generate and save content**, and
+- **run and schedule audits.**
+
+Acquisition within a schedule, classification, knowledge extraction, contradiction detection, gap
+detection, opportunity creation, demand signals, prompt generation, prioritization, and roadmaps
+are automatic. Do not add an approval gate to make a derivation safe — a derivation is made safe by
+being a recomputable projection over immutable evidence, and by recording what produced it.
+
+Approval gates are for spending money and for leaving the system. Nothing else.
+
+## 12. Derived facts are recomputable; corrections are durable
+
+Project facts are projections and may be recomputed or superseded at any time. A user correction
+is not: it persists across recomputation, outranks the derived value, records its author and
+timestamp, and can be withdrawn to restore the derived value.
+
+Generated content is never automatically promoted into project facts. A crawl or import may
+supersede a derived fact; neither may overwrite a correction.
+
+## 13. Context is selected, bounded, and inspectable
+
+Generative and agent tasks receive a task-specific `TaskContextPackage` after authorization. The
+package includes contradictions and limitations, enforces section and total budgets, redacts
+secrets and prohibited data, records omissions, and freezes a manifest before provider I/O.
+Embeddings are ranking projections, not truth or authorization.
+
+## 14. Generated content cannot fabricate facts
+
+Every draft is grounded in a frozen brief and context package. Unsupported, conflicting,
+historical-as-current, regulated, numeric, price, fee, date, policy, safety, and identity claims
+are validated automatically, and blocking failures prevent saving at the API as well as the UI.
+A provider cannot cite an artifact absent from its context package; server validation resolves
+every citation and rejects fabricated ones.
+
+Where structured data mirrors visible content — `FAQPage` and its equivalents — the markup is
+generated from reviewed visible content, never as a substitute for it.
+
+## 15. The Growth Agent is bounded orchestration
+
+The agent uses an explicit task catalog and typed tools. Every tool call is separately authorized,
+idempotent where required, bounded, and versioned. The agent has no arbitrary SQL, unrestricted
+URL access, provider impersonation, private data store, autonomous recursion, or external mutation
+outside the two decisions in §11.
+
+The agent presents and explains priority; it does not set it. A deterministic formula owns
+ordering. An agent-proposed reordering is a separate, visible, reversible artifact.
+
+## 16. Provider secrets and private evidence never leak
+
+Credentials are encrypted at rest, resolved only by the owning connector, and excluded from DTOs,
+logs, snapshots, context packages, and artifacts. Raw OAuth data and unrelated private evidence are
+not sent to models. Measurement provider identity remains separate from analysis and generation
+provider identity.
+
+## 17. PostgreSQL queue leasing is authoritative
+
+Workers claim with `FOR UPDATE SKIP LOCKED`, commit before network I/O, heartbeat leases, use
+bounded retries, and reconcile expired work. Succeeded work is not re-executed under the same
+identity. Cancellation is cooperative. Domain code depends on the queue protocol, not a concrete
+future broker.
+
+## 18. Historical evidence is immutable in context
+
+A prompt audit freezes prompt text, provider route, mode, and versions. New demand evidence
+proposes new candidates or priorities; it never rewrites an active historical audit. Scheduled runs
+create new audit identities.
+
+## 19. Frontend contract rules
+
+The browser calls relative `/api/*` through Next.js rewrites. Response contracts are validated,
+unknown additive response fields are tolerated per current API policy, and every ID is a UUID.
+Frontend state never becomes a competing backend source of truth, and no production screen falls
+back to mock data or computes a backend metric locally.
+
+## 20. Archive is not authority
+
+`docs/archive/` is excluded from implementation decisions and active-link validation. Historical
+content must be restated in a current owner before it affects code.
+
+## Operational gotchas
+
+- Shell `POSTGRES_*` and `DATABASE_URL` values can override Docker Compose interpolation; use the
+  documented `env -u ...` invocation in [`DEVELOPMENT.md`](DEVELOPMENT.md).
+- Browser preview must use same-origin rewrites; `curl` does not reproduce duplicate-CORS browser
+  failures.
+- CiteLadder is pre-launch and keeps one `migrations/versions/0001_initial.py`. Fold schema changes
+  into it and verify against a disposable database.

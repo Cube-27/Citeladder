@@ -65,7 +65,7 @@ export default async function CompareDetailPage({
     notFound();
   }
   return (
-    <main>
+    <main id="main">
       <CompareDetailView competitor={competitor} />
     </main>
   );

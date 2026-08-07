@@ -18,7 +18,10 @@ describe('IconButtonLink', () => {
     );
 
     const link = screen.getByRole('link', { name: 'Try the demo' });
-    expect(link).toHaveClass('focus-ring', 'bg-panel', 'shadow-card');
+    // The `dark` marketing icon-button maps to the shared `secondary` variant:
+    // a white fill with a Pale-Silver hairline (flat — no shadow), per the
+    // Tesla-derived button recipe.
+    expect(link).toHaveClass('focus-ring', 'bg-panel', 'border-border');
     expect(link).toHaveAttribute('href', '/demo');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');

@@ -33,7 +33,7 @@ export const metadata: Metadata = {
  */
 export default function ComparePage() {
   return (
-    <main>
+    <main id="main">
       <CompareIndex />
     </main>
   );

@@ -67,8 +67,20 @@ export function PagesTable({
         {pages.map((page, index) => (
           <TableRow
             key={page.site_url_id}
+            // The row is the primary affordance, so it has to be reachable and
+            // operable from the keyboard too — the trailing `View` link is a
+            // shortcut, not a substitute for the row.
+            tabIndex={0}
+            role="link"
+            aria-label={page.title ?? page.display_url}
             onClick={() => openPage(page.site_url_id)}
-            className="cursor-pointer"
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              openPage(page.site_url_id);
+            }}
+            className="focus-visible:ring-accent/60 cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
           >
             <TableCell numeric className="mono text-muted text-xs">
               {index + 1}
@@ -94,11 +106,11 @@ export function PagesTable({
             </TableCell>
             <TableCell
               numeric
-              className={cn('mono font-semibold', scoreTextClass(page.technical_score))}
+              className={cn('mono font-medium', scoreTextClass(page.technical_score))}
             >
               {formatScore(page.technical_score)}
             </TableCell>
-            <TableCell numeric className={cn('mono font-semibold', scoreTextClass(page.aeo_score))}>
+            <TableCell numeric className={cn('mono font-medium', scoreTextClass(page.aeo_score))}>
               {formatScore(page.aeo_score)}
             </TableCell>
             <TableCell className="text-secondary text-xs whitespace-nowrap">

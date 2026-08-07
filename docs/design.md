@@ -5,127 +5,220 @@
 
 ## Direction and identity
 
-CiteLadder is a light-only, evidence-led enterprise system. It should feel
-calm, precise, and operational: identify what answer engines say, understand
-the evidence, resolve gaps, and measure the result.
+CiteLadder is a light-only, evidence-led enterprise system. It should feel calm,
+precise, and engineered. It began from a Tesla-style restraint and has settled
+into a refined, Untitled-UI-influenced light system: one chromatic accent,
+generous whitespace, crisp micro-shadows over hairline borders, and a few
+deliberate, quiet motion treatments.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
-- **Voice:** direct, confident, and specific. Prefer evidence and outcomes over
-  generic AI language. Do not imply product-feed management.
-- **Typography:** Geist for UI, body copy, data, and navigation; self-hosted
-  Apfel Grotezk for display and headings.
-- **Mark:** a one-colour citation/progression symbol that remains legible at
-  16px. It may use enterprise teal or a monochrome treatment; it is never a
-  literal ladder or magnifier.
-- **Composition:** state before features. Product pages prioritise current
-  state, movement, next action, then evidence. Marketing is more editorial but
-  uses the same system.
+- **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
+  and outcomes over generic AI language.
+- **Typography:** Manrope for display headings, Public Sans for UI, body, and
+  data. Weights 400–600, normal tracking (a tight display headline may use
+  `tracking-tight`). Section headings are 32px; the hero headline scales
+  responsively up to 48px, which is the display ceiling.
+- **Accent:** a single Electric Blue (`#3E6AE1`) for primary actions, selection,
+  links, and focus. It is the only chromatic colour on the marketing surface; the
+  hero closing clause may render it as an accent-token gradient.
+- **Composition:** state before features. Product pages prioritise current state,
+  movement, next action, then evidence. Marketing is more editorial but uses the
+  same tokens, type, and restraint.
 
-There is no dark theme, marketing theme, legacy design-system namespace, or
-route-local palette.
+There is no dark theme, marketing token namespace, or route-local palette.
 
 ## Source of truth and implementation rules
 
-`frontend/app/globals.css` is the sole owner of global tokens, font faces,
+`frontend/app/globals.css` is the sole owner of global tokens, the font binding,
 shared geometry, and global interaction rules. Components consume its semantic
 Tailwind utilities and CSS custom properties.
 
 - Do not add `@theme`, a raw hex colour, a shared control recipe, or an
   unregistered animation outside `globals.css`.
-- Do not create a marketing token namespace. Marketing scenes and product
-  screens use the same surface, type, status, elevation, and motion tokens.
+- Do not create a marketing token namespace. Marketing scenes and product screens
+  use the same surface, type, status, elevation, and motion tokens.
 - Prefer existing primitives in `frontend/components/ui/` and
-  `frontend/components/marketing/` before making a new one. A reusable concern
-  needs an explicit owner, not page-local CSS.
-- `pnpm check:policy` guards legacy brand/theme identifiers, raw colours outside
-  the owner, and duplicate `@theme` blocks.
+  `frontend/components/marketing/` before making a new one.
+- `pnpm check:policy` guards raw colours outside the owner, stray `@theme` blocks,
+  legacy identifiers, and the file line budgets.
 
-## Tokens
+## Colour
 
 Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 |---|---|---|
-| Canvas and surfaces | `background`, `background-alt`, `panel`, `elevated`, `well`, `sidebar` | Page, section, card, inset, and rail hierarchy |
-| Text | `foreground`, `secondary`, `muted`, `subtle`, `inverse` | Reading hierarchy and inverse surfaces |
-| Borders | `border`, `border-subtle`, `border-strong` | Structure and interactive affordance |
-| Primary action | `accent-*` | Teal CTAs, selection, links, and focus-adjacent states |
-| Status | `success-*`, `warning-*`, `danger-*`, `info-*`, `neutral-bg` | State only; always pair it with text or an icon |
+| Canvas and surfaces | `background` (Untitled UI Gray-50 #f9fafb), `background-alt` (#f2f4f7), `panel` (white), `well`, `sidebar` | Clean light tiers — crisp panels with high legibility and contrast |
+| Text | `foreground` (#101828), `secondary` (#344054), `muted` (#475467), `subtle` (#667085), `inverse` | Untitled UI 10-step Gray reading ramp |
+| Borders | `border` (#e4e7ec), `border-subtle` (#f2f4f7), `border-strong` (#d0d5dd) | Crisp hairlines for subtle separation |
+| Primary action | `accent-*` | Electric-blue (`#3E6AE1`) CTAs, selection, links, focus (UNCHANGED) |
+| Status | `success-*`, `warning-*`, `danger-*`, `info-*`, `neutral-bg` | App only; always paired with text or an icon |
 | Evidence and scores | `citation-*`, `run-*`, `score-*`, `series-*`, `chart-*` | Persisted evidence, audit status, score bands, and charts |
 
-The accent is enterprise teal: `#006D77` at rest, `#005A63` on hover, and
-`#00444B` when pressed. Its subtle fill is `#E6F4F3`, border is `#A8DADC`, and
-visible focus is `#007F87`. The canvas is a cool near-white, working surfaces
-are white, and ink is cool near-black. Status colours never carry meaning alone.
+The accent is Electric Blue: `#3E6AE1` at rest (UNCHANGED), darkened on hover and press. Its
+subtle fill and border are pale-blue tints; `accent-text` is a darker blue so
+accent-coloured text clears WCAG AA on white. The canvas is Gray 50 (`#f9fafb`),
+working surfaces are white, and ink is Carbon Ink (`#101828`).
 
-Charts identify metric, unit, time range, measurement context, and provenance.
-The brand is the first series. Show at most five categorical series together;
-aggregate remaining series deliberately.
+**Marketing is monochrome-plus-blue.** It uses only white, the ink ramp, and the
+one blue — no status, score, or category colour. **The authenticated app keeps
+the functional families** (status, score bands, run states, citation types, and
+the categorical chart series, whose first series is the brand blue), because a
+data view has to stay legible at a glance. Status colour never carries meaning
+alone; it is always paired with a label or icon.
 
 ## Type, data, and geometry
 
-The global type scale is `2xs`, `xs`, `sm`, `base`, `lg`, `xl`, `2xl`, and
-`3xl`; `heading-sm` is reserved for compact headings. Use Apfel Grotezk for
-headings and Geist for all other text. Metrics, dates, ranks, and percentages
-use tabular numerals, never monospace.
+Two families: Manrope for display headings (`font-display`), Public Sans for UI,
+body, and data (`font-sans`). Weights run 400–600. Metrics, dates, ranks, and
+percentages use tabular numerals, never a monospace face.
+
+The scale clusters low and caps at 48px. `text-sm` (14px) is the reading
+baseline; `text-2xl` (32px) is the section heading; the hero headline scales
+`text-3xl` → `text-4xl` → `text-5xl` (40 → 44 → 48px) across breakpoints, and 48px
+is the ceiling. Every one of those sizes is a `--text-*` token in `globals.css`;
+no page invents an off-scale size.
 
 | Context | Desktop | Touch / compact |
 |---|---:|---:|
 | Top bar | 48px | 52px |
 | Sidebar rail | 224px | mobile drawer |
 | Content gutter | 20px | 16px |
-| Navigation row | 32px | 44px minimum target |
-| Standard control | 32px | 44px minimum target |
+| Navigation / control row | 32px | 44px minimum target |
+| Primary CTA | 40px height | 44px minimum target |
 | Table row | 36px | labelled record |
 
-The content area caps at 1440px. Standard cards use 16px internal padding and
-gap. Dense layouts gain clarity from aligned rows and labels, not illegible text.
-
-Radius roles are fixed: 2px indicators, 4px compact controls, 6px controls,
-and 8px panels. A full radius is reserved for avatars and binary toggles. Use
-`shadow-card` for standard panels, `shadow-card-hover` for interactive panels,
-and `shadow-modal-value` for menus, tooltips, drawers, and dialogs.
+The content area caps at 1383px. Standard cards use 16px internal padding and gap.
+The radius scale is 4px (`xs`), 6px (`sm`, controls/buttons), 8px (`md`), 12px
+(`lg`, standard cards), 16px (`xl`), and 20px (`2xl`, feature panels); a full
+radius is reserved for badges, dots, and toggles. Elevation is Untitled-UI
+micro-shadows layered over hairline borders (`shadow-card` and up), never a heavy
+drop. Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px
+desktop).
 
 ## Layout and content composition
 
 ### Application
 
-- Use sections, ledgers, tables, and split workspaces as page architecture.
-  Cards support a section; they do not replace one. Avoid nested decorative
-  cards.
-- A command-centre view uses a movement-and-actions split: project state first,
-  a dominant movement chart beside a ranked action queue, then a non-causal
-  proof ledger.
+- Use sections, ledgers, tables, and split workspaces as page architecture. Cards
+  support a section; they do not replace one. Avoid nested decorative cards.
 - Recommendations show impact, deterministic priority factors, affected scope,
   status, and links to persisted evidence. Do not invent confidence, effort,
   ownership, or causality.
 - Mobile retains every critical action. Tables become labelled records; filters
-  and evidence use full-height sheets; ordered lists expose up/down controls
-  where drag-and-drop is unavailable.
+  and evidence use full-height sheets.
+
+#### Screen geometry
+
+Every product screen uses one geometry. Learning it once should mean knowing where
+to look on every page in the app.
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Project / context      Date · Compare      Search    Agent   │
+├────────────┬─────────────────────────────────────────────────┤
+│            │                                                 │
+│ Overview   │  Page title                          Actions    │
+│ Site       │  Supporting context                             │
+│ Content    │                                                 │
+│ Demand     │  ┌─────────┐ ┌─────────┐ ┌─────────┐            │
+│ Growth     │  │ Metric  │ │ Metric  │ │ Metric  │            │
+│            │  └─────────┘ └─────────┘ └─────────┘            │
+│ Reports    │                                                 │
+│            │  Primary analytical surface                     │
+│ Settings   │  ──────────────────────────────────────         │
+│            │                                                 │
+│            │  Insights / findings / table                    │
+└────────────┴─────────────────────────────────────────────────┘
+```
+
+Fixed responsibilities per region:
+
+| Region | Owns | Never |
+|---|---|---|
+| Top bar | Project and context switching, date range and comparison window, global search, agent entry | Page-specific actions |
+| Sidebar | The four layers plus Reports and Settings, flat and always visible | Nested trees or disabled future items |
+| Page header | Title, one line of supporting context, and this page's actions | Metrics |
+| Metric row | Three to five headline numbers, each with coverage | More than five, or a metric without provenance |
+| Analytical surface | The one chart, table, or comparison this page exists for | Competing equal-weight surfaces |
+| Insight list | Ranked insight objects (below) | Ad-hoc card shapes |
+
+Date range and comparison live in the top bar because they apply to the whole
+context, not to one chart. A page that needs its own time control is a page whose
+scope is wrong.
+
+#### The insight object
+
+The product model is *acquire evidence → understand → detect gaps → create
+opportunities → improve → verify → recommend next*. The reusable unit that model
+produces is not a dashboard card — it is an **insight**, and it is the single most
+important component in the system.
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ HIGH PRIORITY                              SITE          │
+│                                                          │
+│ 47 product pages have weak buying-intent coverage        │
+│                                                          │
+│ Evidence                                                 │
+│ 47 pages · /products/* · detected 2h ago                 │
+│                                                          │
+│ Why this matters                                         │
+│ Pack expects purchase questions on product detail roles  │
+│                                                          │
+│ Potential impact                         High            │
+│                                                          │
+│ [View evidence]                         [Resolve →]      │
+└─────────────────────────────────────────────────────────┘
+```
+
+Required anatomy, in this order:
+
+1. **Priority** and **source layer** — the layer chip is how the user learns which
+   system found this without reading the body.
+2. **Claim** — one sentence, specific, quantified where a count exists.
+3. **Evidence** — scope, selector, and observation time. Always resolves to
+   persisted evidence.
+4. **Why this matters** — grounded in a pack expectation, a demand signal, or a
+   contradiction. Never a causal claim, never an invented benchmark.
+5. **Potential impact** — from the deterministic priority formula, not a model.
+6. **Two actions** — inspect, and act.
+
+Rules:
+
+- One insight component, used identically in Site, Content, Demand, and the Growth
+  Agent. A layer that invents its own finding card breaks the product's coherence.
+- The same insight in two places is the same server ID and the same cache identity.
+- An insight with no resolvable evidence does not render.
+- Coverage and unknown states use their text labels; an insight never implies
+  completeness it does not have.
+- Insights are ranked by the deterministic formula. The agent may group and explain
+  them; it does not reorder them.
 
 ### Marketing and auth
 
-Marketing is editorial rather than dense, while staying recognisably part of
-the product. A normal page is a vertical stack of full-width sections with
-content in a centered container. Use the recipe: eyebrow, heading, short lead,
-evidence/media or focused grid, then an optional CTA.
+Marketing is editorial rather than dense, while staying recognisably part of the
+product. A page is a vertical stack of full-width sections with content in a
+centred container. Use the recipe: eyebrow, heading, short lead, evidence/media or
+focused grid, then an optional CTA.
 
-- Give sections breathing room; use the global spacing rhythm rather than
-  route-local magic values.
-- Prefer asymmetric text-and-evidence compositions, a proof ledger, or a concise
-  three-column grid over a wall of feature cards.
+- Give sections breathing room on the global rhythm rather than route-local values.
+- Prefer asymmetric text-and-media compositions, a proof ledger, or a concise grid
+  over a wall of feature cards. The product UI is the "photography": a real
+  workspace canvas carries the visual weight.
 - Keep body copy around 60–70 characters wide and use one H1 per page.
-- Auth uses the same palette and focus treatment. On wide screens the brand
-  panel may sit beside the form, but the form remains the primary task.
+- Auth uses the same palette and focus treatment; the form remains the primary task.
 
 ## Component recipes
 
 ### Controls
 
-Controls have direct labels, visible focus, semantic states, and at least a
-44px touch target. Buttons use accent for primary actions, neutral structural
-treatments for secondary actions, and danger only for destructive actions.
-Pending, success, and error states reuse the existing variants.
+Buttons are `rounded-sm` (6px) rectangles, never pills. Primary is the blue fill
+with a white label; secondary is a white fill with a hairline and a Graphite
+label; neutral and ghost stay quiet so a screen has one obvious action; danger is
+reserved for destructive actions. Hover shifts colour, border, and the micro-shadow
+over the universal 330ms curve. Every control has a direct label, a visible focus
+ring (an opaque accent halo, ≥3:1), and at least a 44px touch target.
 
 Inputs use the semantic input and border roles. Labels sit with their control,
 helper text explains constraints, and errors give a recovery instruction. Never
@@ -133,47 +226,55 @@ use placeholder text as the only label.
 
 ### Panels, badges, and evidence
 
-Panels are white or semantic-surface fills with a clear border and the correct
-elevation rung. Interactive panels may raise slightly and deepen their shadow,
-but never scale. Badges pair a text label with their state mark; a colour, dot,
-or icon cannot be the sole signal.
-
-Evidence rows identify source, measurement context, and the action that opens
-the persisted record. Empty and loading states preserve layout and explain what
-is missing or still being measured.
+Panels are white or semantic-surface fills carried by a hairline border and a
+crisp micro-shadow. Interactive cards may raise a step on hover — a deeper shadow
+and a small rise (`hover:-translate-y-0.5`) — as the one sanctioned lift. Badges
+pair a text label with their state mark; a colour, dot, or icon is never the sole
+signal. Evidence rows identify source, measurement context, and the action that
+opens the persisted record. Empty and loading states preserve layout and explain
+what is missing.
 
 ### Navigation and overlays
 
-Navigation makes the active location obvious without turning every item into a
-card. Menus, tooltips, dialogs, and drawers use the modal elevation rung,
-maintain focus, close predictably, and return focus to their trigger. The
-command palette is a dedicated top-bar action, not a second navigation model.
+The marketing nav floats transparent over the hero and becomes a frosted white on
+scroll, with no shadow. The app sidebar makes the active location obvious through a
+blue fill, a leading blue rail, and a Carbon-Dark label — not through weight.
+Menus, tooltips, dialogs, and drawers use the overlay elevation rung, maintain
+focus, close predictably, and return focus to their trigger.
 
 ## Motion and accessibility
 
-Motion communicates feedback or state: 120ms feedback, 180ms state changes,
-and 260ms drawers or route continuity using one ease-out curve. Content remains
-usable in its finished state without animation.
+State changes use one 330ms `cubic-bezier(0.5, 0, 0, 0.75)` curve, with a 250ms
+micro for feedback. Beyond that, a small, deliberate set of ambient and
+storytelling motions is sanctioned, each one calm and each one reduced-motion-safe:
 
-- No looping decoration, rotating copy/logos, cursor spotlights, glass, glow,
-  or gradients. Marketing may use one entrance and one product-demo treatment
-  when they clarify the message.
-- Entrances may fade and rise a small distance; they never scale, spin, or hide
-  server-rendered content after hydration.
-- `prefers-reduced-motion` removes transforms and nonessential movement while
-  retaining all content and controls.
-- WCAG 2.1 AA is the minimum. Focus is always visible; state is never
-  colour-only; forced-colours and print remain usable.
+- the marketing **atmosphere** — two very-low-opacity accent auras drifting behind
+  the public surface;
+- the **architecture pipeline** diagram (platform section) — accent dots flowing
+  along conduit paths;
+- the rotating answer-engine wordmarks and the product-window walkthrough;
+- scroll **reveal** entrances (GSAP) that fade and rise a small distance and never
+  hide server-rendered content after hydration;
+- the interactive-card hover lift.
+
+Every one of these stops under `prefers-reduced-motion: reduce`: CSS animations and
+transitions are neutralised globally, the SMIL pipeline dots are hidden, and the
+GSAP reveals do not run. WCAG 2.1 AA is the minimum. Focus is always visible via an
+opaque accent halo; state is never colour-only; forced-colours and print remain
+usable.
 
 ## Review checklist
 
 Before merging a visual change, verify:
 
 - It uses semantic global tokens and an existing primitive where one applies.
-- It establishes state, next action, and evidence before secondary detail.
+- Type stays within weights 400–600 and at or below the 48px ceiling, using the
+  `--text-*` token sizes.
+- Marketing stays monochrome-plus-blue; functional colour appears only in the app.
+- Elevation uses the micro-shadow tokens; radius uses the 4 / 6 / 8 / 12 / 16 / 20
+  scale.
+- Any new motion is calm and stops under `prefers-reduced-motion`.
 - Text, focus, status, loading, error, empty, keyboard, touch, reduced-motion,
   forced-colours, and mobile states remain usable.
-- Visualisations state their context and provenance; recommendations make no
-  unsupported causal claim.
 - Focused tests, `pnpm check:policy`, and the appropriate build or visual checks
   pass.

@@ -1,941 +1,345 @@
-# CiteLadder — Architecture
-
-**Status:** Authoritative architecture reference  
-**Scope:** Standalone CiteLadder AEO / AI-visibility audit product
-**Frontend:** Next.js App Router on Vercel  
-**Backend:** Python / FastAPI on Railway  
-**Primary database and job queue:** PostgreSQL on Railway
-**Product boundary:** CiteLadder is a full greenfield AEO platform built on workspaces, UUID PKs, BYOK, and a Postgres queue from day one.
+# CiteLadder — Growth Intelligence Architecture
 
-This is the high-level, whole-product architecture document. The supporting docs go deeper on each layer: [`backend-architecture.md`](backend-architecture.md) (API, models, queue, state machine, analysis), [`frontend-architecture.md`](frontend-architecture.md) (routes, API-contract layer, data flow), [`invariants.md`](invariants.md) (the hard rules), and [`design.md`](design.md) (tokens, theme, per-screen layout).
+**Status:** canonical product architecture
+**Runtime shape:** modular monolith; FastAPI API and workers; Next.js frontend; PostgreSQL state and queue
+**Product hierarchy:** four layers — Site Intelligence, Content Intelligence, Demand Intelligence, and the Growth Agent
+**First industry packs:** Education, then Commerce
 
----
+## 1. Product vision
 
-## 1. Executive decisions
+CiteLadder is the growth operating system for businesses that cannot afford to manage website
+health, brand knowledge, content production, search demand, analytics, AI visibility, and growth
+planning in disconnected tools.
 
-### 1.1 Build a modular monolith
+It answers four connected questions:
 
-Use one Python application with explicit domain modules and a separate worker process. Do not create microservices solely to split current domain boundaries.
+1. What does this business currently say and prove?
+2. What is missing, weak, contradictory, stale, or hard to discover?
+3. What are customers demonstrably asking and doing?
+4. What should the business improve, create, and measure next?
 
-The main workflow is one coherent product transaction:
+The durable differentiator is a project-specific, evidence-backed knowledge system that compounds
+through every crawl, import, analysis, generation, audit, and verified outcome.
 
-```text
-brand and prompt definition
-  -> audit plan
-  -> provider execution
-  -> raw evidence persistence
-  -> response analysis
-  -> metrics
-  -> report
-```
+**The system runs itself.** Acquisition, understanding, gap detection, prioritization, demand
+analysis, and recommendation all happen automatically. The product's job is to arrive at a
+conclusion and show its work — not to ask the user to authorize each step toward it.
 
-Separating those steps into networked services now would add deployment, consistency, tracing, and contract overhead without improving the initial customer outcome.
+## 2. The four layers
 
-### 1.2 Use PostgreSQL as both durable state and the task queue
+Three layers own data. The fourth is how the user talks to them.
 
-The revised deployment has no Redis dependency:
+### 2.1 Site Intelligence
 
-```text
-                         cube27.com
-                             |
-                    app.visibility.cube27.com
-                             |
-                             v
-                    Next.js on Vercel
-                             |
-                             v
-                  FastAPI API on Railway
-                       |             |
-                       |             +------ SSE audit events
-                       |
-             +---------+-------------------------+
-             |                                   |
-             v                                   v
-      PostgreSQL on Railway          S3-compatible object storage
-      - product data                 - raw provider payloads
-      - audit tasks                  - generated reports
-      - leases/retries               - large evidence artifacts
-      - metrics/provenance
-             ^
-             |
-     Python worker on Railway
-     - provider calls
-     - response analysis
-     - report generation
-```
+Owns the business's owned digital corpus:
 
-PostgreSQL remains the source of truth for every audit and task. Workers claim queue rows using row-level locking with `FOR UPDATE SKIP LOCKED`, leases, and idempotency keys.
+- URL and document inventory;
+- safe crawling, rendering escalation, and immutable artifacts;
+- generic page kind and industry-specific role classification;
+- content units, questions, entities, assertions, relationships, schema, and temporal state;
+- discoverability, answerability, trust, machine clarity, and journey coverage;
+- findings and grouped opportunities;
+- snapshots, reports, exports, and recrawl verification.
 
-### 1.3 Treat Redis as an optional future scaling choice, not a requirement
+It creates the knowledge foundation every other layer consumes.
 
-Introduce Redis only after measurements show that PostgreSQL queue activity or distributed coordination is becoming a bottleneck.
+### 2.2 Content Intelligence
 
-A future Redis upgrade may provide:
+Turns evidence into reviewable improvements:
 
-- faster wake-ups and fan-out;
-- distributed rate-limit counters;
-- provider-specific concurrency semaphores;
-- high-volume transient caching;
-- event pub/sub;
-- a dedicated queue implementation.
+- content inventory and portfolio strategy;
+- missing-page, missing-section, unanswered-question, contradiction, trust, and demand gaps;
+- deterministic briefs carrying verified facts, prohibited claims, sources, and success criteria;
+- task-scoped context packages;
+- provider-neutral generation and append-only attempts;
+- automatic validation, then user edit and save;
+- recrawl, demand, and visibility verification.
 
-Even after Redis is added, PostgreSQL should continue to hold the canonical audit task, attempt, response, and outcome records. Redis must not become the sole durable evidence store.
-
-### 1.4 Keep all provider configuration in Providers & Settings
-
-Provider selection, API keys, transport routes, model IDs, connection testing, and defaults belong only in:
-
-```text
-Settings -> Providers
-```
-
-Main audit pages may display a read-only summary such as:
-
-```text
-Discovery model: configured provider / model
-Measurement engines: ChatGPT, Gemini, Claude
-```
-
-They must not repeat provider cards, API-key forms, or model-selection controls. An audit may override operational values such as enabled engines, repeat count, region, concurrency, and rate limits, but it uses provider routes configured centrally.
-
-### 1.5 Reports are projections of persisted evidence
-
-The canonical rule carried into the new project is:
-
-> A report renderer never performs a second extraction or silently repairs analysis. It renders versioned, persisted evidence and metrics.
-
----
-
-## 2. Provider model: measurement engines vs discovery/analysis model
-
-The provider layer separates two distinct concepts. Both use encrypted BYOK configuration and broad transport support, but they play different roles and must never be conflated.
-
-#### Measurement engines
-
-The products being measured:
-
-- ChatGPT / OpenAI;
-- Gemini / Google;
-- Claude / Anthropic.
-
-Every logical engine uses its direct provider API. The executable catalog is keyed by
-`(logical_engine, measurement_mode)` and contains no aliases or fallbacks:
-
-| Engine | Pulse | Benchmark |
-|---|---|---|
-| ChatGPT / OpenAI | `gpt-5.4-nano-2026-03-17`, retrieval off | `gpt-5.6-sol`, native web search |
-| Claude / Anthropic | `claude-haiku-4-5-20251001`, thinking off | `claude-sonnet-5`, native web search |
-| Gemini / Google | `gemini-3.5-flash-lite`, minimal thinking | `gemini-3.6-flash`, Search grounding |
-
-The direct OpenAI adapter (`backend/app/connectors/answer_engines/openai.py`) uses the
-Responses API.
-
-#### Discovery and analysis model
-
-A separately configured model used for brand understanding, prompt suggestion, clustering, and optional ambiguity adjudication. Supported transports may include:
-
-- NVIDIA;
-- Mistral API;
-- OpenAI;
-- Anthropic;
-- Google;
-- Groq;
-- other explicitly approved OpenAI-compatible endpoints.
-
-A result must always preserve both identities. Active measurement rows now carry a direct
-transport (`openai | anthropic | google`):
-
-```text
-logical_engine = gemini
-transport_provider = google           # active direct route
-transport_model = gemini-3.5-flash-lite
-measurement_mode = pulse
-```
-
----
-
-## 3. Current product scope
-
-### 3.1 Included
-
-- user authentication;
-- workspace and project creation;
-- one brand per initial project;
-- brand name, website, market, language, aliases, and competitors;
-- optional website evidence collection;
-- optional AI-assisted brand analysis;
-- user-controlled number of generated prompts;
-- manual prompt creation;
-- CSV prompt import and export;
-- prompt review, editing, grouping, filtering, enable/disable, and deletion;
-- centralized BYOK provider settings;
-- direct measurement routes for ChatGPT (`openai`), Gemini (`google`), and Claude (`anthropic`);
-- separate discovery/analysis-model configuration;
-- one-time audit execution;
-- enabled-engine selection per audit;
-- configurable repeat count;
-- configurable global and per-provider concurrency;
-- configurable request-rate limits;
-- bounded retries;
-- cancellation;
-- raw request/response evidence preservation;
-- partial completion when one provider fails;
-- deterministic brand/competitor mention detection;
-- citation extraction and URL normalization;
-- owned-domain citation classification;
-- ordered recommendation/rank detection;
-- sentiment and theme analysis;
-- accuracy findings tied to brand evidence;
-- aggregate metrics and engine comparison;
-- prompt-level evidence explorer;
-- HTML, Markdown, CSV, and JSON exports;
-- cost, usage, failure, and diagnostic summaries;
-- audit and analyzer version provenance.
-
-### 3.2 Deferred
-
-- recurring schedules;
-- consumer-chat browser automation;
-- prompt-volume datasets;
-- large-scale country/language matrices;
-- GSC and GA4 integration;
-- server/edge-log crawler analytics;
-- automated content generation or publishing;
-- SSO and advanced enterprise roles;
-- subscriptions and metered billing;
-- a public benchmark network;
-- Redis-backed queueing or pub/sub.
-
-The database may include nullable scheduling fields, but the MVP UI must present only one-time audits.
-
----
-
-## 4. Product workflow
-
-### 4.1 Project setup
-
-```text
-Create project
-  -> add brand URL and market
-  -> optionally define aliases and competitors
-  -> verify provider settings
-```
-
-### 4.2 Prompt path A: assisted discovery
-
-```text
-Fetch allowed brand evidence
-  -> create BrandEvidenceSnapshot
-  -> run configured discovery model
-  -> suggest requested number of prompts
-  -> classify and cluster prompts
-  -> user reviews and edits
-```
-
-### 4.3 Prompt path B: no discovery AI
-
-```text
-Manual prompt entry or CSV import
-  -> validation and dedupe
-  -> optional manual metadata
-  -> user reviews
-```
-
-The product must never require discovery AI to run an audit.
-
-### 4.4 Audit execution
-
-```text
-Estimate calls and cost
-  -> snapshot prompt and provider configuration
-  -> create AuditTask rows
-  -> worker claims tasks
-  -> execute provider calls
-  -> persist raw artifacts and attempts
-  -> deterministic analysis
-  -> optional ambiguity adjudication
-  -> aggregate metrics
-  -> generate report
-```
-
----
-
-## 5. Repository shape
-
-```text
-citeladder/
-  frontend/                           # Next.js App Router
-  backend/
-    app/
-      api/                            # thin FastAPI route modules
-      core/                           # config, DB, security, telemetry
-      models/                         # SQLAlchemy persistence
-      schemas/                        # Pydantic API contracts
-      domain/
-        workspaces/
-        brands/
-        prompts/
-        providers/
-        audits/
-        visibility/
-        citations/
-        reports/
-      connectors/
-        answer_engines/
-        discovery_models/
-        web_evidence/
-        object_storage/
-      orchestration/
-        audit_planner.py
-        audit_dispatcher.py
-        audit_state_machine.py
-        task_queue.py
-        postgres_task_queue.py
-      analysis/
-        deterministic.py
-        entity_matching.py
-        citation_parser.py
-        ranking.py
-        sentiment.py
-        fact_check.py
-        llm_adjudication.py
-      reporting/
-        canonical_report.py
-        html_renderer.py
-        markdown_renderer.py
-        csv_exporter.py
-        json_exporter.py
-      workers/
-        audit_worker.py
-        analysis_worker.py
-        report_worker.py
-      tests/
-  migrations/
-  docs/
-    architecture/
-    product/
-    runbooks/
-    adr/
-  infra/
-    docker/
-    railway/
-    vercel/
-```
-
-Use one repository. Vercel can deploy `frontend/` as its root directory, while Railway deploys the API and worker from the backend directory with different start commands.
-
----
-
-## 6. Domain model
-
-### 6.1 Identity and workspaces
-
-- `User`
-- `Workspace`
-- `WorkspaceMember`
-- `Project`
-
-Every project-owned query must include workspace authorization. Do not rely on IDs alone.
-
-### 6.2 Brand evidence
-
-- `Brand`
-- `BrandAlias`
-- `Competitor`
-- `BrandEvidenceSnapshot`
-- `BrandEvidencePage`
-
-A snapshot records what the discovery/accuracy pipeline saw at that time:
-
-- fetched URLs;
-- page titles and canonical URLs;
-- extracted text or compact evidence;
-- brand claims;
-- positioning;
-- services/products;
-- target audience;
-- market;
-- timestamp;
-- fetch diagnostics;
-- content hash;
-- discovery-model snapshot.
-
-### 6.3 Prompts
-
-- `PromptSet`
-- `Prompt`
-- `PromptCluster`
-- `PromptImport`
-
-Prompt fields:
-
-- exact text;
-- language;
-- region;
-- persona;
-- buyer stage;
-- branded/non-branded;
-- topic;
-- cluster;
-- enabled state;
-- origin: generated, manual, imported;
-- generation evidence;
-- created/updated timestamps.
-
-### 6.4 Provider configuration
-
-- `ProviderConnection`
-- `ProviderRoute`
-- `ProviderConnectionTest`
-- `ModelCatalogSnapshot`
-
-Secrets are encrypted and never returned after creation. A route stores:
-
-- logical engine or discovery purpose;
-- transport provider;
-- exact model ID;
-- base URL from an approved provider definition;
-- non-secret options;
-- encrypted credential reference;
-- active/default state.
-
-### 6.5 Audit execution
-
-- `Audit`
-- `AuditPromptSnapshot`
-- `AuditEngineSnapshot`
-- `AuditTask`
-- `ProviderAttempt`
-- `RawResponseArtifact`
-- `AuditEvent`
-
-The atomic execution identity is:
-
-```text
-audit + prompt snapshot + logical engine + repeat index
-```
-
-### 6.6 Analysis and reports
-
-- `ResponseAnalysis`
-- `BrandMention`
-- `CompetitorMention`
-- `Citation`
-- `Claim`
-- `AccuracyFinding`
-- `MetricSnapshot`
-- `Report`
-- `ExportArtifact`
-
-Every derived row points to:
-
-- raw response artifact;
-- analyzer version;
-- formula or rule version;
-- optional adjudication artifact.
-
----
-
-## 7. PostgreSQL task queue
-
-### 7.1 Queue table
-
-Recommended `audit_tasks` fields:
-
-| Field | Purpose |
+### 2.3 Demand Intelligence
+
+Connects external and behavioural evidence to the owned knowledge system:
+
+- Google Search Console query and page observations;
+- Google Analytics landing, engagement, event, key-event, and commerce observations;
+- configured business journeys and outcome definitions;
+- query-to-page and event-to-journey coverage;
+- demand signals and transparent priorities;
+- prompt portfolios and multi-engine AI Visibility measurement;
+- aligned-window comparisons after site or content changes.
+
+Visibility is measurement truth for answer-engine mentions, citations, rankings, and share of
+voice. It does not own company truth and does not define the product hierarchy.
+
+### 2.4 Growth Agent
+
+The conversation and orchestration layer. It is a real layer of the product — the one the user
+spends the most time in — but it owns no data of its own:
+
+- explains persisted evidence, findings, signals, and changes;
+- builds prioritized roadmaps from the three layers' own outputs;
+- calls typed Site, Content, and Demand tools;
+- assembles bounded, inspectable context rather than dumping the knowledge base;
+- creates strategies, briefs, drafts, and prompts;
+- stops at the two decision points in §3 and nowhere else;
+- preserves model, context, tool, cost, and result provenance.
+
+It is not a fourth data owner, an unrestricted chat interface, or an autonomous publisher. Every
+fact it states belongs to one of the three intelligence layers and resolves to that layer's
+evidence.
+
+## 3. What the user decides
+
+The system is automatic except at two points. This is a hard product boundary, not a default.
+
+| Decision | Why the human is here |
 |---|---|
-| `id` | UUID primary key |
-| `audit_id` | parent audit |
-| `prompt_snapshot_id` | immutable prompt input |
-| `logical_engine` | ChatGPT, Gemini, or Claude |
-| `provider_route_snapshot` | non-secret execution configuration |
-| `repeat_index` | reproducibility repeat |
-| `idempotency_key` | unique task identity |
-| `status` | queued, leased, running, succeeded, retry_wait, failed, cancelled |
-| `priority` | bounded integer |
-| `available_at` | retry/scheduling gate |
-| `lease_owner` | worker identity |
-| `lease_expires_at` | crash recovery |
-| `heartbeat_at` | live worker signal |
-| `attempt_count` | attempts used |
-| `max_attempts` | bounded retry limit |
-| `result_artifact_id` | successful raw evidence |
-| `error_code` | normalized error |
-| `error_detail` | redacted diagnostic |
-| timestamps | creation, update, start, completion |
+| **Generate and save content** | Content is the product's only durable outward-facing output. The user chooses what to generate, edits it, and decides what to keep. |
+| **Run and schedule audits** | Crawls, syncs, and answer-engine audits cost money and hit external systems. The user chooses when they run and on what cadence. |
 
-Indexes:
+Everything else runs on its own: crawling within an approved schedule, classification, knowledge
+extraction, assertion and contradiction detection, gap detection, opportunity creation, demand
+signals, prompt generation, prioritization, and roadmap construction.
 
-- `(status, available_at, priority, created_at)`;
-- `(audit_id, status)`;
-- partial index on expired leases;
-- unique index on `idempotency_key`.
+Nothing in that automatic set is irreversible. Every derived artifact is a recomputable
+projection over immutable evidence, so an error is corrected by fixing the input or the rule and
+recomputing — not by having asked a human first. Approval gates are reserved for actions that
+spend money or leave the system; they are not used as a substitute for correctness.
 
-### 7.2 Claim algorithm
+**Corrections, not approvals.** Where the user disagrees with a derived fact, they correct it. A
+correction is durable, wins over any later derivation, and records who made it and when. This is
+opt-out where the old model was opt-in: the user touches the knowledge layer only when something
+is wrong, not to bless each thing that is right.
 
-Within one short transaction:
-
-1. select eligible rows in deterministic priority order;
-2. lock them with `FOR UPDATE SKIP LOCKED`;
-3. update them to `leased`;
-4. assign `lease_owner` and `lease_expires_at`;
-5. return the claimed tasks;
-6. commit before making any external API call.
-
-Do not hold a database transaction open while waiting for a provider.
-
-### 7.3 Lease and recovery
-
-- Worker heartbeats extend a task lease.
-- A sweeper returns expired leased/running tasks to `retry_wait` or marks them failed after `max_attempts`.
-- Provider attempts are append-only.
-- A successful task cannot be re-executed unless an explicit operator rerun creates a new task identity.
-- Cancellation marks queued tasks immediately and causes active workers to stop before the next provider call or analysis stage.
-
-### 7.4 Worker wake-up
-
-For the MVP, workers can use bounded polling with jitter. A short idle delay is acceptable because provider calls are much slower than queue claims.
-
-Optional later optimization:
-
-- PostgreSQL `LISTEN/NOTIFY` to wake workers while retaining polling as recovery.
-- Redis wake-up/pub-sub only when measured scale justifies it.
-
-### 7.5 Queue abstraction
-
-Keep orchestration dependent on an interface:
+## 4. Canonical improvement loop
 
 ```text
-TaskQueue
-  claim()
-  heartbeat()
-  succeed()
-  retry()
-  fail()
-  cancel()
-  release_expired()
+owned domain, documents, and integrations
+  -> immutable evidence
+  -> page and document understanding
+  -> project facts, gaps, and demand signals
+  -> prioritized opportunities
+  -> brief
+  -> generated content the user edits and saves
+  -> recrawl, resync, or visibility audit
+  -> compatible before/after observation
+  -> next recommended action
 ```
 
-The MVP implementation is `PostgresTaskQueue`. A future Redis implementation must not change audit-domain or reporting code.
+Every stage is inspectable and versioned. A later observation never rewrites earlier evidence.
 
----
+## 5. Knowledge system
 
-## 8. Audit state machine
+Two layers, not three.
+
+### Immutable evidence
+
+Observed artifacts, persisted automatically for reproducibility:
+
+- crawl attempts and page/document artifacts;
+- integration imports and normalized metric rows;
+- answer-engine responses, citations, and analyses;
+- generation requests and attempts;
+- user actions.
+
+Persistence means "observed", not "true".
+
+### Project facts
+
+The current best understanding of the business, derived automatically from evidence and kept
+current. Includes entities, assertions, relations, questions, topics, audiences, offerings,
+journeys, contradictions, gaps, demand signals, opportunities, briefs, and prompts — each carrying
+confidence, coverage, effective dates, limitations, and analyzer versions.
+
+Project facts are recomputable. A user correction is the one thing that is not: it persists across
+recomputation, outranks derived values, and is preserved with its author and timestamp. A
+correction can be edited or withdrawn, which restores the derived value.
+
+Embeddings are optional retrieval projections. They are never authorization filters and never the
+canonical truth store.
+
+## 6. Core ontology and industry knowledge
+
+The stable core models reusable concepts: corpus items and evidence; generic page kinds; entities,
+assertions, relations, questions, topics, audiences, offerings, and content units; journeys,
+stages, outcomes, demand signals, prompts, actions, briefs, context packages, and verification;
+temporal, confidence, coverage, and contradiction state.
+
+A versioned `IndustryPack` supplies industry-specific behaviour: page roles and classifier signals,
+expected entity/relation/assertion types, journeys and outcomes, customer questions and content
+expectations, schema parity expectations, trust and regulated-claim policies, rules, report
+modules, brief and prompt archetypes, and evaluation fixtures.
+
+The active analysis contract is:
 
 ```text
-DRAFT
-  -> VALIDATING
-  -> QUEUED
-  -> RUNNING
-  -> ANALYZING
-  -> REPORTING
-  -> COMPLETED
+stable core + one primary industry pack + reviewed capabilities + versioned project overlay
 ```
 
-Terminal and exceptional states:
+This matches the normative contract in
+[`../backend/app/core/config/industry_packs/EXTENSION_CONTRACT.md`](../backend/app/core/config/industry_packs/EXTENSION_CONTRACT.md),
+which the pack validator enforces. Capabilities (`lead_generation`, `local_presence`, and the rest
+of `capabilities.json`) are cross-cutting modules that a pack opts into; they add requirements and
+never weaken shared controls.
 
-- `VALIDATION_FAILED`
-- `PARTIALLY_COMPLETED`
-- `FAILED`
-- `CANCELLED`
+**Known limitation.** A business with two genuine industry identities — a school with a
+merchandise store, a retailer with a learning centre — has no composition path today, because
+capabilities are cross-cutting concerns rather than industries. The forward-compatible mechanism
+is ordered secondary packs scoped by URL subtree, with the primary pack winning ties. Every
+understanding row already records its winning `pack_id` and `pack_version`, so adding this later
+does not require a migration of existing rows. It is not built now.
 
-A provider authentication failure must not discard successful results from other engines. The report must disclose coverage and failed tasks.
+Customer facts never mutate a shared pack. Generalized improvements enter a reviewed pack release
+with fixtures and compatibility notes.
 
----
+## 7. Page understanding
 
-## 9. Concurrency and rate limiting
-
-Snapshot all run controls at audit creation:
-
-- total audit concurrency;
-- workspace concurrency;
-- provider-route concurrency;
-- logical-engine concurrency;
-- requests per minute;
-- token budget where supported;
-- retryable error classes;
-- maximum attempts;
-- request timeout.
-
-MVP implementation:
-
-- worker obtains a bounded batch of PostgreSQL task leases;
-- in-process async semaphores enforce local provider concurrency;
-- the worker persists rate-limit timestamps and retry availability;
-- deployment begins with one worker service or a small fixed worker count.
-
-Future Redis upgrade:
-
-- distributed token buckets;
-- distributed semaphores;
-- high-frequency coordination across many worker replicas.
-
-Do not add Redis merely to support two small worker instances.
-
----
-
-## 10. Provider adapter contract
+Page analysis separates two concepts:
 
 ```text
-AnswerEngineAdapter
-  validate_connection()
-  estimate()
-  execute()
-  normalize_response()
-  normalize_usage()
-  normalize_citations()
-  classify_error()
+page_kind      = generic structural job
+industry_role  = active-pack business job
 ```
-
-Normalized response fields:
-
-- answer text;
-- complete provider payload artifact;
-- provider-returned citations;
-- exact model ID;
-- logical engine;
-- transport provider;
-- request ID;
-- timestamps;
-- finish reason;
-- usage;
-- safety/refusal metadata;
-- normalized error.
-
-Adapters execute and normalize. They do not calculate visibility.
-
----
-
-## 11. Analysis pipeline
 
 ```text
-raw response
-  -> text normalization
-  -> deterministic brand and alias detection
-  -> deterministic competitor detection
-  -> citation URL extraction
-  -> URL normalization and source ownership
-  -> ordered-list/table/rank detection
-  -> sentiment and theme extraction
-  -> claim extraction
-  -> evidence comparison
-  -> optional LLM adjudication
-  -> persisted canonical analysis
+page_kind=conversion  industry_role=education.admissions_overview
+page_kind=detail      industry_role=commerce.product_detail
+page_kind=trust       industry_role=healthcare.clinician_profile
 ```
 
-### Deterministic-first rules
-
-- Unicode and case normalization.
-- Boundary-safe alias matching.
-- Explicit alias and domain registry.
-- URL canonicalization and tracking-parameter removal.
-- Ordered list/table parsing.
-- explicit negation handling;
-- source classification: owned, competitor-owned, third party, unknown.
-- no forced sentiment or rank when evidence is ambiguous.
-
-### Optional adjudication
-
-Use the configured analysis model only for bounded ambiguity:
-
-- unclear entity reference;
-- implied order;
-- sentiment requiring context;
-- claim comparison against the brand evidence snapshot.
-
-Persist the adjudication prompt, model, output, confidence, and reason.
-
----
-
-## 12. Metrics
-
-All formulas are versioned.
-
-### Visibility rate
-
-```text
-eligible successful responses mentioning brand
-/
-eligible successful responses
-```
-
-### Owned citation rate
-
-```text
-eligible successful responses citing at least one owned URL
-/
-eligible successful responses
-```
-
-### Share of voice
-
-Report two definitions:
-
-1. response-level brand presence compared with tracked competitors;
-2. mention-level share across all tracked brand and competitor mentions.
-
-### Average rank
-
-Include only responses with a confidently detected ordered recommendation.
-
-### Sentiment
-
-- positive;
-- neutral;
-- negative;
-- unknown.
-
-Unknown is not silently converted to neutral.
-
-### Accuracy issue rate
-
-```text
-brand-mentioning responses with at least one supported accuracy finding
-/
-brand-mentioning responses
-```
-
-### Repeat stability
-
-When repeat count is greater than one:
-
-- answer agreement;
-- mention variance;
-- citation variance;
-- rank variance;
-- refusal/error variance.
-
----
-
-## 13. Reporting architecture
-
-Create one renderer-independent canonical model:
-
-```text
-CanonicalReport
-  methodology
-  coverage
-  executive_summary
-  metric_cards
-  engine_comparison
-  competitor_comparison
-  prompt_clusters
-  citation_analysis
-  accuracy_findings
-  opportunities
-  prompt_appendix
-  cost_and_failures
-  provenance
-```
-
-Renderers:
-
-- HTML;
-- Markdown;
-- CSV datasets;
-- JSON evidence bundle.
-
-Every recommendation links to supporting prompt and response IDs. The report distinguishes:
-
-- observed evidence;
-- calculated metrics;
-- model/analyst interpretation;
-- recommended action.
-
----
-
-## 14. API surface
-
-```text
-POST   /api/v1/brands/analyze
-GET    /api/v1/projects/{id}/brand-evidence
-
-POST   /api/v1/prompt-sets
-POST   /api/v1/prompt-sets/{id}/generate
-POST   /api/v1/prompt-sets/{id}/import
-PATCH  /api/v1/prompts/{id}
-DELETE /api/v1/prompts/{id}
-
-GET    /api/v1/provider-connections
-POST   /api/v1/provider-connections
-PATCH  /api/v1/provider-connections/{id}
-POST   /api/v1/provider-connections/{id}/test
-DELETE /api/v1/provider-connections/{id}
-
-POST   /api/v1/audits/estimate
-POST   /api/v1/audits
-GET    /api/v1/audits/{id}
-POST   /api/v1/audits/{id}/cancel
-GET    /api/v1/audits/{id}/events
-GET    /api/v1/audits/{id}/responses
-GET    /api/v1/audits/{id}/metrics
-
-POST   /api/v1/audits/{id}/reports
-GET    /api/v1/reports/{id}
-GET    /api/v1/reports/{id}/download
-```
-
-Use server-sent events for audit progress. Keep polling as a fallback.
-
----
-
-## 15. Security
-
-- Encrypt BYOK secrets with envelope encryption backed by a production secret/KMS provider.
-- Never return a stored secret after creation.
-- Redact credentials and authorization headers from logs and artifacts.
-- Maintain an approved provider/base-URL catalog.
-- Reject arbitrary private-network provider endpoints.
-- Apply SSRF protection to brand evidence fetching.
-- Enforce workspace authorization in every repository query.
-- Use secure HttpOnly cookies.
-- Apply CSRF protection to cookie-authenticated mutations.
-- Tenant-isolate raw provider responses and reports.
-- Define retention and project deletion behavior.
-- Audit connection creation, testing, rotation, and deletion.
-- Require explicit confirmation before sending brand evidence to a selected discovery provider.
-
----
-
-## 16. Deployment
-
-### Vercel
-
-Deploy:
-
-```text
-frontend/
-```
-
-Responsibilities:
-
-- Next.js rendering;
-- UI assets;
-- preview deployments;
-- route shell and interactive frontend.
-
-### Railway API service
-
-Start FastAPI as a long-running web service.
-
-Responsibilities:
-
-- auth;
-- domain APIs;
-- audit creation and cancellation;
-- SSE event endpoint;
-- report download authorization.
-
-### Railway worker service
-
-Use the same backend image with a worker start command.
-
-Responsibilities:
-
-- claim PostgreSQL tasks;
-- provider execution;
-- analysis;
-- report generation;
-- lease heartbeat and recovery.
-
-### Railway PostgreSQL
-
-Responsibilities:
-
-- canonical product state;
-- queue rows and leases;
-- metrics;
-- provenance;
-- configuration snapshots.
-
-### Object storage
-
-Use an S3-compatible service for large raw payloads and generated artifacts. PostgreSQL stores content hashes, metadata, and object keys.
-
----
-
-## 17. Redis upgrade criteria
-
-Redis is not scheduled work. Create an architecture decision only when telemetry shows one or more of these:
-
-- queue claim/update traffic materially degrades normal PostgreSQL latency;
-- many worker replicas require distributed rate-limit coordination;
-- audit event fan-out requires lower-latency pub/sub;
-- cache load is expensive enough to justify a dedicated transient store;
-- PostgreSQL queue maintenance becomes a measurable operational burden.
-
-Before upgrading:
-
-1. capture queue throughput and latency;
-2. identify whether the problem is claiming, rate limiting, events, or caching;
-3. choose Redis only for the affected capability;
-4. retain canonical task/attempt state in PostgreSQL;
-5. run dual-write or reconciliation tests during migration.
-
----
-
-## 18. Acceptance criteria
-
-1. All provider secrets are configured only in Providers & Settings.
-2. The supported measurement routes work: direct `google` for Gemini, direct `anthropic` for Claude, and direct `openai` (OpenAI Responses API) for ChatGPT.
-3. Discovery/analysis model configuration is separate.
-4. AI discovery can be skipped.
-5. Manual and CSV prompt paths work.
-6. A configurable number of prompts can be generated and edited.
-7. A one-time audit creates durable PostgreSQL tasks.
-8. Multiple workers cannot claim the same task.
-9. Expired leases recover safely.
-10. Provider failures do not discard unrelated successful evidence.
-11. Every metric is traceable to raw evidence.
-12. Citation normalization and owned-domain classification are inspectable.
-13. Markdown and CSV exports (the MVP export surface) are reproducible; HTML and JSON renderers are post-MVP.
-14. Secrets do not appear in logs or artifacts.
-15. Costs, retries, failures, and coverage are visible.
-16. A running audit can be cancelled safely.
-17. Report output is reproducible: re-rendering a completed audit yields identical metrics and identical Markdown/CSV exports (the MVP export surface).
-18. The product deploys with Vercel, Railway API, Railway worker, and Railway PostgreSQL without Redis.
-
----
-
-## 19. Product roadmap
-
-### Release 1.1
-
-- recurring schedules;
-- report delivery;
-- historical trends;
-- multi-region/language runs;
-- saved views and prompt clusters.
-
-### Release 1.2
-
-- Google Search Console;
-- Google Analytics 4;
-- AI referral classification;
-- conversion correlation;
-- owned-page opportunity mapping.
-
-### Release 1.3
-
-- server/edge-log ingestion;
-- verified AI crawler identification;
-- crawler-to-page analytics;
-- robots and bot-access recommendations.
-
-### Release 2
-
-- Redis where measured scaling requires it;
-- browser-based consumer experience capture where appropriate;
-- content recommendation workflow;
-- remediation tracker;
-- agency multi-client controls;
-- consented aggregate benchmarks.
-
----
-
-## 20. References
-
-- PostgreSQL locking and `SKIP LOCKED`: https://www.postgresql.org/docs/current/sql-select.html
-- Next.js App Router: https://nextjs.org/docs/app
-- Vercel monorepos: https://vercel.com/docs/monorepos
-- Profound product reference: https://www.tryprofound.com/
+**One owner.** `SitePageAnalysis` is the single page-understanding row. It becomes append-only,
+keyed by `(artifact_id, analyzer_version, pack_id, pack_version)`, with one `is_current` row per
+corpus item. `PageUnderstanding` is the public API/DTO name for that row. There is no second
+page-analysis table, and recomputing under a new pack version writes a new row rather than
+mutating the old one — which is exactly what recrawl comparison needs.
+
+Classification is deterministic-first: code owns URL and media disposition, parsing, exact
+identifiers, dates, units, schema syntax, deduplication, and configured signal scoring. Structured
+data is one signal and one expectation; its absence cannot prevent classification from visible
+evidence.
+
+**Where a model decides, say so.** Matching a differently-worded page or question to a pack
+archetype is a semantic judgement that deterministic normalization cannot make. Those matches are
+model-assisted, and each one persists its confidence, model, and template version alongside the
+result. The asymmetry matters: a match that *creates* work is recoverable, while a match that
+*dismisses* a gap hides it. Dismissals therefore require higher confidence than detections, and
+the threshold is config-owned.
+
+## 8. Demand, marketing, and measurement
+
+The product progressively brings marketing strategy into the same knowledge system: organic demand
+and query-page fit; landing-page and configured outcome evidence; paid campaign evidence when a
+connector exists; AI prompt portfolios and visibility audits; content and site action verification;
+business-priority and effort-aware roadmaps.
+
+CiteLadder does not claim causality from aggregate correlations. It displays aligned windows,
+sample size, source coverage, missing joins, and limitations. "Unavailable", "not configured", and
+"observed zero" remain distinct.
+
+## 9. Scores and coverage
+
+Composite scores are reported over the **full** denominator with an explicit coverage figure
+beside them. A composite is never renormalized over only the dimensions that happened to be
+observable.
+
+Renormalizing upward assumes missing dimensions would have scored like the observed ones, and in
+this domain that assumption fails in a predictable direction: absent evidence correlates with
+weakness. A site with no schema graph, no policy pages, and no author attribution is missing
+exactly the dimensions it would have failed, and renormalization would hand it a better score than
+a site that published all three and scored badly. Low coverage is itself the finding, and it is
+shown as one.
+
+## 10. Scheduled growth programs
+
+Scheduling is a governed orchestration feature, not an unbounded agent loop. A `GrowthProgram`
+defines a versioned, user-scheduled cadence for recurring recrawls, GSC/GA4 syncs, visibility
+audits, stale-content reviews, executive snapshots, and post-publication verification windows.
+
+Each schedule freezes task policy, resource scope, and cost/concurrency limits. Scheduled runs call
+the same typed domain tools and create the same immutable artifacts as manual runs. Setting the
+schedule is one of the two user decisions in §3; each run inside it is not.
+
+## 11. Runtime architecture
+
+CiteLadder is a modular monolith:
+
+- Next.js frontend;
+- FastAPI API;
+- separate worker processes;
+- PostgreSQL as canonical product state and task queue;
+- object storage only when bounded database artifacts are insufficient;
+- provider-neutral model gateway;
+- direct measurement adapters for answer engines;
+- typed domain modules rather than autonomous microservices.
+
+Core runtime rules:
+
+- workspace authorization on every project-owned query;
+- UUID identities;
+- config-owned policy;
+- immutable artifacts and append-only attempts;
+- short transactions and commit before external I/O;
+- idempotent queued mutations and leased single-writer workers;
+- persisted projections on reads;
+- coded errors and same-origin browser APIs.
+
+**Pre-launch database policy.** CiteLadder keeps one `migrations/versions/0001_initial.py`.
+Schema changes fold into it and a disposable database is reset and re-verified. This is
+deliberate: multiple pre-launch migrations create more confusion than they prevent. Development
+data is disposable, and longitudinal behaviour — recrawl comparison, before/after verification —
+is proven against re-ingestable fixtures rather than against accumulated local state.
+
+## 12. Transition from the original product
+
+CiteLadder was first built around AI Visibility. That capability is retained; the product is
+reorganized rather than rebuilt.
+
+| Existing capability | Target owner |
+|---|---|
+| Site Health crawler, pages, issues, snapshots | Site Intelligence |
+| Brand Profile / Knowledge Base | Project facts and corrections |
+| Content v1 generation | Content Intelligence generation and attempt foundation |
+| GSC/GA4, Traffic, Analytics | Demand Intelligence evidence and projections |
+| Topics, prompts, audits, visibility | Demand Intelligence prompt and outcome loop |
+| Opportunities | Shared evidence-backed action bundles across all layers |
+| Agent/discovery clients | Provider gateway and bounded Growth Agent |
+| Commerce catalog and product visibility | Commerce pack identity and demand evidence |
+
+Implementation extends these owners and corrects lifecycle and provenance gaps. It does not create
+a second crawler, queue, prompt system, content store, opportunity store, or knowledge silo.
+
+## 13. Delivery sequence
+
+Sequence is owned by
+[`plans/growth-intelligence-platform.md`](plans/growth-intelligence-platform.md) §10 and is not
+restated here. The dependency that matters most: **project facts precede content generation.** A
+brief cannot be built from assertions that do not exist yet.
+
+## 14. Success measures
+
+CiteLadder reports separate coverage and outcome layers rather than one opaque score:
+
+- **Evidence:** relevant-corpus, extraction, integration, join, and audit coverage.
+- **Knowledge:** assertion provenance, current-state confidence, contradiction resolution, and
+  correction rate — a falling correction rate is the honest signal that derivation is improving.
+- **Site:** role, question, journey, schema, and trust coverage, plus verified action resolution.
+- **Content:** brief acceptance, unsupported-claim rate, edit distance before save, publication
+  observation, and later demand or visibility association.
+- **Demand:** query-page fit, event coverage, prompt acceptance, and priority stability.
+- **Outcome:** configured qualified actions, organic and paid efficiency where evidence exists,
+  owned citations, mentions, and share of voice.
+- **Agent:** context precision, evidence citation rate, tool success, bounded cost, and zero
+  unauthorized external mutation.
+
+**Acceptance, not precision.** Precision requires labelled ground truth, and the only labels
+available are authored by the same people who wrote the rules, on the same corpus the rules were
+tuned against — a circular measure that reads high regardless of usefulness. Production reports
+**acceptance rate**: accept / dismiss / not-applicable on real findings. The word "precision" is
+reserved for a corpus slice held out during rule authoring, which
+[`../backend/app/core/config/industry_packs/EVALUATION_CONTRACT.md`](../backend/app/core/config/industry_packs/EVALUATION_CONTRACT.md)
+owns.
+
+## 15. Documentation authority
+
+The active documentation map is [`documentation-index.md`](documentation-index.md). Canonical
+program plans live under `docs/plans/`. Current-runtime references describe shipped behaviour.
+Everything under `docs/archive/` is historical and must not guide implementation.

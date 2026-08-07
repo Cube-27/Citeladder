@@ -20,7 +20,7 @@ export function EngineChip({
     <span
       className={cn(
         'border-border-subtle bg-panel inline-flex items-center gap-4 rounded-md text-sm',
-        'border px-4 py-4 font-semibold',
+        'border px-4 py-4 font-medium',
         className,
       )}
     >

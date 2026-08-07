@@ -196,7 +196,7 @@ function ConnectionRow({
           <Icon className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-foreground truncate text-sm font-semibold">{label}</div>
+          <div className="text-foreground truncate text-sm font-medium">{label}</div>
           <PropertyPicker connection={connection} disabled={busy} />
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -309,18 +309,16 @@ function ConnectionRow({
           {lastConnection ? (
             <>
               <p className="text-secondary text-sm">
-                This is the{' '}
-                <strong className="text-foreground font-semibold">last connection</strong> on the{' '}
-                {familyTitle} OAuth grant, so disconnecting it also{' '}
-                <strong className="text-foreground font-semibold">revokes the grant</strong>:
+                This is the <strong className="text-foreground font-medium">last connection</strong>{' '}
+                on the {familyTitle} OAuth grant, so disconnecting it also{' '}
+                <strong className="text-foreground font-medium">revokes the grant</strong>:
                 CiteLadder&rsquo;s access at {familyTitle} is removed and the stored tokens are
                 deleted. Previously imported {label} data is kept.
               </p>
               <p className="text-secondary text-sm">
                 If {familyTitle}&nbsp;can&rsquo;t be reached to complete the revocation, the grant
-                moves to{' '}
-                <strong className="text-foreground font-semibold">pending revocation</strong> and
-                CiteLadder retries in the background.
+                moves to <strong className="text-foreground font-medium">pending revocation</strong>{' '}
+                and CiteLadder retries in the background.
               </p>
             </>
           ) : (
@@ -331,7 +329,7 @@ function ConnectionRow({
                 connection. Previously imported data is kept.
               </p>
               <p className="text-secondary text-sm">
-                <strong className="text-foreground font-semibold">
+                <strong className="text-foreground font-medium">
                   {siblings.map((conn) => PROVIDER_META[conn.provider].label).join(' and ')} stays
                   connected
                 </strong>

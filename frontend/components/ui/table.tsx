@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  * (12/16 @600, text-subtle, sentence case), and keeping the strings separate
  * stops a future eyebrow change from silently restyling every table.
  */
-const tableHeadClasses = 'text-xs text-secondary font-semibold';
+const tableHeadClasses = 'text-xs text-secondary font-medium';
 export function Table({
   children,
   className,

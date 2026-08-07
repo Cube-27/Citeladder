@@ -19,7 +19,7 @@ export function Wordmark({ className }: Readonly<{ className?: string }>) {
   return (
     <span
       className={cn(
-        'font-display text-foreground inline-flex items-center gap-1.5 text-xl leading-none',
+        'font-display text-foreground inline-flex items-center gap-2 text-[18px] leading-none font-bold tracking-tight',
         className,
       )}
     >

@@ -24,10 +24,9 @@ export function SeeIt() {
     <Section id="see-it" tone="paper" rhythm="base" aria-labelledby="see-it-title">
       <Reveal className="mx-auto mb-8 max-w-5xl text-center md:mb-10">
         <p className="text-accent-text font-mono text-xs uppercase">{seeIt.kicker}</p>
-        {/* No weight or tracking class here: the `text-4xl` rung owns both,
-            and check-frontend-architecture fails the build if markup overrides
-            them (the whole reason heading weight stays uniform site-wide). */}
-        <h2 id="see-it-title" className="font-display text-foreground mt-3 text-4xl">
+        {/* Heading weight and tracking come from the base rule in globals.css;
+            the size rung is the only thing markup sets, so type stays uniform. */}
+        <h2 id="see-it-title" className="font-display text-foreground mt-3 text-2xl">
           {seeIt.title}
         </h2>
       </Reveal>

@@ -47,7 +47,7 @@ export function TextLink({
     <Link
       href={href}
       className={cn(
-        'text-accent-text hover:text-accent-hover inline-flex items-center gap-2 font-semibold',
+        'text-accent-text hover:text-accent-hover inline-flex items-center gap-2 font-medium',
         '[&_svg]:size-4 [&_svg]:shrink-0',
         className,
       )}

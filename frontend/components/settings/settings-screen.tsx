@@ -231,12 +231,12 @@ export function SettingsScreen() {
               <div className="flex items-center gap-4">
                 <span
                   aria-hidden
-                  className="bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase"
+                  className="bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-medium uppercase"
                 >
                   {emailInitials(user.email)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-foreground truncate text-sm font-semibold">{user.email}</div>
+                  <div className="text-foreground truncate text-sm font-medium">{user.email}</div>
                   <div className="text-muted mt-0.5 text-sm capitalize">{user.role}</div>
                 </div>
                 <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
@@ -319,7 +319,7 @@ export function SettingsScreen() {
                         size="md"
                       />
                       <div className="min-w-0">
-                        <div className="text-foreground truncate text-sm font-semibold">
+                        <div className="text-foreground truncate text-sm font-medium">
                           {activeProject.name}
                         </div>
                         <p className="text-muted mt-0.5 text-xs">

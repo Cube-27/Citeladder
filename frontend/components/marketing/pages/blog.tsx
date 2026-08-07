@@ -33,7 +33,7 @@ function TagRow({ tags }: Readonly<{ tags: readonly string[] }>) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="bg-accent-soft text-accent-text rounded-md px-2.5 py-1 text-xs font-semibold"
+          className="bg-accent-soft text-accent-text rounded-md px-2.5 py-1 text-xs font-medium"
         >
           {tag}
         </span>
@@ -59,7 +59,7 @@ function BlogCta({
   return (
     <Section tone="paper" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-3xl">{title}</h2>
+        <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-2xl">{title}</h2>
         <p className="text-muted mx-auto max-w-[52ch] text-base">
           Your category, your prompts — raw answers behind every score.
         </p>
@@ -100,16 +100,12 @@ export function BlogIndex() {
               >
                 <div className="p-6 md:p-8">
                   <TagRow tags={featured.tags} />
-                  <p
-                    role="heading"
-                    aria-level={2}
-                    className="font-display text-foreground group-hover:text-accent-text max-w-[32ch] text-3xl transition-colors duration-200"
-                  >
+                  <h2 className="font-display text-foreground group-hover:text-accent-text max-w-[32ch] text-2xl font-normal transition-colors duration-200">
                     {featured.title}
-                  </p>
+                  </h2>
                   <p className="text-muted mt-4 max-w-[65ch] text-base">{featured.excerpt}</p>
                   <PostMeta post={featured} />
-                  <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-semibold">
+                  <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
                     Read note
                     <ArrowRight
                       className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -138,13 +134,9 @@ export function BlogIndex() {
                       className="hover:bg-accent-soft group block px-5 py-5 transition-colors duration-200 md:px-6"
                     >
                       <TagRow tags={post.tags} />
-                      <p
-                        role="heading"
-                        aria-level={3}
-                        className="font-display text-foreground text-xl"
-                      >
+                      <h3 className="font-display text-foreground text-xl font-normal">
                         {post.title}
-                      </p>
+                      </h3>
                       <p className="text-muted mt-2 max-w-[65ch] text-sm">{post.excerpt}</p>
                       <PostMeta post={post} />
                     </Link>
@@ -186,7 +178,7 @@ export function BlogIndex() {
 }
 
 function authorInitial(author: string) {
-  return author.match(/[a-z]/i)?.[0].toUpperCase() ?? '?';
+  return /[a-z]/i.exec(author)?.[0].toUpperCase() ?? '?';
 }
 
 function PostMetaByline({ post }: Readonly<{ post: BlogPost }>) {
@@ -244,23 +236,23 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           <Reveal className="max-w-3xl">
             <Link
               href="/blog"
-              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All notes
             </Link>
             <Eyebrow>Field notes</Eyebrow>
             <TagRow tags={post.tags} />
-            <h1 className="font-display text-foreground mt-3 max-w-[28ch] text-4xl text-balance md:text-5xl">
+            <h1 className="font-display text-foreground mt-3 max-w-[28ch] text-2xl text-balance md:text-3xl">
               {post.title}
             </h1>
             {(post.author ?? post.date ?? post.readTime) && (
               <div className="border-border-subtle mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-5">
                 {post.author && (
-                  <span className="text-foreground flex items-center gap-3 text-sm font-semibold">
+                  <span className="text-foreground flex items-center gap-3 text-sm font-medium">
                     <span
                       aria-hidden
-                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-md text-xs font-semibold"
+                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-md text-xs font-medium"
                     >
                       {authorInitial(post.author)}
                     </span>

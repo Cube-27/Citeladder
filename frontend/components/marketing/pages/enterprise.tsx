@@ -158,7 +158,7 @@ export function EnterpriseOps() {
 
       <section aria-label="Platform data flow" className="mt-12">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <p className="text-muted text-sm font-semibold">How a request travels</p>
+          <p className="text-muted text-sm font-medium">How a request travels</p>
           <span className="text-subtle text-xs">Managed cloud · same-origin boundary</span>
         </div>
         <Reveal className="border-border-subtle bg-panel shadow-card overflow-hidden rounded-lg border">
@@ -172,10 +172,10 @@ export function EnterpriseOps() {
                     'border-border-subtle max-xl:border-b xl:border-r',
                 )}
               >
-                <span className="text-accent-text text-xs font-semibold tabular-nums">
+                <span className="text-accent-text text-xs font-medium tabular-nums">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <p className="text-foreground text-sm font-semibold">{step.title}</p>
+                <p className="text-foreground text-sm font-medium">{step.title}</p>
                 <p className="text-muted text-xs leading-snug">{step.detail}</p>
               </li>
             ))}
@@ -202,7 +202,7 @@ export function EnterpriseLimits() {
             <h3 className="font-display text-foreground text-2xl">Enterprise agreement</h3>
             <p className="text-muted mt-1 text-sm">Six dials. One quote.</p>
           </div>
-          <span className="border-accent-border bg-panel text-accent-text shrink-0 rounded-md border px-4 py-2 text-xs font-semibold tracking-wide uppercase">
+          <span className="border-accent-border bg-panel text-accent-text shrink-0 rounded-md border px-4 py-2 text-xs font-medium tracking-wide uppercase">
             Quoted to fit
           </span>
         </div>
@@ -215,11 +215,11 @@ export function EnterpriseLimits() {
             >
               <div className="flex items-start justify-between gap-3">
                 <h4 className="font-display text-foreground text-lg">{item.title}</h4>
-                <span className="bg-well text-secondary shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold">
+                <span className="bg-well text-secondary shrink-0 rounded-md px-2.5 py-1 text-xs font-medium">
                   {item.badge}
                 </span>
               </div>
-              <p className="text-accent-text mt-3 text-xs font-semibold">{item.unit}</p>
+              <p className="text-accent-text mt-3 text-xs font-medium">{item.unit}</p>
               <p className="text-muted mt-2 text-sm leading-relaxed">{item.desc}</p>
             </StaggerItem>
           ))}
@@ -246,7 +246,7 @@ export function EnterpriseContactCta() {
   return (
     <Section id="contact" tone="paper" rhythm="base" aria-label="Contact sales">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-display text-foreground mx-auto mb-4 max-w-[28ch] text-4xl">
+        <h2 className="font-display text-foreground mx-auto mb-4 max-w-[28ch] text-2xl">
           Bring AI visibility in-house.
         </h2>
         <p className="text-muted mx-auto max-w-[56ch] text-lg">

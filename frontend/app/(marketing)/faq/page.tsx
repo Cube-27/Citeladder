@@ -7,8 +7,8 @@ import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
 
 const DESCRIPTION =
-  'The short version of how CiteLadder works — engines, scoring, keys, site health, ' +
-  'integrations, and billing.';
+  'The short version of how CiteLadder works — the four intelligence layers, the growth ' +
+  'loop, industry packs, data isolation, and billing.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
@@ -37,14 +37,14 @@ export const metadata: Metadata = {
  */
 export default function FaqPage() {
   return (
-    <main>
+    <main id="main">
       <JsonLd data={faqPageJsonLd(FAQ_GROUPS)} />
       <PageHero
         centered
         eyebrow="FAQ"
         title="Frequently asked"
         accent="questions."
-        lead="The short version of how CiteLadder works — engines, scoring, keys, site health, integrations, and billing."
+        lead="The short version of how CiteLadder works — the four intelligence layers, the growth loop, industry packs, data isolation, and billing."
       />
       <FaqGroups />
     </main>

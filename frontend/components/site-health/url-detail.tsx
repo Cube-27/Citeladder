@@ -340,13 +340,13 @@ function PageTypeEvidencePanel({
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <span className="grid gap-0.5">
             <Label>Classified by</Label>
-            <span className="mono text-foreground text-sm font-semibold">
+            <span className="mono text-foreground text-sm font-medium">
               {evidence.classifiedBy}
             </span>
           </span>
           <span className="grid gap-0.5">
             <Label>Confidence</Label>
-            <span className="mono text-foreground text-sm font-semibold">
+            <span className="mono text-foreground text-sm font-medium">
               {evidence.confidence.toFixed(2)}{' '}
               <span className="text-muted font-medium">
                 / {evidence.confidenceThreshold.toFixed(2)} threshold
@@ -357,7 +357,7 @@ function PageTypeEvidencePanel({
             <Label>Schema suggests</Label>
             <span
               className={cn(
-                'mono text-sm font-semibold',
+                'mono text-sm font-medium',
                 evidence.schemaConflict ? 'text-warning-text' : 'text-foreground',
               )}
             >
@@ -368,7 +368,7 @@ function PageTypeEvidencePanel({
           </span>
           <span className="grid gap-0.5">
             <Label>Signals matched</Label>
-            <span className="mono text-foreground text-sm font-semibold">
+            <span className="mono text-foreground text-sm font-medium">
               {evidence.signals.length}
             </span>
           </span>
@@ -413,7 +413,7 @@ function PageTypeEvidencePanel({
                   </span>
                   <span
                     className={cn(
-                      'mono text-sm font-semibold tabular-nums',
+                      'mono text-sm font-medium tabular-nums',
                       chosen ? 'text-foreground' : 'text-secondary',
                     )}
                   >
@@ -501,7 +501,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
           {items.map((item) => (
             <div key={item.label} className="grid gap-0.5">
               <Label>{item.label}</Label>
-              <dd className="mono text-foreground text-sm font-semibold">{item.value}</dd>
+              <dd className="mono text-foreground text-sm font-medium">{item.value}</dd>
             </div>
           ))}
         </dl>

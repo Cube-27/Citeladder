@@ -19,10 +19,11 @@ import {
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
+import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
+
 import { Wordmark } from '../primitives/wordmark';
 import { DropItemLink, MobileItemLink } from './nav-items';
 
-const ACTIVE_PROJECT_STORAGE_KEY = 'citeladder.active-project-id';
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 function hasStoredActiveProject(): boolean {
@@ -35,8 +36,8 @@ function hasStoredActiveProject(): boolean {
 }
 
 const NAV_LINK =
-  'text-sm text-muted hover:text-foreground relative z-1 inline-flex items-center gap-2 ' +
-  'rounded-md px-5 py-4 font-semibold transition-colors duration-200';
+  'text-base text-secondary hover:text-foreground relative z-1 inline-flex items-center gap-2 ' +
+  'rounded-sm px-4 py-4 font-medium transition-colors duration-300';
 
 /**
  * Panel geometry per menu. A drop with a labelled group renders two columns —
@@ -45,7 +46,7 @@ const NAV_LINK =
  * panel is anchored and clamped before it paints; a column is sized so a
  * one-line description stays on one line.
  */
-const COLUMN = 304;
+const COLUMN = 380;
 const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
   platform: { width: COLUMN, twoColumn: false },
   solutions: { width: COLUMN, twoColumn: false },
@@ -193,8 +194,12 @@ export function MarketingNav() {
       data-marketing-nav
       data-scrolled={scrolled ? 'true' : undefined}
       className={cn(
-        'fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color] duration-300',
-        surfaceVisible ? 'border-border-subtle bg-panel' : 'border-transparent bg-transparent',
+        'safe-top fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300',
+        // Tesla frosted-glass nav: transparent over the hero, then a
+        // three-quarter white with a backdrop blur once the page scrolls.
+        surfaceVisible
+          ? 'border-border-subtle bg-panel/80 backdrop-blur-md'
+          : 'border-transparent bg-transparent',
       )}
     >
       <nav
@@ -286,8 +291,10 @@ export function MarketingNav() {
 
           <AnimatePresence>
             {openDrop !== null && (
+              /* Deliberately no `role="menu"`: the panel holds ordinary links,
+                 not `menuitem` children, and the ARIA menu pattern would
+                 promise arrow-key navigation this nav does not implement. */
               <div
-                role="menu"
                 id={`desktop-nav-panel-${openDrop}`}
                 onMouseEnter={clearDropClose}
                 style={{
@@ -338,7 +345,7 @@ export function MarketingNav() {
             <>
               <Link
                 href="/login"
-                className="text-muted hover:text-foreground hidden px-4 text-sm font-semibold transition-colors sm:inline-flex"
+                className="text-muted hover:text-foreground hidden px-4 text-sm font-medium transition-colors sm:inline-flex"
               >
                 Log in
               </Link>
@@ -367,14 +374,14 @@ export function MarketingNav() {
       {mobileOpen && (
         <div
           id="mobile-menu"
-          className="border-border-subtle bg-background-alt max-h-[calc(100dvh-4rem)] overflow-y-auto border-t px-6 py-5 lg:hidden"
+          className="border-border-subtle bg-background-alt safe-bottom max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t px-6 py-5 lg:hidden"
         >
           {NAV_DROPS.map(({ key, label, href, groups }) => (
             <div key={key} className="border-border-subtle border-b last:border-b-0">
               <div className="flex items-center">
                 <Link
                   href={href}
-                  className="text-foreground flex-1 py-5 text-base font-semibold"
+                  className="text-foreground flex-1 py-5 text-base font-medium"
                   onClick={() => setMobileOpen(false)}
                 >
                   {label}
@@ -423,7 +430,7 @@ export function MarketingNav() {
               <Link
                 key={href}
                 href={href}
-                className="text-foreground py-3 text-base font-semibold"
+                className="text-foreground py-3 text-base font-medium"
                 onClick={() => setMobileOpen(false)}
               >
                 {label}
@@ -431,7 +438,7 @@ export function MarketingNav() {
             ))}
             <Link
               href={isAuthenticated ? dashboardHref : '/login'}
-              className="text-muted py-3 text-base font-semibold"
+              className="text-muted py-3 text-base font-medium"
               onClick={() => setMobileOpen(false)}
             >
               {isAuthenticated ? 'Dashboard' : 'Log in'}

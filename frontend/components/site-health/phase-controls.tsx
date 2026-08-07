@@ -38,7 +38,7 @@ function PhaseCounters({ counters }: Readonly<{ counters: SiteCrawl['counters'] 
       {rows.map(([label, value]) => (
         <div key={label} className="grid gap-0.5">
           <dt className="text-muted text-xs">{label}</dt>
-          <dd className="mono text-foreground text-sm font-semibold">{value ?? '—'}</dd>
+          <dd className="mono text-foreground text-sm font-medium">{value ?? '—'}</dd>
         </div>
       ))}
     </dl>
