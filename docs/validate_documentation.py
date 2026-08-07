@@ -53,7 +53,6 @@ ACTIVE_EXACT = {
 }
 ACTIVE_PREFIXES = (
     "docs/evaluations/",
-    "docs/operations/",
     "backend/docs/",
     ".github/",
 )

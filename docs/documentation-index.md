@@ -73,7 +73,6 @@ operations, or design constraints. They are not alternate product roadmaps.
 | [`commerce-intelligence.md`](commerce-intelligence.md) | Current Commerce specialization boundary within the shared intelligence architecture |
 | [`integrations-traffic-analytics.md`](integrations-traffic-analytics.md) | Current persisted integration/traffic evidence and Demand migration boundary |
 | [`validate_documentation.py`](validate_documentation.py) | Enforces the active-document allowlist and validates local links |
-| [`operations/`](operations/) | Deployment and operational runbooks |
 | [`../backend/docs/`](../backend/docs/) | Backend evaluation/measurement references used by current code and tests |
 
 A current-runtime reference that contains future-roadmap prose must be corrected when its owning
