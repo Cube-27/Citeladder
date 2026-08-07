@@ -21,7 +21,7 @@ export function FinalCta() {
           <span className="bg-accent size-1.5 animate-pulse rounded-full" />
           <span>{cta.kicker}</span>
         </div>
-        <h2 className="font-display text-foreground mt-6 max-w-[24ch] text-2xl font-semibold tracking-tight md:text-3xl">
+        <h2 className="font-display text-foreground mt-6 max-w-[24ch] text-2xl font-semibold tracking-tight">
           {cta.title}
         </h2>
         <p className="text-muted mt-4 max-w-[60ch] text-base leading-relaxed md:text-lg">

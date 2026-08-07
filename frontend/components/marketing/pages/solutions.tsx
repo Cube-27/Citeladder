@@ -82,7 +82,7 @@ export function SolutionSegments() {
           >
             <div>
               <Meta as="p">{segment.eyebrow}</Meta>
-              <h2 className="font-display text-foreground mt-5 max-w-[32ch] text-3xl">
+              <h2 className="font-display text-foreground mt-5 max-w-[32ch] text-2xl">
                 {segment.title}
               </h2>
 

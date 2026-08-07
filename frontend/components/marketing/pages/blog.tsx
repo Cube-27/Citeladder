@@ -59,7 +59,7 @@ function BlogCta({
   return (
     <Section tone="paper" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-3xl">{title}</h2>
+        <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-2xl">{title}</h2>
         <p className="text-muted mx-auto max-w-[52ch] text-base">
           Your category, your prompts — raw answers behind every score.
         </p>
@@ -100,7 +100,7 @@ export function BlogIndex() {
               >
                 <div className="p-6 md:p-8">
                   <TagRow tags={featured.tags} />
-                  <h2 className="font-display text-foreground group-hover:text-accent-text max-w-[32ch] text-3xl font-normal transition-colors duration-200">
+                  <h2 className="font-display text-foreground group-hover:text-accent-text max-w-[32ch] text-2xl font-normal transition-colors duration-200">
                     {featured.title}
                   </h2>
                   <p className="text-muted mt-4 max-w-[65ch] text-base">{featured.excerpt}</p>

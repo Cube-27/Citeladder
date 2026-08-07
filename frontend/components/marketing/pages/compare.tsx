@@ -74,7 +74,7 @@ export function CompareIndex() {
 
       <Section tone="sunken" rhythm="tight" aria-labelledby="compare-fair-title">
         <Reveal className="mb-6 max-w-3xl">
-          <h2 id="compare-fair-title" className="font-display text-foreground text-3xl">
+          <h2 id="compare-fair-title" className="font-display text-foreground text-2xl">
             Compared honestly.
           </h2>
           <p className="text-muted mt-3 text-base">
@@ -118,7 +118,7 @@ export function CompareIndex() {
 
       <Section tone="paper" rhythm="base" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-3xl">
+          <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-2xl">
             Don’t compare pages. Compare evidence.
           </h2>
           <p className="text-muted mx-auto max-w-[56ch] text-base">

@@ -117,7 +117,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
 
       <Section tone="paper" rhythm="base" aria-label="Get started">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-3xl">
+          <h2 className="font-display text-foreground mx-auto mb-3 max-w-[28ch] text-2xl">
             See your own numbers instead.
           </h2>
           <p className="text-muted mx-auto max-w-[52ch] text-base">
