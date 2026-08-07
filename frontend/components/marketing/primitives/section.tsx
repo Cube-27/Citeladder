@@ -154,19 +154,26 @@ export function SectionHeader({
   return (
     <Reveal
       className={cn(
-        'flex flex-col gap-4',
+        'flex flex-col gap-3',
         align === 'center' && 'items-center text-center',
         className,
       )}
     >
+      {/* The parent Reveal already centres this block when align==='center';
+          the Eyebrow is inline-flex, so an inner justify-center did nothing. */}
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
       <Heading
         id={headingId}
-        className={cn('font-display text-foreground max-w-[32ch] text-balance', HEADING[size])}
+        className={cn(
+          'font-display text-foreground max-w-[32ch] font-semibold tracking-tight text-balance',
+          HEADING[size],
+        )}
       >
         {title}
       </Heading>
-      {lead && <p className="text-muted max-w-[65ch] text-lg">{lead}</p>}
+      {lead && (
+        <p className="text-muted max-w-[65ch] text-base leading-relaxed md:text-lg">{lead}</p>
+      )}
     </Reveal>
   );
 }

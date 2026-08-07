@@ -4,7 +4,6 @@ import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
-import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { HeroEntrance } from './hero-entrance';
 import { RotatingEngineLogos } from './rotating-engine-logos';
@@ -23,18 +22,34 @@ export function Hero() {
       <Container className="relative z-1 pt-20 pb-16 md:pt-28 md:pb-20">
         <HeroEntrance className="mx-auto max-w-5xl text-center">
           <div className="flex justify-center">
-            <Eyebrow>{hook.eyebrow}</Eyebrow>
+            <div className="bg-accent-subtle/80 text-accent-text border-accent-border/80 inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium shadow-xs backdrop-blur-sm">
+              <span className="bg-accent size-1.5 animate-pulse rounded-full" />
+              <span>{hook.eyebrow}</span>
+            </div>
           </div>
-          <h1 className="font-display text-foreground mx-auto mt-8 max-w-[32ch] text-3xl text-balance">
-            {hook.title} <em className="text-accent-text not-italic">{hook.titleAccent}</em>
+          <h1 className="font-display text-foreground mx-auto mt-6 max-w-[32ch] text-3xl font-semibold tracking-tight text-balance md:text-4xl lg:text-5xl">
+            {hook.title}{' '}
+            <em className="from-accent via-accent-text to-accent-active bg-gradient-to-r bg-clip-text font-bold text-transparent not-italic">
+              {hook.titleAccent}
+            </em>
           </h1>
-          <p className="text-muted mx-auto mt-8 max-w-[80ch] text-lg">{hook.body}</p>
+          <p className="text-muted mx-auto mt-6 max-w-[72ch] text-base leading-relaxed md:text-lg">
+            {hook.body}
+          </p>
           <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
-            <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
+            <ButtonLink
+              href={DEMO_HREF}
+              variant="primary"
+              className="hover:shadow-card-hover w-full shadow-sm transition-all sm:w-auto"
+            >
               {hook.primaryCta}
               <ArrowRight aria-hidden />
             </ButtonLink>
-            <ButtonLink href="#how-it-works" variant="ghost" className="w-full sm:w-auto">
+            <ButtonLink
+              href="#how-it-works"
+              variant="ghost"
+              className="border-border/80 hover:bg-background-alt w-full border sm:w-auto"
+            >
               {hook.secondaryCta}
             </ButtonLink>
           </div>

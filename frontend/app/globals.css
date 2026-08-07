@@ -17,35 +17,34 @@
 @theme {
   --font-sans: var(--font-public-sans), -apple-system, Arial, sans-serif;
   --font-mono: var(--font-public-sans), -apple-system, Arial, sans-serif;
-  --font-display: var(--font-public-sans), -apple-system, Arial, sans-serif;
+  --font-display: var(--font-manrope), var(--font-public-sans), -apple-system, Arial, sans-serif;
 
-  /* Surfaces — two light tiers (Tesla): Light Ash canvas, white panels.
-     Cards separate from the canvas by tone + spacing, not by shadow. */
-  --color-background: #f4f4f4;
-  --color-background-alt: #eeeeee;
+  /* Surfaces — Untitled UI Gray-50 canvas, white panels, crisp contrast. */
+  --color-background: #f9fafb;
+  --color-background-alt: #f2f4f7;
   --color-panel: #ffffff;
   --color-elevated: #ffffff;
-  --color-well: #eeeeee;
-  --color-active: #e4e4e5;
+  --color-well: #f2f4f7;
+  --color-active: #e4e7ec;
   --color-input: #ffffff;
   --color-sidebar: #ffffff;
-  --color-surface-inverse: #171a20;
+  --color-surface-inverse: #101828;
 
-  /* Borders — used sparingly (Pale Silver / Cloud Gray). */
-  --color-border: #d0d1d2;
-  --color-border-subtle: #eeeeee;
-  --color-border-strong: #b0b1b3;
+  /* Borders — Untitled UI Gray-200 / Gray-300 crisp hairlines. */
+  --color-border: #e4e7ec;
+  --color-border-subtle: #f2f4f7;
+  --color-border-strong: #d0d5dd;
 
-  /* Text — Carbon → Graphite → Pewter → Silver Fog. */
-  --color-foreground: #171a20;
-  --color-secondary: #393c41;
-  --color-muted: #5c5e62;
-  --color-subtle: #8e8e8e;
+  /* Text — Untitled UI Gray-900 Ink → Gray-700 Slate → Gray-600 → Gray-500. */
+  --color-foreground: #101828;
+  --color-secondary: #344054;
+  --color-muted: #475467;
+  --color-subtle: #667085;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
   --color-link: #2f57cc;
 
-  /* Accent — Electric Blue, the sole chromatic move. White label on the fill
+  /* Accent — Electric Blue, the sole chromatic move (UNCHANGED). White label on fill
      clears AA (4.8:1); `-text` is a darker blue for accent-coloured text/icons
      so small sizes stay AA on white. */
   --color-accent: #3e6ae1;
@@ -168,29 +167,27 @@
   --color-series-4: #b33a3a;
   --color-series-5: #67558a;
   --color-series-other: #8e8e8e;
-  --color-chart-tooltip: #171a20;
+  --color-chart-tooltip: #101828;
   --color-chart-tooltip-fg: #ffffff;
-  --color-overlay-scrim: rgb(23 26 32 / 40%);
+  --color-overlay-scrim: rgb(16 24 40 / 40%);
 
-  /* Radius — a strict three-stop scale: 0 sharp default, 4px controls/buttons,
-     12px cards/panels. Every named rung aliases onto 4 or 12 so nothing drifts
-     to an off-scale value; 0 is simply the absence of a rounded-* utility. */
+  /* Radius — Untitled UI refined scale: 4px xs, 6px sm, 8px md, 12px lg, 16px xl. */
   --radius-xs: 4px;
-  --radius-sm: 4px;
-  --radius-md: 12px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 12px;
-  --radius-2xl: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* Elevation — essentially none. Cards are flat; overlays float on a whisper. */
-  --shadow-xs: none;
-  --shadow-sm: none;
-  --shadow-card: none;
-  --shadow-card-hover: 0 2px 8px rgb(23 26 32 / 5%);
-  --shadow-elevated: 0 2px 8px rgb(23 26 32 / 5%);
-  --shadow-lg: 0 4px 16px rgb(23 26 32 / 8%);
-  --shadow-modal-value: 0 8px 28px rgb(23 26 32 / 12%);
+  /* Elevation — Untitled UI crisp micro-shadows layered with hairline borders. */
+  --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(16 24 40 / 0.1), 0 1px 2px -1px rgb(16 24 40 / 0.1);
+  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 0 0 1px #e4e7ec;
+  --shadow-card-hover: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-elevated: 0 4px 6px -2px rgb(16 24 40 / 0.03), 0 12px 16px -4px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08), 0 4px 6px -2px rgb(16 24 40 / 0.03);
+  --shadow-modal-value: 0 20px 24px -4px rgb(16 24 40 / 0.1), 0 8px 8px -4px rgb(16 24 40 / 0.04);
 
   /* Type scale — Tesla px mapped onto the token names. 14px is the baseline
      (text-sm); the display tiers stay restrained and cap at 40px (text-3xl). */
@@ -200,8 +197,10 @@
   --text-base: 1rem; /* 16px — category label / comfortable body */
   --text-lg: 1.0625rem; /* 17px — product name */
   --text-xl: 1.375rem; /* 22px — promo / sub-heading */
-  --text-2xl: 1.75rem; /* 28px — section heading / mid display */
-  --text-3xl: 2.5rem; /* 40px — hero ceiling, never exceeded */
+  --text-2xl: 2rem; /* 32px — section heading */
+  --text-3xl: 2.5rem; /* 40px — hero on small/base screens */
+  --text-4xl: 2.75rem; /* 44px — hero at md */
+  --text-5xl: 3rem; /* 48px — hero at lg, the display ceiling */
   --text-heading-sm: 0.9375rem; /* 15px — compact headings */
 
   --leading-tight: 1.2;
@@ -240,10 +239,12 @@
   --section-y-desktop: 120px;
   --section-y-tablet: 72px;
   --section-y-phone: 48px;
-  --focus-ring: 0 0 0 3px color-mix(in oklab, var(--color-accent), transparent 70%);
+  /* A 2px panel gap then a solid, opaque accent ring — the accent clears 3:1
+     against every surface role, unlike a mostly-transparent tint. */
+  --focus-ring: 0 0 0 2px var(--color-panel), 0 0 0 4px var(--color-accent);
   --skeleton-base: #e6e6e6;
-  --skeleton-highlight: #f4f4f4;
-  --value-placeholder: #5c5e62;
+  --skeleton-highlight: #f9fafb;
+  --value-placeholder: #667085;
 }
 
 *,
@@ -254,15 +255,15 @@
 
 html {
   min-height: 100%;
-  background: #f4f4f4;
+  background: #f9fafb;
   scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background: #f4f4f4;
-  color: #171a20;
+  background: #f9fafb;
+  color: #101828;
   font-family: var(--font-public-sans), -apple-system, Arial, sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -285,7 +286,7 @@ body {
     font-weight: 500;
     letter-spacing: normal;
     line-height: 1.2;
-    color: #171a20;
+    color: #101828;
   }
 
   p {
@@ -390,6 +391,11 @@ samp {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+  /* SMIL <animateMotion> ignores the CSS rule above; hide the moving pipeline
+     dots directly (platform.tsx). The static conduit paths remain. */
+  .pipeline-stream circle {
+    display: none;
+  }
 }
 
 /* Marketing atmosphere — two very-low-opacity accent auras that drift slowly
@@ -409,30 +415,32 @@ samp {
 .marketing-atmosphere::after {
   content: '';
   position: absolute;
-  width: 46rem;
-  height: 46rem;
+  width: 52rem;
+  height: 52rem;
   border-radius: 50%;
-  filter: blur(30px);
+  filter: blur(50px);
   will-change: transform;
   background: radial-gradient(
     circle at center,
-    color-mix(in oklab, var(--color-accent), transparent 90%),
+    color-mix(in oklab, var(--color-accent), transparent 78%),
+    color-mix(in oklab, #818cf8, transparent 88%) 50%,
     transparent 70%
   );
 }
 
 .marketing-atmosphere::before {
-  top: -16rem;
-  left: -10rem;
+  top: -12rem;
+  left: -8rem;
   animation: citeladder-aura-a 28s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
 }
 
 .marketing-atmosphere::after {
-  top: 28%;
-  right: -14rem;
+  top: 32%;
+  right: -10rem;
   background: radial-gradient(
     circle at center,
-    color-mix(in oklab, var(--color-accent), transparent 92%),
+    color-mix(in oklab, var(--color-accent), transparent 82%),
+    color-mix(in oklab, #38bdf8, transparent 90%) 50%,
     transparent 70%
   );
   animation: citeladder-aura-b 34s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
@@ -547,9 +555,4 @@ samp {
   }
 }
 
-@media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
-}
+@media print { body { background: white !important; color: black !important; } }

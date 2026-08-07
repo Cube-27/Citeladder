@@ -29,7 +29,10 @@ export type IconKey =
   | 'isolation'
   | 'provenance'
   | 'approval'
-  | 'versioned';
+  | 'versioned'
+  | 'ask'
+  | 'prove'
+  | 'see';
 
 export const LANDING_CONTENT = {
   hook: {
@@ -51,16 +54,19 @@ export const LANDING_CONTENT = {
     title: 'Growth stopped being a guessing game.',
     facts: [
       {
+        icon: 'ask' as IconKey,
         label: 'Ask',
         title: 'Buyers ask before they browse.',
         body: 'Shortlists now start inside an answer engine — and often end there.',
       },
       {
+        icon: 'prove' as IconKey,
         label: 'Prove',
         title: 'Answers cite evidence, not opinions.',
         body: 'Either your pages prove the claim an engine needs, or a competitor’s do.',
       },
       {
+        icon: 'see' as IconKey,
         label: 'See',
         title: 'You can’t fix what you can’t see.',
         body: 'Scattered tools hide the gap. One system of record makes it measurable.',
@@ -74,10 +80,26 @@ export const LANDING_CONTENT = {
     lead: 'Every layer verifies its work before passing results to the next. Evidence flows up, actions flow down, and the Growth Agent orchestrates everything.',
     // The four-across summary row.
     summary: [
-      { icon: 'site' as IconKey, name: 'Site Intelligence', desc: 'Crawl, classify, and index every page and asset.' },
-      { icon: 'content' as IconKey, name: 'Content Intelligence', desc: 'Detect gaps, draft briefs, generate and verify content.' },
-      { icon: 'demand' as IconKey, name: 'Demand Intelligence', desc: 'GSC, GA4, AI visibility, and journey signals unified.' },
-      { icon: 'agent' as IconKey, name: 'Growth Agent', desc: 'Bounded orchestration with explicit approvals.' },
+      {
+        icon: 'site' as IconKey,
+        name: 'Site Intelligence',
+        desc: 'Crawl, classify, and index every page and asset.',
+      },
+      {
+        icon: 'content' as IconKey,
+        name: 'Content Intelligence',
+        desc: 'Detect gaps, draft briefs, generate and verify content.',
+      },
+      {
+        icon: 'demand' as IconKey,
+        name: 'Demand Intelligence',
+        desc: 'GSC, GA4, AI visibility, and journey signals unified.',
+      },
+      {
+        icon: 'agent' as IconKey,
+        name: 'Growth Agent',
+        desc: 'Bounded orchestration with explicit approvals.',
+      },
     ],
     // The detailed module cards.
     modules: [
@@ -253,16 +275,35 @@ export const LANDING_CONTENT = {
     title: 'Built for regulated and security-conscious enterprises.',
     lead: 'Customer data stays workspace-scoped and project-scoped. Industry knowledge packs are versioned and shared across the platform — customer facts never are.',
     features: [
-      { icon: 'isolation' as IconKey, title: 'Data isolation', sub: 'Project-scoped, never cross-contaminated' },
-      { icon: 'provenance' as IconKey, title: 'Full provenance', sub: 'Every recommendation carries its evidence chain' },
-      { icon: 'approval' as IconKey, title: 'Approval gates', sub: 'Nothing publishes without human sign-off' },
-      { icon: 'versioned' as IconKey, title: 'Versioned knowledge', sub: 'Shared packs are release-managed, not silent' },
+      {
+        icon: 'isolation' as IconKey,
+        title: 'Data isolation',
+        sub: 'Project-scoped, never cross-contaminated',
+      },
+      {
+        icon: 'provenance' as IconKey,
+        title: 'Full provenance',
+        sub: 'Every recommendation carries its evidence chain',
+      },
+      {
+        icon: 'approval' as IconKey,
+        title: 'Approval gates',
+        sub: 'Nothing publishes without human sign-off',
+      },
+      {
+        icon: 'versioned' as IconKey,
+        title: 'Versioned knowledge',
+        sub: 'Shared packs are release-managed, not silent',
+      },
     ],
     ledger: [
       { label: 'Customer data isolation', value: 'Project-scoped, never shared across workspaces' },
       { label: 'Agent provenance', value: 'Every recommendation includes a typed evidence chain' },
       { label: 'Approval gates', value: 'No content is published without explicit human sign-off' },
-      { label: 'Industry pack versioning', value: 'Shared knowledge is versioned and release-managed' },
+      {
+        label: 'Industry pack versioning',
+        value: 'Shared knowledge is versioned and release-managed',
+      },
     ],
   },
 

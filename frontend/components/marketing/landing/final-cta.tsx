@@ -4,7 +4,6 @@ import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
-import { Eyebrow } from '../primitives/label';
 import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
@@ -17,16 +16,31 @@ export function FinalCta() {
   const { cta } = LANDING_CONTENT;
   return (
     <Section id="get-started" tone="paper" rhythm="base" aria-label="Get started">
-      <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
-        <Eyebrow>{cta.kicker}</Eyebrow>
-        <h2 className="font-display text-foreground mt-8 max-w-[24ch] text-3xl">{cta.title}</h2>
-        <p className="text-muted mt-6 max-w-[60ch] text-lg">{cta.body}</p>
+      <Reveal className="bg-panel border-border shadow-elevated mx-auto flex max-w-4xl flex-col items-center rounded-2xl border p-8 text-center md:p-12">
+        <div className="bg-accent-subtle/80 text-accent-text border-accent-border/80 inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium shadow-xs">
+          <span className="bg-accent size-1.5 animate-pulse rounded-full" />
+          <span>{cta.kicker}</span>
+        </div>
+        <h2 className="font-display text-foreground mt-6 max-w-[24ch] text-2xl font-semibold tracking-tight md:text-3xl">
+          {cta.title}
+        </h2>
+        <p className="text-muted mt-4 max-w-[60ch] text-base leading-relaxed md:text-lg">
+          {cta.body}
+        </p>
         <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
-          <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
+          <ButtonLink
+            href={DEMO_HREF}
+            variant="primary"
+            className="hover:shadow-card-hover w-full shadow-sm transition-all sm:w-auto"
+          >
             {cta.primaryCta}
             <ArrowRight aria-hidden />
           </ButtonLink>
-          <ButtonLink href="/pricing" variant="ghost" className="w-full sm:w-auto">
+          <ButtonLink
+            href="/pricing"
+            variant="ghost"
+            className="border-border/80 hover:bg-background-alt w-full border sm:w-auto"
+          >
             {cta.secondaryCta}
           </ButtonLink>
         </div>

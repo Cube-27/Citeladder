@@ -39,9 +39,14 @@ export function Eyebrow({
   className,
 }: Readonly<{ children: ReactNode; dot?: boolean; className?: string }>) {
   return (
-    <p className={cn('text-muted flex items-center gap-3 text-xs font-medium', className)}>
+    <div
+      className={cn(
+        'text-muted inline-flex items-center gap-2 text-xs font-semibold tracking-normal',
+        className,
+      )}
+    >
       {dot && <span aria-hidden className="bg-accent size-2 shrink-0 rounded-full" />}
-      {children}
-    </p>
+      <span>{children}</span>
+    </div>
   );
 }

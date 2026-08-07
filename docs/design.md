@@ -6,18 +6,21 @@
 ## Direction and identity
 
 CiteLadder is a light-only, evidence-led enterprise system. It should feel calm,
-precise, and engineered — technology that does not need to announce itself. The
-system is derived from Tesla's: radical subtraction, near-zero UI decoration, one
-chromatic accent, and whitespace used as a luxury signal.
+precise, and engineered. It began from a Tesla-style restraint and has settled
+into a refined, Untitled-UI-influenced light system: one chromatic accent,
+generous whitespace, crisp micro-shadows over hairline borders, and a few
+deliberate, quiet motion treatments.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** Public Sans for everything — display, UI, body, and data. Only
-  two weights (400 and 500), normal letter-spacing at every level, and a 40px
-  display ceiling.
+- **Typography:** Manrope for display headings, Public Sans for UI, body, and
+  data. Weights 400–600, normal tracking (a tight display headline may use
+  `tracking-tight`). Section headings are 32px; the hero headline scales
+  responsively up to 48px, which is the display ceiling.
 - **Accent:** a single Electric Blue (`#3E6AE1`) for primary actions, selection,
-  links, and focus. It is the only chromatic colour on the marketing surface.
+  links, and focus. It is the only chromatic colour on the marketing surface; the
+  hero closing clause may render it as an accent-token gradient.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
   same tokens, type, and restraint.
@@ -45,17 +48,17 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 |---|---|---|
-| Canvas and surfaces | `background` (Light Ash), `background-alt`, `panel` (white), `well`, `sidebar` | Two light tiers only — cards separate by tone and spacing, not shadow |
-| Text | `foreground`, `secondary`, `muted`, `subtle`, `inverse` | Carbon → Graphite → Pewter → Silver Fog reading ramp |
-| Borders | `border`, `border-subtle`, `border-strong` | Sparingly — a hairline where tone alone is not enough |
-| Primary action | `accent-*` | Electric-blue CTAs, selection, links, focus |
+| Canvas and surfaces | `background` (Untitled UI Gray-50 #f9fafb), `background-alt` (#f2f4f7), `panel` (white), `well`, `sidebar` | Clean light tiers — crisp panels with high legibility and contrast |
+| Text | `foreground` (#101828), `secondary` (#344054), `muted` (#475467), `subtle` (#667085), `inverse` | Untitled UI 10-step Gray reading ramp |
+| Borders | `border` (#e4e7ec), `border-subtle` (#f2f4f7), `border-strong` (#d0d5dd) | Crisp hairlines for subtle separation |
+| Primary action | `accent-*` | Electric-blue (`#3E6AE1`) CTAs, selection, links, focus (UNCHANGED) |
 | Status | `success-*`, `warning-*`, `danger-*`, `info-*`, `neutral-bg` | App only; always paired with text or an icon |
 | Evidence and scores | `citation-*`, `run-*`, `score-*`, `series-*`, `chart-*` | Persisted evidence, audit status, score bands, and charts |
 
-The accent is Electric Blue: `#3E6AE1` at rest, darkened on hover and press. Its
+The accent is Electric Blue: `#3E6AE1` at rest (UNCHANGED), darkened on hover and press. Its
 subtle fill and border are pale-blue tints; `accent-text` is a darker blue so
-accent-coloured text clears WCAG AA on white. The canvas is Light Ash (`#f4f4f4`),
-working surfaces are white, and ink is Carbon Dark (`#171a20`).
+accent-coloured text clears WCAG AA on white. The canvas is Gray 50 (`#f9fafb`),
+working surfaces are white, and ink is Carbon Ink (`#101828`).
 
 **Marketing is monochrome-plus-blue.** It uses only white, the ink ramp, and the
 one blue — no status, score, or category colour. **The authenticated app keeps
@@ -66,15 +69,15 @@ alone; it is always paired with a label or icon.
 
 ## Type, data, and geometry
 
-One typeface (Public Sans), two weights (400 body, 500 display and UI), normal
-letter-spacing everywhere. Metrics, dates, ranks, and percentages use tabular
-numerals, never a monospace face.
+Two families: Manrope for display headings (`font-display`), Public Sans for UI,
+body, and data (`font-sans`). Weights run 400–600. Metrics, dates, ranks, and
+percentages use tabular numerals, never a monospace face.
 
-The scale caps at 40px and clusters low. `text-sm` (14px) is the reading
-baseline; `text-2xl` (28px) is the section heading; `text-3xl` (40px) is the hero
-ceiling and is never exceeded. `text-4xl`/`text-5xl` are forbidden. Heading weight
-and tracking come from the base rule in `globals.css`; markup sets only the size
-rung, so type never drifts page to page.
+The scale clusters low and caps at 48px. `text-sm` (14px) is the reading
+baseline; `text-2xl` (32px) is the section heading; the hero headline scales
+`text-3xl` → `text-4xl` → `text-5xl` (40 → 44 → 48px) across breakpoints, and 48px
+is the ceiling. Every one of those sizes is a `--text-*` token in `globals.css`;
+no page invents an off-scale size.
 
 | Context | Desktop | Touch / compact |
 |---|---:|---:|
@@ -86,11 +89,12 @@ rung, so type never drifts page to page.
 | Table row | 36px | labelled record |
 
 The content area caps at 1383px. Standard cards use 16px internal padding and gap.
-Radius roles are fixed and few: 0 by default, 4px for controls and buttons, 12px
-for cards and panels; a full radius is reserved for badges and toggles. Elevation
-is essentially none — `shadow-card` is flat, and only overlays (menus, dialogs,
-tooltips, the command palette) float on a restrained shadow. Marketing sections
-breathe on a generous rhythm (`--section-y-*`, 120px desktop).
+The radius scale is 4px (`xs`), 6px (`sm`, controls/buttons), 8px (`md`), 12px
+(`lg`, standard cards), 16px (`xl`), and 20px (`2xl`, feature panels); a full
+radius is reserved for badges, dots, and toggles. Elevation is Untitled-UI
+micro-shadows layered over hairline borders (`shadow-card` and up), never a heavy
+drop. Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px
+desktop).
 
 ## Layout and content composition
 
@@ -124,12 +128,12 @@ focused grid, then an optional CTA.
 
 ### Controls
 
-Buttons are 4px-radius rectangles, never pills. Primary is the blue fill with a
-white label; secondary is a white fill with a Pale-Silver hairline and a Graphite
+Buttons are `rounded-sm` (6px) rectangles, never pills. Primary is the blue fill
+with a white label; secondary is a white fill with a hairline and a Graphite
 label; neutral and ghost stay quiet so a screen has one obvious action; danger is
-reserved for destructive actions. Hover moves colour and border only — never scale
-or translate — over the universal 330ms curve. Every control has a direct label,
-visible focus, and at least a 44px touch target.
+reserved for destructive actions. Hover shifts colour, border, and the micro-shadow
+over the universal 330ms curve. Every control has a direct label, a visible focus
+ring (an opaque accent halo, ≥3:1), and at least a 44px touch target.
 
 Inputs use the semantic input and border roles. Labels sit with their control,
 helper text explains constraints, and errors give a recovery instruction. Never
@@ -137,11 +141,13 @@ use placeholder text as the only label.
 
 ### Panels, badges, and evidence
 
-Panels are white or semantic-surface fills, flat, separated by tone, spacing, and
-a faint hairline rather than a shadow. Badges pair a text label with their state
-mark; a colour, dot, or icon is never the sole signal. Evidence rows identify
-source, measurement context, and the action that opens the persisted record.
-Empty and loading states preserve layout and explain what is missing.
+Panels are white or semantic-surface fills carried by a hairline border and a
+crisp micro-shadow. Interactive cards may raise a step on hover — a deeper shadow
+and a small rise (`hover:-translate-y-0.5`) — as the one sanctioned lift. Badges
+pair a text label with their state mark; a colour, dot, or icon is never the sole
+signal. Evidence rows identify source, measurement context, and the action that
+opens the persisted record. Empty and loading states preserve layout and explain
+what is missing.
 
 ### Navigation and overlays
 
@@ -153,26 +159,36 @@ focus, close predictably, and return focus to their trigger.
 
 ## Motion and accessibility
 
-Motion is a single language: one 330ms `cubic-bezier(0.5, 0, 0, 0.75)` curve for
-state changes, with a 250ms micro for feedback. Interactions are colour-only — no
-scale, spin, glow, gradient, or looping decoration. Two motion treatments are kept
-because they clarify rather than decorate: the rotating answer-engine wordmarks and
-the product-window walkthrough. Entrances may fade and rise a small distance; they
-never hide server-rendered content after hydration.
+State changes use one 330ms `cubic-bezier(0.5, 0, 0, 0.75)` curve, with a 250ms
+micro for feedback. Beyond that, a small, deliberate set of ambient and
+storytelling motions is sanctioned, each one calm and each one reduced-motion-safe:
 
-- `prefers-reduced-motion` removes transforms and non-essential movement while
-  retaining all content and controls.
-- WCAG 2.1 AA is the minimum. Focus is always visible; state is never colour-only;
-  forced-colours and print remain usable.
+- the marketing **atmosphere** — two very-low-opacity accent auras drifting behind
+  the public surface;
+- the **architecture pipeline** diagram (platform section) — accent dots flowing
+  along conduit paths;
+- the rotating answer-engine wordmarks and the product-window walkthrough;
+- scroll **reveal** entrances (GSAP) that fade and rise a small distance and never
+  hide server-rendered content after hydration;
+- the interactive-card hover lift.
+
+Every one of these stops under `prefers-reduced-motion: reduce`: CSS animations and
+transitions are neutralised globally, the SMIL pipeline dots are hidden, and the
+GSAP reveals do not run. WCAG 2.1 AA is the minimum. Focus is always visible via an
+opaque accent halo; state is never colour-only; forced-colours and print remain
+usable.
 
 ## Review checklist
 
 Before merging a visual change, verify:
 
 - It uses semantic global tokens and an existing primitive where one applies.
-- Type stays at weight 400/500, normal tracking, and at or below the 40px ceiling.
+- Type stays within weights 400–600 and at or below the 48px ceiling, using the
+  `--text-*` token sizes.
 - Marketing stays monochrome-plus-blue; functional colour appears only in the app.
-- Elevation stays flat except sanctioned overlays; radius is 0 / 4 / 12.
+- Elevation uses the micro-shadow tokens; radius uses the 4 / 6 / 8 / 12 / 16 / 20
+  scale.
+- Any new motion is calm and stops under `prefers-reduced-motion`.
 - Text, focus, status, loading, error, empty, keyboard, touch, reduced-motion,
   forced-colours, and mobile states remain usable.
 - Focused tests, `pnpm check:policy`, and the appropriate build or visual checks

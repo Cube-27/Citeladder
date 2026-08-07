@@ -26,18 +26,28 @@ export function Packs() {
           const Icon = LANDING_ICONS[pack.icon];
           return (
             <StaggerItem key={pack.name} className="h-full">
-              <article className="bg-panel border-border-subtle hover:border-border flex h-full flex-col rounded-lg border p-6 transition-colors duration-300">
+              <article className="bg-panel border-border shadow-card hover:shadow-card-hover group flex h-full flex-col rounded-xl border p-6 transition-all duration-300 hover:-translate-y-0.5">
                 <div className="flex items-center gap-3">
-                  <span className="bg-accent-subtle text-accent-text border-accent-border flex size-9 items-center justify-center rounded-lg border">
+                  <span className="bg-accent-subtle/80 text-accent-text border-accent-border/60 flex size-9 items-center justify-center rounded-lg border shadow-xs">
                     <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
                   </span>
-                  <h3 className="font-display text-foreground text-base">{pack.name}</h3>
+                  <h3 className="font-display text-foreground group-hover:text-accent-text text-base font-semibold transition-colors">
+                    {pack.name}
+                  </h3>
                 </div>
-                <p className="text-muted mt-4 text-xs tracking-wide uppercase">{pack.status}</p>
+                <p className="text-muted text-2xs mt-4 font-mono font-semibold tracking-wider uppercase">
+                  {pack.status}
+                </p>
                 <ul className="mt-4 flex flex-col gap-2">
                   {pack.points.map((point) => (
-                    <li key={point} className="text-secondary flex items-start gap-2 text-sm">
-                      <ChevronRight className="text-accent-text mt-0.5 size-3.5 shrink-0" aria-hidden />
+                    <li
+                      key={point}
+                      className="text-secondary flex items-start gap-2 text-sm font-medium"
+                    >
+                      <ChevronRight
+                        className="text-accent-text mt-0.5 size-3.5 shrink-0"
+                        aria-hidden
+                      />
                       <span>{point}</span>
                     </li>
                   ))}

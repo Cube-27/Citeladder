@@ -4,6 +4,7 @@ import {
   Briefcase,
   Building2,
   Check,
+  Eye,
   FileText,
   GitBranch,
   Globe,
@@ -44,4 +45,7 @@ export const LANDING_ICONS: Record<IconKey, LucideIcon> = {
   provenance: ShieldCheck,
   approval: Check,
   versioned: GitBranch,
+  ask: Search,
+  prove: FileText,
+  see: Eye,
 };

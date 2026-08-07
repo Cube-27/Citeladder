@@ -35,7 +35,7 @@ function hasStoredActiveProject(): boolean {
 }
 
 const NAV_LINK =
-  'text-sm text-secondary hover:text-foreground relative z-1 inline-flex items-center gap-2 ' +
+  'text-base text-secondary hover:text-foreground relative z-1 inline-flex items-center gap-2 ' +
   'rounded-sm px-4 py-4 font-medium transition-colors duration-300';
 
 /**
@@ -45,7 +45,7 @@ const NAV_LINK =
  * panel is anchored and clamped before it paints; a column is sized so a
  * one-line description stays on one line.
  */
-const COLUMN = 304;
+const COLUMN = 380;
 const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
   platform: { width: COLUMN, twoColumn: false },
   solutions: { width: COLUMN, twoColumn: false },
