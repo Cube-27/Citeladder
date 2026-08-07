@@ -116,7 +116,7 @@ export function Donut({
             aria-hidden
             className="absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           >
-            <span className="mono text-foreground text-xl font-semibold">{centerLabel}</span>
+            <span className="mono text-foreground text-xl font-medium">{centerLabel}</span>
             {centerCaption ? <span className="text-muted text-xs">{centerCaption}</span> : null}
           </span>
         ) : null}

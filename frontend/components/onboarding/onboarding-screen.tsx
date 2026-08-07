@@ -318,7 +318,7 @@ export function OnboardingScreen() {
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 sm:gap-6 sm:px-6 lg:px-8">
           <span className="flex shrink-0 items-center gap-2">
             <LogoMark size={24} />
-            <span className="font-display text-foreground text-base font-bold">CiteLadder</span>
+            <span className="font-display text-foreground text-base font-medium">CiteLadder</span>
           </span>
 
           {/* Compact inline stepper — replaces the old dedicated stepper card. */}
@@ -342,7 +342,7 @@ export function OnboardingScreen() {
                   >
                     <span
                       className={cn(
-                        'text-2xs flex size-5 items-center justify-center rounded-full font-bold transition-colors',
+                        'text-2xs flex size-5 items-center justify-center rounded-full font-medium transition-colors',
                         state === 'current'
                           ? 'bg-accent text-accent-fg'
                           : state === 'done'
@@ -358,7 +358,7 @@ export function OnboardingScreen() {
                     </span>
                     <span
                       className={cn(
-                        'text-2xs hidden font-bold uppercase sm:inline',
+                        'text-2xs hidden font-medium uppercase sm:inline',
                         state === 'current'
                           ? 'text-accent-text'
                           : state === 'done'
@@ -374,7 +374,7 @@ export function OnboardingScreen() {
             })}
           </ol>
 
-          <span className="text-3xs border-border-subtle/60 bg-well text-muted ml-auto shrink-0 rounded-full border px-2 py-1 font-semibold sm:ml-0">
+          <span className="text-3xs border-border-subtle/60 bg-well text-muted ml-auto shrink-0 rounded-full border px-2 py-1 font-medium sm:ml-0">
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
@@ -403,7 +403,7 @@ export function OnboardingScreen() {
             >
               <div className="grid gap-6">
                 <div className="grid gap-1.5">
-                  <h1 className="font-display text-foreground text-2xl font-bold sm:text-3xl">
+                  <h1 className="font-display text-foreground text-2xl font-medium sm:text-3xl">
                     {isAdditional ? 'Add a project' : 'What brand are we tracking?'}
                   </h1>
                   <p className="text-muted text-sm">
@@ -529,7 +529,7 @@ export function OnboardingScreen() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button type="submit" className="font-semibold">
+                  <Button type="submit" className="font-medium">
                     Continue
                   </Button>
                   {isAdditional ? (
@@ -545,7 +545,7 @@ export function OnboardingScreen() {
           {step === 1 ? (
             <div className="bg-panel shadow-card grid gap-6 rounded-2xl p-6 sm:p-8">
               <div className="grid gap-1.5">
-                <h1 className="font-display text-foreground text-2xl font-bold sm:text-3xl">
+                <h1 className="font-display text-foreground text-2xl font-medium sm:text-3xl">
                   Finding what to track
                 </h1>
                 <p className="text-muted text-sm">
@@ -604,7 +604,7 @@ export function OnboardingScreen() {
                     !discovery.discovery ||
                     discovery.discovery.prompt_suggestions.length === 0
                   }
-                  className="font-semibold"
+                  className="font-medium"
                 >
                   {discovery.isRunning ? 'Searching…' : 'Review'}
                 </Button>
@@ -618,7 +618,7 @@ export function OnboardingScreen() {
           {step === 2 ? (
             <div className="bg-panel shadow-card flex h-full flex-col gap-6 rounded-2xl p-6 sm:p-8">
               <div className="grid gap-1.5">
-                <h1 className="font-display text-foreground text-2xl font-bold sm:text-3xl">
+                <h1 className="font-display text-foreground text-2xl font-medium sm:text-3xl">
                   Does this look right?
                 </h1>
                 <p className="text-muted text-sm">
@@ -693,7 +693,7 @@ export function OnboardingScreen() {
 
               {discovery.discovery?.profile.description ? (
                 <div className="border-border-subtle bg-background/70 rounded-xl border p-4">
-                  <p className="text-2xs text-muted font-bold uppercase">Discovered profile</p>
+                  <p className="text-2xs text-muted font-medium uppercase">Discovered profile</p>
                   <p className="text-secondary mt-2 text-sm leading-relaxed">
                     {discovery.discovery.profile.description}
                   </p>
@@ -724,7 +724,7 @@ export function OnboardingScreen() {
                     !hasSelectedPrompt ||
                     !hasCompletePromptPortfolio
                   }
-                  className="font-semibold"
+                  className="font-medium"
                 >
                   {complete.isPending ? 'Creating…' : 'Create project'}
                 </Button>

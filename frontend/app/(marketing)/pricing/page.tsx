@@ -9,24 +9,24 @@ import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
 // per visitor, so a number baked into a static description would be wrong for
 // most of them and would go stale the moment the catalog changed.
 const DESCRIPTION =
-  'Pricing for CiteLadder, the AI visibility and site intelligence platform: ' +
-  'self-serve plans plus a sales-assisted Enterprise agreement. Audits run on your own ' +
-  'provider keys. India is billed in INR with GST added; international cards are charged in USD.';
+  'Pricing for CiteLadder, the growth-intelligence platform: self-serve plans plus a ' +
+  'sales-assisted Enterprise agreement. Model calls run on your own provider keys. India is ' +
+  'billed in INR with GST added; international cards are charged in USD.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Pricing — BYOK AI visibility audits, site health & AEO monitoring',
+  title: 'Pricing — the growth-intelligence platform',
   description: DESCRIPTION,
   alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'Pricing — BYOK AI visibility audits, site health & AEO monitoring',
+    title: 'Pricing — the growth-intelligence platform',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'CiteLadder',
   },
   twitter: {
     card: 'summary',
-    title: 'Pricing — BYOK AI visibility audits, site health & AEO monitoring',
+    title: 'Pricing — the growth-intelligence platform',
     description: DESCRIPTION,
   },
 };
@@ -48,9 +48,9 @@ export default function PricingPage() {
       <PageHero
         centered
         eyebrow="Pricing"
-        title="Pay for the evidence layer."
+        title="Pay for the intelligence."
         accent="Not the API markup."
-        lead="Audits run on your own ChatGPT, Gemini and Claude keys — provider usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the monitoring and the evidence behind every score."
+        lead="Model calls run on your own provider keys — usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation."
       >
         <TrustStrip className="mt-8 justify-center" />
       </PageHero>

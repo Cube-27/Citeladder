@@ -1,0 +1,58 @@
+import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
+
+import { Eyebrow } from '../primitives/label';
+import { Reveal } from '../primitives/reveal';
+import { Section } from '../primitives/section';
+import { LANDING_ICONS } from './landing-icons';
+
+/**
+ * Enterprise trust — an asymmetric split: the promise and four proof tiles on
+ * the left, a plain-language evidence ledger on the right. No seals or badges;
+ * the claim is the design.
+ */
+export function Trust() {
+  const { trust } = LANDING_CONTENT;
+  return (
+    <Section id="trust" tone="sunken" rhythm="base" aria-labelledby="trust-title">
+      <div className="grid items-start gap-x-12 gap-y-10 lg:grid-cols-2">
+        <Reveal>
+          <Eyebrow>{trust.kicker}</Eyebrow>
+          <h2 id="trust-title" className="font-display text-foreground mt-6 max-w-[20ch] text-2xl">
+            {trust.title}
+          </h2>
+          <p className="text-muted mt-5 max-w-[52ch] text-base leading-relaxed">{trust.lead}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {trust.features.map((feature) => {
+              const Icon = LANDING_ICONS[feature.icon];
+              return (
+                <div
+                  key={feature.title}
+                  className="bg-panel border-border-subtle flex gap-3 rounded-lg border p-4"
+                >
+                  <span className="text-accent-text mt-0.5 shrink-0">
+                    <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-foreground text-sm font-medium">{feature.title}</p>
+                    <p className="text-muted mt-1 text-xs leading-relaxed">{feature.sub}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Reveal>
+
+        <Reveal className="bg-panel border-border-subtle rounded-lg border">
+          <dl className="divide-border-subtle divide-y">
+            {trust.ledger.map((row) => (
+              <div key={row.label} className="grid gap-1 p-5 sm:grid-cols-[200px_1fr] sm:gap-4">
+                <dt className="text-foreground text-sm font-medium">{row.label}</dt>
+                <dd className="text-muted text-sm leading-relaxed">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Reveal>
+      </div>
+    </Section>
+  );
+}

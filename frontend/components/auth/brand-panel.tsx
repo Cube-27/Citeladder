@@ -57,13 +57,7 @@ export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }
 
 export function AuthBrandPanel() {
   return (
-    <div className="relative col-span-5 flex min-h-full flex-col justify-between px-12 py-12 max-[900px]:hidden xl:px-16">
-      {/* Subtle light ambient glow */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-accent-soft absolute -top-24 -left-24 size-96 rounded-full blur-[100px]" />
-        <div className="bg-accent-soft absolute top-1/2 -right-24 size-80 rounded-full blur-[90px]" />
-      </div>
-
+    <div className="border-border-subtle relative col-span-5 flex min-h-full flex-col justify-between border-r px-12 py-12 max-[900px]:hidden xl:px-16">
       <div className="flex flex-col gap-10">
         <div>
           <AuthWordmark />
@@ -71,7 +65,7 @@ export function AuthBrandPanel() {
 
         {/* Feature showcase */}
         <div className="my-auto max-w-lg space-y-8">
-          <div className="border-accent-border bg-background-alt text-accent-text inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
+          <div className="border-accent-border bg-background-alt text-accent-text inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
             <span className="relative flex size-2">
               <span className="bg-accent absolute inline-flex size-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"></span>
               <span className="bg-accent relative inline-flex size-2 rounded-full"></span>
@@ -80,7 +74,7 @@ export function AuthBrandPanel() {
           </div>
 
           <div className="space-y-3">
-            <h2 className="font-display text-foreground text-3xl leading-tight font-bold sm:text-4xl">
+            <h2 className="font-display text-foreground text-3xl leading-tight font-medium">
               See how AI models talk about your brand.
             </h2>
             <p className="text-muted text-base leading-relaxed">
@@ -94,16 +88,16 @@ export function AuthBrandPanel() {
             {PROOF_POINTS.map((proof) => (
               <div
                 key={proof.lead}
-                className="group bg-panel shadow-card hover:shadow-card-hover flex items-start gap-4 rounded-xl p-4 transition-shadow duration-200"
+                className="bg-panel border-border-subtle hover:border-border flex items-start gap-4 rounded-lg border p-4 transition-colors duration-300"
               >
                 <div
                   aria-hidden
-                  className="border-accent-border bg-background-alt text-accent-text flex size-10 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105"
+                  className="border-accent-border bg-accent-subtle text-accent-text flex size-10 shrink-0 items-center justify-center rounded-lg border"
                 >
                   <proof.icon className="size-5" strokeWidth={1.75} />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-foreground text-sm font-semibold">{proof.lead}</p>
+                  <p className="text-foreground text-sm font-medium">{proof.lead}</p>
                   <p className="text-muted text-xs">{proof.description}</p>
                 </div>
               </div>

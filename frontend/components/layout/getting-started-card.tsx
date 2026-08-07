@@ -85,7 +85,7 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
     >
       <div className="flex items-center justify-between">
         <span className={eyebrowClasses}>Getting Started</span>
-        <span className="text-2xs text-secondary mono font-semibold">
+        <span className="text-2xs text-secondary mono font-medium">
           {completed} of {total}
         </span>
       </div>

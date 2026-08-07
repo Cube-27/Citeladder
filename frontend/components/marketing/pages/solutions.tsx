@@ -49,7 +49,7 @@ export function SolutionsHero() {
             <a
               key={id}
               href={`#${id}`}
-              className="border-border-subtle bg-panel text-foreground shadow-card hover:border-border hover:shadow-card-hover inline-flex items-center gap-4 rounded-md border px-5 py-4 text-sm font-semibold transition-[border-color,box-shadow] duration-200"
+              className="border-border-subtle bg-panel text-foreground shadow-card hover:border-border hover:shadow-card-hover inline-flex items-center gap-4 rounded-md border px-5 py-4 text-sm font-medium transition-[border-color,box-shadow] duration-200"
             >
               <Icon aria-hidden strokeWidth={1.8} className="text-muted size-4" />
               {label}
@@ -136,7 +136,7 @@ export function SolutionsCta() {
   return (
     <Section tone="paper" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-5xl text-center">
-        <h2 className="font-display text-foreground mx-auto mb-5 max-w-[32ch] text-4xl">
+        <h2 className="font-display text-foreground mx-auto mb-5 max-w-[32ch] text-2xl">
           Bring your team the version of the truth it reports in.
         </h2>
         <p className="text-muted mx-auto max-w-[80ch] text-lg">

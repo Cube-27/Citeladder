@@ -25,13 +25,13 @@ export type PlanPresentation = {
  * own description.
  */
 export const PLAN_PRESENTATION: Readonly<Record<PlanKey, PlanPresentation>> = {
-  tier_1: { blurb: 'Start measuring your brand across the answer engines.' },
+  tier_1: { blurb: 'Start with Site Intelligence — crawl, classify, and surface the gaps in your owned pages.' },
   tier_2: {
-    blurb: 'Recurring monitoring, the full Site Health inventory, and authenticated exports.',
+    blurb: 'The full loop: Site, Content, and Demand intelligence with recurring monitoring and exports.',
     highlighted: true,
   },
-  tier_3: { blurb: 'More projects, prompts and monitored URLs as coverage grows.' },
-  enterprise: { blurb: 'Custom volume, security review, and deployment options.' },
+  tier_3: { blurb: 'More projects, pages, and prompts as coverage and teams grow.' },
+  enterprise: { blurb: 'Custom volume, security review, industry-pack tuning, and deployment options.' },
 };
 
 /** The label on the credential-mode switch. */

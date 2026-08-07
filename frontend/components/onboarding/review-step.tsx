@@ -21,7 +21,7 @@ function SectionHead({
 }: Readonly<{ label: string; count: string; muted?: boolean }>) {
   return (
     <div className="flex items-baseline gap-2">
-      <p className={cn('text-2xs font-bold uppercase', muted ? 'text-muted' : 'text-secondary')}>
+      <p className={cn('text-2xs font-medium uppercase', muted ? 'text-muted' : 'text-secondary')}>
         {label}
       </p>
       <Badge variant="neutral">{count}</Badge>
@@ -79,7 +79,7 @@ function TabButton({
       className={cn(
         'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 sm:text-sm',
         active
-          ? 'text-foreground bg-panel font-semibold'
+          ? 'text-foreground bg-panel font-medium'
           : 'text-muted hover:text-foreground hover:bg-panel/50',
       )}
     >
@@ -89,7 +89,7 @@ function TabButton({
       </div>
       <span
         className={cn(
-          'text-2xs rounded-full px-2 py-0.5 font-semibold transition-colors',
+          'text-2xs rounded-full px-2 py-0.5 font-medium transition-colors',
           active ? 'bg-accent-soft text-accent-text' : 'bg-border-subtle/60 text-muted',
         )}
       >
@@ -256,7 +256,7 @@ export function ReviewStep({
                       ? `You can track up to ${maximumCompetitors} competitors`
                       : undefined
                   }
-                  className="text-accent-text hover:bg-accent-soft gap-1 px-2 text-xs font-semibold"
+                  className="text-accent-text hover:bg-accent-soft gap-1 px-2 text-xs font-medium"
                 >
                   <Plus className="size-4" aria-hidden />
                   Add competitor

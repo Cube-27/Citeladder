@@ -15,8 +15,8 @@ export function Shift() {
       <StaggerGroup className="grid gap-5 lg:grid-cols-3">
         {shift.facts.map((fact) => (
           <StaggerItem key={fact.label} className="h-full">
-            <article className="bg-panel shadow-card h-full rounded-lg p-6 md:p-7">
-              <p className="text-accent-text text-xs font-semibold tracking-wide uppercase">
+            <article className="bg-panel border-border-subtle h-full rounded-lg border p-6 md:p-7">
+              <p className="text-accent-text text-xs font-medium tracking-wide uppercase">
                 {fact.label}
               </p>
               <h3 className="font-display text-foreground mt-4 max-w-[28ch] text-xl">

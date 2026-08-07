@@ -37,7 +37,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
             <div key={name} className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-sm">
                 <span
-                  className={`font-medium ${own ? 'text-foreground font-semibold' : 'text-muted'}`}
+                  className={`font-medium ${own ? 'text-foreground font-medium' : 'text-muted'}`}
                 >
                   {name}
                 </span>
@@ -82,7 +82,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
                 <span className="text-foreground font-medium">{name}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-muted text-xs">{status}</span>
-                  <span className="text-foreground font-mono font-semibold tabular-nums">
+                  <span className="text-foreground font-mono font-medium tabular-nums">
                     {value}/100
                   </span>
                 </div>
@@ -138,7 +138,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
       <>
         <div className="border-border-subtle bg-background-alt rounded-md border p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-foreground flex items-center gap-3 font-semibold">
+            <span className="text-foreground flex items-center gap-3 font-medium">
               <ShoppingBag className="text-accent-text size-4" aria-hidden />
               Acoustic Pro ANC Headphones
             </span>
@@ -149,7 +149,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
           <div className="border-border-subtle mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-sm">
             <div>
               <span className="text-muted block text-xs">Quoted Price</span>
-              <span className="text-foreground font-mono font-semibold">$299.00</span>
+              <span className="text-foreground font-mono font-medium">$299.00</span>
             </div>
             <div>
               <span className="text-muted block text-xs">Engine Rank</span>
@@ -203,7 +203,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
             <div key={label} className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-sm">
                 <span
-                  className={`font-medium ${own ? 'text-foreground font-semibold' : 'text-muted'}`}
+                  className={`font-medium ${own ? 'text-foreground font-medium' : 'text-muted'}`}
                 >
                   {label}
                 </span>

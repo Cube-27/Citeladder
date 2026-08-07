@@ -46,7 +46,7 @@ export function TourStepper({
               aria-pressed={isActive}
               onClick={() => onSelectStep(idx)}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-4 py-3 text-left text-xs font-semibold transition-colors',
+                'flex items-center gap-3 rounded-lg px-4 py-3 text-left text-xs font-medium transition-colors',
                 compact && 'gap-2 rounded-md px-4 py-2',
                 isActive ? 'bg-accent text-white' : 'bg-panel text-muted hover:text-foreground',
               )}

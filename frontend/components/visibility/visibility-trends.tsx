@@ -163,7 +163,7 @@ function StatCard({ stat }: Readonly<{ stat: TrendStat }>) {
     <Card>
       <CardContent className="grid gap-1 p-4">
         <span className={eyebrowClasses}>{stat.label}</span>
-        <span className={cn('mono text-xl font-semibold', valueClass)}>{stat.value}</span>
+        <span className={cn('mono text-xl font-medium', valueClass)}>{stat.value}</span>
         <span className={cn('text-xs', deltaClass)}>{stat.delta}</span>
       </CardContent>
     </Card>

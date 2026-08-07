@@ -2,10 +2,12 @@ import type { Metadata } from 'next';
 
 import { FinalCta } from '@/components/marketing/landing/final-cta';
 import { Hero } from '@/components/marketing/landing/hero';
-import { Proof } from '@/components/marketing/landing/proof';
+import { Packs } from '@/components/marketing/landing/packs';
+import { Platform } from '@/components/marketing/landing/platform';
 import { SeeIt } from '@/components/marketing/landing/see-it';
 import { Shift } from '@/components/marketing/landing/shift';
-import { WhatWeMeasure } from '@/components/marketing/landing/what-we-measure';
+import { Trust } from '@/components/marketing/landing/trust';
+import { Workflow } from '@/components/marketing/landing/workflow';
 import { LandingSessionRedirect } from '@/components/marketing/landing-session-redirect';
 
 const DESCRIPTION =
@@ -39,12 +41,11 @@ export const metadata: Metadata = {
  * forwards signed-in visitors to their dashboard (`/projects`) or to
  * first-run `/onboarding` — the contract `/` had before this page existed.
  *
- * Six beats, in order: the hook (Hero), why the ground moved (Shift), the
- * product itself (SeeIt), what its numbers actually mean (WhatWeMeasure), how
- * they are verified (Proof), and the close (FinalCta). The measurement
- * disclosure sits before Proof deliberately — the axes have to be defined
- * before the verification story leans on them. Shared chrome (nav + footer) lives in the (marketing) route-group
- * layout.
+ * Eight beats, in order: the hook (Hero), why growth changed (Shift), the four
+ * intelligence layers (Platform), the product itself (SeeIt), how the loop runs
+ * (Workflow), who it is shaped for (Packs), the data promise (Trust), and the
+ * close (FinalCta). Shared chrome (nav + footer) lives in the (marketing)
+ * route-group layout.
  *
  * Must stay a SYNC component (no async / headers() / cookies()) so the page
  * test can render it directly under Testing Library.
@@ -55,9 +56,11 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Shift />
+        <Platform />
         <SeeIt />
-        <WhatWeMeasure />
-        <Proof />
+        <Workflow />
+        <Packs />
+        <Trust />
         <FinalCta />
       </main>
     </LandingSessionRedirect>

@@ -1,218 +1,276 @@
 /**
- * Landing-page copy for the public "Proof" surface (see docs/design.md,
- * "Marketing creative system").
+ * Landing-page copy for the public marketing surface.
  *
- * Four writing rules govern this file:
- *   1. State what was measured, where, and when.
- *   2. Prefer "shows" and "observed" over "guarantees".
- *   3. Lead with the decision; keep the proof one step away.
- *   4. Never fabricate customer results, scale, or certainty.
+ * Structure and copy follow the approved prototype: a growth-intelligence
+ * platform built from Site, Content, and Demand intelligence with a Growth Agent
+ * on top. Sections carry icons and the prototype's fuller detail (module feature
+ * lists, a four-step loop, industry-pack item lists, a security ledger). Only the
+ * hero tagline, the product visual, and the type scale/weight are ours.
  *
- * Rule 4 is why there are no invented numbers in page copy. The demo moment is
- * illustrative — it shows the SHAPE of what buyers ask and how engines answer —
- * and it says so on its face, rather than dressing a mock up as a real result.
+ * Icons are named here as string keys and resolved to lucide components in the
+ * section files (keeps this a pure data module).
  */
 
-export type EngineAnswer = {
-  engine: 'openai' | 'gemini' | 'claude';
-  /** What the engine did with the brand: named it, cited it, or left it out. */
-  outcome: 'named' | 'cited' | 'missing';
-  /** The one-line observed answer, quoted. */
-  answer: string;
-};
-
-export type DemoQuestion = {
-  /** The buyer question, as a buyer would type it. */
-  question: string;
-  /** The category it probes, shown as the working context. */
-  category: string;
-  answers: readonly EngineAnswer[];
-  /** The takeaway once the three answers are in. */
-  verdict: string;
-};
+export type IconKey =
+  | 'site'
+  | 'content'
+  | 'demand'
+  | 'agent'
+  | 'collect'
+  | 'analyze'
+  | 'improve'
+  | 'verify'
+  | 'education'
+  | 'commerce'
+  | 'services'
+  | 'saas'
+  | 'media'
+  | 'finance'
+  | 'isolation'
+  | 'provenance'
+  | 'approval'
+  | 'versioned';
 
 export const LANDING_CONTENT = {
   hook: {
-    eyebrow: 'Verifiable market intelligence',
+    eyebrow: 'Growth intelligence platform',
+    // Retained tagline — the hook the site opens on.
     title: 'Your buyers stopped Googling you.',
-    /* The accent clause carries the signature slate→sage sweep, so the hero
-       headline turns over to colour on its closing line. */
     titleAccent: 'They ask AI instead.',
-    body: 'AI engines shape what your market buys. CiteLadder shows what they say about your brand — and links every claim to the answer behind it.',
+    body: 'CiteLadder unifies site, content, and demand intelligence with a growth agent that finds the gaps, prioritizes the work, and verifies every improvement against evidence.',
     primaryCta: 'Book a demo',
     secondaryCta: 'See how it works',
   },
 
+  // NOTE: the prototype's "Trusted by …" logo strip is intentionally omitted —
+  // it named fictional customers, and fabricated endorsements must not ship on
+  // the real site. Add a real customer/logo strip here when logos exist.
+
   shift: {
     kicker: 'The shift',
-    title: 'The first page of search is now a conversation.',
+    title: 'Growth stopped being a guessing game.',
     facts: [
       {
         label: 'Ask',
         title: 'Buyers ask before they browse.',
-        body: 'Comparisons and shortlists start inside an answer engine — and often end there.',
+        body: 'Shortlists now start inside an answer engine — and often end there.',
       },
       {
-        label: 'Cite',
-        title: 'Answers cite, they don’t rank.',
-        body: 'Either the engine names you and cites a page, or the category conversation happens without you.',
+        label: 'Prove',
+        title: 'Answers cite evidence, not opinions.',
+        body: 'Either your pages prove the claim an engine needs, or a competitor’s do.',
       },
       {
-        label: 'Gap',
+        label: 'See',
         title: 'You can’t fix what you can’t see.',
-        body: 'Every engine answers differently. The same questions, run the same way, are the only measurement.',
+        body: 'Scattered tools hide the gap. One system of record makes it measurable.',
+      },
+    ],
+  },
+
+  platform: {
+    kicker: 'Product architecture',
+    title: 'Four intelligence layers, one growth system.',
+    lead: 'Every layer verifies its work before passing results to the next. Evidence flows up, actions flow down, and the Growth Agent orchestrates everything.',
+    // The four-across summary row.
+    summary: [
+      { icon: 'site' as IconKey, name: 'Site Intelligence', desc: 'Crawl, classify, and index every page and asset.' },
+      { icon: 'content' as IconKey, name: 'Content Intelligence', desc: 'Detect gaps, draft briefs, generate and verify content.' },
+      { icon: 'demand' as IconKey, name: 'Demand Intelligence', desc: 'GSC, GA4, AI visibility, and journey signals unified.' },
+      { icon: 'agent' as IconKey, name: 'Growth Agent', desc: 'Bounded orchestration with explicit approvals.' },
+    ],
+    // The detailed module cards.
+    modules: [
+      {
+        num: '01',
+        icon: 'site' as IconKey,
+        title: 'Site Intelligence',
+        description:
+          'Crawls and understands every page and document, builds verified knowledge, detects industry-specific gaps, and confirms changes after every recrawl.',
+        features: [
+          'Automated crawl and page-role classification',
+          'Industry-specific gap detection rules',
+          'Recrawl verification after changes',
+          'Versioned working-knowledge store',
+        ],
+      },
+      {
+        num: '02',
+        icon: 'content' as IconKey,
+        title: 'Content Intelligence',
+        description:
+          'Turns detected gaps into strategies, briefs, FAQs, drafts, and post-publication verification. Every piece is evidence-grounded and human-approved.',
+        features: [
+          'Evidence-grounded brief generation',
+          'FAQPage JSON-LD schema automation',
+          'Human approval with full provenance',
+          'Post-publication verification pass',
+        ],
+      },
+      {
+        num: '03',
+        icon: 'demand' as IconKey,
+        title: 'Demand Intelligence',
+        description:
+          'Connects Search Console, GA4, AI visibility, and customer journeys so you always prioritize the action with the highest actual impact.',
+        features: [
+          'Search Console + GA4 integration',
+          'AI visibility across answer engines',
+          'Customer-journey mapping',
+          'Organic and AI signal unification',
+        ],
+      },
+      {
+        num: '04',
+        icon: 'agent' as IconKey,
+        title: 'Growth Agent',
+        description:
+          'An orchestrator that explains every recommendation. Bounded tasks, typed tools, selective context, and reproducible provenance throughout.',
+        features: [
+          'Explicit human approval gates',
+          'Typed tool calls with an audit log',
+          'Versioned industry knowledge packs',
+          'Project-scoped memory, never shared',
+        ],
       },
     ],
   },
 
   seeIt: {
-    kicker: 'The solution',
-    title: 'How teams turn AI search conversations into strategy.',
+    kicker: 'The product',
+    title: 'The whole system, in one workspace.',
     cta: 'Run this on your market',
-    questions: [
-      {
-        question: 'What are the best analytics tools for enterprise teams?',
-        category: 'Enterprise analytics',
-        answers: [
-          {
-            engine: 'openai',
-            outcome: 'missing',
-            answer: 'names three competitors — you’re not one of them',
-          },
-          {
-            /* `missing`, not `cited`: the citation here goes to a RIVAL's page,
-               so the brand is absent from the answer. Marking it `cited` made
-               the chips contradict the verdict below ("two of three answer
-               without you") — `cited` means the engine cited YOU. */
-            engine: 'gemini',
-            outcome: 'missing',
-            answer: 'cites a rival’s comparison page as its source',
-          },
-          {
-            engine: 'claude',
-            outcome: 'missing',
-            answer: 'recommends the category leader by name',
-          },
-        ],
-        verdict:
-          'All three engines answer without you. That’s the visibility gap — and it’s measurable.',
-      },
-      {
-        question: 'Which help desk platform has the best customer support?',
-        category: 'Customer support',
-        answers: [
-          {
-            engine: 'openai',
-            outcome: 'named',
-            answer: 'names you — but credits a feature you deprecated',
-          },
-          {
-            engine: 'gemini',
-            outcome: 'cited',
-            answer: 'cites your docs, alongside two competitors',
-          },
-          {
-            engine: 'claude',
-            outcome: 'named',
-            answer: 'recommends you for mid-market, not enterprise',
-          },
-        ],
-        verdict: 'You show up — but the story is stale. Now you know what to correct, and where.',
-      },
-      {
-        question: 'What do reviewers say about self-serve BI tools?',
-        category: 'Self-serve BI',
-        answers: [
-          {
-            engine: 'openai',
-            outcome: 'cited',
-            answer: 'quotes a G2 thread that ranks you second',
-          },
-          {
-            engine: 'gemini',
-            outcome: 'missing',
-            answer: 'summarises the category without naming you',
-          },
-          {
-            engine: 'claude',
-            outcome: 'cited',
-            answer: 'cites your site for one criterion, a rival for the rest',
-          },
-        ],
-        verdict: 'You’re in the conversation, not leading it. The gap is specific — and closable.',
-      },
-    ] satisfies readonly DemoQuestion[],
   },
 
-  proof: {
-    kicker: 'The operating loop',
-    title: 'State. Evidence. Action. Improve.',
-    intro: 'Every score opens to the answer, engine, artifact and rule that produced it.',
-    /** The closing pull-quote: the verification standard, stated as a rule. */
-    standard:
-      'Persist the raw answer. Version the rules. Never let one model silently judge another.',
+  workflow: {
+    kicker: 'How it works',
+    title: 'Evidence to improvement, in a closed loop.',
+    lead: 'CiteLadder runs a continuous cycle. Every pass tightens the evidence, sharpens the next action, and verifies the last one.',
     steps: [
       {
-        label: 'State',
-        title: 'Where you stand',
-        body: 'Visibility, share of voice, rank and movement — the current picture.',
+        num: '01',
+        icon: 'collect' as IconKey,
+        label: 'Collect evidence',
+        desc: 'Crawl pages, ingest Search Console and GA4, index documents, and measure AI visibility — all versioned and verifiable.',
       },
       {
-        label: 'Evidence',
-        title: 'What produced it',
-        body: 'Mentions and citations from persisted answers, scored by versioned rules.',
+        num: '02',
+        icon: 'analyze' as IconKey,
+        label: 'Analyze & prioritize',
+        desc: 'Apply industry-pack rules. Score every gap by business impact. Rank the queue by evidence strength.',
       },
       {
-        label: 'Action',
-        title: 'What to do next',
-        body: 'Gaps become a ranked queue, still linked to the answers behind them.',
+        num: '03',
+        icon: 'improve' as IconKey,
+        label: 'Improve content',
+        desc: 'Generate briefs, drafts, schema, and FAQs. Human approval before any change is published or applied.',
       },
       {
-        label: 'Improve',
-        title: 'Measure again',
-        body: 'Re-run on equal terms. Movement sits beside resolved work — without inventing causality.',
+        num: '04',
+        icon: 'verify' as IconKey,
+        label: 'Measure & verify',
+        desc: 'Recrawl after publication. Confirm the improvement registered. Feed the result back to the evidence layer.',
       },
+    ],
+  },
+
+  packs: {
+    kicker: 'Use cases',
+    title: 'Built for every growth team.',
+    lead: 'Pre-built industry packs cover the page roles, gap rules, and schema expectations specific to your business model.',
+    items: [
+      {
+        icon: 'education' as IconKey,
+        name: 'Education',
+        status: 'Education pack · Reviewed',
+        points: [
+          'Program and course page optimization',
+          'Accreditation entity coverage',
+          'Student FAQ gap detection',
+          'Enrollment journey mapping',
+        ],
+      },
+      {
+        icon: 'commerce' as IconKey,
+        name: 'Commerce',
+        status: 'Commerce pack · Reviewed',
+        points: [
+          'Product detail page completeness',
+          'Category page gap analysis',
+          'Support FAQ automation',
+          'Shopping-assistant visibility',
+        ],
+      },
+      {
+        icon: 'services' as IconKey,
+        name: 'Professional services',
+        status: 'Services foundation · Draft',
+        points: [
+          'Service page role classification',
+          'Case study and proof coverage',
+          'Expert biography completeness',
+          'Expertise, authority, trust signals',
+        ],
+      },
+      {
+        icon: 'saas' as IconKey,
+        name: 'Enterprise SaaS',
+        status: 'SaaS foundation · Draft',
+        points: [
+          'Landing and pricing intelligence',
+          'Technical documentation coverage',
+          'Changelog and release-note gaps',
+          'Integration entity mapping',
+        ],
+      },
+      {
+        icon: 'media' as IconKey,
+        name: 'Media & publishing',
+        status: 'Foundation draft',
+        points: [
+          'Article and author schema coverage',
+          'Editorial FAQ and explainer gaps',
+          'AI citation and summary visibility',
+          'Content freshness monitoring',
+        ],
+      },
+      {
+        icon: 'finance' as IconKey,
+        name: 'Financial services',
+        status: 'Foundation draft',
+        points: [
+          'Regulatory disclosure completeness',
+          'Advisor profile and credential gaps',
+          'Trust signal and review coverage',
+          'Product assertion accuracy',
+        ],
+      },
+    ],
+  },
+
+  trust: {
+    kicker: 'Enterprise-grade',
+    title: 'Built for regulated and security-conscious enterprises.',
+    lead: 'Customer data stays workspace-scoped and project-scoped. Industry knowledge packs are versioned and shared across the platform — customer facts never are.',
+    features: [
+      { icon: 'isolation' as IconKey, title: 'Data isolation', sub: 'Project-scoped, never cross-contaminated' },
+      { icon: 'provenance' as IconKey, title: 'Full provenance', sub: 'Every recommendation carries its evidence chain' },
+      { icon: 'approval' as IconKey, title: 'Approval gates', sub: 'Nothing publishes without human sign-off' },
+      { icon: 'versioned' as IconKey, title: 'Versioned knowledge', sub: 'Shared packs are release-managed, not silent' },
+    ],
+    ledger: [
+      { label: 'Customer data isolation', value: 'Project-scoped, never shared across workspaces' },
+      { label: 'Agent provenance', value: 'Every recommendation includes a typed evidence chain' },
+      { label: 'Approval gates', value: 'No content is published without explicit human sign-off' },
+      { label: 'Industry pack versioning', value: 'Shared knowledge is versioned and release-managed' },
     ],
   },
 
   cta: {
     kicker: 'Get started',
-    title: 'Bring evidence to the conversation about your market.',
-    body: 'A working session on your category, competitors and the questions buyers already ask.',
+    title: 'Grow on evidence, not assumptions.',
+    body: 'A working session on your category, your competitors, and the gaps buyers already see.',
     primaryCta: 'Book a demo',
     secondaryCta: 'See pricing',
   },
 } as const;
-
-/**
- * The measurement axes every figure on the site carries.
- *
- * These are stated once, plainly, because a score without its conditions is
- * not evidence. Two rules govern the copy: it never implies a comparative cost
- * outcome, and it never implies scheduled execution — no dispatcher ships in
- * this release, so cadence is described strictly as an allowance.
- */
-export const WHAT_WE_MEASURE = [
-  {
-    term: 'Measurement mode',
-    detail:
-      'Pulse for frequent checks; benchmark for the full prompt set. Never averaged together.',
-  },
-  {
-    term: 'Exact model',
-    detail:
-      'One execution, one model. Aggregates list every model — never picks one to stand in for the rest.',
-  },
-  {
-    term: 'Retrieval state',
-    detail:
-      'Web search on or off is frozen with the run. Same prompt, two states, two measurements.',
-  },
-  {
-    term: 'Benchmark cadence',
-    detail: 'An allowance you spend when you choose — nothing runs on its own.',
-  },
-] as const;
-
-export const WHAT_WE_MEASURE_NOTE =
-  'Trends stay partitioned by mode, model and retrieval — points under different conditions are never folded into one line.';

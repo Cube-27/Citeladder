@@ -111,7 +111,7 @@ export function AuthFormShell({
           <div className="border-accent-border bg-background-alt text-accent-text mb-2 inline-flex size-10 items-center justify-center rounded-xl border">
             <Icon className="size-5" />
           </div>
-          <h1 className="font-display text-foreground text-2xl font-bold sm:text-3xl">{title}</h1>
+          <h1 className="font-display text-foreground text-2xl font-medium sm:text-3xl">{title}</h1>
           <p className="text-muted text-sm">{description}</p>
         </div>
         {error ? (
@@ -121,7 +121,7 @@ export function AuthFormShell({
         ) : null}
         <form noValidate onSubmit={onSubmit} className="grid gap-5">
           {children}
-          <Button type="submit" className="mt-2 w-full font-semibold" disabled={pending}>
+          <Button type="submit" className="mt-2 w-full font-medium" disabled={pending}>
             {pending ? pendingLabel : submitLabel}
           </Button>
         </form>
@@ -129,7 +129,7 @@ export function AuthFormShell({
           {footerPrompt}{' '}
           <Link
             href={footerHref}
-            className="text-accent-text hover:text-accent-text font-semibold transition-colors"
+            className="text-accent-text hover:text-accent-text font-medium transition-colors"
           >
             {footerLabel}
           </Link>

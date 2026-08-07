@@ -168,7 +168,7 @@ export function MetricPanel({
   return (
     <figure className={cn('grid gap-1', className)} data-testid={testId}>
       <figcaption className="grid gap-0.5">
-        <span className="text-foreground text-xs font-semibold">{title}</span>
+        <span className="text-foreground text-xs font-medium">{title}</span>
         {description ? <span className="text-muted text-2xs">{description}</span> : null}
       </figcaption>
 
@@ -306,7 +306,7 @@ export function MetricPanel({
             style={{ left: `${(hover.x / plotWidth) * 100}%` }}
           >
             <span className="text-muted">{hover.label}</span>{' '}
-            <span className="font-mono font-semibold tabular-nums">{formatValue(hover.value)}</span>
+            <span className="font-mono font-medium tabular-nums">{formatValue(hover.value)}</span>
           </div>
         ) : null}
       </div>

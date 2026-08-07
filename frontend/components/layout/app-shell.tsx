@@ -5,7 +5,6 @@ import { ChartNoAxesCombined, Home, ListChecks, Settings, Sparkles } from 'lucid
 import Link from 'next/link';
 
 import { CommandPalette } from '@/components/ui/command-palette';
-import { BrandAtmosphere } from '@/components/ui/brand-atmosphere';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -41,12 +40,11 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <TooltipProvider>
       <div className="bg-background relative flex h-dvh overflow-hidden">
-        <BrandAtmosphere variant="app" />
         <aside className="border-border-subtle bg-sidebar relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r transition-[width] md:flex">
           {/* Logo row — matches topbar height */}
           <div className="border-border-subtle flex h-[var(--topbar-height)] shrink-0 items-center gap-3 border-b px-4">
             <LogoMark size={24} />
-            <span className="text-foreground font-display text-heading-sm font-semibold">
+            <span className="text-foreground font-display text-heading-sm font-medium">
               CiteLadder
             </span>
           </div>
@@ -73,7 +71,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               aria-label="CiteLadder command center"
             >
               <LogoMark size={24} />
-              <span className="font-display text-foreground font-semibold">CiteLadder</span>
+              <span className="font-display text-foreground font-medium">CiteLadder</span>
             </Link>
             <div aria-hidden className="hidden md:block" />
             <div className="min-w-0 flex-1 md:w-full md:max-w-105 md:justify-self-center">

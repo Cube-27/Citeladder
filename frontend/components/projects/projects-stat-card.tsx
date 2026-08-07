@@ -33,7 +33,7 @@ export function ProjectsStatCard() {
         <div className="min-w-0 flex-1">
           <p className={eyebrowClasses}>Projects</p>
           <p className="text-foreground mt-0.5 text-sm">
-            <span className="mono font-semibold">{projects.length}</span> tracked
+            <span className="mono font-medium">{projects.length}</span> tracked
             {activeLabel ? <span className="text-muted"> · {activeLabel} active</span> : null}
           </p>
         </div>

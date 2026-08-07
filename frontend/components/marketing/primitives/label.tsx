@@ -16,7 +16,7 @@ export function Meta({
   as: Tag = 'span',
 }: Readonly<{ children: ReactNode; className?: string; as?: 'span' | 'p' | 'div' }>) {
   return (
-    <Tag className={cn('text-muted font-mono text-xs font-semibold tabular-nums', className)}>
+    <Tag className={cn('text-muted font-mono text-xs font-medium tabular-nums', className)}>
       {children}
     </Tag>
   );
@@ -39,7 +39,7 @@ export function Eyebrow({
   className,
 }: Readonly<{ children: ReactNode; dot?: boolean; className?: string }>) {
   return (
-    <p className={cn('text-muted flex items-center gap-3 text-xs font-semibold', className)}>
+    <p className={cn('text-muted flex items-center gap-3 text-xs font-medium', className)}>
       {dot && <span aria-hidden className="bg-accent size-2 shrink-0 rounded-full" />}
       {children}
     </p>

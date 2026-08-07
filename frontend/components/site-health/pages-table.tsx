@@ -94,11 +94,11 @@ export function PagesTable({
             </TableCell>
             <TableCell
               numeric
-              className={cn('mono font-semibold', scoreTextClass(page.technical_score))}
+              className={cn('mono font-medium', scoreTextClass(page.technical_score))}
             >
               {formatScore(page.technical_score)}
             </TableCell>
-            <TableCell numeric className={cn('mono font-semibold', scoreTextClass(page.aeo_score))}>
+            <TableCell numeric className={cn('mono font-medium', scoreTextClass(page.aeo_score))}>
               {formatScore(page.aeo_score)}
             </TableCell>
             <TableCell className="text-secondary text-xs whitespace-nowrap">

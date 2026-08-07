@@ -221,7 +221,7 @@ function FrameView({
       className={className}
     >
       <div className="flex items-center justify-between">
-        <p className="font-display text-foreground text-sm font-semibold">{title}</p>
+        <p className="font-display text-foreground text-sm font-medium">{title}</p>
         {status}
       </div>
       {children}
@@ -263,7 +263,8 @@ export function ProductWindow() {
   return (
     <div
       ref={containerRef}
-      className="citeladder-snapshot bg-panel shadow-card mx-auto max-w-5xl rounded-lg p-4 sm:p-5"
+      data-testid="product-window"
+      className="bg-panel border-border-subtle mx-auto max-w-5xl rounded-lg border p-4 sm:p-5"
     >
       {/* Storytelling Tour Stepper */}
       <div className="bg-background-alt border-border-subtle mb-5 rounded-lg border p-4 sm:p-4">
@@ -281,7 +282,7 @@ export function ProductWindow() {
         <div className="border-border-subtle mt-4 flex items-center justify-between border-t pt-3 text-xs">
           <div className="flex items-center gap-3 truncate">
             <span className="bg-success size-1.5 shrink-0 animate-pulse rounded-full" />
-            <span className="text-accent-text font-mono font-semibold uppercase">
+            <span className="text-accent-text font-mono font-medium uppercase">
               {currentStep.label.split('.')[1]?.trim()}:
             </span>
             <span className="text-muted truncate font-medium">
@@ -294,14 +295,14 @@ export function ProductWindow() {
       {/* Compact Product Layout Canvas */}
       <div
         aria-hidden
-        className="citeladder-snapshot-canvas bg-background-alt grid min-h-[280px] items-stretch gap-0 overflow-hidden lg:grid-cols-[12rem_minmax(0,1fr)]"
+        className="bg-background-alt grid min-h-[280px] items-stretch gap-0 overflow-hidden lg:grid-cols-[12rem_minmax(0,1fr)]"
       >
         {/* Streamlined Authentic Sidebar */}
         <aside className="bg-panel border-border-subtle hidden flex-col justify-between border-r p-4 lg:flex">
           <div className="space-y-5">
             {COMPACT_NAV_GROUPS.map((group) => (
               <div key={group.title} className="space-y-2">
-                <p className="text-muted mb-2 px-3 font-mono text-xs font-semibold uppercase">
+                <p className="text-muted mb-2 px-3 font-mono text-xs font-medium uppercase">
                   {group.title}
                 </p>
                 {group.items.map((item) => {
@@ -312,7 +313,7 @@ export function ProductWindow() {
                     <div
                       key={item.label}
                       className={`relative flex items-center gap-3 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-                        isActive ? 'bg-accent-subtle text-accent-text font-semibold' : 'text-muted'
+                        isActive ? 'bg-accent-subtle text-accent-text font-medium' : 'text-muted'
                       }`}
                     >
                       {isActive && (
@@ -337,7 +338,7 @@ export function ProductWindow() {
                 reduceMotion={reduceMotion}
                 title="Visibility Overview & Trend Graph"
                 status={
-                  <span className="text-accent-text flex items-center gap-2 font-mono text-xs font-semibold">
+                  <span className="text-accent-text flex items-center gap-2 font-mono text-xs font-medium">
                     <TrendingUp className="size-3" /> Cross-Run Trend
                   </span>
                 }
@@ -360,10 +361,10 @@ export function ProductWindow() {
                       <Meta as="p" className="text-muted text-xs">
                         {metric.label}
                       </Meta>
-                      <b className="text-foreground mt-2 block font-mono text-base leading-none font-semibold tabular-nums">
+                      <b className="text-foreground mt-2 block font-mono text-base leading-none font-medium tabular-nums">
                         <AnimatedNumber value={metric.value} />
                         {'delta' in metric && metric.delta && (
-                          <small className="text-success-text ml-2 font-mono text-xs font-semibold tabular-nums">
+                          <small className="text-success-text ml-2 font-mono text-xs font-medium tabular-nums">
                             {metric.delta}
                           </small>
                         )}
@@ -376,7 +377,7 @@ export function ProductWindow() {
                 <FrameCard>
                   <div className="text-muted mb-3 flex items-center justify-between font-mono text-xs">
                     <span>Visibility Score Trend (Last 8 Audits)</span>
-                    <span className="text-success-text font-semibold">72.4% Peak</span>
+                    <span className="text-success-text font-medium">72.4% Peak</span>
                   </div>
                   <div className="relative flex h-20 w-full items-end pt-3">
                     {/* SVG Curve Line */}
@@ -410,18 +411,18 @@ export function ProductWindow() {
                 reduceMotion={reduceMotion}
                 title="Answers & Evidence Trace"
                 status={
-                  <span className="text-accent-text flex items-center gap-2 font-mono text-xs font-semibold">
+                  <span className="text-accent-text flex items-center gap-2 font-mono text-xs font-medium">
                     <ShieldCheck className="text-success-text size-3" /> 100% Verifiable
                   </span>
                 }
               >
                 <FrameCard>
                   <div className="text-muted flex items-center justify-between text-xs">
-                    <span className="text-foreground flex items-center gap-2 font-semibold">
+                    <span className="text-foreground flex items-center gap-2 font-medium">
                       <Search className="text-accent-text size-3" />
                       Observed Answer Text
                     </span>
-                    <span className="text-accent-text font-mono font-semibold tabular-nums">
+                    <span className="text-accent-text font-mono font-medium tabular-nums">
                       Visibility score: <AnimatedNumber value="72.4" />
                     </span>
                   </div>
@@ -437,7 +438,7 @@ export function ProductWindow() {
                         className="bg-panel border-border-subtle text-success-text rounded-full border px-3 py-2 font-mono text-xs"
                       >
                         <span className="text-muted uppercase">{label}:</span>{' '}
-                        <span className="font-semibold">{value}</span>
+                        <span className="font-medium">{value}</span>
                       </span>
                     ))}
                   </div>
@@ -451,7 +452,7 @@ export function ProductWindow() {
                 reduceMotion={reduceMotion}
                 title="Share of Voice & Competitive Chart"
                 status={
-                  <span className="text-accent-text font-mono text-xs font-semibold">
+                  <span className="text-accent-text font-mono text-xs font-medium">
                     Market Share Comparison
                   </span>
                 }
@@ -462,7 +463,7 @@ export function ProductWindow() {
                       <div
                         className={cn(
                           'mb-2 flex justify-between text-xs',
-                          row.own ? 'font-semibold' : 'text-muted',
+                          row.own ? 'font-medium' : 'text-muted',
                         )}
                       >
                         <span className={row.own ? 'text-foreground' : undefined}>{row.label}</span>
@@ -492,7 +493,7 @@ export function ProductWindow() {
                 reduceMotion={reduceMotion}
                 title="Opportunities & Action Recommendations"
                 status={
-                  <span className="text-accent-text font-mono text-xs font-semibold">
+                  <span className="text-accent-text font-mono text-xs font-medium">
                     High-Impact Moves
                   </span>
                 }
@@ -506,7 +507,7 @@ export function ProductWindow() {
                           <Icon className="size-3" />
                         </span>
                         <div>
-                          <span className="text-foreground block text-xs font-semibold">
+                          <span className="text-foreground block text-xs font-medium">
                             {row.title}
                           </span>
                           <span className="text-muted text-xs">{row.detail}</span>
@@ -514,7 +515,7 @@ export function ProductWindow() {
                       </div>
                       <span
                         className={cn(
-                          'rounded-md px-3 py-2 text-xs font-semibold',
+                          'rounded-md px-3 py-2 text-xs font-medium',
                           row.actionClassName,
                         )}
                       >

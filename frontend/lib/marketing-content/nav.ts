@@ -22,29 +22,29 @@ export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'platform',
     label: 'Platform',
-    href: '/#see-it',
+    href: '/#platform',
     groups: [
       {
         items: [
           {
-            title: 'The shift',
-            desc: 'Why the first page is now a conversation',
-            href: '/#why',
+            title: 'The platform',
+            desc: 'Four intelligence layers, one growth system',
+            href: '/#platform',
           },
           {
-            title: 'See it live',
-            desc: 'Watch one question decide a category',
+            title: 'See it',
+            desc: 'The whole system in one workspace',
             href: '/#see-it',
           },
           {
             title: 'How it works',
-            desc: 'Observe, verify and decide',
+            desc: 'Collect, analyze, improve, verify',
             href: '/#how-it-works',
           },
           {
-            title: 'Get started',
-            desc: 'A working session on your market',
-            href: '/#get-started',
+            title: 'Industry packs',
+            desc: 'Built for how your business works',
+            href: '/#industry-packs',
           },
         ],
       },

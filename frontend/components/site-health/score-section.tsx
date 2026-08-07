@@ -120,7 +120,7 @@ function ScoreCard({
         )}
         <div className="grid gap-0.5">
           <Label>{label}</Label>
-          <span className="mono text-foreground text-base font-semibold">
+          <span className="mono text-foreground text-base font-medium">
             {value === null ? PLACEHOLDER : `${formatScore(value)} / 100`}
           </span>
           <span className="text-muted text-xs">{sub}</span>

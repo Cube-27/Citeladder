@@ -91,12 +91,12 @@ export function OverviewSummary({
           <>Visibility for {brandName} is not available for this run.</>
         ) : (
           <>
-            {brandName} is mentioned in <b className="text-foreground font-semibold">{score}%</b> of
+            {brandName} is mentioned in <b className="text-foreground font-medium">{score}%</b> of
             answers
             {visibilityDelta !== null ? (
               <>
                 , {rose ? 'up' : 'down'}{' '}
-                <b className="text-foreground font-semibold">
+                <b className="text-foreground font-medium">
                   {Math.abs(visibilityDelta).toFixed(1)}
                 </b>{' '}
                 points this month

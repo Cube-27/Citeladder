@@ -67,7 +67,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
 ];
 
 const LINK =
-  'text-sm text-muted hover:text-foreground inline-flex items-center gap-2 transition-[color,transform] duration-200 hover:translate-x-0.5';
+  'text-sm text-muted hover:text-foreground inline-flex items-center gap-2 transition-colors duration-300';
 
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
@@ -140,7 +140,7 @@ export function MarketingFooter() {
 
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.key} className="space-y-4">
-              <p className="f-col-label text-foreground mb-4 font-mono text-xs font-semibold uppercase">
+              <p className="f-col-label text-foreground mb-4 font-mono text-xs font-medium uppercase">
                 {column.label}
               </p>
               <div className="grid justify-items-start gap-4">

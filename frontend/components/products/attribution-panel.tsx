@@ -320,7 +320,7 @@ function AttributionCoverageCard({
         {metrics.map(([label, value]) => (
           <div key={label} className="grid gap-1">
             <span className="text-muted text-xs">{label}</span>
-            <span className="text-foreground mono text-sm font-semibold tabular-nums">{value}</span>
+            <span className="text-foreground mono text-sm font-medium tabular-nums">{value}</span>
           </div>
         ))}
       </CardContent>
@@ -345,7 +345,7 @@ function CurrencyBlockSection({
   if (!showHeading) return <>{children}</>;
   return (
     <section className="grid gap-3" aria-label={currency ?? 'Unavailable methods'}>
-      <h3 className="text-muted text-xs font-semibold">{currency ?? 'Unavailable methods'}</h3>
+      <h3 className="text-muted text-xs font-medium">{currency ?? 'Unavailable methods'}</h3>
       {children}
     </section>
   );

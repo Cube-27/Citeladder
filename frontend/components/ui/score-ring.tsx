@@ -97,7 +97,7 @@ export function ScoreRing({
         <span
           aria-hidden
           className={cn(
-            'mono absolute inset-0 flex items-center justify-center font-semibold',
+            'mono absolute inset-0 flex items-center justify-center font-medium',
             numeralSize === 'hero'
               ? 'text-2xl'
               : numeralSize === 'lg'

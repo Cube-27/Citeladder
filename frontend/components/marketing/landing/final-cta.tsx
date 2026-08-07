@@ -17,11 +17,11 @@ export function FinalCta() {
   const { cta } = LANDING_CONTENT;
   return (
     <Section id="get-started" tone="paper" rhythm="base" aria-label="Get started">
-      <Reveal className="mx-auto max-w-5xl">
+      <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
         <Eyebrow>{cta.kicker}</Eyebrow>
-        <h2 className="font-display text-foreground mt-8 max-w-[32ch] text-5xl">{cta.title}</h2>
-        <p className="text-muted mt-8 max-w-[80ch] text-lg">{cta.body}</p>
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+        <h2 className="font-display text-foreground mt-8 max-w-[24ch] text-3xl">{cta.title}</h2>
+        <p className="text-muted mt-6 max-w-[60ch] text-lg">{cta.body}</p>
+        <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
           <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
             {cta.primaryCta}
             <ArrowRight aria-hidden />

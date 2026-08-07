@@ -152,6 +152,8 @@ describe('Landing page (public marketing `/`)', () => {
     const { container } = renderWithProviders(<Page />);
 
     expect(container.querySelectorAll('#why article.bg-panel')).toHaveLength(3);
-    expect(container.querySelector('#see-it .citeladder-snapshot.bg-panel')).not.toBeNull();
+    // Tie the assertion to ProductWindow's own stable hook, not any panel.
+    const seeIt = container.querySelector('#see-it');
+    expect(seeIt?.querySelector('[data-testid="product-window"]')).not.toBeNull();
   });
 });

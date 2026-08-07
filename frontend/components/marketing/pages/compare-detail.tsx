@@ -24,13 +24,13 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           <Reveal className="max-w-5xl">
             <Link
               href="/compare"
-              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All comparisons
             </Link>
             <Eyebrow>Comparison · {competitor.lastReviewed}</Eyebrow>
-            <h1 className="font-display text-foreground mt-4 max-w-[28ch] text-4xl text-balance md:text-5xl">
+            <h1 className="font-display text-foreground mt-4 max-w-[28ch] text-2xl text-balance md:text-3xl">
               CiteLadder vs <em className="text-accent-text not-italic">{competitor.name}</em>
             </h1>
             <p className="text-muted mt-3 max-w-[56ch] text-base">{competitor.tagline}</p>
@@ -46,19 +46,19 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                 <tr className="border-border-subtle bg-background-alt border-b">
                   <th
                     scope="col"
-                    className="text-muted px-4 py-3 text-xs font-semibold tracking-wide uppercase"
+                    className="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
                   >
                     Dimension
                   </th>
                   <th
                     scope="col"
-                    className="text-accent-text px-4 py-3 text-xs font-semibold tracking-wide uppercase"
+                    className="text-accent-text px-4 py-3 text-xs font-medium tracking-wide uppercase"
                   >
                     CiteLadder
                   </th>
                   <th
                     scope="col"
-                    className="text-muted px-4 py-3 text-xs font-semibold tracking-wide uppercase"
+                    className="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
                   >
                     {competitor.name}
                   </th>
@@ -76,7 +76,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     <th
                       scope="row"
                       className={cn(
-                        'text-foreground w-36 px-4 py-2.5 align-top text-sm font-semibold',
+                        'text-foreground w-36 px-4 py-2.5 align-top text-sm font-medium',
                         index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
                       )}
                     >

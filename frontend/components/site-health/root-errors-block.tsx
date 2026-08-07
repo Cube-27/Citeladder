@@ -27,7 +27,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
             data-testid="root-error-row"
             className="border-border-subtle bg-background-alt flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border px-3 py-2"
           >
-            <span className="mono text-foreground text-sm font-semibold">{error.method}</span>
+            <span className="mono text-foreground text-sm font-medium">{error.method}</span>
             <span className="mono text-muted min-w-0 flex-1 truncate text-sm">{error.target}</span>
             {error.error_code ? (
               <span className="mono text-danger-text text-sm">{error.error_code}</span>

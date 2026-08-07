@@ -21,7 +21,7 @@ export function PricingCta() {
   return (
     <Section tone="paper" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-5xl text-center">
-        <h2 className="font-display text-foreground mx-auto mb-5 max-w-[32ch] text-4xl">
+        <h2 className="font-display text-foreground mx-auto mb-5 max-w-[32ch] text-2xl">
           Start from the evidence, not the invoice.
         </h2>
         <p className="text-muted mx-auto max-w-[80ch] text-lg">

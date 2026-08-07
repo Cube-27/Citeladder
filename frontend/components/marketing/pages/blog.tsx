@@ -33,7 +33,7 @@ function TagRow({ tags }: Readonly<{ tags: readonly string[] }>) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="bg-accent-soft text-accent-text rounded-md px-2.5 py-1 text-xs font-semibold"
+          className="bg-accent-soft text-accent-text rounded-md px-2.5 py-1 text-xs font-medium"
         >
           {tag}
         </span>
@@ -109,7 +109,7 @@ export function BlogIndex() {
                   </p>
                   <p className="text-muted mt-4 max-w-[65ch] text-base">{featured.excerpt}</p>
                   <PostMeta post={featured} />
-                  <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-semibold">
+                  <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
                     Read note
                     <ArrowRight
                       className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -244,23 +244,23 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           <Reveal className="max-w-3xl">
             <Link
               href="/blog"
-              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All notes
             </Link>
             <Eyebrow>Field notes</Eyebrow>
             <TagRow tags={post.tags} />
-            <h1 className="font-display text-foreground mt-3 max-w-[28ch] text-4xl text-balance md:text-5xl">
+            <h1 className="font-display text-foreground mt-3 max-w-[28ch] text-2xl text-balance md:text-3xl">
               {post.title}
             </h1>
             {(post.author ?? post.date ?? post.readTime) && (
               <div className="border-border-subtle mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-5">
                 {post.author && (
-                  <span className="text-foreground flex items-center gap-3 text-sm font-semibold">
+                  <span className="text-foreground flex items-center gap-3 text-sm font-medium">
                     <span
                       aria-hidden
-                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-md text-xs font-semibold"
+                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-md text-xs font-medium"
                     >
                       {authorInitial(post.author)}
                     </span>

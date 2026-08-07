@@ -26,17 +26,16 @@ import { cva } from 'class-variance-authority';
  * that reads as the raised option without needing a shadow.
  */
 export const buttonVariants = cva(
-  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[background-color,color,border-color,opacity] duration-150 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
+  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[background-color,color,border-color,box-shadow] duration-[330ms] ease-standard disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
   {
     variants: {
       variant: {
         primary:
           'border-transparent bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-active',
-        // Secondary is the borderless raised option: a white fill lifted by
-        // the card shadow rung (the Gmail/ADS default-button model — light,
-        // not an outline, separates it). Hover walks the tint ladder.
-        secondary:
-          'border-transparent bg-panel text-foreground shadow-card hover:bg-background-alt active:bg-well',
+        // Secondary is Tesla's white alternate action: a white fill, Graphite
+        // label, and a Pale Silver hairline — an outline button, not a raised
+        // one, now that elevation is essentially none. Hover warms the fill.
+        secondary: 'border-border bg-panel text-secondary hover:bg-background-alt active:bg-well',
         neutral:
           'border-transparent bg-background-alt text-foreground hover:bg-well active:bg-active',
         ghost:

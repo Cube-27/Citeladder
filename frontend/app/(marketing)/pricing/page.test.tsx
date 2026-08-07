@@ -19,7 +19,7 @@ describe('Pricing page (public marketing `/pricing`)', () => {
 
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
-    expect(h1s[0]).toHaveTextContent(/pay for the evidence layer/i);
+    expect(h1s[0]).toHaveTextContent(/pay for the intelligence/i);
 
     for (const heading of screen.getAllByRole('heading')) {
       if (heading === h1s[0]) continue;

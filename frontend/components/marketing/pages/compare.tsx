@@ -47,17 +47,17 @@ export function CompareIndex() {
                 >
                   <span
                     aria-hidden
-                    className="bg-accent-soft text-accent-text font-display grid size-9 shrink-0 place-items-center rounded-md text-sm font-semibold"
+                    className="bg-accent-soft text-accent-text font-display grid size-9 shrink-0 place-items-center rounded-md text-sm font-medium"
                   >
                     {competitor.name.charAt(0)}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="text-foreground block text-base font-semibold">
+                    <span className="text-foreground block text-base font-medium">
                       {competitor.name}
                     </span>
                     <span className="text-muted mt-1 block text-sm">{competitor.tagline}</span>
                   </span>
-                  <span className="text-accent-text hidden items-center gap-2 text-sm font-semibold sm:inline-flex">
+                  <span className="text-accent-text hidden items-center gap-2 text-sm font-medium sm:inline-flex">
                     vs {competitor.name}
                     <ArrowRight
                       className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"

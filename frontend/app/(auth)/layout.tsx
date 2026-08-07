@@ -15,7 +15,7 @@ import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
  * instead of each column floating its own way. Below 900px the brand panel
  * drops and the form keeps the same bands.
  *
- * `.citeladder-root` scopes the Proof system (light-only canvas, focus ring). There
+ * The Proof system here is light-only canvas, focus ring. There
  * is no theme control here: CiteLadder is light-only, and a control that
  * changed nothing would be a broken control.
  *
@@ -24,7 +24,7 @@ import { AuthBrandPanel, AuthWordmark } from '@/components/auth/brand-panel';
  */
 export default function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="citeladder-root bg-background-alt text-foreground selection:bg-accent selection:text-accent-fg relative min-h-dvh w-full overflow-hidden antialiased min-[900px]:grid min-[900px]:grid-cols-12">
+    <div className="bg-background-alt text-foreground selection:bg-accent selection:text-accent-fg relative min-h-dvh w-full overflow-hidden antialiased min-[900px]:grid min-[900px]:grid-cols-12">
       {/* Subtle light ambient background lighting */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="bg-accent-soft absolute -top-40 -left-40 size-125 rounded-full blur-[120px]" />

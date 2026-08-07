@@ -57,10 +57,7 @@ function ScoreCell({ score }: Readonly<{ score: number | null }>) {
   if (score === null) return <span className="text-subtle">—</span>;
   return (
     <span
-      className={cn(
-        'font-mono text-sm font-semibold tabular-nums',
-        scoreBandText[scoreBand(score)],
-      )}
+      className={cn('font-mono text-sm font-medium tabular-nums', scoreBandText[scoreBand(score)])}
     >
       {score}%
     </span>
@@ -202,9 +199,9 @@ export function YourPrompts() {
       <div className="bg-panel shadow-card flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3">
         <p className="text-secondary text-sm">
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
-          <span className="text-foreground font-semibold">{activePrompts.length}</span> visibility{' '}
+          <span className="text-foreground font-medium">{activePrompts.length}</span> visibility{' '}
           {activePrompts.length === 1 ? 'prompt' : 'prompts'} across{' '}
-          <span className="text-foreground font-semibold">{topicCount}</span>{' '}
+          <span className="text-foreground font-medium">{topicCount}</span>{' '}
           {topicCount === 1 ? 'topic' : 'topics'}, which are run on each audit.
         </p>
         <div className="flex flex-wrap items-center gap-2">

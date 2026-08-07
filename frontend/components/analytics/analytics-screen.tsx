@@ -416,7 +416,7 @@ function CorrelationCard({
       <CardContent className="grid gap-3">
         <span
           className={cn(
-            'mono text-xl font-semibold',
+            'mono text-xl font-medium',
             display.insufficient ? 'text-subtle' : 'text-foreground',
           )}
         >
@@ -474,12 +474,12 @@ function EngineTile({ engine }: Readonly<{ engine: LlmAnalytics['engine_visibili
           )}
           aria-hidden
         />
-        <span className="text-foreground text-sm font-semibold">
+        <span className="text-foreground text-sm font-medium">
           {engineLabel(engine.logical_engine)}
         </span>
         <span
           className={cn(
-            'mono ms-auto text-base font-semibold',
+            'mono ms-auto text-base font-medium',
             latest === null ? 'text-subtle' : 'text-foreground',
           )}
         >
