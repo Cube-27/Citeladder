@@ -71,10 +71,15 @@ describe('MarketingNav', () => {
       await user.hover(directLink);
       await waitFor(() => expect(directLink).toHaveAttribute('aria-expanded', 'true'));
 
-      const panel = screen.getByRole('menu');
-      expect(panel).toHaveAttribute('id', `desktop-nav-panel-${drop.key}`);
+      // The panel is a disclosure of ordinary links, not an ARIA menu: that
+      // pattern would promise arrow-key navigation this nav does not
+      // implement, and `menuitem` would override the link role screen readers
+      // should announce. It is found by the id the trigger points at.
+      const panel = document.getElementById(`desktop-nav-panel-${drop.key}`);
+      expect(panel).not.toBeNull();
+      expect(directLink).toHaveAttribute('aria-controls', `desktop-nav-panel-${drop.key}`);
       const expected = drop.groups.reduce((sum, group) => sum + group.items.length, 0);
-      expect(within(panel).getAllByRole('menuitem')).toHaveLength(expected);
+      expect(within(panel as HTMLElement).getAllByRole('link')).toHaveLength(expected);
 
       await user.keyboard('{Escape}');
       await waitFor(() => expect(directLink).toHaveAttribute('aria-expanded', 'false'));

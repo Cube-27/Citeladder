@@ -140,53 +140,69 @@ def _validate_schema_subset(
         errors.append(f"{path}: value {value!r} is not in enum {enum!r}")
 
     if isinstance(value, str):
-        minimum_length = schema.get("minLength")
-        if isinstance(minimum_length, int) and len(value) < minimum_length:
-            errors.append(f"{path}: string is shorter than {minimum_length}")
-        pattern = schema.get("pattern")
-        if isinstance(pattern, str) and re.fullmatch(pattern, value) is None:
-            errors.append(f"{path}: value {value!r} does not match {pattern!r}")
-
+        _validate_schema_string(value, schema, path, errors)
     if isinstance(value, list):
-        minimum_items = schema.get("minItems")
-        if isinstance(minimum_items, int) and len(value) < minimum_items:
-            errors.append(f"{path}: array has fewer than {minimum_items} items")
-        if schema.get("uniqueItems") is True:
-            serialized = [
-                json.dumps(item, sort_keys=True, ensure_ascii=False) for item in value
-            ]
-            if len(serialized) != len(set(serialized)):
-                errors.append(f"{path}: array items are not unique")
-        item_schema = schema.get("items")
-        if isinstance(item_schema, dict):
-            for index, item in enumerate(value):
-                _validate_schema_subset(
-                    item,
-                    item_schema,
-                    f"{path}[{index}]",
-                    errors,
-                )
-
+        _validate_schema_array(value, schema, path, errors)
     if isinstance(value, dict):
-        required = schema.get("required", ())
-        if isinstance(required, list):
-            for key in required:
-                if key not in value:
-                    errors.append(f"{path}: missing required property {key!r}")
-        properties = schema.get("properties", {})
-        if isinstance(properties, dict):
-            for key, child_schema in properties.items():
-                if key in value and isinstance(child_schema, dict):
-                    _validate_schema_subset(
-                        value[key],
-                        child_schema,
-                        f"{path}.{key}",
-                        errors,
-                    )
-            if schema.get("additionalProperties") is False:
-                extras = sorted(set(value) - set(properties))
-                if extras:
-                    errors.append(f"{path}: unexpected properties {extras!r}")
+        _validate_schema_object(value, schema, path, errors)
+
+
+def _validate_schema_string(
+    value: str,
+    schema: Mapping[str, Any],
+    path: str,
+    errors: list[str],
+) -> None:
+    minimum_length = schema.get("minLength")
+    if isinstance(minimum_length, int) and len(value) < minimum_length:
+        errors.append(f"{path}: string is shorter than {minimum_length}")
+    pattern = schema.get("pattern")
+    if isinstance(pattern, str) and re.fullmatch(pattern, value) is None:
+        errors.append(f"{path}: value {value!r} does not match {pattern!r}")
+
+
+def _validate_schema_array(
+    value: list[Any],
+    schema: Mapping[str, Any],
+    path: str,
+    errors: list[str],
+) -> None:
+    minimum_items = schema.get("minItems")
+    if isinstance(minimum_items, int) and len(value) < minimum_items:
+        errors.append(f"{path}: array has fewer than {minimum_items} items")
+    if schema.get("uniqueItems") is True:
+        serialized = [
+            json.dumps(item, sort_keys=True, ensure_ascii=False) for item in value
+        ]
+        if len(serialized) != len(set(serialized)):
+            errors.append(f"{path}: array items are not unique")
+    item_schema = schema.get("items")
+    if isinstance(item_schema, dict):
+        for index, item in enumerate(value):
+            _validate_schema_subset(item, item_schema, f"{path}[{index}]", errors)
+
+
+def _validate_schema_object(
+    value: Mapping[str, Any],
+    schema: Mapping[str, Any],
+    path: str,
+    errors: list[str],
+) -> None:
+    required = schema.get("required", ())
+    if isinstance(required, list):
+        for key in required:
+            if key not in value:
+                errors.append(f"{path}: missing required property {key!r}")
+    properties = schema.get("properties", {})
+    if not isinstance(properties, dict):
+        return
+    for key, child_schema in properties.items():
+        if key in value and isinstance(child_schema, dict):
+            _validate_schema_subset(value[key], child_schema, f"{path}.{key}", errors)
+    if schema.get("additionalProperties") is False:
+        extras = sorted(set(value) - set(properties))
+        if extras:
+            errors.append(f"{path}: unexpected properties {extras!r}")
 
 
 def _require_namespaced_ids(
@@ -251,6 +267,18 @@ def _validate_signal(
             f"{signal_id}: expected polarity {expected_polarity!r}, "
             f"got {signal.get('polarity')!r}"
         )
+    _validate_signal_weight(signal, signal_id, expected_polarity, errors)
+    _validate_signal_matcher(signal, signal_id, errors)
+
+
+def _validate_signal_weight(
+    signal: Mapping[str, Any],
+    signal_id: Any,
+    expected_polarity: str,
+    errors: list[str],
+) -> None:
+    """Weight is numeric and its sign agrees with the declared polarity."""
+
     weight = signal.get("weight")
     if not isinstance(weight, (int, float)) or isinstance(weight, bool):
         errors.append(f"{signal_id}: weight must be numeric")
@@ -258,130 +286,89 @@ def _validate_signal(
         errors.append(f"{signal_id}: positive weight must be greater than zero")
     elif expected_polarity == "negative" and weight >= 0:
         errors.append(f"{signal_id}: negative weight must be less than zero")
-    if signal.get("operator") == "regex":
-        pattern = signal.get("pattern")
-        if not isinstance(pattern, str) or not pattern:
-            errors.append(f"{signal_id}: regex signal requires a pattern")
-        else:
-            try:
-                re.compile(pattern)
-            except re.error as exc:
-                errors.append(f"{signal_id}: invalid regex: {exc}")
-    else:
+
+
+def _validate_signal_matcher(
+    signal: Mapping[str, Any],
+    signal_id: Any,
+    errors: list[str],
+) -> None:
+    """A regex signal needs a compilable pattern; every other kind needs values."""
+
+    if signal.get("operator") != "regex":
         values = signal.get("values")
         if not isinstance(values, list) or not values:
             errors.append(f"{signal_id}: non-regex signal requires values")
+        return
+    pattern = signal.get("pattern")
+    if not isinstance(pattern, str) or not pattern:
+        errors.append(f"{signal_id}: regex signal requires a pattern")
+        return
+    try:
+        re.compile(pattern)
+    except re.error as exc:
+        errors.append(f"{signal_id}: invalid regex: {exc}")
 
 
-def _validate_pack(
-    pack: Mapping[str, Any],
-    *,
-    core: Mapping[str, Any],
-    schema_types: set[str],
-    capability_ids: set[str],
+@dataclass(frozen=True)
+class _PackIds:
+    """Namespaced IDs declared by one pack, used to resolve internal references."""
+
+    roles: set[str]
+    entities: set[str]
+    predicates: set[str]
+    questions: set[str]
+    stages: set[str]
+    outcomes: set[str]
+
+
+def _collect_pack_ids(
+    pack_id: str,
+    sections: Mapping[str, Sequence[Mapping[str, Any]]],
     errors: list[str],
-) -> dict[str, int]:
-    pack_id = str(pack.get("pack_id", ""))
-    roles = tuple(pack.get("page_roles", ()))
-    entities = tuple(pack.get("entity_types", ()))
-    predicates = tuple(pack.get("assertion_predicates", ()))
-    relations = tuple(pack.get("relation_types", ()))
-    journeys = tuple(pack.get("journeys", ()))
-    questions = tuple(pack.get("question_contracts", ()))
-    rules = tuple(pack.get("analysis_rules", ()))
-    briefs = tuple(pack.get("brief_templates", ()))
-    prompts = tuple(pack.get("prompt_archetypes", ()))
+) -> _PackIds:
+    """Every declared ID is namespaced by its pack and unique within its section."""
 
-    role_ids = _require_namespaced_ids(
-        roles,
-        "role_id",
-        pack_id,
-        "page_roles",
-        errors,
-    )
-    entity_ids = _require_namespaced_ids(
-        entities,
-        "entity_type_id",
-        pack_id,
-        "entity_types",
-        errors,
-    )
-    predicate_ids = _require_namespaced_ids(
-        predicates,
-        "predicate_id",
-        pack_id,
-        "assertion_predicates",
-        errors,
-    )
-    relation_ids = _require_namespaced_ids(
-        relations,
-        "relation_type_id",
-        pack_id,
-        "relation_types",
-        errors,
-    )
-    journey_ids = _require_namespaced_ids(
-        journeys,
-        "journey_id",
-        pack_id,
-        "journeys",
-        errors,
-    )
-    question_ids = _require_namespaced_ids(
-        questions,
-        "question_id",
-        pack_id,
-        "question_contracts",
-        errors,
-    )
-    rule_ids = _require_namespaced_ids(
-        rules,
-        "rule_id",
-        pack_id,
-        "analysis_rules",
-        errors,
-    )
-    brief_ids = _require_namespaced_ids(
-        briefs,
-        "brief_id",
-        pack_id,
-        "brief_templates",
-        errors,
-    )
-    prompt_ids = _require_namespaced_ids(
-        prompts,
-        "prompt_id",
-        pack_id,
-        "prompt_archetypes",
-        errors,
-    )
-    del relation_ids, journey_ids, rule_ids, brief_ids, prompt_ids
+    def ids(label: str, id_key: str) -> set[str]:
+        return _require_namespaced_ids(
+            sections[label], id_key, pack_id, label, errors
+        )
 
+    for label, id_key in (
+        ("relation_types", "relation_type_id"),
+        ("analysis_rules", "rule_id"),
+        ("brief_templates", "brief_id"),
+        ("prompt_archetypes", "prompt_id"),
+    ):
+        ids(label, id_key)
+
+    journeys = sections["journeys"]
     stage_items = [stage for journey in journeys for stage in journey.get("stages", ())]
     outcome_items = [
         outcome for journey in journeys for outcome in journey.get("outcomes", ())
     ]
-    stage_ids = _require_namespaced_ids(
-        stage_items,
-        "stage_id",
-        pack_id,
-        "journey_stages",
-        errors,
-    )
-    outcome_ids = _require_namespaced_ids(
-        outcome_items,
-        "outcome_id",
-        pack_id,
-        "outcomes",
-        errors,
+    return _PackIds(
+        roles=ids("page_roles", "role_id"),
+        entities=ids("entity_types", "entity_type_id"),
+        predicates=ids("assertion_predicates", "predicate_id"),
+        questions=ids("question_contracts", "question_id"),
+        stages=_require_namespaced_ids(
+            stage_items, "stage_id", pack_id, "journey_stages", errors
+        ),
+        outcomes=_require_namespaced_ids(
+            outcome_items, "outcome_id", pack_id, "outcomes", errors
+        ),
     )
 
-    _require_refs(
-        pack.get("capability_ids", ()),
-        capability_ids,
-        f"{pack_id}.capability_ids",
-        errors,
-    )
+
+def _validate_classification_policy(
+    pack: Mapping[str, Any],
+    pack_id: str,
+    core: Mapping[str, Any],
+    errors: list[str],
+) -> None:
+    """Classifier thresholds are numeric and the two safety switches stay set."""
+
     policy = pack.get("classification_policy", {})
     if not isinstance(policy, dict):
         errors.append(f"{pack_id}.classification_policy must be an object")
@@ -404,30 +391,57 @@ def _validate_pack(
     if policy.get("abstain_on_tie") is not True:
         errors.append(f"{pack_id}: tie abstention must remain enabled")
 
+
+def _validate_role_signals(
+    role: Mapping[str, Any],
+    *,
+    pack_id: str,
+    role_id: str,
+    fields: set[str],
+    operators: set[str],
+    signal_ids: set[str],
+    errors: list[str],
+) -> None:
+    """Positive and negative classifier signals for one role."""
+
+    for key, polarity in (("signals", "positive"), ("negative_signals", "negative")):
+        for signal in role.get(key, ()):
+            _validate_signal(
+                signal,
+                pack_id=pack_id,
+                role_id=role_id,
+                expected_polarity=polarity,
+                fields=fields,
+                operators=operators,
+                seen_ids=signal_ids,
+                errors=errors,
+            )
+
+
+def _validate_pack_roles(
+    roles: Sequence[Mapping[str, Any]],
+    *,
+    pack_id: str,
+    core: Mapping[str, Any],
+    ids: _PackIds,
+    schema_types: set[str],
+    errors: list[str],
+) -> None:
+    """Each role resolves its page kinds, questions, entities, schema, and signals."""
+
     fields = set(core.get("classifier_signal_fields", ()))
     operators = set(core.get("classifier_operators", ()))
     page_kinds = set(core.get("generic_page_kinds", ()))
     signal_ids: set[str] = set()
+
     for role in roles:
         role_id = str(role.get("role_id"))
-        _require_refs(
-            role.get("page_kinds", ()),
-            page_kinds,
-            f"{role_id}.page_kinds",
-            errors,
-        )
-        _require_refs(
-            role.get("required_question_ids", ()),
-            question_ids,
-            f"{role_id}.required_question_ids",
-            errors,
-        )
-        _require_refs(
-            role.get("entity_type_ids", ()),
-            entity_ids,
-            f"{role_id}.entity_type_ids",
-            errors,
-        )
+        for key, allowed in (
+            ("page_kinds", page_kinds),
+            ("required_question_ids", ids.questions),
+            ("entity_type_ids", ids.entities),
+        ):
+            _require_refs(role.get(key, ()), allowed, f"{role_id}.{key}", errors)
         schema_expectations = role.get("schema_expectations", {})
         _require_refs(
             schema_expectations.get("recommended_types", ()),
@@ -437,141 +451,123 @@ def _validate_pack(
         )
         if schema_expectations.get("rich_result_guaranteed") is not False:
             errors.append(f"{role_id}: rich-result guarantees are forbidden")
-        for signal in role.get("signals", ()):
-            _validate_signal(
-                signal,
-                pack_id=pack_id,
-                role_id=role_id,
-                expected_polarity="positive",
-                fields=fields,
-                operators=operators,
-                seen_ids=signal_ids,
-                errors=errors,
-            )
-        for signal in role.get("negative_signals", ()):
-            _validate_signal(
-                signal,
-                pack_id=pack_id,
-                role_id=role_id,
-                expected_polarity="negative",
-                fields=fields,
-                operators=operators,
-                seen_ids=signal_ids,
-                errors=errors,
-            )
+        _validate_role_signals(
+            role,
+            pack_id=pack_id,
+            role_id=role_id,
+            fields=fields,
+            operators=operators,
+            signal_ids=signal_ids,
+            errors=errors,
+        )
 
-    for entity in entities:
-        entity_id = str(entity.get("entity_type_id"))
-        attributes = entity.get("attributes", ())
+
+def _validate_pack_graph(
+    sections: Mapping[str, Sequence[Mapping[str, Any]]],
+    ids: _PackIds,
+    errors: list[str],
+) -> None:
+    """Entity attributes, predicate subjects, and relation endpoints resolve."""
+
+    for entity in sections["entity_types"]:
         attribute_names = {
-            item.get("name") for item in attributes if isinstance(item, dict)
+            str(item.get("name"))
+            for item in entity.get("attributes", ())
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
         }
         _require_refs(
             entity.get("identity_fields", ()),
-            {str(value) for value in attribute_names if isinstance(value, str)},
-            f"{entity_id}.identity_fields",
+            attribute_names,
+            f"{entity.get('entity_type_id')}.identity_fields",
             errors,
         )
 
-    for predicate in predicates:
-        predicate_id = str(predicate.get("predicate_id"))
+    for predicate in sections["assertion_predicates"]:
         _require_refs(
             predicate.get("subject_entity_type_ids", ()),
-            entity_ids,
-            f"{predicate_id}.subject_entity_type_ids",
+            ids.entities,
+            f"{predicate.get('predicate_id')}.subject_entity_type_ids",
             errors,
         )
 
-    for relation in relations:
+    for relation in sections["relation_types"]:
         relation_id = str(relation.get("relation_type_id"))
-        _require_refs(
-            relation.get("source_entity_type_ids", ()),
-            entity_ids,
-            f"{relation_id}.source_entity_type_ids",
-            errors,
-        )
-        _require_refs(
-            relation.get("target_entity_type_ids", ()),
-            entity_ids,
-            f"{relation_id}.target_entity_type_ids",
-            errors,
-        )
+        for key in ("source_entity_type_ids", "target_entity_type_ids"):
+            _require_refs(
+                relation.get(key, ()), ids.entities, f"{relation_id}.{key}", errors
+            )
+
+
+def _validate_pack_journeys(
+    journeys: Sequence[Mapping[str, Any]],
+    ids: _PackIds,
+    errors: list[str],
+) -> None:
+    """Journey audiences and every stage's roles, questions, and outcomes resolve."""
 
     for journey in journeys:
         journey_id = str(journey.get("journey_id"))
         _require_refs(
             journey.get("audience_entity_type_ids", ()),
-            entity_ids,
+            ids.entities,
             f"{journey_id}.audience_entity_type_ids",
             errors,
         )
         for stage in journey.get("stages", ()):
             stage_id = str(stage.get("stage_id"))
-            _require_refs(
-                stage.get("required_role_ids", ()),
-                role_ids,
-                f"{stage_id}.required_role_ids",
-                errors,
-            )
-            _require_refs(
-                stage.get("required_question_ids", ()),
-                question_ids,
-                f"{stage_id}.required_question_ids",
-                errors,
-            )
-            _require_refs(
-                stage.get("outcome_ids", ()),
-                outcome_ids,
-                f"{stage_id}.outcome_ids",
-                errors,
-            )
+            for key, allowed in (
+                ("required_role_ids", ids.roles),
+                ("required_question_ids", ids.questions),
+                ("outcome_ids", ids.outcomes),
+            ):
+                _require_refs(stage.get(key, ()), allowed, f"{stage_id}.{key}", errors)
 
-    for question in questions:
+
+def _validate_pack_outputs(
+    sections: Mapping[str, Sequence[Mapping[str, Any]]],
+    ids: _PackIds,
+    errors: list[str],
+) -> None:
+    """Question contracts, brief templates, and prompt archetypes resolve."""
+
+    for question in sections["question_contracts"]:
         question_id = str(question.get("question_id"))
-        _require_refs(
-            question.get("applicable_role_ids", ()),
-            role_ids,
-            f"{question_id}.applicable_role_ids",
-            errors,
-        )
+        for key, allowed in (
+            ("applicable_role_ids", ids.roles),
+            ("required_predicate_ids", ids.predicates),
+            ("required_entity_type_ids", ids.entities),
+        ):
+            _require_refs(
+                question.get(key, ()), allowed, f"{question_id}.{key}", errors
+            )
         _require_refs(
             (question.get("journey_stage_id"),),
-            stage_ids,
+            ids.stages,
             f"{question_id}.journey_stage_id",
             errors,
         )
-        _require_refs(
-            question.get("required_predicate_ids", ()),
-            predicate_ids,
-            f"{question_id}.required_predicate_ids",
-            errors,
-        )
-        _require_refs(
-            question.get("required_entity_type_ids", ()),
-            entity_ids,
-            f"{question_id}.required_entity_type_ids",
-            errors,
-        )
 
-    for brief in briefs:
+    for brief in sections["brief_templates"]:
         brief_id = str(brief.get("brief_id"))
         _require_refs(
-            brief.get("role_ids", ()),
-            role_ids,
-            f"{brief_id}.role_ids",
-            errors,
+            brief.get("role_ids", ()), ids.roles, f"{brief_id}.role_ids", errors
         )
         if brief.get("human_review_required") is not True:
             errors.append(f"{brief_id}: human review must remain required")
 
-    for prompt in prompts:
-        prompt_id = str(prompt.get("prompt_id"))
+    for prompt in sections["prompt_archetypes"]:
         _require_refs(
             prompt.get("journey_stage_ids", ()),
-            stage_ids,
-            f"{prompt_id}.journey_stage_ids",
+            ids.stages,
+            f"{prompt.get('prompt_id')}.journey_stage_ids",
             errors,
         )
+
+
+def _validate_pack_policies(
+    pack: Mapping[str, Any], pack_id: str, errors: list[str]
+) -> None:
+    """Generation and review guarantees a pack may never relax."""
 
     generation = pack.get("generation_policy", {})
     expected_generation = {
@@ -594,19 +590,103 @@ def _validate_pack(
     if review.get("authoritative_findings_enabled") is not False:
         errors.append(f"{pack_id}: authoritative findings must remain disabled")
 
-    return {
-        "page_roles": len(roles),
-        "entity_types": len(entities),
-        "assertion_predicates": len(predicates),
-        "relation_types": len(relations),
-        "journeys": len(journeys),
-        "journey_stages": len(stage_items),
-        "outcomes": len(outcome_items),
-        "question_contracts": len(questions),
-        "analysis_rules": len(rules),
-        "brief_templates": len(briefs),
-        "prompt_archetypes": len(prompts),
+
+def _validate_pack(
+    pack: Mapping[str, Any],
+    *,
+    core: Mapping[str, Any],
+    schema_types: set[str],
+    capability_ids: set[str],
+    errors: list[str],
+) -> dict[str, int]:
+    """Validate one pack's internal references and policies. Returns its counts."""
+
+    pack_id = str(pack.get("pack_id", ""))
+    sections: dict[str, Sequence[Mapping[str, Any]]] = {
+        label: tuple(pack.get(label, ()))
+        for label in (
+            "page_roles",
+            "entity_types",
+            "assertion_predicates",
+            "relation_types",
+            "journeys",
+            "question_contracts",
+            "analysis_rules",
+            "brief_templates",
+            "prompt_archetypes",
+        )
     }
+    ids = _collect_pack_ids(pack_id, sections, errors)
+
+    _require_refs(
+        pack.get("capability_ids", ()),
+        capability_ids,
+        f"{pack_id}.capability_ids",
+        errors,
+    )
+    _validate_classification_policy(pack, pack_id, core, errors)
+    _validate_pack_roles(
+        sections["page_roles"],
+        pack_id=pack_id,
+        core=core,
+        ids=ids,
+        schema_types=schema_types,
+        errors=errors,
+    )
+    _validate_pack_graph(sections, ids, errors)
+    _validate_pack_journeys(sections["journeys"], ids, errors)
+    _validate_pack_outputs(sections, ids, errors)
+    _validate_pack_policies(pack, pack_id, errors)
+
+    # Counts are of declared items, not of unique IDs: a duplicate is an error
+    # reported above, and the summary must still describe what the file holds.
+    journeys = sections["journeys"]
+    counts = {label: len(items) for label, items in sections.items()}
+    counts["journey_stages"] = sum(
+        len(tuple(journey.get("stages", ()))) for journey in journeys
+    )
+    counts["outcomes"] = sum(
+        len(tuple(journey.get("outcomes", ()))) for journey in journeys
+    )
+    return counts
+
+
+def _validate_role_case(
+    case: Mapping[str, Any],
+    case_id: str,
+    compiled: Any,
+    errors: list[str],
+) -> None:
+    """Classify one fixture case and compare it with the labelled expectation."""
+
+    result = classify_page(compiled, case.get("facts", {}))
+    if "expected_role_id" in case and result["primary_role_id"] != case.get(
+        "expected_role_id"
+    ):
+        # The abstention reason is the first thing you want when a classifier
+        # regresses, so it stays on this message specifically.
+        errors.append(
+            f"{case_id}: expected role {case.get('expected_role_id')!r}, "
+            f"got {result['primary_role_id']!r} ({result['abstention_reason']!r})"
+        )
+    for key, result_key, label in (
+        ("expected_abstention_reason", "abstention_reason", "abstention"),
+        ("expected_temporal_state", "temporal_state", "temporal state"),
+    ):
+        if key in case and result[result_key] != case.get(key):
+            errors.append(
+                f"{case_id}: expected {label} {case.get(key)!r}, "
+                f"got {result[result_key]!r}"
+            )
+    if case.get("expected_conflict_disclosure") and not result["conflicts"]:
+        errors.append(f"{case_id}: expected conflict disclosure")
+    for result_key, bound, label in (
+        ("evidence", compiled.maximum_evidence_records, "evidence"),
+        ("alternatives", compiled.maximum_alternatives, "alternatives"),
+        ("conflicts", compiled.maximum_conflicts, "conflicts"),
+    ):
+        if len(result[result_key]) > bound:
+            errors.append(f"{case_id}: {label} output exceeds configured bound")
 
 
 def _validate_role_fixture(
@@ -633,37 +713,7 @@ def _validate_role_fixture(
             errors.append(f"{pack_id}: duplicate role fixture case_id {case_id}")
         case_ids.add(case_id)
         case_classes.add(str(case.get("case_class")))
-        result = classify_page(compiled, case.get("facts", {}))
-        if "expected_role_id" in case:
-            expected = case.get("expected_role_id")
-            if result["primary_role_id"] != expected:
-                errors.append(
-                    f"{case_id}: expected role {expected!r}, "
-                    f"got {result['primary_role_id']!r} "
-                    f"({result['abstention_reason']!r})"
-                )
-        if "expected_abstention_reason" in case:
-            expected = case.get("expected_abstention_reason")
-            if result["abstention_reason"] != expected:
-                errors.append(
-                    f"{case_id}: expected abstention {expected!r}, "
-                    f"got {result['abstention_reason']!r}"
-                )
-        if case.get("expected_conflict_disclosure") and not result["conflicts"]:
-            errors.append(f"{case_id}: expected conflict disclosure")
-        if "expected_temporal_state" in case:
-            expected = case.get("expected_temporal_state")
-            if result["temporal_state"] != expected:
-                errors.append(
-                    f"{case_id}: expected temporal state {expected!r}, "
-                    f"got {result['temporal_state']!r}"
-                )
-        if len(result["evidence"]) > compiled.maximum_evidence_records:
-            errors.append(f"{case_id}: evidence output exceeds configured bound")
-        if len(result["alternatives"]) > compiled.maximum_alternatives:
-            errors.append(f"{case_id}: alternatives output exceeds configured bound")
-        if len(result["conflicts"]) > compiled.maximum_conflicts:
-            errors.append(f"{case_id}: conflicts output exceeds configured bound")
+        _validate_role_case(case, case_id, compiled, errors)
     required_classes = set(pack.get("evaluation", {}).get("required_case_classes", ()))
     missing_classes = sorted(required_classes - case_classes)
     if missing_classes:
@@ -671,6 +721,31 @@ def _validate_role_fixture(
             f"{pack_id}: role fixture misses required classes {missing_classes!r}"
         )
     return len(cases)
+
+
+def _validate_faq_case(
+    case: Mapping[str, Any],
+    case_id: str,
+    case_class: str,
+    question_ids: set[Any],
+    errors: list[str],
+) -> None:
+    """One FAQ fixture case: known question, safe expectation, parity honesty."""
+
+    if case.get("question_id") not in question_ids:
+        errors.append(f"{case_id}: unknown question_id {case.get('question_id')!r}")
+    expected_safe = _SAFE_FAQ_EXPECTATIONS.get(case_class)
+    if expected_safe and case.get("expected") != expected_safe:
+        errors.append(
+            f"{case_id}: unsafe expectation {case.get('expected')!r}; "
+            f"expected {expected_safe!r}"
+        )
+    if case_class != "schema_parity":
+        return
+    visible = case.get("visible_answer")
+    expected = "pass" if visible and visible == case.get("schema_answer") else "reject"
+    if case.get("expected") != expected:
+        errors.append(f"{case_id}: invalid visible/schema parity expectation")
 
 
 def _validate_faq_fixture(
@@ -698,20 +773,7 @@ def _validate_faq_fixture(
         seen_ids.add(case_id)
         case_class = str(case.get("case_class"))
         seen_classes.add(case_class)
-        if case.get("question_id") not in question_ids:
-            errors.append(f"{case_id}: unknown question_id {case.get('question_id')!r}")
-        expected_safe = _SAFE_FAQ_EXPECTATIONS.get(case_class)
-        if expected_safe and case.get("expected") != expected_safe:
-            errors.append(
-                f"{case_id}: unsafe expectation {case.get('expected')!r}; "
-                f"expected {expected_safe!r}"
-            )
-        if case_class == "schema_parity":
-            visible = case.get("visible_answer")
-            schema_answer = case.get("schema_answer")
-            expected = "pass" if visible and visible == schema_answer else "reject"
-            if case.get("expected") != expected:
-                errors.append(f"{case_id}: invalid visible/schema parity expectation")
+        _validate_faq_case(case, case_id, case_class, question_ids, errors)
     required = {
         "supported",
         "unknown",
@@ -867,52 +929,52 @@ def _validate_hygiene(errors: list[str]) -> None:
             errors.append(f"duplicate industry-pack definition remains: {path}")
 
 
-def validate_catalog(*, check_hygiene: bool = True) -> ValidationReport:
-    """Validate the complete catalog or raise one aggregated error."""
+def _validate_required_files(errors: list[str]) -> None:
+    """Every canonical file exists and every JSON file in the tree parses."""
 
-    errors: list[str] = []
     for relative in REQUIRED_CANONICAL_FILES:
         _error(
             errors,
             (CATALOG_ROOT / relative).is_file(),
             f"missing canonical file: {relative}",
         )
-
     for path in sorted(CATALOG_ROOT.rglob("*.json")):
         _read_json(path, errors)
 
-    registry_data = _read_json(CATALOG_ROOT / "registry.json", errors)
-    core = _read_json(CATALOG_ROOT / "core.json", errors)
-    capabilities_data = _read_json(CATALOG_ROOT / "capabilities.json", errors)
-    taxonomy_data = _read_json(CATALOG_ROOT / "taxonomy.json", errors)
-    schema_terms = _read_json(CATALOG_ROOT / "schema-terms.json", errors)
-    summary = _read_json(CATALOG_ROOT / "catalog-summary.json", errors)
-    pack_schema = _read_json(
-        CATALOG_ROOT / "schema/industry-pack.schema.json",
-        errors,
-    )
-    if not all(
-        isinstance(item, dict)
-        for item in (
-            registry_data,
-            core,
-            capabilities_data,
-            taxonomy_data,
-            schema_terms,
-            summary,
-            pack_schema,
-        )
-    ):
-        raise CatalogValidationError("\n".join(errors))
 
-    registry_entries = registry_data.get("packs", ())
-    registry_ids = {entry.get("pack_id") for entry in registry_entries}
+def _load_canonical_docs(errors: list[str]) -> tuple[Any, ...]:
+    """Load the seven catalog documents, or abort — nothing else can be checked."""
+
+    docs = tuple(
+        _read_json(CATALOG_ROOT / relative, errors)
+        for relative in (
+            "registry.json",
+            "core.json",
+            "capabilities.json",
+            "taxonomy.json",
+            "schema-terms.json",
+            "catalog-summary.json",
+            "schema/industry-pack.schema.json",
+        )
+    )
+    if not all(isinstance(doc, dict) for doc in docs):
+        raise CatalogValidationError("\n".join(errors))
+    return docs
+
+
+def _validate_registry_identity(
+    registry_data: Mapping[str, Any],
+    pack_paths: Sequence[Path],
+    errors: list[str],
+) -> None:
+    """Registry IDs, pack filenames, and the fallback pack match the catalog."""
+
+    registry_ids = {entry.get("pack_id") for entry in registry_data.get("packs", ())}
     if registry_ids != EXPECTED_PACK_IDS:
         errors.append(
             "registry pack IDs differ from required catalog: "
             f"expected {sorted(EXPECTED_PACK_IDS)!r}, got {sorted(registry_ids)!r}"
         )
-    pack_paths = sorted((CATALOG_ROOT / "packs").glob("*.json"))
     file_ids = {path.stem for path in pack_paths}
     if file_ids != EXPECTED_PACK_IDS:
         errors.append(
@@ -922,94 +984,154 @@ def validate_catalog(*, check_hygiene: bool = True) -> ValidationReport:
     if registry_data.get("general_fallback_pack_id") != "general_business":
         errors.append("registry general fallback must be general_business")
 
+
+def _collect_term_ids(
+    capabilities_data: Mapping[str, Any],
+    schema_terms: Mapping[str, Any],
+    errors: list[str],
+) -> tuple[Sequence[Any], set[str], set[str]]:
+    """Capability and Schema.org term identity, checked for duplicates."""
+
     capability_items = capabilities_data.get("capabilities", ())
     capability_ids = {
-        item.get("capability_id") for item in capability_items if isinstance(item, dict)
+        str(item.get("capability_id"))
+        for item in capability_items
+        if isinstance(item, dict) and item.get("capability_id")
     }
     if len(capability_ids) != len(capability_items):
         errors.append("capability IDs must be unique and non-empty")
-    schema_type_items = schema_terms.get("types", ())
-    schema_property_items = schema_terms.get("properties", ())
+
+    type_items = schema_terms.get("types", ())
+    property_items = schema_terms.get("properties", ())
     schema_types = {
-        item.get("name") for item in schema_type_items if isinstance(item, dict)
+        str(item.get("name"))
+        for item in type_items
+        if isinstance(item, dict) and item.get("name")
     }
     schema_properties = {
-        item.get("name") for item in schema_property_items if isinstance(item, dict)
+        str(item.get("name"))
+        for item in property_items
+        if isinstance(item, dict) and item.get("name")
     }
-    if len(schema_types) != len(schema_type_items):
+    if len(schema_types) != len(type_items):
         errors.append("Schema.org type snapshot contains duplicates or invalid names")
-    if len(schema_properties) != len(schema_property_items):
+    if len(schema_properties) != len(property_items):
         errors.append(
             "Schema.org property snapshot contains duplicates or invalid names"
         )
+    return capability_items, capability_ids, schema_types
 
-    packs: dict[str, Mapping[str, Any]] = {}
-    per_pack_counts: dict[str, dict[str, int]] = {}
-    role_fixture_count = 0
-    faq_fixture_count = 0
-    for entry in registry_entries:
-        if not isinstance(entry, dict):
-            errors.append("registry pack entry must be an object")
-            continue
-        pack_id = entry.get("pack_id")
-        version = entry.get("version")
-        if not isinstance(pack_id, str) or not isinstance(version, str):
-            errors.append(f"invalid registry pack entry: {entry!r}")
-            continue
-        if entry.get("authoritative_findings_enabled") is not False:
-            errors.append(f"{pack_id}: registry authoritative findings must be false")
-        try:
-            frozen_pack = load_pack(pack_id, version)
-            manifest = pack_manifest(pack_id, version)
-        except CatalogError as exc:
-            errors.append(str(exc))
-            continue
-        # Reload the canonical JSON after the exact loader has verified it.
-        pack_path = CATALOG_ROOT / str(entry.get("file"))
-        raw_pack = _read_json(pack_path, errors)
-        if not isinstance(raw_pack, dict):
-            continue
-        pack = raw_pack
-        if canonical_content_hash(pack) != entry.get("content_hash"):
-            errors.append(f"{pack_id}: direct registry content hash mismatch")
-        if manifest["pack_content_hash"] != entry.get("content_hash"):
-            errors.append(f"{pack_id}: manifest content hash mismatch")
-        if pack.get("maturity") != entry.get("maturity"):
-            errors.append(f"{pack_id}: registry maturity differs from pack")
-        expected_maturity = (
-            "validated_candidate"
-            if pack_id in VALIDATED_CANDIDATE_PACK_IDS
-            else "foundation"
+
+def _validate_entry_identity(
+    pack: Mapping[str, Any],
+    entry: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    pack_id: str,
+    errors: list[str],
+) -> None:
+    """Content hashes and maturity agree between registry, manifest, and pack."""
+
+    if canonical_content_hash(pack) != entry.get("content_hash"):
+        errors.append(f"{pack_id}: direct registry content hash mismatch")
+    if manifest["pack_content_hash"] != entry.get("content_hash"):
+        errors.append(f"{pack_id}: manifest content hash mismatch")
+    if pack.get("maturity") != entry.get("maturity"):
+        errors.append(f"{pack_id}: registry maturity differs from pack")
+    expected_maturity = (
+        "validated_candidate"
+        if pack_id in VALIDATED_CANDIDATE_PACK_IDS
+        else "foundation"
+    )
+    if pack.get("maturity") != expected_maturity:
+        errors.append(
+            f"{pack_id}: expected maturity {expected_maturity}, "
+            f"got {pack.get('maturity')!r}"
         )
-        if pack.get("maturity") != expected_maturity:
-            errors.append(
-                f"{pack_id}: expected maturity {expected_maturity}, "
-                f"got {pack.get('maturity')!r}"
-            )
-        _validate_schema_subset(pack, pack_schema, pack_id, errors)
-        packs[pack_id] = pack
-        per_pack_counts[pack_id] = _validate_pack(
-            pack,
-            core=core,
-            schema_types={str(item) for item in schema_types if item},
-            capability_ids={str(item) for item in capability_ids if item},
-            errors=errors,
-        )
-        compiled = compile_pack(frozen_pack, manifest=manifest)
-        evaluation = pack.get("evaluation", {})
-        role_fixture_path = CATALOG_ROOT / str(evaluation.get("role_fixture", ""))
-        faq_fixture_path = CATALOG_ROOT / str(evaluation.get("faq_fixture", ""))
-        role_fixture = _read_json(role_fixture_path, errors)
-        faq_fixture = _read_json(faq_fixture_path, errors)
-        if isinstance(role_fixture, dict):
-            role_fixture_count += _validate_role_fixture(
-                pack,
-                compiled,
-                role_fixture,
-                errors,
-            )
-        if isinstance(faq_fixture, dict):
-            faq_fixture_count += _validate_faq_fixture(pack, faq_fixture, errors)
+
+
+def _validate_entry_fixtures(
+    pack: Mapping[str, Any],
+    compiled: Any,
+    errors: list[str],
+) -> tuple[int, int]:
+    """Role and FAQ fixture cases for one pack. Returns the two case counts."""
+
+    evaluation = pack.get("evaluation", {})
+    role_fixture = _read_json(
+        CATALOG_ROOT / str(evaluation.get("role_fixture", "")), errors
+    )
+    faq_fixture = _read_json(
+        CATALOG_ROOT / str(evaluation.get("faq_fixture", "")), errors
+    )
+    role_cases = (
+        _validate_role_fixture(pack, compiled, role_fixture, errors)
+        if isinstance(role_fixture, dict)
+        else 0
+    )
+    faq_cases = (
+        _validate_faq_fixture(pack, faq_fixture, errors)
+        if isinstance(faq_fixture, dict)
+        else 0
+    )
+    return role_cases, faq_cases
+
+
+def _validate_registry_entry(
+    entry: Any,
+    *,
+    core: Mapping[str, Any],
+    pack_schema: Mapping[str, Any],
+    schema_types: set[str],
+    capability_ids: set[str],
+    packs: dict[str, Mapping[str, Any]],
+    per_pack_counts: dict[str, dict[str, int]],
+    errors: list[str],
+) -> tuple[int, int]:
+    """Validate one registry entry and its pack. Returns fixture case counts."""
+
+    if not isinstance(entry, dict):
+        errors.append("registry pack entry must be an object")
+        return 0, 0
+    pack_id = entry.get("pack_id")
+    version = entry.get("version")
+    if not isinstance(pack_id, str) or not isinstance(version, str):
+        errors.append(f"invalid registry pack entry: {entry!r}")
+        return 0, 0
+    if entry.get("authoritative_findings_enabled") is not False:
+        errors.append(f"{pack_id}: registry authoritative findings must be false")
+    try:
+        frozen_pack = load_pack(pack_id, version)
+        manifest = pack_manifest(pack_id, version)
+    except CatalogError as exc:
+        errors.append(str(exc))
+        return 0, 0
+
+    # Reload the canonical JSON after the exact loader has verified it.
+    pack = _read_json(CATALOG_ROOT / str(entry.get("file")), errors)
+    if not isinstance(pack, dict):
+        return 0, 0
+
+    _validate_entry_identity(pack, entry, manifest, pack_id, errors)
+    _validate_schema_subset(pack, pack_schema, pack_id, errors)
+    packs[pack_id] = pack
+    per_pack_counts[pack_id] = _validate_pack(
+        pack,
+        core=core,
+        schema_types=schema_types,
+        capability_ids=capability_ids,
+        errors=errors,
+    )
+    return _validate_entry_fixtures(
+        pack, compile_pack(frozen_pack, manifest=manifest), errors
+    )
+
+
+def _validate_capability_compatibility(
+    capability_items: Sequence[Any],
+    packs: Mapping[str, Mapping[str, Any]],
+    errors: list[str],
+) -> None:
+    """Declared compatibility matches the packs that actually opt in."""
 
     for capability in capability_items:
         capability_id = str(capability.get("capability_id"))
@@ -1033,63 +1155,157 @@ def validate_catalog(*, check_hygiene: bool = True) -> ValidationReport:
         if capability.get("may_weaken_shared_controls") is not False:
             errors.append(f"capability {capability_id}: controls may not be weakened")
 
-    taxonomy_ids: set[str] = set()
-    for node in taxonomy_data.get("nodes", ()):
-        taxonomy_id = node.get("taxonomy_id")
-        if not isinstance(taxonomy_id, str) or not taxonomy_id:
-            errors.append("taxonomy node has no taxonomy_id")
-            continue
-        if taxonomy_id in taxonomy_ids:
-            errors.append(f"duplicate taxonomy_id {taxonomy_id}")
-        taxonomy_ids.add(taxonomy_id)
-        primary_pack_id = node.get("primary_pack_id")
-        _require_refs(
-            (primary_pack_id,),
-            set(packs),
-            f"taxonomy {taxonomy_id}.primary_pack_id",
-            errors,
-        )
-        _require_refs(
-            node.get("recommended_capability_ids", ()),
-            {str(item) for item in capability_ids if item},
-            f"taxonomy {taxonomy_id}.recommended_capability_ids",
-            errors,
-        )
-        if primary_pack_id in packs:
-            extra = set(node.get("recommended_capability_ids", ())) - set(
-                packs[primary_pack_id].get("capability_ids", ())
+
+def _validate_taxonomy_node(
+    node: Mapping[str, Any],
+    *,
+    packs: Mapping[str, Mapping[str, Any]],
+    capability_ids: set[str],
+    seen: set[str],
+    errors: list[str],
+) -> None:
+    """One taxonomy node: unique ID, resolvable pack, capabilities the pack has."""
+
+    taxonomy_id = node.get("taxonomy_id")
+    if not isinstance(taxonomy_id, str) or not taxonomy_id:
+        errors.append("taxonomy node has no taxonomy_id")
+        return
+    if taxonomy_id in seen:
+        errors.append(f"duplicate taxonomy_id {taxonomy_id}")
+    seen.add(taxonomy_id)
+
+    primary_pack_id = node.get("primary_pack_id")
+    recommended = set(node.get("recommended_capability_ids", ()))
+    _require_refs(
+        (primary_pack_id,),
+        set(packs),
+        f"taxonomy {taxonomy_id}.primary_pack_id",
+        errors,
+    )
+    _require_refs(
+        recommended,
+        capability_ids,
+        f"taxonomy {taxonomy_id}.recommended_capability_ids",
+        errors,
+    )
+    if isinstance(primary_pack_id, str) and primary_pack_id in packs:
+        extra = recommended - set(packs[primary_pack_id].get("capability_ids", ()))
+        if extra:
+            errors.append(
+                f"taxonomy {taxonomy_id}: capabilities not in primary pack {extra!r}"
             )
-            if extra:
-                errors.append(
-                    f"taxonomy {taxonomy_id}: capabilities not in primary pack "
-                    f"{extra!r}"
-                )
+
+
+def _validate_taxonomy(
+    taxonomy_data: Mapping[str, Any],
+    packs: Mapping[str, Mapping[str, Any]],
+    capability_ids: set[str],
+    errors: list[str],
+) -> None:
+    """Every taxonomy node resolves, and every pack has a general node."""
+
+    seen: set[str] = set()
+    for node in taxonomy_data.get("nodes", ()):
+        _validate_taxonomy_node(
+            node,
+            packs=packs,
+            capability_ids=capability_ids,
+            seen=seen,
+            errors=errors,
+        )
     for pack_id in packs:
-        if f"{pack_id}.general" not in taxonomy_ids:
+        if f"{pack_id}.general" not in seen:
             errors.append(f"taxonomy has no general node for {pack_id}")
 
+
+def _validate_no_customer_markers(
+    pack_paths: Sequence[Path], errors: list[str]
+) -> None:
+    """Shared catalog files carry no customer facts (invariants.md section 10)."""
+
     shared_paths = [
-        CATALOG_ROOT / "core.json",
-        CATALOG_ROOT / "registry.json",
-        CATALOG_ROOT / "capabilities.json",
-        CATALOG_ROOT / "taxonomy.json",
-        CATALOG_ROOT / "schema-terms.json",
-        *pack_paths,
-    ]
-    customer_markers = ("the asian school", "theasianschool.net")
+        CATALOG_ROOT / name
+        for name in (
+            "core.json",
+            "registry.json",
+            "capabilities.json",
+            "taxonomy.json",
+            "schema-terms.json",
+        )
+    ] + list(pack_paths)
     for path in shared_paths:
         text = path.read_text(encoding="utf-8").casefold()
-        for marker in customer_markers:
+        for marker in ("the asian school", "theasianschool.net"):
             if marker in text:
                 errors.append(f"customer fact marker {marker!r} leaked into {path}")
 
+
+def _validate_sources(errors: list[str]) -> None:
+    """Source IDs are unique and every source URL is HTTPS."""
+
+    sources = _read_json(CATALOG_ROOT / "sources.json", errors)
+    if not isinstance(sources, dict):
+        return
+    source_items = sources.get("sources", ())
+    source_ids = [item.get("source_id") for item in source_items]
+    if len(source_ids) != len(set(source_ids)):
+        errors.append("source IDs must be unique")
+    for item in source_items:
+        url = item.get("url")
+        if not isinstance(url, str) or not url.startswith("https://"):
+            errors.append(f"source URL must be HTTPS: {url!r}")
+
+
+def validate_catalog(*, check_hygiene: bool = True) -> ValidationReport:
+    """Validate the complete catalog or raise one aggregated error.
+
+    Each phase appends to a shared ``errors`` list rather than raising, so one
+    run reports every problem instead of stopping at the first.
+    """
+
+    errors: list[str] = []
+    _validate_required_files(errors)
+    (
+        registry_data,
+        core,
+        capabilities_data,
+        taxonomy_data,
+        schema_terms,
+        summary,
+        pack_schema,
+    ) = _load_canonical_docs(errors)
+
+    pack_paths = sorted((CATALOG_ROOT / "packs").glob("*.json"))
+    _validate_registry_identity(registry_data, pack_paths, errors)
+    capability_items, capability_ids, schema_types = _collect_term_ids(
+        capabilities_data, schema_terms, errors
+    )
+
+    packs: dict[str, Mapping[str, Any]] = {}
+    per_pack_counts: dict[str, dict[str, int]] = {}
+    role_fixture_count = 0
+    faq_fixture_count = 0
+    for entry in registry_data.get("packs", ()):
+        role_cases, faq_cases = _validate_registry_entry(
+            entry,
+            core=core,
+            pack_schema=pack_schema,
+            schema_types=schema_types,
+            capability_ids=capability_ids,
+            packs=packs,
+            per_pack_counts=per_pack_counts,
+            errors=errors,
+        )
+        role_fixture_count += role_cases
+        faq_fixture_count += faq_cases
+
+    _validate_capability_compatibility(capability_items, packs, errors)
+    _validate_taxonomy(taxonomy_data, packs, capability_ids, errors)
+    _validate_no_customer_markers(pack_paths, errors)
+
     special_fixture_count = _validate_special_fixtures(packs, errors)
     computed = _computed_counts(
-        packs,
-        taxonomy_data,
-        capabilities_data,
-        schema_terms,
-        per_pack_counts,
+        packs, taxonomy_data, capabilities_data, schema_terms, per_pack_counts
     )
     if summary.get("catalog_version") != registry_data.get("catalog_version"):
         errors.append("catalog summary version differs from registry")
@@ -1098,17 +1314,7 @@ def validate_catalog(*, check_hygiene: bool = True) -> ValidationReport:
             "catalog-summary counts differ from computed counts: "
             f"expected {computed!r}, got {summary.get('counts')!r}"
         )
-
-    sources = _read_json(CATALOG_ROOT / "sources.json", errors)
-    if isinstance(sources, dict):
-        source_items = sources.get("sources", ())
-        source_ids = [item.get("source_id") for item in source_items]
-        if len(source_ids) != len(set(source_ids)):
-            errors.append("source IDs must be unique")
-        for item in source_items:
-            url = item.get("url")
-            if not isinstance(url, str) or not url.startswith("https://"):
-                errors.append(f"source URL must be HTTPS: {url!r}")
+    _validate_sources(errors)
 
     if check_hygiene:
         _validate_hygiene(errors)

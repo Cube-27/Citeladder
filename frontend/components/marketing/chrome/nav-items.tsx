@@ -27,21 +27,22 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
 }
 
 /**
- * One navigation row, shared by the desktop dropdown and the mobile
- * accordion. The only difference between the two surfaces is the ARIA role:
- * the desktop panel is a `menu`, so its rows are `menuitem`s; the mobile
- * accordion is plain content, where that role would be a lie.
+ * One navigation row, shared by the desktop dropdown and the mobile accordion.
  *
- * External rows open in a new tab and say so with a visible glyph rather
- * than relying on the target alone.
+ * Neither surface uses the ARIA menu pattern. The desktop panel dropped
+ * `role="menu"` because it holds ordinary links rather than `menuitem`
+ * children, and that pattern would promise arrow-key navigation this nav does
+ * not implement — so a `menuitem` role on the rows would be both invalid
+ * (there is no `menu` ancestor) and actively harmful, since it overrides the
+ * link role a screen reader should announce.
+ *
+ * External rows open in a new tab and say so with a visible glyph rather than
+ * relying on the target alone.
  */
-function NavRow({
+export function NavItemLink({
   item,
   onSelect,
-  menuitem,
-}: Readonly<{ item: NavDropItem; onSelect: () => void; menuitem: boolean }>) {
-  const role = menuitem ? 'menuitem' : undefined;
-
+}: Readonly<{ item: NavDropItem; onSelect: () => void }>) {
   if ('external' in item && item.external) {
     return (
       <a
@@ -49,7 +50,6 @@ function NavRow({
         href={item.href}
         target="_blank"
         rel="noreferrer"
-        role={role}
         onClick={onSelect}
       >
         <RowBody item={item} />
@@ -59,18 +59,8 @@ function NavRow({
   }
 
   return (
-    <Link className={ROW} href={item.href} role={role} onClick={onSelect}>
+    <Link className={ROW} href={item.href} onClick={onSelect}>
       <RowBody item={item} />
     </Link>
   );
-}
-
-/** Desktop dropdown row (inside a `menu`). */
-export function DropItemLink(props: Readonly<{ item: NavDropItem; onSelect: () => void }>) {
-  return <NavRow {...props} menuitem />;
-}
-
-/** Mobile accordion row — same content, no menu semantics. */
-export function MobileItemLink(props: Readonly<{ item: NavDropItem; onSelect: () => void }>) {
-  return <NavRow {...props} menuitem={false} />;
 }

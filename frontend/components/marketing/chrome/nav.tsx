@@ -22,7 +22,7 @@ import { ButtonLink } from '../primitives/button';
 import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 
 import { Wordmark } from '../primitives/wordmark';
-import { DropItemLink, MobileItemLink } from './nav-items';
+import { NavItemLink } from './nav-items';
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
@@ -319,13 +319,13 @@ export function MarketingNav() {
                       >
                         <p className="text-muted px-4 pt-3 pb-3 text-xs uppercase">{group.label}</p>
                         {group.items.map((item) => (
-                          <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
+                          <NavItemLink key={item.title} item={item} onSelect={closeDrop} />
                         ))}
                       </div>
                     ) : (
                       <div key="items" className="p-3">
                         {group.items.map((item) => (
-                          <DropItemLink key={item.title} item={item} onSelect={closeDrop} />
+                          <NavItemLink key={item.title} item={item} onSelect={closeDrop} />
                         ))}
                       </div>
                     ),
@@ -410,7 +410,7 @@ export function MarketingNav() {
                       <p className="text-muted px-4 pt-4 pb-2 text-xs uppercase">{group.label}</p>
                     )}
                     {group.items.map((item) => (
-                      <MobileItemLink
+                      <NavItemLink
                         key={item.title}
                         item={item}
                         onSelect={() => {

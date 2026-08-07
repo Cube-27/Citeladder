@@ -11,7 +11,7 @@ import hashlib
 import json
 import re
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
 from types import MappingProxyType
@@ -127,6 +127,31 @@ def load_pack(pack_id: str, version: str) -> Mapping[str, Any]:
     return _freeze(data)
 
 
+def _registry_matches(entries: Sequence[Mapping[str, Any]], needle: str) -> set[str]:
+    """Packs whose ID, label, or alias matches the normalized identifier."""
+
+    matches: set[str] = set()
+    for entry in entries:
+        values = [entry["pack_id"], entry["label"], *entry.get("aliases", ())]
+        if any(_normalized_lookup_key(str(value)) == needle for value in values):
+            matches.add(str(entry["pack_id"]))
+    return matches
+
+
+def _taxonomy_matches(needle: str) -> set[str]:
+    """Primary packs whose taxonomy node, label, or subindustry matches."""
+
+    matches: set[str] = set()
+    for node in taxonomy()["nodes"]:
+        values = [node["taxonomy_id"], node["label"]]
+        subindustry = node.get("subindustry")
+        if subindustry:
+            values.append(subindustry)
+        if any(_normalized_lookup_key(str(value)) == needle for value in values):
+            matches.add(str(node["primary_pack_id"]))
+    return matches
+
+
 def resolve_pack_id(
     identifier: str,
     *,
@@ -143,19 +168,7 @@ def resolve_pack_id(
     if len(exact) == 1:
         return str(exact[0]["pack_id"])
 
-    matches: set[str] = set()
-    for entry in entries:
-        values = [entry["pack_id"], entry["label"], *entry.get("aliases", ())]
-        if any(_normalized_lookup_key(str(value)) == needle for value in values):
-            matches.add(str(entry["pack_id"]))
-
-    for node in taxonomy()["nodes"]:
-        values = [node["taxonomy_id"], node["label"]]
-        subindustry = node.get("subindustry")
-        if subindustry:
-            values.append(subindustry)
-        if any(_normalized_lookup_key(str(value)) == needle for value in values):
-            matches.add(str(node["primary_pack_id"]))
+    matches = _registry_matches(entries, needle) | _taxonomy_matches(needle)
 
     if len(matches) == 1:
         return next(iter(matches))

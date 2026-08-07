@@ -274,38 +274,53 @@ def _match_signal(
     if not field_values:
         return False, ()
 
-    if signal.operator == "regex":
-        if signal.pattern is None:
-            return False, ()
-        matches = []
-        for value in field_values:
-            match = signal.pattern.search(value)
-            if match:
-                matches.append(match.group(0)[:160])
-        return bool(matches), tuple(matches[:4])
+    operator = signal.operator
+    if operator == "regex":
+        return _match_regex(signal, field_values)
+    if operator in _MEMBERSHIP_OPERATORS:
+        return _match_membership(signal, field_values)
+    if operator in _SUBSTRING_OPERATORS:
+        return _match_substring(signal, field_values)
+    return False, ()
 
-    if signal.operator == "equals":
-        matched = tuple(value for value in field_values if value in signal.values)
-        return bool(matched), matched[:4]
 
-    if signal.operator == "in":
-        matched = tuple(value for value in field_values if value in signal.values)
-        return bool(matched), matched[:4]
+# Grouped so the dispatch above stays flat. Membership operators compare whole
+# values; substring operators look inside them.
+_MEMBERSHIP_OPERATORS = frozenset({"equals", "in", "intersects"})
+_SUBSTRING_OPERATORS = frozenset({"contains_any", "contains_all", "ratio_gte"})
 
+
+def _match_regex(
+    signal: CompiledSignal,
+    field_values: Sequence[str],
+) -> tuple[bool, tuple[str, ...]]:
+    if signal.pattern is None:
+        return False, ()
+    matches = []
+    for value in field_values:
+        match = signal.pattern.search(value)
+        if match:
+            matches.append(match.group(0)[:160])
+    return bool(matches), tuple(matches[:4])
+
+
+def _match_membership(
+    signal: CompiledSignal,
+    field_values: Sequence[str],
+) -> tuple[bool, tuple[str, ...]]:
     if signal.operator == "intersects":
         matched = tuple(sorted(set(field_values).intersection(signal.values)))
-        return bool(matched), matched[:4]
+    else:
+        # `equals` and `in` are the same test here: the field is already a
+        # sequence, so both ask whether any whole value is in the allowed set.
+        matched = tuple(value for value in field_values if value in signal.values)
+    return bool(matched), matched[:4]
 
-    if signal.operator in {"contains_any", "contains_all"}:
-        matched_needles = tuple(
-            needle
-            for needle in signal.values
-            if needle and any(needle in value for value in field_values)
-        )
-        if signal.operator == "contains_any":
-            return bool(matched_needles), matched_needles[:4]
-        return len(matched_needles) == len(signal.values), matched_needles[:4]
 
+def _match_substring(
+    signal: CompiledSignal,
+    field_values: Sequence[str],
+) -> tuple[bool, tuple[str, ...]]:
     if signal.operator == "ratio_gte":
         if not signal.values:
             return False, ()
@@ -314,10 +329,16 @@ def _match_signal(
             for needle in signal.values
             if any(needle in value for value in field_values)
         )
-        ratio = len(matched) / len(signal.values)
-        return ratio >= signal.ratio, matched[:4]
+        return len(matched) / len(signal.values) >= signal.ratio, matched[:4]
 
-    return False, ()
+    matched_needles = tuple(
+        needle
+        for needle in signal.values
+        if needle and any(needle in value for value in field_values)
+    )
+    if signal.operator == "contains_any":
+        return bool(matched_needles), matched_needles[:4]
+    return len(matched_needles) == len(signal.values), matched_needles[:4]
 
 
 def _score_role(
@@ -459,6 +480,27 @@ def classify_page(
             temporal_state=temporal_state,
         )
 
+    signaled = _rank_roles(compiled, normalized)
+    if not any(
+        item["substantive_fields"] or item["schema_matched"] for item in signaled
+    ):
+        result = _empty_result(
+            compiled,
+            "no_signal",
+            temporal_state=temporal_state,
+        )
+        result["alternatives"] = _alternatives(compiled, signaled, None)
+        return result
+
+    return _decide_role(compiled, signaled, temporal_state)
+
+
+def _rank_roles(
+    compiled: CompiledPack,
+    normalized: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Score every role, order by score then ID, and keep those with any signal."""
+
     candidates = [
         _score_role(
             role,
@@ -469,17 +511,15 @@ def classify_page(
         for role in compiled.roles
     ]
     candidates.sort(key=lambda item: (-item["score"], item["role_id"]))
-    signaled = [item for item in candidates if item["positive_score"] > 0]
-    substantive = [item for item in signaled if item["substantive_fields"]]
-    schema_candidates = [item for item in signaled if item["schema_matched"]]
-    if not substantive and not schema_candidates:
-        result = _empty_result(
-            compiled,
-            "no_signal",
-            temporal_state=temporal_state,
-        )
-        result["alternatives"] = _alternatives(compiled, signaled, None)
-        return result
+    return [item for item in candidates if item["positive_score"] > 0]
+
+
+def _decide_role(
+    compiled: CompiledPack,
+    signaled: list[dict[str, Any]],
+    temporal_state: str,
+) -> dict[str, Any]:
+    """Pick a winner or abstain, with the evidence for either outcome attached."""
 
     winner = signaled[0]
     runner = signaled[1] if len(signaled) > 1 else None
@@ -499,28 +539,33 @@ def classify_page(
         "conflicts": _conflicts(compiled, winner, signaled[1:]),
     }
 
-    if not winner["substantive_fields"] and winner["schema_matched"]:
-        result["abstention_reason"] = "schema_only"
-        return result
-    if winner["score"] < winner["minimum_score"]:
-        result["abstention_reason"] = "below_minimum_score"
-        return result
-    if runner is not None and margin < winner["minimum_margin"]:
-        result["abstention_reason"] = "ambiguous_margin"
+    abstention = _abstention_reason(winner, runner, margin)
+    if abstention is not None:
+        result["abstention_reason"] = abstention
         return result
 
     result["primary_role_id"] = winner["role_id"]
     result["confidence_band"] = (
-        "high"
-        if winner["score"] >= compiled.high_confidence_score
-        else "moderate"
+        "high" if winner["score"] >= compiled.high_confidence_score else "moderate"
     )
-    result["secondary_role_ids"] = _secondary_roles(
-        compiled,
-        winner,
-        signaled[1:],
-    )
+    result["secondary_role_ids"] = _secondary_roles(compiled, winner, signaled[1:])
     return result
+
+
+def _abstention_reason(
+    winner: Mapping[str, Any],
+    runner: Mapping[str, Any] | None,
+    margin: float,
+) -> str | None:
+    """Why the classifier must not commit, or `None` when it may."""
+
+    if not winner["substantive_fields"] and winner["schema_matched"]:
+        return "schema_only"
+    if winner["score"] < winner["minimum_score"]:
+        return "below_minimum_score"
+    if runner is not None and margin < winner["minimum_margin"]:
+        return "ambiguous_margin"
+    return None
 
 
 def _alternatives(
