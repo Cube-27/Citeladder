@@ -1,5 +1,11 @@
 # Roadmap — Content (writer)
 
+> **Superseded for future implementation:** the unimplemented briefs, strategy, generation,
+> review, and verification roadmap in this file is replaced by
+> [`../plans/content-intelligence.md`](../plans/content-intelligence.md) under the canonical
+> [`Growth Intelligence Platform`](../plans/growth-intelligence-platform.md). The shipped basic
+> Content v1 behavior described below remains current until those slices land.
+
 > **Status update: a basic v1 shipped** (`/content`, July 2026) — an env-driven,
 > provider-agnostic single output type (`website_page`) with a default-on Website-context
 > tool (deterministic projection from Site Health evidence), cancellable generation via the

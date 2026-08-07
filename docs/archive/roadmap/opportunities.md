@@ -1,5 +1,10 @@
 # Roadmap — Opportunities
 
+> **Superseded for future implementation:** new Site, Content, Demand, and agent-driven action
+> work is planned in [`../plans/growth-intelligence-platform.md`](../plans/growth-intelligence-platform.md)
+> and its companion plans. The implemented Opportunity v1 behavior documented below remains the
+> runtime source of truth until those slices land.
+
 > **Status: implemented (v1).** The deterministic core below is coded: the config-owned rule
 > catalog + priority formula, pure detectors over the persisted visibility/site evidence, the
 > supersede-not-mutate recompute service (inline-only, no queue), the workspace-scoped API

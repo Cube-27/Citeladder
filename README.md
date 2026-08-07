@@ -1,388 +1,102 @@
-<div align="center">
-
 # CiteLadder
 
-<strong>Own how your brand appears in AI answers — and strengthen the pages those answers rely on.</strong>
+CiteLadder is an evidence-grounded growth intelligence platform for legacy businesses and
+startups. It unifies website understanding, governed brand knowledge, content improvement,
+demand/marketing evidence, AI Visibility, and a bounded Growth Agent in one project-scoped system.
 
-[Architecture](docs/architecture.md) · [Backend](docs/backend-architecture.md) · [Frontend](docs/frontend-architecture.md) · [Site Health](docs/site-health.md) · [Development](docs/DEVELOPMENT.md)
+## Product architecture
 
-<p align="center">
-  CiteLadder is an open-source AI visibility and site intelligence platform for measuring brand presence across answer engines, inspecting the evidence behind every result, and improving on-page AEO readiness.
-</p>
+CiteLadder has three intelligence systems and one orchestrator:
 
-<p align="center">
-  <a href="https://github.com/abhij1306/Citeladder/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/abhij1306/Citeladder?style=flat-square" /></a>
-  <a href="https://github.com/abhij1306/Citeladder/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/abhij1306/Citeladder?style=flat-square" /></a>
-  <a href="https://github.com/abhij1306/Citeladder/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/abhij1306/Citeladder?style=flat-square" /></a>
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white&amp;style=flat-square" />
-  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&amp;logoColor=white&amp;style=flat-square" />
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&amp;logoColor=white&amp;style=flat-square" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
-</p>
+- **Site Intelligence** crawls and understands pages and documents, builds project knowledge,
+  detects industry-specific gaps, and verifies changes after recrawl.
+- **Content Intelligence** turns verified gaps into strategies, briefs, FAQs, drafts, reviews,
+  and post-publication verification.
+- **Demand Intelligence** connects GSC, GA4, journeys, prompts, AI Visibility, and later paid
+  marketing evidence to decide what should improve next.
+- **Growth Agent** explains and orchestrates bounded tasks through typed tools, selective context,
+  explicit approvals, and reproducible provenance.
 
-<p align="center">
-  <code>AEO</code> · <code>GEO</code> · <code>AI Visibility</code> · <code>Brand Monitoring</code> · <code>Site Health</code> · <code>Technical SEO</code> · <code>Open Source</code>
-</p>
+AI Visibility remains an important measurement loop inside Demand Intelligence; it is no longer
+the organizing principle of the product.
 
-</div>
+## Durable differentiator
 
----
+The knowledge system combines:
 
-<a id="what-citeladder-does"></a>
-## What CiteLadder does
-
-CiteLadder connects two workflows that are usually fragmented across separate tools:
-
-1. **Measure AI visibility.** Run repeatable audits across ChatGPT, Claude, and Gemini using your own provider keys. Compare your brand with competitors, track visibility and share of voice over time, and inspect persisted mention, citation, and query-fanout evidence.
-2. **Improve answer readiness.** Crawl your site with a security-bounded acquisition ladder. Choose the URLs that matter, score Web Fundamentals and AEO health, investigate grouped issues, and drill into evidence and remediation for each page.
-
-Every report is built from persisted, versioned evidence. CiteLadder does not silently re-run providers, re-fetch pages, or invent missing metrics while rendering a dashboard.
-
-<a id="product-highlights"></a>
-## Product highlights
-
-<a id="visibility-intelligence"></a>
-### Visibility Intelligence
-
-- **Multi-engine audits** across ChatGPT/OpenAI, Claude/Anthropic, and Gemini/Google.
-- **Bring your own keys** with encrypted provider credentials and explicit transport routes.
-- **Four-part visibility workspace** covering overview, trends, mentions and citations, and query-fanout evidence.
-- **Competitive benchmarking** for brand mentions, citation ownership, share of voice, and rankings.
-- **Cross-run trends** with engine, time-range, and granularity controls.
-- **Evidence-first exploration** from a headline metric down to the exact persisted execution and source.
-- **Deterministic headline scoring** with analyzer and scoring-rule versions attached to every projection.
-
-<a id="site-health--aeo-auditing"></a>
-### Site Health & AEO Auditing
-
-- **Progressive URL discovery** through an in-house HTTP crawler with SSRF and resource-bound protections.
-- **Free sample and Starter monitoring modes** with privacy-aware count disclosure and quota-controlled URL selection.
-- **Web Fundamentals, AEO, and combined scores** with transparent rule outcomes and no fabricated zeros.
-- **Live crawl and analysis progress** with resilient polling plus credentialed SSE invalidation.
-- **Grouped issue intelligence** with severity, dimension, remediation, and affected-page navigation.
-- **Per-URL diagnostics** including delivery facts, normalized page facts, evidence, links, and issue history.
-- **Authenticated CSV and Markdown exports** scoped to the active workspace.
-
-<a id="built-for-trustworthy-operations"></a>
-### Built for trustworthy operations
-
-- Strict workspace isolation with UUID identifiers throughout.
-- Immutable artifacts and provenance-carrying analyses.
-- PostgreSQL-backed durable queues using `FOR UPDATE SKIP LOCKED`, leases, retries, and idempotency.
-- Same-origin frontend API proxying so backend origins and credentials stay server-side.
-- Typed API contracts validated at runtime with Zod and Pydantic.
-- Light and dark themes, responsive application shell, and reusable design tokens.
-
-> CiteLadder currently ships an active-project Dashboard with authenticated PDF reporting, Visibility Intelligence, audit evidence, provider management, Site Health, grouped Issues, and per-URL diagnostics. New projects attempt to queue a Free Site Health crawl on a best-effort basis; project creation remains successful if crawl queueing fails. Each workspace member can replay the guided product tour from the user menu.
-
----
-
-<a id="table-of-contents"></a>
-## Table of contents
-
-- [What CiteLadder does](#what-citeladder-does)
-- [Product highlights](#product-highlights)
-- [Architecture](#architecture)
-- [Tech stack](#tech-stack)
-- [Repository layout](#repository-layout)
-- [Prerequisites](#prerequisites)
-- [Quick start](#quick-start-docker-compose)
-- [Local development](#local-development-without-docker)
-- [Configuration](#configuration)
-- [Database migrations](#database-migrations)
-- [Testing](#testing)
-- [Key concepts](#key-concepts)
-- [Documentation map](#documentation-map)
-- [Known gotchas](#known-gotchas)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-<a id="architecture"></a>
-## Architecture
-
-CiteLadder is engineered as a modular monolith with strict security boundaries, immutable evidence persistence, and durable background worker orchestration.
-
-### System Components
-
-- **Frontend Application Shell (`Next.js 16 / TypeScript`)**: Delivers a responsive dashboard UI and manages authentication via HttpOnly JWT cookies. Handles same-origin proxying (`/api/*` → backend) to keep backend infrastructure and credentials isolated from browser bundles.
-- **Backend Service Core (`FastAPI / Python 3.12`)**: Exposes workspace-scoped REST endpoints, enforces domain invariants, handles Fernet-encrypted BYOK credentials, and orchestrates task state machines.
-- **Database & Queue Engine (`PostgreSQL 15+`)**: Single source of truth for workspace data, immutable evidence artifacts, derived metrics, and task queue rows (`FOR UPDATE SKIP LOCKED`).
-- **Background Worker Fleet**:
-  - **Audit Worker**: Claims queued audit tasks, executes BYOK provider requests (OpenAI, Anthropic, Google), and records raw response artifacts.
-  - **Site Health Worker**: Executes progressive HTTP crawling with SSRF protection, evaluates AEO & Web Fundamentals rules, and computes issue diagnostics.
-  - **Content Worker**: Handles asynchronous AI content generation requests using environment keys.
-
-### Core Architectural Pillars
-
-- **Same-Origin API Proxying**: The browser calls relative `/api/*` routes. Next.js forwards them to the server-only `BACKEND_ORIGIN`, preventing CORS issues and keeping backend topology hidden.
-- **Deterministic, Versioned Analysis**: Headline metrics and Site Health scores derive from explicit rules over raw persisted evidence. Unsupported metrics remain explicitly nullable (`—`).
-- **PostgreSQL-Backed Task Queueing**: Workers claim tasks with row-level locking (`FOR UPDATE SKIP LOCKED`), maintain lease heartbeats, retry safely, and reconcile terminal states without a Redis dependency.
-- **Immutable Evidence & Provenance**: Raw LLM payloads and crawl snapshots are written once. Derived analyses reference exact source artifact IDs and rule versions for 100% auditability.
-- **Strict Workspace Isolation**: All domain queries and persistence models enforce workspace UUID scoping server-side for complete multi-tenant isolation.
-
-<a id="tech-stack"></a>
-## Tech stack
-
-| Layer     | Technology |
-|-----------|------------|
-| Backend   | Python 3.12, FastAPI, SQLAlchemy (async) + asyncpg, Pydantic v2 / pydantic-settings, Alembic, httpx, argon2-cffi, joserfc (JWT), cryptography (Fernet), structlog |
-| Frontend  | Next.js (App Router) + TypeScript, Tailwind CSS v4, TanStack Query, react-hook-form + zod, Radix UI |
-| Database  | PostgreSQL |
-| Tooling   | `uv` (backend deps), `pnpm` (frontend), Docker Compose, Ruff, pytest / pytest-asyncio, Vitest + Testing Library + MSW, Playwright |
-
-<a id="repository-layout"></a>
-## Repository layout
-
-```
-CiteLadder/
-├── Agents.md                 # Coding-agent bootstrap; unified contract + rules
-├── README.md                 # This file
-├── LICENSE                   # MIT
-├── CONTRIBUTING.md           # Workflow, conventions, review checklist
-├── backend/                  # FastAPI service (uv project)
-│   └── app/
-│       ├── api/              # Routers (/api/v1/*)
-│       ├── core/            # config, database, security, telemetry
-│       ├── models/          # SQLAlchemy models (UUID PKs)
-│       ├── schemas/         # Pydantic DTOs
-│       ├── domain/          # Business logic per subsystem
-│       ├── connectors/      # BYOK answer-engine adapters
-│       ├── orchestration/   # Audit state machine + task queue
-│       ├── analysis/        # Deterministic scoring, normalization, exports
-│       └── workers/         # Audit, Site Health, and content workers
-├── frontend/                 # Next.js App Router app
-│   ├── app/                  # Routes (auth, app shell, screens)
-│   └── lib/api/             # Typed API-contract layer (zod schemas)
-├── migrations/               # Alembic (single greenfield 0001_initial baseline)
-├── infra/docker/             # docker-compose.yml + env template
-└── docs/                     # Architecture, invariants, design, plans
-    ├── DEVELOPMENT.md        # Environment setup + full gotchas runbook
-    ├── backend-architecture.md
-    ├── frontend-architecture.md
-    ├── invariants.md         # The 12 hard rules (review-blocking)
-    ├── design.md             # Design tokens, theme, per-screen layout
-    └── plans/                # Approved implementation plan
+```text
+immutable evidence
+  + versioned working intelligence
+  + explicitly approved project memory
+  + a versioned industry knowledge pack
 ```
 
-<a id="prerequisites"></a>
-## Prerequisites
+Industry packs define page roles, entities, assertions, journeys, customer questions, proof,
+schema expectations, gap rules, briefs, prompts, and evaluation fixtures. Customer facts remain
+workspace/project scoped and never become shared pack truth automatically.
 
-- **Docker + Docker Compose** (for the quick start), or for bare-metal dev:
-- **Python 3.12** and [`uv`](https://docs.astral.sh/uv/)
-- **Node.js 22+** and **pnpm 11+**
-- **PostgreSQL 15+** (only if running the backend outside Docker)
+Education and Commerce are the first reviewed packs. Foundation drafts cover major business
+families and are designed for extension through reviewed pack releases and project-scoped
+overlays.
 
-<a id="quick-start-docker-compose"></a>
-## Quick start (Docker Compose)
+## First complete workflow
 
-> **Important:** this machine (and CI-like shells) may export `POSTGRES_*` and
-> `DATABASE_URL` into every shell, which Compose resolves *before* `.env`. Use the
-> `env -u …` workaround verbatim — see [gotcha 1](#known-gotchas).
+FAQ Intelligence is the first narrow end-to-end proof:
+
+```text
+classify page role
+  -> detect missing or weak industry questions
+  -> build an evidence-grounded FAQ brief
+  -> generate and validate visible answers
+  -> human approval
+  -> optional matching FAQPage JSON-LD
+  -> recrawl verification
+```
+
+## Start here
+
+- [`Agents.md`](Agents.md) — mandatory implementation rules and task-specific document map.
+- [`docs/documentation-index.md`](docs/documentation-index.md) — complete active documentation
+  authority map.
+- [`docs/architecture.md`](docs/architecture.md) — canonical target architecture.
+- [`docs/plans/growth-intelligence-platform.md`](docs/plans/growth-intelligence-platform.md) —
+  program architecture and delivery order.
+- [`backend/app/core/config/industry_packs/README.md`](backend/app/core/config/industry_packs/README.md) — canonical industry catalog, runtime library, maturity, evaluation, and extension policy.
+- [`docs/plans/codex-site-intelligence-wiring-handoff.md`](docs/plans/codex-site-intelligence-wiring-handoff.md) — next gated slice for production persistence and wiring.
+
+Everything under `docs/archive/` is historical and is not an implementation authority.
+
+## Repository shape
+
+```text
+frontend/                         Next.js application
+backend/app/                      FastAPI modular monolith and workers
+migrations/versions/0001_initial.py
+                                  pre-launch canonical database baseline
+docs/plans/                       active target implementation plans
+backend/app/core/config/industry_packs/
+                                  canonical executable industry knowledge catalog
+docs/plans/industry-packs/        pointer to the canonical catalog only
+docs/archive/                     historical plans and superseded context
+```
+
+## Focused validation
 
 ```bash
-# 1. Copy the env template
-cp infra/docker/.env.example infra/docker/.env    # then edit secrets for anything non-local
+# From repository root
+python docs/validate_documentation.py
 
-# 2. Start Postgres first
-env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
-  POSTGRES_PASSWORD=citeladder_dev_password \
-  docker compose -f infra/docker/docker-compose.yml up -d --force-recreate db
+# Backend, from backend/
+uv run python -m app.core.config.industry_packs.validate
+uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
+uv run ruff check <changed paths>
 
-# 3. Apply migrations without leaving the project root
-(cd backend && uv run alembic upgrade head)
-
-# 4. Bring up the application services
-env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
-  POSTGRES_PASSWORD=citeladder_dev_password \
-  docker compose -f infra/docker/docker-compose.yml up -d --build
-
-# 5. Start the frontend (from frontend/)
-cd frontend
-echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
-pnpm install
-pnpm dev            # http://localhost:3000
+# Frontend, from frontend/ — pnpm only
+pnpm test -- <file>
+pnpm lint
+pnpm build
 ```
 
-Open <http://localhost:3000>, register a user (a workspace is created automatically), then
-create a project. Connect a BYOK provider to run Visibility audits, or open Site Health to
-discover and analyze the project website.
-
-<a id="local-development-without-docker"></a>
-## Local development (without Docker)
-
-```bash
-# Backend
-cd backend
-uv sync
-# point DATABASE_URL at your Postgres, e.g.
-export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder"
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload --port 8000     # web API
-uv run python -m app.workers.audit_worker            # audit worker (separate shell)
-uv run python -m app.workers.content_worker          # content worker (separate shell; optional)
-
-# Frontend
-cd frontend
-echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
-pnpm install
-pnpm dev
-```
-
-### Seed demo data (local development only, optional)
-
-> [!WARNING]
-> `scripts.seed_dev_data` is a **local-development-only** script. It **deletes**
-> the demo workspaces and the demo user on every run, and creates a fixed,
-> publicly-documented login. Run it only against a disposable local database —
-> **never** against a shared, staging, or production database. The script
-> **fails closed**: it refuses to run (before any delete, commit, or credential
-> creation) unless `APP_ENV` is a development value (`development` / `dev` /
-> `local` / `test` / `testing`). An unset `APP_ENV` is treated as production and
-> refused.
-
-With a local Postgres running and migrations applied, generate a full demo
-dataset from `backend/`:
-
-```bash
-APP_ENV=development uv run python -m scripts.seed_dev_data
-```
-
-This creates the demo login `demo@citeladder.dev` / `DemoPass123!`, two
-workspaces, two projects with completed audits (mention/citation evidence),
-a completed Site Health crawl, and a product catalog whose fixture answers
-produce real Commerce Visibility numbers (product mentions, prices, share of
-voice). The seed is idempotent — it replaces the demo workspaces on each
-run — and deterministic: reseeding reproduces the same outcomes and
-aggregates.
-
-<a id="configuration"></a>
-## Configuration
-
-Backend settings are read from the environment (see `infra/docker/.env.example`):
-
-| Variable | Purpose |
-|----------|---------|
-| `APP_ENV` | `development` / `test` / `production` (controls cookie `Secure`, CORS) |
-| `DATABASE_URL` | Async SQLAlchemy DSN (`postgresql+asyncpg://…`) |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Compose Postgres credentials |
-| `JWT_SECRET_KEY` / `JWT_ALGORITHM` / `JWT_EXPIRE_HOURS` | Session JWT (HttpOnly cookie) |
-| `ENCRYPTION_KEY` | Fernet key for BYOK provider secrets at rest |
-| `FRONTEND_URL` / `FRONTEND_ORIGINS` | Allowed origins |
-| `LOGFIRE_ENABLED` / `LOGFIRE_TOKEN` | Optional observability |
-| `CONTENT_PROVIDER` / `CONTENT_MODEL` | Content-generation provider (default `mistral` / `mistral-small-latest`) |
-| `MISTRAL_API_KEY` | Content provider API key (env-held, never per-workspace). **Empty = content generation disabled** (enqueue returns 409) |
-| `CONTENT_PROVIDER_ENDPOINT` / `CONTENT_REQUEST_TIMEOUT_SECONDS` / `CONTENT_MAX_OUTPUT_TOKENS` | Content provider endpoint (OpenAI-compatible chat completions), request timeout, output token cap |
-
-Frontend: `BACKEND_ORIGIN` (server-only) is the backend the Next.js `rewrites()` proxy
-forwards `/api/*` to. Never expose it to the browser.
-
-<a id="database-migrations"></a>
-## Database migrations
-
-Migrations live in `migrations/` and are applied with Alembic:
-
-```bash
-cd backend
-uv run alembic upgrade head          # create the full schema
-uv run alembic check                 # assert no ORM-vs-migration drift
-```
-
-> [!WARNING]
-> `uv run alembic downgrade base` **drops every table**. Run it only against a
-> disposable local or CI database that you are willing to lose — never against a
-> shared, staging, or production database.
-
-> **Greenfield migration policy.** CiteLadder maintains one complete
-> `0001_initial` baseline. Schema work is folded into that revision, then
-> verified with a fresh disposable database (`alembic upgrade head` and
-> `alembic check`).
-
-<a id="testing"></a>
-## Testing
-
-```bash
-# Backend (from backend/) — needs only a running local Postgres; server creds
-# come from the repo .env DATABASE_URL. The suite creates and drops a
-# throwaway citeladder_tests_<runid> database automatically.
-cd backend
-uv run pytest -q
-uv run ruff check .
-
-# Frontend (from frontend/)
-cd frontend
-pnpm test             # Vitest unit/component tests (MSW-mocked network)
-pnpm check:contract   # backend OpenAPI vs zod contract drift (fails if no
-                      # OpenAPI source — `pnpm test` only WARNS and skips it)
-pnpm check:policy     # architecture / token guards
-pnpm build            # next build
-pnpm exec tsc --noEmit # type check
-pnpm test:e2e         # Playwright (requires a browser + running stack)
-```
-
-<a id="key-concepts"></a>
-## Key concepts
-
-- **Unified contract.** All ids are string UUIDs, workspace-scoped (no `user_id` scoping, no
-  integer PKs). API prefix is `/api/v1`.
-- **Engines vs transports.** Logical engines are `chatgpt | gemini | claude`; active
-  transports are exactly `openai | anthropic | google`, with one approved direct route per
-  engine (`chatgpt → openai → gpt-5.4`, `claude → anthropic → claude-sonnet-4-6`, `gemini →
-  google → gemini-flash-latest`). ChatGPT runs through the **direct OpenAI Responses API**.
-  Every route/attempt records all three identities: logical engine + transport provider + exact
-  transport model.
-- **Benchmark modes.** `consumer_like | controlled_localized | forced_grounded`.
-- **Prompt intents.** `discovery | comparison | purchase | service | local`.
-- **BYOK security.** Provider API keys are Fernet-encrypted at rest, resolved only at
-  execution time, and never returned in a DTO, logged, or sent as part of a prompt.
-- **Site Health capabilities.** Site Health is capability-gated per workspace
-  (`free | starter`). Free runs a deterministic, read-only **sample** crawl and never
-  discloses the discovered/full-site total; Starter runs the full progressive inventory and
-  lets the user pick a monitored URL set (quota-limited) that is analyzed and dashboarded.
-  See [`docs/site-health.md`](docs/site-health.md).
-
-<a id="documentation-map"></a>
-## Documentation map
-
-| Doc | What it covers |
-|-----|----------------|
-| [`Agents.md`](Agents.md) | Coding-agent bootstrap, unified contract, always-on rules |
-| [`docs/architecture.md`](docs/architecture.md) | Whole-product architecture (authoritative high-level reference) |
-| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Environment setup + full gotchas runbook |
-| [`docs/backend-architecture.md`](docs/backend-architecture.md) | API, models, queue, state machine, analysis |
-| [`docs/frontend-architecture.md`](docs/frontend-architecture.md) | Routes, API-contract layer, data flow |
-| [`docs/api-error-contract.md`](docs/api-error-contract.md) | The API error envelope end-to-end: wire shape, backend handlers, frontend consumption |
-| [`docs/invariants.md`](docs/invariants.md) | The 12 hard rules (review-blocking) |
-| [`docs/design.md`](docs/design.md) | Design tokens, theme, per-screen layout |
-| [`docs/site-health.md`](docs/site-health.md) | Site Health: entitlements, statuses, API endpoints, routes, exports |
-| [`docs/plans/`](docs/plans/) | Historical implementation plans and task graphs |
-| [`docs/roadmap/`](docs/roadmap/) | Shipped design records and specifications for future product surfaces |
-
-<a id="known-gotchas"></a>
-## Known gotchas
-
-Two environment-specific gotchas will bite you if you don't know them (full runbooks in
-[`docs/invariants.md`](docs/invariants.md) §11–12 and [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)):
-
-1. **Shell secrets override Docker Compose `${VAR}`.** The shell exports
-   `POSTGRES_*`/`DATABASE_URL`; Compose interpolates `${VAR}` from the shell before `.env`,
-   so the stack boots with the wrong credentials. Fix: unset them for the Compose invocation
-   with `env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL POSTGRES_PASSWORD=<value> docker compose …`.
-2. **Tunnel double CORS header.** The preview/tunnel proxy injects its own
-   `Access-Control-Allow-Origin: *`; a backend that also sets ACAO yields two ACAO headers
-   browsers reject. `curl` cannot reproduce it. Fix: the browser only calls relative
-   `/api/*`, proxied same-origin via Next.js `rewrites()`. **Always test this in a real
-   browser, not curl.**
-
-<a id="contributing"></a>
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the branch/commit conventions, the review
-checklist, and how the 12 invariants gate a change.
-
-<a id="license"></a>
-## License
-
-Released under the [MIT License](LICENSE).
-
+See `Agents.md` and the owning architecture document before changing code. CiteLadder is a dirty,
+active multi-workstream repository; preserve unrelated user-owned changes and verify focused
+slices rather than rewriting other workstreams.

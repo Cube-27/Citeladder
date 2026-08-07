@@ -1,9 +1,9 @@
 # Development guide — CiteLadder
 
-Everything you need to run, test, and troubleshoot CiteLadder locally, plus the two
-environment gotchas that will otherwise cost you an afternoon. Pair this with
-[`../Agents.md`](../Agents.md) (contract + rules) and [`invariants.md`](invariants.md)
-(the review-blocking hard rules, including the canonical gotcha runbooks §11–12).
+Everything needed to run, test, and troubleshoot CiteLadder locally, including two
+environment gotchas that otherwise waste substantial time. Pair this with
+[`../Agents.md`](../Agents.md), [`README.md`](README.md), and
+[`invariants.md`](invariants.md).
 
 ## Toolchain
 
@@ -26,15 +26,23 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-Run the audit worker in a **separate** process (it claims and executes queued audit tasks):
+Run only the separate workers required by the workflow under test. The web process enqueues
+work and never performs provider calls or long-running crawl/sync/generation work inline.
 
 ```bash
 cd backend
 uv run python -m app.workers.audit_worker
+uv run python -m app.workers.audit_scheduler
+uv run python -m app.workers.site_health_worker
+uv run python -m app.workers.brand_discovery_worker
+uv run python -m app.workers.content_worker
+uv run python -m app.workers.integration_worker
+uv run python -m app.workers.integration_dispatcher
+uv run python -m app.workers.analytics_worker
 ```
 
-The web API and the worker are separate processes on purpose — the web process never
-executes provider calls; it only enqueues tasks (invariant 8).
+Each process uses the shared durable PostgreSQL queue/lease contract and receives only the
+configuration/secrets required by its owner.
 
 ## Frontend setup
 
@@ -61,8 +69,9 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 cd backend && uv run alembic upgrade head
 ```
 
-The compose file defines three services: `db` (Postgres), `web` (FastAPI), `worker` (audit
-worker). See `infra/docker/README.md` for details.
+The Compose stack defines PostgreSQL, migrations, FastAPI, and the current workers/schedulers for
+audits, Site Health, onboarding, content, integrations, and analytics. See
+`infra/docker/docker-compose.yml` for the executable process list.
 
 ## Testing
 

@@ -1,5 +1,14 @@
 # Site Health, Commerce Intelligence, and AI Presence Upgrade
 
+> **Status:** historical foundation plan, substantially delivered. Future product and
+> implementation work is superseded by the canonical
+> [`Growth Intelligence Platform`](growth-intelligence-platform.md) and its detailed
+> [`Site Intelligence and Knowledge Foundation`](site-intelligence-primary-product.md),
+> [`Content Intelligence`](content-intelligence.md),
+> [`Demand Intelligence`](demand-intelligence.md), and
+> [`Growth Agent`](growth-agent.md) plans. This file documents the foundation that shipped; it is
+> not the source of truth for future sequencing or product hierarchy.
+
 ## Summary and Preflight
 
 - Create `feature/site-health-commerce-intelligence` in a separate worktree from `origin/main`; never switch the current dirty checkout.

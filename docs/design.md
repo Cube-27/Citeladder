@@ -6,8 +6,8 @@
 ## Direction and identity
 
 CiteLadder is a light-only, evidence-led enterprise system. It should feel
-calm, precise, and operational: identify what answer engines say, understand
-the evidence, resolve gaps, and measure the result.
+calm, precise, and operational: understand the business and its owned evidence,
+identify industry-specific gaps and demand, resolve them, and measure the result.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
 - **Voice:** direct, confident, and specific. Prefer evidence and outcomes over
