@@ -24,7 +24,8 @@ function groupAnchor(group: FaqGroup): string {
   const fallback = group.heading
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/^-/, '')
+    .replace(/-$/, '');
   return GROUP_ANCHORS[group.heading] ?? `faq-${fallback}`;
 }
 

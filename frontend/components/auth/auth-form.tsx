@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff, Lock, Mail, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { type ComponentProps, type FormEventHandler, type ReactNode, useState } from 'react';
+import { type ComponentProps, type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/marketing/primitives/button';
 import { Alert as MktAlert } from '@/components/ui/alert';
@@ -95,7 +95,7 @@ export function AuthFormShell({
   title: string;
   description: string;
   error?: string;
-  onSubmit: FormEventHandler<HTMLFormElement>;
+  onSubmit: ComponentProps<'form'>['onSubmit'];
   pending: boolean;
   submitLabel: string;
   pendingLabel: string;

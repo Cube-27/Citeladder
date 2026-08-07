@@ -290,8 +290,10 @@ export function MarketingNav() {
 
           <AnimatePresence>
             {openDrop !== null && (
+              /* Deliberately no `role="menu"`: the panel holds ordinary links,
+                 not `menuitem` children, and the ARIA menu pattern would
+                 promise arrow-key navigation this nav does not implement. */
               <div
-                role="menu"
                 id={`desktop-nav-panel-${openDrop}`}
                 onMouseEnter={clearDropClose}
                 style={{

@@ -302,7 +302,7 @@ function TrendCard({
   domainMax?: number;
 }>) {
   const firstLabel = points[0]?.label ?? '';
-  const lastLabel = points[points.length - 1]?.label ?? '';
+  const lastLabel = points.at(-1)?.label ?? '';
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-2">
@@ -463,7 +463,7 @@ function EngineTile({ engine }: Readonly<{ engine: LlmAnalytics['engine_visibili
   const latest = latestValue(engine.series);
   const points = toCountChartPoints(engine.series);
   const firstLabel = points[0]?.label ?? '';
-  const lastLabel = points[points.length - 1]?.label ?? '';
+  const lastLabel = points.at(-1)?.label ?? '';
   return (
     <div className="border-border-subtle bg-background-alt grid gap-2 rounded-lg border p-4">
       <div className="flex items-center gap-2">

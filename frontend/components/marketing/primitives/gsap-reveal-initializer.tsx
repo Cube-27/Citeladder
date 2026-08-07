@@ -9,6 +9,9 @@ if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+/** Horizontal entry offset per `data-citeladder-reveal-from` direction. */
+const X_OFFSET_BY_DIRECTION: Record<string, number> = { left: -30, right: 30 };
+
 export function GsapRevealInitializer() {
   const reduceMotion = useReducedMotion();
 
@@ -21,10 +24,10 @@ export function GsapRevealInitializer() {
       if (reduceMotion || typeof window === 'undefined') return;
 
       // Reveal single elements
-      const elements = document.querySelectorAll('[data-citeladder-reveal=""]');
+      const elements = document.querySelectorAll<HTMLElement>('[data-citeladder-reveal=""]');
       elements.forEach((el) => {
-        const fromDir = el.getAttribute('data-citeladder-reveal-from') || 'up';
-        const xOffset = fromDir === 'left' ? -30 : fromDir === 'right' ? 30 : 0;
+        const fromDir = el.dataset.citeladderRevealFrom || 'up';
+        const xOffset = X_OFFSET_BY_DIRECTION[fromDir] ?? 0;
         const yOffset = fromDir === 'up' ? 24 : 0;
 
         gsap.fromTo(

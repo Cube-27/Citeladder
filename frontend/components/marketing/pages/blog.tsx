@@ -100,13 +100,9 @@ export function BlogIndex() {
               >
                 <div className="p-6 md:p-8">
                   <TagRow tags={featured.tags} />
-                  <p
-                    role="heading"
-                    aria-level={2}
-                    className="font-display text-foreground group-hover:text-accent-text max-w-[32ch] text-3xl transition-colors duration-200"
-                  >
+                  <h2 className="font-display text-foreground group-hover:text-accent-text max-w-[32ch] text-3xl font-normal transition-colors duration-200">
                     {featured.title}
-                  </p>
+                  </h2>
                   <p className="text-muted mt-4 max-w-[65ch] text-base">{featured.excerpt}</p>
                   <PostMeta post={featured} />
                   <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
@@ -138,13 +134,9 @@ export function BlogIndex() {
                       className="hover:bg-accent-soft group block px-5 py-5 transition-colors duration-200 md:px-6"
                     >
                       <TagRow tags={post.tags} />
-                      <p
-                        role="heading"
-                        aria-level={3}
-                        className="font-display text-foreground text-xl"
-                      >
+                      <h3 className="font-display text-foreground text-xl font-normal">
                         {post.title}
-                      </p>
+                      </h3>
                       <p className="text-muted mt-2 max-w-[65ch] text-sm">{post.excerpt}</p>
                       <PostMeta post={post} />
                     </Link>
@@ -186,7 +178,7 @@ export function BlogIndex() {
 }
 
 function authorInitial(author: string) {
-  return author.match(/[a-z]/i)?.[0].toUpperCase() ?? '?';
+  return /[a-z]/i.exec(author)?.[0].toUpperCase() ?? '?';
 }
 
 function PostMetaByline({ post }: Readonly<{ post: BlogPost }>) {

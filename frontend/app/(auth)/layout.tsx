@@ -50,15 +50,15 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
             <ul className="text-muted mt-8 flex flex-wrap items-center justify-center gap-2 text-xs min-[900px]:hidden">
               <li className="border-border-subtle bg-panel flex items-center gap-1.5 rounded-full border px-3 py-1">
                 <span aria-hidden className="bg-accent size-1.5 rounded-full" />
-                Deterministic scoring
+                <span>Deterministic scoring</span>
               </li>
               <li className="border-border-subtle bg-panel flex items-center gap-1.5 rounded-full border px-3 py-1">
                 <span aria-hidden className="bg-success size-1.5 rounded-full" />
-                Verified evidence
+                <span>Verified evidence</span>
               </li>
               <li className="border-border-subtle bg-panel flex items-center gap-1.5 rounded-full border px-3 py-1">
                 <span aria-hidden className="bg-accent size-1.5 rounded-full" />
-                Encrypted keys
+                <span>Encrypted keys</span>
               </li>
             </ul>
           </div>

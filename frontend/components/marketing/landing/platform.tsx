@@ -37,7 +37,7 @@ export function Platform() {
                   </span>
                   <span className="bg-success-bg/80 text-success-text border-success-border/60 text-2xs inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono font-medium">
                     <span className="bg-success-text size-1.5 animate-pulse rounded-full" />
-                    Ingesting Pipelines
+                    <span>Ingesting Pipelines</span>
                   </span>
                 </div>
                 <h3 className="font-display text-foreground mt-2.5 text-xl font-bold md:text-2xl">

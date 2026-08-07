@@ -75,7 +75,8 @@ export function GettingStartedCard({ className }: Readonly<{ className?: string 
 
   const completed = steps.filter((step) => step.done).length;
   const total = steps.length;
-  const nextStep = steps.find((step) => !step.done) ?? steps[steps.length - 1];
+  // `steps` is a non-empty literal, so the fallback is always defined.
+  const nextStep = steps.find((step) => !step.done) ?? steps[total - 1];
   const pct = Math.round((completed / total) * 100);
 
   return (

@@ -23,6 +23,8 @@ import { cn, emailInitials } from '@/lib/utils';
  * confirmed cookie revocation. A failed request keeps the authenticated UI and
  * offers a retry instead of pretending the session ended.
  */
+const SettingsIcon = ICONS.settings;
+
 export function UserMenu({ className }: Readonly<{ className?: string }>) {
   const { user, clearSession } = useSession();
 
@@ -50,7 +52,7 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           <DropdownSeparator className="bg-border-subtle my-1 h-px" />
           <DropdownItem asChild>
             <Link href="/settings">
-              <ICONS.settings className="size-4 shrink-0" aria-hidden />
+              <SettingsIcon className="size-4 shrink-0" aria-hidden />
               <span>Settings</span>
             </Link>
           </DropdownItem>

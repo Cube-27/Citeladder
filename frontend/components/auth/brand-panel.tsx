@@ -70,7 +70,7 @@ export function AuthBrandPanel() {
               <span className="bg-accent absolute inline-flex size-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"></span>
               <span className="bg-accent relative inline-flex size-2 rounded-full"></span>
             </span>
-            Enterprise AI Search Intelligence
+            <span>Enterprise AI Search Intelligence</span>
           </div>
 
           <div className="space-y-3">
