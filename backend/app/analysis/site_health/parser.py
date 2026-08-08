@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import codecs
 import logging
+import re
 from typing import Any
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import unquote, urljoin, urlsplit
 
 from lxml import etree
 from lxml import html as lxml_html
 
-from app.analysis.site_health.page_types import is_question_heading
+from app.analysis.site_health.page_kinds import is_question_heading
 from app.analysis.site_health.structured_data import (
     parse_jsonld_blocks,
     product_facts,
@@ -48,6 +49,13 @@ _MAX_HEADING_CHARS = site_health_config.SITE_HEALTH_MAX_HEADING_CHARS
 _MAX_HEADINGS_KEPT = site_health_config.SITE_HEALTH_MAX_HEADINGS_KEPT
 _MAX_URL_CHARS = site_health_config.SITE_HEALTH_MAX_URL_CHARS
 _MAX_ANCHOR_TEXT_CHARS = site_health_config.SITE_HEALTH_MAX_ANCHOR_TEXT_CHARS
+_MAX_CTA_TEXTS = site_health_config.SITE_HEALTH_MAX_CTA_TEXTS
+_MAX_CTA_TEXT_CHARS = site_health_config.SITE_HEALTH_MAX_CTA_TEXT_CHARS
+_MAX_FORM_FIELDS = site_health_config.SITE_HEALTH_MAX_FORM_FIELDS
+_MAX_FORM_FIELD_CHARS = site_health_config.SITE_HEALTH_MAX_FORM_FIELD_CHARS
+_MAX_LINK_CONTEXT = site_health_config.SITE_HEALTH_MAX_LINK_CONTEXT
+_MAX_LINK_CONTEXT_CHARS = site_health_config.SITE_HEALTH_MAX_LINK_CONTEXT_CHARS
+CTA_BUTTON_ROLE_TOKENS = site_health_config.CTA_BUTTON_ROLE_TOKENS
 _MAX_AUTHOR_CHARS = site_health_config.SITE_HEALTH_MAX_AUTHOR_CHARS
 _MAX_DATE_CHARS = site_health_config.SITE_HEALTH_MAX_DATE_CHARS
 _MAX_OUTBOUND_DOMAINS = site_health_config.SITE_HEALTH_MAX_OUTBOUND_DOMAINS
@@ -56,6 +64,24 @@ _MAX_HREFLANG_ALTERNATES = site_health_config.SITE_HEALTH_MAX_HREFLANG_ALTERNATE
 _MAX_HREFLANG_CHARS = site_health_config.SITE_HEALTH_MAX_HREFLANG_CHARS
 _MAX_FIRST_ANSWER_CHARS = site_health_config.SITE_HEALTH_MAX_FIRST_ANSWER_CHARS
 _MAX_INLINE_SCRIPT_CHARS = site_health_config.SITE_HEALTH_MAX_INLINE_SCRIPT_CHARS
+_MAX_CONTACT_POINTS = site_health_config.SITE_HEALTH_MAX_CONTACT_POINTS
+_MAX_CONTACT_VALUE_CHARS = site_health_config.SITE_HEALTH_MAX_CONTACT_VALUE_CHARS
+_MAX_MONEY_MENTIONS = site_health_config.SITE_HEALTH_MAX_MONEY_MENTIONS
+_MAX_MONEY_CONTEXT_CHARS = site_health_config.SITE_HEALTH_MAX_MONEY_CONTEXT_CHARS
+_MAX_MONEY_RAW_CHARS = site_health_config.SITE_HEALTH_MAX_MONEY_RAW_CHARS
+MONEY_CURRENCY_SYMBOLS = site_health_config.MONEY_CURRENCY_SYMBOLS
+# A currency token (symbol or ISO code) immediately preceding an amount.
+# Currency-FIRST only: a trailing token is ambiguous ("50 lakh", "20 000 sq ft")
+# and the ordering that matters for fees is universally symbol-first.
+# The grouped branch requires at least ONE separator so it cannot claim a
+# prefix of an ungrouped run: with ``*`` it matched "250" out of "250000" and
+# reported a 250-rupee annual fee. Both Western (250,000) and Indian
+# (2,50,000) grouping are accepted, hence the 2-or-3 digit group.
+_MONEY_PATTERN = re.compile(
+    r"(?P<currency>₹|\$|£|€|¥|₦|₨|INR|USD|GBP|EUR|AED|Rs\.?)\s*"
+    r"(?P<amount>\d{1,3}(?:[,\s]\d{2,3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
+    re.IGNORECASE,
+)
 # The security response headers whose mere presence the delivery facts record.
 _SECURITY_HEADERS = (
     "strict-transport-security",
@@ -204,6 +230,235 @@ def _headings(root: Any) -> dict[str, Any]:
         "h2_texts": h2_texts,
         "h3_texts": h3_texts,
     }
+
+
+def _is_cta_anchor(node: Any) -> bool:
+    """Whether an anchor presents as a call to action rather than navigation.
+
+    Every anchor would swamp the CTA signal, so an anchor qualifies only on an
+    explicit button affordance: ``role="button"`` or a button/CTA token in its
+    class list. That keeps "Apply now" and "Enquire" while dropping the footer
+    sitemap.
+    """
+    role = str(node.get("role") or "").strip().casefold()
+    if role == "button":
+        return True
+    classes = str(node.get("class") or "").casefold()
+    if not classes:
+        return False
+    tokens = set(re.split(r"[\s_-]+", classes))
+    return bool(tokens & CTA_BUTTON_ROLE_TOKENS)
+
+
+def _cta_texts(root: Any) -> list[str]:
+    """Bounded visible call-to-action wording in document order.
+
+    Buttons, submit inputs, and button-like anchors. The pack classifier scores
+    conversion roles from this wording, so a missing extractor here makes an
+    enquiry page indistinguishable from an informational one.
+    """
+    texts: list[str] = []
+    seen: set[str] = set()
+
+    def _add(value: str) -> None:
+        cleaned = " ".join(str(value or "").split())[:_MAX_CTA_TEXT_CHARS]
+        if not cleaned:
+            return
+        key = cleaned.casefold()
+        if key in seen:
+            return
+        seen.add(key)
+        texts.append(cleaned)
+
+    try:
+        for node in root.iter("button", "a", "input"):
+            if len(texts) >= _MAX_CTA_TEXTS:
+                break
+            tag = str(node.tag).lower()
+            if tag == "button":
+                _add(_text(node))
+            elif tag == "input":
+                if str(node.get("type") or "").strip().casefold() in {
+                    "submit",
+                    "button",
+                }:
+                    _add(node.get("value") or "")
+            elif _is_cta_anchor(node):
+                _add(_text(node))
+    # Malformed markup must degrade to fewer facts, never fail the analysis.
+    except Exception:
+        pass
+    return texts[:_MAX_CTA_TEXTS]
+
+
+def _form_fields(root: Any) -> list[str]:
+    """Bounded form-field labels: what a page ASKS a visitor for.
+
+    Field labels separate an admissions enquiry form from a newsletter signup
+    far more reliably than the surrounding prose does. Prefers the visible
+    label, falling back to the accessible name, placeholder, or field name —
+    never a value, so nothing a user typed can be captured.
+    """
+    fields: list[str] = []
+    seen: set[str] = set()
+    try:
+        labels_by_for: dict[str, str] = {}
+        for label in root.iter("label"):
+            target = str(label.get("for") or "").strip()
+            if target and target not in labels_by_for:
+                labels_by_for[target] = _text(label)
+        for node in root.iter("input", "select", "textarea"):
+            if len(fields) >= _MAX_FORM_FIELDS:
+                break
+            # Every action control, not just the two obvious ones: ``reset`` and
+            # ``image`` are buttons too, and their label would otherwise enter
+            # the classifier as something the page ASKS the visitor for.
+            if str(node.get("type") or "").strip().casefold() in {
+                "hidden",
+                "submit",
+                "button",
+                "reset",
+                "image",
+            }:
+                continue
+            candidate = (
+                labels_by_for.get(str(node.get("id") or "").strip(), "")
+                or node.get("aria-label")
+                or node.get("placeholder")
+                or node.get("name")
+                or ""
+            )
+            cleaned = " ".join(str(candidate).split())[:_MAX_FORM_FIELD_CHARS]
+            if not cleaned:
+                continue
+            key = cleaned.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            fields.append(cleaned)
+    except Exception:
+        pass
+    return fields[:_MAX_FORM_FIELDS]
+
+
+def _contact_points(root: Any) -> list[dict[str, str]]:
+    """Bounded declared contact points, read from ``mailto:``/``tel:`` hrefs.
+
+    An href is an AUTHORED declaration — the site saying "reach us here". A
+    regex over body text is not: it also matches an address in a testimonial, a
+    placeholder in a sample form, and a partner organization's details, all of
+    which would then be asserted as this project's contact information.
+
+    Nothing here is treated as personal data to retain: these are the public
+    contact points a site publishes for exactly this purpose.
+    """
+    points: list[dict[str, str]] = []
+    seen: set[str] = set()
+    try:
+        for node in root.iter("a"):
+            if len(points) >= _MAX_CONTACT_POINTS:
+                break
+            href = str(node.get("href") or "").strip()
+            lowered = href.casefold()
+            if lowered.startswith("mailto:"):
+                channel, raw = "email", href[7:]
+            elif lowered.startswith("tel:"):
+                channel, raw = "phone", href[4:]
+            else:
+                continue
+            # Drop any mailto query (?subject=/&body=): it is template text,
+            # not an address, and would make two links to one inbox look like
+            # two different contact points. Percent-decode first — an authored
+            # ``mailto:%20info@x.test`` is one inbox, and leaving the escape in
+            # persists an unusable address AND a duplicate of the real one
+            # (observed live on the first acceptance corpus).
+            value = unquote(raw.split("?", 1)[0]).strip()[:_MAX_CONTACT_VALUE_CHARS]
+            if not value:
+                continue
+            key = f"{channel}|{value.casefold()}"
+            if key in seen:
+                continue
+            seen.add(key)
+            points.append({"channel": channel, "value": value})
+    except Exception:
+        pass
+    return points
+
+
+def _money_mentions(text: str) -> list[dict[str, Any]]:
+    """Bounded currency-qualified amounts in visible copy.
+
+    Only amounts carrying a recognized currency are returned. A bare number is
+    never promoted to money: "250000" on a fees page could be an amount, a
+    student count, or a phone extension, and a report that renders it beside a
+    currency symbol it invented is worse than one that reports the fee as
+    missing.
+    """
+    mentions: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for match in _MONEY_PATTERN.finditer(text or ""):
+        if len(mentions) >= _MAX_MONEY_MENTIONS:
+            break
+        token = (match.group("currency") or "").strip().upper()
+        currency = MONEY_CURRENCY_SYMBOLS.get(token) or MONEY_CURRENCY_SYMBOLS.get(
+            match.group("currency") or ""
+        )
+        if not currency:
+            continue
+        digits = (match.group("amount") or "").replace(",", "").replace(" ", "")
+        try:
+            amount = float(digits)
+        except ValueError:
+            continue
+        start = max(0, match.start() - _MAX_MONEY_CONTEXT_CHARS // 2)
+        # Surrounding words are what later tells an annual tuition fee from a
+        # one-time registration fee. Bounded and text-only.
+        context = " ".join(
+            text[start : match.end() + _MAX_MONEY_CONTEXT_CHARS // 2].split()
+        )[:_MAX_MONEY_CONTEXT_CHARS]
+        # The CONTEXT is part of the identity. Keying on currency+amount alone
+        # collapsed "Grade 8: INR 250000" and "Grade 9: INR 250000" into one
+        # mention and silently discarded the second grade's fee.
+        key = f"{currency}|{amount}|{context}"
+        if key in seen:
+            continue
+        seen.add(key)
+        mentions.append(
+            {
+                "currency": currency,
+                "amount": amount,
+                "raw": match.group(0).strip()[:_MAX_MONEY_RAW_CHARS],
+                "context": context,
+            }
+        )
+    return mentions
+
+
+def _link_context(anchors: list[dict]) -> list[str]:
+    """Bounded internal anchor text — what this page says its neighbours are.
+
+    Derived from the already-extracted anchors rather than a second DOM pass:
+    internal anchor text is how a hub page advertises the pages it links to,
+    which is what lets the classifier tell a listing from a detail page.
+    """
+    context: list[str] = []
+    seen: set[str] = set()
+    for anchor in anchors:
+        if len(context) >= _MAX_LINK_CONTEXT:
+            break
+        if not anchor.get("is_internal"):
+            continue
+        cleaned = " ".join(str(anchor.get("anchor_text") or "").split())[
+            :_MAX_LINK_CONTEXT_CHARS
+        ]
+        if not cleaned:
+            continue
+        key = cleaned.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        context.append(cleaned)
+    return context
 
 
 def _images(root: Any) -> dict[str, int]:
@@ -692,6 +947,10 @@ def _empty_facts() -> dict[str, Any]:
         },
         "images": {"count": 0, "missing_alt": 0},
         "body": {"text": "", "word_count": 0},
+        # Industry-role classifier facts (see the extractors above).
+        "cta_text": [],
+        "form_fields": [],
+        "link_context": [],
         "structured_data": {
             "blocks": [],
             "count": 0,
@@ -717,6 +976,9 @@ def _empty_facts() -> dict[str, Any]:
         "hreflang_alternates": [],
         "first_answer_text": "",
         "inline_script_chars": 0,
+        # v2 S2 (sh-extractor-4) knowledge evidence.
+        "contact_points": [],
+        "money_mentions": [],
     }
 
 
@@ -807,6 +1069,14 @@ def extract_page_facts(
     facts["links"] = _links_and_assets(
         root, base_host=base_host, max_links=settings.max_links_per_page
     )
+    # Industry-role classifier facts. ``link_context`` reuses the anchors just
+    # extracted rather than walking the DOM again.
+    facts["cta_text"] = _cta_texts(root)
+    facts["form_fields"] = _form_fields(root)
+    facts["link_context"] = _link_context(facts["links"].get("anchors") or [])
+    # Knowledge evidence (sh-extractor-4). Contact points read hrefs, so they
+    # must run before ``_body_text`` mutates the tree.
+    facts["contact_points"] = _contact_points(root)
 
     # v2 P2 (sh-extractor-2) fields: citability + extractability + hreflang.
     facts["author"], facts["dates"] = _author_and_dates(
@@ -844,6 +1114,9 @@ def extract_page_facts(
 
     # Body text last (it mutates the tree by removing script/style subtrees).
     facts["body"] = _body_text(root, max_chars=settings.max_text_chars)
+    # Money is scanned over the already-bounded VISIBLE text, so an amount
+    # inside a script literal or a style block can never become a published fee.
+    facts["money_mentions"] = _money_mentions(facts["body"].get("text", ""))
 
     # Click-to-expand gating: gated words as a fraction of the visible body
     # word count (details/aria-expanded subtrees survive _body_text's junk

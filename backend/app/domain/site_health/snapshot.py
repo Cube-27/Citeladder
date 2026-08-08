@@ -32,8 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.site_health.scoring import (
     AnalysisScoreInput,
-    PageTypeScoreInput,
-    aggregate_by_page_type,
+    PageKindScoreInput,
+    aggregate_by_page_kind,
     aggregate_scores,
 )
 from app.core.config.site_health import (
@@ -41,6 +41,9 @@ from app.core.config.site_health import (
     PAGE_ANALYSIS_STATUS_COMPLETED,
     SCORING_VERSION,
 )
+from app.core.config.site_intelligence import DIMENSION_FORMULA_VERSION
+from app.domain.site_health.intelligence import build_intelligence_projection
+from app.domain.site_health.knowledge import build_crawl_knowledge
 from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
@@ -92,7 +95,7 @@ async def persist_crawl_snapshot(
             SitePageAnalysis.technical_score.label("technical_score"),
             SitePageAnalysis.aeo_score.label("aeo_score"),
             SitePageAnalysis.overall_score.label("overall_score"),
-            SitePageAnalysis.page_type.label("page_type"),
+            SitePageAnalysis.page_kind.label("page_kind"),
             func.row_number()
             .over(
                 partition_by=SitePageAnalysis.site_url_id,
@@ -124,7 +127,7 @@ async def persist_crawl_snapshot(
                 ranked.c.technical_score,
                 ranked.c.aeo_score,
                 ranked.c.overall_score,
-                ranked.c.page_type,
+                ranked.c.page_kind,
             ).where(ranked.c.latest_rank == 1)
         )
     ).all()
@@ -137,7 +140,7 @@ async def persist_crawl_snapshot(
         return False
 
     inputs: list[AnalysisScoreInput] = []
-    page_type_inputs: list[PageTypeScoreInput] = []
+    page_kind_inputs: list[PageKindScoreInput] = []
     analysis_ids: list[uuid.UUID] = []
     artifact_ids: list[uuid.UUID] = []
     for row in rows:
@@ -152,16 +155,16 @@ async def persist_crawl_snapshot(
                 overall_score=row.overall_score,
             )
         )
-        page_type_inputs.append(
-            PageTypeScoreInput(
-                page_type=row.page_type,
+        page_kind_inputs.append(
+            PageKindScoreInput(
+                page_kind=row.page_kind,
                 technical_score=row.technical_score,
                 aeo_score=row.aeo_score,
                 overall_score=row.overall_score,
             )
         )
     aggregate = aggregate_scores(inputs)
-    by_page_type = aggregate_by_page_type(page_type_inputs)
+    by_page_kind = aggregate_by_page_kind(page_kind_inputs)
 
     # Issue severity/category rollups for this crawl.
     severity_counts: dict[str, int] = {}
@@ -197,6 +200,17 @@ async def persist_crawl_snapshot(
         or 0
     )
 
+    # Derive this crawl's typed knowledge, then score coverage/journeys/
+    # dimensions from it — both BEFORE the snapshot insert, so the immutable row
+    # carries the complete projection rather than being backfilled later. Both
+    # steps are idempotent (deterministic row IDs + ``ON CONFLICT DO NOTHING``),
+    # which matters because terminalization is reachable from the worker and
+    # from a cooperative cancel.
+    knowledge_result = await build_crawl_knowledge(session, crawl=crawl)
+    projection = await build_intelligence_projection(
+        session, crawl=crawl, knowledge_result=knowledge_result
+    )
+
     # One immutable snapshot per crawl. ``ON CONFLICT DO NOTHING`` makes this
     # safe if the worker and a cancel both reach terminalization (the earliest
     # writer wins; the crawl ``score_summary`` projection below is still
@@ -204,6 +218,8 @@ async def persist_crawl_snapshot(
     await session.execute(
         pg_insert(SiteHealthSnapshot)
         .values(
+            intelligence=projection.payload,
+            intelligence_version=DIMENSION_FORMULA_VERSION,
             workspace_id=crawl.workspace_id,
             project_id=crawl.project_id,
             crawl_id=crawl.id,
@@ -235,6 +251,28 @@ async def persist_crawl_snapshot(
         "scoring_version": aggregate.scoring_version,
         # v2 P1: per-page-type breakdown (type -> analyzed count + mean
         # technical/aeo/overall). Missing/errored URLs never appear here.
-        "by_page_type": by_page_type,
+        "by_page_kind": by_page_kind,
+        # The composite is deliberately carried WITH its coverage. A caller that
+        # renders one without the other is reporting a number whose denominator
+        # it cannot see, which is the exact failure the full-denominator rule
+        # exists to prevent.
+        "intelligence": _intelligence_summary(projection.payload),
     }
     return True
+
+
+def _intelligence_summary(payload: dict) -> dict:
+    """The headline numbers for the crawl list, always paired with coverage."""
+    dimensions = payload.get("dimensions") or {}
+    coverage = payload.get("coverage") or {}
+    knowledge = payload.get("knowledge") or {}
+    return {
+        "packed": bool(payload.get("packed")),
+        "composite_score": dimensions.get("composite_score"),
+        "composite_coverage": dimensions.get("composite_coverage"),
+        "question_answered_ratio": coverage.get("answered_ratio"),
+        "question_denominator": coverage.get("denominator", 0),
+        "entity_count": knowledge.get("entity_count", 0),
+        "assertion_count": knowledge.get("assertion_count", 0),
+        "contradiction_count": knowledge.get("contradiction_count", 0),
+    }

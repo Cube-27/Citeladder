@@ -77,8 +77,10 @@ import type {
   pageDetailSchema,
   pageSummarySchema,
   pagesPageSchema,
-  pageTypeSchema,
-  pageTypeScoreSummarySchema,
+  industryRoleManifestSchema,
+  industryRoleSchema,
+  pageKindSchema,
+  pageKindScoreSummarySchema,
   phaseMutationResponseSchema,
   phaseRunSchema,
   rerunPageResponseSchema,
@@ -163,6 +165,28 @@ import type {
   recomputeResponseSchema,
   opportunityGuidanceHistorySchema,
   opportunityGuidanceItemSchema,
+  assertionSubjectSchema,
+  contradictionGroupSchema,
+  contradictionPageSchema,
+  corpusBlockSchema,
+  coverageStateSchema,
+  dimensionBlockSchema,
+  dimensionComponentSchema,
+  dimensionsBlockSchema,
+  evidenceRefSchema,
+  intelligenceOverviewSchema,
+  journeyBlockSchema,
+  journeyStageBlockSchema,
+  knowledgeAssertionItemSchema,
+  knowledgeAssertionPageSchema,
+  knowledgeEntityItemSchema,
+  knowledgeEntityPageSchema,
+  knowledgeRelationItemSchema,
+  knowledgeRelationPageSchema,
+  knowledgeSummaryBlockSchema,
+  questionCoverageBlockSchema,
+  questionCoverageItemSchema,
+  schemaGraphResponseSchema,
 } from './schemas';
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
@@ -223,8 +247,10 @@ export type CrawlCounters = z.infer<typeof crawlCountersSchema>;
 export type CrawlDiscoveryStatus = z.infer<typeof crawlDiscoveryStatusSchema>;
 export type CrawlAnalysisStatus = z.infer<typeof crawlAnalysisStatusSchema>;
 export type PageAnalysisStatus = z.infer<typeof pageAnalysisStatusSchema>;
-export type PageType = z.infer<typeof pageTypeSchema>;
-export type PageTypeScoreSummary = z.infer<typeof pageTypeScoreSummarySchema>;
+export type PageKind = z.infer<typeof pageKindSchema>;
+export type IndustryRole = z.infer<typeof industryRoleSchema>;
+export type IndustryRoleManifest = z.infer<typeof industryRoleManifestSchema>;
+export type PageKindScoreSummary = z.infer<typeof pageKindScoreSummarySchema>;
 export type SiteScoreSummary = z.infer<typeof siteScoreSummarySchema>;
 export type CrawlFailureSummary = z.infer<typeof crawlFailureSummarySchema>;
 export type RootError = z.infer<typeof rootErrorSchema>;
@@ -332,3 +358,27 @@ export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;
 export type RecomputeResponse = z.infer<typeof recomputeResponseSchema>;
 export type OpportunityGuidanceItem = z.infer<typeof opportunityGuidanceItemSchema>;
 export type OpportunityGuidanceHistory = z.infer<typeof opportunityGuidanceHistorySchema>;
+
+// --- Site Intelligence (S2/S3) ---
+export type CoverageState = z.infer<typeof coverageStateSchema>;
+export type QuestionCoverageItem = z.infer<typeof questionCoverageItemSchema>;
+export type QuestionCoverageBlock = z.infer<typeof questionCoverageBlockSchema>;
+export type JourneyStageBlock = z.infer<typeof journeyStageBlockSchema>;
+export type JourneyBlock = z.infer<typeof journeyBlockSchema>;
+export type DimensionComponent = z.infer<typeof dimensionComponentSchema>;
+export type DimensionBlock = z.infer<typeof dimensionBlockSchema>;
+export type DimensionsBlock = z.infer<typeof dimensionsBlockSchema>;
+export type IntelligenceOverview = z.infer<typeof intelligenceOverviewSchema>;
+export type EvidenceRef = z.infer<typeof evidenceRefSchema>;
+export type KnowledgeEntityItem = z.infer<typeof knowledgeEntityItemSchema>;
+export type KnowledgeEntityPage = z.infer<typeof knowledgeEntityPageSchema>;
+export type KnowledgeAssertionItem = z.infer<typeof knowledgeAssertionItemSchema>;
+export type KnowledgeAssertionPage = z.infer<typeof knowledgeAssertionPageSchema>;
+export type ContradictionGroup = z.infer<typeof contradictionGroupSchema>;
+export type ContradictionPage = z.infer<typeof contradictionPageSchema>;
+export type KnowledgeRelationItem = z.infer<typeof knowledgeRelationItemSchema>;
+export type KnowledgeRelationPage = z.infer<typeof knowledgeRelationPageSchema>;
+export type SchemaGraphResponse = z.infer<typeof schemaGraphResponseSchema>;
+export type AssertionSubject = z.infer<typeof assertionSubjectSchema>;
+export type CorpusBlock = z.infer<typeof corpusBlockSchema>;
+export type KnowledgeSummaryBlock = z.infer<typeof knowledgeSummaryBlockSchema>;

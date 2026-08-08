@@ -364,16 +364,67 @@ Create separate config for hard-excluded assets, inventory-supported document ex
 
 ### Phase B — normalize query-critical knowledge
 
-When cross-page review/contradiction/approval/selective retrieval requires it, add:
+**Status: the trigger condition is met and the three tables are shipped.** Phase B was
+deliberately gated on proving the current owners cannot carry this cleanly. The proof, recorded
+here because the gate is the reason the tables exist:
+
+1. **A contradiction group has no row to live on.** A contradiction is by definition two or more
+   assertions sharing subject, predicate, and overlapping scope with incompatible values — and in
+   practice the two sides live on *different pages*: a current fees page and a superseded fee PDF.
+   Each side fits inside a per-artifact `knowledge_summary` blob, but the group identity — the fact
+   that says "these are the same disputed claim" — belongs to neither page. Materialising it would
+   mean writing one group id into N analysis rows and keeping them consistent on every recompute:
+   a join table, implemented badly, without a uniqueness guarantee.
+
+2. **Question coverage needs a predicate-indexed lookup over the whole corpus.** Resolving
+   `education.fees` to `answered_strong` asks whether *any* current assertion exists for
+   `education.fee_amount` scoped to a grade. Against JSONB that is a scan of every analysis row in
+   the crawl, re-parsed once per question — 29 questions × N pages, per read. Against a table it is
+   one indexed query on `(crawl_id, predicate_id)`.
+
+3. **Entity identity and relations are cross-page by construction.** The organization asserted on
+   `/about`, on `/contact`, and in every page's JSON-LD is ONE entity; deduplicating it is the
+   whole point of an identity key. A relation (`campus part_of institution`) is an edge between
+   entities discovered on different pages, and an edge cannot be stored on either endpoint's page
+   row without electing an arbitrary owner and duplicating the other half.
+
+4. **Review state must outlive recomputation.** `SitePageAnalysis` is append-only on
+   `(artifact, analyzer, pack)`: recomputing under a new pack writes a *new* row. Assertions stored
+   inside that row would take every review decision attached to them out of scope on the next pack
+   upgrade — precisely the silent reinterpretation of history the append-only key exists to
+   prevent. Separately-keyed assertion rows carry their own review state and supersede on their own
+   terms.
+
+What did **not** move: raw bodies stay in `SiteFetchArtifact` (kernel rows hold evidence refs, never
+excerpted truth), and `SitePageAnalysis` remains the sole page-understanding owner. The new tables
+hold only what is irreducibly cross-page — identity, claims, and edges.
+
+**Shipped** — exactly three tables, folded into `0001_initial`:
 
 - `knowledge_entities`;
 - `knowledge_assertions`;
-- `knowledge_relations`;
-- `approved_memory_items`;
-- `approved_memory_transitions`;
-- `journey_definitions` and `journey_definition_versions`;
+- `knowledge_relations`.
+
+There is deliberately **no** contradiction-group table. A contradiction group is a deterministic
+UUID derived from `(crawl, subject, predicate, scope)` and written onto every side's
+`contradiction_group_id`, so a group needs no row of its own and cannot drift out of sync with its
+members. Question coverage, journey coverage, and dimension scores are likewise not tables: they are
+a bounded JSONB projection on `SiteHealthSnapshot`, which is the existing crawl-projection owner.
+
+Only clauses 1–2 of the [Contradiction policy](#contradiction-policy) are shipped: disputes are
+detected, every side is preserved, and a shared group is assigned. **Clauses 3–6 — blocking
+publication as current truth, and the reviewer flow to approve one side, narrow its scope, mark it
+historical, or reject both — are not implemented.** Every assertion stays `observed`; there is no
+review state a person can move it to yet.
+
+**Still planned** — none of these exist yet:
+
+- `approved_memory_items` and `approved_memory_transitions`;
+- `journey_definitions` and `journey_definition_versions` (journeys are read from the frozen pack
+  today; project-authored journeys will need them);
 - `task_context_packages`;
-- `content_briefs` and `intelligence_snapshots` only if their lifecycle differs from existing owners.
+- `content_briefs` and `intelligence_snapshots`, and only if their lifecycle turns out to differ
+  from the existing owners.
 
 Every project-owned table has direct `workspace_id` and `project_id`, source IDs, versions, and timestamps. Use partial unique indexes only for live/current identities; preserve superseded history.
 

@@ -20,6 +20,7 @@ from app.core.config.site_health import (
     CODE_DISCOVERY_LIMIT_EXCEEDED,
     CODE_PHASE_ALREADY_RUNNING,
     CODE_PHASE_NOT_RESUMABLE,
+    CORPUS_DISPOSITION_ANALYZE,
     CRAWL_STATUS_PAUSED,
     CRAWL_STATUS_QUEUED,
     CRAWL_STATUS_RUNNING,
@@ -310,6 +311,15 @@ async def _stop_phase_tasks(
 
 
 async def _pause_if_idle(session: AsyncSession, crawl: SiteCrawl) -> None:
+    """Settle crawl + phase state once no non-terminal task remains.
+
+    A stop with no RUNNING phase-run row (the phase already drained, or a
+    second Stop click) still has to leave truthful state behind: a RUNNING
+    discovery/analysis sub-state that no non-terminal task backs renders as a
+    live phase the user cannot stop. Deriving both sub-states from the
+    outstanding-task count here makes Stop idempotent for every caller instead
+    of depending on which rows a particular stop path happened to find.
+    """
     outstanding = await session.scalar(
         select(func.count())
         .select_from(SiteCrawlTask)
@@ -318,7 +328,13 @@ async def _pause_if_idle(session: AsyncSession, crawl: SiteCrawl) -> None:
             SiteCrawlTask.status.not_in(list(TASK_TERMINAL_STATUSES)),
         )
     )
-    if int(outstanding or 0) == 0 and crawl.status == CRAWL_STATUS_RUNNING:
+    if int(outstanding or 0) != 0:
+        return
+    if crawl.discovery_status == DISCOVERY_STATUS_RUNNING:
+        apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
+    if crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
+        apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
+    if crawl.status == CRAWL_STATUS_RUNNING:
         apply_crawl_status(crawl, CRAWL_STATUS_PAUSED)
 
 
@@ -348,6 +364,54 @@ async def stop_discovery(
     return PhaseMutationResult(crawl=crawl, phase_run=run)
 
 
+async def _reject_unusable_selection(
+    session: AsyncSession,
+    *,
+    explicit_ids: list[uuid.UUID],
+    admitted,
+) -> None:
+    """Fail an explicit selection that this crawl cannot analyze.
+
+    Two separate reasons, reported separately because they are separate user
+    errors. Admission alone is not enough: a document or an excluded URL sits in
+    the inventory for coverage but carries no HTML the analyzer can read, so
+    scheduling one spends a budget slot to produce a guaranteed failure. Both are
+    REJECTED rather than silently dropped — a caller that named these specific
+    URLs needs to be told which ones it cannot have.
+    """
+    wanted = set(explicit_ids)
+    admitted_ids = set(
+        (
+            await session.scalars(
+                select(SiteUrl.id).where(
+                    SiteUrl.id.in_(explicit_ids),
+                    SiteUrl.id.in_(select(admitted.c.site_url_id)),
+                )
+            )
+        ).all()
+    )
+    if admitted_ids != wanted:
+        raise PhaseControlError(
+            "One or more selected URLs are not in this crawl",
+            code="invalid_selection",
+        )
+    analyzable = set(
+        (
+            await session.scalars(
+                select(SiteUrl.id).where(
+                    SiteUrl.id.in_(explicit_ids),
+                    SiteUrl.corpus_disposition == CORPUS_DISPOSITION_ANALYZE,
+                )
+            )
+        ).all()
+    )
+    if analyzable != wanted:
+        raise PhaseControlError(
+            "One or more selected URLs cannot be analyzed as HTML",
+            code="invalid_selection",
+        )
+
+
 async def _analysis_candidates(
     session: AsyncSession,
     *,
@@ -362,21 +426,9 @@ async def _analysis_candidates(
         .subquery()
     )
     if explicit_ids:
-        valid = set(
-            (
-                await session.scalars(
-                    select(SiteUrl.id).where(
-                        SiteUrl.id.in_(explicit_ids),
-                        SiteUrl.id.in_(select(admitted.c.site_url_id)),
-                    )
-                )
-            ).all()
+        await _reject_unusable_selection(
+            session, explicit_ids=explicit_ids, admitted=admitted
         )
-        if valid != set(explicit_ids):
-            raise PhaseControlError(
-                "One or more selected URLs are not in this crawl",
-                code="invalid_selection",
-            )
     completed = (
         select(SitePageAnalysis.site_url_id)
         .where(
@@ -400,6 +452,12 @@ async def _analysis_candidates(
     ranked_where = [
         SiteUrlObservation.crawl_id == crawl.id,
         SiteUrl.id.not_in(explicit_ids),
+        # Automatic selection only ever proposes analyzable items. A document or
+        # an excluded URL stays in the inventory for coverage, but spending an
+        # analysis budget slot on one would fetch evidence the HTML analyzer
+        # cannot read. Explicit selections are held to the same rule above,
+        # where a non-analyzable pick is reported instead of silently dropped.
+        SiteUrl.corpus_disposition == CORPUS_DISPOSITION_ANALYZE,
     ]
     if not include_completed:
         ranked_where.append(SiteUrl.id.not_in(select(completed.c.site_url_id)))

@@ -194,6 +194,7 @@ def upgrade() -> None:
         sa.Column("language_code", sa.String(length=16), nullable=False),
         sa.Column("industry", sa.String(length=255), nullable=False),
         sa.Column("subindustry", sa.String(length=255), nullable=False),
+        sa.Column("industry_pack_id", sa.String(length=64), nullable=False),
         sa.Column("primary_market", sa.String(length=8), nullable=False),
         sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
         sa.Column("default_repetitions", sa.Integer(), nullable=False),
@@ -2371,6 +2372,8 @@ def upgrade() -> None:
         sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
         sa.Column("scoring_version", sa.String(length=32), nullable=False),
+        sa.Column("intelligence", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("intelligence_version", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
@@ -2408,6 +2411,10 @@ def upgrade() -> None:
         sa.Column("display_url", sa.String(length=2048), nullable=False),
         sa.Column("host", sa.String(length=255), nullable=False),
         sa.Column("depth", sa.Integer(), nullable=False),
+        sa.Column("corpus_disposition", sa.String(length=16), nullable=False),
+        sa.Column("disposition_reason", sa.String(length=32), nullable=False),
+        sa.Column("disposition_version", sa.String(length=32), nullable=False),
+        sa.Column("item_kind", sa.String(length=16), nullable=False),
         sa.Column("discovery_status", sa.String(length=24), nullable=False),
         sa.Column("latest_source_kind", sa.String(length=16), nullable=False),
         sa.Column("latest_title", sa.String(length=1024), nullable=False),
@@ -3362,9 +3369,8 @@ def upgrade() -> None:
         sa.Column("acquisition_trigger", sa.String(length=32), nullable=False),
         sa.Column("impersonation_profile", sa.String(length=64), nullable=False),
         sa.Column(
-            "scraperapi_options", postgresql.JSONB(astext_type=Text()), nullable=True
+            "acquisition_options", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
-        sa.Column("scraperapi_request_id", sa.String(length=255), nullable=False),
         sa.Column("acquisition_policy_version", sa.String(length=32), nullable=False),
         sa.Column("extractor_version", sa.String(length=32), nullable=False),
         sa.Column(
@@ -3618,9 +3624,8 @@ def upgrade() -> None:
         sa.Column("acquisition_trigger", sa.String(length=32), nullable=False),
         sa.Column("impersonation_profile", sa.String(length=64), nullable=False),
         sa.Column(
-            "scraperapi_options", postgresql.JSONB(astext_type=Text()), nullable=True
+            "acquisition_options", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
-        sa.Column("scraperapi_request_id", sa.String(length=255), nullable=False),
         sa.Column("acquisition_policy_version", sa.String(length=32), nullable=False),
         sa.Column("artifact_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -3674,11 +3679,32 @@ def upgrade() -> None:
         sa.Column("overall_score", sa.Float(), nullable=True),
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
         sa.Column("scoring_version", sa.String(length=32), nullable=False),
-        sa.Column("page_type", sa.String(length=24), nullable=False),
+        sa.Column("page_kind", sa.String(length=24), nullable=False),
         sa.Column("classifier_version", sa.String(length=32), nullable=False),
         sa.Column(
-            "page_type_evidence", postgresql.JSONB(astext_type=Text()), nullable=True
+            "page_kind_evidence", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
+        sa.Column("industry_role_id", sa.String(length=64), nullable=True),
+        sa.Column("industry_role_score", sa.Float(), nullable=True),
+        sa.Column("industry_role_margin", sa.Float(), nullable=True),
+        sa.Column("industry_role_confidence", sa.String(length=16), nullable=False),
+        sa.Column("role_abstention_reason", sa.String(length=32), nullable=False),
+        sa.Column(
+            "industry_role_evidence",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=True,
+        ),
+        sa.Column(
+            "secondary_role_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("industry_pack_id", sa.String(length=64), nullable=False),
+        sa.Column("industry_pack_version", sa.String(length=32), nullable=False),
+        sa.Column("pack_content_hash", sa.String(length=64), nullable=False),
+        sa.Column("catalog_version", sa.String(length=32), nullable=False),
+        sa.Column("role_classifier_version", sa.String(length=64), nullable=False),
+        sa.Column("corpus_disposition", sa.String(length=16), nullable=False),
+        sa.Column("temporal_state", sa.String(length=16), nullable=False),
+        sa.Column("is_current", sa.Boolean(), nullable=False),
         sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True),
@@ -3693,7 +3719,22 @@ def upgrade() -> None:
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("artifact_id", name="uq_site_page_analysis_artifact"),
+        sa.UniqueConstraint(
+            "artifact_id",
+            "analyzer_version",
+            "industry_pack_id",
+            "industry_pack_version",
+            name="uq_site_page_analysis_version",
+        ),
+    )
+    # One live understanding per artifact, enforced by the database so a failed
+    # supersede cannot leave two current rows behind.
+    op.create_index(
+        "uq_site_page_analysis_current",
+        "site_page_analyses",
+        ["artifact_id"],
+        unique=True,
+        postgresql_where=sa.text("is_current"),
     )
     op.create_index(
         op.f("ix_site_page_analyses_artifact_id"),
@@ -5076,8 +5117,168 @@ def upgrade() -> None:
     for column in ("workspace_id", "project_id", "content_generation_id"):
         op.create_index(op.f(f"ix_brand_knowledge_artifacts_{column}"), "brand_knowledge_artifacts", [column])
 
+    # --- Typed project knowledge (kernel spec Phase B) --------------------
+    # Crawl-scoped derived projections with deterministic (uuid5) primary keys,
+    # so replaying the same artifacts reproduces byte-identical knowledge.
+    op.create_table(
+        "knowledge_entities",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("entity_type_id", sa.String(length=64), nullable=False),
+        sa.Column("identity_key", sa.String(length=256), nullable=False),
+        sa.Column("canonical_name", sa.String(length=512), nullable=False),
+        sa.Column("aliases", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("identifiers", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("review_state", sa.String(length=16), nullable=False),
+        sa.Column("evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("evidence_page_count", sa.Integer(), nullable=False),
+        sa.Column("industry_pack_id", sa.String(length=64), nullable=False),
+        sa.Column("industry_pack_version", sa.String(length=32), nullable=False),
+        sa.Column("extractor_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "crawl_id",
+            "entity_type_id",
+            "identity_key",
+            name="uq_knowledge_entity_identity",
+        ),
+    )
+    for column in ("workspace_id", "project_id", "crawl_id"):
+        op.create_index(op.f(f"ix_knowledge_entities_{column}"), "knowledge_entities", [column])
+    op.create_index(
+        "ix_knowledge_entity_crawl_type",
+        "knowledge_entities",
+        ["crawl_id", "entity_type_id"],
+    )
+
+    op.create_table(
+        "knowledge_assertions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("subject_entity_id", sa.UUID(), nullable=False),
+        sa.Column("predicate_id", sa.String(length=64), nullable=False),
+        sa.Column("value_type", sa.String(length=16), nullable=False),
+        sa.Column("raw_value", sa.String(length=512), nullable=False),
+        sa.Column("normalized_value", sa.String(length=512), nullable=False),
+        sa.Column("numeric_value", sa.Float(), nullable=True),
+        sa.Column("unit", sa.String(length=32), nullable=False),
+        sa.Column("currency", sa.String(length=8), nullable=False),
+        sa.Column("scope", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("scope_key", sa.String(length=256), nullable=False),
+        sa.Column(
+            "scope_complete",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("true"),
+        ),
+        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("effective_to", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("temporal_state", sa.String(length=16), nullable=False),
+        sa.Column("evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("derivation_method", sa.String(length=24), nullable=False),
+        sa.Column("extractor_version", sa.String(length=32), nullable=False),
+        sa.Column("confidence", sa.Float(), nullable=True),
+        sa.Column("review_state", sa.String(length=16), nullable=False),
+        sa.Column("contradiction_group_id", sa.UUID(), nullable=True),
+        sa.Column("industry_pack_id", sa.String(length=64), nullable=False),
+        sa.Column("industry_pack_version", sa.String(length=32), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["subject_entity_id"], ["knowledge_entities.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "crawl_id",
+            "subject_entity_id",
+            "predicate_id",
+            "scope_key",
+            "normalized_value",
+            name="uq_knowledge_assertion_claim",
+        ),
+    )
+    for column in ("workspace_id", "project_id", "crawl_id", "subject_entity_id"):
+        op.create_index(op.f(f"ix_knowledge_assertions_{column}"), "knowledge_assertions", [column])
+    op.create_index(
+        "ix_knowledge_assertion_predicate",
+        "knowledge_assertions",
+        ["crawl_id", "predicate_id"],
+    )
+    op.create_index(
+        "ix_knowledge_assertion_contradiction",
+        "knowledge_assertions",
+        ["crawl_id", "contradiction_group_id"],
+    )
+
+    op.create_table(
+        "knowledge_relations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("relation_type_id", sa.String(length=64), nullable=False),
+        sa.Column("source_entity_id", sa.UUID(), nullable=False),
+        sa.Column("target_entity_id", sa.UUID(), nullable=False),
+        sa.Column("qualifiers", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("effective_from", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("effective_to", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("temporal_state", sa.String(length=16), nullable=False),
+        sa.Column("evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("derivation_method", sa.String(length=24), nullable=False),
+        sa.Column("extractor_version", sa.String(length=32), nullable=False),
+        sa.Column("confidence", sa.Float(), nullable=True),
+        sa.Column("review_state", sa.String(length=16), nullable=False),
+        sa.Column("industry_pack_id", sa.String(length=64), nullable=False),
+        sa.Column("industry_pack_version", sa.String(length=32), nullable=False),
+        sa.Column("is_current", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["crawl_id"], ["site_crawls.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_entity_id"], ["knowledge_entities.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_entity_id"], ["knowledge_entities.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "crawl_id",
+            "relation_type_id",
+            "source_entity_id",
+            "target_entity_id",
+            name="uq_knowledge_relation_edge",
+        ),
+    )
+    for column in (
+        "workspace_id",
+        "project_id",
+        "crawl_id",
+        "source_entity_id",
+        "target_entity_id",
+    ):
+        op.create_index(op.f(f"ix_knowledge_relations_{column}"), "knowledge_relations", [column])
+    op.create_index(
+        "ix_knowledge_relation_crawl_type",
+        "knowledge_relations",
+        ["crawl_id", "relation_type_id"],
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("knowledge_relations")
+    op.drop_table("knowledge_assertions")
+    op.drop_table("knowledge_entities")
     op.drop_table("brand_knowledge_artifacts")
     op.drop_table("observed_entity_candidates")
     op.drop_table("prompt_metric_snapshots")

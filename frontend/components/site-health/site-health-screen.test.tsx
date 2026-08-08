@@ -8,10 +8,13 @@ import { renderWithProviders } from '@/test/render';
 import { ProjectProvider } from '@/lib/project/project-context';
 import { SiteHealthScreen } from './site-health-screen';
 
-// The analyzing/scored inventory modes render PagesTable, which calls
-// useRouter for clickable rows; stub next/navigation (unavailable in jsdom).
+// The analyzing/scored inventory modes render PagesTable (clickable rows) and
+// the Site Intelligence workspace (panel state mirrored to the URL); stub
+// next/navigation, which is unavailable in jsdom.
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/site-health',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -100,7 +103,7 @@ function crawl(overrides: Record<string, unknown> = {}) {
       analyzed: 0,
       errors: 0,
       blocked: 0,
-      by_page_type: {},
+      by_page_kind: {},
     },
     discovered_count: 3,
     total_url_count: 3,
@@ -138,7 +141,7 @@ function inventoryRow(id: string, url: string) {
     aeo_score: null,
     overall_score: null,
     last_audited: null,
-    page_type: null,
+    page_kind: null,
   };
 }
 
@@ -258,7 +261,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
         analyzed_count: 0,
         issue_count: 0,
         scoring_version: 's1',
-        by_page_type: {},
+        by_page_kind: {},
       },
       failure_summary: {
         code: 'http_5xx',
@@ -402,7 +405,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
       analyzed_count: 4,
       issue_count: 3,
       scoring_version: 's1',
-      by_page_type: {
+      by_page_kind: {
         article: { analyzed_count: 4, technical_score: 80, aeo_score: 62, overall_score: 71 },
       },
     };
@@ -433,9 +436,9 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     ).toBeInTheDocument();
     // The dashboard score value stays visible (partial results kept).
     expect(await screen.findByText('71 / 100')).toBeInTheDocument();
-    // The v2 P1 per-page-type breakdown renders from the same projection
-    // (scoped — the inventory page-type <select> also lists type labels).
-    const breakdown = screen.getByTestId('page-type-scores');
+    // The v2 P1 per-page-kind breakdown renders from the same projection
+    // (scoped — the inventory page-kind <select> also lists type labels).
+    const breakdown = screen.getByTestId('page-kind-scores');
     expect(breakdown).toBeInTheDocument();
     expect(within(breakdown).getByText('Article')).toBeInTheDocument();
     // The header offers Re-crawl for a terminal-with-data dashboard.
@@ -467,7 +470,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
       analyzed_count: 1,
       issue_count: 3,
       scoring_version: 's1',
-      by_page_type: {},
+      by_page_kind: {},
     };
 
     // Mutable server state the handlers read on every request.

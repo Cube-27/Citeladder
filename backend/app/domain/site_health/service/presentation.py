@@ -135,16 +135,30 @@ def _crawl_count_disclosure(crawl: SiteCrawl) -> bool:
     return bool(config.get("count_disclosure", False))
 
 
+def _page_kind_buckets(summary: dict) -> dict:
+    """The per-page-kind rollup, reading the pre-rename key as a fallback.
+
+    ``score_summary`` is persisted JSON. Rows scored before this release wrote
+    the same breakdown under ``by_page_type``, so reading only the new key
+    would render every historical crawl's breakdown as an empty map — the
+    scores stay right while the per-kind detail silently disappears.
+    """
+    buckets = summary.get("by_page_kind")
+    if buckets is None:
+        buckets = summary.get("by_page_type")
+    return buckets or {}
+
+
 def _score_summary(crawl: SiteCrawl) -> dict | None:
     """Project the worker-written ``score_summary`` into the strict shape."""
     summary = crawl.score_summary or None
     if not summary:
         return None
-    # v2 P1 per-page-type breakdown; absent on pre-P1 summaries (empty map).
-    by_page_type: dict[str, dict] = {}
-    for page_type, values in (summary.get("by_page_type") or {}).items():
+    # v2 P1 per-page-kind breakdown; absent on pre-P1 summaries (empty map).
+    by_page_kind: dict[str, dict] = {}
+    for page_kind, values in _page_kind_buckets(summary).items():
         values = values or {}
-        by_page_type[str(page_type)] = {
+        by_page_kind[str(page_kind)] = {
             "analyzed_count": int(values.get("analyzed_count", 0) or 0),
             "technical_score": values.get("technical_score"),
             "aeo_score": values.get("aeo_score"),
@@ -162,7 +176,7 @@ def _score_summary(crawl: SiteCrawl) -> dict | None:
         "scoring_version": str(
             summary.get("scoring_version") or crawl.scoring_version or SCORING_VERSION
         ),
-        "by_page_type": by_page_type,
+        "by_page_kind": by_page_kind,
     }
 
 
@@ -186,9 +200,9 @@ def _default_crawl_counters(
         "analyzed": int(crawl.analyzed_url_count or 0),
         "errors": int(crawl.failed_url_count or 0),
         "blocked": 0,
-        "by_page_type": {
-            page_type: int(values.get("analyzed_count", 0))
-            for page_type, values in ((summary or {}).get("by_page_type") or {}).items()
+        "by_page_kind": {
+            page_kind: int((values or {}).get("analyzed_count", 0))
+            for page_kind, values in _page_kind_buckets(summary or {}).items()
         },
     }
 
@@ -342,8 +356,8 @@ def presentation_status_for(
 # =========================================================================
 # Inventory (keyset (normalized_url, id) over SiteUrl)
 # =========================================================================
-def _page_type_matches(analysis: SitePageAnalysis | None, wanted: str | None) -> bool:
-    """The v2 P1 page_type filter predicate (inventory + pages share it).
+def _page_kind_matches(analysis: SitePageAnalysis | None, wanted: str | None) -> bool:
+    """The v2 P1 page_kind filter predicate (inventory + pages share it).
 
     An unfiltered request (``wanted is None``) matches everything; a filtered
     one requires a classified analysis of exactly that type — URLs without
@@ -352,7 +366,7 @@ def _page_type_matches(analysis: SitePageAnalysis | None, wanted: str | None) ->
     """
     if wanted is None:
         return True
-    return analysis is not None and analysis.page_type == wanted
+    return analysis is not None and analysis.page_kind == wanted
 
 
 # =========================================================================
