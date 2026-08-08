@@ -199,18 +199,20 @@ Copy lives in [`landing.ts`](../../frontend/lib/marketing-content/landing.ts).
 product — it is only not a fourth *database*. The site, the sidebar, and
 [`../architecture.md`](../architecture.md) now agree on this.
 
-The shipped `AgentConsole` section needs no copy change: its transcript derives from
-`platform.modules` and asserts no metric.
+`AgentConsole`'s transcript is **hardcoded**, not derived from `platform.modules`, and it
+carried three approval claims that contradicted §1. Those are corrected; the claim guard in
+`landing-claims.test.tsx` pins them. Any future edit to that transcript is a copy change and
+must be re-checked against §1.
 
 ### 8.2 Structure
 
-- **Lead with the loop, not the layers.** The differentiator is
-  evidence → improvement → verification; the module breakdown is *how*, not *why*. Move `workflow`
-  above `platform`.
-- **Add an evidence/provenance section** showing the real chain: artifact → fact → insight → brief
-  → verification. This is the claim competitors cannot copy and it is currently only implied.
-- **Show the insight object.** It is the product's most recognisable artifact; a real one on the
-  landing page is stronger proof than a feature list.
+**Withdrawn — do not implement.** This section previously called for moving `workflow` above
+`platform` and adding an evidence/provenance section with a sample insight object. Both were
+built and then reverted at the product owner's direction: the landing page keeps its existing
+beat order, and "How it works" occupies the slot the provenance section briefly held. Section
+tones went back to their original values with it.
+
+The §8.1 copy corrections below stand — only the structural changes are withdrawn.
 
 ## 9. Website content
 
@@ -247,19 +249,113 @@ Fix the drift across docs, app, and site once:
 
 ## 10. Delivery order
 
-| Step | Work | Gate |
-|---|---|---|
-| 1 | Website content corrections (§8.1, §9) | none |
-| 2 | Shared components (§5) and the coverage rule (§6) | none |
-| 3 | Landing structure (§8.2) | none |
-| 4 | Sidebar regrouping (§4) | first `/site` route |
-| 5 | Site workspace (§7.2) and Overview (§7.1) | stages 1–2 |
-| 6 | Content workspace (§7.3) | stage 4 |
-| 7 | Demand workspace (§7.4) | stage 3 |
-| 8 | Agent workspace (§7.5) | stage 5 |
-| 9 | Contextual agent actions, Reports, schedules | stage 6 |
+| Step | Work | Gate | Status |
+|---|---|---|---|
+| 1 | Website content corrections (§8.1, §9) | none | **Done** |
+| 2 | Shared components (§5) and the coverage rule (§6) | none | **Done** |
+| 3 | Landing structure (§8.2) | none | **Withdrawn** — built, then reverted (see §8.2) |
+| 4 | Sidebar regrouping (§4) | first `/site` route | **Done** |
+| 5 | Site workspace (§7.2) and Overview (§7.1) | stages 1–2 | Pages and Corpus shipped; Overview ships the ranked-insights projection only, the full route is pending; Facts/Schema/Journeys/Evidence pending |
+| 6 | Content workspace (§7.3) | stage 4 | Generate + Facts tabs shipped; briefs/validation/verification pending |
+| 7 | Demand workspace (§7.4) | stage 3 | Visibility/Traffic regrouped, related surfaces linked; signals pending |
+| 8 | Agent workspace (§7.5) | stage 5 | Route declares the five surfaces; no backend exists |
+| 9 | Contextual agent actions, Reports, schedules | stage 6 | `/reports` stub only |
 
 Steps 1–3 have no backend dependency and are the correct first commits after this branch merges.
+
+## 13. Implementation log
+
+Recorded so future work does not re-derive these decisions or re-litigate them.
+
+### Shipped (branch `feat/frontend-growth-intelligence`, PR #52)
+
+**Steps 1–4 complete**, plus the parts of 5/7/9 that existing projections already
+back. Components live in `frontend/components/intelligence/`.
+
+**Empty shells are acceptable while the product is pre-users.** §3 originally said to
+leave the current route in place rather than ship an empty shell. That rule exists to
+protect users from a promise the API cannot keep, and there are none yet — so `/site`,
+`/demand` and `/reports` render declared-but-empty panels for surfaces whose backend has
+not landed. Revisit before the first real user, not before.
+
+### Gotchas
+
+- **`/prompts` owns `?tab=`.** Its manage mode already uses that param, so it is NOT
+  embedded as a tab under `/demand` — the two would collide. §11 already schedules the
+  prompts URL-contract change; do the move there, not here.
+- **Band tones on the landing page cascade.** `Section` enforces "no two adjacent bands
+  share a tone", and the page has only two sunken sections in an eight-section run — so
+  moving one beat forced four sections to flip when §8.2's reorder was attempted. Both the
+  reorder and the tone flips were reverted; the lesson stands for any future reordering.
+- **§8.1 was wrong about `AgentConsole`.** It claimed the section needed no copy change
+  because its transcript derives from `platform.modules`. The transcript is hardcoded,
+  and it carried three approval claims. The claim guard caught them, and §8.1 has since
+  been corrected — recorded here so the original assumption is not made again.
+- **`Insight` returns `null` without evidence.** Deliberate (§5). Consumers rendering
+  lists must filter before computing counts, or a count will disagree with the rows.
+- **`DecisionKind` is a closed union of two members.** Adding a third fails
+  `decision-count.test.ts` at the type level. That failure is the signal to go back to
+  the layer plan, not to edit the test.
+- **SonarCloud runs in automatic-analysis mode** — there is no `sonar-project.properties`
+  and adding one switches the project to CI-based analysis. Duplication exclusions can
+  only be set in the SonarCloud UI. `faq.ts` tripped the 3% new-code duplication gate
+  because Sonar's tokenizer counts the repeated `'...' +` concatenation shape across
+  every answer; answers are now single template literals. Keep them that way.
+- **Marketing cannot import `Insight`.** Recorded for whenever a marketing surface wants to
+  show one: `Insight` requires a resolvable evidence href and refuses to render without one,
+  and marketing is monochrome-plus-blue so it cannot use the app's danger fill for the
+  priority chip. Mirror the anatomy rather than importing the component.
+- **`opportunity_type` is a closed enum**: `visibility | site | traffic | topic`. It is NOT
+  free-form, and it does not carry `content_*` or `prompt_*` members. `opportunity-insight.ts`
+  maps it exhaustively to the four layers; extend that map when the backend enum grows.
+- **`dashboard-screen.test.tsx` mocks `@tanstack/react-query` wholesale.** Any child added
+  to `DashboardScreen` that runs its own query will receive the command-center fixture
+  instead of its own response shape. `TopInsights` is stubbed there for that reason — do
+  the same for the next such child rather than teaching that fixture two shapes.
+- **`analysis_status` is on `pageSummarySchema`, NOT `inventoryRowSchema`.** Inventory rows
+  carry no status field, so they cannot answer "why was this not analyzed". Corpus (§7.2)
+  is therefore built on the `/pages` projection, not `/inventory`, even though "corpus"
+  sounds like the inventory surface.
+- **Mocking `@tanstack/react-query` needs `queryOptions` too.** Every `*Queries` builder in
+  `lib/api` calls it, so a mock that returns only `useQuery` fails at import with a
+  confusing "No queryOptions export" error.
+- **`EditableFact` keeps its editor open across the mutation.** The first caller must pass
+  `disabled` while `onCorrect` is pending, and let the returned `correction` close the
+  editor. Closing on submit instead would discard the user's draft whenever a save is
+  rejected, since the draft is only re-seeded from the (stale) displayed value. Clearing
+  the field or retyping the derived value both withdraw an active correction rather than
+  discarding the edit silently.
+- **`EditableFact` has no production caller yet.** It is a built contract, not a shipped
+  capability, so the landing page must NOT claim durable corrections — a guard in
+  `landing-claims.test.tsx` pins that. Wire it to a durable mutation (stage 1–2 facts), then
+  restore the claim and delete the guard.
+- **The decision-count test is a type-level guard, not integration coverage.** A reviewer
+  flagged that a third blocking prompt could be added elsewhere without touching
+  `DecisionKind`. True, and accepted: `DecisionPrompt` is the only blocking UI by
+  construction, and a runtime registry would add indirection to enforce what the closed
+  union already enforces at the one place it can be violated. If a second blocking surface
+  ever appears, that is the moment to add the registry.
+- **Nav labels are regex-matched in `sidebar-nav.test.tsx`.** "Site" matches "Site health"
+  and "Content" matches other labels, so anchor those assertions (`/^site$/i`) when adding
+  a destination whose name is a prefix of another.
+
+### Not yet done
+
+Everything gated on a backend stage that does not exist. Stated precisely, because the
+delivery table above and this list previously disagreed about Corpus and Overview:
+
+- **Site (§7.2)** — Pages and **Corpus have shipped** (Corpus on the `/pages` projection,
+  see the gotcha above). Facts, Schema, Journeys and Evidence are pending.
+- **Overview (§7.1)** — the **ranked insights projection has shipped** (`TopInsights` over
+  the opportunities catalog). The complete route — project state and what-changed-since-
+  last-snapshot — is **pending**, so Overview is partial, not done.
+- **Content (§7.3)** — Generate and Facts tabs shipped; briefs, validation and
+  verification pending.
+- **Demand (§7.4)** — regrouping shipped; demand signals and the coverage panel pending.
+- **Growth Agent (§7.5)** — the entire workspace; no backend exists.
+
+The §11 UI-debt items remain open and deliberately deferred. A live accessibility pass
+(§11) has still not run.
 
 ## 11. UI debt
 

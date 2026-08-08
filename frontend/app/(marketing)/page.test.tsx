@@ -76,9 +76,15 @@ describe('Landing page (public marketing `/`)', () => {
     const { container } = renderWithProviders(<Page />);
 
     // The nav/footer (rendered by the layout) target these ids — pin them.
-    // `#platform` / `#evidence` are gone with the sections that owned them;
-    // the page is now hook → shift → product → proof → close.
-    for (const hash of ['#why', '#see-it', '#how-it-works', '#get-started']) {
+    // `#platform` returned with the four-layer architecture.
+    for (const hash of [
+      '#why',
+      '#platform',
+      '#see-it',
+      '#how-it-works',
+      '#industry-packs',
+      '#get-started',
+    ]) {
       expect(container.querySelector(hash)).not.toBeNull();
     }
   });

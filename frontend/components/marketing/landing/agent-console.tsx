@@ -21,14 +21,13 @@ const SCRIPT = [
     name: 'Site Intelligence',
     role: 'Crawls and classifies every page, then re-verifies after changes.',
     prompt: 'Recrawl complete — gap rules flagged uncovered questions on the service pages.',
-    reply:
-      'Queuing an evidence-grounded brief for each gap. Nothing publishes without your approval.',
+    reply: 'Queuing an evidence-grounded brief for each gap. Saving a draft stays your decision.',
   },
   {
     icon: 'content' as const,
     name: 'Content Intelligence',
     role: 'Turns detected gaps into briefs, schema, and verified drafts.',
-    prompt: 'Brief approved with full provenance. The draft is ready for schema.',
+    prompt: 'Draft checked against project facts — no unsupported claims. Ready for schema.',
     reply: 'Generating FAQPage JSON-LD, then scheduling a post-publication verification pass.',
   },
   {
@@ -41,7 +40,22 @@ const SCRIPT = [
 ];
 
 type Phase = 'prompt' | 'thinking' | 'reply' | 'hold';
-type Entry = { id: number; layer: number; from: 'layer' | 'agent'; text: string };
+type Entry = {
+  id: number;
+  layer: number;
+  from: 'layer' | 'agent';
+  text: string;
+  /**
+   * Set on the agent entry that was just committed from the live `reply`
+   * bubble. The live bubble is suppressed against THIS flag rather than by
+   * comparing the log tail to `SCRIPT[active].reply`: `push` and `setActive`
+   * land in the same batch, so by the time that comparison ran `active` had
+   * already advanced and it never matched — leaving the committed entry and
+   * the live bubble both on screen for a frame. That double-render was the
+   * flicker at the end of every exchange.
+   */
+  justCommitted?: boolean;
+};
 
 const PROMPT_MS = 22;
 const REPLY_MS = 15;
@@ -60,12 +74,40 @@ export function AgentConsole() {
   const [log, setLog] = useState<Entry[]>([]);
   const [paused, setPaused] = useState(false);
   const nextId = useRef(0);
+  /**
+   * How far the current sentence has typed. This is a ref, not a local in the
+   * effect: `paused` is a dependency, so hovering the console re-runs the
+   * effect mid-sentence, and a local counter would reset to 0 and visibly
+   * retype from the first character. Cleared whenever a run genuinely starts
+   * over (a new layer, or a new phase).
+   */
+  const cursor = useRef(0);
 
-  const push = useCallback((layer: number, from: Entry['from'], text: string) => {
-    nextId.current += 1;
-    const entry = { id: nextId.current, layer, from, text };
-    setLog((current) => [...current, entry].slice(-LOG_LIMIT));
-  }, []);
+  const push = useCallback(
+    (layer: number, from: Entry['from'], text: string, justCommitted = false) => {
+      nextId.current += 1;
+      const entry = { id: nextId.current, layer, from, text, justCommitted };
+      setLog((current) =>
+        // The previous commit flag is cleared as the next entry lands, so only
+        // ever one entry carries it.
+        [
+          ...current.map((item) => (item.justCommitted ? { ...item, justCommitted: false } : item)),
+          entry,
+        ].slice(-LOG_LIMIT),
+      );
+    },
+    [],
+  );
+
+  /**
+   * A new sentence starts at character zero. Keyed on layer and phase only —
+   * deliberately NOT on `paused`, which is the whole point: hovering must not
+   * rewind the sentence being typed. Runs before the typing effect below, so
+   * that effect always sees a cursor belonging to the phase it is starting.
+   */
+  useEffect(() => {
+    cursor.current = 0;
+  }, [active, phase]);
 
   // One timer per phase. Every branch returns its own cleanup, so a click that
   // jumps to another layer mid-sentence cancels the run in flight.
@@ -74,21 +116,29 @@ export function AgentConsole() {
     const step = SCRIPT[active];
     if (!step) return;
 
+    // The trailing timer of the prompt phase, cleared alongside its interval.
+    let settle: number | undefined;
+
     if (phase === 'prompt') {
-      let index = 0;
+      // Resume where the last run left off rather than restarting the sentence.
       const id = window.setInterval(() => {
-        index += 1;
-        setTyped(step.prompt.slice(0, index));
-        if (index >= step.prompt.length) {
+        cursor.current += 1;
+        setTyped(step.prompt.slice(0, cursor.current));
+        if (cursor.current >= step.prompt.length) {
           window.clearInterval(id);
-          window.setTimeout(() => {
+          // Captured so the cleanup can cancel it: left dangling, this fires
+          // after a layer switch and pushes a duplicate bubble into the new run.
+          settle = window.setTimeout(() => {
             setTyped('');
             push(active, 'layer', step.prompt);
             setPhase('thinking');
           }, 480);
         }
       }, PROMPT_MS);
-      return () => window.clearInterval(id);
+      return () => {
+        window.clearInterval(id);
+        if (settle !== undefined) window.clearTimeout(settle);
+      };
     }
 
     if (phase === 'thinking') {
@@ -97,11 +147,10 @@ export function AgentConsole() {
     }
 
     if (phase === 'reply') {
-      let index = 0;
       const id = window.setInterval(() => {
-        index += 1;
-        setReply(step.reply.slice(0, index));
-        if (index >= step.reply.length) {
+        cursor.current += 1;
+        setReply(step.reply.slice(0, cursor.current));
+        if (cursor.current >= step.reply.length) {
           window.clearInterval(id);
           setPhase('hold');
         }
@@ -112,8 +161,11 @@ export function AgentConsole() {
     // hold — the one place the cycle waits, and the one place hover pauses it.
     if (paused) return;
     const id = window.setTimeout(() => {
+      // Commit and clear in one batch. `push` appends the finished reply while
+      // `setReply('')` retires the live bubble; the render below suppresses the
+      // live bubble on this tick so the text never renders twice or blinks out.
+      push(active, 'agent', step.reply, true);
       setReply('');
-      push(active, 'agent', step.reply);
       setActive((current) => (current + 1) % SCRIPT.length);
       setPhase('prompt');
     }, HOLD_MS);
@@ -121,14 +173,19 @@ export function AgentConsole() {
   }, [active, phase, paused, push, reduce]);
 
   const select = useCallback((index: number) => {
+    // Reset here too: clicking the row that is already typing changes neither
+    // `active` nor `phase`, so the reset effect above would not re-run.
+    cursor.current = 0;
     setActive(index);
     setPhase('prompt');
     setTyped('');
     setReply('');
   }, []);
 
+  // 5:2 rather than 2:1 — the transcript is bottom-anchored, so any height
+  // beyond what the messages need became dead space at the top of the stage.
   return (
-    <div className="relative w-full xl:aspect-[2/1]">
+    <div className="relative w-full xl:aspect-[5/2]">
       <Bus active={active} reduce={reduce} />
 
       <div className="grid gap-8 xl:block xl:gap-0">
@@ -185,9 +242,16 @@ function LayerRow({
       type="button"
       onClick={() => onSelect(index)}
       aria-pressed={active}
+      /* Each row is a real card, so the copy sits ON a surface rather than
+         floating on the section background. Resting state is the sunken grey
+         well; the selected row lifts to a white panel with the accent border —
+         the tonal jump is what makes "which layer is streaming" readable at a
+         glance, rather than relying on the status text alone. */
       className={cn(
-        'focus-visible:ring-accent/60 group flex w-full items-start gap-3.5 rounded-xl px-4 py-5 text-left transition-colors duration-300 focus-visible:ring-2 focus-visible:outline-none xl:my-auto',
-        active ? 'bg-accent-subtle/60' : 'hover:bg-background-alt/70',
+        'focus-visible:ring-accent/60 group flex w-full items-start gap-3.5 rounded-xl border px-4 py-5 text-left transition-[background-color,border-color,box-shadow] duration-300 focus-visible:ring-2 focus-visible:outline-none xl:my-auto',
+        active
+          ? 'bg-panel border-accent-border shadow-card'
+          : 'bg-well border-border-subtle hover:bg-panel hover:border-border hover:shadow-xs',
       )}
     >
       <span
@@ -195,7 +259,9 @@ function LayerRow({
           'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-300',
           active
             ? 'bg-accent text-inverse shadow-xs'
-            : 'bg-background-alt text-subtle group-hover:text-accent-text',
+            : // On the grey resting card the chip needs a white fill to read as
+              // a chip at all; `bg-background-alt` would blend into the card.
+              'bg-panel border-border-subtle text-subtle group-hover:text-accent-text border',
         )}
       >
         <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
@@ -236,16 +302,18 @@ function LayerRow({
  * The converging bus. Three straight runs leave the rows, the outer two bend
  * into the centre line, and one trunk carries the merged stream into the agent.
  *
- * The viewBox is 192x600 and the element is 16% x 100% of a 1200x600 stage, so
- * the ratio matches exactly and nothing is stretched — the dots stay round. The
- * `pipeline-stream` class is what globals.css uses to hide SMIL dots under
+ * The viewBox is 192x480 and the element is 16% x 100% of a 1200x480 stage (the
+ * 5:2 ratio above), so the ratio matches exactly and nothing is stretched — the
+ * dots stay round. Every y here is the former 600-tall geometry scaled by 0.8;
+ * the corner radius stays 24 because a scaled arc would no longer be circular.
+ * The `pipeline-stream` class is what globals.css uses to hide SMIL dots under
  * `prefers-reduced-motion`.
  */
 function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) {
   const routes = [
-    'M 0 100 H 60 A 24 24 0 0 1 84 124 V 276 A 24 24 0 0 0 108 300 H 186',
-    'M 0 300 H 186',
-    'M 0 500 H 60 A 24 24 0 0 0 84 476 V 324 A 24 24 0 0 1 108 300 H 186',
+    'M 0 80 H 60 A 24 24 0 0 1 84 104 V 216 A 24 24 0 0 0 108 240 H 186',
+    'M 0 240 H 186',
+    'M 0 400 H 60 A 24 24 0 0 0 84 376 V 264 A 24 24 0 0 1 108 240 H 186',
   ];
   // Constant dot speed, so the bent routes simply take longer to arrive.
   const durations = [3, 1.55, 3];
@@ -253,7 +321,7 @@ function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) 
   return (
     <svg
       aria-hidden
-      viewBox="0 0 192 600"
+      viewBox="0 0 192 480"
       fill="none"
       className="pipeline-stream absolute inset-y-0 left-[30%] hidden h-full w-[16%] xl:block"
     >
@@ -288,12 +356,13 @@ function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) 
         </g>
       ))}
 
-      {/* The merged trunk, drawn solid over the dashed routes it carries. */}
-      <path d="M 108 300 H 186" className="stroke-accent" strokeWidth="2" />
-      <polygon points="182,292 196,300 182,308" className="fill-accent" />
+      {/* The merged trunk, drawn solid over the dashed routes it carries. Its
+          y is the stage centre — 240 in the 480-tall box, matching the routes. */}
+      <path d="M 108 240 H 186" className="stroke-accent" strokeWidth="2" />
+      <polygon points="182,232 196,240 182,248" className="fill-accent" />
       <circle
         cx="108"
-        cy="300"
+        cy="240"
         r="4"
         className={cn('fill-accent', !reduce && 'animate-pulse')}
         aria-hidden
@@ -331,6 +400,24 @@ function ChatWindow({
       ])
     : log;
 
+  /**
+   * True on the tick where the finished reply has been appended to the log but
+   * the live `reply` string has not yet cleared. Without this the same sentence
+   * renders as two bubbles under different keys, so React unmounts one and
+   * mounts the other — the text visibly blinks at the end of every exchange.
+   */
+  const replyCommitted = !reduce && (log.at(-1)?.justCommitted ?? false);
+
+  /**
+   * The pending agent message is on screen from the moment thinking starts
+   * until the finished reply is committed to the log — one continuous mount,
+   * with no frame in between where it is absent. `hold` is included: the reply
+   * has finished typing but has not been pushed yet, so dropping the bubble
+   * there would blank it for the whole 2.2s hold.
+   */
+  const liveBubble =
+    !reduce && phase !== 'prompt' && !replyCommitted && !(phase === 'hold' && reply.length === 0);
+
   return (
     <div
       onMouseEnter={() => onHoverChange(true)}
@@ -344,7 +431,7 @@ function ChatWindow({
         <div className="min-w-0 flex-1">
           <p className="font-display text-foreground text-sm font-semibold">Growth Agent</p>
           <p className="text-subtle text-2xs mt-0.5">
-            Bounded orchestration · human approval gates
+            Bounded orchestration · inspectable evidence
           </p>
         </div>
         <span className="text-success-text text-2xs inline-flex items-center gap-1.5 font-semibold">
@@ -357,7 +444,15 @@ function ChatWindow({
       </div>
 
       {/* Newest exchange sits at the bottom; the mask fades whatever scrolls off
-          the top instead of slicing a bubble in half. */}
+          the top instead of slicing a bubble in half.
+
+          `content-visibility` is deliberately not used and the column is not
+          re-keyed: the transcript is bottom-anchored, so when `LOG_LIMIT`
+          evicts the oldest entry every surviving bubble shifts up one slot in
+          the same commit that mounts the new one. Keying each bubble by its
+          stable entry id (never by index) is what keeps those survivors as
+          moves rather than unmount/remount pairs — the latter is what read as
+          a flicker on every message. */}
       <div
         aria-live="polite"
         className="flex min-h-0 flex-1 flex-col justify-end gap-3 overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_14%)] px-5 py-4"
@@ -366,11 +461,20 @@ function ChatWindow({
           <Bubble key={entry.id} entry={entry} />
         ))}
 
-        {!reduce && phase === 'thinking' && (
-          <Bubble entry={{ id: -1, layer: active, from: 'agent', text: '' }} thinking />
-        )}
-        {!reduce && phase !== 'thinking' && reply && (
-          <Bubble entry={{ id: -2, layer: active, from: 'agent', text: reply }} caret />
+        {/* ONE live bubble across both phases, rendered from a single condition.
+            Thinking and replying are two states of the same pending agent
+            message, so splitting them into two conditions left a gap: `phase`
+            flips to 'reply' but `reply` is still '' until the first interval
+            tick, so for that frame neither branch matched and the bubble
+            unmounted entirely — the dots disappeared, one blank frame passed,
+            then the text mounted. That gap was the "Analyzing → content" blink.
+            Keeping it mounted and swapping only its contents removes it. */}
+        {liveBubble && (
+          <Bubble
+            entry={{ id: -1, layer: active, from: 'agent', text: reply }}
+            thinking={phase === 'thinking' || reply.length === 0}
+            caret={reply.length > 0}
+          />
         )}
       </div>
 

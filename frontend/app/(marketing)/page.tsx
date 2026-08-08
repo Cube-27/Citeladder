@@ -47,6 +47,10 @@ export const metadata: Metadata = {
  * close (FinalCta). Shared chrome (nav + footer) lives in the (marketing)
  * route-group layout.
  *
+ * Section tones are owned by the section components, not here. `Section` sets
+ * the rule that no two adjacent bands share a tone, so reordering these beats
+ * means re-checking the tone run, not just the two sections that moved.
+ *
  * Must stay a SYNC component (no async / headers() / cookies()) so the page
  * test can render it directly under Testing Library.
  */

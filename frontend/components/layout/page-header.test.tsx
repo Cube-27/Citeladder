@@ -12,6 +12,8 @@ import { PageHeader } from './page-header';
 function renderTitle(route: string) {
   pathname.value = route;
   render(<PageHeader />);
+  // The title is sr-only by default (the sidebar already names the route), so
+  // it is still queried by role — `getByRole` ignores `sr-only`, not `hidden`.
   return screen.getByRole('heading', { level: 1 }).textContent;
 }
 
@@ -23,8 +25,14 @@ describe('PageHeader', () => {
     ['/prompts', 'Prompts'],
     ['/opportunities', 'Opportunities'],
     ['/site-health', 'Site health'],
-    ['/knowledge-base', 'Brand knowledge'],
+    // §9.3: the route persists, the label is "Facts".
+    ['/knowledge-base', 'Facts'],
     ['/prompt-research', 'Prompt research'],
+    // The layer routes. `/site` must not be swallowed by `/site-health`.
+    ['/site', 'Site'],
+    ['/demand', 'Demand'],
+    ['/agent', 'Growth Agent'],
+    ['/reports', 'Reports'],
   ])('resolves %s to the page title %s', (route, title) => {
     expect(renderTitle(route)).toBe(title);
   });
@@ -59,5 +67,18 @@ describe('PageHeader', () => {
     pathname.value = '/visibility';
     render(<PageHeader title="Custom" />);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Custom');
+  });
+
+  it('keeps the route title out of sight by default — the sidebar already names it', () => {
+    pathname.value = '/site';
+    render(<PageHeader />);
+    // Present for assistive tech, invisible to sighted users.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveClass('sr-only');
+  });
+
+  it('paints the title when showTitle is set', () => {
+    pathname.value = '/site';
+    render(<PageHeader showTitle />);
+    expect(screen.getByRole('heading', { level: 1 })).not.toHaveClass('sr-only');
   });
 });
