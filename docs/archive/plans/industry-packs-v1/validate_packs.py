@@ -19,6 +19,20 @@ DEFAULT_PACKS = (
     Path(__file__).with_name("education-v1.yaml"),
     Path(__file__).with_name("commerce-v1.yaml"),
 )
+# Every path this script reads is CLI-supplied, so confine reads to the
+# repository tree rather than trusting the argument. Without this a caller
+# (human or agent) passing `../../../etc/passwd` would be obeyed.
+REPO_ROOT = Path(__file__).resolve().parents[4]
+
+
+def _resolve_within_repo(path: Path) -> Path:
+    """Resolve ``path`` and reject anything escaping the repository root."""
+    resolved = path.resolve()
+    if not resolved.is_relative_to(REPO_ROOT):
+        raise ValueError(f"refusing to read outside the repository: {path}")
+    if not resolved.is_file():
+        raise ValueError(f"not a readable file: {path}")
+    return resolved
 
 
 def _ids(items: list[dict[str, Any]]) -> set[str]:
@@ -35,7 +49,7 @@ def _require(values: list[str], registry: set[str], owner: str) -> None:
 
 
 def validate_pack(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data = yaml.safe_load(_resolve_within_repo(path).read_text(encoding="utf-8"))
     jsonschema.validate(data, schema)
 
     roles = _ids(data["page_roles"])
@@ -100,7 +114,7 @@ def main() -> int:
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
     args = parser.parse_args()
 
-    schema = json.loads(args.schema.read_text(encoding="utf-8"))
+    schema = json.loads(_resolve_within_repo(args.schema).read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator.check_schema(schema)
 
     for pack in args.packs:

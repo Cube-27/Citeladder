@@ -135,9 +135,19 @@ def _markdown_files() -> list[Path]:
     return sorted(path for path in _iter_files() if path.suffix.lower() == ".md")
 
 
+# Link targets carrying any of these schemes are external references, not paths
+# into this repository, so link validation skips them. Spelled as schemes rather
+# than literal prefixes so this reads as the skip-list it is: nothing here is a
+# URL the script fetches.
+_EXTERNAL_LINK_SCHEMES = ("http", "https", "mailto", "tel", "data")
+
+
 def _link_path(source: Path, raw_target: str) -> Path | None:
     target = raw_target.strip().strip("<>")
-    if not target or target.startswith(("#", "http://", "https://", "mailto:", "tel:", "data:")):
+    if not target or target.startswith("#"):
+        return None
+    scheme, separator, _ = target.partition(":")
+    if separator and scheme.lower() in _EXTERNAL_LINK_SCHEMES:
         return None
     # Optional Markdown title follows a whitespace boundary. Paths in this
     # repository do not intentionally contain unescaped spaces.
