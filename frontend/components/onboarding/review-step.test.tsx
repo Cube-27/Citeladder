@@ -20,12 +20,9 @@ describe('ReviewStep competitor limit', () => {
             selected: true,
           },
         ]}
-        prompts={[]}
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onTogglePrompt={vi.fn()}
-        onEditPrompt={vi.fn()}
         onEditCompetitorDomain={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
@@ -51,12 +48,9 @@ describe('ReviewStep competitor limit', () => {
           domains: [],
           selected: true,
         }))}
-        prompts={[]}
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onTogglePrompt={vi.fn()}
-        onEditPrompt={vi.fn()}
         onEditCompetitorDomain={vi.fn()}
         onAddCompetitor={add}
       />,

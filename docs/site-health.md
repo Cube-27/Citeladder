@@ -29,7 +29,9 @@ All seven are implemented:
 
 1. Terminal crawl/discovery/analysis state agrees with drained task state. A drained crawl with no
    RUNNING phase-run row now terminalizes its phase sub-states instead of parking PAUSED while
-   `analysis_status` stayed `running`.
+   `analysis_status` stayed `running`. Automatic sample crawls also bypass manual phase parking:
+   once their bounded analysis and link checks drain, they persist a score snapshot and complete
+   even when development-only advanced controls are enabled.
 2. Stop/continue controls are idempotent. `_pause_if_idle` settles both sub-states from the
    outstanding-task count, so a second Stop (or a stop after the phase already drained) cannot
    leave a RUNNING phase no task backs.
@@ -37,6 +39,8 @@ All seven are implemented:
    discover+analyze rather than summing per-kind task failures.
 4. The acquisition ladder is `secure_httpx -> curl_cffi -> patchright`. ScraperAPI is fully
    removed — rung, settings, and columns.
+   The local Docker stack enables the pinned curl-cffi recovery rung so ordinary 403 challenge
+   responses can escalate; Patchright remains an explicit image/runtime opt-in.
 5. Corpus disposition (`analyze` | `inventory_only` | `exclude`) is first-class on `SiteUrl` with
    its reason, version, and `item_kind`.
 6. `page_type` is split: `page_kind` (generic structural) and `industry_role_id` (pack-governed)

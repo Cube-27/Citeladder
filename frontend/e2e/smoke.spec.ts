@@ -21,7 +21,7 @@ test('landing renders on the Proof surface without a backend', async ({ page }) 
 
   await expect(page.locator('.bg-background').first()).toHaveCSS(
     'background-color',
-    'rgb(249, 250, 251)',
+    'rgb(255, 255, 255)',
   );
 
   await expect(page.getByRole('img', { name: /ChatGPT, Grok, Gemini/i })).toBeVisible();

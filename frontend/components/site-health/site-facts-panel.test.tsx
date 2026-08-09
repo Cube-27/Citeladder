@@ -139,6 +139,10 @@ describe('SiteFactsPanel', () => {
     // Header summary badge + description.
     expect(screen.getByText('1 of 4 blocked')).toBeInTheDocument();
     expect(screen.getByText('AI crawler access')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Which AI answer engines your robots.txt allows to crawl this site.'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Crawler details').closest('details')).not.toHaveAttribute('open');
 
     // Four stance cells in canonical AI_CRAWLER_BOTS order.
     const grid = screen.getByTestId('site-facts-stance-grid');

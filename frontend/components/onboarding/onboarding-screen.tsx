@@ -431,6 +431,7 @@ export function OnboardingScreen() {
             what lets a flex child shrink below its content and actually
             scroll instead of stretching the column. */}
         <main
+          id="main"
           className={cn(
             'mx-auto flex min-h-0 w-full flex-1 flex-col justify-start overflow-y-auto py-2 sm:py-4',
             step === 2 ? 'max-w-3xl lg:max-w-4xl' : 'max-w-xl',
@@ -596,6 +597,7 @@ export function OnboardingScreen() {
                   <ActivityProgress
                     label="Discovering your brand"
                     steps={discoveryActivity(discovery.discovery)}
+                    animateCompletion
                   />
                 </div>
 
@@ -677,7 +679,6 @@ export function OnboardingScreen() {
                 <ReviewStep
                   domains={domains}
                   competitors={competitors}
-                  prompts={prompts}
                   onToggleDomain={toggle(setDomains)}
                   onToggleCompetitor={(index) =>
                     setCompetitors((previous) => {
@@ -693,14 +694,6 @@ export function OnboardingScreen() {
                         return { ...item, selected: !item.selected };
                       });
                     })
-                  }
-                  onTogglePrompt={toggle(setPrompts)}
-                  onEditPrompt={(index, text) =>
-                    setPrompts((previous) =>
-                      previous.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, text } : item,
-                      ),
-                    )
                   }
                   onEditCompetitorDomain={(index, domain) =>
                     setCompetitors((prev) =>
@@ -755,15 +748,12 @@ export function OnboardingScreen() {
                 {complete.isError ? (
                   <Alert tone="danger">{onboardingErrorMessage(complete.error)}</Alert>
                 ) : null}
-                {!hasSelectedDomain || !hasSelectedPrompt ? (
-                  <Alert tone="warning">
-                    Keep at least one website address and one starting question selected.
-                  </Alert>
+                {!hasSelectedDomain ? (
+                  <Alert tone="warning">Keep at least one website address selected.</Alert>
                 ) : null}
                 {hasSelectedPrompt && !hasCompletePromptPortfolio ? (
                   <Alert tone="warning">
-                    Keep all ten questions selected with non-empty text: five neutral market
-                    questions and five unbranded, brand-relevant questions.
+                    Discovery did not finish preparing this project. Go back and retry the scan.
                   </Alert>
                 ) : null}
 

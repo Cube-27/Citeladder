@@ -573,11 +573,13 @@ class CrawlLifecycle:
                 if (
                     phase_run.phase == PHASE_DISCOVERY
                     and crawl.discovery_status == DISCOVERY_STATUS_RUNNING
+                    and not crawl.sample_mode
                 ):
                     apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
                 elif (
                     phase_run.phase == PHASE_ANALYSIS
                     and crawl.analysis_status == ANALYSIS_STATUS_RUNNING
+                    and not crawl.sample_mode
                 ):
                     apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
 
@@ -590,6 +592,14 @@ class CrawlLifecycle:
             )
         )
         if outstanding:
+            return False
+        # Sample crawls are an automatic bounded run, even when the local
+        # development controls are enabled. Their initial discovery phase-run
+        # is bookkeeping for progress; it must not turn a fully successful
+        # sample into PAUSED/STOPPED before the normal lifecycle persists its
+        # snapshot and completed event. Manual full-inventory phase batches
+        # still park below so the user can explicitly continue them.
+        if crawl.sample_mode:
             return False
         # The loop above only sees phase runs still marked RUNNING. Once an
         # earlier reconcile completed them, a later drained reconcile finds no

@@ -14,8 +14,8 @@ deliberate, quiet motion treatments.
 - **Name and domain:** CiteLadder, `citeladder.com`.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** Manrope for display headings and Geist for UI, body, and data,
-  both loaded through `next/font/google`. The website and authentication surfaces
+- **Typography:** Satoshi for display headings and Switzer for UI, body, and data,
+  both self-hosted as variable WOFF2 files through `next/font/local`. The website and authentication surfaces
   use a 16px reading baseline and a content-role ladder; the authenticated app
   keeps its existing compact size scale. Size, leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
@@ -81,11 +81,12 @@ alone; it is always paired with a label or icon.
 
 ## Typography
 
-Two families only: Manrope for display headings (`font-display`) and Geist for
-UI, body, and data (`font-sans`). Both are Google Fonts loaded through
-`next/font/google`; no local font files or runtime stylesheet request is added.
-Weights run 400–600. Metrics, dates, ranks, and percentages use tabular numerals,
-never a monospace face.
+Two families only: Satoshi for display headings (`font-display`) and Switzer for
+UI, body, and data (`font-sans`). Both are self-hosted through `next/font/local`:
+one upright Satoshi variable WOFF2 and upright plus italic Switzer variable WOFF2
+files cover the used styles without runtime stylesheet requests or unused static
+cuts. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
+and percentages use tabular numerals, never a monospace face.
 
 ### Website and authentication ladder
 
@@ -96,29 +97,29 @@ tracking, weight, and colour combinations.
 
 | Role                    | Family  |      Size / line height |  Weight |                       Tracking | Colour                                      |
 | ----------------------- | ------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Manrope | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
-| Page title              | Manrope |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
-| Section heading         | Manrope |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
-| Feature heading         | Manrope |                 24/30px |     600 |                        -0.02em | foreground                                  |
-| Small heading           | Manrope |                 20/26px |     600 |                        -0.01em | foreground                                  |
-| Lead                    | Geist   |                 20/30px |     400 |                        -0.01em | secondary                                   |
-| Large body              | Geist   |                 18/28px |     400 |                              0 | secondary                                   |
-| Body baseline           | Geist   |                 16/24px |     400 |                              0 | secondary                                   |
-| Navigation and actions  | Geist   |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
-| Label, caption, eyebrow | Geist   |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
+| Hero display            | Satoshi | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
+| Page title              | Satoshi |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
+| Section heading         | Satoshi |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
+| Feature heading         | Satoshi |                 24/30px |     600 |                        -0.02em | foreground                                  |
+| Small heading           | Satoshi |                 20/26px |     600 |                        -0.01em | foreground                                  |
+| Lead                    | Switzer |                 20/30px |     400 |                        -0.01em | secondary                                   |
+| Large body              | Switzer |                 18/28px |     400 |                              0 | secondary                                   |
+| Body baseline           | Switzer |                 16/24px |     400 |                              0 | secondary                                   |
+| Navigation and actions  | Switzer |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
+| Label, caption, eyebrow | Switzer |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
 
 Ordinary website paragraphs never render below 16px. Fourteen pixels is reserved
 for short labels, metadata, captions, and legal support. Prose stays within a
 45–75 character measure. Accent blue never carries a long paragraph. Large text
 uses tighter leading and tracking; body text stays at zero tracking with more
 leading. Pricing values are the one non-editorial website display role:
-`website-data-display` uses Geist at 40/46px with tabular numerals and never
+`website-data-display` uses Switzer at 40/46px with tabular numerals and never
 applies to prose or headings.
 
 ### Product app ladder
 
 The authenticated app keeps the current compact `--text-*` sizes. Replacing Public
-Sans with Geist must not change their computed sizes, control heights, table
+Sans with Switzer must not change their computed sizes, control heights, table
 density, or screen geometry. Product previews embedded on the website use the app
 ladder because they depict product UI, while surrounding editorial copy uses the
 website ladder.
@@ -151,6 +152,9 @@ desktop).
 - Recommendations show impact, deterministic priority factors, affected scope,
   status, and links to persisted evidence. Do not invent confidence, effort,
   ownership, or causality.
+- Site Health puts crawl controls and the URL inventory before crawler-bot,
+  file, and page-kind diagnostics. Primary phase and re-crawl actions stay
+  visible; secondary diagnostics collapse without hiding those actions.
 - Mobile retains every critical action. Tables become labelled records; filters
   and evidence use full-height sheets.
 
@@ -183,7 +187,7 @@ Fixed responsibilities per region:
 | Region             | Owns                                                                                        | Never                                          |
 | ------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Top bar            | Project and context switching, date range and comparison window, global search, agent entry | Page-specific actions                          |
-| Sidebar            | The four layers plus Reports and Settings, flat and always visible                          | Nested trees or disabled future items          |
+| Sidebar            | Workspace links plus primary destinations grouped under Site, Content, and Demand Intelligence | A third navigation level or disabled future items |
 | Page header        | Title, one line of supporting context, and this page's actions                              | Metrics                                        |
 | Metric row         | Three to five headline numbers, each with coverage                                          | More than five, or a metric without provenance |
 | Analytical surface | The one chart, table, or comparison this page exists for                                    | Competing equal-weight surfaces                |
@@ -255,6 +259,9 @@ focused grid, then an optional CTA.
 - Keep body copy around 60–70 characters wide and use one H1 per page.
 - Auth uses the website type ladder and shared focus treatment; the form remains
   the primary task. The existing dark login/onboarding brand panel is preserved.
+- Onboarding review shows the discovered profile, owned domains, and competitors.
+  Generated prompt candidates stay out of setup chrome; they may seed the project
+  without becoming a separate review portfolio.
 - Website and app copy, data, feature claims, and workflow behaviour are outside
   this pass. Product previews may change layout, typography, colour, border,
   radius, or elevation only; their strings and scripted content stay unchanged.

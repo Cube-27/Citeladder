@@ -98,7 +98,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={social.label}
-      className="border-border-subtle bg-panel text-muted hover:border-accent hover:text-accent-text grid size-10 place-items-center rounded-md border transition-colors duration-200"
+      className="border-border-subtle bg-background text-muted hover:border-accent hover:text-accent-text grid size-10 place-items-center rounded-md border transition-colors duration-200"
     >
       <Icon aria-hidden className="size-4" />
     </a>
@@ -114,7 +114,7 @@ export function MarketingFooter() {
   const name = legalDisplayName();
 
   return (
-    <footer className="border-border-subtle bg-panel relative border-t">
+    <footer className="border-border-subtle bg-background-alt relative border-t">
       <Container className="py-12 sm:py-16">
         <nav
           aria-label="Footer"

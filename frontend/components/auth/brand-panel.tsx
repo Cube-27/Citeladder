@@ -48,6 +48,7 @@ export function BrandCanvas({
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
     <div
+      data-brand-canvas="true"
       className={cn(
         'bg-brand-canvas text-brand-canvas-foreground relative flex flex-col overflow-hidden max-[900px]:hidden',
         className,

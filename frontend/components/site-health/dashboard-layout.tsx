@@ -18,8 +18,8 @@ const EMPTY_URL_SELECTION: ReadonlySet<string> = new Set();
  * The canonical Site Health dashboard layout.
  *
  * ONE composed screen that stays mounted through the entire discover → select
- * → analyze → scored lifecycle: the score cards, a compact status/progress
- * row, and the page inventory. Phase changes update each section's DATA and
+ * → analyze → scored lifecycle: the controls, a compact status/progress row,
+ * the page inventory, and secondary score diagnostics. Phase changes update each section's DATA and
  * mode — they never swap the layout for a different panel, so starting,
  * cancelling, or finishing a crawl visibly updates the screen the user is
  * already on. (The per-URL crawl detail view and the issues screen remain the
@@ -29,10 +29,12 @@ export function SiteHealthDashboardLayout({
   screen,
   entitlement,
   projectId,
+  onRecrawl,
 }: Readonly<{
   screen: ReturnType<typeof useSiteHealthScreen>;
   entitlement: SiteHealthEntitlement;
   projectId: string;
+  onRecrawl: () => void;
 }>) {
   const {
     phase,
@@ -58,6 +60,43 @@ export function SiteHealthDashboardLayout({
 
   return (
     <div className="grid gap-6" data-testid="site-health-canonical">
+      {/* Keep the current state and actions first. Score and crawler diagnostics
+          are reference material, not prerequisites for working with URLs. */}
+      <StatusStrip
+        crawl={crawl}
+        phase={phase}
+        entitlement={entitlement}
+        cancelPending={cancelMutation.isPending}
+        startPending={startPending}
+        pages={pagesQuery.data?.items ?? []}
+        selectedTotal={projectSelectedTotal}
+        selectedError={projectSelectedError}
+      />
+
+      <PhaseControls
+        screen={screen}
+        selectedUrlIds={selectedUrlIds}
+        lastMutation={lastPhaseMutation}
+        onMutationStart={setLastPhaseMutation}
+        onRecrawl={onRecrawl}
+      />
+
+      <InventorySection
+        mode={inventoryMode}
+        crawl={crawl}
+        entitlement={entitlement}
+        projectId={projectId}
+        active={active}
+        onCancel={cancelCrawl}
+        cancelPending={cancelMutation.isPending}
+        onStartAnalysis={startCrawl}
+        // Disabled while the create request is in flight so a second click can
+        // never fire a duplicate. There is no post-success gap to cover: the
+        // create writes the new crawl into the dashboard cache itself.
+        startPending={startPending}
+      />
+
+      {/* Secondary diagnostics follow the URL workspace. */}
       <ScoreSection
         crawl={crawl}
         dashboard={dashboardQuery.data}
@@ -70,32 +109,6 @@ export function SiteHealthDashboardLayout({
         selectedTotal={projectSelectedTotal}
       />
 
-      {/* One compact row under the score cards — narration + inline counters,
-          never a separate full-height progress panel. */}
-      <StatusStrip
-        crawl={crawl}
-        phase={phase}
-        entitlement={entitlement}
-        cancelPending={cancelMutation.isPending}
-        startPending={startPending}
-        pages={pagesQuery.data?.items ?? []}
-        selectedTotal={projectSelectedTotal}
-        selectedError={projectSelectedError}
-      />
-
-      {/* AI-crawler access + well-known files (v2 P2) — reads the crawl's
-          `site_facts`; self-hides until a crawl persists it. */}
-      <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
-
-      <PhaseControls
-        screen={screen}
-        selectedUrlIds={selectedUrlIds}
-        lastMutation={lastPhaseMutation}
-        onMutationStart={setLastPhaseMutation}
-      />
-
-      {/* Per-page-kind score breakdown (v2 P1) — data-driven like the score
-          cards: renders once a score summary exists, hides itself before. */}
       <PageKindScores
         key={crawl?.id ?? 'no-crawl'}
         crawl={crawl}
@@ -121,21 +134,7 @@ export function SiteHealthDashboardLayout({
         }
         reanalyzePending={screen.startAnalysisMutation.isPending}
       />
-
-      <InventorySection
-        mode={inventoryMode}
-        crawl={crawl}
-        entitlement={entitlement}
-        projectId={projectId}
-        active={active}
-        onCancel={cancelCrawl}
-        cancelPending={cancelMutation.isPending}
-        onStartAnalysis={startCrawl}
-        // Disabled while the create request is in flight so a second click can
-        // never fire a duplicate. There is no post-success gap to cover: the
-        // create writes the new crawl into the dashboard cache itself.
-        startPending={startPending}
-      />
+      <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
     </div>
   );
 }

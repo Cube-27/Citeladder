@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Input } from '@/components/ui/input';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { PhaseRun, SiteCrawl } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
 import { SITE_HEALTH_DEFAULT_PHASE_BATCH_SIZE } from '@/lib/config/operational';
+import { cn } from '@/lib/utils';
 
 function positiveInteger(value: string): number | null {
   if (!/^\d+$/.test(value)) return null;
@@ -23,25 +23,34 @@ export type PhaseMutation = 'startDiscovery' | 'stopDiscovery' | 'startAnalysis'
 type SiteHealthScreen = ReturnType<typeof useSiteHealthScreen>;
 
 function PhaseCounters({ counters }: Readonly<{ counters: SiteCrawl['counters'] }>) {
-  const rows: ReadonlyArray<readonly [string, number | null]> = [
-    ['Discovered', counters.discovered],
-    ['Selected', counters.selected],
-    ['Queued', counters.queued],
-    ['Running', counters.running],
-    ['Analyzed', counters.analyzed],
-    ['Errors', counters.errors],
-    ['Blocked', counters.blocked],
+  const problems = counters.errors + counters.blocked;
+  const rows: ReadonlyArray<readonly [string, number | null, string?]> = [
+    ['found', counters.discovered],
+    ['selected', counters.selected],
+    ['analyzed', counters.analyzed],
+    ['problems', problems, problems > 0 ? 'text-danger-text' : undefined],
   ];
 
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-2 lg:grid-cols-7">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid gap-0.5">
+    <dl className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      {rows.map(([label, value, className]) => (
+        <div key={label} className="flex items-baseline gap-1">
+          <dd className={cn('mono text-foreground text-sm font-semibold', className)}>
+            {value ?? '—'}
+          </dd>
           <dt className="text-muted text-xs">{label}</dt>
-          <dd className="mono text-foreground text-sm font-medium">{value ?? '—'}</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+function BatchProgress({ phaseRun }: Readonly<{ phaseRun: PhaseRun | null | undefined }>) {
+  if (!phaseRun) return <span className="text-muted text-xs">Ready</span>;
+  return (
+    <span className="text-muted text-xs">
+      {phaseRun.processed_count}/{phaseRun.requested_count} processed
+    </span>
   );
 }
 
@@ -60,13 +69,16 @@ function DiscoveryControl({
 }>) {
   const [count, setCount] = useState(String(SITE_HEALTH_DEFAULT_PHASE_BATCH_SIZE));
   const batch = positiveInteger(count);
+  const starting = screen.startDiscoveryMutation.isPending;
+  const stopping = screen.stopDiscoveryMutation.isPending;
 
   const stop = () => {
+    if (stopping) return;
     onMutationStart('stopDiscovery');
     screen.stopDiscoveryMutation.mutate(crawlId);
   };
   const start = () => {
-    if (batch === null) return;
+    if (batch === null || starting) return;
     onMutationStart('startDiscovery');
     screen.startDiscoveryMutation.mutate({
       crawlId,
@@ -75,21 +87,16 @@ function DiscoveryControl({
   };
 
   return (
-    <div className="grid gap-2">
-      <div>
-        <h3 className={eyebrowClasses}>URL discovery</h3>
-        <p className="text-secondary text-sm">
-          Add a new batch without resetting previously discovered URLs.
-        </p>
-        {phaseRun ? (
-          <p className="text-muted text-xs">
-            Current batch: {phaseRun.processed_count} of {phaseRun.requested_count} processed
-          </p>
-        ) : null}
+    <section className="grid gap-2" aria-labelledby="discovery-control-title">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 id="discovery-control-title" className="text-foreground text-sm font-semibold">
+          Discover more URLs
+        </h3>
+        <BatchProgress phaseRun={phaseRun} />
       </div>
-      <div className="flex items-end gap-2">
-        <label className="grid min-w-0 flex-1 gap-1 text-sm font-medium">
-          Additional URLs
+      <div className="flex items-center gap-2">
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">Additional URLs</span>
           <Input
             type="number"
             inputMode="numeric"
@@ -97,26 +104,29 @@ function DiscoveryControl({
             value={count}
             onChange={(event) => setCount(event.target.value)}
             aria-invalid={batch === null}
+            disabled={running || starting || stopping}
           />
         </label>
         {running ? (
           <Button
+            className="min-w-36 shrink-0"
             variant="destructive"
             onClick={stop}
-            disabled={screen.stopDiscoveryMutation.isPending}
+            disabled={stopping || starting}
           >
-            {screen.stopDiscoveryMutation.isPending ? 'Stopping…' : 'Stop discovery'}
+            {stopping ? 'Stopping…' : 'Stop discovery'}
           </Button>
         ) : (
           <Button
+            className="min-w-36 shrink-0"
             onClick={start}
-            disabled={batch === null || screen.startDiscoveryMutation.isPending}
+            disabled={batch === null || starting || stopping}
           >
-            {screen.startDiscoveryMutation.isPending ? 'Starting…' : 'Continue discovery'}
+            {starting ? 'Starting…' : 'Continue discovery'}
           </Button>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -139,13 +149,16 @@ function AnalysisControl({
   const batch = positiveInteger(count);
   const selectionVersion = screen.monitoredQuery.data?.selection_version;
   const selectionTooLarge = batch !== null && selectedUrlIds.size > batch;
+  const starting = screen.startAnalysisMutation.isPending;
+  const stopping = screen.stopAnalysisMutation.isPending;
 
   const stop = () => {
+    if (stopping) return;
     onMutationStart('stopAnalysis');
     screen.stopAnalysisMutation.mutate(crawlId);
   };
   const start = () => {
-    if (batch === null || selectionVersion === undefined) return;
+    if (batch === null || selectionVersion === undefined || starting) return;
     onMutationStart('startAnalysis');
     screen.startAnalysisMutation.mutate({
       crawlId,
@@ -158,21 +171,16 @@ function AnalysisControl({
   };
 
   return (
-    <div className="grid gap-2">
-      <div>
-        <h3 className={eyebrowClasses}>URL analysis</h3>
-        <p className="text-secondary text-sm">
-          Analyze checked URLs first, then fill the batch with highest-value pages.
-        </p>
-        {phaseRun ? (
-          <p className="text-muted text-xs">
-            Current batch: {phaseRun.processed_count} of {phaseRun.requested_count} processed
-          </p>
-        ) : null}
+    <section className="grid gap-2" aria-labelledby="analysis-control-title">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 id="analysis-control-title" className="text-foreground text-sm font-semibold">
+          Analyze URLs
+        </h3>
+        <BatchProgress phaseRun={phaseRun} />
       </div>
-      <div className="flex items-end gap-2">
-        <label className="grid min-w-0 flex-1 gap-1 text-sm font-medium">
-          URLs to analyze
+      <div className="flex items-center gap-2">
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">URLs to analyze</span>
           <Input
             type="number"
             inputMode="numeric"
@@ -180,37 +188,41 @@ function AnalysisControl({
             value={count}
             onChange={(event) => setCount(event.target.value)}
             aria-invalid={batch === null || selectionTooLarge}
+            disabled={running || starting || stopping}
           />
         </label>
         {running ? (
           <Button
+            className="min-w-36 shrink-0"
             variant="destructive"
             onClick={stop}
-            disabled={screen.stopAnalysisMutation.isPending}
+            disabled={stopping || starting}
           >
-            {screen.stopAnalysisMutation.isPending ? 'Stopping…' : 'Stop analysis'}
+            {stopping ? 'Stopping…' : 'Stop analysis'}
           </Button>
         ) : (
           <Button
+            className="min-w-36 shrink-0"
             onClick={start}
             disabled={
               batch === null ||
               selectionTooLarge ||
               selectionVersion === undefined ||
-              screen.startAnalysisMutation.isPending
+              starting ||
+              stopping
             }
           >
-            {screen.startAnalysisMutation.isPending ? 'Starting…' : 'Start analysis'}
+            {starting ? 'Starting…' : 'Start analysis'}
           </Button>
         )}
       </div>
       {selectedUrlIds.size > 0 ? (
-        <p className="text-muted text-xs">{selectedUrlIds.size} checked URLs selected.</p>
+        <p className="text-muted text-xs">{selectedUrlIds.size} checked URLs will run first.</p>
       ) : null}
       {selectionTooLarge ? (
         <Alert tone="warning">Increase the analysis batch to include every checked URL.</Alert>
       ) : null}
-    </div>
+    </section>
   );
 }
 
@@ -219,11 +231,13 @@ export function PhaseControls({
   selectedUrlIds,
   lastMutation,
   onMutationStart,
+  onRecrawl,
 }: Readonly<{
   screen: SiteHealthScreen;
   selectedUrlIds: ReadonlySet<string>;
   lastMutation: PhaseMutation | null;
   onMutationStart: (mutation: PhaseMutation) => void;
+  onRecrawl: () => void;
 }>) {
   const crawl = screen.crawl;
   const phaseRuns = screen.dashboardQuery.data?.phase_runs;
@@ -244,32 +258,47 @@ export function PhaseControls({
   const mutationMessage = mutationError
     ? humanizeApiError(mutationError, 'The phase could not be updated.').message
     : null;
+  const phaseMutationPending =
+    screen.startDiscoveryMutation.isPending ||
+    screen.stopDiscoveryMutation.isPending ||
+    screen.startAnalysisMutation.isPending ||
+    screen.stopAnalysisMutation.isPending;
 
   return (
     <Card data-testid="site-health-phase-controls">
-      <CardContent className="grid gap-4 lg:grid-cols-2">
-        <PhaseCounters counters={crawl.counters} />
-        <DiscoveryControl
-          screen={screen}
-          crawlId={crawl.id}
-          phaseRun={phaseRuns?.discovery}
-          running={discoveryRunning}
-          onMutationStart={onMutationStart}
-        />
-        <AnalysisControl
-          screen={screen}
-          crawlId={crawl.id}
-          phaseRun={phaseRuns?.analysis}
-          running={analysisRunning}
-          selectedUrlIds={selectedUrlIds}
-          onMutationStart={onMutationStart}
-        />
-
-        {mutationMessage ? (
-          <div className="lg:col-span-2">
-            <Alert tone="danger">{mutationMessage}</Alert>
+      <CardContent className="grid gap-3 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-foreground text-sm font-semibold">Crawl controls</h2>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <PhaseCounters counters={crawl.counters} />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={onRecrawl}
+              disabled={screen.active || screen.startPending || phaseMutationPending}
+            >
+              {screen.startPending ? 'Starting…' : 'Re-crawl site'}
+            </Button>
           </div>
-        ) : null}
+        </div>
+        <div className="border-border-subtle grid gap-4 border-t pt-3 lg:grid-cols-2 lg:gap-6">
+          <DiscoveryControl
+            screen={screen}
+            crawlId={crawl.id}
+            phaseRun={phaseRuns?.discovery}
+            running={discoveryRunning}
+            onMutationStart={onMutationStart}
+          />
+          <AnalysisControl
+            screen={screen}
+            crawlId={crawl.id}
+            phaseRun={phaseRuns?.analysis}
+            running={analysisRunning}
+            selectedUrlIds={selectedUrlIds}
+            onMutationStart={onMutationStart}
+          />
+        </div>
+        {mutationMessage ? <Alert tone="danger">{mutationMessage}</Alert> : null}
       </CardContent>
     </Card>
   );

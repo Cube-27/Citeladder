@@ -47,4 +47,25 @@ describe('ActivityProgress', () => {
     expect(screen.getByText('We could not read the website')).toBeInTheDocument();
     expect(screen.queryByText(/crawl_owned_site|discovery_unavailable/)).not.toBeInTheDocument();
   });
+
+  it('preserves attention while completed steps animate into view', () => {
+    const { container } = render(
+      <ActivityProgress
+        label="Preparing your project"
+        animateCompletion
+        steps={[
+          { id: 'site', label: 'Opening your website', state: 'complete' },
+          {
+            id: 'market',
+            label: 'Website review needs attention',
+            state: 'attention',
+          },
+          { id: 'questions', label: 'Building balanced questions', state: 'complete' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Website review needs attention')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-circle-alert')).toBeInTheDocument();
+  });
 });

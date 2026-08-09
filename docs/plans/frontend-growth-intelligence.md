@@ -60,24 +60,38 @@ redirect, never as one cutover.
 
 ## 4. Navigation
 
-Flat, six destinations, matching [`../design.md`](../design.md) screen geometry. The sidebar is the
-architecture — if a user cannot name the four layers after a week, this failed.
+The sidebar teaches the architecture through three stable intelligence-system headings. Primary
+workspaces remain directly reachable beneath the owning system; sub-surfaces inside one workspace
+remain tabs on that route. Overview, Growth Agent, and Reports stay in Workspace because the agent
+orchestrates the three systems rather than belonging to one of them.
 
 ```text
-Overview          /projects          project state, top insights, what changed
-Site              /site              corpus, pages, facts, schema, journeys, evidence
-Content           /content           strategy, inventory, briefs, drafts, verification
-Demand            /demand            search demand, journeys, prompts, visibility, coverage
-Growth Agent      /agent             conversation, tasks, roadmap
-Reports           /reports           snapshots and exports
-Settings          /settings          project, integrations, providers, billing
+Workspace
+  Overview          /projects          project state, top insights, what changed
+  Growth Agent      /agent             conversation, tasks, roadmap
+  Reports           /reports           snapshots and exports
+Site Intelligence
+  Website           /site              overview, pages, knowledge, schema, journeys, evidence
+  Issues            /issues            current issue catalog
+  Opportunities     /opportunities     ranked persisted opportunities
+  Facts             /knowledge-base    project facts and corrections
+Content Intelligence
+  Content           /content           strategy, inventory, briefs, drafts, verification
+Demand Intelligence
+  Demand overview   /demand            demand signals, journeys, prompts, visibility, evidence
+  AI Visibility     /visibility        answer-engine measurement
+  AI Referrals      /analytics         referral evidence
+  Traffic           /traffic           first-party search and behavior
+  Prompts           /prompts           measured prompt portfolio
+  Commerce          /products          commerce workspace
+  Runs              /runs              audit execution and evidence
 ```
 
-Within a layer, sub-surfaces are tabs on the layer route rather than sidebar children. Two levels
-of navigation is the limit.
+Within a workspace, sub-surfaces are tabs on the route rather than sidebar children. Group heading,
+destination, then in-page tab is the maximum depth.
 
-`/issues` and `/opportunities` do not survive as destinations. Findings are insights attached to the
-artifact they concern, surfaced in their owning layer and on Overview.
+`/issues` and `/opportunities` remain direct Site Intelligence destinations while the more specific
+artifact views stay contextual inside the Website workspace.
 
 **Sequencing.** Regroup in one change, at the point the first `/site` route exists. A sidebar
 promising destinations that resolve to nothing violates the live-navigation rule.
@@ -169,7 +183,10 @@ screens under the new grouping. New:
 
 ### 7.5 Growth Agent — after stage 5
 
-- **Task composer** listing only the task families in the backend catalog.
+- **Conversation-first workspace** using durable conversation and message contracts. The bottom
+  composer sends one message into one bounded catalog task. Raw task types, identifiers, provider
+  status, and scope JSON never become composer controls; contextual source identity arrives from
+  the owning workspace, and completed task telemetry is represented once as the assistant reply.
 - **Plan and progress timeline** driven by polling; polling is authoritative and streaming is
   presentation only. `awaiting_user` and `awaiting_task` render differently — one needs the person,
   one needs patience.

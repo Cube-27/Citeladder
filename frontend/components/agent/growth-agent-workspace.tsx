@@ -1,15 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronRight, Circle, Clock3, ShieldCheck, X } from 'lucide-react';
+import { Check, Circle, Clock3, Plus, Send, ShieldCheck, X } from 'lucide-react';
 
 import { DecisionPrompt } from '@/components/intelligence/decision-prompt';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Input, Textarea, inputClasses } from '@/components/ui/input';
-import { agentApi, type AgentTaskRun } from '@/lib/api/agent';
+import { Textarea } from '@/components/ui/input';
+import { agentApi, type AgentConversationDetail, type AgentTaskRun } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
@@ -17,42 +17,17 @@ import { cn } from '@/lib/utils';
 const ACTIVE_STATUSES = new Set(['validating', 'planning', 'running', 'awaiting_task']);
 const TERMINAL_STATUSES = new Set(['completed', 'partially_completed', 'failed', 'cancelled']);
 
-function statusIcon(status: string) {
-  if (status === 'completed') return <Check aria-hidden className="size-4" />;
-  if (status === 'failed' || status === 'cancelled') return <X aria-hidden className="size-4" />;
-  if (status === 'running' || status === 'awaiting_task')
-    return <Clock3 aria-hidden className="size-4" />;
-  return <Circle aria-hidden className="size-3" />;
-}
-
 function readable(value: string) {
   return value.replaceAll('_', ' ');
 }
 
-function unknownText(value: unknown, fallback = '') {
-  return typeof value === 'string' || typeof value === 'number' ? String(value) : fallback;
-}
-
-function providerSummary(configured: boolean | undefined, adapter?: string, model?: string) {
-  if (configured) return `${adapter ?? ''} · ${model ?? ''}`;
-  return 'Deterministic mode · model narration unavailable';
-}
-
-function artifactHref(kind: string, id: string) {
-  if (kind === 'opportunity') return `/opportunities?selected=${encodeURIComponent(id)}`;
-  if (kind === 'prompt') return '/prompts';
-  if (kind === 'audit_schedule') return '/runs';
-  if (kind.startsWith('content_')) return '/content';
-  if (kind === 'demand_snapshot') return '/demand';
-  if (kind === 'site_snapshot') return '/site';
-  return null;
-}
-
-function timestamp(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+function statusIcon(status: string) {
+  if (status === 'completed') return <Check aria-hidden className="size-4" />;
+  if (status === 'failed' || status === 'cancelled') return <X aria-hidden className="size-4" />;
+  if (status === 'running' || status === 'awaiting_task') {
+    return <Clock3 aria-hidden className="size-4" />;
+  }
+  return <Circle aria-hidden className="size-3" />;
 }
 
 function parseScope(value: string): Record<string, unknown> {
@@ -64,179 +39,49 @@ function parseScope(value: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-function ResultPanel({ run }: Readonly<{ run: AgentTaskRun }>) {
-  const result = run.result;
-  const limitations = Array.isArray(result?.limitations) ? result.limitations : [];
-  const artifacts = Array.isArray(result?.artifacts_created) ? result.artifacts_created : [];
-  const citations = Array.isArray(result?.citations) ? result.citations : [];
-  const nextStep = typeof result?.next_step === 'string' ? result.next_step : '';
-  const roadmap = result?.roadmap;
-  const groups =
-    roadmap && typeof roadmap === 'object' && !Array.isArray(roadmap)
-      ? (roadmap as Record<string, unknown>).groups
-      : null;
-
-  return (
-    <section
-      aria-labelledby="agent-result-heading"
-      className="border-border bg-panel rounded-lg border"
-    >
-      <div className="border-border-subtle border-b px-4 py-3">
-        <h2 id="agent-result-heading" className="text-foreground text-sm font-semibold">
-          Result
-        </h2>
-      </div>
-      <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="min-w-0">
-          <p className="text-foreground max-w-[70ch] text-sm leading-relaxed">
-            {String(result?.conclusion ?? 'This run has not produced a conclusion yet.')}
-          </p>
-          {Array.isArray(groups) && groups.length > 0 ? (
-            <ol className="border-border-subtle mt-5 divide-y border-y">
-              {groups.map((group, index) => {
-                const item = group as Record<string, unknown>;
-                const groupItems = Array.isArray(item.items) ? item.items : [];
-                return (
-                  <li key={`${String(item.name)}-${index}`} className="py-4">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <h3 className="text-foreground text-sm font-semibold capitalize">
-                        {readable(unknownText(item.name, 'Other'))}
-                      </h3>
-                      <span className="text-subtle text-xs tabular-nums">
-                        {groupItems.length} {groupItems.length === 1 ? 'action' : 'actions'}
-                      </span>
-                    </div>
-                    <p className="text-muted mt-1 text-xs leading-relaxed">
-                      {unknownText(item.rationale)}
-                    </p>
-                    <ul className="mt-3 grid gap-2">
-                      {groupItems.map((entry, entryIndex) => {
-                        const action = entry as Record<string, unknown>;
-                        return (
-                          <li
-                            key={unknownText(action.id, String(entryIndex))}
-                            className="flex gap-3 text-sm"
-                          >
-                            <span className="text-subtle tabular-nums">
-                              {unknownText(action.rank, String(entryIndex + 1))}
-                            </span>
-                            <span className="text-foreground">
-                              {unknownText(action.title, 'Action')}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </li>
-                );
-              })}
-            </ol>
-          ) : null}
-          {nextStep ? (
-            <div className="border-border-subtle mt-5 border-t pt-4">
-              <p className="text-subtle text-2xs font-medium tracking-wide uppercase">Next step</p>
-              <p className="text-foreground mt-1 text-sm leading-relaxed">{nextStep}</p>
-            </div>
-          ) : null}
-        </div>
-        <aside className="border-border-subtle border-t pt-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-5">
-          <p className="text-subtle text-2xs font-medium tracking-wide uppercase">Trust record</p>
-          <dl className="mt-3 grid gap-3 text-xs">
-            <div>
-              <dt className="text-muted">Validation</dt>
-              <dd className="text-foreground mt-0.5 font-medium capitalize">
-                {String(run.validation?.status ?? 'pending')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Artifacts</dt>
-              <dd className="text-foreground mt-0.5 tabular-nums">{artifacts.length}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Model</dt>
-              <dd className="text-foreground mt-0.5 break-words">{run.model}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Usage</dt>
-              <dd className="text-foreground mt-0.5 tabular-nums">
-                {run.usage ? `${String(run.usage.total_tokens ?? 0)} tokens` : 'No model usage'}
-              </dd>
-            </div>
-          </dl>
-          {limitations.length > 0 ? (
-            <div className="mt-5">
-              <p className="text-subtle text-2xs font-medium tracking-wide uppercase">
-                Limitations
-              </p>
-              <ul className="text-muted mt-2 grid gap-1.5 text-xs leading-relaxed">
-                {limitations.map((item, index) => (
-                  <li key={`${String(item)}-${index}`}>{String(item)}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {artifacts.length > 0 ? (
-            <div className="mt-5">
-              <p className="text-subtle text-2xs font-medium tracking-wide uppercase">Artifacts</p>
-              <ul className="mt-2 grid gap-1.5 text-xs">
-                {artifacts.map((value, index) => {
-                  const artifact = value as Record<string, unknown>;
-                  const kind = unknownText(artifact.kind, 'artifact');
-                  const id = unknownText(artifact.id);
-                  const href = artifactHref(kind, id);
-                  return (
-                    <li key={`${kind}-${id}-${index}`} className="min-w-0">
-                      {href ? (
-                        <Link className="text-accent-text hover:underline" href={href}>
-                          {readable(kind)} · {id.slice(0, 8)}
-                        </Link>
-                      ) : (
-                        <span className="text-muted break-all">
-                          {readable(kind)} · {id}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
-          {citations.length > 0 ? (
-            <details className="mt-5">
-              <summary className="text-subtle text-2xs cursor-pointer font-medium tracking-wide uppercase">
-                Citation IDs · {citations.length}
-              </summary>
-              <ul className="text-muted mt-2 grid gap-1 text-xs break-all">
-                {citations.map((citation) => (
-                  <li key={String(citation)}>{String(citation)}</li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
-        </aside>
-      </div>
-    </section>
-  );
+function mostRecentConversationRun(
+  runs: ReadonlyArray<AgentTaskRun> | undefined,
+  conversationId: string | null,
+): AgentTaskRun | null {
+  if (!conversationId) return null;
+  return (runs ?? [])
+    .filter((run) => run.conversation_id === conversationId)
+    .reduce<AgentTaskRun | null>(
+      (latest, run) => (!latest || run.created_at > latest.created_at ? run : latest),
+      null,
+    );
 }
 
-function RunTimeline({ run }: Readonly<{ run: AgentTaskRun }>) {
+function isAwaitingAssistantReply(
+  run: AgentTaskRun | null,
+  conversation: AgentConversationDetail | undefined,
+): boolean {
+  const selectedRunAnswered = Boolean(
+    run &&
+    conversation?.messages.some(
+      (message) => message.role === 'assistant' && message.task_run_id === run.id,
+    ),
+  );
+  return Boolean(run && TERMINAL_STATUSES.has(run.status) && !selectedRunAnswered);
+}
+
+function TaskProgress({ run }: Readonly<{ run: AgentTaskRun }>) {
+  const status = ['validating', 'planning'].includes(run.status)
+    ? 'Preparing'
+    : run.status === 'awaiting_task'
+      ? 'Waiting for linked work'
+      : 'Working';
   return (
-    <section
-      aria-labelledby="agent-plan-heading"
-      className="border-border bg-panel rounded-lg border p-4"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="agent-plan-heading" className="text-foreground text-sm font-semibold">
-          Plan and progress
-        </h2>
-        <span className="text-muted text-xs capitalize">{readable(run.status)}</span>
-      </div>
-      <ol className="mt-4 grid gap-1">
+    <details className="border-border-subtle mt-3 border-t pt-3">
+      <summary className="text-muted cursor-pointer text-xs font-medium">
+        {status} · {run.steps.length} {run.steps.length === 1 ? 'step' : 'steps'}
+      </summary>
+      <ol className="mt-3 grid gap-2">
         {run.steps.map((step) => (
-          <li key={step.id} className="flex min-h-11 items-center gap-3 py-1.5">
+          <li key={step.id} className="flex items-start gap-2 text-xs">
             <span
               className={cn(
-                'flex size-7 shrink-0 items-center justify-center rounded-full',
+                'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full',
                 step.status === 'completed' && 'bg-success-bg text-success-text',
                 ['failed', 'cancelled'].includes(step.status) && 'bg-danger-bg text-danger-text',
                 ['running', 'awaiting_task', 'awaiting_user'].includes(step.status) &&
@@ -246,16 +91,14 @@ function RunTimeline({ run }: Readonly<{ run: AgentTaskRun }>) {
             >
               {statusIcon(step.status)}
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-foreground text-sm">{step.name}</p>
-              <p className="text-muted text-xs">
-                {readable(step.tool_name)} · {readable(step.status)}
-              </p>
-            </div>
+            <span className="min-w-0">
+              <span className="text-foreground block">{step.name}</span>
+              <span className="text-muted block capitalize">{readable(step.status)}</span>
+            </span>
           </li>
         ))}
       </ol>
-    </section>
+    </details>
   );
 }
 
@@ -264,11 +107,19 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
   const queryClient = useQueryClient();
   const { activeProject, isLoading: projectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
-  const [taskType, setTaskType] = useState(search.get('task') ?? 'build_roadmap');
-  const [objective, setObjective] = useState(
-    search.get('objective') ?? 'Build a roadmap from the current verified evidence.',
-  );
-  const [scopeText, setScopeText] = useState(search.get('scope') ?? '{}');
+  const taskType = search.get('task') ?? 'explain';
+  const objectiveParam = search.get('objective') ?? '';
+  const [objectiveDraft, setObjectiveDraft] = useState({
+    searchValue: objectiveParam,
+    value: objectiveParam,
+  });
+  const objective =
+    objectiveDraft.searchValue === objectiveParam ? objectiveDraft.value : objectiveParam;
+  const setObjective = (value: string) => {
+    setObjectiveDraft({ searchValue: objectiveParam, value });
+  };
+  const scopeText = search.get('scope') ?? '{}';
+  const [conversationChoice, setConversationChoice] = useState<string | 'new' | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
   const [decisionError, setDecisionError] = useState('');
@@ -278,6 +129,15 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
     queryKey: queryKeys.agent.capabilities(),
     queryFn: ({ signal }) => agentApi.capabilities({ signal }),
   });
+  const conversations = useQuery({
+    queryKey: queryKeys.agent.conversations(projectId ?? ''),
+    queryFn: ({ signal }) => agentApi.listConversations(projectId!, { signal }),
+    enabled: Boolean(projectId),
+  });
+  const conversationId =
+    conversationChoice === 'new'
+      ? null
+      : (conversationChoice ?? conversations.data?.[0]?.id ?? null);
   const tasks = useQuery({
     queryKey: queryKeys.agent.tasks(projectId ?? ''),
     queryFn: ({ signal }) => agentApi.listTasks(projectId!, { signal }),
@@ -285,46 +145,76 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
     refetchInterval: (query) =>
       (query.state.data ?? []).some((run) => ACTIVE_STATUSES.has(run.status)) ? 2_000 : false,
   });
+  const selectedRun = useMemo(() => {
+    if (selectedRunId) return tasks.data?.find((run) => run.id === selectedRunId) ?? null;
+    return mostRecentConversationRun(tasks.data, conversationId);
+  }, [conversationId, selectedRunId, tasks.data]);
+  const conversation = useQuery({
+    queryKey: queryKeys.agent.conversation(projectId ?? '', conversationId ?? ''),
+    queryFn: ({ signal }) => agentApi.getConversation(projectId!, conversationId!, { signal }),
+    enabled: Boolean(projectId && conversationId),
+    refetchInterval: (query) =>
+      isAwaitingAssistantReply(selectedRun, query.state.data) ? 1_000 : false,
+  });
+
   const resolvedTaskType = capabilities.data?.task_catalog.some(
     (item) => item.task_type === taskType,
   )
     ? taskType
     : (capabilities.data?.task_catalog[0]?.task_type ?? taskType);
-  const selectedRun = useMemo(
-    () =>
-      selectedRunId === null
-        ? (tasks.data?.[0] ?? null)
-        : (tasks.data?.find((run) => run.id === selectedRunId) ?? null),
-    [selectedRunId, tasks.data],
+  const taskPolicy = capabilities.data?.task_catalog.find(
+    (item) => item.task_type === resolvedTaskType,
   );
-
+  const taskScope = useMemo(() => {
+    try {
+      return parseScope(scopeText);
+    } catch {
+      return {};
+    }
+  }, [scopeText]);
+  const missingRequiredScope =
+    taskPolicy?.required_scope.filter((key) => !String(taskScope[key] ?? '').trim()) ?? [];
   const submit = useMutation({
     mutationFn: async () => {
-      if (!projectId) throw new Error('Select a project before starting a task.');
-      return agentApi.submitTask(
+      if (!projectId) throw new Error('Select a project before sending a message.');
+      const message = objective.trim();
+      if (!message) throw new Error('Write a message for the Growth Agent.');
+      const activeConversationId =
+        conversationId ?? (await agentApi.createConversation(projectId, message.slice(0, 80))).id;
+      const run = await agentApi.submitTask(
         {
           project_id: projectId,
+          conversation_id: activeConversationId,
           task_type: resolvedTaskType,
-          objective,
-          resource_scope: parseScope(scopeText),
+          objective: message,
+          resource_scope: taskScope,
         },
         crypto.randomUUID(),
       );
+      return { run, conversationId: activeConversationId };
     },
-    onSuccess: (run) => {
+    onSuccess: ({ run, conversationId: nextConversationId }) => {
       setFormError('');
+      setObjective('');
+      setConversationChoice(nextConversationId);
       setSelectedRunId(run.id);
       void queryClient.invalidateQueries({ queryKey: queryKeys.agent.tasks(run.project_id) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.agent.conversations(run.project_id),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.agent.conversation(run.project_id, nextConversationId),
+      });
     },
     onError: (error) =>
-      setFormError(error instanceof Error ? error.message : 'The task could not start.'),
+      setFormError(error instanceof Error ? error.message : 'The message could not be sent.'),
   });
   const decide = useMutation({
     mutationFn: async ({ run, confirmed }: { run: AgentTaskRun; confirmed: boolean }) => {
       const remaining = run.result?.decisions_remaining;
       const decision = String(
         (Array.isArray(remaining) ? remaining[0] : null) ??
-          run.steps.find((s) => s.status === 'awaiting_user')?.tool_kind ??
+          run.steps.find((step) => step.status === 'awaiting_user')?.tool_kind ??
           '',
       );
       return agentApi.decide(run.project_id, run.id, decision, confirmed);
@@ -333,6 +223,11 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
       setDecisionError('');
       setDecisionOpen(false);
       void queryClient.invalidateQueries({ queryKey: queryKeys.agent.tasks(run.project_id) });
+      if (run.conversation_id) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.agent.conversation(run.project_id, run.conversation_id),
+        });
+      }
     },
     onError: (error) =>
       setDecisionError(
@@ -349,257 +244,208 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
       setFormError(error instanceof Error ? error.message : 'The task could not be cancelled.'),
   });
 
-  const taskPolicy = capabilities.data?.task_catalog.find(
-    (item) => item.task_type === resolvedTaskType,
-  );
   const pendingDecision = selectedRun?.steps.find((step) => step.status === 'awaiting_user');
   const decisionKind = pendingDecision?.tool_kind === 'run_audit' ? 'run-audit' : 'save-content';
-  const selectedManifest = selectedRun?.context?.manifest.selected;
-  const selectedCount: number =
-    selectedManifest && typeof selectedManifest === 'object'
-      ? Object.values(selectedManifest as Record<string, unknown>).reduce<number>(
-          (total, value) => total + (Array.isArray(value) ? value.length : 0),
-          0,
-        )
-      : 0;
-  let providerStatus = providerSummary(
-    capabilities.data?.configured,
-    capabilities.data?.provider_adapter,
-    capabilities.data?.model,
-  );
-  if (capabilities.isError) providerStatus = 'Provider status unavailable';
-
   if (projectLoading) return <p className="text-muted text-sm">Loading project…</p>;
-  if (!projectId)
+  if (!projectId) {
     return (
       <p className="text-muted text-sm">Create or select a project to use the Growth Agent.</p>
     );
+  }
 
   return (
-    <div className="grid gap-6">
-      <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <h1 className="font-display text-foreground text-2xl font-semibold tracking-tight">
-            Turn evidence into the next move
-          </h1>
-          <p className="text-muted mt-2 max-w-[70ch] text-sm leading-relaxed">
-            The agent coordinates Site, Content, and Demand through bounded tasks. It cannot
-            publish, change deterministic scores, or turn generated prose into project facts.
-          </p>
-        </div>
-        <div className="border-border bg-panel flex items-center gap-3 rounded-md border px-3 py-2 text-xs">
-          <ShieldCheck aria-hidden className="text-accent-text size-4" />
-          <span className="text-secondary">{providerStatus}</span>
-        </div>
-      </header>
-
-      <section
-        className="border-border bg-panel rounded-lg border p-4"
-        aria-labelledby="agent-compose-heading"
-      >
-        <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)_auto] lg:items-end">
-          <label className="text-secondary grid gap-1.5 text-xs font-medium">
-            <span id="agent-compose-heading">Supported task</span>
-            <select
-              value={resolvedTaskType}
-              onChange={(event) => setTaskType(event.target.value)}
-              className={cn(inputClasses, 'h-11')}
-            >
-              {(capabilities.data?.task_catalog ?? []).map((item) => (
-                <option key={item.task_type} value={item.task_type}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-secondary grid gap-1.5 text-xs font-medium">
-            <span>Objective</span>
-            <Input
-              value={objective}
-              onChange={(event) => setObjective(event.target.value)}
-              maxLength={2000}
-              className="h-11"
-            />
-          </label>
-          <Button
-            className="min-h-11"
-            onClick={() => submit.mutate()}
-            disabled={submit.isPending || !objective.trim() || !taskPolicy}
-          >
-            {submit.isPending ? 'Starting…' : 'Start task'}
-          </Button>
-        </div>
-        {taskPolicy ? (
-          <p className="text-muted mt-3 text-xs leading-relaxed">{taskPolicy.description}</p>
-        ) : null}
-        {taskPolicy?.required_scope.length ? (
-          <label className="text-secondary mt-4 grid gap-1.5 text-xs font-medium">
-            Resource scope · required: {taskPolicy.required_scope.join(', ')}
-            <Textarea
-              value={scopeText}
-              onChange={(event) => setScopeText(event.target.value)}
-              rows={3}
-              spellCheck={false}
-            />
-            <span className="text-muted text-2xs">
-              JSON object, for example {`{"${taskPolicy.required_scope[0]}": "…"}`}.
-            </span>
-          </label>
-        ) : null}
-        {capabilities.isError ? (
-          <div className="border-danger bg-danger-bg mt-3 flex items-center justify-between gap-3 rounded-sm border p-3">
-            <p role="alert" className="text-danger-text text-xs">
-              Agent capabilities could not be loaded.
-            </p>
-            <Button variant="ghost" size="sm" onClick={() => void capabilities.refetch()}>
-              Retry
-            </Button>
-          </div>
-        ) : null}
-        {formError ? (
-          <p role="alert" className="text-danger-text mt-3 text-xs">
-            {formError} Check the task scope and try again.
-          </p>
-        ) : null}
-      </section>
-
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside aria-label="Task history" className="min-w-0">
-          <div className="flex items-center justify-between">
-            <h2 className="text-foreground text-sm font-semibold">Task history</h2>
-            <span className="text-subtle text-xs tabular-nums">{tasks.data?.length ?? 0}</span>
-          </div>
-          <div className="mt-3 grid gap-1">
-            {tasks.data?.map((run) => (
+    <div className="grid min-h-[calc(100dvh-10rem)] gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="border-border-subtle bg-background-alt rounded-lg border p-2">
+        <Button
+          variant="secondary"
+          className="w-full justify-start"
+          onClick={() => {
+            setConversationChoice('new');
+            setSelectedRunId(null);
+            setObjective('');
+            setFormError('');
+          }}
+        >
+          <Plus aria-hidden className="size-4" />
+          New conversation
+        </Button>
+        <div className="mt-3 grid gap-1" aria-label="Conversations">
+          {conversations.data?.map((item) => {
+            const conversationRun = mostRecentConversationRun(tasks.data, item.id);
+            return (
               <button
-                key={run.id}
+                key={item.id}
                 type="button"
-                onClick={() => setSelectedRunId(run.id)}
-                aria-pressed={selectedRun?.id === run.id}
+                onClick={() => {
+                  setConversationChoice(item.id);
+                  setSelectedRunId(null);
+                }}
+                aria-pressed={conversationId === item.id}
                 className={cn(
-                  'focus:ring-accent flex min-h-11 w-full items-center gap-2 rounded-sm px-2 text-left text-xs outline-none focus:ring-2',
-                  selectedRun?.id === run.id
-                    ? 'bg-accent-subtle text-accent-text'
-                    : 'text-secondary hover:bg-well',
+                  'focus-ring min-h-10 rounded-sm px-2 py-1.5 text-left text-xs',
+                  conversationId === item.id
+                    ? 'bg-accent-soft text-accent-hover'
+                    : 'text-secondary hover:bg-background',
                 )}
               >
-                <span className="shrink-0">{statusIcon(run.status)}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="text-foreground block truncate">{run.objective}</span>
-                  <span className="text-muted mt-0.5 block truncate">
-                    {readable(run.task_type)} · {readable(run.status)} · {timestamp(run.updated_at)}
-                  </span>
+                <span className="block truncate font-medium">{item.title}</span>
+                <span className="text-muted mt-0.5 block capitalize">
+                  {conversationRun ? readable(conversationRun.status) : 'Conversation'}
                 </span>
-                <ChevronRight aria-hidden className="size-3.5 shrink-0" />
               </button>
-            ))}
-            {tasks.isError ? (
-              <div className="border-danger bg-danger-bg mt-2 rounded-sm border p-3">
-                <p role="alert" className="text-danger-text text-xs">
-                  Task history could not be loaded.
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => void tasks.refetch()}
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : null}
-            {!tasks.isLoading && !tasks.isError && !tasks.data?.length ? (
-              <p className="text-muted py-6 text-xs leading-relaxed">
-                No runs yet. Start with a roadmap or evidence explanation.
-              </p>
-            ) : null}
-          </div>
-        </aside>
+            );
+          })}
+          {!conversations.isLoading && !conversations.data?.length ? (
+            <p className="text-muted px-2 py-4 text-xs leading-relaxed">
+              Your conversations will appear here.
+            </p>
+          ) : null}
+        </div>
+      </aside>
 
-        <div className="grid min-w-0 gap-4">
-          {selectedRun ? (
-            <>
-              <RunTimeline run={selectedRun} />
+      <section className="border-border bg-panel flex min-w-0 flex-col rounded-lg border">
+        <header className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <div>
+            <h1 className="font-display text-foreground text-lg font-semibold">Growth Agent</h1>
+            <p className="text-muted text-xs">Ask across Site, Content, and Demand evidence.</p>
+          </div>
+          <div className="text-secondary flex items-center gap-2 text-xs">
+            <ShieldCheck aria-hidden className="text-accent-text size-4" />
+            Uses approved project evidence
+          </div>
+        </header>
+
+        <div className="min-h-80 flex-1 overflow-y-auto p-4 sm:p-6">
+          {conversation.isError ? (
+            <Alert tone="danger">
+              The conversation could not be loaded. Refresh and try again.
+            </Alert>
+          ) : null}
+          {!conversationId || (!conversation.isLoading && !conversation.data?.messages.length) ? (
+            <div className="mx-auto grid max-w-xl place-items-center py-16 text-center">
+              <h2 className="font-display text-foreground text-xl font-semibold">
+                What should we work on next?
+              </h2>
+              <p className="text-muted mt-2 max-w-[58ch] text-sm leading-relaxed">
+                Ask for an explanation, roadmap, draft, demand analysis, or next measurement. The
+                agent uses only the current project&apos;s persisted evidence and bounded tools.
+              </p>
+            </div>
+          ) : null}
+          {conversation.data?.messages.length ? (
+            <ol className="mx-auto grid max-w-3xl gap-5">
+              {conversation.data.messages.map((message) => (
+                <li
+                  key={message.id}
+                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
+                      message.role === 'user'
+                        ? 'bg-accent text-inverse'
+                        : 'bg-background-alt text-foreground border-border-subtle border',
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.citations.length ? (
+                      <details className="mt-2 text-xs opacity-80">
+                        <summary className="cursor-pointer">
+                          Evidence · {message.citations.length}
+                        </summary>
+                        <ul className="mt-1 grid gap-1 break-all">
+                          {message.citations.map((citation) => (
+                            <li key={citation}>{citation}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+
+          {selectedRun && !TERMINAL_STATUSES.has(selectedRun.status) ? (
+            <div className="mx-auto mt-5 max-w-3xl">
               {pendingDecision ? (
-                <section className="border-info bg-info-bg flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="border-info bg-info-bg flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
                   <div>
                     <p className="text-info-text text-sm font-semibold">
                       Your decision is required
                     </p>
-                    <p className="text-info-text mt-1 text-xs">{pendingDecision.name}</p>
+                    <p className="text-info-text mt-0.5 text-xs">{pendingDecision.name}</p>
                   </div>
-                  <Button onClick={() => setDecisionOpen(true)}>Review decision</Button>
-                </section>
-              ) : null}
-              {selectedRun.result ? <ResultPanel run={selectedRun} /> : null}
-              <details className="border-border bg-panel rounded-lg border p-4">
-                <summary className="text-foreground cursor-pointer text-sm font-semibold">
-                  Context and evidence
-                </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-muted text-xs">Included artifacts</p>
-                    <p className="text-foreground mt-1 text-sm tabular-nums">{selectedCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted text-xs">Omissions</p>
-                    <p className="text-foreground mt-1 text-sm tabular-nums">
-                      {selectedRun.context?.omissions.length ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted text-xs">Frozen context</p>
-                    <p className="text-foreground mt-1 text-sm tabular-nums">
-                      {selectedRun.context?.char_count ?? 0} characters
-                    </p>
-                  </div>
+                  <Button size="sm" onClick={() => setDecisionOpen(true)}>
+                    Review decision
+                  </Button>
                 </div>
-                {selectedRun.context?.omissions.length ? (
-                  <ul className="border-border-subtle text-muted mt-4 grid gap-1 border-t pt-3 text-xs">
-                    {selectedRun.context.omissions.map((value, index) => {
-                      const item = value as Record<string, unknown>;
-                      return (
-                        <li key={`${String(item.section)}-${index}`}>
-                          {readable(unknownText(item.section, 'context'))}:{' '}
-                          {readable(unknownText(item.reason, 'omitted'))}
-                          {typeof item.count === 'number' ? ` · ${item.count}` : ''}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : null}
-                <p className="text-muted mt-4 text-xs break-all">
-                  Manifest {selectedRun.context?.manifest_hash ?? 'not available'}
-                </p>
-              </details>
-              {!TERMINAL_STATUSES.has(selectedRun.status) ? (
-                <Button
-                  variant="ghost"
-                  className="justify-self-start"
-                  onClick={() => cancel.mutate(selectedRun)}
-                  disabled={cancel.isPending}
-                >
-                  {cancel.isPending ? 'Cancelling…' : 'Cancel task'}
-                </Button>
               ) : null}
-            </>
-          ) : (
-            <div className="border-border bg-panel rounded-lg border p-8">
-              <p className="text-foreground text-sm font-medium">Choose a bounded task</p>
-              <p className="text-muted mt-2 max-w-[65ch] text-sm leading-relaxed">
-                Roadmaps preserve deterministic priority. Explanations cite only frozen, authorized
-                context.
-              </p>
-              <Link
-                href="/site"
-                className="text-accent-text mt-4 inline-flex text-sm font-medium hover:underline"
+              <TaskProgress run={selectedRun} />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => cancel.mutate(selectedRun)}
+                disabled={cancel.isPending}
               >
-                Review Site evidence first
-              </Link>
+                {cancel.isPending ? 'Cancelling…' : 'Cancel task'}
+              </Button>
             </div>
-          )}
+          ) : null}
         </div>
-      </div>
+
+        <form
+          className="border-border-subtle bg-background-alt border-t p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit.mutate();
+          }}
+        >
+          <div className="mx-auto grid max-w-3xl gap-2">
+            <Textarea
+              value={objective}
+              onChange={(event) => setObjective(event.target.value)}
+              maxLength={2000}
+              rows={3}
+              aria-label="Message Growth Agent"
+              placeholder="Ask the Growth Agent about your current evidence…"
+              disabled={submit.isPending}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              {missingRequiredScope.length ? (
+                <p className="text-muted max-w-xl text-xs leading-relaxed">
+                  This action needs a selected source item. Start it from the related Content or
+                  Demand workspace so the agent receives the right context.
+                </p>
+              ) : null}
+              <Button
+                type="submit"
+                className="ml-auto"
+                disabled={
+                  submit.isPending ||
+                  !objective.trim() ||
+                  !taskPolicy ||
+                  missingRequiredScope.length > 0
+                }
+              >
+                <Send aria-hidden className="size-4" />
+                {submit.isPending ? 'Sending…' : 'Send'}
+              </Button>
+            </div>
+            {formError ? (
+              <p role="alert" className="text-danger-text text-xs">
+                {formError}
+              </p>
+            ) : null}
+            {capabilities.isError ? (
+              <p role="alert" className="text-danger-text text-xs">
+                Agent capabilities could not be loaded. Refresh and try again.
+              </p>
+            ) : null}
+          </div>
+        </form>
+      </section>
 
       {selectedRun && pendingDecision ? (
         <DecisionPrompt

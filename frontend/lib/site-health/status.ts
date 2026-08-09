@@ -269,16 +269,20 @@ export function hasScoreData(crawl: Pick<SiteCrawl, 'score_summary'>): boolean {
  *        - selection mode + discovered URLs → 'selection' (inventory persists through
  *          a cancel; the user stages a monitored set and re-crawls)
  *        - otherwise                   → 'terminal' (nothing to show)
- *   8. ACTIVE crawl + committed monitored set → 'analyzing'. Every
+ *   8. paused crawl                     → 'selection' when its inventory can
+ *      resume, otherwise 'terminal'. A stopped analysis must never keep
+ *      rendering as live merely because the monitored set still exists.
+ *   9. ACTIVE crawl + committed monitored set + pending/running analysis
+ *      → 'analyzing'. Every
  *      crawl created while a monitored set exists is seeded with its analyze
  *      tasks at creation, and a selection commit enqueues into the active
  *      crawl — so this crawl IS an analysis run even while re-discovery
  *      streams. Resolving it to 'discovering'/'selection' is what bounced the
  *      screen back to the URL list after "Start analysis" / "Re-crawl".
- *   9. discovery still running         → 'discovering'
- *  10. analysis running                → 'analyzing'
- *  11. selection mode + analysis pending → 'selection'
- *  12. otherwise (sample auto-analysis) → 'analyzing'
+ *  10. discovery still running         → 'discovering'
+ *  11. analysis running                → 'analyzing'
+ *  12. selection mode + analysis pending → 'selection'
+ *  13. otherwise (sample auto-analysis) → 'analyzing'
  */
 export function resolveSiteHealthPhase(
   /** The crawl, `null` for "settled: no crawl", `undefined` for "not settled". */
@@ -350,24 +354,39 @@ export function resolveSiteHealthPhase(
     return accessMode === 'full' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
   }
 
-  // 8. Every remaining status is ACTIVE (draft/validating/queued/running). An
+  // 8. A paused crawl has no live work. The monitored set survives specifically
+  // so the user can adjust or restart it; it is not evidence that analysis is
+  // still running. Treating it as active is why Stop analysis appeared to do
+  // nothing even after the backend had cancelled every phase task.
+  if (crawl.status === 'paused') {
+    return accessMode === 'full' && crawl.visible_url_count > 0 ? 'selection' : 'terminal';
+  }
+
+  // 9. Every remaining status is ACTIVE (draft/validating/queued/running). An
   // active crawl for a project with a committed monitored set is an analysis
   // run from the moment it is created: the planner seeds the monitored set's
   // analyze tasks at crawl creation, and a selection commit enqueues analyze
   // tasks into the active crawl immediately — `analysis_status` merely lags
-  // ('pending' until the worker's first reconcile). Resolving this shape to
+  // ('pending' until the worker's first reconcile). A STOPPED sub-state is
+  // deliberately excluded: the monitored set persists after Stop and cannot
+  // by itself prove that analysis is live. Resolving the pending shape to
   // 'discovering'/'selection' is what bounced the screen back to the URL list
   // right after "Start analysis" / "Re-crawl".
-  if (hasMonitoredSelection) return 'analyzing';
+  if (
+    hasMonitoredSelection &&
+    (crawl.analysis_status === 'pending' || crawl.analysis_status === 'running')
+  ) {
+    return 'analyzing';
+  }
 
-  // 9. Discovery still running.
+  // 10. Discovery still running.
   if (!TERMINAL_DISCOVERY.has(crawl.discovery_status)) return 'discovering';
 
-  // 10–12. Discovery done. A sample-mode account auto-analyzes its server-
+  // 11–13. Discovery done. A sample-mode account auto-analyzes its server-
   // selected sample; a selection-mode account stages a monitored set unless
   // analysis has already started.
   if (crawl.analysis_status === 'running') return 'analyzing';
-  if (accessMode === 'full' && crawl.analysis_status === 'pending') return 'selection';
+  if (accessMode === 'full') return 'selection';
   return 'analyzing';
 }
 
@@ -392,10 +411,10 @@ export function primaryActionForPhase(phase: SiteHealthPhase, active: boolean): 
     case 'analyzing':
       return active ? 'cancel' : 'none';
     case 'selection':
-      // An ACTIVE crawl parked in selection (discovery done, analysis pending)
-      // can still be cancelled from the header; a cancelled crawl's selection
-      // is driven by the section's own Save/Start-analysis buttons.
-      return active ? 'cancel' : 'none';
+      // An ACTIVE crawl parked in selection can still be cancelled. A paused
+      // or cancelled crawl keeps Re-crawl visible instead of leaving the page
+      // with no way to acquire fresh evidence.
+      return active ? 'cancel' : 'recrawl';
     case 'dashboard':
       return active ? 'cancel' : 'recrawl';
     default:

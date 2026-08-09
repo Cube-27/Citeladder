@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.site_health import (
     ANALYSIS_STATUS_COMPLETED,
     ANALYSIS_STATUS_FAILED,
+    ANALYSIS_STATUS_PENDING,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
@@ -27,6 +28,9 @@ from app.core.config.site_health import (
     EVENT_CRAWL_COMPLETED,
     EVENT_CRAWL_FAILED,
     FETCH_ATTEMPT_OUTCOME_ERROR,
+    PHASE_DISCOVERY,
+    PHASE_RUN_COMPLETED,
+    PHASE_RUN_RUNNING,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     SELECTION_SOURCE_USER,
@@ -45,6 +49,7 @@ from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
     SiteCrawlEvent,
+    SiteCrawlPhaseRun,
     SiteCrawlTask,
     SiteFetchArtifact,
     SiteFetchAttempt,
@@ -202,6 +207,50 @@ async def test_legitimately_empty_plan_keeps_analysis_completed_event(
         )
         assert EVENT_CRAWL_COMPLETED in event_types
         assert EVENT_CRAWL_FAILED not in event_types
+
+
+@pytest.mark.asyncio
+async def test_advanced_controls_do_not_park_a_completed_sample_crawl(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The automatic sample remains a terminal crawl, not a manual phase batch."""
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        task = await session.get(SiteCrawlTask, seed.task_ids[0])
+        assert crawl is not None and task is not None
+        crawl.sample_mode = True
+        crawl.discovery_status = DISCOVERY_STATUS_RUNNING
+        crawl.analysis_status = ANALYSIS_STATUS_PENDING
+        crawl.discovered_url_count = 1
+        crawl.configuration = {
+            "advanced_controls_enabled": True,
+            "count_disclosure": False,
+        }
+        phase_run = SiteCrawlPhaseRun(
+            workspace_id=seed.workspace_id,
+            crawl_id=seed.crawl_id,
+            phase=PHASE_DISCOVERY,
+            ordinal=1,
+            status=PHASE_RUN_RUNNING,
+            requested_count=1,
+        )
+        session.add(phase_run)
+        await session.flush()
+        task.phase_run_id = phase_run.id
+        task.status = TASK_STATUS_SUCCEEDED
+        task.completed_at = datetime.now(UTC)
+        await session.commit()
+
+    await _worker(session_factory, {})._reconcile_crawl_status(seed.crawl_id)
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        phase_run = await session.get(SiteCrawlPhaseRun, phase_run.id)
+        assert crawl is not None and crawl.status == CRAWL_STATUS_COMPLETED
+        assert crawl.discovery_status == DISCOVERY_STATUS_COMPLETED
+        assert crawl.analysis_status == ANALYSIS_STATUS_COMPLETED
+        assert phase_run is not None and phase_run.status == PHASE_RUN_COMPLETED
 
 
 @pytest.mark.asyncio

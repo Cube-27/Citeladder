@@ -71,6 +71,29 @@ const contextSchema = z.object({
   created_at: z.string(),
 });
 
+const conversationSchema = z.object({
+  id: z.string().uuid(),
+  project_id: z.string().uuid(),
+  title: z.string(),
+  created_by_user_id: z.string().uuid().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+const messageSchema = z.object({
+  id: z.string().uuid(),
+  conversation_id: z.string().uuid(),
+  task_run_id: z.string().uuid().nullable(),
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  citations: z.array(z.string()),
+  created_at: z.string(),
+});
+
+const conversationDetailSchema = conversationSchema.extend({
+  messages: z.array(messageSchema),
+});
+
 export const agentTaskRunSchema = z.object({
   id: z.string().uuid(),
   project_id: z.string().uuid(),
@@ -110,9 +133,12 @@ export const agentTaskRunSchema = z.object({
 
 export type AgentCapabilities = z.infer<typeof capabilitiesSchema>;
 export type AgentTaskRun = z.infer<typeof agentTaskRunSchema>;
+export type AgentConversation = z.infer<typeof conversationSchema>;
+export type AgentConversationDetail = z.infer<typeof conversationDetailSchema>;
 
 export type AgentTaskInput = {
   project_id: string;
+  conversation_id?: string;
   task_type: string;
   objective: string;
   resource_scope: Record<string, unknown>;
@@ -121,6 +147,26 @@ export type AgentTaskInput = {
 export const agentApi = {
   capabilities: async (options?: ApiRequestOptions) =>
     capabilitiesSchema.parse(await apiClient.get<unknown>('/agent/capabilities', options)),
+  createConversation: async (projectId: string, title: string) =>
+    conversationSchema.parse(
+      await apiClient.post<unknown>('/agent/conversations', { project_id: projectId, title }),
+    ),
+  listConversations: async (projectId: string, options?: ApiRequestOptions) =>
+    z
+      .array(conversationSchema)
+      .parse(
+        await apiClient.get<unknown>(
+          `/agent/conversations?project_id=${encodeURIComponent(projectId)}`,
+          options,
+        ),
+      ),
+  getConversation: async (projectId: string, conversationId: string, options?: ApiRequestOptions) =>
+    conversationDetailSchema.parse(
+      await apiClient.get<unknown>(
+        `/agent/conversations/${encodeURIComponent(conversationId)}?project_id=${encodeURIComponent(projectId)}`,
+        options,
+      ),
+    ),
   listTasks: async (projectId: string, options?: ApiRequestOptions) =>
     z
       .array(agentTaskRunSchema)

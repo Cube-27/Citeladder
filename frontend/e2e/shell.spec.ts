@@ -23,9 +23,11 @@ test('authenticated shell renders sidebar groups and top bar', async ({ page }) 
   // exact-matched so page copy can't satisfy or trip the assertion.
   const nav = page.getByRole('navigation', { name: 'Primary' });
   await expect(nav.getByText('Workspace', { exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Site', exact: true })).toBeVisible();
+  await expect(nav.getByText('Site Intelligence', { exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Website', exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Content', exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Demand', exact: true })).toBeVisible();
+  await expect(nav.getByText('Demand Intelligence', { exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Demand overview', exact: true })).toBeVisible();
 
   // Project switcher shows the active brand.
   await expect(page.getByText('Acme').first()).toBeVisible();

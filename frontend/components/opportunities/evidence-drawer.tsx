@@ -1,7 +1,6 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
 import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
@@ -94,11 +93,6 @@ export function EvidenceDrawer({
               </div>
             </section>
           ) : null}
-          <Button variant="secondary" size="sm" asChild>
-            <Link href={`/content?opportunity_id=${detail.id}`}>
-              Create content from this opportunity
-            </Link>
-          </Button>
           <section className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <Label>Tailored guidance</Label>

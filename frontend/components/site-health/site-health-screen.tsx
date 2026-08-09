@@ -108,6 +108,10 @@ export function SiteHealthScreen() {
         // in the global page header.
         return null;
       case 'recrawl':
+        // Advanced workspaces keep this beside the phase controls where users
+        // manage crawl work. Sample-mode screens have no phase-controls card,
+        // so the header remains their recrawl owner.
+        if (entitlementQuery.data?.advanced_controls_enabled) return null;
         return (
           <Button size="sm" onClick={() => setIntakeOpen(true)} disabled={startPending || active}>
             {startPending
@@ -187,6 +191,7 @@ export function SiteHealthScreen() {
             screen={screen}
             entitlement={entitlementQuery.data!}
             projectId={projectId}
+            onRecrawl={() => setIntakeOpen(true)}
           />
         }
       />

@@ -169,12 +169,14 @@ export function MarketSelect({
               onMouseEnter={() => setHighlight(index)}
               className={cn(
                 menuItemVariants({ selected: option.value === value }),
-                'justify-between',
+                'grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-xs leading-5',
                 index === highlight && option.value !== value && 'bg-background-alt',
               )}
             >
-              <span>{option.label}</span>
-              <span className="mono text-muted text-xs">{option.value}</span>
+              <span className="min-w-0 truncate">{option.label}</span>
+              {option.value.trim().toLowerCase() !== option.label.trim().toLowerCase() ? (
+                <span className="mono text-muted text-2xs max-w-24 truncate">{option.value}</span>
+              ) : null}
             </li>
           ))}
         </ul>

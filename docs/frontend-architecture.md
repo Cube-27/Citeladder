@@ -21,14 +21,16 @@ business truth, scoring, knowledge, authorization, or lifecycle decisions.
 
 ## Target information architecture
 
-Seven destinations, flat. Sub-surfaces are tabs on the layer route, never sidebar children — two
-levels of navigation is the limit. The screen geometry every route uses is owned by
-[`design.md`](design.md).
+The sidebar teaches the product through Workspace plus the three intelligence-system headings.
+Each heading contains its live primary workspaces; sub-surfaces inside a workspace are tabs on
+that route, never nested sidebar children. Group heading, destination, then in-page tab is the
+maximum depth. The screen geometry every route uses is owned by [`design.md`](design.md).
 
-Existing `/site-health`, `/issues`, `/traffic`, `/analytics`, `/prompt-research`, `/prompts`,
-`/visibility`, and `/runs` deep links stay usable through the migration. `/issues` and
-`/opportunities` do not survive as destinations: findings are insights attached to the artifact
-they concern.
+Existing `/site-health`, `/traffic`, `/analytics`, `/prompt-research`, `/prompts`, `/visibility`,
+and `/runs` deep links stay usable through the migration. `/issues` and `/opportunities` remain
+direct Site Intelligence destinations while their artifact-specific views also appear
+contextually inside the Website workspace. Consolidating either direct destination requires a
+later explicit authority change and permanent redirect; it is not implied by this migration.
 
 The migration order lives in
 [`plans/frontend-growth-intelligence.md`](plans/frontend-growth-intelligence.md).
@@ -43,25 +45,26 @@ action resolution. Its Knowledge panel keeps every contradictory observation vis
 an inline correction/withdrawal control with a required reason; there is no modal approval queue
 or review inbox.
 
-The shipped `/agent` workspace is a governed task surface, not an open chat box. Its composer is
-populated from the backend task catalog; history and long-running progress poll persisted runs;
-results keep deterministic roadmap order and expose validation, limitations, artifact counts,
-provider/usage provenance, and the frozen context manifest. `DecisionPrompt` remains closed to
-`save-content` and `run-audit`. Site, Content, and Demand link into the workspace with scoped task
-intent while their underlying artifacts remain independently operable.
+The shipped `/agent` workspace is a conversation-first surface over governed tasks. It reads and
+creates durable project-scoped conversations, appends each message through a backend-catalog task,
+and polls long-running progress. The composer never exposes task IDs, raw scope JSON, provider
+configuration, or terminal task telemetry: completed work appears once as the assistant reply.
+Context-dependent task intent arrives through links from its owning workspace; a missing source is
+explained in product language. `DecisionPrompt` remains closed to `save-content` and `run-audit`.
+Site, Content, and Demand artifacts remain independently operable.
 
 ## Current route ownership
 
 | Route family | Current purpose | Target placement |
 |---|---|---|
 | `/projects`, `/knowledge-base` | Project state and curated profile | Project command centre and Business Knowledge |
-| `/site-health`, `/issues` | Crawl, pages, rules, issues | Site Intelligence |
+| `/site-health`, `/issues`, `/opportunities` | Crawl, pages, rules, issues, ranked persisted opportunities | Site Intelligence |
 | `/content` | Strategy, Inventory, Briefs, Drafts, Revisions, Verification | Content Intelligence |
 | `/traffic`, `/analytics` | First-party projections | Demand Intelligence |
 | `/prompt-research`, `/prompts` | Prompt creation/review | Demand Intelligence |
 | `/visibility`, `/runs` | Answer-engine measurement/evidence | Demand Intelligence |
 | `/products` | Catalog and product visibility | Commerce views backed by shared Site/Content/Demand contracts |
-| `/agent` | Bounded task composer, progress, context, results, and roadmap | Growth Agent |
+| `/agent` | Conversation history, message composer, live task progress, assistant replies, and roadmap | Growth Agent |
 | `/providers`, `/settings` | Connections, billing, integrations | Shared project/workspace settings |
 
 ## Data and query ownership

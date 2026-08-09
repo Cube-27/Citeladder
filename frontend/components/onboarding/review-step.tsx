@@ -5,9 +5,8 @@ import { Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { ReviewCompetitor, ReviewDomain, ReviewPrompt } from '@/lib/onboarding/forms';
+import type { ReviewCompetitor, ReviewDomain } from '@/lib/onboarding/forms';
 
 function competitorUrl(competitor: ReviewCompetitor): string {
   const domain = competitor.domains.find(Boolean);
@@ -155,36 +154,28 @@ function CompetitorChip({
 export function ReviewStep({
   domains,
   competitors,
-  prompts,
   onToggleDomain,
   onToggleCompetitor,
-  onTogglePrompt,
-  onEditPrompt,
   onEditCompetitorDomain,
   onAddCompetitor,
   maximumCompetitors,
 }: Readonly<{
   domains: ReviewDomain[];
   competitors: ReviewCompetitor[];
-  prompts: ReviewPrompt[];
   onToggleDomain: (index: number) => void;
   onToggleCompetitor: (index: number) => void;
-  onTogglePrompt: (index: number) => void;
-  onEditPrompt: (index: number, text: string) => void;
   onEditCompetitorDomain: (index: number, domain: string) => void;
   onAddCompetitor: () => void;
   maximumCompetitors: number | undefined;
 }>) {
   const selectedDomains = domains.filter((d) => d.selected);
   const selectedCompetitors = competitors.filter((c) => c.selected);
-  const selectedPrompts = prompts.filter((p) => p.selected).length;
   const competitorLimitReached =
     maximumCompetitors === undefined || selectedCompetitors.length >= maximumCompetitors;
 
   return (
-    <div className="grid w-full items-start gap-5 lg:grid-cols-12">
-      {/* Left Column (5 cols): Domains & Competitors */}
-      <div className="space-y-4 lg:col-span-5">
+    <div className="grid w-full items-start gap-4 sm:grid-cols-2">
+      <div className="contents">
         {/* Card 1: Your Domains */}
         <div className="bg-panel border-border-subtle/80 space-y-2.5 rounded-xl border p-4 shadow-xs">
           <div className="flex items-center justify-between">
@@ -212,7 +203,7 @@ export function ReviewStep({
         </div>
 
         {/* Card 2: Competitors — Sleek Single-Line Chips */}
-        <div className="bg-panel border-border-subtle/80 space-y-3 rounded-xl border p-4 shadow-xs">
+        <div className="bg-panel border-border-subtle/80 space-y-3 rounded-xl border p-4 shadow-xs sm:col-span-2">
           <div className="flex items-center justify-between">
             <span className="text-muted text-xs font-semibold tracking-wider uppercase">
               Competitors
@@ -248,63 +239,6 @@ export function ReviewStep({
                 />
               ))}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right Column (7 cols): Starting Prompts Portfolio */}
-      <div className="bg-panel border-border-subtle/80 space-y-3 rounded-xl border p-4 shadow-xs lg:col-span-7">
-        <div className="flex items-center justify-between">
-          <span className="text-muted text-xs font-semibold tracking-wider uppercase">
-            Starting Prompts ({selectedPrompts} selected)
-          </span>
-          <span className="text-muted text-xs font-normal">Check to select / edit text</span>
-        </div>
-
-        <div className="max-h-80 overflow-y-auto pr-1">
-          {prompts.length === 0 ? (
-            <p className="website-body text-muted py-2 italic">
-              None found — you can write your own after setup.
-            </p>
-          ) : (
-            <ul className="m-0 flex list-none flex-col gap-2 p-0">
-              {prompts.map((prompt, index) => (
-                <li key={prompt.id}>
-                  <div
-                    className={cn(
-                      'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-all',
-                      prompt.selected
-                        ? 'border-accent-border/50 bg-accent-soft/20'
-                        : 'border-border-subtle bg-well/20 opacity-60',
-                    )}
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={prompt.selected}
-                        onChange={() => onTogglePrompt(index)}
-                        aria-label={prompt.text}
-                        className="border-border text-accent-text accent-accent size-4 shrink-0 cursor-pointer rounded"
-                      />
-                      <Input
-                        value={prompt.text}
-                        onChange={(event) => onEditPrompt(index, event.target.value)}
-                        aria-label={`Prompt ${index + 1}`}
-                        className={cn(
-                          'h-7 min-w-0 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus:ring-0',
-                          !prompt.selected && 'text-muted line-through',
-                        )}
-                      />
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Badge variant="neutral" className="px-2 py-0.5 text-xs font-normal">
-                        {prompt.cohort === 'market_visibility' ? 'Industry' : 'Brand'}
-                      </Badge>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       </div>

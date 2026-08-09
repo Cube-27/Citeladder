@@ -542,6 +542,49 @@ describe('resolveSiteHealthPhase', () => {
     );
   });
 
+  it('resolves a paused crawl to selection even when a monitored set still exists', () => {
+    expect(
+      resolveSiteHealthPhase(
+        {
+          ...base,
+          status: 'paused',
+          discovery_status: 'stopped',
+          analysis_status: 'stopped',
+          visible_url_count: 12,
+        },
+        'full',
+        true,
+      ),
+    ).toBe('selection');
+  });
+
+  it('does not render stopped analysis as live while discovery continues', () => {
+    expect(
+      resolveSiteHealthPhase(
+        {
+          ...base,
+          status: 'running',
+          discovery_status: 'running',
+          analysis_status: 'stopped',
+        },
+        'full',
+        true,
+      ),
+    ).toBe('discovering');
+    expect(
+      resolveSiteHealthPhase(
+        {
+          ...base,
+          status: 'running',
+          discovery_status: 'completed',
+          analysis_status: 'stopped',
+        },
+        'full',
+        true,
+      ),
+    ).toBe('selection');
+  });
+
   it('still resolves a first crawl (no monitored set) to the discovery/selection flow', () => {
     expect(resolveSiteHealthPhase(base, 'full', false)).toBe('discovering');
     expect(resolveSiteHealthPhase({ ...base, discovery_status: 'completed' }, 'full', false)).toBe(
@@ -606,9 +649,8 @@ describe('canonical-screen view-model (primaryAction / inventoryMode)', () => {
     expect(primaryActionForPhase('analyzing', false)).toBe('none');
   });
 
-  it('leaves an inactive selection to the section buttons and gives the dashboard Re-crawl', () => {
-    // A cancelled crawl's selection flow is driven by Save / Start analysis.
-    expect(primaryActionForPhase('selection', false)).toBe('none');
+  it('keeps Re-crawl available for inactive selection and dashboard states', () => {
+    expect(primaryActionForPhase('selection', false)).toBe('recrawl');
     expect(primaryActionForPhase('dashboard', false)).toBe('recrawl');
     // A live projection dashboard (analysis still running) can still cancel.
     expect(primaryActionForPhase('dashboard', true)).toBe('cancel');

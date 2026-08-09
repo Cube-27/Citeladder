@@ -33,8 +33,8 @@
 
 .website-type :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family:
-    var(--font-manrope),
-    var(--font-geist),
+    var(--font-satoshi),
+    var(--font-switzer),
     -apple-system,
     sans-serif;
   font-optical-sizing: auto;
@@ -66,8 +66,8 @@
 .website-feature-heading,
 .website-small-heading {
   font-family:
-    var(--font-manrope),
-    var(--font-geist),
+    var(--font-satoshi),
+    var(--font-switzer),
     -apple-system,
     sans-serif;
   font-optical-sizing: auto;
@@ -111,7 +111,7 @@
 .website-label,
 .website-eyebrow {
   font-family:
-    var(--font-geist),
+    var(--font-switzer),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -120,7 +120,7 @@
 
 .website-data-display {
   font-family:
-    var(--font-geist),
+    var(--font-switzer),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -150,6 +150,21 @@
 
 :where(.website-label, .website-eyebrow) {
   color: var(--color-muted);
+}
+
+/* The fixed dark auth/onboarding canvas owns inverse type roles. Keep this
+   explicit so named website-role defaults cannot win during font loading or
+   after Tailwind's generated utility order changes. */
+.website-type [data-brand-canvas] :where(.website-feature-heading, .website-small-heading) {
+  color: var(--color-brand-canvas-foreground);
+}
+
+.website-type [data-brand-canvas] :where(.website-body) {
+  color: var(--color-brand-canvas-secondary);
+}
+
+.website-type [data-brand-canvas] :where(.website-label, .website-eyebrow) {
+  color: var(--color-brand-canvas-muted);
 }
 
 .website-lead {

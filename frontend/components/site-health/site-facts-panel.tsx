@@ -96,34 +96,18 @@ export function SiteFactsPanel({
 
   return (
     <Card data-testid="site-facts-panel">
-      <CardContent className="grid gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-0.5">
-            <Label>AI crawler access</Label>
-            <span className="text-secondary text-sm">
-              Which AI answer engines your robots.txt allows to crawl this site.
-            </span>
-          </div>
+      <CardContent className="grid gap-2 p-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="text-foreground text-sm font-semibold">AI crawler access</span>
           <SummaryBadge view={view} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="site-facts-stance-grid">
-          {view.bots.map(({ bot, stance }) => (
-            <div
-              key={bot}
-              data-testid={`site-facts-stance-${bot.toLowerCase()}`}
-              className={cn(
-                'grid gap-2 rounded-md border px-3 py-2',
-                stance === 'block'
-                  ? 'border-danger-border bg-danger-bg'
-                  : 'border-border-subtle bg-background-alt',
-              )}
-            >
-              <span className="mono text-foreground truncate text-sm font-medium">{bot}</span>
-              <StanceBadge stance={stance} />
-              <span className="text-2xs text-muted">{engineLabel(bot)}</span>
-            </div>
-          ))}
+          <span className="text-secondary flex items-center gap-1.5 text-xs">
+            <span>robots.txt</span>
+            <StatusValue status={view.robotsStatus} />
+          </span>
+          <span className="text-secondary flex items-center gap-1.5 text-xs">
+            <span>llms.txt</span>
+            <StatusValue status={view.llmsTxtStatus} />
+          </span>
         </div>
 
         {view.robotsFetched && blocked.length === 1 ? (
@@ -150,54 +134,86 @@ export function SiteFactsPanel({
           </Alert>
         ) : null}
 
-        <div
-          className="border-border-subtle flex flex-wrap items-start gap-x-8 gap-y-3 border-t pt-3"
-          data-testid="site-facts-well-known-files"
-        >
-          <div className="grid gap-0.5">
-            <Label>robots.txt</Label>
-            <span className="flex items-center gap-2">
-              <StatusValue status={view.robotsStatus} />
-              {view.robotsFetchStatus === 'fetched' ? (
-                <Badge variant="status" value="success">
-                  Fetched
-                </Badge>
-              ) : view.robotsFetchStatus === 'not_found' ? (
-                <Badge>Not found</Badge>
-              ) : (
-                <Badge variant="status" value="warning">
-                  Not fetched
-                </Badge>
-              )}
-            </span>
+        <details className="border-border-subtle border-t pt-2">
+          <summary className="focus-ring text-muted hover:text-foreground w-fit cursor-pointer rounded-sm text-xs font-medium">
+            Crawler details
+          </summary>
+          <div className="mt-3 grid gap-3">
+            <div
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+              data-testid="site-facts-stance-grid"
+            >
+              {view.bots.map(({ bot, stance }) => (
+                <div
+                  key={bot}
+                  data-testid={`site-facts-stance-${bot.toLowerCase()}`}
+                  className={cn(
+                    'flex flex-wrap items-center justify-between gap-2 rounded-md border px-2.5 py-2',
+                    stance === 'block'
+                      ? 'border-danger-border bg-danger-bg'
+                      : 'border-border-subtle bg-background-alt',
+                  )}
+                >
+                  <span className="mono text-foreground truncate text-xs font-medium">{bot}</span>
+                  <StanceBadge stance={stance} />
+                  <span className="text-2xs text-muted basis-full">{engineLabel(bot)}</span>
+                </div>
+              ))}
+            </div>
+            <div
+              className="border-border-subtle grid gap-3 border-t pt-3 sm:grid-cols-[auto_auto_minmax(0,1fr)]"
+              data-testid="site-facts-well-known-files"
+            >
+              <div className="grid gap-0.5">
+                <Label>robots.txt</Label>
+                <span className="flex items-center gap-2">
+                  <StatusValue status={view.robotsStatus} />
+                  {view.robotsFetchStatus === 'fetched' ? (
+                    <Badge variant="status" value="success">
+                      Fetched
+                    </Badge>
+                  ) : view.robotsFetchStatus === 'not_found' ? (
+                    <Badge>Not found</Badge>
+                  ) : (
+                    <Badge variant="status" value="warning">
+                      Not fetched
+                    </Badge>
+                  )}
+                </span>
+              </div>
+              <div className="grid gap-0.5">
+                <Label>llms.txt</Label>
+                <span className="flex items-center gap-2">
+                  <StatusValue status={view.llmsTxtStatus} />
+                  {!view.llmsTxtFetched ? (
+                    <Badge variant="status" value="warning">
+                      Not fetched
+                    </Badge>
+                  ) : view.llmsTxtPresent ? (
+                    <Badge variant="status" value="success">
+                      Present
+                    </Badge>
+                  ) : (
+                    <Badge variant="status" value="warning">
+                      Absent
+                    </Badge>
+                  )}
+                </span>
+              </div>
+              <div className="grid min-w-0 gap-0.5 sm:justify-self-end">
+                <Label>Checked</Label>
+                <span className="mono text-muted truncate text-xs font-medium">
+                  {view.robotsUrl ?? '—'}
+                </span>
+                {view.llmsTxtUrl !== null ? (
+                  <span className="mono text-muted truncate text-xs font-medium">
+                    {view.llmsTxtUrl}
+                  </span>
+                ) : null}
+              </div>
+            </div>
           </div>
-          <div className="grid gap-0.5">
-            <Label>llms.txt</Label>
-            <span className="flex items-center gap-2">
-              <StatusValue status={view.llmsTxtStatus} />
-              {!view.llmsTxtFetched ? (
-                <Badge variant="status" value="warning">
-                  Not fetched
-                </Badge>
-              ) : view.llmsTxtPresent ? (
-                <Badge variant="status" value="success">
-                  Present
-                </Badge>
-              ) : (
-                <Badge variant="status" value="warning">
-                  Absent
-                </Badge>
-              )}
-            </span>
-          </div>
-          <div className="ms-auto grid gap-0.5">
-            <Label>Checked</Label>
-            <span className="mono text-muted text-sm font-medium">{view.robotsUrl ?? '—'}</span>
-            {view.llmsTxtUrl !== null ? (
-              <span className="mono text-muted text-sm font-medium">{view.llmsTxtUrl}</span>
-            ) : null}
-          </div>
-        </div>
+        </details>
       </CardContent>
     </Card>
   );

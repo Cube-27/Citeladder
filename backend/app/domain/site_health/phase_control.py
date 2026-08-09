@@ -6,8 +6,9 @@ import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any, cast
 
-from sqlalchemy import func, select, update
+from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -291,12 +292,12 @@ async def start_discovery(
 
 
 async def _stop_phase_tasks(
-    session: AsyncSession, *, run_id: uuid.UUID, task_kinds: tuple[str, ...]
-) -> None:
-    await session.execute(
+    session: AsyncSession, *, crawl_id: uuid.UUID, task_kinds: tuple[str, ...]
+) -> int:
+    result = await session.execute(
         update(SiteCrawlTask)
         .where(
-            SiteCrawlTask.phase_run_id == run_id,
+            SiteCrawlTask.crawl_id == crawl_id,
             SiteCrawlTask.task_kind.in_(task_kinds),
             SiteCrawlTask.status.not_in(list(TASK_TERMINAL_STATUSES)),
         )
@@ -308,6 +309,7 @@ async def _stop_phase_tasks(
             error_code="stopped",
         )
     )
+    return int(cast(CursorResult[Any], result).rowcount or 0)
 
 
 async def _pause_if_idle(session: AsyncSession, crawl: SiteCrawl) -> None:
@@ -343,12 +345,13 @@ async def stop_discovery(
 ) -> PhaseMutationResult:
     crawl = await _lock_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
     run = await _running_phase(session, crawl_id=crawl.id, phase=PHASE_DISCOVERY)
+    stopped_count = await _stop_phase_tasks(
+        session, crawl_id=crawl.id, task_kinds=(TASK_KIND_DISCOVER,)
+    )
     if run is not None:
-        await _stop_phase_tasks(
-            session, run_id=run.id, task_kinds=(TASK_KIND_DISCOVER,)
-        )
         run.status = PHASE_RUN_STOPPED
         run.stopped_at = _now()
+    if stopped_count > 0 or crawl.discovery_status == DISCOVERY_STATUS_RUNNING:
         if crawl.discovery_status == DISCOVERY_STATUS_RUNNING:
             apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
         record_crawl_event(
@@ -815,14 +818,15 @@ async def stop_analysis(
 ) -> PhaseMutationResult:
     crawl = await _lock_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
     run = await _running_phase(session, crawl_id=crawl.id, phase=PHASE_ANALYSIS)
+    stopped_count = await _stop_phase_tasks(
+        session,
+        crawl_id=crawl.id,
+        task_kinds=(TASK_KIND_ANALYZE, TASK_KIND_LINK_CHECK),
+    )
     if run is not None:
-        await _stop_phase_tasks(
-            session,
-            run_id=run.id,
-            task_kinds=(TASK_KIND_ANALYZE, TASK_KIND_LINK_CHECK),
-        )
         run.status = PHASE_RUN_STOPPED
         run.stopped_at = _now()
+    if stopped_count > 0 or crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
         if crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
             apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
         record_crawl_event(

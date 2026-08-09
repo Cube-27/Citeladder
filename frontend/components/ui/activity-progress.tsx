@@ -1,4 +1,7 @@
+'use client';
+
 import { Check, CircleAlert } from 'lucide-react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -23,6 +26,16 @@ function progressAnnouncement(activeStep: ActivityStep | undefined, completed: n
   return `${activeStep.label}. ${activeStep.detail ?? ''}`;
 }
 
+function subscribeToReducedMotion(onChange: () => void) {
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+}
+
+function reducedMotionSnapshot() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /**
  * A compact, factual timeline for background product work.
  *
@@ -33,12 +46,58 @@ function progressAnnouncement(activeStep: ActivityStep | undefined, completed: n
 export function ActivityProgress({
   steps,
   label,
+  animateCompletion = false,
 }: Readonly<{
   steps: ActivityStep[];
   label: string;
+  /** Reveal fast persisted phase jumps one step at a time. */
+  animateCompletion?: boolean;
 }>) {
-  const completed = steps.filter((step) => step.state === 'complete').length;
-  const activeStep = steps.find((step) => step.state === 'active' || step.state === 'attention');
+  const targetCompleted = steps.filter((step) => step.state === 'complete').length;
+  const [displayedCompleted, setDisplayedCompleted] = useState(
+    animateCompletion ? 0 : targetCompleted,
+  );
+  const reduceMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    reducedMotionSnapshot,
+    () => false,
+  );
+  const shouldAnimate = animateCompletion && !reduceMotion;
+
+  useEffect(() => {
+    if (!shouldAnimate) return;
+    if (displayedCompleted > targetCompleted) {
+      const resetTimer = window.setTimeout(() => setDisplayedCompleted(targetCompleted), 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+    if (displayedCompleted === targetCompleted) return;
+    const timer = window.setTimeout(
+      () => setDisplayedCompleted((current) => Math.min(current + 1, targetCompleted)),
+      360,
+    );
+    return () => window.clearTimeout(timer);
+  }, [displayedCompleted, shouldAnimate, targetCompleted]);
+
+  const renderedSteps = useMemo(() => {
+    if (!shouldAnimate || displayedCompleted >= targetCompleted) return steps;
+    return steps.map((step, index): ActivityStep => {
+      if (step.state === 'attention') return step;
+      return {
+        ...step,
+        state:
+          index < displayedCompleted
+            ? 'complete'
+            : index === displayedCompleted
+              ? 'active'
+              : 'pending',
+      };
+    });
+  }, [displayedCompleted, shouldAnimate, steps, targetCompleted]);
+
+  const completed = renderedSteps.filter((step) => step.state === 'complete').length;
+  const activeStep = renderedSteps.find(
+    (step) => step.state === 'active' || step.state === 'attention',
+  );
   const progressLabel = `${completed} of ${steps.length} steps complete`;
 
   return (
@@ -50,11 +109,11 @@ export function ActivityProgress({
         aria-valuemax={steps.length}
         aria-valuenow={completed}
         value={completed}
-        max={Math.max(steps.length, 1)}
+        max={Math.max(renderedSteps.length, 1)}
       />
 
       <ol className="grid list-none gap-0 p-0">
-        {steps.map((step, index) => (
+        {renderedSteps.map((step, index) => (
           <li key={step.id} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-3">
             <div className="flex flex-col items-center" aria-hidden>
               <span
@@ -68,12 +127,12 @@ export function ActivityProgress({
               >
                 <StepIndicator state={step.state} />
               </span>
-              {index < steps.length - 1 ? (
+              {index < renderedSteps.length - 1 ? (
                 <span className="bg-border-subtle min-h-5 w-px flex-1" />
               ) : null}
             </div>
 
-            <div className={cn('min-w-0 pb-4', index === steps.length - 1 && 'pb-0')}>
+            <div className={cn('min-w-0 pb-4', index === renderedSteps.length - 1 && 'pb-0')}>
               <p
                 className={cn(
                   'text-sm font-medium',

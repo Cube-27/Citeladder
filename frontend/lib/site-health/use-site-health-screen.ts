@@ -220,20 +220,33 @@ export function useSiteHealthScreen(projectId: string | null) {
       queryKey: queryKeys.siteHealth.monitored(projectId),
     });
   };
+  const pauseDashboardRefresh = async () => {
+    if (!projectId) return;
+    // A poll started before the click can otherwise land after the mutation
+    // response and overwrite the new phase with stale data. Cancelling that
+    // request keeps the start/stop button stable until the next scheduled poll.
+    await queryClient.cancelQueries({
+      queryKey: queryKeys.siteHealth.dashboard(projectId),
+    });
+  };
   const startDiscoveryMutation = useMutation({
     ...siteHealthMutations.startDiscovery(),
+    onMutate: pauseDashboardRefresh,
     onSuccess: applyPhaseResult,
   });
   const stopDiscoveryMutation = useMutation({
     ...siteHealthMutations.stopDiscovery(),
+    onMutate: pauseDashboardRefresh,
     onSuccess: applyPhaseResult,
   });
   const startAnalysisMutation = useMutation({
     ...siteHealthMutations.startAnalysis(),
+    onMutate: pauseDashboardRefresh,
     onSuccess: applyPhaseResult,
   });
   const stopAnalysisMutation = useMutation({
     ...siteHealthMutations.stopAnalysis(),
+    onMutate: pauseDashboardRefresh,
     onSuccess: applyPhaseResult,
   });
 

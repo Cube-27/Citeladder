@@ -1,0 +1,385 @@
+import { expect, test } from '@playwright/test';
+
+import { stubAuthedShell } from './helpers/app-fixture';
+
+const DISCOVERY_ID = '33333333-3333-4333-8333-333333333333';
+const CONVERSATION_ID = '44444444-4444-4444-8444-444444444444';
+const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
+const CRAWL_ID = '66666666-6666-4666-8666-666666666666';
+
+const catalog = {
+  business_types: ['b2b', 'b2c', 'both'],
+  price_tiers: ['unknown'],
+  required_fields: [],
+  optional_fields: [],
+  capture_methods: [],
+  maximum_competitors: 5,
+  industries: ['General', 'Education', 'Professional Services'],
+  subindustries: { General: [], Education: [], 'Professional Services': [] },
+  prompt_cohorts: ['market_visibility', 'brand_relevant'],
+};
+
+const prompts = Array.from({ length: 10 }, (_, index) => ({
+  text: `Which school option fits my family need ${index + 1}?`,
+  theme: index < 5 ? 'School selection' : 'Admissions',
+  intent: index % 2 === 0 ? 'discovery' : 'comparison',
+  cohort: index < 5 ? 'market_visibility' : 'brand_relevant',
+}));
+
+const readyDiscovery = {
+  id: DISCOVERY_ID,
+  workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  project_id: null,
+  status: 'ready',
+  progress: {
+    phase: 'preparing_review',
+    completed_steps: 4,
+    total_steps: 5,
+    pages_read: 1,
+    competitors_found: 2,
+    prompts_prepared: 10,
+  },
+  input_data: {
+    brand_name: 'The Asian School',
+    website_url: 'https://www.theasianschool.net/',
+    industry: 'Education',
+    subindustry: '',
+    primary_market: 'IN',
+    language_code: 'en',
+  },
+  profile: {
+    description: 'A co-educational day cum boarding school in Dehradun, India.',
+    positioning: '',
+    products_services: ['Education'],
+    target_audience: 'Families',
+    industry: 'Education',
+    business_type: 'b2c',
+    price_tier: 'unknown',
+    field_confidence: {},
+  },
+  domains: ['theasianschool.net'],
+  competitors: [
+    {
+      name: 'The Doon School',
+      aliases: [],
+      domains: ['doonschool.com'],
+      qualification: null,
+      reasoning: '',
+      evidence_urls: [],
+      confidence: 0.8,
+    },
+    {
+      name: "Welham Girls' School",
+      aliases: [],
+      domains: ['welhamgirls.com'],
+      qualification: null,
+      reasoning: '',
+      evidence_urls: [],
+      confidence: 0.8,
+    },
+  ],
+  topics: ['School selection', 'Admissions'],
+  prompt_suggestions: prompts,
+  evidence: [],
+  warnings: [],
+  gaps: [],
+  error_code: '',
+  created_at: '2026-08-09T00:00:00Z',
+  updated_at: '2026-08-09T00:00:01Z',
+};
+
+test('onboarding renders inverse type, sequential progress, and a prompt-free review', async ({
+  page,
+}) => {
+  await stubAuthedShell(page, [
+    ['**/api/v1/brand-discovery-catalog', catalog],
+    ['**/api/v1/brand-discoveries', readyDiscovery],
+    [`**/api/v1/brand-discoveries/${DISCOVERY_ID}`, readyDiscovery],
+  ]);
+
+  await page.goto('/onboarding');
+  const setupHeading = page.getByRole('heading', { name: 'Set up your project' });
+  await expect(setupHeading).toBeVisible();
+  await expect(setupHeading).toHaveCSS('color', 'rgb(255, 255, 255)');
+
+  await page.getByLabel(/^Brand name/).fill('The Asian School');
+  await page.getByLabel(/^Website/).fill('theasianschool.net');
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  const progress = page.getByRole('progressbar', { name: /steps complete/ });
+  await expect(progress).not.toHaveAttribute('aria-valuenow', '5');
+  await expect(progress).toHaveAttribute('aria-valuenow', '5', { timeout: 4_000 });
+
+  await page.getByRole('button', { name: 'Review' }).click();
+  await expect(page.getByText('Discovered Profile')).toBeVisible();
+  await expect(page.getByText('theasianschool.net')).toBeVisible();
+  await expect(page.getByText('The Doon School')).toBeVisible();
+  await expect(page.getByText(/Starting Prompts/i)).toHaveCount(0);
+});
+
+test('Growth Agent opens as a durable conversation with a bottom composer', async ({ page }) => {
+  const conversation = {
+    id: CONVERSATION_ID,
+    project_id: '11111111-1111-4111-8111-111111111111',
+    title: 'Admissions roadmap',
+    created_by_user_id: null,
+    created_at: '2026-08-09T00:00:00Z',
+    updated_at: '2026-08-09T00:00:00Z',
+  };
+  await stubAuthedShell(page, [
+    [
+      '**/api/v1/agent/capabilities',
+      {
+        configured: false,
+        provider_adapter: '',
+        endpoint_host: '',
+        model: '',
+        model_capabilities: {},
+        policy_version: 'v1',
+        context_policy_version: 'v1',
+        tool_registry_version: 'v1',
+        task_catalog: [
+          {
+            task_type: 'build_roadmap',
+            title: 'Build roadmap',
+            description: 'Build a roadmap from verified evidence.',
+            allowed_tools: [],
+            required_scope: [],
+            requested_outputs: [],
+            max_steps: 8,
+            max_tool_calls: 8,
+          },
+        ],
+        tool_catalog: [],
+      },
+    ],
+    ['**/api/v1/agent/conversations?*', [conversation]],
+    [
+      `**/api/v1/agent/conversations/${CONVERSATION_ID}?*`,
+      {
+        ...conversation,
+        messages: [
+          {
+            id: '55555555-5555-4555-8555-555555555555',
+            conversation_id: CONVERSATION_ID,
+            task_run_id: null,
+            role: 'user',
+            content: 'Build an admissions roadmap',
+            citations: [],
+            created_at: '2026-08-09T00:00:00Z',
+          },
+        ],
+      },
+    ],
+    ['**/api/v1/agent/tasks?*', []],
+  ]);
+
+  await page.goto('/agent');
+  await expect(page.getByText('Build an admissions roadmap')).toBeVisible();
+  await expect(page.getByLabel('Message Growth Agent')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New conversation' })).toBeVisible();
+  await expect(page.getByText(/Required scope/i)).toHaveCount(0);
+  await expect(page.getByText(/JSON scope/i)).toHaveCount(0);
+  await expect(page.getByRole('combobox')).toHaveCount(0);
+});
+
+const siteFacts = {
+  robots: {
+    fetched: true,
+    url: 'https://acme.example/robots.txt',
+    status_code: 200,
+    ai_crawlers: {
+      GPTBot: 'allow',
+      ClaudeBot: 'allow',
+      PerplexityBot: 'allow',
+      'Google-Extended': 'allow',
+    },
+    sitemaps: ['https://acme.example/sitemap.xml'],
+  },
+  llms_txt: {
+    fetched: false,
+    url: 'https://acme.example/llms.txt',
+    status_code: 404,
+    present: false,
+  },
+  sitemap: { fetched: true, files: ['https://acme.example/sitemap.xml'] },
+};
+
+function siteCrawl(analysisStatus: 'running' | 'stopped') {
+  const running = analysisStatus === 'running';
+  return {
+    id: CRAWL_ID,
+    workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    project_id: PROJECT_ID,
+    profile_id: '77777777-7777-4777-8777-777777777777',
+    status: running ? 'running' : 'paused',
+    discovery_status: 'completed',
+    analysis_status: analysisStatus,
+    root_url: 'https://acme.example/',
+    sample_mode: false,
+    seed: '1',
+    inventory_complete: true,
+    visible_url_count: 2,
+    analyzed_count: running ? 0 : 1,
+    failed_count: 0,
+    discovery_requested_count: 2,
+    analysis_requested_count: 1,
+    counters: {
+      discovered: 2,
+      selected: 1,
+      queued: running ? 1 : 0,
+      running: 0,
+      analyzed: running ? 0 : 1,
+      errors: 0,
+      blocked: 0,
+      by_page_kind: {},
+    },
+    discovered_count: 2,
+    total_url_count: 2,
+    has_more_site_urls: false,
+    score_summary: null,
+    failure_summary: null,
+    site_facts: siteFacts,
+    extractor_version: 'e1',
+    analyzer_version: 'a1',
+    rule_version: 'r1',
+    scoring_version: 's1',
+    error_message: '',
+    created_at: '2026-08-10T00:00:00Z',
+    updated_at: running ? '2026-08-10T00:01:00Z' : '2026-08-10T00:02:00Z',
+    started_at: '2026-08-10T00:00:00Z',
+    completed_at: null,
+  };
+}
+
+test('Site Health keeps crawl controls and URLs above diagnostics while analysis stops', async ({
+  page,
+}) => {
+  let analysisStatus: 'running' | 'stopped' = 'running';
+  const dashboard = () => ({
+    project_id: PROJECT_ID,
+    crawl: siteCrawl(analysisStatus),
+    score_summary: null,
+    quota: { used: 1, limit: 50 },
+    root_errors: [],
+    phase_runs: { discovery: null, analysis: null },
+  });
+  await stubAuthedShell(page, [
+    [
+      '**/api/v1/entitlements',
+      {
+        workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        access_mode: 'full',
+        sample_url_limit: 10,
+        monitored_url_limit: 50,
+        count_disclosure: true,
+        resolver_status: 'resolved',
+        registry_revision: 'registry-v8',
+        entitlement_lifecycle_version: 1,
+        valid_until: null,
+        contributing_grant_ids: [],
+        advanced_controls_enabled: true,
+      },
+    ],
+    [
+      `**/api/v1/projects/${PROJECT_ID}/monitored-urls`,
+      {
+        project_id: PROJECT_ID,
+        selection_version: 1,
+        monitored_urls: [
+          {
+            site_url_id: '88888888-8888-4888-8888-888888888888',
+            normalized_url: 'https://acme.example/',
+            display_url: 'https://acme.example/',
+            title: 'Acme',
+            active: true,
+            selection_source: 'user',
+            selected_at: '2026-08-10T00:00:00Z',
+            deselected_at: null,
+          },
+        ],
+        quota: { used: 1, limit: 50 },
+      },
+    ],
+    [
+      `**/api/v1/site-crawls/${CRAWL_ID}/inventory?*`,
+      {
+        items: [
+          {
+            site_url_id: '88888888-8888-4888-8888-888888888888',
+            normalized_url: 'https://acme.example/',
+            display_url: 'https://acme.example/',
+            title: 'Acme',
+            content_type: 'text/html',
+            source: 'root',
+            depth: 0,
+            monitored: true,
+            first_seen_at: null,
+            last_seen_at: null,
+            issue_count: null,
+            technical_score: null,
+            aeo_score: null,
+            overall_score: null,
+            last_audited: null,
+            page_kind: 'homepage',
+          },
+        ],
+        next_cursor: null,
+      },
+    ],
+    [
+      `**/api/v1/site-crawls/${CRAWL_ID}/pages?*`,
+      { items: [], next_cursor: null, root_errors: [] },
+    ],
+  ]);
+  await page.route(`**/api/v1/projects/${PROJECT_ID}/site-health`, (route) =>
+    route.fulfill({ json: dashboard() }),
+  );
+  await page.route(`**/api/v1/site-crawls/${CRAWL_ID}/analysis/stop`, async (route) => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 300);
+    });
+    analysisStatus = 'stopped';
+    await route.fulfill({
+      json: {
+        crawl: siteCrawl('stopped'),
+        phase_run: null,
+        created_new_crawl: false,
+        selection_version: 1,
+        scheduled_count: 0,
+      },
+    });
+  });
+
+  await page.goto('/site-health');
+  const controls = page.getByTestId('site-health-phase-controls');
+  await expect(controls).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Re-crawl site' })).toBeVisible();
+  const urlWorkspace = page.getByRole('button', { name: 'Monitored' });
+  await expect(urlWorkspace).toBeVisible();
+  await expect(page.getByText('Crawler details')).toBeVisible();
+
+  const controlsTop = await controls.evaluate((element) => element.getBoundingClientRect().top);
+  const inventoryTop = await urlWorkspace.evaluate(
+    (element) => element.getBoundingClientRect().top,
+  );
+  const crawlerTop = await page
+    .getByText('AI crawler access')
+    .evaluate((element) => element.getBoundingClientRect().top);
+  expect(controlsTop).toBeLessThan(inventoryTop);
+  expect(inventoryTop).toBeLessThan(crawlerTop);
+
+  await page.getByRole('button', { name: 'Stop analysis' }).click();
+  await expect(page.getByRole('button', { name: 'Stopping…' })).toBeVisible();
+  await expect(controls).toBeVisible();
+  await expect(controls.getByRole('button', { name: 'Start analysis' })).toBeVisible();
+  await expect(controls).toBeVisible();
+  await expect(
+    page.getByTestId('inventory-section').getByText('https://acme.example/', { exact: true }),
+  ).toBeVisible();
+  const recrawl = page.getByRole('button', { name: 'Re-crawl site' });
+  await expect(recrawl).toBeEnabled();
+  await recrawl.click();
+  await expect(page.getByRole('dialog', { name: 'Choose pages to crawl' })).toBeVisible();
+});

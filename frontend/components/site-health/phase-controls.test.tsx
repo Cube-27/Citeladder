@@ -49,6 +49,8 @@ describe('PhaseControls', () => {
       stopDiscoveryMutation,
       startAnalysisMutation,
       stopAnalysisMutation,
+      active: true,
+      startPending: false,
     };
     const onMutationStart = vi.fn();
 
@@ -58,16 +60,121 @@ describe('PhaseControls', () => {
         selectedUrlIds={new Set()}
         lastMutation={null}
         onMutationStart={onMutationStart}
+        onRecrawl={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'URL discovery' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'URL analysis' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Discover more URLs' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Analyze URLs' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Stop discovery' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Re-crawl site' })).toBeDisabled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Start analysis' }));
     expect(onMutationStart).toHaveBeenCalledWith('startAnalysis');
     expect(startAnalysisMutation.mutate).toHaveBeenCalledOnce();
     expect(screen.queryByText('stale discovery error')).not.toBeInTheDocument();
+  });
+
+  it('keeps each action stable while its request is pending', () => {
+    const siteHealthScreen = {
+      crawl: {
+        id: '22222222-2222-4222-8222-222222222222',
+        discovery_status: 'stopped',
+        analysis_status: 'running',
+        counters: {
+          discovered: 176,
+          selected: 48,
+          queued: 0,
+          running: 2,
+          analyzed: 34,
+          errors: 1,
+          blocked: 1,
+        },
+      },
+      entitlementQuery: { data: { advanced_controls_enabled: true } },
+      monitoredQuery: { data: { selection_version: 4 } },
+      dashboardQuery: {
+        data: { phase_runs: { discovery: null, analysis: null } },
+      },
+      startDiscoveryMutation: { ...mutation(), isPending: true },
+      stopDiscoveryMutation: mutation(),
+      startAnalysisMutation: mutation(),
+      stopAnalysisMutation: { ...mutation(), isPending: true },
+      active: false,
+      startPending: false,
+    };
+
+    render(
+      <PhaseControls
+        screen={siteHealthScreen as never}
+        selectedUrlIds={new Set()}
+        lastMutation={null}
+        onMutationStart={vi.fn()}
+        onRecrawl={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Starting…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Stopping…' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Continue discovery' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start analysis' })).not.toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('problems')).toBeInTheDocument();
+  });
+
+  it('updates a phase button in place through start, running, stop, and stopped states', () => {
+    const siteHealthScreen = {
+      crawl: {
+        id: '22222222-2222-4222-8222-222222222222',
+        discovery_status: 'stopped',
+        analysis_status: 'stopped',
+        counters: {
+          discovered: 12,
+          selected: 4,
+          queued: 0,
+          running: 0,
+          analyzed: 4,
+          errors: 0,
+          blocked: 0,
+        },
+      },
+      entitlementQuery: { data: { advanced_controls_enabled: true } },
+      monitoredQuery: { data: { selection_version: 4 } },
+      dashboardQuery: { data: { phase_runs: { discovery: null, analysis: null } } },
+      startDiscoveryMutation: mutation(),
+      stopDiscoveryMutation: mutation(),
+      startAnalysisMutation: mutation(),
+      stopAnalysisMutation: mutation(),
+      active: false,
+      startPending: false,
+    };
+    const props = {
+      selectedUrlIds: new Set<string>(),
+      lastMutation: null,
+      onMutationStart: vi.fn(),
+      onRecrawl: vi.fn(),
+    };
+    const { rerender } = render(<PhaseControls screen={siteHealthScreen as never} {...props} />);
+    const controls = screen.getByTestId('site-health-phase-controls');
+
+    expect(screen.getByRole('button', { name: 'Continue discovery' })).toBeInTheDocument();
+    siteHealthScreen.startDiscoveryMutation.isPending = true;
+    rerender(<PhaseControls screen={siteHealthScreen as never} {...props} />);
+    expect(screen.getByRole('button', { name: 'Starting…' })).toBeDisabled();
+
+    siteHealthScreen.startDiscoveryMutation.isPending = false;
+    siteHealthScreen.crawl.discovery_status = 'running';
+    rerender(<PhaseControls screen={siteHealthScreen as never} {...props} />);
+    expect(screen.getByRole('button', { name: 'Stop discovery' })).toBeInTheDocument();
+
+    siteHealthScreen.stopDiscoveryMutation.isPending = true;
+    rerender(<PhaseControls screen={siteHealthScreen as never} {...props} />);
+    expect(screen.getByRole('button', { name: 'Stopping…' })).toBeDisabled();
+
+    siteHealthScreen.stopDiscoveryMutation.isPending = false;
+    siteHealthScreen.crawl.discovery_status = 'stopped';
+    rerender(<PhaseControls screen={siteHealthScreen as never} {...props} />);
+    expect(screen.getByRole('button', { name: 'Continue discovery' })).toBeInTheDocument();
+    expect(screen.getByTestId('site-health-phase-controls')).toBe(controls);
   });
 });

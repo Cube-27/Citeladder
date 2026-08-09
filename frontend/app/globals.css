@@ -4,7 +4,7 @@
 /*
  * CiteLadder's single design-system owner (Tesla-derived).
  *
- * Manrope display + Geist body/UI from next/font/google, one chromatic accent
+ * Satoshi display + Switzer body/UI from self-hosted variable WOFF2 files, one chromatic accent
  * (Reference Blue #2667FF), white canvases, neutral-gray highlights, and a
  * shared soft elevation ladder. Marketing is monochrome-plus-blue; the
  * authenticated app reuses the same chrome but keeps
@@ -15,9 +15,9 @@
  * outside this file; `pnpm check:policy` enforces that.
  */
 @theme {
-  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-manrope), var(--font-geist), -apple-system, sans-serif;
+  --font-sans: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-satoshi), var(--font-switzer), -apple-system, sans-serif;
 
   /* Surfaces — white canvas with one quiet neutral highlight. */
   --color-background: #ffffff;
@@ -288,7 +288,7 @@ body {
   min-height: 100dvh;
   background: #ffffff;
   color: #101828;
-  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
   letter-spacing: normal;
@@ -304,7 +304,7 @@ body {
   h5,
   h6 {
     margin: 0;
-    font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-satoshi), var(--font-switzer), -apple-system, sans-serif;
     font-weight: 500;
     letter-spacing: normal;
     line-height: 1.2;
@@ -341,7 +341,7 @@ code,
 pre,
 kbd,
 samp {
-  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }
