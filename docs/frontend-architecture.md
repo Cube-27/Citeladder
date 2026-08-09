@@ -21,19 +21,9 @@ business truth, scoring, knowledge, authorization, or lifecycle decisions.
 
 ## Target information architecture
 
-Six destinations, flat. Sub-surfaces are tabs on the layer route, never sidebar children — two
+Seven destinations, flat. Sub-surfaces are tabs on the layer route, never sidebar children — two
 levels of navigation is the limit. The screen geometry every route uses is owned by
 [`design.md`](design.md).
-
-```text
-Overview   /projects   project state, ranked insights, what changed
-Site       /site       corpus, pages, facts, schema, journeys, evidence
-Content    /content    strategy, inventory, briefs, drafts, verification
-Demand     /demand     search demand, journeys, prompts, visibility, coverage
-Agent      /agent      conversation, tasks, roadmap
-Reports    /reports    snapshots and exports
-Settings   /settings   project, integrations, providers, billing
-```
 
 Existing `/site-health`, `/issues`, `/traffic`, `/analytics`, `/prompt-research`, `/prompts`,
 `/visibility`, and `/runs` deep links stay usable through the migration. `/issues` and
@@ -53,6 +43,13 @@ action resolution. Its Knowledge panel keeps every contradictory observation vis
 an inline correction/withdrawal control with a required reason; there is no modal approval queue
 or review inbox.
 
+The shipped `/agent` workspace is a governed task surface, not an open chat box. Its composer is
+populated from the backend task catalog; history and long-running progress poll persisted runs;
+results keep deterministic roadmap order and expose validation, limitations, artifact counts,
+provider/usage provenance, and the frozen context manifest. `DecisionPrompt` remains closed to
+`save-content` and `run-audit`. Site, Content, and Demand link into the workspace with scoped task
+intent while their underlying artifacts remain independently operable.
+
 ## Current route ownership
 
 | Route family | Current purpose | Target placement |
@@ -64,6 +61,7 @@ or review inbox.
 | `/prompt-research`, `/prompts` | Prompt creation/review | Demand Intelligence |
 | `/visibility`, `/runs` | Answer-engine measurement/evidence | Demand Intelligence |
 | `/products` | Catalog and product visibility | Commerce views backed by shared Site/Content/Demand contracts |
+| `/agent` | Bounded task composer, progress, context, results, and roadmap | Growth Agent |
 | `/providers`, `/settings` | Connections, billing, integrations | Shared project/workspace settings |
 
 ## Data and query ownership
