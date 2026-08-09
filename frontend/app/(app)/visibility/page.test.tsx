@@ -485,13 +485,18 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
       hour: '2-digit',
       minute: '2-digit',
     });
-    await user.click(await screen.findByRole('menuitem', { name: olderLabel }));
+    await user.click(await screen.findByRole('menuitemradio', { name: olderLabel }));
 
     await waitFor(() => expect(releaseOlder).toBeTypeOf('function'));
     expect(screen.getByTestId('overview-summary')).toHaveTextContent('67%');
     releaseOlder?.();
     await waitFor(() => expect(screen.getByTestId('overview-summary')).toHaveTextContent('42%'));
     expect(seen).toContain(AUDIT_OLDER);
+
+    await user.click(screen.getByRole('button', { name: 'Select run' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Latest' }));
+    await waitFor(() => expect(screen.getByTestId('overview-summary')).toHaveTextContent('67%'));
+    expect(screen.getByRole('button', { name: 'Select run' })).toHaveTextContent('Latest');
   });
 
   it('narrows the per-engine comparison when an engine filter is applied', async () => {
@@ -509,7 +514,7 @@ describe('VisibilityPage — Overview (unchanged behavior)', () => {
     expect(within(comparisonOf()).getByText('Claude')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Filter by model' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Gemini' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Gemini' }));
 
     await waitFor(() =>
       expect(within(comparisonOf()).queryByText('Claude')).not.toBeInTheDocument(),
@@ -779,7 +784,7 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
     // The default range preset (90d) counts as a narrowing filter; widen it so
     // the genuinely-empty (not filtered-empty) state is exercised.
     await user.click(await screen.findByRole('button', { name: 'Select date range' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'All time' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'All time' }));
 
     expect(await screen.findByText('No mentions or citations yet')).toBeInTheDocument();
   });
@@ -903,7 +908,7 @@ describe('VisibilityPage — shared filter persistence', () => {
     await screen.findByTestId('overview-summary');
     // Pick an engine on Overview.
     await user.click(screen.getByRole('button', { name: 'Filter by model' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Gemini' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Gemini' }));
 
     // Switch to an evidence tab; the engine filter carries over into the query.
     await user.click(screen.getByRole('tab', { name: 'Mentions' }));

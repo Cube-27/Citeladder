@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 
+import { segmentedItemVariants, segmentedTrackVariants } from '@/components/ui/segmented-variants';
 import { cn } from '@/lib/utils';
 
 /** Arrow keys that move the roving focus, and the direction each moves it. */
@@ -31,6 +32,7 @@ export function SegmentedControl<T extends string>({
   id,
   'aria-describedby': describedBy,
   className,
+  disabled = false,
 }: Readonly<{
   value: T;
   onChange: (value: T) => void;
@@ -39,6 +41,7 @@ export function SegmentedControl<T extends string>({
   id?: string;
   'aria-describedby'?: string;
   className?: string;
+  disabled?: boolean;
 }>) {
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   // With an off-list `value` nothing is checked, and a group where every option
@@ -59,10 +62,7 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={ariaLabel}
       aria-describedby={describedBy}
-      className={cn(
-        'border-border bg-background-alt inline-flex h-[var(--control-height-sm)] items-center gap-0.5 rounded-full border p-0.5',
-        className,
-      )}
+      className={cn(segmentedTrackVariants(), className)}
     >
       {options.map((option, index) => {
         const selected = option.value === value;
@@ -75,6 +75,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            disabled={disabled}
             // Roving tabindex: Tab enters the group at the current selection and
             // leaves it again, rather than stepping through every option.
             tabIndex={index === tabStop ? 0 : -1}
@@ -87,13 +88,7 @@ export function SegmentedControl<T extends string>({
               event.preventDefault();
               move(index, delta);
             }}
-            className={cn(
-              // Horizontal padding stays on the ADS ladder, which has no 10px rung.
-              'focus-ring inline-flex h-full items-center justify-center rounded-full px-3 text-xs font-medium transition-colors',
-              selected
-                ? 'bg-panel text-foreground shadow-card font-medium'
-                : 'text-secondary hover:text-foreground',
-            )}
+            className={segmentedItemVariants({ selected })}
           >
             {option.label}
           </button>

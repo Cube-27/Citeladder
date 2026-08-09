@@ -1,6 +1,11 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
+import {
+  editorialTypographyViolations,
+  websiteContractViolations,
+} from './design-system-source-checks.mjs';
+
 const root = resolve(import.meta.dirname, '..');
 const tokenOwner = join(root, 'app', 'globals.css');
 const sourceExtensions = new Set(['.css', '.ts', '.tsx', '.js', '.mjs']);
@@ -26,6 +31,10 @@ for (const path of files(root)) {
     ['--', 'mkt-'].join(''),
     ['data', '-theme'].join(''),
     ['Theme', 'Toggle'].join(''),
+    ['Public', ' Sans'].join(''),
+    ['Public', '_Sans'].join(''),
+    ['font', '-public-sans'].join(''),
+    ['marketing', '-atmosphere'].join(''),
   ];
   for (const legacy of legacyIdentifiers) {
     if (source.includes(legacy)) violations.push(`${label}: legacy identifier ${legacy}`);
@@ -40,7 +49,19 @@ for (const path of files(root)) {
   if (path !== tokenOwner && path !== import.meta.filename && /@theme\b/.test(source)) {
     violations.push(`${label}: @theme outside app/globals.css`);
   }
+  if (!label.startsWith('components/ui/') && /from\s+['"]@radix-ui\//.test(source)) {
+    violations.push(`${label}: feature code must use components/ui instead of importing Radix`);
+  }
+  const ownsWebsiteEditorialCopy =
+    (label.startsWith('components/marketing/') &&
+      label !== 'components/marketing/landing/agent-console.tsx' &&
+      !label.startsWith('components/marketing/scenes/')) ||
+    label.startsWith('components/auth/') ||
+    label.startsWith('components/onboarding/');
+  violations.push(...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy));
 }
+
+violations.push(...websiteContractViolations(root));
 
 if (violations.length) {
   console.error(violations.join('\n'));

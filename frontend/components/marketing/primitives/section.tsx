@@ -5,6 +5,14 @@ import { cn } from '@/lib/utils';
 import { Eyebrow } from './label';
 import { Reveal } from './reveal';
 
+// The scoped website ladder resolves these semantic rungs responsively;
+// embedded product previews reset to the compact app ladder.
+const SECTION_HEADING_CLASSES = {
+  h1: 'website-page-title',
+  h2: 'website-section-heading',
+  h3: 'website-feature-heading',
+} as const;
+
 /**
  * Vertical rhythm for the whole public surface. Sections NEVER set their own
  * padding — the six cases live here, so every page breathes identically
@@ -143,14 +151,6 @@ export function SectionHeader({
   as?: 'h1' | 'h2' | 'h3';
   className?: string;
 }>) {
-  // Tesla ramp under the 40px ceiling: h1 hero (40), h2 section (28), h3
-  // compact (22). Never text-4xl/5xl — those exceed the ceiling.
-  const HEADING = {
-    h1: 'text-3xl',
-    h2: 'text-2xl',
-    h3: 'text-xl',
-  } as const;
-
   return (
     <Reveal
       className={cn(
@@ -164,16 +164,11 @@ export function SectionHeader({
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
       <Heading
         id={headingId}
-        className={cn(
-          'font-display text-foreground max-w-[32ch] font-semibold tracking-tight text-balance',
-          HEADING[size],
-        )}
+        className={cn('text-foreground max-w-[32ch] text-balance', SECTION_HEADING_CLASSES[size])}
       >
         {title}
       </Heading>
-      {lead && (
-        <p className="text-muted max-w-[65ch] text-base leading-relaxed md:text-lg">{lead}</p>
-      )}
+      {lead && <p className="website-lead text-muted max-w-[65ch]">{lead}</p>}
     </Reveal>
   );
 }
