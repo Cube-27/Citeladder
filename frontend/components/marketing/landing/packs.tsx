@@ -7,9 +7,8 @@ import { Section, SectionHeader } from '../primitives/section';
 import { LANDING_ICONS } from './landing-icons';
 
 /**
- * Use cases — six industry packs, each an icon, a name, its maturity status, and
- * the concrete checks it ships. Status is `text-muted` (Pewter), which clears
- * WCAG AA on the paper band, not the lighter Silver Fog.
+ * Use cases — six industry packs, each with an icon, a name, and the concrete
+ * checks it supports.
  */
 export function Packs() {
   const { packs } = LANDING_CONTENT;
@@ -35,7 +34,6 @@ export function Packs() {
                     {pack.name}
                   </h3>
                 </div>
-                <p className="website-eyebrow text-muted mt-4 font-semibold">{pack.status}</p>
                 <ul className="mt-4 flex flex-col gap-2">
                   {pack.points.map((point) => (
                     <li

@@ -6,16 +6,15 @@ import { Section } from '../primitives/section';
 import { LANDING_ICONS } from './landing-icons';
 
 /**
- * Enterprise trust — an asymmetric split: the promise and four proof tiles on
- * the left, a plain-language evidence ledger on the right. No seals or badges;
- * the claim is the design.
+ * Enterprise trust — an asymmetric split between the promise and one concise
+ * proof ledger. Each guarantee appears once, with its supporting detail.
  */
 export function Trust() {
   const { trust } = LANDING_CONTENT;
   return (
     <Section id="trust" tone="sunken" rhythm="base" aria-labelledby="trust-title">
-      <div className="grid items-start gap-x-12 gap-y-10 lg:grid-cols-2">
-        <Reveal>
+      <div className="grid items-center gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Reveal className="lg:py-8">
           <Eyebrow>{trust.kicker}</Eyebrow>
           <h2
             id="trust-title"
@@ -24,38 +23,29 @@ export function Trust() {
             {trust.title}
           </h2>
           <p className="website-body-lg text-muted mt-5 max-w-[52ch]">{trust.lead}</p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            {trust.features.map((feature) => {
-              const Icon = LANDING_ICONS[feature.icon];
+        </Reveal>
+
+        <Reveal className="bg-panel shadow-card overflow-hidden rounded-2xl">
+          <dl className="divide-border divide-y">
+            {trust.guarantees.map((guarantee) => {
+              const Icon = LANDING_ICONS[guarantee.icon];
               return (
                 <div
-                  key={feature.title}
-                  className="bg-panel shadow-card hover:shadow-card-hover flex gap-3.5 rounded-xl p-4.5 transition-shadow duration-300"
+                  key={guarantee.title}
+                  className="hover:bg-background-alt/50 grid grid-cols-[40px_1fr] gap-4 p-5 transition-colors sm:p-6"
                 >
-                  <span className="bg-accent-subtle/80 text-accent-text border-accent-border/60 flex size-9 shrink-0 items-center justify-center rounded-lg border shadow-xs">
+                  <span className="bg-accent-subtle/80 text-accent-text flex size-10 items-center justify-center rounded-lg">
                     <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
                   </span>
                   <div>
-                    <p className="website-body text-foreground font-semibold">{feature.title}</p>
-                    <p className="website-label text-muted mt-1">{feature.sub}</p>
+                    <dt className="website-body text-foreground font-semibold">
+                      {guarantee.title}
+                    </dt>
+                    <dd className="website-body text-muted mt-1">{guarantee.description}</dd>
                   </div>
                 </div>
               );
             })}
-          </div>
-        </Reveal>
-
-        <Reveal className="bg-panel shadow-card overflow-hidden rounded-xl">
-          <dl className="divide-border divide-y">
-            {trust.ledger.map((row) => (
-              <div
-                key={row.label}
-                className="hover:bg-background-alt/50 grid gap-1 p-5 transition-colors sm:grid-cols-[200px_1fr] sm:gap-4"
-              >
-                <dt className="text-foreground text-sm font-semibold">{row.label}</dt>
-                <dd className="text-muted text-sm leading-relaxed">{row.value}</dd>
-              </div>
-            ))}
           </dl>
         </Reveal>
       </div>

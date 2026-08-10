@@ -198,17 +198,12 @@ export const LANDING_CONTENT = {
 
   packs: {
     kicker: 'Use cases',
-    // Fourteen foundation drafts do not support "every growth team"; the claim
-    // is scoped to the composition model that actually ships.
     title: 'Built around how your industry actually works.',
     lead: 'Each project runs one primary industry pack plus the reviewed capabilities it needs — page roles, gap rules, and schema expectations, versioned together.',
     items: [
       {
         icon: 'education' as IconKey,
         name: 'Education',
-        // "Reviewed" read as an authoritative production finding. These packs
-        // are ready for controlled shadow evaluation, not for citing as fact.
-        status: 'Education pack · Validated candidate',
         points: [
           'Program and course page optimization',
           'Accreditation entity coverage',
@@ -219,7 +214,6 @@ export const LANDING_CONTENT = {
       {
         icon: 'commerce' as IconKey,
         name: 'Commerce',
-        status: 'Commerce pack · Validated candidate',
         points: [
           'Product detail page completeness',
           'Category page gap analysis',
@@ -230,7 +224,6 @@ export const LANDING_CONTENT = {
       {
         icon: 'services' as IconKey,
         name: 'Professional services',
-        status: 'Services pack · Foundation draft',
         points: [
           'Service page role classification',
           'Case study and proof coverage',
@@ -241,7 +234,6 @@ export const LANDING_CONTENT = {
       {
         icon: 'saas' as IconKey,
         name: 'Enterprise SaaS',
-        status: 'SaaS pack · Foundation draft',
         points: [
           'Landing and pricing intelligence',
           'Technical documentation coverage',
@@ -252,7 +244,6 @@ export const LANDING_CONTENT = {
       {
         icon: 'media' as IconKey,
         name: 'Media & publishing',
-        status: 'Media pack · Foundation draft',
         points: [
           'Article and author schema coverage',
           'Editorial FAQ and explainer gaps',
@@ -263,7 +254,6 @@ export const LANDING_CONTENT = {
       {
         icon: 'finance' as IconKey,
         name: 'Financial services',
-        status: 'Finance pack · Foundation draft',
         points: [
           'Regulatory disclosure completeness',
           'Advisor profile and credential gaps',
@@ -277,17 +267,17 @@ export const LANDING_CONTENT = {
   trust: {
     kicker: 'Enterprise-grade',
     title: 'Built for regulated and security-conscious enterprises.',
-    lead: 'Customer data stays workspace-scoped and project-scoped. Industry knowledge packs are versioned and shared across the platform — customer facts never are.',
-    features: [
+    lead: 'CiteLadder keeps the record inspectable from the first crawl to the latest recommendation.',
+    guarantees: [
       {
         icon: 'isolation' as IconKey,
         title: 'Data isolation',
-        sub: 'Project-scoped, never cross-contaminated',
+        description: 'Every customer fact stays project-scoped and never crosses workspaces.',
       },
       {
         icon: 'provenance' as IconKey,
         title: 'Full provenance',
-        sub: 'Every recommendation carries its evidence chain',
+        description: 'Every recommendation links to the typed evidence chain behind it.',
       },
       {
         icon: 'correction' as IconKey,
@@ -296,24 +286,13 @@ export const LANDING_CONTENT = {
         // the product cannot keep (§9.1). Restore the stronger claim when
         // corrections are wired to a durable mutation.
         title: 'No silent rewrites',
-        sub: 'A later observation never overwrites earlier evidence',
+        description: 'New observations append to the record instead of replacing earlier evidence.',
       },
       {
         icon: 'versioned' as IconKey,
         title: 'Versioned knowledge',
-        sub: 'Shared packs are release-managed, not silent',
-      },
-    ],
-    ledger: [
-      { label: 'Customer data isolation', value: 'Project-scoped, never shared across workspaces' },
-      { label: 'Agent provenance', value: 'Every recommendation includes a typed evidence chain' },
-      {
-        label: 'Immutable evidence',
-        value: 'A later observation never rewrites the record an earlier one produced',
-      },
-      {
-        label: 'Industry pack versioning',
-        value: 'Shared knowledge is versioned and release-managed',
+        description:
+          'Shared industry knowledge is release-managed; customer facts are never shared.',
       },
     ],
   },

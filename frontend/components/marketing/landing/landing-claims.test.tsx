@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import Page from '@/app/(marketing)/page';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
-import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
 // The landing page's only client island forwards signed-in visitors away;
 // it needs a session provider it does not have under a plain render.
@@ -93,22 +92,12 @@ describe('Landing claims', () => {
     expect(text).not.toMatch(/human[- ]approved|awaiting approval|pending approval/i);
   });
 
-  /**
-   * §8.1 and §9.3: packs carry exactly two maturity terms. "Reviewed" read as
-   * an authoritative production finding, which is precisely what a validated
-   * candidate is not.
-   */
-  it('labels every industry pack with one of the two maturity terms', () => {
+  it('does not expose internal pack-readiness terminology', () => {
     const { container } = render(<Page />);
-    const text = container.textContent ?? '';
+    const faqAnswers = FAQ_GROUPS.flatMap((group) => group.items.map((item) => item.a)).join(' ');
 
-    // Every pack is checked, not just a sample: a third pack carrying an
-    // unsupported maturity word is exactly the drift this guards.
-    for (const pack of LANDING_CONTENT.packs.items) {
-      expect(pack.status).toMatch(/· (Validated candidate|Foundation draft)$/);
-      expect(text).toContain(pack.status);
-    }
-    expect(text).not.toMatch(/· Reviewed\b/i);
+    expect(container.textContent).not.toMatch(/foundation draft|validated candidate/i);
+    expect(faqAnswers).not.toMatch(/foundation draft|validated candidate/i);
   });
 
   /**

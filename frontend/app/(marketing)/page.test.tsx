@@ -144,12 +144,13 @@ describe('Landing page (public marketing `/`)', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
-    // The page used to run the question→verdicts demo TWICE — ambient in the
-    // hero and again as the "see it" beat — so the scroll repeated itself.
-    // The second beat is now the workspace, opened to its evidence.
+    // The product beat is a faithful app-shell preview, not a second narrative
+    // layer explaining the marketing story from inside the product frame.
     const product = container.querySelector('#see-it');
     expect(product).not.toBeNull();
-    expect(product).toHaveTextContent(/every score opens to the answer behind it/i);
+    expect(product).toHaveTextContent(/AI Visibility/i);
+    expect(product).toHaveTextContent(/Cross-run trend across completed audits/i);
+    expect(product).not.toHaveTextContent(/Observe|Trace|Benchmark|Optimize/i);
     expect(product).not.toHaveTextContent(/example data/i);
   });
 

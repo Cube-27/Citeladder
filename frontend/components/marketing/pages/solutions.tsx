@@ -9,11 +9,7 @@ import {
 } from 'lucide-react';
 
 import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
-import {
-  PACK_MATURITY_LABEL,
-  SOLUTION_SEGMENTS,
-  SOLUTIONS_HERO,
-} from '@/lib/marketing-content/solutions';
+import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink, TextLink } from '../primitives/button';
@@ -89,12 +85,6 @@ export function SolutionSegments() {
               <h2 className="website-section-heading text-foreground mt-5 max-w-[32ch]">
                 {segment.title}
               </h2>
-              {segment.pack ? (
-                <p className="website-label text-secondary bg-well mt-4 inline-block rounded-md px-2.5 py-1 font-medium">
-                  {segment.pack.name} · {PACK_MATURITY_LABEL[segment.pack.maturity]}
-                </p>
-              ) : null}
-
               <Meta as="p" className="mt-8 mb-4">
                 The pain
               </Meta>

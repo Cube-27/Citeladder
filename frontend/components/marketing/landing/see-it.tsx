@@ -15,14 +15,14 @@ import { Section } from '../primitives/section';
  * the hero's ambient panel almost exactly — the page asked the same question
  * twice and answered it the same way, so the scroll bought the reader nothing.
  * The hero states the PROBLEM (engines answer without you); this states the
- * ANSWER, and the answer is the product: a real workspace canvas with one
- * metric opened to the persisted artifact behind it.
+ * ANSWER, and the answer is the product: a faithful preview of the real app
+ * shell and its primary analytical workspace.
  */
 export function SeeIt() {
   const { seeIt } = LANDING_CONTENT;
   return (
     <Section id="see-it" tone="paper" rhythm="base" aria-labelledby="see-it-title">
-      <Reveal className="mx-auto mb-8 max-w-5xl text-center md:mb-10">
+      <Reveal className="mx-auto max-w-5xl text-center">
         <p className="website-eyebrow text-accent-text">{seeIt.kicker}</p>
         {/* Heading weight and tracking come from the base rule in globals.css;
             the size rung is the only thing markup sets, so type stays uniform. */}

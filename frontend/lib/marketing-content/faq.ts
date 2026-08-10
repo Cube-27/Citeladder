@@ -68,8 +68,8 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
         a: `A versioned pack encodes the page roles, gap-detection rules, and schema expectations of a specific business model, so classification and gap-finding are judged the way your industry actually works rather than by one generic rule. A project runs one primary pack plus the reviewed capabilities it needs, and every finding records the pack ID and version that produced it.`,
       },
       {
-        q: 'Which industries are covered, and how mature is each?',
-        a: `Packs carry one of two maturity labels. Education and Commerce are validated candidates — ready for controlled shadow evaluation, not yet authoritative production findings. Professional services, enterprise SaaS, media, and financial services are foundation drafts. We label these plainly because acting on a draft as though it were validated is the mistake the labels exist to prevent.`,
+        q: 'Which industries are covered?',
+        a: `CiteLadder includes industry packs for education, commerce, professional services, enterprise SaaS, media, and financial services. Each pack defines the page roles, gap rules, and schema expectations used to evaluate that business model, and every finding records the pack and version that produced it.`,
       },
       {
         q: 'Do packs share my data with other customers?',

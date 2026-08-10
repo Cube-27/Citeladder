@@ -24,7 +24,7 @@ from sqlalchemy.engine import make_url
 from app.core.config import settings
 from app.core.config.entitlements import CAPABILITY_REGISTRY, CapabilityType
 from app.core.database import SessionLocal, dispose_engine
-from app.domain.auth.service import get_user_by_email, register_user
+from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
 from app.domain.billing.bootstrap import ensure_user_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
@@ -62,43 +62,61 @@ def _full_access_grants(counter_allowance: int) -> tuple[GrantSpec, ...]:
 
 async def _run(email: str, password: str, counter_allowance: int) -> None:
     _require_local_development_target()
-    async with SessionLocal() as session:
-        user = await get_user_by_email(session, email)
-        if user is None:
-            user = await register_user(session, email, password, role="admin")
-        elif user.role != "admin":
-            raise RuntimeError("Existing development login is not an admin account")
-        workspace = await ensure_personal_workspace(session, user)
-        if workspace is None:
-            workspace = await session.scalar(
-                select(Workspace)
-                .join(
-                    WorkspaceMember,
-                    WorkspaceMember.workspace_id == Workspace.id,
+    try:
+        async with SessionLocal() as session:
+            user = await get_user_by_email(session, email)
+            if user is None:
+                user = await register_user(session, email, password, role="admin")
+            elif user.role != "admin":
+                raise RuntimeError("Existing development login is not an admin account")
+            workspace = await ensure_personal_workspace(session, user)
+            if workspace is None:
+                workspace = await session.scalar(
+                    select(Workspace)
+                    .join(
+                        WorkspaceMember,
+                        WorkspaceMember.workspace_id == Workspace.id,
+                    )
+                    .where(WorkspaceMember.user_id == user.id)
+                    .order_by(Workspace.created_at.asc(), Workspace.id.asc())
                 )
-                .where(WorkspaceMember.user_id == user.id)
-                .order_by(Workspace.created_at.asc(), Workspace.id.asc())
+            if workspace is None:
+                raise RuntimeError("Development user has no workspace membership")
+            account = await ensure_user_billing(
+                session, user, workspace_ids=(workspace.id,)
             )
-        if workspace is None:
-            raise RuntimeError("Development user has no workspace membership")
-        account = await ensure_user_billing(
-            session, user, workspace_ids=(workspace.id,)
-        )
-        await issue_override_bundle(
-            session,
-            operator_user=user,
-            account_id=account.id,
-            grants=_full_access_grants(counter_allowance),
-            reason="local development full-access account",
-            valid_from=datetime.now(UTC),
-            valid_until=None,
-            idempotency_key=f"dev-full-access:{user.id}",
-        )
-        await session.commit()
-        print(f"email={user.email}")
-        print(f"workspace_id={workspace.id}")
-        print("role=admin capabilities=all_issuable")
-    await dispose_engine()
+            await issue_override_bundle(
+                session,
+                operator_user=user,
+                account_id=account.id,
+                grants=_full_access_grants(counter_allowance),
+                reason="local development full-access account",
+                valid_from=datetime.now(UTC),
+                valid_until=None,
+                idempotency_key=f"dev-full-access:{user.id}",
+            )
+            await session.commit()
+            print(f"email={user.email}")
+            print(f"workspace_id={workspace.id}")
+            print("role=admin capabilities=all_issuable")
+
+            # Authenticate while this backend process is already warm. Starting a
+            # second process just for this check made a reset appear to hang on a
+            # cold Windows filesystem even though password verification is fast.
+            print("Verifying development login...")
+            authenticated = await authenticate_user(session, email, password)
+            if authenticated is None:
+                raise RuntimeError(
+                    "Development account was written but its credentials did not "
+                    "authenticate"
+                )
+            _token, authenticated_user = authenticated
+            print(
+                f"verified login for {authenticated_user.email} "
+                f"(id={authenticated_user.id})"
+            )
+    finally:
+        await dispose_engine()
 
 
 def main(argv: list[str] | None = None) -> int:
