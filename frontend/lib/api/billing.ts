@@ -36,8 +36,6 @@ export type SubscriptionChange = z.infer<typeof subscriptionChangeSchema>;
 export type CredentialMode = 'byok' | 'funded';
 export type SelfServePlanKey = 'tier_1' | 'tier_2' | 'tier_3';
 
-export { BILLING_CONFIRM_MAX_POLLS, BILLING_CONFIRM_POLL_MS } from '@/lib/config/operational';
-
 /**
  * A fresh idempotency key for one commercial intent.
  *

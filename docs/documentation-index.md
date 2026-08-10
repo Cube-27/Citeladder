@@ -73,6 +73,8 @@ operations, or design constraints. They are not alternate product roadmaps.
 | [`site-health.md`](site-health.md) | Shipped generic Site Health behavior until Site Intelligence slices replace it |
 | [`commerce-intelligence.md`](commerce-intelligence.md) | Current Commerce specialization boundary within the shared intelligence architecture |
 | [`integrations-traffic-analytics.md`](integrations-traffic-analytics.md) | Current persisted integration/traffic evidence and Demand migration boundary |
+| [`operations/aws-hosting-runbook.md`](operations/aws-hosting-runbook.md) | Target AWS production controls, deployment, and recovery gates; not a claim of deployed IaC |
+| [`operations/razorpay-and-demo-owner-requirements.md`](operations/razorpay-and-demo-owner-requirements.md) | Operator approvals and verification required before Razorpay checkout or demo launch |
 | [`validate_documentation.py`](validate_documentation.py) | Enforces the active-document allowlist and validates local links |
 | [`../backend/docs/`](../backend/docs/) | Backend evaluation/measurement references used by current code and tests |
 

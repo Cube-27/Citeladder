@@ -6,7 +6,8 @@ import userEvent from '@testing-library/user-event';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { ProjectProvider, useProjectContext } from '@/lib/project/project-context';
-import { OpportunitiesScreen, opportunitySummaryPollingInterval } from './opportunities-screen';
+import { opportunitySummaryPollingInterval } from './opportunity-summary-polling';
+import { OpportunitiesScreen } from './opportunities-screen';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';

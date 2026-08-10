@@ -309,15 +309,15 @@ function LayerRow({
  * The `pipeline-stream` class is what globals.css uses to hide SMIL dots under
  * `prefers-reduced-motion`.
  */
-function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) {
-  const routes = [
-    'M 0 80 H 60 A 24 24 0 0 1 84 104 V 216 A 24 24 0 0 0 108 240 H 186',
-    'M 0 240 H 186',
-    'M 0 400 H 60 A 24 24 0 0 0 84 376 V 264 A 24 24 0 0 1 108 240 H 186',
-  ];
-  // Constant dot speed, so the bent routes simply take longer to arrive.
-  const durations = [3, 1.55, 3];
+const BUS_ROUTES = [
+  'M 0 80 H 60 A 24 24 0 0 1 84 104 V 216 A 24 24 0 0 0 108 240 H 186',
+  'M 0 240 H 186',
+  'M 0 400 H 60 A 24 24 0 0 0 84 376 V 264 A 24 24 0 0 1 108 240 H 186',
+] as const;
+// Constant dot speed, so the bent routes simply take longer to arrive.
+const BUS_DURATIONS = [3, 1.55, 3] as const;
 
+function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) {
   return (
     <svg
       aria-hidden
@@ -325,7 +325,7 @@ function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) 
       fill="none"
       className="pipeline-stream absolute inset-y-0 left-[30%] hidden h-full w-[16%] xl:block"
     >
-      {routes.map((d, index) => (
+      {BUS_ROUTES.map((d, index) => (
         <g key={d}>
           <path
             d={d}
@@ -347,8 +347,8 @@ function Bus({ active, reduce }: Readonly<{ active: number; reduce: boolean }>) 
             >
               <animateMotion
                 path={d}
-                dur={`${durations[index]}s`}
-                begin={`${(slot * (durations[index] ?? 3)) / 3}s`}
+                dur={`${BUS_DURATIONS[index]}s`}
+                begin={`${(slot * (BUS_DURATIONS[index] ?? 3)) / 3}s`}
                 repeatCount="indefinite"
               />
             </circle>

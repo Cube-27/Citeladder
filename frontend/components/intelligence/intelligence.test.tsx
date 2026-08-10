@@ -7,7 +7,8 @@ import { DecisionPrompt } from './decision-prompt';
 import { EditableFact } from './editable-fact';
 import { Insight, type InsightModel } from './insight';
 import { ProvenanceChip } from './provenance-chip';
-import { DERIVED_STATES, StateLabel, stateLabel } from './state-label';
+import { DERIVED_STATES, stateLabel } from './state-label-data';
+import { StateLabel } from './state-label';
 
 /**
  * Contract tests for the shared intelligence components (§5, §6).

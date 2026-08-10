@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/typography';
 import { opportunitiesMutations, opportunitiesQueries } from '@/lib/api/opportunities';
 import { queryKeys } from '@/lib/api/query-keys';
+import { formatUtcTimestamp } from '@/lib/format';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 
 /** Recommendation detail drawer backed by the persisted detail projection. */
@@ -124,7 +125,7 @@ export function EvidenceDrawer({
                   </ul>
                 </div>
                 <p className="text-muted text-xs">
-                  Updated {new Date(guidanceQuery.data.created_at).toLocaleString()}
+                  Updated {formatUtcTimestamp(guidanceQuery.data.created_at)}
                 </p>
               </div>
             ) : guidanceQuery.isError ? (

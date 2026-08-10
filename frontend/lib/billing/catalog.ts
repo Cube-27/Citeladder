@@ -32,11 +32,6 @@ export function catalogPlanByKey(catalog: BillingCatalog, key: string): CatalogP
   return catalog.plans.find((plan) => plan.key === key);
 }
 
-/** The four tiers in the order the backend published them. */
-export function orderedPlans(catalog: BillingCatalog): CatalogPlan[] {
-  return [...catalog.plans];
-}
-
 export function isSelfServeKey(key: string): key is SelfServePlanKey {
   return key === 'tier_1' || key === 'tier_2' || key === 'tier_3';
 }
@@ -99,35 +94,18 @@ export type ComparisonRow = {
  * appears without a frontend change.
  */
 export function comparisonRows(catalog: BillingCatalog): ComparisonRow[] {
-  const keys: string[] = [];
+  const keys = new Set<string>();
   for (const plan of catalog.plans) {
     for (const capability of plan.capabilities) {
-      if (!keys.includes(capability.key)) {
-        keys.push(capability.key);
-      }
+      keys.add(capability.key);
     }
   }
-  return keys.map((key) => ({
+  return [...keys].map((key) => ({
     key,
     values: Object.fromEntries(
       catalog.plans.map((plan) => [plan.key, plan.capabilities.find((c) => c.key === key)]),
     ),
   }));
-}
-
-/**
- * Add-ons and top-ups a customer can actually act on right now.
- *
- * An entry with no `unit_price` is unpriced, which is not the same as free —
- * it is filtered out of the purchasable set and rendered as unavailable by the
- * caller instead.
- */
-export function visibleAddons(catalog: BillingCatalog): CatalogAddon[] {
-  return [...catalog.addons];
-}
-
-export function visibleTopups(catalog: BillingCatalog): CatalogTopup[] {
-  return [...catalog.topups];
 }
 
 export function isPurchasable(entry: CatalogAddon | CatalogTopup): boolean {

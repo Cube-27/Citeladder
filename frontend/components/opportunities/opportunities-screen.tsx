@@ -12,6 +12,7 @@ import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 import { OpportunitiesCatalog } from '@/components/opportunities/opportunities-catalog';
+import { opportunitySummaryPollingInterval } from '@/components/opportunities/opportunity-summary-polling';
 import {
   opportunitiesApi,
   opportunitiesMutations,
@@ -22,17 +23,6 @@ import type { OpportunitySummary } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { formatAudited } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
-
-export function opportunitySummaryPollingInterval(state: {
-  status: string;
-  data?: OpportunitySummary;
-}): number | false {
-  if (state.status === 'error' && !state.data) return false;
-  if (state.data?.activation_state === 'ready' || state.data?.activation_state === 'delayed') {
-    return false;
-  }
-  return 1500;
-}
 
 function preparationMessage(state: OpportunitySummary['activation_state']): string {
   if (state === 'waiting_for_evidence') {

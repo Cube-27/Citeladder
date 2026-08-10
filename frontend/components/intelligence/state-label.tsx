@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react';
 
+import { STATE_COPY, type DerivedState } from '@/components/intelligence/state-label-data';
 import { cn } from '@/lib/utils';
 
 /**
@@ -15,64 +16,6 @@ import { cn } from '@/lib/utils';
  * Rendering the state as a shared component rather than per-screen strings is
  * what stops the vocabulary drifting apart across the four layers.
  */
-export const DERIVED_STATES = [
-  'unknown',
-  'unavailable',
-  'not_applicable',
-  'historical',
-  'future',
-  'conflicting',
-  'excluded',
-  'failed',
-  'observed_zero',
-] as const;
-
-export type DerivedState = (typeof DERIVED_STATES)[number];
-
-/**
- * Label and explanation per state. The label is what renders; the description
- * is the title/tooltip, because the distinction between these states is the
- * part users get wrong.
- */
-const STATE_COPY: Record<DerivedState, { label: string; description: string }> = {
-  unknown: {
-    label: 'Unknown',
-    description: 'Not yet determined. No observation has been attempted.',
-  },
-  unavailable: {
-    label: 'Unavailable',
-    description: 'Could not be measured — the source did not return a usable value.',
-  },
-  not_applicable: {
-    label: 'Not applicable',
-    description: 'This measure does not apply to this artifact.',
-  },
-  historical: {
-    label: 'Historical',
-    description: 'Was true in an earlier period and is not asserted as current.',
-  },
-  future: {
-    label: 'Scheduled',
-    description: 'Takes effect at a future date and is not current.',
-  },
-  conflicting: {
-    label: 'Conflicting',
-    description: 'Sources disagree. No single value is asserted.',
-  },
-  excluded: {
-    label: 'Excluded',
-    description: 'Deliberately outside the analyzed scope.',
-  },
-  failed: {
-    label: 'Failed',
-    description: 'The attempt ran and did not complete.',
-  },
-  observed_zero: {
-    label: 'Zero observed',
-    description: 'Measured successfully. The observed value is zero.',
-  },
-};
-
 /**
  * Tone maps to the semantic status families. Colour is redundant with the
  * label by construction — never the only signal.
@@ -88,10 +31,6 @@ const STATE_TONE: Record<DerivedState, string> = {
   failed: 'bg-danger-bg text-danger-text',
   observed_zero: 'bg-neutral-bg text-secondary',
 };
-
-export function stateLabel(state: DerivedState): string {
-  return STATE_COPY[state].label;
-}
 
 export type StateLabelProps = {
   state: DerivedState;

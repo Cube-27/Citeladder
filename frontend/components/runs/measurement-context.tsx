@@ -69,11 +69,9 @@ function ModelBadge({ model }: Readonly<{ model: string | null }>) {
 }
 
 function distinctModels(provenance: readonly ModelProvenance[]): string[] {
-  const seen: string[] = [];
+  const seen = new Set<string>();
   for (const entry of provenance) {
-    if (entry.transport_model && !seen.includes(entry.transport_model)) {
-      seen.push(entry.transport_model);
-    }
+    if (entry.transport_model) seen.add(entry.transport_model);
   }
-  return seen;
+  return [...seen];
 }

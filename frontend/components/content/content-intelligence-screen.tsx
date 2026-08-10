@@ -207,9 +207,9 @@ function StrategyPanel({ content }: Readonly<{ content: ContentHook }>) {
             <p className="bg-panel text-secondary p-5 text-sm">No actionable question gaps.</p>
           ) : (
             <ol className="divide-border bg-panel divide-y">
-              {strategy.priorities.map((priority, index) => (
+              {strategy.priorities.map((priority) => (
                 <li
-                  key={`${text(priority.question_id)}-${index}`}
+                  key={text(priority.question_id)}
                   className="grid gap-2 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
                 >
                   <div>
@@ -365,8 +365,8 @@ function BriefsPanel({ content }: Readonly<{ content: ContentHook }>) {
           <p className="text-secondary text-sm">No automatically briefable missing questions.</p>
         ) : (
           <ul className="divide-border bg-panel shadow-card divide-y overflow-hidden rounded-lg">
-            {missing.slice(0, 12).map((priority, index) => (
-              <li key={`${text(priority.question_id)}-${index}`} className="grid gap-3 p-4">
+            {missing.slice(0, 12).map((priority) => (
+              <li key={text(priority.question_id)} className="grid gap-3 p-4">
                 <p className="text-sm font-medium">{text(priority.question_id)}</p>
                 <Button
                   variant="secondary"

@@ -9,7 +9,12 @@ import { DecisionPrompt } from '@/components/intelligence/decision-prompt';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
-import { agentApi, type AgentConversationDetail, type AgentTaskRun } from '@/lib/api/agent';
+import {
+  agentApi,
+  type AgentConversation,
+  type AgentConversationDetail,
+  type AgentTaskRun,
+} from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
@@ -102,7 +107,235 @@ function TaskProgress({ run }: Readonly<{ run: AgentTaskRun }>) {
   );
 }
 
-export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composition */ {
+function ConversationSidebar({
+  conversations,
+  tasks,
+  conversationId,
+  loading,
+  onNew,
+  onSelect,
+}: Readonly<{
+  conversations: AgentConversation[] | undefined;
+  tasks: AgentTaskRun[] | undefined;
+  conversationId: string | null;
+  loading: boolean;
+  onNew: () => void;
+  onSelect: (conversationId: string) => void;
+}>) {
+  return (
+    <aside className="border-border-subtle bg-background-alt rounded-lg border p-2">
+      <Button variant="secondary" className="w-full justify-start" onClick={onNew}>
+        <Plus aria-hidden className="size-4" />
+        New conversation
+      </Button>
+      <div className="mt-3 grid gap-1" aria-label="Conversations">
+        {conversations?.map((item) => {
+          const conversationRun = mostRecentConversationRun(tasks, item.id);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelect(item.id)}
+              aria-pressed={conversationId === item.id}
+              className={cn(
+                'focus-ring min-h-10 rounded-sm px-2 py-1.5 text-left text-xs',
+                conversationId === item.id
+                  ? 'bg-accent-soft text-accent-hover'
+                  : 'text-secondary hover:bg-background',
+              )}
+            >
+              <span className="block truncate font-medium">{item.title}</span>
+              <span className="text-muted mt-0.5 block capitalize">
+                {conversationRun ? readable(conversationRun.status) : 'Conversation'}
+              </span>
+            </button>
+          );
+        })}
+        {!loading && !conversations?.length ? (
+          <p className="text-muted px-2 py-4 text-xs leading-relaxed">
+            Your conversations will appear here.
+          </p>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
+
+function ConversationMessages({
+  conversationId,
+  conversation,
+  loading,
+  error,
+}: Readonly<{
+  conversationId: string | null;
+  conversation: AgentConversationDetail | undefined;
+  loading: boolean;
+  error: boolean;
+}>) {
+  return (
+    <>
+      {error ? (
+        <Alert tone="danger">The conversation could not be loaded. Refresh and try again.</Alert>
+      ) : null}
+      {!conversationId || (!loading && !conversation?.messages.length) ? (
+        <div className="mx-auto grid max-w-xl place-items-center py-16 text-center">
+          <h2 className="font-display text-foreground text-xl font-semibold">
+            What should we work on next?
+          </h2>
+          <p className="text-muted mt-2 max-w-[58ch] text-sm leading-relaxed">
+            Ask for an explanation, roadmap, draft, demand analysis, or next measurement. The agent
+            uses only the current project&apos;s persisted evidence and bounded tools.
+          </p>
+        </div>
+      ) : null}
+      {conversation?.messages.length ? (
+        <ol className="mx-auto grid max-w-3xl gap-5">
+          {conversation.messages.map((message) => (
+            <li
+              key={message.id}
+              className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
+            >
+              <div
+                className={cn(
+                  'max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
+                  message.role === 'user'
+                    ? 'bg-accent text-inverse'
+                    : 'bg-background-alt text-foreground border-border-subtle border',
+                )}
+              >
+                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.citations.length ? (
+                  <details className="mt-2 text-xs opacity-80">
+                    <summary className="cursor-pointer">
+                      Evidence · {message.citations.length}
+                    </summary>
+                    <ul className="mt-1 grid gap-1 break-all">
+                      {message.citations.map((citation) => (
+                        <li key={citation}>{citation}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </>
+  );
+}
+
+function ActiveTaskPanel({
+  run,
+  onReviewDecision,
+  onCancel,
+  cancelling,
+}: Readonly<{
+  run: AgentTaskRun | null;
+  onReviewDecision: () => void;
+  onCancel: (run: AgentTaskRun) => void;
+  cancelling: boolean;
+}>) {
+  if (!run || TERMINAL_STATUSES.has(run.status)) return null;
+  const pendingDecision = run.steps.find((step) => step.status === 'awaiting_user');
+  return (
+    <div className="mx-auto mt-5 max-w-3xl">
+      {pendingDecision ? (
+        <div className="border-info bg-info-bg flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+          <div>
+            <p className="text-info-text text-sm font-semibold">Your decision is required</p>
+            <p className="text-info-text mt-0.5 text-xs">{pendingDecision.name}</p>
+          </div>
+          <Button size="sm" onClick={onReviewDecision}>
+            Review decision
+          </Button>
+        </div>
+      ) : null}
+      <TaskProgress run={run} />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mt-2"
+        onClick={() => onCancel(run)}
+        disabled={cancelling}
+      >
+        {cancelling ? 'Cancelling…' : 'Cancel task'}
+      </Button>
+    </div>
+  );
+}
+
+function AgentComposer({
+  objective,
+  onObjectiveChange,
+  onSubmit,
+  submitting,
+  taskAvailable,
+  missingRequiredScope,
+  formError,
+  capabilitiesError,
+}: Readonly<{
+  objective: string;
+  onObjectiveChange: (value: string) => void;
+  onSubmit: () => void;
+  submitting: boolean;
+  taskAvailable: boolean;
+  missingRequiredScope: string[];
+  formError: string;
+  capabilitiesError: boolean;
+}>) {
+  return (
+    <form
+      className="border-border-subtle bg-background-alt border-t p-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <div className="mx-auto grid max-w-3xl gap-2">
+        <Textarea
+          value={objective}
+          onChange={(event) => onObjectiveChange(event.target.value)}
+          maxLength={2000}
+          rows={3}
+          aria-label="Message Growth Agent"
+          placeholder="Ask the Growth Agent about your current evidence…"
+          disabled={submitting}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          {missingRequiredScope.length ? (
+            <p className="text-muted max-w-xl text-xs leading-relaxed">
+              This action needs a selected source item. Start it from the related Content or Demand
+              workspace so the agent receives the right context.
+            </p>
+          ) : null}
+          <Button
+            type="submit"
+            className="ml-auto"
+            disabled={
+              submitting || !objective.trim() || !taskAvailable || missingRequiredScope.length > 0
+            }
+          >
+            <Send aria-hidden className="size-4" />
+            {submitting ? 'Sending…' : 'Send'}
+          </Button>
+        </div>
+        {formError ? (
+          <p role="alert" className="text-danger-text text-xs">
+            {formError}
+          </p>
+        ) : null}
+        {capabilitiesError ? (
+          <p role="alert" className="text-danger-text text-xs">
+            Agent capabilities could not be loaded. Refresh and try again.
+          </p>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+export function GrowthAgentWorkspace() {
   const search = useSearchParams();
   const queryClient = useQueryClient();
   const { activeProject, isLoading: projectLoading } = useProjectContext();
@@ -255,53 +488,22 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
 
   return (
     <div className="grid min-h-[calc(100dvh-10rem)] gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="border-border-subtle bg-background-alt rounded-lg border p-2">
-        <Button
-          variant="secondary"
-          className="w-full justify-start"
-          onClick={() => {
-            setConversationChoice('new');
-            setSelectedRunId(null);
-            setObjective('');
-            setFormError('');
-          }}
-        >
-          <Plus aria-hidden className="size-4" />
-          New conversation
-        </Button>
-        <div className="mt-3 grid gap-1" aria-label="Conversations">
-          {conversations.data?.map((item) => {
-            const conversationRun = mostRecentConversationRun(tasks.data, item.id);
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setConversationChoice(item.id);
-                  setSelectedRunId(null);
-                }}
-                aria-pressed={conversationId === item.id}
-                className={cn(
-                  'focus-ring min-h-10 rounded-sm px-2 py-1.5 text-left text-xs',
-                  conversationId === item.id
-                    ? 'bg-accent-soft text-accent-hover'
-                    : 'text-secondary hover:bg-background',
-                )}
-              >
-                <span className="block truncate font-medium">{item.title}</span>
-                <span className="text-muted mt-0.5 block capitalize">
-                  {conversationRun ? readable(conversationRun.status) : 'Conversation'}
-                </span>
-              </button>
-            );
-          })}
-          {!conversations.isLoading && !conversations.data?.length ? (
-            <p className="text-muted px-2 py-4 text-xs leading-relaxed">
-              Your conversations will appear here.
-            </p>
-          ) : null}
-        </div>
-      </aside>
+      <ConversationSidebar
+        conversations={conversations.data}
+        tasks={tasks.data}
+        conversationId={conversationId}
+        loading={conversations.isLoading}
+        onNew={() => {
+          setConversationChoice('new');
+          setSelectedRunId(null);
+          setObjective('');
+          setFormError('');
+        }}
+        onSelect={(nextConversationId) => {
+          setConversationChoice(nextConversationId);
+          setSelectedRunId(null);
+        }}
+      />
 
       <section className="border-border bg-panel flex min-w-0 flex-col rounded-lg border">
         <header className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
@@ -316,135 +518,30 @@ export function GrowthAgentWorkspace() /* NOSONAR -- screen-level React composit
         </header>
 
         <div className="min-h-80 flex-1 overflow-y-auto p-4 sm:p-6">
-          {conversation.isError ? (
-            <Alert tone="danger">
-              The conversation could not be loaded. Refresh and try again.
-            </Alert>
-          ) : null}
-          {!conversationId || (!conversation.isLoading && !conversation.data?.messages.length) ? (
-            <div className="mx-auto grid max-w-xl place-items-center py-16 text-center">
-              <h2 className="font-display text-foreground text-xl font-semibold">
-                What should we work on next?
-              </h2>
-              <p className="text-muted mt-2 max-w-[58ch] text-sm leading-relaxed">
-                Ask for an explanation, roadmap, draft, demand analysis, or next measurement. The
-                agent uses only the current project&apos;s persisted evidence and bounded tools.
-              </p>
-            </div>
-          ) : null}
-          {conversation.data?.messages.length ? (
-            <ol className="mx-auto grid max-w-3xl gap-5">
-              {conversation.data.messages.map((message) => (
-                <li
-                  key={message.id}
-                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
-                      message.role === 'user'
-                        ? 'bg-accent text-inverse'
-                        : 'bg-background-alt text-foreground border-border-subtle border',
-                    )}
-                  >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    {message.citations.length ? (
-                      <details className="mt-2 text-xs opacity-80">
-                        <summary className="cursor-pointer">
-                          Evidence · {message.citations.length}
-                        </summary>
-                        <ul className="mt-1 grid gap-1 break-all">
-                          {message.citations.map((citation) => (
-                            <li key={citation}>{citation}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          ) : null}
-
-          {selectedRun && !TERMINAL_STATUSES.has(selectedRun.status) ? (
-            <div className="mx-auto mt-5 max-w-3xl">
-              {pendingDecision ? (
-                <div className="border-info bg-info-bg flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
-                  <div>
-                    <p className="text-info-text text-sm font-semibold">
-                      Your decision is required
-                    </p>
-                    <p className="text-info-text mt-0.5 text-xs">{pendingDecision.name}</p>
-                  </div>
-                  <Button size="sm" onClick={() => setDecisionOpen(true)}>
-                    Review decision
-                  </Button>
-                </div>
-              ) : null}
-              <TaskProgress run={selectedRun} />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-                onClick={() => cancel.mutate(selectedRun)}
-                disabled={cancel.isPending}
-              >
-                {cancel.isPending ? 'Cancelling…' : 'Cancel task'}
-              </Button>
-            </div>
-          ) : null}
+          <ConversationMessages
+            conversationId={conversationId}
+            conversation={conversation.data}
+            loading={conversation.isLoading}
+            error={conversation.isError}
+          />
+          <ActiveTaskPanel
+            run={selectedRun}
+            onReviewDecision={() => setDecisionOpen(true)}
+            onCancel={(run) => cancel.mutate(run)}
+            cancelling={cancel.isPending}
+          />
         </div>
 
-        <form
-          className="border-border-subtle bg-background-alt border-t p-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit.mutate();
-          }}
-        >
-          <div className="mx-auto grid max-w-3xl gap-2">
-            <Textarea
-              value={objective}
-              onChange={(event) => setObjective(event.target.value)}
-              maxLength={2000}
-              rows={3}
-              aria-label="Message Growth Agent"
-              placeholder="Ask the Growth Agent about your current evidence…"
-              disabled={submit.isPending}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              {missingRequiredScope.length ? (
-                <p className="text-muted max-w-xl text-xs leading-relaxed">
-                  This action needs a selected source item. Start it from the related Content or
-                  Demand workspace so the agent receives the right context.
-                </p>
-              ) : null}
-              <Button
-                type="submit"
-                className="ml-auto"
-                disabled={
-                  submit.isPending ||
-                  !objective.trim() ||
-                  !taskPolicy ||
-                  missingRequiredScope.length > 0
-                }
-              >
-                <Send aria-hidden className="size-4" />
-                {submit.isPending ? 'Sending…' : 'Send'}
-              </Button>
-            </div>
-            {formError ? (
-              <p role="alert" className="text-danger-text text-xs">
-                {formError}
-              </p>
-            ) : null}
-            {capabilities.isError ? (
-              <p role="alert" className="text-danger-text text-xs">
-                Agent capabilities could not be loaded. Refresh and try again.
-              </p>
-            ) : null}
-          </div>
-        </form>
+        <AgentComposer
+          objective={objective}
+          onObjectiveChange={setObjective}
+          onSubmit={() => submit.mutate()}
+          submitting={submit.isPending}
+          taskAvailable={Boolean(taskPolicy)}
+          missingRequiredScope={missingRequiredScope}
+          formError={formError}
+          capabilitiesError={capabilities.isError}
+        />
       </section>
 
       {selectedRun && pendingDecision ? (

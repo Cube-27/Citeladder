@@ -40,6 +40,7 @@ import { opportunitiesApi } from '@/lib/api/opportunities';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { formatUtcTimestamp } from '@/lib/format';
 import type { CommandCenter, Opportunity, Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
@@ -379,7 +380,7 @@ function CommandCenterContent({
               {data.project.brand_name || data.project.name}
             </h2>
             <p className="text-muted mt-1 text-xs">
-              Updated {new Date(data.measurement.completed_at).toLocaleString()} ·{' '}
+              Updated {formatUtcTimestamp(data.measurement.completed_at)} ·{' '}
               {data.measurement.logical_engines.join(', ')}
             </p>
           </div>

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/input';
 import { siteIntelligenceApi, type CorrectionCreateInput } from '@/lib/api/site-intelligence';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ContradictionGroup, KnowledgeAssertionItem } from '@/lib/api/types';
+import { displayValue } from '@/lib/site-intelligence/display-value';
 
 function correctionInput(side: KnowledgeAssertionItem): CorrectionCreateInput['value'] | null {
   if (side.value_type === 'number' || side.value_type === 'money') {
@@ -23,12 +24,6 @@ function correctionInput(side: KnowledgeAssertionItem): CorrectionCreateInput['v
   }
   if (side.value_type === 'object') return null;
   return side.raw_value.trim() || side.normalized_value || null;
-}
-
-export function displayValue(value: Record<string, unknown>, fallback: string): string {
-  if (typeof value.normalized_value === 'string') return value.normalized_value;
-  if (typeof value.canonical_name === 'string') return value.canonical_name;
-  return fallback;
 }
 
 function correctedLabel(group: ContradictionGroup): string {

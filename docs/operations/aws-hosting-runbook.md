@@ -4,8 +4,9 @@
 - **Deployment model:** single-region, Multi-AZ
 - **Application revision reviewed:**
   `7effabf91f8012982a816d807ab9df93b9aece85`
-- **Security gate:**
-  [Security and production-readiness audit](security-production-audit-2026-07-27.md)
+- **Security gate:** repeat and record a production-readiness review against the
+  current architecture and code; the earlier dated audit is archived history,
+  not launch authority.
 - **Billing gate:**
   [Razorpay and demo owner requirements](razorpay-and-demo-owner-requirements.md)
 
@@ -78,7 +79,8 @@ Do not accept public traffic until all items are complete:
 flowchart TD
     U[Browser] --> R53[Route 53]
     R53 --> CF[CloudFront<br/>ACM + AWS WAF]
-    CF --> ALB[Public ALB<br/>CloudFront-only origin]
+    CF --> ORIGIN[origin.app.citeladder.com<br/>Route 53 alias + regional ACM]
+    ORIGIN --> ALB[Public ALB<br/>CloudFront-only origin]
     ALB --> FE[ECS Fargate<br/>Next.js, 2+ tasks]
     FE -->|same-origin rewrite<br/>private Service Connect| API[ECS Fargate<br/>FastAPI, 2+ tasks]
     API --> DB[(RDS PostgreSQL 16<br/>Multi-AZ)]
@@ -90,24 +92,35 @@ flowchart TD
     IW[Integration worker] --> DB
     ID[Integration dispatcher] --> DB
 
-    AW --> NAT[NAT gateways]
-    SW --> NAT
-    CW --> NAT
-    IW --> NAT
-    ID --> NAT
-    API --> NAT
-    NAT --> EXT[AI providers, OAuth/data APIs,<br/>Razorpay, public crawl targets]
+    AW --> RE[Restricted egress<br/>firewall or trusted proxy]
+    CW --> RE
+    IW --> RE
+    API --> RE
+    RE --> AI[AI-provider catalog]
+    RE --> DATA[OAuth/data-API catalog]
+    RE --> PAY[Razorpay catalog]
+    SW --> CNAT[Dedicated crawler NAT]
+    CNAT --> WEB[Arbitrary public crawl targets]
 
     FE -. images/logs/secrets .-> VPCE[VPC endpoints<br/>ECR, Logs, Secrets, KMS, S3]
     API -. images/logs/secrets .-> VPCE
 ```
 
-There is one public application origin, for example `https://app.citeladder.com`.
-CloudFront sends both page and `/api/*` requests to the frontend target. The
+The viewer hostname is `app.citeladder.com`. Configure a distinct public origin
+alias such as `origin.app.citeladder.com` as a Route 53 alias that resolves
+**directly to the ALB**, never to CloudFront. Issue an `ap-south-1` ACM
+certificate containing that origin alias, attach it to the ALB HTTPS listener,
+and configure CloudFront's custom origin and TLS SNI name to that alias.
+CloudFront sends both page and `/api/*` requests to this frontend origin. The
 frontend performs the existing rewrite to a stable private Service Connect
-alias such as `http://api:8000`. Do **not** add a direct public API origin or
-route CloudFront `/api/*` around Next.js; that would break the committed
-same-origin proxy contract.
+alias such as `http://api:8000`. Do **not** use `app.citeladder.com` as the
+origin name, route the origin alias back through CloudFront, add a direct public
+API origin, or route CloudFront `/api/*` around Next.js; those configurations can
+create an origin loop or break the committed same-origin proxy contract.
+Before go-live, test the deployed Route 53 answers, regional certificate and SNI,
+ALB secret-header rejection, CloudFront page/API/SSE paths, and origin-request
+policy as one end-to-end configuration; a template or origin-only test does not
+pass this gate.
 
 ## AWS account and region layout
 
@@ -142,9 +155,9 @@ IaC must own:
 - Route 53, ACM, CloudFront, WAF, origin restrictions, and response policies;
 - ECR repositories, ECS cluster/task definitions/services, Service Connect,
   autoscaling constraints, log groups, and one-off migration task definition;
-- RDS subnet/parameter groups, instance, encryption, backup, monitoring, and
-  Secrets Manager credentials;
-- KMS keys, regional Secrets Manager replicas, secret/parameter paths, IAM
+- RDS subnet/parameter groups, instance, encryption, backup, and monitoring;
+- KMS keys, Secrets Manager secret **containers and policies** (not secret
+  values or versions), regional replica configuration, secret/parameter paths, IAM
   execution/task/deploy/migration roles, cross-account backup-copy grants, and
   narrowly scoped restore/decrypt roles;
 - dashboards, alarms, SNS/incident destinations, log buckets, and the primary,
@@ -153,23 +166,53 @@ IaC must own:
 
 Store Terraform state in an encrypted, versioned S3 bucket with locking and
 separate state access roles. Plan on pull requests; require human approval for
-production apply. Prevent destroy of RDS, KMS keys, backup vaults, domains, and
-production ECR through both IaC lifecycle rules and AWS deletion protection.
+production apply. Secret values must never enter Terraform configuration,
+variables, data sources, plan files, or state; marking a value `sensitive` only
+redacts CLI output and does not satisfy this rule. Terraform creates only the
+secret containers, replica configuration, KMS keys, and resource policies.
+Load and rotate secret versions afterward through a controlled bootstrap or
+rotation identity that writes directly to Secrets Manager and never returns the
+value to Terraform. CI must inspect redacted plan JSON and state metadata for
+secret-version resources, forbidden value-bearing fields, and unexpected
+sensitive changes without printing either artifact; a match blocks apply.
+
+Apply each service's controls separately rather than assuming
+one AWS deletion-protection feature covers them all:
+
+- **ECR:** use IaC `prevent_destroy` plus IAM or SCP denies for
+  `ecr:DeleteRepository` and `ecr:BatchDeleteImage`. Exempt only a named,
+  approval-gated break-glass role and audit every use; ECR has no native
+  repository deletion-protection switch.
+- **KMS:** use IaC `prevent_destroy`, key-policy/IAM denies for
+  `kms:ScheduleKeyDeletion`, and a reviewed break-glass path with the maximum
+  approved waiting period and cancellation drill.
+- **RDS:** enable native deletion protection, use IaC `prevent_destroy`, and
+  require a retained final snapshot on an approved destructive change.
+- **Backup vaults:** use Vault Lock in the approved mode, restrictive vault/IAM
+  policies, and IaC `prevent_destroy`; no normal role may delete recovery points
+  or weaken retention.
+- **Domains:** enable registrar transfer lock and auto-renewal, protect hosted
+  zones in IaC, and deny routine domain/hosted-zone deletion outside the
+  reviewed break-glass path.
 
 ## Network design
 
 Use three Availability Zones when budget permits; two is the minimum.
 
-| Subnet tier                     | Contents                                            | Internet route                           |
-| ------------------------------- | --------------------------------------------------- | ---------------------------------------- |
-| Public, one per AZ              | ALB and NAT gateway only                            | Internet gateway                         |
-| Private application, one per AZ | Frontend, API, workers, dispatcher, migration tasks | Per-AZ NAT for external providers/crawls |
-| Isolated database, one per AZ   | RDS only                                            | None                                     |
+| Subnet tier                              | Contents                                                    | Internet route                                                    |
+| ---------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| Public, one per AZ                       | ALB and NAT gateways only                                   | Internet gateway                                                  |
+| Private trusted-egress, one per AZ       | Frontend, API, credential-bearing workers, dispatcher       | Catalog-restricted firewall/trusted proxy; no crawler NAT route    |
+| Private crawler-egress, one per AZ       | Site Health/crawler workers                                 | Dedicated NAT with unrestricted public DNS/HTTP(S) egress          |
+| Private no-internet, one per AZ          | Analytics workers and migration tasks where applicable      | VPC endpoints and internal services only                           |
+| Isolated database, one per AZ            | RDS                                                         | None                                                               |
 
 Production ECS tasks have no public IP. Add interface endpoints for ECR API/DKR,
 CloudWatch Logs, Secrets Manager, KMS, and STS where used, plus an S3 gateway
-endpoint. NAT remains required because AI providers, OAuth/data APIs, Razorpay,
-and arbitrary public crawl targets are outside AWS endpoints.
+endpoint. Use distinct route tables for crawler and trusted-egress subnets. The
+crawler route reaches a dedicated NAT; credential-bearing tasks reach cataloged
+external services only through the restricted firewall or trusted proxy and
+must have no route to the crawler NAT.
 
 ### Security-group contract
 
@@ -177,9 +220,10 @@ and arbitrary public crawl targets are outside AWS endpoints.
 | -------------- | ----------------------------------------------------------------- | -------------------------------------------------------- |
 | ALB            | TCP 443 from the AWS-managed CloudFront origin-facing prefix list | Frontend SG on TCP 3000                                  |
 | Frontend tasks | TCP 3000 from ALB SG                                              | API SG on TCP 8000, endpoints/DNS                        |
-| API tasks      | TCP 8000 from frontend SG only                                    | RDS SG on 5432, endpoints, approved internet through NAT |
-| Worker tasks   | No inbound                                                        | RDS SG, endpoints, required internet through NAT         |
-| RDS            | TCP 5432 from API/worker/migration SGs only                       | Stateful responses only                                  |
+| API tasks                    | TCP 8000 from frontend SG only                      | RDS SG, endpoints, catalog-restricted egress proxy/firewall |
+| Credential-bearing workers  | No inbound                                          | RDS SG, endpoints, catalog-restricted egress proxy/firewall |
+| Site Health/crawler workers  | No inbound                                          | RDS SG, endpoints, arbitrary public DNS/HTTP(S) through dedicated crawler NAT |
+| RDS                          | TCP 5432 from API/worker/migration SGs only         | Stateful responses only                                    |
 
 Keep default network ACLs unless a tested compliance requirement needs stricter
 rules; security groups and application controls are less error-prone. Enable VPC
@@ -198,35 +242,64 @@ impact of a future SSRF bypass.
 ### Outbound endpoint policy
 
 NAT and security groups do not make arbitrary HTTPS destinations safe. Hosted
-production should use only the exact answer-engine endpoints in the provider
-catalog unless an owner-approved gateway feature is implemented. Validate both
+production must use the following integration-class catalogs. Every entry is
+TCP 443 only; HTTP, wildcard domain rules, and tenant-supplied hostnames are
+denied. The dynamic Shopify entry is instantiated as one exact, validated
+`<shop>.myshopify.com:443` host per approved connection, never as a suffix
+wildcard.
+
+| Catalog | Exact hosts and ports |
+| ------- | --------------------- |
+| `ai-provider` | `api.openai.com:443`, `api.anthropic.com:443`, `generativelanguage.googleapis.com:443`, `api.mistral.ai:443`; an optional agent gateway is added as one reviewed exact hostname before its key is installed |
+| `identity-oauth` | `oauth2.googleapis.com:443`, `github.com:443`, `appleid.apple.com:443`; browser authorization destinations do not grant task egress |
+| `integration-oauth` | `oauth2.googleapis.com:443`, `login.microsoftonline.com:443`, and each exact validated `<shop>.myshopify.com:443` |
+| `integration-data` | `www.googleapis.com:443`, `analyticsdata.googleapis.com:443`, `analyticsadmin.googleapis.com:443`, `ssl.bing.com:443`, and each exact validated `<shop>.myshopify.com:443` |
+| `razorpay` | `api.razorpay.com:443`; checkout hosts are browser destinations and do not grant task egress |
+
+The current Site Health ladder is `secure_httpx -> curl_cffi -> patchright`.
+ScraperAPI and Firecrawl are not runtime dependencies: do not provision their
+credentials, endpoint catalogs, task permissions, or cost controls.
+
+Validate the exact scheme, host, and port
 when a connection is written and immediately before each credential-bearing
 request; block private, loopback, link-local, reserved, and metadata IPs after
 DNS resolution and pin the validated address. Changing a base URL must require a
 fresh API key so a member cannot redirect an existing stored key.
 
-Keep crawler egress logically separate because Site Health deliberately visits
-arbitrary public hosts. Where cost permits, route API/audit/integration/billing
-egress through an AWS Network Firewall domain policy or explicit trusted proxy
-limited to cataloged provider hosts, while the crawler uses its own subnet/route
-policy. Application validation remains mandatory. Credential-bearing HTTP
-clients must set `trust_env=False`; do not rely on the absence of `HTTP_PROXY` in
-the task definition.
+Keep crawler egress physically enforceable and separate because Site Health
+deliberately visits arbitrary public hosts. Site Health/crawler tasks use only
+their dedicated subnet, route table, and NAT path. API, audit, content,
+integration, and billing tasks use separate route tables and an AWS Network
+Firewall domain policy or explicit trusted proxy limited to cataloged provider
+hosts; they must not be able to attach to or route through the crawler path.
+Enforce that boundary in IaC policy checks and deployed route-table, task-
+definition, and reachability tests. Application destination validation remains
+mandatory defense in depth, never a substitute or bypass. Credential-bearing
+HTTP clients must set `trust_env=False`; configure a required proxy explicitly
+and do not rely on ambient `HTTP_PROXY` task variables.
 
 ## DNS, TLS, and edge policy
 
-- Route 53 aliases the application domain to CloudFront.
+- Route 53 aliases the viewer application domain to CloudFront and the distinct
+  origin alias directly to the ALB; the origin alias must never resolve to the
+  CloudFront distribution.
 - ACM viewer certificate uses TLS 1.2+ policy and automatic renewal.
-- CloudFront connects to the ALB over HTTPS and validates the regional origin
-  certificate.
+- CloudFront connects to the ALB over HTTPS with SNI set to the origin alias and
+  validates the regional origin certificate for that alias.
 - Redirect HTTP to HTTPS at CloudFront; ALB port 80 should not be exposed.
 - Add HSTS only after every production subdomain is HTTPS-ready. Start without
   `includeSubDomains`/preload, then deliberately expand.
-- Apply CSP, `frame-ancestors`, `X-Content-Type-Options: nosniff`, strict
-  `Referrer-Policy`, and a minimal `Permissions-Policy` through Next.js and a
-  CloudFront response-header policy. Roll CSP out report-only first. The inline
-  theme bootstrap must use an approved CSP hash/nonce or move to a same-origin
-  external script; do not add `unsafe-inline` for convenience.
+- Apply `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, a strict
+  `Referrer-Policy`, and a minimal `Permissions-Policy` through Next.js and the
+  CloudFront response-header policy. CSP may begin in report-only mode for
+  tuning, but authenticated pages must not be public until CloudFront returns an
+  enforced CSP with `frame-ancestors 'none'` or the explicitly approved framing
+  origins. Add `X-Frame-Options: DENY` (or `SAMEORIGIN` when same-origin framing
+  is approved) only for required legacy-client support. Verify the effective
+  viewer-response headers through CloudFront, including errors and redirects;
+  an origin-only or report-only result does not pass. The inline theme bootstrap
+  must use an approved CSP hash/nonce or move to a same-origin external script;
+  do not add `unsafe-inline` for convenience.
 
 ## CloudFront behaviors
 
@@ -235,7 +308,7 @@ header tests prove it safe.
 
 | Priority/path     | Origin       | Cache policy                                                  | Origin request policy                                                                                | Methods               |
 | ----------------- | ------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
-| `/api/*`          | Frontend ALB | Managed `CachingDisabled`; all TTLs zero                      | `AllViewer` or an equivalent custom policy forwarding all cookies/query strings and required headers | All HTTP methods      |
+| `/api/*`          | Frontend ALB | Managed `CachingDisabled`; all TTLs zero                      | `AllViewerExceptHostHeader` or equivalent: forward all cookies/query strings and required headers, but replace viewer `Host` with the origin alias | All HTTP methods      |
 | `/_next/static/*` | Frontend ALB | Managed `CachingOptimized`, immutable asset TTL               | No cookies; minimal headers/query                                                                    | GET, HEAD, OPTIONS    |
 | `/_next/image*`   | Frontend ALB | Dedicated bounded image policy keyed on required query values | No cookies                                                                                           | GET, HEAD, OPTIONS    |
 | Default `*`       | Frontend ALB | `CachingDisabled` initially                                   | Forward cookies/query required by Next.js                                                            | Normal viewer methods |
@@ -250,7 +323,9 @@ The `/api/*` behavior must preserve at least:
 
 Because caching is disabled, avoid an allowlist that silently drops a new
 security-critical header. Test the exact deployed origin-request policy whenever
-an API header is added.
+an API header is added. For `/api/*`, do not forward the viewer `Host` header:
+CloudFront must send `Host: origin.app.citeladder.com` and use that same name for
+TLS SNI so the ALB certificate validation is deterministic.
 
 Every authenticated backend response must also emit `Cache-Control: private,
 no-store, max-age=0`. Through CloudFront, verify `Age` never grows and `x-cache`
@@ -261,16 +336,25 @@ not only an edge setting:
 
 - CloudFront: set the custom-origin response/read timeout to 60 seconds and the
   response-completion timeout to at least the maximum supported stream duration
-  (initially 3,600 seconds). Do not cache or compress/buffer `text/event-stream`.
+  (initially 3,600 seconds). This is an edge ceiling, not the application SSE
+  lifetime. Do not cache or compress/buffer `text/event-stream`.
 - ALB: use a 75-second idle timeout and a 120-second deregistration delay. The
-  timeout must reset on each data frame; target draining must not cut an active
-  response before the application shutdown window.
-- Next.js/Node rewrite: configure the production server with no active-response
-  deadline (`requestTimeout=0`) and an upstream rewrite read/idle timeout of at
-  least 75 seconds. Forward each upstream chunk immediately; disable proxy
-  response buffering and any compression that batches SSE frames. If the
-  generated standalone server does not expose these controls, wrap it with the
-  reviewed Node server configuration rather than relying on defaults.
+  timeout must reset on each data frame. Cap each application SSE response below
+  the approximately 90-second application drain deadline (initial target: 75
+  seconds), close it cleanly when possible, and reconnect; neither the 120-second
+  ALB/Fargate limits nor the 3,600-second CloudFront ceiling guarantees that a
+  longer stream survives deployment.
+- Next.js/Node rewrite: keep finite, non-zero `requestTimeout` and
+  `headersTimeout` values to protect receipt of incoming requests; these Node
+  request-ingress controls do not govern an SSE response's lifetime. Configure
+  SSE response/socket inactivity separately, with an upstream rewrite read/idle
+  timeout of at least 75 seconds. Forward each upstream chunk immediately;
+  disable proxy response buffering and any compression that batches SSE frames.
+  Verify these options against the exact built Next.js server before deployment.
+  The current Next.js 16.2.11 standalone server exposes
+  `KEEP_ALIVE_TIMEOUT` but not `requestTimeout` or `headersTimeout`; if that
+  remains true for the deployed artifact, use a reviewed Node server wrapper
+  that owns and configures the underlying `http.Server`.
 - FastAPI: the `StreamingResponse` has no application read deadline, yields a
   `: keepalive\n\n` comment every 10–15 seconds (target 12 seconds), emits
   `Cache-Control: private, no-store` and `X-Accel-Buffering: no`, and handles
@@ -279,20 +363,26 @@ not only an edge setting:
 Verify CloudFront alone, ALB alone, the Next.js rewrite, FastAPI, and the full
 browser path with timestamped chunk captures: every hop must deliver each
 keepalive within 15 seconds and must show no response buffering. Test a stream
-longer than every configured idle threshold.
+longer than every configured idle threshold and its planned 75-second rollover.
+Persist and resend `Last-Event-ID`, prove the replacement stream resumes after
+the last delivered event without a gap, and confirm polling converges if resume
+is unavailable.
 
 **Deployment drain order.** Stop new worker claims first, then let provider work
 finish cooperatively at the execution boundary, then close active API/Node
-streams, and only stop the task once the ALB reports the target `unused`.
+streams with a reconnect instruction when possible. Do not claim that the task
+can keep an arbitrary active stream alive: every stream is bounded below the
+application drain deadline and clients recover with `Last-Event-ID` or polling.
 
 `stopTimeout` is 120 seconds, and that is a **force-kill deadline, not a budget
 to spend**: when it expires ECS sends `SIGKILL` regardless of in-flight work, so
 the application must enforce its own drain deadline well below it — target ~90
 seconds, leaving headroom for `SIGTERM` propagation and ALB deregistration.
-Deregistration delay must also fit inside the same window; if the target is still
-`draining` when the task dies, the ALB has connections pointed at a dead task and
-clients see 5xx. Verify with a deploy under active SSE load: no request should
-fail, and no stream should terminate without a clean close frame.
+The application must close its bounded streams inside that window; the
+120-second deregistration/force-kill settings are outer limits, not proof that a
+stream survives. Verify with a deploy under active SSE load: interrupted clients
+must resume with `Last-Event-ID` without missing or duplicating logical events,
+and polling must still reach the authoritative terminal state.
 
 The client must reconnect with `Last-Event-ID` when possible, and polling remains
 the authoritative recovery path after any timeout, disconnect, deploy, or missed
@@ -325,6 +415,28 @@ credentials.
 Maintain two ECR repositories, one for frontend and one for backend. Enable tag
 immutability, KMS encryption, lifecycle retention, and scan-on-push/enhanced
 scanning. Deploy image digests, never mutable `latest` tags.
+
+Before deployment, attach an immutable protected-release tag to each recorded
+manifest digest. In both source and DR repositories, lifecycle rules must retain
+every digest referenced by the current production release, every approved
+rollback release for the full rollback window, and every recovery-drill fixture
+for the full recovery-test window; age or untagged-image rules must not expire
+those digests early. Before cleanup, resolve every protected tag and recorded
+release entry to a digest, compare that inventory in both Regions, and verify the
+digest is pullable and its signature is valid. Preview cleanup and delete only
+unreferenced digests older than all three windows. Provision and test source and
+destination lifecycle policies separately.
+
+Make the same exact digests available before any regional failover through
+cross-Region ECR replication configured before images are pushed, or through a
+separately populated immutable DR registry. Backfill and verify images that
+predate replication. Repository policies, lifecycle policies, protected-release
+tags, tag immutability,
+encryption, scanning, and deletion denies do not follow an image automatically;
+IaC must provision and test those destination settings separately (or apply an
+explicit destination repository-creation template). A DNS/origin cutover is
+blocked until both recorded production digests can be pulled from the DR Region
+and their signatures are verified.
 
 ### Backend image requirements
 
@@ -363,17 +475,20 @@ Use one ECS cluster per environment. Enable Container Insights selectively after
 measuring cost. Use Service Connect or private Cloud Map for frontend → API;
 FastAPI has no public load balancer.
 
-| Service/task           | Container command                                 | Initial production count | Initial sizing hypothesis |
-| ---------------------- | ------------------------------------------------- | -----------------------: | ------------------------- |
-| Frontend               | `node server.js` from standalone output           |             2 across AZs | 0.5 vCPU / 1 GiB          |
-| API                    | `uvicorn app.main:app --host 0.0.0.0 --port 8000` |             2 across AZs | 0.5 vCPU / 1 GiB          |
-| Audit worker           | `python -m app.workers.audit_worker`              |                        1 | 1 vCPU / 2 GiB            |
-| Site Health worker     | `python -m app.workers.site_health_worker`        |                        1 | 1 vCPU / 2 GiB            |
-| Content worker         | `python -m app.workers.content_worker`            |                        1 | 0.5 vCPU / 1 GiB          |
-| Analytics worker       | `python -m app.workers.analytics_worker`          |                        1 | 0.5 vCPU / 1 GiB          |
-| Integration worker     | `python -m app.workers.integration_worker`        |                        1 | 0.5 vCPU / 1 GiB          |
-| Integration dispatcher | `python -m app.workers.integration_dispatcher`    |                exactly 1 | 0.25 vCPU / 0.5 GiB       |
-| Migration task         | `alembic upgrade head`                            |      one-off per release | 0.25 vCPU / 0.5 GiB       |
+| Service/task           | Container command                                 | Initial production count | Initial sizing hypothesis | Egress assignment |
+| ---------------------- | ------------------------------------------------- | -----------------------: | ------------------------- | ----------------- |
+| Frontend               | `node server.js` from standalone output           |             2 across AZs | 0.5 vCPU / 1 GiB          | Internal API/endpoints only |
+| API                    | `uvicorn app.main:app --host 0.0.0.0 --port 8000` |             2 across AZs | 0.5 vCPU / 1 GiB          | `identity-oauth`, `integration-oauth`, `integration-data`, `razorpay`, and `ai-provider` only when the corresponding shipped feature is enabled |
+| Audit worker           | `python -m app.workers.audit_worker`              |                        1 | 1 vCPU / 2 GiB            | `ai-provider` |
+| Site Health worker     | `python -m app.workers.site_health_worker`        |                        1 | 1 vCPU / 2 GiB            | Dedicated credential-free crawler NAT; no provider catalog or credential |
+| Content worker         | `python -m app.workers.content_worker`            |                        1 | 0.5 vCPU / 1 GiB          | `ai-provider` |
+| Analytics worker       | `python -m app.workers.analytics_worker`          |                        1 | 0.5 vCPU / 1 GiB          | Internal/endpoints only |
+| Integration worker     | `python -m app.workers.integration_worker`        |                        1 | 0.5 vCPU / 1 GiB          | `integration-oauth` and `integration-data` |
+| Integration dispatcher | `python -m app.workers.integration_dispatcher`    |                exactly 1 | 0.25 vCPU / 0.5 GiB       | Internal/endpoints only |
+| Migration task         | `alembic upgrade head`                            |      one-off per release | 0.25 vCPU / 0.5 GiB       | RDS/endpoints only |
+
+Generate firewall/proxy rules per task family from these assignments; do not
+attach a union of every catalog to the trusted-egress subnet or task role.
 
 These are starting hypotheses, not capacity claims. Measure CPU, resident memory,
 event-loop lag, queue age, provider latency, and database use under a
@@ -456,9 +571,12 @@ pinning. Migration tasks should connect directly to RDS.
 
 Never put secrets in task definitions, images, build arguments, GitHub secrets
 when OIDC/AWS storage can avoid it, `.env` files, or CloudFormation/Terraform
-outputs. Inject Secrets Manager values into ECS at task start and force a new
-deployment after rotation. Use customer-managed KMS keys with narrowly scoped
-decrypt grants and CloudTrail auditing.
+configuration, variables, data sources, plans, state, or outputs. IaC owns only
+Secrets Manager containers, replica settings, KMS keys, and policies; a
+controlled bootstrap/rotation path writes secret versions directly to Secrets
+Manager. Inject those values into ECS at task start and force a new deployment
+after rotation. Use customer-managed KMS keys with narrowly scoped decrypt
+grants and CloudTrail auditing.
 
 Application startup must validate that signing/encryption/HMAC secrets contain
 at least 256 bits of independent random material, are not duplicated, and are
@@ -515,19 +633,24 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
 3. Python lock and frontend production/full dependency audits.
 4. `detect-secrets-hook` comparison against the reviewed baseline.
 5. Alembic fresh-install and prior-revision upgrade tests.
-6. Terraform/CDK formatting, validation, plan, policy, and IaC security scan.
+6. Terraform/CDK formatting, validation, plan, policy, and IaC security scan,
+   including blocking checks for secret-version resources or value-bearing
+   fields in redacted plan JSON and state metadata; never publish plan/state
+   artifacts to logs.
 7. Backend/frontend image builds with lock enforcement.
 8. Image vulnerability/secret scan, SBOM generation, and license policy.
 9. Same-origin, no-store, workspace-isolation, CSRF, upload-limit, health, and
    callback/webhook contract tests.
 10. Provider egress tests covering attacker HTTPS, private/loopback/metadata IP,
-    DNS rebinding, redirects, ambient proxy variables, member roles, and base-URL
-    changes without fresh key entry.
+     DNS rebinding, redirects, ambient proxy variables, member roles, and base-URL
+     changes without fresh key entry. IaC/reachability tests must also prove that
+     credential-bearing tasks cannot route through the crawler NAT.
 
 ### Build and promotion
 
 1. Build once from the signed commit in a clean ephemeral runner.
-2. Tag ECR images with Git SHA for discovery, but record and deploy digests.
+2. Tag ECR images with Git SHA for discovery, but record and deploy digests;
+   apply the immutable protected-release tag in source and DR before staging.
 3. Generate SBOM and provenance attestations; sign images through keyless OIDC.
 4. Deploy the exact digests to staging.
 5. Run migration, smoke, queue, SSE, OAuth-sandbox, and recovery checks.
@@ -538,7 +661,8 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
 1. Confirm incident channel/on-call coverage and review the change, migration,
    feature flags, provider-cost impact, and rollback compatibility.
 2. Confirm all CI gates and signatures; record current task-definition revisions,
-   image digests, schema revision, and CloudFront distribution config.
+   image digests, their source/DR protected-release tags and retention windows,
+   schema revision, and CloudFront distribution config.
 3. For a material migration, create/verify a restorable pre-change snapshot; do
    not treat the snapshot as the only rollback plan.
 4. Run exactly one migration ECS task with the new backend digest and
@@ -549,7 +673,8 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
    time. Keep the dispatcher non-overlapping.
 8. Deploy the frontend last, after backend compatibility is confirmed.
 9. Through CloudFront, smoke-test:
-   - health/readiness and security headers;
+   - viewer and origin DNS, the origin alias certificate/SNI and secret-header
+     restriction, health/readiness, and security headers;
    - register/login/logout and cookie attributes;
    - account A/B and workspace isolation;
    - API no-cache behavior with two sessions;
@@ -595,7 +720,10 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
   destinations and cannot delete or shorten retention.
 - Monthly retained recovery points according to approved customer/legal policy.
 - IaC state, ECR digests/SBOMs, configuration versions, and all historical
-  application decryption keys included in the recovery inventory.
+  application decryption keys included in the recovery inventory. Inventory is
+  not image recovery: before failover, require both recorded production digests
+  to be pullable from cross-Region ECR replication or a separately populated
+  immutable DR registry.
 - **Secrets Manager replication is not the historical key archive.** Replication
   mirrors the *current* secret and its rotation window into the recovery region;
   it is not a retention-controlled archive, and a rotation or a deletion
@@ -603,11 +731,14 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
   a superseded `ENCRYPTION_KEY` version becomes permanently unreadable the
   moment that version is no longer retrievable.
   Therefore maintain a **separate versioned, retention-controlled archive** of
-  every application key version — an S3 archive with Object Lock and its own KMS
-  key, or an encrypted offline recovery package — with retention at least as long
-  as the longest ciphertext retention, and deletion gated by the same approval
-  path as the vault. Replication remains useful for fast regional failover; it
-  does not satisfy this requirement.
+  every application key version — an S3 archive with Object Lock and its own
+  dedicated customer-managed KMS key, or an encrypted offline recovery package
+  — with retention at least as long as the longest ciphertext retention and
+  deletion gated by the same approval path as the vault. For S3, place both the
+  archive and its key in the owner-approved DR account/Region, distinct from the
+  regional Secrets Manager key, and enable CloudTrail S3 data events plus KMS
+  events. Replication remains useful for fast regional failover; it does not
+  satisfy this requirement.
   Recovery drills must **restore and verify every retained key version**, not
   just the current one: decrypt one known ciphertext per key version and record
   the result. A drill that only exercises the current key does not prove the
@@ -615,18 +746,23 @@ reviewers and branch/environment rules; pin actions by full commit SHA.
 - A cross-account `BackupCopyRole` may copy only the named plans/vaults.
   A human-assumable `RecoveryOperatorRole` may start restores but cannot read
   application secrets. A separate approval-gated `RecoveryDecryptRole` may
-  decrypt the destination backup key and recovery-secret key and may be assumed
-  only during a recorded drill/incident. ECS recovery task roles may read only
-  the exact regional secret ARNs they need; normal runtime, deploy, and
-  migration roles cannot administer vaults, keys, grants, or recovery secrets.
+  read the historical-key archive and decrypt its dedicated archive key as well
+  as approved recovery-secret material, and may be assumed only during a
+  recorded drill/incident. The AWS Backup restore service role, not the human
+  decrypt role, receives only the RDS restore and KMS grants required by
+  `StartRestoreJob`. ECS recovery task roles may read only the exact regional
+  secret/archive outputs they need; normal runtime, deploy, and migration roles
+  cannot administer vaults, keys, grants, or recovery secrets.
 - CloudTrail/security logs retained in the log-archive account under Object Lock
   where policy requires it.
 
 The repository currently has no AWS IaC, so this remains an open implementation
 gate rather than a claimed deployed control. The future Terraform/CDK stacks
-must create the named vaults, regional KMS keys, Secrets Manager replication or
-recovery package, key/vault policies, cross-account grants, and restore/decrypt
-roles in both staging and production; console-created substitutes are drift.
+must create the named vaults, regional KMS keys, historical-key archive,
+Secrets Manager replication or recovery package, DR ECR repositories and
+replication, destination repository/lifecycle policies, cross-account grants,
+and restore/decrypt roles in both staging and production; console-created
+substitutes are drift.
 
 ### Initial recovery objectives requiring owner approval
 
@@ -641,33 +777,75 @@ Do not publish these as an SLA until drills demonstrate them.
 ### Monthly restore test
 
 1. Select a recovery point without disclosing production values to testers.
-2. Restore into isolated subnets under a unique test identifier; never overwrite
-   production.
-3. Assume the approval-gated recovery roles. **Three distinct keys are in play
-   and each needs its own access and validation — do not treat them as one:**
+2. Restore the AWS Backup recovery point into isolated subnets under a unique
+   test identifier; record that identifier and the requested RDS target
+   identifier before the call, and never overwrite production. Call
+   `GetRecoveryPointRestoreMetadata`, override the required RDS target identifier,
+   subnet group, security groups, and non-public settings, then call
+   `StartRestoreJob` with the recovery-point ARN, an idempotency token, that
+   metadata, and the dedicated restore service-role `IamRoleArn`. The
+   `RecoveryOperatorRole` is limited to
+   `backup:GetRecoveryPointRestoreMetadata`, `backup:StartRestoreJob`,
+   `backup:DescribeRestoreJob`, and `rds:DescribeDBInstances`, plus
+   `iam:PassRole` on that one restore service-role ARN with
+   `iam:PassedToService=backup.amazonaws.com`. These read actions poll the job,
+   obtain its `CreatedResourceArn`/DB identifier, and inspect the resulting RDS
+   instance. The passed restore service role—not the operator—has only the RDS
+   create/tag and KMS permissions needed for the selected recovery point and
+   isolated target.
+
+   For an AWS Backup RDS restore, metadata fields `KmsKeyId`, `Encrypted`,
+   `EngineVersion`, and `vpcId` are informational and do not change the restore.
+   Do not infer the target storage key from a submitted `KmsKeyId`. Record the
+   expected key for the selected, tested restore path and ensure the restore
+   role and key policies grant that path; if policy requires a different key,
+   select and drill a supported copy/re-encryption path explicitly.
+3. Assume the approval-gated recovery roles. **For the S3 archive design, four
+   distinct keys are in play and each needs its own access and validation — do
+   not treat them as one:**
    - the **destination backup-vault KMS key**, which decrypts the recovery point
-     itself;
+      itself;
    - the **DR-region RDS KMS key**, which encrypts the *restored* instance's
-     storage. `RestoreDBInstanceFromDBSnapshot`'s `KmsKeyId` names this
-     resource-specific key, **not** the vault key; a restore into a region where
-     that key is missing or ungranted fails even though the recovery point read
-     succeeded;
+      storage. The applied key comes from the selected restore path, not AWS
+      Backup's informational `KmsKeyId` metadata;
    - the **regional Secrets Manager KMS key**, which decrypts the replicated
-     secret material and the retained historical application-encryption key
-     versions (see the archive requirement in the backup policy).
+      current secret material;
+   - the **historical-key archive KMS key**, which decrypts the separately
+      retained application-encryption key versions when the S3 archive option is
+      used. It is not the Secrets Manager key.
 
    Retrieve the regional secret and **every** retained application-encryption key
-   version. Require CloudTrail evidence for **both decryption paths** — the
-   vault/RDS key path and the Secrets Manager key path — plus both role
-   assumptions. A drill that only evidences one path has not proven recovery.
-4. Verify that the restored instance reports encryption under the DR-region RDS
-   key (not the vault key), run schema/version checks, and start one isolated
-   API/worker set with all outbound provider calls and billing disabled.
-5. Verify row counts, random workspace/artifact relationships, encrypted BYOK
+   version. Require CloudTrail evidence for the vault/RDS, Secrets Manager, and
+   archive S3-object/KMS decryption paths plus the role assumptions. Decrypt one
+   known ciphertext per retained application-key version and record the result;
+   a drill that exercises only the current key has not proven recovery.
+4. Wait for `StartRestoreJob` to complete, resolve its restored DB identifier,
+   and verify `DescribeDBInstances(...).DBInstances[0].KmsKeyId` equals the key
+   expected for the selected restore path (and is not merely the backup-vault
+   key). Run schema/version checks.
+5. Authenticate to the DR ECR registry and pull the frontend and backend by exact
+   digest, for example
+   `<account>.dkr.ecr.<dr-region>.amazonaws.com/<repository>@sha256:<digest>`;
+   verify both signatures, then start one isolated API/worker set from those
+   digests with all outbound provider calls and billing disabled.
+6. Verify row counts, random workspace/artifact relationships, encrypted BYOK
    decryptability, immutable artifact hashes, and queue consistency.
-6. Measure restore and application-ready time; record achieved RPO/RTO.
-7. Delete test resources through the exact validated IaC stack after evidence is
-   retained and sign-off is complete.
+7. Measure restore and application-ready time; record achieved RPO/RTO.
+8. Run cleanup from a `finally` path after both successful and failed restores;
+   the drill must exercise both paths. Use the recorded target identifier and,
+   when available, the restore job's `CreatedResourceArn`. Through a separately
+   approval-gated `RecoveryCleanupRole`, call RDS directly to disable deletion
+   protection if present and delete this disposable restored instance with
+   **no final snapshot** (`SkipFinalSnapshot=true`); the retained recovery point
+   and drill evidence are the recovery artifacts. Delete only dedicated test
+   subnet groups, security groups, secrets, and task resources carrying the same
+   unique identifier through their owning service APIs. Do not rely on an IaC
+   stack to own resources created out of band by `StartRestoreJob`.
+9. Make cleanup idempotent: treat `DBInstanceNotFound`/`ResourceNotFound` as
+   success, wait until `DescribeDBInstances` no longer returns the target, and
+   query RDS and every dedicated test-resource inventory/tag index to prove that
+   nothing matching the unique test identifier remains. Retain the cleanup log
+   and any cleanup failure as drill evidence and page the recovery owner.
 
 Run a full regional recovery exercise at least twice yearly. CloudFront is
 global, but the origin, database, NAT, tasks, and regional secrets must be
@@ -676,8 +854,11 @@ only when IaC recreates the destination vault/key/grant/role contract, the
 recovery point reads under the destination **backup-vault** key, the restored
 database is encrypted under the DR-region **RDS** key, the regional Secrets
 Manager material decrypts under its own **regional secrets** key via the recovery
-role, CloudTrail evidences each of those key paths separately, and the isolated
-API/migration/worker tasks start and complete read-only application checks.
+role, every historical key decrypts through the separate archive key with S3 and
+KMS CloudTrail evidence, and both exact production image digests pull from the
+DR registry with valid signatures before the isolated API/migration/worker tasks
+start and complete read-only application checks. Do not change the CloudFront
+origin or DNS until those image pulls and task starts succeed.
 
 ## Observability and alerting
 
@@ -767,7 +948,7 @@ measured workload. Do not treat a development traffic estimate as a budget.
 | --------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | RDS Multi-AZ          | Instance class, storage, IOPS, backup/cross-region retention    | Right-size from DB metrics; storage autoscale alarms; retention policy                   |
 | Fargate               | vCPU/GiB × running seconds across two web tiers and six workers | Measure per process; schedule non-prod; controlled concurrency                           |
-| NAT gateways          | Per-AZ hours and every external GB                              | VPC endpoints, compression, measured provider/crawl egress                               |
+| Egress paths          | Per-AZ NAT/firewall/proxy hours and every external GB            | VPC endpoints, compression, and separately measured trusted/crawler egress; never merge the security boundary for cost |
 | CloudFront/ALB/WAF    | Requests, transfer, managed/Bot rules, logs                     | Cache immutable assets, sample logs, enable paid rule groups only from evidence          |
 | Logs/metrics/traces   | Ingest, high-cardinality dimensions, retention                  | Redaction, sampling, metric cardinality policy, tiered retention                         |
 | Backups/KMS           | Snapshot copies, cross-region GB, API requests                  | Lifecycle aligned to approved RPO/legal policy                                           |
@@ -775,10 +956,12 @@ measured workload. Do not treat a development traffic estimate as a budget.
 
 The largest launch fixed costs are usually Multi-AZ RDS, two-AZ always-on web
 tasks, NAT gateways, and always-on workers. Staging may use Single-AZ RDS,
-single web tasks, one NAT gateway, scheduled shutdown, and Fargate Spot for
-recoverable tasks; production should keep Multi-AZ web/database capacity and
-on-demand baseline workers. Never save cost by sharing production secrets,
-databases, KMS keys, or provider apps with staging.
+single web tasks, one NAT per required egress class (or one crawler NAT plus a
+trusted provider proxy), scheduled shutdown, and Fargate Spot for recoverable
+tasks; production should keep Multi-AZ web/database capacity and on-demand
+baseline workers. Never save cost by joining credential-bearing and arbitrary
+crawler egress or by sharing production secrets, databases, KMS keys, or
+provider apps with staging.
 
 ## Go-live sign-off
 
@@ -820,21 +1003,3 @@ databases, KMS keys, or provider apps with staging.
 - [IAM OIDC identity providers](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)
 - [ECS deployment circuit breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html)
 - [AWS Backup restore testing](https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html)
-# ScraperAPI worker operations
-
-Site Health acquisition can use ScraperAPI only as a server-side fallback after
-the configured httpx/curl-cffi ladder. Store the credential as a dedicated
-Secrets Manager value (for example `citeladder/<environment>/scraperapi-key`),
-grant read access only to the worker task role, and never inject it into Vercel,
-browser configuration, API responses, logs, traces, or artifacts. The API service
-does not need the secret unless it also performs worker duties.
-
-Workers require controlled NAT egress to ScraperAPI and DNS/HTTPS endpoints; keep
-private databases without public ingress. Monitor per-rung request count, credits,
-latency, fallback/error code, and cost. Configure server-owned ceilings for
-requests, premium/render/geo options, concurrency, and per-crawl budget; alert
-before credit exhaustion and make the next eligible rung fail with a redacted,
-coded error once a ceiling is reached. Rotate the secret through Secrets Manager,
-deploy/restart workers to load the new version, probe a disposable target, then
-revoke the old key. Provenance stores the safe option set and provider request ID,
-never the credential or raw response.

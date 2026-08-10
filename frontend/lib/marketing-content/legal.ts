@@ -413,13 +413,6 @@ export const AI_POLICY: LegalDocument = {
   ],
 };
 
-export const LEGAL_DOCUMENTS = [
-  PRIVACY_POLICY,
-  TERMS_OF_SERVICE,
-  COOKIE_POLICY,
-  AI_POLICY,
-] as const;
-
 export const FOOTER_LEGAL_LINKS = [
   { label: 'Terms of Service', href: '/terms' },
   { label: 'Privacy Policy', href: '/privacy' },

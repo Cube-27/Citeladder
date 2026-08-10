@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { CompetitorComparisonSnapshot } from '@/lib/api/types';
+import { formatUtcTimestamp } from '@/lib/format';
 import type { useMarketIntelligence } from '@/lib/products/use-products-screen';
 
 type Market = ReturnType<typeof useMarketIntelligence>;
@@ -154,7 +155,7 @@ export function MarketIntelligencePanel({
               className="hover:bg-surface-hover flex items-center justify-between rounded-sm p-2 text-left"
               onClick={() => setSelectedId(snapshot.id)}
             >
-              <span>{new Date(snapshot.created_at).toLocaleString()}</span>
+              <span>{formatUtcTimestamp(snapshot.created_at)}</span>
               <Badge>{snapshot.competitor_id ?? 'All competitors'}</Badge>
             </button>
           ))}

@@ -63,7 +63,20 @@ const STEPS = [
   { id: 'discovery', title: 'AI Research', description: 'Auto-finding competitors' },
   { id: 'review', title: 'Review & Confirm', description: 'Finalize tracking scope' },
 ] as const;
+const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...COUNTRY_OPTIONS];
 type StepIndex = 0 | 1 | 2;
+
+function selectedDomainValues(domains: ReviewDomain[]): string[] {
+  return domains.flatMap((item) => (item.selected ? [item.domain] : []));
+}
+
+function selectedCompetitorValues(competitors: ReviewCompetitor[]) {
+  return competitors.flatMap((item) =>
+    item.selected && item.name.trim()
+      ? [{ name: item.name.trim(), aliases: item.aliases, domains: item.domains }]
+      : [],
+  );
+}
 
 function stepQueryValue(step: StepIndex): 'brand' | 'discovery' | 'review' {
   if (step === 2) return 'review';
@@ -155,7 +168,6 @@ export function OnboardingScreen() {
   const subindustryOptions = (discoveryCatalog.data?.subindustries[selectedIndustry] ?? []).map(
     (value) => ({ value, label: value }),
   );
-  const marketOptions = [{ value: 'GLOBAL', label: 'Global' }, ...COUNTRY_OPTIONS];
   // Seed the editable review lists once each section lands. Guarded on length
   // so re-renders never clobber the user's selections mid-review.
   const discoveryState = discovery.discovery;
@@ -244,14 +256,8 @@ export function OnboardingScreen() {
         {
           name: brand.brand_name.trim(),
           profile: discovery.discovery.profile,
-          domains: domains.filter((item) => item.selected).map((item) => item.domain),
-          competitors: competitors
-            .filter((item) => item.selected && item.name.trim())
-            .map((item) => ({
-              name: item.name.trim(),
-              aliases: item.aliases,
-              domains: item.domains,
-            })),
+          domains: selectedDomainValues(domains),
+          competitors: selectedCompetitorValues(competitors),
           prompt_groups: [...groupedPrompts.entries()].map(([topic, topicPrompts]) => ({
             topic,
             prompts: topicPrompts.map(({ text, intent, cohort }) => ({ text, intent, cohort })),
@@ -543,7 +549,7 @@ export function OnboardingScreen() {
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            options={marketOptions}
+                            options={MARKET_OPTIONS}
                           />
                         )}
                       />

@@ -309,27 +309,27 @@ export function diffContract(spec: OpenApiSpec): ContractDiffResult {
       unresolved.push(`${name}: OpenAPI component '${component}' not found`);
       continue;
     }
+    const declared = new Set(keys.declared);
     const missing = keys.required.filter((key) => !properties.has(key));
-    const additive = [...properties].filter((key) => !keys.declared.includes(key)).sort();
+    const additive = [...properties].filter((key) => !declared.has(key)).sort();
     if (missing.length > 0 || additive.length > 0) {
       drifts.push({ schema: name, component, missing, additive });
     }
   }
-  const warnings = drifts
-    .filter((drift) => drift.additive.length > 0)
-    .map(
-      (drift) =>
+  const warnings: string[] = [];
+  const failures = unresolved.map((entry) => `unresolved mapping — ${entry}`);
+  for (const drift of drifts) {
+    if (drift.additive.length > 0) {
+      warnings.push(
         `${drift.schema} (${drift.component}): additive backend fields not declared: ${drift.additive.join(', ')}`,
-    );
-  const failures = [
-    ...unresolved.map((entry) => `unresolved mapping — ${entry}`),
-    ...drifts
-      .filter((drift) => drift.missing.length > 0)
-      .map(
-        (drift) =>
-          `${drift.schema} (${drift.component}): declared fields missing from the backend model: ${drift.missing.join(', ')}`,
-      ),
-  ];
+      );
+    }
+    if (drift.missing.length > 0) {
+      failures.push(
+        `${drift.schema} (${drift.component}): declared fields missing from the backend model: ${drift.missing.join(', ')}`,
+      );
+    }
+  }
   return { drifts, unresolved, warnings, failures };
 }
 

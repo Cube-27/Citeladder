@@ -6,8 +6,9 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/input';
+import { inputClasses, Textarea } from '@/components/ui/input';
 import type { CommerceCandidate, CommerceCandidateInput } from '@/lib/api/types';
+import { formatUtcTimestamp } from '@/lib/format';
 import type { useCommerceDiscovery } from '@/lib/products/use-products-screen';
 
 type Discovery = ReturnType<typeof useCommerceDiscovery>;
@@ -87,7 +88,7 @@ export function CommerceDiscoveryPanel({
           <label className="text-foreground grid gap-1 text-sm">
             <span>Input type</span>
             <select
-              className="border-border bg-input h-[var(--control-height)] rounded-sm border px-2 text-sm"
+              className={inputClasses}
               value={sourceKind}
               onChange={(event) => setSourceKind(event.target.value as typeof sourceKind)}
             >
@@ -160,7 +161,7 @@ export function CommerceDiscoveryPanel({
               onClick={() => queries.setSelectedRunId(run.id)}
             >
               <span>
-                {run.input_kind} · {new Date(run.created_at).toLocaleString()}
+                {run.input_kind} · {formatUtcTimestamp(run.created_at)}
               </span>
               <Badge>{run.status}</Badge>
             </button>
@@ -177,47 +178,47 @@ export function CommerceDiscoveryPanel({
             <CardTitle>{kind === 'own' ? 'Own candidates' : 'Competitor candidates'}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
-            {candidates[kind].map((candidate) => (
-              <div
-                key={candidate.id}
-                className="border-border grid gap-2 rounded-sm border p-3 text-sm"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <strong>{dash(identityName(candidate.identity))}</strong>
-                  <Badge>
-                    {candidate.matches.some((match) => match.review_required)
-                      ? 'Review required'
-                      : 'Ready for review'}
-                  </Badge>
-                </div>
-                <p className="text-muted">
-                  Confidence {candidate.extraction_confidence.toFixed(2)} · artifact{' '}
-                  {candidate.artifact_id}
-                </p>
-                {candidate.matches.map((match, index) => (
-                  <p key={`${candidate.id}-${index}`} className="text-muted">
-                    {match.target_kind}: {match.confidence.toFixed(2)} —{' '}
-                    {match.reasons.join(', ') || 'No deterministic match reason'}
+            {candidates[kind].map((candidate) => {
+              const targetMatches = candidate.matches.filter((match) => match.target_id);
+              return (
+                <div
+                  key={candidate.id}
+                  className="border-border grid gap-2 rounded-sm border p-3 text-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <strong>{dash(identityName(candidate.identity))}</strong>
+                    <Badge>
+                      {candidate.matches.some((match) => match.review_required)
+                        ? 'Review required'
+                        : 'Ready for review'}
+                    </Badge>
+                  </div>
+                  <p className="text-muted">
+                    Confidence {candidate.extraction_confidence.toFixed(2)} · artifact{' '}
+                    {candidate.artifact_id}
                   </p>
-                ))}
-                {candidate.matches.some((match) => match.target_id) ? (
-                  <label className="text-foreground grid gap-1">
-                    <span>Catalog target</span>
-                    <select
-                      aria-label={`Match target for ${identityName(candidate.identity) ?? 'candidate'}`}
-                      className="border-border bg-input h-[var(--control-height)] rounded-sm border px-2 text-sm"
-                      value={selectedTargets[candidate.id] ?? ''}
-                      onChange={(event) =>
-                        setSelectedTargets((current) => ({
-                          ...current,
-                          [candidate.id]: event.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">Create a new catalog product</option>
-                      {candidate.matches
-                        .filter((match) => match.target_id)
-                        .map((match) => (
+                  {candidate.matches.map((match, index) => (
+                    <p key={`${candidate.id}-${index}`} className="text-muted">
+                      {match.target_kind}: {match.confidence.toFixed(2)} —{' '}
+                      {match.reasons.join(', ') || 'No deterministic match reason'}
+                    </p>
+                  ))}
+                  {targetMatches.length > 0 ? (
+                    <label className="text-foreground grid gap-1">
+                      <span>Catalog target</span>
+                      <select
+                        aria-label={`Match target for ${identityName(candidate.identity) ?? 'candidate'}`}
+                        className={inputClasses}
+                        value={selectedTargets[candidate.id] ?? ''}
+                        onChange={(event) =>
+                          setSelectedTargets((current) => ({
+                            ...current,
+                            [candidate.id]: event.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Create a new catalog product</option>
+                        {targetMatches.map((match) => (
                           <option
                             key={match.target_id ?? match.target_kind}
                             value={match.target_id!}
@@ -226,42 +227,47 @@ export function CommerceDiscoveryPanel({
                             {match.review_required ? ' · review required' : ''}
                           </option>
                         ))}
-                    </select>
-                  </label>
-                ) : null}
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() =>
-                      void queries.decisionMutation.mutateAsync({
-                        candidateId: candidate.id,
-                        body: {
-                          status: 'accepted',
-                          target_id: selectedTargets[candidate.id] || null,
-                        },
-                      })
-                    }
-                    disabled={queries.decisionMutation.isPending}
-                  >
-                    Accept / review
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      void queries.decisionMutation.mutateAsync({
-                        candidateId: candidate.id,
-                        body: { status: 'rejected' },
-                      })
-                    }
-                    disabled={queries.decisionMutation.isPending}
-                  >
-                    Reject
-                  </Button>
+                      </select>
+                    </label>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() =>
+                        queries.decisionMutation.mutate({
+                          candidateId: candidate.id,
+                          body: {
+                            status: 'accepted',
+                            target_id: selectedTargets[candidate.id] || null,
+                          },
+                        })
+                      }
+                      disabled={queries.decisionMutation.isPending}
+                    >
+                      Accept / review
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        queries.decisionMutation.mutate({
+                          candidateId: candidate.id,
+                          body: { status: 'rejected' },
+                        })
+                      }
+                      disabled={queries.decisionMutation.isPending}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                  {queries.decisionMutation.error &&
+                  queries.decisionMutation.variables?.candidateId === candidate.id ? (
+                    <Alert tone="danger">{message(queries.decisionMutation.error)}</Alert>
+                  ) : null}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {!candidates[kind].length ? (
               <p className="text-muted text-sm">No {kind} candidates in this selection.</p>
             ) : null}

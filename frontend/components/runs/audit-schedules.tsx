@@ -12,6 +12,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { AuditScheduleCadence, LogicalEngine, PromptSet } from '@/lib/api/types';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { formatUtcTimestamp } from '@/lib/format';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -77,7 +78,7 @@ export function AuditSchedules({
                 </span>
                 <span className="text-secondary">
                   {schedule.engines.join(', ')} · next{' '}
-                  {schedule.next_run_at ? new Date(schedule.next_run_at).toLocaleString() : '—'}
+                  {schedule.next_run_at ? formatUtcTimestamp(schedule.next_run_at) : '—'}
                 </span>
               </li>
             ))}

@@ -24,9 +24,10 @@ import type {
   RerunPageResponse,
   SiteIssue,
 } from '@/lib/api/types';
-import { IndustryRoleBadge, abstentionLabel } from '@/components/site-health/industry-role-badge';
+import { IndustryRoleBadge } from '@/components/site-health/industry-role-badge';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { ICONS } from '@/lib/icons';
+import { abstentionLabel } from '@/lib/site-health/industry-roles';
 import {
   pageKindLabel,
   readPageKindEvidence,
@@ -543,6 +544,7 @@ function PageKindEvidencePanel({
  */
 function IndustryRolePanel({ role }: Readonly<{ role: IndustryRole }>) {
   const WarningIcon = ICONS.warning;
+  const alternativeKeyOccurrences = new Map<string, number>();
   return (
     <div id="industry-role-evidence">
       <div className="border-border-subtle bg-background-alt grid gap-3 rounded-lg border p-3">
@@ -593,11 +595,22 @@ function IndustryRolePanel({ role }: Readonly<{ role: IndustryRole }>) {
           <div className="grid gap-1">
             <Label>Other candidates</Label>
             <div className="flex flex-wrap gap-1.5">
-              {role.alternatives.map((alternative, index) => (
-                <Badge key={String(alternative.role_id ?? index)}>
-                  {String(alternative.role_id ?? PLACEHOLDER)}
-                </Badge>
-              ))}
+              {role.alternatives.map((alternative) => {
+                const candidateId =
+                  typeof alternative.role_id === 'string' && alternative.role_id
+                    ? alternative.role_id
+                    : null;
+                const signature = candidateId
+                  ? `candidate:${JSON.stringify(candidateId)}`
+                  : `alternative:${JSON.stringify(alternative)}`;
+                const occurrence = alternativeKeyOccurrences.get(signature) ?? 0;
+                alternativeKeyOccurrences.set(signature, occurrence + 1);
+                return (
+                  <Badge key={`${signature}:${occurrence}`}>
+                    {String(alternative.role_id ?? PLACEHOLDER)}
+                  </Badge>
+                );
+              })}
             </div>
           </div>
         ) : null}

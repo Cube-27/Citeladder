@@ -68,8 +68,6 @@ export const SITE_HEALTH_DEFAULT_PHASE_BATCH_SIZE = 10;
 
 // Polling cadences and retry ceilings.
 export const ACTIVE_RUN_POLL_MS = 3_000;
-export const BILLING_CONFIRM_POLL_MS = 3_000;
-export const BILLING_CONFIRM_MAX_POLLS = 20;
 export const CONTENT_LIST_POLL_MS = 3_000;
 export const CONTENT_DETAIL_POLL_MS = 2_000;
 export const SYNC_RUN_POLL_MS = 3_000;

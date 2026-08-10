@@ -58,10 +58,6 @@ export function CoverageBadge({ state }: Readonly<{ state: CoverageState }>) {
   );
 }
 
-export function coverageLabel(state: CoverageState): string {
-  return presentationFor(state).label;
-}
-
 /**
  * Render a 0–1 ratio as a percentage, or an explicit "not measurable".
  *

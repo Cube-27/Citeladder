@@ -2,7 +2,7 @@
 
 import { Check, Copy, RefreshCw, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -108,6 +108,330 @@ export function ContentScreen({ opportunityId }: Readonly<{ opportunityId?: stri
       projectName={activeProject?.name ?? 'project'}
       opportunityId={opportunityId}
     />
+  );
+}
+
+function ContentComposer({
+  prompt,
+  promptRef,
+  opportunityId,
+  generating,
+  skillId,
+  websiteContextEnabled,
+  projectName,
+  canGenerate,
+  onPromptChange,
+  onSkillChange,
+  onWebsiteContextChange,
+  onGenerate,
+}: Readonly<{
+  prompt: string;
+  promptRef: RefObject<HTMLTextAreaElement | null>;
+  opportunityId?: string | null;
+  generating: boolean;
+  skillId: ContentSkill;
+  websiteContextEnabled: boolean;
+  projectName: string;
+  canGenerate: boolean;
+  onPromptChange: (value: string) => void;
+  onSkillChange: (value: ContentSkill) => void;
+  onWebsiteContextChange: (checked: boolean) => void;
+  onGenerate: () => void;
+}>) {
+  return (
+    <Card data-component-id="content-prompt-box">
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div className="grid gap-1">
+          <span className={eyebrowClasses}>New generation</span>
+          <h2 className={displayHeadingLgClasses}>What can I help you create?</h2>
+        </div>
+        {opportunityId ? (
+          <Alert tone="info">This draft will keep a link to the selected opportunity.</Alert>
+        ) : null}
+        <Textarea
+          ref={promptRef}
+          value={prompt}
+          onChange={(event) => onPromptChange(event.target.value)}
+          disabled={generating}
+          maxLength={CONTENT_PROMPT_MAX_LEN}
+          rows={4}
+          aria-label="Describe the website content you want to create"
+          placeholder="Describe the website content you want to create…"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge data-component-id="content-output-type" aria-label="Output type: Website page">
+            Website page
+          </Badge>
+          <SegmentedControl
+            value={skillId}
+            onChange={onSkillChange}
+            options={CONTENT_SKILL_OPTIONS}
+            ariaLabel="Content format"
+            disabled={generating}
+            className="[&_button]:capitalize"
+          />
+          <div
+            data-component-id="content-website-context-toggle"
+            className="text-secondary inline-flex items-center gap-2 text-xs font-medium"
+          >
+            <Sparkles className="size-3" aria-hidden />
+            Website context {websiteContextEnabled ? 'on' : 'off'}
+            <Switch
+              checked={websiteContextEnabled}
+              onCheckedChange={onWebsiteContextChange}
+              label={`Website context, ${projectName}, ${websiteContextEnabled ? 'on' : 'off'}`}
+              disabled={generating}
+            />
+          </div>
+          <div className="ml-auto">
+            <Button
+              data-component-id="content-generate-button"
+              disabled={!canGenerate}
+              onClick={onGenerate}
+            >
+              Generate
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GeneratingPanel({
+  selectedId,
+  cancelling,
+  onCancel,
+}: Readonly<{
+  selectedId: string | null;
+  cancelling: boolean;
+  onCancel: (generationId: string) => void;
+}>) {
+  return (
+    <Card data-component-id="content-generating-panel">
+      <CardContent className="flex items-center gap-4 py-6">
+        <div role="status" aria-label="Generating content" className="flex items-center gap-3">
+          <ICONS.spinner className="text-accent size-5 animate-spin" aria-hidden />
+          <span className="text-secondary text-sm">Generating your content…</span>
+        </div>
+        <div className="ml-auto">
+          <Button
+            variant="secondary"
+            data-component-id="content-cancel-button"
+            disabled={!selectedId || cancelling}
+            onClick={() => selectedId && onCancel(selectedId)}
+          >
+            Cancel
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GenerationErrorPanel({
+  mutationError,
+  failedGenerationId,
+  retrying,
+  onTryAgain,
+  onDismiss,
+}: Readonly<{
+  mutationError: unknown;
+  failedGenerationId: string | null;
+  retrying: boolean;
+  onTryAgain: (generationId: string) => void;
+  onDismiss: () => void;
+}>) {
+  return (
+    <Card data-component-id="content-error-panel">
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div role="alert" className="text-danger-text flex items-start gap-2 text-sm">
+          <ICONS.warning className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            {mutationError
+              ? actionErrorMessage(mutationError)
+              : 'Generation failed. You can edit your prompt and try again.'}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          {failedGenerationId ? (
+            <Button
+              data-component-id="content-retry-button"
+              disabled={retrying}
+              onClick={() => onTryAgain(failedGenerationId)}
+            >
+              <RefreshCw className="mr-1.5 size-4" aria-hidden />
+              Try again
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            data-component-id="content-dismiss-button"
+            onClick={onDismiss}
+          >
+            <X className="mr-1.5 size-4" aria-hidden />
+            Dismiss
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+type ContentValidation = Awaited<ReturnType<typeof contentApi.getValidation>>;
+
+function GenerationResult({
+  detail,
+  validation,
+  copied,
+  copyLabel,
+  regenerating,
+  revisionAction,
+  feedbackPending,
+  onCopy,
+  onRegenerate,
+  onFeedback,
+}: Readonly<{
+  detail: ContentGenerationDetail;
+  validation: ContentValidation | undefined;
+  copied: boolean;
+  copyLabel: string;
+  regenerating: boolean;
+  revisionAction: ReactNode;
+  feedbackPending: boolean;
+  onCopy: () => void;
+  onRegenerate: (generationId: string) => void;
+  onFeedback: (generationId: string, feedback: 'accepted' | 'rejected') => void;
+}>) {
+  return (
+    <Card data-component-id="content-result-card">
+      <CardContent className="flex flex-col gap-4 py-5">
+        {detail.output_truncated ? (
+          <div data-component-id="content-truncation-warning">
+            <Alert tone="warning">
+              The output hit the length limit and may be incomplete. Regenerate or shorten your
+              prompt for a complete result.
+            </Alert>
+          </div>
+        ) : null}
+        <div data-component-id="content-result-body">
+          <ContentMarkdown markdown={detail.output_text ?? ''} />
+        </div>
+        <p data-component-id="content-ai-disclaimer" className="text-secondary text-xs">
+          AI-generated {detail.skill_id} — review and revise before publishing. Generated prose
+          never becomes a project fact.
+        </p>
+        {validation ? (
+          <Alert tone={validation.status === 'passed' ? 'success' : 'warning'}>
+            Automatic validation {validation.status}.{' '}
+            {!validation.blocking
+              ? 'No blocking findings.'
+              : `${validation.checks.filter((check) => check.passed === false).length} finding(s) require review.`}
+          </Alert>
+        ) : null}
+        <div
+          data-component-id="content-result-provenance"
+          className="border-border-subtle text-muted text-2xs flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 font-mono"
+        >
+          <span>Requested model: {detail.requested_model}</span>
+          {detail.returned_model ? <span>Returned model: {detail.returned_model}</span> : null}
+          <span>
+            Website context:{' '}
+            {detail.website_context_status === 'included'
+              ? `${detail.website_context_summary?.page_count ?? 0} pages`
+              : detail.website_context_status}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" data-component-id="content-copy-button" onClick={onCopy}>
+            {copied ? (
+              <Check className="mr-1.5 size-4" aria-hidden />
+            ) : (
+              <Copy className="mr-1.5 size-4" aria-hidden />
+            )}
+            {copyLabel}
+          </Button>
+          <Button
+            variant="secondary"
+            data-component-id="content-regenerate-button"
+            disabled={regenerating}
+            onClick={() => onRegenerate(detail.id)}
+          >
+            <RefreshCw className="mr-1.5 size-4" aria-hidden />
+            Regenerate
+          </Button>
+          {revisionAction}
+          {detail.feedback === null ? (
+            <>
+              <Button disabled={feedbackPending} onClick={() => onFeedback(detail.id, 'accepted')}>
+                Helpful
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={feedbackPending}
+                onClick={() => onFeedback(detail.id, 'rejected')}
+              >
+                Not useful
+              </Button>
+            </>
+          ) : (
+            <span className="text-secondary self-center text-sm">
+              {detail.feedback === 'accepted' ? 'Marked helpful' : 'Marked not useful'}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GenerationHistory({
+  items,
+  loading,
+  selectedId,
+  onSelect,
+}: Readonly<{
+  items: ContentGenerationListItem[];
+  loading: boolean;
+  selectedId: string | null;
+  onSelect: (generationId: string) => void;
+}>) {
+  return (
+    <section data-component-id="content-history" className="flex flex-col gap-2">
+      <div className="grid gap-1">
+        <span className={eyebrowClasses}>History</span>
+        <h2 className={displayHeadingLgClasses}>Recent generations</h2>
+      </div>
+      {loading ? (
+        <Skeleton className="h-24 w-full" />
+      ) : items.length === 0 ? (
+        <p className="text-secondary text-sm">No generations yet.</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {items.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className={cn(
+                  'focus-ring hover:bg-background-alt flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors',
+                  item.id === selectedId
+                    ? 'border-accent-border bg-accent-soft/40'
+                    : 'border-border',
+                )}
+              >
+                <span className="text-foreground min-w-0 flex-1 truncate">
+                  {historyLabel(item)}
+                </span>
+                <Badge variant="run-status" value={STATUS_BADGE[item.status]}>
+                  {item.status.replace('_', ' ')}
+                </Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -247,251 +571,62 @@ function ProjectContentScreen({
 
   return (
     <div className="grid gap-6">
-      {/* Composer */}
-      <Card data-component-id="content-prompt-box">
-        <CardContent className="flex flex-col gap-3 py-5">
-          <div className="grid gap-1">
-            <span className={eyebrowClasses}>New generation</span>
-            <h2 className={displayHeadingLgClasses}>What can I help you create?</h2>
-          </div>
-          {opportunityId ? (
-            <Alert tone="info">This draft will keep a link to the selected opportunity.</Alert>
-          ) : null}
-          <Textarea
-            ref={promptRef}
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            disabled={generating}
-            maxLength={CONTENT_PROMPT_MAX_LEN}
-            rows={4}
-            aria-label="Describe the website content you want to create"
-            placeholder="Describe the website content you want to create…"
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge data-component-id="content-output-type" aria-label="Output type: Website page">
-              Website page
-            </Badge>
-            <SegmentedControl
-              value={skillId}
-              onChange={setSkillId}
-              options={CONTENT_SKILL_OPTIONS}
-              ariaLabel="Content format"
-              disabled={generating}
-              className="[&_button]:capitalize"
-            />
-            <div
-              data-component-id="content-website-context-toggle"
-              className="text-secondary inline-flex items-center gap-2 text-xs font-medium"
-            >
-              <Sparkles className="size-3" aria-hidden />
-              Website context {websiteContextEnabled ? 'on' : 'off'}
-              <Switch
-                checked={websiteContextEnabled}
-                onCheckedChange={setWebsiteContextEnabled}
-                label={`Website context, ${projectName}, ${websiteContextEnabled ? 'on' : 'off'}`}
-                disabled={generating}
-              />
-            </div>
-            <div className="ml-auto">
-              <Button
-                data-component-id="content-generate-button"
-                disabled={!canGenerate}
-                onClick={handleGenerate}
-              >
-                Generate
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ContentComposer
+        prompt={prompt}
+        promptRef={promptRef}
+        opportunityId={opportunityId}
+        generating={generating}
+        skillId={skillId}
+        websiteContextEnabled={websiteContextEnabled}
+        projectName={projectName}
+        canGenerate={canGenerate}
+        onPromptChange={setPrompt}
+        onSkillChange={setSkillId}
+        onWebsiteContextChange={setWebsiteContextEnabled}
+        onGenerate={handleGenerate}
+      />
 
-      {/* Generating */}
       {generating ? (
-        <Card data-component-id="content-generating-panel">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div role="status" aria-label="Generating content" className="flex items-center gap-3">
-              <ICONS.spinner className="text-accent size-5 animate-spin" aria-hidden />
-              <span className="text-secondary text-sm">Generating your content…</span>
-            </div>
-            <div className="ml-auto">
-              <Button
-                variant="secondary"
-                data-component-id="content-cancel-button"
-                disabled={!selectedId || cancelMutation.isPending}
-                onClick={() => selectedId && cancelMutation.mutate(selectedId)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <GeneratingPanel
+          selectedId={selectedId}
+          cancelling={cancelMutation.isPending}
+          onCancel={(generationId) => cancelMutation.mutate(generationId)}
+        />
       ) : null}
 
-      {/* Error */}
       {showErrorPanel ? (
-        <Card data-component-id="content-error-panel">
-          <CardContent className="flex flex-col gap-3 py-5">
-            <div role="alert" className="text-danger-text flex items-start gap-2 text-sm">
-              <ICONS.warning className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>
-                {mutationError
-                  ? actionErrorMessage(mutationError)
-                  : 'Generation failed. You can edit your prompt and try again.'}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              {failed && detail ? (
-                <Button
-                  data-component-id="content-retry-button"
-                  disabled={tryAgainMutation.isPending}
-                  onClick={() => tryAgainMutation.mutate(detail.id)}
-                >
-                  <RefreshCw className="mr-1.5 size-4" aria-hidden />
-                  Try again
-                </Button>
-              ) : null}
-              <Button
-                variant="secondary"
-                data-component-id="content-dismiss-button"
-                onClick={handleDismiss}
-              >
-                <X className="mr-1.5 size-4" aria-hidden />
-                Dismiss
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <GenerationErrorPanel
+          mutationError={mutationError}
+          failedGenerationId={failed && detail ? detail.id : null}
+          retrying={tryAgainMutation.isPending}
+          onTryAgain={(generationId) => tryAgainMutation.mutate(generationId)}
+          onDismiss={handleDismiss}
+        />
       ) : null}
 
-      {/* Result */}
       {!generating && succeeded && detail?.output_text ? (
-        <Card data-component-id="content-result-card">
-          <CardContent className="flex flex-col gap-4 py-5">
-            {detail.output_truncated ? (
-              <div data-component-id="content-truncation-warning">
-                <Alert tone="warning">
-                  The output hit the length limit and may be incomplete. Regenerate or shorten your
-                  prompt for a complete result.
-                </Alert>
-              </div>
-            ) : null}
-            <div data-component-id="content-result-body">
-              <ContentMarkdown markdown={detail.output_text} />
-            </div>
-            <p data-component-id="content-ai-disclaimer" className="text-secondary text-xs">
-              AI-generated {detail.skill_id} — review and revise before publishing. Generated prose
-              never becomes a project fact.
-            </p>
-            {validationQuery.data ? (
-              <Alert tone={validationQuery.data.status === 'passed' ? 'success' : 'warning'}>
-                Automatic validation {validationQuery.data.status}.{' '}
-                {!validationQuery.data.blocking
-                  ? 'No blocking findings.'
-                  : `${validationQuery.data.checks.filter((check) => check.passed === false).length} finding(s) require review.`}
-              </Alert>
-            ) : null}
-            <div
-              data-component-id="content-result-provenance"
-              className="border-border-subtle text-muted text-2xs flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 font-mono"
-            >
-              <span>Requested model: {detail.requested_model}</span>
-              {detail.returned_model ? <span>Returned model: {detail.returned_model}</span> : null}
-              <span>
-                Website context:{' '}
-                {detail.website_context_status === 'included'
-                  ? `${detail.website_context_summary?.page_count ?? 0} pages`
-                  : detail.website_context_status}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                data-component-id="content-copy-button"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <Check className="mr-1.5 size-4" aria-hidden />
-                ) : (
-                  <Copy className="mr-1.5 size-4" aria-hidden />
-                )}
-                {copyLabel}
-              </Button>
-              <Button
-                variant="secondary"
-                data-component-id="content-regenerate-button"
-                disabled={regenerateMutation.isPending}
-                onClick={() => regenerateMutation.mutate(detail.id)}
-              >
-                <RefreshCw className="mr-1.5 size-4" aria-hidden />
-                Regenerate
-              </Button>
-              {revisionAction()}
-              {detail.feedback === null ? (
-                <>
-                  <Button
-                    disabled={feedbackMutation.isPending}
-                    onClick={() =>
-                      feedbackMutation.mutate({ generationId: detail.id, feedback: 'accepted' })
-                    }
-                  >
-                    Helpful
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={feedbackMutation.isPending}
-                    onClick={() =>
-                      feedbackMutation.mutate({ generationId: detail.id, feedback: 'rejected' })
-                    }
-                  >
-                    Not useful
-                  </Button>
-                </>
-              ) : (
-                <span className="text-secondary self-center text-sm">
-                  {detail.feedback === 'accepted' ? 'Marked helpful' : 'Marked not useful'}
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <GenerationResult
+          detail={detail}
+          validation={validationQuery.data}
+          copied={copied}
+          copyLabel={copyLabel}
+          regenerating={regenerateMutation.isPending}
+          revisionAction={revisionAction()}
+          feedbackPending={feedbackMutation.isPending}
+          onCopy={handleCopy}
+          onRegenerate={(generationId) => regenerateMutation.mutate(generationId)}
+          onFeedback={(generationId, feedback) =>
+            feedbackMutation.mutate({ generationId, feedback })
+          }
+        />
       ) : null}
 
-      {/* History */}
-      <section data-component-id="content-history" className="flex flex-col gap-2">
-        <div className="grid gap-1">
-          <span className={eyebrowClasses}>History</span>
-          <h2 className={displayHeadingLgClasses}>Recent generations</h2>
-        </div>
-        {listQuery.isLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : (listQuery.data ?? []).length === 0 ? (
-          <p className="text-secondary text-sm">No generations yet.</p>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {(listQuery.data ?? []).map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(item.id)}
-                  className={cn(
-                    'focus-ring hover:bg-background-alt flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors',
-                    item.id === selectedId
-                      ? 'border-accent-border bg-accent-soft/40'
-                      : 'border-border',
-                  )}
-                >
-                  <span className="text-foreground min-w-0 flex-1 truncate">
-                    {historyLabel(item)}
-                  </span>
-                  <Badge variant="run-status" value={STATUS_BADGE[item.status]}>
-                    {item.status.replace('_', ' ')}
-                  </Badge>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <GenerationHistory
+        items={listQuery.data ?? []}
+        loading={listQuery.isLoading}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+      />
     </div>
   );
 }

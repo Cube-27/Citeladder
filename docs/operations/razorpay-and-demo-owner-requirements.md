@@ -5,8 +5,10 @@
 > Store secrets directly in the deployment secret manager and mark only the
 > non-secret completion status here.
 
-Companion implementation plan:
-[`../plans/v6-razorpay-production-and-enterprise-demo.md`](../plans/v6-razorpay-production-and-enterprise-demo.md).
+Runtime authority is `backend/app/core/config/billing.py`, the billing domain and
+connector code, and `backend/scripts/provision_razorpay_plans.py`. Earlier V6/V8
+plans are archived historical context and do not override the shipped catalog or
+API contracts.
 
 ## 1. Blocking commercial decisions
 
@@ -16,27 +18,34 @@ fields, not suggested values):
 ```text
 Catalog version:
 Effective date:
-Free display name:
-Paid display name:
-Paid monthly USD amount: $49 (approved implementation anchor)
+Enabled self-serve catalog plan keys/display names:
+Per-plan monthly USD base amounts verified against the shipped catalog:
 USD/INR provisioning rate and source/date:
-Derived Paid monthly INR base amount (minor units):
-GST is displayed and charged extra for India: yes (approved direction)
-GST rate/treatment approved by:
+Per-plan derived monthly INR GST-exclusive base amounts (minor units):
+GST is displayed as a separate invoice tax line for India: yes (approved direction)
+GST rate/treatment approved by, approval date, and tax metadata/version:
 Trial enabled? yes/no; if yes, exact duration and first-charge behavior:
 Past-due grace duration:
 Cancellation: end of period or immediate:
 Refund policy and entitlement effect:
-Monthly subscription cycle bound (recommended product policy, not a guess):
-Annual plan at launch? no/yes; if yes, exact amount and policy:
+Selected billing period/interval and total cycles (monthly interval 1: at most
+1200; annual interval 1: at most 100; all combinations: at most 100 years):
+Annual plan at launch? no/yes; if yes, exact amount, interval, cycles, and policy:
 Customer communications handled by Razorpay? yes/no:
 ```
 
 Why this is a live-plan gate: Razorpay requires a concrete amount and currency.
-CiteLadder will derive the India price once from the operator-supplied USD/INR rate,
-add the configured GST, and freeze the result into the plan. It will not reprice an
-active recurring mandate from a live exchange rate. Non-India launch checkout is
-USD; a cardholder's issuer may convert that charge into the card account currency.
+For each enabled catalog item, CiteLadder derives the India price once from the
+operator-supplied USD/INR rate and freezes the **GST-exclusive** base amount into
+the Razorpay plan. It will
+not reprice an active recurring mandate from a live exchange rate. Calculate in
+this order using decimal arithmetic: convert the approved USD base amount to INR,
+round the plan base once to paise with `ROUND_HALF_UP`; calculate GST from that
+rounded base and the approved rate, then round GST once to paise with
+`ROUND_HALF_UP`; for quantity greater than one, multiply the rounded base and GST
+minor-unit values separately, then add them for the invoice total.
+Do not also embed GST in the plan amount. Non-India launch checkout is USD; a
+cardholder's issuer may convert that charge into the card account currency.
 
 ## 2. Legal, tax, invoice, and policy inputs
 
@@ -77,7 +86,7 @@ the selected INR/USD route matches Razorpay payment/invoice evidence, keep
 - [ ] Confirm the live account's approved methods: Cards, UPI AutoPay, and/or
       eMandate. Do not rely on generic documentation; record what Razorpay enabled
       for this merchant category.
-- [ ] Confirm mandate amount limits cover the approved Paid price.
+- [ ] Confirm mandate amount limits cover every enabled self-serve catalog price.
 - [ ] Confirm settlement schedule, fees, refunds, disputes, and reserve terms.
 - [ ] Configure the customer-facing business name, logo, support details, and
       invoice settings in Razorpay.
@@ -85,6 +94,16 @@ the selected INR/USD route matches Razorpay payment/invoice evidence, keep
       notifications.
 - [ ] Name at least two Razorpay Dashboard users and enable strong MFA/access
       controls; avoid a shared owner login.
+
+Record the merchant-specific approval against this launch matrix:
+
+| Launch route | Currency | Cards | UPI AutoPay | eMandate |
+| ------------ | -------- | ----- | ----------- | --------- |
+| India | INR | Allowed only when enabled for the live merchant | India/INR only and only when enabled | India/INR only and only when enabled |
+| Non-India | USD | Allowed only after international cards/currency approval | Excluded unless Razorpay gives written support for this exact USD route | Excluded unless Razorpay gives written support for this exact USD route |
+
+Do not infer one method's approval from another. The USD route requires
+`BILLING_RAZORPAY_INTERNATIONAL_READY=true`; the India/INR route does not.
 
 ## 4. Secrets and non-secret identifiers
 
@@ -103,15 +122,14 @@ Non-secret but environment-specific values:
 
 ```text
 BILLING_RAZORPAY_KEY_ID
-BILLING_RAZORPAY_PAID_MONTHLY_USD_PLAN_ID
-BILLING_RAZORPAY_PAID_MONTHLY_INR_PLAN_ID
+BILLING_PROVIDER_PRICE_REFS=<approved-catalog-key-to-provider-reference-map>
 BILLING_CATALOG_VERSION
 BILLING_USD_INR_RATE
-BILLING_INDIA_GST_RATE=0.18
+BILLING_INDIA_GST_RATE=<approved-decimal-rate> # required; no live default/example approval
 BILLING_CHECKOUT_ENABLED=false        # stays false until go-live sign-off
 BILLING_RAZORPAY_LIVE_READY=false     # stays false until live lifecycle passes
-BILLING_RAZORPAY_INTERNATIONAL_READY=false
-BILLING_SUBSCRIPTION_TOTAL_CYCLES=1200
+BILLING_RAZORPAY_INTERNATIONAL_READY=false # required only before USD checkout
+BILLING_SUBSCRIPTION_TOTAL_CYCLES=<approved-cycles-for-selected-period>
 BILLING_PAST_DUE_GRACE_DAYS=3
 ```
 
@@ -120,8 +138,21 @@ Rules:
 - Never reuse test keys, live keys, or webhook secrets across environments.
 - The Razorpay API key secret is not the webhook secret.
 - Never send a secret to the browser or place it in a `NEXT_PUBLIC_*` variable.
-- Rotate a suspected secret immediately. During webhook-secret rotation, account
-  for retries signed with the previous secret as Razorpay documents.
+- Provisioning must fail while the GST rate, treatment, approval reference, or
+  effective tax metadata/version is unset; `0.18` in application source is not
+  evidence of tax approval.
+- Before subscription creation, validate that the selected
+  `billing_period × interval × total_cycles` never exceeds Razorpay's 100-year
+  maximum. For interval 1 this permits at most 1,200 monthly or 100 annual
+  cycles; recompute the limit for every other period/interval.
+- For a planned webhook-secret rotation, first deploy dual-secret verification.
+  Store the previous secret in a separate, access-restricted Secrets Manager
+  version, verify against the active secret and then the previous secret for one
+  bounded **24-hour overlap**, and preserve the same event-ID and provider-state
+  idempotency checks for both. At expiry, remove verifier access to the previous
+  version, record its removal and the rotation evidence, and alert if removal
+  fails. Rotate immediately on suspected compromise; do not extend the overlap,
+  and reconcile any failed old-secret delivery explicitly.
 - Plan ids are not credentials, but still belong in environment configuration so
   test/live cannot be crossed accidentally.
 
@@ -176,33 +207,48 @@ duplicate/reordered events, reconciliation drift, and webhook deactivation.
 Run these commands from `backend/`:
 
 ```text
+BILLING_CATALOG_VERSION=<operator-selected-approved-revision>
 uv run python -m scripts.provision_razorpay_plans propose --environment test
 uv run python -m scripts.provision_razorpay_plans verify --environment test
-uv run python -m scripts.provision_razorpay_plans create --environment test
-uv run python -m scripts.provision_razorpay_plans create --environment live --confirm-live billing-v1
+uv run python -m scripts.provision_razorpay_plans propose --environment live
+uv run python -m scripts.provision_razorpay_plans verify --environment live
 ```
 
-`verify` and `create` reject credentials whose Razorpay key prefix does not match the selected
-environment (`rzp_test_…` for test, `rzp_live_…` for live). `propose` performs no provider I/O.
+The shipped CLI deliberately refuses `create`; provider-side plan creation is an
+approval-gated manual/API bootstrap action. `verify` rejects credentials whose
+Razorpay key prefix does not match the selected environment (`rzp_test_…` for
+test, `rzp_live_…` for live), and `propose` performs no provider I/O. Before any
+provider-side creation, compare the `catalog revision:` printed by `propose` to
+`BILLING_CATALOG_VERSION` and stop unless they are byte-for-byte equal. Record
+that comparison in the approval evidence; never substitute a hardcoded revision.
 
 1. Install test credentials in staging.
 2. Run catalog validation and a redacted dry-run.
-3. Create the test Paid-monthly plan once.
-4. install the returned test plan id in staging configuration.
-5. run `verify` and confirm period, interval, currency, amount, and item name.
+3. After the catalog-version equality check and approval, create each enabled
+   test self-serve plan once through the reviewed provider bootstrap path.
+4. Install each returned test plan ID in `BILLING_PROVIDER_PRICE_REFS` for staging.
+5. Run `verify` and confirm period, interval, currency, GST-exclusive base
+   amount, and item name.
 6. complete the full sandbox lifecycle and webhook replay suite.
 7. complete KYC, policy, payment-method, settlement, and live webhook gates.
 8. install live credentials with checkout/live-ready flags still false.
 9. run the redacted live dry-run and obtain a second-person review.
-10. create the live plan with the explicit catalog-version confirmation.
-11. install and verify the live plan id.
+10. Re-run the catalog-version equality check, then create each enabled live plan
+    through the same reviewed provider bootstrap path.
+11. Install and verify each live plan ID in `BILLING_PROVIDER_PRICE_REFS`.
 12. execute one real low-risk authorized lifecycle and reconcile Dashboard,
     database, invoice, settlement, and cancellation behavior.
-13. enable the live-ready flag, then checkout for an allow-list only.
+13. After go-live sign-off set `BILLING_RAZORPAY_LIVE_READY=true`, then set
+    `BILLING_CHECKOUT_ENABLED=true` for the India allow-list. Before enabling USD
+    checkout, separately complete the international-route evidence and set
+    `BILLING_RAZORPAY_INTERNATIONAL_READY=true`; that flag is not required for
+    India/INR checkout.
 
-Creating or editing a Razorpay plan manually in the Dashboard outside this process
-risks catalog drift. If it happens, record the plan id and run verification before
-using it.
+Razorpay plans cannot be edited or deleted after creation. If a value changes or
+a plan was created outside this process, create or duplicate a new plan, record
+the new plan ID, install it in the matching environment, and run verification
+against that ID before use. Keep the old plan ID in the audit record for existing
+subscriptions; never pretend it was modified in place.
 
 ## 7. Enterprise demo funnel inputs
 
@@ -245,15 +291,22 @@ Launch behavior:
 
 Attach or record non-secret evidence for:
 
-- [ ] Provisioned test plan verified against the approved catalog.
+- [ ] Provisioned test plan verified against the approved catalog, including
+      evidence comparing its GST-exclusive base amount, the invoice GST line,
+      and the final invoice total to the application quote after the documented
+      minor-unit rounding order.
+- [ ] The selected billing period, interval, and total cycles pass the 100-year
+      maximum calculation before subscription creation (including separate
+      monthly and annual fixtures when both are offered).
 - [ ] Subscription authorization through hosted Razorpay checkout.
-- [ ] Initial payment produces webhook-confirmed Paid; redirect alone does not.
+- [ ] Initial payment produces webhook-confirmed grants; redirect alone does not.
 - [ ] Duplicate event is acknowledged without duplicate mutation.
 - [ ] Reordered event does not downgrade/upgrade incorrectly.
 - [ ] Failed renewal enters grace, then recovers or downgrades as approved.
-- [ ] Halted subscription fails closed for new Paid work.
+- [ ] Halted subscription fails closed for new plan-gated work.
 - [ ] End-of-period cancellation preserves access only through verified paid time.
-- [ ] Completed/expired subscription resolves Free.
+- [ ] Completed/expired subscription removes expired grants and resolves to the
+      unentitled baseline.
 - [ ] Invited user sees the active workspace sponsor's entitlement.
 - [ ] Existing audit/site evidence remains readable after downgrade.
 - [ ] No secret, external customer id, full webhook payload, or billing PII appears
@@ -281,7 +334,11 @@ General India launch approval/date:
 ```
 
 If any required approval, live lifecycle, webhook monitoring, or rollback control
-is missing, the correct state is `BILLING_CHECKOUT_ENABLED=false`.
+is missing, the correct state is `BILLING_CHECKOUT_ENABLED=false`. The signed
+India launch record must show `BILLING_RAZORPAY_LIVE_READY=true` before checkout
+is set true. USD checkout additionally requires
+`BILLING_RAZORPAY_INTERNATIONAL_READY=true`; do not require that international
+flag for the India/INR route.
 
 ## 10. India-first alternatives retained as contingency
 
@@ -302,8 +359,8 @@ methods, or commercials fail are:
 Primary sources:
 
 - [Cashfree subscription webhook events](https://www.cashfree.com/docs/payments/subscription/webhooks)
-- [PayU recurring payments overview](https://docs.payu.in/docs/introduction-recurring-payments-integration.md)
-- [PayU plans/subscription automation](https://docs.payu.in/docs/understanding-plan.md)
+- [PayU recurring payments overview](https://docs.payu.in/docs/introduction-recurring-payments-integration)
+- [PayU plans/subscription automation](https://docs.payu.in/docs/understanding-plan)
 - [PhonePe PG AutoPay introduction](https://developer.phonepe.com/payment-gateway/autopay/api-integration/introduction)
 
 Do not switch a live customer between providers silently. A migration remains an

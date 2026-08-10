@@ -10,15 +10,17 @@ import { Meta } from '../primitives/label';
 import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
+const UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 function formatUpdated(iso: string): string {
   const date = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(date);
+  return UPDATED_DATE_FORMATTER.format(date);
 }
 
 /**
@@ -91,8 +93,8 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
               aria-label="Other legal documents"
               className="border-border-subtle mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-6"
             >
-              {FOOTER_LEGAL_LINKS.filter((link) => link.href !== `/${document.slug}`).map(
-                (link) => (
+              {FOOTER_LEGAL_LINKS.map((link) =>
+                link.href === `/${document.slug}` ? null : (
                   <Link
                     key={link.href}
                     href={link.href}

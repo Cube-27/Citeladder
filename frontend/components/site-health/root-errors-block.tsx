@@ -14,6 +14,7 @@ import { PLACEHOLDER } from '@/lib/site-health/status';
  */
 export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   if (errors.length === 0) return null;
+  const keyOccurrences = new Map<string, number>();
   return (
     <div className="grid gap-2" data-testid="root-errors-block">
       <p className="text-secondary text-sm">
@@ -21,29 +22,43 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
         network call the crawler made.
       </p>
       <ul className="grid gap-1">
-        {errors.map((error, index) => (
-          <li
-            key={`${error.target}:${index}`}
-            data-testid="root-error-row"
-            className="border-border-subtle bg-background-alt flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border px-3 py-2"
-          >
-            <span className="mono text-foreground text-sm font-medium">{error.method}</span>
-            <span className="mono text-muted min-w-0 flex-1 truncate text-sm">{error.target}</span>
-            {error.error_code ? (
-              <span className="mono text-danger-text text-sm">{error.error_code}</span>
-            ) : null}
-            <span className="mono text-muted text-sm">
-              {error.status_code !== null ? `HTTP ${error.status_code}` : PLACEHOLDER}
-            </span>
-            <span className="mono text-muted text-sm">
-              {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
+        {errors.map((error) => {
+          const signature = JSON.stringify([
+            error.method,
+            error.target,
+            error.outcome,
+            error.error_code,
+            error.status_code,
+            error.latency_ms,
+          ]);
+          const occurrence = keyOccurrences.get(signature) ?? 0;
+          keyOccurrences.set(signature, occurrence + 1);
+          return (
+            <li
+              key={`${signature}:${occurrence}`}
+              data-testid="root-error-row"
+              className="border-border-subtle bg-background-alt flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border px-3 py-2"
+            >
+              <span className="mono text-foreground text-sm font-medium">{error.method}</span>
+              <span className="mono text-muted min-w-0 flex-1 truncate text-sm">
+                {error.target}
+              </span>
+              {error.error_code ? (
+                <span className="mono text-danger-text text-sm">{error.error_code}</span>
+              ) : null}
+              <span className="mono text-muted text-sm">
+                {error.status_code !== null ? `HTTP ${error.status_code}` : PLACEHOLDER}
+              </span>
+              <span className="mono text-muted text-sm">
+                {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
                   wire), not an instant response — show the placeholder. */}
-              {error.latency_ms !== null && error.latency_ms > 0
-                ? `${error.latency_ms} ms`
-                : PLACEHOLDER}
-            </span>
-          </li>
-        ))}
+                {error.latency_ms !== null && error.latency_ms > 0
+                  ? `${error.latency_ms} ms`
+                  : PLACEHOLDER}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

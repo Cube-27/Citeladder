@@ -14,38 +14,42 @@ const LABELS: Record<string, string> = {
   unanswered_required_question: 'Unanswered required question',
 };
 
+function describeCoverage(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return String(value);
+  const details = value as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof details.state === 'string') parts.push(details.state);
+  if (typeof details.total_pages === 'number' && typeof details.matched_pages === 'number') {
+    parts.push(`${details.matched_pages} of ${details.total_pages} pages joined`);
+  }
+  if (typeof details.join_rate === 'number') {
+    parts.push(`${Math.round(details.join_rate * 100)}%`);
+  }
+  const keyEvents = details.key_events;
+  if (keyEvents && typeof keyEvents === 'object' && !Array.isArray(keyEvents)) {
+    const event = keyEvents as Record<string, unknown>;
+    parts.push(
+      event.state === 'observed'
+        ? `${String(event.value)} key events observed`
+        : 'key events unavailable',
+    );
+  }
+  if (parts.length > 0) return parts.join(' · ');
+
+  const counts: string[] = [];
+  for (const [key, count] of Object.entries(details)) {
+    if (typeof count === 'number') counts.push(`${key.replaceAll('_', ' ')} ${count}`);
+  }
+  return counts.join(' · ') || 'None represented';
+}
+
 function Coverage({ coverage }: Readonly<{ coverage: Record<string, unknown> }>) {
-  const describe = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return String(value);
-    const details = value as Record<string, unknown>;
-    const parts = [typeof details.state === 'string' ? details.state : null];
-    if (typeof details.total_pages === 'number' && typeof details.matched_pages === 'number') {
-      parts.push(`${details.matched_pages} of ${details.total_pages} pages joined`);
-    }
-    if (typeof details.join_rate === 'number')
-      parts.push(`${Math.round(details.join_rate * 100)}%`);
-    const keyEvents = details.key_events;
-    if (keyEvents && typeof keyEvents === 'object' && !Array.isArray(keyEvents)) {
-      const event = keyEvents as Record<string, unknown>;
-      parts.push(
-        event.state === 'observed'
-          ? `${String(event.value)} key events observed`
-          : 'key events unavailable',
-      );
-    }
-    const knownParts = parts.filter(Boolean);
-    if (knownParts.length) return knownParts.join(' · ');
-    const counts = Object.entries(details)
-      .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
-      .map(([key, count]) => `${key.replaceAll('_', ' ')} ${count}`);
-    return counts.join(' · ') || 'None represented';
-  };
   return (
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {Object.entries(coverage).map(([source, value]) => (
         <div key={source} className="border-border-subtle rounded-md border p-3">
           <dt className="text-muted text-xs capitalize">{source.replaceAll('_', ' ')}</dt>
-          <dd className="text-foreground mt-1 text-sm font-medium">{describe(value)}</dd>
+          <dd className="text-foreground mt-1 text-sm font-medium">{describeCoverage(value)}</dd>
         </div>
       ))}
     </dl>

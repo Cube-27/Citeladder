@@ -2,7 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { StateLabel, type DerivedState } from '@/components/intelligence/state-label';
+import type { DerivedState } from '@/components/intelligence/state-label-data';
+import { StateLabel } from '@/components/intelligence/state-label';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { PageSummary } from '@/lib/api/types';
 

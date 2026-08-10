@@ -5,21 +5,30 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { brandDiscoveriesApi, type BrandDiscoveryInput } from '@/lib/api/brand-discoveries';
 
+let fallbackOperationSequence = 0;
+
 function operationKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `discovery-${Date.now()}`;
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  fallbackOperationSequence += 1;
+  return `discovery-${Date.now()}-${fallbackOperationSequence}`;
 }
 
 export function useBrandDiscovery(
   input: BrandDiscoveryInput | null,
   resumeId: string | null = null,
 ) {
-  const key = useRef(operationKey());
   const fingerprint = useMemo(() => JSON.stringify(input), [input]);
   const createdFor = useRef<string | null>(null);
   const [responseFor, setResponseFor] = useState<string | null>(null);
   const create = useMutation({
-    mutationFn: (payload: BrandDiscoveryInput) => brandDiscoveriesApi.create(payload, key.current),
-    onSuccess: (_data, payload) => {
+    mutationFn: ({
+      payload,
+      idempotencyKey,
+    }: {
+      payload: BrandDiscoveryInput;
+      idempotencyKey: string;
+    }) => brandDiscoveriesApi.create(payload, idempotencyKey),
+    onSuccess: (_data, { payload }) => {
       setResponseFor(JSON.stringify(payload));
     },
   });
@@ -27,8 +36,7 @@ export function useBrandDiscovery(
   useEffect(() => {
     if (resumeId || !input || createdFor.current === fingerprint) return;
     createdFor.current = fingerprint;
-    key.current = operationKey();
-    create.mutate(input);
+    create.mutate({ payload: input, idempotencyKey: operationKey() });
   }, [create, fingerprint, input, resumeId]);
 
   const createdDiscoveryId = responseFor === fingerprint ? create.data?.id : undefined;
@@ -48,9 +56,8 @@ export function useBrandDiscovery(
   const discovery = query.data ?? (createdDiscoveryId ? create.data : undefined);
   const retry = () => {
     if (!input || create.isPending) return;
-    key.current = operationKey();
     createdFor.current = fingerprint;
-    create.mutate(input);
+    create.mutate({ payload: input, idempotencyKey: operationKey() });
   };
   return {
     discovery,

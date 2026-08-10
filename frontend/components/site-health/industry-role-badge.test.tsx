@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { IndustryRoleBadge, abstentionLabel, industryRoleLabel } from './industry-role-badge';
+import { abstentionLabel, industryRoleLabel } from '@/lib/site-health/industry-roles';
+
+import { IndustryRoleBadge } from './industry-role-badge';
 
 describe('industryRoleLabel', () => {
   it('keeps the fully-qualified pack role id', () => {

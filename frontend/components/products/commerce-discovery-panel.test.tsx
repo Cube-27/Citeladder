@@ -23,7 +23,12 @@ function discoveryQueries(overrides: Record<string, unknown> = {}) {
       isPending: false,
       mutateAsync: vi.fn(),
     },
-    decisionMutation: { isPending: false, mutateAsync: vi.fn() },
+    decisionMutation: {
+      error: null,
+      isPending: false,
+      mutate: vi.fn(),
+      variables: undefined,
+    },
     setSelectedRunId: vi.fn(),
     ...overrides,
   };
@@ -94,19 +99,23 @@ describe('CommerceDiscoveryPanel', () => {
       ],
     };
     const decisionMutation = {
+      error: null,
       isPending: false,
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      mutate: vi.fn(),
+      variables: undefined,
     };
     const queries = discoveryQueries({
       candidatesQuery: { data: [candidate], isLoading: false },
       decisionMutation,
     });
-    render(<CommerceDiscoveryPanel projectId={projectId} queries={queries as never} />);
+    const { rerender } = render(
+      <CommerceDiscoveryPanel projectId={projectId} queries={queries as never} />,
+    );
 
     const selector = screen.getByLabelText('Match target for Widget');
     await user.selectOptions(selector, '66666666-6666-4666-8666-666666666666');
     await user.click(screen.getByRole('button', { name: 'Accept / review' }));
-    expect(decisionMutation.mutateAsync).toHaveBeenLastCalledWith({
+    expect(decisionMutation.mutate).toHaveBeenLastCalledWith({
       candidateId: candidate.id,
       body: {
         status: 'accepted',
@@ -116,9 +125,29 @@ describe('CommerceDiscoveryPanel', () => {
 
     await user.selectOptions(selector, '');
     await user.click(screen.getByRole('button', { name: 'Accept / review' }));
-    expect(decisionMutation.mutateAsync).toHaveBeenLastCalledWith({
+    expect(decisionMutation.mutate).toHaveBeenLastCalledWith({
       candidateId: candidate.id,
       body: { status: 'accepted', target_id: null },
     });
+
+    rerender(
+      <CommerceDiscoveryPanel
+        projectId={projectId}
+        queries={
+          discoveryQueries({
+            candidatesQuery: { data: [candidate], isLoading: false },
+            decisionMutation: {
+              ...decisionMutation,
+              error: new Error('Decision failed'),
+              variables: {
+                candidateId: candidate.id,
+                body: { status: 'accepted', target_id: null },
+              },
+            },
+          }) as never
+        }
+      />,
+    );
+    expect(screen.getByText('Decision failed')).toBeVisible();
   });
 });

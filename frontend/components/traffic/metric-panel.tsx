@@ -144,13 +144,15 @@ export function MetricPanel({
   });
 
   const allSegments = toSegments(plotted);
-  const segments = allSegments.filter((segment) => segment.length > 1);
+  const segments: PlottedPoint[][] = [];
+  const isolatedPoints: PlottedPoint[] = [];
   // Sparse provider data commonly leaves null buckets between readings. Each
   // one-point segment still represents a real measurement and needs a mark;
   // otherwise two isolated readings produce an entirely blank chart.
-  const isolatedPoints = allSegments
-    .filter((segment) => segment.length === 1)
-    .map((segment) => segment[0]);
+  for (const segment of allSegments) {
+    if (segment.length > 1) segments.push(segment);
+    else if (segment[0]) isolatedPoints.push(segment[0]);
+  }
   const drawn = plotted.filter((p): p is PlottedPoint => p !== null);
 
   const first = points[0]?.label ?? '';

@@ -7,12 +7,10 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CoverageBadge, Ratio, ScoreWithCoverage } from '@/components/site-intelligence/coverage';
-import {
-  ContradictionDecision,
-  displayValue,
-} from '@/components/site-intelligence/contradiction-decision';
+import { ContradictionDecision } from '@/components/site-intelligence/contradiction-decision';
 import { siteIntelligenceQueries } from '@/lib/api/site-intelligence';
 import type { IntelligenceOverview, SnapshotComparison } from '@/lib/api/types';
+import { displayValue } from '@/lib/site-intelligence/display-value';
 
 type PanelProps = Readonly<{
   projectId: string;

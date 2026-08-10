@@ -58,23 +58,6 @@ export function TextLink({
   );
 }
 
-export function Button({
-  variant = 'primary',
-  className,
-  children,
-  type = 'button',
-  ...rest
-}: VisualProps & { children: ReactNode } & Omit<
-    ComponentPropsWithoutRef<'button'>,
-    'className' | 'children'
-  >) {
-  return (
-    <SharedButton type={type} variant={sharedVariant(variant)} className={className} {...rest}>
-      {children}
-    </SharedButton>
-  );
-}
-
 export type IconButtonVariant = 'default' | 'dark' | 'nav';
 export type IconButtonSide = 'left' | 'right';
 
@@ -115,30 +98,6 @@ export function IconButtonLink({
         <span>{title}</span>
         {side === 'right' ? arrow : null}
       </Link>
-    </SharedButton>
-  );
-}
-
-export function IconButton({
-  title,
-  variant = 'default',
-  side = 'right',
-  icon,
-  className,
-  type = 'button',
-  ...rest
-}: IconButtonProps & Omit<ComponentPropsWithoutRef<'button'>, 'className' | 'children' | 'title'>) {
-  const arrow = icon ?? <ArrowRight aria-hidden className="size-4" />;
-  return (
-    <SharedButton
-      type={type}
-      variant={variant === 'default' ? 'primary' : 'secondary'}
-      className={cn(className)}
-      {...rest}
-    >
-      {side === 'left' ? arrow : null}
-      <span>{title}</span>
-      {side === 'right' ? arrow : null}
     </SharedButton>
   );
 }

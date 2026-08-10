@@ -22,8 +22,7 @@ import { ProvenanceChip, type Provenance } from './provenance-chip';
  */
 
 /** The four layers. The chip is how a user learns which system found this. */
-export const INSIGHT_LAYERS = ['site', 'content', 'demand', 'agent'] as const;
-export type InsightLayer = (typeof INSIGHT_LAYERS)[number];
+export type InsightLayer = 'site' | 'content' | 'demand' | 'agent';
 
 const LAYER_LABEL: Record<InsightLayer, string> = {
   site: 'Site',
@@ -33,8 +32,7 @@ const LAYER_LABEL: Record<InsightLayer, string> = {
 };
 
 /** Deterministic priority bands — from the priority formula, never a model. */
-export const INSIGHT_PRIORITIES = ['high', 'medium', 'low'] as const;
-export type InsightPriority = (typeof INSIGHT_PRIORITIES)[number];
+export type InsightPriority = 'high' | 'medium' | 'low';
 
 const PRIORITY_COPY: Record<InsightPriority, string> = {
   high: 'High priority',

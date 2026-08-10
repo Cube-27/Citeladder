@@ -39,7 +39,7 @@ export function BrandProfilePanel({
 }>) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(() => profileDraft(profile));
-  const [productsInput, setProductsInput] = useState(profile.products_services.join(', '));
+  const [productsInput, setProductsInput] = useState(() => profile.products_services.join(', '));
   const [notice, setNotice] = useState<string | null>(null);
 
   const saveMutation = useMutation({

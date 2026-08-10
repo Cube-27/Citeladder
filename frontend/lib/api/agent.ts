@@ -39,7 +39,7 @@ const capabilitiesSchema = z.object({
 });
 
 const stepSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   ordinal: z.number().int(),
   name: z.string(),
   tool_name: z.string(),
@@ -49,7 +49,7 @@ const stepSchema = z.object({
   input: z.record(z.string(), z.unknown()),
   output: z.record(z.string(), z.unknown()).nullable(),
   child_task_kind: z.string(),
-  child_task_id: z.string().uuid().nullable(),
+  child_task_id: z.uuid().nullable(),
   retry_count: z.number().int(),
   error_code: z.string(),
   error_detail: z.string(),
@@ -58,9 +58,9 @@ const stepSchema = z.object({
 });
 
 const contextSchema = z.object({
-  id: z.string().uuid(),
-  project_id: z.string().uuid(),
-  brief_id: z.string().uuid().nullable(),
+  id: z.uuid(),
+  project_id: z.uuid(),
+  brief_id: z.uuid().nullable(),
   task_type: z.string(),
   manifest: z.record(z.string(), z.unknown()),
   rendered_context: z.record(z.string(), z.unknown()),
@@ -72,18 +72,18 @@ const contextSchema = z.object({
 });
 
 const conversationSchema = z.object({
-  id: z.string().uuid(),
-  project_id: z.string().uuid(),
+  id: z.uuid(),
+  project_id: z.uuid(),
   title: z.string(),
-  created_by_user_id: z.string().uuid().nullable(),
+  created_by_user_id: z.uuid().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
 
 const messageSchema = z.object({
-  id: z.string().uuid(),
-  conversation_id: z.string().uuid(),
-  task_run_id: z.string().uuid().nullable(),
+  id: z.uuid(),
+  conversation_id: z.uuid(),
+  task_run_id: z.uuid().nullable(),
   role: z.enum(['user', 'assistant']),
   content: z.string(),
   citations: z.array(z.string()),
@@ -95,11 +95,11 @@ const conversationDetailSchema = conversationSchema.extend({
 });
 
 export const agentTaskRunSchema = z.object({
-  id: z.string().uuid(),
-  project_id: z.string().uuid(),
-  conversation_id: z.string().uuid().nullable(),
-  parent_run_id: z.string().uuid().nullable(),
-  context_package_id: z.string().uuid().nullable(),
+  id: z.uuid(),
+  project_id: z.uuid(),
+  conversation_id: z.uuid().nullable(),
+  parent_run_id: z.uuid().nullable(),
+  context_package_id: z.uuid().nullable(),
   task_type: z.string(),
   objective: z.string(),
   requested_outputs: z.array(z.unknown()),
