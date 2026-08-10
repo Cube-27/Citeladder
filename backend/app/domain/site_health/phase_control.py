@@ -309,7 +309,22 @@ async def _stop_phase_tasks(
             error_code="stopped",
         )
     )
+    return _affected_row_count(result)
+
+
+def _affected_row_count(result: Any) -> int:
     return int(cast(CursorResult[Any], result).rowcount or 0)
+
+
+def _mark_phase_run_stopped(run: SiteCrawlPhaseRun | None) -> None:
+    if run is None:
+        return
+    run.status = PHASE_RUN_STOPPED
+    run.stopped_at = _now()
+
+
+def _phase_stop_changed_state(*, stopped_count: int, phase_was_running: bool) -> bool:
+    return stopped_count > 0 or phase_was_running
 
 
 async def _pause_if_idle(session: AsyncSession, crawl: SiteCrawl) -> None:
@@ -348,10 +363,11 @@ async def stop_discovery(
     stopped_count = await _stop_phase_tasks(
         session, crawl_id=crawl.id, task_kinds=(TASK_KIND_DISCOVER,)
     )
-    if run is not None:
-        run.status = PHASE_RUN_STOPPED
-        run.stopped_at = _now()
-    if stopped_count > 0 or crawl.discovery_status == DISCOVERY_STATUS_RUNNING:
+    _mark_phase_run_stopped(run)
+    if _phase_stop_changed_state(
+        stopped_count=stopped_count,
+        phase_was_running=crawl.discovery_status == DISCOVERY_STATUS_RUNNING,
+    ):
         if crawl.discovery_status == DISCOVERY_STATUS_RUNNING:
             apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
         record_crawl_event(
@@ -823,10 +839,11 @@ async def stop_analysis(
         crawl_id=crawl.id,
         task_kinds=(TASK_KIND_ANALYZE, TASK_KIND_LINK_CHECK),
     )
-    if run is not None:
-        run.status = PHASE_RUN_STOPPED
-        run.stopped_at = _now()
-    if stopped_count > 0 or crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
+    _mark_phase_run_stopped(run)
+    if _phase_stop_changed_state(
+        stopped_count=stopped_count,
+        phase_was_running=crawl.analysis_status == ANALYSIS_STATUS_RUNNING,
+    ):
         if crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
             apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
         record_crawl_event(

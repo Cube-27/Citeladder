@@ -4264,6 +4264,7 @@
   "app/domain/site_health/phase_control.py": {
     "functions": {
       "PhaseControlError.__init__": 1,
+      "_affected_row_count": 2,
       "_analysis_candidates": 5,
       "_analysis_target_crawl": 6,
       "_clone_cancelled_discovery_tasks": 3,
@@ -4271,10 +4272,12 @@
       "_lock_analysis_profile": 3,
       "_lock_analysis_source": 8,
       "_lock_crawl": 3,
+      "_mark_phase_run_stopped": 2,
       "_max_task_generations": 3,
       "_next_ordinal": 2,
       "_now": 1,
       "_pause_if_idle": 6,
+      "_phase_stop_changed_state": 2,
       "_record_analysis_inventory": 3,
       "_reject_unusable_selection": 3,
       "_resume_crawl": 2,
@@ -4286,7 +4289,7 @@
       "stop_analysis": 3,
       "stop_discovery": 3
     },
-    "loc": 838,
+    "loc": 859,
     "max_cc": 8
   },
   "app/domain/site_health/planner.py": {
@@ -5196,7 +5199,7 @@
       "CrawlLifecycle._load_latest_analyses": 1,
       "CrawlLifecycle._persist_evaluations": 7,
       "CrawlLifecycle._persist_snapshot": 1,
-      "CrawlLifecycle._reconcile_advanced_phase_runs": 15,
+      "CrawlLifecycle._reconcile_advanced_phase_runs": 12,
       "CrawlLifecycle._run_crawl_finalize_pass": 5,
       "CrawlLifecycle._task_counts": 3,
       "CrawlLifecycle.reconcile": 34,
@@ -5210,11 +5213,12 @@
       "_pass_through_hreflang_evaluation": 1,
       "_pause_running_crawl": 2,
       "_start_planned_analysis": 3,
+      "_stop_completed_manual_phase": 6,
       "_stop_drained_phases": 3,
       "_utcnow": 1,
       "crawl_root_identity": 2
     },
-    "loc": 1024,
+    "loc": 1033,
     "max_cc": 34
   },
   "app/workers/site_health/outcomes.py": {

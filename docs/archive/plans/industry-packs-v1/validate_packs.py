@@ -3,6 +3,7 @@
 Planning/implementation helper. The production loader should implement the same
 checks with typed contracts under backend/app/core/config/industry_packs.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -12,7 +13,6 @@ from typing import Any
 
 import jsonschema
 import yaml
-
 
 DEFAULT_SCHEMA = Path(__file__).with_name("industry-pack.schema.json")
 DEFAULT_PACKS = (
@@ -67,7 +67,11 @@ def validate_pack(path: Path, schema: dict[str, Any]) -> dict[str, Any]:
         [stage for journey in data["journey_templates"] for stage in journey["stages"]]
     )
     outcomes = _ids(
-        [outcome for journey in data["journey_templates"] for outcome in journey["outcomes"]]
+        [
+            outcome
+            for journey in data["journey_templates"]
+            for outcome in journey["outcomes"]
+        ]
     )
 
     # Keep variables live so duplicate checking applies to every registry even

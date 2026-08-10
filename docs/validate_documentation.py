@@ -171,7 +171,11 @@ def validate() -> list[Issue]:
     forbidden_active_dirs = (ROOT / "docs/roadmap",)
     for directory in forbidden_active_dirs:
         if directory.exists():
-            issues.append(Issue(_relative(directory), "superseded documentation directory is active"))
+            issues.append(
+                Issue(
+                    _relative(directory), "superseded documentation directory is active"
+                )
+            )
 
     for path in sorted(_iter_files()):
         if not _is_repository_document(path):
@@ -241,8 +245,12 @@ def main() -> int:
         for path in _iter_files()
         if _is_repository_document(path) and _is_active_document(path)
     )
-    archived_count = sum(1 for path in (ROOT / "docs/archive").rglob("*") if path.is_file())
-    print(f"Documentation boundary valid: {active_count} active documents, {archived_count} archived files.")
+    archived_count = sum(
+        1 for path in (ROOT / "docs/archive").rglob("*") if path.is_file()
+    )
+    print(
+        f"Documentation boundary valid: {active_count} active documents, {archived_count} archived files."
+    )
     return 0
 
 

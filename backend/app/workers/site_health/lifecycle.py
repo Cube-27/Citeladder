@@ -160,6 +160,16 @@ def _pause_running_crawl(crawl: SiteCrawl) -> None:
         apply_crawl_status(crawl, CRAWL_STATUS_PAUSED)
 
 
+def _stop_completed_manual_phase(crawl: SiteCrawl, phase: str) -> None:
+    """Stop a drained user-controlled phase without parking sample crawls."""
+    if crawl.sample_mode:
+        return
+    if phase == PHASE_DISCOVERY and crawl.discovery_status == DISCOVERY_STATUS_RUNNING:
+        apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
+    elif phase == PHASE_ANALYSIS and crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
+        apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
+
+
 def _is_crawl_finalize_rule(rule_id: str) -> bool:
     """Whether a catalog rule is scoped ``crawl_finalize`` (finalize-owned)."""
     rule = SITE_HEALTH_RULES_BY_ID.get(rule_id)
@@ -570,18 +580,7 @@ class CrawlLifecycle:
             if drained:
                 phase_run.status = PHASE_RUN_COMPLETED
                 phase_run.completed_at = _utcnow()
-                if (
-                    phase_run.phase == PHASE_DISCOVERY
-                    and crawl.discovery_status == DISCOVERY_STATUS_RUNNING
-                    and not crawl.sample_mode
-                ):
-                    apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
-                elif (
-                    phase_run.phase == PHASE_ANALYSIS
-                    and crawl.analysis_status == ANALYSIS_STATUS_RUNNING
-                    and not crawl.sample_mode
-                ):
-                    apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
+                _stop_completed_manual_phase(crawl, phase_run.phase)
 
         outstanding = sum(
             counts[key]
