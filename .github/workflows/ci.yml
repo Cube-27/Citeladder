@@ -17,6 +17,7 @@ jobs:
   backend:
     name: Backend (ruff, pytest)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -37,6 +38,10 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Complexity policy compares ceilings with the PR/push base so a
+          # branch cannot make its own complexity budget larger.
+          fetch-depth: 0
       # Pinned to match the runtime image (infra/docker/Dockerfile is
       # python:3.12.x) and backend/.python-version. Unpinned, uv resolved the
       # newest interpreter it could find — CI was validating on 3.14 while
@@ -58,14 +63,22 @@ jobs:
       # fails the build instead of joining a backlog.
       - name: Mypy
         run: uv run mypy app
-      # Downward ratchet on module size / function complexity. The July 2026
-      # audit found two modules at MI 0.0; they got there because nothing in CI
-      # measured either. Fails only on REGRESSION against the checked-in
-      # baseline, so improving a number never breaks the build.
-      - name: Complexity ratchet
-        run: uv run python -m scripts.check_complexity
+      # Fixed CC/LOC defaults plus narrow legacy exceptions. The base-revision
+      # comparison rejects higher defaults, higher exceptions, and new
+      # exceptions; there is deliberately no baseline rewrite command.
+      - name: Complexity policy
+        env:
+          COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$COMPLEXITY_BASE_SHA" ] && ! [[ "$COMPLEXITY_BASE_SHA" =~ ^0+$ ]]; then
+            .venv/bin/python -m scripts.check_complexity --check-policy-diff "$COMPLEXITY_BASE_SHA"
+          else
+            .venv/bin/python -m scripts.check_complexity
+          fi
       - name: Pytest
-        run: uv run pytest -q
+        # Verbose node ids make an anomalous runner/database stall attributable;
+        # faulthandler prints thread stacks if one test exceeds two minutes.
+        run: .venv/bin/python -m pytest -vv -o faulthandler_timeout=120
 
   frontend:
     name: Frontend (vitest, tsc, policy, build)
