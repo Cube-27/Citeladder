@@ -42,10 +42,10 @@ import { ReviewStep } from './review-step';
  *
  * Three steps: Brand → Discovery → Review, framed by a slim header
  * (logo + compact inline stepper) and a centered card per step. The review
- * step widens to a two-column grid so the whole review fits without a nested-
- * card scroll. Discovery fires all three suggestion calls automatically on
- * entry; there is no Generate button, because discovery is the reason the
- * screen exists.
+ * step keeps the same content rail as the other two stages while using a
+ * compact two-column grid inside it. Discovery fires all three suggestion
+ * calls automatically on entry; there is no Generate button, because
+ * discovery is the reason the screen exists.
  *
  * Second project onward (`?new=1`) runs the identical flow — the discovery is
  * the value, not a first-run formality — with two differences: the copy drops
@@ -438,10 +438,7 @@ export function OnboardingScreen() {
             scroll instead of stretching the column. */}
         <main
           id="main"
-          className={cn(
-            'mx-auto flex min-h-0 w-full flex-1 flex-col justify-start overflow-y-auto py-2 sm:py-4',
-            step === 2 ? 'max-w-3xl lg:max-w-4xl' : 'max-w-xl',
-          )}
+          className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col justify-start overflow-y-auto py-2 sm:py-4"
         >
           <div className="p-1 sm:p-2">
             {step === 0 ? (

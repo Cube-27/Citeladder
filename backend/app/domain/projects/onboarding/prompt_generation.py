@@ -181,7 +181,7 @@ def validated_portfolio(
     primary_market: str,
     competitor_terms: list[str],
     context_terms: list[str],
-) -> tuple[list[dict], list[str]]:
+) -> list[dict]:
     result: PromptQualityResult = validate_portfolio(
         model_prompts,
         brand_terms=[brand_name],
@@ -194,7 +194,7 @@ def validated_portfolio(
         ),
     )
     if not result.errors:
-        return list(result.accepted), []
+        return list(result.accepted)
     fallback_result = validate_portfolio(
         fallback_prompts,
         brand_terms=[brand_name],
@@ -211,4 +211,4 @@ def validated_portfolio(
             "Config-owned onboarding fallback failed validation: "
             + ", ".join(fallback_result.errors)
         )
-    return list(fallback_result.accepted), ["research_degraded"]
+    return list(fallback_result.accepted)

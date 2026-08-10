@@ -101,16 +101,26 @@ test('onboarding renders inverse type, sequential progress, and a prompt-free re
   const setupHeading = page.getByRole('heading', { name: 'Set up your project' });
   await expect(setupHeading).toBeVisible();
   await expect(setupHeading).toHaveCSS('color', 'rgb(255, 255, 255)');
+  const brandStage = await page.locator('main#main').boundingBox();
+  expect(brandStage).not.toBeNull();
 
   await page.getByLabel(/^Brand name/).fill('The Asian School');
   await page.getByLabel(/^Website/).fill('theasianschool.net');
   await page.getByRole('button', { name: 'Continue' }).click();
+  const discoveryStage = await page.locator('main#main').boundingBox();
+  expect(discoveryStage).not.toBeNull();
 
   const progress = page.getByRole('progressbar', { name: /steps complete/ });
   await expect(progress).not.toHaveAttribute('aria-valuenow', '5');
   await expect(progress).toHaveAttribute('aria-valuenow', '5', { timeout: 4_000 });
 
   await page.getByRole('button', { name: 'Review' }).click();
+  const reviewStage = await page.locator('main#main').boundingBox();
+  expect(reviewStage).not.toBeNull();
+  expect(reviewStage?.width).toBeCloseTo(brandStage!.width, 0);
+  expect(reviewStage?.height).toBeCloseTo(brandStage!.height, 0);
+  expect(reviewStage?.width).toBeCloseTo(discoveryStage!.width, 0);
+  expect(reviewStage?.height).toBeCloseTo(discoveryStage!.height, 0);
   await expect(page.getByText('Discovered Profile')).toBeVisible();
   await expect(page.getByText('theasianschool.net')).toBeVisible();
   await expect(page.getByText('The Doon School')).toBeVisible();

@@ -43,8 +43,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         <aside className="border-border-subtle bg-sidebar relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r transition-[width] md:flex">
           {/* Logo row — matches topbar height */}
           <div className="border-border-subtle flex h-[var(--topbar-height)] shrink-0 items-center gap-3 border-b px-4">
-            <LogoMark size={24} />
-            <span className="text-foreground font-display text-heading-sm font-medium">
+            <LogoMark size={20} />
+            <span className="text-foreground font-display text-heading-sm font-semibold">
               CiteLadder
             </span>
           </div>
@@ -70,8 +70,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               className="flex shrink-0 items-center gap-2 md:hidden"
               aria-label="CiteLadder command center"
             >
-              <LogoMark size={24} />
-              <span className="font-display text-foreground font-medium">CiteLadder</span>
+              <LogoMark size={20} />
+              <span className="font-display text-foreground font-semibold">CiteLadder</span>
             </Link>
             <div aria-hidden className="hidden md:block" />
             <div className="min-w-0 flex-1 md:w-full md:max-w-105 md:justify-self-center">

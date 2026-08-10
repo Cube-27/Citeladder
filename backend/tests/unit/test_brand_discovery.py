@@ -24,7 +24,7 @@ from app.domain.projects.onboarding.prompt_validation import (
     MARKET_VISIBILITY,
     validate_portfolio,
 )
-from app.domain.projects.onboarding.research import _prompt_topics
+from app.domain.projects.onboarding.research import _customer_warnings, _prompt_topics
 from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 
@@ -86,6 +86,17 @@ def test_research_topics_drop_blanks_and_preserve_first_seen_order() -> None:
             {"theme": "   "},
         ]
     ) == ["Analytics", "Pricing"]
+
+
+def test_complete_research_does_not_warn_about_internal_fallbacks() -> None:
+    assert _customer_warnings(model_available=True, competitors_found=True) == []
+
+
+def test_materially_incomplete_research_keeps_customer_warnings() -> None:
+    assert _customer_warnings(model_available=False, competitors_found=False) == [
+        "research_degraded",
+        "competitors_not_found",
+    ]
 
 
 @pytest.mark.asyncio

@@ -177,7 +177,10 @@ describe('OnboardingScreen', () => {
     renderWithProviders(<OnboardingScreen />);
 
     const user = await enterBrand();
+    expect(screen.getByRole('main')).toHaveClass('max-w-xl');
     await user.click(screen.getByRole('button', { name: 'Review' }));
+    expect(screen.getByRole('main')).toHaveClass('max-w-xl');
+    expect(screen.getByRole('main')).not.toHaveClass('max-w-3xl', 'lg:max-w-4xl');
     const createProject = await screen.findByRole('button', { name: 'Create project' });
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);

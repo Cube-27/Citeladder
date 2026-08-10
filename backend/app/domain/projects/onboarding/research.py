@@ -170,7 +170,6 @@ async def research_brand(
     site,
     industry_context: dict,
 ) -> ResearchResult:
-    warnings = [site.warning] if site.warning else []
     model_result, provider, model = await _research_model(
         brand_name=brand_name,
         site=site,
@@ -185,12 +184,11 @@ async def research_brand(
         if model_result is not None
         else _fallback_profile(brand_name=brand_name, industry=industry)
     )
-    if model_result is None:
-        warnings.append("research_degraded")
-
     verified = await _verified_from_model(model_result, site.registrable_domain)
-    if not verified:
-        warnings.append("competitors_not_found")
+    warnings = _customer_warnings(
+        model_available=model_result is not None,
+        competitors_found=bool(verified),
+    )
     fallback = fallback_portfolio(
         primary_market=primary_market,
         industry=industry,
@@ -203,7 +201,7 @@ async def research_brand(
         if model_result is not None
         else []
     )
-    prompts, prompt_warnings = validated_portfolio(
+    prompts = validated_portfolio(
         model_prompts,
         fallback_prompts=fallback,
         brand_name=brand_name,
@@ -217,7 +215,6 @@ async def research_brand(
             term for item in verified for term in [item.name, *item.aliases]
         ],
     )
-    warnings.extend(prompt_warnings)
     topics = _prompt_topics(prompts)
     evidence = _research_evidence(site, model_result, provider, model)
     return ResearchResult(
@@ -230,6 +227,24 @@ async def research_brand(
         provider=provider,
         model=model,
     )
+
+
+def _customer_warnings(*, model_available: bool, competitors_found: bool) -> list[str]:
+    """Expose only degraded outcomes that need the customer's attention.
+
+    Homepage extraction and prompt validation have deterministic, provenance-
+    preserving fallbacks. Surfacing those internal recovery paths as errors made
+    every otherwise complete review look broken. A warning remains appropriate
+    when the research model itself was unavailable or no competitor survived
+    evidence verification, because those conditions materially reduce the
+    review the customer receives.
+    """
+    warnings = []
+    if not model_available:
+        warnings.append("research_degraded")
+    if not competitors_found:
+        warnings.append("competitors_not_found")
+    return warnings
 
 
 async def _research_model(**kwargs):
