@@ -12,17 +12,16 @@ export function AuthWordmark({
     <Link
       href="/"
       aria-label="CiteLadder home"
-      className="group inline-flex items-center gap-3 no-underline transition-opacity hover:opacity-90"
+      className={cn(
+        'group inline-flex items-center gap-3 no-underline transition-opacity hover:opacity-90',
+        light ? 'text-brand-canvas-foreground' : 'text-foreground',
+      )}
     >
-      <span className="text-accent inline-flex shrink-0">
+      <span className="inline-flex shrink-0">
         <LogoMark size={compact ? 22 : 28} />
       </span>
       <span
-        className={cn(
-          'font-display font-semibold tracking-tight',
-          light ? 'text-brand-canvas-foreground' : 'text-foreground',
-          compact ? 'text-lg' : 'text-xl',
-        )}
+        className={cn('font-display font-semibold tracking-tight', compact ? 'text-lg' : 'text-xl')}
       >
         CiteLadder
       </span>

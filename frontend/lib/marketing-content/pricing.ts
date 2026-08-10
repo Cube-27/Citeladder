@@ -26,22 +26,20 @@ export type PlanPresentation = {
  */
 export const PLAN_PRESENTATION: Readonly<Record<PlanKey, PlanPresentation>> = {
   tier_1: {
-    blurb:
-      'Start with Site Intelligence — crawl, classify, and surface the gaps in your owned pages.',
+    blurb: 'Crawl, classify, and improve your owned pages.',
   },
   tier_2: {
-    blurb:
-      'The full loop: Site, Content, and Demand intelligence with recurring monitoring and exports.',
+    blurb: 'Site, Content, and Demand Intelligence in one workspace.',
     highlighted: true,
   },
-  tier_3: { blurb: 'More projects, pages, and prompts as coverage and teams grow.' },
+  tier_3: { blurb: 'Higher limits for growing sites and teams.' },
   enterprise: {
-    blurb: 'Custom volume, security review, industry-pack tuning, and deployment options.',
+    blurb: 'Custom scale, security, and industry-pack support.',
   },
 };
 
 /** The label on the credential-mode switch. */
-export const BYOK_SWITCH_LABEL = 'Use your own API keys.';
+export const BYOK_SWITCH_LABEL = 'Use your own API keys';
 
 /**
  * The full BYOK disclosure, shown beside the switch.
@@ -51,9 +49,8 @@ export const BYOK_SWITCH_LABEL = 'Use your own API keys.';
  * latency on someone else's quota would be a promise we cannot keep.
  */
 export const BYOK_DISCLOSURE =
-  'With your own keys, provider usage bills straight to your provider accounts at their ' +
-  'rates — CiteLadder never marks it up. Report-ready latency is not guaranteed in this ' +
-  'mode, because your key’s rate limits apply.';
+  'Provider usage is billed directly to your accounts with no CiteLadder markup. ' +
+  'Run speed depends on your providers’ rate limits.';
 
 /** Fallback for a malformed or stale catalog response without a plan price. */
 export const FUNDED_UNAVAILABLE_LABEL = 'Not yet priced';
@@ -69,7 +66,8 @@ export const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   manual_runs_per_day: 'Manual runs per day',
   benchmark_credits: 'Benchmark credits',
   pulse_credits: 'Pulse credits',
-  benchmark_cadence: 'Benchmark cadence',
+  pulse_cadence: 'Monitoring frequency',
+  benchmark_cadence: 'Benchmark frequency',
   audit_web_search: 'Web-search-grounded audits',
   authenticated_exports: 'Authenticated exports',
 };

@@ -12,6 +12,11 @@ generous whitespace, crisp micro-shadows over hairline borders, and a few
 deliberate, quiet motion treatments.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
+- **Logo:** a monochrome rounded inverted L with one rounded horizontal line
+  through its middle. The middle line is 10 units long, and the visible whitespace
+  above that line and between it and the bottom line is equal. Clipped inner and
+  softly offset outer shadows add depth without introducing another visible
+  contour. The mark inherits the surrounding foreground colour on every surface.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
 - **Typography:** Satoshi for display headings and Switzer for UI, body, and data,

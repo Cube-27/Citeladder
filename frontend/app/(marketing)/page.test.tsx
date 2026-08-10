@@ -144,12 +144,15 @@ describe('Landing page (public marketing `/`)', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
-    // The product beat is a faithful app-shell preview, not a second narrative
-    // layer explaining the marketing story from inside the product frame.
+    // The product beat is a faithful, interactive app-shell preview built
+    // around the canonical four-layer hierarchy.
     const product = container.querySelector('#see-it');
     expect(product).not.toBeNull();
-    expect(product).toHaveTextContent(/AI Visibility/i);
-    expect(product).toHaveTextContent(/Cross-run trend across completed audits/i);
+    expect(product).toHaveTextContent(/Site Intelligence/i);
+    expect(product).toHaveTextContent(/Content Intelligence/i);
+    expect(product).toHaveTextContent(/Demand Intelligence/i);
+    expect(product).toHaveTextContent(/Growth Agent/i);
+    expect(product).toHaveTextContent(/Illustrative workspace/i);
     expect(product).not.toHaveTextContent(/Observe|Trace|Benchmark|Optimize/i);
     expect(product).not.toHaveTextContent(/example data/i);
   });

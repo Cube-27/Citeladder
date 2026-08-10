@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { AnimatedPrice } from './animated-price';
 
 /**
@@ -66,11 +67,11 @@ export function PricingTierCard({
       data-tier={plan.key}
       data-highlighted={highlighted ? 'true' : undefined}
       className={cn(
-        'shadow-card flex h-full flex-col rounded-lg p-8',
+        'shadow-card flex h-full flex-col rounded-lg p-6 md:p-7 xl:p-6',
         highlighted ? 'bg-background-alt ring-accent ring-1' : 'bg-panel',
       )}
     >
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex min-h-7 items-center justify-between gap-3">
         <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
         {highlighted && (
           <Badge variant="status" value="info">
@@ -78,14 +79,14 @@ export function PricingTierCard({
           </Badge>
         )}
       </div>
-      <p className="website-body text-muted mt-3 min-h-[3rem]">
+      <p className="website-body text-muted mt-3 min-h-[3rem] max-w-[32ch]">
         {presentation?.blurb ?? plan.description}
       </p>
 
       {/* The price rides the website's own display rung, not the app's
           `text-hero`: an app token on this surface drifts with the dashboard
           ladder rather than the site's. */}
-      <p className="website-data-display text-foreground mt-5 flex items-baseline gap-2">
+      <p className="website-data-display text-foreground mt-6 flex min-h-[2.875rem] items-baseline gap-2">
         <AnimatedPrice
           value={numeric}
           format={(value) =>
@@ -104,45 +105,34 @@ export function PricingTierCard({
         )}
       </p>
 
-      {/* Each capability leads with a check glyph and reads as a sentence:
-          "Prompts tracked — 250". The raw `snake_case` key used to render
-          verbatim, so the list read as a database dump rather than a list of
-          what you get. Tight 10px rhythm — a feature list is a scan target,
-          not prose.
-
-          Absent capabilities are dropped BEFORE the cap, not after: the glyph
-          is a success tick, so an absent value rendered "Label — —" behind a
-          tick, and dropping it late would also spend one of the five slots on
-          something the tier does not include. */}
-      <ul className="border-border-subtle mt-5 grid flex-1 gap-3 border-t pt-5">
+      {/* Labels and values occupy separate edges so every limit scans as a
+          compact row instead of wrapping around punctuation. Absent
+          capabilities are dropped before the five-row cap because the check
+          glyph communicates inclusion. */}
+      <ul className="border-border-subtle mt-6 grid flex-1 content-start gap-1 border-t pt-4">
         {plan.capabilities
           .filter((capability) => isIncluded(capability.value))
           .slice(0, 5)
-          .map((capability) => (
-            <li key={capability.key} className="text-muted flex items-start gap-3 text-sm">
-              {/* The glyph sits in a box as tall as the text's first line, so
-                  it stays optically aligned on wrapped items without a nudge
-                  margin — a margin here would be an off-ladder one-off, which
-                  is exactly what this system exists to prevent. */}
-              <span aria-hidden className="flex h-[1lh] shrink-0 items-center text-sm">
-                <Check className="text-success size-4" />
-              </span>
-              <span>
-                {capabilityLabel(capability.key)}
-                {renderValue(capability.value) !== 'Included' && (
-                  <>
-                    {' — '}
-                    <span className="text-foreground font-medium">
-                      {renderValue(capability.value)}
-                    </span>
-                  </>
+          .map((capability) => {
+            const value = renderValue(capability.value);
+            return (
+              <li
+                key={capability.key}
+                className="text-secondary flex min-h-9 items-center justify-between gap-3 text-sm"
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Check aria-hidden className="text-accent size-4 shrink-0" />
+                  <span>{capabilityLabel(capability.key)}</span>
+                </span>
+                {value !== 'Included' && (
+                  <span className="text-foreground shrink-0 font-medium tabular-nums">{value}</span>
                 )}
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
       </ul>
 
-      <div className="mt-5">
+      <div className="mt-6">
         <PlanCta
           plan={plan}
           priceKind={catalogPrice.kind}
@@ -167,12 +157,9 @@ function PlanCta({
 }>) {
   if (plan.contact_only) {
     return (
-      <a
-        href={plan.contact_url ?? '/demo'}
-        className="border-border-subtle text-foreground focus-ring inline-flex h-10 w-full items-center justify-center rounded-md border text-sm font-medium"
-      >
-        {CONTACT_LABEL}
-      </a>
+      <Button asChild variant="secondary" className="w-full">
+        <a href={plan.contact_url ?? '/demo'}>{CONTACT_LABEL}</a>
+      </Button>
     );
   }
   // Funded mode is unpurchasable while `credit_price` is null: the button is
@@ -180,14 +167,9 @@ function PlanCta({
   // vanishing and the card silently losing its call to action.
   const disabled = priceKind !== 'price' || pending;
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => onCheckout(plan)}
-      className="bg-accent text-inverse focus-ring inline-flex h-10 w-full items-center justify-center rounded-md text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-    >
+    <Button disabled={disabled} onClick={() => onCheckout(plan)} className="w-full">
       {pending ? 'Starting checkout…' : `Choose ${plan.name}`}
-    </button>
+    </Button>
   );
 }
 

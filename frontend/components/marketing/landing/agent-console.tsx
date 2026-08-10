@@ -39,7 +39,7 @@ const SCRIPT = [
   },
 ];
 
-type Phase = 'prompt' | 'thinking' | 'reply' | 'hold';
+type Phase = 'prompt' | 'thinking' | 'hold';
 type Entry = {
   id: number;
   layer: number;
@@ -58,7 +58,6 @@ type Entry = {
 };
 
 const PROMPT_MS = 22;
-const REPLY_MS = 15;
 const THINKING_MS = 1000;
 const HOLD_MS = 2200;
 /** Only the newest exchange and a half stay on screen, so the window never grows. */
@@ -142,24 +141,21 @@ export function AgentConsole() {
     }
 
     if (phase === 'thinking') {
-      const id = window.setTimeout(() => setPhase('reply'), THINKING_MS);
+      const id = window.setTimeout(() => {
+        setReply(step.reply);
+        setPhase('hold');
+      }, THINKING_MS);
       return () => window.clearTimeout(id);
     }
+  }, [active, phase, push, reduce]);
 
-    if (phase === 'reply') {
-      const id = window.setInterval(() => {
-        cursor.current += 1;
-        setReply(step.reply.slice(0, cursor.current));
-        if (cursor.current >= step.reply.length) {
-          window.clearInterval(id);
-          setPhase('hold');
-        }
-      }, REPLY_MS);
-      return () => window.clearInterval(id);
-    }
+  useEffect(() => {
+    if (reduce || paused || phase !== 'hold') return;
+    const step = SCRIPT[active];
+    if (!step) return;
 
-    // hold — the one place the cycle waits, and the one place hover pauses it.
-    if (paused) return;
+    // Hold is the only phase hover may pause. Keeping it in its own effect
+    // prevents hover changes from restarting prompt or thinking timers.
     const id = window.setTimeout(() => {
       // Commit and clear in one batch. `push` appends the finished reply while
       // `setReply('')` retires the live bubble; the render below suppresses the
@@ -401,7 +397,7 @@ function ChatWindow({
     : log;
 
   /**
-   * True on the tick where the finished reply has been appended to the log but
+   * True on the tick where the complete reply has been appended to the log but
    * the live `reply` string has not yet cleared. Without this the same sentence
    * renders as two bubbles under different keys, so React unmounts one and
    * mounts the other — the text visibly blinks at the end of every exchange.
@@ -410,10 +406,9 @@ function ChatWindow({
 
   /**
    * The pending agent message is on screen from the moment thinking starts
-   * until the finished reply is committed to the log — one continuous mount,
-   * with no frame in between where it is absent. `hold` is included: the reply
-   * has finished typing but has not been pushed yet, so dropping the bubble
-   * there would blank it for the whole 2.2s hold.
+   * until the complete reply is committed to the log — one continuous mount,
+   * with no frame in between where it is absent. The assistant response is
+   * inserted whole after thinking; only the user-side composer types.
    */
   const liveBubble =
     !reduce && phase !== 'prompt' && !replyCommitted && !(phase === 'hold' && reply.length === 0);
@@ -474,7 +469,6 @@ function ChatWindow({
           <Bubble
             entry={{ id: -1, layer: active, from: 'agent', text: reply }}
             thinking={phase === 'thinking' || reply.length === 0}
-            caret={reply.length > 0}
           />
         )}
       </div>
@@ -505,21 +499,17 @@ function ChatWindow({
   );
 }
 
-function Bubble({
-  entry,
-  thinking = false,
-  caret = false,
-}: Readonly<{ entry: Entry; thinking?: boolean; caret?: boolean }>) {
+function Bubble({ entry, thinking = false }: Readonly<{ entry: Entry; thinking?: boolean }>) {
   const layer = SCRIPT[entry.layer];
   const Icon = LANDING_ICONS[entry.from === 'agent' ? 'agent' : (layer?.icon ?? 'site')];
   const fromAgent = entry.from === 'agent';
 
   return (
-    <div className={cn('flex items-start gap-2.5', fromAgent && 'flex-row-reverse')}>
+    <div className={cn('flex items-start gap-2.5', !fromAgent && 'flex-row-reverse')}>
       <span
         className={cn(
           'flex size-6 shrink-0 items-center justify-center rounded-md',
-          fromAgent ? 'bg-accent text-inverse' : 'bg-panel text-foreground shadow-xs',
+          fromAgent ? 'bg-panel text-foreground shadow-xs' : 'bg-accent text-inverse',
         )}
       >
         <Icon className="size-3.5" strokeWidth={2} aria-hidden />
@@ -528,7 +518,7 @@ function Bubble({
       <div
         className={cn(
           'max-w-[82%] rounded-xl px-3.5 py-2.5 text-xs leading-relaxed',
-          fromAgent ? 'bg-accent text-inverse shadow-sm' : 'bg-panel text-secondary shadow-sm',
+          fromAgent ? 'bg-panel text-secondary shadow-sm' : 'bg-accent text-inverse shadow-sm',
         )}
       >
         {thinking ? (
@@ -538,12 +528,12 @@ function Bubble({
                 key={dot}
                 className={cn(
                   'size-1.5 animate-pulse rounded-full',
-                  fromAgent ? 'bg-inverse/70' : 'bg-subtle',
+                  fromAgent ? 'bg-subtle' : 'bg-inverse/70',
                 )}
                 style={{ animationDelay: `${dot * 160}ms` }}
               />
             ))}
-            <span className={cn('ml-1', fromAgent ? 'text-inverse/80' : 'text-subtle')}>
+            <span className={cn('ml-1', fromAgent ? 'text-subtle' : 'text-inverse/80')}>
               Analyzing evidence
             </span>
           </span>
@@ -553,14 +543,6 @@ function Bubble({
               <span className="text-2xs mb-1 block font-semibold opacity-80">{layer?.name}</span>
             )}
             {entry.text}
-            {caret && (
-              <span
-                className={cn(
-                  'ml-0.5 inline-block h-3 w-px animate-pulse align-middle',
-                  fromAgent ? 'bg-inverse/80' : 'bg-secondary',
-                )}
-              />
-            )}
           </>
         )}
       </div>

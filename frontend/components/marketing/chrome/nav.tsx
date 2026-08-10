@@ -205,7 +205,7 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="mx-auto flex h-16 w-full max-w-screen-2xl items-center gap-5 px-6"
+        className="px-6-phone md:px-6-tablet mx-auto flex h-16 w-full max-w-7xl items-center gap-5 xl:px-6"
       >
         <Link href="/" aria-label="CiteLadder home" className="shrink-0">
           <Wordmark />

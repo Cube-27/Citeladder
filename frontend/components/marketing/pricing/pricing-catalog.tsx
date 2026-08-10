@@ -194,15 +194,20 @@ export function PricingCatalog() {
   return (
     <>
       <Section tone="paper" rhythm="tight" aria-label="Plans">
-        <div className="mb-8 flex flex-wrap items-center gap-4">
-          <Switch
-            checked={byok}
-            onCheckedChange={setByok}
-            label={BYOK_SWITCH_LABEL}
-            describedBy="byok-disclosure"
-          />
-          <span className="text-foreground text-sm font-medium">{BYOK_SWITCH_LABEL}</span>
-          <p id="byok-disclosure" className="website-body text-muted max-w-[70ch] basis-full">
+        <div className="border-border-subtle bg-background-alt mb-8 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:gap-5 md:p-5">
+          <div className="flex shrink-0 items-center gap-3">
+            <Switch
+              checked={byok}
+              onCheckedChange={setByok}
+              label={BYOK_SWITCH_LABEL}
+              describedBy="byok-disclosure"
+            />
+            <span className="text-foreground text-sm font-medium">{BYOK_SWITCH_LABEL}</span>
+          </div>
+          <p
+            id="byok-disclosure"
+            className="website-label text-muted max-w-[62ch] sm:border-l sm:pl-5"
+          >
             {BYOK_DISCLOSURE}
           </p>
         </div>

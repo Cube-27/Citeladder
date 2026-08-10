@@ -1,4 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CiteLadder">
-  <rect width="64" height="64" rx="12" fill="#006D77" />
-  <path fill="#FFFFFF" d="M10 10h24v10H20v12h14v10H10V10Zm44 44H30V44h14V32H30V22h24v32Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="CiteLadder">
+  <defs>
+    <filter id="depth" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation=".6" result="outer-blur" />
+      <feOffset in="outer-blur" dx=".8" dy=".8" result="outer-offset" />
+      <feFlood flood-color="#000" flood-opacity=".28" result="outer-color" />
+      <feComposite in="outer-color" in2="outer-offset" operator="in" result="outer-shadow" />
+      <feComponentTransfer in="SourceAlpha" result="inverse-alpha"><feFuncA type="table" tableValues="1 0" /></feComponentTransfer>
+      <feGaussianBlur in="inverse-alpha" stdDeviation=".65" result="inner-blur" />
+      <feOffset in="inner-blur" dx=".65" dy=".65" result="inner-offset" />
+      <feComposite in="inner-offset" in2="SourceAlpha" operator="in" result="inner-mask" />
+      <feFlood flood-color="#000" flood-opacity=".24" result="inner-color" />
+      <feComposite in="inner-color" in2="inner-mask" operator="in" result="inner-shadow" />
+      <feMerge><feMergeNode in="outer-shadow" /><feMergeNode in="SourceGraphic" /><feMergeNode in="inner-shadow" /></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#depth)">
+    <path d="M4 20h16V4" fill="none" stroke="#101828" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M10 10h10" fill="none" stroke="#101828" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
 </svg>

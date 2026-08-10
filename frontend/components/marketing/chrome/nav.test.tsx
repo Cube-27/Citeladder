@@ -47,6 +47,18 @@ function stubSignedIn() {
  * file guards behaviour only.
  */
 describe('MarketingNav', () => {
+  it('aligns the logo and account actions with the website content container', () => {
+    stubAnonymous();
+    renderWithProviders(<MarketingNav />);
+
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toHaveClass(
+      'max-w-7xl',
+      'px-6-phone',
+      'md:px-6-tablet',
+      'xl:px-6',
+    );
+  });
+
   it('gives every Platform menu row a distinct destination', () => {
     const platform = NAV_DROPS.find((drop) => drop.key === 'platform');
     const hrefs = platform?.groups.flatMap((group) => group.items.map((item) => item.href)) ?? [];

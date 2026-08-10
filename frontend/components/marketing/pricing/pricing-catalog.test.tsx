@@ -47,6 +47,8 @@ function plan(key: string, name: string, overrides: Record<string, unknown> = {}
     unavailable_reason: 'funded_not_priced',
     capabilities: [
       { key: 'project_slots', capability_type: 'counter.occupancy', value: 3, issuable: true },
+      { key: 'pulse_cadence', capability_type: 'level', value: 'daily', issuable: true },
+      { key: 'benchmark_cadence', capability_type: 'level', value: 'weekly', issuable: true },
     ],
     trial_availability: 'unavailable',
     trial_unavailable_reason: 'trial_unavailable',
@@ -190,6 +192,17 @@ describe('PricingCatalog', () => {
     expect(prices).toContain('$49');
     expect(prices).toContain('$99');
     expect(prices).toContain('$149');
+  });
+
+  it('uses concise customer-facing labels for monitoring frequency', async () => {
+    mswServer.use(catalogHandler(), anonymous());
+    renderWithProviders(<PricingCatalog />);
+
+    await screen.findByRole('heading', { name: 'Starter' });
+    screen.getAllByText('Monitoring frequency');
+    screen.getAllByText('Benchmark frequency');
+    expect(screen.queryByText('Pulse cadence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Benchmark cadence')).not.toBeInTheDocument();
   });
 
   it('shows the approved managed prices without an unavailable warning', async () => {

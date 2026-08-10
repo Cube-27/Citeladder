@@ -17,7 +17,7 @@ export type NavItem = {
 
 export type NavGroup = {
   title: string;
-  items: NavItem[];
+  items: readonly NavItem[];
 };
 
 /**
@@ -28,7 +28,7 @@ export type NavGroup = {
  */
 const MOBILE_NAV_HREFS = ['/projects', '/site', '/content', '/demand', '/agent'] as const;
 
-export const NAV_GROUPS: NavGroup[] = [
+export const NAV_GROUPS = [
   {
     title: 'Workspace',
     items: [
@@ -62,9 +62,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Runs', href: '/runs', icon: ICONS.runs },
     ],
   },
-];
+] as const satisfies readonly NavGroup[];
 
-const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
+const NAV_ITEMS = NAV_GROUPS.flatMap<NavItem>((group) => group.items);
 
 /**
  * The mobile bar's five slots, in `MOBILE_NAV_HREFS` order. One source of
