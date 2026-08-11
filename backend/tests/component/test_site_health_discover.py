@@ -44,12 +44,15 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
+from app.domain.site_health.discovery import _store_frontier_candidates
 from app.domain.site_health.normalization import canonical_identity
+from app.domain.site_health.schemas import FrontierCandidate
 from app.domain.site_health.service import presentation_status_for
 from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
     SiteCrawlTask,
+    SiteDiscoveryFrontier,
     SiteFetchArtifact,
     SiteFetchAttempt,
     SiteHealthSnapshot,
@@ -162,7 +165,6 @@ async def test_full_allowance_discover_admits_children_and_completes(
             .all()
         )
         assert all(h == "example.com" for h in hosts)
-
         # Immutable evidence written for each fetched URL.
         obs_count = await session.scalar(
             select(func.count())
@@ -223,6 +225,53 @@ async def test_full_allowance_discover_admits_children_and_completes(
             .all()
         )
         assert attempt_numbers and all(n == 1 for n in attempt_numbers)
+
+
+@pytest.mark.asyncio
+async def test_large_sitemap_frontier_is_persisted_in_bounded_batches(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A default-sized sitemap cannot exceed asyncpg's bind-parameter cap."""
+    candidate_count = site_health_settings.max_sitemap_admitted_urls
+    assert candidate_count >= 5_000
+
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=0)
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        crawl.configuration = {
+            "root_registrable_domain": "example.com",
+            "max_frontier_urls": candidate_count,
+        }
+        candidates = []
+        for ordinal in range(candidate_count):
+            url = f"https://example.com/catalog/item-{ordinal}"
+            canonical, url_hash = canonical_identity(url)
+            candidates.append(
+                FrontierCandidate(
+                    url=canonical,
+                    url_hash=url_hash,
+                    depth=1,
+                    source_kind=OBSERVATION_SOURCE_SITEMAP,
+                    parent_position=0,
+                    link_ordinal=ordinal,
+                )
+            )
+
+        await _store_frontier_candidates(
+            session,
+            crawl=crawl,
+            candidates=candidates,
+            configuration=dict(crawl.configuration),
+        )
+        await session.commit()
+
+        stored = await session.scalar(
+            select(func.count())
+            .select_from(SiteDiscoveryFrontier)
+            .where(SiteDiscoveryFrontier.crawl_id == crawl.id)
+        )
+        assert stored == candidate_count
 
 
 @pytest.mark.asyncio
@@ -923,6 +972,97 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         ).scalar_one()
         assert snapshot.analyzed_url_count == 1
         assert snapshot.issue_count == len(issues)
+
+
+@pytest.mark.asyncio
+async def test_sitemap_attempt_limit_includes_failed_child_documents(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A large blocked sitemap tree cannot monopolize the crawl worker."""
+    monkeypatch.setattr(site_health_settings, "max_sitemap_documents", 5)
+    monkeypatch.setattr(site_health_settings, "per_host_delay_seconds", 0.0)
+    root = "https://example.com/"
+    seed = await _seed_root_discover(session_factory, root=root)
+    child_refs = "".join(
+        f"<sitemap><loc>https://example.com/child-{index}.xml</loc></sitemap>"
+        for index in range(100)
+    )
+    sitemap_index = f"<sitemapindex>{child_refs}</sitemapindex>".encode()
+    pages: dict[str, bytes | tuple[bytes, dict[str, str]]] = {
+        "/robots.txt": b"Sitemap: https://example.com/index.xml\n",
+        "/index.xml": (sitemap_index, {"content-type": "application/xml"}),
+        "/": _html([]),
+    }
+    requests: list[tuple[str, str]] = []
+
+    worker = _worker(session_factory, pages, requests=requests)
+    await worker.run_until_idle()
+
+    sitemap_requests = [
+        path
+        for method, path in requests
+        if method == "GET" and (path == "/index.xml" or path.startswith("/child-"))
+    ]
+    assert sitemap_requests == [
+        "/index.xml",
+        "/child-0.xml",
+        "/child-1.xml",
+        "/child-2.xml",
+        "/child-3.xml",
+    ]
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_requested_page_limit_stays_closed_while_children_are_unobserved(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reconciliation cannot reopen a full crawl's reserved URL budget."""
+    monkeypatch.setattr(site_health_settings, "per_host_delay_seconds", 0.0)
+    root = "https://example.com/"
+    seed = await _seed_root_discover(session_factory, root=root)
+    first_level = [f"https://example.com/page-{index}" for index in range(30)]
+    second_level = [f"https://example.com/deep-{index}" for index in range(30)]
+    pages = {"/": _html(first_level)}
+    pages.update({f"/page-{index}": _html(second_level) for index in range(30)})
+    pages.update({f"/deep-{index}": _html([]) for index in range(30)})
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        # The production planner reserves the root as the first admission.
+        crawl.admitted_url_count = 1
+        crawl.discovery_requested_count = 10
+        crawl.configuration = {
+            **dict(crawl.configuration or {}),
+            "requested_page_limit": 10,
+        }
+        await session.commit()
+
+    worker = _worker(session_factory, pages)
+    await worker.run_until_idle()
+
+    async with session_factory() as session:
+        discover_count = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteCrawlTask)
+                .where(
+                    SiteCrawlTask.crawl_id == seed.crawl_id,
+                    SiteCrawlTask.task_kind == TASK_KIND_DISCOVER,
+                )
+            )
+            or 0
+        )
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert discover_count == 10
+        assert crawl.admitted_url_count == 10
+        assert crawl.status == CRAWL_STATUS_COMPLETED
 
 
 @pytest.mark.asyncio

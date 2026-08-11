@@ -2,10 +2,9 @@
 
 Part of the read surface (with ``queries``), kept separate because grouping is
 its own algorithm rather than another row projection: issues are aggregated by
-``(crawl_id, rule_id)`` AFTER filtering, a group's id is the earliest immutable
-``SiteIssue`` UUID (never synthetic, and stable under any filter), and the
-summary counts DISTINCT RULE GROUPS rather than occurrence rows so the tiles
-match what the list shows.
+``(crawl_id, rule_id)`` AFTER filtering, a group's id is a deterministic UUID5
+of that stable identity, and the summary counts DISTINCT RULE GROUPS rather
+than occurrence rows so the tiles match what the list shows.
 """
 
 from __future__ import annotations
@@ -70,6 +69,17 @@ class _IssueGroup:
     rule_version: str
 
 
+def issue_group_id(crawl_id: uuid.UUID, rule_id: str) -> uuid.UUID:
+    """Stable UUID for one ``(crawl, rule)`` issue group.
+
+    An occurrence UUID cannot safely represent a group: issue timestamps can
+    tie, and a later random UUID may sort before the previous representative.
+    UUID5 gives filters, pagination, and later occurrences one immutable group
+    identity without adding another table.
+    """
+    return uuid.uuid5(crawl_id, f"site-issue-group:{rule_id}")
+
+
 def _issue_filter_clause(
     *,
     crawl_id: uuid.UUID,
@@ -122,8 +132,9 @@ async def _load_issue_groups(
     """Aggregate issues into per-rule groups (canonical id, distinct affected).
 
     Group aggregation happens in the query BEFORE keyset/limit: for each
-    ``rule_id`` we take the earliest issue id by ``(created_at, id)`` as the
-    canonical (immutable) id and count the DISTINCT affected ``site_url_id``.
+    ``rule_id`` we use its deterministic group UUID and count the DISTINCT
+    affected ``site_url_id``. The earliest occurrence still supplies persisted
+    metadata and the group's first-seen timestamp.
     """
     rows = await session.execute(
         select(
@@ -143,11 +154,7 @@ async def _load_issue_groups(
     groups: list[_IssueGroup] = []
     for row in rows.all():
         rule_id = row[0]
-        # Resolve a STABLE canonical id: the earliest issue row for this
-        # (crawl_id, rule_id) by (created_at, id), computed UNFILTERED so the
-        # representative id never changes when a query/severity/URL filter is
-        # applied (issue rows are immutable). MIN(created_at) alone is not
-        # enough (ties), so pick the row explicitly.
+        # Resolve the earliest occurrence UNFILTERED for persisted metadata.
         canonical = await session.scalar(
             select(SiteIssue)
             .where(
@@ -165,7 +172,7 @@ async def _load_issue_groups(
                 dimension=canonical.dimension,
                 category=canonical.category,
                 severity=canonical.severity,
-                canonical_id=canonical.id,
+                canonical_id=issue_group_id(crawl_id, rule_id),
                 canonical_created_at=canonical.created_at,
                 affected_url_count=int(row[4]),
                 remediation=canonical.remediation or "",
@@ -270,8 +277,8 @@ async def get_issues(
 
     Groups by ``(crawl_id, rule_id)`` after filters, keysets by
     ``(severity_rank, rule_id, canonical_id)`` and applies ``limit + 1`` so a
-    rule group is never split across pages. ``id`` is the canonical (earliest)
-    issue UUID; ``title`` reads the CURRENT display label. The ``page_kind``
+    rule group is never split across pages. ``id`` is the deterministic group
+    UUID; ``title`` reads the CURRENT display label. The ``page_kind``
     filter (v2 P1) narrows to issues whose analysis classified as that type.
     """
     await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
@@ -337,11 +344,19 @@ async def get_issues(
             ],
         )
 
+    # Which PAGE TYPES each group actually affects. One aggregate for the
+    # whole page of groups, not a query per row: the issue list is the screen
+    # where "is this relevant to my product pages or my articles?" is the first
+    # question, and a rule group can legitimately span several types.
+    page_kinds_by_rule = await _page_kinds_for_rules(
+        session, crawl_id=crawl_id, rule_ids=[g.rule_id for g in window]
+    )
     items = [
         {
             "id": g.canonical_id,
             "crawl_id": crawl_id,
             "rule_id": g.rule_id,
+            "page_kinds": page_kinds_by_rule.get(g.rule_id, []),
             "dimension": g.dimension,
             "category": g.category,
             "severity": g.severity,
@@ -370,6 +385,35 @@ async def get_issues(
     )
     summary = await _issues_summary(session, clauses=summary_clauses)
     return {"items": items, "next_cursor": next_cursor, "summary": summary}
+
+
+async def _page_kinds_for_rules(
+    session: AsyncSession,
+    *,
+    crawl_id: uuid.UUID,
+    rule_ids: list[str],
+) -> dict[str, list[str]]:
+    """Distinct page types affected by each of ``rule_ids`` in this crawl.
+
+    Scoped to the rule ids actually on the requested page so the cost tracks
+    the window, not the whole catalog. Unclassified analyses contribute no
+    type rather than an "unknown" bucket.
+    """
+    if not rule_ids:
+        return {}
+    rows = await session.execute(
+        select(
+            SiteIssue.rule_id,
+            func.array_agg(func.distinct(SitePageAnalysis.page_kind)),
+        )
+        .join(SitePageAnalysis, SitePageAnalysis.id == SiteIssue.analysis_id)
+        .where(SiteIssue.crawl_id == crawl_id, SiteIssue.rule_id.in_(rule_ids))
+        .group_by(SiteIssue.rule_id)
+    )
+    return {
+        rule_id: sorted(str(t) for t in (types or []) if t)
+        for rule_id, types in rows.all()
+    }
 
 
 async def issue_group_page_kinds(
@@ -411,21 +455,20 @@ async def get_issue_detail(
     limit: int | None = None,
     cursor: str | None = None,
 ) -> dict:
-    """Resolve a canonical issue then return its rule group + affected URLs.
+    """Resolve a group/member UUID then return its rule group + affected URLs.
 
     Affected URLs are ordered ``(normalized_url, site_url_id)`` and keyset-
     limited for navigation. Title reads the current display label; remediation/
     evidence/versions come from the persisted canonical row.
     """
     await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
-    row = await session.scalar(
-        select(SiteIssue).where(
-            SiteIssue.id == canonical_id,
-            SiteIssue.crawl_id == crawl_id,
-            SiteIssue.workspace_id == workspace_id,
-        )
+    rule_id = await _resolve_issue_rule_id(
+        session,
+        workspace_id=workspace_id,
+        crawl_id=crawl_id,
+        canonical_id=canonical_id,
     )
-    if row is None:
+    if rule_id is None:
         raise SiteHealthNotFoundError("Issue not found")
 
     # Canonicalize to the stable representative row for the rule group (the
@@ -435,21 +478,23 @@ async def get_issue_detail(
         select(SiteIssue)
         .where(
             SiteIssue.crawl_id == crawl_id,
-            SiteIssue.rule_id == row.rule_id,
+            SiteIssue.rule_id == rule_id,
         )
         .order_by(SiteIssue.created_at.asc(), SiteIssue.id.asc())
         .limit(1)
     )
-    if canonical is None:  # pragma: no cover - row proves at least one exists
-        canonical = row
+    if canonical is None:  # pragma: no cover - the rule lookup proves a row exists
+        raise SiteHealthNotFoundError("Issue not found")
+
+    group_id = issue_group_id(crawl_id, rule_id)
 
     limit = _clamp_limit(limit)
     scope = "issue_detail"
-    # Fingerprint on the stable canonical id (not the requested member id) so a
-    # non-representative id and its canonical share the same page identity.
+    # Fingerprint on the stable group id (not a requested occurrence id) so all
+    # member links share the same page identity.
     filters = {
         "crawl_id": str(crawl_id),
-        "canonical_id": str(canonical.id),
+        "canonical_id": str(group_id),
     }
 
     total = (
@@ -462,29 +507,13 @@ async def get_issue_detail(
         or 0
     )
 
-    # Distinct affected URLs, ordered (normalized_url, site_url_id).
-    aff_stmt = (
-        select(
-            SiteUrl.id,
-            SiteUrl.normalized_url,
-            SiteUrl.display_url,
-            SiteUrl.latest_title,
-        )
-        .join(SiteIssue, SiteIssue.site_url_id == SiteUrl.id)
-        .where(
-            SiteIssue.crawl_id == crawl_id,
-            SiteIssue.rule_id == canonical.rule_id,
-        )
-        .distinct()
-        .order_by(SiteUrl.normalized_url.asc(), SiteUrl.id.asc())
-    )
+    aff_stmt = _affected_url_statement(crawl_id, canonical.rule_id)
     if cursor:
         cur_url, cur_id = _decode_url_keyset(cursor, scope=scope, filters=filters)
         aff_stmt = aff_stmt.where(
             tuple_(SiteUrl.normalized_url, SiteUrl.id) > (cur_url, cur_id)
         )
-    aff_stmt = aff_stmt.limit(limit + 1)
-    aff_rows = list((await session.execute(aff_stmt)).all())
+    aff_rows = list((await session.execute(aff_stmt.limit(limit + 1))).all())
 
     next_cursor: str | None = None
     if len(aff_rows) > limit:
@@ -496,25 +525,12 @@ async def get_issue_detail(
             sort_values=[last[1], str(last[0])],
         )
 
-    # v2 P1: each affected URL's classified page type (latest issue analysis
-    # wins when a URL has several). Optional on the wire — the badge simply
-    # does not render for rows without a classification.
-    affected_ids = [row[0] for row in aff_rows]
-    page_kind_by_url: dict[uuid.UUID, str] = {}
-    if affected_ids:
-        type_rows = await session.execute(
-            select(SiteIssue.site_url_id, SitePageAnalysis.page_kind)
-            .join(SitePageAnalysis, SitePageAnalysis.id == SiteIssue.analysis_id)
-            .where(
-                SiteIssue.crawl_id == crawl_id,
-                SiteIssue.rule_id == canonical.rule_id,
-                SiteIssue.site_url_id.in_(affected_ids),
-            )
-            .order_by(SiteIssue.created_at.desc(), SiteIssue.id.desc())
-        )
-        for site_url_id_value, page_kind_value in type_rows.all():
-            page_kind_by_url.setdefault(site_url_id_value, page_kind_value)
-
+    page_kind_by_url = await _affected_page_kinds(
+        session,
+        crawl_id=crawl_id,
+        rule_id=canonical.rule_id,
+        affected_ids=[row[0] for row in aff_rows],
+    )
     affected_urls = [
         {
             "site_url_id": row[0],
@@ -526,7 +542,7 @@ async def get_issue_detail(
         for row in aff_rows
     ]
     return {
-        "id": canonical.id,
+        "id": group_id,
         "crawl_id": crawl_id,
         "rule_id": canonical.rule_id,
         "dimension": canonical.dimension,
@@ -542,6 +558,90 @@ async def get_issue_detail(
         "created_at": _iso(canonical.created_at),
         "next_cursor": next_cursor,
     }
+
+
+async def _resolve_issue_rule_id(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    crawl_id: uuid.UUID,
+    canonical_id: uuid.UUID,
+) -> str | None:
+    """Resolve either an occurrence id or the derived stable group id."""
+    row = await session.scalar(
+        select(SiteIssue).where(
+            SiteIssue.id == canonical_id,
+            SiteIssue.crawl_id == crawl_id,
+            SiteIssue.workspace_id == workspace_id,
+        )
+    )
+    if row is not None:
+        return row.rule_id
+    # Group UUIDs are derived rather than stored. Resolve against the crawl's
+    # bounded distinct rule set while retaining support for old occurrence links.
+    rule_ids = await session.scalars(
+        select(SiteIssue.rule_id)
+        .where(
+            SiteIssue.crawl_id == crawl_id,
+            SiteIssue.workspace_id == workspace_id,
+        )
+        .distinct()
+    )
+    return next(
+        (
+            candidate
+            for candidate in rule_ids
+            if issue_group_id(crawl_id, candidate) == canonical_id
+        ),
+        None,
+    )
+
+
+def _affected_url_statement(crawl_id: uuid.UUID, rule_id: str):
+    """Build the stable, distinct affected-URL query for one issue group."""
+    # Each affected URL's latest issue analysis supplies the optional page-kind
+    # badge in ``_affected_page_kinds`` below.
+    return (
+        select(
+            SiteUrl.id,
+            SiteUrl.normalized_url,
+            SiteUrl.display_url,
+            SiteUrl.latest_title,
+        )
+        .join(SiteIssue, SiteIssue.site_url_id == SiteUrl.id)
+        .where(
+            SiteIssue.crawl_id == crawl_id,
+            SiteIssue.rule_id == rule_id,
+        )
+        .distinct()
+        .order_by(SiteUrl.normalized_url.asc(), SiteUrl.id.asc())
+    )
+
+
+async def _affected_page_kinds(
+    session: AsyncSession,
+    *,
+    crawl_id: uuid.UUID,
+    rule_id: str,
+    affected_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, str]:
+    """Return the newest classification for each affected URL."""
+    page_kind_by_url: dict[uuid.UUID, str] = {}
+    if affected_ids:
+        type_rows = await session.execute(
+            select(SiteIssue.site_url_id, SitePageAnalysis.page_kind)
+            .join(SitePageAnalysis, SitePageAnalysis.id == SiteIssue.analysis_id)
+            .where(
+                SiteIssue.crawl_id == crawl_id,
+                SiteIssue.rule_id == rule_id,
+                SiteIssue.site_url_id.in_(affected_ids),
+            )
+            .order_by(SiteIssue.created_at.desc(), SiteIssue.id.desc())
+        )
+        for site_url_id_value, page_kind_value in type_rows.all():
+            page_kind_by_url.setdefault(site_url_id_value, page_kind_value)
+
+    return page_kind_by_url
 
 
 async def get_issue_history(
