@@ -40,17 +40,10 @@ from app.domain.billing.schemas import (
 )
 from app.models.provider import ProviderConnectionTest
 from app.models.workspace import Workspace
+from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
 _T0 = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert resp.status_code == 201
 
 
 async def _workspace_id(db_session) -> uuid.UUID:
