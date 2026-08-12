@@ -297,12 +297,25 @@ describe('TrafficScreen — empty + bounded-miss states', () => {
   });
 
   it('offers a first sync when connections already exist', async () => {
+    let postCalls = 0;
     mockDashboard(emptyPayload);
     mockConnections([connection()]);
+    mswServer.use(
+      http.post(`${DASHBOARD_URL}/sync`, () => {
+        postCalls += 1;
+        return HttpResponse.json([], { status: 202 });
+      }),
+    );
+    const ue = userEvent.setup();
     renderWithProviders(<TrafficScreen />);
 
     expect(await screen.findByText('Sync your traffic data')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sync now' })).toBeEnabled();
+    const syncNow = screen.getByRole('button', { name: 'Sync now' });
+    expect(syncNow).toBeEnabled();
+    await ue.click(syncNow);
+
+    await waitFor(() => expect(postCalls).toBe(1));
+    expect(await screen.findByText(/No active mapped sync connection/)).toBeInTheDocument();
   });
 
   it('shows the honest no-snapshot note when a bounded range matches no persisted window', async () => {

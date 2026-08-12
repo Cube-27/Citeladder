@@ -215,18 +215,19 @@ def classify_url_admission(
     try:
         resolved = _resolve_relative(base_url, raw) if base_url else raw
         parts = urlsplit(resolved)
-        if _path_is_hard_excluded(parts.path):
-            return UrlAdmission(False, None, URL_EXCLUSION_HARD_PATH, "other", 0)
-        asset_is_infrastructure = _is_infrastructure_asset_exception(
-            parts.path, infrastructure_purpose
-        )
-        if _is_hard_excluded_asset(parts.path) and not asset_is_infrastructure:
-            return UrlAdmission(False, None, URL_EXCLUSION_HARD_ASSET, "other", 0)
         if _has_hard_excluded_query(parts.query):
             return UrlAdmission(False, None, URL_EXCLUSION_HARD_QUERY, "other", 0)
         if _has_tracking_query(parts.query):
             return UrlAdmission(False, None, URL_EXCLUSION_TRACKING, "other", 0)
         canonical = canonicalize(resolved)
+        canonical_path = urlsplit(canonical).path
+        if _path_is_hard_excluded(canonical_path):
+            return UrlAdmission(False, None, URL_EXCLUSION_HARD_PATH, "other", 0)
+        asset_is_infrastructure = _is_infrastructure_asset_exception(
+            canonical_path, infrastructure_purpose
+        )
+        if _is_hard_excluded_asset(canonical_path) and not asset_is_infrastructure:
+            return UrlAdmission(False, None, URL_EXCLUSION_HARD_ASSET, "other", 0)
         if len(canonical) > SITE_HEALTH_MAX_URL_CHARS:
             return UrlAdmission(False, None, URL_EXCLUSION_INVALID, "other", 0)
     except UrlPolicyError:

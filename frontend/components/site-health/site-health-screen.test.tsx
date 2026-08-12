@@ -433,6 +433,8 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     // The persisted inventory row itself is visible and selectable.
     expect(await screen.findByLabelText('Monitor https://acme.com/pricing')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /analysis/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/start the analysis/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/save, then run a new crawl/i)).toBeInTheDocument();
     expect(
       screen.queryByText('This crawl was cancelled before it produced results.'),
     ).not.toBeInTheDocument();

@@ -622,6 +622,7 @@ export function TrafficScreen() {
     return (
       <div className="grid gap-6">
         {syncBanner}
+        {syncNotice ? <Alert tone="info">{syncNotice}</Alert> : null}
         {syncMutation.isError ? (
           <Alert tone="danger">{errorMessage(syncMutation.error)}</Alert>
         ) : null}

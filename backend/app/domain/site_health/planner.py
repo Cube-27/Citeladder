@@ -340,9 +340,10 @@ def _controls_for_request(
     raw_seeds = list(seed_urls or [])
     selected_types = list(page_kinds or [])
     _validate_control_values(mode, raw_seeds, selected_types)
-    if _advanced_controls_requested(
-        mode, raw_seeds, selected_types
-    ) and not site_health_settings.advanced_controls_enabled:
+    if (
+        _advanced_controls_requested(mode, raw_seeds, selected_types)
+        and not site_health_settings.advanced_controls_enabled
+    ):
         raise CrawlPlanError(
             "advanced crawl controls are unavailable",
             code=CODE_ADVANCED_CONTROLS_UNAVAILABLE,
@@ -610,14 +611,13 @@ async def create_crawl(
     # Refresh (seed if missing) the runtime row BEFORE mutating the profile.
     # ``replace_monitored_set()`` locks the runtime row before profile, so
     # this path must match that lock order to avoid a deadlock cycle. In
-    # sample mode, LOCK the runtime row so the workspace-wide sample allowance
-    # is serialized at creation time against any concurrent crawl in another
-    # project.
+    # automatic mode, LOCK the runtime row so root admission and the
+    # workspace-wide allowance are serialized against concurrent projects.
     runtime = await refresh_site_health_runtime_for_workspace(
         session, workspace_id=workspace_id, at=datetime.now(UTC)
     )
     sample_mode = _is_sample_mode(runtime)
-    if sample_mode:
+    if sample_mode or mode == INPUT_MODE_AUTO:
         runtime = await lock_runtime(session, workspace_id)
         # Re-derive sample_mode from the LOCKED row: the projection may have
         # changed between the unlocked refresh above and acquiring the lock.
@@ -730,7 +730,7 @@ async def create_crawl(
     # crawl there is no monitored set yet, so this is a no-op.
     await seed_monitored_targets(session, crawl=crawl)
     if mode == INPUT_MODE_AUTO:
-        await add_automatic_root(session, crawl)
+        await add_automatic_root(session, crawl, runtime=runtime)
 
     # Drive the lifecycle through the guarded state machine (invariant 9).
     apply_crawl_status(crawl, CRAWL_STATUS_VALIDATING)
@@ -823,9 +823,7 @@ async def create_page_rerun_crawl(
     # reanalyzed page came back UNPACKED — no industry role, no knowledge, no
     # provenance — so rerunning a page to check a fix silently discarded the
     # very classification the fix was meant to change.
-    await _load_project(
-        session, workspace_id=workspace_id, project_id=project_id
-    )
+    await _load_project(session, workspace_id=workspace_id, project_id=project_id)
     seed = _normalize_seed(random_seed)
 
     crawl = SiteCrawl(

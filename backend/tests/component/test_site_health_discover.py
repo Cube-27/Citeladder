@@ -16,6 +16,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.connectors.web_evidence.contracts import ResolvedTarget
 from app.core.config.site_health import (
     AI_CRAWLER_BOTS,
     ANALYSIS_STATUS_COMPLETED,
@@ -94,18 +95,60 @@ async def test_worker_reuses_and_closes_secure_http_client(
         transport=httpx.MockTransport(lambda _request: httpx.Response(204)),
     )
 
-    first = worker._new_fetcher()
-    async with first:
-        shared_client = first._client
-    second = worker._new_fetcher()
-
-    assert second._client is shared_client
-    assert not shared_client.is_closed
-    await second.aclose()
+    first_target = ResolvedTarget(
+        url="https://example.com/one",
+        scheme="https",
+        host="example.com",
+        port=443,
+        connect_ip="203.0.113.10",
+    )
+    second_target = ResolvedTarget(
+        url="https://example.com/two",
+        scheme="https",
+        host="example.com",
+        port=443,
+        connect_ip="203.0.113.10",
+    )
+    shared_client = worker._shared_http_client(first_target)
+    assert worker._shared_http_client(second_target) is shared_client
     assert not shared_client.is_closed
 
     await worker.aclose()
     assert shared_client.is_closed
+
+
+@pytest.mark.asyncio
+async def test_worker_partitions_tls_clients_for_hostnames_sharing_an_ip(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Different hostname certificates always get distinct TLS pools."""
+    worker = SiteHealthWorker(
+        session_factory=session_factory,
+        resolver=_FakeResolver(),
+        transport=httpx.MockTransport(lambda _request: httpx.Response(204)),
+    )
+    first = ResolvedTarget(
+        url="https://first.example/",
+        scheme="https",
+        host="first.example",
+        port=443,
+        connect_ip="203.0.113.10",
+    )
+    second = ResolvedTarget(
+        url="https://second.example/",
+        scheme="https",
+        host="second.example",
+        port=443,
+        connect_ip="203.0.113.10",
+    )
+
+    first_client = worker._shared_http_client(first)
+    second_client = worker._shared_http_client(second)
+
+    assert first_client is not second_client
+    await worker.aclose()
+    assert first_client.is_closed
+    assert second_client.is_closed
 
 
 @pytest.mark.asyncio
@@ -161,9 +204,7 @@ async def test_sitemap_observations_use_bounded_bulk_statements(
     for statement in session.statements:
         params = statement.compile().params
         persisted_urls.extend(
-            value
-            for key, value in params.items()
-            if key.startswith("final_url_m")
+            value for key, value in params.items() if key.startswith("final_url_m")
         )
     assert persisted_urls == [candidate.url for candidate in candidates]
 

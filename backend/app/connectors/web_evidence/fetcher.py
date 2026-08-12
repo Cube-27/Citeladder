@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import time
 import zlib
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import replace
 from typing import cast
 from urllib.parse import urljoin, urlsplit
@@ -309,6 +309,7 @@ class SecureFetcher:
         resolver: DnsResolver,
         transport: httpx.AsyncBaseTransport | None = None,
         client: httpx.AsyncClient | None = None,
+        client_provider: Callable[[ResolvedTarget], httpx.AsyncClient] | None = None,
         settings=site_health_settings,
         browser_transport: AcquisitionTransport | None = None,
         curl_transport: AcquisitionTransport | None = None,
@@ -351,12 +352,17 @@ class SecureFetcher:
             self._owns_browser_transport = True
         # In production we pin the IP ourselves, so the transport must never
         # re-resolve or read the host environment (invariant: trust_env=False).
-        self._owns_client = client is None
-        self._client = client or self.build_client(
-            transport=transport,
-            settings=settings,
-            user_agent=user_agent,
-        )
+        if client is not None and client_provider is not None:
+            raise ValueError("client and client_provider are mutually exclusive")
+        self._client_provider = client_provider
+        self._owns_client = client is None and client_provider is None
+        self._client = client
+        if self._owns_client:
+            self._client = self.build_client(
+                transport=transport,
+                settings=settings,
+                user_agent=user_agent,
+            )
         self._pin_ip = transport is None
 
     @staticmethod
@@ -397,7 +403,7 @@ class SecureFetcher:
         left running so its connection pool can be reused by later tasks.
         """
         try:
-            if self._owns_client:
+            if self._owns_client and self._client is not None:
                 await self._client.aclose()
         finally:
             try:
@@ -425,7 +431,14 @@ class SecureFetcher:
         target: ResolvedTarget,
         extra_headers: dict[str, str],
         timeout: float,
-    ) -> httpx.Request:
+    ) -> tuple[httpx.AsyncClient, httpx.Request]:
+        client = (
+            self._client_provider(target)
+            if self._client_provider is not None
+            else self._client
+        )
+        if client is None:
+            raise RuntimeError("secure HTTP client is unavailable")
         headers = dict(extra_headers)
         if self._pin_ip:
             # Dial the pinned, validated IP but keep Host + SNI = original host
@@ -442,15 +455,19 @@ class SecureFetcher:
             )
             dial_url = parts._replace(netloc=f"{ip_literal}:{target.port}").geturl()
             headers["host"] = host_header
-            return self._client.build_request(
-                method,
-                dial_url,
-                headers=headers,
-                timeout=timeout,
-                extensions={"sni_hostname": target.host},
+            return (
+                client,
+                client.build_request(
+                    method,
+                    dial_url,
+                    headers=headers,
+                    timeout=timeout,
+                    extensions={"sni_hostname": target.host},
+                ),
             )
-        return self._client.build_request(
-            method, target.url, headers=headers, timeout=timeout
+        return (
+            client,
+            client.build_request(method, target.url, headers=headers, timeout=timeout),
         )
 
     async def fetch(
@@ -969,7 +986,7 @@ class SecureFetcher:
                 enforce_scope=enforce_scope,
                 purpose=purpose,
             )
-            httpx_request = self._build_httpx_request(
+            client, httpx_request = self._build_httpx_request(
                 method=request.method,
                 target=target,
                 extra_headers=request.headers,
@@ -977,7 +994,11 @@ class SecureFetcher:
             )
             hop_started = time.monotonic()
             try:
-                response = await self._client.send(httpx_request, stream=True)
+                response = await client.send(
+                    httpx_request,
+                    stream=True,
+                    follow_redirects=False,
+                )
             except httpx.TimeoutException as exc:
                 self._trace(
                     attempts,

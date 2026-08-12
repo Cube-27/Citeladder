@@ -45,6 +45,7 @@ from app.connectors.web_evidence.contracts import (
     DnsResolver,
     FetchCallTrace,
     FetchResult,
+    ResolvedTarget,
 )
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.resolver import SystemDnsResolver
@@ -207,10 +208,11 @@ class SiteHealthWorker(
         self._robots_locks: dict[str, asyncio.Lock] = {}
         # One browser process per WORKER, not per task (see ``_new_fetcher``).
         self._browser_transport: PatchrightTransport | None = None
-        # One secure httpx session per worker. Reusing it restores HTTP
-        # keep-alive and TLS pooling without changing the per-request DNS,
-        # pinned-IP, manual-redirect, robots, or host-gate boundaries.
-        self._http_client: httpx.AsyncClient | None = None
+        # Reuse secure httpx sessions by original origin. Requests dial a
+        # validated IP literal, so pooling only by that rewritten URL could
+        # reuse one hostname's TLS connection for another hostname on the same
+        # IP without a fresh SNI/certificate check.
+        self._http_clients: dict[tuple[str, str, int], httpx.AsyncClient] = {}
 
     def _new_fetcher(self) -> SecureFetcher:
         """Build a fetcher with the worker's injected transport seams.
@@ -229,15 +231,18 @@ class SiteHealthWorker(
         return SecureFetcher(
             resolver=self._resolver,
             transport=self._transport,
-            client=self._shared_http_client(),
+            client_provider=self._shared_http_client,
             browser_transport=self._shared_browser_transport(),
         )
 
-    def _shared_http_client(self) -> httpx.AsyncClient:
-        """Return the worker's live secure connection pool."""
-        if self._http_client is None or self._http_client.is_closed:
-            self._http_client = SecureFetcher.build_client(transport=self._transport)
-        return self._http_client
+    def _shared_http_client(self, target: ResolvedTarget) -> httpx.AsyncClient:
+        """Return the worker's secure pool for one original URL origin."""
+        origin = (target.scheme, target.host, target.port)
+        client = self._http_clients.get(origin)
+        if client is None or client.is_closed:
+            client = SecureFetcher.build_client(transport=self._transport)
+            self._http_clients[origin] = client
+        return client
 
     def _shared_browser_transport(self) -> PatchrightTransport | None:
         """The worker's one browser transport, created on first use."""
@@ -264,15 +269,13 @@ class SiteHealthWorker(
         footnote about cleanup, and the transport is dropped either way.
         """
         resources = [
-            (self._http_client, "http client"),
+            *((client, "http client") for client in self._http_clients.values()),
             (self._browser_transport, "browser transport"),
         ]
-        self._http_client = None
+        self._http_clients = {}
         self._browser_transport = None
         resources = [
-            (resource, name)
-            for resource, name in resources
-            if resource is not None
+            (resource, name) for resource, name in resources if resource is not None
         ]
         if not resources:
             return
@@ -284,10 +287,7 @@ class SiteHealthWorker(
         # out so the process is actually gone before the cancellation resumes
         # unwinding; the cancellation itself is re-raised, never swallowed.
         closing = asyncio.gather(
-            *(
-                self._close_resource(resource, name=name)
-                for resource, name in resources
-            )
+            *(self._close_resource(resource, name=name) for resource, name in resources)
         )
         try:
             await asyncio.shield(closing)

@@ -75,6 +75,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
   const workspaceId = activeProject?.workspace_id ?? null;
   const renderedStep = useRef<string | null>(null);
   const transitioning = useRef(false);
+  const terminalSkipAttempt = useRef<string | null>(null);
   const [targetRetry, setTargetRetry] = useState(0);
 
   const tourQuery = useQuery({
@@ -89,6 +90,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       queryClient.setQueryData(queryKeys.workspaces.productTour(workspaceId ?? ''), tour);
       renderedStep.current = null;
       transitioning.current = false;
+      terminalSkipAttempt.current = null;
       setTargetRetry(0);
     },
     onError: () => {
@@ -106,6 +108,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
   );
 
   const replay = useCallback(() => {
+    terminalSkipAttempt.current = null;
     persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
   }, [persist]);
 
@@ -158,7 +161,11 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
         // Command Center has no dashboard cards before the first audit). Do not
         // leave the tour in_progress: its route-aware effect would otherwise
         // force every later sidebar navigation back to this unavailable step.
-        persist('skipped');
+        const skipAttemptKey = `${workspaceId}:${step.id}`;
+        if (terminalSkipAttempt.current !== skipAttemptKey) {
+          terminalSkipAttempt.current = skipAttemptKey;
+          persist('skipped');
+        }
       }
       return cleanup;
     }
@@ -218,7 +225,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       },
     });
     return cleanup;
-  }, [pathname, persist, router, search, targetRetry, tourQuery.data, update.isPending]);
+  }, [pathname, persist, router, search, targetRetry, tourQuery.data, update.isPending, workspaceId]);
 
   return children;
 }

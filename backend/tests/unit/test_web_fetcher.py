@@ -451,6 +451,39 @@ async def test_fetch_redirect_to_private_ip_blocked():
     assert exc.value.error_code == "ssrf_blocked"
 
 
+async def test_injected_client_cannot_follow_redirects_before_validation():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/old":
+            return httpx.Response(
+                302,
+                headers={"location": "https://internal.example.com/private"},
+            )
+        return _html_response(body=b"should not be reached")
+
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        follow_redirects=True,
+    )
+    resolver = _FakeResolver(
+        {
+            "example.com": [_PUBLIC_IP],
+            "internal.example.com": ["10.0.0.5"],
+        }
+    )
+    fetcher = SecureFetcher(resolver=resolver, client=client)
+    try:
+        with pytest.raises(FetchError) as exc:
+            await fetcher.fetch(
+                FetchRequest(url="https://example.com/old", purpose="discover"),
+                root_registrable_domain="example.com",
+                enforce_scope=True,
+            )
+    finally:
+        await client.aclose()
+
+    assert exc.value.error_code == "ssrf_blocked"
+
+
 # --- transport failure ----------------------------------------------------
 
 

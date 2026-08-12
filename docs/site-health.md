@@ -47,9 +47,9 @@ repair lifecycle state, or call a model.
   row into analysis work.
 - Sitemap frontier lookups and inserts use bounded batches; a full configured
   sitemap cannot exceed PostgreSQL driver parameter limits.
-- Sitemap observations are also written in bounded batches. A worker reuses its
-  secure HTTP connection pool while retaining the same per-request DNS,
-  pinned-IP, redirect, robots, and host-gate checks.
+- Sitemap observations are also written in bounded batches. A worker reuses
+  secure HTTP connection pools by original origin while retaining the same
+  per-request DNS, pinned-IP, redirect, robots, and host-gate checks.
 - The default host gate no longer imposes a sub-six-starts-per-second policy
   ceiling on a responsive owned site. Robots directives, response latency,
   retries, parsing, and persistence still determine actual crawl throughput.

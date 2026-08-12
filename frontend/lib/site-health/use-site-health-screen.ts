@@ -130,8 +130,8 @@ export function useSiteHealthScreen(projectId: string | null) {
 
   const createMutation = useMutation({
     ...siteHealthMutations.createCrawl(),
-    onSuccess: async () => {
-      if (!projectId) return;
+    onSuccess: async (_crawl, variables) => {
+      const targetProjectId = variables.project_id;
       // The create response is a crawl row, while this screen is driven by the
       // backend's crawl + phase projection. Keep the mutation pending until
       // that complete projection refetches; partially replacing only `crawl`
@@ -140,10 +140,10 @@ export function useSiteHealthScreen(projectId: string | null) {
       // project-scoped count must refresh in the same pending window.
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: queryKeys.siteHealth.dashboard(projectId),
+          queryKey: queryKeys.siteHealth.dashboard(targetProjectId),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.siteHealth.monitored(projectId),
+          queryKey: queryKeys.siteHealth.monitored(targetProjectId),
         }),
       ]);
     },

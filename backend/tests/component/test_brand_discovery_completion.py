@@ -18,6 +18,7 @@ from app.domain.projects.onboarding.site_resolution import SiteNotFoundError
 from app.models.discovery import BrandDiscovery, BrandDiscoveryTask
 from app.models.project import Project
 from app.models.prompt import Prompt
+from app.models.site_health import SiteCrawl
 from app.models.workspace import Workspace
 from app.workers import brand_discovery_worker
 from tests.component.occupancy_helpers import seed_occupancy_grants
@@ -234,6 +235,14 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         assert project.subindustry == "Analytics"
         assert project.primary_market == "US"
         assert await session.scalar(select(func.count()).select_from(Prompt)) == 10
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteCrawl)
+                .where(SiteCrawl.project_id == project.id)
+            )
+            == 0
+        )
 
     await _register(client, "complete-foreign@example.com")
     foreign = await client.get(f"/api/v1/brand-discoveries/{discovery_id}")

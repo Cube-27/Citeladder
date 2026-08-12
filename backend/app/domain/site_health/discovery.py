@@ -534,28 +534,44 @@ def _ordered_unique_candidates(
     return list(by_hash.values())
 
 
-async def _sample_remaining(session: AsyncSession, crawl: SiteCrawl) -> int | None:
+async def _sample_remaining(
+    session: AsyncSession,
+    crawl: SiteCrawl,
+    *,
+    runtime: WorkspaceSiteHealthRuntime | None = None,
+) -> int | None:
     if not crawl.sample_mode:
         return None
-    runtime = await session.scalar(
-        select(WorkspaceSiteHealthRuntime)
-        .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
-        .with_for_update()
-    )
+    if runtime is None:
+        runtime = await session.scalar(
+            select(WorkspaceSiteHealthRuntime)
+            .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
+            .with_for_update()
+        )
     sample_limit = runtime.sample_url_limit if runtime is not None else 0
     used = await _active_free_sample_count(session, crawl.workspace_id)
     return max(0, int(sample_limit) - used)
 
 
-async def _automatic_remaining(session: AsyncSession, crawl: SiteCrawl) -> int | None:
+async def _automatic_remaining(
+    session: AsyncSession,
+    crawl: SiteCrawl,
+    *,
+    runtime: WorkspaceSiteHealthRuntime | None = None,
+) -> int | None:
     requested = int((crawl.configuration or {}).get(AUTOMATIC_MONITOR_LIMIT_KEY) or 0)
     if requested <= 0:
-        return await _sample_remaining(session, crawl) if crawl.sample_mode else None
-    runtime = await session.scalar(
-        select(WorkspaceSiteHealthRuntime)
-        .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
-        .with_for_update()
-    )
+        return (
+            await _sample_remaining(session, crawl, runtime=runtime)
+            if crawl.sample_mode
+            else None
+        )
+    if runtime is None:
+        runtime = await session.scalar(
+            select(WorkspaceSiteHealthRuntime)
+            .where(WorkspaceSiteHealthRuntime.workspace_id == crawl.workspace_id)
+            .with_for_update()
+        )
     if runtime is None:
         return 0
     entitlement_limit = int(
@@ -582,9 +598,14 @@ async def _automatic_remaining(session: AsyncSession, crawl: SiteCrawl) -> int |
     )
 
 
-async def add_automatic_root(session: AsyncSession, crawl: SiteCrawl) -> None:
+async def add_automatic_root(
+    session: AsyncSession,
+    crawl: SiteCrawl,
+    *,
+    runtime: WorkspaceSiteHealthRuntime | None = None,
+) -> None:
     """Persist and queue analysis for a user-initiated automatic crawl root."""
-    remaining = await _automatic_remaining(session, crawl)
+    remaining = await _automatic_remaining(session, crawl, runtime=runtime)
     if remaining is None or remaining <= 0:
         return
     canonical_url, url_hash_value = canonical_identity(crawl.root_url)

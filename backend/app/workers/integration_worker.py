@@ -1403,6 +1403,7 @@ class IntegrationWorker(DrainableWorkerMixin):
                     "heartbeat failed; retrying", extra={"sync_run_id": str(run_id)}
                 )
 
+
 if __name__ == "__main__":  # pragma: no cover
     configure_logging()
     asyncio.run(IntegrationWorker().run_forever())

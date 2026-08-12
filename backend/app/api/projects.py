@@ -87,6 +87,7 @@ from app.domain.projects.service import (
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
+
 async def _map_occupancy[T](call: Callable[[], Awaitable[T]]) -> T:
     """Run one occupancy-gated mutation, mapping a denial to the coded 403.
 

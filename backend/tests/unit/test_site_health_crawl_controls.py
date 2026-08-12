@@ -50,12 +50,15 @@ def test_production_page_limit_accepts_500_and_rejects_501(monkeypatch):
         False,
     )
 
-    assert _controls_for_request(
-        input_mode=None,
-        requested_page_limit=500,
-        seed_urls=None,
-        page_kinds=None,
-    )[1] == 500
+    assert (
+        _controls_for_request(
+            input_mode=None,
+            requested_page_limit=500,
+            seed_urls=None,
+            page_kinds=None,
+        )[1]
+        == 500
+    )
     with pytest.raises(CrawlPlanError, match="outside the allowed range"):
         _controls_for_request(
             input_mode=None,
@@ -78,12 +81,15 @@ def test_development_page_limit_retains_internal_ceiling(monkeypatch):
         True,
     )
 
-    assert _controls_for_request(
-        input_mode=None,
-        requested_page_limit=50_000,
-        seed_urls=None,
-        page_kinds=None,
-    )[1] == 50_000
+    assert (
+        _controls_for_request(
+            input_mode=None,
+            requested_page_limit=50_000,
+            seed_urls=None,
+            page_kinds=None,
+        )[1]
+        == 50_000
+    )
     with pytest.raises(CrawlPlanError, match="outside the allowed range"):
         _controls_for_request(
             input_mode=None,

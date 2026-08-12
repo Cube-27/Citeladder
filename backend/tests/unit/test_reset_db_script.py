@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -107,3 +108,28 @@ def test_development_reset_requires_dev_login_configuration(
 
     with pytest.raises(RuntimeError, match="DEV_LOGIN_EMAIL"):
         reset_db.provision_dev_login("postgresql://localhost/app")
+
+
+def test_development_login_provisioning_timeout_exits_cleanly(monkeypatch) -> None:
+    reset_db = _load_reset_db_module()
+    monkeypatch.setattr(
+        reset_db,
+        "_configuration",
+        lambda: {
+            "APP_ENV": "development",
+            "DEV_LOGIN_EMAIL": "dev@example.com",
+            "DEV_LOGIN_PASSWORD": "password123",
+            "DEV_LOGIN_COUNTER_ALLOWANCE": "100",
+            "RESET_PROVISION_TIMEOUT_SECONDS": "12",
+        },
+    )
+
+    def timeout(*_args, **kwargs):
+        raise subprocess.TimeoutExpired("provision", kwargs["timeout"])
+
+    monkeypatch.setattr(reset_db.subprocess, "run", timeout)
+
+    with pytest.raises(SystemExit) as exc:
+        reset_db.provision_dev_login("postgresql://localhost/app")
+
+    assert exc.value.code == 1

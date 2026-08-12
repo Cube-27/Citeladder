@@ -148,8 +148,8 @@ function StripContent({
     return (
       <Alert tone="info">
         {crawl.status === 'cancelled'
-          ? 'Discovery cancelled — found pages are kept below. Select pages to monitor, save, then start the analysis.'
-          : 'Discovery finished — select pages to monitor, then start the analysis.'}
+          ? 'Discovery cancelled — found pages are kept below. Select pages to monitor, save, then run a new crawl.'
+          : 'Discovery finished — select pages to monitor, save, then run a new crawl.'}
       </Alert>
     );
   }

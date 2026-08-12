@@ -16,6 +16,7 @@ BACKEND_DIR = PROJECT_ROOT / "backend"
 DOCKER_ENV_FILE = PROJECT_ROOT / "infra" / "docker" / ".env"
 PROTECTED_DATABASES = frozenset({"postgres", "template0", "template1"})
 DEVELOPMENT_ENVS = frozenset({"development", "dev", "local", "test", "testing"})
+DEFAULT_PROVISION_TIMEOUT_SECONDS = 300.0
 
 
 def _configuration() -> dict[str, str]:
@@ -172,24 +173,36 @@ def provision_dev_login(database_url: str) -> None:
     provision_environment = os.environ.copy()
     provision_environment.update(configuration)
     provision_environment["DATABASE_URL"] = database_url
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "scripts.provision_dev_login",
-            "--email",
-            email,
-            "--password",
-            password,
-            "--counter-allowance",
-            counter_allowance,
-        ],
-        cwd=BACKEND_DIR,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=provision_environment,
+    timeout_value = configuration.get("RESET_PROVISION_TIMEOUT_SECONDS", "").strip()
+    provision_timeout = (
+        float(timeout_value) if timeout_value else DEFAULT_PROVISION_TIMEOUT_SECONDS
     )
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "scripts.provision_dev_login",
+                "--email",
+                email,
+                "--password",
+                password,
+                "--counter-allowance",
+                counter_allowance,
+            ],
+            cwd=BACKEND_DIR,
+            capture_output=True,
+            text=True,
+            timeout=provision_timeout,
+            check=False,
+            env=provision_environment,
+        )
+    except subprocess.TimeoutExpired as exc:
+        print(
+            f"Development login provisioning timed out after {exc.timeout:g} seconds.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1) from None
     if result.returncode != 0:
         print(f"Development login provisioning failed:\n{result.stderr}")
         raise SystemExit(1)

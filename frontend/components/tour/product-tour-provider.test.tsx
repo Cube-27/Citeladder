@@ -139,7 +139,41 @@ describe('ProductTourProvider', () => {
     }
 
     expect(state.driverCalls).toHaveLength(0);
-    expect(state.updates).toContainEqual({ status: 'skipped', step_id: undefined });
+    expect(state.updates).toEqual([{ status: 'skipped', step_id: undefined }]);
+    vi.unstubAllGlobals();
+  });
+
+  it('attempts a terminal skip only once when persistence is rejected', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    );
+    state.failUpdate = true;
+    const view = renderTour(false);
+
+    for (let attempt = 0; attempt < 13; attempt += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+    }
+
+    expect(state.driverCalls).toHaveLength(0);
+    expect(state.updates).toEqual([{ status: 'skipped', step_id: undefined }]);
+
+    // A rejected mutation returns the real hook to idle and reruns the effect.
+    // Simulate that cache-state rerender: the same terminal step must not write again.
+    state.tour = { ...state.tour };
+    view.rerender(
+      <ProductTourProvider>
+        <div />
+      </ProductTourProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(state.updates).toEqual([{ status: 'skipped', step_id: undefined }]);
     vi.unstubAllGlobals();
   });
 

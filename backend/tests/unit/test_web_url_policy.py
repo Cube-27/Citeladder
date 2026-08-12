@@ -181,6 +181,8 @@ def test_is_admissible_combines_scope_and_narrowing():
         ("https://example.com/checkout/confirm", "hard_excluded_path"),
         ("https://example.com/viewcart?marketplace=store", "hard_excluded_path"),
         ("https://example.com/searchsuggestion", "hard_excluded_path"),
+        ("https://example.com/%76iewcart", "hard_excluded_path"),
+        ("https://example.com/%73earchsuggestion", "hard_excluded_path"),
         ("https://example.com/assets/logo.png", "hard_excluded_asset"),
         ("https://example.com/products/widget?filter=blue", "hard_excluded_query"),
         ("https://example.com/products/widget?utm_source=mail", "tracking_url"),

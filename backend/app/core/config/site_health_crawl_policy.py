@@ -16,7 +16,7 @@ AUTOMATIC_MONITOR_LIMIT_KEY: Final = "automatic_monitor_limit"
 SAMPLE_URL_LIMIT: Final = 10
 SAMPLE_DISCOVERY_URL_CAP: Final = 200
 
-URL_ADMISSION_POLICY_VERSION: Final = "sh-url-admission-1"
+URL_ADMISSION_POLICY_VERSION: Final = "sh-url-admission-2"
 INPUT_MODE_AUTO: Final = "auto"
 INPUT_MODE_EXACT_URLS: Final = "exact_urls"
 INPUT_MODE_DISCOVERY_SEEDS: Final = "discovery_seeds"

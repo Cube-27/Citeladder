@@ -157,6 +157,12 @@ def test_public_narrative_rejects_internal_ids() -> None:
         )
         == ""
     )
+    assert (
+        _public_narrative_text(
+            "Use occurrence 0190f6e8-7f2b-7a4c-b6d1-8f35ad36f2c9 instead."
+        )
+        == ""
+    )
 
 
 @pytest.mark.parametrize("invalid_limit", [0, -1])

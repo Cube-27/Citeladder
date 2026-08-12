@@ -19,7 +19,7 @@ import type { SiteHealthEntitlement } from '@/lib/api/types';
  * only other screens in the flow.)
  *
  * Reading order is answer-first: where the crawl stands, what you can do next,
- * the scores, then the URL inventory as the drill-down.
+ * the score summary, URL inventory, then page-kind diagnostics.
  */
 export function SiteHealthDashboardLayout({
   screen,
@@ -84,8 +84,6 @@ export function SiteHealthDashboardLayout({
             selectedTotal={projectSelectedTotal}
           />
 
-          <PageKindScores crawl={crawl} dashboard={dashboardQuery.data} />
-
           <InventorySection
             mode={inventoryMode}
             crawl={crawl}
@@ -93,6 +91,8 @@ export function SiteHealthDashboardLayout({
             projectId={projectId}
             active={active}
           />
+
+          <PageKindScores crawl={crawl} dashboard={dashboardQuery.data} />
 
           <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
         </>

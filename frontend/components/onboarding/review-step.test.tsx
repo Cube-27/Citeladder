@@ -30,10 +30,37 @@ describe('ReviewStep competitor limit', () => {
 
     expect(screen.queryByText('A long generated competitor explanation.')).not.toBeInTheDocument();
     expect(screen.queryByText(/Supporting links available/)).not.toBeInTheDocument();
+    expect(screen.queryByText('https://example.com/evidence')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://kmart.com.au' })).toHaveAttribute(
       'href',
       'https://kmart.com.au',
     );
+  });
+
+  it('preserves an existing competitor URL scheme without duplication', () => {
+    render(
+      <ReviewStep
+        domains={[]}
+        competitors={[
+          {
+            id: 'competitor-1',
+            name: 'Example competitor',
+            aliases: [],
+            domains: ['http://competitor.example'],
+            selected: true,
+          },
+        ]}
+        maximumCompetitors={5}
+        onToggleDomain={vi.fn()}
+        onToggleCompetitor={vi.fn()}
+        onEditCompetitorDomain={vi.fn()}
+        onAddCompetitor={vi.fn()}
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: 'http://competitor.example' });
+    expect(link).toHaveAttribute('href', 'http://competitor.example');
+    expect(screen.queryByText('https://http://competitor.example')).not.toBeInTheDocument();
   });
 
   it('shows the backend limit and disables additions at five selected competitors', async () => {
