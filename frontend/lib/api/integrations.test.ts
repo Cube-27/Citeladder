@@ -68,28 +68,32 @@ describe('integrationsApi.list', () => {
     expect(items[0].last_synced_at).toBe('2026-07-22T00:00:00Z');
   });
 
-  it('strips a leaked access_token so it never enters app state (invariant 6)', async () => {
+  it('rejects a leaked access_token (invariant 6)', async () => {
     mswServer.use(
       http.get('/api/v1/integrations', () =>
         HttpResponse.json([{ ...connection, access_token: 'ya29.leaked' }]),
       ),
     );
-    // Tolerant-on-unknown: the additive key is stripped on parse, so the
-    // leaked token can never reach the UI or app state.
-    const items = await integrationsApi.list();
-    expect(items).toHaveLength(1);
-    expect('access_token' in items[0]).toBe(false);
+    await expect(integrationsApi.list()).rejects.toThrow('API validation failure');
   });
 
-  it('strips a leaked refresh_token so it never enters app state (invariant 6)', async () => {
+  it('rejects a leaked refresh_token (invariant 6)', async () => {
     mswServer.use(
       http.get('/api/v1/integrations', () =>
         HttpResponse.json([{ ...connection, refresh_token: '1//leaked' }]),
       ),
     );
+    await expect(integrationsApi.list()).rejects.toThrow('API validation failure');
+  });
+
+  it('retains non-token additive response fields', async () => {
+    mswServer.use(
+      http.get('/api/v1/integrations', () =>
+        HttpResponse.json([{ ...connection, additive_status: 'ready' }]),
+      ),
+    );
     const items = await integrationsApi.list();
-    expect(items).toHaveLength(1);
-    expect('refresh_token' in items[0]).toBe(false);
+    expect(items[0]).toMatchObject({ additive_status: 'ready' });
   });
 });
 
@@ -176,7 +180,7 @@ describe('integrationsApi.sync + sync-run projections', () => {
     expect(run.row_count).toBe(400);
   });
 
-  it('strips an additive key from a sync-run projection (tolerant-on-unknown)', async () => {
+  it('retains a safe additive key in a sync-run projection', async () => {
     mswServer.use(
       http.get(`/api/v1/integrations/${CONN}/syncs/${SYNC}`, () =>
         HttpResponse.json({ ...syncRun, idempotency_key: 'internal-only' }),
@@ -184,7 +188,7 @@ describe('integrationsApi.sync + sync-run projections', () => {
     );
     const run = await integrationsApi.getSync(CONN, SYNC);
     expect(run.id).toBe(SYNC);
-    expect('idempotency_key' in run).toBe(false);
+    expect(run).toMatchObject({ idempotency_key: 'internal-only' });
   });
 });
 

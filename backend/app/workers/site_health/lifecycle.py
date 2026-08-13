@@ -148,7 +148,11 @@ async def _enqueue_post_crawl_refresh(
             TrafficSnapshot.project_id == crawl.project_id,
             TrafficSnapshot.granularity == TRAFFIC_GRANULARITY_DAY,
         )
-        .order_by(TrafficSnapshot.window_end.desc(), TrafficSnapshot.created_at.desc())
+        .order_by(
+            TrafficSnapshot.window_end.desc(),
+            TrafficSnapshot.created_at.desc(),
+            TrafficSnapshot.id.desc(),
+        )
         .limit(1)
     )
     if traffic is not None:
