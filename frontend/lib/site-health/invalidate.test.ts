@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
 import { queryKeys } from '@/lib/api/query-keys';
-import { invalidateCrawlViews } from './invalidate';
+import { invalidateCrawlViews, invalidateMonitoredProjection } from './invalidate';
 
 const CRAWL = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
@@ -19,6 +19,7 @@ function seeded() {
   });
   client.setQueryData(queryKeys.siteHealth.inventory(CRAWL, { cursor: null }), { items: [] });
   client.setQueryData(queryKeys.siteHealth.dashboard(PROJECT), { crawl: null });
+  client.setQueryData(queryKeys.siteHealth.monitored(PROJECT), { monitored_urls: [] });
   return client;
 }
 
@@ -56,5 +57,14 @@ describe('invalidateCrawlViews', () => {
     const streaming = seeded();
     invalidateCrawlViews(streaming, CRAWL, PROJECT);
     expect(invalidated(streaming, queryKeys.siteHealth.dashboard(PROJECT))).toBe(true);
+  });
+
+  it('refreshes the project monitored projection without invalidating the dashboard', () => {
+    const client = seeded();
+
+    invalidateMonitoredProjection(client, PROJECT);
+
+    expect(invalidated(client, queryKeys.siteHealth.monitored(PROJECT))).toBe(true);
+    expect(invalidated(client, queryKeys.siteHealth.dashboard(PROJECT))).toBe(false);
   });
 });

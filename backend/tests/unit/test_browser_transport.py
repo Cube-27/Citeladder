@@ -43,9 +43,7 @@ class _Page:
 
     async def evaluate(self, _script: str, _limit: int) -> dict[str, object]:
         if self.queued_amount:
-            asyncio.get_running_loop().call_soon(
-                self.session.emit, self.queued_amount
-            )
+            asyncio.get_running_loop().call_soon(self.session.emit, self.queued_amount)
         return {"size": 15, "html": "<html></html>"}
 
 

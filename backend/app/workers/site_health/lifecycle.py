@@ -442,10 +442,12 @@ class CrawlLifecycle:
           - drives the independent ANALYSIS lifecycle (pending -> running ->
             completed/partially_completed/failed) from the analyze task
             outcomes;
+          - terminalizes analysis as soon as discovery and analyze work drain,
+            while link checks may continue under the still-active crawl;
           - terminalizes the OVERALL crawl ONLY when EVERY non-terminal task of
             ALL kinds is drained, classifying completed / partially_completed /
-            failed and (on analysis terminalization) persisting the aggregate
-            ``SiteHealthSnapshot`` + a ``crawl.completed`` event.
+            failed and then persisting the aggregate ``SiteHealthSnapshot`` +
+            a ``crawl.completed`` event.
 
         Keeping the crawl row ``FOR UPDATE`` and terminalizing exactly once (a
         completed crawl short-circuits) is what prevents a late analyze finalize
@@ -475,17 +477,24 @@ class CrawlLifecycle:
 
             fully_failed, discovery_partial = _reconcile_discovery_state(crawl, summary)
             _start_planned_analysis(crawl, analyze_total=summary.analyze_total)
+            # Discovery can still admit fresh analyze tasks, so analysis is
+            # drained only when BOTH kinds are done. Link checks are a later
+            # evidence phase: keeping analysis RUNNING until they finish made
+            # 150/150 analyzed pages look stuck and hid the UI's explicit
+            # "checking links" state.
+            if summary.discover_remaining == 0 and summary.analyze_remaining == 0:
+                _terminalize_analysis_state(
+                    crawl, summary=summary, fully_failed=fully_failed
+                )
             if not summary.all_drained:
                 await session.commit()
                 return
 
-            if _terminalize_analysis_state(
-                crawl, summary=summary, fully_failed=fully_failed
-            ):
-                # Crawl-finalize rules run after analysis terminalization and
-                # before the snapshot so their issues enter its rollups.
-                await self._run_crawl_finalize_pass(session, crawl=crawl)
-                await self._persist_snapshot(session, crawl=crawl)
+            # Crawl-finalize rules wait for link evidence, then run before the
+            # snapshot so their issues enter its rollups. Analysis may already
+            # have terminalized on an earlier reconciliation.
+            await self._run_crawl_finalize_pass(session, crawl=crawl)
+            await self._persist_snapshot(session, crawl=crawl)
 
             _advance_drained_crawl_to_running(crawl)
             await self._terminalize_crawl(

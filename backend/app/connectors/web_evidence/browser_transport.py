@@ -450,9 +450,7 @@ class PatchrightTransport:
             finally:
                 acquisition.cancel()
                 over_budget.cancel()
-                await asyncio.gather(
-                    acquisition, over_budget, return_exceptions=True
-                )
+                await asyncio.gather(acquisition, over_budget, return_exceptions=True)
             if wire_budget.exceeded.is_set():
                 raise FetchError(
                     "browser response exceeded the wire cap",

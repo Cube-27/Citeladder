@@ -15,7 +15,7 @@ import {
   type ExportFormat,
   type ExportView,
 } from '@/lib/site-health/download';
-import { invalidateCrawlViews } from '@/lib/site-health/invalidate';
+import { invalidateCrawlViews, invalidateMonitoredProjection } from '@/lib/site-health/invalidate';
 import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
@@ -91,7 +91,8 @@ export function useSiteHealthScreen(projectId: string | null) {
     lastSeenRef.current = { crawlId, version: crawlVersion };
     if (previous?.crawlId !== crawlId || previous.version === crawlVersion) return;
     invalidateCrawlViews(queryClient, crawlId);
-  }, [crawlId, crawlVersion, queryClient]);
+    if (projectId) invalidateMonitoredProjection(queryClient, projectId);
+  }, [crawlId, crawlVersion, projectId, queryClient]);
 
   // Per-PROJECT monitored set. Supplies the analysis progress totals and the
   // `selection_version` that guards a phase mutation. It is NO LONGER a phase

@@ -41,6 +41,7 @@ from app.core.config.site_health import (
     SELECTION_SOURCE_USER,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
+    TASK_KIND_LINK_CHECK,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
@@ -550,6 +551,100 @@ async def test_crawl_not_completed_while_analyze_queued(
         assert crawl is not None
         # Discovery drained but the queued analyze keeps the crawl RUNNING.
         assert crawl.status == CRAWL_STATUS_RUNNING
+
+
+@pytest.mark.asyncio
+async def test_analysis_completes_while_link_checks_keep_crawl_running(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Completed pages enter the link-check UI phase before crawl finalization."""
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=0)
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        crawl.discovery_status = DISCOVERY_STATUS_COMPLETED
+        crawl.analysis_status = ANALYSIS_STATUS_RUNNING
+        crawl.discovered_url_count = 1
+        crawl.inventory_complete = True
+        now = datetime.now(UTC)
+        analyze = SiteCrawlTask(
+            crawl_id=seed.crawl_id,
+            workspace_id=seed.workspace_id,
+            task_kind=TASK_KIND_ANALYZE,
+            requested_url="https://example.com/",
+            url_hash=canonical_identity("https://example.com/")[1],
+            generation=0,
+            idempotency_key=f"{seed.crawl_id}:analyze:root:0",
+            status=TASK_STATUS_SUCCEEDED,
+            randomized_position=0,
+            completed_at=now,
+        )
+        link_check = SiteCrawlTask(
+            crawl_id=seed.crawl_id,
+            workspace_id=seed.workspace_id,
+            task_kind=TASK_KIND_LINK_CHECK,
+            requested_url="https://example.com/destination",
+            url_hash=canonical_identity("https://example.com/destination")[1],
+            generation=0,
+            idempotency_key=f"{seed.crawl_id}:link_check:destination:0",
+            status=TASK_STATUS_QUEUED,
+            randomized_position=1,
+        )
+        session.add_all([analyze, link_check])
+        await session.commit()
+        link_check_id = link_check.id
+
+    lifecycle = CrawlLifecycle(session_factory)
+    await lifecycle.reconcile(seed.crawl_id)
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_RUNNING
+        assert crawl.analysis_status == ANALYSIS_STATUS_COMPLETED
+        assert crawl.completed_at is None
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteHealthSnapshot)
+                .where(SiteHealthSnapshot.crawl_id == seed.crawl_id)
+            )
+            == 0
+        )
+
+        link_check = await session.get(SiteCrawlTask, link_check_id)
+        assert link_check is not None
+        link_check.status = TASK_STATUS_SUCCEEDED
+        link_check.completed_at = datetime.now(UTC)
+        await session.commit()
+
+    await lifecycle.reconcile(seed.crawl_id)
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_COMPLETED
+        assert crawl.analysis_status == ANALYSIS_STATUS_COMPLETED
+        assert crawl.completed_at is not None
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteHealthSnapshot)
+                .where(SiteHealthSnapshot.crawl_id == seed.crawl_id)
+            )
+            == 1
+        )
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(AnalyticsTask)
+                .where(
+                    AnalyticsTask.project_id == seed.project_id,
+                    AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
+                )
+            )
+            == 1
+        )
 
 
 @pytest.mark.asyncio

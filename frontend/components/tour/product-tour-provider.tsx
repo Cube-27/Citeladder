@@ -225,7 +225,16 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       },
     });
     return cleanup;
-  }, [pathname, persist, router, search, targetRetry, tourQuery.data, update.isPending, workspaceId]);
+  }, [
+    pathname,
+    persist,
+    router,
+    search,
+    targetRetry,
+    tourQuery.data,
+    update.isPending,
+    workspaceId,
+  ]);
 
   return children;
 }

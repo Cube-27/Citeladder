@@ -1,7 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { ScreenSkeleton } from './screen-states';
+import { ScreenHeader, ScreenSkeleton } from './screen-states';
+
+describe('ScreenHeader', () => {
+  it('keeps page actions in normal flow so the scroll viewport cannot clip them', () => {
+    render(<ScreenHeader actions={<button type="button">Run new crawl</button>} />);
+
+    const action = screen.getByRole('button', { name: 'Run new crawl' });
+    expect(action.parentElement).not.toHaveClass('-mt-12');
+  });
+});
 
 describe('ScreenSkeleton', () => {
   it('shows meaningful progress while reserving the dashboard layout', () => {

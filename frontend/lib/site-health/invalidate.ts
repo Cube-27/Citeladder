@@ -55,3 +55,13 @@ export function invalidateCrawlViews(
     queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.dashboard(projectId) });
   }
 }
+
+/**
+ * Refresh the project-level monitored projection while automatic admission is
+ * still growing it. It is not crawl-owned data, so it deliberately stays out
+ * of `invalidateCrawlViews`: callers decide when a crawl progress change can
+ * also have changed the persistent monitored set.
+ */
+export function invalidateMonitoredProjection(queryClient: QueryClient, projectId: string): void {
+  queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.monitored(projectId) });
+}

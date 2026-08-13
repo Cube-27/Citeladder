@@ -16,9 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function ScreenHeader({ actions }: Readonly<{ actions?: ReactNode }>) {
   if (!actions) return null;
   return (
-    <div className="relative z-10 -mt-12 flex flex-wrap items-center justify-end gap-2">
-      {actions}
-    </div>
+    <div className="relative z-10 flex flex-wrap items-center justify-end gap-2">{actions}</div>
   );
 }
 
