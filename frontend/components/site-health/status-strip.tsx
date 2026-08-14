@@ -251,7 +251,7 @@ function DiscoveryStrip({
   const showTotal = canShowDiscoveredTotal(entitlement, crawl);
   // Neutral capability, not a plan name: `sample` means the server picks a
   // bounded sample; full mode uses the crawl's automatic admission allowance.
-  const sampleMode = entitlement.access_mode === 'sample';
+  const sampleMode = crawl.sample_mode;
   let narration: string;
   if (cancelPending) {
     narration = 'Stopping crawl — finishing the page in flight';

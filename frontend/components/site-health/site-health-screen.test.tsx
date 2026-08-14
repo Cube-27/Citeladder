@@ -351,6 +351,8 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
         /The site returned HTTP 500 after 3 attempts\. The site is having server trouble/,
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText('No score available')).toBeInTheDocument();
+    expect(screen.queryByText('Across 0 of 0 pages')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
   });
 

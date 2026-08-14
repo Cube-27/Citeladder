@@ -18,6 +18,7 @@ from app.connectors.answer_engines.contracts import (
 )
 
 _PUBLIC_IP = "93.184.216.34"
+_WANDERLUST_CITATION_LABEL = "Wanderlust Gear"
 # Monitored-URL allowance granted to the demo workspace so Site Health seeds a
 # full-discovery crawl with user selection (mirrors the old Starter limit).
 SEED_MONITORED_URL_ALLOWANCE = 50
@@ -229,7 +230,9 @@ class _SeedStubAdapter:
                 f"3. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
                 "two-year warranty, a 45-liter alpine alternative."
             )
-            wanderlust_start, wanderlust_end = _citation_span(answer, "Wanderlust Gear")
+            wanderlust_start, wanderlust_end = _citation_span(
+                answer, _WANDERLUST_CITATION_LABEL
+            )
             trailblaze_start, trailblaze_end = _citation_span(
                 answer, "TrailBlaze Packs"
             )
@@ -241,7 +244,7 @@ class _SeedStubAdapter:
                     domain="wanderlustgear.com",
                     start_index=wanderlust_start,
                     end_index=wanderlust_end,
-                    cited_text="Wanderlust Gear",
+                    cited_text=_WANDERLUST_CITATION_LABEL,
                 ),
                 CitationResult(
                     ordinal=1,
@@ -263,7 +266,7 @@ class _SeedStubAdapter:
                 f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
                 "lower price, a compact 25-liter carry-on for weekend travel."
             )
-            start, end = _citation_span(answer, "Wanderlust Gear")
+            start, end = _citation_span(answer, _WANDERLUST_CITATION_LABEL)
             citations = (
                 CitationResult(
                     ordinal=0,
@@ -272,7 +275,7 @@ class _SeedStubAdapter:
                     domain="wanderlustgear.com",
                     start_index=start,
                     end_index=end,
-                    cited_text="Wanderlust Gear",
+                    cited_text=_WANDERLUST_CITATION_LABEL,
                 ),
             )
         return AnswerEngineResponse(

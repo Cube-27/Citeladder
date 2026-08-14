@@ -127,7 +127,9 @@ test('onboarding renders inverse type, sequential progress, and a prompt-free re
   await expect(page.getByText(/Starting Prompts/i)).toHaveCount(0);
 });
 
-test('Growth Agent opens as a bounded task workspace with plain-language data used', async ({ page }) => {
+test('Growth Agent opens as a bounded task workspace with plain-language data used', async ({
+  page,
+}) => {
   const run = {
     id: CONVERSATION_ID,
     project_id: '11111111-1111-4111-8111-111111111111',
@@ -138,8 +140,26 @@ test('Growth Agent opens as a bounded task workspace with plain-language data us
     result: {
       summary: 'Prioritize the admissions journey first.',
       observations: ['Admissions has the highest-ranked saved opportunity.'],
-      roadmap_items: [{ rank: 1, title: 'Improve admissions', remediation: 'Answer the next common question.', target_url: null, priority_score: 90, severity: 'high' }],
-      sources: [{ key: 'opportunities', label: 'Opportunities', availability: 'available', window: null, coverage: { count: 1 }, reason: null }],
+      roadmap_items: [
+        {
+          rank: 1,
+          title: 'Improve admissions',
+          remediation: 'Answer the next common question.',
+          target_url: null,
+          priority_score: 90,
+          severity: 'high',
+        },
+      ],
+      sources: [
+        {
+          key: 'opportunities',
+          label: 'Opportunities',
+          availability: 'available',
+          window: null,
+          coverage: { count: 1 },
+          reason: null,
+        },
+      ],
       limitations: [],
       artifact_refs: [{ kind: 'opportunity', id: '55555555-5555-4555-8555-555555555555' }],
     },

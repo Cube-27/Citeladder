@@ -116,7 +116,9 @@ describe('DemandProjection', () => {
     renderProjection();
 
     expect(
-      await screen.findByText(/no query or page met the configured high-impression, low-click criteria/i),
+      await screen.findByText(
+        /no query or page met the configured high-impression, low-click criteria/i,
+      ),
     ).toBeInTheDocument();
   });
 });

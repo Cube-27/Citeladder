@@ -225,6 +225,25 @@ describe('StatusStrip — link-check phase', () => {
 });
 
 describe('StatusStrip — lifecycle content', () => {
+  it('renders discovery mode from the persisted crawl rather than the current entitlement', () => {
+    renderStrip({
+      phase: 'discovering',
+      entitlement: { ...entitlement, access_mode: 'sample' },
+      crawl: crawl({
+        status: 'running',
+        discovery_status: 'running',
+        analysis_status: 'pending',
+        inventory_complete: false,
+        sample_mode: false,
+        score_summary: null,
+      }),
+    });
+
+    expect(screen.getByText('URLs found')).toBeInTheDocument();
+    expect(screen.queryByText('Sample URLs')).not.toBeInTheDocument();
+    expect(screen.queryByText(/page sample of your site/)).not.toBeInTheDocument();
+  });
+
   it('narrates discovery with provisional Starter copy while scanning', () => {
     renderStrip({
       phase: 'discovering',

@@ -49,7 +49,9 @@ function SearchSignalRow({ signal, rank }: Readonly<{ signal: DemandSignal; rank
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="neutral">{target.kind}</Badge>
-            <p className="text-foreground min-w-0 break-words text-sm font-medium">{target.value}</p>
+            <p className="text-foreground min-w-0 text-sm font-medium break-words">
+              {target.value}
+            </p>
           </div>
         </div>
       </div>
@@ -139,9 +141,7 @@ export function DemandProjection() {
   if (projectLoading || latest.isLoading) {
     return (
       <>
-        <span role="status" className="sr-only">
-          Loading search demand
-        </span>
+        <output className="sr-only">Loading search demand</output>
         <Skeleton className="h-72" />
       </>
     );

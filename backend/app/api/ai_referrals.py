@@ -53,7 +53,7 @@ def _unprocessable(exc: AiReferralsQueryError) -> HTTPException:
     )
 
 
-@router.get("/{project_id}/ai-referrals", response_model=AiReferralsResponse)
+@router.get("/{project_id}/ai-referrals")
 async def get_ai_referrals_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,

@@ -34,13 +34,15 @@ const TASKS: ReadonlyArray<{
   {
     value: 'explain',
     label: 'Explain my latest data',
-    description: 'Summarize the latest saved Site Health, Search Demand, Opportunity, and AI Visibility data.',
+    description:
+      'Summarize the latest saved Site Health, Search Demand, Opportunity, and AI Visibility data.',
     icon: FileSearch,
   },
   {
     value: 'build_roadmap',
     label: 'Prioritize next steps',
-    description: 'Turn the saved Opportunity order into a concise, evidence-backed list of next steps.',
+    description:
+      'Turn the saved Opportunity order into a concise, evidence-backed list of next steps.',
     icon: Map,
   },
 ];
@@ -59,12 +61,14 @@ function taskLabel(value: AgentTaskType): string {
 
 function sourceCoverage(coverage: AgentResult['sources'][number]['coverage']): string {
   if (!coverage) return '';
-  return Object.entries(coverage).reduce<string[]>((parts, [key, value]) => {
-    if ((typeof value === 'string' && value !== '') || typeof value === 'number') {
-      parts.push(`${readable(key)}: ${String(value)}`);
-    }
-    return parts;
-  }, []).join(' · ');
+  return Object.entries(coverage)
+    .reduce<string[]>((parts, [key, value]) => {
+      if ((typeof value === 'string' && value !== '') || typeof value === 'number') {
+        parts.push(`${readable(key)}: ${String(value)}`);
+      }
+      return parts;
+    }, [])
+    .join(' · ');
 }
 
 function formatDate(value: string): string {
@@ -136,6 +140,11 @@ function TaskHistory({
 type AgentResult = NonNullable<AgentTaskRun['result']>;
 
 function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
+  const artifactCount = result.artifact_refs.length;
+  const artifactSummary = artifactCount
+    ? `${artifactCount} saved data ${artifactCount === 1 ? 'artifact' : 'artifacts'} supported this result.`
+    : 'No saved data artifact was available for this result.';
+
   return (
     <details className="border-border-subtle bg-background rounded-md border px-3 py-3">
       <summary className="focus-ring cursor-pointer list-none rounded-sm text-sm font-medium">
@@ -162,11 +171,7 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
             </div>
           );
         })}
-        <p className="text-muted border-border-subtle border-t pt-2 text-xs">
-          {result.artifact_refs.length
-            ? `${result.artifact_refs.length} saved data ${result.artifact_refs.length === 1 ? 'artifact' : 'artifacts'} supported this result.`
-            : 'No saved data artifact was available for this result.'}
-        </p>
+        <p className="text-muted border-border-subtle border-t pt-2 text-xs">{artifactSummary}</p>
       </div>
     </details>
   );
@@ -179,7 +184,10 @@ function Roadmap({ items }: Readonly<{ items: AgentResult['roadmap_items'] }>) {
       <h3 className="text-foreground text-sm font-semibold">Prioritized next steps</h3>
       <ol className="mt-2 grid gap-2">
         {items.map((item) => (
-          <li key={`${item.rank}:${item.title}`} className="border-border-subtle rounded-md border p-3">
+          <li
+            key={`${item.rank}:${item.title}`}
+            className="border-border-subtle rounded-md border p-3"
+          >
             <div className="flex items-start gap-3">
               <span className="bg-accent-soft text-accent-text grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold">
                 {item.rank}
@@ -187,7 +195,9 @@ function Roadmap({ items }: Readonly<{ items: AgentResult['roadmap_items'] }>) {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-foreground text-sm font-medium">{item.title}</h4>
-                  <Badge variant="neutral" className="capitalize">{readable(item.severity)}</Badge>
+                  <Badge variant="neutral" className="capitalize">
+                    {readable(item.severity)}
+                  </Badge>
                 </div>
                 <p className="text-secondary mt-1 text-sm leading-relaxed">{item.remediation}</p>
                 {item.target_url ? (
@@ -457,7 +467,9 @@ export function GrowthAgentWorkspace() {
         <header className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <div>
             <h1 className="font-display text-foreground text-lg font-semibold">Growth Agent</h1>
-            <p className="text-muted text-xs">Understand saved data or prioritize the next actions.</p>
+            <p className="text-muted text-xs">
+              Understand saved data or prioritize the next actions.
+            </p>
           </div>
           <div className="text-secondary flex items-center gap-2 text-xs">
             <ShieldCheck aria-hidden className="text-accent-text size-4" />

@@ -12,7 +12,10 @@ let searchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({ useSearchParams: () => searchParams }));
 vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({ activeProject: { id: PROJECT_ID, name: 'Asian School' }, isLoading: false }),
+  useProjectContext: () => ({
+    activeProject: { id: PROJECT_ID, name: 'Asian School' },
+    isLoading: false,
+  }),
 }));
 vi.mock('@/lib/api/agent', async (loadOriginal) => ({
   ...(await loadOriginal<typeof import('@/lib/api/agent')>()),
@@ -21,10 +24,19 @@ vi.mock('@/lib/api/agent', async (loadOriginal) => ({
 
 function run(status = 'running'): AgentTaskRun {
   return {
-    id: RUN_ID, project_id: PROJECT_ID, task_type: 'build_roadmap',
-    objective: 'Build an admissions roadmap', status, result: null,
-    error_code: '', error_detail: '', attempt_count: 1, completed_at: null, cancelled_at: null,
-    created_at: '2026-08-09T00:00:00Z', updated_at: '2026-08-09T00:00:00Z',
+    id: RUN_ID,
+    project_id: PROJECT_ID,
+    task_type: 'build_roadmap',
+    objective: 'Build an admissions roadmap',
+    status,
+    result: null,
+    error_code: '',
+    error_detail: '',
+    attempt_count: 1,
+    completed_at: null,
+    cancelled_at: null,
+    created_at: '2026-08-09T00:00:00Z',
+    updated_at: '2026-08-09T00:00:00Z',
   };
 }
 
@@ -40,7 +52,9 @@ describe('GrowthAgentWorkspace', () => {
 
   it('offers exactly the two plain-language bounded tasks', async () => {
     renderWithProviders(<GrowthAgentWorkspace />);
-    expect(await screen.findByRole('heading', { name: 'Build an admissions roadmap' })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'Build an admissions roadmap' }),
+    ).toBeVisible();
     expect(screen.getByRole('option', { name: 'Explain my latest data' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Prioritize next steps' })).toBeInTheDocument();
     expect(screen.queryByText(/conversation/i)).not.toBeInTheDocument();
@@ -52,10 +66,12 @@ describe('GrowthAgentWorkspace', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Task' }), 'build_roadmap');
     await user.type(screen.getByRole('textbox', { name: /Objective/ }), 'Prioritize admissions');
     await user.click(screen.getByRole('button', { name: 'Start task' }));
-    await waitFor(() => expect(agentApi.submitTask).toHaveBeenCalledWith(
-      { project_id: PROJECT_ID, task_type: 'build_roadmap', objective: 'Prioritize admissions' },
-      expect.any(String),
-    ));
+    await waitFor(() =>
+      expect(agentApi.submitTask).toHaveBeenCalledWith(
+        { project_id: PROJECT_ID, task_type: 'build_roadmap', objective: 'Prioritize admissions' },
+        expect.any(String),
+      ),
+    );
   });
 
   it('renders summary, observations, and persisted-order next steps', async () => {
@@ -63,8 +79,26 @@ describe('GrowthAgentWorkspace', () => {
     completed.result = {
       summary: 'Admissions pages are the highest-priority work.',
       observations: ['Search Demand has one high-impression, low-click query.'],
-      roadmap_items: [{ rank: 1, title: 'Improve admissions pages', remediation: 'Answer common admissions questions clearly.', target_url: 'https://example.com/admissions', priority_score: 90, severity: 'high' }],
-      sources: [{ key: 'search_demand', label: 'Search Demand', availability: 'available', window: { start: '2026-08-01', end: '2026-08-07' }, coverage: null, reason: null }],
+      roadmap_items: [
+        {
+          rank: 1,
+          title: 'Improve admissions pages',
+          remediation: 'Answer common admissions questions clearly.',
+          target_url: 'https://example.com/admissions',
+          priority_score: 90,
+          severity: 'high',
+        },
+      ],
+      sources: [
+        {
+          key: 'search_demand',
+          label: 'Search Demand',
+          availability: 'available',
+          window: { start: '2026-08-01', end: '2026-08-07' },
+          coverage: null,
+          reason: null,
+        },
+      ],
       limitations: ['Demand evidence is unavailable.'],
       artifact_refs: [{ kind: 'opportunity', id: '44444444-4444-4444-8444-444444444444' }],
     };
@@ -82,15 +116,33 @@ describe('GrowthAgentWorkspace', () => {
     const user = userEvent.setup();
     const completed = run('completed');
     completed.result = {
-      summary: 'Saved data is ready to explain.', observations: [], roadmap_items: [], limitations: [],
-      sources: [{ key: 'site_health', label: 'Site Health', availability: 'unavailable', window: null, coverage: null, reason: 'No Site Health snapshot is available yet.' }],
+      summary: 'Saved data is ready to explain.',
+      observations: [],
+      roadmap_items: [],
+      limitations: [],
+      sources: [
+        {
+          key: 'site_health',
+          label: 'Site Health',
+          availability: 'unavailable',
+          window: null,
+          coverage: null,
+          reason: 'No Site Health snapshot is available yet.',
+        },
+      ],
       artifact_refs: [{ kind: 'site_snapshot', id: '44444444-4444-4444-8444-444444444444' }],
     };
     vi.mocked(agentApi.listTasks).mockResolvedValue([completed]);
     vi.mocked(agentApi.getTask).mockResolvedValue(completed);
     renderWithProviders(<GrowthAgentWorkspace />);
     const disclosure = await screen.findByText('Data used');
-    const internals = ['opportunities.read_ranked', 'evidence-output-hash', '2.0.0', '44444444-4444-4444-8444-444444444444', '{"project_id"'];
+    const internals = [
+      'opportunities.read_ranked',
+      'evidence-output-hash',
+      '2.0.0',
+      '44444444-4444-4444-8444-444444444444',
+      '{"project_id"',
+    ];
     internals.forEach((value) => expect(document.body).not.toHaveTextContent(value));
     await user.click(disclosure);
     expect(screen.getByText('Site Health')).toBeVisible();

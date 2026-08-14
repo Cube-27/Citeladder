@@ -72,7 +72,9 @@ function overallSub(
   crawl: SiteCrawl | null,
   selectedTotal: number | null,
 ): string {
-  if (summary) return `Across ${summary.analyzed_count} of ${summary.selected_count} pages`;
+  if (summary && summary.overall_score !== null) {
+    return `Across ${summary.analyzed_count} of ${summary.selected_count} pages`;
+  }
   if (analyzing && crawl) {
     return selectedTotal !== null
       ? `based on ${crawl.analyzed_count} of ${selectedTotal} pages`
