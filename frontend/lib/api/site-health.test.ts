@@ -3,8 +3,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { queryKeys } from './query-keys';
 import {
+  aeoReadinessSchema,
   cursorPageSchema,
   inventoryRowSchema,
+  linkGraphSnapshotSchema,
   monitoredUrlsResponseSchema,
   pageDetailSchema,
   rerunPageResponseSchema,
@@ -664,6 +666,15 @@ describe('query key isolation (project / crawl / filter)', () => {
     );
   });
 
+  it('isolates link graph projections by project and crawl', () => {
+    expect(queryKeys.siteHealth.linkGraph('p1', 'c1')).not.toEqual(
+      queryKeys.siteHealth.linkGraph('p1', 'c2'),
+    );
+    expect(queryKeys.siteHealth.linkGraphNodes('p1')).not.toEqual(
+      queryKeys.siteHealth.linkGraphEdges('p1'),
+    );
+  });
+
   it('isolates issues by crawl and filter', () => {
     const a = queryKeys.siteHealth.issues('c1', { severity: 'high' });
     const b = queryKeys.siteHealth.issues('c1', { severity: 'low' });
@@ -674,6 +685,68 @@ describe('query key isolation (project / crawl / filter)', () => {
 
   it('keeps monitored keyed per project', () => {
     expect(queryKeys.siteHealth.monitored('p1')).not.toEqual(queryKeys.siteHealth.monitored('p2'));
+  });
+});
+
+describe('link graph contract', () => {
+  it('keeps partial coverage and exact source provenance', () => {
+    const parsed = strictValidate(
+      linkGraphSnapshotSchema,
+      {
+        state: 'incomplete',
+        snapshot_id: UUID,
+        crawl_id: UUID2,
+        analyzer_version: 'link-graph-v1',
+        page_analyzer_version: 'page-v1',
+        extractor_version: 'extract-v1',
+        source_analysis_ids: [UUID],
+        coverage: { complete: false },
+        limitations: ['Observed topology is partial.'],
+        summary: { node_count: 1 },
+        created_at: '2026-08-15T00:00:00Z',
+      },
+      'linkGraph',
+    );
+    expect(parsed.state).toBe('incomplete');
+    expect(parsed.source_analysis_ids).toEqual([UUID]);
+  });
+});
+
+describe('AEO Readiness contract', () => {
+  it('keeps not-applicable distinct and exposes no score field', () => {
+    const parsed = strictValidate(
+      aeoReadinessSchema,
+      {
+        state: 'available',
+        crawl_id: UUID,
+        taxonomy_version: 'aeo-readiness-v1',
+        analyzer_version: 'page-v1',
+        source_analysis_ids: [UUID2],
+        analysis_count: 1,
+        observed_evaluation_count: 1,
+        expected_evaluation_count: 1,
+        coverage: 1,
+        dimensions: [
+          {
+            key: 'freshness',
+            label: 'Freshness',
+            rule_ids: ['aeo.date_present'],
+            pass_count: 0,
+            fail_count: 0,
+            not_applicable_count: 1,
+            error_count: 0,
+            observed_evaluation_count: 1,
+            expected_evaluation_count: 1,
+            coverage: 1,
+            evidence_links: [],
+          },
+        ],
+        limitations: [],
+      },
+      'readiness',
+    );
+    expect(parsed.dimensions[0].not_applicable_count).toBe(1);
+    expect('score' in parsed).toBe(false);
   });
 });
 

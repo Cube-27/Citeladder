@@ -36,6 +36,7 @@
 #   - ``lifecycle``    — ``cancel_crawl``, the dashboard, event replay.
 from __future__ import annotations
 
+from app.domain.site_health.service.aeo_readiness import get_aeo_readiness
 from app.domain.site_health.service.common import (
     InvalidCursorError,
     SiteHealthNotFoundError,
@@ -52,6 +53,11 @@ from app.domain.site_health.service.lifecycle import (
     get_dashboard,
     load_crawl_for_stream,
     load_events,
+)
+from app.domain.site_health.service.link_graph import (
+    get_link_graph,
+    list_link_graph_edges,
+    list_link_graph_nodes,
 )
 from app.domain.site_health.service.presentation import (
     _crawl_count_disclosure,
@@ -88,6 +94,10 @@ __all__ = [
     "get_issue_history",
     "get_grouped_issue_history",
     "get_dashboard",
+    "get_aeo_readiness",
+    "get_link_graph",
+    "list_link_graph_nodes",
+    "list_link_graph_edges",
     "load_events",
     "load_crawl_for_stream",
     "presentation_status_for",

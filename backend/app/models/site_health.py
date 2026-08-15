@@ -1,24 +1,7 @@
-# Site Health persistence graph (UUID PKs, workspace-scoped — invariant 5).
-#
-# The HTTP-level technical/AEO crawler's durable state. Everything here is
-# UUID-keyed and scoped by ``workspace_id`` (directly on query-heavy/derived
-# rows, or through the parent project/crawl). Immutable evidence
-# (``SiteFetchArtifact`` / ``SiteFetchAttempt`` / ``SiteRuleEvaluation`` /
-# ``SiteIssue`` / ``SiteHealthSnapshot`` / ``SiteUrlObservation`` /
-# ``SiteCrawlEvent``) is append-only, written once by the claiming worker
-# (invariant 3). Mutable projections (``SiteCrawl`` / ``SiteCrawlTask`` /
-# ``SiteHealthProfile`` / ``SiteUrl`` / ``MonitoredSiteUrl``) are explicit
-# state projections. There is NO raw HTML body column anywhere — only bounded,
-# redacted, normalized facts (subplan Persistence contract).
-#
-# ``SiteCrawlTask`` reuses the exact queue-row column contract (status /
-# lease_owner / lease_expires_at / heartbeat_at / attempt_count / max_attempts /
-# available_at / idempotency_key / error_code / error_detail / completed_at /
-# result_artifact_id) so the one generic ``PostgresTaskQueue`` serves it and
-# ``AuditTask`` unchanged (invariant 8). It carries an integer ``generation``
-# (default 0): initial work is generation 0; remove/re-add and explicit rerun
-# allocate the next generation under lock so they always create a new
-# task/artifact identity rather than colliding with a cancelled task.
+# Site Health's UUID-keyed, workspace-scoped persistence graph. Evidence is
+# append-only; projections are explicitly mutable; raw HTML is never stored.
+# SiteCrawlTask retains the shared queue contract and uses generations so a
+# rerun cannot collide with a cancelled task identity.
 from __future__ import annotations
 
 import uuid
@@ -26,6 +9,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -60,6 +44,10 @@ from app.core.config.site_health import (
     TASK_KIND_DISCOVER,
     site_health_settings,
 )
+from app.core.config.site_link_graph import (
+    LINK_GRAPH_ANCHOR_TEXT_MAX_LENGTH,
+    LINK_GRAPH_NODE_TITLE_MAX_LENGTH,
+)
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
@@ -77,6 +65,7 @@ _FK_SITE_URL = "site_urls.id"
 _FK_SITE_FETCH_ARTIFACT = "site_fetch_artifacts.id"
 _FK_SITE_PAGE_ANALYSIS = "site_page_analyses.id"
 _FK_SITE_RULE_EVALUATION = "site_rule_evaluations.id"
+_FK_SITE_LINK_GRAPH_SNAPSHOT = "site_link_graph_snapshots.id"
 _ON_DELETE_CASCADE = "CASCADE"
 _ON_DELETE_SET_NULL = "SET NULL"
 
@@ -547,7 +536,9 @@ class SiteUrlObservation(Base):
     final_url: Mapped[str] = mapped_column(String(2048), default="")
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content_type: Mapped[str] = mapped_column(String(128), default="")
-    title: Mapped[str] = mapped_column(String(1024), default="")
+    title: Mapped[str] = mapped_column(
+        String(LINK_GRAPH_NODE_TITLE_MAX_LENGTH), default=""
+    )
     rewrite_reason: Mapped[str] = mapped_column(String(64), default="")
     rewrite_version: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(
@@ -1069,6 +1060,10 @@ class SiteRuleEvaluation(Base):
     __tablename__ = "site_rule_evaluations"
     __table_args__ = (
         UniqueConstraint("analysis_id", "rule_id", name="uq_site_rule_evaluation"),
+        CheckConstraint(
+            "outcome IN ('pass', 'fail', 'not_applicable', 'error')",
+            name="ck_site_rule_evaluations_outcome",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -1240,6 +1235,166 @@ class SiteHealthSnapshot(Base):
     scoring_version: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
+    )
+
+
+class SiteLinkGraphSnapshot(Base):
+    """Immutable crawl-scoped graph projection with exact analysis provenance."""
+
+    __tablename__ = "site_link_graph_snapshots"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id", "crawl_id"],
+            [
+                "site_crawls.workspace_id",
+                "site_crawls.project_id",
+                _FK_SITE_CRAWL,
+            ],
+            name="fk_site_link_graph_snapshot_crawl_scoped",
+            ondelete=_ON_DELETE_CASCADE,
+        ),
+        UniqueConstraint(
+            "workspace_id",
+            "crawl_id",
+            "source_analysis_hash",
+            "analyzer_version",
+            name="uq_site_link_graph_snapshot_identity",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    crawl_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        index=True,
+    )
+    supersedes_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_LINK_GRAPH_SNAPSHOT, ondelete=_ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    state: Mapped[str] = mapped_column(String(24))
+    root_site_url_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_URL, ondelete=_ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    source_analysis_hash: Mapped[str] = mapped_column(String(64))
+    source_analysis_ids: Mapped[list] = mapped_column(ARRAY(PGUUID(as_uuid=True)))
+    source_artifact_ids: Mapped[list] = mapped_column(ARRAY(PGUUID(as_uuid=True)))
+    analyzer_version: Mapped[str] = mapped_column(String(32))
+    page_analyzer_version: Mapped[str] = mapped_column(String(32))
+    extractor_version: Mapped[str] = mapped_column(String(32))
+    coverage: Mapped[dict] = mapped_column(JSONB)
+    limitations: Mapped[list] = mapped_column(ARRAY(Text), default=list)
+    summary: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
+class SiteLinkGraphNode(Base):
+    """One immutable node metric within a graph snapshot."""
+
+    __tablename__ = "site_link_graph_nodes"
+    __table_args__ = (
+        UniqueConstraint("snapshot_id", "site_url_id", name="uq_site_link_graph_node"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_LINK_GRAPH_SNAPSHOT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    site_url_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_URL, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    source_analysis_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_PAGE_ANALYSIS, ondelete=_ON_DELETE_CASCADE),
+    )
+    normalized_url: Mapped[str] = mapped_column(String(2048))
+    title: Mapped[str] = mapped_column(String(1024), default="")
+    indexable: Mapped[bool] = mapped_column(Boolean, default=False)
+    pagerank: Mapped[float] = mapped_column(Float)
+    click_depth: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    followed_inbound_count: Mapped[int] = mapped_column(Integer, default=0)
+    followed_outbound_count: Mapped[int] = mapped_column(Integer, default=0)
+    near_orphan: Mapped[bool] = mapped_column(Boolean, default=False)
+    weak_authority: Mapped[bool] = mapped_column(Boolean, default=False)
+    over_linked: Mapped[bool] = mapped_column(Boolean, default=False)
+    hub: Mapped[bool] = mapped_column(Boolean, default=False)
+    suggested_source_ids: Mapped[list] = mapped_column(
+        ARRAY(PGUUID(as_uuid=True)), default=list
+    )
+
+
+class SiteLinkGraphEdge(Base):
+    """Collapsed observed internal-link evidence for one ordered pair."""
+
+    __tablename__ = "site_link_graph_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_id",
+            "source_site_url_id",
+            "target_key",
+            name="uq_site_link_graph_edge",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_LINK_GRAPH_SNAPSHOT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    source_site_url_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_URL, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    target_site_url_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_URL, ondelete=_ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
+    target_key: Mapped[str] = mapped_column(String(2048))
+    target_url: Mapped[str] = mapped_column(String(2048))
+    followed: Mapped[bool] = mapped_column(Boolean, default=False)
+    occurrence_count: Mapped[int] = mapped_column(Integer, default=0)
+    followed_occurrence_count: Mapped[int] = mapped_column(Integer, default=0)
+    nofollow_occurrence_count: Mapped[int] = mapped_column(Integer, default=0)
+    anchor_texts: Mapped[list] = mapped_column(
+        ARRAY(String(LINK_GRAPH_ANCHOR_TEXT_MAX_LENGTH)), default=list
     )
 
 

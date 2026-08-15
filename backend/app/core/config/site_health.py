@@ -370,8 +370,9 @@ PAGE_ANALYSIS_STATUS_FAILED: Final = "failed"
 TASK_KIND_DISCOVER: Final = "discover"
 TASK_KIND_ANALYZE: Final = "analyze"
 TASK_KIND_LINK_CHECK: Final = "link_check"
+TASK_KIND_LINK_GRAPH: Final = "link_graph"
 SITE_TASK_KINDS: Final[frozenset[str]] = frozenset(
-    {TASK_KIND_DISCOVER, TASK_KIND_ANALYZE, TASK_KIND_LINK_CHECK}
+    {TASK_KIND_DISCOVER, TASK_KIND_ANALYZE, TASK_KIND_LINK_CHECK, TASK_KIND_LINK_GRAPH}
 )
 
 # Initial (first-generation) task/artifact identity. Remove/re-add and explicit
@@ -401,6 +402,37 @@ LINK_KIND_STYLESHEET: Final = "stylesheet"
 LINK_KINDS: Final[frozenset[str]] = frozenset(
     {LINK_KIND_ANCHOR, LINK_KIND_IMAGE, LINK_KIND_SCRIPT, LINK_KIND_STYLESHEET}
 )
+
+AEO_READINESS_TAXONOMY_VERSION: Final = "aeo-readiness-v1"
+RULE_ID_TECHNICAL_INDEXABLE: Final = "technical.indexable"
+AEO_READINESS_DIMENSIONS: Final[tuple[str, ...]] = ("answerability", "structure", "evidence", "machine-readability", "authority", "freshness", "crawlability")  # noqa: E501
+AEO_READINESS_DIMENSION_LABELS: Final[dict[str, str]] = {
+    key: key.replace("_", " ").capitalize() for key in AEO_READINESS_DIMENSIONS
+}
+AEO_READINESS_RULE_DIMENSIONS: Final[dict[str, str]] = {
+    "technical.thin_content": "answerability",
+    "aeo.answer_first": "answerability",
+    "aeo.question_headings": "answerability",
+    "aeo.no_expand_gating": "answerability",
+    "technical.single_h1": "structure",
+    "aeo.schema_expected_for_type": "structure",
+    "aeo.schema_required_valid": "structure",
+    "aeo.schema_recommended_present": "structure",
+    "aeo.schema_matches_content": "structure",
+    "aeo.outbound_citations": "evidence",
+    "aeo.structured_data_present": "machine-readability",
+    "aeo.open_graph_present": "machine-readability",
+    "aeo.llms_txt_present": "machine-readability",
+    "aeo.author_present": "authority",
+    "aeo.organization_identity": "authority",
+    "aeo.date_present": "freshness",
+    "aeo.server_rendered_content": "crawlability",
+    "technical.ai_crawler_access": "crawlability",
+    RULE_ID_TECHNICAL_INDEXABLE: "crawlability",
+    "technical.https": "crawlability",
+}
+AEO_READINESS_MAX_EVALUATIONS: Final = 100_000
+AEO_READINESS_MAX_EVIDENCE_LINKS_PER_DIMENSION: Final = 25
 
 FETCH_PURPOSE_DISCOVER: Final = "discover"
 FETCH_PURPOSE_ANALYZE: Final = "analyze"
