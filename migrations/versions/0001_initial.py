@@ -1749,6 +1749,8 @@ def upgrade() -> None:
         sa.Column("value_priority", sa.Integer(), nullable=False),
         sa.Column("parent_position", sa.Integer(), nullable=False),
         sa.Column("link_ordinal", sa.Integer(), nullable=False),
+        sa.Column("rewrite_reason", sa.String(length=64), nullable=False),
+        sa.Column("rewrite_version", sa.String(length=32), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("admitted_at", sa.DateTime(timezone=True), nullable=True),
@@ -2098,6 +2100,12 @@ def upgrade() -> None:
         sa.Column("site_crawl_id", sa.UUID(), nullable=True),
         sa.Column("demand_snapshot_id", sa.UUID(), nullable=True),
         sa.Column("demand_source_revision", sa.String(length=64), nullable=True),
+        sa.Column("coverage", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "limitations",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.Column(
             "counts_by_type", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
@@ -3808,6 +3816,8 @@ def upgrade() -> None:
         sa.Column("status_code", sa.Integer(), nullable=True),
         sa.Column("content_type", sa.String(length=128), nullable=False),
         sa.Column("title", sa.String(length=1024), nullable=False),
+        sa.Column("rewrite_reason", sa.String(length=64), nullable=False),
+        sa.Column("rewrite_version", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["parent_site_url_id"], ["site_urls.id"], ondelete="SET NULL"
@@ -4160,6 +4170,7 @@ def upgrade() -> None:
         sa.Column("dimension", sa.String(length=16), nullable=False),
         sa.Column("category", sa.String(length=32), nullable=False),
         sa.Column("severity", sa.String(length=16), nullable=False),
+        sa.Column("finding_class", sa.String(length=16), nullable=False),
         sa.Column("weight", sa.Float(), nullable=False),
         sa.Column("outcome", sa.String(length=16), nullable=False),
         sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=True),
@@ -4214,7 +4225,9 @@ def upgrade() -> None:
         sa.Column("dimension", sa.String(length=16), nullable=False),
         sa.Column("category", sa.String(length=32), nullable=False),
         sa.Column("severity", sa.String(length=16), nullable=False),
+        sa.Column("finding_class", sa.String(length=16), nullable=False),
         sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("description", sa.Text(), nullable=False),
         sa.Column("remediation", sa.Text(), nullable=False),
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
         sa.Column("rule_version", sa.String(length=32), nullable=False),
@@ -4246,7 +4259,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_site_issues_filter",
         "site_issues",
-        ["crawl_id", "severity", "category", "rule_id"],
+        ["crawl_id", "finding_class", "severity", "category", "rule_id"],
         unique=False,
     )
     op.create_index(

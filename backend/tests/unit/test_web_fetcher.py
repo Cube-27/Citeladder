@@ -857,6 +857,40 @@ async def test_challenge_uses_pinned_curl_rung_when_available():
     assert curl_transport.targets[0].connect_ip == _PUBLIC_IP
 
 
+async def test_host_preference_starts_at_curl_without_a_direct_request():
+    direct_requests: list[httpx.Request] = []
+
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        direct_requests.append(request)
+        return _html_response(403)
+
+    curl_transport = _FakeAcquisitionTransport(_acquisition_result())
+    settings = SiteHealthSettings(curl_cffi_enabled=True)
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        curl_transport=curl_transport,
+        curl_pinned_resolution_supported=True,
+    ) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(
+                url="https://example.com/",
+                purpose="discover",
+                allowed_content_types=frozenset({"text/html"}),
+            ),
+            preferred_rung=2,
+            initial_trigger="host_block_preference",
+        )
+
+    assert direct_requests == []
+    assert result.acquisition is not None
+    assert (result.acquisition.rung, result.acquisition.trigger) == (
+        2,
+        "host_block_preference",
+    )
+
+
 async def test_curl_redirect_uses_transient_location_and_revalidates_next_hop():
     def direct_handler(request: httpx.Request) -> httpx.Response:
         return _html_response(403, body=b"<title>Just a moment...</title>")

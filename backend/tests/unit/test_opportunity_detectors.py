@@ -217,7 +217,13 @@ def _site(
     issues: tuple[SiteIssueEvidence, ...],
     urls: tuple[SiteUrlEvidence, ...],
 ) -> SiteEvidence:
-    return SiteEvidence(crawl_id=uuid.uuid4(), issues=issues, urls=urls)
+    return SiteEvidence(
+        crawl_id=uuid.uuid4(),
+        issues=issues,
+        urls=urls,
+        coverage={"crawl_status": "cancelled", "analysis_ratio": 0.5},
+        limitations=("Site Health evidence is partial.",),
+    )
 
 
 def _issue(
@@ -226,12 +232,14 @@ def _issue(
     *,
     severity: str = "medium",
     category: str = "structured_data",
+    finding_class: str = "defect",
 ) -> SiteIssueEvidence:
     return SiteIssueEvidence(
         issue_id=uuid.uuid4(),
         rule_id=rule_id,
         severity=severity,
         category=category,
+        finding_class=finding_class,
         site_url_id=site_url_id,
         evidence={"detail": "x"},
     )
@@ -269,12 +277,29 @@ def test_site_rules_fire_from_mapped_issues() -> None:
         assert hit.evidence["crawl_id"] == str(evidence.crawl_id)
         assert hit.evidence["url"] == "https://acme.com/pricing"
         assert hit.evidence["issue_evidence"] == {"detail": "x"}
+        assert hit.evidence["coverage"] == evidence.coverage
+        assert hit.evidence["limitations"] == list(evidence.limitations)
 
 
 def test_site_rules_skip_issue_with_unknown_url_identity() -> None:
     evidence = _site(
         (_issue("aeo.structured_data_present", uuid.uuid4()),),
         (),  # no URL map entries
+    )
+    assert detect_site_issue_opportunities(evidence) == []
+
+
+def test_site_rules_never_project_advisories_as_opportunities() -> None:
+    url_id = uuid.uuid4()
+    evidence = _site(
+        (
+            _issue(
+                "aeo.structured_data_present",
+                url_id,
+                finding_class="advisory",
+            ),
+        ),
+        (_url(url_id, "https://acme.com/pricing"),),
     )
     assert detect_site_issue_opportunities(evidence) == []
 

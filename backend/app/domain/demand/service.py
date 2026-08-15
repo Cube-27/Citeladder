@@ -225,12 +225,17 @@ async def recompute_demand(
             search_inputs=search_inputs,
         )
         source_hash = stable_hash(source_material)
-        if await session.scalar(
+        existing_snapshot_id = await session.scalar(
             select(DemandSnapshot.id).where(
                 DemandSnapshot.project_id == task.project_id,
                 DemandSnapshot.source_hash == source_hash,
             )
-        ):
+        )
+        if existing_snapshot_id is not None:
+            await _enqueue_downstream_opportunity(
+                session, task=task, demand_snapshot_id=existing_snapshot_id
+            )
+            await session.commit()
             return
         prior = await session.scalar(
             select(DemandSnapshot)
@@ -254,16 +259,36 @@ async def recompute_demand(
         session.add(snapshot)
         await session.flush()
         _add_signals(session, task=task, snapshot=snapshot, candidates=candidates)
-        from app.domain.opportunities.service import enqueue_opportunity_refresh
-
-        await enqueue_opportunity_refresh(
-            session,
-            workspace_id=task.workspace_id,
-            project_id=task.project_id,
-            trigger_kind="demand_snapshot",
-            trigger_id=snapshot.id,
+        await _enqueue_downstream_opportunity(
+            session, task=task, demand_snapshot_id=snapshot.id
         )
         await session.commit()
+
+
+async def _enqueue_downstream_opportunity(
+    session: AsyncSession,
+    *,
+    task: AnalyticsTask,
+    demand_snapshot_id: uuid.UUID,
+) -> None:
+    """Continue Demand's DAG using an optional originating trigger."""
+    from app.domain.opportunities.service import enqueue_opportunity_refresh
+
+    if task.project_id is None:
+        raise ValueError("demand snapshot refresh requires project_id")
+    payload = task.payload or {}
+    trigger_kind = str(payload.get("downstream_trigger_kind") or "demand_snapshot")
+    raw_trigger_id = payload.get("downstream_trigger_id")
+    trigger_id = (
+        uuid.UUID(str(raw_trigger_id)) if raw_trigger_id else demand_snapshot_id
+    )
+    await enqueue_opportunity_refresh(
+        session,
+        workspace_id=task.workspace_id,
+        project_id=task.project_id,
+        trigger_kind=trigger_kind,
+        trigger_id=trigger_id,
+    )
 
 
 async def latest_snapshot(

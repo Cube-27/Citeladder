@@ -367,6 +367,8 @@ class SiteDiscoveryFrontier(Base):
     value_priority: Mapped[int] = mapped_column(Integer, default=0)
     parent_position: Mapped[int] = mapped_column(Integer, default=0)
     link_ordinal: Mapped[int] = mapped_column(Integer, default=0)
+    rewrite_reason: Mapped[str] = mapped_column(String(64), default="")
+    rewrite_version: Mapped[str] = mapped_column(String(32), default="")
     status: Mapped[str] = mapped_column(String(16), default=FRONTIER_PENDING)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -546,6 +548,8 @@ class SiteUrlObservation(Base):
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content_type: Mapped[str] = mapped_column(String(128), default="")
     title: Mapped[str] = mapped_column(String(1024), default="")
+    rewrite_reason: Mapped[str] = mapped_column(String(64), default="")
+    rewrite_version: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
@@ -1089,6 +1093,7 @@ class SiteRuleEvaluation(Base):
     dimension: Mapped[str] = mapped_column(String(16), default="")
     category: Mapped[str] = mapped_column(String(32), default="")
     severity: Mapped[str] = mapped_column(String(16), default="")
+    finding_class: Mapped[str] = mapped_column(String(16), default="defect")
     weight: Mapped[float] = mapped_column(Float, default=0.0)
     outcome: Mapped[str] = mapped_column(String(16), default="")
     evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -1107,8 +1112,8 @@ class SiteIssue(Base):
     """Failure projection of one failed rule evaluation (unique per evaluation).
 
     Unique ``evaluation_id``: one issue per ``fail`` evaluation. Snapshots the
-    rule's dimension/category/severity, the exact evidence, and the remediation
-    text at evaluation time so a later rule-catalog change never rewrites
+    rule's dimension/category/severity, exact evidence, description, and
+    remediation text at evaluation time so a later rule-catalog change never rewrites
     history. Indexed for issue filtering (``crawl_id, severity, category,
     rule_id``) and per-URL history (``site_url_id, created_at``).
     """
@@ -1119,6 +1124,7 @@ class SiteIssue(Base):
         Index(
             "ix_site_issues_filter",
             "crawl_id",
+            "finding_class",
             "severity",
             "category",
             "rule_id",
@@ -1170,7 +1176,9 @@ class SiteIssue(Base):
     dimension: Mapped[str] = mapped_column(String(16), default="")
     category: Mapped[str] = mapped_column(String(32), default="")
     severity: Mapped[str] = mapped_column(String(16), default="")
+    finding_class: Mapped[str] = mapped_column(String(16), default="defect")
     evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    description: Mapped[str] = mapped_column(Text, default="")
     remediation: Mapped[str] = mapped_column(Text, default="")
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     rule_version: Mapped[str] = mapped_column(String(32), default="")

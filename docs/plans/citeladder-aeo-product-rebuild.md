@@ -153,8 +153,8 @@ this plan with the evidence and a concrete replacement decision before continuin
 
 | PR | Branch | Status | Sub-slices in order | Cumulative delivery outcome |
 |---|---|---|---|---|
-| W1 | `feat/aeo-wave-1-foundations` | ready_for_merge | R00 → X01 → D01 → D02 → A01 → A02 | Authorities, cross-source identity, window/honest-state primitives, branded classification, and the complete Act→Verify record. |
-| W2 | `feat/aeo-wave-2-site-health` | pending | S01 → S02 → S03 → S04 → S05 → S06 | Crawl correctness/speed/progress, terminal refresh, historical issue copy, and trustworthy defect/advisory semantics. |
+| W1 | `feat/aeo-wave-1-foundations` | completed | R00 → X01 → D01 → D02 → A01 → A02 | Authorities, cross-source identity, window/honest-state primitives, branded classification, and the complete Act→Verify record. |
+| W2 | `feat/aeo-wave-2-site-health` | ready_for_merge | S01 → S02 → S03 → S04 → S05 → S06 | Crawl correctness/speed/progress, terminal refresh, historical issue copy, and trustworthy defect/advisory semantics. |
 | W3 | `feat/aeo-wave-3-product-loop` | pending | I01 → I02 → I03 → P01 → O01 → O02 → O03 | Final route/navigation replacement, confirmed-ICP onboarding, useful no-audit Overview, Facts cutover, and Visibility cleanup. |
 | W4 | `feat/aeo-wave-4-demand-content` | pending | G01 → Q01 → Q02 → Q03 | Grounded generation plus bounded query evidence and all approved GSC detectors. |
 | W5 | `feat/aeo-wave-5-site-intelligence` | pending | L01 → L02 → E01 | Internal-link graph, link Opportunities/UI, and evidence-linked AEO Readiness. |
@@ -178,12 +178,12 @@ focused gate passed and its completion note was recorded; it does **not** create
 | D02 | W1 | completed | D01 | X3 branded-query classifier, append-only overrides, ambiguity handling, versioning, and fixtures. |
 | A01 | W1 | completed | X01 | WS0B implementation declaration: append-only model, create/list/detail API, idempotency/authorization, and explicit Opportunities UI action. |
 | A02 | W1 | completed | A01 | WS0B verification observations: terminal triggers, bounded verifier task, persisted state projection, provenance and lifecycle tests. |
-| S01 | W2 | pending | W1 | SH-1 link-extraction delimiter fix, rewrite provenance, negative fixtures, live proof. |
-| S02 | W2 | pending | S01 | SH-2 extract-once acquisition, artifact reuse/fallback, host-rung observations, performance proof. |
-| S03 | W2 | pending | S02 | SH-3 persisted blocked/failure progress contract and truthful crawl progress UI. |
-| S04 | W2 | pending | S03 | SH-4 exactly-once post-terminal Demand/Opportunity refresh for usable partial/cancelled evidence. |
-| S05 | W2 | pending | S04 | SH-5 frozen issue description schema/API and issue-row UI. |
-| S06 | W2 | pending | S05 | SH-6 defect/advisory semantics, intentional-indexing policy, headline counts, and views. |
+| S01 | W2 | completed | W1 | SH-1 link-extraction delimiter fix, rewrite provenance, negative fixtures, live proof. |
+| S02 | W2 | completed | S01 | SH-2 extract-once acquisition, artifact reuse/fallback, host-rung observations, performance proof. |
+| S03 | W2 | completed | S02 | SH-3 persisted blocked/failure progress contract and truthful crawl progress UI. |
+| S04 | W2 | completed | S03 | SH-4 exactly-once post-terminal Demand/Opportunity refresh for usable partial/cancelled evidence. |
+| S05 | W2 | completed | S04 | SH-5 frozen issue description schema/API and issue-row UI. |
+| S06 | W2 | completed | S05 | SH-6 defect/advisory semantics, intentional-indexing policy, headline counts, and views. |
 | I01 | W3 | pending | W2 | WS7 phase A: build `/site/crawls/...`, migrate callers, delete the `/site-health/**` browser route family, prove retained backend owner. |
 | I02 | W3 | pending | I01 | WS7 phase A: top-bar Agent sheet, typed context, delete `/agent` route/nav/title/tests. |
 | I03 | W3 | pending | I02 | WS7 phase A: five-station desktop/mobile navigation, conditional Commerce, settings-owned Providers, prompt route cleanup, and deletion of `/providers` + `/prompt-research`. |
@@ -276,6 +276,72 @@ row is the removal condition. No other compatibility path is implied.
 - Evaluation artifact: not applicable (deterministic lifecycle fixtures cover every projection state)
 - Advanced to internal slice: wave close
 
+#### S01 — completed 2026-08-15
+- Wave / branch: W2 / `feat/aeo-wave-2-site-health`
+- Owners: Site Health anchor extraction, deterministic frontier admission, and immutable URL observations; crawler canonical identity remains unchanged.
+- Implemented: positive detection of encoded tracking-query delimiters, boundary-only separator interpretation, `intpromo` tracking normalization, and persisted rewrite reason/version across deferred frontier admission.
+- Deleted / retained until: no global decode path added; `canonicalize()`, `canonical_identity()`, and reserved-byte identity semantics remain the sole crawler identity owners.
+- Commit: wave commit
+- Cumulative changed files vs wave merge base: 12
+- Local verification: focused pytest 24 passed; Ruff and targeted mypy passed; empty disposable PostgreSQL `alembic upgrade head` and `alembic check` passed; documentation validator and `git diff --check` passed.
+- Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md` (live three-site result recorded at the cumulative SH gate after S06)
+- Advanced to internal slice: S02
+
+#### S02 — completed 2026-08-15
+- Wave / branch: W2 / `feat/aeo-wave-2-site-health`
+- Owners: the secure web-evidence connector, Site Health discovery/analysis phases, immutable fetch artifacts/attempts, and the shared PostgreSQL queue.
+- Implemented: complete fact extraction on discovery acquisition; exact current-extractor artifact reuse with durable race deferral; analyze-only fallback; and bounded per-crawl host-rung preference/recovery from append-only attempt evidence.
+- Deleted / retained until: no fetch-artifact schema widening and no mutable crawl-configuration transport state; discovery and analysis retain separate task lifecycle results while referencing one immutable artifact.
+- Commit: wave commit
+- Cumulative changed files vs wave merge base: 22
+- Local verification: focused pytest 71 passed; Ruff and targeted mypy passed. The concurrent pipeline fixture proves one root GET and one shared artifact; deterministic transport fixtures prove two-block preference, the 20-acquisition boundary, and immediate probe recovery.
+- Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md` (three-site request amplification and wall time recorded at the cumulative SH gate after S06)
+- Advanced to internal slice: S03
+
+#### S03 — completed 2026-08-15
+- Wave / branch: W2 / `feat/aeo-wave-2-site-health`
+- Owners: Site Health dashboard projection, analyze-task evidence, strict API schema, and the always-mounted frontend status strip.
+- Implemented: persisted robots/4xx/5xx/timeout progress categories; backend-owned working/waiting/stalled/terminal activity from queue availability, live leases, host-gate waits, and expired leases; and truthful inline UI counters/copy.
+- Deleted / retained until: removed client-time silence as a stall authority; the existing queue/task rows remain the single progress store and in-memory host scheduling adds no parallel persistence.
+- Commit: wave commit
+- Cumulative changed files vs wave merge base: 39
+- Local verification: backend Site Health API pytest 29 passed, including all four failure categories plus healthy-host-wait and expired-lease boundaries; frontend focused Vitest 53 passed for status/activity and the full S03 UI/API fixture set passed 113 tests before one pulse expectation was corrected and rerun green; Ruff and targeted mypy passed for backend owners.
+- Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md` (flipkart blocked coverage recorded at the cumulative SH gate after S06)
+- Advanced to internal slice: S04
+
+#### S04 — completed 2026-08-15
+- Wave / branch: W2 / `feat/aeo-wave-2-site-health`
+- Owners: shared Site Health terminal-refresh DAG, Demand executor, Opportunity immutable snapshot/evidence projection, and baseline schema.
+- Implemented: exactly-once completed/partial/cancelled-after-analysis refresh; Traffic → Demand → crawl-keyed Opportunities ordering (including Demand snapshot reuse); site-only direct refresh; and frozen partial coverage/limitations in snapshots, API, rows, and UI.
+- Deleted / retained until: removed duplicate worker/service terminal hooks and concurrent successor risk; a cancelled crawl with no aggregatable analysis intentionally emits no projection refresh.
+- Commit: wave commit
+- Cumulative changed files vs wave merge base: 57
+- Local verification: focused backend pytest 79 passed across terminalization, Demand, Opportunity service, and pure detectors; targeted S04 boundaries additionally passed 3/3 and coverage persistence 2/2; frontend Opportunities schema/screen Vitest 26 passed; Ruff and targeted mypy passed.
+- Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md` (cancelled coverage/opportunity proof recorded at the cumulative SH gate after S06)
+- Advanced to internal slice: S05
+
+#### S05 — completed 2026-08-15
+- Wave / branch: W2 / `feat/aeo-wave-2-site-health`
+- Owners: config-owned rule copy, immutable SiteIssue creation/history, strict Site Health API schemas, and the Issues catalog row.
+- Implemented: froze description beside remediation and rule/analyzer versions; projected it through group/detail/page/history reads; rendered problem subtitle plus evidence chip and expand-only remediation; and covered historical catalog-copy stability.
+- Deleted / retained until: current display labels remain intentionally live, while historical descriptions/remediations never read current catalog copy; no parallel frontend rule-copy catalog was added.
+- Commit: wave commit
+- Cumulative changed files vs wave merge base: 64
+- Local verification: focused backend page-analysis/API pytest 36 passed after the historical-copy fixture correction; dedicated historical-copy API test passed; frontend issue/API Vitest 65 passed; Ruff and targeted mypy passed; empty disposable PostgreSQL `alembic upgrade head` and `alembic check` passed on `citeladder_w2_s05_retry` (the first attempt used the container port instead of its published host port and was discarded).
+- Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md` (final issue-row classifications recorded after S06)
+- Advanced to internal slice: S06
+
+#### S06 — completed 2026-08-15
+- Wave / branch: W2 / `feat/aeo-wave-2-site-health`
+- Owners: config-owned Site Health rule catalog, immutable evaluations/issues, grouped issue API, Issues UI, Opportunity evidence boundary, and baseline schema.
+- Implemented: persisted `defect | advisory` classes; defect-default server views and explicit defect-type/occurrence/affected-URL counts; advisory-only title/meta length guidance; strong indexing-intent precedence with uncertain advisory fallback; and defect-only Opportunity eligibility.
+- Deleted / retained until: removed advisory evidence from defect headlines, severity chips, and Opportunity detection; retained per-page occurrences, and intentionally added no host/template scope or dormant scope owner.
+- Commit: wave commit
+- Cumulative changed files vs wave merge base: 76
+- Local verification: focused backend pytest 283 passed; changed-owner Ruff, targeted mypy (81 files), and complexity policy (377 modules) passed; focused frontend Vitest 170 passed; ESLint, contract, design/policy, frontend-architecture, TypeScript, and production build passed; clean disposable PostgreSQL `alembic upgrade head` and `alembic check` passed; documentation validator and `git diff --check` passed at wave close.
+- Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md`
+- Advanced to internal slice: wave close
+
 Add one heading per completed row. Use this exact compact schema so a fresh session can audit it:
 
 ```text
@@ -297,44 +363,55 @@ Add one note per merged wave with branch, sub-slices, final unique-file count, P
 CodeRabbit/agent disposition, merge commit, retained review debt, and local-main synchronization.
 The next wave chat reconciles this note from GitHub readback.
 
-### Current next-session handoff — W2
+#### W1 — completed 2026-08-15
+- Branch / sub-slices: `feat/aeo-wave-1-foundations`; R00 → X01 → D01 → D02 → A01 → A02.
+- Final unique-file count: 78 (GitHub readback; the PR body's earlier 66-file scope line was stale).
+- Pull request / merge: https://github.com/abhij1306/Citeladder/pull/71; merge commit `0150cbcb5544b97efb2a4e75d13f61a67f4bac54`.
+- Required CI: 9 passed, 0 failed.
+- Review disposition: CodeRabbit and CodeAnt findings were audited and addressed in follow-up commits `435c8bbd` and `4b0efce3`; remaining open-thread markers point at the pre-fix diff or already-correct current code. The Traffic snapshot suggestion is intentionally not applied because W1's approved contract treats an existing measured all-zero snapshot as `observed_zero`, while absence of a persisted snapshot is `not_run`.
+- Retained review debt: none actionable from merged-head readback.
+- Synchronization: local `main` and `origin/main` both resolved to `0150cbcb5544b97efb2a4e75d13f61a67f4bac54` before W2 branched.
+
+### Current next-session handoff — W3
 
 Copy and paste this entire prompt into a fresh Codex chat:
 
 ```text
-Continue the CiteLadder AEO rebuild by implementing the complete W2 Site Health delivery wave from
+Continue the CiteLadder AEO rebuild by implementing the complete W3 Product Loop delivery wave from
 docs/plans/citeladder-aeo-product-rebuild.md in one fresh chat. One chat equals one PR. Use the
-citeladder-engineering skill throughout and finish with $ship-main. Implement all W2 internal
-sub-slices in order: S01 → S02 → S03 → S04 → S05 → S06. Do not start W3.
+citeladder-engineering skill throughout and finish with $ship-main. Implement all W3 internal
+sub-slices in order: I01 → I02 → I03 → P01 → O01 → O02 → O03. Do not start W4.
 
 Bootstrap only from synchronized `main`. Read AGENTS.md, docs/invariants.md, the plan's Codex
-execution protocol, both ledgers, the merged W1 completion note, the W2 row, SH-1 through SH-6, the
-SH gates, and the named Site Health/design/frontend/backend authorities. Reconcile W1's
-`ready_for_merge` ledger row and completion note from GitHub readback before editing. Inspect git
-status/branch/upstream and preserve unrelated work.
+execution protocol, both ledgers, the merged W2 completion note, the W3 row, WS7 phases A/B, WS2,
+WS1, their gates, and the named architecture/design/frontend/backend/onboarding authorities.
+Reconcile W2's `ready_for_merge` ledger row and completion note from GitHub readback before editing.
+Inspect git status/branch/upstream and preserve unrelated work.
 
-Before editing, inventory projected W2 files. Target at most 75 unique files, freeze additions at
+Before editing, inventory projected W3 files and the required migrate/delete/retain replacement
+map for routes, navigation, Agent entry points, Facts, ICP fields, and Visibility overview. Target
+at most 75 unique files, freeze additions at
 85, and close at no more than 95. Rebalance only whole trailing sub-slices among the existing six
 waves if required; never drop a gate or create a seventh PR. Create
-`feat/aeo-wave-2-site-health` from synchronized main.
+`feat/aeo-wave-3-product-loop` from synchronized main.
 
-Execute S01–S06 sequentially with their validation spikes, deterministic positive/boundary
-fixtures, and focused gates. Preserve crawler identity and security invariants. Prove the encoded
-query delimiter fix without damaging legitimate encoded path content; extract once and reuse the
-immutable artifact across analysis; persist honest blocked/failure progress; make post-terminal
-Demand/Opportunity refresh exactly once for usable completed, partial, and cancelled evidence;
-freeze issue descriptions; and separate defects from advisories with intentional-indexing
-precedence and explicit headline-count semantics.
+Execute I01–O03 sequentially with their replacement inventories, validation spikes, deterministic
+positive/boundary fixtures, and focused gates. Atomically replace the `/site-health/**` browser
+route family with `/site/crawls/**` while retaining the Site Health backend owner; replace the
+Agent route with the typed top-bar sheet; ship the five-station desktop/mobile navigation and
+delete retired provider/prompt routes; require confirmed structured ICP before prompt generation;
+ship the useful no-audit Overview, loop-state/next-action precedence, Facts drawer, competitor
+suggestions, and Track summary; then move retained Visibility capabilities to Trends and delete
+the Visibility overview. Do not leave redirects, duplicate owners, caller-free UI, or stale active
+documentation after each atomic cutover.
 
-Run the required sanitized live recrawls for cube27, flipkart, and best&less and store the dated
-evaluation artifact with before/after wall time, HTTP attempts, issue types by finding class,
-occurrences, affected URLs, opportunity counts, blocked coverage, and cancellation coverage. Do
-not run the repository-wide test suite locally. After S06, run the wave-close checks, update W2 to
+Run focused backend/frontend tests and the named route/navigation/empty-state browser proofs; do
+not run the repository-wide test suite locally. After O03, run the wave-close checks, update W3 to
 ready-for-merge, record every completion note and cumulative file count, replace this handoff with
-a concrete W3 prompt, and invoke $ship-main. Continue autonomously through one non-draft PR,
+a concrete W4 prompt, and invoke $ship-main. Continue autonomously through one non-draft PR,
 CodeRabbit/agent review, green required CI, merge, and local-main synchronization. In the final
-response report the PR, merge commit, checks, review disposition, final file count, evaluation
-artifact, and repeat the W3 handoff prompt verbatim.
+response report the PR, merge commit, checks, review disposition, final file count, replacement
+deletion proof, and repeat the W4 handoff prompt verbatim.
 ```
 
 ---

@@ -213,6 +213,8 @@ async def _add_free_sample(
     phase_run_id: uuid.UUID | None = None,
     value_kind: str = "other",
     value_priority: int = 0,
+    rewrite_reason: str = "",
+    rewrite_version: str = "",
 ) -> tuple[bool, bool]:
     """Admit a URL into inventory and optionally monitor and analyze it."""
     now = _utcnow()
@@ -238,6 +240,8 @@ async def _add_free_sample(
             phase_run_id=phase_run_id,
             value_kind=value_kind,
             value_priority=value_priority,
+            rewrite_reason=rewrite_reason,
+            rewrite_version=rewrite_version,
             depth=depth,
             observed_url=url,
             final_url=url,

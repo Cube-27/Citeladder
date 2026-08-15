@@ -73,6 +73,27 @@ repair lifecycle state, or call a model.
   retries, parsing, and persistence still determine actual crawl throughput.
 - Fetch attempts and artifacts are append-only; secrets and unsafe response
   headers are never persisted.
+- Discovery runs the complete bounded fact extractor on each acquired HTML
+  response and freezes those facts on its immutable artifact. Analysis reuses
+  that same artifact when the crawl's required extractor version matches, so
+  discovery and analysis retain separate lifecycle results without a second
+  HTTP acquisition. If no complete current-version discovery artifact can
+  exist (including a Free sample analyze-only URL), analysis uses the normal
+  secure acquisition fallback. An analyze task that races an active discovery
+  task is durably deferred without consuming a network-attempt budget.
+- Append-only fetch-attempt rows are also the bounded per-crawl host transport
+  observations; the frozen crawl configuration is never mutated. Two
+  consecutive rung-1 `403`/`429` outcomes prefer rung 2 for the next 20 host
+  acquisitions, followed by one rung-1 recovery probe. A successful probe
+  immediately restores rung 1; another `403`/`429` starts a fresh interval.
+  Timeouts and `5xx` evidence use ordinary retry policy and never pin a rung.
+- Anchor extraction may repair an encoded query delimiter only when the first
+  encoded suffix key is a config-owned tracking parameter. That boundary-only
+  rewrite interprets encoded `=` and `&` separators in the identified query,
+  runs ordinary query normalization, and freezes its reason and rewrite version
+  on the immutable URL observation. Legitimate `%3F`, `%26`, `%2F`, and `%25`
+  path content remains byte-preserving crawler identity; `canonicalize()` and
+  `canonical_identity()` retain their reserved-escape semantics.
 - `analyze`, `inventory_only`, and `exclude` dispositions stay distinct.
 - Supported documents may remain inventory-only and never enter the HTML rule
   evaluator.
@@ -97,8 +118,29 @@ new crawl**; read endpoints never repair or reinterpret its persisted state.
 The inventory stays mounted as the crawl progresses. During discovery it shows
 the first ten persisted rows as they arrive; once scoring is available, those
 same persisted rows enrich in place rather than moving the user to a separate
-analysis screen. Issue/remediation copy uses the persisted remediation text as
-its subtitle, so the UI does not manufacture a second recommendation.
+analysis screen. Issue rows use the persisted rule description as the
+plain-language problem subtitle; remediation remains separate fix guidance.
+
+Live analysis progress is a persisted task projection. It reports successful,
+queued, running, blocked, and failed counts plus the explicit
+`robots_denied`, `http_4xx`, `http_5xx`, and `timeout` breakdown. Activity is
+`working`, `waiting`, `stalled`, or `terminal`: a healthy leased task waiting
+for its host slot is `waiting/host_gate`; a future `available_at` is
+`waiting/retry_backoff`; only an expired lease is `stalled/expired_lease`.
+Lease ownership/expiry and durable queue availability—not elapsed browser
+time—own those states. Terminal failures therefore count as progress and a
+robots-blocked URL is visible instead of leaving the counter apparently frozen.
+
+Terminal evidence refresh follows one transactionally idempotent DAG for
+completed, partially completed, and cancelled-after-analysis crawls. When a
+current Traffic snapshot exists the crawl enqueues Demand, and Demand enqueues
+the crawl-keyed Opportunity refresh after either creating or reusing its
+snapshot. Without Traffic input, the crawl enqueues Opportunities directly.
+The two successors are never fired concurrently, and repeated terminalization
+or cancellation cannot duplicate either logical task. Partial/cancelled
+Opportunity snapshots and each site-derived Opportunity freeze the crawl
+status, selected/analyzed/failed counts, analysis ratio, and plain-language
+coverage limitations. A cancellation before any usable analysis enqueues none.
 
 ## Page-kind classification
 
@@ -180,6 +222,30 @@ version so an old artifact is never silently reinterpreted as the same result.
 Grouped issue IDs are deterministic UUID5 values derived from the crawl and
 rule. Filtering or adding another occurrence cannot change the group URL;
 legacy occurrence IDs remain accepted by the detail endpoint.
+
+Every failed evaluation freezes both rule `description` (what is wrong) and
+`remediation` (how to fix it) onto `SiteIssue` with its analyzer/catalog
+versions. Group, detail, per-page, and history projections read that stored
+copy and never substitute the current catalog. The Issues row shows severity,
+plain-language title, frozen description, an affected-page evidence chip, and
+page-kind scope; remediation appears when the row expands.
+
+Every rule also owns a versioned `finding_class`: `defect` for a reproducible
+problem and `advisory` for deterministic but opinionated guidance. Title- and
+meta-description length bands are advisories. Defects and advisories have
+separate server-filtered views. The headline is the number of distinct defect
+issue types; supporting metrics explicitly name defect occurrences and
+affected URLs. Only defects feed severity filters and Opportunities. The
+per-evaluation rows remain append-only evidence regardless of class.
+
+Indexability follows strong-evidence precedence: explicit user policy, then a
+canonical declaration, sitemap membership, then robots evidence. Explicitly
+intended exclusion is not applicable; intended indexing contradicted by
+`noindex` is a defect; genuinely unknown intent is an uncertain advisory and
+never critical. Promo-like paths and missing inbound links are not intent
+evidence. Host-scoped and template-scoped evaluation remain out of scope: the
+current per-page evidence is retained, and no dormant scope configuration or
+placeholder identity owner is introduced.
 
 Current versions are owned in `backend/app/core/config/site_health.py`; tests
 pin persistence and replay behavior.

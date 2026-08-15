@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.site_health.parser import extract_page_facts
 from app.connectors.web_evidence.contracts import (
     FetchError,
     FetchRequest,
@@ -161,6 +162,7 @@ class DiscoverPhaseMixin(PhaseSupport):
         # task that was still writing.
         async with self._leased(task_id):
             outcome = await self._fetch_discover(
+                crawl_id=crawl_id,
                 requested_url=requested_url,
                 root_registrable_domain=root_registrable_domain,
                 include_globs=include_globs,
@@ -179,6 +181,7 @@ class DiscoverPhaseMixin(PhaseSupport):
     async def _fetch_discover(
         self,
         *,
+        crawl_id: uuid.UUID,
         requested_url: str,
         root_registrable_domain: str,
         include_globs: list[str] | None,
@@ -253,6 +256,9 @@ class DiscoverPhaseMixin(PhaseSupport):
             allowed_content_types=HTML_CONTENT_TYPES,
         )
         started = time.monotonic()
+        acquisition_plan = await self._acquisition_plan(
+            crawl_id=crawl_id, url=requested_url
+        )
         try:
             async with self._new_fetcher() as fetcher:
                 result = await fetcher.fetch(
@@ -261,6 +267,8 @@ class DiscoverPhaseMixin(PhaseSupport):
                     include_globs=include_globs,
                     exclude_globs=exclude_globs,
                     enforce_scope=bool(root_registrable_domain),
+                    preferred_rung=acquisition_plan.preferred_rung,
+                    initial_trigger=acquisition_plan.trigger,
                 )
         except FetchError as exc:
             latency = int((time.monotonic() - started) * 1000)
@@ -310,6 +318,19 @@ class DiscoverPhaseMixin(PhaseSupport):
                 sitemap_files=sitemap_files,
             )
 
+        facts = extract_page_facts(
+            result.body,
+            final_url=result.final_url or requested_url,
+            content_type=result.content_type,
+            charset=result.charset,
+            status_code=status,
+            redacted_headers=result.redacted_headers,
+            http_version=result.http_version,
+            ttfb_ms=result.ttfb_ms,
+            latency_ms=result.latency_ms,
+            wire_bytes=result.wire_bytes,
+            decoded_bytes=result.decoded_bytes,
+        )
         # Success: parse in-scope canonical links (HTML only; empty otherwise).
         title, links = extract_discovery_links(
             result.body,
@@ -331,6 +352,7 @@ class DiscoverPhaseMixin(PhaseSupport):
         return _DiscoverOutcome(
             result=result,
             output=output,
+            facts=facts,
             attempts=result.attempts,
             site_facts=site_facts,
             sitemap_urls=sitemap_urls,
@@ -770,7 +792,11 @@ class DiscoverPhaseMixin(PhaseSupport):
     ) -> tuple[uuid.UUID, AdmissionResult]:
         assert outcome.output is not None and outcome.result is not None
         artifact_id = await self._write_artifact(
-            session, crawl=crawl, task=task, result=outcome.result
+            session,
+            crawl=crawl,
+            task=task,
+            result=outcome.result,
+            normalized_facts=outcome.facts,
         )
         await self._write_observation(
             session,

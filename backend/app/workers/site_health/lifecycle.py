@@ -83,10 +83,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
-from app.core.config.traffic import TRAFFIC_GRANULARITY_DAY
-from app.domain.analytics.enqueue import enqueue_demand_snapshot_refresh
-from app.domain.opportunities.service import enqueue_opportunity_refresh
-from app.domain.opportunities.verification import enqueue_implementation_verification
 from app.domain.site_health.failure import load_root_failure_summary
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.selection import crawl_is_active
@@ -97,6 +93,7 @@ from app.domain.site_health.state_events import (
     apply_discovery_status,
     record_crawl_event,
 )
+from app.domain.site_health.terminal_refresh import enqueue_terminal_crawl_refresh
 from app.models.site_health import (
     SiteCrawl,
     SiteCrawlPhaseRun,
@@ -109,7 +106,6 @@ from app.models.site_health import (
     SiteUrl,
     SiteUrlObservation,
 )
-from app.models.traffic import TrafficSnapshot
 
 logger = logging.getLogger("app.workers.site_health.lifecycle")
 
@@ -137,50 +133,6 @@ _RUNNING_PATH: Final[dict[str, tuple[str, ...]]] = {
 def _count_disclosure(crawl: SiteCrawl) -> bool:
     """Free crawls never disclose absolute counts in event payloads."""
     return not crawl.sample_mode
-
-
-async def _enqueue_post_crawl_refresh(
-    session: AsyncSession, *, crawl: SiteCrawl
-) -> None:
-    """Queue verification plus the current downstream projection chain."""
-    await enqueue_implementation_verification(
-        session,
-        workspace_id=crawl.workspace_id,
-        project_id=crawl.project_id,
-        trigger_kind="site_crawl",
-        trigger_id=crawl.id,
-    )
-    traffic = await session.scalar(
-        select(TrafficSnapshot)
-        .where(
-            TrafficSnapshot.workspace_id == crawl.workspace_id,
-            TrafficSnapshot.project_id == crawl.project_id,
-            TrafficSnapshot.granularity == TRAFFIC_GRANULARITY_DAY,
-        )
-        .order_by(
-            TrafficSnapshot.window_end.desc(),
-            TrafficSnapshot.created_at.desc(),
-            TrafficSnapshot.id.desc(),
-        )
-        .limit(1)
-    )
-    if traffic is not None:
-        await enqueue_demand_snapshot_refresh(
-            session,
-            workspace_id=crawl.workspace_id,
-            project_id=crawl.project_id,
-            window_start=traffic.window_start,
-            window_end=traffic.window_end,
-            source_revision=f"site:{crawl.id}",
-        )
-        return
-    await enqueue_opportunity_refresh(
-        session,
-        workspace_id=crawl.workspace_id,
-        project_id=crawl.project_id,
-        trigger_kind="site_crawl",
-        trigger_id=crawl.id,
-    )
 
 
 def _start_planned_analysis(crawl: SiteCrawl, *, analyze_total: int) -> None:
@@ -597,7 +549,11 @@ class CrawlLifecycle:
             payload={"status": crawl.status},
             count_disclosure=_count_disclosure(crawl),
         )
-        await _enqueue_post_crawl_refresh(session, crawl=crawl)
+        await enqueue_terminal_crawl_refresh(
+            session,
+            crawl=crawl,
+            usable_evidence=summary.analyze_succeeded > 0,
+        )
 
     async def _reconcile_advanced_phase_runs(
         self,
@@ -1065,6 +1021,7 @@ class CrawlLifecycle:
                     dimension=ev.dimension,
                     category=ev.category,
                     severity=ev.severity,
+                    finding_class=ev.finding_class,
                     weight=ev.weight,
                     outcome=ev.outcome,
                     evidence=ev.evidence,
@@ -1092,7 +1049,9 @@ class CrawlLifecycle:
                         dimension=ev.dimension,
                         category=ev.category,
                         severity=ev.severity,
+                        finding_class=ev.finding_class,
                         evidence=ev.evidence,
+                        description=ev.description,
                         remediation=ev.remediation,
                         analyzer_version=crawl.analyzer_version or ANALYZER_VERSION,
                         rule_version=ev.rule_version,

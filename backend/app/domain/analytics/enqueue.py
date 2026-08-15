@@ -24,7 +24,7 @@ import uuid
 from collections.abc import Iterable
 from datetime import date
 
-from sqlalchemy import Integer, cast, func, select
+from sqlalchemy import Integer, cast, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -279,11 +279,13 @@ async def enqueue_demand_snapshot_refresh(
     window_start: date,
     window_end: date,
     source_revision: str,
+    downstream_trigger_kind: str | None = None,
+    downstream_trigger_id: uuid.UUID | None = None,
     priority: int = 0,
 ) -> uuid.UUID | None:
     """Queue one immutable Demand interpretation for an evidence revision."""
     revision = source_revision[:24]
-    return await _enqueue_window_snapshot_refresh(
+    task_id = await _enqueue_window_snapshot_refresh(
         session,
         task_kind=ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
         workspace_id=workspace_id,
@@ -294,6 +296,22 @@ async def enqueue_demand_snapshot_refresh(
         source_revision=revision,
         priority=priority,
     )
+    if task_id is not None and downstream_trigger_kind is not None:
+        if downstream_trigger_id is None:
+            raise ValueError("downstream trigger id is required with its kind")
+        await session.execute(
+            update(AnalyticsTask)
+            .where(AnalyticsTask.id == task_id)
+            .values(
+                payload=AnalyticsTask.payload.op("||")(
+                    {
+                        "downstream_trigger_kind": downstream_trigger_kind,
+                        "downstream_trigger_id": str(downstream_trigger_id),
+                    }
+                )
+            )
+        )
+    return task_id
 
 
 async def enqueue_attribution_snapshot_refresh(

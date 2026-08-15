@@ -157,6 +157,18 @@ export const crawlCountersSchema = responseObject({
   analyzed: z.number().int(),
   errors: z.number().int(),
   blocked: z.number().int(),
+  failure_breakdown: responseObject({
+    robots_denied: z.number().int(),
+    http_4xx: z.number().int(),
+    http_5xx: z.number().int(),
+    timeout: z.number().int(),
+  }),
+  activity: responseObject({
+    state: z.enum(['working', 'waiting', 'stalled', 'terminal']),
+    reason: z.enum(['active_work', 'host_gate', 'retry_backoff', 'expired_lease', 'terminal']),
+    queue_depth: z.number().int(),
+    next_available_at: z.string().nullable(),
+  }),
   by_page_kind: z.record(z.string(), z.number().int()),
 });
 
@@ -361,6 +373,7 @@ export const pageFactsSchema = responseObject({
 // Issue severity + dimension enums (config-owned rule catalog).
 export const issueSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
 export const issueDimensionSchema = z.enum(['technical', 'aeo']);
+export const findingClassSchema = z.enum(['defect', 'advisory']);
 
 // A single affected-URL summary on an issue projection. `page_kind` is the
 // affected page's classification; it is OPTIONAL — the v1 backend DTO has no
@@ -384,7 +397,9 @@ export const siteIssueSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
+  finding_class: findingClassSchema,
   title: z.string(),
+  description: z.string(),
   remediation: z.string(),
   affected_url_count: z.number().int(),
   analyzer_version: z.string(),
@@ -397,6 +412,9 @@ export const siteIssueSchema = responseObject({
 // are the rule dimensions (technical/aeo); values are occurrence counts.
 export const issuesSummarySchema = responseObject({
   issue_count: z.number().int(),
+  defect_issue_type_count: z.number().int(),
+  advisory_issue_type_count: z.number().int(),
+  occurrence_count: z.number().int(),
   severity_counts: z.record(z.string(), z.number().int()),
   dimension_counts: z.record(z.string(), z.number().int()),
   affected_url_count: z.number().int(),
@@ -414,7 +432,9 @@ export const siteIssueDetailSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
+  finding_class: findingClassSchema,
   title: z.string(),
+  description: z.string(),
   remediation: z.string(),
   evidence: z.record(z.string(), z.unknown()),
   affected_urls: z.array(affectedUrlSchema),
@@ -471,6 +491,7 @@ const ruleEvaluationSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
+  finding_class: findingClassSchema,
   outcome: z.enum(['pass', 'fail', 'not_applicable', 'error']),
   weight: z.number(),
   evidence: z.record(z.string(), z.unknown()),
@@ -546,7 +567,9 @@ export const issueHistoryRowSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
+  finding_class: findingClassSchema,
   title: z.string(),
+  description: z.string(),
   remediation: z.string(),
   analyzer_version: z.string(),
   rule_version: z.string(),

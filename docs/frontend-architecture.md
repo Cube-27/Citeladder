@@ -60,6 +60,13 @@ The backend owns the current Site Health phase. The client renders the provided
 phase and action availability instead of reconstructing a cross-product of
 crawl, discovery, analysis, and phase-run states.
 
+The same rule applies to live worker activity. The API supplies a persisted
+blocked/failure breakdown and an evidence-derived `working | waiting | stalled
+| terminal` activity projection. The browser renders host-gate and retry waits,
+continues polling through recovery, and calls a crawl stalled only when the
+backend reports an expired lease. It never infers failure from a quiet timer or
+from a completed counter that has stopped moving.
+
 Before the first crawl, `/site-health` renders one actionable empty placeholder
 with **Run new crawl**, rather than empty metrics or an intake workflow. After a
 crawl exists, its header has one contextual primary control: **Stop crawl** for
@@ -68,8 +75,16 @@ secondary action. The client exposes no separate discovery or analysis buttons.
 
 The inventory remains mounted and progressive: discovery renders the first ten
 persisted rows as they arrive, and rows later receive their analysis status and
-scores in place. The Issues surface uses persisted remediation copy as the
-remediation subtitle; it does not generate a browser-side recommendation.
+scores in place. The Issues row uses persisted description copy for what is
+wrong, an affected-page evidence chip, and persisted remediation only inside
+the expanded fix guidance. It does not generate browser-side recommendation
+copy.
+
+The Issues surface has separate server-backed **Defects** and **Advisories**
+views. Defects are the default and the only class with severity chips. Its
+headline explicitly counts distinct defect issue types, while supporting
+labels name occurrences and affected URLs. Advisory rows are labelled as
+advisories rather than borrowing defect severity semantics.
 
 ## Page-kind UX
 

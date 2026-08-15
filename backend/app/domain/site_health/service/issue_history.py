@@ -126,10 +126,12 @@ async def get_issue_history(
             "dimension": i.dimension,
             "category": i.category,
             "severity": i.severity,
+            "finding_class": i.finding_class,
             # Per-URL history rows are ONE occurrence each, so the variant
             # title applies (grouped/catalog rows above stay neutral — a group
             # can span both directions of the same rule).
             "title": display_label_for(i.rule_id, i.evidence),
+            "description": i.description or "",
             "remediation": i.remediation or "",
             "analyzer_version": i.analyzer_version,
             "rule_version": i.rule_version,
@@ -148,9 +150,11 @@ class _HistoryObservation:
     dimension: str
     category: str
     severity: str
+    finding_class: str
     outcome: str
     analyzer_version: str
     rule_version: str
+    description: str
     remediation: str
 
 
@@ -226,7 +230,9 @@ def _rule_history_group(rule_id: str, rows: list[_HistoryObservation]) -> dict |
         "dimension": last_failure.dimension,
         "category": last_failure.category,
         "severity": last_failure.severity,
+        "finding_class": last_failure.finding_class,
         "title": display_label_for(rule_id),
+        "description": last_failure.description,
         "remediation": last_failure.remediation,
         "current_state": "open" if latest.outcome == "fail" else "resolved",
         "current_transition": timeline[-1]["transition"],
@@ -303,8 +309,9 @@ async def _history_observations(
             )
         ).all()
     )
-    remediation_by_evaluation = {
-        issue.evaluation_id: issue.remediation or "" for issue in issue_rows
+    copy_by_evaluation = {
+        issue.evaluation_id: (issue.description or "", issue.remediation or "")
+        for issue in issue_rows
     }
     return [
         _HistoryObservation(
@@ -314,10 +321,12 @@ async def _history_observations(
             dimension=evaluation.dimension,
             category=evaluation.category,
             severity=evaluation.severity,
+            finding_class=evaluation.finding_class,
             outcome=evaluation.outcome,
             analyzer_version=evaluation.analyzer_version,
             rule_version=evaluation.rule_version,
-            remediation=remediation_by_evaluation.get(evaluation.id, ""),
+            description=copy_by_evaluation.get(evaluation.id, ("", ""))[0],
+            remediation=copy_by_evaluation.get(evaluation.id, ("", ""))[1],
         )
         for crawl_row, analysis, evaluation in rows
         if latest_analysis.get(crawl_row.id) == analysis.id

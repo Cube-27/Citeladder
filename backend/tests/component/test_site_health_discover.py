@@ -222,11 +222,13 @@ async def test_full_allowance_discover_admits_children_and_completes(
             [
                 "https://example.com/a",
                 "https://example.com/b",
+                "https://example.com/men%3Futm_source%3Dhero",
                 "https://external.org/x",  # out of scope -> not admitted
             ]
         ),
         "/a": _html([]),
         "/b": _html([]),
+        "/men": _html([]),
     }
     worker = _worker(session_factory, pages)
     await worker.run_until_idle()
@@ -279,6 +281,7 @@ async def test_full_allowance_discover_admits_children_and_completes(
             "https://example.com/",
             "https://example.com/a",
             "https://example.com/b",
+            "https://example.com/men",
         } <= set(urls)
         assert not any(urlsplit(u).hostname == "external.org" for u in urls)
 
@@ -299,13 +302,22 @@ async def test_full_allowance_discover_admits_children_and_completes(
             .select_from(SiteUrlObservation)
             .where(SiteUrlObservation.crawl_id == seed.crawl_id)
         )
-        assert obs_count == 3  # root + a + b
+        assert obs_count == 4  # root + a + b + rewritten men link
+        rewrite = await session.scalar(
+            select(SiteUrlObservation).where(
+                SiteUrlObservation.crawl_id == seed.crawl_id,
+                SiteUrlObservation.rewrite_reason == "encoded_tracking_query_delimiter",
+            )
+        )
+        assert rewrite is not None
+        assert rewrite.observed_url == "https://example.com/men"
+        assert rewrite.rewrite_version == "sh-link-rewrite-1"
         artifact_count = await session.scalar(
             select(func.count())
             .select_from(SiteFetchArtifact)
             .where(SiteFetchArtifact.crawl_id == seed.crawl_id)
         )
-        assert artifact_count == 3
+        assert artifact_count == 4
 
         # Every discover task succeeded.
         statuses = (
@@ -988,6 +1000,7 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         crawl = await session.get(SiteCrawl, seed.crawl_id)
         assert crawl is not None
         assert crawl.status == CRAWL_STATUS_COMPLETED
+        assert requests.count(("GET", "/")) == 1
 
         # The robots policy was fetched ONCE for the whole crawl (the root +
         # both child discovers + the sitemap-tree walk + the analyze task all
@@ -1046,6 +1059,18 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
                 )
             )
         ).scalar_one()
+        shared_artifact = await session.get(SiteFetchArtifact, analysis.artifact_id)
+        assert shared_artifact is not None
+        assert shared_artifact.fetch_purpose == "discover"
+        assert shared_artifact.normalized_facts is not None
+        analyze_task = await session.scalar(
+            select(SiteCrawlTask).where(
+                SiteCrawlTask.crawl_id == seed.crawl_id,
+                SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
+            )
+        )
+        assert analyze_task is not None
+        assert analyze_task.result_artifact_id == shared_artifact.id
         evals = {
             row.rule_id: row
             for row in (

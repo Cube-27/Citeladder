@@ -16,6 +16,7 @@ from app.core.config.site_health import (
     ACQUISITION_TRIGGER_CHALLENGE,
     ACQUISITION_TRIGGER_JS_SHELL,
     ACQUISITION_TRIGGER_LOW_CONTENT,
+    SiteHealthSettings,
 )
 
 # Subtrees whose contents are never readable page text. Removed whole (open tag
@@ -42,6 +43,26 @@ _INLINE_SCRIPT = re.compile(
     r"<script\b(?![^>]*\bsrc\s*=)[^>]*>(.*?)</script\b[^>]*>",
     re.IGNORECASE | re.DOTALL,
 )
+
+
+def configured_ladder_trigger(
+    result: FetchResult,
+    *,
+    settings: SiteHealthSettings,
+    has_challenge_marker: bool,
+) -> str | None:
+    """Apply the config-owned rung trigger policy to one response."""
+    return curl_trigger_for_result(
+        result,
+        has_challenge_marker=has_challenge_marker,
+        trigger_statuses=settings.curl_cffi_trigger_statuses,
+        low_content_bytes=settings.curl_cffi_low_content_bytes,
+        js_shell_min_text_chars=(
+            settings.js_shell_min_text_chars if settings.browser_enabled else 0
+        ),
+        js_shell_min_inline_script_chars=settings.js_shell_min_inline_script_chars,
+        js_shell_scan_bytes=settings.js_shell_scan_bytes,
+    )
 
 
 def curl_cffi_pinned_resolution_supported() -> bool:

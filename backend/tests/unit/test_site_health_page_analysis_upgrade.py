@@ -149,6 +149,7 @@ def test_grouped_issue_history_tracks_new_continuing_and_resolved() -> None:
             outcome=outcome,
             analyzer_version="analyzer-1",
             rule_version="rule-1",
+            description="Required schema properties are missing.",
             remediation="Add missing properties.",
         )
         for index, outcome in enumerate(("fail", "fail", "pass"))

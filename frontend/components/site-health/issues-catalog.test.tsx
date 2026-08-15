@@ -21,7 +21,9 @@ function issue(overrides: Partial<SiteIssue> = {}): SiteIssue {
     dimension: 'aeo',
     category: 'schema',
     severity: 'high',
+    finding_class: 'defect',
     title: 'WebSite schema is missing',
+    description: 'Search engines cannot find WebSite structured data on this page.',
     remediation: 'Add a JSON-LD WebSite schema.',
     affected_url_count: 32,
     analyzer_version: 'a1',
@@ -33,6 +35,9 @@ function issue(overrides: Partial<SiteIssue> = {}): SiteIssue {
 
 const summary = {
   issue_count: 47,
+  defect_issue_type_count: 47,
+  advisory_issue_type_count: 2,
+  occurrence_count: 94,
   severity_counts: { high: 12, medium: 23, low: 12 },
   dimension_counts: { technical: 30, aeo: 17 },
   affected_url_count: 50,
@@ -63,6 +68,11 @@ describe('IssuesCatalog', () => {
     expect(screen.getByText('HIGH')).toBeInTheDocument();
     expect(screen.getAllByText('AEO').length).toBeGreaterThan(0);
     expect(screen.getByText('32 pages affected')).toBeInTheDocument();
+    expect(
+      screen.getByText('Search engines cannot find WebSite structured data on this page.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Evidence · 32 pages')).toBeInTheDocument();
+    expect(screen.queryByText('Add a JSON-LD WebSite schema.')).not.toBeInTheDocument();
     // No unsupported "mark reviewed/resolved" action is rendered.
     expect(screen.queryByText(/mark reviewed/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/mark resolved/i)).not.toBeInTheDocument();
@@ -84,6 +94,46 @@ describe('IssuesCatalog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Medium (23)' }));
     await waitFor(() => expect(seen).toContain('medium'));
+  });
+
+  it('keeps advisories in their own server-backed view and labels all quantities', async () => {
+    const seen: Array<string | null> = [];
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
+        const findingClass = new URL(request.url).searchParams.get('finding_class');
+        seen.push(findingClass);
+        return HttpResponse.json({
+          items:
+            findingClass === 'advisory'
+              ? [
+                  issue({
+                    rule_id: 'technical.title_length_band',
+                    title: 'Title length outside recommended band',
+                    finding_class: 'advisory',
+                    severity: 'low',
+                  }),
+                ]
+              : [issue()],
+          next_cursor: null,
+          summary,
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    expect(
+      await screen.findByText((_, element) => element?.textContent === '47 defect issue types'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('94 defect occurrences')).toBeInTheDocument();
+    expect(screen.getByText('50 affected URLs')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Advisories (2)' }));
+    expect(await screen.findByText('Title length outside recommended band')).toBeInTheDocument();
+    expect(screen.getByText('Advisory')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /High/ })).not.toBeInTheDocument();
+    expect(screen.getByText('94 advisory occurrences')).toBeInTheDocument();
+    expect(seen).toContain('advisory');
   });
 
   it('wires the page-kind filter as a server param, set and cleared', async () => {
@@ -129,7 +179,9 @@ describe('IssuesCatalog', () => {
           dimension: 'aeo',
           category: 'schema',
           severity: 'high',
+          finding_class: 'defect',
           title: 'WebSite schema is missing',
+          description: 'Search engines cannot find WebSite structured data on this page.',
           remediation: 'Add a JSON-LD WebSite schema.',
           evidence: {},
           affected_urls: [
@@ -156,6 +208,7 @@ describe('IssuesCatalog', () => {
 
     await user.click(screen.getByRole('button', { name: 'View affected URLs' }));
 
+    expect(await screen.findByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
     const link = await screen.findByRole('link', { name: /Homepage/ });
     expect(link).toHaveAttribute('href', `/site-health/crawls/${CRAWL}/pages/${URL_A}`);
     // The affected page's v2 P1 type badge renders inside the row (scoped —
@@ -181,7 +234,9 @@ describe('IssuesCatalog', () => {
           dimension: 'aeo',
           category: 'schema',
           severity: 'high',
+          finding_class: 'defect',
           title: 'WebSite schema is missing',
+          description: 'Search engines cannot find WebSite structured data on this page.',
           remediation: 'Add a JSON-LD WebSite schema.',
           evidence: {},
           affected_urls: [

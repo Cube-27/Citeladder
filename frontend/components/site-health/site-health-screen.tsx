@@ -139,13 +139,9 @@ export function SiteHealthScreen() {
         />
       ) : null}
       {stalled ? (
-        // We have stopped polling this crawl, so say so rather than leaving a
-        // progress state that silently never advances. Whatever it managed to
-        // analyze is still below; refreshing picks up a late server-side
-        // resolution.
         <Alert tone="warning">
-          This crawl hasn&apos;t reported progress for a while and may have stopped. Any results
-          collected so far are shown below — refresh to check again, or start a new crawl.
+          This crawl has an expired worker lease. Recovery is still being checked; results already
+          persisted remain visible below.
         </Alert>
       ) : null}
       {/* ONE screen. The Site Intelligence workspace used to wrap this whole

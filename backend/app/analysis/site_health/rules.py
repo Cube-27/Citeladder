@@ -24,8 +24,11 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlsplit
 
+from app.analysis.site_health.indexing import (
+    evaluate_indexability,
+    normalized_url_for_compare,
+)
 from app.core.config.site_health import (
     AI_CRAWLER_BOTS,
     AI_CRAWLER_STANCE_BLOCK,
@@ -34,6 +37,7 @@ from app.core.config.site_health import (
     APPLICABILITY_OBSERVED_CONTENT,
     APPLICABILITY_SITE_ROOT,
     EXPAND_GATED_MAX_RATIO,
+    FINDING_CLASS_ADVISORY,
     META_DESCRIPTION_LENGTH_BAND,
     PAGE_KIND_APPLICABILITY_PREFIX,
     PAGE_KIND_CONTENT_APPLICABILITY_PREFIX,
@@ -99,9 +103,11 @@ class RuleEvaluation:
     dimension: str
     category: str
     severity: str
+    finding_class: str
     weight: float
     outcome: str
     evidence: dict[str, Any] = field(default_factory=dict)
+    description: str = ""
     remediation: str = ""
 
 
@@ -137,13 +143,7 @@ def _check_canonical_present(facts: dict) -> tuple[str, dict]:
 
 
 def _check_indexable(facts: dict) -> tuple[str, dict]:
-    robots = facts.get("robots") or {}
-    noindex = bool(robots.get("noindex"))
-    # noindex -> fail (not indexable); otherwise pass.
-    return _pass_fail(not noindex), {
-        "noindex": noindex,
-        "nofollow": bool(robots.get("nofollow")),
-    }
+    return evaluate_indexability(facts)
 
 
 def _check_https(facts: dict) -> tuple[str, dict]:
@@ -199,40 +199,6 @@ def _check_thin_content(facts: dict) -> tuple[str, dict]:
 # --- v2 P2: hygiene checks -------------------------------------------------
 
 
-def _normalized_url_for_compare(url: str) -> str:
-    """Canonical form for canonical-vs-final comparison (deterministic).
-
-    Lowercases scheme/host, strips the fragment, drops default ports, and
-    strips trailing slashes (except the root path). NOT the admission-time
-    canonicalizer — a comparison-only normalization local to this check.
-    """
-    raw = str(url or "").strip()
-    try:
-        parts = urlsplit(raw)
-        scheme = (parts.scheme or "").lower()
-        host = (parts.hostname or "").lower()
-        try:
-            port = parts.port
-        except ValueError:
-            port = None
-    except Exception:
-        return raw.lower()
-    if not scheme or not host:
-        return raw.lower()
-    netloc = host
-    if port is not None and not (
-        (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
-    ):
-        netloc = f"{host}:{port}"
-    path = parts.path or ""
-    while len(path) > 1 and path.endswith("/"):
-        path = path[:-1]
-    out = f"{scheme}://{netloc}{path or '/'}"
-    if parts.query:
-        out += f"?{parts.query}"
-    return out
-
-
 def _check_canonical_conflict(facts: dict) -> tuple[str, dict]:
     canonical = (facts.get("canonical_url") or "").strip()
     if not canonical:
@@ -240,7 +206,7 @@ def _check_canonical_conflict(facts: dict) -> tuple[str, dict]:
         return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_canonical"}
     delivery = facts.get("delivery") or {}
     final_url = str(delivery.get("final_url") or "")
-    match = _normalized_url_for_compare(canonical) == _normalized_url_for_compare(
+    match = normalized_url_for_compare(canonical) == normalized_url_for_compare(
         final_url
     )
     return _pass_fail(match), {
@@ -896,7 +862,9 @@ def evaluate_rule(rule: SiteHealthRule, facts: dict) -> RuleEvaluation:
         dimension=rule.dimension,
         category=rule.category,
         severity=rule.severity,
+        finding_class=rule.finding_class,
         weight=_weight_for(rule, facts),
+        description=rule.description,
         remediation=rule.remediation,
     )
     applicable, skip_reason = _applicability(rule, facts)
@@ -921,6 +889,15 @@ def evaluate_rule(rule: SiteHealthRule, facts: dict) -> RuleEvaluation:
             evidence={"error": f"{type(exc).__name__}: {exc}"[:512]},
             **base,
         )
+    if (
+        rule.rule_id == "technical.indexable"
+        and outcome == RULE_OUTCOME_FAIL
+        and evidence.get("indexing_intent") == "unknown"
+    ):
+        # Unknown intent is an advisory observation, never a critical defect.
+        base["finding_class"] = FINDING_CLASS_ADVISORY
+        base["severity"] = "low"
+        evidence["uncertain"] = True
     return RuleEvaluation(outcome=outcome, evidence=evidence, **base)
 
 

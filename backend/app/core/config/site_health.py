@@ -703,9 +703,16 @@ EVENT_CRAWL_CANCELLED: Final = "crawl.cancelled"
 # 3+ can produce a conversion/journey role from CTA or form evidence.
 # sh-extractor-6 removes the unconsumed ``money_mentions`` compatibility fact.
 # Contact points remain part of the observable Site Health artifact.
-EXTRACTOR_VERSION: Final = "sh-extractor-6"
-ANALYZER_VERSION: Final = "sh-analyzer-3"
-RULE_CATALOG_VERSION: Final = "sh-rules-3"
+EXTRACTOR_VERSION: Final = "sh-extractor-7"
+LINK_REWRITE_VERSION: Final = "sh-link-rewrite-1"
+LINK_REWRITE_ENCODED_TRACKING_QUERY: Final = "encoded_tracking_query_delimiter"
+HOST_RUNG_BLOCK_THRESHOLD: Final = 2
+HOST_RUNG_PREFERENCE_WINDOW: Final = 20
+HOST_RUNG_OBSERVATION_LIMIT: Final = 64
+ACQUISITION_TRIGGER_HOST_PREFERENCE: Final = "host_block_preference"
+ACQUISITION_TRIGGER_HOST_PROBE: Final = "host_recovery_probe"
+ANALYZER_VERSION: Final = "sh-analyzer-4"
+RULE_CATALOG_VERSION: Final = "sh-rules-4"
 SCORING_VERSION: Final = "sh-scoring-2"
 CLASSIFIER_VERSION: Final = "sh-classifier-3"
 
@@ -1297,6 +1304,12 @@ DIMENSION_WEIGHT_AEO: Final = 0.5
 # Round every dimension/overall score once to this many decimals.
 SCORE_ROUNDING_DECIMALS: Final = 1
 
+FINDING_CLASS_DEFECT: Final = "defect"
+FINDING_CLASS_ADVISORY: Final = "advisory"
+FINDING_CLASSES: Final[frozenset[str]] = frozenset(
+    {FINDING_CLASS_DEFECT, FINDING_CLASS_ADVISORY}
+)
+
 
 class SiteHealthRule:
     """One deterministic Site Health rule (frozen catalog entry).
@@ -1313,6 +1326,7 @@ class SiteHealthRule:
         "dimension",
         "category",
         "severity",
+        "finding_class",
         "weight",
         "applicability_key",
         "description",
@@ -1335,12 +1349,16 @@ class SiteHealthRule:
         remediation: str,
         display_label: str = "",
         display_label_variants: dict[str, str] | None = None,
+        finding_class: str = FINDING_CLASS_DEFECT,
     ) -> None:
         self.rule_id = rule_id
         self.rule_version = rule_version
         self.dimension = dimension
         self.category = category
         self.severity = severity
+        if finding_class not in FINDING_CLASSES:
+            raise ValueError(f"Unsupported finding class: {finding_class}")
+        self.finding_class = finding_class
         self.weight = weight
         self.applicability_key = applicability_key
         self.description = description
@@ -1514,6 +1532,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         description="Title length falls inside the recommended band (30-60 chars).",
         remediation="Rewrite the <title> to roughly 30-60 characters.",
         display_label="Title length outside recommended band",
+        finding_class=FINDING_CLASS_ADVISORY,
     ),
     SiteHealthRule(
         rule_id="technical.meta_description_length_band",
@@ -1528,6 +1547,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         remediation="Rewrite the meta description to roughly 70-160 characters.",
         display_label="Meta description length outside recommended band",
+        finding_class=FINDING_CLASS_ADVISORY,
     ),
     SiteHealthRule(
         rule_id="technical.hsts_present",
@@ -2004,6 +2024,7 @@ TRACKING_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
         "utm_campaign",
         "utm_term",
         "utm_content",
+        "intpromo",
         "gclid",
         "fbclid",
         "msclkid",

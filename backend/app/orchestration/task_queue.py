@@ -79,6 +79,21 @@ class TaskQueue[T](Protocol):
         """
         ...
 
+    async def defer(
+        self,
+        *,
+        task_id: uuid.UUID,
+        owner: str,
+        delay_seconds: float = 0.0,
+    ) -> bool:
+        """Release an owned task back to ``queued`` without spending an attempt.
+
+        Used for durable task dependencies discovered after claim but before
+        external work starts. It records neither an error nor a provider
+        attempt because neither occurred.
+        """
+        ...
+
     async def park_capacity_wait(
         self,
         *,

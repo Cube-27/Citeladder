@@ -54,3 +54,31 @@ def test_extract_discovery_links_valid_charset_honored():
         charset="ISO-8859-1",
     )
     assert title == "Caf\u00e9"
+
+
+def test_encoded_tracking_query_delimiter_is_repaired_at_extraction():
+    body = b'<a href="/men%3Fintpromo%3Dhomepage%26utm_source%3Dhero">Men</a>'
+    _title, links = extract_discovery_links(
+        body,
+        base_url="https://shop.example.com/",
+        root_registrable_domain="example.com",
+    )
+    assert [link.url for link in links] == ["https://shop.example.com/men"]
+    assert links[0].rewrite_reason == "encoded_tracking_query_delimiter"
+    assert links[0].rewrite_version == "sh-link-rewrite-1"
+
+
+def test_reserved_path_escapes_survive_without_positive_query_evidence():
+    encoded = ("%3Ffaq", "%26terms", "%2Fpart", "%25value", "%3Fsku%3D42")
+    body = "".join(
+        f'<a href="/items/{value}">{value}</a>' for value in encoded
+    ).encode()
+    _title, links = extract_discovery_links(
+        body,
+        base_url="https://shop.example.com/",
+        root_registrable_domain="example.com",
+    )
+    assert [link.url for link in links] == [
+        f"https://shop.example.com/items/{value}" for value in encoded
+    ]
+    assert all(not link.rewrite_reason and not link.rewrite_version for link in links)

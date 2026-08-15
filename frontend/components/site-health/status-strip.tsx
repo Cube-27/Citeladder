@@ -303,18 +303,11 @@ function AnalysisStrip({
   // written when the crawl terminalizes, so derive the live view from server
   // counters instead of rendering 0s. `pages.length` is the last resort (a
   // bounded window, but better than nothing before the quota loads).
-  const selected = summary?.selected_count ?? selectedTotal ?? pages.length;
-  const completed = summary?.analyzed_count ?? crawl.analyzed_count;
-  const failed = crawl.failed_count;
-  // `completed`/`failed` use the server-aggregated crawl counters. `running`
-  // is observed from the visible window (no server counter exists for it),
-  // and `queued` is the arithmetic remainder — clamped at 0 so a transiently
-  // stale mix of counters can never render a negative count. Until the
-  // selected total is known, `Queued: 0` would misread as "nothing left to
-  // do", so it renders the placeholder instead.
-  const countsKnown = summary !== null || selectedTotal !== null;
-  const running = pages.filter((p) => p.analysis_status === 'running').length;
-  const queued = countsKnown ? Math.max(0, selected - completed - failed - running) : null;
+  const selected =
+    crawl.counters.selected || summary?.selected_count || selectedTotal || pages.length;
+  const completed = crawl.counters.analyzed;
+  const running = crawl.counters.running;
+  const queued = crawl.counters.queued;
   // A recrawl runs analysis of the monitored set WHILE re-discovery streams —
   // say so, instead of pretending only one sub-process exists. Never for a
   // sample crawl: Free copy must not imply continued full-site scanning.
@@ -329,6 +322,13 @@ function AnalysisStrip({
     narration = 'Cancelling — finishing the page in flight and stopping';
   } else if (linkChecking) {
     narration = 'Pages analyzed — checking their links for broken destinations';
+  } else if (crawl.counters.activity.state === 'waiting') {
+    narration =
+      crawl.counters.activity.reason === 'host_gate'
+        ? 'Waiting for the site host gate while the worker lease stays healthy'
+        : 'Waiting for the next persisted retry window';
+  } else if (crawl.counters.activity.state === 'stalled') {
+    narration = 'Worker lease expired — recovery is pending';
   } else if (discovering) {
     narration = 'Auditing monitored pages while discovery re-scans the site in the background';
   } else {
@@ -341,12 +341,28 @@ function AnalysisStrip({
       narration={narration}
       // Link checking and background re-discovery both leave the counters
       // still — the pulse is what distinguishes "working" from "stuck".
-      active={linkChecking || discovering}
+      active={!cancelPending && crawl.counters.activity.state !== 'stalled'}
       counts={[
-        { label: 'Total pages', value: countsKnown ? selected : null },
+        { label: 'Total pages', value: selected },
         { label: 'Completed', value: completed, className: 'text-run-completed' },
         { label: 'In progress', value: running, className: 'text-run-running' },
         { label: 'Queued', value: queued, className: 'text-muted' },
+        ...(crawl.counters.failure_breakdown.robots_denied > 0
+          ? [
+              {
+                label: 'Blocked by robots.txt',
+                value: crawl.counters.failure_breakdown.robots_denied,
+                className: 'text-run-blocked',
+              },
+            ]
+          : []),
+        ...(['http_4xx', 'http_5xx', 'timeout'] as const)
+          .filter((code) => crawl.counters.failure_breakdown[code] > 0)
+          .map((code) => ({
+            label: code === 'timeout' ? 'Timeouts' : code.replace('_', ' ').toUpperCase(),
+            value: crawl.counters.failure_breakdown[code],
+            className: 'text-run-error',
+          })),
       ]}
     >
       {selectedError ? (

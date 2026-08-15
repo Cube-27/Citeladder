@@ -401,7 +401,7 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
     )
 
     assert (ANALYZER_VERSION, SCORING_VERSION, CLASSIFIER_VERSION) == (
-        "sh-analyzer-3",
+        "sh-analyzer-4",
         "sh-scoring-2",
         "sh-classifier-3",
     )
@@ -424,7 +424,7 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         # The /blog/ path pattern classified the page as an article.
         assert analysis.page_kind == "article"
         assert analysis.classifier_version == "sh-classifier-3"
-        assert analysis.analyzer_version == "sh-analyzer-3"
+        assert analysis.analyzer_version == "sh-analyzer-4"
         assert analysis.scoring_version == "sh-scoring-2"
 
         # The bounded classifier evidence persisted WITH the row (it used to
@@ -587,7 +587,7 @@ async def test_analyze_injects_site_facts_on_root_analysis_only(
         assert stance is not None
         assert stance.outcome == RULE_OUTCOME_FAIL
         assert stance.evidence["blocked"] == ["GPTBot"]
-        assert stance.rule_version == RULE_CATALOG_VERSION == "sh-rules-3"
+        assert stance.rule_version == RULE_CATALOG_VERSION == "sh-rules-4"
         llms = await _eval("aeo.llms_txt_present", root_analysis.id)
         assert llms is not None
         assert llms.outcome == RULE_OUTCOME_PASS

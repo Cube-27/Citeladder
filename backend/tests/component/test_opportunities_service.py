@@ -30,7 +30,7 @@ from app.core.config.products import (
     PRODUCT_ANALYZER_VERSION,
     PRODUCT_SCORING_RULE_VERSION,
 )
-from app.core.config.site_health import CRAWL_STATUS_RUNNING
+from app.core.config.site_health import CRAWL_STATUS_CANCELLED, CRAWL_STATUS_RUNNING
 from app.core.config.task_queue import TASK_STATUS_FAILED
 from app.domain.opportunities import service
 from app.domain.opportunities.service import (
@@ -294,6 +294,50 @@ async def test_recompute_persists_rows_and_snapshot_with_provenance(
     assert snapshot.source_analysis_ids == sorted([str(scn.analysis0_id)])
     assert snapshot.source_issue_ids == sorted(
         [str(scn.issue_structured_id), str(scn.issue_thin_id)]
+    )
+
+
+async def test_cancelled_site_evidence_freezes_coverage_and_limitations(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    crawl = await db_session.get(SiteCrawl, scn.crawl_id)
+    assert crawl is not None
+    crawl.status = CRAWL_STATUS_CANCELLED
+    crawl.analyzed_url_count = 1
+    crawl.failed_url_count = 1
+    crawl.analysis_requested_count = 3
+    crawl.score_summary = {"selected_count": 3, "analyzed_count": 1}
+    await db_session.commit()
+
+    result = await service.recompute(
+        db_session,
+        workspace_id=scn.workspace_id,
+        project_id=scn.project_id,
+        site_crawl_id=scn.crawl_id,
+    )
+
+    assert result["coverage"] == {
+        "crawl_status": "cancelled",
+        "selected_url_count": 3,
+        "analyzed_url_count": 1,
+        "failed_url_count": 1,
+        "analysis_ratio": 0.3333,
+    }
+    assert result["limitations"] == [
+        "Site Health evidence is partial (cancelled); "
+        "only completed analyses are included.",
+        "Coverage: 1 of 3 selected URLs analyzed.",
+    ]
+    site_rows = [
+        row
+        for row in await _live_rows(db_session, scn)
+        if row.opportunity_type == "site"
+    ]
+    assert site_rows
+    assert all(row.evidence["coverage"] == result["coverage"] for row in site_rows)
+    assert all(
+        row.evidence["limitations"] == result["limitations"] for row in site_rows
     )
 
 

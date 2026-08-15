@@ -24,6 +24,8 @@ from app.core.config.site_health import (
     DIMENSION_AEO,
     DIMENSION_TECHNICAL,
     EXPAND_GATED_MAX_RATIO,
+    FINDING_CLASS_ADVISORY,
+    FINDING_CLASS_DEFECT,
     META_DESCRIPTION_LENGTH_BAND,
     PAGE_KIND_OTHER,
     PAGE_KIND_PROFILES,
@@ -536,6 +538,65 @@ def test_canonical_conflict_not_applicable_without_canonical():
     assert ev.evidence["reason"] == "no_canonical"
 
 
+def test_indexability_uses_strong_intent_evidence_in_precedence_order():
+    explicit = _outcome(
+        _html_facts(
+            robots={"noindex": True, "nofollow": False},
+            indexing_policy="exclude",
+            canonical_url="https://x.example/",
+            sitemap_member=True,
+        ),
+        "technical.indexable",
+    )
+    assert explicit.outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert explicit.finding_class == FINDING_CLASS_DEFECT
+    assert explicit.evidence["intent_source"] == "explicit_user_policy"
+
+    canonical_exclude = _outcome(
+        _html_facts(
+            robots={"noindex": True, "nofollow": False},
+            canonical_url="https://x.example/preferred",
+            sitemap_member=True,
+        ),
+        "technical.indexable",
+    )
+    assert canonical_exclude.outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert canonical_exclude.evidence["intent_source"] == "canonical_declaration"
+
+    sitemap_index = _outcome(
+        _html_facts(
+            robots={"noindex": True, "nofollow": False},
+            canonical_url="",
+            sitemap_member=True,
+        ),
+        "technical.indexable",
+    )
+    assert sitemap_index.outcome == RULE_OUTCOME_FAIL
+    assert sitemap_index.finding_class == FINDING_CLASS_DEFECT
+    assert sitemap_index.severity == "critical"
+
+
+def test_unknown_noindex_intent_is_low_advisory_not_critical_defect():
+    result = _outcome(
+        _html_facts(
+            robots={"noindex": True, "nofollow": False},
+            canonical_url="",
+            sitemap_member=False,
+        ),
+        "technical.indexable",
+    )
+    assert result.outcome == RULE_OUTCOME_FAIL
+    assert result.finding_class == FINDING_CLASS_ADVISORY
+    assert result.severity == "low"
+    assert result.evidence == {
+        "noindex": True,
+        "nofollow": False,
+        "indexing_intent": "unknown",
+        "intent_source": "insufficient_evidence",
+        "uncertain": True,
+    }
+
+
 def test_title_length_band():
     low, high = TITLE_LENGTH_BAND
     assert _outcome(_html_facts(), "technical.title_length_band").outcome == (
@@ -543,6 +604,7 @@ def test_title_length_band():
     )
     short = _outcome(_html_facts(title="x" * (low - 1)), "technical.title_length_band")
     assert short.outcome == RULE_OUTCOME_FAIL
+    assert short.finding_class == FINDING_CLASS_ADVISORY
     assert short.evidence["title_length"] == low - 1
     assert short.evidence["band"] == [low, high]
     long = _outcome(_html_facts(title="x" * (high + 1)), "technical.title_length_band")
@@ -570,6 +632,7 @@ def test_meta_description_length_band():
         "technical.meta_description_length_band",
     )
     assert short.outcome == RULE_OUTCOME_FAIL
+    assert short.finding_class == FINDING_CLASS_ADVISORY
     assert short.evidence["description_length"] == low - 1
     assert short.evidence["band"] == [low, high]
     long = _outcome(

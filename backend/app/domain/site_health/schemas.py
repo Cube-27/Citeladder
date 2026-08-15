@@ -45,6 +45,8 @@ class FrontierCandidate:
     # DIFFERENT verdict for the same URL, so re-deriving it downstream risked
     # persisting a value kind that disagreed with the one used to admit.
     value_kind: str = "other"
+    rewrite_reason: str = ""
+    rewrite_version: str = ""
 
     @property
     def analyzable(self) -> bool:
@@ -62,6 +64,8 @@ class FrontierCandidate:
         source_kind: str,
         parent_position: int = 0,
         link_ordinal: int = 0,
+        rewrite_reason: str = "",
+        rewrite_version: str = "",
     ) -> FrontierCandidate:
         """Build a candidate carrying one admission decision's full verdict.
 
@@ -77,6 +81,8 @@ class FrontierCandidate:
             value_priority=admission.priority,
             parent_position=parent_position,
             link_ordinal=link_ordinal,
+            rewrite_reason=rewrite_reason,
+            rewrite_version=rewrite_version,
             disposition=admission.disposition,
             disposition_reason=admission.disposition_reason,
             disposition_version=admission.disposition_version,
@@ -101,6 +107,8 @@ class DiscoveredLink:
     url: str
     url_hash: str
     ordinal: int
+    rewrite_reason: str = ""
+    rewrite_version: str = ""
 
 
 @dataclass(frozen=True, slots=True)

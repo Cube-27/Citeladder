@@ -28,6 +28,7 @@ const AFFECTED_URL_LIMIT = 25;
 
 /** Filter chips (mockup 710): All + severity tiers + technical/AEO dimension. */
 type FilterKey = 'all' | 'high' | 'medium' | 'low' | 'technical' | 'aeo';
+type FindingView = 'defect' | 'advisory';
 
 const FILTERS: ReadonlyArray<{ key: FilterKey; label: string }> = [
   { key: 'all', label: 'All' },
@@ -57,7 +58,11 @@ function filterParams(filter: FilterKey): Pick<IssuesParams, 'severity' | 'dimen
  * Per-chip occurrence count from the chip-independent summary. `high` folds in
  * `critical` so the chip agrees with the "High Severity" tile above it.
  */
-function filterCount(filter: FilterKey, summary: import('@/lib/api/types').IssuesSummary): number {
+function filterCount(
+  filter: FilterKey,
+  summary: import('@/lib/api/types').IssuesSummary,
+  findingView: FindingView,
+): number {
   switch (filter) {
     case 'high':
       return (summary.severity_counts.high ?? 0) + (summary.severity_counts.critical ?? 0);
@@ -68,7 +73,9 @@ function filterCount(filter: FilterKey, summary: import('@/lib/api/types').Issue
     case 'aeo':
       return summary.dimension_counts?.[filter] ?? 0;
     default:
-      return summary.issue_count;
+      return findingView === 'defect'
+        ? summary.defect_issue_type_count
+        : summary.advisory_issue_type_count;
   }
 }
 
@@ -87,6 +94,7 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [findingView, setFindingView] = useState<FindingView>('defect');
   const [pageKind, setPageKind] = useState('');
   const [cursorStack, setCursorStack] = useState<string[]>([]);
 
@@ -94,12 +102,13 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   const params: IssuesParams = useMemo(
     () => ({
       ...filterParams(filter),
+      finding_class: findingView,
       query: query.trim() || undefined,
       page_kind: pageKind || undefined,
       cursor,
       limit: ISSUE_LIMIT,
     }),
-    [filter, query, pageKind, cursor],
+    [filter, findingView, query, pageKind, cursor],
   );
 
   const issuesQuery = useQuery(siteHealthQueries.issues(crawlId, params));
@@ -117,6 +126,11 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
     setFilter(next);
     setCursorStack([]);
   };
+  const selectFindingView = (next: FindingView) => {
+    setFindingView(next);
+    setFilter('all');
+    setCursorStack([]);
+  };
   // Same server-backed reset behavior as the chips: a filter edit restarts
   // from the first page (filter-bound cursors are rejected server-side).
   const selectPageKind = (next: string) => {
@@ -130,6 +144,18 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
 
   return (
     <div className="grid gap-6">
+      {summary ? (
+        <div className="border-border-subtle bg-panel flex flex-wrap gap-x-6 gap-y-2 rounded-xl border p-4 text-sm">
+          <span>
+            <strong className="text-foreground">{summary.defect_issue_type_count}</strong>{' '}
+            defect issue types
+          </span>
+          <span className="text-secondary">
+            {summary.occurrence_count} {findingView} occurrences
+          </span>
+          <span className="text-secondary">{summary.affected_url_count} affected URLs</span>
+        </div>
+      ) : null}
       <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2">
         <Input
           type="search"
@@ -140,8 +166,31 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
           className="max-w-xs"
         />
         <PageKindSelect value={pageKind} onChange={selectPageKind} />
+        <div className="flex items-center gap-1" aria-label="Finding class">
+          {(['defect', 'advisory'] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => selectFindingView(view)}
+              aria-pressed={findingView === view}
+              className={cn(
+                'focus-ring rounded-full border px-3 py-1 text-xs font-medium capitalize',
+                findingView === view
+                  ? 'border-accent-border bg-accent-subtle text-accent-text'
+                  : 'border-border bg-panel text-secondary',
+              )}
+            >
+              {view === 'defect' ? 'Defects' : 'Advisories'}
+              {summary
+                ? ` (${view === 'defect' ? summary.defect_issue_type_count : summary.advisory_issue_type_count})`
+                : ''}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {FILTERS.map((f) => (
+          {FILTERS.filter(
+            (f) => findingView === 'defect' || !['high', 'medium', 'low'].includes(f.key),
+          ).map((f) => (
             <button
               key={f.key}
               type="button"
@@ -155,7 +204,7 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
               )}
             >
               {f.label}
-              {summary ? ` (${filterCount(f.key, summary)})` : ''}
+              {summary ? ` (${filterCount(f.key, summary, findingView)})` : ''}
             </button>
           ))}
         </div>
@@ -232,9 +281,13 @@ function IssueCard({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: str
       <CardContent className="grid gap-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="status" value={severityBadgeValue(issue.severity)}>
-              {severityLabel(issue.severity)}
-            </Badge>
+            {issue.finding_class === 'defect' ? (
+              <Badge variant="status" value={severityBadgeValue(issue.severity)}>
+                {severityLabel(issue.severity)}
+              </Badge>
+            ) : (
+              <Badge>Advisory</Badge>
+            )}
             <DimensionBadge dimension={issue.dimension} />
           </div>
           <span className="text-2xs text-muted font-mono whitespace-nowrap">
@@ -244,9 +297,15 @@ function IssueCard({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: str
 
         <div className="grid gap-1">
           <h3 className="text-foreground text-heading-sm">{issueTitle(issue)}</h3>
-          {issue.remediation ? (
-            <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
+          {issue.description ? (
+            <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}
+          <span className="flex flex-wrap items-center gap-1">
+            <Badge>
+              Evidence · {issue.affected_url_count}{' '}
+              {issue.affected_url_count === 1 ? 'page' : 'pages'}
+            </Badge>
+          </span>
           {/* Which page TYPES this issue actually reaches. A product-schema
               finding that only touches product pages and a title finding that
               touches everything are very different pieces of work, and the
@@ -271,7 +330,15 @@ function IssueCard({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: str
         </div>
 
         {expanded ? (
-          <div className="border-border-subtle rounded-lg border">
+          <div className="border-border-subtle grid rounded-lg border">
+            {issue.remediation ? (
+              <div className="border-border-subtle grid gap-1 border-b p-3">
+                <span className="text-2xs text-muted font-medium tracking-wide uppercase">
+                  How to fix
+                </span>
+                <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
+              </div>
+            ) : null}
             {detailQuery.isError ? (
               <div className="p-3">
                 <Alert tone="danger">Could not load affected URLs.</Alert>
@@ -351,6 +418,9 @@ function buildFixPrompt(issue: SiteIssue): string {
   const lines = [
     `Fix this Site Health issue on my website: "${label}" (${dimensionLabel(issue.dimension)}, ${severityLabel(issue.severity)} severity).`,
   ];
+  if (issue.description) {
+    lines.push('', 'What is wrong:', issue.description);
+  }
   if (issue.remediation) {
     lines.push('', 'Recommended remediation:', issue.remediation);
   }

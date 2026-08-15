@@ -47,8 +47,8 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 from app.connectors.web_evidence.acquisition import (
+    configured_ladder_trigger,
     curl_cffi_pinned_resolution_supported,
-    curl_trigger_for_result,
 )
 from app.connectors.web_evidence.browser_transport import PatchrightTransport
 from app.connectors.web_evidence.contracts import (
@@ -478,6 +478,8 @@ class SecureFetcher:
         include_globs: list[str] | None = None,
         exclude_globs: list[str] | None = None,
         enforce_scope: bool = False,
+        preferred_rung: int = 1,
+        initial_trigger: str = ACQUISITION_TRIGGER_INITIAL,
     ) -> FetchResult:
         """Fetch ``request.url`` with full SSRF + size + redirect enforcement.
 
@@ -510,10 +512,23 @@ class SecureFetcher:
 
         limits = self._limits(request)
         attempts: list[FetchCallTrace] = []
+        preferred = await self._fetch_preferred_rung(
+            request=request,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+            enforce_scope=enforce_scope,
+            limits=limits,
+            attempts=attempts,
+            preferred_rung=preferred_rung,
+            initial_trigger=initial_trigger,
+        )
+        if preferred is not None:
+            return preferred
         initial = AcquisitionProvenance(
             transport=ACQUISITION_TRANSPORT_HTTPX,
             rung=1,
-            trigger=ACQUISITION_TRIGGER_INITIAL,
+            trigger=initial_trigger,
             policy_version=self._settings.acquisition_policy_version,
         )
         try:
@@ -555,30 +570,59 @@ class SecureFetcher:
             prior=result,
         )
 
+    async def _fetch_preferred_rung(
+        self,
+        *,
+        request: FetchRequest,
+        root_registrable_domain: str | None,
+        include_globs: list[str] | None,
+        exclude_globs: list[str] | None,
+        enforce_scope: bool,
+        limits: tuple[int, int, float, int],
+        attempts: list[FetchCallTrace],
+        preferred_rung: int,
+        initial_trigger: str,
+    ) -> FetchResult | None:
+        """Start at persisted rung 2 when host evidence requires it."""
+        if preferred_rung != 2 or self._curl_transport is None:
+            return None
+        try:
+            result = await self._fetch_curl(
+                request=request,
+                root_registrable_domain=root_registrable_domain,
+                include_globs=include_globs,
+                exclude_globs=exclude_globs,
+                enforce_scope=enforce_scope,
+                limits=limits,
+                attempts=attempts,
+                trigger=initial_trigger,
+            )
+        except FetchError as exc:
+            if not exc.attempts:
+                exc.attempts = tuple(attempts)
+            raise
+        result = replace(result, attempts=tuple(attempts))
+        trigger = self._ladder_trigger(result)
+        if trigger is None:
+            return result
+        return await self._continue_with_browser(
+            request=request,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+            enforce_scope=enforce_scope,
+            limits=limits,
+            attempts=attempts,
+            trigger=trigger,
+            prior=result,
+        )
+
     def _ladder_trigger(self, result: FetchResult) -> str | None:
-        """The config-owned reason (if any) that this result needs a later rung.
-
-        The JS-shell signal is offered ONLY when the browser rung is enabled.
-        curl-cffi replays the same request with a different TLS fingerprint, so
-        it returns the identical shell — escalating a shell to rung 2 would buy
-        a second fetch and no new evidence. Zeroing the thresholds here (rather
-        than branching inside the pure helper) keeps rung selection a matter of
-        configuration.
-        """
-
-        browser = self._settings.browser_enabled
-        return curl_trigger_for_result(
+        """Return the config-owned reason for entering a later rung."""
+        return configured_ladder_trigger(
             result,
+            settings=self._settings,
             has_challenge_marker=is_bot_block_result(result),
-            trigger_statuses=self._settings.curl_cffi_trigger_statuses,
-            low_content_bytes=self._settings.curl_cffi_low_content_bytes,
-            js_shell_min_text_chars=(
-                self._settings.js_shell_min_text_chars if browser else 0
-            ),
-            js_shell_min_inline_script_chars=(
-                self._settings.js_shell_min_inline_script_chars
-            ),
-            js_shell_scan_bytes=self._settings.js_shell_scan_bytes,
         )
 
     async def _continue_acquisition_ladder(
