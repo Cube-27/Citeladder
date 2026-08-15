@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { BrandProfile } from '@/lib/api/types';
 import { mswServer } from '@/test/msw-server';
@@ -43,6 +43,7 @@ afterAll(() => mswServer.close());
 describe('BrandProfilePanel', () => {
   it('saves direct edits as manual knowledge', async () => {
     const user = userEvent.setup({ delay: null });
+    const onSaved = vi.fn();
     let requestBody: unknown;
     mswServer.use(
       http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
@@ -50,12 +51,22 @@ describe('BrandProfilePanel', () => {
         return HttpResponse.json({
           ...profile,
           description: 'A value-focused family retailer.',
-          sources: { ...profile.sources, description: 'manual' },
+          sources: {
+            ...profile.sources,
+            description: {
+              origin: 'manual',
+              review_state: 'confirmed',
+              reviewed_by: null,
+              reviewed_at: null,
+            },
+          },
         });
       }),
     );
 
-    renderWithProviders(<BrandProfilePanel projectId={projectId} profile={profile} />);
+    renderWithProviders(
+      <BrandProfilePanel projectId={projectId} profile={profile} onSaved={onSaved} />,
+    );
     await user.type(screen.getByLabelText('Description'), 'A value-focused family retailer.');
     await user.type(screen.getByLabelText('Products and services'), 'Clothing,');
     expect(screen.getByLabelText('Products and services')).toHaveValue('Clothing,');
@@ -66,6 +77,7 @@ describe('BrandProfilePanel', () => {
       description: 'A value-focused family retailer.',
       products_services: ['Clothing'],
     });
+    expect(onSaved).toHaveBeenCalledOnce();
   });
 
   it('locks profile fields while a save is pending', async () => {

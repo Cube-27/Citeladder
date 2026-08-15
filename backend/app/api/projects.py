@@ -77,6 +77,7 @@ from app.domain.projects.schemas import (
 )
 from app.domain.projects.service import (
     ProjectNotFoundError,
+    commerce_evidence_project_ids,
     create_project,
     delete_project,
     get_project,
@@ -124,12 +125,31 @@ async def _get_project_or_404(
         raise_not_found(_RES_PROJECT, cause=exc)
 
 
+async def _project_response(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project
+) -> ProjectResponse:
+    commerce_ids = await commerce_evidence_project_ids(
+        session, workspace_id=workspace_id, project_ids=[project.id]
+    )
+    return project_to_response(
+        project, has_commerce_evidence=project.id in commerce_ids
+    )
+
+
 @router.get("", response_model=list[ProjectResponse])
 async def list_projects_endpoint(
     ctx: _WorkspaceDep, session: _SessionDep
 ) -> list[ProjectResponse]:
     projects = await list_projects(session, workspace_id=ctx.workspace_id)
-    return [project_to_response(p) for p in projects]
+    commerce_ids = await commerce_evidence_project_ids(
+        session,
+        workspace_id=ctx.workspace_id,
+        project_ids=[project.id for project in projects],
+    )
+    return [
+        project_to_response(project, has_commerce_evidence=project.id in commerce_ids)
+        for project in projects
+    ]
 
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -141,9 +161,12 @@ async def create_project_endpoint(
             session,
             workspace_id=ctx.workspace_id,
             payload=payload,
+            reviewer_id=ctx.user.id,
         )
     )
-    return project_to_response(project)
+    return await _project_response(
+        session, workspace_id=ctx.workspace_id, project=project
+    )
 
 
 @router.get(
@@ -179,6 +202,7 @@ async def put_brand_profile_endpoint(
             session,
             workspace_id=ctx.workspace_id,
             project_id=project_id,
+            user_id=ctx.user.id,
             payload=payload,
         )
     except (ProjectNotFoundError, BrandProfileNotFoundError) as exc:
@@ -364,7 +388,9 @@ async def refresh_project_logos_endpoint(
         )
     except ProjectNotFoundError as exc:
         raise_not_found(_RES_PROJECT, cause=exc)
-    return project_to_response(project)
+    return await _project_response(
+        session, workspace_id=ctx.workspace_id, project=project
+    )
 
 
 @router.get("/{project_id}/logo", response_class=Response)
@@ -423,7 +449,9 @@ async def get_project_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ProjectResponse:
     project = await _get_project_or_404(session, ctx.workspace_id, project_id)
-    return project_to_response(project)
+    return await _project_response(
+        session, workspace_id=ctx.workspace_id, project=project
+    )
 
 
 @router.get("/{project_id}/command-center", response_model=CommandCenterResponse)
@@ -468,6 +496,11 @@ async def get_executive_report_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No completed command-center measurement is available",
         ) from exc
+    if not command_center.report_available or command_center.measurement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No completed command-center measurement is available",
+        )
     slug = re.sub(r"[^a-z0-9]+", "-", project.brand_name.lower()).strip("-")
     date = command_center.measurement.completed_at.date().isoformat()
     filename = f"citeladder-{slug or 'report'}-{date}.pdf"
@@ -563,7 +596,9 @@ async def update_project_endpoint(
         )
     except ProjectNotFoundError as exc:
         raise_not_found(_RES_PROJECT, cause=exc)
-    return project_to_response(project)
+    return await _project_response(
+        session, workspace_id=ctx.workspace_id, project=project
+    )
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

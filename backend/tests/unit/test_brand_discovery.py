@@ -7,7 +7,10 @@ from types import SimpleNamespace
 import pytest
 
 from app.core.config.brand_discovery import _discovery_research_system_prompt
-from app.domain.projects.discovery_schemas import BrandDiscoveryCreate
+from app.domain.projects.discovery_schemas import (
+    BrandDiscoveryCreate,
+    ConfirmedDiscoveryProfile,
+)
 from app.domain.projects.onboarding import prompt_generation
 from app.domain.projects.onboarding.industry_library import (
     industry_context,
@@ -24,7 +27,7 @@ from app.domain.projects.onboarding.prompt_validation import (
     MARKET_VISIBILITY,
     validate_portfolio,
 )
-from app.domain.projects.onboarding.research import _customer_warnings, _prompt_topics
+from app.domain.projects.onboarding.research import _customer_warnings
 from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 
@@ -68,24 +71,28 @@ def test_general_industry_is_deterministic_fallback() -> None:
     assert all("products and services" not in item["text"] for item in prompts)
 
 
-def test_research_prompt_uses_configured_cohort_counts() -> None:
+def test_research_prompt_defers_generation_until_icp_confirmation() -> None:
     prompt = _discovery_research_system_prompt(3, 4)
 
-    assert "exactly 7 natural consumer searches" in prompt
-    assert "3 market_visibility queries" in prompt
-    assert "4 brand_relevant queries" in prompt
+    assert "Do not generate search prompts" in prompt
+    assert "after the user confirms or edits the ICP" in prompt
 
 
-def test_research_topics_drop_blanks_and_preserve_first_seen_order() -> None:
-    assert _prompt_topics(
-        [
-            {"theme": " Analytics "},
-            {"theme": ""},
-            {"theme": "Pricing"},
-            {"theme": "Analytics"},
-            {"theme": "   "},
-        ]
-    ) == ["Analytics", "Pricing"]
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"positioning": " ", "target_audience": "buyers", "products_services": ["x"]},
+        {"positioning": "value", "target_audience": " ", "products_services": ["x"]},
+        {
+            "positioning": "value",
+            "target_audience": "buyers",
+            "products_services": [" "],
+        },
+    ],
+)
+def test_confirmed_icp_rejects_blank_required_values(payload: dict) -> None:
+    with pytest.raises(ValueError):
+        ConfirmedDiscoveryProfile.model_validate(payload)
 
 
 def test_complete_research_does_not_warn_about_internal_fallbacks() -> None:
@@ -167,6 +174,27 @@ def test_fallback_portfolio_is_balanced_and_all_prompts_are_unbranded() -> None:
     )
     assert all("flipkart" not in item["text"].casefold() for item in prompts)
     assert any("India" in item["text"] or "Indian" in item["text"] for item in prompts)
+
+
+def test_confirmed_target_audience_changes_generated_portfolio() -> None:
+    industry, context = industry_context("Software")
+    shared = {
+        "primary_market": "US",
+        "industry": industry,
+        "industry_context": context,
+        "products_services": ["analytics software"],
+    }
+
+    enterprise = fallback_portfolio(
+        **shared, target_audience="enterprise marketing teams"
+    )
+    agencies = fallback_portfolio(**shared, target_audience="independent agencies")
+
+    assert [item["text"] for item in enterprise] != [
+        item["text"] for item in agencies
+    ]
+    assert any("enterprise marketing teams" in item["text"] for item in enterprise)
+    assert any("independent agencies" in item["text"] for item in agencies)
 
 
 def test_fallback_uses_general_templates_when_industry_archetypes_are_empty() -> None:
