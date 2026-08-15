@@ -1,6 +1,6 @@
 /**
- * FAQ content for /faq — four groups aligned to the growth-intelligence
- * platform (see docs/architecture.md and the landing page).
+ * FAQ content for /faq, aligned to the governed product loop in
+ * docs/architecture.md.
  *
  * Answers describe the platform's architecture and guarantees at the vision
  * level; commercial answers follow lib/marketing-content/pricing.ts, the single
@@ -24,19 +24,19 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       {
         q: 'What is CiteLadder?',
-        a: `CiteLadder is a growth-intelligence platform. It unifies site, content, and demand intelligence with a Growth Agent that finds gaps, ranks the work by impact, and verifies every improvement against evidence — so growth runs on proof, not guesswork.`,
+        a: `CiteLadder is an evidence-grounded growth-intelligence platform. It connects owned-site and demand evidence, ranks the next action, and tracks observed mention and citation share under comparable conditions.`,
       },
       {
-        q: 'What are the four intelligence layers?',
-        a: `Site Intelligence crawls and understands your pages and documents. Content Intelligence turns detected gaps into briefs, drafts, and schema. Demand Intelligence unifies Search Console, GA4, and AI visibility. The Growth Agent orchestrates all three, explaining every recommendation and showing the evidence it used.`,
+        q: 'How is the product organized?',
+        a: `Five stations form one loop: Connect, Analyze, Act, Improve / Verify, and Track. Site Health, Content Intelligence, Demand Intelligence, and the bounded Growth Agent retain clear ownership behind those stations; Opportunities is their shared action projection.`,
       },
       {
         q: 'How does the growth loop work?',
-        a: `A continuous cycle: collect evidence, analyze and prioritize the gaps, improve the content, then measure and verify. Every pass tightens the evidence, sharpens the next action, and confirms the last one before it counts as done.`,
+        a: `Connect evidence, analyze and prioritize gaps, explicitly declare an implemented action, observe later crawl or audit evidence, and track comparable outcomes. Verification reports observation, never causality.`,
       },
       {
         q: 'Does CiteLadder measure AI visibility?',
-        a: `Yes — it is part of Demand Intelligence. CiteLadder observes how the answer engines describe your brand and competitors, and traces every observation back to the answer it came from, so a score is always inspectable.`,
+        a: `Yes. AI Visibility is the Track station. CiteLadder observes how answer engines mention and cite your brand and competitors and traces every metric to persisted responses under a versioned prompt portfolio.`,
       },
       {
         q: 'Can CiteLadder create content?',
@@ -64,16 +64,16 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     heading: 'Industry packs',
     items: [
       {
-        q: 'What is an industry pack?',
+        q: 'How does CiteLadder adapt to different businesses?',
         a: `A versioned pack encodes the page roles, gap-detection rules, and schema expectations of a specific business model, so classification and gap-finding are judged the way your industry actually works rather than by one generic rule. A project runs one primary pack plus the reviewed capabilities it needs, and every finding records the pack ID and version that produced it.`,
       },
       {
         q: 'Which industries are covered?',
-        a: `CiteLadder includes industry packs for education, commerce, professional services, enterprise SaaS, media, and financial services. Each pack defines the page roles, gap rules, and schema expectations used to evaluate that business model, and every finding records the pack and version that produced it.`,
+        a: `CiteLadder classifies each page by structural purpose, applies the matching deterministic checks, and combines those findings with the project's own demand evidence. Every derived result records the versions and source evidence that produced it.`,
       },
       {
         q: 'Do packs share my data with other customers?',
-        a: `No. Industry knowledge is shared and versioned across the platform; your customer facts are not. A pack carries rules and expectations, never another company’s data.`,
+        a: `No. Project evidence remains workspace-authorized and isolated. Shared product rules contain deterministic checks and thresholds, never another company’s data.`,
       },
     ],
   },
@@ -82,7 +82,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       {
         q: 'How is my data isolated?',
-        a: `Every customer fact is scoped to its project and never crosses workspaces. Shared industry packs are the only thing versioned across the platform — customer data never is.`,
+        a: `Every customer fact is scoped to its project and never crosses workspaces. Product rules and analyzers are versioned independently so historical results remain reproducible.`,
       },
       {
         q: 'Can I see the evidence behind a recommendation?',

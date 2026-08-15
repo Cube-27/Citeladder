@@ -86,6 +86,7 @@ from app.core.config.task_queue import (
 from app.core.config.traffic import TRAFFIC_GRANULARITY_DAY
 from app.domain.analytics.enqueue import enqueue_demand_snapshot_refresh
 from app.domain.opportunities.service import enqueue_opportunity_refresh
+from app.domain.opportunities.verification import enqueue_implementation_verification
 from app.domain.site_health.failure import load_root_failure_summary
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.selection import crawl_is_active
@@ -141,7 +142,14 @@ def _count_disclosure(crawl: SiteCrawl) -> bool:
 async def _enqueue_post_crawl_refresh(
     session: AsyncSession, *, crawl: SiteCrawl
 ) -> None:
-    """Refresh Demand when Traffic exists, otherwise refresh Opportunities."""
+    """Queue verification plus the current downstream projection chain."""
+    await enqueue_implementation_verification(
+        session,
+        workspace_id=crawl.workspace_id,
+        project_id=crawl.project_id,
+        trigger_kind="site_crawl",
+        trigger_id=crawl.id,
+    )
     traffic = await session.scalar(
         select(TrafficSnapshot)
         .where(
@@ -300,6 +308,13 @@ def _stop_completed_manual_phase(crawl: SiteCrawl, phase: str) -> None:
         apply_discovery_status(crawl, DISCOVERY_STATUS_STOPPED)
     elif phase == PHASE_ANALYSIS and crawl.analysis_status == ANALYSIS_STATUS_RUNNING:
         apply_analysis_status(crawl, ANALYSIS_STATUS_STOPPED)
+
+
+def _uses_phase_lifecycle(crawl: SiteCrawl) -> bool:
+    """Whether persisted phase-run bookkeeping participates in reconciliation."""
+    return crawl.sample_mode or bool(
+        (crawl.configuration or {}).get(MANUAL_PHASE_LIFECYCLE_KEY)
+    )
 
 
 def _is_crawl_finalize_rule(rule_id: str) -> bool:
@@ -591,7 +606,7 @@ class CrawlLifecycle:
         crawl: SiteCrawl,
         counts: dict[str, int],
     ) -> bool:
-        if not (crawl.configuration or {}).get(MANUAL_PHASE_LIFECYCLE_KEY):
+        if not _uses_phase_lifecycle(crawl):
             return False
         phase_runs = list(
             (

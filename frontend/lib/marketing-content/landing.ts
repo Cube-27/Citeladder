@@ -1,10 +1,10 @@
 /**
  * Landing-page copy for the public marketing surface.
  *
- * Structure and copy follow the approved prototype: a growth-intelligence
- * platform built from Site, Content, and Demand intelligence with a Growth Agent
- * on top. Sections carry icons and the prototype's fuller detail (module feature
- * lists, a four-step loop, industry-pack item lists, a security ledger). Only the
+ * Structure and copy follow the governed product loop. Durable Site, Content,
+ * Demand, and Agent capabilities sit behind user-facing loop
+ * stations. Sections carry icons and the prototype's fuller detail (module feature
+ * lists, a four-step loop, use-case item lists, and a security ledger). Only the
  * hero tagline, the product visual, and the type scale/weight are ours.
  *
  * Icons are named here as string keys and resolved to lucide components in the
@@ -36,11 +36,11 @@ export type IconKey =
 
 export const LANDING_CONTENT = {
   hook: {
-    eyebrow: 'Growth intelligence platform',
+    eyebrow: 'Evidence-grounded AEO',
     // Retained tagline — the hook the site opens on.
     title: 'Your buyers stopped Googling you.',
     titleAccent: 'They ask AI instead.',
-    body: 'CiteLadder unifies site, content, and demand intelligence with a growth agent that finds the gaps, prioritizes the work, and verifies every improvement against evidence.',
+    body: 'Connect what your site proves with what people search for, act on the clearest gap, and track observed mention and citation share without causal overclaiming.',
     primaryCta: 'Book a demo',
     secondaryCta: 'See how it works',
   },
@@ -76,14 +76,14 @@ export const LANDING_CONTENT = {
 
   platform: {
     kicker: 'Product architecture',
-    title: 'Four intelligence layers, one growth system.',
-    lead: 'Every layer verifies its work before passing results to the next. Evidence flows up, actions flow down, and the Growth Agent orchestrates everything.',
+    title: 'One measurable loop, four durable capabilities.',
+    lead: 'Connect, Analyze, Act, Improve / Verify, and Track. Evidence stays with its owning system while the Growth Agent provides bounded help from the top bar.',
     // The four-across summary row.
     summary: [
       {
         icon: 'site' as IconKey,
-        name: 'Site Intelligence',
-        desc: 'Crawl, classify, and index every page and asset.',
+        name: 'Site Health',
+        desc: 'Crawl, classify, and evaluate every owned page.',
       },
       {
         icon: 'content' as IconKey,
@@ -106,14 +106,14 @@ export const LANDING_CONTENT = {
       {
         num: '01',
         icon: 'site' as IconKey,
-        title: 'Site Intelligence',
+        title: 'Site Health',
         description:
-          'Crawls and understands every page and document, builds verified knowledge, detects industry-specific gaps, and confirms changes after every recrawl.',
+          'Securely crawls owned pages, classifies their structural purpose, applies deterministic checks, and confirms observable changes after a recrawl.',
         features: [
-          'Automated crawl and page-role classification',
-          'Industry-specific gap detection rules',
+          'Safe crawl and structural page classification',
+          'Page-kind-scoped deterministic checks',
           'Recrawl verification after changes',
-          'Versioned working-knowledge store',
+          'Persisted issues, scores, and evidence',
         ],
       },
       {
@@ -151,7 +151,7 @@ export const LANDING_CONTENT = {
         features: [
           'Two decisions: save content, and run an audit',
           'Typed tool calls with an audit log',
-          'Versioned industry packs',
+          'Typed tools across the product systems',
           'Project-scoped facts, never shared',
         ],
       },
@@ -179,7 +179,7 @@ export const LANDING_CONTENT = {
         num: '02',
         icon: 'analyze' as IconKey,
         label: 'Analyze & prioritize',
-        desc: 'Apply industry-pack rules. Score every gap by business impact. Rank the queue by evidence strength.',
+        desc: 'Apply deterministic checks and measured signals. Score every gap by business impact. Rank the queue by evidence strength.',
       },
       {
         num: '03',
@@ -199,7 +199,7 @@ export const LANDING_CONTENT = {
   packs: {
     kicker: 'Use cases',
     title: 'Built around how your industry actually works.',
-    lead: 'Each project runs one primary industry pack plus the reviewed capabilities it needs — page roles, gap rules, and schema expectations, versioned together.',
+    lead: 'The same evidence loop adapts to different business models while page classification, checks, and provenance stay explicit.',
     items: [
       {
         icon: 'education' as IconKey,
@@ -290,9 +290,9 @@ export const LANDING_CONTENT = {
       },
       {
         icon: 'versioned' as IconKey,
-        title: 'Versioned knowledge',
+        title: 'Versioned analysis',
         description:
-          'Shared industry knowledge is release-managed; customer facts are never shared.',
+          'Classifiers, rules, formulas, and source evidence stay versioned and inspectable.',
       },
     ],
   },
