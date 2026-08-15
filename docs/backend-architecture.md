@@ -71,12 +71,36 @@ Demand's `page_equivalence` module is the sole cross-source owned-page resolver.
 It uses exact `SiteUrl` matches plus persisted redirect/canonical evidence and
 returns `exact`, `resolved`, `ambiguous`, or `unresolved` with a versioned
 candidate projection. Sitemap/preferred-origin signals rank but never prove a
-mapping. All resolver queries are workspace- and project-scoped.
+mapping. All resolver queries are workspace- and project-scoped; large variant
+sets are split into config-bounded SQL batches.
 
 Traffic's existing `load_snapshot` resolver is exact-window when both dates are
 present and explicit-latest only when they are omitted. Dashboard projections
 expose `not_run`, `observed_zero`, or `available`; reads never substitute a
 newer mismatched window or recompute missing state.
+
+Demand owns the bounded query-evidence projection consumed by its detectors.
+The existing post-GSC Demand queue builds it before `DemandSignal` computation
+from immutable `gsc_query_page_daily` rows. `QueryEvidenceSnapshot` records the
+workspace/project/exact-window identity, source hash, superseded snapshot,
+coverage, limitations, source IDs, and analyzer/resolver versions;
+`QueryEvidenceRow` records normalized query, observed and resolved page
+identity, date, metrics, resolution evidence, and exact import provenance.
+Retries reuse identical immutable snapshots, while source or version changes
+append. Workspace-authorized list/summary APIs read only persisted rows, with
+config-owned 100/500 pagination and 5,000-row/100-artifact build bounds. Cursors
+are bound to the immutable snapshot ID. Latest-row and exact-window artifact
+caps are applied in SQL before ORM materialization, and equal concurrent
+snapshot inserts converge through the unique identity.
+
+Demand query detection is split along complexity boundaries: `projection.py`
+owns the baseline and branded/striking-distance separation,
+`query_detectors.py` owns cannibalization, property-relative CTR gap, and
+complete-daily-coverage adjacent-window trends, and `detector_source.py` performs bounded classified
+input assembly. Detector states and limitations persist in the Demand snapshot
+summary. `opportunities/demand_hits.py` is the sole mapping seam from the
+approved actionable signal set into distinct existing Opportunity rules;
+branded and ambiguous cohorts cannot cross that seam.
 
 Demand's `query_classification` module owns deterministic branded-query
 classification. Vocabulary comes from the canonical brand row, aliases, and
@@ -216,9 +240,13 @@ schema/property contracts and rule applicability. See
 The shipped runtime has no strategy, brief, context-package, validation,
 revision, publication-claim, or verification rows.
 
-The current brief evidence adapter returns explicit empty `allowed_facts`,
-`prohibited_claims`, and `source_refs` because its former knowledge-assertion
-source was removed. A replacement requires a separate approved design.
+`domain/content/grounding.py` is the sole grounding adapter. It builds a bounded,
+versioned envelope from confirmed or edited BrandProfile fields and exact
+crawl-observed fragments selected internally by `website_context.py`.
+`ContentGeneration` freezes that envelope before provider I/O; message building
+validates fact-to-source references, and the worker rejects provider source
+markers outside the envelope. Conflicts prohibit the affected claim class.
+Unavailable evidence remains a truthful ungrounded draft.
 
 ## Demand, Traffic, and visibility
 
@@ -227,8 +255,9 @@ snapshots preserve provider coverage, requested/available report families,
 join coverage, source IDs, and formula versions. Missing permissions or data
 remain unavailable rather than becoming zero.
 
-Search Demand projects its latest snapshot as ranked GSC query/page gaps with
-their evidence window and observed impressions, clicks, and CTR. It does not
+Search Demand projects its latest snapshot as ranked GSC query/page signals with
+their evidence window, honest detector states, and observed impressions,
+clicks, CTR, and position. It does not
 embed a duplicate AI Visibility projection. Traffic projections make chart
 granularity explicit while retaining selected-window totals. AI Referrals derives
 session volume and shares only from `ga4_source_medium_daily`; overlapping
