@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -32,7 +33,10 @@ from app.core.config.site_health import (
     CRAWL_STATUS_RUNNING,
     DISCOVERY_STATUS_RUNNING,
     DISCOVERY_STATUS_STOPPED,
+    ERROR_HTTP_4XX,
     ERROR_HTTP_5XX,
+    ERROR_ROBOTS_DENIED,
+    ERROR_TIMEOUT,
     FETCH_ATTEMPT_OUTCOME_ERROR,
     INITIAL_TASK_GENERATION,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
@@ -43,6 +47,7 @@ from app.core.config.site_health import (
     PHASE_RUN_STOPPED,
     RULE_OUTCOME_FAIL,
     SELECTION_SOURCE_USER,
+    SITE_HEALTH_RULES_BY_ID,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
     TASK_KIND_LINK_CHECK,
@@ -51,7 +56,9 @@ from app.core.config.site_health import (
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
     TASK_STATUS_FAILED,
+    TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
+    TASK_STATUS_RETRY_WAIT,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
 )
@@ -708,6 +715,7 @@ async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:
                 category="meta",
                 severity="critical",
                 evidence={"observed": "missing"},
+                description="The page has no HTML title element.",
                 remediation="Add a <title> tag.",
                 analyzer_version="v1",
                 rule_version="v1",
@@ -933,6 +941,125 @@ async def test_pages_and_issues_projection(
     assert any(
         au["site_url_id"] == str(scn.issue_url_id) for au in dbody["affected_urls"]
     )
+
+
+async def test_issue_catalog_separates_defect_and_advisory_quantities(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _register(client, "finding-classes@example.com")
+    async with session_factory() as session:
+        scn = await _seed_scenario(session, email="finding-classes@example.com")
+        issue = await session.scalar(
+            select(SiteIssue).where(
+                SiteIssue.crawl_id == scn.crawl_id,
+                SiteIssue.rule_id == "technical.title_present",
+            )
+        )
+        assert issue is not None
+        issue.finding_class = "advisory"
+        issue.description = "Advisory metadata"
+        defect_analysis = await session.scalar(
+            select(SitePageAnalysis).where(
+                SitePageAnalysis.crawl_id == scn.crawl_id,
+                SitePageAnalysis.site_url_id != issue.site_url_id,
+            )
+        )
+        assert defect_analysis is not None
+        defect_evaluation = SiteRuleEvaluation(
+            workspace_id=scn.workspace_id,
+            analysis_id=defect_analysis.id,
+            source_artifact_id=defect_analysis.artifact_id,
+            rule_id=issue.rule_id,
+            dimension=issue.dimension,
+            category=issue.category,
+            severity="high",
+            finding_class="defect",
+            weight=1.0,
+            outcome=RULE_OUTCOME_FAIL,
+            evidence={"observed": "defect"},
+            analyzer_version="v1",
+            rule_version="v1",
+        )
+        session.add(defect_evaluation)
+        await session.flush()
+        session.add(
+            SiteIssue(
+                workspace_id=scn.workspace_id,
+                project_id=scn.project_id,
+                crawl_id=scn.crawl_id,
+                site_url_id=defect_analysis.site_url_id,
+                analysis_id=defect_analysis.id,
+                evaluation_id=defect_evaluation.id,
+                source_artifact_id=defect_analysis.artifact_id,
+                rule_id=issue.rule_id,
+                dimension=issue.dimension,
+                category=issue.category,
+                severity="high",
+                finding_class="defect",
+                evidence={"observed": "defect"},
+                description="Defect metadata",
+                remediation="Fix the defect.",
+                analyzer_version="v1",
+                rule_version="v1",
+            )
+        )
+        await session.commit()
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+
+    defects = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/issues", headers=headers
+    )
+    assert defects.status_code == 200
+    defect_body = defects.json()
+    assert defect_body["items"][0]["description"] == "Defect metadata"
+    assert defect_body["summary"] == {
+        "issue_count": 1,
+        "defect_issue_type_count": 1,
+        "advisory_issue_type_count": 1,
+        "occurrence_count": 1,
+        "severity_counts": {
+            "critical": 0,
+            "high": 1,
+            "medium": 0,
+            "low": 0,
+            "info": 0,
+        },
+        "dimension_counts": {"aeo": 0, "technical": 1},
+        "affected_url_count": 1,
+        "monitored_affected_url_count": 1,
+    }
+
+    advisories = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/issues?finding_class=advisory",
+        headers=headers,
+    )
+    assert advisories.status_code == 200
+    body = advisories.json()
+    assert body["items"][0]["finding_class"] == "advisory"
+    assert body["items"][0]["description"] == "Advisory metadata"
+    assert body["items"][0]["id"] != defect_body["items"][0]["id"]
+    assert body["summary"]["occurrence_count"] == 1
+    assert body["summary"]["affected_url_count"] == 1
+    assert body["summary"]["severity_counts"] == {
+        "critical": 0,
+        "high": 1,
+        "medium": 0,
+        "low": 0,
+        "info": 0,
+    }
+    detail = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/issues/{body['items'][0]['id']}",
+        headers=headers,
+    )
+    assert detail.status_code == 200
+    detail_body = detail.json()
+    assert detail_body["finding_class"] == "advisory"
+    assert detail_body["description"] == "Advisory metadata"
+    assert detail_body["affected_url_count"] == 1
+    assert [row["site_url_id"] for row in detail_body["affected_urls"]] == [
+        str(scn.issue_url_id)
+    ]
 
 
 async def test_page_type_projection_filters_and_exports(
@@ -2049,3 +2176,189 @@ async def test_healthy_crawl_has_no_failure_summary_or_root_errors(
     dash_body = dashboard.json()
     assert dash_body["crawl"]["failure_summary"] is None
     assert dash_body["root_errors"] == []
+
+
+async def test_issue_description_is_frozen_across_catalog_copy_changes(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "frozen-issue-description@example.com")
+    async with session_factory() as session:
+        scn = await _seed_scenario(
+            session, email="frozen-issue-description@example.com"
+        )
+
+    rule = SITE_HEALTH_RULES_BY_ID["technical.title_present"]
+    monkeypatch.setattr(
+        rule, "description", "New catalog copy must not rewrite history."
+    )
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+    listing = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/issues", headers=headers
+    )
+    detail = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/issues/{scn.canonical_issue_id}",
+        headers=headers,
+    )
+
+    assert listing.status_code == 200
+    assert detail.status_code == 200
+    assert listing.json()["items"][0]["description"] == (
+        "The page has no HTML title element."
+    )
+    assert detail.json()["description"] == "The page has no HTML title element."
+
+
+async def test_dashboard_projects_failure_breakdown_and_evidence_activity(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """S03: persisted task evidence distinguishes blocked, waiting, and stalled."""
+    await _register(client, "progress-evidence@example.com")
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        scn = await _seed_scenario(session, email="progress-evidence@example.com")
+        crawl = await session.get(SiteCrawl, scn.crawl_id)
+        assert crawl is not None
+        crawl.status = CRAWL_STATUS_RUNNING
+        crawl.analysis_status = ANALYSIS_STATUS_RUNNING
+        crawl.completed_at = None
+
+        for index, error_code in enumerate(
+            (ERROR_ROBOTS_DENIED, ERROR_HTTP_4XX, ERROR_HTTP_5XX, ERROR_TIMEOUT),
+            start=1,
+        ):
+            url = f"https://acme.test/progress-{index}"
+            site_url = SiteUrl(
+                workspace_id=scn.workspace_id,
+                project_id=scn.project_id,
+                normalized_url=url,
+                url_hash=_hash(url),
+                display_url=url,
+                host="acme.test",
+                last_seen_crawl_id=crawl.id,
+            )
+            session.add(site_url)
+            await session.flush()
+            session.add(
+                MonitoredSiteUrl(
+                    workspace_id=scn.workspace_id,
+                    project_id=scn.project_id,
+                    profile_id=crawl.profile_id,
+                    site_url_id=site_url.id,
+                    active=True,
+                    selection_source=SELECTION_SOURCE_USER,
+                )
+            )
+            session.add(
+                SiteCrawlTask(
+                    crawl_id=crawl.id,
+                    workspace_id=scn.workspace_id,
+                    site_url_id=site_url.id,
+                    task_kind=TASK_KIND_ANALYZE,
+                    requested_url=url,
+                    url_hash=site_url.url_hash,
+                    idempotency_key=f"{crawl.id}:analyze:progress:{index}",
+                    status=TASK_STATUS_FAILED,
+                    error_code=error_code,
+                )
+            )
+
+        wait_url = "https://acme.test/host-wait"
+        waiting_site_url = SiteUrl(
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+            normalized_url=wait_url,
+            url_hash=_hash(wait_url),
+            display_url=wait_url,
+            host="acme.test",
+            last_seen_crawl_id=crawl.id,
+        )
+        session.add(waiting_site_url)
+        await session.flush()
+        session.add(
+            MonitoredSiteUrl(
+                workspace_id=scn.workspace_id,
+                project_id=scn.project_id,
+                profile_id=crawl.profile_id,
+                site_url_id=waiting_site_url.id,
+                active=True,
+                selection_source=SELECTION_SOURCE_USER,
+            )
+        )
+        waiting_task = SiteCrawlTask(
+            crawl_id=crawl.id,
+            workspace_id=scn.workspace_id,
+            site_url_id=waiting_site_url.id,
+            task_kind=TASK_KIND_ANALYZE,
+            requested_url=wait_url,
+            url_hash=waiting_site_url.url_hash,
+            idempotency_key=f"{crawl.id}:analyze:host-wait",
+            status=TASK_STATUS_LEASED,
+            lease_owner="progress-worker",
+            lease_expires_at=now + timedelta(minutes=1),
+            heartbeat_at=now,
+        )
+        session.add(waiting_task)
+        retry_url = "https://acme.test/retrying-timeout"
+        retry_site_url = SiteUrl(
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+            normalized_url=retry_url,
+            url_hash=_hash(retry_url),
+            display_url=retry_url,
+            host="acme.test",
+            last_seen_crawl_id=crawl.id,
+        )
+        session.add(retry_site_url)
+        await session.flush()
+        retry_timeout = SiteCrawlTask(
+            crawl_id=crawl.id,
+            workspace_id=scn.workspace_id,
+            site_url_id=retry_site_url.id,
+            task_kind=TASK_KIND_ANALYZE,
+            requested_url=retry_url,
+            url_hash=retry_site_url.url_hash,
+            idempotency_key=f"{crawl.id}:analyze:retry-timeout",
+            status=TASK_STATUS_RETRY_WAIT,
+            available_at=now + timedelta(minutes=2),
+            error_code=ERROR_TIMEOUT,
+        )
+        session.add(retry_timeout)
+        await session.commit()
+
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+    response = await client.get(
+        f"/api/v1/projects/{scn.project_id}/site-health", headers=headers
+    )
+    assert response.status_code == 200
+    counters = response.json()["crawl"]["counters"]
+    assert counters["failure_breakdown"] == {
+        "robots_denied": 1,
+        "http_4xx": 1,
+        "http_5xx": 1,
+        "timeout": 1,
+    }
+    assert counters["blocked"] == 1
+    assert counters["errors"] == 3
+    assert counters["activity"]["state"] == "waiting"
+    assert counters["activity"]["reason"] == "host_gate"
+    assert counters["activity"]["queue_depth"] == 2
+    assert counters["activity"]["next_available_at"] is not None
+
+    async with session_factory() as session:
+        task = await session.get(SiteCrawlTask, waiting_task.id)
+        assert task is not None
+        task.lease_expires_at = now - timedelta(seconds=1)
+        await session.commit()
+
+    stalled = await client.get(
+        f"/api/v1/projects/{scn.project_id}/site-health", headers=headers
+    )
+    assert stalled.status_code == 200
+    stalled_activity = stalled.json()["crawl"]["counters"]["activity"]
+    assert stalled_activity["state"] == "stalled"
+    assert stalled_activity["reason"] == "expired_lease"
+    assert stalled_activity["queue_depth"] == 2
+    assert stalled_activity["next_available_at"] is not None

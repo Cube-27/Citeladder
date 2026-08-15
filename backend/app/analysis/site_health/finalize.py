@@ -54,9 +54,11 @@ def _evaluation(rule: SiteHealthRule, outcome: str, evidence: dict) -> RuleEvalu
         dimension=rule.dimension,
         category=rule.category,
         severity=rule.severity,
+        finding_class=rule.finding_class,
         weight=float(rule.weight),
         outcome=outcome,
         evidence=evidence,
+        description=rule.description,
         remediation=rule.remediation,
     )
 

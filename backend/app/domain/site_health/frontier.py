@@ -77,6 +77,8 @@ async def _record_sample_admission(
         phase_run_id=phase_run_id,
         value_kind=candidate.value_kind,
         value_priority=candidate.value_priority,
+        rewrite_reason=candidate.rewrite_reason,
+        rewrite_version=candidate.rewrite_version,
     )
     if newly_activated and progress.remaining is not None:
         progress.remaining -= 1
@@ -127,6 +129,8 @@ async def _record_admission(
             phase_run_id=phase_run_id,
             value_kind=candidate.value_kind,
             value_priority=candidate.value_priority,
+            rewrite_reason=candidate.rewrite_reason,
+            rewrite_version=candidate.rewrite_version,
         )
         if newly_activated:
             progress.remaining -= 1
@@ -242,6 +246,8 @@ async def _insert_frontier_candidates(
                 "value_priority": candidate.value_priority,
                 "parent_position": candidate.parent_position,
                 "link_ordinal": candidate.link_ordinal,
+                "rewrite_reason": candidate.rewrite_reason,
+                "rewrite_version": candidate.rewrite_version,
                 "status": FRONTIER_PENDING,
             }
             for candidate in candidate_batch
@@ -303,6 +309,8 @@ def _candidate_from_frontier_row(row: SiteDiscoveryFrontier) -> FrontierCandidat
         value_priority=row.value_priority,
         parent_position=row.parent_position,
         link_ordinal=row.link_ordinal,
+        rewrite_reason=row.rewrite_reason,
+        rewrite_version=row.rewrite_version,
         value_kind=row.value_kind,
         disposition=admission.disposition,
         disposition_reason=admission.disposition_reason,

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   PLACEHOLDER,
   POLL_INTERVAL_MS,
-  STALL_TIMEOUT_MS,
   canShowDiscoveredTotal,
   crawlBadgeValue,
   crawlFailureCopy,
@@ -72,31 +71,41 @@ describe('polling / cancel / terminal predicates', () => {
       updated_at: new Date(now - 1_000).toISOString(),
     };
     expect(crawlPollInterval(crawl, now)).toBe(30_000);
-    expect(isCrawlStalled(crawl, now)).toBe(false);
+    expect(
+      isCrawlStalled({
+        status: 'running',
+        counters: { activity: { state: 'working' } },
+      } as never),
+    ).toBe(false);
   });
 
-  it('gives up on an active crawl that has gone silent', () => {
-    // The stuck-crawl symptom: active forever, no writes. The client stops
-    // polling instead of pinning the tab to an endless refetch loop.
+  it('does not infer a stall from silence and trusts expired-lease evidence', () => {
     const now = Date.parse('2026-07-29T12:00:00Z');
-    const silent = new Date(now - (STALL_TIMEOUT_MS + 60_000)).toISOString();
+    const silent = new Date(now - 60 * 60_000).toISOString();
     const crawl = {
       status: 'running' as const,
       started_at: silent,
       created_at: silent,
       updated_at: silent,
     };
-    expect(crawlPollInterval(crawl, now)).toBe(false);
-    expect(isCrawlStalled(crawl, now)).toBe(true);
+    expect(crawlPollInterval(crawl, now)).toBe(30_000);
+    expect(
+      isCrawlStalled({
+        status: 'running',
+        counters: { activity: { state: 'stalled' } },
+      } as never),
+    ).toBe(true);
   });
 
   it('is not stalled when the crawl is terminal or absent', () => {
     const now = Date.parse('2026-07-29T12:00:00Z');
-    const silent = new Date(now - (STALL_TIMEOUT_MS + 60_000)).toISOString();
     expect(isCrawlStalled(null, now)).toBe(false);
     expect(
       isCrawlStalled(
-        { status: 'completed', started_at: silent, created_at: silent, updated_at: silent },
+        {
+          status: 'completed',
+          counters: { activity: { state: 'stalled' } },
+        } as never,
         now,
       ),
     ).toBe(false);

@@ -58,9 +58,11 @@ _ISSUES_COLUMNS = [
     "dimension",
     "category",
     "severity",
+    "finding_class",
     # Distinct page types of the group's affected analyses (comma-joined).
     "page_kind",
     "affected_url_count",
+    "description",
     "remediation",
     "analyzer_version",
     "rule_version",

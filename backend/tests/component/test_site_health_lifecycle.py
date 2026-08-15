@@ -392,22 +392,16 @@ async def test_standard_crawl_completes_when_advanced_controls_are_available(
             )
             is not None
         )
-        opportunity_refresh = await session.scalar(
-            select(AnalyticsTask).where(
-                AnalyticsTask.project_id == seed.project_id,
-                AnalyticsTask.task_kind == "opportunity_refresh",
+        # A discovery-only terminal crawl has no usable analysis evidence, so
+        # it must not start either downstream refresh chain.
+        assert (
+            await session.scalar(
+                select(AnalyticsTask.id).where(
+                    AnalyticsTask.project_id == seed.project_id
+                )
             )
+            is None
         )
-        assert opportunity_refresh is not None
-        assert opportunity_refresh.payload["trigger_id"] == str(seed.crawl_id)
-        verification = await session.scalar(
-            select(AnalyticsTask).where(
-                AnalyticsTask.project_id == seed.project_id,
-                AnalyticsTask.task_kind == "opportunity_verification",
-            )
-        )
-        assert verification is not None
-        assert verification.payload["trigger_id"] == str(seed.crawl_id)
 
 
 @pytest.mark.asyncio

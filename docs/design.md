@@ -165,7 +165,20 @@ desktop).
   discovery and analysis are not separate user actions. Before a first run, use
   the actionable empty placeholder. During discovery, keep the first ten
   persisted inventory rows visible and enrich them in place as analysis
-  arrives. Remediation subtitles use persisted remediation text.
+  arrives. Issue rows show severity, affected-page count, plain-language name,
+  frozen problem description, and an evidence chip; persisted remediation is
+  disclosed on expand as **How to fix**.
+- Site Health progress names blocked and failed work beside completed work:
+  **Blocked by robots.txt**, **HTTP 4xx**, **HTTP 5xx**, and **Timeouts** appear
+  when non-zero. Waiting copy names a healthy host-gate or retry-backoff wait;
+  stalled copy is reserved for backend-reported expired-lease evidence. Never
+  describe a crawl as stuck solely because a browser-side timer elapsed.
+- Site Health findings use separate **Defects** and **Advisories** views.
+  Defects own severity and Opportunity eligibility. The headline says
+  **defect issue types** in the default view and **advisory issue types** after
+  switching views; supporting counters say class-labelled **occurrences** and
+  **affected URLs** so visually adjacent quantities never masquerade as one
+  number. Advisory rows use an Advisory label, not a severity chip.
 - Mobile retains every critical action. Tables become labelled records; filters
   and evidence use full-height sheets.
 

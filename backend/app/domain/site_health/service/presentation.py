@@ -180,6 +180,17 @@ def _score_summary(crawl: SiteCrawl) -> dict | None:
     }
 
 
+def _default_activity(*, terminal: bool) -> dict:
+    state = "terminal" if terminal else "working"
+    reason = "terminal" if terminal else "active_work"
+    return {
+        "state": state,
+        "reason": reason,
+        "queue_depth": 0,
+        "next_available_at": None,
+    }
+
+
 def _default_crawl_counters(
     crawl: SiteCrawl,
     *,
@@ -200,6 +211,13 @@ def _default_crawl_counters(
         "analyzed": int(crawl.analyzed_url_count or 0),
         "errors": int(crawl.failed_url_count or 0),
         "blocked": 0,
+        "failure_breakdown": {
+            "robots_denied": 0,
+            "http_4xx": 0,
+            "http_5xx": 0,
+            "timeout": 0,
+        },
+        "activity": _default_activity(terminal=crawl.completed_at is not None),
         "by_page_kind": {
             page_kind: int((values or {}).get("analyzed_count", 0))
             for page_kind, values in _page_kind_buckets(summary or {}).items()
@@ -458,6 +476,7 @@ def _evaluation_row(evaluation: SiteRuleEvaluation) -> dict:
         "dimension": evaluation.dimension,
         "category": evaluation.category,
         "severity": evaluation.severity,
+        "finding_class": evaluation.finding_class,
         "outcome": evaluation.outcome,
         "weight": evaluation.weight,
         "evidence": evaluation.evidence or {},
@@ -488,10 +507,12 @@ def _issue_row(issue: SiteIssue, affected_count: int) -> dict:
         "dimension": issue.dimension,
         "category": issue.category,
         "severity": issue.severity,
+        "finding_class": issue.finding_class,
         # Sole caller is the per-URL page detail (``affected_count`` is always
         # 1), so this row describes ONE occurrence and can name which side of
         # a two-sided rule fired.
         "title": display_label_for(issue.rule_id, issue.evidence),
+        "description": issue.description or "",
         "remediation": issue.remediation or "",
         "affected_url_count": affected_count,
         "analyzer_version": issue.analyzer_version,

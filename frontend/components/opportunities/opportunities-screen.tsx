@@ -161,6 +161,9 @@ function SummaryStrip({
               </Badge>
             ) : null}
           </div>
+          {summary.limitations.length > 0 ? (
+            <p className="text-warning text-xs">{summary.limitations.join(' ')}</p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <Dropdown>

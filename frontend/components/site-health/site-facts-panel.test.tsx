@@ -100,6 +100,8 @@ function crawl(siteFacts: SiteCrawl['site_facts']): SiteCrawl {
       analyzed: 3,
       errors: 0,
       blocked: 0,
+      failure_breakdown: { robots_denied: 0, http_4xx: 0, http_5xx: 0, timeout: 0 },
+      activity: { state: 'terminal', reason: 'terminal', queue_depth: 0, next_available_at: null },
       by_page_kind: {},
     },
     discovered_count: 3,

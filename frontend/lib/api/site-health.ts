@@ -102,6 +102,7 @@ export type IssuesParams = {
   dimension?: string;
   rule?: string;
   site_url_id?: string;
+  finding_class?: 'defect' | 'advisory';
   /** v2 P1: filter to issues affecting one classified page type. */
   page_kind?: string;
 };
@@ -298,6 +299,7 @@ export const siteHealthQueries = {
         dimension: params?.dimension ?? null,
         rule: params?.rule ?? null,
         site_url_id: params?.site_url_id ?? null,
+        finding_class: params?.finding_class ?? 'defect',
         page_kind: params?.page_kind ?? null,
       }),
       queryFn: ({ signal }) => siteHealthApi.getIssues(crawlId, params, { signal }),

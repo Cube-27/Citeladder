@@ -86,6 +86,13 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
       analyzed: 1,
       errors: 0,
       blocked: 0,
+      failure_breakdown: { robots_denied: 0, http_4xx: 0, http_5xx: 0, timeout: 0 },
+      activity: {
+        state: 'working',
+        reason: 'active_work',
+        queue_depth: 2,
+        next_available_at: null,
+      },
       by_page_kind: {},
     },
     discovered_count: 3,
@@ -146,21 +153,29 @@ describe('StatusStrip — analysis counters', () => {
     expect(completedValue?.textContent).toBe('1');
   });
 
-  it('shows — for Queued (not a false 0) while the selected total is unknown', () => {
-    // No terminal score_summary yet AND the per-project monitored count has not
-    // loaded (selectedTotal=null): the total is genuinely unknown, so Queued
-    // must render the em-dash placeholder rather than a misleading 0.
+  it('uses the persisted queue projection while the monitored query loads', () => {
     renderStrip({ crawl: crawl({ score_summary: null, analyzed_count: 0 }), selectedTotal: null });
 
     const queuedLabel = screen.getByText('Queued');
-    expect(queuedLabel.parentElement?.textContent).toContain('—');
+    expect(queuedLabel.parentElement?.textContent).toContain('2');
     const totalLabel = screen.getByText('Total pages');
-    expect(totalLabel.parentElement?.textContent).toContain('—');
+    expect(totalLabel.parentElement?.textContent).toContain('3');
   });
 
   it('shows a real Queued count once the selected total is known', () => {
     renderStrip({
-      crawl: crawl({ score_summary: null, analyzed_count: 1, failed_count: 0 }),
+      crawl: crawl({
+        score_summary: null,
+        analyzed_count: 1,
+        failed_count: 0,
+        counters: {
+          ...crawl().counters,
+          selected: 5,
+          analyzed: 1,
+          running: 1,
+          queued: 3,
+        },
+      }),
       pages: [page({ analysis_status: 'running' })],
       selectedTotal: 5,
     });
@@ -202,14 +217,51 @@ describe('StatusStrip — link-check phase', () => {
     expect(screen.getByTestId('activity-pulse')).toBeInTheDocument();
   });
 
-  it('keeps the audit copy (and no pulse) while analysis is genuinely still running', () => {
+  it('keeps the audit copy and live pulse while analysis is genuinely running', () => {
     renderStrip({
       crawl: crawl({ status: 'running', analysis_status: 'running', score_summary: null }),
       selectedTotal: 3,
     });
 
     expect(screen.getByText(/Auditing monitored pages/i)).toBeInTheDocument();
-    expect(screen.queryByTestId('activity-pulse')).not.toBeInTheDocument();
+    expect(screen.getByTestId('activity-pulse')).toBeInTheDocument();
+  });
+
+  it('names blocked and failed categories from persisted task evidence', () => {
+    renderStrip({
+      crawl: crawl({
+        score_summary: null,
+        counters: {
+          ...crawl().counters,
+          blocked: 36,
+          errors: 3,
+          failure_breakdown: { robots_denied: 36, http_4xx: 1, http_5xx: 2, timeout: 0 },
+        },
+      }),
+    });
+
+    expect(screen.getByText('Blocked by robots.txt').parentElement?.textContent).toContain('36');
+    expect(screen.getByText('HTTP 4XX').parentElement?.textContent).toContain('1');
+    expect(screen.getByText('HTTP 5XX').parentElement?.textContent).toContain('2');
+  });
+
+  it('explains a persisted host-gate wait without calling it stalled', () => {
+    renderStrip({
+      crawl: crawl({
+        score_summary: null,
+        counters: {
+          ...crawl().counters,
+          activity: {
+            state: 'waiting',
+            reason: 'host_gate',
+            queue_depth: 4,
+            next_available_at: null,
+          },
+        },
+      }),
+    });
+
+    expect(screen.getByText(/Waiting for the site host gate/i)).toBeInTheDocument();
   });
 
   it('prefers the cancelling narration over the link-check copy', () => {

@@ -260,6 +260,13 @@ function siteCrawl(analysisStatus: 'running' | 'stopped') {
       analyzed: running ? 0 : 1,
       errors: 0,
       blocked: 0,
+      failure_breakdown: { robots_denied: 0, http_4xx: 0, http_5xx: 0, timeout: 0 },
+      activity: {
+        state: running ? 'working' : 'terminal',
+        reason: running ? 'active_work' : 'terminal',
+        queue_depth: running ? 1 : 0,
+        next_available_at: null,
+      },
       by_page_kind: {},
     },
     discovered_count: 2,

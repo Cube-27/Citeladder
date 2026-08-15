@@ -371,10 +371,10 @@ _V2_PAGE = b"""
 """
 
 
-def test_extractor_version_is_sh_extractor_6():
-    # sh-extractor-6 preserves every recognized token from multi-typed JSON-LD.
-    assert EXTRACTOR_VERSION == "sh-extractor-6"
-    assert _facts(_V2_PAGE)["extractor_version"] == "sh-extractor-6"
+def test_extractor_version_is_sh_extractor_7():
+    # sh-extractor-7 includes the W2 encoded-delimiter boundary correction.
+    assert EXTRACTOR_VERSION == "sh-extractor-7"
+    assert _facts(_V2_PAGE)["extractor_version"] == "sh-extractor-7"
 
 
 # --- sh-extractor-3: industry-role classifier facts -------------------------

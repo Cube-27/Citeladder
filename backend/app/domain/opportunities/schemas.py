@@ -236,6 +236,8 @@ class OpportunitySummary(_Model):
     site_crawl_id: uuid.UUID | None
     demand_snapshot_id: uuid.UUID | None
     demand_source_revision: str | None
+    coverage: dict[str, Any]
+    limitations: list[str]
     counts_by_type: dict[str, int]
     counts_by_severity: dict[str, int]
     counts_by_status: dict[str, int]
@@ -263,6 +265,8 @@ class RecomputeResponse(_Model):
     site_crawl_id: uuid.UUID | None
     demand_snapshot_id: uuid.UUID | None
     demand_source_revision: str | None
+    coverage: dict[str, Any]
+    limitations: list[str]
     counts_by_type: dict[str, int]
     counts_by_severity: dict[str, int]
     counts_by_status: dict[str, int]

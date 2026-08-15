@@ -802,6 +802,7 @@ async def get_issues_endpoint(
     rule: Annotated[str | None, Query()] = None,
     site_url_id: Annotated[uuid.UUID | None, Query()] = None,
     page_kind: Annotated[str | None, Query()] = None,
+    finding_class: Annotated[Literal["defect", "advisory"], Query()] = "defect",
 ) -> SiteIssuesPage:
     try:
         page = await service.get_issues(
@@ -817,6 +818,7 @@ async def get_issues_endpoint(
             rule=rule,
             site_url_id=site_url_id,
             page_kind=page_kind,
+            finding_class=finding_class,
         )
     except SiteHealthNotFoundError as exc:
         raise _not_found(str(exc)) from exc

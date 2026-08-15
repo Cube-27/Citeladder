@@ -87,6 +87,7 @@ class SiteIssueEvidence:
     category: str
     site_url_id: uuid.UUID
     evidence: dict[str, Any] | None
+    finding_class: str = "defect"
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,8 @@ class SiteEvidence:
     crawl_id: uuid.UUID
     issues: tuple[SiteIssueEvidence, ...]
     urls: tuple[SiteUrlEvidence, ...]
+    coverage: dict[str, Any]
+    limitations: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -312,6 +315,8 @@ def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]
     urls = {u.site_url_id: u.normalized_url for u in evidence.urls}
     hits: list[DetectorHit] = []
     for issue in evidence.issues:
+        if issue.finding_class != "defect":
+            continue
         rule_id = _site_opportunity_rule_id(issue.rule_id)
         if rule_id is None:
             continue
@@ -338,6 +343,8 @@ def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]
                     # link (rendered only when present; older rows predate it).
                     "site_url_id": str(issue.site_url_id),
                     "url": normalized_url,
+                    "coverage": evidence.coverage,
+                    "limitations": list(evidence.limitations),
                 },
                 source_analysis_ids=(),
                 source_issue_ids=(str(issue.issue_id),),

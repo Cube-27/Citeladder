@@ -3,16 +3,24 @@
 from __future__ import annotations
 
 import codecs
+import re
 
 from lxml import etree
 from lxml import html as lxml_html
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.connectors.web_evidence.url_policy import classify_url_admission
+from app.connectors.web_evidence.url_policy import (
+    UrlPolicyError,
+    canonicalize,
+    classify_url_admission,
+)
 from app.core.config.site_health import (
+    LINK_REWRITE_ENCODED_TRACKING_QUERY,
+    LINK_REWRITE_VERSION,
     OBSERVATION_SOURCE_LINK,
     OBSERVATION_SOURCE_ROOT,
     SELECTION_SOURCE_BOOTSTRAP,
+    TRACKING_QUERY_PARAMS,
     site_health_settings,
 )
 from app.domain.site_health.frontier import admit_candidates as admit_candidates
@@ -31,6 +39,29 @@ from app.domain.site_health.schemas import (
     FrontierCandidate,
 )
 from app.models.site_health import SiteCrawl, WorkspaceSiteHealthRuntime
+
+_ENCODED_QUERY_DELIMITER = re.compile(r"%3f", re.IGNORECASE)
+_ENCODED_QUERY_EQUALS = re.compile(r"%3d", re.IGNORECASE)
+_ENCODED_QUERY_PAIR = re.compile(r"%26", re.IGNORECASE)
+
+
+def _rewrite_extracted_href(href: str) -> tuple[str, str, str]:
+    """Repair a positively identified encoded tracking-query delimiter."""
+    if "?" in href:
+        return href, "", ""
+    match = _ENCODED_QUERY_DELIMITER.search(href)
+    if match is None:
+        return href, "", ""
+    path, encoded_query = href[: match.start()], href[match.end() :]
+    query = _ENCODED_QUERY_PAIR.sub("&", _ENCODED_QUERY_EQUALS.sub("=", encoded_query))
+    first_key, separator, _value = query.partition("=")
+    if not separator or first_key.casefold() not in TRACKING_QUERY_PARAMS:
+        return href, "", ""
+    return (
+        f"{path}?{query}",
+        LINK_REWRITE_ENCODED_TRACKING_QUERY,
+        LINK_REWRITE_VERSION,
+    )
 
 
 def _safe_parser_encoding(charset: str) -> str | None:
@@ -91,8 +122,17 @@ def extract_discovery_links(
         href = href.strip()
         if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
             continue
+        rewritten_href, rewrite_reason, rewrite_version = _rewrite_extracted_href(href)
+        try:
+            candidate_href = (
+                canonicalize(rewritten_href, base_url=base_url)
+                if rewrite_reason
+                else rewritten_href
+            )
+        except UrlPolicyError:
+            continue
         admission = classify_url_admission(
-            href,
+            candidate_href,
             base_url=base_url,
             root_registrable_domain=root_registrable_domain,
             include_globs=include_globs,
@@ -104,7 +144,15 @@ def extract_discovery_links(
         if url_hash in seen:
             continue
         seen.add(url_hash)
-        links.append(DiscoveredLink(url=canonical, url_hash=url_hash, ordinal=ordinal))
+        links.append(
+            DiscoveredLink(
+                url=canonical,
+                url_hash=url_hash,
+                ordinal=ordinal,
+                rewrite_reason=rewrite_reason,
+                rewrite_version=rewrite_version,
+            )
+        )
         ordinal += 1
         if len(links) >= limit:
             break
@@ -127,6 +175,8 @@ def build_frontier_candidates(
             source_kind=OBSERVATION_SOURCE_LINK,
             parent_position=parent_position,
             link_ordinal=link.ordinal,
+            rewrite_reason=link.rewrite_reason,
+            rewrite_version=link.rewrite_version,
         )
         for link in output.links
     ]

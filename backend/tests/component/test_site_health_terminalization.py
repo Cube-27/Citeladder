@@ -52,6 +52,7 @@ from app.core.config.task_queue import (
 )
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.snapshot import persist_crawl_snapshot
+from app.domain.site_health.terminal_refresh import enqueue_terminal_crawl_refresh
 from app.models.analytics import AnalyticsTask
 from app.models.site_health import (
     MonitoredSiteUrl,
@@ -69,10 +70,7 @@ from app.models.site_health import (
 )
 from app.models.traffic import TrafficSnapshot
 from app.workers.site_health.helpers import _is_crawl_finalize_rule
-from app.workers.site_health.lifecycle import (
-    CrawlLifecycle,
-    _enqueue_post_crawl_refresh,
-)
+from app.workers.site_health.lifecycle import CrawlLifecycle
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
     DEFAULT_SEED_MONITORED_URLS,
@@ -384,7 +382,8 @@ async def test_completed_crawl_refreshes_demand_when_traffic_exists(
         )
         await session.flush()
 
-        await _enqueue_post_crawl_refresh(session, crawl=crawl)
+        await enqueue_terminal_crawl_refresh(session, crawl=crawl, usable_evidence=True)
+        await enqueue_terminal_crawl_refresh(session, crawl=crawl, usable_evidence=True)
         await session.commit()
 
     async with session_factory() as session:
@@ -401,6 +400,13 @@ async def test_completed_crawl_refreshes_demand_when_traffic_exists(
             ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
             ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
         }
+        demand_task = next(
+            task
+            for task in tasks
+            if task.task_kind == ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH
+        )
+        assert demand_task.payload["downstream_trigger_kind"] == "site_crawl"
+        assert demand_task.payload["downstream_trigger_id"] == str(crawl.id)
 
 
 @pytest.mark.asyncio
@@ -849,6 +855,14 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
     assert summary["selected_count"] == 2
     assert dto["status"] == CRAWL_STATUS_CANCELLED
 
+    # Idempotent readback of the already-terminal cancel cannot enqueue a
+    # second downstream chain.
+    async with session_factory() as session:
+        repeated = await cancel_crawl(
+            session, workspace_id=seed.workspace_id, crawl_id=seed.crawl_id
+        )
+    assert repeated["status"] == CRAWL_STATUS_CANCELLED
+
     async with session_factory() as session:
         snapshot = (
             await session.execute(
@@ -879,12 +893,27 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
         verification = await session.scalar(
             select(AnalyticsTask).where(
                 AnalyticsTask.project_id == seed.project_id,
-                AnalyticsTask.task_kind
-                == ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
+                AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
             )
         )
         assert verification is not None
         assert verification.payload["trigger_id"] == str(seed.crawl_id)
+        opportunity_tasks = list(
+            (
+                await session.scalars(
+                    select(AnalyticsTask).where(
+                        AnalyticsTask.project_id == seed.project_id,
+                        AnalyticsTask.task_kind
+                        == ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
+                    )
+                )
+            ).all()
+        )
+        assert len(opportunity_tasks) == 1
+        assert opportunity_tasks[0].payload == {
+            "trigger_kind": "site_crawl",
+            "trigger_id": str(seed.crawl_id),
+        }
 
 
 @pytest.mark.asyncio

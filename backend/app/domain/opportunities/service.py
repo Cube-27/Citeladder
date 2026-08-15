@@ -98,6 +98,7 @@ from app.core.config.site_health import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
+    FINDING_CLASS_DEFECT,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
@@ -106,6 +107,8 @@ from app.core.config.task_queue import (
     TASK_STATUS_RETRY_WAIT,
     TASK_STATUS_RUNNING,
 )
+from app.domain.opportunities.site_coverage import site_coverage
+from app.domain.opportunities.snapshot_projection import project_snapshot
 from app.domain.products.visibility import select_current_snapshots
 from app.domain.prompts.locks import acquire_project_lock
 from app.domain.site_health.normalization import (
@@ -468,6 +471,7 @@ async def _load_site_evidence(
                 .where(
                     SiteIssue.crawl_id == crawl.id,
                     SiteIssue.workspace_id == workspace_id,
+                    SiteIssue.finding_class == FINDING_CLASS_DEFECT,
                 )
                 .order_by(SiteIssue.created_at.asc(), SiteIssue.id.asc())
                 .limit(RECOMPUTE_MAX_ISSUES)
@@ -486,6 +490,7 @@ async def _load_site_evidence(
                 )
             ).all()
         )
+    coverage, limitations = site_coverage(crawl)
     return SiteEvidence(
         crawl_id=crawl.id,
         issues=tuple(
@@ -494,6 +499,7 @@ async def _load_site_evidence(
                 rule_id=issue.rule_id,
                 severity=issue.severity or "",
                 category=issue.category or "",
+                finding_class=issue.finding_class,
                 site_url_id=issue.site_url_id,
                 evidence=issue.evidence or {},
             )
@@ -503,6 +509,8 @@ async def _load_site_evidence(
             SiteUrlEvidence(site_url_id=url.id, normalized_url=url.normalized_url)
             for url in urls
         ),
+        coverage=coverage,
+        limitations=tuple(limitations),
     )
 
 
@@ -859,7 +867,7 @@ async def recompute(
             session, workspace_id=workspace_id, project_id=project_id
         )
         if unchanged is not None:
-            return _project_snapshot(unchanged)
+            return project_snapshot(unchanged)
         # Never computed and nothing to compute from: fall through and write
         # the explicit empty snapshot, so the screen can tell "no evidence yet"
         # from "not computed yet". There is no live set to protect here.
@@ -877,7 +885,7 @@ async def recompute(
         current, audit=audit, crawl=crawl, demand_snapshot=demand_snapshot
     ):
         assert current is not None
-        return _project_snapshot(current)
+        return project_snapshot(current)
     live_rows = list(
         (
             await session.scalars(
@@ -958,7 +966,7 @@ async def recompute(
     )
     session.add(snapshot)
     await session.commit()
-    return _project_snapshot(snapshot)
+    return project_snapshot(snapshot)
 
 
 def _build_snapshot(
@@ -984,6 +992,7 @@ def _build_snapshot(
     median = round(statistics.median(scores), 1) if scores else None
     source_analysis_ids = _source_ids(scored, "source_analysis_ids")
     source_issue_ids = _source_ids(scored, "source_issue_ids")
+    coverage, limitations = site_coverage(crawl)
     return OpportunitySnapshot(
         workspace_id=workspace_id,
         project_id=project_id,
@@ -994,6 +1003,8 @@ def _build_snapshot(
         demand_source_revision=(
             demand_snapshot.source_hash if demand_snapshot is not None else None
         ),
+        coverage=coverage or None,
+        limitations=limitations,
         counts_by_type=counts_by_type,
         counts_by_severity=counts_by_severity,
         counts_by_status=counts_by_status,
@@ -1802,6 +1813,8 @@ async def get_summary(
             "site_crawl_id": None,
             "demand_snapshot_id": None,
             "demand_source_revision": None,
+            "coverage": {},
+            "limitations": [],
             "counts_by_type": {},
             "counts_by_severity": {},
             "counts_by_status": {},
@@ -1822,6 +1835,8 @@ async def get_summary(
         "site_crawl_id": snapshot.site_crawl_id,
         "demand_snapshot_id": snapshot.demand_snapshot_id,
         "demand_source_revision": snapshot.demand_source_revision,
+        "coverage": snapshot.coverage or {},
+        "limitations": list(snapshot.limitations or []),
         "counts_by_type": snapshot.counts_by_type or {},
         "counts_by_severity": snapshot.counts_by_severity or {},
         "counts_by_status": snapshot.counts_by_status or {},
@@ -2069,24 +2084,4 @@ def _project_export_row(row: Opportunity) -> dict:
         "rule_version": row.rule_version,
         "formula_version": row.formula_version,
         "created_at": _iso(row.created_at),
-    }
-
-
-def _project_snapshot(snapshot: OpportunitySnapshot) -> dict:
-    return {
-        "id": snapshot.id,
-        "run_id": snapshot.run_id,
-        "audit_id": snapshot.audit_id,
-        "site_crawl_id": snapshot.site_crawl_id,
-        "demand_snapshot_id": snapshot.demand_snapshot_id,
-        "demand_source_revision": snapshot.demand_source_revision,
-        "counts_by_type": snapshot.counts_by_type or {},
-        "counts_by_severity": snapshot.counts_by_severity or {},
-        "counts_by_status": snapshot.counts_by_status or {},
-        "total_count": snapshot.total_count,
-        "median_priority": snapshot.median_priority,
-        "analyzer_version": snapshot.analyzer_version,
-        "rule_version": snapshot.rule_version,
-        "formula_version": snapshot.formula_version,
-        "created_at": _iso(snapshot.created_at),
     }

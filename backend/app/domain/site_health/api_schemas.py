@@ -33,6 +33,7 @@ PageAnalysisStatus = Literal[
 ]
 AccessMode = Literal["sample", "full", "unresolved"]
 IssueSeverity = Literal["critical", "high", "medium", "low", "info"]
+FindingClass = Literal["defect", "advisory"]
 IssueDimension = Literal["technical", "aeo"]
 SiteUrlSource = Literal["root", "link", "sitemap", "redirect"]
 SelectionSource = Literal["user", "free_sample", "bootstrap"]
@@ -196,6 +197,19 @@ class CrawlFailureSummary(_Model):
     target_url: str
 
 
+class CrawlActivity(_Model):
+    state: Literal["working", "waiting", "stalled", "terminal"]
+    reason: Literal[
+        "active_work",
+        "host_gate",
+        "retry_backoff",
+        "expired_lease",
+        "terminal",
+    ]
+    queue_depth: int
+    next_available_at: str | None
+
+
 class CrawlCounters(_Model):
     discovered: int | None
     selected: int
@@ -204,6 +218,10 @@ class CrawlCounters(_Model):
     analyzed: int
     errors: int
     blocked: int
+    failure_breakdown: dict[
+        Literal["robots_denied", "http_4xx", "http_5xx", "timeout"], int
+    ]
+    activity: CrawlActivity
     by_page_kind: dict[str, int] = {}
 
 
@@ -414,7 +432,9 @@ class SiteIssue(_Model):
     dimension: IssueDimension
     category: str
     severity: IssueSeverity
+    finding_class: FindingClass
     title: str
+    description: str
     remediation: str
     affected_url_count: int
     analyzer_version: str
@@ -432,6 +452,7 @@ class RuleEvaluation(_Model):
     dimension: IssueDimension
     category: str
     severity: IssueSeverity
+    finding_class: FindingClass
     outcome: RuleOutcome
     weight: float
     evidence: dict[str, object]
@@ -499,6 +520,9 @@ class AffectedUrl(_Model):
 
 class IssuesSummary(_Model):
     issue_count: int
+    defect_issue_type_count: int
+    advisory_issue_type_count: int
+    occurrence_count: int
     severity_counts: dict[str, int]
     dimension_counts: dict[str, int]
     affected_url_count: int
@@ -518,7 +542,9 @@ class SiteIssueDetail(_Model):
     dimension: IssueDimension
     category: str
     severity: IssueSeverity
+    finding_class: FindingClass
     title: str
+    description: str
     remediation: str
     evidence: dict[str, object]
     affected_urls: list[AffectedUrl]
@@ -536,7 +562,9 @@ class IssueHistoryRow(_Model):
     dimension: IssueDimension
     category: str
     severity: IssueSeverity
+    finding_class: FindingClass
     title: str
+    description: str
     remediation: str
     analyzer_version: str
     rule_version: str
@@ -560,7 +588,9 @@ class GroupedIssueHistoryRow(_Model):
     dimension: IssueDimension
     category: str
     severity: IssueSeverity
+    finding_class: FindingClass
     title: str
+    description: str
     remediation: str
     current_state: Literal["open", "resolved"]
     current_transition: Literal["new", "continuing", "resolved", "unchanged"]

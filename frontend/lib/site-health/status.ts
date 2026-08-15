@@ -75,16 +75,8 @@ export function shouldPollCrawl(crawl: Pick<SiteCrawl, 'status'>): boolean {
 }
 
 /**
- * How long an active crawl may go without progressing before we treat it as
- * stalled: stop polling and say so, rather than spinning forever.
- *
- * The backend has its own backstop that force-terminalizes a crawl whose queue
- * has drained (`stalled_crawl_reconcile_seconds`), so this should be
- * unreachable in practice. It exists because the failure it guards against —
- * an active-forever crawl — used to pin every open tab to an endless 4s poll
- * of five queries, which is both the worst symptom for the user and the one
- * the client can unilaterally refuse to participate in. Comfortably above the
- * backend threshold so the server always gets to resolve it first.
+ * Kept for callers that schedule age-based polling. Stalled classification is
+ * backend-owned and never inferred from elapsed client time.
  */
 export const STALL_TIMEOUT_MS = 10 * 60_000;
 
@@ -96,23 +88,19 @@ export const STALL_TIMEOUT_MS = 10 * 60_000;
  * and cost the most per poll. SSE (`useCrawlEvents`) is what keeps a long crawl
  * feeling live, so the slower tick is only the safety net's cadence.
  *
- * Returns `false` once the crawl is terminal or has stalled — the value React
- * Query's `refetchInterval` expects for "stop".
+ * Returns `false` once the crawl is terminal — the value React Query's
+ * `refetchInterval` expects for "stop".
  */
 export function crawlPollInterval(
   crawl: Pick<SiteCrawl, 'status' | 'started_at' | 'created_at' | 'updated_at'>,
   now: number = Date.now(),
 ): number | false {
   if (!shouldPollCrawl(crawl)) return false;
-  // Back off on how long the crawl has RUN, but stall on how long it has been
-  // SILENT: `updated_at` moves on every counter/status write, so a large crawl
-  // that is genuinely progressing never trips the stall cutoff no matter how
-  // long it takes.
+  // Back off on how long the crawl has run. The backend activity projection
+  // owns waiting/stalled semantics from leases and durable queue evidence.
   const startedAt = crawl.started_at ?? crawl.created_at;
   const running = _sinceMs(startedAt, now);
-  const silent = _sinceMs(crawl.updated_at ?? startedAt, now);
-  if (silent === null || running === null) return POLL_INTERVAL_MS;
-  if (silent >= STALL_TIMEOUT_MS) return false;
+  if (running === null) return POLL_INTERVAL_MS;
   if (running >= 5 * 60_000) return 30_000;
   if (running >= 60_000) return 10_000;
   return POLL_INTERVAL_MS;
@@ -126,16 +114,15 @@ function _sinceMs(iso: string | null | undefined, now: number): number | null {
 }
 
 /**
- * True when an ACTIVE crawl has gone quiet for longer than `STALL_TIMEOUT_MS`
- * and polling has been given up. The screen renders an explicit stalled notice
- * instead of an indefinite progress state.
+ * True only when the backend reports expired-lease evidence for an active
+ * crawl. Elapsed client time is deliberately not an input.
  */
 export function isCrawlStalled(
-  crawl: Pick<SiteCrawl, 'status' | 'started_at' | 'created_at' | 'updated_at'> | null,
-  now: number = Date.now(),
+  crawl: Pick<SiteCrawl, 'status' | 'counters'> | null,
+  _now: number = Date.now(),
 ): boolean {
   if (!crawl || !shouldPollCrawl(crawl)) return false;
-  return crawlPollInterval(crawl, now) === false;
+  return crawl.counters.activity.state === 'stalled';
 }
 
 /** True when the crawl can still be cancelled cooperatively. */

@@ -65,8 +65,7 @@ export function useSiteHealthScreen(projectId: string | null) {
 
   const crawl: SiteCrawl | null = dashboardQuery.data?.crawl ?? null;
   const active = crawl ? shouldPollCrawl(crawl) : false;
-  // An active crawl the client has stopped polling: surfaced so the screen can
-  // say so explicitly rather than showing a progress state that never advances.
+  // Evidence-derived backend activity state; never inferred from client time.
   const stalled = isCrawlStalled(crawl);
   // THE phase, resolved server-side from the crawl, the entitlement, and the
   // project's monitored set at one instant. `'resolving'` only means the
@@ -74,10 +73,9 @@ export function useSiteHealthScreen(projectId: string | null) {
   // chain racing three independently-loading queries any more.
   const phase: SiteHealthPhase = dashboardQuery.data?.phase ?? 'resolving';
 
-  // SSE invalidation accelerator (polling stays the baseline). Dropped for a
-  // stalled crawl too: if we have given up polling it, holding a reconnecting
-  // stream open for it is the same waste by another route.
-  useCrawlEvents(crawl?.id, projectId, active && !stalled);
+  // SSE invalidation accelerator (polling stays the baseline). Keep it active
+  // through an expired-lease report so the sweeper's recovery is observed.
+  useCrawlEvents(crawl?.id, projectId, active);
 
   // Refresh crawl-derived lists only when persisted progress changes. The
   // first sighting mounts its own queries, and unchanged dashboard polls do no

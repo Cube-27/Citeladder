@@ -34,10 +34,12 @@ from app.core.config.site_health import (
     EXTRACTOR_VERSION,
     FETCH_PURPOSE_ANALYZE,
     HTML_CONTENT_TYPES,
+    OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     RULE_OUTCOME_FAIL,
     SCORING_VERSION,
     TASK_KIND_LINK_CHECK,
+    site_health_settings,
 )
 from app.domain.site_health.frontier_support import (
     _enqueue_task as _enqueue_discovery_task,
@@ -48,7 +50,6 @@ from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
     SiteCrawlTask,
-    SiteFetchArtifact,
     SiteIssue,
     SitePageAnalysis,
     SiteRuleEvaluation,
@@ -56,6 +57,7 @@ from app.models.site_health import (
     SiteUrlObservation,
     WorkspaceSiteHealthRuntime,
 )
+from app.workers.site_health.acquisition import reusable_discover_artifact
 from app.workers.site_health.helpers import (
     _classify_http_error,
     _count_disclosure,
@@ -73,7 +75,9 @@ from app.workers.site_health.urls import authority_key as _authority_key
 class AnalyzePhaseMixin(PhaseSupport):
     """TASK_KIND_ANALYZE handling."""
 
-    async def _run_analyze(self, task_id: uuid.UUID, crawl_id: uuid.UUID) -> None:
+    async def _run_analyze(
+        self, task_id: uuid.UUID, crawl_id: uuid.UUID, workspace_id: uuid.UUID
+    ) -> None:
         """Fetch + deep-analyze one monitored URL, persisting evidence atomically.
 
         Mirrors the discover flow: load config in one short session, fetch the
@@ -86,7 +90,9 @@ class AnalyzePhaseMixin(PhaseSupport):
         # If evidence committed but the out-of-transaction queue acknowledgement
         # failed, a reclaimed task must acknowledge that durable result instead
         # of fetching and attempting the unique inserts again.
-        persisted_artifact_id = await self._persisted_analysis_artifact_id(task_id)
+        persisted_artifact_id = await self._persisted_analysis_artifact_id(
+            task_id, workspace_id
+        )
         if persisted_artifact_id is not None:
             await self._queue.succeed(
                 task_id=task_id,
@@ -110,13 +116,29 @@ class AnalyzePhaseMixin(PhaseSupport):
             requested_url = task.requested_url
             config = dict(crawl.configuration or {})
             root_registrable_domain = config.get("root_registrable_domain") or ""
+            reusable, discover_pending = await reusable_discover_artifact(
+                session, crawl=crawl, task=task
+            )
+
+        if discover_pending:
+            await self._queue.defer(
+                task_id=task_id,
+                owner=self.owner,
+                delay_seconds=site_health_settings.analysis_dependency_retry_seconds,
+            )
+            return
 
         # One heartbeat across fetch + persist (see ``_leased``).
         async with self._leased(task_id):
-            outcome = await self._fetch_analyze(
-                requested_url=requested_url,
-                root_registrable_domain=root_registrable_domain,
-            )
+            if reusable is not None:
+                artifact_id, facts = reusable
+                outcome = _AnalyzeOutcome(facts=facts, reused_artifact_id=artifact_id)
+            else:
+                outcome = await self._fetch_analyze(
+                    crawl_id=crawl_id,
+                    requested_url=requested_url,
+                    root_registrable_domain=root_registrable_domain,
+                )
             await self._persist_analyze(
                 task_id=task_id,
                 crawl_id=crawl_id,
@@ -125,19 +147,20 @@ class AnalyzePhaseMixin(PhaseSupport):
             )
 
     async def _persisted_analysis_artifact_id(
-        self, task_id: uuid.UUID
+        self, task_id: uuid.UUID, workspace_id: uuid.UUID
     ) -> uuid.UUID | None:
         """Return durable analyze evidence for an idempotently reclaimed task."""
         async with self._session_factory() as session:
             return await session.scalar(
-                select(SiteFetchArtifact.id)
+                select(SiteCrawlTask.result_artifact_id)
                 .join(
                     SitePageAnalysis,
-                    SitePageAnalysis.artifact_id == SiteFetchArtifact.id,
+                    SitePageAnalysis.artifact_id == SiteCrawlTask.result_artifact_id,
                 )
                 .where(
-                    SiteFetchArtifact.task_id == task_id,
-                    SiteFetchArtifact.fetch_purpose == FETCH_PURPOSE_ANALYZE,
+                    SiteCrawlTask.id == task_id,
+                    SiteCrawlTask.workspace_id == workspace_id,
+                    SitePageAnalysis.workspace_id == workspace_id,
                     SitePageAnalysis.status == PAGE_ANALYSIS_STATUS_COMPLETED,
                 )
                 .limit(1)
@@ -246,6 +269,7 @@ class AnalyzePhaseMixin(PhaseSupport):
     async def _fetch_analyze(
         self,
         *,
+        crawl_id: uuid.UUID,
         requested_url: str,
         root_registrable_domain: str,
     ) -> _AnalyzeOutcome:
@@ -278,12 +302,17 @@ class AnalyzePhaseMixin(PhaseSupport):
             allowed_content_types=HTML_CONTENT_TYPES,
         )
         started = time.monotonic()
+        acquisition_plan = await self._acquisition_plan(
+            crawl_id=crawl_id, url=requested_url
+        )
         try:
             async with self._new_fetcher() as fetcher:
                 result = await fetcher.fetch(
                     request,
                     root_registrable_domain=root_registrable_domain or None,
                     enforce_scope=False,
+                    preferred_rung=acquisition_plan.preferred_rung,
+                    initial_trigger=acquisition_plan.trigger,
                 )
         except FetchError as exc:
             latency = int((time.monotonic() - started) * 1000)
@@ -366,66 +395,32 @@ class AnalyzePhaseMixin(PhaseSupport):
             else:
                 task, crawl = locked
                 artifact_id: uuid.UUID | None = None
-                if outcome.facts is not None and outcome.result is not None:
-                    artifact_id = await self._write_artifact(
+                if outcome.facts is not None and (
+                    outcome.result is not None or outcome.reused_artifact_id is not None
+                ):
+                    artifact_id = await self._persist_successful_analysis(
                         session,
                         crawl=crawl,
                         task=task,
-                        result=outcome.result,
-                        fetch_purpose=FETCH_PURPOSE_ANALYZE,
-                        normalized_facts=outcome.facts,
+                        requested_url=requested_url,
+                        outcome=outcome,
                     )
-                    await self._write_page_analysis(
-                        session,
-                        crawl=crawl,
-                        task=task,
-                        artifact_id=artifact_id,
-                        facts=outcome.facts,
-                    )
-                    crawl.analyzed_url_count += 1
-                    task.result_artifact_id = artifact_id
                     succeeded_artifact_id = artifact_id
-                    # Automatically enqueue the link-check task for this URL in
-                    # the same transaction as the completed analysis, so the
-                    # worker's own ``TASK_KIND_LINK_CHECK`` handling is ever
-                    # reached for a normal crawl. Conflict-safe (``ON CONFLICT
-                    # DO NOTHING`` on the unique
-                    # ``(crawl_id, task_kind, url_hash, generation)`` slot) so
-                    # a reclaimed/retried analyze task never double-enqueues.
-                    await _enqueue_discovery_task(
-                        session,
-                        crawl=crawl,
-                        site_url_id=task.site_url_id,
-                        url=requested_url,
-                        url_hash_value=task.url_hash,
-                        task_kind=TASK_KIND_LINK_CHECK,
-                        depth=task.depth,
-                        generation=task.generation,
-                        parent_site_url_id=task.parent_site_url_id,
-                        phase_run_id=task.phase_run_id,
-                    )
-                    record_crawl_event(
-                        session,
-                        crawl_id=crawl_id,
-                        event_type=EVENT_ANALYSIS_PROGRESS,
-                        message="analysis progress",
-                        payload={"analyzed": crawl.analyzed_url_count},
-                        count_disclosure=_count_disclosure(crawl),
-                    )
                 else:
                     exhausted = task.attempt_count + 1 >= task.max_attempts
                     should_retry = outcome.retryable and not exhausted
                     retry_attempt = task.attempt_count + 1
 
-                self._write_attempt(
-                    session,
-                    crawl=crawl,
-                    task=task,
-                    outcome=outcome,
-                    succeeded=outcome.facts is not None,
-                    requested_url=requested_url,
-                    artifact_id=artifact_id,
-                )
+                if outcome.reused_artifact_id is None:
+                    self._write_attempt(
+                        session,
+                        crawl=crawl,
+                        task=task,
+                        outcome=outcome,
+                        succeeded=outcome.facts is not None,
+                        requested_url=requested_url,
+                        artifact_id=artifact_id,
+                    )
                 task.attempt_count += 1
                 await session.commit()
 
@@ -443,6 +438,58 @@ class AnalyzePhaseMixin(PhaseSupport):
             error_detail=outcome.error_detail,
             retry_after_seconds=outcome.retry_after_seconds,
         )
+
+    async def _persist_successful_analysis(
+        self,
+        session: AsyncSession,
+        *,
+        crawl: SiteCrawl,
+        task: SiteCrawlTask,
+        requested_url: str,
+        outcome: _AnalyzeOutcome,
+    ) -> uuid.UUID:
+        """Persist one successful fresh or artifact-reusing analysis."""
+        artifact_id = outcome.reused_artifact_id
+        if artifact_id is None and outcome.result is not None:
+            artifact_id = await self._write_artifact(
+                session,
+                crawl=crawl,
+                task=task,
+                result=outcome.result,
+                fetch_purpose=FETCH_PURPOSE_ANALYZE,
+                normalized_facts=outcome.facts,
+            )
+        assert artifact_id is not None and outcome.facts is not None
+        await self._write_page_analysis(
+            session,
+            crawl=crawl,
+            task=task,
+            artifact_id=artifact_id,
+            facts=outcome.facts,
+        )
+        crawl.analyzed_url_count += 1
+        task.result_artifact_id = artifact_id
+        await _enqueue_discovery_task(
+            session,
+            crawl=crawl,
+            site_url_id=task.site_url_id,
+            url=requested_url,
+            url_hash_value=task.url_hash,
+            task_kind=TASK_KIND_LINK_CHECK,
+            depth=task.depth,
+            generation=task.generation,
+            parent_site_url_id=task.parent_site_url_id,
+            phase_run_id=task.phase_run_id,
+        )
+        record_crawl_event(
+            session,
+            crawl_id=crawl.id,
+            event_type=EVENT_ANALYSIS_PROGRESS,
+            message="analysis progress",
+            payload={"analyzed": crawl.analyzed_url_count},
+            count_disclosure=_count_disclosure(crawl),
+        )
+        return artifact_id
 
     async def _write_page_analysis(
         self,
@@ -463,8 +510,19 @@ class AnalyzePhaseMixin(PhaseSupport):
         site_url_id = await self._resolve_analysis_site_url_id(
             session, crawl=crawl, task=task
         )
+        sitemap_member = bool(
+            await session.scalar(
+                select(SiteUrlObservation.id)
+                .where(
+                    SiteUrlObservation.crawl_id == crawl.id,
+                    SiteUrlObservation.site_url_id == site_url_id,
+                    SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
+                )
+                .limit(1)
+            )
+        )
         assessment, evaluations, scores = self._prepare_page_evaluation(
-            crawl=crawl, task=task, facts=facts
+            crawl=crawl, task=task, facts=facts, sitemap_member=sitemap_member
         )
         await self._refresh_analyzed_url_state(
             session,
@@ -497,6 +555,7 @@ class AnalyzePhaseMixin(PhaseSupport):
         crawl: SiteCrawl,
         task: SiteCrawlTask,
         facts: dict[str, Any],
+        sitemap_member: bool = False,
     ) -> tuple[PageKindAssessment, list[RuleEvaluation], AnalysisScores]:
         """Classify and score a shallow evaluation-only copy of fetched facts."""
         # Evaluation-time enrichment goes onto a SHALLOW COPY, never the facts
@@ -518,6 +577,7 @@ class AnalyzePhaseMixin(PhaseSupport):
         )
         eval_facts["page_kind"] = assessment.page_kind
         eval_facts["page_kind_evidence"] = assessment.to_evidence()
+        eval_facts["sitemap_member"] = sitemap_member
         # v2 P2 (spec §5.3): inside the crawl ROOT's own analysis only, inject
         # the crawl's site_facts so site_root-scoped rules (AI-crawler access,
         # llms.txt) evaluate exactly once per crawl, anchored on this analysis.
@@ -664,6 +724,7 @@ class AnalyzePhaseMixin(PhaseSupport):
                 dimension=ev.dimension,
                 category=ev.category,
                 severity=ev.severity,
+                finding_class=ev.finding_class,
                 weight=ev.weight,
                 outcome=ev.outcome,
                 evidence=ev.evidence,
@@ -689,7 +750,9 @@ class AnalyzePhaseMixin(PhaseSupport):
                         dimension=ev.dimension,
                         category=ev.category,
                         severity=ev.severity,
+                        finding_class=ev.finding_class,
                         evidence=ev.evidence,
+                        description=ev.description,
                         remediation=ev.remediation,
                         analyzer_version=crawl.analyzer_version or ANALYZER_VERSION,
                         rule_version=ev.rule_version,

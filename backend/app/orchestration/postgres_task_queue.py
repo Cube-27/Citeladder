@@ -32,6 +32,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
+    TASK_STATUS_QUEUED,
     TASK_STATUS_RETRY_WAIT,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
@@ -320,6 +321,29 @@ class PostgresTaskQueue[
             task.available_at = now + timedelta(seconds=max(0.0, delay_seconds))
             task.error_code = error_code
             task.error_detail = error_detail[:2000]
+            await session.commit()
+            return True
+
+    async def defer(
+        self,
+        *,
+        task_id: uuid.UUID,
+        owner: str,
+        delay_seconds: float = 0.0,
+    ) -> bool:
+        """Release a task whose durable prerequisite is still in flight."""
+        now = _utcnow()
+        async with self._session_factory() as session:
+            task = await self._owned_task(session, task_id, owner)
+            if task is None:
+                await session.commit()
+                return False
+            task.status = TASK_STATUS_QUEUED
+            task.lease_owner = None
+            task.lease_expires_at = None
+            task.available_at = now + timedelta(seconds=max(0.0, delay_seconds))
+            task.error_code = ""
+            task.error_detail = ""
             await session.commit()
             return True
 

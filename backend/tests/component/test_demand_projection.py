@@ -129,6 +129,63 @@ async def test_recompute_is_immutable_idempotent_and_preserves_provenance(
 
 
 @pytest.mark.asyncio
+async def test_existing_demand_snapshot_continues_originating_crawl_dag_once(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace = Workspace(name="Demand downstream workspace")
+    db_session.add(workspace)
+    await db_session.flush()
+    project = Project(workspace_id=workspace.id, name="Demand downstream")
+    db_session.add(project)
+    await db_session.flush()
+    traffic = TrafficSnapshot(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        window_start=date(2026, 8, 1),
+        window_end=date(2026, 8, 7),
+        granularity="day",
+        metrics={},
+        source_metric_row_ids=[],
+        source_artifact_ids=[],
+    )
+    db_session.add(traffic)
+    await db_session.commit()
+
+    crawl_id = uuid.uuid4()
+    task = AnalyticsTask(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        task_kind=ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
+        payload={
+            "window_start": "2026-08-01",
+            "window_end": "2026-08-07",
+            "downstream_trigger_kind": "site_crawl",
+            "downstream_trigger_id": str(crawl_id),
+        },
+        idempotency_key=uuid.uuid4().hex,
+    )
+
+    await recompute_demand(session_factory, task)
+    await recompute_demand(session_factory, task)
+
+    tasks = list(
+        (
+            await db_session.scalars(
+                select(AnalyticsTask).where(
+                    AnalyticsTask.task_kind == "opportunity_refresh"
+                )
+            )
+        ).all()
+    )
+    assert len(tasks) == 1
+    assert tasks[0].payload == {
+        "trigger_kind": "site_crawl",
+        "trigger_id": str(crawl_id),
+    }
+
+
+@pytest.mark.asyncio
 async def test_latest_contract_and_removed_demand_routes(
     client: httpx.AsyncClient, db_session: AsyncSession
 ) -> None:

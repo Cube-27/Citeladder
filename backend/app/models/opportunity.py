@@ -281,6 +281,8 @@ class OpportunitySnapshot(Base):
     demand_source_revision: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
+    coverage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    limitations: Mapped[list] = mapped_column(JSONB, default=list)
     counts_by_type: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     counts_by_severity: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     counts_by_status: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

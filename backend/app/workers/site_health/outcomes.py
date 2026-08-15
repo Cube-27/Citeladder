@@ -6,6 +6,7 @@ outcome type without importing the worker that mixes it in (a cycle).
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 
 from app.connectors.web_evidence.fetcher import FetchCallTrace, FetchResult
@@ -40,6 +41,7 @@ class DiscoverOutcome:
 
     result: FetchResult | None = None
     output: DiscoveryOutput | None = None
+    facts: dict | None = None
     error_code: str = ""
     error_detail: str = ""
     retryable: bool = False
@@ -75,3 +77,4 @@ class AnalyzeOutcome:
     retry_after_seconds: float | None = None
     # The fetcher's per-network-call trace (T7/T8), as on ``DiscoverOutcome``.
     attempts: tuple[FetchCallTrace, ...] = ()
+    reused_artifact_id: uuid.UUID | None = None

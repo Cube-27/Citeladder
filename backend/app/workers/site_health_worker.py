@@ -91,6 +91,7 @@ from app.domain.site_health.state_events import (
 from app.models.site_health import (
     SiteCrawl,
     SiteCrawlTask,
+    SiteDiscoveryFrontier,
     SiteFetchArtifact,
     SiteFetchAttempt,
     SiteUrl,
@@ -429,7 +430,7 @@ class SiteHealthWorker(
             if kind == TASK_KIND_DISCOVER:
                 await self._run_discover(task_id, crawl_id)
             elif kind == TASK_KIND_ANALYZE:
-                await self._run_analyze(task_id, crawl_id)
+                await self._run_analyze(task_id, crawl_id, claimed.workspace_id)
             elif kind == TASK_KIND_LINK_CHECK:
                 await self._run_link_check(task_id, crawl_id)
             else:
@@ -632,6 +633,17 @@ class SiteHealthWorker(
             site_url.last_seen_crawl_id = crawl.id
             site_url.discovery_status = DISCOVERY_STATUS_COMPLETED
         value = classify_url_admission(task.requested_url)
+        rewrite = (
+            await session.execute(
+                select(
+                    SiteDiscoveryFrontier.rewrite_reason,
+                    SiteDiscoveryFrontier.rewrite_version,
+                ).where(
+                    SiteDiscoveryFrontier.crawl_id == crawl.id,
+                    SiteDiscoveryFrontier.url_hash == task.url_hash,
+                )
+            )
+        ).one_or_none()
         await session.execute(
             pg_insert(SiteUrlObservation)
             .values(
@@ -647,6 +659,8 @@ class SiteHealthWorker(
                 phase_run_id=task.phase_run_id,
                 value_kind=value.value_kind,
                 value_priority=value.priority,
+                rewrite_reason=rewrite[0] if rewrite else "",
+                rewrite_version=rewrite[1] if rewrite else "",
                 depth=depth,
                 observed_url=output.requested_url,
                 final_url=output.final_url,

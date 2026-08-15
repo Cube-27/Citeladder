@@ -121,6 +121,20 @@ page-understanding row. It stores scores, analyzer/scoring versions,
 `page_kind`, classifier version/evidence, and source IDs. It is append-only per
 artifact/analyzer version with one current row.
 
+`SiteIssue` is the immutable failure-copy boundary. It freezes the catalog
+description and remediation alongside rule/analyzer versions at creation;
+group, detail, page, and history reads project those columns and never consult
+current catalog copy for historical prose. Display labels remain the separate
+current UI-label owner.
+
+Rule evaluations and issues also freeze `finding_class` (`defect` or
+`advisory`). Issue reads default to defects and expose explicit distinct-type,
+occurrence, and affected-URL counts; advisory reads are opt-in. Opportunity
+detection rejects advisory evidence at both its query and detector boundary.
+Indexability classification uses only explicit policy, canonical, sitemap, or
+robots evidence, in that order, and represents unknown intent as an uncertain
+advisory.
+
 A Site Health crawl is created only by the explicit user **Run new crawl**
 action. Discovery and analysis remain durable internal phases: admitted pages
 are progressively and automatically enqueued for analysis while discovery is
@@ -142,6 +156,28 @@ Sitemap observation inserts are bounded batched writes.
 The default host-gate concurrency and start spacing permit at least six request
 starts per second on a responsive host, while robots crawl-delay overrides
 upward and observed throughput remains workload-dependent.
+
+Acquisition is shared, not page understanding. Discovery extracts and persists
+the complete bounded normalized-facts payload once; a matching-version analysis
+references that immutable discovery artifact and writes no duplicate artifact
+or HTTP attempt. Analysis falls back to its own secure fetch only when no
+complete current-extractor discovery artifact exists. A concurrent analysis is
+deferred through the existing PostgreSQL queue until its active discovery
+prerequisite commits, without recording a failure or consuming an acquisition
+attempt. `SiteFetchAttempt` remains the append-only owner for bounded per-crawl
+host rung outcomes: after two consecutive rung-1 `403`/`429` responses, rung 2
+is preferred for 20 acquisitions, then rung 1 is probed; success restores rung
+1 immediately. This adds no fetch-artifact column or mutable crawl-config state.
+
+Usable terminal Site Health evidence has one downstream DAG owned by
+`domain/site_health/terminal_refresh.py`. Completed, partial, and
+cancelled-after-analysis crawls enqueue verification plus exactly one eventual
+Opportunity refresh. A project with Traffic evidence routes through Demand;
+Demand carries the originating crawl identity and enqueues Opportunities after
+persisting or reusing the Demand snapshot. A site-only project routes directly
+to Opportunities. Conflict-safe crawl-keyed task identities make repeated
+terminal reconciliation/cancellation no-ops. Opportunity snapshots freeze
+coverage and limitations for partial/cancelled crawl evidence.
 
 The analysis sequence is fixed:
 

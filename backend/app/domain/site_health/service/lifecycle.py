@@ -22,6 +22,10 @@ from app.core.config.site_health import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_TERMINAL_STATUSES,
     DISCOVERY_STATUS_CANCELLED,
+    ERROR_HTTP_4XX,
+    ERROR_HTTP_5XX,
+    ERROR_ROBOTS_DENIED,
+    ERROR_TIMEOUT,
     EVENT_CRAWL_CANCELLED,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PHASE_ANALYSIS,
@@ -31,6 +35,7 @@ from app.core.config.site_health import (
 )
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
+    TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
@@ -41,8 +46,6 @@ from app.core.config.task_queue import (
 from app.domain.entitlements.service import (
     refresh_site_health_runtime_for_workspace,
 )
-from app.domain.opportunities.service import enqueue_opportunity_refresh
-from app.domain.opportunities.verification import enqueue_implementation_verification
 from app.domain.site_health.phase import resolve_phase
 from app.domain.site_health.service.common import (
     _CRAWL_NOT_FOUND,
@@ -68,6 +71,7 @@ from app.domain.site_health.state_events import (
     apply_discovery_status,
     record_crawl_event,
 )
+from app.domain.site_health.terminal_refresh import enqueue_terminal_crawl_refresh
 from app.models.site_health import (
     MonitoredSiteUrl,
     SiteCrawl,
@@ -81,12 +85,44 @@ from app.models.site_health import (
 logger = logging.getLogger("app.domain.site_health.service.lifecycle")
 
 
+def _task_activity(task_counts, *, terminal: bool) -> dict:
+    active_depth = sum(
+        int(getattr(task_counts, name))
+        for name in ("ready", "waiting", "host_waiting", "running_live", "expired")
+    )
+    if terminal:
+        state, reason = "terminal", "terminal"
+    elif int(task_counts.expired):
+        state, reason = "stalled", "expired_lease"
+    elif int(task_counts.host_waiting) and not int(task_counts.running_live):
+        state, reason = "waiting", "host_gate"
+    elif int(task_counts.waiting) and not (
+        int(task_counts.ready) or int(task_counts.running_live)
+    ):
+        state, reason = "waiting", "retry_backoff"
+    else:
+        state, reason = "working", "active_work"
+    return {
+        "state": state,
+        "reason": reason,
+        "queue_depth": active_depth,
+        "next_available_at": (
+            task_counts.next_available_at.isoformat()
+            if task_counts.next_available_at is not None
+            else None
+        ),
+    }
+
+
 async def _crawl_counters(session: AsyncSession, crawl: SiteCrawl) -> dict:
+    now = datetime.now(UTC)
     latest_tasks = (
         select(
             SiteCrawlTask.site_url_id,
             SiteCrawlTask.status,
             SiteCrawlTask.error_code,
+            SiteCrawlTask.available_at,
+            SiteCrawlTask.lease_expires_at,
         )
         .where(
             SiteCrawlTask.crawl_id == crawl.id,
@@ -97,7 +133,11 @@ async def _crawl_counters(session: AsyncSession, crawl: SiteCrawl) -> dict:
         .order_by(SiteCrawlTask.site_url_id, SiteCrawlTask.generation.desc())
         .subquery()
     )
-    queued_statuses = {TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT}
+    queued_statuses = {
+        TASK_STATUS_QUEUED,
+        TASK_STATUS_RETRY_WAIT,
+        TASK_STATUS_CAPACITY_WAIT,
+    }
     running_statuses = {TASK_STATUS_LEASED, TASK_STATUS_RUNNING}
     task_counts = (
         await session.execute(
@@ -120,6 +160,66 @@ async def _crawl_counters(session: AsyncSession, crawl: SiteCrawl) -> dict:
                     latest_tasks.c.error_code.in_(POLICY_BLOCKING_ERROR_CODES),
                 )
                 .label("blocked"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_ROBOTS_DENIED,
+                )
+                .label("robots_denied"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_HTTP_4XX,
+                )
+                .label("http_4xx"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_HTTP_5XX,
+                )
+                .label("http_5xx"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_TIMEOUT,
+                )
+                .label("timeout"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status.in_(queued_statuses),
+                    latest_tasks.c.available_at <= now,
+                )
+                .label("ready"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status.in_(queued_statuses),
+                    latest_tasks.c.available_at > now,
+                )
+                .label("waiting"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_LEASED,
+                    latest_tasks.c.lease_expires_at > now,
+                )
+                .label("host_waiting"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_RUNNING,
+                    latest_tasks.c.lease_expires_at > now,
+                )
+                .label("running_live"),
+                func.count()
+                .filter(
+                    latest_tasks.c.status.in_(running_statuses),
+                    latest_tasks.c.lease_expires_at <= now,
+                )
+                .label("expired"),
+                func.min(latest_tasks.c.available_at)
+                .filter(
+                    latest_tasks.c.status.in_(queued_statuses),
+                    latest_tasks.c.available_at > now,
+                )
+                .label("next_available_at"),
             ).select_from(latest_tasks)
         )
     ).one()
@@ -167,6 +267,15 @@ async def _crawl_counters(session: AsyncSession, crawl: SiteCrawl) -> dict:
         "analyzed": int(task_counts.analyzed),
         "errors": int(task_counts.failed) - blocked,
         "blocked": blocked,
+        "failure_breakdown": {
+            "robots_denied": int(task_counts.robots_denied),
+            "http_4xx": int(task_counts.http_4xx),
+            "http_5xx": int(task_counts.http_5xx),
+            "timeout": int(task_counts.timeout),
+        },
+        "activity": _task_activity(
+            task_counts, terminal=crawl.status in CRAWL_TERMINAL_STATUSES
+        ),
         "by_page_kind": page_kinds,
     }
 
@@ -307,20 +416,7 @@ async def cancel_crawl(
         count_disclosure=_crawl_count_disclosure(crawl),
     )
     if snapshot_written:
-        await enqueue_opportunity_refresh(
-            session,
-            workspace_id=workspace_id,
-            project_id=crawl.project_id,
-            trigger_kind="site_crawl",
-            trigger_id=crawl.id,
-        )
-        await enqueue_implementation_verification(
-            session,
-            workspace_id=workspace_id,
-            project_id=crawl.project_id,
-            trigger_kind="site_crawl",
-            trigger_id=crawl.id,
-        )
+        await enqueue_terminal_crawl_refresh(session, crawl=crawl, usable_evidence=True)
     await session.commit()
 
     refreshed = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)

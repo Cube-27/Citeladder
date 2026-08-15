@@ -21,7 +21,6 @@
       "app/analysis/site_health/parser.py::_outbound_domains": 17,
       "app/analysis/site_health/parser.py::extract_page_facts": 20,
       "app/analysis/site_health/rules.py::_check_schema_matches_content": 18,
-      "app/analysis/site_health/rules.py::_normalized_url_for_compare": 20,
       "app/analysis/site_health/scoring.py::aggregate_by_page_kind": 15,
       "app/connectors/answer_engines/anthropic_parser.py::_answer_and_citations": 18,
       "app/connectors/answer_engines/gemini.py::safe_quota_detail": 19,
