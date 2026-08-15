@@ -234,7 +234,8 @@ Every rule also owns a versioned `finding_class`: `defect` for a reproducible
 problem and `advisory` for deterministic but opinionated guidance. Title- and
 meta-description length bands are advisories. Defects and advisories have
 separate server-filtered views. The headline is the number of distinct defect
-issue types; supporting metrics explicitly name defect occurrences and
+issue types by default and distinct advisory issue types in the advisory view;
+supporting metrics explicitly name the selected class's occurrences and
 affected URLs. Only defects feed severity filters and Opportunities. The
 per-evaluation rows remain append-only evidence regardless of class.
 

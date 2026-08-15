@@ -430,7 +430,7 @@ class SiteHealthWorker(
             if kind == TASK_KIND_DISCOVER:
                 await self._run_discover(task_id, crawl_id)
             elif kind == TASK_KIND_ANALYZE:
-                await self._run_analyze(task_id, crawl_id)
+                await self._run_analyze(task_id, crawl_id, claimed.workspace_id)
             elif kind == TASK_KIND_LINK_CHECK:
                 await self._run_link_check(task_id, crawl_id)
             else:

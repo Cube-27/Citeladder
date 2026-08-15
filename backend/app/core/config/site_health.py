@@ -2261,6 +2261,9 @@ class SiteHealthSettings(BaseSettings):
     retry_jitter_seconds: float = 1.5
     worker_concurrency: int = 8
     poll_interval_seconds: float = 1.0
+    # Bounded recheck when analyze observes a still-running discover task for
+    # the same URL. A non-zero delay prevents a claim/defer hot loop.
+    analysis_dependency_retry_seconds: float = 1.0
     # Deterministic bound on how many expired leases the sweeper reclaims in
     # ONE transaction. A mass expiry across a large frontier (e.g. 50,000
     # URLs) would otherwise lock and update every expired row in a single

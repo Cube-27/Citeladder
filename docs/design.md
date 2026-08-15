@@ -175,7 +175,8 @@ desktop).
   describe a crawl as stuck solely because a browser-side timer elapsed.
 - Site Health findings use separate **Defects** and **Advisories** views.
   Defects own severity and Opportunity eligibility. The headline says
-  **defect issue types**; supporting counters say **occurrences** and
+  **defect issue types** in the default view and **advisory issue types** after
+  switching views; supporting counters say class-labelled **occurrences** and
   **affected URLs** so visually adjacent quantities never masquerade as one
   number. Advisory rows use an Advisory label, not a severity chip.
 - Mobile retains every critical action. Tables become labelled records; filters

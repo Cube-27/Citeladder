@@ -6,6 +6,7 @@ in ``site_health_worker_helpers``.
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from types import SimpleNamespace
@@ -994,6 +995,10 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
     }
     requests: list[tuple[str, str]] = []
     worker = _worker(session_factory, pages, owner="p2-setup", requests=requests)
+    await worker.run_until_idle()
+    # The analyze task deliberately backs off when its discover dependency is
+    # still committing; let that bounded defer mature, then drain it.
+    await asyncio.sleep(site_health_settings.analysis_dependency_retry_seconds)
     await worker.run_until_idle()
 
     async with session_factory() as session:

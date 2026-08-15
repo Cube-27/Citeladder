@@ -131,6 +131,9 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getByRole('button', { name: 'Advisories (2)' }));
     expect(await screen.findByText('Title length outside recommended band')).toBeInTheDocument();
     expect(screen.getByText('Advisory')).toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.textContent === '2 advisory issue types'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /High/ })).not.toBeInTheDocument();
     expect(screen.getByText('94 advisory occurrences')).toBeInTheDocument();
     expect(seen).toContain('advisory');

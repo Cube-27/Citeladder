@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.site_health import (
     ACQUISITION_TRIGGER_HOST_PREFERENCE,
     ACQUISITION_TRIGGER_HOST_PROBE,
+    ACQUISITION_TRIGGER_INITIAL,
     EXTRACTOR_VERSION,
+    FETCH_ATTEMPT_OUTCOME_SUCCESS,
     FETCH_PURPOSE_DISCOVER,
     HOST_RUNG_BLOCK_THRESHOLD,
     HOST_RUNG_OBSERVATION_LIMIT,
@@ -33,7 +35,7 @@ _BLOCKING_STATUSES = frozenset({403, 429})
 @dataclass(frozen=True, slots=True)
 class AcquisitionPlan:
     preferred_rung: int = 1
-    trigger: str = "initial"
+    trigger: str = ACQUISITION_TRIGGER_INITIAL
 
 
 def plan_from_observations(rows: list[SiteFetchAttempt]) -> AcquisitionPlan:
@@ -48,7 +50,9 @@ def plan_from_observations(rows: list[SiteFetchAttempt]) -> AcquisitionPlan:
     preferred_tasks = {
         row.task_id
         for row in rows
-        if row.acquisition_rung == 2 and row.created_at > interval_start
+        if row.acquisition_rung == 2
+        and row.outcome == FETCH_ATTEMPT_OUTCOME_SUCCESS
+        and row.created_at > interval_start
     }
     if len(preferred_tasks) >= HOST_RUNG_PREFERENCE_WINDOW:
         return AcquisitionPlan(trigger=ACQUISITION_TRIGGER_HOST_PROBE)

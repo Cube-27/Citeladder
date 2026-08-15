@@ -39,6 +39,7 @@ from app.core.config.site_health import (
     RULE_OUTCOME_FAIL,
     SCORING_VERSION,
     TASK_KIND_LINK_CHECK,
+    site_health_settings,
 )
 from app.domain.site_health.frontier_support import (
     _enqueue_task as _enqueue_discovery_task,
@@ -74,7 +75,9 @@ from app.workers.site_health.urls import authority_key as _authority_key
 class AnalyzePhaseMixin(PhaseSupport):
     """TASK_KIND_ANALYZE handling."""
 
-    async def _run_analyze(self, task_id: uuid.UUID, crawl_id: uuid.UUID) -> None:
+    async def _run_analyze(
+        self, task_id: uuid.UUID, crawl_id: uuid.UUID, workspace_id: uuid.UUID
+    ) -> None:
         """Fetch + deep-analyze one monitored URL, persisting evidence atomically.
 
         Mirrors the discover flow: load config in one short session, fetch the
@@ -87,7 +90,9 @@ class AnalyzePhaseMixin(PhaseSupport):
         # If evidence committed but the out-of-transaction queue acknowledgement
         # failed, a reclaimed task must acknowledge that durable result instead
         # of fetching and attempting the unique inserts again.
-        persisted_artifact_id = await self._persisted_analysis_artifact_id(task_id)
+        persisted_artifact_id = await self._persisted_analysis_artifact_id(
+            task_id, workspace_id
+        )
         if persisted_artifact_id is not None:
             await self._queue.succeed(
                 task_id=task_id,
@@ -116,7 +121,11 @@ class AnalyzePhaseMixin(PhaseSupport):
             )
 
         if discover_pending:
-            await self._queue.defer(task_id=task_id, owner=self.owner)
+            await self._queue.defer(
+                task_id=task_id,
+                owner=self.owner,
+                delay_seconds=site_health_settings.analysis_dependency_retry_seconds,
+            )
             return
 
         # One heartbeat across fetch + persist (see ``_leased``).
@@ -138,7 +147,7 @@ class AnalyzePhaseMixin(PhaseSupport):
             )
 
     async def _persisted_analysis_artifact_id(
-        self, task_id: uuid.UUID
+        self, task_id: uuid.UUID, workspace_id: uuid.UUID
     ) -> uuid.UUID | None:
         """Return durable analyze evidence for an idempotently reclaimed task."""
         async with self._session_factory() as session:
@@ -150,6 +159,8 @@ class AnalyzePhaseMixin(PhaseSupport):
                 )
                 .where(
                     SiteCrawlTask.id == task_id,
+                    SiteCrawlTask.workspace_id == workspace_id,
+                    SitePageAnalysis.workspace_id == workspace_id,
                     SitePageAnalysis.status == PAGE_ANALYSIS_STATUS_COMPLETED,
                 )
                 .limit(1)

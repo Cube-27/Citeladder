@@ -161,16 +161,28 @@ async def _crawl_counters(session: AsyncSession, crawl: SiteCrawl) -> dict:
                 )
                 .label("blocked"),
                 func.count()
-                .filter(latest_tasks.c.error_code == ERROR_ROBOTS_DENIED)
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_ROBOTS_DENIED,
+                )
                 .label("robots_denied"),
                 func.count()
-                .filter(latest_tasks.c.error_code == ERROR_HTTP_4XX)
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_HTTP_4XX,
+                )
                 .label("http_4xx"),
                 func.count()
-                .filter(latest_tasks.c.error_code == ERROR_HTTP_5XX)
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_HTTP_5XX,
+                )
                 .label("http_5xx"),
                 func.count()
-                .filter(latest_tasks.c.error_code == ERROR_TIMEOUT)
+                .filter(
+                    latest_tasks.c.status == TASK_STATUS_FAILED,
+                    latest_tasks.c.error_code == ERROR_TIMEOUT,
+                )
                 .label("timeout"),
                 func.count()
                 .filter(

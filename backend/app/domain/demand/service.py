@@ -227,6 +227,7 @@ async def recompute_demand(
         source_hash = stable_hash(source_material)
         existing_snapshot_id = await session.scalar(
             select(DemandSnapshot.id).where(
+                DemandSnapshot.workspace_id == task.workspace_id,
                 DemandSnapshot.project_id == task.project_id,
                 DemandSnapshot.source_hash == source_hash,
             )
@@ -276,6 +277,15 @@ async def _enqueue_downstream_opportunity(
 
     if task.project_id is None:
         raise ValueError("demand snapshot refresh requires project_id")
+    owns_snapshot = await session.scalar(
+        select(DemandSnapshot.id).where(
+            DemandSnapshot.id == demand_snapshot_id,
+            DemandSnapshot.workspace_id == task.workspace_id,
+            DemandSnapshot.project_id == task.project_id,
+        )
+    )
+    if owns_snapshot is None:
+        raise ValueError("demand snapshot is outside the task workspace/project")
     payload = task.payload or {}
     trigger_kind = str(payload.get("downstream_trigger_kind") or "demand_snapshot")
     raw_trigger_id = payload.get("downstream_trigger_id")

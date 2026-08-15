@@ -301,7 +301,11 @@ async def enqueue_demand_snapshot_refresh(
             raise ValueError("downstream trigger id is required with its kind")
         await session.execute(
             update(AnalyticsTask)
-            .where(AnalyticsTask.id == task_id)
+            .where(
+                AnalyticsTask.id == task_id,
+                AnalyticsTask.workspace_id == workspace_id,
+                AnalyticsTask.project_id == project_id,
+            )
             .values(
                 payload=AnalyticsTask.payload.op("||")(
                     {

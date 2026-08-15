@@ -10,8 +10,9 @@ persisted attempt, analysis, issue, task, and snapshot rows—not log estimates.
 ## Before / after
 
 `GET / URL` is persisted HTTP `GET` attempts divided by distinct requested
-URLs. Finding counts are shown as `defect / advisory`; occurrences remain the
-append-only per-page evidence. Affected URLs use the same class ordering.
+URLs. In the three finding columns, the value left of `→` is the legacy,
+unsplit total; values right of `→` are `defect / advisory`. Occurrences remain
+the append-only per-page evidence. Affected URLs use the same class ordering.
 
 | Site | Terminal result | Wall time before → after | GET / URL before → after | Issue types before → after | Occurrences before → after | Affected URLs before → after | Opportunities before → after |
 |---|---|---:|---:|---:|---:|---:|---:|

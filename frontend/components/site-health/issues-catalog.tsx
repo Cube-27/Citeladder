@@ -147,8 +147,12 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
       {summary ? (
         <div className="border-border-subtle bg-panel flex flex-wrap gap-x-6 gap-y-2 rounded-xl border p-4 text-sm">
           <span>
-            <strong className="text-foreground">{summary.defect_issue_type_count}</strong>{' '}
-            defect issue types
+            <strong className="text-foreground">
+              {findingView === 'defect'
+                ? summary.defect_issue_type_count
+                : summary.advisory_issue_type_count}
+            </strong>{' '}
+            {findingView} issue types
           </span>
           <span className="text-secondary">
             {summary.occurrence_count} {findingView} occurrences

@@ -83,8 +83,10 @@ copy.
 The Issues surface has separate server-backed **Defects** and **Advisories**
 views. Defects are the default and the only class with severity chips. Its
 headline explicitly counts distinct defect issue types, while supporting
-labels name occurrences and affected URLs. Advisory rows are labelled as
-advisories rather than borrowing defect severity semantics.
+labels name occurrences and affected URLs. Switching views changes the
+headline to distinct advisory issue types and labels the supporting quantities
+as advisory evidence. Advisory rows are labelled as advisories rather than
+borrowing defect severity semantics.
 
 ## Page-kind UX
 
