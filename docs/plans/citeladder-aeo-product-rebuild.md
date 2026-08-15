@@ -337,7 +337,7 @@ row is the removal condition. No other compatibility path is implied.
 - Implemented: persisted `defect | advisory` classes; defect-default server views and explicit defect-type/occurrence/affected-URL counts; advisory-only title/meta length guidance; strong indexing-intent precedence with uncertain advisory fallback; and defect-only Opportunity eligibility.
 - Deleted / retained until: removed advisory evidence from defect headlines, severity chips, and Opportunity detection; retained per-page occurrences, and intentionally added no host/template scope or dormant scope owner.
 - Commit: wave commit
-- Cumulative changed files vs wave merge base: 77
+- Cumulative changed files vs wave merge base: 80
 - Local verification: focused backend pytest 283 passed; CodeAnt fetcher follow-up pytest 42 passed; remaining review follow-up pytest 65 passed; five CI-discovered stale boundary fixtures passed after correction; changed-owner Ruff, targeted mypy, and complexity policy (378 modules) passed; focused frontend Vitest 170 passed plus 56 review-follow-up tests; ESLint, contract, design/policy, frontend-architecture, TypeScript, and production build passed; clean disposable PostgreSQL `alembic upgrade head` and `alembic check` passed; documentation validator and `git diff --check` passed at wave close.
 - Evaluation artifact: `docs/evaluations/2026-08-15-w2-site-health.md`
 - Advanced to internal slice: wave close
