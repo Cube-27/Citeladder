@@ -36,6 +36,7 @@ from app.core.config.site_health import (
     FETCH_ATTEMPT_OUTCOME_ERROR,
     INITIAL_TASK_GENERATION,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
+    MANUAL_PHASE_LIFECYCLE_KEY,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PHASE_ANALYSIS,
     PHASE_RUN_RUNNING,
@@ -472,6 +473,7 @@ async def test_discovery_resume_clones_only_the_requested_batch(
         )
         assert result.phase_run is not None
         assert result.scheduled_count == 1
+        assert result.crawl.configuration[MANUAL_PHASE_LIFECYCLE_KEY] is True
         queued = await session.scalar(
             select(func.count())
             .select_from(SiteCrawlTask)

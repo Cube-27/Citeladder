@@ -63,6 +63,7 @@ from app.core.config.site_health import (
     EVENT_CRAWL_FAILED,
     EXTRACTOR_VERSION,
     LINK_KIND_ANCHOR,
+    MANUAL_PHASE_LIFECYCLE_KEY,
     OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PHASE_ANALYSIS,
@@ -590,7 +591,7 @@ class CrawlLifecycle:
         crawl: SiteCrawl,
         counts: dict[str, int],
     ) -> bool:
-        if not (crawl.configuration or {}).get("advanced_controls_enabled"):
+        if not (crawl.configuration or {}).get(MANUAL_PHASE_LIFECYCLE_KEY):
             return False
         phase_runs = list(
             (

@@ -96,6 +96,9 @@ from app.core.config.site_health_crawl_policy import (
     ITEM_KIND_OTHER as ITEM_KIND_OTHER,
 )
 from app.core.config.site_health_crawl_policy import (
+    MANUAL_PHASE_LIFECYCLE_KEY as MANUAL_PHASE_LIFECYCLE_KEY,
+)
+from app.core.config.site_health_crawl_policy import (
     PHASE_ANALYSIS as PHASE_ANALYSIS,
 )
 from app.core.config.site_health_crawl_policy import (

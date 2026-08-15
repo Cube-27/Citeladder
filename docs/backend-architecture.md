@@ -87,11 +87,16 @@ The product control surface has no separate discovery or analysis start action.
 
 The standard production crawl freezes a 500-page requested limit. Advanced
 input and the 50,000 discovery/analysis ceilings are development-only config;
-they are not a production UI contract or a throughput claim. The Site Health
-worker owns reusable secure HTTP clients partitioned by original origin, while
-each request continues to enforce the connector's DNS, pinned-IP, redirect,
-robots, scope, and host-gate controls. Sitemap observation inserts are bounded
-batched writes.
+they are not a production UI contract or a throughput claim. Availability of
+those development controls is separate from the frozen manual-phase lifecycle
+marker. Standard user-triggered crawls never create manual phase runs and proceed to
+snapshot and terminalization; starting an explicit development phase marks its
+crawl as manually controlled. The internal `input_mode=auto` token describes
+the standard user-triggered **Run new crawl** request; it is not a scheduled or
+autonomous crawl feature. The Site Health worker owns reusable secure HTTP
+clients partitioned by original origin, while each request continues to enforce
+the connector's DNS, pinned-IP, redirect, robots, scope, and host-gate controls.
+Sitemap observation inserts are bounded batched writes.
 The default host-gate concurrency and start spacing permit at least six request
 starts per second on a responsive host, while robots crawl-delay overrides
 upward and observed throughput remains workload-dependent.
@@ -133,6 +138,17 @@ session volume and shares only from `ga4_source_medium_daily`; overlapping
 referrer rows are provenance, not an additional summand. Derived referral
 snapshots carry formula/analyzer versions and rebuild through an explicit worker
 path, never in a read route.
+
+Integration OAuth starts persist a one-time state row and set the signed
+state's random nonce in one short-lived, HttpOnly, SameSite=Lax transaction
+cookie. The callback authenticates that transaction independently of the main
+login cookie: it validates the signed state, nonce cookie, provider, persisted
+row, initiating active user, current workspace membership, and expiry before
+any provider exchange. Consumption is atomic and committed before network I/O.
+Every callback clears the transaction cookie, as do login and logout, so a
+transaction cannot survive replay, a second connect attempt, or an account
+switch. Invalid callbacks always redirect to Settings with
+`oauth_state_invalid`; they do not expose an API authentication response.
 
 Prompt generation, scheduled audits, provider attempts, and answer-engine
 measurements use existing queue owners and immutable evidence. Visibility does

@@ -35,6 +35,7 @@ from app.core.config.site_health import (
     EVENT_DISCOVERY_STOPPED,
     INITIAL_TASK_GENERATION,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
+    MANUAL_PHASE_LIFECYCLE_KEY,
     OBSERVATION_SOURCE_ROOT,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PHASE_ANALYSIS,
@@ -90,6 +91,12 @@ class PhaseMutationResult:
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def _mark_manual_phase_lifecycle(crawl: SiteCrawl) -> None:
+    configuration = dict(crawl.configuration or {})
+    configuration[MANUAL_PHASE_LIFECYCLE_KEY] = True
+    crawl.configuration = configuration
 
 
 async def _lock_crawl(
@@ -254,6 +261,7 @@ async def start_discovery(
             "The requested discovery batch is too large for this environment",
             code=CODE_DISCOVERY_LIMIT_EXCEEDED,
         )
+    _mark_manual_phase_lifecycle(crawl)
     run = SiteCrawlPhaseRun(
         workspace_id=workspace_id,
         crawl_id=crawl.id,
@@ -777,6 +785,7 @@ async def start_analysis(
     crawl = await _analysis_target_crawl(
         session, source=source_crawl, create_new=terminal_source
     )
+    _mark_manual_phase_lifecycle(crawl)
     run = SiteCrawlPhaseRun(
         workspace_id=workspace_id,
         crawl_id=crawl.id,

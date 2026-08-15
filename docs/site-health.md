@@ -45,6 +45,13 @@ repair lifecycle state, or call a model.
   alongside discovery. The frozen entitlement/runtime allowance still bounds
   which pages may be analyzed; discovery never turns an unentitled inventory
   row into analysis work.
+- A user-triggered **Run new crawl** request always advances through discovery,
+  analysis, link checking, snapshot creation, and terminal completion. Its
+  internal `input_mode=auto` value is a request-mode token, not an automatic or
+  scheduled crawl feature. The development advanced-controls setting only
+  makes manual APIs available; it does not opt standard runs into pausing.
+  Only an explicit advanced request or a manual phase-start API call freezes
+  the internal manual-phase marker that permits pausing between phases.
 - Discovery completion never opens a page-selection or separate analysis step.
   The live results surface stays mounted until the crawl terminalizes.
 - Sitemap frontier lookups and inserts use bounded batches; a full configured
@@ -75,7 +82,8 @@ Before any crawl, Site Health shows one empty placeholder with **Run new
 crawl**. Once a crawl exists, the header exposes one contextual primary control:
 **Stop crawl** while its persisted status is active, otherwise **Run new
 crawl**. **Export** is secondary. There are no separate user controls for
-discovery or analysis.
+discovery or analysis. A paused historical crawl remains eligible for **Run
+new crawl**; read endpoints never repair or reinterpret its persisted state.
 
 The inventory stays mounted as the crawl progresses. During discovery it shows
 the first ten persisted rows as they arrive; once scoring is available, those

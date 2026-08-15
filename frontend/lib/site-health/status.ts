@@ -368,6 +368,13 @@ export function dashboardRunNotice(
         message:
           'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.',
       };
+    case 'paused':
+      return {
+        badge: 'paused',
+        tone: 'info',
+        message:
+          'This run is paused — showing the pages analyzed so far. Run a new crawl to refresh the results.',
+      };
     case 'failed': {
       const { reason, guidance } = crawlFailureCopy(crawl);
       // SH-2: with zero pages analyzed there is no "so far" to show — lead

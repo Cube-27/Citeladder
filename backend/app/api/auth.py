@@ -18,6 +18,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.browser_cookies import (
+    browser_cookie_secure,
+    clear_integration_oauth_cookie,
+)
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings, trusted_proxy_networks
 from app.core.config.abuse import abuse_settings
@@ -34,13 +38,6 @@ from app.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("app.auth")
 
-# Local, non-secure transports where the cookie must work without TLS.
-_INSECURE_ENVS = {"", "development", "dev", "local", "test", "testing"}
-
-
-def _cookie_secure() -> bool:
-    return str(settings.app_env or "").strip().lower() not in _INSECURE_ENVS
-
 
 def _set_session_cookie(response: Response, token: str) -> None:
     response.set_cookie(
@@ -48,7 +45,7 @@ def _set_session_cookie(response: Response, token: str) -> None:
         token,
         httponly=True,
         samesite="lax",
-        secure=_cookie_secure(),
+        secure=browser_cookie_secure(),
         path="/",
         max_age=int(settings.jwt_expire_hours * 3600),
     )
@@ -160,6 +157,7 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
     token, user = authenticated
+    clear_integration_oauth_cookie(response)
     _set_session_cookie(response, token)
     logger.info("auth.login_success", extra={"user_id": str(user.id)})
     return AuthResponse(user=SessionUser.model_validate(user))
@@ -174,6 +172,7 @@ async def logout(
     user.session_version += 1
     await session.commit()
     response.delete_cookie(settings.session_cookie_name, path="/")
+    clear_integration_oauth_cookie(response)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 

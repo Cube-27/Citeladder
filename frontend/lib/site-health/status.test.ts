@@ -288,6 +288,15 @@ describe('dashboardRunNotice', () => {
     expect(notice?.tone).toBe('warning');
   });
 
+  it('labels a paused dashboard with actionable partial-results copy', () => {
+    const notice = dashboardRunNotice({ ...noticeBase, status: 'paused' });
+    expect(notice?.badge).toBe('paused');
+    expect(notice?.tone).toBe('info');
+    expect(notice?.message).toMatch(/showing the pages analyzed so far/i);
+    expect(notice?.message).toMatch(/run a new crawl/i);
+    expect(notice?.message).not.toMatch(/undefined/i);
+  });
+
   it('labels a failed-with-data dashboard with a Failed badge', () => {
     const notice = dashboardRunNotice({ ...noticeBase, status: 'failed' });
     expect(notice?.badge).toBe('failed');

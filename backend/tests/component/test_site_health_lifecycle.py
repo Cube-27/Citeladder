@@ -27,11 +27,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health import (
     CRAWL_ACTIVE_STATUSES,
+    CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PAUSED,
     CRAWL_STATUS_RUNNING,
     DISCOVERY_STATUS_RUNNING,
     DISCOVERY_STATUS_STOPPED,
     EVENT_CRAWL_COMPLETED,
+    MANUAL_PHASE_LIFECYCLE_KEY,
     PHASE_DISCOVERY,
     PHASE_RUN_COMPLETED,
     PHASE_RUN_RUNNING,
@@ -299,7 +301,7 @@ async def test_advanced_manual_phase_parks_without_terminal_side_effects(
         assert crawl is not None
         assert task is not None
         crawl.sample_mode = False
-        crawl.configuration = {"advanced_controls_enabled": True}
+        crawl.configuration = {MANUAL_PHASE_LIFECYCLE_KEY: True}
         crawl.discovery_status = DISCOVERY_STATUS_RUNNING
         crawl.discovered_url_count = 1
         phase_run = SiteCrawlPhaseRun(
@@ -346,6 +348,58 @@ async def test_advanced_manual_phase_parks_without_terminal_side_effects(
             is None
         )
         assert await session.scalar(select(AnalyticsTask.id)) is None
+
+
+@pytest.mark.asyncio
+async def test_standard_crawl_completes_when_advanced_controls_are_available(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The environment capability must never opt a standard crawl into pausing."""
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        task = await session.get(SiteCrawlTask, seed.task_ids[0])
+        assert crawl is not None
+        assert task is not None
+        crawl.configuration = {"advanced_controls_enabled": True}
+        crawl.discovery_status = DISCOVERY_STATUS_RUNNING
+        crawl.discovered_url_count = 1
+        task.status = TASK_STATUS_SUCCEEDED
+        task.completed_at = datetime.now(UTC)
+        await session.commit()
+
+    await CrawlLifecycle(session_factory).reconcile(seed.crawl_id)
+
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None
+        assert crawl.status == CRAWL_STATUS_COMPLETED
+        assert crawl.completed_at is not None
+        assert (
+            await session.scalar(
+                select(SiteHealthSnapshot.id).where(
+                    SiteHealthSnapshot.crawl_id == seed.crawl_id
+                )
+            )
+            is not None
+        )
+        assert (
+            await session.scalar(
+                select(SiteCrawlEvent.id).where(
+                    SiteCrawlEvent.crawl_id == seed.crawl_id,
+                    SiteCrawlEvent.event_type == EVENT_CRAWL_COMPLETED,
+                )
+            )
+            is not None
+        )
+        opportunity_refresh = await session.scalar(
+            select(AnalyticsTask).where(
+                AnalyticsTask.project_id == seed.project_id,
+                AnalyticsTask.task_kind == "opportunity_refresh",
+            )
+        )
+        assert opportunity_refresh is not None
+        assert opportunity_refresh.payload["trigger_id"] == str(seed.crawl_id)
 
 
 @pytest.mark.asyncio

@@ -144,6 +144,8 @@ INTEGRATION_OAUTH_CALLBACK_PATH: Final = (
     "/api/v1/integrations/oauth/{provider}/callback"
 )
 INTEGRATION_OAUTH_LANDING_PATH: Final = "/settings?tab=integrations"
+INTEGRATION_OAUTH_TRANSACTION_COOKIE: Final = "citeladder_integration_oauth"
+INTEGRATION_OAUTH_TRANSACTION_COOKIE_PATH: Final = "/api/v1/integrations/oauth"
 
 
 def integration_oauth_redirect_uri(provider: str) -> str:

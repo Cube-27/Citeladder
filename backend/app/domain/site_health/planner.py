@@ -64,6 +64,7 @@ from app.core.config.site_health import (
     INPUT_MODE_EXACT_URLS,
     INPUT_MODES,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
+    MANUAL_PHASE_LIFECYCLE_KEY,
     OBSERVATION_SOURCE_ROOT,
     PAGE_KINDS,
     PHASE_DISCOVERY,
@@ -252,8 +253,8 @@ def _is_sample_mode(runtime) -> bool:
     return runtime.discovery_mode == DISCOVERY_MODE_SAMPLE
 
 
-def _advanced_controls_configuration(enabled: bool) -> dict[str, bool]:
-    return {"advanced_controls_enabled": True} if enabled else {}
+def _manual_phase_configuration(enabled: bool) -> dict[str, bool]:
+    return {MANUAL_PHASE_LIFECYCLE_KEY: True} if enabled else {}
 
 
 def _frozen_configuration(
@@ -266,7 +267,7 @@ def _frozen_configuration(
     requested_page_limit: int | None = None,
     seed_urls: list[str] | None = None,
     page_kinds: list[str] | None = None,
-    advanced_controls_enabled: bool = False,
+    manual_phase_lifecycle: bool = False,
 ) -> dict:
     """Freeze the operational settings + runtime projection (invariant 9).
 
@@ -295,7 +296,7 @@ def _frozen_configuration(
         "page_profile_rule_version": PAGE_PROFILE_RULE_VERSION,
         "input_mode": input_mode,
         "requested_page_limit": requested_page_limit,
-        **_advanced_controls_configuration(advanced_controls_enabled),
+        **_manual_phase_configuration(manual_phase_lifecycle),
         "max_discovery_urls": s.max_discovery_urls,
         "max_analysis_urls": s.max_analysis_urls,
         "seed_urls": list(seed_urls or []),
@@ -601,6 +602,9 @@ async def create_crawl(
         seed_urls=seed_urls,
         page_kinds=page_kinds,
     )
+    manual_phase_lifecycle = _advanced_controls_requested(
+        mode, raw_seeds, selected_types
+    )
     accepted_seeds = _admit_seed_urls(
         raw_seeds,
         root_domain=root_registrable_domain,
@@ -644,7 +648,7 @@ async def create_crawl(
         requested_page_limit=page_limit,
         seed_urls=accepted_seeds,
         page_kinds=selected_types,
-        advanced_controls_enabled=site_health_settings.advanced_controls_enabled,
+        manual_phase_lifecycle=manual_phase_lifecycle,
     )
 
     # Freeze the EXACT industry pack once, here. Resolving it per page (or at
@@ -695,7 +699,7 @@ async def create_crawl(
         session,
         crawl=crawl,
         requested_count=page_limit,
-        enabled=bool(configuration.get("advanced_controls_enabled")),
+        enabled=bool(configuration.get(MANUAL_PHASE_LIFECYCLE_KEY)),
     )
 
     # All roots/manual seeds pass the same policy above. Exact mode deliberately

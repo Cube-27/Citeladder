@@ -17,15 +17,21 @@ import hmac
 import json
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 
 from app.connectors.integrations import oauth as integration_oauth
 from app.core.config import settings
+from app.core.config.integrations import (
+    INTEGRATION_OAUTH_TRANSACTION_COOKIE,
+    INTEGRATION_OAUTH_TRANSACTION_COOKIE_PATH,
+)
+from app.core.config.oauth import oauth_settings
 from app.core.security import decrypt_secret
 from app.models.integrations import (
     IntegrationConnection,
@@ -33,6 +39,7 @@ from app.models.integrations import (
     IntegrationOAuthGrant,
     IntegrationOAuthState,
 )
+from app.models.workspace import WorkspaceMember
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "integrations"
 _BASE = "/api/v1/integrations"
@@ -237,6 +244,20 @@ async def test_google_connect_happy_path_shared_grant(
     # The client secret never leaves the server (invariant 6).
     assert _GOOGLE_CLIENT_SECRET not in location
 
+    cookie = start.headers["set-cookie"]
+    assert f"{INTEGRATION_OAUTH_TRANSACTION_COOKIE}=" in cookie
+    assert "HttpOnly" in cookie
+    assert "SameSite=lax" in cookie
+    assert f"Path={INTEGRATION_OAUTH_TRANSACTION_COOKIE_PATH}" in cookie
+    assert f"Max-Age={oauth_settings.state_ttl_seconds}" in cookie
+    transaction_nonce = client.cookies.get(INTEGRATION_OAUTH_TRANSACTION_COOKIE)
+    assert transaction_nonce
+    assert transaction_nonce not in location
+    assert ("Secure" in cookie) is (
+        settings.app_env.lower()
+        not in {"", "development", "dev", "local", "test", "testing"}
+    )
+
     # The state row is persisted, unconsumed, and bound to the workspace/user.
     state_row = (await db_session.execute(select(IntegrationOAuthState))).scalar_one()
     assert state_row.consumed_at is None
@@ -246,6 +267,7 @@ async def test_google_connect_happy_path_shared_grant(
         callback = await _callback(client, "gsc", state)
     assert callback.status_code == 302
     assert callback.headers["location"] == _landing("connected=gsc")
+    assert "Max-Age=0" in callback.headers["set-cookie"]
 
     # One grant carries the Fernet-encrypted tokens (never the plaintext).
     (grant,) = await _grants(db_session)
@@ -285,6 +307,92 @@ async def test_google_connect_happy_path_shared_grant(
 
 
 @pytest.mark.asyncio
+async def test_callback_uses_transaction_nonce_without_a_valid_login_session(
+    client: httpx.AsyncClient,
+    db_session,
+    _oauth_credentials: None,
+    _fake_oauth: _FakeOAuthServer,
+) -> None:
+    await _register(client, "int-stale-session@example.com")
+    state = _state_from_start(await _start(client, "gsc"))
+    client.cookies.delete(settings.session_cookie_name)
+    client.cookies.set(settings.session_cookie_name, "stale-session", path="/")
+
+    callback = await _callback(client, "gsc", state)
+
+    assert callback.status_code == 302
+    assert callback.headers["location"] == _landing("connected=gsc")
+    assert len(_fake_oauth.token_calls()) == 1
+    assert len(await _grants(db_session)) == 1
+
+
+@pytest.mark.asyncio
+async def test_missing_and_wrong_transaction_nonce_fail_before_exchange(
+    client: httpx.AsyncClient,
+    db_session,
+    _oauth_credentials: None,
+    _fake_oauth: _FakeOAuthServer,
+) -> None:
+    await _register(client, "int-nonce@example.com")
+    missing_state = _state_from_start(await _start(client, "gsc"))
+    client.cookies.delete(INTEGRATION_OAUTH_TRANSACTION_COOKIE)
+    missing = await _callback(client, "gsc", missing_state)
+    assert missing.headers["location"] == _landing("error=oauth_state_invalid")
+
+    wrong_state = _state_from_start(await _start(client, "gsc"))
+    client.cookies.delete(INTEGRATION_OAUTH_TRANSACTION_COOKIE)
+    client.cookies.set(
+        INTEGRATION_OAUTH_TRANSACTION_COOKIE,
+        "wrong-nonce",
+        path=INTEGRATION_OAUTH_TRANSACTION_COOKIE_PATH,
+    )
+    wrong = await _callback(client, "gsc", wrong_state)
+    assert wrong.headers["location"] == _landing("error=oauth_state_invalid")
+    assert _fake_oauth.token_calls() == []
+    assert await _grants(db_session) == []
+
+
+@pytest.mark.asyncio
+async def test_expired_state_and_lost_membership_fail_before_exchange(
+    client: httpx.AsyncClient,
+    db_session,
+    _oauth_credentials: None,
+    _fake_oauth: _FakeOAuthServer,
+) -> None:
+    await _register(client, "int-state-guards@example.com")
+    expired_state = _state_from_start(await _start(client, "gsc"))
+    expired_row = (await db_session.execute(select(IntegrationOAuthState))).scalar_one()
+    await db_session.execute(
+        update(IntegrationOAuthState)
+        .where(IntegrationOAuthState.id == expired_row.id)
+        .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+    )
+    await db_session.commit()
+    expired = await _callback(client, "gsc", expired_state)
+    assert expired.headers["location"] == _landing("error=oauth_state_invalid")
+
+    membership_state = _state_from_start(await _start(client, "gsc"))
+    membership_row = (
+        await db_session.execute(
+            select(IntegrationOAuthState).where(
+                IntegrationOAuthState.expires_at > datetime.now(UTC)
+            )
+        )
+    ).scalar_one()
+    await db_session.execute(
+        delete(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == membership_row.workspace_id,
+            WorkspaceMember.user_id == membership_row.user_id,
+        )
+    )
+    await db_session.commit()
+    lost = await _callback(client, "gsc", membership_state)
+    assert lost.headers["location"] == _landing("error=oauth_state_invalid")
+    assert _fake_oauth.token_calls() == []
+    assert await _grants(db_session) == []
+
+
+@pytest.mark.asyncio
 async def test_replayed_state_rejected(
     client: httpx.AsyncClient,
     db_session,
@@ -315,7 +423,8 @@ async def test_cross_user_state_rejected(
     await _register(client, "int-owner@example.com")
     state = _state_from_start(await _start(client, "gsc"))
 
-    # A different authenticated user must not consume the owner's state.
+    # Logout/login clears the transaction cookie, so an account switch cannot
+    # carry the owner's integration transaction into the new account.
     await client.post("/api/v1/auth/logout")
     await _register(client, "int-intruder@example.com")
     callback = await _callback(client, "gsc", state)
@@ -598,7 +707,8 @@ async def test_unauthenticated_flow_rejected(client: httpx.AsyncClient) -> None:
     callback = await client.get(
         f"{_BASE}/oauth/gsc/callback", params={"code": "x", "state": "y"}
     )
-    assert callback.status_code == 401
+    assert callback.status_code == 302
+    assert callback.headers["location"] == _landing("error=oauth_state_invalid")
 
 
 @pytest.mark.asyncio
@@ -626,8 +736,10 @@ async def test_state_minted_for_one_provider_cannot_complete_another(
     assert "error=oauth_state_invalid" in callback.headers["location"]
     assert _fake_oauth.token_calls() == []
     assert await _grants(db_session) == []
-    # The state remains unconsumed — it is still valid for its own provider.
-    ok = await _callback(client, "gsc", state)
+    # Every callback clears the browser transaction. A fresh Connect action is
+    # required even though the mismatched attempt did not consume the DB row.
+    fresh = _state_from_start(await _start(client, "gsc"))
+    ok = await _callback(client, "gsc", fresh)
     assert "connected=gsc" in ok.headers["location"]
 
 
@@ -656,7 +768,7 @@ async def test_state_rows_are_bound_per_mint(
     _oauth_credentials: None,
     _fake_oauth: _FakeOAuthServer,
 ) -> None:
-    """Two minted states have distinct jtis and each consumes exactly once."""
+    """Starting again replaces the browser's one pending transaction nonce."""
     await _register(client, "int-jti@example.com")
     state1 = _state_from_start(await _start(client, "gsc"))
     state2 = _state_from_start(await _start(client, "gsc"))
@@ -664,11 +776,16 @@ async def test_state_rows_are_bound_per_mint(
     rows = list((await db_session.execute(select(IntegrationOAuthState))).scalars())
     assert len(rows) == 2
     assert len({r.jti for r in rows}) == 2
-    ok = await _callback(client, "gsc", state1)
+    stale = await _callback(client, "gsc", state1)
+    assert "oauth_state_invalid" in stale.headers["location"]
+    # The failed callback clears the nonce, so resume through a fresh start.
+    state3 = _state_from_start(await _start(client, "gsc"))
+    ok = await _callback(client, "gsc", state3)
     assert "connected=gsc" in ok.headers["location"]
-    await db_session.refresh(rows[0])
-    await db_session.refresh(rows[1])
-    consumed = [r for r in (rows[0], rows[1]) if r.consumed_at is not None]
+    rows = list((await db_session.execute(select(IntegrationOAuthState))).scalars())
+    for row in rows:
+        await db_session.refresh(row)
+    consumed = [row for row in rows if row.consumed_at is not None]
     assert len(consumed) == 1
     # uuid sanity: the grant id is a real UUID.
     (grant,) = await _grants(db_session)

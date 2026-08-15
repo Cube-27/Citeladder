@@ -147,18 +147,23 @@ function StripContent({
   if (phase === 'terminal') {
     // B1: a failed crawl names its reason (the API-projected failure summary /
     // humanized error_message, never a bare code) plus what to do next.
-    const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
+    let message = 'This crawl ended before it produced results. Run a new crawl to try again.';
+    if (crawl.status === 'cancelled') {
+      message = 'This crawl was cancelled before it produced results.';
+    } else if (crawl.status === 'paused') {
+      message =
+        'This crawl is paused and has no completed score yet. Run a new crawl to try again.';
+    } else if (crawl.status === 'failed') {
+      const failure = crawlFailureCopy(crawl);
+      message = [endSentence(failure.reason), failure.guidance].filter(Boolean).join(' ');
+    }
     return (
       <Alert tone={crawl.status === 'failed' ? 'danger' : 'info'}>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
             {statusLabel(crawl.status)}
           </Badge>
-          <span>
-            {crawl.status === 'cancelled'
-              ? 'This crawl was cancelled before it produced results.'
-              : `${endSentence(failure?.reason ?? '')} ${failure?.guidance}`}
-          </span>
+          <span>{message}</span>
         </div>
       </Alert>
     );

@@ -3,26 +3,29 @@
 #
 # Flat surface under /api/v1/integrations; the active workspace comes from
 # ``require_active_workspace`` EXCEPT at the OAuth callback, where the
-# workspace comes only from the verified, consumed state and the user from
-# ``get_current_user`` (spec section 2). The connect endpoints are full-page
+# workspace and user come only from the verified, consumed, nonce-bound OAuth
+# transaction (spec section 2). The connect endpoints are full-page
 # 302 navigations through the same-origin proxy (never fetch/XHR) — including
 # the RETURN leg: the registered redirect URI is anchored on the app origin
 # (``integration_oauth_redirect_uri``), so the provider's post-consent
-# navigation carries the session cookie the callback authenticates with. No
-# endpoint ever returns a token — the DTOs carry no token fields (invariant
-# 6).
+# navigation carries the scoped transaction cookie the callback authenticates
+# with. No endpoint ever returns a token — the DTOs carry no token fields
+# (invariant 6).
 from __future__ import annotations
 
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.browser_cookies import (
+    clear_integration_oauth_cookie,
+    set_integration_oauth_cookie,
+)
 from app.api.deps import (
     WorkspaceContext,
-    get_current_user,
     get_db,
     require_active_workspace,
 )
@@ -39,6 +42,7 @@ from app.core.config.integrations import (
     ERROR_PROPERTY_DISCOVERY_UNSUPPORTED,
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
     ERROR_SYNC_WINDOW_INVALID,
+    INTEGRATION_OAUTH_TRANSACTION_COOKIE,
     INTEGRATION_PROVIDER_SHOPIFY,
     INTEGRATION_PROVIDERS,
     SYNC_KIND_ON_DEMAND,
@@ -90,12 +94,10 @@ from app.domain.integrations.sync import (
     list_sync_runs,
 )
 from app.domain.projects.service import ProjectNotFoundError
-from app.models.user import User
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
-_UserDep = Annotated[User, Depends(get_current_user)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 _RES_PROVIDER = "Integration provider"
@@ -150,6 +152,12 @@ def _landing_redirect(params: dict[str, str]) -> RedirectResponse:
     )
 
 
+def _oauth_callback_redirect(params: dict[str, str]) -> RedirectResponse:
+    response = _landing_redirect(params)
+    clear_integration_oauth_cookie(response)
+    return response
+
+
 @router.get("/oauth/{provider}/start", status_code=status.HTTP_302_FOUND)
 async def integration_oauth_start(
     provider: str,
@@ -184,7 +192,7 @@ async def integration_oauth_start(
             detail=ERROR_OAUTH_SHOP_INVALID,
         )
     try:
-        authorize_url = await start_connect(
+        oauth_start = await start_connect(
             session,
             workspace_id=ctx.workspace_id,
             user_id=ctx.user.id,
@@ -197,7 +205,11 @@ async def integration_oauth_start(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_OAUTH_NOT_CONFIGURED,
         ) from exc
-    return RedirectResponse(authorize_url, status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(
+        oauth_start.authorize_url, status_code=status.HTTP_302_FOUND
+    )
+    set_integration_oauth_cookie(response, oauth_start.session_nonce)
+    return response
 
 
 @router.get("/oauth/{provider}/callback", status_code=status.HTTP_302_FOUND)
@@ -205,7 +217,9 @@ async def integration_oauth_callback(
     provider: str,
     request: Request,
     session: _SessionDep,
-    user: _UserDep,
+    transaction_nonce: Annotated[
+        str | None, Cookie(alias=INTEGRATION_OAUTH_TRANSACTION_COOKIE)
+    ] = None,
     code: Annotated[str, Query()] = "",
     state: Annotated[str, Query()] = "",
     error: Annotated[str, Query()] = "",
@@ -218,28 +232,28 @@ async def integration_oauth_callback(
     _require_known_provider(provider)
     if error:
         # The provider reported a consent/authorization failure.
-        return _landing_redirect({"error": ERROR_OAUTH_EXCHANGE_FAILED})
+        return _oauth_callback_redirect({"error": ERROR_OAUTH_EXCHANGE_FAILED})
     if not code or not state:
-        return _landing_redirect({"error": ERROR_OAUTH_STATE_INVALID})
+        return _oauth_callback_redirect({"error": ERROR_OAUTH_STATE_INVALID})
     try:
         await complete_connect(
             session,
             provider=provider,
             code=code,
             state=state,
-            user=user,
+            session_nonce=transaction_nonce or "",
             redirect_uri=integration_oauth_redirect_uri(provider),
             # The full query map for the Shopify callback HMAC verification
             # (ignored by the single-tenant transports).
             callback_params={key: value for key, value in request.query_params.items()},
         )
     except IntegrationStateError:
-        return _landing_redirect({"error": ERROR_OAUTH_STATE_INVALID})
+        return _oauth_callback_redirect({"error": ERROR_OAUTH_STATE_INVALID})
     except IntegrationNotConfiguredError:
-        return _landing_redirect({"error": ERROR_OAUTH_NOT_CONFIGURED})
+        return _oauth_callback_redirect({"error": ERROR_OAUTH_NOT_CONFIGURED})
     except IntegrationExchangeError:
-        return _landing_redirect({"error": ERROR_OAUTH_EXCHANGE_FAILED})
-    return _landing_redirect({"connected": provider})
+        return _oauth_callback_redirect({"error": ERROR_OAUTH_EXCHANGE_FAILED})
+    return _oauth_callback_redirect({"connected": provider})
 
 
 @router.get("", response_model=list[IntegrationConnectionResponse])

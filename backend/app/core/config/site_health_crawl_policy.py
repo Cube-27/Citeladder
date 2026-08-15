@@ -13,6 +13,7 @@ DISCOVERY_MODE_SAMPLE: Final = "sample"
 DISCOVERY_MODE_FULL: Final = "full"
 INVENTORY_SOURCE_CRAWL_IDS_KEY: Final = "inventory_source_crawl_ids"
 AUTOMATIC_MONITOR_LIMIT_KEY: Final = "automatic_monitor_limit"
+MANUAL_PHASE_LIFECYCLE_KEY: Final = "manual_phase_lifecycle"
 SAMPLE_URL_LIMIT: Final = 10
 SAMPLE_DISCOVERY_URL_CAP: Final = 200
 

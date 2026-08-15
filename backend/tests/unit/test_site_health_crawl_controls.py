@@ -9,7 +9,11 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from app.core.config.site_health import SiteHealthSettings, site_health_settings
+from app.core.config.site_health import (
+    MANUAL_PHASE_LIFECYCLE_KEY,
+    SiteHealthSettings,
+    site_health_settings,
+)
 from app.core.config.site_health_page_profiles import PAGE_PROFILE_RULE_VERSION
 from app.domain.site_health import discovery, frontier
 from app.domain.site_health.api_schemas import (
@@ -197,7 +201,7 @@ def test_frozen_configuration_stamps_supplemental_page_profile_rule_version():
     )
 
     assert configuration["page_profile_rule_version"] == PAGE_PROFILE_RULE_VERSION
-    assert "advanced_controls_enabled" not in configuration
+    assert MANUAL_PHASE_LIFECYCLE_KEY not in configuration
 
 
 def test_frozen_configuration_only_enables_phase_lifecycle_when_requested():
@@ -215,10 +219,10 @@ def test_frozen_configuration_only_enables_phase_lifecycle_when_requested():
         include_globs=[],
         exclude_globs=[],
         runtime=Runtime(),
-        advanced_controls_enabled=True,
+        manual_phase_lifecycle=True,
     )
 
-    assert configuration["advanced_controls_enabled"] is True
+    assert configuration[MANUAL_PHASE_LIFECYCLE_KEY] is True
 
 
 def test_normal_and_page_rerun_creation_share_the_frozen_configuration() -> None:

@@ -3,10 +3,10 @@
 Implements docs/roadmap/integrations.md §2 (OAuth connect flow) and the §5
 management surface:
 
-- The state nonce binds the callback to the initiating user + workspace
-  (signed claims + persisted row), is verified for signature/expiry/user
-  binding, and is consumed ATOMICALLY (``UPDATE ... SET consumed_at ...
-  WHERE consumed_at IS NULL``) BEFORE the code exchange — a replayed,
+- The state nonce binds the callback to its browser transaction and the
+  initiating user + workspace (signed claims + persisted row), is verified for
+  signature/expiry/user binding, and is consumed ATOMICALLY (``UPDATE ... SET
+  consumed_at ... WHERE consumed_at IS NULL``) BEFORE the code exchange — a replayed,
   cross-user, or cross-workspace state is rejected before any token moves.
 - Tokens are Fernet-encrypted (``encrypt_secret`` — invariant 2/6) and
   stored ONCE on the workspace's ``IntegrationOAuthGrant`` (find-or-create
@@ -25,6 +25,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
@@ -100,6 +101,12 @@ class PropertyDiscoveryUnsupportedError(RuntimeError):
     """Raised when a provider exposes no property listing to discover."""
 
 
+@dataclass(frozen=True)
+class IntegrationOAuthStart:
+    authorize_url: str
+    session_nonce: str
+
+
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 
@@ -124,11 +131,12 @@ async def start_connect(
     provider: str,
     redirect_uri: str,
     provider_account_ref: str = "",
-) -> str:
+) -> IntegrationOAuthStart:
     """Mint + persist the OAuth state row and build the provider authorize URL.
 
-    The state JWT carries the workspace/user/jti binding claims; the
-    persisted row enables atomic one-time consumption at the callback.
+    The state JWT carries the workspace/user/jti binding claims and a random
+    nonce returned for the short-lived transaction cookie; the persisted row
+    enables atomic one-time consumption at the callback.
     ``provider_account_ref`` is the per-account OAuth target (Shopify: the
     canonical shop host, validated by the caller): it is persisted on the
     state row AND signed into the state JWT so the callback can require an
@@ -138,7 +146,7 @@ async def start_connect(
     if not integration_oauth.oauth_client_configured(transport):
         raise IntegrationNotConfiguredError(provider)
     jti = secrets.token_urlsafe(24)
-    state_token, _session_nonce = create_oauth_state(
+    state_token, session_nonce = create_oauth_state(
         provider,
         workspace_id=str(workspace_id),
         user_id=str(user_id),
@@ -168,7 +176,10 @@ async def start_connect(
             "state": state_token,
         }
         authorize_url = shopify_oauth_authorize_url(provider_account_ref)
-        return f"{authorize_url}?{urlencode(params)}"
+        return IntegrationOAuthStart(
+            authorize_url=f"{authorize_url}?{urlencode(params)}",
+            session_nonce=session_nonce,
+        )
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -181,15 +192,22 @@ async def start_connect(
         # authorization request.
         params["access_type"] = "offline"
         params["prompt"] = "consent"
-    return f"{INTEGRATION_OAUTH_AUTHORIZE_URLS[transport]}?{urlencode(params)}"
+    return IntegrationOAuthStart(
+        authorize_url=(
+            f"{INTEGRATION_OAUTH_AUTHORIZE_URLS[transport]}?{urlencode(params)}"
+        ),
+        session_nonce=session_nonce,
+    )
 
 
-def _verify_state_claims(state: str, provider: str, user: User) -> dict[str, str | int]:
-    """Verify signature/expiry/provider + the initiating-user binding."""
+def _verify_state_claims(
+    state: str, provider: str, session_nonce: str
+) -> dict[str, str | int]:
+    """Verify signature, expiry, provider, and transaction-cookie binding."""
+    if not session_nonce:
+        raise IntegrationStateError("OAuth transaction cookie is missing")
     try:
-        # session_nonce=None: integration states bind via their persisted
-        # claims + the authenticated user, not a cookie nonce.
-        claims = decode_oauth_state(state, provider, session_nonce=None)
+        claims = decode_oauth_state(state, provider, session_nonce=session_nonce)
     except TokenDecodeError as exc:
         raise IntegrationStateError("Invalid OAuth state") from exc
     jti = str(claims.get("jti") or "")
@@ -199,10 +217,6 @@ def _verify_state_claims(state: str, provider: str, user: User) -> dict[str, str
         # A state minted without the integrations binding claims (e.g. the
         # auth sign-in scaffold) must never drive a connect callback.
         raise IntegrationStateError("OAuth state is missing its binding claims")
-    if user_id != str(user.id):
-        # The callback must run under the SAME authenticated user that
-        # started the flow (spec §2 account-linking guard).
-        raise IntegrationStateError("OAuth state user mismatch")
     return claims
 
 
@@ -211,7 +225,6 @@ async def _consume_state(
     *,
     claims: dict[str, str | int],
     provider: str,
-    user: User,
 ) -> tuple[uuid.UUID, str]:
     """Atomically consume the persisted state row.
 
@@ -244,13 +257,16 @@ async def _consume_state(
         raise IntegrationStateError("OAuth state was already consumed or is unknown")
     if (
         row.provider != provider
-        or str(row.user_id) != str(user.id)
+        or str(row.user_id) != str(claims["user_id"])
         or str(row.workspace_id) != str(claims["workspace_id"])
     ):
         raise IntegrationStateError("OAuth state binding mismatch")
     if row.expires_at <= now:
         raise IntegrationStateError("OAuth state expired")
-    if await get_membership(session, row.workspace_id, user.id) is None:
+    user = await session.get(User, row.user_id)
+    if user is None or not user.is_active:
+        raise IntegrationStateError("OAuth state user is inactive")
+    if await get_membership(session, row.workspace_id, row.user_id) is None:
         raise IntegrationStateError("OAuth state workspace membership lost")
     return row.workspace_id, str(row.provider_account_ref or "")
 
@@ -342,7 +358,7 @@ async def complete_connect(
     provider: str,
     code: str,
     state: str,
-    user: User,
+    session_nonce: str,
     redirect_uri: str,
     callback_params: Mapping[str, str] | None = None,
 ) -> None:
@@ -360,9 +376,9 @@ async def complete_connect(
     exchanged for an unauthenticated or mis-bound callback.
     """
     transport = INTEGRATION_PROVIDER_TRANSPORT[provider]
+    claims = _verify_state_claims(state, provider, session_nonce)
     if not integration_oauth.oauth_client_configured(transport):
         raise IntegrationNotConfiguredError(provider)
-    claims = _verify_state_claims(state, provider, user)
     signed_account_ref = str(claims.get("provider_account_ref") or "")
     if transport == INTEGRATION_TRANSPORT_SHOPIFY:
         hmac_valid = callback_params is not None and (
@@ -371,7 +387,7 @@ async def complete_connect(
         if not hmac_valid:
             raise IntegrationStateError("Invalid Shopify callback signature")
     workspace_id, persisted_account_ref = await _consume_state(
-        session, claims=claims, provider=provider, user=user
+        session, claims=claims, provider=provider
     )
     if transport == INTEGRATION_TRANSPORT_SHOPIFY:
         callback_shop = str((callback_params or {}).get("shop") or "")

@@ -138,7 +138,7 @@ async def add_automatic_root(
     *,
     runtime: WorkspaceSiteHealthRuntime | None = None,
 ) -> None:
-    """Persist and queue analysis for a user-initiated automatic crawl root."""
+    """Persist and queue analysis for a user-triggered standard crawl root."""
     remaining = await _automatic_remaining(session, crawl, runtime=runtime)
     if remaining is None or remaining <= 0:
         return
