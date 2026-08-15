@@ -143,6 +143,19 @@ class _SequenceAcquisitionTransport(AcquisitionTransport):
         return next(self.results)
 
 
+class _FailingAcquisitionTransport(AcquisitionTransport):
+    async def fetch(
+        self,
+        request: FetchRequest,
+        target: ResolvedTarget,
+        *,
+        max_wire_bytes: int,
+        max_decoded_bytes: int,
+        timeout_seconds: float,
+    ) -> FetchResult:
+        raise FetchError("curl timed out", error_code="timeout", retryable=True)
+
+
 def _rendered_result(*, title: str = "rendered page") -> FetchResult:
     """A browser result big enough to clear ``browser_low_content_bytes``.
 
@@ -889,6 +902,38 @@ async def test_host_preference_starts_at_curl_without_a_direct_request():
         2,
         "host_block_preference",
     )
+
+
+async def test_host_preference_recovers_from_curl_error_with_browser():
+    direct_requests: list[httpx.Request] = []
+
+    def direct_handler(request: httpx.Request) -> httpx.Response:
+        direct_requests.append(request)
+        return _html_response(500)
+
+    browser = _FakeAcquisitionTransport(_rendered_result())
+    settings = SiteHealthSettings(
+        curl_cffi_enabled=True,
+        browser_enabled=True,
+    )
+    async with _fetcher(
+        direct_handler,
+        _FakeResolver({}),
+        settings=settings,
+        curl_transport=_FailingAcquisitionTransport(),
+        browser_transport=browser,
+        curl_pinned_resolution_supported=True,
+    ) as fetcher:
+        result = await fetcher.fetch(
+            FetchRequest(url="https://example.com/", purpose="discover"),
+            preferred_rung=2,
+            initial_trigger="host_block_preference",
+        )
+
+    assert direct_requests == []
+    assert result.acquisition is not None
+    assert (result.acquisition.rung, result.acquisition.transport) == (3, "patchright")
+    assert [attempt.acquisition.rung for attempt in result.attempts] == [2, 3]
 
 
 async def test_curl_redirect_uses_transient_location_and_revalidates_next_hop():

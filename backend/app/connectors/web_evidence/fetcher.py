@@ -50,6 +50,10 @@ from app.connectors.web_evidence.acquisition import (
     configured_ladder_trigger,
     curl_cffi_pinned_resolution_supported,
 )
+from app.connectors.web_evidence.browser_recovery import (
+    browser_result_or_prior,
+    prior_or_error,
+)
 from app.connectors.web_evidence.browser_transport import PatchrightTransport
 from app.connectors.web_evidence.contracts import (
     AcquisitionProvenance,
@@ -598,9 +602,27 @@ class SecureFetcher:
                 trigger=initial_trigger,
             )
         except FetchError as exc:
-            if not exc.attempts:
-                exc.attempts = tuple(attempts)
-            raise
+            can_render = (
+                exc.error_code in self._settings.browser_continue_error_codes
+                and self._settings.browser_enabled
+                and self._browser_transport is not None
+            )
+            if not can_render:
+                if not exc.attempts:
+                    exc.attempts = tuple(attempts)
+                raise
+            return await self._continue_with_browser(
+                request=request,
+                root_registrable_domain=root_registrable_domain,
+                include_globs=include_globs,
+                exclude_globs=exclude_globs,
+                enforce_scope=enforce_scope,
+                limits=limits,
+                attempts=attempts,
+                trigger=initial_trigger,
+                prior=None,
+                fallback_error=exc,
+            )
         result = replace(result, attempts=tuple(attempts))
         trigger = self._ladder_trigger(result)
         if trigger is None:
@@ -820,7 +842,8 @@ class SecureFetcher:
         limits: tuple[int, int, float, int],
         attempts: list[FetchCallTrace],
         trigger: str,
-        prior: FetchResult,
+        prior: FetchResult | None,
+        fallback_error: FetchError | None = None,
     ) -> FetchResult:
         """Render the target locally when server evidence stays unusable.
 
@@ -835,7 +858,7 @@ class SecureFetcher:
 
         transport = self._browser_transport
         if transport is None or not self._settings.browser_enabled:
-            return replace(prior, attempts=tuple(attempts))
+            return prior_or_error(prior, fallback_error, attempts)
 
         max_wire, max_decoded, timeout, _max_redirects = limits
         acquisition = AcquisitionProvenance(
@@ -885,7 +908,7 @@ class SecureFetcher:
                 started=started,
                 acquisition=acquisition,
             )
-            return replace(prior, attempts=tuple(attempts))
+            return prior_or_error(prior, fallback_error, attempts)
 
         try:
             result = await transport.fetch(
@@ -911,7 +934,7 @@ class SecureFetcher:
             # The browser rung is best-effort recovery: when it cannot render,
             # the prior server evidence remains the crawl's answer rather than
             # turning a usable-but-thin response into a hard failure.
-            return replace(prior, attempts=tuple(attempts))
+            return prior_or_error(prior, fallback_error, attempts)
 
         self._trace(
             attempts,
@@ -925,45 +948,14 @@ class SecureFetcher:
             started=started,
             acquisition=acquisition,
         )
-        return self._browser_result_or_prior(
+        return browser_result_or_prior(
             result,
             prior=prior,
+            fallback_error=fallback_error,
             request=request,
             attempts=attempts,
             acquisition=acquisition,
-        )
-
-    def _browser_result_or_prior(
-        self,
-        result: FetchResult,
-        *,
-        prior: FetchResult,
-        request: FetchRequest,
-        attempts: list[FetchCallTrace],
-        acquisition: AcquisitionProvenance,
-    ) -> FetchResult:
-        """The render, unless it came back under the configured content floor.
-
-        ``browser_low_content_bytes`` was configured and then never consulted. A
-        render below it is the challenge page or the JS shell this rung was sent
-        to get PAST, and returning it let that shell overwrite the thin-but-real
-        server evidence the earlier rung already had. Treated exactly like a
-        render failure: keep what we had.
-        """
-        # ``decoded_bytes`` is the measure the curl rung's own low-content check
-        # uses, so the two floors mean the same thing.
-        if result.decoded_bytes < self._settings.browser_low_content_bytes:
-            return cast(  # type: ignore[redundant-cast]
-                FetchResult, replace(prior, attempts=tuple(attempts))
-            )
-        return cast(  # type: ignore[redundant-cast]
-            FetchResult,
-            replace(
-                result,
-                requested_url=request.url,
-                attempts=tuple(attempts),
-                acquisition=acquisition,
-            ),
+            low_content_bytes=self._settings.browser_low_content_bytes,
         )
 
     def _trace(
