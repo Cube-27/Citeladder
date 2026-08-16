@@ -417,7 +417,7 @@ function CommandCenterContent({
         <div className="flex min-w-0 items-center gap-3.5">
           <BrandLogo
             name={data.project.brand_name || data.project.name}
-            logoUrl={data.project.brand?.logo_url}
+            logoUrl={activeProject.brand.logo_url}
             websiteUrl={data.project.website_url}
             size="xl"
           />
