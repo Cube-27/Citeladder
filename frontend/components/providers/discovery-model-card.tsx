@@ -81,13 +81,16 @@ export function DiscoveryModelCard({
             aria-label="Discovery model"
             className={cn(
               inputClasses,
-              'flex w-full items-center justify-between text-left font-normal cursor-pointer select-none',
+              'flex w-full cursor-pointer items-center justify-between text-left font-normal select-none',
             )}
           >
             <span className="truncate">{currentLabel}</span>
             <ChevronDown className="text-muted size-4 shrink-0" aria-hidden />
           </DropdownTrigger>
-          <DropdownContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto">
+          <DropdownContent
+            align="start"
+            className="max-h-64 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
+          >
             <DropdownRadioGroup value={selected} onValueChange={handleSelect}>
               <DropdownRadioItem value="">Use default</DropdownRadioItem>
               {options.map((option) => {

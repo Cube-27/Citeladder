@@ -5,7 +5,12 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { ProviderConnection } from '@/lib/api/types';
-import { ENGINE_DOMAINS, ENGINE_LOGOS, isConnectable, type EngineCardModel } from '@/lib/providers/catalog';
+import {
+  ENGINE_DOMAINS,
+  ENGINE_LOGOS,
+  isConnectable,
+  type EngineCardModel,
+} from '@/lib/providers/catalog';
 import { useEngineConnection } from '@/lib/providers/use-engine-connection';
 
 import { EngineConnectionFields } from './engine-connection-fields';
@@ -64,10 +69,12 @@ export function EngineCard({
           {route ? (
             <div className="bg-background-alt border-border-subtle grid gap-1.5 rounded-md border p-3">
               <div className="flex items-center justify-between">
-                <span className="text-muted text-2xs font-semibold uppercase tracking-wider">Route</span>
+                <span className="text-muted text-2xs font-semibold tracking-wider uppercase">
+                  Route
+                </span>
                 <span className="text-foreground text-xs font-medium">{route.label}</span>
               </div>
-              <div className="text-muted grid gap-1 font-mono text-2xs">
+              <div className="text-muted text-2xs grid gap-1 font-mono">
                 <div className="flex items-center justify-between">
                   <span>Pulse</span>
                   <span className="text-secondary">{route.pulse_model}</span>

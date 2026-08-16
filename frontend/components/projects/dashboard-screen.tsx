@@ -87,8 +87,8 @@ function StateMetric({
   const positive = delta !== null && (inverse ? delta < 0 : delta > 0);
   return (
     <div className="bg-panel shadow-card flex min-h-28 flex-col justify-between rounded-md p-4">
-      <p className="text-muted text-2xs font-semibold uppercase tracking-wider">{label}</p>
-      <p className="text-foreground font-mono text-3xl font-medium leading-none tracking-tight tabular-nums">
+      <p className="text-muted text-2xs font-semibold tracking-wider uppercase">{label}</p>
+      <p className="text-foreground font-mono text-3xl leading-none font-medium tracking-tight tabular-nums">
         {metricValue(value, suffix)}
       </p>
       <p
@@ -118,7 +118,7 @@ function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movem
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {movements.map((row) => (
-        <div key={row.label} className="bg-background-alt shadow-sm rounded-md p-3">
+        <div key={row.label} className="bg-background-alt rounded-md p-3 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             <span className="text-foreground text-xs font-medium capitalize">{row.label}</span>
             <span
@@ -141,7 +141,7 @@ function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movem
               style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
             />
           </div>
-          <p className="text-muted mt-2 text-center text-2xs">Previous · Current</p>
+          <p className="text-muted text-2xs mt-2 text-center">Previous · Current</p>
         </div>
       ))}
     </div>
@@ -178,7 +178,7 @@ function ActionRow({
         if (!reorderPending) onDrop(Number(event.dataTransfer.getData('text/plain')), index);
       }}
       className={cn(
-        'border-border-subtle grid gap-3 border-b px-3.5 py-3 last:border-b-0 hover:bg-background-alt/50 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
+        'border-border-subtle hover:bg-background-alt/50 grid gap-3 border-b px-3.5 py-3 transition-colors last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
         dragging && 'opacity-60',
       )}
     >
@@ -499,7 +499,9 @@ function CommandCenterContent({
         </div>
         <div className="bg-panel shadow-card grid gap-3 rounded-md p-4 sm:grid-cols-2">
           <div>
-            <p className="text-muted text-2xs font-semibold uppercase tracking-wider">Positioning</p>
+            <p className="text-muted text-2xs font-semibold tracking-wider uppercase">
+              Positioning
+            </p>
             <p className="text-foreground mt-1 text-sm font-medium">
               {data.facts.positioning ||
                 data.facts.description ||
@@ -507,7 +509,7 @@ function CommandCenterContent({
             </p>
           </div>
           <div>
-            <p className="text-muted text-2xs font-semibold uppercase tracking-wider">
+            <p className="text-muted text-2xs font-semibold tracking-wider uppercase">
               Target Audience
             </p>
             <p className="text-secondary mt-1 text-sm">
@@ -516,7 +518,7 @@ function CommandCenterContent({
                 : 'Target audience not set.'}
             </p>
           </div>
-          <div className="border-border-subtle pt-2 sm:col-span-2 border-t">
+          <div className="border-border-subtle border-t pt-2 sm:col-span-2">
             <p className="text-muted text-2xs font-medium">
               {data.facts.products_services.length
                 ? `Offerings: ${data.facts.products_services.join(', ')}`
@@ -531,12 +533,17 @@ function CommandCenterContent({
         <div className="bg-panel shadow-card flex flex-col justify-between gap-3 rounded-md p-4">
           <div>
             <div className="flex items-center justify-between">
-              <p className="text-muted text-2xs font-semibold uppercase tracking-wider">Next action</p>
-              <Badge variant="status" value={data.next_action.kind === 'monitor' ? 'success' : 'info'}>
+              <p className="text-muted text-2xs font-semibold tracking-wider uppercase">
+                Next action
+              </p>
+              <Badge
+                variant="status"
+                value={data.next_action.kind === 'monitor' ? 'success' : 'info'}
+              >
                 {data.next_action.kind === 'monitor' ? 'Optimal' : 'Action required'}
               </Badge>
             </div>
-            <p className="text-foreground mt-2 text-base font-semibold leading-snug">
+            <p className="text-foreground mt-2 text-base leading-snug font-semibold">
               {data.next_action.title}
             </p>
           </div>
@@ -553,13 +560,13 @@ function CommandCenterContent({
         <div className="bg-panel shadow-card flex flex-col justify-between gap-3 rounded-md p-4">
           <div>
             <div className="flex items-center justify-between">
-              <p className="text-muted text-2xs font-semibold uppercase tracking-wider">Track</p>
+              <p className="text-muted text-2xs font-semibold tracking-wider uppercase">Track</p>
               <span className="text-muted text-xs font-medium">
                 {data.track.observed_at ? `${data.track.engine_coverage} engine(s)` : 'No run'}
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <p className="text-foreground text-base font-semibold leading-snug">
+              <p className="text-foreground text-base leading-snug font-semibold">
                 Citation share {metricValue(data.track.citation_share.value, '%')}
               </p>
               {data.track.citation_share.delta !== null ? (
@@ -620,7 +627,10 @@ function CommandCenterContent({
         <section aria-labelledby="ranked-actions">
           <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b p-4">
             <div>
-              <h2 id="ranked-actions" className="text-foreground text-sm font-semibold tracking-tight">
+              <h2
+                id="ranked-actions"
+                className="text-foreground text-sm font-semibold tracking-tight"
+              >
                 Ranked actions
               </h2>
               <p className="text-muted mt-0.5 text-xs">
@@ -664,7 +674,10 @@ function CommandCenterContent({
           className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"
         >
           <div>
-            <h2 id="progress-proof" className="text-foreground text-sm font-semibold tracking-tight">
+            <h2
+              id="progress-proof"
+              className="text-foreground text-sm font-semibold tracking-tight"
+            >
               Progress and report proof
             </h2>
             <p className="text-muted mt-0.5 text-xs">

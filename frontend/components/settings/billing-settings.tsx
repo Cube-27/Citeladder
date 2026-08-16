@@ -74,7 +74,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
 
   if (!enabled || entitlementLoading) {
     return (
-      <div className="bg-panel shadow-card grid gap-3 rounded-md border border-border-subtle p-5">
+      <div className="bg-panel shadow-card border-border-subtle grid gap-3 rounded-md border p-5">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-20 w-full" />
       </div>
@@ -88,10 +88,12 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
 
   return (
     <div className="grid gap-5">
-      <div className="bg-panel shadow-card rounded-md border border-border-subtle p-5">
+      <div className="bg-panel shadow-card border-border-subtle rounded-md border p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-muted text-2xs font-semibold uppercase tracking-wider">Current plan</p>
+            <p className="text-muted text-2xs font-semibold tracking-wider uppercase">
+              Current plan
+            </p>
             <div className="mt-1 flex items-center gap-2.5">
               <p className="text-foreground text-heading-sm font-semibold">
                 {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
@@ -147,7 +149,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
       </div>
 
       <div className="grid gap-5 lg:grid-cols-12 lg:items-start">
-        <div className="bg-panel shadow-card grid gap-4 rounded-md border border-border-subtle p-5 lg:col-span-7">
+        <div className="bg-panel shadow-card border-border-subtle grid gap-4 rounded-md border p-5 lg:col-span-7">
           <div>
             <h2 className="text-foreground text-sm font-semibold tracking-tight">Change plan</h2>
             <p className="text-muted mt-0.5 text-xs">
@@ -164,13 +166,17 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
             <Skeleton className="h-24 w-full" />
           ) : (
             <div className="grid gap-3.5">
-              <div className="bg-background-alt flex flex-col justify-between gap-2.5 rounded-md border border-border-subtle p-3 sm:flex-row sm:items-center">
+              <div className="bg-background-alt border-border-subtle flex flex-col justify-between gap-2.5 rounded-md border p-3 sm:flex-row sm:items-center">
                 <div className="min-w-0">
-                  <label htmlFor="billing-country-input" className="text-secondary text-xs font-medium block">
+                  <label
+                    htmlFor="billing-country-input"
+                    className="text-secondary block text-xs font-medium"
+                  >
                     Billing country
                   </label>
                   <span id="billing-country-help" className="text-muted text-2xs block">
-                    Two-letter ISO code. The server resolves currency, tax and the exact amount from it.
+                    Two-letter ISO code. The server resolves currency, tax and the exact amount from
+                    it.
                   </span>
                 </div>
                 <input
@@ -208,7 +214,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
                           <p className="text-muted mt-0.5 text-xs">{plan.description}</p>
                         ) : null}
                         {!selection.ok && !plan.contact_only && selection.reason ? (
-                          <p className="text-muted mt-0.5 text-2xs">{selection.reason}</p>
+                          <p className="text-muted text-2xs mt-0.5">{selection.reason}</p>
                         ) : null}
                       </div>
                       <div className="shrink-0">
@@ -229,7 +235,9 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
                             }
                           >
                             <CreditCard className="size-3.5" aria-hidden />
-                            {checkoutMutation.isPending ? 'Opening checkout…' : `Choose ${plan.name}`}
+                            {checkoutMutation.isPending
+                              ? 'Opening checkout…'
+                              : `Choose ${plan.name}`}
                           </Button>
                         )}
                       </div>

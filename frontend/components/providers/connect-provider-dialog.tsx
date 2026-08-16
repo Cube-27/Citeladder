@@ -163,12 +163,18 @@ function ConnectEngineForm({
             />
             <div>
               <p className="text-foreground text-xs font-semibold">{model.label}</p>
-              <p className="text-muted text-2xs">via {TRANSPORT_LABELS[route.transport_provider]}</p>
+              <p className="text-muted text-2xs">
+                via {TRANSPORT_LABELS[route.transport_provider]}
+              </p>
             </div>
           </div>
-          <div className="text-muted grid gap-0.5 text-right font-mono text-2xs">
-            <span>Pulse: <span className="text-secondary">{route.pulse_model}</span></span>
-            <span>Benchmark: <span className="text-secondary">{route.benchmark_model}</span></span>
+          <div className="text-muted text-2xs grid gap-0.5 text-right font-mono">
+            <span>
+              Pulse: <span className="text-secondary">{route.pulse_model}</span>
+            </span>
+            <span>
+              Benchmark: <span className="text-secondary">{route.benchmark_model}</span>
+            </span>
           </div>
         </div>
       ) : (

@@ -32,13 +32,13 @@ export function PageKindSelect({
         aria-label="Filter by page kind"
         className={cn(
           inputClasses,
-          'flex w-44 items-center justify-between text-left font-normal cursor-pointer select-none',
+          'flex w-44 cursor-pointer items-center justify-between text-left font-normal select-none',
         )}
       >
         <span className="truncate">{currentLabel}</span>
         <ChevronDown className="text-muted size-4 shrink-0" aria-hidden />
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-48 max-h-64 overflow-y-auto">
+      <DropdownContent align="start" className="max-h-64 w-48 overflow-y-auto">
         <DropdownRadioGroup value={value} onValueChange={onChange}>
           <DropdownRadioItem value="">All page kinds</DropdownRadioItem>
           {PAGE_KINDS.map((pageKind) => (

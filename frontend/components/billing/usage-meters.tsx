@@ -48,7 +48,7 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   });
 
   return (
-    <div className="bg-panel shadow-card grid gap-3.5 rounded-md border border-border-subtle p-5">
+    <div className="bg-panel shadow-card border-border-subtle grid gap-3.5 rounded-md border p-5">
       <div>
         <h2 className="text-foreground text-sm font-semibold tracking-tight">Usage</h2>
         <p className="text-muted mt-0.5 text-xs">

@@ -182,11 +182,11 @@ function ConnectionRow({
       className="bg-panel border-border-subtle rounded-md border p-3.5 shadow-2xs"
       data-testid={`connection-row-${connection.provider}`}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <span
             aria-hidden
-            className="bg-well border-border-subtle text-secondary flex size-8 shrink-0 items-center justify-center rounded-md border mt-0.5"
+            className="bg-well border-border-subtle text-secondary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border"
           >
             <Icon className="size-4" aria-hidden />
           </span>
@@ -370,17 +370,18 @@ export function IntegrationCard({
     return (
       <Card data-testid={`grant-card-${family}`} className="flex flex-col justify-between">
         <div>
-          <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border-subtle pb-3">
+          <CardHeader className="border-border-subtle flex-row items-center justify-between gap-3 border-b pb-3">
             <div className="grid min-w-0 gap-0.5">
               <CardEyebrow>OAuth grant</CardEyebrow>
               <h3 className="text-foreground text-heading-sm font-semibold">{meta.title}</h3>
-              <p className="text-muted text-xs truncate">{meta.blurb}</p>
+              <p className="text-muted truncate text-xs">{meta.blurb}</p>
             </div>
             <Badge variant="neutral">Not connected</Badge>
           </CardHeader>
           <CardContent className="pt-4">
             <p className="text-secondary text-sm">
-              Connect your {meta.title} account to automatically import traffic and search visibility metrics.
+              Connect your {meta.title} account to automatically import traffic and search
+              visibility metrics.
             </p>
           </CardContent>
         </div>
@@ -400,11 +401,11 @@ export function IntegrationCard({
   return (
     <Card data-testid={`grant-card-${family}`} className="flex flex-col justify-between">
       <div>
-        <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border-subtle pb-3">
+        <CardHeader className="border-border-subtle flex-row items-center justify-between gap-3 border-b pb-3">
           <div className="grid min-w-0 gap-0.5">
             <CardEyebrow>OAuth grant</CardEyebrow>
             <h3 className="text-foreground text-heading-sm font-semibold">{meta.title}</h3>
-            <p className="text-muted text-xs truncate">{meta.blurb}</p>
+            <p className="text-muted truncate text-xs">{meta.blurb}</p>
           </div>
           <div className="shrink-0">
             {badge.variant === 'status' ? (
@@ -422,8 +423,8 @@ export function IntegrationCard({
         <CardContent className="grid gap-3 pt-4">
           <GrantAlert family={family} status={grant.status} />
 
-          <div className="bg-well/60 border-border-subtle flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted">
-            <Info className="size-3.5 shrink-0 text-secondary" aria-hidden />
+          <div className="bg-well/60 border-border-subtle text-muted flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
+            <Info className="text-secondary size-3.5 shrink-0" aria-hidden />
             <span>
               One OAuth grant shared by {grant.connections.length}{' '}
               {grant.connections.length === 1 ? 'connection' : 'connections'}.

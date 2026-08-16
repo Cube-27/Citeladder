@@ -149,11 +149,7 @@ export function SiteHealthScreen() {
         </Alert>
       ) : null}
       <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b">
-        <div
-          className="-mb-px flex gap-1"
-          role="tablist"
-          aria-label="Website analysis"
-        >
+        <div className="-mb-px flex gap-1" role="tablist" aria-label="Website analysis">
           {(
             [
               ['pages', 'Pages'],

@@ -81,14 +81,14 @@ export function CompetitorSuggestions({
         <Alert tone="danger">Could not load competitor suggestions.</Alert>
       ) : null}
       {suggestionsQuery.data?.length ? (
-        <ul className="border-border-subtle bg-panel shadow-sm divide-border-subtle divide-y rounded-md border">
+        <ul className="border-border-subtle bg-panel divide-border-subtle divide-y rounded-md border shadow-sm">
           {suggestionsQuery.data.map((candidate) => (
             <li
               key={candidate.id}
               className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 text-sm"
             >
               <div>
-                <p className="text-foreground font-medium text-xs">{candidate.name}</p>
+                <p className="text-foreground text-xs font-medium">{candidate.name}</p>
                 <p className="text-muted text-2xs mt-0.5">
                   {candidate.domain} · {candidate.prompt_count} prompts / {candidate.engine_count}{' '}
                   engines

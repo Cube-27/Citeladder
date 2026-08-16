@@ -166,7 +166,7 @@ export function PropertyPicker({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 px-1.5 text-xs font-medium text-muted hover:text-foreground"
+          className="text-muted hover:text-foreground h-6 px-1.5 text-xs font-medium"
           onClick={() => setOpen(true)}
           disabled={disabled}
           data-testid={`select-property-${connection.provider}`}
