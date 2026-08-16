@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
 from types import SimpleNamespace
 
 import pytest
 
-from app.core.config.brand_discovery import _discovery_research_system_prompt
+from app.core.config.brand_discovery import (
+    _discovery_research_system_prompt,
+    brand_discovery_settings,
+)
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryCreate,
+    CompetitorQualification,
     ConfirmedDiscoveryProfile,
+    DiscoveryCompetitorSuggestion,
 )
-from app.domain.projects.onboarding import prompt_generation
+from app.domain.projects.onboarding import portfolio_generation, prompt_generation
 from app.domain.projects.onboarding.industry_library import (
     industry_context,
     industry_names,
@@ -27,7 +34,10 @@ from app.domain.projects.onboarding.prompt_validation import (
     MARKET_VISIBILITY,
     validate_portfolio,
 )
-from app.domain.projects.onboarding.research import _customer_warnings
+from app.domain.projects.onboarding.research import (
+    _customer_warnings,
+    _is_peer_company,
+)
 from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 
@@ -93,6 +103,56 @@ def test_research_prompt_defers_generation_until_icp_confirmation() -> None:
 def test_confirmed_icp_rejects_blank_required_values(payload: dict) -> None:
     with pytest.raises(ValueError):
         ConfirmedDiscoveryProfile.model_validate(payload)
+
+
+def _candidate(name: str, business_model: str | None) -> DiscoveryCompetitorSuggestion:
+    return DiscoveryCompetitorSuggestion(
+        name=name,
+        domains=[f"{name.lower().replace(' ', '')}.com"],
+        business_model=business_model,
+        qualification=CompetitorQualification(
+            # Deliberately perfect. The point of the case is that every
+            # dimension the model scores can agree while the answer is wrong.
+            product_substitutability=1.0,
+            customer_use_case_overlap=1.0,
+            geographic_relevance=1.0,
+            question_visibility=1.0,
+        ),
+    )
+
+
+def test_platform_vendors_are_not_peers_of_a_services_firm() -> None:
+    """The exact failure: an ecommerce agency handed the platforms it implements.
+
+    CUBE27 builds ecommerce sites; discovery returned Shopify Plus, BigCommerce,
+    Salesforce Commerce Cloud, SAP Commerce Cloud and commercetools. Nobody
+    hires a storefront platform instead of an implementation partner.
+    """
+    for vendor in ("Shopify Plus", "commercetools", "BigCommerce"):
+        assert not _is_peer_company(
+            _candidate(vendor, "b2b_saas"), brand_model="professional_service"
+        ), vendor
+
+
+def test_peer_agencies_survive_the_class_filter() -> None:
+    assert _is_peer_company(
+        _candidate("Publicis Sapient", "professional_service"),
+        brand_model="professional_service",
+    )
+
+
+def test_class_filter_abstains_when_the_model_did_not_classify() -> None:
+    """An unstated business model is not evidence of a mismatch."""
+    assert _is_peer_company(_candidate("Unknown Co", None), brand_model="b2b_saas")
+
+
+def test_research_prompt_separates_services_firms_from_the_products_they_build() -> (
+    None
+):
+    prompt = _discovery_research_system_prompt(3, 4)
+
+    assert "WHAT DOES THE BUYER ACTUALLY RECEIVE?" in prompt
+    assert "THE SAME KIND OF COMPANY" in prompt
 
 
 def test_complete_research_does_not_warn_about_internal_fallbacks() -> None:
@@ -259,7 +319,14 @@ def test_prompt_gate_rejects_tracked_names_in_both_cohorts() -> None:
     assert "prompt[5].tracked_name" in result.errors
 
 
-def test_brand_relevant_prompts_must_carry_context_coverage() -> None:
+def test_portfolio_must_stay_grounded_in_confirmed_context() -> None:
+    """Grounding is a portfolio-level floor, not a per-prompt keyword quota.
+
+    The rule this replaced required every confirmed phrase to appear verbatim,
+    which rewarded stuffing mechanical context clauses into otherwise natural
+    questions. Sharing vocabulary with two confirmed terms proves the portfolio
+    is about this brand without dictating how it reads.
+    """
     _, context = industry_context("Software")
     prompts = fallback_portfolio(
         primary_market="US",
@@ -285,10 +352,11 @@ def test_brand_relevant_prompts_must_carry_context_coverage() -> None:
         context_terms=["analytics software", "integrations"],
     )
 
-    assert "portfolio.context_coverage" in result.errors
+    assert "portfolio.grounding" in result.errors
 
 
 def test_prompt_gate_rejects_third_person_buyer_language() -> None:
+    """Asking *about* the audience is the marketer tell worth catching."""
     _, context = industry_context("Ecommerce")
     prompts = fallback_portfolio(
         primary_market="US",
@@ -307,7 +375,34 @@ def test_prompt_gate_rejects_third_person_buyer_language() -> None:
         competitor_terms=[],
     )
 
-    assert "prompt[0].buyer_perspective" in result.errors
+    assert "prompt[0].third_person_audience" in result.errors
+
+
+def test_prompt_gate_keeps_pronoun_free_buyer_searches() -> None:
+    """Real queries often have no pronoun at all; that must not be an error.
+
+    The former rule demanded an i/me/my/we/us/our token, which rejected the
+    single most common shape of real buyer query and forced the stilted
+    "...should I consider..." phrasing it was meant to prevent.
+    """
+    prompts = [
+        {
+            "text": "best mattress for back pain india under 20000",
+            "theme": "mattress for back pain",
+            "intent": "purchase",
+            "cohort": "market_visibility",
+        },
+        {
+            "text": "memory foam vs spring mattress",
+            "theme": "mattress types",
+            "intent": "comparison",
+            "cohort": "market_visibility",
+        },
+    ]
+
+    result = validate_portfolio(prompts, brand_terms=["Wakefit"], competitor_terms=[])
+
+    assert not [error for error in result.errors if error.startswith("prompt[")]
 
 
 def test_best_less_fallback_produces_real_searches_when_research_degrades() -> None:
@@ -378,3 +473,36 @@ def test_catalog_exposes_only_current_research_methods_and_cohorts() -> None:
         "website_url",
         "primary_market",
     ]
+
+
+@pytest.mark.asyncio
+async def test_portfolio_generation_budget_covers_every_retry(monkeypatch) -> None:
+    """One deadline for the whole retry loop, not one per attempt.
+
+    `complete_discovery` awaits this while holding the discovery row
+    `FOR UPDATE`, so a per-attempt timeout multiplied by `synthesis_max_attempts`
+    would hold the lock for twice the configured ceiling and time out every
+    concurrent write on the row.
+    """
+    attempts = 0
+
+    async def never_answers(_request):
+        nonlocal attempts
+        attempts += 1
+        await asyncio.sleep(10)
+
+    monkeypatch.setattr(
+        brand_discovery_settings, "portfolio_generation_timeout_seconds", 0.2
+    )
+    monkeypatch.setattr(brand_discovery_settings, "synthesis_max_attempts", 3)
+    monkeypatch.setattr(portfolio_generation, "_model_portfolio", never_answers)
+
+    started = time.perf_counter()
+    prompts, shortfall = await portfolio_generation.generate_portfolio(
+        brand_name="Acme", primary_market="US", profile={}, competitors=[]
+    )
+    elapsed = time.perf_counter() - started
+
+    assert (prompts, shortfall) == ([], "")
+    assert attempts == 1
+    assert elapsed < 0.2 * 2
