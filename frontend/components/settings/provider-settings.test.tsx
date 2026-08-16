@@ -165,10 +165,9 @@ describe('ProviderSettings', () => {
     await user.click(utils.getByRole('button', { name: /save key/i }));
 
     // Saving a key does NOT make the engine connected — only a successful
-    // probe does. Until then it stays missing with the verification reason.
+    // probe does. Until then it stays missing.
     await waitFor(() => expect(createdTransport).toBe('openai'));
     expect(utils.getByText('Missing')).toBeInTheDocument();
-    expect(utils.getByText(/verification required/i)).toBeInTheDocument();
 
     await user.click(utils.getByRole('button', { name: /test connection/i }));
     expect(await utils.findByText(/connection succeeded/i)).toBeInTheDocument();

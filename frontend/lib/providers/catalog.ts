@@ -28,13 +28,29 @@ export const ENGINE_LABELS: Record<LogicalEngine, string> = {
   claude: 'Claude',
 };
 
-/**
- * Human display names for each transport provider.
- */
+/** Human display names for each transport provider. */
 export const TRANSPORT_LABELS: Record<TransportProvider, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   google: 'Google',
+};
+
+/** Domains for brand logo resolution via Logo.dev / BrandLogo. */
+export const ENGINE_DOMAINS: Record<string, string> = {
+  chatgpt: 'openai.com',
+  gemini: 'google.com',
+  claude: 'anthropic.com',
+  grok: 'x.ai',
+  perplexity: 'perplexity.ai',
+  copilot: 'microsoft.com',
+};
+
+/** Local brand logo assets for engines when available. */
+export const ENGINE_LOGOS: Record<string, string> = {
+  claude: '/brand/claude.png',
+  copilot: '/brand/copilot.jpg',
+  grok: '/brand/grok.png',
+  perplexity: '/brand/perplexity.png',
 };
 
 /** Human label for an engine key (falls back to the raw key). */

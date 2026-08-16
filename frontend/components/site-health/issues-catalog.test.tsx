@@ -150,21 +150,20 @@ describe('IssuesCatalog', () => {
 
     const user = userEvent.setup();
     renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
-    const select = await screen.findByLabelText('Filter by page kind');
+    const trigger = await screen.findByRole('button', { name: 'Filter by page kind' });
     // The initial unfiltered request carries no page-kind param.
     await screen.findByText('WebSite schema is missing');
     expect(seen.at(-1)).toBeNull();
 
-    await user.selectOptions(select, 'article');
+    await user.click(trigger);
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Article' }));
     await waitFor(() => expect(seen.at(-1)).toBe('article'));
 
     // Clearing back to "All page kinds" drops the param entirely. The
     // unfiltered combination is already cached (no new request), so force a
     // fresh combination via a chip and assert THAT request omits page_kind.
-    // (Select by the option's visible label — user-event does not fire a
-    // change event for selectOptions(select, '').)
-    await user.selectOptions(select, 'All page kinds');
-    expect(select).toHaveValue('');
+    await user.click(trigger);
+    await user.click(await screen.findByRole('menuitemradio', { name: 'All page kinds' }));
     await user.click(screen.getByRole('button', { name: 'Medium (23)' }));
     await waitFor(() => expect(seen.at(-1)).toBeNull());
   });

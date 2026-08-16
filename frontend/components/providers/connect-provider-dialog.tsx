@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -14,6 +15,8 @@ import {
   buildEngineCards,
   isConnectable,
   connectionForTransport,
+  ENGINE_DOMAINS,
+  ENGINE_LOGOS,
   ENGINE_LABELS,
   ENGINE_ORDER,
   isConfigured,
@@ -150,11 +153,24 @@ function ConnectEngineForm({
   return (
     <div className="grid gap-4">
       {route ? (
-        <p className="text-muted text-sm">
-          via {TRANSPORT_LABELS[route.transport_provider]}
-          {' · '}Pulse <span className="text-2xs font-mono">{route.pulse_model}</span>
-          {' · '}Benchmark <span className="text-2xs font-mono">{route.benchmark_model}</span>
-        </p>
+        <div className="bg-background-alt border-border-subtle flex items-center justify-between rounded-md border p-3">
+          <div className="flex items-center gap-2.5">
+            <BrandLogo
+              name={model.label}
+              logoUrl={ENGINE_LOGOS[model.logical_engine]}
+              websiteUrl={ENGINE_DOMAINS[model.logical_engine]}
+              size="sm"
+            />
+            <div>
+              <p className="text-foreground text-xs font-semibold">{model.label}</p>
+              <p className="text-muted text-2xs">via {TRANSPORT_LABELS[route.transport_provider]}</p>
+            </div>
+          </div>
+          <div className="text-muted grid gap-0.5 text-right font-mono text-2xs">
+            <span>Pulse: <span className="text-secondary">{route.pulse_model}</span></span>
+            <span>Benchmark: <span className="text-secondary">{route.benchmark_model}</span></span>
+          </div>
+        </div>
       ) : (
         <p className="text-muted text-sm">No route available for this engine.</p>
       )}

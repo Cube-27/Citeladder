@@ -69,6 +69,15 @@ describe('station navigation', () => {
     expect(primary).toHaveTextContent('OverviewAnalyzeActTrackConnect');
     expect(screen.getByRole('link', { name: 'Track' })).toHaveAttribute('aria-current', 'page');
     const secondary = screen.getByRole('navigation', { name: 'Track destinations' });
-    expect(secondary).toHaveTextContent('AI VisibilityRunsAI Referrals');
+    expect(secondary).toHaveTextContent('PromptsAI VisibilityRunsAI Referrals');
+  });
+
+  it('omits section heading for Overview but renders headings for other stations', () => {
+    render(<SidebarNav />);
+    expect(screen.queryByText('Overview', { selector: 'p' })).not.toBeInTheDocument();
+    expect(screen.getByText('Analyze', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('Act', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('Track', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('Connect', { selector: 'p' })).toBeInTheDocument();
   });
 });

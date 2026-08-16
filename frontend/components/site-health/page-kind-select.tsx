@@ -2,39 +2,52 @@
 
 import { ChevronDown } from 'lucide-react';
 
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownRadioGroup,
+  DropdownRadioItem,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
 import { inputClasses } from '@/components/ui/input';
+import type { PageKind } from '@/lib/api/types';
 import { PAGE_KINDS, pageKindLabel } from '@/lib/site-health/page-kinds';
 import { cn } from '@/lib/utils';
 
 /**
  * The page-kind filter control (site-health v2 P1) shared by the pages,
- * inventory, and issues list screens. A native `<select>` on the shared
- * `inputClasses` control treatment (the same pattern as the Topics narrow
- * selector) — the empty option clears the filter (all page kinds).
+ * inventory, and issues list screens. A custom styled Radix dropdown on the
+ * shared `inputClasses` control treatment — the empty option clears the
+ * filter (all page kinds).
  */
 export function PageKindSelect({
   value,
   onChange,
 }: Readonly<{ value: string; onChange: (value: string) => void }>) {
+  const currentLabel = value ? pageKindLabel(value as PageKind) : 'All page kinds';
+
   return (
-    <div className="relative w-44">
-      <select
+    <Dropdown>
+      <DropdownTrigger
         aria-label="Filter by page kind"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(inputClasses, 'appearance-none pe-8')}
+        className={cn(
+          inputClasses,
+          'flex w-44 items-center justify-between text-left font-normal cursor-pointer select-none',
+        )}
       >
-        <option value="">All page kinds</option>
-        {PAGE_KINDS.map((pageKind) => (
-          <option key={pageKind} value={pageKind}>
-            {pageKindLabel(pageKind)}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="text-muted pointer-events-none absolute end-2 top-1/2 size-4 -translate-y-1/2"
-        aria-hidden
-      />
-    </div>
+        <span className="truncate">{currentLabel}</span>
+        <ChevronDown className="text-muted size-4 shrink-0" aria-hidden />
+      </DropdownTrigger>
+      <DropdownContent align="start" className="w-48 max-h-64 overflow-y-auto">
+        <DropdownRadioGroup value={value} onValueChange={onChange}>
+          <DropdownRadioItem value="">All page kinds</DropdownRadioItem>
+          {PAGE_KINDS.map((pageKind) => (
+            <DropdownRadioItem key={pageKind} value={pageKind}>
+              {pageKindLabel(pageKind)}
+            </DropdownRadioItem>
+          ))}
+        </DropdownRadioGroup>
+      </DropdownContent>
+    </Dropdown>
   );
 }

@@ -50,12 +50,6 @@ const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
   revoked: 'Revoked',
 };
 
-/** Scope chips show the short scope name (`…/auth/webmasters.readonly` → `webmasters.readonly`). */
-function scopeLabel(scope: string): string {
-  const segment = scope.split('/').filter(Boolean).pop();
-  return segment ?? scope;
-}
-
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
   return 'Something went wrong. Please try again.';
@@ -185,24 +179,27 @@ function ConnectionRow({
 
   return (
     <div
-      className="border-border-subtle [&+&]:border-t"
+      className="bg-panel border-border-subtle rounded-md border p-3.5 shadow-2xs"
       data-testid={`connection-row-${connection.provider}`}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
-        <span
-          aria-hidden
-          className="bg-well text-secondary flex size-8 shrink-0 items-center justify-center rounded-md"
-        >
-          <Icon className="size-4" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-foreground truncate text-sm font-medium">{label}</div>
-          <PropertyPicker connection={connection} disabled={busy} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <span
+            aria-hidden
+            className="bg-well border-border-subtle text-secondary flex size-8 shrink-0 items-center justify-center rounded-md border mt-0.5"
+          >
+            <Icon className="size-4" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-foreground truncate text-sm font-semibold">{label}</div>
+            <PropertyPicker connection={connection} disabled={busy} />
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
           <Button
             variant="secondary"
             size="sm"
+            className="min-w-[56px]"
             onClick={() => testMutation.mutate()}
             disabled={busy}
           >
@@ -211,6 +208,7 @@ function ConnectionRow({
           <Button
             variant="secondary"
             size="sm"
+            className="min-w-[86px]"
             onClick={() => syncMutation.mutate()}
             // No property selected ⇒ nothing to fetch from. The run would
             // fail `unmapped_property` server-side; blocking it here says so
@@ -220,7 +218,7 @@ function ConnectionRow({
           >
             {syncMutation.isPending ? (
               <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
                 Syncing…
               </>
             ) : (
@@ -239,33 +237,36 @@ function ConnectionRow({
         </div>
       </div>
 
-      {runActive && activeRun ? (
-        <div className="flex items-center gap-2 px-4 ps-15 pb-3">
-          <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
-            {activeRun.status.replace('_', ' ')}
-          </Badge>
-          <span className="text-muted text-2xs font-mono whitespace-nowrap">
-            {activeRun.status === 'running'
-              ? `${activeRun.row_count.toLocaleString('en-US')} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
-              : `Enqueued ${formatUtcTimestamp(activeRun.created_at)} · waiting for a worker`}
+      {/* Permanent metadata + live run status bar */}
+      <div className="border-border-subtle/70 mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
+        <div className="flex items-center gap-2">
+          <span className={eyebrowClasses}>Last synced</span>
+          <span className="text-secondary font-mono text-xs tabular-nums">
+            {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
           </span>
         </div>
-      ) : null}
 
-      <div className="flex items-center gap-2 px-4 ps-15 pb-3">
-        <span className={eyebrowClasses}>Last synced</span>
-        <span className="text-secondary font-mono text-xs tabular-nums">
-          {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
-        </span>
+        {runActive && activeRun ? (
+          <div className="flex items-center gap-2">
+            <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
+              {activeRun.status.replace('_', ' ')}
+            </Badge>
+            <span className="text-muted text-2xs font-mono whitespace-nowrap">
+              {activeRun.status === 'running'
+                ? `${activeRun.row_count.toLocaleString('en-US')} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
+                : `Enqueued ${formatUtcTimestamp(activeRun.created_at)} · waiting for a worker`}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {testState ? (
-        <div className="px-4 ps-15 pb-3">
+        <div className="pt-2.5">
           <Alert tone={testState.ok ? 'success' : 'danger'}>{testState.message}</Alert>
         </div>
       ) : null}
       {syncMutation.isError ? (
-        <div className="px-4 ps-15 pb-3">
+        <div className="pt-2.5">
           <Alert tone="danger">{errorMessage(syncMutation.error)}</Alert>
         </div>
       ) : null}
@@ -351,8 +352,8 @@ function ConnectionRow({
 /**
  * Per-grant integration card (F5; mockups `integrations-settings-*.html`),
  * mirroring the providers `engine-card.tsx` idiom: an eyebrow + title header
- * with the grant-status badge, granted-scope chips, one sub-row per connection
- * on the grant, and a grant-level Reconnect footer.
+ * with the grant-status badge, one sub-row per connection on the grant,
+ * and a grant-level Reconnect footer.
  *
  * A `null` grant renders the family's not-connected card — the Connect action
  * is a full-page navigation to the same-origin OAuth start endpoint (a 302 —
@@ -367,24 +368,29 @@ export function IntegrationCard({
 
   if (!grant) {
     return (
-      <Card data-testid={`grant-card-${family}`}>
-        <CardHeader className="flex-row items-start justify-between gap-2">
-          <div className="grid gap-1">
-            <CardEyebrow>OAuth grant</CardEyebrow>
-            <h3 className="text-foreground text-heading-sm">{meta.title}</h3>
-            <p className="text-muted text-xs">{meta.blurb}</p>
-          </div>
-          <Badge variant="neutral">Not connected</Badge>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Button
-              variant="secondary"
-              onClick={() => assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider))}
-            >
-              Connect {meta.title}
-            </Button>
-          </div>
+      <Card data-testid={`grant-card-${family}`} className="flex flex-col justify-between">
+        <div>
+          <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border-subtle pb-3">
+            <div className="grid min-w-0 gap-0.5">
+              <CardEyebrow>OAuth grant</CardEyebrow>
+              <h3 className="text-foreground text-heading-sm font-semibold">{meta.title}</h3>
+              <p className="text-muted text-xs truncate">{meta.blurb}</p>
+            </div>
+            <Badge variant="neutral">Not connected</Badge>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-secondary text-sm">
+              Connect your {meta.title} account to automatically import traffic and search visibility metrics.
+            </p>
+          </CardContent>
+        </div>
+        <CardContent className="pt-0">
+          <Button
+            variant="secondary"
+            onClick={() => assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider))}
+          >
+            Connect {meta.title}
+          </Button>
         </CardContent>
       </Card>
     );
@@ -392,56 +398,55 @@ export function IntegrationCard({
 
   const badge = GRANT_STATUS_BADGE[grant.status];
   return (
-    <Card data-testid={`grant-card-${family}`}>
-      <CardHeader className="flex-row items-start justify-between gap-2">
-        <div className="grid min-w-0 gap-1">
-          <CardEyebrow>OAuth grant</CardEyebrow>
-          <h3 className="text-foreground text-heading-sm">{meta.title}</h3>
-          {grant.scopes.length > 0 ? (
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-              <span className={eyebrowClasses}>Scopes</span>
-              {grant.scopes.map((scope) => (
-                <Badge key={scope} variant="neutral" className="normal-case">
-                  {scopeLabel(scope)}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        {badge.variant === 'status' ? (
-          <Badge variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
-            {GRANT_STATUS_LABEL[grant.status]}
-          </Badge>
-        ) : (
-          <Badge variant="neutral" data-testid={`grant-status-${family}`}>
-            {GRANT_STATUS_LABEL[grant.status]}
-          </Badge>
-        )}
-      </CardHeader>
+    <Card data-testid={`grant-card-${family}`} className="flex flex-col justify-between">
+      <div>
+        <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border-subtle pb-3">
+          <div className="grid min-w-0 gap-0.5">
+            <CardEyebrow>OAuth grant</CardEyebrow>
+            <h3 className="text-foreground text-heading-sm font-semibold">{meta.title}</h3>
+            <p className="text-muted text-xs truncate">{meta.blurb}</p>
+          </div>
+          <div className="shrink-0">
+            {badge.variant === 'status' ? (
+              <Badge variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
+                {GRANT_STATUS_LABEL[grant.status]}
+              </Badge>
+            ) : (
+              <Badge variant="neutral" data-testid={`grant-status-${family}`}>
+                {GRANT_STATUS_LABEL[grant.status]}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
 
-      <CardContent className="grid gap-4">
-        <GrantAlert family={family} status={grant.status} />
+        <CardContent className="grid gap-3 pt-4">
+          <GrantAlert family={family} status={grant.status} />
 
-        <div className="text-muted flex items-center gap-1.5 text-xs">
-          <Info className="size-4 shrink-0" aria-hidden />
-          One OAuth grant shared by {grant.connections.length}{' '}
-          {grant.connections.length === 1 ? 'connection' : 'connections'}.
-        </div>
+          <div className="bg-well/60 border-border-subtle flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted">
+            <Info className="size-3.5 shrink-0 text-secondary" aria-hidden />
+            <span>
+              One OAuth grant shared by {grant.connections.length}{' '}
+              {grant.connections.length === 1 ? 'connection' : 'connections'}.
+            </span>
+          </div>
 
-        <div className="border-border-subtle rounded-sm border">
-          {grant.connections.map((connection) => (
-            <ConnectionRow key={connection.id} connection={connection} grant={grant} />
-          ))}
-        </div>
+          <div className="grid gap-3">
+            {grant.connections.map((connection) => (
+              <ConnectionRow key={connection.id} connection={connection} grant={grant} />
+            ))}
+          </div>
+        </CardContent>
+      </div>
 
-        <div className="flex items-center gap-2">
+      <CardContent className="pt-0">
+        <div className="border-border-subtle flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <Button
             variant={grant.status === 'connected' ? 'secondary' : 'primary'}
+            size="sm"
             onClick={() => assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider))}
           >
             Reconnect
           </Button>
-          <span className="flex-1" />
           <span className="text-muted text-right text-xs">
             Reconnecting renews consent for the whole grant.
           </span>

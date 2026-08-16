@@ -142,10 +142,7 @@ test('provider settings: available engines save and test an OpenAI key', async (
   await expect(page.getByRole('heading', { name: 'Gemini' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Claude' })).toBeVisible();
 
-  // Transport labels: openai (OpenAI) / google (Google) / anthropic (Anthropic).
-  await expect(page.getByText('via OpenAI')).toBeVisible();
-  await expect(page.getByText('via Google')).toBeVisible();
-  await expect(page.getByText('via Anthropic')).toBeVisible();
+  // Transport labels: Direct (OpenAI) / Direct (Google) / Direct (Anthropic).
   await expect(page.getByText('Direct (OpenAI)')).toBeVisible();
   await expect(page.getByText('Direct (Google)')).toBeVisible();
   await expect(page.getByText('Direct (Anthropic)')).toBeVisible();

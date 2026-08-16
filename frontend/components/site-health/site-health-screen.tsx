@@ -127,8 +127,6 @@ export function SiteHealthScreen() {
 
   return (
     <div className="grid min-w-0 gap-6">
-      <ScreenHeader actions={headerActions} />
-
       {exportError ? <Alert tone="danger">{exportError}</Alert> : null}
       {createMutation.isError ? (
         // A4: recrawl/start — 4xx verbatim (e.g. a crawl is already running),
@@ -150,30 +148,33 @@ export function SiteHealthScreen() {
           persisted remain visible below.
         </Alert>
       ) : null}
-      <div
-        className="border-border flex gap-1 border-b"
-        role="tablist"
-        aria-label="Website analysis"
-      >
-        {(
-          [
-            ['pages', 'Pages'],
-            ['aeo-readiness', 'AEO Readiness'],
-            ['link-graph', 'Link Graph'],
-            ['changes', 'Changes'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            className={`min-h-10 border-b-2 px-3 text-sm font-medium transition-colors ${tab === value ? 'border-accent text-foreground' : 'text-muted hover:text-foreground border-transparent'}`}
-            onClick={() => setTab(value)}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b">
+        <div
+          className="-mb-px flex gap-1"
+          role="tablist"
+          aria-label="Website analysis"
+        >
+          {(
+            [
+              ['pages', 'Pages'],
+              ['aeo-readiness', 'AEO Readiness'],
+              ['link-graph', 'Link Graph'],
+              ['changes', 'Changes'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              className={`min-h-10 border-b-2 px-3 text-sm font-medium transition-colors ${tab === value ? 'border-accent text-foreground' : 'text-muted hover:text-foreground border-transparent'}`}
+              onClick={() => setTab(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {headerActions ? <div className="pb-1">{headerActions}</div> : null}
       </div>
       {/* ONE screen. The Site Intelligence workspace used to wrap this whole
           dashboard as its "Pages" tab — the old screen nested inside the new

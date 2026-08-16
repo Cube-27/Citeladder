@@ -33,6 +33,19 @@ describe('Insight', () => {
     rerender(<Insight insight={insightFixture({ evidence: null })} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('renders whyThisMatters by default and omits it when hideWhyThisMatters is set', () => {
+    const { rerender } = render(<Insight insight={insightFixture()} />);
+    expect(screen.getByText('Why this matters')).toBeInTheDocument();
+    expect(screen.getByText('Visitors cannot find purchase answers')).toBeInTheDocument();
+
+    rerender(<Insight insight={insightFixture()} hideWhyThisMatters />);
+    expect(screen.queryByText('Why this matters')).not.toBeInTheDocument();
+    expect(screen.queryByText('Visitors cannot find purchase answers')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('47 product pages have weak buying-intent coverage'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('ProvenanceChip', () => {

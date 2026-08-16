@@ -74,9 +74,10 @@ export type InsightProps = {
   /** The "act" action. Inspect is always the evidence link. */
   action?: ReactNode;
   className?: string;
+  hideWhyThisMatters?: boolean;
 };
 
-export function Insight({ insight, action, className }: Readonly<InsightProps>) {
+export function Insight({ insight, action, className, hideWhyThisMatters = false }: Readonly<InsightProps>) {
   // §5: does not render without resolvable evidence. A claim we cannot open is
   // not an insight, and degrading to a plain-text card would be exactly the
   // unevidenced conclusion this system exists to prevent.
@@ -115,10 +116,12 @@ export function Insight({ insight, action, className }: Readonly<InsightProps>) 
       </div>
 
       {/* 4. Why this matters */}
-      <div className="flex flex-col gap-1">
-        <p className="text-subtle text-2xs font-medium tracking-wide uppercase">Why this matters</p>
-        <p className="text-muted text-xs leading-relaxed">{insight.whyThisMatters}</p>
-      </div>
+      {!hideWhyThisMatters ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-subtle text-2xs font-medium tracking-wide uppercase">Why this matters</p>
+          <p className="text-muted text-xs leading-relaxed">{insight.whyThisMatters}</p>
+        </div>
+      ) : null}
 
       {/* 5. Potential impact */}
       <div className="border-border-subtle flex items-center justify-between border-t pt-3">

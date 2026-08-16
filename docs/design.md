@@ -64,7 +64,7 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role                | Token family                                                                                    | Use                                                                                                                    |
 | ------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Canvas and surfaces | `background` and `panel` (white), `background-alt` / `well` (`#F3F4F6`), `sidebar`              | White is the default canvas; subtle neutral gray groups or highlights content without turning every region into a card |
+| Canvas and surfaces | `background` (`#f4f6fb`), `panel` / `elevated` (white), `background-alt` / `well` (`#edf1f7`), `sidebar` | Light cool blue/grey is the page canvas; white panels and cards pop with elevation; subtle neutral wells group content |
 | Text                | `foreground` (#101828), `secondary` (#344054), `muted` (#475467), `subtle` (#667085), `inverse` | Untitled UI 10-step Gray reading ramp                                                                                  |
 | Borders             | `border` (#e4e7ec), `border-subtle` (#f2f4f7), `border-strong` (#d0d5dd)                        | Crisp hairlines for subtle separation                                                                                  |
 | Primary action      | `accent-*`                                                                                      | Reference Blue (`#2667FF`) CTAs, explicit selection, links, and focus                                                  |
@@ -72,10 +72,9 @@ Tokens are semantic; components use the role, not a colour value.
 | Evidence and scores | `citation-*`, `run-*`, `score-*`, `series-*`, `chart-*`                                         | Persisted evidence, audit status, score bands, and charts                                                              |
 
 The accent is Reference Blue: `#2667FF` at rest, darkened on hover and press.
-`accent-text` is a darker accessible blue for text on white. Page, panel, card,
-dialog, and drawer surfaces are white. `#F3F4F6` is the shared neutral highlight
-for grouped regions, wells, hover, and quiet emphasis. Pale-blue fills do not act
-as atmosphere, section backgrounds, or generic highlights.
+`accent-text` is a darker accessible blue for text on white. Page canvas is a calm light cool blue/grey (`#f4f6fb`), while panel, card,
+dialog, and drawer surfaces are white. `#edf1f7` is the shared neutral highlight
+for grouped regions, wells, hover, and quiet emphasis.
 
 **Marketing is monochrome-plus-blue.** It uses only white, the ink ramp, and the
 one blue — no status, score, or category colour. **The authenticated app keeps
@@ -123,11 +122,40 @@ applies to prose or headings.
 
 ### Product app ladder
 
-The authenticated app keeps the current compact `--text-*` sizes. Replacing Public
-Sans with Switzer must not change their computed sizes, control heights, table
-density, or screen geometry. Product previews embedded on the website use the app
-ladder because they depict product UI, while surrounding editorial copy uses the
-website ladder.
+The authenticated enterprise application uses a strict token-driven typography ladder
+built on Switzer (`font-sans`) and Satoshi (`font-display`). It enforces consistent visual
+hierarchy, strict tabular numerals for metrics, and high-density information architecture.
+Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
+classes.
+
+| Role                       | Family  | Size / line height |  Weight |  Tracking | Class / Token                   | Text Colour                  |
+| -------------------------- | ------- | -----------------: | ------: | --------: | :------------------------------ | :--------------------------- |
+| App Hero / Screen Title    | Satoshi |            20/26px |     600 |  -0.015em | `text-xl font-display`          | `text-foreground`            |
+| Section / Surface Heading  | Switzer |            15/22px |     600 |   -0.01em | `text-heading-sm` / `text-sm`   | `text-foreground`            |
+| Primary KPI / Metric Value | Switzer |    28/32 → 32/36px |     600 |   -0.02em | `text-2xl` / `text-3xl` + `tabular-nums` | `text-foreground`  |
+| Metric Subtitle / Delta    | Switzer |            12/16px |     500 |         0 | `text-xs font-mono`             | `text-secondary` / delta tone|
+| UI / Form Field Label      | Switzer |            12/16px |     500 |         0 | `text-xs font-medium`           | `text-foreground`            |
+| Standard Body / Content    | Switzer |            13/20px |     400 |         0 | `text-sm text-secondary`        | `text-secondary`             |
+| Compact Body / Row Data    | Switzer |            12/16px |     400 |         0 | `text-xs text-secondary`        | `text-secondary`             |
+| Micro Eyebrow / Meta Pill  | Switzer |            11/14px | 500–600 |   +0.05em | `text-2xs uppercase`            | `text-muted` / `text-subtle` |
+
+### High density layout and elevation standard
+
+The product app is an enterprise data-dense environment. It favors elevation over
+heavy borders to avoid visual noise and container-in-container clutter:
+
+- **Elevation without borders**: Primary cards and surfaces use `bg-panel` and `shadow-card`
+  or `shadow-sm` without redundant `border border-border` lines. Elevated menus and popovers
+  use `bg-elevated` and `shadow-elevated rounded-md`.
+- **Drawer and Sheet Composition**: Modals, slide-out drawers, and sheets already provide an
+  elevated surface. They must **never** contain nested `<Card>` components. Field groups and
+  lists inside drawers use clean structural section divisions (`space-y-4` / borderless rows).
+- **Tab & Action Alignment**: Section headers with tabs and actions place controls on the same
+  row (`flex items-center justify-between`) rather than wasting vertical canvas on an empty
+  header row.
+- **Custom Select Menus**: Filter dropdowns and page-kind selectors use custom Radix menus with
+  `shadow-elevated rounded-md` and radio items—never raw browser-native `<select>` popups.
+
 
 ## Data and geometry
 
@@ -335,6 +363,9 @@ Rules:
   completeness it does not have.
 - Insights are ranked by the deterministic formula. The agent may group and explain
   them; it does not reorder them.
+- On dense summary surfaces (such as the Command Center Overview), the 'Why this matters'
+  section is omitted via `hideWhyThisMatters` to reduce vertical clutter while keeping priority,
+  claim, evidence, potential impact, and actions directly visible.
 
 ### Marketing and auth
 

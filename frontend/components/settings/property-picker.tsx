@@ -103,6 +103,7 @@ export function useActiveMapping(connectionId: string) {
   const query = useQuery({
     queryKey: queryKeys.integrations.mappings(connectionId),
     queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal }),
+    staleTime: 60 * 1000,
   });
   return query.data?.find((mapping) => mapping.status === 'active') ?? null;
 }
@@ -152,15 +153,20 @@ export function PropertyPicker({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {selected ? (
-          <span className="text-muted truncate font-mono text-xs">{selected}</span>
+          <span className="bg-well border-border-subtle text-secondary max-w-full truncate rounded border px-2 py-0.5 font-mono text-xs">
+            {selected}
+          </span>
         ) : (
-          <span className="text-warning-text truncate text-xs">No {noun} selected</span>
+          <span className="text-warning-text bg-warning-bg/50 max-w-full truncate rounded px-2 py-0.5 text-xs font-medium">
+            No {noun} selected
+          </span>
         )}
         <Button
           variant="ghost"
           size="sm"
+          className="h-6 px-1.5 text-xs font-medium text-muted hover:text-foreground"
           onClick={() => setOpen(true)}
           disabled={disabled}
           data-testid={`select-property-${connection.provider}`}

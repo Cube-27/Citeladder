@@ -18,12 +18,12 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 
   if (item.limit_state === 'unknown') {
     return (
-      <div className="grid gap-1">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="text-secondary text-sm font-medium">{label}</span>
-          <span className="text-muted text-sm">Not available</span>
+      <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-secondary text-xs font-medium">{label}</span>
+          <span className="text-muted text-xs font-medium">Not available</span>
         </div>
-        <p className="text-muted text-xs">
+        <p className="text-muted text-2xs">
           This allowance could not be resolved, so no usage is shown.
         </p>
       </div>
@@ -32,15 +32,17 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 
   if (item.limit_state === 'unlimited') {
     return (
-      <div className="grid gap-1">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="text-secondary text-sm font-medium">{label}</span>
-          <span className="text-foreground text-sm tabular-nums">
+      <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-secondary text-xs font-medium">{label}</span>
+          <span className="text-foreground font-mono text-xs font-medium tabular-nums">
             {item.consumed ?? 0} {item.unit}
           </span>
         </div>
-        <p className="text-muted text-xs">Unlimited</p>
-        <ExpiryLine item={item} />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted text-2xs">Unlimited</span>
+          <ExpiryLine item={item} />
+        </div>
       </div>
     );
   }
@@ -58,10 +60,10 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         : 'bg-brand-solid';
 
   return (
-    <div className="grid gap-1.5">
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="text-secondary text-sm font-medium">{label}</span>
-        <span className="text-foreground text-sm tabular-nums">
+    <div className="border-border-subtle grid gap-1.5 border-b pb-3.5 last:border-b-0 last:pb-0">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-secondary text-xs font-medium">{label}</span>
+        <span className="text-foreground font-mono text-xs font-medium tabular-nums">
           {consumed} / {allowance} {item.unit}
         </span>
       </div>
@@ -71,18 +73,20 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         aria-valuemin={0}
         aria-valuemax={allowance}
         aria-valuenow={consumed}
-        className="bg-surface-sunken h-2 overflow-hidden rounded-full"
+        className="bg-surface-sunken h-1.5 overflow-hidden rounded-full"
       >
         <div
-          className={`h-full rounded-full ${tone}`}
+          className={`h-full rounded-full transition-all ${tone}`}
           style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }}
         />
       </div>
-      <p className="text-muted text-xs">
-        {remaining} remaining
-        {item.reserved ? ` · ${item.reserved} reserved` : ''}
-      </p>
-      <ExpiryLine item={item} />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted text-2xs">
+          {remaining} remaining
+          {item.reserved ? ` · ${item.reserved} reserved` : ''}
+        </span>
+        <ExpiryLine item={item} />
+      </div>
     </div>
   );
 }

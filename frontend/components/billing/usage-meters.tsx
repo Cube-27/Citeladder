@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
@@ -49,17 +48,17 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Usage</CardTitle>
-        <CardDescription>
+    <div className="bg-panel shadow-card grid gap-3.5 rounded-md border border-border-subtle p-5">
+      <div>
+        <h2 className="text-foreground text-sm font-semibold tracking-tight">Usage</h2>
+        <p className="text-muted mt-0.5 text-xs">
           Measured against the allowances your active grants provide.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-5">
+        </p>
+      </div>
+      <div className="grid gap-3">
         <UsageBody enabled={enabled} query={usageQuery} />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

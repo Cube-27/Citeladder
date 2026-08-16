@@ -56,6 +56,7 @@ export const NAV_GROUPS = [
     href: '/visibility?tab=trends',
     icon: ICONS.visibility,
     items: [
+      { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
       {
         label: 'AI Visibility',
         href: '/visibility?tab=trends',
@@ -83,7 +84,6 @@ export const NAV_GROUPS = [
         icon: ICONS.settings,
         queryMatch: { key: 'tab', values: ['providers'] },
       },
-      { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
       {
         label: 'Settings',
         href: '/settings',

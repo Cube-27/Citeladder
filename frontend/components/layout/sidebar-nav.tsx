@@ -87,12 +87,17 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
   const hasCommerceEvidence = activeProject?.has_commerce_evidence ?? false;
   return (
     <nav aria-label="Primary" className={cn('flex flex-col gap-3', className)}>
-      {NAV_GROUPS.map((group) => (
-        <div key={group.title} className="flex flex-col gap-0">
-          <p className={cn(eyebrowClasses, 'px-1 pb-0.5')}>{group.title}</p>
-          <StationLinks group={group} hasCommerceEvidence={hasCommerceEvidence} />
-        </div>
-      ))}
+      {NAV_GROUPS.map((group) => {
+        const showHeading = group.title !== 'Overview';
+        return (
+          <div key={group.title} className="flex flex-col gap-0">
+            {showHeading ? (
+              <p className={cn(eyebrowClasses, 'px-1 pb-0.5')}>{group.title}</p>
+            ) : null}
+            <StationLinks group={group} hasCommerceEvidence={hasCommerceEvidence} />
+          </div>
+        );
+      })}
     </nav>
   );
 }

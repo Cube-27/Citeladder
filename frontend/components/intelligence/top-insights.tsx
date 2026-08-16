@@ -48,7 +48,7 @@ export function TopInsights({
       <h2 className="text-foreground text-sm font-semibold">Top insights</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {insights.map((insight) => (
-          <Insight key={insight.id} insight={insight} />
+          <Insight key={insight.id} insight={insight} hideWhyThisMatters />
         ))}
       </div>
     </section>

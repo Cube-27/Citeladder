@@ -182,7 +182,7 @@ describe('IntegrationSettings — grant cards', () => {
     replaceState.mockClear();
   });
 
-  it('groups connections onto one card per grant with scope chips, sub-rows, and mono last-synced', async () => {
+  it('groups connections onto one card per grant with sub-rows and mono last-synced', async () => {
     mockList([gscConnection, ga4Connection, bingConnection]);
     renderWithProviders(<IntegrationSettings />);
 
@@ -197,9 +197,6 @@ describe('IntegrationSettings — grant cards', () => {
     // is a second fetch — hence findBy rather than getBy.
     expect(await within(googleCard).findByText('sc-domain:example.com')).toBeInTheDocument();
     expect(within(googleCard).getByText('properties/123456789')).toBeInTheDocument();
-    // Granted-scope chips (short scope names).
-    expect(within(googleCard).getByText('webmasters.readonly')).toBeInTheDocument();
-    expect(within(googleCard).getByText('analytics.readonly')).toBeInTheDocument();
     // Mono last-synced timestamps.
     expect(within(googleCard).getByText('Jul 23, 2026 · 04:12 UTC')).toBeInTheDocument();
 
