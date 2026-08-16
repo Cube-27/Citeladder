@@ -412,7 +412,15 @@ LINK_KINDS: Final[frozenset[str]] = frozenset(
 
 AEO_READINESS_TAXONOMY_VERSION: Final = "aeo-readiness-v1"
 RULE_ID_TECHNICAL_INDEXABLE: Final = "technical.indexable"
-AEO_READINESS_DIMENSIONS: Final[tuple[str, ...]] = ("answerability", "structure", "evidence", "machine-readability", "authority", "freshness", "crawlability")  # noqa: E501
+AEO_READINESS_DIMENSIONS: Final[tuple[str, ...]] = (
+    "answerability",
+    "structure",
+    "evidence",
+    "machine-readability",
+    "authority",
+    "freshness",
+    "crawlability",
+)  # noqa: E501
 AEO_READINESS_DIMENSION_LABELS: Final[dict[str, str]] = {
     key: key.replace("_", " ").capitalize() for key in AEO_READINESS_DIMENSIONS
 }

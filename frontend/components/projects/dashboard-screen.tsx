@@ -287,40 +287,6 @@ function ProjectControls({
   );
 }
 
-function LoopStrip({ loop }: Readonly<{ loop: CommandCenter['loop'] }>) {
-  const stations = [
-    ['Connected', loop.connected],
-    ['Analyzed', loop.analyzed],
-    ['Acted', loop.acted],
-    ['Tracked', loop.tracked],
-  ] as const;
-  return (
-    <section aria-labelledby="loop-status" className="grid gap-3">
-      <h2 id="loop-status" className="text-foreground text-sm font-medium">
-        Product loop
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {stations.map(([label, evidence]) => (
-          <Card key={label} className="grid gap-2 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-foreground text-sm font-medium">{label}</span>
-              <Badge>{evidence.state.replace('_', ' ')}</Badge>
-            </div>
-            <p className="text-muted text-xs">
-              {evidence.observed_at
-                ? `Observed ${formatUtcTimestamp(evidence.observed_at)}`
-                : evidence.limitations[0] || 'Not run yet.'}
-            </p>
-            {evidence.coverage.length ? (
-              <p className="text-secondary text-xs">Coverage: {evidence.coverage.join(', ')}</p>
-            ) : null}
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function FactsDrawer({ projectId }: Readonly<{ projectId: string }>) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -511,7 +477,9 @@ function CommandCenterContent({
         </div>
         <Card className="grid gap-2 p-4 sm:grid-cols-2">
           <p className="text-foreground text-sm">
-            {data.facts.positioning || data.facts.description || 'Add positioning in company facts.'}
+            {data.facts.positioning ||
+              data.facts.description ||
+              'Add positioning in company facts.'}
           </p>
           <p className="text-muted text-sm">
             {data.facts.target_audience
@@ -526,8 +494,6 @@ function CommandCenterContent({
           </p>
         </Card>
       </section>
-
-      <LoopStrip loop={data.loop} />
 
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div>

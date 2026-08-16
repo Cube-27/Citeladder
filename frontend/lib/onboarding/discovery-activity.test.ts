@@ -52,12 +52,7 @@ describe('discoveryActivity', () => {
       'Finding comparable brands',
       'Preparing your review',
     ]);
-    expect(steps.map((step) => step.state)).toEqual([
-      'complete',
-      'complete',
-      'active',
-      'pending',
-    ]);
+    expect(steps.map((step) => step.state)).toEqual(['complete', 'complete', 'active', 'pending']);
     expect(JSON.stringify(steps)).not.toMatch(/finding_competitors|queue|provider/);
   });
 

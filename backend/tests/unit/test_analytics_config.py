@@ -94,10 +94,7 @@ def test_analytics_task_kinds_include_attribution_snapshot() -> None:
     assert ANALYTICS_TASK_KIND_ATTRIBUTION_SNAPSHOT == "attribution_snapshot"
     assert ANALYTICS_TASK_KIND_ORDER_RETENTION_SWEEP == "order_retention_sweep"
     assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH == "opportunity_refresh"
-    assert (
-        ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION
-        == "opportunity_verification"
-    )
+    assert ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION == "opportunity_verification"
     assert ANALYTICS_TASK_KINDS == frozenset(
         {
             "ingest_referrals",

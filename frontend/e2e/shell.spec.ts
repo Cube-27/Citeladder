@@ -21,12 +21,14 @@ test('authenticated shell renders sidebar groups and top bar', async ({ page }) 
 
   // Sidebar groups + a nav item. Scoped to the primary nav landmark and
   // exact-matched so page copy can't satisfy or trip the assertion.
+  // Groups are the five loop stations (design.md §Screen geometry), not the
+  // pre-AEO Workspace / Site Health / Demand Intelligence headings.
   const nav = page.getByRole('navigation', { name: 'Primary' });
-  await expect(nav.getByText('Workspace', { exact: true })).toBeVisible();
-  await expect(nav.getByText('Site Health', { exact: true })).toBeVisible();
+  await expect(nav.getByText('Analyze', { exact: true })).toBeVisible();
+  await expect(nav.getByText('Act', { exact: true })).toBeVisible();
+  await expect(nav.getByText('Track', { exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Website', exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Content', exact: true })).toBeVisible();
-  await expect(nav.getByText('Demand Intelligence', { exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Search Demand', exact: true })).toBeVisible();
 
   // Project switcher shows the active brand.
@@ -35,6 +37,6 @@ test('authenticated shell renders sidebar groups and top bar', async ({ page }) 
   // Page title + theme toggle are present. The v2 Figma shell restores the
   // 52px top bar, and the title is the page's single <h1> inside it; scoping
   // by heading level keeps this independent of the surrounding landmark.
-  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'AI Visibility' })).toBeVisible();
   await expect(page.getByRole('button', { name: /search or jump to/i })).toBeVisible();
 });

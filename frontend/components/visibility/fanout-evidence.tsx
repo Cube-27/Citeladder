@@ -4,23 +4,20 @@ import { MinusCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import {
   EvidenceEmpty,
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
+  ExecutionHeader,
+  ProvenanceDisclosure,
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
-import { engineLabel } from '@/lib/providers/catalog';
-import { cn } from '@/lib/utils';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import {
   countOnlyExplanation,
-  formatExecutionDate,
   groupByPrompt,
-  provenanceSummary,
   queryTexts,
   type PromptGroup,
 } from '@/lib/visibility/evidence';
@@ -83,8 +80,8 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
           {groups.length} {groups.length === 1 ? 'prompt' : 'prompts'}
         </Badge>
       </CardHeader>
-      <CardContent className="grid gap-5 p-0">
-        <div className="grid gap-5 p-[var(--card-padding)]">
+      <CardContent className="grid gap-0 p-0">
+        <div className="divide-border-subtle grid divide-y">
           {groups.map((group) => (
             <PromptGroupBlock key={group.promptSnapshotId} group={group} />
           ))}
@@ -97,9 +94,9 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
 
 function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
   return (
-    <section className="grid gap-2">
+    <section className="grid gap-2 px-[var(--card-padding)] py-4">
       <h3 className="text-foreground text-heading-xs">{group.promptText}</h3>
-      <ul className="grid gap-2">
+      <ul className="grid gap-3">
         {group.executions.map((item) => (
           <ExecutionRow key={item.analysis_id} item={item} />
         ))}
@@ -110,24 +107,17 @@ function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
 
 function ExecutionRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
-    <li className="border-border-subtle bg-background-alt grid gap-2 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted text-xs">
-          Execution #{item.prompt_index} · rep {item.repetition} ·{' '}
-          {formatExecutionDate(item.completed_at)}
-        </p>
-        <span className="flex items-center gap-2">
-          <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
-          <span className="text-muted text-xs">{item.transport_model}</span>
-          <span className="mono text-secondary text-xs">
+    <li className="grid gap-2">
+      <ExecutionHeader
+        item={item}
+        trailing={
+          <span className="mono text-secondary">
             {item.search_query_count} {item.search_query_count === 1 ? 'search' : 'searches'}
           </span>
-        </span>
-      </div>
-
-      <p className={cn(eyebrowClasses, 'font-normal')}>{provenanceSummary(item)}</p>
-
+        }
+      />
       <QueryDetail item={item} />
+      <ProvenanceDisclosure item={item} />
     </li>
   );
 }
@@ -140,7 +130,7 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
         {queries.map((query, index) => (
           <li
             key={`${index}-${query}`}
-            className="bg-panel shadow-card text-secondary rounded-lg px-3 py-2 font-mono text-xs"
+            className="border-border-subtle text-secondary border-l-2 py-0.5 pl-3 font-mono text-xs"
           >
             {query}
           </li>
@@ -151,14 +141,14 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
 
   if (item.state === 'count_only') {
     return (
-      <div className="bg-panel shadow-card text-muted rounded-lg px-3 py-2 text-xs">
+      <div className="border-border-subtle text-muted border-l-2 py-0.5 pl-3 text-xs">
         {countOnlyExplanation(item)}
       </div>
     );
   }
 
   return (
-    <div className="bg-panel shadow-card text-muted flex items-center gap-2 rounded-lg px-3 py-2 text-xs">
+    <div className="border-border-subtle text-muted flex items-center gap-2 border-l-2 py-0.5 pl-3 text-xs">
       <MinusCircle className="size-4 shrink-0" aria-hidden />
       <span>No web searches performed for this execution</span>
     </div>

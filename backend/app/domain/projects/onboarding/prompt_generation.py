@@ -17,13 +17,46 @@ from app.domain.projects.onboarding.prompt_validation import (
     validate_portfolio,
 )
 
-_INTENTS = ("discovery", "service", "comparison", "purchase", "local")
-
 
 def _render_search(template: str, values: dict[str, str]) -> str:
     """Render one complete search without bolting extra clauses onto it."""
     rendered = " ".join(template.format(**values).split())
-    return re.sub(r"\b(\w+)\s+\1\b", r"\1", rendered, flags=re.IGNORECASE)
+    rendered = re.sub(r"\b(\w+)\s+\1\b", r"\1", rendered, flags=re.IGNORECASE)
+    # A slot value that ended in its own sentence punctuation used to collide
+    # with the template's ("...trusted delivery.?"). Keep the template's mark.
+    return re.sub(r"[.!?]+(?=[.!?])", "", rendered)
+
+
+def _mid_sentence(value: str) -> str:
+    """Lower-case a slot value that is only sentence-cased, not a proper noun.
+
+    Verified offerings and topics arrive title/sentence-cased ("Consumer
+    electronics", "Online retail marketplace") and were dropped verbatim into
+    the middle of a question. Acronyms and real proper nouns ("SaaS", "iPhone",
+    "NDIS") keep their casing because their first word is not plain
+    capitalised-then-lowercase.
+    """
+    text = value.strip()
+    first = text.split(" ", 1)[0]
+    if not first[:1].isupper() or not first[1:].islower():
+        return text
+    return text[:1].lower() + text[1:]
+
+
+def _trimmed_phrase(value: str) -> str:
+    """Collapse whitespace and drop a slot value's own trailing punctuation."""
+    return " ".join(str(value).split()).rstrip(".!?,;:")
+
+
+def _slot_phrase(value: str) -> str:
+    """Normalize a CATEGORY-style slot value for mid-sentence interpolation.
+
+    Only for values drawn from the curated topic / verified-offering lists,
+    which are sentence-cased labels. Free prose (the reviewed target audience)
+    uses ``_trimmed_phrase`` instead — lower-casing it would wreck proper
+    adjectives like "Indian households".
+    """
+    return _mid_sentence(_trimmed_phrase(value))
 
 
 def fallback_portfolio(
@@ -108,7 +141,7 @@ def _fallback_prompt(
 ):
     return {
         "text": _render_search(
-            template,
+            template["text"],
             _fallback_values(
                 index,
                 primary_market,
@@ -119,7 +152,11 @@ def _fallback_prompt(
             ),
         ),
         "theme": _topic_name(categories[index % len(categories)]),
-        "intent": _INTENTS[index % len(_INTENTS)],
+        # The template owns its intent. Cycling a fixed intent tuple by loop
+        # position produced labels that contradicted the wording (a "which
+        # stores can I trust" search tagged `local`) and made every downstream
+        # intent filter meaningless.
+        "intent": template["intent"],
         "cohort": cohort,
     }
 
@@ -127,8 +164,8 @@ def _fallback_prompt(
 def _fallback_values(index, market, categories, uses, persona, price_tier):
     return {
         "market": MARKET_CONTEXT_TERMS.get(market, (market,))[0],
-        "category": categories[index % len(categories)],
-        "use_case": uses[index % len(uses)],
+        "category": _slot_phrase(categories[index % len(categories)]),
+        "use_case": _slot_phrase(uses[index % len(uses)]),
         "persona": persona,
         "quality": PRICE_TIER_QUERY_MODIFIERS.get(
             price_tier, PRICE_TIER_QUERY_MODIFIERS["unknown"]
@@ -145,11 +182,13 @@ def _fallback_context(industry, industry_context, products_services, target_audi
     if not brand_categories:
         brand_categories = list(market_categories)
     uses = _values_or_default(industry_context.get("use_cases"), "their needs")
-    reviewed_audience = str(target_audience).strip()
+    # The reviewed audience is free text ending in its own punctuation; it is
+    # interpolated mid-question, so it has to be trimmed and lower-cased first.
+    reviewed_audience = _trimmed_phrase(target_audience)
     persona = (
         f"my needs as {reviewed_audience}"
         if reviewed_audience
-        else str(industry_context.get("buyer_persona") or "my needs").strip()
+        else _trimmed_phrase(industry_context.get("buyer_persona") or "my needs")
     )
     return market_categories, brand_categories, uses, persona
 

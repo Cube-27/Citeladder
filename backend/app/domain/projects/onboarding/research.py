@@ -18,6 +18,7 @@ from app.core.config.brand_discovery import (
     DISCOVERY_RESEARCH_SYSTEM_PROMPT,
     brand_discovery_settings,
 )
+from app.core.config.observed_competitors import EXCLUDED_RESEARCH_DOMAINS
 from app.domain.projects.discovery_schemas import (
     DiscoveryCompetitorSuggestion,
     DiscoveryEvidence,
@@ -67,6 +68,35 @@ def _fallback_profile(*, brand_name: str, industry: str) -> DiscoveryProfile:
     )
 
 
+def _competitor_domain_candidates(
+    candidate: DiscoveryCompetitorSuggestion,
+) -> list[str]:
+    """Domains that may be adopted as this competitor's OWN site.
+
+    An evidence URL records where the competitor was *mentioned*, not where it
+    lives. Folding evidence URLs in unconditionally let a reference host become
+    the competitor's domain whenever its real site failed to resolve — Myntra
+    was persisted with ``wikipedia.org``, which both loses every real
+    ``myntra.com`` citation and misattributes every Wikipedia one. Evidence
+    URLs stay eligible only when they are not a known research/reference host.
+    """
+    evidence = [
+        url for url in candidate.evidence_urls if not _is_excluded_research_url(url)
+    ]
+    return list(dict.fromkeys([*candidate.domains, *evidence]))
+
+
+def _is_excluded_research_url(value: str) -> bool:
+    try:
+        _, domain = normalize_website_url(value)
+    except InvalidWebsiteUrl:
+        return True
+    return any(
+        domain == excluded or domain.endswith(f".{excluded}")
+        for excluded in EXCLUDED_RESEARCH_DOMAINS
+    )
+
+
 async def _verified_competitor(
     candidate: DiscoveryCompetitorSuggestion,
     *,
@@ -87,10 +117,7 @@ async def _verified_competitor(
         < floor
     ):
         return None
-    domain_candidates = list(
-        dict.fromkeys([*candidate.domains, *candidate.evidence_urls])
-    )
-    for domain_value in domain_candidates[:2]:
+    for domain_value in _competitor_domain_candidates(candidate)[:2]:
         try:
             url, candidate_domain = normalize_website_url(domain_value)
         except InvalidWebsiteUrl:

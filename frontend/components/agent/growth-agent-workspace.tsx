@@ -88,35 +88,39 @@ function RunBadge({ status }: Readonly<{ status: string }>) {
   );
 }
 
+/**
+ * The workspace only ever renders inside the right-side Agent sheet, so history
+ * is a collapsed disclosure rather than a fixed sidebar: at sheet width a 16rem
+ * rail either stacked above the result or squeezed it.
+ */
 function TaskHistory({
   runs,
   selectedId,
-  loading,
   onSelect,
 }: Readonly<{
   runs: AgentTaskRunSummary[] | undefined;
   selectedId: string | null;
-  loading: boolean;
   onSelect: (runId: string) => void;
 }>) {
+  // Nothing to switch between until a run exists; the newest run auto-selects.
+  if (!runs?.length) return null;
   return (
-    <aside className="border-border-subtle bg-background-alt rounded-lg border p-2">
-      <div className="px-2 py-2">
-        <h2 className="text-foreground text-sm font-semibold">Task history</h2>
-        <p className="text-muted mt-0.5 text-xs">Standalone runs for this project.</p>
-      </div>
-      <div className="mt-1 grid gap-1" aria-label="Task history">
-        {runs?.map((run) => (
+    <details className="border-border-subtle rounded-md border">
+      <summary className="focus-ring text-secondary cursor-pointer list-none rounded-md px-3 py-2 text-xs font-medium">
+        Task history · {runs.length}
+      </summary>
+      <div className="border-border-subtle grid gap-1 border-t p-2" aria-label="Task history">
+        {runs.map((run) => (
           <button
             key={run.id}
             type="button"
             onClick={() => onSelect(run.id)}
             aria-pressed={selectedId === run.id}
             className={cn(
-              'focus-ring min-h-12 rounded-sm px-2 py-2 text-left',
+              'focus-ring min-h-11 rounded-sm px-2 py-2 text-left',
               selectedId === run.id
                 ? 'bg-accent-soft text-accent-hover'
-                : 'text-secondary hover:bg-background',
+                : 'text-secondary hover:bg-background-alt',
             )}
           >
             <span className="block truncate text-xs font-medium">{run.objective}</span>
@@ -126,13 +130,8 @@ function TaskHistory({
             </span>
           </button>
         ))}
-        {!loading && !runs?.length ? (
-          <p className="text-muted px-2 py-5 text-xs leading-relaxed">
-            Completed and active tasks will appear here.
-          </p>
-        ) : null}
       </div>
-    </aside>
+    </details>
   );
 }
 
@@ -200,7 +199,7 @@ function Roadmap({ items }: Readonly<{ items: AgentResult['roadmap_items'] }>) {
                 </div>
                 <p className="text-secondary mt-1 text-sm leading-relaxed">{item.remediation}</p>
                 {item.target_url ? (
-                  <p className="text-muted mt-1 truncate text-xs">Target: {item.target_url}</p>
+                  <p className="text-muted mt-1 text-xs break-all">Target: {item.target_url}</p>
                 ) : null}
               </div>
             </div>
@@ -245,7 +244,7 @@ function RunDetail({
   }
 
   return (
-    <article className="grid gap-5">
+    <article className="grid min-w-0 gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-muted text-xs">{taskLabel(run.task_type)}</p>
@@ -271,7 +270,7 @@ function RunDetail({
       ) : null}
 
       {run.result ? (
-        <section className="border-border-subtle bg-background-alt rounded-md border p-4">
+        <section className="border-border-subtle bg-background-alt rounded-md border p-4 break-words">
           <h3 className="text-foreground text-sm font-semibold">Summary</h3>
           <p className="text-secondary mt-2 text-sm leading-relaxed whitespace-pre-wrap">
             {run.result.summary}
@@ -329,15 +328,31 @@ function TaskForm({
 }>) {
   const selected = TASKS.find((task) => task.value === taskType) ?? TASKS[0];
   return (
+    // Composer geometry: the sheet is 720px wide and shares its height with the
+    // result, so the form is one objective field over a task/submit row rather
+    // than a full stacked page form.
     <form
-      className="border-border-subtle bg-background-alt border-t p-4"
+      className="border-border-subtle bg-background-alt grid min-w-0 gap-3 border-t px-5 py-4"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      <div className="mx-auto grid max-w-3xl gap-3 sm:grid-cols-[13rem_minmax(0,1fr)]">
-        <Field label="Task">
+      <Field label="Objective" required error={error || undefined} hint={selected.description}>
+        {(props) => (
+          <Textarea
+            {...props}
+            value={objective}
+            onChange={(event) => onObjectiveChange(event.target.value)}
+            maxLength={2000}
+            rows={2}
+            placeholder="What should this task explain or prioritize?"
+            disabled={submitting}
+          />
+        )}
+      </Field>
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="Task" className="min-w-0 flex-1">
           {(props) => (
             <select
               {...props}
@@ -354,24 +369,9 @@ function TaskForm({
             </select>
           )}
         </Field>
-        <Field label="Objective" required error={error || undefined} hint={selected.description}>
-          {(props) => (
-            <Textarea
-              {...props}
-              value={objective}
-              onChange={(event) => onObjectiveChange(event.target.value)}
-              maxLength={2000}
-              rows={3}
-              placeholder="What should this task explain or prioritize?"
-              disabled={submitting}
-            />
-          )}
-        </Field>
-        <div className="sm:col-start-2">
-          <Button type="submit" disabled={submitting || !objective.trim()}>
-            {submitting ? 'Starting…' : 'Start task'}
-          </Button>
-        </div>
+        <Button type="submit" disabled={submitting || !objective.trim()}>
+          {submitting ? 'Starting…' : 'Start task'}
+        </Button>
       </div>
     </form>
   );
@@ -461,29 +461,18 @@ export function GrowthAgentWorkspace({
   }
 
   return (
-    <div className="grid min-h-[calc(100dvh-10rem)] gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-      <TaskHistory
-        runs={tasks.data}
-        selectedId={resolvedRunId}
-        loading={tasks.isLoading}
-        onSelect={setSelectedRunId}
-      />
-
-      <section className="border-border bg-panel flex min-w-0 flex-col rounded-lg border">
-        <header className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <div>
-            <h1 className="font-display text-foreground text-lg font-semibold">Growth Agent</h1>
-            <p className="text-muted text-xs">
-              Understand saved data or prioritize the next actions.
-            </p>
-          </div>
-          <div className="text-secondary flex items-center gap-2 text-xs">
-            <ShieldCheck aria-hidden className="text-accent-text size-4" />
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <p className="text-muted mb-4 flex items-center gap-2 text-xs">
+          <ShieldCheck aria-hidden className="text-accent-text size-4 shrink-0" />
+          <span className="min-w-0 truncate">
             Read-only project evidence{routeContext ? ` · ${routeContext.canonicalRoute}` : ''}
-          </div>
-        </header>
+          </span>
+        </p>
 
-        <div className="min-h-80 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="grid gap-4">
+          <TaskHistory runs={tasks.data} selectedId={resolvedRunId} onSelect={setSelectedRunId} />
+
           {tasks.isError ? (
             <Alert tone="danger">Task history could not be loaded. Refresh and try again.</Alert>
           ) : (
@@ -497,17 +486,17 @@ export function GrowthAgentWorkspace({
             />
           )}
         </div>
+      </div>
 
-        <TaskForm
-          taskType={taskType}
-          objective={objective}
-          submitting={submit.isPending}
-          error={formError}
-          onTaskTypeChange={setTaskType}
-          onObjectiveChange={setObjective}
-          onSubmit={() => submit.mutate()}
-        />
-      </section>
+      <TaskForm
+        taskType={taskType}
+        objective={objective}
+        submitting={submit.isPending}
+        error={formError}
+        onTaskTypeChange={setTaskType}
+        onObjectiveChange={setObjective}
+        onSubmit={() => submit.mutate()}
+      />
     </div>
   );
 }

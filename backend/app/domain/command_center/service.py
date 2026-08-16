@@ -394,14 +394,14 @@ async def _current_implementation(
     if snapshot is None:
         return None
     return await session.scalar(
-            select(OpportunityImplementationEvent)
-            .where(
-                OpportunityImplementationEvent.workspace_id == workspace_id,
-                OpportunityImplementationEvent.project_id == project_id,
-                OpportunityImplementationEvent.opportunity_snapshot_id == snapshot.id,
-            )
-            .order_by(OpportunityImplementationEvent.created_at.desc())
+        select(OpportunityImplementationEvent)
+        .where(
+            OpportunityImplementationEvent.workspace_id == workspace_id,
+            OpportunityImplementationEvent.project_id == project_id,
+            OpportunityImplementationEvent.opportunity_snapshot_id == snapshot.id,
         )
+        .order_by(OpportunityImplementationEvent.created_at.desc())
+    )
 
 
 def _project_loop(
@@ -462,9 +462,7 @@ def _acted_state(implementation) -> EvidenceState:
         limitations=(
             []
             if implementation
-            else [
-                "No implementation is declared for the current opportunity snapshot."
-            ]
+            else ["No implementation is declared for the current opportunity snapshot."]
         ),
     )
 
@@ -478,9 +476,7 @@ def _tracked_state(audits: ComparableAudits | None) -> EvidenceState:
         )
     return _evidence_state(
         observed_at=audits.selected.completed_at or audits.selected.created_at,
-        coverage=sorted(
-            row.logical_engine for row in audits.selected.engine_snapshots
-        ),
+        coverage=sorted(row.logical_engine for row in audits.selected.engine_snapshots),
         limitations=[],
     )
 

@@ -8,20 +8,14 @@ import {
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
+  ExecutionHeader,
+  ProvenanceDisclosure,
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
-import { engineLabel } from '@/lib/providers/catalog';
-import { cn } from '@/lib/utils';
-import {
-  formatExecutionDate,
-  provenanceSummary,
-  shortId,
-  totalCitationCount,
-  totalMentionCount,
-} from '@/lib/visibility/evidence';
+import { totalCitationCount, totalMentionCount } from '@/lib/visibility/evidence';
 
 const TITLE = 'Mentions & Citations';
 
@@ -83,8 +77,8 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
           {mentionCount} mentions · {citationCount} citations
         </Badge>
       </CardHeader>
-      <CardContent className="grid gap-4 p-0">
-        <ul className="grid gap-4 p-[var(--card-padding)]">
+      <CardContent className="grid gap-0 p-0">
+        <ul className="divide-border-subtle grid divide-y">
           {withEvidence.map((item) => (
             <ExecutionEvidenceRow key={item.analysis_id} item={item} />
           ))}
@@ -97,24 +91,13 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
 
 function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
-    <li className="border-border-subtle bg-background-alt grid gap-3 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-foreground truncate text-sm font-medium">
-            {item.prompt_text || 'Untitled prompt'}
-          </p>
-          <p className="text-muted text-xs">
-            Execution #{item.prompt_index} · rep {item.repetition} ·{' '}
-            {formatExecutionDate(item.completed_at)}
-          </p>
-        </div>
-        <span className="flex items-center gap-2">
-          <Badge variant="neutral">{engineLabel(item.logical_engine)}</Badge>
-          <span className="text-muted text-xs">{item.transport_model}</span>
-        </span>
+    <li className="grid gap-3 px-[var(--card-padding)] py-4">
+      <div className="grid gap-1">
+        <p className="text-foreground text-sm font-medium">
+          {item.prompt_text || 'Untitled prompt'}
+        </p>
+        <ExecutionHeader item={item} />
       </div>
-
-      <p className={cn(eyebrowClasses, 'font-normal')}>{provenanceSummary(item)}</p>
 
       {item.mentions.length > 0 ? (
         <div className="grid gap-1.5">
@@ -136,11 +119,11 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
       {item.citations.length > 0 ? (
         <div className="grid gap-1.5">
           <p className={eyebrowClasses}>Citations</p>
-          <ul className="grid gap-2">
+          <ul className="border-border-subtle divide-border-subtle grid divide-y border-t">
             {item.citations.map((citation) => (
               <li
                 key={`${item.analysis_id}-${citation.ordinal}-${citation.url}`}
-                className="bg-panel shadow-card flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+                className="flex items-center justify-between gap-3 py-1.5"
               >
                 <span className="text-secondary min-w-0 truncate text-xs">
                   {citation.title?.trim() || citation.domain || citation.url}
@@ -157,9 +140,7 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
         </div>
       ) : null}
 
-      {item.artifact_id ? (
-        <p className="text-2xs text-subtle font-mono">Artifact {shortId(item.artifact_id)}</p>
-      ) : null}
+      <ProvenanceDisclosure item={item} />
     </li>
   );
 }

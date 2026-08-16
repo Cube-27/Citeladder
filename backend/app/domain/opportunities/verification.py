@@ -234,8 +234,10 @@ def _evaluate_traffic_metric(
     metric_name = str(check.get("metric") or "")
     value = totals.get(metric_name)
     expected = check.get("expected_value")
-    if snapshot is None or not isinstance(value, (int, float)) or not isinstance(
-        expected, (int, float)
+    if (
+        snapshot is None
+        or not isinstance(value, (int, float))
+        or not isinstance(expected, (int, float))
     ):
         result.limitations.append(f"traffic_metric: {metric_name} unavailable")
         return
@@ -432,8 +434,7 @@ async def _eligible_declarations(
                 statement.order_by(
                     OpportunityImplementationEvent.created_at.asc(),
                     OpportunityImplementationEvent.id.asc(),
-                )
-                .limit(IMPLEMENTATION_VERIFICATION_BATCH_MAX)
+                ).limit(IMPLEMENTATION_VERIFICATION_BATCH_MAX)
             )
         ).all()
     )
@@ -502,9 +503,7 @@ async def verify_implementation_events(
                     result = await _traffic_evidence(
                         session, declaration=declaration, snapshot_id=source.id
                     )
-                kind = _observation_kind(
-                    result, len(declaration.expected_checks or [])
-                )
+                kind = _observation_kind(result, len(declaration.expected_checks or []))
                 if kind is not None:
                     await _append_observation(
                         session,

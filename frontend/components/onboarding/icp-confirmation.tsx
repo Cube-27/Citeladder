@@ -7,8 +7,8 @@ import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';
 export function hasConfirmedIcp(profile: DiscoveryProfile | null): profile is DiscoveryProfile {
   return Boolean(
     profile?.positioning.trim() &&
-      profile.target_audience.trim() &&
-      profile.products_services.some((item) => item.trim()),
+    profile.target_audience.trim() &&
+    profile.products_services.some((item) => item.trim()),
   );
 }
 

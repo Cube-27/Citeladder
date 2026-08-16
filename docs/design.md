@@ -185,10 +185,21 @@ desktop).
   page or edge. Flag labels and source-page links carry meaning without colour.
   Partial crawls lead with exact observed coverage and do not show near-orphan
   or weak-authority recommendations.
+- The link-graph overview is a **click-depth layout, never a ring or a
+  force hairball**: columns are click depth from the home page (with a final
+  Unlinked column when a page has no path from the root), vertical order within
+  a column is PageRank, and circle area is relative PageRank. It carries a
+  legend and an axis, so hub, flagged, and ordinary pages read without colour
+  alone. The node sample is bounded and prioritises flagged pages; unused slots
+  return to flagged pages rather than silently dropping them.
 - AEO Readiness is a dimension ledger, never a gauge or mystery number. Its
   table names pass, fail, not applicable, and coverage independently for all
-  seven dimensions. Evidence disclosures link to persisted page evaluations;
-  not-applicable rows remain visible and are not styled as failures.
+  seven dimensions; not-applicable rows remain visible and are not styled as
+  failures. Because one count is one rule evaluated on one page, the surface
+  says so rather than letting the totals read as page counts. Evidence opens in
+  the shared right-side sheet, failures first — a dimension can carry dozens of
+  persisted evaluations, and an in-cell disclosure inflated one table row past
+  the height of the viewport.
 - Website Changes is an evidence ledger with four named classes and expandable
   before/after provenance. `Expected` is a secondary exact-link label, not a
   fifth severity. Unavailable and non-comparable states use distinct empty
@@ -223,14 +234,14 @@ to look on every page in the app.
 
 Fixed responsibilities per region:
 
-| Region             | Owns                                                                                        | Never                                          |
-| ------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Top bar            | Project and context switching, date range and comparison window, global search, agent entry | Page-specific actions                          |
+| Region             | Owns                                                                                                        | Never                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Top bar            | Project and context switching, date range and comparison window, global search, agent entry                 | Page-specific actions                             |
 | Sidebar            | Five loop stations: Overview, Analyze, Act, Track, and Connect; station subnavigation owns its destinations | A third navigation level or disabled future items |
-| Page header        | Title, one line of supporting context, and this page's actions                              | Metrics                                        |
-| Metric row         | Three to five headline numbers, each with coverage                                          | More than five, or a metric without provenance |
-| Analytical surface | The one chart, table, or comparison this page exists for                                    | Competing equal-weight surfaces                |
-| Insight list       | Ranked insight objects (below)                                                              | Ad-hoc card shapes                             |
+| Page header        | Title, one line of supporting context, and this page's actions                                              | Metrics                                           |
+| Metric row         | Three to five headline numbers, each with coverage                                                          | More than five, or a metric without provenance    |
+| Analytical surface | The one chart, table, or comparison this page exists for                                                    | Competing equal-weight surfaces                   |
+| Insight list       | Ranked insight objects (below)                                                                              | Ad-hoc card shapes                                |
 
 Date range and comparison live in the top bar because they apply to the whole
 context, not to one chart. A page that needs its own time control is a page whose
@@ -246,14 +257,36 @@ Escape closes it, focus returns to the trigger, and its context is limited to
 typed workspace, project, canonical route, date range, and route filters.
 The shipped sheet reuses the bounded explain/roadmap workspace and clears its
 route preset when the active project changes; no DOM text or unpersisted page
-data enters Agent context.
+data enters Agent context. Because the sheet is the workspace's only host, the
+workspace carries no page chrome of its own: the drawer owns the one title and
+description, the result region owns the one scroll container, the composer pins
+below it, and task history is a collapsed disclosure rather than a sidebar rail.
 
 Overview stays useful without an audit. Its order is canonical Facts and edit
-drawer, the four evidence-labelled loop states, one next action, and Track.
+drawer, one next action, and Track. There is no Product loop station strip:
+four tiles restating pipeline state told the reader nothing they could act on.
 Unavailable Track values use text and an em dash rather than fabricated zeroes;
-report actions do not render until a persisted audit/report exists. Visibility
-uses three tabs—Trends, Mentions & Citations, and Query Fanout—with Trends as the
-default and no parallel Overview surface.
+report actions do not render until a persisted audit/report exists.
+
+AI Visibility uses three tabs—Trends, Mentions & Citations, and Query Fanout—with
+Trends as the default and no parallel Overview surface. It carries no project
+switcher of its own; the top bar owns project context.
+
+- The Trends metric row is **exactly the five computed metrics** (Visibility
+  Score, SOV mention, SOV response, brand mentions, owned citations). Sentiment
+  and average position are never computed (decision B-2), so they are disclosed
+  as "—" in their rankings-table columns and are **not** stat cards — two
+  permanently blank tiles pushed the row past the five-metric cap and read as
+  broken.
+- A trend chart renders only with at least two points. One run plots one dot;
+  a full empty axis under a banner that already says there is no movement is
+  noise. The same rule collapses the start-of-range ranking comparison until a
+  second run exists.
+- The two evidence tabs are **ruled rows, not nested cards**. An execution is a
+  row inside the tab's one card — never a filled, bordered box holding a third
+  layer of boxes around its citations or queries. Task/analysis/artifact ids are
+  audit trail, so they live behind one collapsed **Provenance** disclosure per
+  row rather than as raw truncated UUIDs across the primary surface.
 
 #### The insight object
 

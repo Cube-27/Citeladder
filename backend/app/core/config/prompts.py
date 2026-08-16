@@ -25,7 +25,29 @@ DEFAULT_PROMPT_STATUS: Final = PROMPT_STATUS_ACTIVE
 
 PROMPT_COHORT_CORE: Final = "core"
 PROMPT_COHORT_COMPARISON: Final = "comparison"
-PROMPT_COHORTS: Final[frozenset[str]] = frozenset(
+# Brand-discovery onboarding writes these two portfolio cohorts (see
+# domain/projects/onboarding/prompt_generation.py). They are ORGANIC
+# answer-engine measurement exactly like ``core`` — the split is only which
+# half of the portfolio a prompt came from — so every organic read must accept
+# all three. ``comparison`` (comparison-shopping surface) and
+# ``brand_diagnostic`` (explicitly brand-naming prompts) are separate views.
+PROMPT_COHORT_MARKET_VISIBILITY: Final = "market_visibility"
+PROMPT_COHORT_BRAND_RELEVANT: Final = "brand_relevant"
+PROMPT_COHORT_BRAND_DIAGNOSTIC: Final = "brand_diagnostic"
+ORGANIC_PROMPT_COHORTS: Final[frozenset[str]] = frozenset(
+    {
+        PROMPT_COHORT_CORE,
+        PROMPT_COHORT_MARKET_VISIBILITY,
+        PROMPT_COHORT_BRAND_RELEVANT,
+    }
+)
+PROMPT_COHORTS: Final[frozenset[str]] = ORGANIC_PROMPT_COHORTS | {
+    PROMPT_COHORT_COMPARISON,
+    PROMPT_COHORT_BRAND_DIAGNOSTIC,
+}
+# The cohort VIEW a caller may request on the read APIs. `core` selects the
+# whole organic set above; it is not the same thing as the stored `core` value.
+REQUESTABLE_PROMPT_COHORTS: Final[frozenset[str]] = frozenset(
     {PROMPT_COHORT_CORE, PROMPT_COHORT_COMPARISON}
 )
 PROMPT_NEAR_DUPLICATE_SIMILARITY: Final = 0.9

@@ -188,9 +188,9 @@ test('Overview remains useful before the first visibility audit', async ({ page 
   await expect(page.getByText('Connect GSC or GA4')).toBeVisible();
   await expect(page.getByText('Citation share —')).toBeVisible();
   await expect(page.getByRole('button', { name: /Executive PDF/i })).toHaveCount(0);
-  for (const label of ['Connected', 'Analyzed', 'Acted', 'Tracked']) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
-  }
+  // The Product loop station strip was removed from Overview; loop evidence
+  // still arrives on the projection but has no station-tile surface.
+  await expect(page.getByRole('heading', { name: 'Product loop' })).toHaveCount(0);
 });
 
 test('Growth Agent opens as a bounded task workspace with plain-language data used', async ({

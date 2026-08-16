@@ -24,7 +24,10 @@ function boundedFilters(search: URLSearchParams): Readonly<Record<string, readon
     .sort((left, right) => left.localeCompare(right))
     .slice(0, 10)) {
     if (DATE_KEYS.has(key)) continue;
-    filters[key] = search.getAll(key).slice(0, 10).map((value) => value.slice(0, 200));
+    filters[key] = search
+      .getAll(key)
+      .slice(0, 10)
+      .map((value) => value.slice(0, 200));
   }
   return filters;
 }
@@ -111,7 +114,9 @@ export function AgentSheet() {
         title="Growth Agent"
         description="Explain saved evidence or prioritize the next action."
         closeLabel="Close Growth Agent"
-        bodyClassName="p-0"
+        /* The workspace owns its own scrolling body + pinned composer, so the
+           drawer must not add a second scroll container around it. */
+        bodyClassName="overflow-hidden p-0"
       >
         <GrowthAgentWorkspace
           key={`${activeProject?.id ?? 'none'}:${launch.taskType}:${launch.objective}`}

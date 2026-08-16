@@ -21,11 +21,7 @@ import { ACTIVE_RUN_POLL_MS, EVIDENCE_LIMIT } from '@/lib/config/operational';
 
 /** Compatibility exports for existing visibility consumers and tests. */
 export { ACTIVE_RUN_POLL_MS, EVIDENCE_LIMIT } from '@/lib/config/operational';
-import {
-  rangeToFrom,
-  type TrendGranularity,
-  type TrendRange,
-} from '@/lib/visibility/trends';
+import { rangeToFrom, type TrendGranularity, type TrendRange } from '@/lib/visibility/trends';
 
 /**
  * The Visibility workspace's URL-synced tab + shared filter state.

@@ -153,11 +153,7 @@ export const opportunitiesApi = {
       ),
       options,
     );
-    return strictValidate(
-      implementationEventsPageSchema,
-      res,
-      'opportunities.implementation.list',
-    );
+    return strictValidate(implementationEventsPageSchema, res, 'opportunities.implementation.list');
   },
   getImplementationEvent: async (
     projectId: string,
@@ -256,10 +252,6 @@ export const opportunitiesMutations = {
         input: ImplementationEventCreate;
         idempotencyKey: string;
       }) =>
-        opportunitiesApi.createImplementationEvent(
-          vars.projectId,
-          vars.input,
-          vars.idempotencyKey,
-        ),
+        opportunitiesApi.createImplementationEvent(vars.projectId, vars.input, vars.idempotencyKey),
     }),
 };

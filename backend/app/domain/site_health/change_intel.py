@@ -146,10 +146,7 @@ async def _page_rows(
                 .join(
                     SiteUrlObservation,
                     (SiteUrlObservation.crawl_id == crawl.id)
-                    & (
-                        SiteUrlObservation.site_url_id
-                        == SitePageAnalysis.site_url_id
-                    ),
+                    & (SiteUrlObservation.site_url_id == SitePageAnalysis.site_url_id),
                 )
                 .where(
                     SitePageAnalysis.workspace_id == crawl.workspace_id,

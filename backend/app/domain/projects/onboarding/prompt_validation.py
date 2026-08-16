@@ -10,8 +10,9 @@ from app.analysis.normalization import normalize_alias
 from app.core.config.brand_discovery import (
     BUYER_PERSPECTIVE_TERMS,
     MARKET_CONTEXT_TERMS,
-    REQUIRED_ONBOARDING_PROMPT_INTENTS,
+    MIN_ONBOARDING_DISTINCT_INTENTS,
 )
+from app.core.config.projects import PROMPT_INTENTS
 from app.domain.prompts.portfolio import contains_tracked_name
 
 MARKET_VISIBILITY = "market_visibility"
@@ -142,7 +143,7 @@ def _prompt_error(
         return f"prompt[{index}].natural_search"
     if _is_near_duplicate(text, accepted_text):
         return f"prompt[{index}].duplicate"
-    if intent not in REQUIRED_ONBOARDING_PROMPT_INTENTS:
+    if intent not in PROMPT_INTENTS or not intent:
         return f"prompt[{index}].intent"
     tracked_terms = [*brand_terms, *competitor_terms]
     if contains_tracked_name(text, tracked_terms):
@@ -187,8 +188,10 @@ def _lacks_market_coverage(primary_market: str, prompts: list[str]) -> bool:
 
 
 def _lacks_intent_coverage(primary_market: str, intents: set[str]) -> bool:
-    return bool(primary_market) and not REQUIRED_ONBOARDING_PROMPT_INTENTS.issubset(
-        intents
+    return (
+        bool(primary_market)
+        and len({intent for intent in intents if intent})
+        < MIN_ONBOARDING_DISTINCT_INTENTS
     )
 
 

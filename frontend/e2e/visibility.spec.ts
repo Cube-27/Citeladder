@@ -18,6 +18,7 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const AUDIT_LATEST = '22222222-2222-4222-8222-222222222222';
+const AUDIT_EARLIER = '22222222-2222-4222-8222-222222222221';
 const ANALYSIS_A = '44444444-4444-4444-8444-444444444444';
 const ANALYSIS_B = '55555555-5555-4555-8555-555555555555';
 const ANALYSIS_C = '66666666-6666-4666-8666-666666666666';
@@ -313,7 +314,12 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
     route.fulfill(
       bodies.trendsStatus
         ? { status: bodies.trendsStatus, json: { detail: 'boom' } }
-        : { json: bodies.trends ?? [trendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67)] },
+        : {
+            json: bodies.trends ?? [
+              trendPoint(AUDIT_EARLIER, '2026-07-08T00:00:00Z', 54),
+              trendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67),
+            ],
+          },
     ),
   );
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/evidence(\?.*)?$/, (route) => {
@@ -338,9 +344,7 @@ function assertSameOriginApi(requests: Request[], baseURL: string) {
   }
 }
 
-test('three tabs in order, no retired Overview, Trends by default, one panel', async ({
-  page,
-}) => {
+test('three tabs in order, no retired Overview, Trends by default, one panel', async ({ page }) => {
   await setup(page);
   await page.goto('/visibility');
 
@@ -357,10 +361,7 @@ test('three tabs in order, no retired Overview, Trends by default, one panel', a
   await expect(tablist.getByRole('tab', { name: 'Overview' })).toHaveCount(0);
 
   // Trends is selected by default and its retained content is present.
-  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('trend-chart-visibility_score')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'By model' })).toBeVisible();
 
@@ -401,7 +402,10 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
   await trends.focus();
 
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Mentions' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Mentions' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(page.getByRole('tab', { name: 'Mentions' })).toBeFocused();
 
   await page.keyboard.press('End');
@@ -413,10 +417,7 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
 
   // Wraps forward from the last tab back to the first.
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
 
   await page.keyboard.press('End');
   await page.keyboard.press('ArrowLeft');
@@ -426,10 +427,7 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
   );
 
   await page.keyboard.press('Home');
-  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'Trends' })).toBeFocused();
 });
 
@@ -518,4 +516,37 @@ test('mobile viewport: tablist is a single horizontally-scrollable row, one pane
   await page.getByRole('button', { name: 'Filter by model' }).click();
   await page.getByRole('menuitemradio', { name: 'Gemini' }).click();
   await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
+});
+
+test('a single trend point suppresses the empty charts but keeps the run detail', async ({
+  page,
+}) => {
+  await setup(page, { trends: [trendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67)] });
+  await page.goto('/visibility');
+
+  await expect(page.getByText(/no movement to plot yet/i)).toBeVisible();
+  // One point plots one dot; a full empty axis is noise, not evidence.
+  await expect(page.getByTestId('trend-chart-visibility_score')).toHaveCount(0);
+  await expect(page.getByTestId('trend-chart-sov')).toHaveCount(0);
+  // The run's own detail still renders, full width and without the empty
+  // start-of-range comparison column.
+  await expect(page.getByRole('heading', { name: 'Rankings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Start of Range/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'By model' })).toBeVisible();
+});
+
+test('the metric row is five real metrics with no permanent placeholders', async ({ page }) => {
+  await setup(page);
+  await page.goto('/visibility');
+
+  await expect(page.getByTestId('trend-chart-visibility_score')).toBeVisible();
+  for (const label of ['Visibility Score', 'SOV (mention)', 'SOV (response)']) {
+    await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+  }
+  // Sentiment / average position are never computed (decision B-2). They stay
+  // disclosed as "—" in the rankings table (so `Sentiment` remains a column
+  // header there) but are no longer two permanently blank stat cards, whose
+  // giveaway was this delta string.
+  await expect(page.getByText('Not yet computed')).toHaveCount(0);
+  await expect(page.getByText('Avg Position', { exact: true })).toHaveCount(0);
 });

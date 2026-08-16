@@ -51,6 +51,7 @@ from app.core.config.audits import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
+from app.core.config.prompts import ORGANIC_PROMPT_COHORTS
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.prompts.normalization import prompt_text_hash
 from app.models.analysis import (
@@ -569,8 +570,7 @@ def _cohort_metrics(rows, config, cohort, requested):
 def _finalized_metrics(
     all_rows, per_engine, prompt_cohorts, engine_count, repetitions, config
 ):
-    organic_cohorts = {"core", "market_visibility", "brand_relevant"}
-    organic = [row for row in all_rows if row.get("cohort") in organic_cohorts]
+    organic = [row for row in all_rows if row.get("cohort") in ORGANIC_PROMPT_COHORTS]
     diagnostic = [row for row in all_rows if row.get("cohort") == "brand_diagnostic"]
     comparison = [row for row in all_rows if row.get("cohort") == "comparison"]
     slot_count = engine_count * repetitions
@@ -578,7 +578,7 @@ def _finalized_metrics(
         organic,
         config,
         "market_visibility",
-        sum(cohort in organic_cohorts for cohort in prompt_cohorts) * slot_count,
+        sum(cohort in ORGANIC_PROMPT_COHORTS for cohort in prompt_cohorts) * slot_count,
     )
     metrics["comparison"] = _cohort_metrics(
         comparison,
@@ -594,7 +594,7 @@ def _finalized_metrics(
     )
     metrics["per_engine"] = {
         engine: aggregate_run(
-            [row for row in rows if row.get("cohort") in organic_cohorts], config
+            [row for row in rows if row.get("cohort") in ORGANIC_PROMPT_COHORTS], config
         )
         for engine, rows in sorted(per_engine.items())
     }

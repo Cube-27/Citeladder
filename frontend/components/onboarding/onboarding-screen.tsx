@@ -17,10 +17,7 @@ import { Input } from '@/components/ui/input';
 import { MarketSelect } from '@/components/ui/market-select';
 import { queryKeys } from '@/lib/api/query-keys';
 import { projectsApi } from '@/lib/api/projects';
-import {
-  brandDiscoveriesApi,
-  type DiscoveryProfile,
-} from '@/lib/api/brand-discoveries';
+import { brandDiscoveriesApi, type DiscoveryProfile } from '@/lib/api/brand-discoveries';
 import {
   brandStepSchema,
   emptyBrandStep,
@@ -733,11 +730,7 @@ export function OnboardingScreen() {
                   <Button
                     size="lg"
                     onClick={() => complete.mutate()}
-                    disabled={
-                      complete.isPending ||
-                      !hasSelectedDomain ||
-                      !hasConfirmedIcp(profile)
-                    }
+                    disabled={complete.isPending || !hasSelectedDomain || !hasConfirmedIcp(profile)}
                     className="text-sm font-medium"
                   >
                     {complete.isPending ? 'Creating…' : 'Create project'}

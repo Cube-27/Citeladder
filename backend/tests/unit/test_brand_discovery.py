@@ -190,9 +190,7 @@ def test_confirmed_target_audience_changes_generated_portfolio() -> None:
     )
     agencies = fallback_portfolio(**shared, target_audience="independent agencies")
 
-    assert [item["text"] for item in enterprise] != [
-        item["text"] for item in agencies
-    ]
+    assert [item["text"] for item in enterprise] != [item["text"] for item in agencies]
     assert any("enterprise marketing teams" in item["text"] for item in enterprise)
     assert any("independent agencies" in item["text"] for item in agencies)
 

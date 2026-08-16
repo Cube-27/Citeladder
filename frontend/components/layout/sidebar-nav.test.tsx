@@ -51,13 +51,8 @@ describe('station navigation', () => {
     pathname = '/settings';
     searchParams = new URLSearchParams('tab=providers');
     render(<SidebarNav />);
-    expect(screen.getByRole('link', { name: 'Providers' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(screen.getByRole('link', { name: 'Integrations' })).not.toHaveAttribute(
-      'aria-current',
-    );
+    expect(screen.getByRole('link', { name: 'Providers' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Integrations' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Settings' })).not.toHaveAttribute('aria-current');
   });
 

@@ -198,7 +198,7 @@ describe('DashboardScreen', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders facts, loop evidence, and a real next action before the first audit', () => {
+  it('renders facts and a real next action before the first audit', () => {
     queryResult.data = {
       ...commandCenter,
       measurement: null,
@@ -230,7 +230,9 @@ describe('DashboardScreen', () => {
     render(<DashboardScreen />);
 
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Product loop' })).toBeVisible();
+    // The Product loop strip was removed from Overview; loop evidence still
+    // arrives on the projection but no longer has a station-tile surface.
+    expect(screen.queryByRole('heading', { name: 'Product loop' })).not.toBeInTheDocument();
     expect(screen.getByText('Run the first visibility audit')).toBeVisible();
     expect(screen.getByText('Citation share —')).toBeVisible();
     expect(screen.queryByRole('button', { name: /executive pdf/i })).not.toBeInTheDocument();

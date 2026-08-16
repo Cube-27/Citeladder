@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,9 @@ import type { LinkGraphEdge, LinkGraphNode } from '@/lib/api/types';
 import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
 
 const VISUAL_NODE_LIMIT = 24;
+const FLAGGED_VISUAL_LIMIT = 10;
+/** Depth columns are laid out inside this box; the axis strip sits below it. */
+const CANVAS = { width: 1000, height: 200, padX: 64, padY: 22, axisY: 224 } as const;
 
 function displayPath(url: string) {
   try {
@@ -30,16 +34,55 @@ function displayPath(url: string) {
   }
 }
 
+function isFlagged(node: LinkGraphNode) {
+  return node.near_orphan || node.weak_authority;
+}
+
+function byAuthority(left: LinkGraphNode, right: LinkGraphNode) {
+  return right.pagerank - left.pagerank || left.site_url_id.localeCompare(right.site_url_id);
+}
+
+/**
+ * Bounded node sample. Flagged pages are the story this surface exists for, so
+ * they hold at least half the slots — but when the authority remainder does not
+ * fill the rest, the leftover slots go back to flagged pages instead of going
+ * unused.
+ */
 function visualNodes(nodes: LinkGraphNode[]) {
-  return [...nodes]
-    .sort(
-      (left, right) =>
-        Number(right.near_orphan || right.weak_authority) -
-          Number(left.near_orphan || left.weak_authority) ||
-        right.pagerank - left.pagerank ||
-        left.site_url_id.localeCompare(right.site_url_id),
-    )
-    .slice(0, VISUAL_NODE_LIMIT);
+  const flagged = nodes.filter(isFlagged).sort(byAuthority);
+  const rest = nodes.filter((node) => !isFlagged(node)).sort(byAuthority);
+  const flaggedSlots = Math.min(
+    flagged.length,
+    Math.max(FLAGGED_VISUAL_LIMIT, VISUAL_NODE_LIMIT - rest.length),
+  );
+  return [...flagged.slice(0, flaggedSlots), ...rest].slice(0, VISUAL_NODE_LIMIT);
+}
+
+/** Click depth is the x axis; pages with no path from the root sort last. */
+function depthColumns(visible: LinkGraphNode[]) {
+  const groups = new Map<number, LinkGraphNode[]>();
+  for (const node of visible) {
+    const depth = node.click_depth ?? -1;
+    groups.set(depth, [...(groups.get(depth) ?? []), node]);
+  }
+  return [...groups.entries()]
+    .map(([depth, group]) => [depth, [...group].sort(byAuthority)] as const)
+    .sort(([left], [right]) => (left < 0 ? Infinity : left) - (right < 0 ? Infinity : right));
+}
+
+function depthLabel(depth: number) {
+  return depth < 0 ? 'Unlinked' : `Depth ${depth}`;
+}
+
+function LegendKey({ className, children }: Readonly<{ className: string; children: ReactNode }>) {
+  return (
+    <span className="text-muted flex items-center gap-1.5 text-xs">
+      <svg viewBox="0 0 12 12" className="size-3 shrink-0" aria-hidden>
+        <circle cx="6" cy="6" r="5" className={className} />
+      </svg>
+      {children}
+    </span>
+  );
 }
 
 function GraphPreview({
@@ -47,12 +90,23 @@ function GraphPreview({
   edges,
 }: Readonly<{ nodes: LinkGraphNode[]; edges: LinkGraphEdge[] }>) {
   const visible = visualNodes(nodes);
-  const positions = new Map(
-    visible.map((node, index) => {
-      const angle = (2 * Math.PI * index) / Math.max(visible.length, 1) - Math.PI / 2;
-      return [node.site_url_id, { x: 260 + Math.cos(angle) * 190, y: 145 + Math.sin(angle) * 105 }];
-    }),
-  );
+  const columns = depthColumns(visible);
+  const topRank = Math.max(...visible.map((node) => node.pagerank), Number.EPSILON);
+  const stepX = columns.length > 1 ? (CANVAS.width - 2 * CANVAS.padX) / (columns.length - 1) : 0;
+
+  const positions = new Map<string, { x: number; y: number; r: number }>();
+  columns.forEach(([, group], columnIndex) => {
+    const x = columns.length > 1 ? CANVAS.padX + columnIndex * stepX : CANVAS.width / 2;
+    const stepY = group.length > 1 ? (CANVAS.height - 2 * CANVAS.padY) / (group.length - 1) : 0;
+    group.forEach((node, rowIndex) => {
+      positions.set(node.site_url_id, {
+        x,
+        y: group.length > 1 ? CANVAS.padY + rowIndex * stepY : CANVAS.height / 2,
+        r: 4 + 6 * Math.sqrt(Math.min(node.pagerank, topRank) / topRank),
+      });
+    });
+  });
+
   const visibleEdges = edges.filter(
     (edge) =>
       edge.followed &&
@@ -64,44 +118,71 @@ function GraphPreview({
   if (visible.length < 2) return null;
   return (
     <div
-      className="border-border bg-background-alt overflow-hidden rounded-lg border"
+      className="border-border bg-background-alt grid gap-3 rounded-lg border p-4"
       aria-label="Internal link graph preview"
     >
-      <svg viewBox="0 0 520 290" className="h-auto w-full" role="img">
-        <title>Bounded preview of followed internal links</title>
+      <svg
+        viewBox={`0 0 ${CANVAS.width} ${CANVAS.axisY + 8}`}
+        className="h-auto w-full"
+        role="img"
+        aria-label="Pages placed by click depth from the home page; circle size shows relative PageRank."
+      >
         {visibleEdges.map((edge) => {
           const source = positions.get(edge.source_site_url_id)!;
           const target = positions.get(edge.target_site_url_id!)!;
+          const midX = (source.x + target.x) / 2;
           return (
-            <line
+            <path
               key={edge.id}
-              x1={source.x}
-              y1={source.y}
-              x2={target.x}
-              y2={target.y}
+              d={`M ${source.x} ${source.y} C ${midX} ${source.y}, ${midX} ${target.y}, ${target.x} ${target.y}`}
               className="stroke-border-strong"
               strokeWidth="1"
+              strokeOpacity="0.55"
+              fill="none"
             />
           );
         })}
         {visible.map((node) => {
           const point = positions.get(node.site_url_id)!;
-          const flagged = node.near_orphan || node.weak_authority;
+          const flagged = isFlagged(node);
           return (
             <g key={node.id}>
               <circle
                 cx={point.x}
                 cy={point.y}
-                r={flagged ? 7 : node.hub ? 8 : 5}
-                className={
-                  flagged ? 'fill-warning-text' : node.hub ? 'fill-accent' : 'fill-secondary'
-                }
+                r={point.r}
+                className={flagged ? 'fill-danger' : node.hub ? 'fill-accent' : 'fill-series-other'}
+                stroke={flagged ? 'currentColor' : 'none'}
+                strokeWidth={flagged ? 2 : 0}
+                strokeOpacity="0.25"
               />
-              <title>{displayPath(node.normalized_url)}</title>
+              <title>
+                {displayPath(node.normalized_url)} · {depthLabel(node.click_depth ?? -1)}
+              </title>
             </g>
           );
         })}
+        {columns.map(([depth], columnIndex) => (
+          <text
+            key={depth}
+            x={columns.length > 1 ? CANVAS.padX + columnIndex * stepX : CANVAS.width / 2}
+            y={CANVAS.axisY}
+            textAnchor="middle"
+            fontSize="13"
+            className="fill-subtle"
+          >
+            {depthLabel(depth)}
+          </text>
+        ))}
       </svg>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <LegendKey className="fill-accent">Hub</LegendKey>
+        <LegendKey className="fill-danger">Near orphan or weak authority</LegendKey>
+        <LegendKey className="fill-series-other">Other page</LegendKey>
+        <span className="text-subtle text-xs">
+          Left to right is click depth from the home page; circle size is relative PageRank.
+        </span>
+      </div>
     </div>
   );
 }
@@ -221,57 +302,57 @@ export function LinkGraphPanel({
         <CardContent className="pt-0">
           <div role="region" aria-label="Page authority evidence">
             <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Page</TableHead>
-                <TableHead>Signals</TableHead>
-                <TableHead numeric>In / out</TableHead>
-                <TableHead>Suggested sources</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {nodeRows.map((node) => (
-                <TableRow key={node.id}>
-                  <TableCell>
-                    <Link
-                      className="text-accent-text font-medium hover:underline"
-                      href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
-                    >
-                      {node.title || displayPath(node.normalized_url)}
-                    </Link>
-                    <span className="text-subtle block max-w-80 truncate text-xs">
-                      {displayPath(node.normalized_url)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Signals node={node} />
-                  </TableCell>
-                  <TableCell numeric>
-                    {node.followed_inbound_count} / {node.followed_outbound_count}
-                  </TableCell>
-                  <TableCell>
-                    {node.suggested_source_ids.length ? (
-                      <div className="flex flex-wrap gap-x-2 gap-y-1">
-                        {node.suggested_source_ids.map((sourceId) => {
-                          const source = byId.get(sourceId);
-                          return (
-                            <Link
-                              key={sourceId}
-                              className="text-accent-text text-xs hover:underline"
-                              href={`/site/crawls/${crawlId}/pages/${sourceId}`}
-                            >
-                              {source?.title || displayPath(source?.normalized_url ?? sourceId)}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <span className="text-subtle">—</span>
-                    )}
-                  </TableCell>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Page</TableHead>
+                  <TableHead>Signals</TableHead>
+                  <TableHead numeric>In / out</TableHead>
+                  <TableHead>Suggested sources</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
+              </TableHeader>
+              <TableBody>
+                {nodeRows.map((node) => (
+                  <TableRow key={node.id}>
+                    <TableCell>
+                      <Link
+                        className="text-accent-text font-medium hover:underline"
+                        href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
+                      >
+                        {node.title || displayPath(node.normalized_url)}
+                      </Link>
+                      <span className="text-subtle block max-w-80 truncate text-xs">
+                        {displayPath(node.normalized_url)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Signals node={node} />
+                    </TableCell>
+                    <TableCell numeric>
+                      {node.followed_inbound_count} / {node.followed_outbound_count}
+                    </TableCell>
+                    <TableCell>
+                      {node.suggested_source_ids.length ? (
+                        <div className="flex flex-wrap gap-x-2 gap-y-1">
+                          {node.suggested_source_ids.map((sourceId) => {
+                            const source = byId.get(sourceId);
+                            return (
+                              <Link
+                                key={sourceId}
+                                className="text-accent-text text-xs hover:underline"
+                                href={`/site/crawls/${crawlId}/pages/${sourceId}`}
+                              >
+                                {source?.title || displayPath(source?.normalized_url ?? sourceId)}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-subtle">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
             </Table>
           </div>
           {nodePager.canPrev || nodes.data?.next_cursor ? (
@@ -297,36 +378,37 @@ export function LinkGraphPanel({
         <CardContent className="pt-0">
           <div role="region" aria-label="Observed link evidence">
             <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Source</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Transfer</TableHead>
-                <TableHead numeric>Occurrences</TableHead>
-                <TableHead>Anchors</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {edgeRows.map((edge) => {
-                const source = byId.get(edge.source_site_url_id);
-                const target = edge.target_site_url_id
-                  ? byId.get(edge.target_site_url_id)
-                  : undefined;
-                return (
-                  <TableRow key={edge.id}>
-                    <TableCell>
-                      {source?.title || displayPath(source?.normalized_url ?? edge.source_site_url_id)}
-                    </TableCell>
-                    <TableCell>
-                      {target?.title || displayPath(target?.normalized_url ?? edge.target_url)}
-                    </TableCell>
-                    <TableCell>{edge.followed ? 'Followed' : 'Nofollow-only'}</TableCell>
-                    <TableCell numeric>{edge.occurrence_count}</TableCell>
-                    <TableCell>{edge.anchor_texts.join(', ') || '—'}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Target</TableHead>
+                  <TableHead>Transfer</TableHead>
+                  <TableHead numeric>Occurrences</TableHead>
+                  <TableHead>Anchors</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {edgeRows.map((edge) => {
+                  const source = byId.get(edge.source_site_url_id);
+                  const target = edge.target_site_url_id
+                    ? byId.get(edge.target_site_url_id)
+                    : undefined;
+                  return (
+                    <TableRow key={edge.id}>
+                      <TableCell>
+                        {source?.title ||
+                          displayPath(source?.normalized_url ?? edge.source_site_url_id)}
+                      </TableCell>
+                      <TableCell>
+                        {target?.title || displayPath(target?.normalized_url ?? edge.target_url)}
+                      </TableCell>
+                      <TableCell>{edge.followed ? 'Followed' : 'Nofollow-only'}</TableCell>
+                      <TableCell numeric>{edge.occurrence_count}</TableCell>
+                      <TableCell>{edge.anchor_texts.join(', ') || '—'}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
             </Table>
           </div>
           {edgePager.canPrev || edges.data?.next_cursor ? (

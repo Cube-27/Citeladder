@@ -51,9 +51,7 @@ class SiteChangeSnapshot(Base):
             "analyzer_version",
             name="uq_site_change_snapshot_identity",
         ),
-        UniqueConstraint(
-            "workspace_id", "id", name="uq_site_change_snapshot_ws_id"
-        ),
+        UniqueConstraint("workspace_id", "id", name="uq_site_change_snapshot_ws_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

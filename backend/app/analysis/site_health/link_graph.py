@@ -353,9 +353,7 @@ def analyze_link_graph(
         for node_id in node_ids
     ]
     top_count = (
-        max(1, math.ceil(len(node_ids) * LINK_GRAPH_TOP_FRACTION))
-        if node_ids
-        else 0
+        max(1, math.ceil(len(node_ids) * LINK_GRAPH_TOP_FRACTION)) if node_ids else 0
     )
     top_share = sum(sorted(ranks.values(), reverse=True)[:top_count])
     anchor_counts = Counter(

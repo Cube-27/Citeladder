@@ -16,7 +16,11 @@ from app.core.config.http import (
     PROMPT_INTENT_MAX_CHARS,
     PROMPT_TEXT_MAX_CHARS,
 )
-from app.core.config.prompts import PROMPT_STATUSES, prompt_generation_settings
+from app.core.config.prompts import (
+    PROMPT_COHORTS,
+    PROMPT_STATUSES,
+    prompt_generation_settings,
+)
 
 PromptIntent = Literal["", "discovery", "comparison", "purchase", "service", "local"]
 # ``Literal`` requires inline literals for static checkers, so the values are
@@ -35,6 +39,10 @@ PromptCohort = Literal[
     "comparison",
 ]
 assert set(get_args(PromptStatus)) == PROMPT_STATUSES
+# The same lock-step guard for cohorts. Without it `PROMPT_COHORTS` drifted to
+# {core, comparison} while onboarding wrote market_visibility/brand_relevant,
+# and every read filtering on the config value returned nothing.
+assert set(get_args(PromptCohort)) == PROMPT_COHORTS
 
 
 # --------------------------------------------------------------------------

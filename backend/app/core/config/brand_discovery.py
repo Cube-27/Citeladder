@@ -57,9 +57,12 @@ MARKET_CONTEXT_TERMS: Final[dict[str, tuple[str, ...]]] = {
     "GB": ("United Kingdom", "UK", "British"),
     "CA": ("Canada", "Canadian", "CAD"),
 }
-REQUIRED_ONBOARDING_PROMPT_INTENTS: Final[frozenset[str]] = frozenset(
-    {"discovery", "comparison", "purchase", "service", "local"}
-)
+# A portfolio must SPAN buying intents, not contain every intent in the
+# vocabulary. Demanding all five made the generator label prompts by loop
+# position to satisfy the gate — an Ecommerce template set has no genuinely
+# `local` search, so honest labelling could never pass. A diversity floor keeps
+# the portfolio broad while letting each label stay true to its wording.
+MIN_ONBOARDING_DISTINCT_INTENTS: Final[int] = 3
 BUYER_PERSPECTIVE_TERMS: Final[tuple[str, ...]] = (
     "i",
     "me",

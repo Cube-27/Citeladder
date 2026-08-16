@@ -26,9 +26,7 @@ export function OpportunityStatusFooter({
         queryKey: opportunitiesQueries.implementationEvents(projectId, detail.id).queryKey,
       }),
   });
-  const declarations = useQuery(
-    opportunitiesQueries.implementationEvents(projectId, detail.id),
-  );
+  const declarations = useQuery(opportunitiesQueries.implementationEvents(projectId, detail.id));
   const [idempotencyKey] = useState(
     () => globalThis.crypto?.randomUUID?.() ?? `${detail.id}-${Date.now()}`,
   );

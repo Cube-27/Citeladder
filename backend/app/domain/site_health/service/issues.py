@@ -682,9 +682,7 @@ async def _resolve_issue_rule_id(
     )
 
 
-def _affected_url_statement(
-    crawl_id: uuid.UUID, rule_id: str, finding_class: str
-):
+def _affected_url_statement(crawl_id: uuid.UUID, rule_id: str, finding_class: str):
     """Build the stable, distinct affected-URL query for one issue group."""
     # Each affected URL's latest issue analysis supplies the optional page-kind
     # badge in ``_affected_page_kinds`` below.

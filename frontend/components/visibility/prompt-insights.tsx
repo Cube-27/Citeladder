@@ -71,49 +71,49 @@ export function CompetitorSuggestions({
 
   return (
     <Card>
-        <CardHeader>
-          <CardTitle>Competitor suggestions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          <p className="text-muted text-xs">
-            Observed repeatedly in third-party citations. Verify relevance before adding.
-          </p>
-          {suggestionsQuery.isError ? (
-            <Alert tone="danger">Could not load competitor suggestions.</Alert>
-          ) : null}
-          {suggestionsQuery.data?.length ? (
-            <ul className="border-border-subtle divide-border-subtle divide-y rounded-lg border">
-              {suggestionsQuery.data.map((candidate) => (
-                <li
-                  key={candidate.id}
-                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+      <CardHeader>
+        <CardTitle>Competitor suggestions</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        <p className="text-muted text-xs">
+          Observed repeatedly in third-party citations. Verify relevance before adding.
+        </p>
+        {suggestionsQuery.isError ? (
+          <Alert tone="danger">Could not load competitor suggestions.</Alert>
+        ) : null}
+        {suggestionsQuery.data?.length ? (
+          <ul className="border-border-subtle divide-border-subtle divide-y rounded-lg border">
+            {suggestionsQuery.data.map((candidate) => (
+              <li
+                key={candidate.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+              >
+                <div>
+                  <p className="text-foreground font-medium">{candidate.name}</p>
+                  <p className="text-secondary text-xs">
+                    {candidate.domain} · {candidate.prompt_count} prompts / {candidate.engine_count}{' '}
+                    engines
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => acceptMutation.mutate(candidate.id)}
+                  disabled={acceptMutation.isPending}
                 >
-                  <div>
-                    <p className="text-foreground font-medium">{candidate.name}</p>
-                    <p className="text-secondary text-xs">
-                      {candidate.domain} · {candidate.prompt_count} prompts /{' '}
-                      {candidate.engine_count} engines
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => acceptMutation.mutate(candidate.id)}
-                    disabled={acceptMutation.isPending}
-                  >
-                    Add competitor
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {!suggestionsQuery.data?.length && !suggestionsQuery.isLoading ? (
-            <p className="text-muted text-sm">No repeated citation candidates yet.</p>
-          ) : null}
-          {acceptMutation.isError ? (
-            <Alert tone="danger">Could not add that competitor. Try again.</Alert>
-          ) : null}
-        </CardContent>
+                  Add competitor
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {!suggestionsQuery.data?.length && !suggestionsQuery.isLoading ? (
+          <p className="text-muted text-sm">No repeated citation candidates yet.</p>
+        ) : null}
+        {acceptMutation.isError ? (
+          <Alert tone="danger">Could not add that competitor. Try again.</Alert>
+        ) : null}
+      </CardContent>
     </Card>
   );
 }

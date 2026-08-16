@@ -88,7 +88,11 @@ export const NAV_GROUPS = [
         label: 'Settings',
         href: '/settings',
         icon: ICONS.settings,
-        queryMatch: { key: 'tab', values: ['account', 'billing', 'danger'], defaultValue: 'account' },
+        queryMatch: {
+          key: 'tab',
+          values: ['account', 'billing', 'danger'],
+          defaultValue: 'account',
+        },
       },
     ],
   },

@@ -400,8 +400,7 @@ async def seed() -> None:
                 ],
                 target_audience="Travelers and hikers planning multi-day trips.",
                 sources={
-                    field: dict(confirmed_source)
-                    for field in BRAND_PROFILE_FIELDS
+                    field: dict(confirmed_source) for field in BRAND_PROFILE_FIELDS
                 },
             )
         )
@@ -720,9 +719,7 @@ async def seed() -> None:
         resolver=_FakeResolver(),
         transport=_site_transport(),
     )
-    await _drain_site_crawl(
-        worker3, workspace_id=workspace_id, crawl_id=crawl1_id
-    )
+    await _drain_site_crawl(worker3, workspace_id=workspace_id, crawl_id=crawl1_id)
     logger.info("Completed site health discovery crawl %s", crawl1_id)
 
     async with SessionLocal() as session:
@@ -744,9 +741,7 @@ async def seed() -> None:
             session, workspace_id=workspace_id, project_id=project_id, random_seed="100"
         )
         crawl2_id = crawl2.id
-    await _drain_site_crawl(
-        worker3, workspace_id=workspace_id, crawl_id=crawl2_id
-    )
+    await _drain_site_crawl(worker3, workspace_id=workspace_id, crawl_id=crawl2_id)
     logger.info("Completed site health analysis crawl %s", crawl2_id)
 
     # A second analysis recrawl supplies the immediate comparable A/B pair for
@@ -757,9 +752,7 @@ async def seed() -> None:
             session, workspace_id=workspace_id, project_id=project_id, random_seed="101"
         )
         crawl3_id = crawl3.id
-    await _drain_site_crawl(
-        worker3, workspace_id=workspace_id, crawl_id=crawl3_id
-    )
+    await _drain_site_crawl(worker3, workspace_id=workspace_id, crawl_id=crawl3_id)
     logger.info("Completed comparable site health crawl %s", crawl3_id)
 
     # 8. Materialize the first action set and resolve one item between two

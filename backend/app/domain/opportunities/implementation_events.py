@@ -1,4 +1,5 @@
 """Append-only Opportunity implementation declarations and read projection."""
+
 from __future__ import annotations
 
 import json
@@ -290,12 +291,10 @@ async def list_implementation_events(
     return list(
         (
             await session.scalars(
-                statement
-                .order_by(
+                statement.order_by(
                     OpportunityImplementationEvent.created_at.desc(),
                     OpportunityImplementationEvent.id.desc(),
-                )
-                .limit(limit)
+                ).limit(limit)
             )
         ).all()
     )

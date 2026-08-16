@@ -66,9 +66,7 @@ async def test_declaration_is_idempotent_and_projects_declared_state(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, opportunity, site_url = await _seed_and_recompute(
-        client, session_factory
-    )
+    scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
     headers = {
         "X-Workspace-Id": str(scenario.workspace_id),
         "Idempotency-Key": "implementation-once",
@@ -86,10 +84,7 @@ async def test_declaration_is_idempotent_and_projects_declared_state(
             }
         ],
     }
-    url = (
-        f"/api/v1/projects/{scenario.project_id}"
-        "/opportunities/implementation-events"
-    )
+    url = f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events"
 
     created = await client.post(url, headers=headers, json=payload)
     refreshed = await client.post(
@@ -108,9 +103,7 @@ async def test_declaration_is_idempotent_and_projects_declared_state(
         url, headers={"X-Workspace-Id": str(scenario.workspace_id)}
     )
     assert listed.status_code == 200
-    assert [item["id"] for item in listed.json()["items"]] == [
-        created.json()["id"]
-    ]
+    assert [item["id"] for item in listed.json()["items"]] == [created.json()["id"]]
     detail = await client.get(
         f"{url}/{created.json()['id']}",
         headers={"X-Workspace-Id": str(scenario.workspace_id)},
@@ -167,16 +160,13 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, opportunity, site_url = await _seed_and_recompute(
-        client, session_factory
-    )
+    scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, scenario.crawl_id)
         assert crawl is not None and crawl.completed_at is not None
         boundary = crawl.completed_at - timedelta(minutes=1)
     base_url = (
-        f"/api/v1/projects/{scenario.project_id}"
-        "/opportunities/implementation-events"
+        f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events"
     )
     headers = {"X-Workspace-Id": str(scenario.workspace_id)}
 

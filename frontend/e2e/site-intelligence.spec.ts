@@ -211,12 +211,9 @@ async function stubWebsite(page: Page) {
           key,
           label,
           rule_ids: Array.from({ length: ruleCounts[index] }, (_, ruleIndex) =>
-            index === 0 && ruleIndex === 0
-              ? 'aeo.answer_first'
-              : `aeo.rule_${index}_${ruleIndex}`,
+            index === 0 && ruleIndex === 0 ? 'aeo.answer_first' : `aeo.rule_${index}_${ruleIndex}`,
           ),
-          pass_count:
-            ruleCounts[index] * 2 - (index === 0 ? 1 : 0) - (index === 1 ? 1 : 0),
+          pass_count: ruleCounts[index] * 2 - (index === 0 ? 1 : 0) - (index === 1 ? 1 : 0),
           fail_count: index ? 0 : 1,
           not_applicable_count: index === 1 ? 1 : 0,
           error_count: 0,

@@ -264,24 +264,13 @@ export function trendStats(points: readonly VisibilityTrendPoint[]): TrendStat[]
       direction: ocDelta.direction,
       placeholder: false,
     },
-    {
-      key: 'sentiment',
-      label: 'Sentiment',
-      value: '—',
-      delta: 'Not yet computed',
-      direction: 'flat',
-      placeholder: true,
-    },
-    {
-      key: 'avg_position',
-      label: 'Avg Position',
-      value: '—',
-      delta: 'Not yet computed',
-      direction: 'flat',
-      placeholder: true,
-    },
   ];
 }
+// Sentiment and average position are NOT part of the metric row. They are never
+// computed (decision B-2), so as stat cards they were two permanently blank
+// tiles that pushed the row to seven and broke design.md's "three to five
+// headline numbers" rule. Their not-yet-computed state stays disclosed in their
+// own rankings-table columns, where it belongs.
 
 /** Ranking rows for a point, kept SOV-sorted (rows already arrive sorted). */
 export function sortedTrendRankings(

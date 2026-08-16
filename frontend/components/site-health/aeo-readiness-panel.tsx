@@ -1,10 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Drawer } from '@/components/ui/drawer';
 import {
   Table,
   TableBody,
@@ -29,39 +32,56 @@ function pageLabel(url: string) {
   }
 }
 
-function EvidenceLinks({
+const OUTCOME_ORDER: Record<string, number> = { fail: 0, error: 1, pass: 2, not_applicable: 3 };
+
+/**
+ * Evidence is a right-side sheet rather than an in-cell disclosure: a dimension
+ * can carry dozens of persisted evaluations, and expanding them inside a table
+ * cell inflated a single row past the height of the viewport.
+ */
+function EvidenceDrawer({
   dimension,
   crawlId,
-}: Readonly<{ dimension: ReadinessDimension; crawlId: string }>) {
-  if (!dimension.evidence_links.length)
-    return <span className="text-subtle">No persisted evaluations</span>;
+  onClose,
+}: Readonly<{ dimension: ReadinessDimension | null; crawlId: string; onClose: () => void }>) {
+  const links = [...(dimension?.evidence_links ?? [])].sort(
+    (left, right) =>
+      (OUTCOME_ORDER[left.outcome] ?? 9) - (OUTCOME_ORDER[right.outcome] ?? 9) ||
+      left.normalized_url.localeCompare(right.normalized_url),
+  );
   return (
-    <details>
-      <summary className="text-accent-text cursor-pointer text-xs font-medium">
-        View {dimension.evidence_links.length} evidence link
-        {dimension.evidence_links.length === 1 ? '' : 's'}
-      </summary>
-      <ul className="mt-2 grid gap-1.5">
-        {dimension.evidence_links.map((link) => (
-          <li key={link.evaluation_id} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-            <span
-              className={
-                link.outcome === 'fail' ? 'text-danger-text font-medium' : 'text-secondary'
-              }
-            >
-              {link.outcome.replace('_', ' ')}
-            </span>
-            <Link
-              className="text-accent-text hover:underline"
-              href={`/site/crawls/${crawlId}/pages/${link.site_url_id}`}
-            >
-              {pageLabel(link.normalized_url)}
-            </Link>
-            <span className="text-subtle">{link.rule_id}</span>
+    <Drawer
+      open={Boolean(dimension)}
+      onOpenChange={(open) => (open ? undefined : onClose())}
+      title={`${dimension?.label ?? ''} evidence`}
+      description="Persisted rule evaluations behind this dimension, failures first."
+      closeLabel="Close evidence"
+    >
+      <ul className="divide-border-subtle divide-y">
+        {links.map((link) => (
+          <li key={link.evaluation_id} className="grid gap-1 py-2.5 first:pt-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <Link
+                className="text-accent-text truncate text-sm hover:underline"
+                href={`/site/crawls/${crawlId}/pages/${link.site_url_id}`}
+              >
+                {pageLabel(link.normalized_url)}
+              </Link>
+              <span
+                className={
+                  link.outcome === 'fail'
+                    ? 'text-danger-text shrink-0 text-xs font-medium'
+                    : 'text-subtle shrink-0 text-xs'
+                }
+              >
+                {link.outcome.replace('_', ' ')}
+              </span>
+            </div>
+            <span className="text-muted text-xs">{link.rule_id}</span>
           </li>
         ))}
       </ul>
-    </details>
+    </Drawer>
   );
 }
 
@@ -70,6 +90,7 @@ export function AeoReadinessPanel({
   crawlId,
 }: Readonly<{ projectId: string; crawlId: string }>) {
   const readiness = useQuery(siteHealthQueries.aeoReadiness(projectId, crawlId));
+  const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {
     return (
@@ -98,10 +119,11 @@ export function AeoReadinessPanel({
       <Card>
         <CardHeader>
           <CardTitle>AEO Readiness</CardTitle>
-          <CardDescription>
+          <CardDescription className="max-w-3xl">
             Seven presentation dimensions over {data.analysis_count} analyzed page
             {data.analysis_count === 1 ? '' : 's'}. Counts are persisted rule outcomes—not a new
-            score.
+            score. One count is one rule evaluated on one page, so a dimension totals more than the
+            page count.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -140,7 +162,19 @@ export function AeoReadinessPanel({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <EvidenceLinks dimension={dimension} crawlId={crawlId} />
+                    {dimension.evidence_links.length ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-accent-text hover:text-accent-hover -mx-2"
+                        onClick={() => setEvidenceKey(dimension.key)}
+                      >
+                        View {dimension.evidence_links.length} evidence link
+                        {dimension.evidence_links.length === 1 ? '' : 's'}
+                      </Button>
+                    ) : (
+                      <span className="text-subtle text-xs">No persisted evaluations</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -148,6 +182,11 @@ export function AeoReadinessPanel({
           </Table>
         </CardContent>
       </Card>
+      <EvidenceDrawer
+        dimension={data.dimensions.find((dimension) => dimension.key === evidenceKey) ?? null}
+        crawlId={crawlId}
+        onClose={() => setEvidenceKey(null)}
+      />
       <p className="text-subtle text-xs">
         Taxonomy {data.taxonomy_version} · Analyzer {data.analyzer_version}
       </p>

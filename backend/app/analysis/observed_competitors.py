@@ -14,6 +14,7 @@ from app.core.config.observed_competitors import (
     MIN_DISTINCT_ENGINES,
     MIN_DISTINCT_PROMPTS,
 )
+from app.core.config.prompts import ORGANIC_PROMPT_COHORTS
 from app.models.analysis import Citation, ResponseAnalysis
 from app.models.audit import Audit
 from app.models.brand import ObservedEntityCandidate
@@ -32,7 +33,7 @@ def _group_citations(citations, analysis_by_id, excluded):
             not domain
             or _domain_matches_any(domain, excluded)
             or analysis is None
-            or analysis.cohort not in {"core", "market_visibility", "brand_relevant"}
+            or analysis.cohort not in ORGANIC_PROMPT_COHORTS
         ):
             continue
         bucket = grouped.setdefault(

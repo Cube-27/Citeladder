@@ -612,9 +612,7 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
       }),
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/trends`, () => {
         trendCalls += 1;
-        return HttpResponse.json([
-          makeTrendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67),
-        ]);
+        return HttpResponse.json([makeTrendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67)]);
       }),
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () => {
         evidenceCalls += 1;

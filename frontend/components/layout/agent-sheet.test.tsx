@@ -28,7 +28,9 @@ describe('AgentSheet', () => {
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
     expect(screen.getByText(/"canonicalRoute":"\/site"/)).toBeVisible();
-    expect(screen.getByText(/"dateRange":\{"start":"2026-08-01","end":"2026-08-15"\}/)).toBeVisible();
+    expect(
+      screen.getByText(/"dateRange":\{"start":"2026-08-01","end":"2026-08-15"\}/),
+    ).toBeVisible();
     expect(screen.getByText(/"filters":\{"tab":\["pages"\]\}/)).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Close Growth Agent' }));
     expect(trigger).toHaveFocus();

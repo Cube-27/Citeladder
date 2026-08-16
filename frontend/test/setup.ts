@@ -14,6 +14,42 @@ const nativeAbortController = transferableAbortController();
 globalThis.AbortController = nativeAbortController.constructor as typeof AbortController;
 globalThis.AbortSignal = nativeAbortController.signal.constructor as typeof AbortSignal;
 
+/**
+ * Node 26 ships its own lazy `globalThis.localStorage` getter that resolves to
+ * `undefined` unless the process was started with `--localstorage-file`. In the
+ * jsdom environment `window === globalThis`, and that Node-owned property is
+ * already defined by the time vitest copies jsdom's window keys across — so
+ * jsdom's own Storage never lands and `window.localStorage` reads as undefined.
+ * `sessionStorage` has no Node counterpart and survives untouched, which is why
+ * only localStorage breaks. Install a spec-shaped Storage in its place; the
+ * property is configurable, and a fresh instance per test file keeps state from
+ * leaking between them.
+ */
+function installLocalStorage() {
+  const entries = new Map<string, string>();
+  const storage: Storage = {
+    get length() {
+      return entries.size;
+    },
+    key: (index: number) => [...entries.keys()][index] ?? null,
+    getItem: (key: string) => entries.get(String(key)) ?? null,
+    setItem: (key: string, value: string) => {
+      entries.set(String(key), String(value));
+    },
+    removeItem: (key: string) => {
+      entries.delete(String(key));
+    },
+    clear: () => entries.clear(),
+  };
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: storage,
+    configurable: true,
+    writable: true,
+  });
+}
+
+if (typeof window !== 'undefined' && !window.localStorage) installLocalStorage();
+
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,

@@ -31,15 +31,17 @@ import {
  * Cross-run Visibility Trend view (design.md §9.6 Trend mode).
  *
  * Renders the trend workflow over the `VisibilityTrendPoint[]` projection:
- *   - a headline stat row (Visibility Score, SOV, brand mentions, owned
- *     citations, plus the null Sentiment / Avg Position placeholders),
+ *   - a five-metric headline row (Visibility Score, SOV mention, SOV response,
+ *     brand mentions, owned citations) — design.md caps the metric row at five,
  *   - two accessible trend charts (Visibility Score + Share of Voice) reusing
- *     the single `TrendChart` owner, with version-boundary markers,
+ *     the single `TrendChart` owner, with version-boundary markers, shown only
+ *     once there are at least two points to join,
  *   - side-by-side start-of-range vs latest ranking-history tables.
  * It also covers the loading skeleton, request-error, no-history, filtered-empty
  * and single-point ("add another run") states. Sentiment / average position are
- * always the "—" not-yet-computed placeholder (decision B-2 / invariant 9);
- * partial-run points are shown without hiding them. The toolbar (engine / date
+ * never computed (decision B-2 / invariant 9) and are disclosed as "—" in the
+ * rankings table rather than as blank stat cards.
+ * Partial-run points are shown without hiding them. The toolbar (engine / date
  * / granularity controls) lives in `visibility-toolbar.tsx`; this component owns
  * only the trend body.
  */
@@ -122,38 +124,53 @@ export function VisibilityTrends({
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
           <StatCard key={stat.key} stat={stat} />
         ))}
       </div>
 
       <section className="grid gap-6">
-        <TrendCard
-          title="Visibility Score"
-          description="Cross-run trend across completed audits"
-          badge={`${points.length} ${points.length === 1 ? 'run' : 'runs'}`}
-          points={points}
-          metric="visibility_score"
-          yLabels={['100', '75', '50', '25', '0']}
-          versionNote={versionNote}
-        />
-        <TrendCard
-          title="Share of Voice"
-          description="Brand mention share vs. competitors over time"
-          points={points}
-          metric="sov"
-          yLabels={['100%', '75%', '50%', '25%', '0%']}
-          versionNote={null}
-        />
+        {/* A single run plots one dot. Two full-height empty axes below a banner
+            that already says there is no movement yet is noise, not evidence —
+            the rankings and model comparison carry that run's real detail. */}
+        {onePoint ? null : (
+          <>
+            <TrendCard
+              title="Visibility Score"
+              description="Cross-run trend across completed audits"
+              badge={`${points.length} runs`}
+              points={points}
+              metric="visibility_score"
+              yLabels={['100', '75', '50', '25', '0']}
+              versionNote={versionNote}
+            />
+            <TrendCard
+              title="Share of Voice"
+              description="Brand mention share vs. competitors over time"
+              points={points}
+              metric="sov"
+              yLabels={['100%', '75%', '50%', '25%', '0%']}
+              versionNote={null}
+            />
+          </>
+        )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <RankingHistoryCard title="Rankings (Latest)" point={rankingBookends(points).latest} />
+        {/* With one run the two bookends are the same run, so the comparison
+            column is a half-width card holding one sentence. Give the rankings
+            the full width until there is a second run to compare against. */}
+        <div className={cn('grid gap-6', !onePoint && 'lg:grid-cols-2')}>
           <RankingHistoryCard
-            title="Rankings (Start of Range)"
-            point={rankingBookends(points).first}
-            emptyNote="Add another run to compare the start of the range."
+            title={onePoint ? 'Rankings' : 'Rankings (Latest)'}
+            point={rankingBookends(points).latest}
           />
+          {onePoint ? null : (
+            <RankingHistoryCard
+              title="Rankings (Start of Range)"
+              point={rankingBookends(points).first}
+              emptyNote="Add another run to compare the start of the range."
+            />
+          )}
         </div>
         {visibilityQuery.data ? (
           <EngineComparison visibility={visibilityQuery.data} filter={engineFilter} />
@@ -287,8 +304,8 @@ function RankingHistoryCard({
 function TrendsSkeleton() {
   return (
     <div className="grid gap-6" aria-hidden>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((i) => (
           <Card key={i}>
             <CardContent className="grid gap-2 p-4">
               <Skeleton className="h-3 w-20" />

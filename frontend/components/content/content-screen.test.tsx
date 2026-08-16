@@ -169,7 +169,9 @@ describe('ContentScreen — generate flow', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/requested model: mistral-small-latest/i)).toBeInTheDocument();
     expect(screen.getByText(/returned model: mistral-small-2506/i)).toBeInTheDocument();
-    expect(screen.getByText(/grounding: 3 confirmed facts · 1 crawl fragments/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/grounding: 3 confirmed facts · 1 crawl fragments/i),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /regenerate/i })).toBeInTheDocument();
     expect(screen.queryByText(/hit the length limit/i)).not.toBeInTheDocument();
   });

@@ -31,6 +31,11 @@ from app.core.config.audits import (
     MEASUREMENT_MODES,
 )
 from app.core.config.commerce import SHOPPING_SURFACE_MEASUREMENT
+from app.core.config.prompts import (
+    ORGANIC_PROMPT_COHORTS,
+    PROMPT_COHORT_CORE,
+    REQUESTABLE_PROMPT_COHORTS,
+)
 from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.domain.analysis.schemas import (
     CitationEvidence,
@@ -185,7 +190,7 @@ async def get_visibility(
     snapshot = await _load_snapshot(
         session, workspace_id=workspace_id, audit_id=audit_id
     )
-    if cohort not in {"core", "comparison"}:
+    if cohort not in REQUESTABLE_PROMPT_COHORTS:
         raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
     stored_metrics = snapshot.metrics or {}
     metrics = (
@@ -310,7 +315,7 @@ async def get_visibility_trends(
         from_at=from_at,
         to_at=to_at,
     )
-    if cohort not in {"core", "comparison"}:
+    if cohort not in REQUESTABLE_PROMPT_COHORTS:
         raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
     sources = [
         source
@@ -379,7 +384,7 @@ async def get_visibility_evidence(
     _validate_engine_and_range(
         logical_engine=logical_engine, from_at=from_at, to_at=to_at
     )
-    if cohort not in {"core", "comparison"}:
+    if cohort not in REQUESTABLE_PROMPT_COHORTS:
         raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
     if limit < 1 or limit > VISIBILITY_EVIDENCE_MAX_LIMIT:
         raise TrendQueryError(
@@ -437,7 +442,16 @@ async def get_visibility_evidence(
         stmt = stmt.where(AuditPromptSnapshot.prompt_id == prompt_id)
     if logical_engine is not None:
         stmt = stmt.where(ResponseAnalysis.logical_engine == logical_engine)
-    stmt = stmt.where(ResponseAnalysis.cohort == cohort)
+    # `core` is a VIEW over every organic cohort, not a literal column match:
+    # onboarding-generated portfolios store `market_visibility` /
+    # `brand_relevant`, so an `== "core"` filter matched nothing and emptied
+    # both evidence tabs. `app/analysis/service.py` already aggregates on the
+    # same organic set — this keeps the read side in step with the write side.
+    stmt = stmt.where(
+        ResponseAnalysis.cohort.in_(
+            tuple(ORGANIC_PROMPT_COHORTS) if cohort == PROMPT_COHORT_CORE else (cohort,)
+        )
+    )
     if from_at is not None:
         stmt = stmt.where(Audit.completed_at >= from_at)
     if to_at is not None:
