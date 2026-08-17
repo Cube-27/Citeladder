@@ -17,7 +17,9 @@ import { safeUrlTransform } from './safe-url';
 /** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
 export function ContentMarkdown({ markdown }: { markdown: string }) {
   return (
-    <div className="text-foreground [&_a]:text-accent-text [&_blockquote]:border-border [&_blockquote]:text-secondary [&_code]:bg-background-alt [&_pre]:bg-background-alt [&_td]:border-border [&_th]:border-border [&_h2]:text-heading-sm [&_h3]:text-heading-xs space-y-3 text-sm leading-normal [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_h1]:text-lg [&_li]:ml-4 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:p-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc">
+    // `break-words`: model output can contain unbreakable tokens (long URLs,
+    // slugs) that would otherwise spill out of the card's right edge.
+    <div className="text-foreground [&_a]:text-accent-text [&_blockquote]:border-border [&_blockquote]:text-secondary [&_code]:bg-background-alt [&_pre]:bg-background-alt [&_td]:border-border [&_th]:border-border [&_h2]:text-heading-sm [&_h3]:text-heading-xs space-y-3 text-sm leading-normal break-words [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_h1]:text-lg [&_li]:ml-4 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:p-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         urlTransform={safeUrlTransform}

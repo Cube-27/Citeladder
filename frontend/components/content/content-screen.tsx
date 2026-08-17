@@ -626,7 +626,11 @@ function ProjectContentScreen({
   else if (copyFailed) copyLabel = 'Copy failed';
 
   return (
-    <div className="grid gap-6">
+    // Explicit `minmax(0,1fr)` column + `min-w-0` cards, not the implicit
+    // `auto` track (see app-shell.tsx): generated Markdown carries wide
+    // min-content (fenced blocks, long lines), which otherwise stretched the
+    // track — and with it every card on the page — past the right gutter.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 [&>*]:min-w-0">
       {demand.notFound ? (
         <Alert tone="warning">
           That demand signal is no longer in the latest snapshot — it may have been recomputed away.
