@@ -487,9 +487,17 @@ class TaskCapacityWaitPayload(_StrictEventPayload):
     Opaque ids + retry timing only — never credentials, prompts, or provider
     bodies (invariant 6). ``available_at`` is the persisted ISO timestamp
     ("" when the decision carried no guidance).
+
+    ``attempt`` is the writer's per-attempt dedupe key (the worker records at
+    most one wait per (task, attempt, code) and matches on exactly those three
+    fields), so it is part of the persisted body and must be declared here:
+    this payload is closed, and omitting a key the writer always emits made
+    every ``task.capacity_wait`` event unserializable — one parked task killed
+    the whole events list and SSE stream with a 500.
     """
 
     task_id: uuid.UUID
+    attempt: int = 0
     code: str
     pool_kind: str
     available_at: str = ""

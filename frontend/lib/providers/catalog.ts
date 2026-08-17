@@ -198,6 +198,17 @@ export function isConfigured(connection: ProviderConnection | undefined): boolea
 }
 
 /**
+ * True when a connection is actually EXECUTABLE — a stored key whose latest
+ * probe succeeded. This is the frontend mirror of the backend's admission
+ * filter (`resolve_execution_credentials`), which skips any BYOK route whose
+ * `last_test_status` is not `ok`. "We stored a key" is a weaker fact than
+ * "the key works", and only the stronger one may offer an engine for a launch.
+ */
+export function isVerified(connection: ProviderConnection | undefined): boolean {
+  return isConfigured(connection) && connection?.last_test_status === 'ok';
+}
+
+/**
  * Merge a logical-engine route into a connection's existing routes for a
  * create/update payload. Preserves other engines' routes on the same direct
  * connection and stamps the catalog default model for the added engine.

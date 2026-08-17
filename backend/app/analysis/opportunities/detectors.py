@@ -20,6 +20,10 @@ from app.analysis.opportunities.scoring import (
     gap_factor_visibility,
     value_factor_for_intent,
 )
+from app.analysis.opportunities.source_patterns import (
+    CitationEvidence,
+    summarize_source_pattern,
+)
 from app.core.config.opportunities import (
     COMMERCE_COMPETITOR_SOV_THRESHOLD,
     COMMERCE_GAP_FACTOR,
@@ -54,6 +58,11 @@ class AnalysisEvidence:
     owned_citation_count: int
     # Competitor citation-or-mention names on this repetition (deduped later).
     competitor_names: tuple[str, ...]
+    # The persisted citations behind this repetition, in ordinal order. Used
+    # ONLY to describe the observed source pattern beside a gap — never to
+    # change whether a rule fires. Defaults to empty so a caller that has no
+    # citation rows (or predates them) still builds valid evidence.
+    citations: tuple[CitationEvidence, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -180,6 +189,18 @@ def _prompt_target(
     return f"prompt-index:{audit_id}:{prompt_index}", None, theme
 
 
+def _gap_source_pattern(analyses: list[AnalysisEvidence]) -> dict[str, Any]:
+    """Observed source pattern across every repetition of one prompt.
+
+    Repetitions are flattened before summarizing so the distinct-domain counts
+    describe the PROMPT, not one engine call. Kept out of
+    ``_visibility_gap_hits`` so that function's complexity budget is unchanged.
+    """
+    return summarize_source_pattern(
+        citation for analysis in analyses for citation in analysis.citations
+    )
+
+
 def _group_by_prompt_index(
     analyses: tuple[AnalysisEvidence, ...],
 ) -> dict[int, list[AnalysisEvidence]]:
@@ -237,6 +258,10 @@ def _visibility_gap_hits(
                     "prompt_index": prompt_index,
                     "repetitions": len(analyses),
                     "owned_citation_count": 0,
+                    # Descriptive only: what kinds of sources were cited where
+                    # this brand was not. Never a causal claim (see
+                    # ``source_patterns``), and never an input to firing.
+                    "source_pattern": _gap_source_pattern(analyses),
                     **extras(analyses, competitor_names),
                     "audit_id": str(evidence.audit_id),
                 },

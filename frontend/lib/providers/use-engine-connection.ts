@@ -31,9 +31,19 @@ export function errorMessage(error: unknown): string {
  * secret is never on the wire), the save mutation (create or rotate the
  * direct-transport connection and record the engine's catalog route), and the
  * "Test connection" mutation with the EngineCard success/failure alert model.
- * A successful save clears the key + test state and invalidates the shared
- * `providers.connections()` query; `onSaved` lets a host (e.g. the connect
- * dialog) react — typically by closing.
+ *
+ * SAVING ALWAYS PROBES. Storing a key does not make it executable: admission
+ * only resolves a BYOK route whose LATEST probe succeeded, so a key that was
+ * saved and never tested is invisible to the planner and a launch refuses with
+ * `execution_credentials_unavailable`. Settings hid that because the card stays
+ * on screen and users click "Test connection" themselves; the guided connect
+ * dialog closes on save, so the probe never happened and the very next launch
+ * failed. Folding the probe into the save makes "connected" mean the same
+ * thing — verified — on every surface.
+ *
+ * A save clears the key and invalidates the shared `providers.connections()`
+ * query either way; `onSaved` fires ONLY on a verified save, so a host (e.g.
+ * the connect dialog) closes on success and stays open showing the failure.
  */
 export function useEngineConnection({
   model,
@@ -54,7 +64,22 @@ export function useEngineConnection({
   const connection = transport ? connectionForTransport(connections, transport) : undefined;
   const configured = isConfigured(connection);
 
+  /**
+   * Probe one connection and fold the outcome into the alert model. Returns
+   * the state so the save path can decide whether the connect flow is done.
+   */
+  const probe = async (connectionId: string): Promise<ConnectionTestState> => {
+    const result = await providersApi.testConnection(connectionId);
+    const state: ConnectionTestState =
+      result.status === 'ok'
+        ? { status: 'ok', message: `Connection succeeded (${result.transport_model || 'model'}).` }
+        : { status: 'failed', message: result.detail || 'Connection failed.' };
+    setTestResult(state);
+    return state;
+  };
+
   const saveMutation = useMutation({
+    onMutate: () => setTestResult(null),
     mutationFn: async () => {
       // Availability gate, not just a null check: a planned provider has no
       // adapter and no route, so it must not be able to construct a mutation
@@ -63,40 +88,44 @@ export function useEngineConnection({
         throw new Error('No route available.');
       }
       const routes = mergeRoutePayload(connection, model.logical_engine);
-      if (connection) {
-        return providersApi.updateConnection(connection.id, {
-          api_key: apiKey || undefined,
-          routes,
-        });
+      const saved = connection
+        ? await providersApi.updateConnection(connection.id, {
+            api_key: apiKey || undefined,
+            routes,
+          })
+        : await providersApi.createConnection({
+            transport_provider: transport,
+            api_key: apiKey,
+            routes,
+          });
+      // The key IS stored at this point, so a probe fault is reported as a
+      // failed test rather than a failed save — telling the user their key
+      // did not save would be wrong, and would send them to rotate a key
+      // that is already there.
+      let verified: ConnectionTestState;
+      try {
+        verified = await probe(saved.id);
+      } catch (error) {
+        verified = { status: 'failed', message: errorMessage(error) };
+        setTestResult(verified);
       }
-      return providersApi.createConnection({
-        transport_provider: transport,
-        api_key: apiKey,
-        routes,
-      });
+      return { saved, verified };
     },
-    onSuccess: async () => {
+    onSuccess: async ({ verified }) => {
       setApiKey('');
-      setTestResult(null);
       await queryClient.invalidateQueries({ queryKey: queryKeys.providers.connections() });
-      onSaved?.();
+      if (verified?.status === 'ok') onSaved?.();
     },
   });
 
   const testMutation = useMutation({
     mutationFn: async () => {
       if (!connection) throw new Error('Save a key before testing.');
-      return providersApi.testConnection(connection.id);
+      return probe(connection.id);
     },
-    onSuccess: (result) => {
-      setTestResult({
-        status: result.status === 'ok' ? 'ok' : 'failed',
-        message:
-          result.status === 'ok'
-            ? `Connection succeeded (${result.transport_model || 'model'}).`
-            : result.detail || 'Connection failed.',
-      });
-    },
+    // The probe denormalizes its outcome onto the connection, and that outcome
+    // is what gates launching — so the connections query is stale afterwards.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.providers.connections() }),
     onError: (error) => setTestResult({ status: 'failed', message: errorMessage(error) }),
   });
 

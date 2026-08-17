@@ -98,7 +98,11 @@ export function EngineCard({
                   onClick={() => saveMutation.mutate()}
                   disabled={busy || !transport || (!apiKey && !configured)}
                 >
-                  {saveMutation.isPending ? 'Saving…' : configured ? 'Update key' : 'Save key'}
+                  {saveMutation.isPending
+                    ? 'Saving & testing…'
+                    : configured
+                      ? 'Update key'
+                      : 'Save key'}
                 </Button>
                 <Button
                   type="button"

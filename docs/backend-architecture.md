@@ -109,6 +109,20 @@ version. The newest override for the exact normalized query wins, with every
 lookup scoped to workspace and project. Overrides are written through
 `POST /api/v1/projects/{project_id}/demand/query-classification-overrides`.
 
+Visibility-gap Opportunities carry an observed source pattern.
+`opportunities/source_patterns.py` projects the citations already persisted for
+a prompt into a `source_pattern` block on the existing
+`brand_absent_high_value_prompt` and `owned_page_not_cited` evidence: distinct
+cited domains per source class, the competitor-to-domain map, bounded
+representative citations, and one deterministic next action. Classification is
+identity-first — the analyzer's own `is_owned` / `matched_competitor` verdicts
+win, and only the remainder is looked up in the `config/source_patterns.py`
+domain tables, where an unknown domain abstains to `other_third_party`. The
+block is descriptive evidence only: it never affects whether a rule fires, and
+it asserts no causal link between a cited source and a recommendation. It is
+versioned by `SOURCE_TAXONOMY_VERSION` beside the opportunity
+`ANALYZER_VERSION`.
+
 Opportunities owns the Act → Verify record. An
 `OpportunityImplementationEvent` is an immutable, workspace-authorized user
 declaration against the current opportunity snapshot, resolved owned-page

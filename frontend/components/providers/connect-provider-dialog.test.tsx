@@ -62,17 +62,49 @@ async function findDialog() {
   return screen.findByRole('dialog', { name: 'Connect a provider' });
 }
 
+/** The connectivity probe every save now runs before the flow is done. */
+function testHandler(status: 'ok' | 'failed', detail = 'Connection succeeded') {
+  return http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () =>
+    HttpResponse.json({
+      connection_id: CONNECTION_ID,
+      status,
+      error_code: status === 'ok' ? '' : 'auth_failure',
+      detail,
+      latency_ms: 42,
+      logical_engine: 'chatgpt',
+      transport_provider: 'openai',
+      transport_model: 'gpt-5.4-nano-2026-03-17',
+      tested_at: '2026-07-15T00:00:00Z',
+    }),
+  );
+}
+
 describe('ConnectProviderDialog', () => {
-  it('saves a key for the picked engine, then closes and refreshes the connections query', async () => {
+  it('saves a key for the picked engine, probes it, then closes and refreshes the connections query', async () => {
     const user = userEvent.setup();
     const onConnected = vi.fn();
     let createdBody: Record<string, unknown> | null = null;
     let connectionReads = 0;
+    let probes = 0;
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () => {
         connectionReads += 1;
         return HttpResponse.json([]);
+      }),
+      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () => {
+        probes += 1;
+        return HttpResponse.json({
+          connection_id: CONNECTION_ID,
+          status: 'ok',
+          error_code: '',
+          detail: 'Connection succeeded',
+          latency_ms: 42,
+          logical_engine: 'claude',
+          transport_provider: 'anthropic',
+          transport_model: 'claude-haiku-4-5-20251001',
+          tested_at: '2026-07-15T00:00:00Z',
+        });
       }),
       http.post('/api/v1/provider-connections', async ({ request }) => {
         createdBody = (await request.json()) as Record<string, unknown>;
@@ -125,8 +157,37 @@ describe('ConnectProviderDialog', () => {
       ],
     });
     expect(onConnected).toHaveBeenCalledTimes(1);
+    // Saving PROBES: admission only resolves a BYOK route whose latest probe
+    // succeeded, so a key stored without one cannot launch an audit.
+    expect(probes).toBe(1);
     // Save invalidated the shared connections query → it refetched.
     await waitFor(() => expect(connectionReads).toBeGreaterThanOrEqual(2));
+  });
+
+  // Regression: the dialog used to close as soon as the key was STORED. The
+  // key was then invisible to admission until someone happened to press "Test
+  // connection" in Settings, so the next launch refused with
+  // `execution_credentials_unavailable` while the same key tested fine.
+  it('keeps the dialog open and reports the failure when the saved key does not probe', async () => {
+    const user = userEvent.setup();
+    const onConnected = vi.fn();
+    mswServer.use(
+      catalogHandler(),
+      http.get('/api/v1/provider-connections', () => HttpResponse.json([])),
+      http.post('/api/v1/provider-connections', () =>
+        HttpResponse.json(connection(), { status: 201 }),
+      ),
+      testHandler('failed', 'Invalid API key'),
+    );
+
+    renderWithProviders(<Harness onConnected={onConnected} />);
+    const dialog = await findDialog();
+    await user.type(await within(dialog).findByLabelText(/api key/i), 'sk-bad-key');
+    await user.click(within(dialog).getByRole('button', { name: /save key/i }));
+
+    expect(await within(dialog).findByText('Invalid API key')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Connect a provider' })).toBeInTheDocument();
+    expect(onConnected).not.toHaveBeenCalled();
   });
 
   it('tests the existing connection inline, then updates the key and closes', async () => {
@@ -135,19 +196,7 @@ describe('ConnectProviderDialog', () => {
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([connection()])),
-      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () =>
-        HttpResponse.json({
-          connection_id: CONNECTION_ID,
-          status: 'ok',
-          error_code: '',
-          detail: 'Connection succeeded',
-          latency_ms: 42,
-          logical_engine: 'chatgpt',
-          transport_provider: 'openai',
-          transport_model: 'gpt-5.4-nano-2026-03-17',
-          tested_at: '2026-07-15T00:00:00Z',
-        }),
-      ),
+      testHandler('ok'),
       http.patch(`/api/v1/provider-connections/${CONNECTION_ID}`, async ({ request }) => {
         patchBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(connection());
@@ -157,11 +206,10 @@ describe('ConnectProviderDialog', () => {
     renderWithProviders(<Harness />);
     const dialog = await findDialog();
 
-    // ChatGPT is already configured → once the connections query lands the
-    // picker defaults to the first engine that still needs a key.
+    // ChatGPT holds a key but has never probed, so it is still the engine that
+    // needs attention — the picker opens on it rather than skipping ahead.
     const picker = within(dialog).getByLabelText('AI engine');
-    await waitFor(() => expect(picker).toHaveValue('gemini'));
-    await user.selectOptions(picker, 'chatgpt');
+    await waitFor(() => expect(picker).toHaveValue('chatgpt'));
 
     const keyInput = within(dialog).getByLabelText(/api key/i);
     await user.type(keyInput, 'sk-rotated');
@@ -210,13 +258,16 @@ describe('ConnectProviderDialog', () => {
   // route, so once all three shipped engines were configured it selected a
   // PLANNED provider — a value the <select> cannot even display.
   it('never defaults to a planned provider when every shipped engine is configured', async () => {
+    // All three VERIFIED, so no card is left needing attention and the default
+    // falls through to the fallback this regression is about.
+    const verified = { last_test_status: 'ok', last_tested_at: '2026-07-15T00:00:00Z' };
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () =>
         HttpResponse.json([
-          connection({ transport_provider: 'openai' }),
-          connection({ id: OTHER_ID, transport_provider: 'google' }),
-          connection({ id: THIRD_ID, transport_provider: 'anthropic' }),
+          connection({ transport_provider: 'openai', ...verified }),
+          connection({ id: OTHER_ID, transport_provider: 'google', ...verified }),
+          connection({ id: THIRD_ID, transport_provider: 'anthropic', ...verified }),
         ]),
       ),
     );

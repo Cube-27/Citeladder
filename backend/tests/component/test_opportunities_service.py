@@ -31,6 +31,7 @@ from app.core.config.products import (
     PRODUCT_SCORING_RULE_VERSION,
 )
 from app.core.config.site_health import CRAWL_STATUS_CANCELLED, CRAWL_STATUS_RUNNING
+from app.core.config.source_patterns import SOURCE_TAXONOMY_VERSION
 from app.core.config.task_queue import TASK_STATUS_FAILED
 from app.domain.opportunities import service
 from app.domain.opportunities.service import (
@@ -335,6 +336,17 @@ async def test_recompute_persists_rows_and_snapshot_with_provenance(
     assert brand_absent.evidence["competitor_names"] == ["Globex"]
     assert brand_absent.evidence["prompt_intent"] == "purchase"
     assert brand_absent.evidence["prompt_text"] == "best crm for small teams"
+    # The observed source pattern is projected from the PERSISTED citation rows
+    # the seed wrote (one competitor-matched globex.com citation) — it must
+    # survive the whole detector -> persistence path, not just the pure layer.
+    source_pattern = brand_absent.evidence["source_pattern"]
+    assert source_pattern["taxonomy_version"] == SOURCE_TAXONOMY_VERSION
+    assert source_pattern["distinct_domain_count"] == 1
+    assert source_pattern["class_counts"] == {"competitor_owned": 1}
+    assert source_pattern["competitor_source_domains"] == {"Globex": ["globex.com"]}
+    assert source_pattern["observed_patterns"] == ["competitor_owned_sources_cited"]
+    assert source_pattern["top_citations"][0]["url"] == "https://globex.com/crm"
+    assert source_pattern["recommended_action"] == "investigate_competitor_sources"
     assert brand_absent.source_analysis_ids == [str(scn.analysis0_id)]
     assert brand_absent.source_metric_ids == [str(scn.metric_snapshot_id)]
     assert brand_absent.source_issue_ids == []

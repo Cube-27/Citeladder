@@ -19,7 +19,7 @@ import {
   ENGINE_LOGOS,
   ENGINE_LABELS,
   ENGINE_ORDER,
-  isConfigured,
+  isVerified,
   TRANSPORT_LABELS,
   type EngineCardModel,
 } from '@/lib/providers/catalog';
@@ -75,12 +75,16 @@ export function ConnectProviderDialog({
   // so the old `card.route ? … : true` fallback selected one of them as soon
   // as all three shipped engines were configured — a default the <select>
   // below cannot even display, since it lists ENGINE_ORDER only.
+  //
+  // "Still needs attention" means UNVERIFIED, not key-less: an engine whose key
+  // is stored but has never passed a probe cannot launch an audit, so it is
+  // exactly what this dialog should open on.
   const connectableCards = cards.filter(isConnectable);
-  const firstUnconfigured =
+  const firstUnverified =
     connectableCards.find(
-      (card) => !isConfigured(connectionForTransport(connections, card.route!.transport_provider)),
+      (card) => !isVerified(connectionForTransport(connections, card.route!.transport_provider)),
     )?.logical_engine ?? ENGINE_ORDER[0];
-  const engine = selected ?? firstUnconfigured;
+  const engine = selected ?? firstUnverified;
   // Undefined while the catalog is still loading (no routes yet). The form is
   // withheld rather than rendered against a route-less placeholder.
   const model =
@@ -91,7 +95,7 @@ export function ConnectProviderDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Connect a provider"
-      description="Pick an AI engine and paste its API key. Keys are write-only — CiteLadder never displays a stored secret."
+      description="Pick an AI engine and paste its API key. Saving runs a connection test — a key only becomes usable for audits once it passes. Keys are write-only: CiteLadder never displays a stored secret."
     >
       <div className="grid gap-4">
         <Field label="AI engine">
@@ -198,7 +202,7 @@ function ConnectEngineForm({
           onClick={() => saveMutation.mutate()}
           disabled={busy || !transport || (!apiKey && !configured)}
         >
-          {saveMutation.isPending ? 'Saving…' : configured ? 'Update key' : 'Save key'}
+          {saveMutation.isPending ? 'Saving & testing…' : configured ? 'Update key' : 'Save key'}
         </Button>
       </div>
     </div>

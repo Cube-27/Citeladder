@@ -1,7 +1,9 @@
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
+import { OpportunitySourcePattern } from '@/components/opportunities/opportunity-source-pattern';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
+import { parseSourcePattern } from '@/lib/opportunities/source-pattern';
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
@@ -19,6 +21,7 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
   const url = asString(evidence.url) ?? detail.target_url;
   const theme = asString(evidence.prompt_theme) ?? detail.target_theme;
   const competitors = asStringList(evidence.competitor_names);
+  const sourcePattern = parseSourcePattern(evidence);
 
   return (
     <section className="grid gap-2">
@@ -46,6 +49,7 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
           </div>
         </div>
       ) : null}
+      {sourcePattern ? <OpportunitySourcePattern pattern={sourcePattern} /> : null}
     </section>
   );
 }

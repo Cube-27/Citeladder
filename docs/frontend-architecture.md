@@ -166,6 +166,16 @@ Unknown, unavailable, zero, historical, conflicting, excluded, and
 not-applicable states retain distinct labels and are never communicated by
 color alone.
 
+The Opportunity evidence section renders the backend's `source_pattern` block
+for visibility gaps: the distinct cited domains grouped by source class, the
+competitor-to-domain map, representative citations, and the suggested next
+action. `lib/opportunities/source-pattern.ts` parses the persisted payload
+defensively and never re-derives a class from a domain; an absent block or a
+gap with nothing cited renders nothing rather than a measured zero. Badge color
+tracks ownership only, so independence is never presented as a quality ranking,
+and the copy stays observational — these are sources seen alongside a measured
+gap, never its stated cause.
+
 The Opportunity detail footer owns the explicit **I implemented this** action.
 It posts an idempotent declaration with resolved target IDs and expected
 checks, then renders the persisted lifecycle as `declared`, `observed`,

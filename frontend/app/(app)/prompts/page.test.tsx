@@ -191,8 +191,10 @@ describe('PromptsPage (Your Prompts)', () => {
             base_url: null,
             active: true,
             api_key_set: true,
-            last_tested_at: null,
-            last_test_status: '',
+            last_tested_at: '2026-07-15T00:00:00Z',
+            // Verified: the launch dialog only offers engines whose latest
+            // probe succeeded, since that is what admission will execute.
+            last_test_status: 'ok',
             routes: [
               {
                 id: '77777777-7777-4777-8777-777777777777',

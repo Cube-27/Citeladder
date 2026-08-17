@@ -77,8 +77,8 @@ export function auditStatusLabel(status: AuditStatus): string {
 
 /**
  * Map an execution/queue status onto a status badge value (success/warning/
- * danger/info). Succeeded is success; failed/cancelled are danger; retry_wait is
- * warning; everything in flight is info.
+ * danger/info). Succeeded is success; failed/cancelled are danger; the two wait
+ * states are warning; everything in flight is info.
  */
 export function executionBadgeValue(
   status: ExecutionStatus,
@@ -90,6 +90,9 @@ export function executionBadgeValue(
     case 'cancelled':
       return 'danger';
     case 'retry_wait':
+    // Parked on a full provider pool: nothing is wrong, but the row is not
+    // progressing either, so it reads like a retry wait rather than in-flight.
+    case 'capacity_wait':
       return 'warning';
     default:
       return 'info';

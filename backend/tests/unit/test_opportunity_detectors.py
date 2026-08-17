@@ -22,6 +22,7 @@ from app.analysis.opportunities.detectors import (
     detect_product_not_mentioned,
     detect_site_issue_opportunities,
 )
+from app.analysis.opportunities.source_patterns import CitationEvidence
 from app.core.config.opportunities import (
     COMMERCE_COMPETITOR_SOV_THRESHOLD,
     COMMERCE_GAP_FACTOR,
@@ -39,6 +40,7 @@ def _analysis(
     owned: int = 0,
     competitors: tuple[str, ...] = (),
     engine: str = "gemini",
+    citations: tuple[CitationEvidence, ...] = (),
 ) -> AnalysisEvidence:
     return AnalysisEvidence(
         analysis_id=uuid.uuid4(),
@@ -46,6 +48,17 @@ def _analysis(
         logical_engine=engine,
         owned_citation_count=owned,
         competitor_names=competitors,
+        citations=citations,
+    )
+
+
+def _citation(domain: str, *, competitor: str | None = None) -> CitationEvidence:
+    return CitationEvidence(
+        domain=domain,
+        url=f"https://{domain}/page",
+        title=domain,
+        is_owned=False,
+        matched_competitor=competitor,
     )
 
 
@@ -176,6 +189,92 @@ def test_brand_absent_groups_by_prompt_index() -> None:
     hits = detect_brand_absent_high_value_prompt(evidence)
     assert len(hits) == 2
     assert [h.evidence["prompt_index"] for h in hits] == [0, 1]
+
+
+# =========================================================================
+# Observed source pattern (descriptive evidence, never a firing input)
+# =========================================================================
+def test_gap_evidence_carries_the_observed_source_pattern() -> None:
+    evidence = _visibility(
+        (
+            _analysis(
+                0,
+                competitors=("Globex",),
+                citations=(
+                    _citation("globex.com", competitor="Globex"),
+                    _citation("g2.com"),
+                ),
+            ),
+            _analysis(
+                0,
+                competitors=("Globex",),
+                engine="chatgpt",
+                # Same competitor domain again: one repeated domain, not two.
+                citations=(
+                    _citation("globex.com", competitor="Globex"),
+                    _citation("reddit.com"),
+                ),
+            ),
+        ),
+        (_snapshot(0),),
+    )
+    (hit,) = detect_brand_absent_high_value_prompt(evidence)
+    pattern = hit.evidence["source_pattern"]
+    assert pattern["distinct_domain_count"] == 3
+    assert pattern["class_counts"] == {
+        "competitor_owned": 1,
+        "review_marketplace": 1,
+        "community": 1,
+    }
+    assert pattern["competitor_source_domains"] == {"Globex": ["globex.com"]}
+    assert "competitor_owned_sources_cited" in pattern["observed_patterns"]
+    assert "community_evidence_present" in pattern["observed_patterns"]
+
+
+def test_owned_page_not_cited_also_carries_the_source_pattern() -> None:
+    evidence = _visibility(
+        (_analysis(0, citations=(_citation("youtube.com"),)),),
+        (_snapshot(0),),
+    )
+    (hit,) = detect_owned_page_not_cited(evidence)
+    assert hit.evidence["source_pattern"]["class_counts"] == {"video": 1}
+
+
+def test_source_pattern_never_changes_whether_a_rule_fires() -> None:
+    """A rich citation set cannot make a non-firing prompt fire, or vice versa."""
+    # Brand IS cited -> suppressed no matter how many competitor sources exist.
+    cited = _visibility(
+        (
+            _analysis(
+                0,
+                owned=1,
+                competitors=("Globex",),
+                citations=(_citation("globex.com", competitor="Globex"),),
+            ),
+        ),
+        (_snapshot(0),),
+    )
+    assert detect_brand_absent_high_value_prompt(cited) == []
+
+    # Competitor MENTIONED but nothing cited -> still fires, with a zeroed
+    # pattern block rather than a missing one.
+    uncited = _visibility((_analysis(0, competitors=("Globex",)),), (_snapshot(0),))
+    (hit,) = detect_brand_absent_high_value_prompt(uncited)
+    assert hit.evidence["source_pattern"]["distinct_domain_count"] == 0
+    assert hit.evidence["source_pattern"]["observed_patterns"] == []
+
+
+def test_source_pattern_abstains_on_unknown_domains() -> None:
+    evidence = _visibility(
+        (
+            _analysis(
+                0, competitors=("Globex",), citations=(_citation("obscure.example"),)
+            ),
+        ),
+        (_snapshot(0),),
+    )
+    (hit,) = detect_brand_absent_high_value_prompt(evidence)
+    assert hit.evidence["source_pattern"]["class_counts"] == {"other_third_party": 1}
 
 
 # =========================================================================

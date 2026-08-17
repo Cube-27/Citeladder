@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -102,6 +102,86 @@ class PostgresTaskQueue[
     def _lease_expiry(self, now: datetime) -> datetime:
         return now + timedelta(seconds=self._spec.lease_ttl())
 
+    def _claim_statement(
+        self,
+        *,
+        model: type[T],
+        now: datetime,
+        limit: int,
+        kinds: Sequence[str] | None,
+        queue_name: str,
+    ) -> Select[tuple[T]]:
+        """The locking SELECT one claim runs.
+
+        Lock eligible rows and skip any another worker already holds. The
+        ORDER BY (spec-supplied) makes claim order deterministic. No queue-wide
+        advisory lock is needed: task-row locks make claims disjoint, while the
+        caller's cursor upsert is conflict-safe and monotonic across concurrent
+        claim transactions.
+
+        ``eligible_filter`` is applied TWICE on purpose — once inside the ranked
+        subquery (to number each workspace's backlog) and once on the locked
+        relation itself. Under READ COMMITTED, a statement that meets a row
+        another transaction updated and COMMITTED re-evaluates only the quals
+        attached to the locked relation against the new row version. With the
+        predicate living solely in the subquery there is nothing left to
+        re-check, so two workers whose claim statements overlap return the SAME
+        rows: ``SKIP LOCKED`` covers the window while the first claim holds its
+        lock, not the window after it commits. Dropping the outer copy silently
+        reintroduces double-claiming under load — see
+        ``test_claim_rechecks_eligibility_on_the_locked_relation``.
+
+        Split out of ``claim`` so that shape is assertable without a race.
+        """
+        base_order = tuple(self._spec.claim_order(model))
+        eligible_filter = (
+            # queued / retry_wait / capacity_wait (config-owned claimable
+            # vocabulary): a capacity-parked task becomes claimable again
+            # exactly like a retry — once its ``available_at`` passes.
+            model.status.in_(sorted(TASK_CLAIMABLE_STATUSES)),
+            model.available_at <= now,
+        )
+        eligible = select(
+            model.id.label("task_id"),
+            func.row_number()
+            .over(
+                partition_by=model.workspace_id,
+                order_by=base_order,
+            )
+            .label("workspace_position"),
+        ).where(*eligible_filter)
+        if kinds is not None:
+            # Only queue-row models with a ``task_kind`` column (SiteCrawlTask)
+            # accept a kind filter; audit rows have no such column, and the
+            # audit worker never passes ``kinds``. ``task_kind`` is immutable
+            # after insert, so unlike status/available_at it needs no re-check
+            # copy on the locked relation.
+            task_kind = getattr(model, "task_kind", None)
+            if task_kind is not None:
+                eligible = eligible.where(task_kind.in_(list(kinds)))
+
+        ranked = eligible.subquery("fair_queue_candidates")
+        return (
+            select(model)
+            .where(*eligible_filter)
+            .join(ranked, ranked.c.task_id == model.id)
+            .outerjoin(
+                QueueWorkspaceTurn,
+                (QueueWorkspaceTurn.queue_name == queue_name)
+                & (QueueWorkspaceTurn.workspace_id == model.workspace_id),
+            )
+            # One task per workspace before any workspace receives its second,
+            # then third, and so on. This keeps large tenant backlogs from
+            # filling a worker's whole claim batch.
+            .order_by(
+                ranked.c.workspace_position.asc(),
+                QueueWorkspaceTurn.last_claimed_at.asc().nulls_first(),
+                *base_order,
+            )
+            .limit(limit)
+            .with_for_update(of=model, skip_locked=True)
+        )
+
     async def claim(
         self,
         *,
@@ -122,55 +202,12 @@ class PostgresTaskQueue[
         lease_expires = self._lease_expiry(now)
         async with self._session_factory() as session:
             queue_name = model.__tablename__
-            # Lock eligible rows and skip any another worker already holds. The
-            # ORDER BY (spec-supplied) makes claim order deterministic. No
-            # queue-wide advisory lock is needed: task-row locks make claims
-            # disjoint, while the cursor upsert below is conflict-safe and
-            # monotonic across concurrent claim transactions.
-            base_order = tuple(self._spec.claim_order(model))
-            eligible_filter = (
-                # queued / retry_wait / capacity_wait (config-owned claimable
-                # vocabulary): a capacity-parked task becomes claimable again
-                # exactly like a retry — once its ``available_at`` passes.
-                model.status.in_(sorted(TASK_CLAIMABLE_STATUSES)),
-                model.available_at <= now,
-            )
-            eligible = select(
-                model.id.label("task_id"),
-                func.row_number()
-                .over(
-                    partition_by=model.workspace_id,
-                    order_by=base_order,
-                )
-                .label("workspace_position"),
-            ).where(*eligible_filter)
-            if kinds is not None:
-                # Only queue-row models with a ``task_kind`` column (SiteCrawlTask)
-                # accept a kind filter; audit rows have no such column, and the
-                # audit worker never passes ``kinds``.
-                task_kind = getattr(model, "task_kind", None)
-                if task_kind is not None:
-                    eligible = eligible.where(task_kind.in_(list(kinds)))
-
-            ranked = eligible.subquery("fair_queue_candidates")
-            stmt = (
-                select(model)
-                .join(ranked, ranked.c.task_id == model.id)
-                .outerjoin(
-                    QueueWorkspaceTurn,
-                    (QueueWorkspaceTurn.queue_name == queue_name)
-                    & (QueueWorkspaceTurn.workspace_id == model.workspace_id),
-                )
-                # One task per workspace before any workspace receives its
-                # second, then third, and so on. This keeps large tenant
-                # backlogs from filling a worker's whole claim batch.
-                .order_by(
-                    ranked.c.workspace_position.asc(),
-                    QueueWorkspaceTurn.last_claimed_at.asc().nulls_first(),
-                    *base_order,
-                )
-                .limit(limit)
-                .with_for_update(of=model, skip_locked=True)
+            stmt = self._claim_statement(
+                model=model,
+                now=now,
+                limit=limit,
+                kinds=kinds,
+                queue_name=queue_name,
             )
             tasks = list((await session.scalars(stmt)).all())
             for task in tasks:

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.abuse import abuse_settings
@@ -192,6 +194,59 @@ async def test_parallel_claims_are_disjoint_and_preserve_workspace_balance(
     for task in claimed:
         counts[task.workspace_id] += 1
     assert set(counts.values()) == {4}
+
+
+@pytest.mark.asyncio
+async def test_claim_rechecks_eligibility_on_the_locked_relation(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The claim must filter eligibility on the row it LOCKS, not only in the
+    ranked subquery.
+
+    Under READ COMMITTED, a statement that meets a row another transaction
+    updated and committed re-evaluates only the quals attached to the locked
+    relation. With the predicate living solely inside
+    ``fair_queue_candidates`` there is nothing left to re-check, and two
+    workers whose claim statements overlap return the SAME tasks —
+    ``SKIP LOCKED`` only covers the window while the first claim still holds
+    its lock, not the window after it commits.
+
+    ``test_parallel_claims_are_disjoint_and_preserve_workspace_balance``
+    covers the same defect behaviourally, but only reproduces it when the two
+    statements interleave just so, so it passes on an unloaded machine. This
+    assertion is deterministic: it fails the moment the outer filter is
+    dropped.
+    """
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=2)
+    async with session_factory() as session:
+        await create_audit(
+            session,
+            trigger=AUDIT_TRIGGER_MANUAL,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            engines=seed.engines,
+            prompt_set_id=seed.prompt_set_id,
+            repetitions=1,
+        )
+
+    queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
+    model = AUDIT_QUEUE_SPEC.model
+    statement = queue._claim_statement(  # noqa: SLF001 - shape is the contract
+        model=model,
+        now=datetime.now(UTC),
+        limit=1,
+        kinds=None,
+        queue_name="audit_tasks",
+    )
+    compiled = str(statement.compile(dialect=postgresql.dialect()))
+    locked, _, tail = compiled.partition("FOR UPDATE")
+
+    assert "FOR UPDATE OF audit_tasks SKIP LOCKED" in "FOR UPDATE" + tail
+    # The predicate has to appear at BOTH levels: once to rank each
+    # workspace's backlog, once on the locked relation for the re-check.
+    assert locked.count("audit_tasks.status IN") == 2
+    assert locked.count("audit_tasks.available_at <=") == 2
 
 
 @pytest.mark.asyncio

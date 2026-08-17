@@ -36,7 +36,7 @@ from app.core.config.projects import (
 # catalog change, and ``FORMULA_VERSION`` on any scoring change so a derived
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
-ANALYZER_VERSION: Final = "opp-analyzer-4"
+ANALYZER_VERSION: Final = "opp-analyzer-5"
 RULE_VERSION: Final = "opp-rules-6"
 FORMULA_VERSION: Final = "opp-formula-1"
 CONFIRMED_DECLINE_MIN_FACTOR: Final = 0.1

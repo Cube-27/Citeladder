@@ -48,6 +48,7 @@ from app.analysis.opportunities.detectors import (
     detect_site_issue_opportunities,
 )
 from app.analysis.opportunities.scoring import priority_score
+from app.analysis.opportunities.source_patterns import CitationEvidence
 from app.analysis.product_service import build_product_scoring_config
 from app.core.config import settings
 from app.core.config.analytics import (
@@ -339,6 +340,31 @@ def _visibility_credits(
     return owned_counts, competitor_names
 
 
+def _citations_by_analysis(
+    citations: list[Citation],
+) -> dict[uuid.UUID, tuple[CitationEvidence, ...]]:
+    """Project persisted citations into detector evidence, keyed by analysis.
+
+    Carries the analyzer's OWN identity verdicts (``is_owned`` /
+    ``matched_competitor``) forward untouched — the source-pattern taxonomy
+    classifies only what the analyzer already left as third party. Input order
+    is the caller's query order (analysis, then ordinal), which is what makes
+    the summarized representative citation per domain deterministic.
+    """
+    grouped: dict[uuid.UUID, list[CitationEvidence]] = {}
+    for citation in citations:
+        grouped.setdefault(citation.analysis_id, []).append(
+            CitationEvidence(
+                domain=citation.domain or "",
+                url=citation.url or "",
+                title=citation.title or "",
+                is_owned=citation.is_owned,
+                matched_competitor=citation.matched_competitor,
+            )
+        )
+    return {analysis_id: tuple(rows) for analysis_id, rows in grouped.items()}
+
+
 async def _load_visibility_evidence(
     session: AsyncSession, *, workspace_id: uuid.UUID, audit: Audit
 ) -> tuple[VisibilityEvidence, MetricSnapshot | None]:
@@ -363,6 +389,7 @@ async def _load_visibility_evidence(
 
     owned_counts: dict[uuid.UUID, int] = {}
     competitor_names: dict[uuid.UUID, set[str]] = {}
+    citation_evidence: dict[uuid.UUID, tuple[CitationEvidence, ...]] = {}
     if analysis_ids:
         citations = list(
             (
@@ -385,6 +412,7 @@ async def _load_visibility_evidence(
             ).all()
         )
         owned_counts, competitor_names = _visibility_credits(citations, mentions)
+        citation_evidence = _citations_by_analysis(citations)
 
     snapshots = list(
         (
@@ -419,6 +447,7 @@ async def _load_visibility_evidence(
                 logical_engine=a.logical_engine or "",
                 owned_citation_count=owned_counts.get(a.id, 0),
                 competitor_names=tuple(sorted(competitor_names.get(a.id, ()))),
+                citations=citation_evidence.get(a.id, ()),
             )
             for a in analyses
         ),

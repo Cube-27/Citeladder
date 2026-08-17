@@ -277,6 +277,23 @@ describe('contract schemas', () => {
       completed_at: '2026-07-15T00:00:03Z',
     };
     expect(strictValidate(executionSchema, execution, 'exec').status).toBe('succeeded');
+
+    // Regression: the enum listed only the statuses a FINISHED run ends on, so
+    // a single row parked mid-run failed the whole executions list and the run
+    // screen showed "Could not load executions." until the run terminalized.
+    // Every status the queue can persist must parse.
+    for (const status of [
+      'pending_reservation',
+      'queued',
+      'leased',
+      'running',
+      'retry_wait',
+      'capacity_wait',
+      'failed',
+      'cancelled',
+    ]) {
+      expect(strictValidate(executionSchema, { ...execution, status }, 'exec').status).toBe(status);
+    }
   });
 
   it('validates execution evidence keyed by the execution id', () => {

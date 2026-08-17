@@ -169,13 +169,21 @@ export const citationSchema = responseObject({
   matched_competitor: z.string().nullable(),
 });
 
-// Queue/execution row status (B5 task statuses).
+// Queue/execution row status (B5 task statuses). This must list EVERY status
+// the queue can persist, not just the ones a run usually ends on: the response
+// is strictly validated, so a single row in a missing status fails the whole
+// executions list. `capacity_wait` (parked on a full provider pool) and
+// `pending_reservation` (funded task awaiting its ledger reservation) are both
+// transient, both common mid-run, and both were absent — which is why a live
+// run's executions table errored out and then loaded fine once it terminalized.
 export const executionStatusSchema = z.enum([
+  'pending_reservation',
   'queued',
   'leased',
   'running',
   'succeeded',
   'retry_wait',
+  'capacity_wait',
   'failed',
   'cancelled',
 ]);

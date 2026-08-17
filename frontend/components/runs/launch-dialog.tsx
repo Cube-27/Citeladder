@@ -16,7 +16,7 @@ import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit, LogicalEngine } from '@/lib/api/types';
-import { ENGINE_LABELS, ENGINE_ORDER } from '@/lib/providers/catalog';
+import { ENGINE_LABELS, ENGINE_ORDER, isConfigured, isVerified } from '@/lib/providers/catalog';
 import {
   buildLaunchPayload,
   canLaunch,
@@ -65,17 +65,28 @@ export function LaunchDialog({
   const promptSets = promptSetsQuery.data ?? [];
   const connections = connectionsQuery.data;
 
-  // A logical engine is selectable only when a BYOK connection with a stored
-  // key backs a route for it (the backend rejects a launch otherwise).
-  const configuredEngines = useMemo<LogicalEngine[]>(() => {
-    const configured = new Set<LogicalEngine>();
+  // A logical engine is selectable only when a VERIFIED BYOK connection backs a
+  // route for it. A stored key is not enough: admission resolves only routes
+  // whose latest probe succeeded, so gating on `api_key_set` alone offered
+  // engines the backend would then refuse with `execution_credentials_unavailable`
+  // — the launch failed after the fact instead of the chip never appearing.
+  // `stored` tracks the difference so the empty state can say which case it is.
+  const { configuredEngines, unverifiedEngines } = useMemo(() => {
+    const verified = new Set<LogicalEngine>();
+    const stored = new Set<LogicalEngine>();
     for (const connection of connections ?? []) {
-      if (!connection.api_key_set) continue;
+      if (!isConfigured(connection)) continue;
+      const target = isVerified(connection) ? verified : stored;
       for (const route of connection.routes ?? []) {
-        configured.add(route.logical_engine);
+        target.add(route.logical_engine);
       }
     }
-    return ENGINE_ORDER.filter((engine) => configured.has(engine));
+    return {
+      configuredEngines: ENGINE_ORDER.filter((engine) => verified.has(engine)),
+      unverifiedEngines: ENGINE_ORDER.filter(
+        (engine) => stored.has(engine) && !verified.has(engine),
+      ),
+    };
   }, [connections]);
 
   const [promptSetId, setPromptSetId] = useState<string | null>(null);
@@ -204,11 +215,17 @@ export function LaunchDialog({
             {noEngines ? (
               <div className="grid gap-2">
                 <p className="text-muted text-sm">
-                  No configured engines. Connect a provider to launch an audit.
+                  {unverifiedEngines.length > 0
+                    ? `A key is stored for ${unverifiedEngines
+                        .map((engine) => ENGINE_LABELS[engine])
+                        .join(
+                          ', ',
+                        )}, but it has not passed a connection test yet. Test it to launch an audit with it.`
+                    : 'No configured engines. Connect a provider to launch an audit.'}
                 </p>
                 <div>
                   <Button variant="secondary" onClick={() => setConnectOpen(true)}>
-                    Connect a provider
+                    {unverifiedEngines.length > 0 ? 'Test connection' : 'Connect a provider'}
                   </Button>
                 </div>
               </div>

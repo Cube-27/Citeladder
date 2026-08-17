@@ -70,6 +70,8 @@ from app.domain.audits.state_events import record_event
 from app.models.audit import AuditEvent
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
+from app.orchestration.provider_capacity import CapacityDecision
+from app.workers.audit_worker_support import capacity_wait_payload
 from tests.component.audit_helpers import Seed, seed_audit_fixtures
 
 
@@ -361,15 +363,22 @@ async def test_capacity_wait_uses_one_schema_on_list_and_stream(
 ) -> None:
     seed = await _register_and_seed(client, session_factory)
     audit_id = await _create_terminal_audit(session_factory, seed)
-    # The exact payload the worker persists for a capacity park (opaque ids +
-    # retry timing only — invariant 6).
-    expected_payload = {
-        "task_id": str(uuid.uuid4()),
-        "code": CAPACITY_CODE_CONCURRENCY,
-        "pool_kind": POOL_KIND_TRANSPORT,
-        "available_at": datetime.now(UTC).isoformat(),
-        "retry_after_seconds": 2.0,
-    }
+    # Built by THE WRITER, not by hand: the payload schema is closed, so any
+    # key the worker emits and the DTO omits makes the event unserializable and
+    # 500s both surfaces. Hand-writing the expected body here is exactly how
+    # `attempt` (the worker's per-attempt dedupe key) drifted out of the
+    # schema unnoticed — one parked task then broke the whole events stream.
+    expected_payload = capacity_wait_payload(
+        task_id=uuid.uuid4(),
+        attempt_number=1,
+        decision=CapacityDecision(
+            acquired=False,
+            code=CAPACITY_CODE_CONCURRENCY,
+            pool_kind=POOL_KIND_TRANSPORT,
+            available_at=datetime.now(UTC),
+            retry_after_seconds=2.0,
+        ),
+    )
     async with session_factory() as session:
         record_event(
             session,

@@ -66,8 +66,10 @@ function connection(routes: string[]) {
     base_url: null,
     active: true,
     api_key_set: true,
-    last_tested_at: null,
-    last_test_status: '',
+    last_tested_at: '2026-07-15T00:00:00Z',
+    // Verified, not merely stored: the launch dialog only offers engines whose
+    // latest probe succeeded, because that is what the backend will execute.
+    last_test_status: 'ok',
     routes: routes.map((engine, i) => ({
       id: `66666666-6666-4666-8666-66666666666${i}`,
       logical_engine: engine,
@@ -231,5 +233,30 @@ describe('RunsPage', () => {
     expect(queryClient.getQueryData(queryKeys.runs.detail(AUDIT_ID))).toMatchObject(
       audit({ status: 'queued' }),
     );
+  });
+
+  // Regression: the engine chips used to appear for any connection with a
+  // stored key. A key that has never passed a probe is invisible to admission,
+  // so launching with it failed AFTER the fact with
+  // `execution_credentials_unavailable` — a refusal the user could do nothing
+  // about from the launch dialog. An unverified key must not offer an engine.
+  it('does not offer engines whose stored key has not passed a connection test', async () => {
+    const user = userEvent.setup();
+    mswServer.use(
+      http.get('/api/v1/audits', () => HttpResponse.json([])),
+      http.get('/api/v1/prompt-sets', () => HttpResponse.json([promptSet])),
+      http.get('/api/v1/provider-connections', () =>
+        HttpResponse.json([
+          { ...connection(['gemini', 'claude']), last_test_status: '', last_tested_at: null },
+        ]),
+      ),
+    );
+
+    renderWithProviders(<RunsPage />);
+    await user.click((await screen.findAllByRole('button', { name: /launch/i }))[0]);
+
+    expect(await screen.findByText(/has not passed a connection test yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Gemini' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
   });
 });
