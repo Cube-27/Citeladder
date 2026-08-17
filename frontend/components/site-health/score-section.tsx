@@ -113,7 +113,7 @@ function ScoreCard({
   sub,
 }: Readonly<{ label: string; value: number | null; sub: string }>) {
   return (
-    <Card className="border-border/70 bg-panel shadow-card rounded-2xl border">
+    <Card className="border-border/70">
       <CardContent className="flex items-center gap-4 p-5 sm:p-6">
         {value === null ? (
           <div className="border-border/60 text-muted mono size-score-ring flex items-center justify-center rounded-full border text-base">

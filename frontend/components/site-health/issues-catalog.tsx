@@ -145,7 +145,7 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   return (
     <div className="grid gap-6">
       {summary ? (
-        <div className="border-border-subtle bg-panel flex flex-wrap gap-x-6 gap-y-2 rounded-xl border p-4 text-sm">
+        <div className="border-border-subtle bg-panel flex flex-wrap gap-x-6 gap-y-2 rounded-sm border p-4 text-sm">
           <span>
             <strong className="text-foreground">
               {findingView === 'defect'

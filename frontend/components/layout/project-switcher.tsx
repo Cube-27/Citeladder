@@ -31,7 +31,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <Dropdown>
       <DropdownTrigger
         className={cn(
-          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
+          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
           className,
         )}
         disabled={isLoading}
@@ -41,7 +41,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           logoUrl={activeProject?.brand.logo_url}
           websiteUrl={activeProject?.website_url}
           size="sm"
-          className="bg-foreground text-background size-6.5 rounded-md shadow-xs"
+          className="bg-foreground text-background size-6.5 rounded-sm shadow-xs"
         />
         <span className="text-foreground min-w-0 flex-1 truncate text-xs font-semibold tracking-tight">
           {label}

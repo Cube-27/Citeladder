@@ -12,7 +12,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  title: 'Overview' | 'Analyze' | 'Act' | 'Track' | 'Connect';
+  title: 'Overview' | 'Analyze' | 'Act' | 'Track';
   href: string;
   icon: LucideIcon;
   items: readonly NavItem[];
@@ -65,35 +65,6 @@ export const NAV_GROUPS = [
       },
       { label: 'Runs', href: '/runs', icon: ICONS.runs },
       { label: 'AI Referrals', href: '/ai-referrals', icon: ICONS.analytics },
-    ],
-  },
-  {
-    title: 'Connect',
-    href: '/settings?tab=integrations',
-    icon: ICONS.setup,
-    items: [
-      {
-        label: 'Integrations',
-        href: '/settings?tab=integrations',
-        icon: ICONS.setup,
-        queryMatch: { key: 'tab', values: ['integrations'] },
-      },
-      {
-        label: 'Providers',
-        href: '/settings?tab=providers',
-        icon: ICONS.settings,
-        queryMatch: { key: 'tab', values: ['providers'] },
-      },
-      {
-        label: 'Settings',
-        href: '/settings',
-        icon: ICONS.settings,
-        queryMatch: {
-          key: 'tab',
-          values: ['account', 'billing', 'danger'],
-          defaultValue: 'account',
-        },
-      },
     ],
   },
 ] as const satisfies readonly NavGroup[];

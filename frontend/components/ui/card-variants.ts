@@ -13,7 +13,7 @@ import { cva } from 'class-variance-authority';
  * cards add `hover:shadow-card-hover`; the transition is retained for them.
  */
 export const cardVariants = cva(
-  'bg-panel shadow-card rounded-xl transition-shadow duration-[180ms] ease-out',
+  'bg-panel border border-border shadow-card rounded-sm transition-all duration-[180ms] ease-out',
 );
 
 export const cardClasses = () => cardVariants({});

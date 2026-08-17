@@ -1,40 +1,25 @@
 import type { Metadata } from 'next';
-import localFont from 'next/font/local';
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
 import { SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
 import './globals.css';
 
-const switzer = localFont({
-  src: [
-    {
-      path: './fonts/Switzer-Variable.woff2',
-      weight: '100 900',
-      style: 'normal',
-    },
-    {
-      path: './fonts/Switzer-VariableItalic.woff2',
-      weight: '100 900',
-      style: 'italic',
-    },
-  ],
-  variable: '--font-switzer',
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
   display: 'swap',
-  fallback: ['Arial', 'sans-serif'],
 });
 
-const satoshi = localFont({
-  src: './fonts/Satoshi-Variable.woff2',
-  weight: '300 900',
-  style: 'normal',
-  variable: '--font-satoshi',
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta-sans',
   display: 'swap',
-  fallback: ['Arial', 'sans-serif'],
 });
 
 const DIRECTION_CONTRACT = `<!--
 THESIS: CiteLadder turns persisted AI evidence into the next measurable action; it refuses the metric-card gallery.
-OWN-WORLD: refined light system — white surfaces, neutral-gray highlights, one reference-blue accent, soft crisp elevation, Satoshi display + Switzer UI, and a 16px website reading baseline.
+OWN-WORLD: refined light system — white surfaces, neutral-gray highlights, one reference-blue accent, soft crisp elevation, Plus Jakarta Sans display + Inter UI, and a 16px website reading baseline.
 STORY: See project state, understand comparable movement, act on a ranked evidence-backed queue, then remeasure without causal overclaiming.
 FIRST VIEWPORT: A sentence-led state header above a dominant movement chart and right-hand action queue; report and measurement actions sit with state.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and docs/design.md
@@ -56,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${switzer.variable} ${satoshi.variable}`}>
+    <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
       <body>
         <span hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         {/* First tab stop on every route. Visually hidden until focused, so

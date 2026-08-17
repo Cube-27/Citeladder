@@ -244,7 +244,7 @@ function LayerRow({
          the tonal jump is what makes "which layer is streaming" readable at a
          glance, rather than relying on the status text alone. */
       className={cn(
-        'focus-visible:ring-accent/60 group flex w-full items-start gap-3.5 rounded-xl border px-4 py-5 text-left transition-[background-color,border-color,box-shadow] duration-300 focus-visible:ring-2 focus-visible:outline-none xl:my-auto',
+        'focus-visible:ring-accent/60 group flex w-full items-start gap-3.5 rounded-sm border px-4 py-5 text-left transition-[background-color,border-color,box-shadow] duration-300 focus-visible:ring-2 focus-visible:outline-none xl:my-auto',
         active
           ? 'bg-panel border-accent-border shadow-card'
           : 'bg-well border-border-subtle hover:bg-panel hover:border-border hover:shadow-xs',
@@ -252,7 +252,7 @@ function LayerRow({
     >
       <span
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-300',
+          'flex size-9 shrink-0 items-center justify-center rounded-sm transition-colors duration-300',
           active
             ? 'bg-accent text-inverse shadow-xs'
             : // On the grey resting card the chip needs a white fill to read as
@@ -418,10 +418,10 @@ function ChatWindow({
       data-testid="growth-agent-preview"
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
-      className="app-type-scale bg-panel shadow-card flex h-full flex-col overflow-hidden rounded-xl"
+      className="app-type-scale bg-panel shadow-card flex h-full flex-col overflow-hidden rounded-sm"
     >
       <div className="border-border-subtle flex items-center gap-3 border-b px-4 py-3">
-        <span className="bg-accent text-inverse flex size-8 shrink-0 items-center justify-center rounded-lg">
+        <span className="bg-accent text-inverse flex size-8 shrink-0 items-center justify-center rounded-sm">
           <AgentIcon className="size-4.5" strokeWidth={1.75} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
@@ -517,7 +517,7 @@ function Bubble({ entry, thinking = false }: Readonly<{ entry: Entry; thinking?:
 
       <div
         className={cn(
-          'max-w-[82%] rounded-xl px-3.5 py-2.5 text-xs leading-relaxed',
+          'max-w-[82%] rounded-sm px-3.5 py-2.5 text-xs leading-relaxed',
           fromAgent ? 'bg-panel text-secondary shadow-sm' : 'bg-accent text-inverse shadow-sm',
         )}
       >

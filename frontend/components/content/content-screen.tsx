@@ -202,7 +202,7 @@ function ContentComposer({
   return (
     <Card
       data-component-id="content-prompt-box"
-      className="border-border/70 bg-panel shadow-card rounded-2xl border p-6 sm:p-8"
+      className="border-border/70 bg-panel shadow-card rounded-sm border p-6 sm:p-8"
     >
       <CardContent className="flex flex-col gap-5 p-0">
         <div className="grid gap-1">
@@ -219,7 +219,7 @@ function ContentComposer({
         {demandSource ? (
           <div
             data-component-id="content-demand-source"
-            className="border-accent-border bg-accent-soft/50 text-secondary flex items-start gap-2.5 rounded-xl border p-3.5 text-sm"
+            className="border-accent-border bg-accent-soft/50 text-secondary flex items-start gap-2.5 rounded-sm border p-3.5 text-sm"
           >
             <TrendingUp className="text-accent-text mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
@@ -238,7 +238,7 @@ function ContentComposer({
           rows={demandSource ? 10 : 4}
           aria-label="Describe the website content you want to create"
           placeholder="Describe the website content you want to create…"
-          className="border-border/80 bg-background/50 focus:bg-panel rounded-xl p-4 text-sm leading-relaxed"
+          className="border-border/80 bg-background/50 focus:bg-panel rounded-sm p-4 text-sm leading-relaxed"
         />
         <SkillPicker
           skills={skills}
@@ -289,7 +289,7 @@ function GeneratingPanel({
   return (
     <Card
       data-component-id="content-generating-panel"
-      className="border-border/70 bg-panel shadow-card rounded-2xl border p-6"
+      className="border-border/70 bg-panel shadow-card rounded-sm border p-6"
     >
       <CardContent className="flex items-center gap-4 p-0">
         <div role="status" aria-label="Generating content" className="flex items-center gap-3">
@@ -328,7 +328,7 @@ function GenerationErrorPanel({
   return (
     <Card
       data-component-id="content-error-panel"
-      className="border-danger/30 bg-danger-bg/50 shadow-card rounded-2xl border p-6"
+      className="border-danger/30 bg-danger-bg/50 shadow-card rounded-sm border p-6"
     >
       <CardContent className="flex flex-col gap-4 p-0">
         <div role="alert" className="text-danger-text flex items-start gap-2.5 text-sm">
@@ -390,7 +390,7 @@ function GenerationResult({
   return (
     <Card
       data-component-id="content-result-card"
-      className="border-border/70 bg-panel shadow-card rounded-2xl border p-6 sm:p-8"
+      className="border-border/70 bg-panel shadow-card rounded-sm border p-6 sm:p-8"
     >
       <CardContent className="flex flex-col gap-5 p-0">
         {detail.output_truncated ? (
@@ -504,7 +504,7 @@ function GenerationHistory({
   return (
     <section
       data-component-id="content-history"
-      className="bg-panel shadow-card border-border/70 flex flex-col gap-3.5 rounded-2xl border p-5 sm:p-6"
+      className="bg-panel shadow-card border-border/70 flex flex-col gap-3.5 rounded-sm border p-5 sm:p-6"
     >
       <div className="border-border/60 grid gap-1 border-b pb-3">
         <span className="text-muted text-xs font-semibold tracking-wider uppercase">History</span>
@@ -513,7 +513,7 @@ function GenerationHistory({
         </h2>
       </div>
       {loading ? (
-        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-sm" />
       ) : items.length === 0 ? (
         <p className="text-muted py-4 text-center text-sm">No generations yet.</p>
       ) : (
@@ -524,7 +524,7 @@ function GenerationHistory({
                 type="button"
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  'focus-ring hover:bg-background-alt flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm transition-colors',
+                  'focus-ring hover:bg-background-alt flex w-full items-center gap-3 rounded-sm border px-3.5 py-3 text-left text-sm transition-colors',
                   item.id === selectedId
                     ? 'border-accent-border bg-accent-soft/50 font-medium'
                     : 'border-border/60',

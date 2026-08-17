@@ -24,14 +24,14 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors',
+        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-sm px-2.5 text-xs font-semibold transition-all duration-150',
         active
-          ? 'bg-accent-soft text-accent-text font-semibold shadow-xs'
-          : 'text-secondary hover:text-foreground hover:bg-well',
+          ? 'bg-accent-subtle text-accent-text font-bold shadow-xs'
+          : 'text-secondary hover:text-foreground hover:bg-well hover:translate-x-0.5',
       )}
     >
       {active ? (
-        <span aria-hidden className="bg-accent absolute inset-y-2 start-0 w-1 rounded-e-md" />
+        <span aria-hidden className="bg-accent absolute inset-y-1.5 start-0 w-1 rounded-e-sm" />
       ) : null}
       <Icon
         className={cn('size-4 shrink-0', active ? 'text-accent opacity-100' : 'opacity-80')}

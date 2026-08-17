@@ -19,8 +19,8 @@ deliberate, quiet motion treatments.
   contour. The mark inherits the surrounding foreground colour on every surface.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** Satoshi for display headings and Switzer for UI, body, and data,
-  both self-hosted as variable WOFF2 files through `next/font/local`. The website and authentication surfaces
+- **Typography:** Plus Jakarta Sans for display headings and Inter for UI, body, and data,
+  loaded from Google Fonts through `next/font/google`. The website and authentication surfaces
   use a 16px reading baseline and a content-role ladder; the authenticated app
   keeps its existing compact size scale. Size, leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
@@ -64,32 +64,30 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role                | Token family                                                                                                                        | Use                                                                                                                    |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Canvas and surfaces | `background` (`#f8f9fc`), `panel` / `elevated` (white), `panel-tonal` / `background-alt` (`#f1f4f9`), `well` (`#edf2f7`), `sidebar` | Light cool blue/grey is the page canvas; white panels and cards pop with elevation; subtle neutral wells group content |
-| Text                | `foreground` (#101828), `secondary` (#344054), `muted` (#475467), `subtle` (#667085), `inverse`                                     | Untitled UI 10-step Gray reading ramp                                                                                  |
-| Borders             | `border` (#e4e7ec), `border-subtle` (#f2f4f7), `border-strong` (#d0d5dd)                                                            | Crisp hairlines for subtle separation                                                                                  |
-| Primary action      | `accent-*`                                                                                                                          | Reference Blue (`#2667FF`) CTAs, explicit selection, links, and focus                                                  |
-| Status              | `success-*`, `warning-*`, `danger-*`, `info-*`, `neutral-bg`                                                                        | App only; always paired with text or an icon                                                                           |
+| Canvas and surfaces | `background` (`#f4f5f7`), `panel` / `elevated` (`#ffffff`), `panel-tonal` / `background-alt` (`#f8f9fa`), `well` (`#eaedf2`), `sidebar` (`#f8f9fb`) | Luminous pearl paper canvas; crisp white panels and floating cards; subtle grey wells and frosted chrome              |
+| Text                | `foreground` (#18202b), `secondary` (#4f5966), `muted` (#68717d), `subtle` (#7a838e), `inverse` (#ffffff)                          | Slate ink reading ramp                                                                                                |
+| Borders             | `border` (#e2e5e9), `border-subtle` (#ebedf1), `border-strong` (#d4d8df), `border-bold` (#b8c0cc)                                    | Crisp ledger hairlines for structured separation                                                                       |
+| Primary action      | `accent-*`                                                                                                                          | Growth Cobalt (`#315CFF`) CTAs, active indicators, explicit selection, links, and focus rings                          |
+| Status              | `success-*` (`#31a57a`), `warning-*` (`#d9822b`), `danger-*` (`#d96b55`), `info-*`, `neutral-bg`                                   | App only; always paired with text or an icon                                                                           |
 | Evidence and scores | `citation-*`, `run-*`, `score-*`, `series-*`, `chart-*`                                                                             | Persisted evidence, audit status, score bands, and charts                                                              |
 
-The accent is Reference Blue: `#2667FF` at rest, darkened on hover and press.
-`accent-text` is a darker accessible blue for text on white. Page canvas is a calm light cool blue/grey (`#f8f9fc`), while panel, card,
-dialog, and drawer surfaces are white. `#f1f4f9` provides tonal panels and the
-alternate surface; `#edf2f7` is the stronger neutral well and hover treatment.
+The accent is Growth Cobalt: `#315CFF` at rest, `#2548D4` on hover, and `#1D3BB8` on press.
+`accent-text` (`#2548D4`) is the accessible cobalt for text on white or tinted backgrounds. Page canvas is a luminous pearl paper (`#f4f5f7`), while panel, card,
+dialog, and drawer surfaces are crisp white (`#ffffff`). `#f8f9fa` provides tonal panels, the sidebar background, and the
+alternate surface; `#eaedf2` is the neutral well and hover treatment.
 
 **Marketing is monochrome-plus-blue.** It uses only white, the ink ramp, and the
-one blue — no status, score, or category colour. **The authenticated app keeps
+one cobalt — no status, score, or category colour. **The authenticated app keeps
 the functional families** (status, score bands, run states, citation types, and
-the categorical chart series, whose first series is the brand blue), because a
+the categorical chart series, whose first series is the brand cobalt), because a
 data view has to stay legible at a glance. Status colour never carries meaning
 alone; it is always paired with a label or icon.
 
 ## Typography
 
-Two families only: Satoshi for display headings (`font-display`) and Switzer for
-UI, body, and data (`font-sans`). Both are self-hosted through `next/font/local`:
-one upright Satoshi variable WOFF2 and upright plus italic Switzer variable WOFF2
-files cover the used styles without runtime stylesheet requests or unused static
-cuts. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
+Two families only: Plus Jakarta Sans for display headings (`font-display`) and Inter for
+UI, body, and data (`font-sans`). Both are loaded through `next/font/google` with
+variable fonts and swap display. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
 and percentages use tabular numerals, never a monospace face.
 
 ### Website and authentication ladder
@@ -99,54 +97,54 @@ owns its size, leading, weight, tracking, and colour as one unit. Public and aut
 components consume these roles instead of assembling arbitrary size, leading,
 tracking, weight, and colour combinations.
 
-| Role                    | Family  |      Size / line height |  Weight |                       Tracking | Colour                                      |
-| ----------------------- | ------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Satoshi | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
-| Page title              | Satoshi |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
-| Section heading         | Satoshi |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
-| Feature heading         | Satoshi |                 24/30px |     600 |                        -0.02em | foreground                                  |
-| Small heading           | Satoshi |                 20/26px |     600 |                        -0.01em | foreground                                  |
-| Lead                    | Switzer |                 20/30px |     400 |                        -0.01em | secondary                                   |
-| Large body              | Switzer |                 18/28px |     400 |                              0 | secondary                                   |
-| Body baseline           | Switzer |                 16/24px |     400 |                              0 | secondary                                   |
-| Navigation and actions  | Switzer |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
-| Label, caption, eyebrow | Switzer |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
+| Role                    | Family            |      Size / line height |  Weight |                       Tracking | Colour                                      |
+| ----------------------- | ----------------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
+| Hero display            | Plus Jakarta Sans | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
+| Page title              | Plus Jakarta Sans |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
+| Section heading         | Plus Jakarta Sans |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
+| Feature heading         | Plus Jakarta Sans |                 24/30px |     600 |                        -0.02em | foreground                                  |
+| Small heading           | Plus Jakarta Sans |                 20/26px |     600 |                        -0.01em | foreground                                  |
+| Lead                    | Inter             |                 20/30px |     400 |                        -0.01em | secondary                                   |
+| Large body              | Inter             |                 18/28px |     400 |                              0 | secondary                                   |
+| Body baseline           | Inter             |                 16/24px |     400 |                              0 | secondary                                   |
+| Navigation and actions  | Inter             |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
+| Label, caption, eyebrow | Inter             |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
 
 Ordinary website paragraphs never render below 16px. Fourteen pixels is reserved
 for short labels, metadata, captions, and legal support. Prose stays within a
-45–75 character measure. Accent blue never carries a long paragraph. Large text
+45–75 character measure. Accent cobalt never carries a long paragraph. Large text
 uses tighter leading and tracking; body text stays at zero tracking with more
 leading. Pricing values are the one non-editorial website display role:
-`website-data-display` uses Switzer at 40/46px with tabular numerals and never
+`website-data-display` uses Inter at 40/46px with tabular numerals and never
 applies to prose or headings.
 
 ### Product app ladder
 
 The authenticated enterprise application uses a strict token-driven typography ladder
-built on Switzer (`font-sans`) and Satoshi (`font-display`). It enforces consistent visual
+built on Inter (`font-sans`) and Plus Jakarta Sans (`font-display`). It enforces consistent visual
 hierarchy, strict tabular numerals for metrics, and high-density information architecture.
 Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
 classes.
 
-| Role                       | Family  | Size / line height |  Weight | Tracking | Class / Token                            | Text Colour                   |
-| -------------------------- | ------- | -----------------: | ------: | -------: | :--------------------------------------- | :---------------------------- |
-| App Hero / Screen Title    | Satoshi |            26/30px |     600 | -0.025em | `displayHeadingXlClasses`                | `text-foreground`             |
-| Section / Surface Heading  | Satoshi |         16–18/23px |     600 | -0.015em | `text-base` / `text-lg font-display`     | `text-foreground`             |
-| Primary KPI / Metric Value | Satoshi |    28/35 → 32/40px |     600 |  -0.02em | `text-2xl` / `text-3xl` + `tabular-nums` | `text-foreground`             |
-| Metric Subtitle / Delta    | Switzer |            13/20px | 500–600 |        0 | `text-xs` + `tabular-nums`               | `text-secondary` / delta tone |
-| UI / Form Field Label      | Switzer |            13/20px |     500 |        0 | `text-xs font-medium`                    | `text-foreground`             |
-| Standard Body / Content    | Switzer |            14/21px |     400 |        0 | `text-sm text-secondary`                 | `text-secondary`              |
-| Compact Body / Row Data    | Switzer |            13/20px |     400 |        0 | `text-xs text-secondary`                 | `text-secondary`              |
-| Micro Eyebrow / Meta Pill  | Switzer |            12/16px |     600 |  +0.08em | `text-2xs uppercase`                     | `text-muted` / `text-subtle`  |
+| Role                       | Family            | Size / line height |  Weight | Tracking | Class / Token                            | Text Colour                   |
+| -------------------------- | ----------------- | -----------------: | ------: | -------: | :--------------------------------------- | :---------------------------- |
+| App Hero / Screen Title    | Plus Jakarta Sans |            26/30px |     600 | -0.025em | `displayHeadingXlClasses`                | `text-foreground`             |
+| Section / Surface Heading  | Plus Jakarta Sans |         16–18/23px |     600 | -0.015em | `text-base` / `text-lg font-display`     | `text-foreground`             |
+| Primary KPI / Metric Value | Plus Jakarta Sans |    28/35 → 32/40px |     600 |  -0.02em | `text-2xl` / `text-3xl` + `tabular-nums` | `text-foreground`             |
+| Metric Subtitle / Delta    | Inter             |            13/20px | 500–600 |        0 | `text-xs` + `tabular-nums`               | `text-secondary` / delta tone |
+| UI / Form Field Label      | Inter             |            13/20px |     500 |        0 | `text-xs font-medium`                    | `text-foreground`             |
+| Standard Body / Content    | Inter             |            14/21px |     400 |        0 | `text-sm text-secondary`                 | `text-secondary`              |
+| Compact Body / Row Data    | Inter             |            13/20px |     400 |        0 | `text-xs text-secondary`                 | `text-secondary`              |
+| Micro Eyebrow / Meta Pill  | Inter             |            12/16px |     600 |  +0.08em | `text-2xs uppercase`                     | `text-muted` / `text-subtle`  |
 
 ### High density layout and elevation standard
 
 The product app is an enterprise data-dense environment. It uses diffuse elevation
-and selective semantic hairlines to avoid visual noise and container-in-container clutter:
+and crisp semantic hairlines to maintain clear structure without visual clutter:
 
-- **Elevation and borders**: Primary cards and surfaces use `bg-panel` with `shadow-card`
-  or `shadow-sm`. Add a semantic hairline only when the surface needs a stronger edge;
-  elevated menus and popovers use `bg-elevated` and `shadow-elevated`.
+- **Elevation and borders**: Primary cards and surfaces use `bg-panel border border-border` with `shadow-card`.
+  Hover states slightly deepen the hairline (`border-border-strong`) and lift (`shadow-card-hover`).
+  Elevated menus and popovers use `bg-elevated` and `shadow-elevated`.
 - **Drawer and Sheet Composition**: Modals, slide-out drawers, and sheets already provide an
   elevated surface. They must **never** contain nested `<Card>` components. Field groups and
   lists inside drawers use clean structural section divisions (`space-y-4` / borderless rows).
@@ -154,7 +152,7 @@ and selective semantic hairlines to avoid visual noise and container-in-containe
   row (`flex items-center justify-between`) rather than wasting vertical canvas on an empty
   header row.
 - **Custom Select Menus**: Filter dropdowns and page-kind selectors use custom Radix menus with
-  `shadow-elevated rounded-md` and radio items—never raw browser-native `<select>` popups.
+  `shadow-elevated rounded-sm` and radio items—never raw browser-native `<select>` popups.
 
 ## Data and geometry
 
@@ -168,12 +166,10 @@ and selective semantic hairlines to avoid visual noise and container-in-containe
 | Table row                |        40px |     labelled record |
 
 The content area caps at 1360px. Standard cards use 24px internal padding and gap.
-The radius scale is 4px (`xs`), 6px (`sm`, controls/buttons), 8px (`md`), 12px
-(`lg`, standard cards), 16px (`xl`), and 20px (`2xl`, feature panels); a full
-radius is reserved for badges, dots, and toggles. Elevation uses soft diffuse
-shadows (`shadow-card` and up), with semantic hairlines added only where a surface
-needs a stronger edge. Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px
-desktop).
+The radius scale uses crisp micro-radii: 2px (`xs`, `sm`, controls/buttons/cards), 4px (`md`, `lg`, dialogs/popovers),
+and 6px (`xl`, `2xl`); rounded-full (`rounded-full`) is retained for chips, badges, status dots, count pills, and filter toggles.
+Elevation uses soft diffuse shadows (`shadow-card` and up), with semantic hairlines for crisp ledger definition.
+Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px desktop).
 
 ## Layout and content composition
 
@@ -250,10 +246,10 @@ to look on every page in the app.
 │ Analyze    │  Supporting context                             │
 │ Act        │                                                 │
 │ Track      │  ┌─────────┐ ┌─────────┐ ┌─────────┐            │
-│ Connect    │  │ Metric  │ │ Metric  │ │ Metric  │            │
+│            │  │ Metric  │ │ Metric  │ │ Metric  │            │
 │            │  └─────────┘ └─────────┘ └─────────┘            │
-│            │  Primary analytical surface                     │
-│ Settings   │  ──────────────────────────────────────         │
+│ User Menu  │  Primary analytical surface                     │
+│ (Settings) │  ──────────────────────────────────────         │
 │            │                                                 │
 │            │  Insights / findings / table                    │
 └────────────┴─────────────────────────────────────────────────┘

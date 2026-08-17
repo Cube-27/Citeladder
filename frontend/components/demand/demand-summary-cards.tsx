@@ -63,7 +63,7 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
   const health = detectorHealth(snapshot.summary);
 
   return (
-    <div className="bg-panel shadow-card border-border/70 overflow-hidden rounded-2xl border">
+    <div className="bg-panel shadow-card border-border/70 overflow-hidden rounded-sm border">
       <div className="divide-border/60 grid grid-cols-1 divide-y sm:grid-cols-2 lg:grid-cols-5 lg:divide-x lg:divide-y-0">
         <KpiSegment
           label="Latent Search Demand"

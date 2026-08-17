@@ -50,8 +50,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </aside>
 
         <div className="relative z-1 flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Top bar with seamless Material 3 utility chrome. */}
-          <header className="border-border/50 bg-background/90 sticky top-0 z-20 flex h-[var(--topbar-height)] shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur-md md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,440px)_minmax(0,1fr)] md:px-6">
+          {/* Top bar with frosted glassmorphism utility chrome. */}
+          <header className="border-border-subtle bg-background/80 sticky top-0 z-20 flex h-[var(--topbar-height)] shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur-md md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,440px)_minmax(0,1fr)] md:px-6">
             <div className="flex items-center gap-2 md:hidden">
               <Link
                 href="/projects"
@@ -67,7 +67,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               <CommandPalette />
             </div>
             <div className="flex items-center justify-end gap-2.5">
-              <div className="border-border/60 bg-panel text-muted hidden items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-xs lg:flex">
+              <div className="border-border-subtle bg-panel text-muted hidden items-center gap-2 rounded-sm border px-3 py-1.5 text-xs font-medium shadow-xs lg:flex">
                 <Calendar className="text-muted size-3.5 shrink-0" aria-hidden />
                 <span>Last 28 days</span>
                 <span className="text-border-strong">|</span>

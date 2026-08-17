@@ -430,14 +430,14 @@ function CommandCenterContent({
   return (
     <div className="grid gap-6" data-tour="command-center">
       {/* Brand Header Banner */}
-      <section className="bg-panel shadow-card border-border-subtle flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5">
+      <section className="bg-panel shadow-card border-border-subtle flex flex-wrap items-center justify-between gap-4 rounded-sm border p-5">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
             name={data.project.brand_name || data.project.name}
             logoUrl={activeProject.brand.logo_url}
             websiteUrl={data.project.website_url}
             size="xl"
-            className="size-12 rounded-xl shadow-xs"
+            className="size-12 rounded-sm shadow-xs"
           />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -514,7 +514,7 @@ function CommandCenterContent({
 
       {/* High-Contrast Next Action Banner & Track Card */}
       <div className="grid gap-5 md:grid-cols-2">
-        <div className="bg-panel-tonal text-foreground border-border/70 shadow-card flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:p-6">
+        <div className="bg-panel-tonal text-foreground border-border/70 shadow-card flex flex-col justify-between gap-4 rounded-sm border p-5 sm:p-6">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-accent-text bg-accent-soft inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-sans text-xs font-semibold tracking-wider uppercase">
@@ -542,7 +542,7 @@ function CommandCenterContent({
           </div>
         </div>
 
-        <div className="bg-panel shadow-card border-border/70 flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:p-6">
+        <div className="bg-panel shadow-card border-border/70 flex flex-col justify-between gap-4 rounded-sm border p-5 sm:p-6">
           <div>
             <div className="flex items-center justify-between">
               <span className={eyebrowClasses}>AI Visibility Track</span>
@@ -588,7 +588,7 @@ function CommandCenterContent({
           <SectionTitle id="project-state">Project state</SectionTitle>
           <Badge>{data.measurement?.measurement_mode ?? 'not run'}</Badge>
         </div>
-        <div className="bg-panel shadow-card border-border-subtle divide-border-subtle grid divide-y overflow-hidden rounded-xl border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="bg-panel shadow-card border-border-subtle divide-border-subtle grid divide-y overflow-hidden rounded-sm border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <StateMetric label="Visibility" {...data.state.visibility} />
           <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
           <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
@@ -597,7 +597,7 @@ function CommandCenterContent({
 
       {/* 2-Column Grid: Movement & Company Facts */}
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="bg-panel shadow-card border-border-subtle flex flex-col justify-between gap-4 rounded-xl border p-5">
+        <div className="bg-panel shadow-card border-border-subtle flex flex-col justify-between gap-4 rounded-sm border p-5">
           <section aria-labelledby="movement" className="grid gap-3.5">
             <div>
               <SectionTitle id="movement">Movement</SectionTitle>
@@ -609,7 +609,7 @@ function CommandCenterContent({
           </section>
         </div>
 
-        <div className="bg-panel shadow-card border-border-subtle flex flex-col justify-between gap-4 rounded-xl border p-5">
+        <div className="bg-panel shadow-card border-border-subtle flex flex-col justify-between gap-4 rounded-sm border p-5">
           <section aria-labelledby="company-facts" className="grid gap-3.5">
             <div className="flex items-center justify-between gap-3">
               <SectionTitle id="company-facts">Company facts</SectionTitle>
@@ -648,7 +648,7 @@ function CommandCenterContent({
       </div>
 
       {/* Ranked Actions Ledger Table */}
-      <div className="bg-panel shadow-card border-border-subtle overflow-hidden rounded-xl border">
+      <div className="bg-panel shadow-card border-border-subtle overflow-hidden rounded-sm border">
         <section aria-labelledby="ranked-actions">
           <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
             <div>
@@ -689,7 +689,7 @@ function CommandCenterContent({
       </div>
 
       {/* Progress & Proof Card */}
-      <div className="bg-panel shadow-card border-border-subtle rounded-xl border p-5">
+      <div className="bg-panel shadow-card border-border-subtle rounded-sm border p-5">
         <section
           aria-labelledby="progress-proof"
           className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"

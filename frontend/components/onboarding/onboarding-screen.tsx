@@ -548,7 +548,7 @@ export function OnboardingScreen() {
                   </p>
                 </div>
 
-                <div className="border-border-subtle bg-well/40 rounded-xl border p-3.5">
+                <div className="border-border-subtle bg-well/40 rounded-sm border p-3.5">
                   <ActivityProgress
                     label="Discovering your brand"
                     steps={discoveryActivity(discovery.discovery)}
@@ -634,7 +634,7 @@ export function OnboardingScreen() {
                     to it. Rendering the questions bare and the lists as their
                     own bordered cards also said the two halves were unrelated,
                     and gave the least important part the heaviest container. */}
-                <div className="border-border-subtle bg-panel divide-border-subtle grid divide-y rounded-xl border lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+                <div className="border-border-subtle bg-panel divide-border-subtle grid divide-y rounded-sm border lg:grid-cols-2 lg:divide-x lg:divide-y-0">
                   <div className="divide-border-subtle divide-y px-4 py-3">
                     {profile ? <IcpConfirmation profile={profile} onChange={setProfile} /> : null}
                   </div>

@@ -9,6 +9,7 @@ import { NAV_GROUPS } from '@/components/layout/nav-items';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { ICONS } from '@/lib/icons';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -41,7 +42,7 @@ type Command = {
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
-const ROW = 'flex w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm h-9';
+const ROW = 'flex w-full items-center gap-2.5 rounded-sm px-3 text-left text-sm h-9';
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
@@ -130,6 +131,30 @@ export function CommandPalette() {
       })),
     );
 
+    const settingsCommands: Command[] = [
+      {
+        id: 'nav:/settings?tab=integrations',
+        label: 'Integrations',
+        group: 'Settings',
+        icon: ICONS.setup,
+        run: () => router.push('/settings?tab=integrations'),
+      },
+      {
+        id: 'nav:/settings?tab=providers',
+        label: 'Providers',
+        group: 'Settings',
+        icon: ICONS.settings,
+        run: () => router.push('/settings?tab=providers'),
+      },
+      {
+        id: 'nav:/settings',
+        label: 'Settings',
+        group: 'Settings',
+        icon: ICONS.settings,
+        run: () => router.push('/settings'),
+      },
+    ];
+
     // Switching project re-scopes the API client's workspace header, so this
     // is a genuine action rather than a link.
     const projectCommands = projects.map((project) => ({
@@ -143,7 +168,7 @@ export function CommandPalette() {
       run: () => setActiveProjectId(project.id),
     }));
 
-    return [...navigation, ...projectCommands];
+    return [...navigation, ...settingsCommands, ...projectCommands];
   }, [router, projects, activeProjectId, setActiveProjectId]);
 
   const results = useMemo(() => {
@@ -206,11 +231,11 @@ export function CommandPalette() {
         }}
         aria-label="Search or jump to"
         aria-keyshortcuts="Meta+K Control+K"
-        className="bg-panel hover:bg-well border-border/70 text-muted hover:text-foreground h-9 w-full justify-start rounded-xl border px-3 text-left shadow-xs transition-colors"
+        className="bg-panel hover:bg-well border-border/70 text-muted hover:text-foreground h-9 w-full justify-start rounded-sm border px-3 text-left shadow-xs transition-colors"
       >
         <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
         <span className="min-w-0 truncate text-sm font-normal">Search or jump to…</span>
-        <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-md border px-1.5 py-0.5 text-xs font-medium sm:inline">
+        <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-sm border px-1.5 py-0.5 text-xs font-medium sm:inline">
           ⌘K
         </kbd>
       </Button>
@@ -233,7 +258,7 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="border-border/60 bg-elevated shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-2xl border focus:outline-none"
+            className="border-border/60 bg-elevated/95 shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-md border backdrop-blur-xl focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border/60 flex items-center gap-3 border-b px-4">

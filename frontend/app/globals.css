@@ -2,62 +2,56 @@
 @import './website-type.css';
 
 /*
- * CiteLadder's single design-system owner (restrained Material Design 3).
+ * CiteLadder's single design-system owner (Cube27 Growth Ledger).
  *
- * Satoshi display + Switzer body/UI from self-hosted variable WOFF2 files, one chromatic accent
- * (Reference Blue #2667FF), light cool blue/grey canvases (#f8f9fc), neutral-gray highlights, and a
- * shared soft elevation ladder. Marketing is monochrome-plus-blue; the
- * authenticated app reuses the same chrome but keeps
- * functional status/score/run/citation/chart colour because a data view has to
- * stay legible at a glance. See docs/design.md.
+ * Plus Jakarta Sans display + Inter body/UI loaded from Google Fonts via next/font/google, one chromatic accent
+ * (Cube Cobalt #315CFF), warm paper ledger canvases (#f7f7f4), graphite slate hierarchy, and a
+ * crisp micro-radius geometry ladder (2px–6px). See docs/design.md.
  *
  * No @theme, raw hex, shared control recipe, or unregistered animation lives
  * outside this file; `pnpm check:policy` enforces that.
  */
 @theme {
-  --font-sans: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-satoshi), var(--font-switzer), -apple-system, sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-plus-jakarta-sans), var(--font-inter), -apple-system, sans-serif;
 
-  /* Surfaces — light cool blue/grey canvas so all cards and panels pop with elevation. */
-  --color-background: #f8f9fc;
-  --color-background-alt: #f1f4f9;
+  /* Surfaces — Luminous pearl paper canvas with crisp white panels and frosted tones. */
+  --color-background: #f4f5f7;
+  --color-background-alt: #f8f9fa;
   --color-panel: #ffffff;
-  --color-panel-tonal: #f1f4f9;
+  --color-panel-tonal: #f8f9fb;
   --color-elevated: #ffffff;
-  --color-well: #edf2f7;
-  --color-active: #e2e8f0;
+  --color-well: #eaedf2;
+  --color-active: #e2e6eb;
   --color-input: #ffffff;
-  --color-sidebar: #ffffff;
-  --color-surface-inverse: #101828;
+  --color-sidebar: #f8f9fb;
+  --color-surface-inverse: #18202b;
 
-  /* Borders — Untitled UI Gray-200/300 hairlines; `-bold` (Gray-400) is the
-     hover step for a control resting at `-strong`, short of the blue focus. */
-  --color-border: #e4e7ec;
-  --color-border-subtle: #f2f4f7;
-  --color-border-strong: #d0d5dd;
-  --color-border-bold: #98a2b3;
+  /* Borders — Graphite hairlines and precise ledger rules. */
+  --color-border: #e2e5e9;
+  --color-border-subtle: #ebedf1;
+  --color-border-strong: #d4d8df;
+  --color-border-bold: #b8c0cc;
 
-  /* Text — Untitled UI Gray-900 Ink → Gray-700 Slate → Gray-600 → Gray-500. */
-  --color-foreground: #101828;
-  --color-secondary: #344054;
-  --color-muted: #475467;
-  --color-subtle: #667085;
+  /* Text — Graphite slate hierarchy (#18202B Ink → #4F5966 Slate → #68717D Muted → #7A838E Subtle). */
+  --color-foreground: #18202b;
+  --color-secondary: #4f5966;
+  --color-muted: #68717d;
+  --color-subtle: #7a838e;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
-  --color-link: #2f57cc;
+  --color-link: #2548d4;
 
-  /* Accent — sampled from the supplied references. White label on fill clears
-     AA (4.7:1); `-text` is a darker blue for accent-coloured text/icons
-     so small sizes stay AA on white. */
-  --color-accent: #2667ff;
-  --color-accent-hover: #235feb;
-  --color-accent-active: #1f56d9;
+  /* Accent — Cube Cobalt (#315CFF) with accessible #2548D4 text/active state and #EEF1FF tint. */
+  --color-accent: #315cff;
+  --color-accent-hover: #2548d4;
+  --color-accent-active: #1d3bb8;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #edf2ff;
-  --color-accent-soft: #f7f9ff;
-  --color-accent-border: #b9cbff;
-  --color-accent-text: #235feb;
+  --color-accent-subtle: #eef1ff;
+  --color-accent-soft: #f4f6ff;
+  --color-accent-border: #c8d2ff;
+  --color-accent-text: #2548d4;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
   --color-brand-openai: #10a37f;
@@ -74,8 +68,7 @@
   --color-brand-google-yellow: #fbbc05;
   --color-brand-google-red: #ea4335;
 
-  /* Brand canvas — the dark half of the split auth/onboarding screens, and the
-     only surface dark in every theme. Named for the ROLE, not the shade. */
+  /* Brand canvas — the dark half of the split auth/onboarding screens. */
   --color-brand-canvas: #020617;
   --color-brand-canvas-raised: #0f172a;
   --color-brand-canvas-glow: #1e3a8a;
@@ -84,133 +77,133 @@
   --color-brand-canvas-secondary: #cbd5e1;
   --color-brand-canvas-muted: #94a3b8;
 
-  /* Status — app-only functional colour; never carries meaning alone. */
-  --color-success: #19724b;
-  --color-success-bg: #e9f6ee;
-  --color-success-border: #9fd2b4;
-  --color-success-text: #135d3d;
-  --color-warning: #9a5b00;
-  --color-warning-bg: #fff5df;
-  --color-warning-border: #e7c47c;
-  --color-warning-text: #754500;
-  --color-danger: #b33a3a;
-  --color-danger-solid: #a92f35;
-  --color-danger-solid-hover: #8f252b;
+  /* Status — app-only functional colour harmonized with Cube27. */
+  --color-success: #31a57a;
+  --color-success-bg: #eaf7f1;
+  --color-success-border: #a8e0cb;
+  --color-success-text: #1e7c59;
+  --color-warning: #d9822b;
+  --color-warning-bg: #fdf6ec;
+  --color-warning-border: #f5d4a4;
+  --color-warning-text: #9c5512;
+  --color-danger: #d96b55;
+  --color-danger-solid: #d96b55;
+  --color-danger-solid-hover: #b54833;
   --color-danger-fg: #ffffff;
-  --color-danger-bg: #fff0f0;
-  --color-danger-border: #e7aaaa;
-  --color-danger-text: #8f292e;
-  /* Info tracks the accent — informational == the brand's blue. */
-  --color-info: #2667ff;
-  --color-info-bg: #edf2ff;
-  --color-info-border: #b9cbff;
-  --color-info-text: #235feb;
-  --color-neutral-bg: #eeeeee;
+  --color-danger-bg: #fdf1ee;
+  --color-danger-border: #f3c0b6;
+  --color-danger-text: #b54833;
+  /* Info tracks the accent — informational == Cube Cobalt. */
+  --color-info: #315cff;
+  --color-info-bg: #eef1ff;
+  --color-info-border: #c8d2ff;
+  --color-info-text: #2548d4;
+  --color-neutral-bg: #f0f2f4;
 
-  --color-sentiment-positive: #19724b;
-  --color-sentiment-positive-bg: #e9f6ee;
-  --color-sentiment-positive-text: #135d3d;
+  --color-sentiment-positive: #31a57a;
+  --color-sentiment-positive-bg: #eaf7f1;
+  --color-sentiment-positive-text: #1e7c59;
   --color-sentiment-neutral: #5c5e62;
-  --color-sentiment-neutral-bg: #eeeeee;
+  --color-sentiment-neutral-bg: #f0f2f4;
   --color-sentiment-neutral-text: #393c41;
-  --color-sentiment-negative: #b33a3a;
-  --color-sentiment-negative-bg: #fff0f0;
-  --color-sentiment-negative-text: #8f292e;
+  --color-sentiment-negative: #d96b55;
+  --color-sentiment-negative-bg: #fdf1ee;
+  --color-sentiment-negative-text: #b54833;
 
-  /* Owned evidence tracks the brand blue; competitor/third-party stay distinct. */
-  --color-citation-owned: #2667ff;
-  --color-citation-owned-bg: #eaf1fd;
-  --color-citation-owned-border: #c8d6f6;
-  --color-citation-owned-text: #2f57cc;
+  /* Owned evidence tracks the brand cobalt; competitor/third-party stay distinct. */
+  --color-citation-owned: #315cff;
+  --color-citation-owned-bg: #eef1ff;
+  --color-citation-owned-border: #c8d2ff;
+  --color-citation-owned-text: #2548d4;
   --color-citation-competitor: #7a5477;
   --color-citation-competitor-bg: #f5eef4;
   --color-citation-competitor-border: #d6bfd3;
   --color-citation-competitor-text: #634360;
   --color-citation-third-party: #5c5e62;
-  --color-citation-third-party-bg: #eeeeee;
-  --color-citation-third-party-border: #d0d1d2;
+  --color-citation-third-party-bg: #f0f2f4;
+  --color-citation-third-party-border: #dce0e4;
   --color-citation-third-party-text: #393c41;
 
   --color-run-draft: #5c5e62;
-  --color-run-draft-bg: #eeeeee;
+  --color-run-draft-bg: #f0f2f4;
   --color-run-queued: #5c5e62;
-  --color-run-queued-bg: #eeeeee;
-  --color-run-running: #2667ff;
-  --color-run-running-bg: #eaf1fd;
+  --color-run-queued-bg: #f0f2f4;
+  --color-run-running: #315cff;
+  --color-run-running-bg: #eef1ff;
   --color-run-analyzing: #67558a;
   --color-run-analyzing-bg: #f1edf8;
-  --color-run-completed: #19724b;
-  --color-run-completed-bg: #e9f6ee;
-  --color-run-partial: #9a5b00;
-  --color-run-partial-bg: #fff5df;
-  --color-run-failed: #b33a3a;
-  --color-run-failed-bg: #fff0f0;
+  --color-run-completed: #31a57a;
+  --color-run-completed-bg: #eaf7f1;
+  --color-run-partial: #d9822b;
+  --color-run-partial-bg: #fdf6ec;
+  --color-run-failed: #d96b55;
+  --color-run-failed-bg: #fdf1ee;
   --color-run-cancelled: #5c5e62;
-  --color-run-cancelled-bg: #eeeeee;
+  --color-run-cancelled-bg: #f0f2f4;
 
-  /* Score bands — low/mid escalate red→amber; good is the brand blue; high is green. */
-  --color-score-low: #b33a3a;
-  --color-score-low-bg: #fff0f0;
-  --color-score-low-border: #e7aaaa;
-  --color-score-low-text: #8f292e;
-  --color-score-low-ring: #b33a3a;
-  --color-score-mid: #9a5b00;
-  --color-score-mid-bg: #fff5df;
-  --color-score-mid-border: #e7c47c;
-  --color-score-mid-text: #754500;
-  --color-score-mid-ring: #9a5b00;
-  --color-score-good: #2667ff;
-  --color-score-good-bg: #eaf1fd;
-  --color-score-good-border: #c8d6f6;
-  --color-score-good-text: #2f57cc;
-  --color-score-good-ring: #2667ff;
-  --color-score-high: #19724b;
-  --color-score-high-bg: #e9f6ee;
-  --color-score-high-border: #9fd2b4;
-  --color-score-high-text: #135d3d;
-  --color-score-high-ring: #19724b;
+  /* Score bands — low/mid escalate coral→amber; good is Cube Cobalt; high is green. */
+  --color-score-low: #d96b55;
+  --color-score-low-bg: #fdf1ee;
+  --color-score-low-border: #f3c0b6;
+  --color-score-low-text: #b54833;
+  --color-score-low-ring: #d96b55;
+  --color-score-mid: #d9822b;
+  --color-score-mid-bg: #fdf6ec;
+  --color-score-mid-border: #f5d4a4;
+  --color-score-mid-text: #9c5512;
+  --color-score-mid-ring: #d9822b;
+  --color-score-good: #315cff;
+  --color-score-good-bg: #eef1ff;
+  --color-score-good-border: #c8d2ff;
+  --color-score-good-text: #2548d4;
+  --color-score-good-ring: #315cff;
+  --color-score-high: #31a57a;
+  --color-score-high-bg: #eaf7f1;
+  --color-score-high-border: #a8e0cb;
+  --color-score-high-text: #1e7c59;
+  --color-score-high-ring: #31a57a;
 
-  /* Charts — the brand blue is the first series; the rest stay categorical. */
-  --color-chart-1: #2667ff;
-  --color-chart-2: #19724b;
-  --color-chart-3: #9a5b00;
-  --color-chart-4: #b33a3a;
+  /* Charts — the brand cobalt is the first series; the rest stay categorical. */
+  --color-chart-1: #315cff;
+  --color-chart-2: #31a57a;
+  --color-chart-3: #d9822b;
+  --color-chart-4: #d96b55;
   --color-chart-5: #67558a;
   --color-chart-6: #0f8a9b;
   --color-chart-7: #9b761c;
   --color-chart-8: #7a5477;
-  --color-series-1: #2667ff;
-  --color-series-2: #19724b;
-  --color-series-3: #9a5b00;
-  --color-series-4: #b33a3a;
+  --color-series-1: #315cff;
+  --color-series-2: #31a57a;
+  --color-series-3: #d9822b;
+  --color-series-4: #d96b55;
   --color-series-5: #67558a;
   --color-series-other: #8e8e8e;
-  --color-chart-tooltip: #101828;
+  --color-chart-tooltip: #18202b;
   --color-chart-tooltip-fg: #ffffff;
-  --color-overlay-scrim: rgb(16 24 40 / 40%);
+  --color-overlay-scrim: rgb(24 32 43 / 40%);
 
-  /* Radius — Material Design 3 scale: 4px xs, 6px sm, 8px md, 12px lg, 16px xl, 20px 2xl. */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
+  /* Radius — Cube27 micro-radius scale (2px–6px); full pill retained for chips. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
   --radius-full: 9999px;
 
-  /* Elevation — soft diffuse Material Design 3 elevation ladder. */
-  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05), 0 2px 6px -1px rgb(16 24 40 / 0.08);
+  /* Elevation — Apple-style specular ambient shadows with subtle 1px border highlight. */
+  --shadow-xs: 0 1px 2px rgb(24 32 43 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(24 32 43 / 0.04), 0 2px 4px -1px rgb(24 32 43 / 0.06);
   --shadow-card:
-    0 1px 3px 0 rgb(16 24 40 / 0.04), 0 4px 14px -2px rgb(16 24 40 / 0.07);
+    0 0 0 1px rgb(24 32 43 / 0.035), 0 1px 3px 0 rgb(24 32 43 / 0.025), 0 8px 24px -4px rgb(18 32 48 / 0.05);
   --shadow-card-hover:
-    0 2px 5px 0 rgb(16 24 40 / 0.06), 0 8px 22px -4px rgb(16 24 40 / 0.12);
+    0 0 0 1px rgb(24 32 43 / 0.05), 0 3px 8px 0 rgb(24 32 43 / 0.04), 0 16px 36px -6px rgb(18 32 48 / 0.08);
   --shadow-elevated:
-    0 4px 8px -2px rgb(16 24 40 / 0.06), 0 16px 32px -6px rgb(16 24 40 / 0.16);
-  --shadow-lg: 0 4px 8px rgb(16 24 40 / 0.06), 0 20px 42px -16px rgb(16 24 40 / 0.18);
-  --shadow-modal-value: 0 8px 16px rgb(16 24 40 / 0.08), 0 28px 64px -20px rgb(16 24 40 / 0.24);
+    0 0 0 1px rgb(24 32 43 / 0.045), 0 4px 14px -2px rgb(24 32 43 / 0.06), 0 20px 40px -8px rgb(18 32 48 / 0.10);
+  --shadow-lg: 0 0 0 1px rgb(24 32 43 / 0.055), 0 8px 24px -4px rgb(24 32 43 / 0.08), 0 24px 60px -12px rgb(18 32 48 / 0.14);
+  --shadow-modal-value: 0 0 0 1px rgb(24 32 43 / 0.06), 0 12px 32px rgb(24 32 43 / 0.10), 0 32px 72px -20px rgb(18 32 48 / 0.22);
 
-  /* Product-app type scale. Standardized M3 legible typography. */
+  /* Product-app type scale. Standardized legible typography. */
   --text-2xs: 0.75rem; /* 12px — fine print / micro-label minimum */
   --text-xs: 0.8125rem; /* 13px — compact tags / secondary labels */
   --text-sm: 0.875rem; /* 14px — UI body / labels / buttons / inputs / tables */
@@ -261,12 +254,11 @@
   --section-y-desktop: 120px;
   --section-y-tablet: 72px;
   --section-y-phone: 48px;
-  /* A 2px panel gap then a solid, opaque accent ring — the accent clears 3:1
-     against every surface role, unlike a mostly-transparent tint. */
-  --focus-ring: 0 0 0 2px var(--color-panel), 0 0 0 4px var(--color-accent);
+  /* A 2px panel gap then a solid, opaque accent ring. */
+  --focus-ring: 0 0 0 2px var(--color-panel), 0 0 0 3px rgba(49, 92, 255, 0.25);
   --skeleton-base: #e6e6e6;
   --skeleton-highlight: #ffffff;
-  --value-placeholder: #667085;
+  --value-placeholder: #7a838e;
 }
 
 *,
@@ -285,8 +277,8 @@ body {
   margin: 0;
   min-height: 100dvh;
   background: var(--color-background);
-  color: #101828;
-  font-family: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #18202b;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
   letter-spacing: normal;
@@ -302,11 +294,11 @@ body {
   h5,
   h6 {
     margin: 0;
-    font-family: var(--font-satoshi), var(--font-switzer), -apple-system, sans-serif;
+    font-family: var(--font-plus-jakarta-sans), var(--font-inter), -apple-system, sans-serif;
     font-weight: 500;
     letter-spacing: normal;
     line-height: 1.2;
-    color: #101828;
+    color: #18202b;
   }
 
   p {
@@ -315,7 +307,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #2667ff;
+  outline: 2px solid #315cff;
   outline-offset: 2px;
 }
 
@@ -324,13 +316,13 @@ body {
 }
 
 .focus-ring:focus-visible {
-  border-color: #2667ff !important;
+  border-color: #315cff !important;
   box-shadow: var(--focus-ring);
 }
 
 ::selection {
-  background: #b9cbff;
-  color: #171a20;
+  background: #c9d5ff;
+  color: #18202b;
 }
 
 .mono,
@@ -339,7 +331,7 @@ code,
 pre,
 kbd,
 samp {
-  font-family: var(--font-switzer), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }

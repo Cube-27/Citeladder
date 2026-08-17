@@ -92,7 +92,7 @@ export function ProductWindow() {
   return (
     <div
       data-testid="product-window"
-      className="app-type-scale border-border-strong bg-panel shadow-elevated mx-auto w-full max-w-[1240px] overflow-hidden rounded-xl border"
+      className="app-type-scale border-border-strong bg-panel shadow-elevated mx-auto w-full max-w-[1240px] overflow-hidden rounded-md border"
     >
       <div
         role="tablist"

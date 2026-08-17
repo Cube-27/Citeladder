@@ -34,8 +34,8 @@
 
 .website-type :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family:
-    var(--font-satoshi),
-    var(--font-switzer),
+    var(--font-plus-jakarta-sans),
+    var(--font-inter),
     -apple-system,
     sans-serif;
   font-optical-sizing: auto;
@@ -67,8 +67,8 @@
 .website-feature-heading,
 .website-small-heading {
   font-family:
-    var(--font-satoshi),
-    var(--font-switzer),
+    var(--font-plus-jakarta-sans),
+    var(--font-inter),
     -apple-system,
     sans-serif;
   font-optical-sizing: auto;
@@ -112,7 +112,7 @@
 .website-label,
 .website-eyebrow {
   font-family:
-    var(--font-switzer),
+    var(--font-inter),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -121,7 +121,7 @@
 
 .website-data-display {
   font-family:
-    var(--font-switzer),
+    var(--font-inter),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',

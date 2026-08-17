@@ -93,7 +93,10 @@ export function Insight({
     <article
       data-insight-id={insight.id}
       data-layer={insight.layer}
-      className={cn('bg-panel shadow-card flex flex-col gap-3.5 rounded-xl p-4 sm:p-5', className)}
+      className={cn(
+        'bg-panel border-border shadow-card flex flex-col gap-3.5 rounded-sm border p-4 sm:p-5',
+        className,
+      )}
     >
       {/* 1. Priority and source layer */}
       <div className="flex items-center justify-between gap-3">

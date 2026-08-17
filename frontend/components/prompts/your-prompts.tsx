@@ -232,7 +232,7 @@ export function YourPrompts() {
       </div>
 
       {activePrompts.length === 0 ? (
-        <div className="bg-panel shadow-card border-border/70 grid place-items-center gap-3 rounded-2xl border p-8 text-center sm:p-12">
+        <div className="bg-panel shadow-card border-border/70 grid place-items-center gap-3 rounded-sm border p-8 text-center sm:p-12">
           <p className={eyebrowClasses}>Your prompts</p>
           <h2 className={displayHeadingLgClasses}>No active prompts yet</h2>
           <p className="text-secondary max-w-md text-sm leading-relaxed">
@@ -247,11 +247,11 @@ export function YourPrompts() {
           </Link>
         </div>
       ) : visiblePrompts.length === 0 ? (
-        <div className="bg-panel shadow-card text-secondary border-border/70 rounded-2xl border p-8 text-center text-sm">
+        <div className="bg-panel shadow-card text-secondary border-border/70 rounded-sm border p-8 text-center text-sm">
           No prompts match your search.
         </div>
       ) : (
-        <div className="bg-panel shadow-card border-border/70 overflow-hidden rounded-2xl border">
+        <div className="bg-panel shadow-card border-border/70 overflow-hidden rounded-sm border">
           <Table>
             <TableHeader>
               <TableRow>
