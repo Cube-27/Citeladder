@@ -72,16 +72,16 @@ export function PageHeader({
   if (!showTitle && !summary && !actions && !eyebrow) return heading;
 
   return (
-    <div className={cn('flex flex-col gap-1 pb-1', className)}>
+    <div className={cn('flex flex-col gap-1.5 pb-2', className)}>
       {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
-      <div className="flex flex-nowrap items-start gap-2">
+      <div className="flex flex-nowrap items-start justify-between gap-4">
         {heading}
         {actions ? (
-          <div className="ms-auto flex shrink-0 items-center gap-2 ps-8">{actions}</div>
+          <div className="ms-auto flex shrink-0 items-center gap-2.5 ps-4">{actions}</div>
         ) : null}
       </div>
       {summary ? (
-        <p className="text-muted max-w-[70ch] text-sm leading-relaxed">{summary}</p>
+        <p className="text-muted max-w-[72ch] text-sm leading-relaxed">{summary}</p>
       ) : null}
     </div>
   );

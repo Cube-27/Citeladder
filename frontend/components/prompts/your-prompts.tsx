@@ -232,26 +232,26 @@ export function YourPrompts() {
       </div>
 
       {activePrompts.length === 0 ? (
-        <div className="bg-panel shadow-card grid place-items-center gap-3 rounded-lg px-6 py-16 text-center">
+        <div className="bg-panel shadow-card border-border/70 grid place-items-center gap-3 rounded-2xl border p-8 text-center sm:p-12">
           <p className={eyebrowClasses}>Your prompts</p>
           <h2 className={displayHeadingLgClasses}>No active prompts yet</h2>
-          <p className="text-secondary max-w-md text-sm">
+          <p className="text-secondary max-w-md text-sm leading-relaxed">
             Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
             topics with AI.
           </p>
           <Link
             href="/prompts?mode=manage"
-            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            className={buttonVariants({ variant: 'secondary', size: 'md' })}
           >
             Manage prompts
           </Link>
         </div>
       ) : visiblePrompts.length === 0 ? (
-        <div className="bg-panel shadow-card text-secondary rounded-lg px-6 py-12 text-center text-sm">
+        <div className="bg-panel shadow-card text-secondary border-border/70 rounded-2xl border p-8 text-center text-sm">
           No prompts match your search.
         </div>
       ) : (
-        <div className="bg-panel shadow-card overflow-hidden rounded-lg">
+        <div className="bg-panel shadow-card border-border/70 overflow-hidden rounded-2xl border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -277,7 +277,7 @@ export function YourPrompts() {
                           aria-expanded={!isCollapsed}
                           aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} topic ${label}`}
                           onClick={() => toggleGroup(group.key)}
-                          className="focus-ring text-muted hover:text-foreground grid size-6 place-items-center rounded-sm"
+                          className="focus-ring text-muted hover:text-foreground hover:bg-well grid size-7 place-items-center rounded-lg transition-colors"
                         >
                           {isCollapsed ? (
                             <ChevronRight className="size-4" aria-hidden />

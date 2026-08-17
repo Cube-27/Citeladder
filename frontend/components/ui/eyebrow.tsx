@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils';
  * element is semantic at the call site. <AccentEyebrow> is the accent-toned
  * variant used atop setup and status pages.
  */
-export const eyebrowClasses = 'text-xs text-muted font-medium';
+export const eyebrowClasses =
+  'font-sans text-2xs font-semibold uppercase tracking-[0.08em] text-muted';
 
 export function AccentEyebrow({
   children,

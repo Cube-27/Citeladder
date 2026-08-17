@@ -2,7 +2,6 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
-import { Label } from '@/components/ui/typography';
 import type { PageSummary, SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { PLACEHOLDER, formatScore } from '@/lib/site-health/status';
 
@@ -114,21 +113,21 @@ function ScoreCard({
   sub,
 }: Readonly<{ label: string; value: number | null; sub: string }>) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-4">
+    <Card className="border-border/70 bg-panel shadow-card rounded-2xl border">
+      <CardContent className="flex items-center gap-4 p-5 sm:p-6">
         {value === null ? (
-          <div className="border-border-subtle text-muted mono size-score-ring flex items-center justify-center rounded-full border text-base">
+          <div className="border-border/60 text-muted mono size-score-ring flex items-center justify-center rounded-full border text-base">
             {PLACEHOLDER}
           </div>
         ) : (
           <ScoreRing value={value} size={72} label={`${label} score: ${Math.round(value)}`} />
         )}
-        <div className="grid gap-0.5">
-          <Label>{label}</Label>
-          <span className="mono text-foreground text-base font-medium">
+        <div className="grid gap-1">
+          <p className="text-muted text-xs font-semibold tracking-wider uppercase">{label}</p>
+          <span className="font-display text-foreground text-xl font-semibold tabular-nums">
             {value === null ? PLACEHOLDER : `${formatScore(value)} / 100`}
           </span>
-          <span className="text-muted text-xs">{sub}</span>
+          <span className="text-muted text-xs leading-relaxed">{sub}</span>
         </div>
       </CardContent>
     </Card>

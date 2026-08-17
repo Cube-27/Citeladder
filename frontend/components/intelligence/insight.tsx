@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 import { EvidenceLink, type EvidenceRef } from './evidence-link';
@@ -92,50 +93,44 @@ export function Insight({
     <article
       data-insight-id={insight.id}
       data-layer={insight.layer}
-      className={cn('bg-panel shadow-card flex flex-col gap-4 rounded-lg p-4', className)}
+      className={cn('bg-panel shadow-card flex flex-col gap-3.5 rounded-xl p-4 sm:p-5', className)}
     >
       {/* 1. Priority and source layer */}
       <div className="flex items-center justify-between gap-3">
         <span
           className={cn(
-            'text-2xs inline-flex items-center rounded-sm px-1.5 py-0.5 font-medium tracking-wide uppercase',
+            'text-2xs inline-flex items-center rounded px-1.5 py-0.5 font-semibold tracking-[0.06em] uppercase',
             PRIORITY_TONE[insight.priority],
           )}
         >
           {PRIORITY_COPY[insight.priority]}
         </span>
-        <span className="text-subtle text-2xs font-medium tracking-wide uppercase">
-          {LAYER_LABEL[insight.layer]}
-        </span>
+        <span className={cn(eyebrowClasses, 'text-subtle')}>{LAYER_LABEL[insight.layer]}</span>
       </div>
 
       {/* 2. Claim */}
-      <h3 className="text-foreground text-sm leading-snug font-semibold text-balance">
+      <h3 className="font-display text-foreground text-sm leading-[1.35] font-semibold text-balance">
         {insight.claim}
       </h3>
 
       {/* 3. Evidence */}
       <div className="flex flex-col gap-1">
-        <p className="text-subtle text-2xs font-medium tracking-wide uppercase">Evidence</p>
+        <p className={cn(eyebrowClasses, 'text-subtle')}>Evidence</p>
         <EvidenceLink evidence={insight.evidence} />
       </div>
 
       {/* 4. Why this matters */}
       {!hideWhyThisMatters ? (
         <div className="flex flex-col gap-1">
-          <p className="text-subtle text-2xs font-medium tracking-wide uppercase">
-            Why this matters
-          </p>
+          <p className={cn(eyebrowClasses, 'text-subtle')}>Why this matters</p>
           <p className="text-muted text-xs leading-relaxed">{insight.whyThisMatters}</p>
         </div>
       ) : null}
 
       {/* 5. Potential impact */}
       <div className="border-border-subtle flex items-center justify-between border-t pt-3">
-        <span className="text-subtle text-2xs font-medium tracking-wide uppercase">
-          Potential impact
-        </span>
-        <span className="text-foreground text-xs font-semibold">
+        <span className={cn(eyebrowClasses, 'text-subtle')}>Potential impact</span>
+        <span className="font-display text-foreground text-xs font-semibold">
           {IMPACT_COPY[insight.potentialImpact]}
         </span>
       </div>

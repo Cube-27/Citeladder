@@ -16,10 +16,11 @@ import { safeUrlTransform } from './safe-url';
 
 /** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
 export function ContentMarkdown({ markdown }: { markdown: string }) {
+  const content = markdown ?? '';
   return (
     // `break-words`: model output can contain unbreakable tokens (long URLs,
     // slugs) that would otherwise spill out of the card's right edge.
-    <div className="text-foreground [&_a]:text-accent-text [&_blockquote]:border-border [&_blockquote]:text-secondary [&_code]:bg-background-alt [&_pre]:bg-background-alt [&_td]:border-border [&_th]:border-border [&_h2]:text-heading-sm [&_h3]:text-heading-xs space-y-3 text-sm leading-normal break-words [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_h1]:text-lg [&_li]:ml-4 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:p-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc">
+    <div className="text-foreground [&_h1]:font-display [&_h1]:text-foreground [&_h2]:font-display [&_h2]:text-foreground [&_h3]:font-display [&_h3]:text-foreground [&_p]:text-foreground/90 [&_a]:text-accent-text hover:[&_a]:text-accent-hover [&_blockquote]:border-accent [&_blockquote]:bg-accent-subtle/40 [&_blockquote]:text-secondary [&_code]:bg-well [&_code]:border-border/60 [&_pre]:bg-well [&_pre]:border-border/80 [&_th]:border-border [&_th]:bg-well [&_td]:border-border w-full text-base leading-relaxed break-words [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:my-4 [&_blockquote]:rounded-r-lg [&_blockquote]:border-l-4 [&_blockquote]:py-2.5 [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:rounded-md [&_code]:border [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_h1]:mt-6 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:tracking-tight [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:tracking-tight [&_li]:leading-relaxed [&_ol]:mb-4 [&_ol]:ml-6 [&_ol]:list-decimal [&_ol]:space-y-2 [&_p]:mb-4 [&_p]:leading-relaxed [&_pre]:my-5 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-sm [&_pre_code]:border-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-5 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_td]:border [&_td]:px-4 [&_td]:py-2.5 [&_th]:border [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-semibold [&_ul]:mb-4 [&_ul]:ml-6 [&_ul]:list-disc [&_ul]:space-y-2">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         urlTransform={safeUrlTransform}
@@ -36,7 +37,7 @@ export function ContentMarkdown({ markdown }: { markdown: string }) {
           ),
         }}
       >
-        {markdown}
+        {content}
       </ReactMarkdown>
     </div>
   );

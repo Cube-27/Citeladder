@@ -26,16 +26,17 @@ import { cva } from 'class-variance-authority';
  * that reads as the raised option without needing a shadow.
  */
 export const buttonVariants = cva(
-  'focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[transform,background-color,color,border-color,box-shadow] duration-[160ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
+  'focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border font-sans font-medium no-underline transition-[transform,background-color,color,border-color,box-shadow] duration-[160ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
   {
     variants: {
       variant: {
         primary:
-          'border-transparent bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-active',
+          'border-transparent bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-active shadow-xs',
         // Secondary is Tesla's white alternate action: a white fill, Graphite
         // label, and a Pale Silver hairline — an outline button, not a raised
         // one, now that elevation is essentially none. Hover warms the fill.
-        secondary: 'border-border bg-panel text-secondary hover:bg-background-alt active:bg-well',
+        secondary:
+          'border-border bg-panel text-secondary hover:bg-background-alt active:bg-well shadow-xs',
         neutral:
           'border-transparent bg-background-alt text-foreground hover:bg-well active:bg-active',
         ghost:
@@ -48,12 +49,12 @@ export const buttonVariants = cva(
         // instead of fading opacity, which used to wash the label out along with
         // the fill. globals.test.ts gates both `danger-fg` ↔ fill pairs.
         destructive:
-          'border-transparent bg-danger-solid text-danger-fg hover:bg-danger-solid-hover active:bg-danger-solid-hover',
+          'border-transparent bg-danger-solid text-danger-fg hover:bg-danger-solid-hover active:bg-danger-solid-hover shadow-xs',
       },
       size: {
-        sm: 'h-[var(--control-height-sm)] px-2 text-xs',
-        md: 'h-[var(--control-height)] px-3 text-sm',
-        lg: 'h-[var(--control-height-lg)] px-4 text-sm',
+        sm: 'h-[var(--control-height-sm)] px-2.5 text-xs font-medium',
+        md: 'h-[var(--control-height)] px-3.5 text-sm font-medium',
+        lg: 'h-[var(--control-height-lg)] px-5 text-sm font-medium',
         icon: 'size-[var(--control-height)] px-0',
       },
     },

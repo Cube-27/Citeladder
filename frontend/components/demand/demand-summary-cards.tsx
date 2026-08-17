@@ -1,11 +1,10 @@
 import { Activity, AlertTriangle, ArrowUpRight, Split, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { Card, CardContent } from '@/components/ui/card';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { countByTab, detectorStates, isActionableGap, numericMetric } from '@/lib/demand/signals';
 
-function KpiCard({
+function KpiSegment({
   label,
   value,
   caption,
@@ -21,18 +20,18 @@ function KpiCard({
   className?: string;
 }>) {
   return (
-    <Card
-      className={`bg-panel border-border hover:border-border-strong transition-all ${className ?? ''}`}
+    <div
+      className={`hover:bg-panel-tonal/40 flex flex-col justify-between p-4.5 transition-colors sm:p-5 ${className ?? ''}`}
     >
-      <CardContent className="p-3.5">
-        <div className="text-muted flex items-center justify-between text-xs">
-          <span className="font-medium">{label}</span>
-          <Icon className={`${iconClassName} size-3.5`} aria-hidden="true" />
-        </div>
-        <div className="text-foreground mt-2 text-xl font-semibold tabular-nums">{value}</div>
-        <p className="text-muted mt-0.5 text-xs">{caption}</p>
-      </CardContent>
-    </Card>
+      <div className="text-muted flex items-center justify-between text-xs font-semibold tracking-wider uppercase">
+        <span className="truncate">{label}</span>
+        <Icon className={`${iconClassName} ml-2 size-4 shrink-0`} aria-hidden="true" />
+      </div>
+      <div className="text-foreground font-display mt-2 text-2xl font-semibold tabular-nums">
+        {value}
+      </div>
+      <p className="text-muted mt-1 text-xs leading-relaxed">{caption}</p>
+    </div>
   );
 }
 
@@ -64,43 +63,45 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
   const health = detectorHealth(snapshot.summary);
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      <KpiCard
-        label="Latent Search Demand"
-        value={latentImpressions.toLocaleString('en-US')}
-        caption="Impressions in ranking gaps"
-        icon={Zap}
-        iconClassName="text-accent"
-      />
-      <KpiCard
-        label="Striking Distance"
-        value={String(countByTab(signals, 'striking_distance'))}
-        caption="Positions 4–15 quick wins"
-        icon={ArrowUpRight}
-        iconClassName="text-info"
-      />
-      <KpiCard
-        label="Cannibalization"
-        value={String(countByTab(signals, 'cannibalization'))}
-        caption="Internal URL conflicts"
-        icon={Split}
-        iconClassName="text-warning"
-      />
-      <KpiCard
-        label="CTR Underperformers"
-        value={String(countByTab(signals, 'ctr_gap'))}
-        caption="Below position benchmark"
-        icon={AlertTriangle}
-        iconClassName="text-danger"
-      />
-      <KpiCard
-        label="Detector Health"
-        value={health.value}
-        caption={health.caption}
-        icon={Activity}
-        iconClassName="text-success"
-        className="col-span-2 sm:col-span-1"
-      />
+    <div className="bg-panel shadow-card border-border/70 overflow-hidden rounded-2xl border">
+      <div className="divide-border/60 grid grid-cols-1 divide-y sm:grid-cols-2 lg:grid-cols-5 lg:divide-x lg:divide-y-0">
+        <KpiSegment
+          label="Latent Search Demand"
+          value={latentImpressions.toLocaleString('en-US')}
+          caption="Impressions in ranking gaps"
+          icon={Zap}
+          iconClassName="text-accent"
+        />
+        <KpiSegment
+          label="Striking Distance"
+          value={String(countByTab(signals, 'striking_distance'))}
+          caption="Positions 4–15 quick wins"
+          icon={ArrowUpRight}
+          iconClassName="text-info"
+        />
+        <KpiSegment
+          label="Cannibalization"
+          value={String(countByTab(signals, 'cannibalization'))}
+          caption="Internal URL conflicts"
+          icon={Split}
+          iconClassName="text-warning"
+        />
+        <KpiSegment
+          label="CTR Underperformers"
+          value={String(countByTab(signals, 'ctr_gap'))}
+          caption="Below position benchmark"
+          icon={AlertTriangle}
+          iconClassName="text-danger"
+        />
+        <KpiSegment
+          label="Detector Health"
+          value={health.value}
+          caption={health.caption}
+          icon={Activity}
+          iconClassName="text-success"
+          className="sm:col-span-2 lg:col-span-1"
+        />
+      </div>
     </div>
   );
 }

@@ -217,19 +217,6 @@ async def test_claim_rechecks_eligibility_on_the_locked_relation(
     assertion is deterministic: it fails the moment the outer filter is
     dropped.
     """
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=2)
-    async with session_factory() as session:
-        await create_audit(
-            session,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            engines=seed.engines,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=1,
-        )
-
     queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
     model = AUDIT_QUEUE_SPEC.model
     statement = queue._claim_statement(  # noqa: SLF001 - shape is the contract

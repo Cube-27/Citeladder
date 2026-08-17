@@ -2,10 +2,10 @@
 @import './website-type.css';
 
 /*
- * CiteLadder's single design-system owner (Tesla-derived).
+ * CiteLadder's single design-system owner (restrained Material Design 3).
  *
  * Satoshi display + Switzer body/UI from self-hosted variable WOFF2 files, one chromatic accent
- * (Reference Blue #2667FF), light cool blue/grey canvases (#f4f6fb), neutral-gray highlights, and a
+ * (Reference Blue #2667FF), light cool blue/grey canvases (#f8f9fc), neutral-gray highlights, and a
  * shared soft elevation ladder. Marketing is monochrome-plus-blue; the
  * authenticated app reuses the same chrome but keeps
  * functional status/score/run/citation/chart colour because a data view has to
@@ -20,11 +20,12 @@
   --font-display: var(--font-satoshi), var(--font-switzer), -apple-system, sans-serif;
 
   /* Surfaces — light cool blue/grey canvas so all cards and panels pop with elevation. */
-  --color-background: #f4f6fb;
-  --color-background-alt: #edf1f7;
+  --color-background: #f8f9fc;
+  --color-background-alt: #f1f4f9;
   --color-panel: #ffffff;
+  --color-panel-tonal: #f1f4f9;
   --color-elevated: #ffffff;
-  --color-well: #edf1f7;
+  --color-well: #edf2f7;
   --color-active: #e2e8f0;
   --color-input: #ffffff;
   --color-sidebar: #ffffff;
@@ -188,7 +189,7 @@
   --color-chart-tooltip-fg: #ffffff;
   --color-overlay-scrim: rgb(16 24 40 / 40%);
 
-  /* Radius — Untitled UI refined scale: 4px xs, 6px sm, 8px md, 12px lg, 16px xl. */
+  /* Radius — Material Design 3 scale: 4px xs, 6px sm, 8px md, 12px lg, 16px xl, 20px 2xl. */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -197,37 +198,34 @@
   --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* Elevation — one shared reference ladder for marketing and app surfaces.
-     The near ring and ambient drop live in one shadow token, so elevated cards
-     do not also need a CSS border. Background remains an independent choice. */
-  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.07), 0 5px 12px -6px rgb(16 24 40 / 0.12);
+  /* Elevation — soft diffuse Material Design 3 elevation ladder. */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05), 0 2px 6px -1px rgb(16 24 40 / 0.08);
   --shadow-card:
-    0 0 0 1px rgb(16 24 40 / 0.08), 0 2px 4px rgb(16 24 40 / 0.06),
-    0 14px 30px -14px rgb(16 24 40 / 0.18);
+    0 1px 3px 0 rgb(16 24 40 / 0.04), 0 4px 14px -2px rgb(16 24 40 / 0.07);
   --shadow-card-hover:
-    0 0 0 1px rgb(16 24 40 / 0.1), 0 4px 8px rgb(16 24 40 / 0.07),
-    0 20px 38px -16px rgb(16 24 40 / 0.22);
-  --shadow-elevated: 0 2px 4px rgb(16 24 40 / 0.08), 0 14px 28px -12px rgb(16 24 40 / 0.2);
-  --shadow-lg: 0 4px 8px rgb(16 24 40 / 0.08), 0 20px 42px -18px rgb(16 24 40 / 0.22);
-  --shadow-modal-value: 0 8px 16px rgb(16 24 40 / 0.08), 0 28px 64px -20px rgb(16 24 40 / 0.28);
+    0 2px 5px 0 rgb(16 24 40 / 0.06), 0 8px 22px -4px rgb(16 24 40 / 0.12);
+  --shadow-elevated:
+    0 4px 8px -2px rgb(16 24 40 / 0.06), 0 16px 32px -6px rgb(16 24 40 / 0.16);
+  --shadow-lg: 0 4px 8px rgb(16 24 40 / 0.06), 0 20px 42px -16px rgb(16 24 40 / 0.18);
+  --shadow-modal-value: 0 8px 16px rgb(16 24 40 / 0.08), 0 28px 64px -20px rgb(16 24 40 / 0.24);
 
-  /* Product-app type scale. Website/auth override these variables within
-     `.website-type`; embedded product previews reset through `.app-type-scale`. */
-  --text-2xs: 0.6875rem; /* 11px — micro / fine print */
-  --text-xs: 0.75rem; /* 12px — small UI labels */
-  --text-sm: 0.875rem; /* 14px — body, nav, button, link baseline */
-  --text-base: 1rem; /* 16px — category label / comfortable body */
-  --text-lg: 1.0625rem; /* 17px — product name */
-  --text-xl: 1.375rem; /* 22px — promo / sub-heading */
-  --text-2xl: 2rem; /* 32px — section heading */
-  --text-3xl: 2.5rem; /* 40px — hero on small/base screens */
-  --text-4xl: 2.75rem; /* 44px — hero at md */
-  --text-5xl: 3rem; /* 48px — hero at lg, the display ceiling */
-  --text-heading-sm: 0.9375rem; /* 15px — compact headings */
+  /* Product-app type scale. Standardized M3 legible typography. */
+  --text-2xs: 0.75rem; /* 12px — fine print / micro-label minimum */
+  --text-xs: 0.8125rem; /* 13px — compact tags / secondary labels */
+  --text-sm: 0.875rem; /* 14px — UI body / labels / buttons / inputs / tables */
+  --text-base: 1rem; /* 16px — comfortable body prose / card body */
+  --text-lg: 1.125rem; /* 18px — card section titles */
+  --text-xl: 1.375rem; /* 22px — surface titles */
+  --text-2xl: 1.75rem; /* 28px — main page anchors / screen titles */
+  --text-3xl: 2rem; /* 32px — primary KPI metrics */
+  --text-4xl: 2.5rem; /* 40px — hero at md */
+  --text-5xl: 3rem; /* 48px — hero at lg */
+  --text-heading-sm: 1.125rem; /* 18px — compact headings */
+  --text-heading-xs: 1rem; /* 16px — structural sub-headings */
 
-  --leading-tight: 1.2;
-  --leading-body: 1.43;
+  --leading-tight: 1.25;
+  --leading-body: 1.5;
 
   /* Motion — frequent controls are quick; occasional drawers get more travel. */
   --transition-fast: 170ms;
@@ -242,21 +240,21 @@
 
 :root {
   color-scheme: light;
-  --sidebar-width: 224px;
-  --topbar-height: 48px;
-  --nav-item-height: 32px;
-  --content-gutter: 20px;
-  --content-max-width: 1383px;
-  --container-max: 1383px;
-  --card-padding: 16px;
-  --card-gap: 16px;
+  --sidebar-width: 236px;
+  --topbar-height: 52px;
+  --nav-item-height: 36px;
+  --content-gutter: 24px;
+  --content-max-width: 1360px;
+  --container-max: 1360px;
+  --card-padding: 24px;
+  --card-gap: 24px;
   --control-height-sm: 32px;
-  --control-height: 32px;
-  --control-height-lg: 40px;
-  --table-row-height: 36px;
-  --table-header-height: 32px;
-  --table-cell-padding-x: 12px;
-  --table-cell-padding-y: 6px;
+  --control-height: 36px;
+  --control-height-lg: 42px;
+  --table-row-height: 40px;
+  --table-header-height: 36px;
+  --table-cell-padding-x: 16px;
+  --table-cell-padding-y: 8px;
   --dialog-scroll: 60vh;
   --score-ring: 72px;
   /* Section rhythm — whitespace as a luxury signal (marketing consumes these). */

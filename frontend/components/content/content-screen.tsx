@@ -10,10 +10,8 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Textarea } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { displayHeadingLgClasses } from '@/components/ui/typography';
 import type { RunStatusValue } from '@/components/ui/badge-variants';
 import { CONTENT_PROMPT_MAX_LEN, contentApi, type ContentSkillView } from '@/lib/api/content';
 import { demandApi } from '@/lib/api/demand';
@@ -202,11 +200,18 @@ function ContentComposer({
   onGenerate: () => void;
 }>) {
   return (
-    <Card data-component-id="content-prompt-box">
-      <CardContent className="flex flex-col gap-3 py-5">
+    <Card
+      data-component-id="content-prompt-box"
+      className="border-border/70 bg-panel shadow-card rounded-2xl border p-6 sm:p-8"
+    >
+      <CardContent className="flex flex-col gap-5 p-0">
         <div className="grid gap-1">
-          <span className={eyebrowClasses}>New generation</span>
-          <h2 className={displayHeadingLgClasses}>What can I help you create?</h2>
+          <span className="text-muted text-xs font-semibold tracking-wider uppercase">
+            New generation
+          </span>
+          <h2 className="font-display text-foreground text-xl font-semibold tracking-tight">
+            What can I help you create?
+          </h2>
         </div>
         {opportunityId ? (
           <Alert tone="info">This draft will keep a link to the selected opportunity.</Alert>
@@ -214,12 +219,12 @@ function ContentComposer({
         {demandSource ? (
           <div
             data-component-id="content-demand-source"
-            className="border-accent-border bg-accent-soft/40 text-secondary flex items-start gap-2 rounded-md border p-2.5 text-xs"
+            className="border-accent-border bg-accent-soft/50 text-secondary flex items-start gap-2.5 rounded-xl border p-3.5 text-sm"
           >
-            <TrendingUp className="text-accent-text mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <TrendingUp className="text-accent-text mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
               Brief written from the search demand signal{' '}
-              <span className="text-foreground font-medium">{demandSource}</span>. Edit anything
+              <span className="text-foreground font-semibold">{demandSource}</span>. Edit anything
               below before generating.
             </span>
           </div>
@@ -233,6 +238,7 @@ function ContentComposer({
           rows={demandSource ? 10 : 4}
           aria-label="Describe the website content you want to create"
           placeholder="Describe the website content you want to create…"
+          className="border-border/80 bg-background/50 focus:bg-panel rounded-xl p-4 text-sm leading-relaxed"
         />
         <SkillPicker
           skills={skills}
@@ -241,23 +247,27 @@ function ContentComposer({
           disabled={generating}
           loading={skillsLoading}
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge data-component-id="content-output-type" aria-label="Output type: Website page">
-            Website page
-          </Badge>
-          <div
-            data-component-id="content-website-context-required"
-            className="text-secondary inline-flex items-center gap-2 text-xs font-medium"
-          >
-            <Sparkles className="size-3" aria-hidden />
-            Uses confirmed facts and crawl evidence when available
+        <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge data-component-id="content-output-type" aria-label="Output type: Website page">
+              Website page
+            </Badge>
+            <div
+              data-component-id="content-website-context-required"
+              className="text-muted inline-flex items-center gap-1.5 text-xs font-medium"
+            >
+              <Sparkles className="text-accent size-3.5" aria-hidden />
+              Uses confirmed facts and crawl evidence when available
+            </div>
           </div>
-          <div className="ml-auto">
+          <div>
             <Button
               data-component-id="content-generate-button"
               disabled={!canGenerate}
               onClick={onGenerate}
+              className="gap-2 shadow-xs"
             >
+              <Sparkles className="size-4" aria-hidden />
               Generate
             </Button>
           </div>
@@ -277,11 +287,14 @@ function GeneratingPanel({
   onCancel: (generationId: string) => void;
 }>) {
   return (
-    <Card data-component-id="content-generating-panel">
-      <CardContent className="flex items-center gap-4 py-6">
+    <Card
+      data-component-id="content-generating-panel"
+      className="border-border/70 bg-panel shadow-card rounded-2xl border p-6"
+    >
+      <CardContent className="flex items-center gap-4 p-0">
         <div role="status" aria-label="Generating content" className="flex items-center gap-3">
           <ICONS.spinner className="text-accent size-5 animate-spin" aria-hidden />
-          <span className="text-secondary text-sm">Generating your content…</span>
+          <span className="text-foreground text-sm font-medium">Generating your content…</span>
         </div>
         <div className="ml-auto">
           <Button
@@ -289,6 +302,7 @@ function GeneratingPanel({
             data-component-id="content-cancel-button"
             disabled={!selectedId || cancelling}
             onClick={() => selectedId && onCancel(selectedId)}
+            size="sm"
           >
             Cancel
           </Button>
@@ -312,24 +326,28 @@ function GenerationErrorPanel({
   onDismiss: () => void;
 }>) {
   return (
-    <Card data-component-id="content-error-panel">
-      <CardContent className="flex flex-col gap-3 py-5">
-        <div role="alert" className="text-danger-text flex items-start gap-2 text-sm">
+    <Card
+      data-component-id="content-error-panel"
+      className="border-danger/30 bg-danger-bg/50 shadow-card rounded-2xl border p-6"
+    >
+      <CardContent className="flex flex-col gap-4 p-0">
+        <div role="alert" className="text-danger-text flex items-start gap-2.5 text-sm">
           <ICONS.warning className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>
+          <span className="leading-relaxed font-medium">
             {mutationError
               ? actionErrorMessage(mutationError)
               : 'Generation failed. You can edit your prompt and try again.'}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5 pt-1">
           {failedGenerationId ? (
             <Button
               data-component-id="content-retry-button"
               disabled={retrying}
               onClick={() => onTryAgain(failedGenerationId)}
+              size="sm"
             >
-              <RefreshCw className="mr-1.5 size-4" aria-hidden />
+              <RefreshCw className="mr-1.5 size-3.5" aria-hidden />
               Try again
             </Button>
           ) : null}
@@ -337,8 +355,9 @@ function GenerationErrorPanel({
             variant="secondary"
             data-component-id="content-dismiss-button"
             onClick={onDismiss}
+            size="sm"
           >
-            <X className="mr-1.5 size-4" aria-hidden />
+            <X className="mr-1.5 size-3.5" aria-hidden />
             Dismiss
           </Button>
         </div>
@@ -369,8 +388,11 @@ function GenerationResult({
   onFeedback: (generationId: string, feedback: 'accepted' | 'rejected') => void;
 }>) {
   return (
-    <Card data-component-id="content-result-card">
-      <CardContent className="flex flex-col gap-4 py-5">
+    <Card
+      data-component-id="content-result-card"
+      className="border-border/70 bg-panel shadow-card rounded-2xl border p-6 sm:p-8"
+    >
+      <CardContent className="flex flex-col gap-5 p-0">
         {detail.output_truncated ? (
           <div data-component-id="content-truncation-warning">
             <Alert tone="warning">
@@ -379,16 +401,16 @@ function GenerationResult({
             </Alert>
           </div>
         ) : null}
-        <div data-component-id="content-result-body">
+        <div data-component-id="content-result-body" className="py-2">
           <ContentMarkdown markdown={detail.output_text ?? ''} />
         </div>
-        <p data-component-id="content-ai-disclaimer" className="text-secondary text-xs">
+        <p data-component-id="content-ai-disclaimer" className="text-muted text-sm leading-relaxed">
           AI-generated {detail.skill_id} — review and revise before publishing. Generated prose
           never becomes a project fact.
         </p>
         <div
           data-component-id="content-result-provenance"
-          className="border-border-subtle text-muted text-2xs flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 font-mono"
+          className="border-border/60 text-muted flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 font-mono text-xs"
         >
           <span>Requested model: {detail.requested_model}</span>
           {detail.returned_model ? <span>Returned model: {detail.returned_model}</span> : null}
@@ -401,46 +423,67 @@ function GenerationResult({
                 : 'Unavailable — ungrounded draft'}
           </span>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" data-component-id="content-copy-button" onClick={onCopy}>
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <Button
+            variant="secondary"
+            size="md"
+            data-component-id="content-copy-button"
+            onClick={onCopy}
+            className="shadow-xs"
+          >
             {copied ? (
-              <Check className="mr-1.5 size-4" aria-hidden />
+              <Check className="text-success mr-1.5 size-4" aria-hidden />
             ) : (
               <Copy className="mr-1.5 size-4" aria-hidden />
             )}
             {copyLabel}
           </Button>
-          <Button variant="secondary" data-component-id="content-export-button" onClick={onExport}>
+          <Button
+            variant="secondary"
+            size="md"
+            data-component-id="content-export-button"
+            onClick={onExport}
+            className="shadow-xs"
+          >
             <Download className="mr-1.5 size-4" aria-hidden />
             Export Markdown
           </Button>
           <Button
             variant="secondary"
+            size="md"
             data-component-id="content-regenerate-button"
             disabled={regenerating}
             onClick={() => onRegenerate(detail.id)}
+            className="shadow-xs"
           >
             <RefreshCw className="mr-1.5 size-4" aria-hidden />
             Regenerate
           </Button>
-          {detail.feedback === null ? (
-            <>
-              <Button disabled={feedbackPending} onClick={() => onFeedback(detail.id, 'accepted')}>
-                Helpful
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={feedbackPending}
-                onClick={() => onFeedback(detail.id, 'rejected')}
-              >
-                Not useful
-              </Button>
-            </>
-          ) : (
-            <span className="text-secondary self-center text-sm">
-              {detail.feedback === 'accepted' ? 'Marked helpful' : 'Marked not useful'}
-            </span>
-          )}
+          <div className="ms-auto flex items-center gap-2">
+            {detail.feedback === null ? (
+              <>
+                <Button
+                  size="sm"
+                  disabled={feedbackPending}
+                  onClick={() => onFeedback(detail.id, 'accepted')}
+                >
+                  Helpful
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={feedbackPending}
+                  onClick={() => onFeedback(detail.id, 'rejected')}
+                >
+                  Not useful
+                </Button>
+              </>
+            ) : (
+              <span className="text-secondary text-sm font-medium">
+                {detail.feedback === 'accepted' ? 'Marked helpful' : 'Marked not useful'}
+              </span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -459,30 +502,35 @@ function GenerationHistory({
   onSelect: (generationId: string) => void;
 }>) {
   return (
-    <section data-component-id="content-history" className="flex flex-col gap-2">
-      <div className="grid gap-1">
-        <span className={eyebrowClasses}>History</span>
-        <h2 className={displayHeadingLgClasses}>Recent generations</h2>
+    <section
+      data-component-id="content-history"
+      className="bg-panel shadow-card border-border/70 flex flex-col gap-3.5 rounded-2xl border p-5 sm:p-6"
+    >
+      <div className="border-border/60 grid gap-1 border-b pb-3">
+        <span className="text-muted text-xs font-semibold tracking-wider uppercase">History</span>
+        <h2 className="font-display text-foreground text-lg leading-tight font-semibold tracking-tight">
+          Recent generations
+        </h2>
       </div>
       {loading ? (
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full rounded-xl" />
       ) : items.length === 0 ? (
-        <p className="text-secondary text-sm">No generations yet.</p>
+        <p className="text-muted py-4 text-center text-sm">No generations yet.</p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {items.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  'focus-ring hover:bg-background-alt flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors',
+                  'focus-ring hover:bg-background-alt flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm transition-colors',
                   item.id === selectedId
-                    ? 'border-accent-border bg-accent-soft/40'
-                    : 'border-border',
+                    ? 'border-accent-border bg-accent-soft/50 font-medium'
+                    : 'border-border/60',
                 )}
               >
-                <span className="text-foreground min-w-0 flex-1 truncate">
+                <span className="text-foreground min-w-0 flex-1 truncate font-medium">
                   {historyLabel(item)}
                 </span>
                 <Badge variant="run-status" value={STATUS_BADGE[item.status]}>
@@ -626,78 +674,80 @@ function ProjectContentScreen({
   else if (copyFailed) copyLabel = 'Copy failed';
 
   return (
-    // Explicit `minmax(0,1fr)` column + `min-w-0` cards, not the implicit
-    // `auto` track (see app-shell.tsx): generated Markdown carries wide
-    // min-content (fenced blocks, long lines), which otherwise stretched the
-    // track — and with it every card on the page — past the right gutter.
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 [&>*]:min-w-0">
-      {demand.notFound ? (
-        <Alert tone="warning">
-          That demand signal is no longer in the latest snapshot — it may have been recomputed away.
-          Start from a current signal on Search Demand, or write your own brief below.
-        </Alert>
-      ) : null}
-      {demand.failed ? (
-        <Alert tone="danger">
-          Search demand could not be loaded, so the brief for this signal could not be built. The
-          signal itself may still exist — reload to try again, or write your own brief below.
-        </Alert>
-      ) : null}
-      <ContentComposer
-        prompt={prompt}
-        promptRef={promptRef}
-        opportunityId={opportunityId}
-        demandSource={demand.brief?.sourceLabel ?? null}
-        generating={generating}
-        skillId={effectiveSkillId}
-        skills={skills}
-        skillsLoading={skillCatalog.isLoading}
-        canGenerate={canGenerate}
-        onPromptChange={setPrompt}
-        onSkillChange={setChosenSkillId}
-        onGenerate={handleGenerate}
-      />
+    // Explicit 2-column layout on desktop: Composer & Results on Left (minmax(0, 1fr)),
+    // Recent Generations History on Right (sticky rail).
+    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px] [&>*]:min-w-0">
+      <div className="flex min-w-0 flex-col gap-6">
+        {demand.notFound ? (
+          <Alert tone="warning">
+            That demand signal is no longer in the latest snapshot — it may have been recomputed
+            away. Start from a current signal on Search Demand, or write your own brief below.
+          </Alert>
+        ) : null}
+        {demand.failed ? (
+          <Alert tone="danger">
+            Search demand could not be loaded, so the brief for this signal could not be built. The
+            signal itself may still exist — reload to try again, or write your own brief below.
+          </Alert>
+        ) : null}
+        <ContentComposer
+          prompt={prompt}
+          promptRef={promptRef}
+          opportunityId={opportunityId}
+          demandSource={demand.brief?.sourceLabel ?? null}
+          generating={generating}
+          skillId={effectiveSkillId}
+          skills={skills}
+          skillsLoading={skillCatalog.isLoading}
+          canGenerate={canGenerate}
+          onPromptChange={setPrompt}
+          onSkillChange={setChosenSkillId}
+          onGenerate={handleGenerate}
+        />
 
-      {generating ? (
-        <GeneratingPanel
+        {generating ? (
+          <GeneratingPanel
+            selectedId={selectedId}
+            cancelling={cancelMutation.isPending}
+            onCancel={(generationId) => cancelMutation.mutate(generationId)}
+          />
+        ) : null}
+
+        {showErrorPanel ? (
+          <GenerationErrorPanel
+            mutationError={mutationError}
+            failedGenerationId={failed && detail ? detail.id : null}
+            retrying={tryAgainMutation.isPending}
+            onTryAgain={(generationId) => tryAgainMutation.mutate(generationId)}
+            onDismiss={handleDismiss}
+          />
+        ) : null}
+
+        {!generating && succeeded && detail?.output_text ? (
+          <GenerationResult
+            detail={detail}
+            copied={copied}
+            copyLabel={copyLabel}
+            regenerating={regenerateMutation.isPending}
+            feedbackPending={feedbackMutation.isPending}
+            onCopy={handleCopy}
+            onExport={handleExport}
+            onRegenerate={(generationId) => regenerateMutation.mutate(generationId)}
+            onFeedback={(generationId, feedback) =>
+              feedbackMutation.mutate({ generationId, feedback })
+            }
+          />
+        ) : null}
+      </div>
+
+      <div className="w-full min-w-0 xl:sticky xl:top-6">
+        <GenerationHistory
+          items={listQuery.data ?? []}
+          loading={listQuery.isLoading}
           selectedId={selectedId}
-          cancelling={cancelMutation.isPending}
-          onCancel={(generationId) => cancelMutation.mutate(generationId)}
+          onSelect={setSelectedId}
         />
-      ) : null}
-
-      {showErrorPanel ? (
-        <GenerationErrorPanel
-          mutationError={mutationError}
-          failedGenerationId={failed && detail ? detail.id : null}
-          retrying={tryAgainMutation.isPending}
-          onTryAgain={(generationId) => tryAgainMutation.mutate(generationId)}
-          onDismiss={handleDismiss}
-        />
-      ) : null}
-
-      {!generating && succeeded && detail?.output_text ? (
-        <GenerationResult
-          detail={detail}
-          copied={copied}
-          copyLabel={copyLabel}
-          regenerating={regenerateMutation.isPending}
-          feedbackPending={feedbackMutation.isPending}
-          onCopy={handleCopy}
-          onExport={handleExport}
-          onRegenerate={(generationId) => regenerateMutation.mutate(generationId)}
-          onFeedback={(generationId, feedback) =>
-            feedbackMutation.mutate({ generationId, feedback })
-          }
-        />
-      ) : null}
-
-      <GenerationHistory
-        items={listQuery.data ?? []}
-        loading={listQuery.isLoading}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-      />
+      </div>
     </div>
   );
 }

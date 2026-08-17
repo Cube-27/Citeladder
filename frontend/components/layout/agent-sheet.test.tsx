@@ -24,7 +24,7 @@ describe('AgentSheet', () => {
   it('opens from the top bar with bounded typed route context and returns focus', async () => {
     const user = userEvent.setup();
     render(<AgentSheet />);
-    const trigger = screen.getByRole('button', { name: 'Agent' });
+    const trigger = screen.getByRole('button', { name: 'Open Growth Agent' });
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
     expect(screen.getByText(/"canonicalRoute":"\/site"/)).toBeVisible();
@@ -54,7 +54,7 @@ describe('AgentSheet', () => {
   it('closes and clears route context when the active project changes', async () => {
     const user = userEvent.setup();
     const view = render(<AgentSheet />);
-    await user.click(screen.getByRole('button', { name: 'Agent' }));
+    await user.click(screen.getByRole('button', { name: 'Open Growth Agent' }));
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
     activeProject = {
       id: '33333333-3333-4333-8333-333333333333',

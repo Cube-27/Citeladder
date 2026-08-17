@@ -7,7 +7,7 @@
 
 CiteLadder is a light-only, evidence-led enterprise system. It should feel calm,
 precise, and engineered. It began from a Tesla-style restraint and has settled
-into a refined, Untitled-UI-influenced light system: one chromatic accent,
+into a refined, restrained Material-3-influenced light system: one chromatic accent,
 generous whitespace, crisp micro-shadows over hairline borders, and a few
 deliberate, quiet motion treatments.
 
@@ -62,19 +62,19 @@ properties.
 
 Tokens are semantic; components use the role, not a colour value.
 
-| Role                | Token family                                                                                    | Use                                                                                                                    |
-| ------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Canvas and surfaces | `background` (`#f4f6fb`), `panel` / `elevated` (white), `background-alt` / `well` (`#edf1f7`), `sidebar` | Light cool blue/grey is the page canvas; white panels and cards pop with elevation; subtle neutral wells group content |
-| Text                | `foreground` (#101828), `secondary` (#344054), `muted` (#475467), `subtle` (#667085), `inverse` | Untitled UI 10-step Gray reading ramp                                                                                  |
-| Borders             | `border` (#e4e7ec), `border-subtle` (#f2f4f7), `border-strong` (#d0d5dd)                        | Crisp hairlines for subtle separation                                                                                  |
-| Primary action      | `accent-*`                                                                                      | Reference Blue (`#2667FF`) CTAs, explicit selection, links, and focus                                                  |
-| Status              | `success-*`, `warning-*`, `danger-*`, `info-*`, `neutral-bg`                                    | App only; always paired with text or an icon                                                                           |
-| Evidence and scores | `citation-*`, `run-*`, `score-*`, `series-*`, `chart-*`                                         | Persisted evidence, audit status, score bands, and charts                                                              |
+| Role                | Token family                                                                                                                        | Use                                                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Canvas and surfaces | `background` (`#f8f9fc`), `panel` / `elevated` (white), `panel-tonal` / `background-alt` (`#f1f4f9`), `well` (`#edf2f7`), `sidebar` | Light cool blue/grey is the page canvas; white panels and cards pop with elevation; subtle neutral wells group content |
+| Text                | `foreground` (#101828), `secondary` (#344054), `muted` (#475467), `subtle` (#667085), `inverse`                                     | Untitled UI 10-step Gray reading ramp                                                                                  |
+| Borders             | `border` (#e4e7ec), `border-subtle` (#f2f4f7), `border-strong` (#d0d5dd)                                                            | Crisp hairlines for subtle separation                                                                                  |
+| Primary action      | `accent-*`                                                                                                                          | Reference Blue (`#2667FF`) CTAs, explicit selection, links, and focus                                                  |
+| Status              | `success-*`, `warning-*`, `danger-*`, `info-*`, `neutral-bg`                                                                        | App only; always paired with text or an icon                                                                           |
+| Evidence and scores | `citation-*`, `run-*`, `score-*`, `series-*`, `chart-*`                                                                             | Persisted evidence, audit status, score bands, and charts                                                              |
 
 The accent is Reference Blue: `#2667FF` at rest, darkened on hover and press.
-`accent-text` is a darker accessible blue for text on white. Page canvas is a calm light cool blue/grey (`#f4f6fb`), while panel, card,
-dialog, and drawer surfaces are white. `#edf1f7` is the shared neutral highlight
-for grouped regions, wells, hover, and quiet emphasis.
+`accent-text` is a darker accessible blue for text on white. Page canvas is a calm light cool blue/grey (`#f8f9fc`), while panel, card,
+dialog, and drawer surfaces are white. `#f1f4f9` provides tonal panels and the
+alternate surface; `#edf2f7` is the stronger neutral well and hover treatment.
 
 **Marketing is monochrome-plus-blue.** It uses only white, the ink ramp, and the
 one blue — no status, score, or category colour. **The authenticated app keeps
@@ -128,25 +128,25 @@ hierarchy, strict tabular numerals for metrics, and high-density information arc
 Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
 classes.
 
-| Role                       | Family  | Size / line height |  Weight |  Tracking | Class / Token                   | Text Colour                  |
-| -------------------------- | ------- | -----------------: | ------: | --------: | :------------------------------ | :--------------------------- |
-| App Hero / Screen Title    | Satoshi |            20/26px |     600 |  -0.015em | `text-xl font-display`          | `text-foreground`            |
-| Section / Surface Heading  | Switzer |            15/22px |     600 |   -0.01em | `text-heading-sm` / `text-sm`   | `text-foreground`            |
-| Primary KPI / Metric Value | Switzer |    28/32 → 32/36px |     600 |   -0.02em | `text-2xl` / `text-3xl` + `tabular-nums` | `text-foreground`  |
-| Metric Subtitle / Delta    | Switzer |            12/16px |     500 |         0 | `text-xs font-mono`             | `text-secondary` / delta tone|
-| UI / Form Field Label      | Switzer |            12/16px |     500 |         0 | `text-xs font-medium`           | `text-foreground`            |
-| Standard Body / Content    | Switzer |            13/20px |     400 |         0 | `text-sm text-secondary`        | `text-secondary`             |
-| Compact Body / Row Data    | Switzer |            12/16px |     400 |         0 | `text-xs text-secondary`        | `text-secondary`             |
-| Micro Eyebrow / Meta Pill  | Switzer |            11/14px | 500–600 |   +0.05em | `text-2xs uppercase`            | `text-muted` / `text-subtle` |
+| Role                       | Family  | Size / line height |  Weight | Tracking | Class / Token                            | Text Colour                   |
+| -------------------------- | ------- | -----------------: | ------: | -------: | :--------------------------------------- | :---------------------------- |
+| App Hero / Screen Title    | Satoshi |            26/30px |     600 | -0.025em | `displayHeadingXlClasses`                | `text-foreground`             |
+| Section / Surface Heading  | Satoshi |         16–18/23px |     600 | -0.015em | `text-base` / `text-lg font-display`     | `text-foreground`             |
+| Primary KPI / Metric Value | Satoshi |    28/35 → 32/40px |     600 |  -0.02em | `text-2xl` / `text-3xl` + `tabular-nums` | `text-foreground`             |
+| Metric Subtitle / Delta    | Switzer |            13/20px | 500–600 |        0 | `text-xs` + `tabular-nums`               | `text-secondary` / delta tone |
+| UI / Form Field Label      | Switzer |            13/20px |     500 |        0 | `text-xs font-medium`                    | `text-foreground`             |
+| Standard Body / Content    | Switzer |            14/21px |     400 |        0 | `text-sm text-secondary`                 | `text-secondary`              |
+| Compact Body / Row Data    | Switzer |            13/20px |     400 |        0 | `text-xs text-secondary`                 | `text-secondary`              |
+| Micro Eyebrow / Meta Pill  | Switzer |            12/16px |     600 |  +0.08em | `text-2xs uppercase`                     | `text-muted` / `text-subtle`  |
 
 ### High density layout and elevation standard
 
-The product app is an enterprise data-dense environment. It favors elevation over
-heavy borders to avoid visual noise and container-in-container clutter:
+The product app is an enterprise data-dense environment. It uses diffuse elevation
+and selective semantic hairlines to avoid visual noise and container-in-container clutter:
 
-- **Elevation without borders**: Primary cards and surfaces use `bg-panel` and `shadow-card`
-  or `shadow-sm` without redundant `border border-border` lines. Elevated menus and popovers
-  use `bg-elevated` and `shadow-elevated rounded-md`.
+- **Elevation and borders**: Primary cards and surfaces use `bg-panel` with `shadow-card`
+  or `shadow-sm`. Add a semantic hairline only when the surface needs a stronger edge;
+  elevated menus and popovers use `bg-elevated` and `shadow-elevated`.
 - **Drawer and Sheet Composition**: Modals, slide-out drawers, and sheets already provide an
   elevated surface. They must **never** contain nested `<Card>` components. Field groups and
   lists inside drawers use clean structural section divisions (`space-y-4` / borderless rows).
@@ -156,24 +156,23 @@ heavy borders to avoid visual noise and container-in-container clutter:
 - **Custom Select Menus**: Filter dropdowns and page-kind selectors use custom Radix menus with
   `shadow-elevated rounded-md` and radio items—never raw browser-native `<select>` popups.
 
-
 ## Data and geometry
 
 | Context                  |     Desktop |     Touch / compact |
 | ------------------------ | ----------: | ------------------: |
-| Top bar                  |        48px |                52px |
-| Sidebar rail             |       224px |       mobile drawer |
-| Content gutter           |        20px |                16px |
-| Navigation / control row |        32px | 44px minimum target |
-| Primary CTA              | 40px height | 44px minimum target |
-| Table row                |        36px |     labelled record |
+| Top bar                  |        52px |                52px |
+| Sidebar rail             |       236px |       mobile drawer |
+| Content gutter           |        24px |                16px |
+| Navigation / control row |        36px | 44px minimum target |
+| Primary CTA              | 42px height | 44px minimum target |
+| Table row                |        40px |     labelled record |
 
-The content area caps at 1383px. Standard cards use 16px internal padding and gap.
+The content area caps at 1360px. Standard cards use 24px internal padding and gap.
 The radius scale is 4px (`xs`), 6px (`sm`, controls/buttons), 8px (`md`), 12px
 (`lg`, standard cards), 16px (`xl`), and 20px (`2xl`, feature panels); a full
-radius is reserved for badges, dots, and toggles. Elevation is Untitled-UI
-micro-shadows layered over hairline borders (`shadow-card` and up), never a heavy
-drop. Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px
+radius is reserved for badges, dots, and toggles. Elevation uses soft diffuse
+shadows (`shadow-card` and up), with semantic hairlines added only where a surface
+needs a stronger edge. Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px
 desktop).
 
 ## Layout and content composition
@@ -474,8 +473,8 @@ Before merging a visual change, verify:
 - Website/auth type uses a documented content role with a 16px body baseline;
   app type keeps its compact scale. Both stay within weights 400–600.
 - Marketing stays monochrome-plus-blue; functional colour appears only in the app.
-- The default canvas is white, quiet highlight is `#F3F4F6`, and elevation does
-  not force card backgrounds onto structural regions.
+- The default canvas is `#f8f9fc`, quiet tonal panels use `#f1f4f9`, and elevation
+  does not force card backgrounds onto structural regions.
 - Elevation uses the shared shadow tokens; radius uses the 4 / 6 / 8 / 12 / 16 / 20
   scale.
 - Any new motion is calm and stops under `prefers-reduced-motion`.

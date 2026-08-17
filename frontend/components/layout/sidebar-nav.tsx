@@ -24,16 +24,19 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-[var(--nav-item-height)] items-center gap-1.5 rounded-sm px-1.5 text-sm transition-colors',
+        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors',
         active
-          ? 'bg-accent-soft text-accent-hover font-medium'
-          : 'text-secondary hover:text-foreground hover:bg-background-alt font-medium',
+          ? 'bg-accent-soft text-accent-text font-semibold shadow-xs'
+          : 'text-secondary hover:text-foreground hover:bg-well',
       )}
     >
       {active ? (
-        <span aria-hidden className="bg-accent absolute inset-y-1.5 start-0 w-1 rounded-e-sm" />
+        <span aria-hidden className="bg-accent absolute inset-y-2 start-0 w-1 rounded-e-md" />
       ) : null}
-      <Icon className={cn('size-4 shrink-0', active ? 'opacity-100' : 'opacity-80')} aria-hidden />
+      <Icon
+        className={cn('size-4 shrink-0', active ? 'text-accent opacity-100' : 'opacity-80')}
+        aria-hidden
+      />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
     </Link>
   );

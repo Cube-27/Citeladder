@@ -189,4 +189,7 @@ def test_summary_bounds_and_orders_top_citations() -> None:
 
 def test_summary_is_deterministic_for_the_same_input() -> None:
     citations = [_citation("g2.com"), _citation("reddit.com"), _citation("youtube.com")]
-    assert summarize_source_pattern(citations) == summarize_source_pattern(citations)
+    first_summary = summarize_source_pattern(citations)
+    repeated_summary = summarize_source_pattern(list(citations))
+
+    assert repeated_summary == first_summary

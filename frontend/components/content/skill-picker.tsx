@@ -82,8 +82,8 @@ export function SkillPicker({
       data-component-id="content-skill-picker"
     >
       {byChannel.map((group) => (
-        <div key={group.channel} className="flex flex-wrap items-center gap-1.5">
-          <span className="text-muted text-2xs w-16 shrink-0 font-medium tracking-wider uppercase">
+        <div key={group.channel} className="flex flex-wrap items-center gap-2">
+          <span className="text-muted w-20 shrink-0 text-xs font-medium tracking-wider uppercase">
             {group.label}
           </span>
           {group.items.map((skill) => {
@@ -97,13 +97,13 @@ export function SkillPicker({
                   disabled={disabled}
                   onClick={() => onChange(skill.id)}
                   className={cn(
-                    'focus-ring inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                    'focus-ring inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
                     selected
                       ? 'border-accent-border bg-accent-soft text-accent-text font-medium'
-                      : 'border-border text-secondary hover:border-border-strong hover:text-foreground',
+                      : 'border-border/70 text-secondary hover:border-border-strong hover:text-foreground',
                   )}
                 >
-                  {selected ? <Check className="size-3" aria-hidden /> : null}
+                  {selected ? <Check className="size-3.5" aria-hidden /> : null}
                   {skill.label}
                 </button>
               </Tooltip>

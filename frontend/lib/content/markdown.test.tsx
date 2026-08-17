@@ -41,6 +41,12 @@ describe('ContentMarkdown', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
+  it('preserves leading indentation in the original Markdown', () => {
+    const { container } = render(<ContentMarkdown markdown={'    indented code\n'} />);
+
+    expect(container.querySelector('pre code')).toHaveTextContent('indented code');
+  });
+
   it('never parses raw HTML (script/iframe arrive as escaped text)', () => {
     const { container } = render(
       <ContentMarkdown markdown={'hello <script>window.pwned = true</script> <b>bold?</b>'} />,

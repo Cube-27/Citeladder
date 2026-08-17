@@ -41,7 +41,7 @@ type Command = {
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
-const ROW = 'flex w-full items-center gap-2 rounded-sm px-2 text-left text-sm h-8';
+const ROW = 'flex w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm h-9';
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
@@ -198,7 +198,7 @@ export function CommandPalette() {
           itself as the focus target for the same reason the ⌘K path does —
           this button is not a Radix Trigger, so nothing else would. */}
       <Button
-        variant="secondary"
+        variant="ghost"
         size="sm"
         onClick={(event) => {
           returnFocusTo.current = event.currentTarget;
@@ -206,11 +206,13 @@ export function CommandPalette() {
         }}
         aria-label="Search or jump to"
         aria-keyshortcuts="Meta+K Control+K"
-        className="text-muted w-full justify-start text-left"
+        className="bg-panel hover:bg-well border-border/70 text-muted hover:text-foreground h-9 w-full justify-start rounded-xl border px-3 text-left shadow-xs transition-colors"
       >
-        <Search className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
-        <span className="text-xs">Search or jump to…</span>
-        <kbd className="text-subtle text-2xs ms-auto font-mono">⌘K</kbd>
+        <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
+        <span className="min-w-0 truncate text-sm font-normal">Search or jump to…</span>
+        <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-md border px-1.5 py-0.5 text-xs font-medium sm:inline">
+          ⌘K
+        </kbd>
       </Button>
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
@@ -231,10 +233,10 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg border focus:outline-none"
+            className="border-border/60 bg-elevated shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-2xl border focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-            <div className="border-border-subtle flex items-center gap-3 border-b px-4">
+            <div className="border-border/60 flex items-center gap-3 border-b px-4">
               <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
               <input
                 ref={inputRef}
@@ -252,9 +254,9 @@ export function CommandPalette() {
                 // `:focus-visible` outline would draw a permanent blue ring
                 // around the header for no information. `!` is needed because
                 // that rule is unlayered and would otherwise beat a utility.
-                className="text-foreground placeholder:text-muted h-10 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
+                className="text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border-subtle text-subtle text-2xs shrink-0 rounded-sm border px-1.5 py-0.5 font-mono">
+              <kbd className="border-border/60 text-muted shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-xs">
                 esc
               </kbd>
             </div>
@@ -328,14 +330,20 @@ export function CommandPalette() {
 
             {/* Keyboard legend — the palette is a keyboard surface first, so
                 it states its own controls rather than assuming they are known. */}
-            <div className="border-border-subtle text-subtle text-2xs flex shrink-0 items-center gap-4 border-t px-4 py-2">
+            <div className="border-border/60 text-muted flex shrink-0 items-center gap-4 border-t px-4 py-2.5 text-xs font-medium">
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border-subtle rounded-sm border px-1 font-mono">↑</kbd>
-                <kbd className="border-border-subtle rounded-sm border px-1 font-mono">↓</kbd>
+                <kbd className="border-border/60 bg-well text-2xs rounded-md border px-1.5 py-0.5 font-mono">
+                  ↑
+                </kbd>
+                <kbd className="border-border/60 bg-well text-2xs rounded-md border px-1.5 py-0.5 font-mono">
+                  ↓
+                </kbd>
                 navigate
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border-subtle rounded-sm border px-1 font-mono">↵</kbd>
+                <kbd className="border-border/60 bg-well text-2xs rounded-md border px-1.5 py-0.5 font-mono">
+                  ↵
+                </kbd>
                 select
               </span>
             </div>

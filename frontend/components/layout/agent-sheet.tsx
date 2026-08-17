@@ -104,8 +104,14 @@ export function AgentSheet() {
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)} className="gap-1.5">
-        <Bot className="size-4" aria-hidden />
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => setOpen(true)}
+        aria-label="Open Growth Agent"
+        className="bg-accent-soft border-accent-border text-accent-text hover:bg-accent-subtle h-8 gap-1.5 rounded-lg px-2.5 text-xs font-semibold shadow-xs"
+      >
+        <Bot className="text-accent size-3.5" aria-hidden />
         <span className="hidden sm:inline">Agent</span>
       </Button>
       <Drawer

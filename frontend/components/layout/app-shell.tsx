@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 import { CommandPalette } from '@/components/ui/command-palette';
@@ -16,25 +17,11 @@ import { UserMenu } from './user-menu';
 /**
  * AppShell — the authed-area chrome in the ADS shell language.
  *
- * Geometry: a 240px left sidebar (`bg-sidebar`, `--sidebar-width`) stacked as
+ * Geometry: a 236px left sidebar (`bg-sidebar`, `--sidebar-width`) stacked as
  * logo row → project switcher → grouped nav → user card, each
- * band separated by a hairline; and a 48px top bar (`--topbar-height`) over
- * the content column carrying the centered command palette and theme toggle.
- *
- * The top-bar search is the ⌘K palette (components/ui/command-palette.tsx),
- * which owns both the global key binding and its pointer trigger.
- *
- * The page header no longer lives in the top bar: `<PageHeader />` renders as
- * the first block of the content column (page-header.tsx), where it has room
- * for the 24/28 H-L title, a wrapping description, and an actions row. The
- * 48px bar is reduced to right-aligned utility chrome.
- *
- * The grouped Analyze/Improve nav is deliberately kept — the Figma flat nav is
- * not adopted (plan.md §10, resolved decision 4).
- *
- * Wrapped once in `<TooltipProvider>` so descendants' tooltips work. Session +
- * project context are provided one level up in `(app)/layout.tsx`, so this
- * component is pure chrome around `children`.
+ * band separated by a hairline; and a 52px top bar (`--topbar-height`) over
+ * the content column carrying the centered command palette, date range badge,
+ * and Agent trigger.
  */
 export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -43,17 +30,17 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         <aside className="border-border-subtle bg-sidebar relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r transition-[width] md:flex">
           {/* Logo row — matches topbar height */}
           <div className="border-border-subtle flex h-[var(--topbar-height)] shrink-0 items-center gap-3 border-b px-4">
-            <LogoMark size={16} />
-            <span className="text-foreground font-display text-heading-sm font-bold">
+            <LogoMark size={18} />
+            <span className="text-foreground font-display text-sm font-semibold tracking-tight">
               CiteLadder
             </span>
           </div>
 
-          <div className="border-border-subtle border-b p-1">
+          <div className="border-border-subtle border-b p-1.5">
             <ProjectSwitcher />
           </div>
 
-          <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
+          <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2.5">
             <SidebarNav />
           </div>
 
@@ -63,23 +50,31 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </aside>
 
         <div className="relative z-1 flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Top bar with opaque utility chrome. */}
-          <header className="border-border-subtle bg-panel sticky top-0 z-20 flex h-[var(--topbar-height)] shrink-0 items-center gap-3 border-b px-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,420px)_minmax(0,1fr)] md:px-6">
-            <Link
-              href="/projects"
-              className="flex shrink-0 items-center gap-2 md:hidden"
-              aria-label="CiteLadder command center"
-            >
-              <LogoMark size={16} />
-              <span className="font-display text-foreground font-bold">CiteLadder</span>
-            </Link>
-            <div className="flex justify-end">
-              <AgentSheet />
-            </div>
-            <div className="min-w-0 flex-1 md:w-full md:max-w-105 md:justify-self-center">
-              <CommandPalette />
+          {/* Top bar with seamless Material 3 utility chrome. */}
+          <header className="border-border/50 bg-background/90 sticky top-0 z-20 flex h-[var(--topbar-height)] shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur-md md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,440px)_minmax(0,1fr)] md:px-6">
+            <div className="flex items-center gap-2 md:hidden">
+              <Link
+                href="/projects"
+                className="flex shrink-0 items-center gap-2"
+                aria-label="CiteLadder command center"
+              >
+                <LogoMark size={16} />
+                <span className="font-display text-foreground font-semibold">CiteLadder</span>
+              </Link>
             </div>
             <div aria-hidden className="hidden md:block" />
+            <div className="min-w-0 flex-1 md:w-full md:max-w-110 md:justify-self-center">
+              <CommandPalette />
+            </div>
+            <div className="flex items-center justify-end gap-2.5">
+              <div className="border-border/60 bg-panel text-muted hidden items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-xs lg:flex">
+                <Calendar className="text-muted size-3.5 shrink-0" aria-hidden />
+                <span>Last 28 days</span>
+                <span className="text-border-strong">|</span>
+                <span className="text-subtle">vs previous</span>
+              </div>
+              <AgentSheet />
+            </div>
           </header>
 
           <main
@@ -87,13 +82,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             className="content-scroll safe-bottom min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0"
           >
             <MobileStationNavigation />
-            {/* `grid-cols-[minmax(0,1fr)]`, not the implicit `auto` track: an
-                implicit track is max-content-sized, so any descendant that
-                cannot shrink (an unbreakable URL, a wide table) widened the
-                whole content column and pushed the page header's action
-                buttons out past the viewport. The explicit 0-minimum column
-                keeps overflow inside whichever scroll container owns it. */}
-            <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-[var(--card-gap)] p-[var(--content-gutter)]">
+            <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-[var(--card-gap)] p-4 pt-4 sm:p-6 sm:pt-6 lg:p-8">
               <PageHeader />
               {children}
             </div>

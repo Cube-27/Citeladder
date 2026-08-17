@@ -83,7 +83,13 @@ export function CardTitle({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h3'>>) {
   return (
-    <h3 {...props} className={cn('text-foreground text-heading-sm', className)}>
+    <h3
+      {...props}
+      className={cn(
+        'font-display text-foreground text-lg leading-[1.3] font-semibold tracking-[-0.015em]',
+        className,
+      )}
+    >
       {children}
     </h3>
   );
@@ -95,7 +101,7 @@ export function CardDescription({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'p'>>) {
   return (
-    <p {...props} className={cn('text-muted text-sm', className)}>
+    <p {...props} className={cn('text-muted text-sm leading-relaxed', className)}>
       {children}
     </p>
   );

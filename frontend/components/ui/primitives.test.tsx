@@ -150,17 +150,17 @@ describe('Card', () => {
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 
-  it('CardEyebrow renders the ADS micro-label recipe (never a heading)', () => {
+  it('CardEyebrow renders the shared micro-label recipe (never a heading)', () => {
     render(<CardEyebrow>Visibility score</CardEyebrow>);
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
-    // Micro-label: 12/16 @500, muted — no uppercase, no tracking, and never the
-    // mono face (reserved for values).
-    expect(eyebrow.className).toContain('text-xs');
+    // Micro-label: 12/16 @600, muted, uppercase, tracked, and never the mono
+    // face (reserved for values).
+    expect(eyebrow.className).toContain('text-2xs');
     expect(eyebrow.className).toContain('text-muted');
-    expect(eyebrow.className).toContain('font-medium');
-    expect(eyebrow.className).not.toContain('uppercase');
-    expect(eyebrow.className).not.toContain('tracking-');
+    expect(eyebrow.className).toContain('font-semibold');
+    expect(eyebrow.className).toContain('uppercase');
+    expect(eyebrow.className).toContain('tracking-');
     expect(eyebrow.className).not.toContain('font-mono');
   });
 });
