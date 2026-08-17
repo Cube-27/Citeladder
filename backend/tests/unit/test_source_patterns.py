@@ -189,7 +189,36 @@ def test_summary_bounds_and_orders_top_citations() -> None:
 
 def test_summary_is_deterministic_for_the_same_input() -> None:
     citations = [_citation("g2.com"), _citation("reddit.com"), _citation("youtube.com")]
-    first_summary = summarize_source_pattern(citations)
-    repeated_summary = summarize_source_pattern(list(citations))
-
-    assert repeated_summary == first_summary
+    assert summarize_source_pattern(citations) == {
+        "taxonomy_version": SOURCE_TAXONOMY_VERSION,
+        "distinct_domain_count": 3,
+        "independent_domain_count": 3,
+        "class_counts": {
+            "review_marketplace": 1,
+            "community": 1,
+            "video": 1,
+        },
+        "observed_patterns": [
+            PATTERN_INDEPENDENT_VALIDATION,
+            PATTERN_COMMUNITY_EVIDENCE,
+            PATTERN_VIDEO_EVIDENCE,
+            PATTERN_MULTIPLE_INDEPENDENT_DOMAINS,
+        ],
+        "competitor_source_domains": {},
+        "top_citations": [
+            {
+                "domain": domain,
+                "url": f"https://{domain}/page",
+                "title": domain,
+                "source_class": source_class,
+                "matched_competitor": None,
+            }
+            for domain, source_class in (
+                ("g2.com", "review_marketplace"),
+                ("reddit.com", "community"),
+                ("youtube.com", "video"),
+            )
+        ],
+        "top_citations_truncated": False,
+        "recommended_action": ACTION_PURSUE_INDEPENDENT_EVIDENCE,
+    }
