@@ -17,13 +17,15 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.audits import AUDIT_QUEUE_SPEC, AUDIT_TRIGGER_MANUAL
-from app.core.config.site_health import SITE_CRAWL_QUEUE_SPEC
+from app.core.config.site_health_runtime import (
+    SITE_CRAWL_QUEUE_SPEC,
+)
 from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_LEASED,
 )
 from app.domain.audits.planner import create_audit
-from app.models.site_health import SiteCrawlTask
+from app.models.site_health.queue import SiteCrawlTask
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from tests.component.audit_helpers import seed_audit_fixtures
 from tests.component.site_health_helpers import seed_site_crawl

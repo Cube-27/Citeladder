@@ -17,7 +17,7 @@ from app.analysis.site_health.link_graph import (
     LinkGraphResult,
     analyze_link_graph,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     LINK_KIND_ANCHOR,
     PAGE_ANALYSIS_STATUS_COMPLETED,
@@ -32,18 +32,20 @@ from app.core.config.site_link_graph import (
     LINK_GRAPH_NODE_TITLE_MAX_LENGTH,
 )
 from app.domain.site_health.normalization import canonical_or_empty
-from app.models.site_health import (
-    SiteCrawl,
-    SiteCrawlTask,
-    SiteFetchArtifact,
-    SiteLinkGraphEdge,
-    SiteLinkGraphNode,
-    SiteLinkGraphSnapshot,
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.analysis import (
     SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
-    SiteUrl,
 )
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.graph import (
+    SiteLinkGraphEdge,
+    SiteLinkGraphNode,
+    SiteLinkGraphSnapshot,
+)
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.urls import SiteUrl
 
 
 @dataclass(frozen=True)

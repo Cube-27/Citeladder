@@ -23,7 +23,14 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.site_health import (
+from app.core.config.site_health_acquisition import (
+    ERROR_HTTP_4XX,
+    ERROR_HTTP_5XX,
+    ERROR_ROBOTS_DENIED,
+    ERROR_TIMEOUT,
+    FETCH_ATTEMPT_OUTCOME_ERROR,
+)
+from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_RUNNING,
     ANALYSIS_STATUS_STOPPED,
     CODE_ADVANCED_CONTROLS_UNAVAILABLE,
@@ -33,24 +40,25 @@ from app.core.config.site_health import (
     CRAWL_STATUS_RUNNING,
     DISCOVERY_STATUS_RUNNING,
     DISCOVERY_STATUS_STOPPED,
-    ERROR_HTTP_4XX,
-    ERROR_HTTP_5XX,
-    ERROR_ROBOTS_DENIED,
-    ERROR_TIMEOUT,
-    FETCH_ATTEMPT_OUTCOME_ERROR,
     INITIAL_TASK_GENERATION,
-    INVENTORY_SOURCE_CRAWL_IDS_KEY,
-    MANUAL_PHASE_LIFECYCLE_KEY,
     PAGE_ANALYSIS_STATUS_COMPLETED,
-    PHASE_ANALYSIS,
-    PHASE_RUN_RUNNING,
-    PHASE_RUN_STOPPED,
     RULE_OUTCOME_FAIL,
-    SELECTION_SOURCE_USER,
-    SITE_HEALTH_RULES_BY_ID,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
     TASK_KIND_LINK_CHECK,
+)
+from app.core.config.site_health_crawl_policy import (
+    INVENTORY_SOURCE_CRAWL_IDS_KEY,
+    MANUAL_PHASE_LIFECYCLE_KEY,
+    PHASE_ANALYSIS,
+    PHASE_RUN_RUNNING,
+    PHASE_RUN_STOPPED,
+    SELECTION_SOURCE_USER,
+)
+from app.core.config.site_health_rules import (
+    SITE_HEALTH_RULES_BY_ID,
+)
+from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 from app.core.config.task_queue import (
@@ -65,21 +73,17 @@ from app.core.config.task_queue import (
 from app.domain.site_health.phase_control import start_discovery
 from app.domain.site_health.service.issues import issue_group_id
 from app.models.project import Project
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlEvent,
-    SiteCrawlPhaseRun,
-    SiteCrawlTask,
-    SiteFetchArtifact,
-    SiteFetchAttempt,
-    SiteHealthProfile,
+from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
+from app.models.site_health.analysis import (
     SiteIssue,
     SitePageAnalysis,
     SiteRuleEvaluation,
-    SiteUrl,
-    SiteUrlObservation,
 )
+from app.models.site_health.crawl import SiteCrawl, SiteCrawlPhaseRun
+from app.models.site_health.events import SiteCrawlEvent
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.runtime import SiteHealthProfile
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 from tests.component.site_health_helpers import seed_monitored_urls_allowance
@@ -1884,7 +1888,7 @@ async def test_rerun_page_from_completed_crawl_mints_new_crawl(
     a FRESH single-page rerun crawl and return its identity so the client polls
     the new run rather than the terminal source crawl.
     """
-    from app.core.config.site_health import (
+    from app.core.config.site_health_contracts import (
         CRAWL_ACTIVE_STATUSES,
         TASK_KIND_ANALYZE,
     )

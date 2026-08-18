@@ -13,16 +13,14 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.site_health import (
+from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
 )
-from app.models.site_health import (
-    SiteCrawlTask,
-)
+from app.models.site_health.queue import SiteCrawlTask
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
     _worker,

@@ -18,7 +18,9 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import cast
 
-from app.core.config.site_health import SITE_HEALTH_RULES_BY_ID
+from app.core.config.site_health_rules import (
+    SITE_HEALTH_RULES_BY_ID,
+)
 from app.domain.site_health.service.presentation import (
     _delivery_facts,
     _evaluation_row,
@@ -30,13 +32,13 @@ from app.domain.site_health.service.presentation import (
     display_label_for,
     project_crawl,
 )
-from app.models.site_health import (
-    SiteCrawl,
+from app.models.site_health.analysis import (
     SiteIssue,
     SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
 )
+from app.models.site_health.crawl import SiteCrawl
 
 _NOW = datetime(2026, 7, 29, 12, 0, tzinfo=UTC)
 

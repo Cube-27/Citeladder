@@ -1284,7 +1284,7 @@ schema-matches-visible) — but there is no dimension-level readiness view.
 - **This mapping is a config-owned presentation taxonomy, not existing scoring.** Persisted
   evaluations carry `dimension` (technical/aeo) + `category` (citability, content, structured
   data…), so the seven buckets are a **new taxonomy** and must be declared in
-  `core/config/site_health.py` (invariant 2).
+  `core/config/site_health_taxonomy.py` (invariant 2).
 - **The v1 mapping is fixed, one rule ID to one presentation dimension:**
   - **Answerability:** `technical.thin_content`, `aeo.answer_first`,
     `aeo.question_headings`, `aeo.no_expand_gating`.
@@ -1571,7 +1571,7 @@ analyze curl).
 
 **A naive "reuse the discover artifact" fix cannot work.** `SiteFetchArtifact` has **no raw HTML
 body column** and carries bounded normalized facts **for analyze tasks only**
-([`models/site_health.py:823`](../../backend/app/models/site_health.py)); discovery parses links
+([`models/site_health/acquisition.py:110`](../../backend/app/models/site_health/acquisition.py)); discovery parses links
 from an in-memory response and discards the body. There is nothing stored for analysis to
 re-extract from.
 
@@ -1680,7 +1680,8 @@ predecessor; record exactly-once/idempotency and cancelled-crawl tests in the S0
 `evidence = {"scheme":"https","present":false}`. `components/site-health/issues-catalog.tsx:247`
 already renders remediation — the `/issues` **table** does not.
 
-**Correction: a per-rule `description` already exists** in `core/config/site_health.py`
+**Correction: a per-rule `description` already exists** in
+`core/config/site_health_rules.py`
 (rule definitions carry `description=` alongside `remediation=`). It is simply **not exposed** —
 `domain/site_health/api_schemas.py` has no `description` field, and the frontend cannot read
 Python config.

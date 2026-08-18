@@ -27,7 +27,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import billing as billing_api
 from app.connectors.billing.base import ProviderSubscription
-from app.core.config.billing import billing_settings
+from app.core.config.billing_settings import (
+    billing_settings,
+)
 from app.core.config.entitlements import (
     GRANT_SOURCE_PLAN,
     KEY_MONITORED_URLS,
@@ -39,7 +41,7 @@ from app.models.billing import (
     BillingWebhookEvent,
     GrantRevocation,
 )
-from app.models.site_health import WorkspaceSiteHealthRuntime
+from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "component-webhook-secret"

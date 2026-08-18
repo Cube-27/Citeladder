@@ -23,7 +23,7 @@ from app.core.config.content import (
     CONTEXT_MAX_H1,
     CONTEXT_MAX_H2,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_FAILED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
@@ -31,15 +31,12 @@ from app.core.config.site_health import (
 )
 from app.domain.content.website_context import select_crawl_fragments
 from app.models.project import Project
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlTask,
-    SiteFetchArtifact,
-    SiteHealthProfile,
-    SitePageAnalysis,
-    SiteUrl,
-)
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.analysis import SitePageAnalysis
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.runtime import SiteHealthProfile
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 from app.models.workspace import Workspace
 
 _ROOT = "https://example.com/"

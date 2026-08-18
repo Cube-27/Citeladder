@@ -18,9 +18,11 @@ from sqlalchemy import and_, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.entitlements import KEY_MONITORED_URLS
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_FAILED,
     TASK_KIND_ANALYZE,
+)
+from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 from app.domain.entitlements.service import (
@@ -50,15 +52,11 @@ from app.domain.site_health.service.presentation import (
     project_crawl,
 )
 from app.models.billing import WorkspaceBillingLink
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlTask,
-    SiteHealthProfile,
-    SiteIssue,
-    SitePageAnalysis,
-    SiteUrl,
-)
+from app.models.site_health.analysis import SiteIssue, SitePageAnalysis
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.runtime import SiteHealthProfile
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 
 
 # =========================================================================

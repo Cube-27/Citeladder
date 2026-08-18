@@ -30,12 +30,14 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
-from app.core.config.integrations import (
+from app.core.config.integrations_datasets import (
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
+)
+from app.core.config.integrations_transport import (
     INTEGRATION_PROVIDER_GA4,
     INTEGRATION_PROVIDER_GSC,
 )
@@ -49,7 +51,7 @@ from app.domain.traffic import service as traffic_service
 from app.domain.traffic.service import refresh_traffic_snapshot
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationConnection
-from app.models.site_health import SiteUrl
+from app.models.site_health.urls import SiteUrl
 from tests.component.analytics_helpers import (
     seed_ga4_import,
     seed_metric_row,

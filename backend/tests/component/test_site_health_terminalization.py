@@ -18,7 +18,11 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_acquisition import (
+    ERROR_HTTP_4XX,
+    FETCH_ATTEMPT_OUTCOME_ERROR,
+)
+from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_COMPLETED,
     ANALYSIS_STATUS_FAILED,
     ANALYSIS_STATUS_PENDING,
@@ -30,20 +34,20 @@ from app.core.config.site_health import (
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_RUNNING,
-    ERROR_HTTP_4XX,
     EVENT_CRAWL_COMPLETED,
     EVENT_CRAWL_FAILED,
-    FETCH_ATTEMPT_OUTCOME_ERROR,
-    PHASE_DISCOVERY,
-    PHASE_RUN_COMPLETED,
-    PHASE_RUN_RUNNING,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
-    SELECTION_SOURCE_USER,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
     TASK_KIND_LINK_CHECK,
     TASK_KIND_LINK_GRAPH,
+)
+from app.core.config.site_health_crawl_policy import (
+    PHASE_DISCOVERY,
+    PHASE_RUN_COMPLETED,
+    PHASE_RUN_RUNNING,
+    SELECTION_SOURCE_USER,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
@@ -57,20 +61,17 @@ from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.snapshot import persist_crawl_snapshot
 from app.domain.site_health.terminal_refresh import enqueue_terminal_analytics_refresh
 from app.models.analytics import AnalyticsTask
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlEvent,
-    SiteCrawlPhaseRun,
-    SiteCrawlTask,
-    SiteFetchArtifact,
-    SiteFetchAttempt,
-    SiteHealthSnapshot,
+from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
+from app.models.site_health.analysis import (
     SiteIssue,
     SitePageAnalysis,
     SiteRuleEvaluation,
-    SiteUrl,
 )
+from app.models.site_health.crawl import SiteCrawl, SiteCrawlPhaseRun
+from app.models.site_health.events import SiteCrawlEvent
+from app.models.site_health.graph import SiteHealthSnapshot
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 from app.models.traffic import TrafficSnapshot
 from app.workers.site_health.helpers import _is_crawl_finalize_rule
 from app.workers.site_health.lifecycle import CrawlLifecycle
@@ -691,7 +692,7 @@ async def test_partial_analysis_failure_partially_completes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """One analyze succeeds, one 404s -> partially_completed, no zero score."""
-    from app.core.config.site_health import (
+    from app.core.config.site_health_contracts import (
         ANALYSIS_STATUS_PARTIALLY_COMPLETED,
     )
 
@@ -890,9 +891,11 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
     writes on clean terminalization, so a partial cancel keeps its scores +
     inventory instead of hiding the dashboard behind a null summary.
     """
-    from app.core.config.site_health import (
-        CRAWL_STATUS_CANCELLED,
+    from app.core.config.site_health_acquisition import (
         FETCH_PURPOSE_ANALYZE,
+    )
+    from app.core.config.site_health_contracts import (
+        CRAWL_STATUS_CANCELLED,
         PAGE_ANALYSIS_STATUS_COMPLETED,
     )
     from app.domain.site_health.service import cancel_crawl
@@ -1080,7 +1083,9 @@ async def test_cancel_crawl_without_completed_analyses_leaves_summary_null(
     With no completed analyses there is nothing to project — the summary stays
     null (never a fabricated zero) so the UI shows its terminal/selection state.
     """
-    from app.core.config.site_health import CRAWL_STATUS_CANCELLED
+    from app.core.config.site_health_contracts import (
+        CRAWL_STATUS_CANCELLED,
+    )
     from app.domain.site_health.service import cancel_crawl
 
     seed, _site_url_id, _task_id = await _seed_analyze_ready(session_factory)
@@ -1119,9 +1124,11 @@ async def test_cancel_crawl_with_only_deactivated_completed_analyses_skips_snaps
     renders empty (zero aggregated rows). The precheck shares the persist
     helper's active-membership predicate to enforce this.
     """
-    from app.core.config.site_health import (
-        CRAWL_STATUS_CANCELLED,
+    from app.core.config.site_health_acquisition import (
         FETCH_PURPOSE_ANALYZE,
+    )
+    from app.core.config.site_health_contracts import (
+        CRAWL_STATUS_CANCELLED,
         PAGE_ANALYSIS_STATUS_COMPLETED,
     )
     from app.domain.site_health.service import cancel_crawl
@@ -1274,8 +1281,10 @@ async def test_persist_crawl_snapshot_returns_true_when_active_rows_present(
     the decision derives from the single fetched aggregate row set rather than a
     precheck.
     """
-    from app.core.config.site_health import (
+    from app.core.config.site_health_acquisition import (
         FETCH_PURPOSE_ANALYZE,
+    )
+    from app.core.config.site_health_contracts import (
         PAGE_ANALYSIS_STATUS_COMPLETED,
     )
 
@@ -1354,8 +1363,10 @@ async def test_snapshot_uses_only_latest_completed_analysis_and_issues(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Equal timestamps use UUID tie-break; stale scores/issues stay excluded."""
-    from app.core.config.site_health import (
+    from app.core.config.site_health_acquisition import (
         FETCH_PURPOSE_ANALYZE,
+    )
+    from app.core.config.site_health_contracts import (
         PAGE_ANALYSIS_STATUS_COMPLETED,
     )
 

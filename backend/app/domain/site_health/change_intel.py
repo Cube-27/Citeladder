@@ -32,22 +32,21 @@ from app.core.config.site_change_intel import (
     CHANGE_STATE_NON_COMPARABLE,
     CHANGE_STATE_UNAVAILABLE,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     CRAWL_TERMINAL_STATUSES,
     PAGE_ANALYSIS_STATUS_COMPLETED,
 )
 from app.models.opportunity import OpportunityImplementationEvent
 from app.models.site_changes import SiteChangeObservation, SiteChangeSnapshot
-from app.models.site_health import (
-    SiteCrawl,
-    SiteFetchArtifact,
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.analysis import (
     SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
-    SiteUrl,
-    SiteUrlObservation,
 )
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.urls import SiteUrl, SiteUrlObservation
 
 _SCOPE_KEYS = (
     "discovery_mode",

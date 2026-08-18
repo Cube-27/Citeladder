@@ -17,21 +17,25 @@ from datetime import UTC, datetime
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.site_health import (
-    ANALYSIS_STATUS_CANCELLED,
-    CRAWL_STATUS_CANCELLED,
-    CRAWL_TERMINAL_STATUSES,
-    DISCOVERY_STATUS_CANCELLED,
+from app.core.config.site_health_acquisition import (
     ERROR_HTTP_4XX,
     ERROR_HTTP_5XX,
     ERROR_ROBOTS_DENIED,
     ERROR_TIMEOUT,
+    POLICY_BLOCKING_ERROR_CODES,
+)
+from app.core.config.site_health_contracts import (
+    ANALYSIS_STATUS_CANCELLED,
+    CRAWL_STATUS_CANCELLED,
+    CRAWL_TERMINAL_STATUSES,
+    DISCOVERY_STATUS_CANCELLED,
     EVENT_CRAWL_CANCELLED,
     PAGE_ANALYSIS_STATUS_COMPLETED,
+    TASK_KIND_ANALYZE,
+)
+from app.core.config.site_health_crawl_policy import (
     PHASE_ANALYSIS,
     PHASE_DISCOVERY,
-    POLICY_BLOCKING_ERROR_CODES,
-    TASK_KIND_ANALYZE,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
@@ -72,15 +76,12 @@ from app.domain.site_health.state_events import (
     apply_discovery_status,
     record_crawl_event,
 )
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlEvent,
-    SiteCrawlPhaseRun,
-    SiteCrawlTask,
-    SiteHealthSnapshot,
-    SitePageAnalysis,
-)
+from app.models.site_health.analysis import SitePageAnalysis
+from app.models.site_health.crawl import SiteCrawl, SiteCrawlPhaseRun
+from app.models.site_health.events import SiteCrawlEvent
+from app.models.site_health.graph import SiteHealthSnapshot
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.urls import MonitoredSiteUrl
 
 logger = logging.getLogger("app.domain.site_health.service.lifecycle")
 

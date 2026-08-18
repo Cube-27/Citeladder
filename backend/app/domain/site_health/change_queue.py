@@ -6,9 +6,15 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_change_intel import CHANGE_ANALYZER_VERSION
-from app.core.config.site_health import TASK_KIND_CHANGE_INTEL, site_health_settings
+from app.core.config.site_health_contracts import (
+    TASK_KIND_CHANGE_INTEL,
+)
+from app.core.config.site_health_runtime import (
+    site_health_settings,
+)
 from app.core.config.task_queue import TASK_STATUS_QUEUED
-from app.models.site_health import SiteCrawl, SiteCrawlTask
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
 
 
 async def enqueue_change_refresh(session: AsyncSession, *, crawl: SiteCrawl) -> None:

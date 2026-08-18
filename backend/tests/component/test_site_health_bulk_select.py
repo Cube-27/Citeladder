@@ -15,7 +15,9 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.site_health import TASK_KIND_ANALYZE
+from app.core.config.site_health_contracts import (
+    TASK_KIND_ANALYZE,
+)
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.site_health.selection import (
     QuotaExceededError,
@@ -23,12 +25,8 @@ from app.domain.site_health.selection import (
     StaleSelectionVersionError,
     bulk_select_monitored_set,
 )
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawlTask,
-    SiteUrl,
-    SiteUrlObservation,
-)
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 from tests.component.test_site_health_selection import (
     ProjectSeed,
     WorkspaceSeed,

@@ -16,12 +16,14 @@ from datetime import datetime
 from sqlalchemy import and_, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.site_health import (
-    FINDING_CLASS_ADVISORY,
-    FINDING_CLASS_DEFECT,
+from app.core.config.site_health_contracts import (
     RULE_DIMENSIONS,
     SEVERITY_CRITICAL,
     SEVERITY_HIGH,
+)
+from app.core.config.site_health_rules import (
+    FINDING_CLASS_ADVISORY,
+    FINDING_CLASS_DEFECT,
 )
 from app.domain.site_health.normalization import (
     CursorScopeError,
@@ -41,12 +43,8 @@ from app.domain.site_health.service.presentation import (
     _iso,
     display_label_for,
 )
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteIssue,
-    SitePageAnalysis,
-    SiteUrl,
-)
+from app.models.site_health.analysis import SiteIssue, SitePageAnalysis
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 
 
 # =========================================================================

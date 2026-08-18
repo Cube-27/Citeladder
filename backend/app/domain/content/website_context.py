@@ -28,15 +28,14 @@ from app.core.config.content import (
     CONTEXT_MAX_H1,
     CONTEXT_MAX_H2,
 )
-from app.core.config.site_health import CRAWL_TERMINAL_STATUSES
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteFetchArtifact,
-    SiteHealthProfile,
-    SitePageAnalysis,
-    SiteUrl,
+from app.core.config.site_health_contracts import (
+    CRAWL_TERMINAL_STATUSES,
 )
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.analysis import SitePageAnalysis
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.runtime import SiteHealthProfile
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 
 # Control/non-printable chars stripped from every emitted string; the
 # whitespace collapse in ``_clean`` then folds ALL whitespace (newlines

@@ -36,7 +36,7 @@ from app.analysis.site_health.finalize import (
 )
 from app.analysis.site_health.rules import RuleEvaluation
 from app.connectors.web_evidence.url_policy import UrlPolicyError
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_CANCELLED,
     ANALYSIS_STATUS_COMPLETED,
     ANALYSIS_STATUS_FAILED,
@@ -63,18 +63,24 @@ from app.core.config.site_health import (
     EVENT_CRAWL_FAILED,
     EXTRACTOR_VERSION,
     LINK_KIND_ANCHOR,
-    MANUAL_PHASE_LIFECYCLE_KEY,
     OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
+    RULE_OUTCOME_FAIL,
+    TASK_KIND_ANALYZE,
+    TASK_KIND_DISCOVER,
+    TASK_KIND_LINK_CHECK,
+)
+from app.core.config.site_health_crawl_policy import (
+    MANUAL_PHASE_LIFECYCLE_KEY,
     PHASE_ANALYSIS,
     PHASE_DISCOVERY,
     PHASE_RUN_COMPLETED,
     PHASE_RUN_RUNNING,
-    RULE_OUTCOME_FAIL,
+)
+from app.core.config.site_health_rules import (
     SITE_HEALTH_RULES_BY_ID,
-    TASK_KIND_ANALYZE,
-    TASK_KIND_DISCOVER,
-    TASK_KIND_LINK_CHECK,
+)
+from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 from app.core.config.task_queue import (
@@ -95,18 +101,16 @@ from app.domain.site_health.state_events import (
     record_crawl_event,
 )
 from app.domain.site_health.terminal_refresh import enqueue_terminal_analytics_refresh
-from app.models.site_health import (
-    SiteCrawl,
-    SiteCrawlPhaseRun,
-    SiteCrawlTask,
-    SiteFetchArtifact,
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.analysis import (
     SiteIssue,
     SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
-    SiteUrl,
-    SiteUrlObservation,
 )
+from app.models.site_health.crawl import SiteCrawl, SiteCrawlPhaseRun
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.urls import SiteUrl, SiteUrlObservation
 
 logger = logging.getLogger("app.workers.site_health.lifecycle")
 

@@ -14,7 +14,7 @@ from sqlalchemy import Float, and_, cast, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.integrations import (
+from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
     MAPPING_STATUS_ACTIVE,
 )
@@ -93,7 +93,8 @@ from app.models.integrations import (
     IntegrationOAuthGrant,
     IntegrationPropertyMapping,
 )
-from app.models.site_health import SiteHealthProfile, SiteUrl
+from app.models.site_health.runtime import SiteHealthProfile
+from app.models.site_health.urls import SiteUrl
 from app.models.traffic import TrafficPageStat, TrafficQueryStat, TrafficSnapshot
 
 # Bounded work per read batch: each batch is one cooperative-cancel boundary

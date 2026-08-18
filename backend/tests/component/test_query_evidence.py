@@ -10,8 +10,10 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.integrations import (
+from app.core.config.integrations_datasets import (
     DATASET_GSC_QUERY_PAGE_DAILY,
+)
+from app.core.config.integrations_transport import (
     INTEGRATION_PROVIDER_GSC,
 )
 from app.domain.demand.query_evidence import (
@@ -27,7 +29,7 @@ from app.models.integrations import (
     IntegrationImportArtifact,
     IntegrationPropertyMapping,
 )
-from app.models.site_health import SiteUrl
+from app.models.site_health.urls import SiteUrl
 from tests.component.analytics_helpers import (
     seed_ga4_import,
     seed_metric_row,

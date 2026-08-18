@@ -14,13 +14,19 @@ from app.connectors.web_evidence.url_policy import (
     canonicalize,
     classify_url_admission,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     LINK_REWRITE_ENCODED_TRACKING_QUERY,
     LINK_REWRITE_VERSION,
     OBSERVATION_SOURCE_LINK,
     OBSERVATION_SOURCE_ROOT,
+)
+from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_BOOTSTRAP,
+)
+from app.core.config.site_health_rules import (
     TRACKING_QUERY_PARAMS,
+)
+from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 from app.domain.site_health.frontier import admit_candidates as admit_candidates
@@ -38,7 +44,8 @@ from app.domain.site_health.schemas import (
     DiscoveryOutput,
     FrontierCandidate,
 )
-from app.models.site_health import SiteCrawl, WorkspaceSiteHealthRuntime
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 
 _ENCODED_QUERY_DELIMITER = re.compile(r"%3f", re.IGNORECASE)
 _ENCODED_QUERY_EQUALS = re.compile(r"%3d", re.IGNORECASE)

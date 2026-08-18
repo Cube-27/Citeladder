@@ -19,15 +19,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY_REVISION,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     ANALYZER_VERSION,
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_RUNNING,
     EXTRACTOR_VERSION,
     SCORING_VERSION,
-    SELECTION_SOURCE_USER,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
+)
+from app.core.config.site_health_crawl_policy import (
+    SELECTION_SOURCE_USER,
+)
+from app.core.config.site_health_runtime import (
     runtime_policy_for_allowance,
 )
 from app.core.config.task_queue import (
@@ -38,13 +42,10 @@ from app.domain.site_health.entitlements import (
     resolve_runtime,
 )
 from app.domain.site_health.normalization import canonical_identity
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlTask,
-    SitePageAnalysis,
-    SiteUrl,
-)
+from app.models.site_health.analysis import SitePageAnalysis
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 from app.workers.site_health_worker import (
     SiteHealthWorker,
 )

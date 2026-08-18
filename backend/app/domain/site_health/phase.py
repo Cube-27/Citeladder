@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_FAILED,
@@ -27,7 +27,7 @@ from app.core.config.site_health import (
     DISCOVERY_STATUS_SAMPLE_COMPLETED,
     DISCOVERY_STATUS_STOPPED,
 )
-from app.models.site_health import SiteCrawl
+from app.models.site_health.crawl import SiteCrawl
 
 SiteHealthPhase = Literal[
     "empty",

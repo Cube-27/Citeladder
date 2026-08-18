@@ -93,10 +93,12 @@ from app.core.config.opportunities import (
     STATUS_OPEN,
     validate_rule_id,
 )
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
+)
+from app.core.config.site_health_rules import (
     FINDING_CLASS_DEFECT,
 )
 from app.core.config.task_queue import (
@@ -137,7 +139,9 @@ from app.models.opportunity import (
 )
 from app.models.product import ProductMetricSnapshot
 from app.models.project import Project
-from app.models.site_health import SiteCrawl, SiteIssue, SiteUrl
+from app.models.site_health.analysis import SiteIssue
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.urls import SiteUrl
 
 __all__ = [
     "OpportunityNotFoundError",

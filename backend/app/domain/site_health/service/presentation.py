@@ -14,10 +14,12 @@ from collections.abc import Callable
 from datetime import datetime
 
 from app.analysis.site_health.rules import rule_for
-from app.core.config.site_health import (
+from app.core.config.site_health_acquisition import (
+    POLICY_BLOCKING_ERROR_CODES,
+)
+from app.core.config.site_health_contracts import (
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PAGE_ANALYSIS_STATUS_PARTIALLY_COMPLETED,
-    POLICY_BLOCKING_ERROR_CODES,
     SCORING_VERSION,
     SEVERITY_CRITICAL,
     SEVERITY_HIGH,
@@ -32,15 +34,14 @@ from app.core.config.task_queue import (
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
 )
-from app.models.site_health import (
-    SiteCrawl,
-    SiteCrawlPhaseRun,
-    SiteCrawlTask,
+from app.models.site_health.analysis import (
     SiteIssue,
     SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
 )
+from app.models.site_health.crawl import SiteCrawl, SiteCrawlPhaseRun
+from app.models.site_health.queue import SiteCrawlTask
 
 # Deterministic severity ordering (critical worst). Used for the grouped-issue
 # keyset sort and the issues summary rollup.

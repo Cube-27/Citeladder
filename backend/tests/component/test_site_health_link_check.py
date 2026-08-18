@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CRAWL_STATUS_RUNNING,
     RULE_OUTCOME_PASS,
 )
@@ -19,11 +19,9 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
-from app.models.site_health import (
-    SiteCrawl,
-    SiteCrawlTask,
-    SiteRuleEvaluation,
-)
+from app.models.site_health.analysis import SiteLinkReference, SiteRuleEvaluation
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
 from app.workers.site_health_worker import (
     SiteHealthWorker,
 )
@@ -41,8 +39,9 @@ from tests.component.site_health_worker_helpers import (
 async def test_link_check_resolves_relative_targets_and_records_probe_provenance(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    from app.core.config.site_health import TASK_KIND_LINK_CHECK
-    from app.models.site_health import SiteLinkReference
+    from app.core.config.site_health_contracts import (
+        TASK_KIND_LINK_CHECK,
+    )
 
     source_url = "https://example.com/base/page"
     seed, site_url_id, _task_id = await _seed_analyze_ready(
@@ -164,8 +163,9 @@ async def test_reclaimed_link_check_does_not_reprobe(
     reclaimed run must instead acknowledge the persisted references and never
     probe again.
     """
-    from app.core.config.site_health import TASK_KIND_LINK_CHECK
-    from app.models.site_health import SiteLinkReference
+    from app.core.config.site_health_contracts import (
+        TASK_KIND_LINK_CHECK,
+    )
 
     source_url = "https://example.com/base/page"
     seed, site_url_id, _task_id = await _seed_analyze_ready(
@@ -274,7 +274,6 @@ async def test_link_check_honors_robots_and_skips_denied_targets(
     fingerprint, so the finalize pass's ``broken_internal_link`` counts
     only the actually-probed link as checked (the skipped one is neither
     checked nor broken)."""
-    from app.models.site_health import SiteLinkReference
 
     root = "https://example.com/rich"
     second = "https://example.com/plain"

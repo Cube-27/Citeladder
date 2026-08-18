@@ -14,25 +14,25 @@ from app.connectors.web_evidence.url_policy import (
     classify_url_admission,
     split_host_port,
 )
-from app.core.config.site_health import (
-    AUTOMATIC_MONITOR_LIMIT_KEY,
+from app.core.config.site_health_contracts import (
     CRAWL_ACTIVE_STATUSES,
     DISCOVERY_STATUS_RUNNING,
     OBSERVATION_SOURCE_LINK,
-    SELECTION_SOURCE_FREE_SAMPLE,
     TASK_KIND_ANALYZE,
+)
+from app.core.config.site_health_crawl_policy import (
+    AUTOMATIC_MONITOR_LIMIT_KEY,
+    SELECTION_SOURCE_FREE_SAMPLE,
+)
+from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.site_health.schemas import FrontierCandidate
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlTask,
-    SiteUrl,
-    SiteUrlObservation,
-    WorkspaceSiteHealthRuntime,
-)
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 
 
 def _utcnow() -> datetime:

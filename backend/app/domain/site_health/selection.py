@@ -32,15 +32,17 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.web_evidence.url_policy import classify_url_admission
-from app.core.config.site_health import (
+from app.core.config.site_health_contracts import (
     CODE_MONITORING_NOT_ALLOWED,
     CODE_QUOTA_EXCEEDED,
     CODE_STALE_SELECTION_VERSION,
     CRAWL_ACTIVE_STATUSES,
     INITIAL_TASK_GENERATION,
     OBSERVATION_SOURCE_LINK,
-    SELECTION_SOURCE_USER,
     TASK_KIND_ANALYZE,
+)
+from app.core.config.site_health_crawl_policy import (
+    SELECTION_SOURCE_USER,
 )
 from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
@@ -58,15 +60,10 @@ from app.domain.site_health.entitlements import (
 )
 from app.domain.site_health.inventory_scope import inventory_site_url_subquery
 from app.models.project import Project
-from app.models.site_health import (
-    MonitoredSiteUrl,
-    SiteCrawl,
-    SiteCrawlTask,
-    SiteHealthProfile,
-    SiteUrl,
-    SiteUrlObservation,
-    WorkspaceSiteHealthRuntime,
-)
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.runtime import SiteHealthProfile, WorkspaceSiteHealthRuntime
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 
 
 def _utcnow() -> datetime:

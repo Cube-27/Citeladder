@@ -17,7 +17,7 @@ from typing import Final
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.site_health import (
+from app.core.config.site_health_acquisition import (
     ERROR_BOT_BLOCKED,
     ERROR_CONNECTION_FAILED,
     ERROR_DNS_RESOLUTION_FAILED,
@@ -32,10 +32,14 @@ from app.core.config.site_health import (
     ERROR_TIMEOUT,
     ERROR_UNSUPPORTED_CONTENT_TYPE,
     FETCH_ATTEMPT_OUTCOME_ERROR,
+)
+from app.core.config.site_health_contracts import (
     TASK_KIND_DISCOVER,
 )
 from app.core.config.task_queue import TASK_STATUS_FAILED
-from app.models.site_health import SiteCrawl, SiteCrawlTask, SiteFetchAttempt
+from app.models.site_health.acquisition import SiteFetchAttempt
+from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
 
 # Human sentence per stable fetch error token (SH-5). HTTP 4xx/5xx are NOT
 # here: their sentences name the terminal status code (and the attempt count
