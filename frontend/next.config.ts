@@ -95,6 +95,14 @@ const BACKEND_ORIGIN = resolveBackendOrigin();
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // Next 16.3's standalone tracer copies only `@swc/helpers/cjs`, but the
+  // generated server chunks require the `esm/` variants, so `node server.js`
+  // in the runtime image dies on `Cannot find module
+  // .../@swc/helpers/esm/_interop_require_default.js`. Tracing the whole
+  // package restores a bootable standalone build.
+  outputFileTracingIncludes: {
+    '/**': ['./node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers/**'],
+  },
   // Next 16 blocks cross-origin requests to /_next/* dev resources. The app is
   // opened via 127.0.0.1 while the dev server treats `localhost` as canonical,
   // so allow the loopback IP or the browser gets a blank (unhydrated) page.
