@@ -19,7 +19,6 @@ import type { RawSseFrame } from '@/lib/sse/frames';
 import { auditEventSchema } from './schemas';
 import type { AuditEvent } from './types';
 
-/** Re-export the raw frame type used by parsed audit events. */
 export type { RawSseFrame };
 
 /**
