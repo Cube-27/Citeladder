@@ -454,7 +454,7 @@ and their signatures are verified.
 
 ### Frontend image requirements
 
-- Multi-stage Node build using the repository's pinned `pnpm@11.9.0` only.
+- Multi-stage Node build using the repository's pinned `pnpm@11.22.0` only.
 - `pnpm install --frozen-lockfile`, test/build, and Next.js
   `output: 'standalone'`.
 - Copy only the standalone server, static assets, and public assets into the

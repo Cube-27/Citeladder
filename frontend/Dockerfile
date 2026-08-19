@@ -4,7 +4,9 @@ ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+# Node 26 no longer bundles corepack, so pnpm is installed from npm.
+# Keep this version in lockstep with `packageManager` in frontend/package.json.
+RUN npm install --global pnpm@11.22.0
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -20,7 +22,9 @@ ENV BACKEND_ORIGIN=${BACKEND_ORIGIN}
 ENV BUILD_REVISION=${BUILD_REVISION}
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+# Node 26 no longer bundles corepack, so pnpm is installed from npm.
+# Keep this version in lockstep with `packageManager` in frontend/package.json.
+RUN npm install --global pnpm@11.22.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/app ./app
