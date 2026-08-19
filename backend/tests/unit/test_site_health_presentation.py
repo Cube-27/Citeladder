@@ -21,24 +21,24 @@ from typing import cast
 from app.core.config.site_health_rules import (
     SITE_HEALTH_RULES_BY_ID,
 )
+from app.domain.site_health.service.facts_projection import project_page_facts
 from app.domain.site_health.service.presentation import (
     _delivery_facts,
     _evaluation_row,
     _issue_row,
-    _link_reference_row,
     _matches_page_status,
-    _page_facts,
     _page_kind_matches,
     display_label_for,
     project_crawl,
 )
 from app.models.site_health.analysis import (
     SiteIssue,
-    SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
 )
 from app.models.site_health.crawl import SiteCrawl
+
+_page_facts = project_page_facts
 
 _NOW = datetime(2026, 7, 29, 12, 0, tzinfo=UTC)
 
@@ -294,27 +294,6 @@ def test_display_label_ignores_evidence_for_rules_without_variants() -> None:
         SITE_HEALTH_RULES_BY_ID[rule_id].display_label
     )
     assert display_label_for("nope.not_a_rule", {"h1_count": 0}) == "nope.not_a_rule"
-
-
-def test_link_reference_row_projects_nulls_as_empty_strings() -> None:
-    row = _link_reference_row(
-        cast(
-            SiteLinkReference,
-            SimpleNamespace(
-                id=uuid.uuid4(),
-                kind="anchor",
-                target_url="https://example.com/a",
-                is_internal=True,
-                rel=None,
-                anchor_text=None,
-                target_artifact_id=None,
-            ),
-        )
-    )
-
-    assert row["rel"] == ""
-    assert row["anchor_text"] == ""
-    assert row["target_artifact_id"] is None
 
 
 def test_issue_row_carries_the_affected_count_passed_by_the_caller() -> None:

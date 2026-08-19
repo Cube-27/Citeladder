@@ -48,25 +48,41 @@ from app.core.config.provider_catalog import (
 logger = logging.getLogger(__name__)
 
 
-def safe_quota_detail(payload: dict[str, Any]) -> str:
-    """Extract provider quota identifiers without retaining echoed request text."""
-    error = payload.get("error") or {}
-    parts = [str(error.get("status") or "").strip()]
-    for detail in error.get("details") or []:
-        if not isinstance(detail, dict):
+def _quota_detail(detail: object) -> list[str]:
+    if not isinstance(detail, dict):
+        return []
+    parts: list[str] = []
+    retry_delay = str(detail.get("retryDelay") or "").strip()
+    if retry_delay:
+        parts.append(f"retry={retry_delay}")
+    violations = detail.get("violations")
+    if not isinstance(violations, list):
+        return parts
+    for violation in violations:
+        if not isinstance(violation, dict):
             continue
-        retry_delay = str(detail.get("retryDelay") or "").strip()
-        if retry_delay:
-            parts.append(f"retry={retry_delay}")
-        for violation in detail.get("violations") or []:
-            if not isinstance(violation, dict):
-                continue
-            metric = str(violation.get("quotaMetric") or "").strip()
-            quota_id = str(violation.get("quotaId") or "").strip()
-            if metric:
-                parts.append(f"quota={metric}")
-            if quota_id:
-                parts.append(f"quota_id={quota_id}")
+        metric = str(violation.get("quotaMetric") or "").strip()
+        quota_id = str(violation.get("quotaId") or "").strip()
+        if metric:
+            parts.append(f"quota={metric}")
+        if quota_id:
+            parts.append(f"quota_id={quota_id}")
+    return parts
+
+
+def safe_quota_detail(payload: object) -> str:
+    """Extract provider quota identifiers without retaining echoed request text."""
+    if not isinstance(payload, dict):
+        return ""
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return ""
+    parts = [str(error.get("status") or "").strip()]
+    details = error.get("details")
+    if not isinstance(details, list):
+        return "; ".join(part for part in parts if part)
+    for detail in details:
+        parts.extend(_quota_detail(detail))
     return "; ".join(part for part in parts if part)
 
 

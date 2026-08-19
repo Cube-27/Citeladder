@@ -46,6 +46,12 @@ from app.domain.prompts.generation_errors import (
     GenerationValidationError,
     reraise_scoped_integrity_error,
 )
+from app.domain.prompts.generation_topics import (
+    ground_suggestion_topics as _ground_suggestion_topics,
+)
+from app.domain.prompts.generation_topics import (
+    product_service_topic_names as _product_service_topic_names,
+)
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.portfolio import (
@@ -243,7 +249,12 @@ def _validate_generation_payload(prompt_set: PromptSet, payload: Any) -> Topic |
         raise GenerationValidationError(
             f"count must be at most {max_count} (requested {payload.count})"
         )
-    return _resolve_target_topic(prompt_set, payload)
+    target_topic = _resolve_target_topic(prompt_set, payload)
+    if target_topic is None and not _product_service_topic_names(prompt_set.project):
+        raise GenerationValidationError(
+            "Add at least one confirmed product/service before generating topics"
+        )
+    return target_topic
 
 
 async def validate_generation_request(
@@ -555,6 +566,7 @@ async def _generate_suggestions(
         existing_prompts=[p.text for p in prompt_set.prompts][:context_limit],
         count=payload.count,
         intents=[i for i in payload.intents if i],
+        product_service_topics=_product_service_topic_names(prompt_set.project),
         target_topic=target_topic.name if target_topic is not None else "",
         target_topic_description=(
             target_topic.description if target_topic is not None else ""
@@ -569,6 +581,9 @@ async def _generate_suggestions(
     raw = await agent.complete_json(system=system_prompt, user=user_message)
     suggestions, intra_duplicates = parse_generation_output(raw)
     suggestions = _filter_for_cohort(suggestions, payload.cohort, brand_context)
+    suggestions = _ground_suggestion_topics(
+        suggestions, project=prompt_set.project, target_topic=target_topic
+    )
     if _prompt_count(suggestions) < payload.count:
         missing = payload.count - _prompt_count(suggestions)
         replacement_raw = await agent.complete_json(
@@ -581,6 +596,9 @@ async def _generate_suggestions(
         )
         replacements, replacement_duplicates = parse_generation_output(replacement_raw)
         replacements = _filter_for_cohort(replacements, payload.cohort, brand_context)
+        replacements = _ground_suggestion_topics(
+            replacements, project=prompt_set.project, target_topic=target_topic
+        )
         suggestions.extend(replacements)
         intra_duplicates += replacement_duplicates
     return (

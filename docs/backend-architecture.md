@@ -48,10 +48,6 @@ causal claims.
 | Commerce | Catalog/product specialization |
 | Growth Agent | Standalone explain/roadmap runs and append-only typed-tool attempts |
 
-The workspace-authorized project list projects `has_commerce_evidence` from
-persisted Product or OrderFact rows. Navigation may hide Commerce when false;
-the `/products` route remains authorized and owns its honest empty state.
-
 The command-center read projection is useful before the first visibility audit.
 It composes Facts only from the workspace-authorized Project, BrandProfile, and
 Competitor owners; exposes Connect, Analyze, Act, and Track with explicit
@@ -173,7 +169,7 @@ serialization enforces the decoded-document cap before HTML crosses the driver
 boundary.
 
 Site Health owns crawl, URL, task, attempt, artifact, evaluation, analysis,
-issue, graph/change snapshot, event, and export persistence. `SitePageAnalysis` is the one
+issue, change snapshot, event, and export persistence. `SitePageAnalysis` is the one
 page-understanding row. It stores scores, analyzer/scoring versions,
 `page_kind`, classifier version/evidence, and source IDs. It is append-only per
 artifact/analyzer version with one current row.
@@ -226,24 +222,15 @@ host rung outcomes: after two consecutive rung-1 `403`/`429` responses, rung 2
 is preferred for 20 acquisitions, then rung 1 is probed; success restores rung
 1 immediately. This adds no fetch-artifact column or mutable crawl-config state.
 
-Usable terminal Site Health evidence has one graph-then-change downstream DAG. A
-conflict-safe `link_graph` `SiteCrawlTask` runs without network I/O after a
-completed, partial, or cancelled-after-analysis crawl. It selects only the
-exact current successful HTML analyses for that crawl and persists immutable
-`SiteLinkGraphSnapshot`, node, and collapsed-edge rows with source IDs, relevant
-versions, coverage, and limitations. A conflict-safe `change_intel` task then
-selects the immediate persisted A/B pair, enforces root, scope, extractor, and
-analyzer comparability, and writes immutable snapshot and observation rows.
+Usable terminal Site Health evidence has one change-intelligence downstream DAG.
+A conflict-safe `change_intel` task selects the immediate persisted A/B pair,
+enforces root, scope, extractor, and analyzer comparability, and writes
+immutable snapshot and observation rows.
 `domain/site_health/terminal_refresh.py` admits verification and
 Demand/Opportunity successors only after the change snapshot commits. Traffic
-projects route `graph -> change -> Demand -> Opportunities`; site-only projects
-route `graph -> change -> Opportunities`. Retries reuse projection and task
+projects route `change -> Demand -> Opportunities`; site-only projects route
+`change -> Opportunities`. Retries reuse projection and task
 identities, so no successor can race or duplicate a predecessor.
-
-The Site Health API exposes persisted graph summary, node, and edge projections
-under `/api/v1/projects/{project_id}/site-health/link-graph`. Optional
-`crawl_id` selects an exact snapshot; latest selection and snapshot-bound cursor
-pagination remain workspace/project authorized. Reads perform no graph work.
 
 The AEO Readiness endpoint is a separate read-only projection over those same
 persisted current page analyses and rule evaluations. It requires the crawl's
@@ -316,6 +303,12 @@ switch. Invalid callbacks always redirect to Settings with
 Prompt generation, scheduled audits, provider attempts, and answer-engine
 measurements use existing queue owners and immutable evidence. Visibility does
 not write business truth.
+
+Unscoped prompt generation may reuse an existing topic or create one only from
+the confirmed BrandProfile products/services taxonomy. New product/service topic
+names use deterministic display title case; unsupported model-invented labels
+are dropped before persistence. Scoped generation continues to use the selected
+persisted topic verbatim.
 
 ## Growth Agent
 

@@ -154,7 +154,7 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 cd frontend
 echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
 pnpm install
-pnpm dev            # http://localhost:3000
+pnpm dev            # http://127.0.0.1:3000
 ```
 
 Register a user (a workspace is created automatically), create a project, then connect a BYOK
@@ -173,7 +173,7 @@ runbook: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 | [`docs/architecture.md`](docs/architecture.md) | Canonical target product architecture |
 | [`docs/invariants.md`](docs/invariants.md) | The review-blocking rules |
 | [`docs/plans/growth-intelligence-platform.md`](docs/plans/growth-intelligence-platform.md) | Program architecture and delivery order |
-| [`docs/site-health.md`](docs/site-health.md) | Site crawl, page kinds, rules, issues, link graph, readiness, and crawl changes |
+| [`docs/site-health.md`](docs/site-health.md) | Site crawl, page kinds, rules, issues, readiness, and crawl changes |
 | [`docs/design.md`](docs/design.md) | Design tokens, screen geometry, and the insight object |
 
 Everything under [`docs/archive/`](docs/archive/) is historical and is **not** an implementation
@@ -212,10 +212,9 @@ pnpm build
 <a id="contributing"></a>
 ## Contributing
 
-Read [`Agents.md`](Agents.md) and the owning architecture document before changing code.
+Read [`AGENTS.md`](AGENTS.md) and the owning architecture document before changing code.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) covers workflow and ownership; [`Review.md`](Review.md) covers
 the review checklist and recurring anti-patterns.
-
 CiteLadder is a dirty, active, multi-workstream repository. Preserve unrelated user-owned changes
 and verify focused slices rather than rewriting other workstreams.
 

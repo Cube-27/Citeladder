@@ -24,6 +24,8 @@ from app.core.config.site_health_acquisition import (
     ERROR_HTTP_4XX,
     ERROR_ROBOTS_DENIED,
     ERROR_ROBOTS_UNAVAILABLE,
+    FETCH_ATTEMPT_OUTCOME_ERROR,
+    FETCH_ATTEMPT_OUTCOME_SUCCESS,
     ROBOTS_FETCH_STATUS_FETCH_FAILED,
     ROBOTS_FETCH_STATUS_FETCHED,
     ROBOTS_FETCH_STATUS_NOT_FOUND,
@@ -38,7 +40,6 @@ from app.core.config.site_health_contracts import (
     OBSERVATION_SOURCE_SITEMAP,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
-    RULE_OUTCOME_PASS,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
 )
@@ -64,14 +65,10 @@ from app.models.site_health.analysis import (
     SiteRuleEvaluation,
 )
 from app.models.site_health.crawl import SiteCrawl, SiteDiscoveryFrontier
-from app.models.site_health.graph import SiteHealthSnapshot
 from app.models.site_health.queue import SiteCrawlTask
+from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
-from app.workers.site_health_worker import (
-    _OUTCOME_ERROR,
-    _OUTCOME_SUCCESS,
-    SiteHealthWorker,
-)
+from app.workers.site_health_worker import SiteHealthWorker
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
     _add_monitored_analyze_task,
@@ -957,9 +954,8 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
     the robots policy across every task, and persists the bounded
     ``site_facts`` display copy on the crawl row. When the crawl terminalizes,
     the crawl_finalize pass runs: ``sitemap_orphan`` fails for the sitemap URL
-    no internal link reaches, ``broken_internal_link`` passes (the one linked
-    target is reachable), and ``hreflang_conflict`` is N/A — all at weight
-    0.0, with the orphan issue in the snapshot rollup.
+    no internal link reaches, and ``hreflang_conflict`` is N/A — both at
+    weight 0.0, with the orphan issue in the snapshot rollup.
     """
     root = "https://example.com/"
     seed = await _seed_root_discover(session_factory, root=root)
@@ -1097,18 +1093,12 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         # Both admitted sitemap URLs carry the sitemap-source observation.
         assert orphan.evidence["sitemap_url_count"] == 2
 
-        broken = evals["technical.broken_internal_link"]
-        assert broken.outcome == RULE_OUTCOME_PASS
-        assert broken.evidence["checked_count"] == 1
-        assert broken.evidence["broken_count"] == 0
-
         hreflang = evals["technical.hreflang_conflict"]
         assert hreflang.outcome == RULE_OUTCOME_NOT_APPLICABLE
         assert hreflang.evidence["reason"] == "no_hreflang"
 
         # Every crawl_finalize rule is weight-0: issues, never denominators.
         assert orphan.weight == 0.0
-        assert broken.weight == 0.0
         assert hreflang.weight == 0.0
 
         # The orphan issue landed and the (single) snapshot counted it.
@@ -1263,7 +1253,7 @@ async def test_plain_fetch_persists_one_attempt_row(
         assert row.attempt_number == 1
         assert row.request_ordinal == 0
         assert row.status_code == 200
-        assert row.outcome == _OUTCOME_SUCCESS
+        assert row.outcome == FETCH_ATTEMPT_OUTCOME_SUCCESS
         assert row.artifact_id == artifact.id
         assert row.acquisition_transport == "httpx"
         assert row.acquisition_rung == 1
@@ -1324,7 +1314,7 @@ async def test_plain_403_without_challenge_marker_stays_http_4xx(
         )
         assert len(rows) == 1
         assert rows[0].status_code == 403
-        assert rows[0].outcome == _OUTCOME_ERROR
+        assert rows[0].outcome == FETCH_ATTEMPT_OUTCOME_ERROR
         assert rows[0].error_code == ERROR_HTTP_4XX
         assert rows[0].artifact_id is None
 
@@ -1388,7 +1378,7 @@ async def test_bot_block_presents_blocked_via_bot_blocked_token(
         assert len(rows) == 1
         assert rows[0].status_code == 403
         assert rows[0].artifact_id is None
-        assert rows[0].outcome == _OUTCOME_ERROR
+        assert rows[0].outcome == FETCH_ATTEMPT_OUTCOME_ERROR
         assert rows[0].error_code == ERROR_BOT_BLOCKED
 
         # No analyzable artifact was created from the blocked response.

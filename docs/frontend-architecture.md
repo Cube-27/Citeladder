@@ -16,9 +16,9 @@ superseded path is deleted.
 | Station | Destination | Canonical browser location |
 |---|---|---|
 | Overview | Overview | `/projects` |
-| Analyze | Website | `/site?tab=pages` (default), `aeo-readiness`, `link-graph`, `changes` |
+| Analyze | Website | `/site?tab=pages` (default), `aeo-readiness`, `changes` |
 | Analyze | Issues / Search Demand / Traffic | `/issues`, `/demand`, `/traffic` |
-| Analyze | Commerce | `/products` only when commerce evidence exists |
+| Analyze | Commerce Suite | `/products` |
 | Act | Opportunities / Content | `/opportunities`, `/content` |
 | Track | AI Visibility | `/visibility?tab=trends` (default), `mentions-citations`, `query-fanout` |
 | Track | Runs / AI Referrals | `/runs`, `/runs/[runId]`, `/ai-referrals` |
@@ -31,10 +31,9 @@ active state from pathname plus recognized `tab`/`mode` values. The Growth
 Agent moves to an accessible top-bar sheet with typed persisted route context;
 it is not a sidebar destination. Retired internal routes receive no redirects.
 
-Desktop and mobile now consume that shared station owner. Commerce is included
-under Analyze only when the active project projection reports persisted
-commerce evidence. Providers and Integrations are Settings tabs, and prompt
-read/manage modes live only under `/prompts`.
+Desktop and mobile now consume that shared station owner. Commerce Suite is an
+Analyze destination for every project. Providers and Integrations are Settings
+tabs, and prompt read/manage modes live only under `/prompts`.
 
 Overview renders before any audit: canonical Facts with an editable drawer,
 competitor suggestions, four evidence-labelled loop states, one server-selected
@@ -87,16 +86,7 @@ an active persisted crawl, otherwise **Run new crawl**. **Export** is the
 secondary action. The client exposes no separate discovery or analysis buttons.
 
 Website uses one tablist on `/site`. **Pages** retains the crawl lifecycle and
-inventory surface. **Link Graph** reads the selected crawl's persisted summary,
-nodes, and edges with no client-side analysis. Its topology preview is bounded
-to 24 stable-priority nodes from the current evidence pages; snapshot-bound
-cursor controls page through both the page-authority and collapsed-link tables,
-which remain the accessible evidence fallback. The authority table shows
-deterministic PageRank/depth/link counts and links suggested source pages to the
-existing crawl-bounded page detail. Incomplete graphs state observed coverage
-and suppress recommendation language rather than implying a complete crawl.
-
-**AEO Readiness** is the adjacent Website tab. It renders the server's seven
+inventory surface. **AEO Readiness** is the adjacent Website tab. It renders the server's seven
 ordered presentation dimensions as pass, fail, not-applicable, and explicit
 expected/observed coverage columns. Bounded persisted evaluation links open the
 existing crawl-bounded page detail. The client does not remap rules, recompute

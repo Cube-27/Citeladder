@@ -36,7 +36,6 @@ from app.core.config.task_queue import (
 )
 from app.models.site_health.analysis import (
     SiteIssue,
-    SiteLinkReference,
     SitePageAnalysis,
     SiteRuleEvaluation,
 )
@@ -407,40 +406,6 @@ def _matches_page_status(pres_status: str, wanted: str | None) -> bool:
 # =========================================================================
 # Page detail (persisted facts/delivery/scores/issues/provenance; no network)
 # =========================================================================
-def _page_facts(facts: dict | None) -> dict:
-    facts = facts or {}
-    robots = facts.get("robots") or {}
-    directives: list[str] = []
-    if robots.get("noindex"):
-        directives.append("noindex")
-    if robots.get("nofollow"):
-        directives.append("nofollow")
-    headings = facts.get("headings") or {}
-    images = facts.get("images") or {}
-    body = facts.get("body") or {}
-    structured = facts.get("structured_data") or {}
-    links = facts.get("links") or {}
-    anchors = links.get("anchors") or []
-    internal = sum(1 for a in anchors if a.get("is_internal"))
-    external = len(anchors) - internal
-    heading_counts = headings.get("counts") or {}
-    heading_total = sum(int(v or 0) for v in heading_counts.values())
-    return {
-        "title": facts.get("title") or None,
-        "meta_description": facts.get("meta_description") or None,
-        "canonical_url": facts.get("canonical_url") or None,
-        "robots_directives": directives,
-        "h1_count": int(headings.get("h1_count", 0) or 0),
-        "heading_count": int(heading_total),
-        "image_count": int(images.get("count", 0) or 0),
-        "image_missing_alt_count": int(images.get("missing_alt", 0) or 0),
-        "word_count": int(body.get("word_count", 0) or 0),
-        "internal_link_count": int(internal),
-        "external_link_count": int(external),
-        "structured_data_types": list(structured.get("types") or []),
-    }
-
-
 def _delivery_facts(facts: dict | None, *, html_bytes: int | None) -> dict:
     facts = facts or {}
     delivery = facts.get("delivery") or {}
@@ -462,10 +427,9 @@ def _delivery_facts(facts: dict | None, *, html_bytes: int | None) -> dict:
     }
 
 
-# Bound the exact evidence/link projections so a pathological artifact can
-# never balloon a detail response (plan §Projection: bounded evidence/links).
+# Bound exact evidence projections so a pathological artifact can never balloon
+# a detail response.
 _MAX_EVALUATIONS = 200
-_MAX_LINK_REFERENCES = 200
 
 
 def _evaluation_row(evaluation: SiteRuleEvaluation) -> dict:
@@ -484,19 +448,6 @@ def _evaluation_row(evaluation: SiteRuleEvaluation) -> dict:
         "analyzer_version": evaluation.analyzer_version,
         "rule_version": evaluation.rule_version,
         "created_at": _iso(evaluation.created_at),
-    }
-
-
-def _link_reference_row(link: SiteLinkReference) -> dict:
-    """Project one deduplicated link reference (target status where known)."""
-    return {
-        "id": link.id,
-        "kind": link.kind,
-        "target_url": link.target_url,
-        "is_internal": link.is_internal,
-        "rel": link.rel or "",
-        "anchor_text": link.anchor_text or "",
-        "target_artifact_id": link.target_artifact_id,
     }
 
 

@@ -11,6 +11,7 @@
 #   - GET/POST /projects/{id}/topics, PATCH/DELETE /topics/{id}
 from __future__ import annotations
 
+import math
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Annotated
@@ -33,6 +34,7 @@ from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway as DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.abuse import abuse_settings
+from app.core.config.provider_catalog import ERROR_RATE_LIMIT
 from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
 from app.domain.entitlements.enforcement import OccupancyError
@@ -111,6 +113,27 @@ def _not_found(detail: str) -> HTTPException:
 
 def _conflict(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+def _generation_provider_error(exc: ProviderError) -> HTTPException:
+    if exc.error_code == ERROR_RATE_LIMIT:
+        retry_after = (
+            str(max(1, math.ceil(exc.retry_after_seconds)))
+            if exc.retry_after_seconds is not None
+            else None
+        )
+        return HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": "rate_limited",
+                "message": "The AI provider is rate limited. Please try again shortly.",
+            },
+            headers={"Retry-After": retry_after} if retry_after else None,
+        )
+    return HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail={"code": "agent_call_failed", "message": str(exc)},
+    )
 
 
 async def _map_prompt_mutation[T](call: Callable[[], Awaitable[T]]) -> T:
@@ -438,10 +461,7 @@ async def generate_prompts_endpoint(
             detail={"code": "generation_unparseable", "message": str(exc)},
         ) from exc
     except ProviderError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={"code": "agent_call_failed", "message": str(exc)},
-        ) from exc
+        raise _generation_provider_error(exc) from exc
     counts = (
         await topic_status_counts(session, project_id=topics[0].project_id)
         if topics
