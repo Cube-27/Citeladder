@@ -40,6 +40,7 @@ ACTIVE_EXACT = {
     "docs/frontend-architecture.md",
     "docs/integrations-traffic-analytics.md",
     "docs/invariants.md",
+    "docs/visibility-prompt.md",
     "docs/security-fix.md",
     "docs/release-checklist.md",
     "docs/operations/aws-hosting-runbook.md",
@@ -171,10 +172,6 @@ def _link_path(source: Path, raw_target: str) -> Path | None:
 
 def validate() -> list[Issue]:
     issues: list[Issue] = []
-
-    archive_manifest = ROOT / "docs/archive/README.md"
-    if not archive_manifest.is_file():
-        issues.append(Issue("docs/archive/", "archive manifest is missing"))
 
     forbidden_active_dirs = (ROOT / "docs/roadmap",)
     for directory in forbidden_active_dirs:

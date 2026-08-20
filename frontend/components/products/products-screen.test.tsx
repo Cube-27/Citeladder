@@ -13,6 +13,7 @@ vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
 vi.mock('next/navigation', () => ({
   usePathname: () => '/products',
   useSearchParams: () => new URLSearchParams(urlTab ? `tab=${urlTab}` : ''),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({
@@ -67,6 +68,9 @@ vi.mock('./competitors-panel', () => ({
 }));
 vi.mock('./commerce-opportunities-panel', () => ({
   CommerceOpportunitiesPanel: () => <div data-testid="opportunities-panel" />,
+}));
+vi.mock('@/components/runs/launch-dialog', () => ({
+  LaunchDialog: () => null,
 }));
 
 describe('ProductsScreen tabs', () => {

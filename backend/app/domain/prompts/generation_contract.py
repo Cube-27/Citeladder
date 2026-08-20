@@ -1,11 +1,12 @@
-"""Strict model-output parsing and request construction for prompt generation."""
+"""Strict topic-ID prompt generation contract."""
 
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.connectors.web_evidence.brand_evidence import evidence_block_lines
 from app.core.config.projects import PROMPT_INTENTS
@@ -23,56 +24,72 @@ class SuggestedPrompt(BaseModel):
 
 
 class SuggestedTopic(BaseModel):
+    topic_id: uuid.UUID
     name: str = Field(min_length=1, max_length=255)
     prompts: list[SuggestedPrompt] = Field(default_factory=list)
 
 
+class GeneratedPrompt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    topic_id: uuid.UUID
+    text: str = Field(min_length=1)
+    intent: str = ""
+
+
 class GenerationOutput(BaseModel):
-    topics: list[SuggestedTopic] = Field(default_factory=list)
+    model_config = ConfigDict(extra="forbid")
+
+    prompts: list[GeneratedPrompt] = Field(default_factory=list)
 
 
-def parse_generation_output(raw: str) -> tuple[list[SuggestedTopic], int]:
+def parse_generation_output(
+    raw: str, *, allowed_topics: list[dict[str, str]]
+) -> tuple[list[SuggestedTopic], int]:
     try:
         output = GenerationOutput.model_validate(json.loads(raw))
     except (json.JSONDecodeError, ValidationError) as exc:
         raise GenerationOutputError(f"Unparseable agent output: {exc}") from exc
 
+    topics = {str(topic["id"]): topic["name"] for topic in allowed_topics}
+    grouped: dict[str, list[SuggestedPrompt]] = {}
     seen_hashes: set[str] = set()
     duplicate_count = 0
-    topics: list[SuggestedTopic] = []
-    for topic in output.topics:
-        prompts: list[SuggestedPrompt] = []
-        for prompt in topic.prompts:
-            text = prompt.text.strip()
-            text_hash = prompt_text_hash(text)
-            if not text or text_hash in seen_hashes:
-                duplicate_count += bool(text)
-                continue
-            seen_hashes.add(text_hash)
-            intent = prompt.intent.strip().casefold()
-            prompts.append(
-                SuggestedPrompt(
-                    text=text,
-                    intent=intent if intent in PROMPT_INTENTS else "",
-                )
+    for prompt in output.prompts:
+        topic_id = str(prompt.topic_id)
+        text = prompt.text.strip()
+        if topic_id not in topics or not text:
+            continue
+        text_hash = prompt_text_hash(text)
+        if text_hash in seen_hashes:
+            duplicate_count += 1
+            continue
+        seen_hashes.add(text_hash)
+        intent = prompt.intent.strip().casefold()
+        grouped.setdefault(topic_id, []).append(
+            SuggestedPrompt(
+                text=text,
+                intent=intent if intent in PROMPT_INTENTS else "",
             )
-        if topic.name.strip() and prompts:
-            topics.append(SuggestedTopic(name=topic.name.strip(), prompts=prompts))
-    if not topics:
+        )
+    suggestions = [
+        SuggestedTopic(
+            topic_id=uuid.UUID(topic_id), name=topics[topic_id], prompts=prompts
+        )
+        for topic_id, prompts in grouped.items()
+    ]
+    if not suggestions:
         raise GenerationOutputError("Agent output contained no usable prompts")
-    return topics, duplicate_count
+    return suggestions, duplicate_count
 
 
 def build_generation_user_message(
     *,
     brand_context: dict[str, Any],
-    existing_topics: list[dict[str, str]],
+    topics: list[dict[str, str]],
     existing_prompts: list[str],
     count: int,
     intents: list[str],
-    product_service_topics: list[str] | tuple[str, ...] = (),
-    target_topic: str = "",
-    target_topic_description: str = "",
 ) -> str:
     competitors = [item["name"] for item in brand_context.get("competitors", [])]
     lines = [
@@ -80,9 +97,8 @@ def build_generation_user_message(
     ]
     lines += evidence_block_lines(
         brand_context.get("website_evidence", ""),
-        "Ground every prompt in the <brand_website_evidence> page content "
-        "above: it is what this brand actually sells and to whom. Do NOT "
-        "infer the brand's market or products from its name.",
+        "Use the website evidence only to ground prompt wording. The canonical "
+        "topics below are the complete allowed taxonomy.",
     )
     lines += [
         f"Brand: {brand_context.get('brand_name', '')}",
@@ -90,33 +106,12 @@ def build_generation_user_message(
         f"Competitors: {', '.join(competitors) or 'none'}",
         f"Market country: {brand_context.get('country_code') or 'unspecified'}",
         f"Language: {brand_context.get('language_code') or 'unspecified'}",
+        "Canonical topics (copy one id exactly for every prompt): "
+        + json.dumps(topics, ensure_ascii=False, separators=(",", ":")),
     ]
-    if target_topic:
-        lines.append(
-            f"Generate prompts ONLY for this topic (use it verbatim): {target_topic}"
-        )
-        if target_topic_description:
-            lines.append(f"Target topic description: {target_topic_description}")
-    else:
-        if product_service_topics:
-            serialized_products = json.dumps(
-                list(product_service_topics), ensure_ascii=False, separators=(",", ":")
-            )
-            lines.append(
-                "Confirmed product/service topic taxonomy "
-                "(use one exact name for every new topic): " + serialized_products
-            )
-        if existing_topics:
-            serialized = json.dumps(
-                existing_topics, ensure_ascii=False, separators=(",", ":")
-            )
-            lines.append(
-                "Existing topics (reuse the exact name field when applicable): "
-                + serialized
-            )
     if intents:
         lines.append("Restrict prompt intents to: " + ", ".join(intents))
-    lines.append(f"Generate exactly {count} prompts in total across topics.")
+    lines.append(f"Generate exactly {count} prompts in total.")
     if existing_prompts:
         lines.append(
             "Existing prompts (do NOT duplicate any of these):\n- "

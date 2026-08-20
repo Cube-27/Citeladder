@@ -51,16 +51,13 @@ __all__ = [
     "template_tell",
 ]
 
-# Bounded, not exact.  A brand the model barely knows should ship fewer honest
-# prompts rather than pad to a quota, so only the ceiling is enforced.
-MARKET_VISIBILITY_MAX = 5
-BRAND_RELEVANT_MAX = 5
-BRANDED_MAX = 5
-PORTFOLIO_MAX = MARKET_VISIBILITY_MAX + BRAND_RELEVANT_MAX + BRANDED_MAX
-PORTFOLIO_MIN = 6
+ORGANIC_COUNT = 8
+BRAND_CONTEXT_COUNT = 2
+PORTFOLIO_MAX = ORGANIC_COUNT + BRAND_CONTEXT_COUNT
+PORTFOLIO_MIN = PORTFOLIO_MAX
 
-NEUTRAL_COHORTS = ("market_visibility", "brand_relevant")
-BRANDED_COHORTS = ("brand_diagnostic", "comparison")
+NEUTRAL_COHORTS = ("core",)
+BRANDED_COHORTS = ("brand_diagnostic",)
 
 JUDGE_DEFAULT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 JUDGE_DEFAULT_MODEL = "llama-3.3-70b-versatile"
@@ -127,8 +124,7 @@ class PortfolioPrompt:
 class PortfolioEvaluation:
     valid: bool
     issues: tuple[str, ...]
-    market_visibility_count: int
-    brand_relevant_count: int
+    organic_count: int
     branded_count: int
     market_signal_rate: float = 0.0
     offering_coverage: float = 0.0
@@ -258,19 +254,17 @@ def evaluate_portfolio(
     suffix onto queries no American ever types.  Structure is a contract;
     vocabulary is a score.
     """
-    neutral = [p for p in prompts if p.cohort == "market_visibility"]
-    brand_relevant = [p for p in prompts if p.cohort == "brand_relevant"]
+    neutral = [p for p in prompts if p.cohort in NEUTRAL_COHORTS]
     branded = [p for p in prompts if p.cohort in BRANDED_COHORTS]
     issues = [
-        *_cohort_issues(prompts, neutral, brand_relevant, branded),
+        *_cohort_issues(prompts, neutral, branded),
         *_identity_issues(case, prompts),
     ]
     combined = " ".join(_normalized(p.text) for p in prompts)
     return PortfolioEvaluation(
         valid=not issues,
         issues=tuple(issues),
-        market_visibility_count=len(neutral),
-        brand_relevant_count=len(brand_relevant),
+        organic_count=len(neutral),
         branded_count=len(branded),
         market_signal_rate=_signal_rate(prompts, case.market_terms),
         offering_coverage=_covered_fraction(combined, case.products_or_services),
@@ -312,21 +306,17 @@ def _covered_fraction(text: str, requirements: Sequence[str]) -> float:
     return hits / len(requirements)
 
 
-def _cohort_issues(prompts, neutral, brand_relevant, branded):
+def _cohort_issues(prompts, neutral, branded):
     issues = []
-    known = len(neutral) + len(brand_relevant) + len(branded)
+    known = len(neutral) + len(branded)
     if known != len(prompts):
         issues.append("every prompt must carry a known cohort")
-    if not PORTFOLIO_MIN <= len(prompts) <= PORTFOLIO_MAX:
-        issues.append(
-            f"expected {PORTFOLIO_MIN}-{PORTFOLIO_MAX} prompts, got {len(prompts)}"
-        )
-    if len(neutral) > MARKET_VISIBILITY_MAX:
-        issues.append(f"at most {MARKET_VISIBILITY_MAX} market_visibility prompts")
-    if len(brand_relevant) > BRAND_RELEVANT_MAX:
-        issues.append(f"at most {BRAND_RELEVANT_MAX} brand_relevant prompts")
-    if len(branded) > BRANDED_MAX:
-        issues.append(f"at most {BRANDED_MAX} branded prompts")
+    if len(prompts) != PORTFOLIO_MAX:
+        issues.append(f"expected exactly {PORTFOLIO_MAX} prompts, got {len(prompts)}")
+    if len(neutral) != ORGANIC_COUNT:
+        issues.append(f"expected exactly {ORGANIC_COUNT} organic prompts")
+    if len(branded) != BRAND_CONTEXT_COUNT:
+        issues.append(f"expected exactly {BRAND_CONTEXT_COUNT} brand-context prompts")
     return issues
 
 

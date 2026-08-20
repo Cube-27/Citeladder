@@ -31,6 +31,7 @@ from app.core.config.prompts import (
     BINDING_CODE_ACCEPTED,
     CODE_BINDING_VOCABULARY_EMPTY,
     CODE_PROMPT_OFF_TOPIC,
+    PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS,
     TOPICAL_BINDING_MIN_TOKEN_CHARS,
     TOPICAL_BINDING_STOPWORDS,
 )
@@ -184,6 +185,19 @@ def _clean(value: str | None) -> str:
     return value or ""
 
 
+def _business_context_values(context: dict[str, object]) -> list[str]:
+    values: list[str] = []
+    for field in PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS:
+        raw = context.get(field)
+        candidates = raw if isinstance(raw, list) else [raw]
+        for candidate in candidates:
+            if isinstance(candidate, str):
+                values.append(candidate)
+            elif isinstance(candidate, list):
+                values.extend(item for item in candidate if isinstance(item, str))
+    return values
+
+
 def build_project_vocabulary(project: Project) -> BindingVocabulary:
     """Build the binding vocabulary from a project's persisted identity rows.
 
@@ -202,6 +216,7 @@ def build_project_vocabulary(project: Project) -> BindingVocabulary:
         profile = brand.profile
         if profile is not None:
             texts.extend(profile.products_services or [])
+            texts.extend(_business_context_values(dict(profile.business_context or {})))
             texts.append(_clean(profile.description))
             texts.append(_clean(profile.positioning))
             texts.append(_clean(profile.target_audience))

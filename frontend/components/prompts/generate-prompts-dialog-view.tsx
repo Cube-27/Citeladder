@@ -76,6 +76,7 @@ export function GeneratePromptsDialogView({
   isGenerating,
   error,
   result,
+  maxCount,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -89,20 +90,25 @@ export function GeneratePromptsDialogView({
   isGenerating?: boolean;
   error?: unknown;
   result?: PromptGenerateResponse | null;
+  maxCount: number;
 }>) {
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Generate prompts & topics"
-      description="CiteLadder drafts topic-organized prompt suggestions from your brand profile."
+      title="Generate prompts"
+      description="CiteLadder drafts prompt suggestions for your existing topics."
       className="w-130"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {result ? 'Close' : 'Cancel'}
           </Button>
-          <Button variant="primary" onClick={onSubmit} disabled={isGenerating || !countValid}>
+          <Button
+            variant="primary"
+            onClick={onSubmit}
+            disabled={isGenerating || !countValid || topics.length === 0}
+          >
             <Sparkles className="size-4" aria-hidden />
             {isGenerating ? 'Generating…' : 'Generate'}
           </Button>
@@ -110,14 +116,19 @@ export function GeneratePromptsDialogView({
       }
     >
       <div className="grid gap-4">
+        {topics.length === 0 ? (
+          <Alert tone="warning">Create or discover a topic before generating prompts.</Alert>
+        ) : null}
         {error ? <GenerateErrorAlert error={error} /> : null}
         {result && !error ? <GenerateResultAlert result={result} /> : null}
         <label className="grid gap-1.5">
-          <span className="text-secondary text-xs font-medium">Number of prompts (1–20)</span>
+          <span className="text-secondary text-xs font-medium">
+            Number of prompts (1–{maxCount})
+          </span>
           <Input
             type="number"
             min={1}
-            max={20}
+            max={maxCount}
             value={count}
             onChange={(event) => setCount(event.target.value)}
             aria-label="Number of prompts"
@@ -132,7 +143,7 @@ export function GeneratePromptsDialogView({
             aria-label="Topic"
             className={inputClasses}
           >
-            <option value="">Let AI propose topics</option>
+            <option value="">All existing topics</option>
             {topics.map((topic) => (
               <option key={topic.id} value={topic.id}>
                 {topic.name}

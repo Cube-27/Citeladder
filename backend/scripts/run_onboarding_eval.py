@@ -50,6 +50,7 @@ def _load_env() -> None:
 
 _load_env()
 
+from app.domain.projects.discovery_schemas import DiscoveryTopic  # noqa: E402
 from app.domain.projects.onboarding.industry_library import (  # noqa: E402
     archetype_templates,
     industry_context,
@@ -59,13 +60,6 @@ from app.domain.projects.onboarding.normalization import (  # noqa: E402
 )
 from app.domain.projects.onboarding.portfolio_generation import (  # noqa: E402
     generate_portfolio,
-)
-from app.domain.projects.onboarding.prompt_generation import (  # noqa: E402
-    fallback_portfolio,
-    validated_portfolio,
-)
-from app.domain.projects.onboarding.prompt_validation import (  # noqa: E402
-    template_patterns,
 )
 from app.domain.projects.onboarding.research import research_brand  # noqa: E402
 from app.domain.projects.onboarding.site_resolution import resolve_site  # noqa: E402
@@ -160,18 +154,20 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
         profile = _as_mapping(research.profile)
         competitors = [_competitor_name(entry) for entry in research.competitors]
         competitors = [name for name in competitors if name]
-        # Generation is inside the guard on purpose: `validated_portfolio`
-        # raises when its own deterministic fallback fails the quality gate,
-        # which in production aborts project creation outright.
-        model_prompts, _shortfall = await generate_portfolio(
+        topics = [DiscoveryTopic.model_validate(topic) for topic in research.topics]
+        portfolio = await generate_portfolio(
             brand_name=case.brand_name,
             primary_market=market,
             profile=profile,
             competitors=competitors,
+            topics=topics,
         )
-        prompts = _generate_portfolio(
-            case, context, profile, competitors, market, model_prompts
-        )
+        if not portfolio.prompts:
+            raise RuntimeError(
+                "initial portfolio failed: "
+                + ", ".join(portfolio.errors or ("generation_failed",))
+            )
+        prompts = list(portfolio.prompts)
         result.prompts = [
             PortfolioPrompt(text=str(item["text"]), cohort=str(item["cohort"]))
             for item in prompts
@@ -181,7 +177,7 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
             result.prompts,
             profile=profile,
             competitors=competitors,
-            research_topics=list(research.topics),
+            research_topics=[topic.name for topic in topics],
             warnings=list(research.warnings),
             judge_key=judge_key,
             judge_model=judge_model,
@@ -208,36 +204,6 @@ def _as_mapping(value: Any) -> dict[str, Any]:
         return value
     dump = getattr(value, "model_dump", None)
     return dict(dump()) if callable(dump) else {}
-
-
-def _generate_portfolio(
-    case, context, profile, competitors, market, model_prompts
-) -> list[dict]:
-    """Reproduce `_prepare_confirmed_portfolio` without requiring a database."""
-    products = [str(item) for item in (profile.get("products_services") or [])]
-    context_terms = [
-        str(profile.get("target_audience") or ""),
-        *products,
-        *(context.get("use_cases") or []),
-        *(context.get("topics") or []),
-    ]
-    fallback = fallback_portfolio(
-        primary_market=market,
-        industry=BEST_FIT_INDUSTRY[case.slug][0],
-        industry_context=context,
-        products_services=products,
-        target_audience=str(profile.get("target_audience") or ""),
-        price_tier=str(profile.get("price_tier") or "unknown"),
-    )
-    return validated_portfolio(
-        model_prompts,
-        fallback_prompts=fallback,
-        brand_name=case.brand_name,
-        primary_market=market,
-        competitor_terms=competitors,
-        context_terms=context_terms,
-        banned_patterns=template_patterns(archetype_templates()),
-    )
 
 
 async def _score(

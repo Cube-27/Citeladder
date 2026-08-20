@@ -1,9 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { PackageSearch, Play } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { httpErrorStatus } from '@/lib/api/errors';
 import { formatAvgRank, formatPercent } from '@/lib/products/catalog';
 import type { ProductsTab } from '@/lib/products/catalog';
 import type { useCommerceOverview } from '@/lib/products/use-products-screen';
@@ -13,29 +17,50 @@ type OverviewQueries = ReturnType<typeof useCommerceOverview>;
 export function CommerceOverviewPanel({
   queries,
   onSelectTab,
+  onLaunchAudit,
 }: Readonly<{
   queries: OverviewQueries;
   onSelectTab: (tab: ProductsTab) => void;
+  onLaunchAudit: () => void;
 }>) {
-  if (queries.visibilityQuery.isLoading) {
+  if (queries.visibilityQuery.isLoading || queries.productsQuery.isLoading) {
     return <p className="text-secondary text-sm">Loading Commerce overview…</p>;
   }
-  if (queries.visibilityQuery.isError) {
+  if (queries.productsQuery.isError) {
     return <Alert tone="danger">Could not load the Commerce overview.</Alert>;
   }
-  if (!queries.visibilityQuery.data) {
+  if (!queries.productsQuery.data?.length) {
     return (
-      <Alert tone="info">Run a product-enabled audit to populate the Commerce overview.</Alert>
+      <EmptyState
+        icon={PackageSearch}
+        heading="Add products before measuring Commerce visibility"
+        description="Import or add the products you want CiteLadder to track, then launch an AI visibility audit."
+        action={<Button onClick={() => onSelectTab('catalog')}>Add products</Button>}
+      />
     );
   }
-
+  if (queries.visibilityQuery.isError && httpErrorStatus(queries.visibilityQuery.error) !== 404) {
+    return <Alert tone="danger">Could not load the Commerce overview.</Alert>;
+  }
+  if (
+    (queries.visibilityQuery.isError && httpErrorStatus(queries.visibilityQuery.error) === 404) ||
+    !queries.visibilityQuery.data
+  ) {
+    return (
+      <EmptyState
+        icon={Play}
+        heading="Run your first Commerce visibility audit"
+        description="The audit freezes the current catalog and measures which products AI engines mention."
+        action={<Button onClick={onLaunchAudit}>Launch audit</Button>}
+      />
+    );
+  }
   const visibility = queries.visibilityQuery.data;
   const summary = visibility.summary;
   const gaps = [...visibility.products]
     .filter((product) => product.visibility_delta !== null)
     .sort((a, b) => a.visibility_delta! - b.visibility_delta!)
     .slice(0, 3);
-  const opportunities = queries.opportunitiesQuery.data?.items ?? [];
 
   return (
     <div className="grid gap-4" data-testid="commerce-overview-panel">
@@ -97,21 +122,42 @@ export function CommerceOverviewPanel({
           <CardDescription>Deterministic opportunities tied to product evidence.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm">
-          {opportunities.slice(0, 3).map((opportunity) => (
-            <button
-              key={opportunity.id}
-              className="hover:bg-surface-hover flex justify-between rounded-sm p-2 text-left"
-              type="button"
-              onClick={() => onSelectTab('opportunities')}
-            >
-              <span>{opportunity.title}</span>
-              <span className="text-muted">{opportunity.target_label ?? 'Catalog'}</span>
-            </button>
-          ))}
-          {!opportunities.length ? <p className="text-muted">No open Commerce actions.</p> : null}
+          <RecommendedActions query={queries.opportunitiesQuery} onSelectTab={onSelectTab} />
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function RecommendedActions({
+  query,
+  onSelectTab,
+}: Readonly<{
+  query: OverviewQueries['opportunitiesQuery'];
+  onSelectTab: (tab: ProductsTab) => void;
+}>) {
+  // Loading and failure are answered before absence: an unresolved or failed
+  // request carries no items, and reporting that as "no open actions" would
+  // state a fact about the catalog that was never observed.
+  if (query.isLoading) return <p className="text-secondary">Loading Commerce actions…</p>;
+  if (query.isError) return <Alert tone="danger">Could not load Commerce actions.</Alert>;
+  if (!query.data) return <p className="text-muted">Commerce actions are unavailable.</p>;
+  const opportunities = query.data.items;
+  if (!opportunities.length) return <p className="text-muted">No open Commerce actions.</p>;
+  return (
+    <>
+      {opportunities.slice(0, 3).map((opportunity) => (
+        <button
+          key={opportunity.id}
+          className="hover:bg-surface-hover flex justify-between rounded-sm p-2 text-left"
+          type="button"
+          onClick={() => onSelectTab('opportunities')}
+        >
+          <span>{opportunity.title}</span>
+          <span className="text-muted">{opportunity.target_label ?? 'Catalog'}</span>
+        </button>
+      ))}
+    </>
   );
 }
 

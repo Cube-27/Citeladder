@@ -125,6 +125,36 @@ def test_build_project_vocabulary_uses_all_identity_sources() -> None:
     assert "running shoes" in vocabulary.phrases
 
 
+def test_business_context_flattens_one_string_list_level_only() -> None:
+    project = Project(name="P", brand_name="Acme")
+    brand = Brand(project_id=project.id, name="Acme")
+    brand.profile = BrandProfile(
+        brand_id=brand.id,
+        workspace_id=project.workspace_id or __import__("uuid").uuid4(),
+        project_id=project.id,
+        business_context={
+            "category": "workflow analytics",
+            "category_aliases": [
+                "process intelligence",
+                ["journey analytics", {"ignored": "dictionary text"}],
+                [["too deeply nested"]],
+                42,
+            ],
+            "category_terms": {"ignored": "mapping text"},
+        },
+    )
+    project.brand = brand
+
+    vocabulary = build_project_vocabulary(project)
+
+    assert {"workflow", "analytics", "process", "intelligence", "journey"} <= set(
+        vocabulary.tokens
+    )
+    assert "ignored" not in vocabulary.tokens
+    assert "dictionary" not in vocabulary.tokens
+    assert "deeply" not in vocabulary.tokens
+
+
 def test_build_project_vocabulary_excludes_competitors() -> None:
     project = Project(name="P", brand_name="Acme Corp")
     brand = Brand(project_id=project.id, name="Acme Corp")

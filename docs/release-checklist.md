@@ -26,11 +26,13 @@ cp .env.example .env
 # Edit only local or deployment-specific values; do not commit this file.
 
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
-  POSTGRES_PASSWORD=citeladder_dev_password \
+  POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
   docker compose --env-file .env -f docker-compose.yml \
   up -d --build --force-recreate
 
-docker compose --env-file .env -f docker-compose.yml ps
+env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
+  POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
+  docker compose --env-file .env -f docker-compose.yml ps
 curl -fsS http://localhost:3000/
 curl -fsS http://localhost:8000/health
 ```
@@ -40,7 +42,9 @@ curl -fsS http://localhost:8000/health
 - [ ] The frontend loads at port 3000 and its browser requests use relative `/api/*` routes.
 - [ ] The API health endpoint responds at port 8000.
 - [ ] Smoke-test the appropriate authenticated and worker-backed flows with non-production data.
-- [ ] Stop the evidence stack when finished: `docker compose --env-file .env -f
+- [ ] Stop the evidence stack when finished: `env -u POSTGRES_PASSWORD -u POSTGRES_USER
+      -u POSTGRES_DB -u DATABASE_URL POSTGRES_PASSWORD="$(grep -E
+      '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" docker compose --env-file .env -f
       docker-compose.yml down` (use `down -v` only when deleting disposable data).
 
 ## 3. Run repository gates

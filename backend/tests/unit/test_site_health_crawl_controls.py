@@ -51,7 +51,7 @@ def test_production_controls_keep_the_automatic_page_limit(monkeypatch):
         page_kinds=None,
     )
     assert mode == "auto"
-    assert limit == 500
+    assert limit == site_health_settings.automatic_page_limit
     assert seeds == []
     assert page_kinds == []
 

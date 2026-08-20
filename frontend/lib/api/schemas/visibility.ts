@@ -128,10 +128,16 @@ const discoveryProfileSchema = responseObject({
 });
 
 const discoveryPromptSuggestionSchema = responseObject({
+  topic_id: uuid(),
   text: z.string(),
-  theme: z.string().default(''),
   intent: z.enum(['discovery', 'comparison', 'purchase', 'service', 'local']),
-  cohort: z.enum(['market_visibility', 'brand_relevant', 'brand_diagnostic', 'comparison']),
+  cohort: z.enum(['core', 'brand_diagnostic']),
+});
+
+const discoveryTopicSchema = responseObject({
+  topic_id: uuid(),
+  name: z.string(),
+  evidence_refs: z.array(z.string()),
 });
 
 const discoveryEvidenceSchema = responseObject({
@@ -183,7 +189,7 @@ export const brandDiscoverySchema = responseObject({
       confidence: z.number(),
     }),
   ),
-  topics: z.array(z.string()),
+  topics: z.array(discoveryTopicSchema),
   prompt_suggestions: z.array(discoveryPromptSuggestionSchema),
   evidence: z.array(discoveryEvidenceSchema),
   warnings: z.array(z.string()),

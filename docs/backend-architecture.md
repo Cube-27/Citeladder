@@ -61,9 +61,11 @@ or repairing a report during a read.
 
 BrandProfile field provenance is structured as `origin`, `review_state`,
 `reviewed_by`, and `reviewed_at`. Onboarding discovery persists suggestions but
-does not generate prompts. Completion requires confirmed or edited positioning,
-target audience, and products/services, records the reviewer, and only then
-creates the initial deterministic prompt portfolio exactly once.
+does not activate a portfolio before confirmation. Completion requires confirmed
+or edited positioning, target audience, and products/services, records the
+reviewer, and only then creates the bounded initial prompt portfolio exactly
+once. Topics in that portfolio are reusable semantic demand clusters, not query
+phrases; related prompts share a topic.
 
 Demand's `page_equivalence` module is the sole cross-source owned-page resolver.
 It uses exact `SiteUrl` matches plus persisted redirect/canonical evidence and
@@ -306,11 +308,15 @@ Prompt generation, scheduled audits, provider attempts, and answer-engine
 measurements use existing queue owners and immutable evidence. Visibility does
 not write business truth.
 
-Unscoped prompt generation may reuse an existing topic or create one only from
-the confirmed BrandProfile products/services taxonomy. New product/service topic
-names use deterministic display title case; unsupported model-invented labels
-are dropped before persistence. Scoped generation continues to use the selected
-persisted topic verbatim.
+Onboarding topic discovery is the sole AI owner of the initial taxonomy. It
+admits three to five evidence-backed commercial topics, persists their UUIDs on
+the discovery record, and never pads a thin site with built-in categories.
+Prompt generation receives those persisted IDs and cannot create, rename,
+repair, or replace topics. Its initial portfolio is selected from 12 candidates
+as exactly eight organic prompts and two brand-diagnostic prompts, with every
+topic covered. Later library generation is also restricted to existing project
+topic IDs. See [`visibility-prompt.md`](visibility-prompt.md) for the complete
+runtime contract and model instructions.
 
 ## Growth Agent
 

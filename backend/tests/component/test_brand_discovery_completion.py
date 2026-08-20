@@ -14,6 +14,7 @@ from app.core.config.brand_discovery import ERROR_BRAND_DISCOVERY
 from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
 from app.domain.entitlements.types import GrantSpec
 from app.domain.projects.onboarding import service as onboarding_service
+from app.domain.projects.onboarding.portfolio_generation import PortfolioResult
 from app.domain.projects.onboarding.site_resolution import SiteNotFoundError
 from app.models.brand import BrandProfile
 from app.models.discovery import (
@@ -66,6 +67,14 @@ def _completion_payload() -> dict:
 async def _seed_ready_discovery(
     session: AsyncSession, workspace_id: uuid.UUID
 ) -> BrandDiscovery:
+    topics = [
+        {
+            "topic_id": str(uuid.uuid4()),
+            "name": name,
+            "evidence_refs": ["page-1"],
+        }
+        for name in ("Workflow Analytics", "Process Mining", "Journey Analysis")
+    ]
     row = BrandDiscovery(
         workspace_id=workspace_id,
         status="ready",
@@ -93,6 +102,7 @@ async def _seed_ready_discovery(
             "products_services": ["analytics software"],
             "target_audience": "marketing teams",
         },
+        topics=topics,
         idempotency_key=f"discover-{uuid.uuid4()}",
     )
     session.add(row)
@@ -182,7 +192,52 @@ async def test_reaper_persists_blocking_code_and_deduplicated_warning(
 async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_health(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    async def fixture_portfolio(**kwargs) -> PortfolioResult:
+        topic_ids = [str(topic.topic_id) for topic in kwargs["topics"]]
+        organic_texts = (
+            "how can teams understand inefficient business workflows",
+            "which tools reveal bottlenecks in complex processes",
+            "how do companies compare process mining platforms",
+            "what software maps customer journeys across channels",
+            "which analytics tools explain workflow performance",
+            "how can operations teams find repeated process delays",
+            "what should I consider when choosing journey analytics software",
+            "which platform helps monitor enterprise workflow improvements",
+        )
+        prompts = [
+            {
+                "topic_id": topic_ids[index % len(topic_ids)],
+                "text": text,
+                "intent": "discovery",
+                "cohort": "core",
+            }
+            for index, text in enumerate(organic_texts)
+        ]
+        prompts.extend(
+            [
+                {
+                    "topic_id": topic_ids[0],
+                    "text": "is Acme suitable for workflow analytics",
+                    "intent": "discovery",
+                    "cohort": "brand_diagnostic",
+                },
+                {
+                    "topic_id": topic_ids[1],
+                    "text": "how does Acme support process mining teams",
+                    "intent": "service",
+                    "cohort": "brand_diagnostic",
+                },
+            ]
+        )
+        return PortfolioResult(
+            prompts=tuple(prompts), provider="agent.test", model="fake-model"
+        )
+
+    # This component test owns atomic completion, not a live application-model
+    # call. Supply an already validated Pass 2 portfolio fixture.
+    monkeypatch.setattr(onboarding_service, "generate_portfolio", fixture_portfolio)
     await _register(client, "complete-owner@example.com")
     async with session_factory() as session:
         workspace_id = await session.scalar(select(Workspace.id).limit(1))
@@ -230,7 +285,19 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         assert project.industry == "Software"
         assert project.subindustry == "Analytics"
         assert project.primary_market == "US"
-        assert await session.scalar(select(func.count()).select_from(Prompt)) == 10
+        prompt_rows = (await session.scalars(select(Prompt))).all()
+        assert len(prompt_rows) == 10
+        assert sum(prompt.cohort == "core" for prompt in prompt_rows) == 8
+        diagnostic = [
+            prompt for prompt in prompt_rows if prompt.cohort == "brand_diagnostic"
+        ]
+        assert len(diagnostic) == 2
+        assert all(prompt.branded for prompt in diagnostic)
+        assert all(prompt.topic_id is not None for prompt in prompt_rows)
+        assert all(
+            prompt.generation_evidence.get("research_snapshot_id")
+            for prompt in prompt_rows
+        )
         profile = await session.scalar(select(BrandProfile))
         assert profile is not None
         # The confirm screen asks what you sell, who buys it and where; the

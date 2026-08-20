@@ -1,5 +1,9 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,6 +42,8 @@ export function ProductsScreen() {
   const { activeProject, isLoading: isProjectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const { activeTab, selectTab } = useProductsTab();
+  const router = useRouter();
+  const [launchOpen, setLaunchOpen] = useState(false);
   const overviewQueries = useCommerceOverview(projectId, activeTab === 'overview');
   const catalogQueries = useCatalogQueries(projectId, activeTab === 'catalog');
   const visibilityQueries = useProductVisibilityQueries(projectId, activeTab === 'visibility');
@@ -52,14 +58,33 @@ export function ProductsScreen() {
     activeTab === 'catalog' ? (
       <CatalogPanel projectId={projectId} queries={catalogQueries} />
     ) : activeTab === 'visibility' ? (
-      <AiVisibilityPanel projectId={projectId} queries={visibilityQueries} />
+      <AiVisibilityPanel
+        projectId={projectId}
+        queries={visibilityQueries}
+        onAddProducts={() => selectTab('catalog')}
+        onLaunchAudit={() => setLaunchOpen(true)}
+      />
     ) : activeTab === 'competitors' ? (
       <CompetitorsPanel queries={comparisonQueries} />
     ) : activeTab === 'opportunities' ? (
       <CommerceOpportunitiesPanel queries={opportunityQueries} />
     ) : (
-      <CommerceOverviewPanel queries={overviewQueries} onSelectTab={selectTab} />
+      <CommerceOverviewPanel
+        queries={overviewQueries}
+        onSelectTab={selectTab}
+        onLaunchAudit={() => setLaunchOpen(true)}
+      />
     );
 
-  return <ProductsTabs activeTab={activeTab} onSelectTab={selectTab} panel={panel} />;
+  return (
+    <>
+      <ProductsTabs activeTab={activeTab} onSelectTab={selectTab} panel={panel} />
+      <LaunchDialog
+        open={launchOpen}
+        onOpenChange={setLaunchOpen}
+        projectId={projectId}
+        onLaunched={(audit) => router.push(`/runs/${audit.id}`)}
+      />
+    </>
+  );
 }

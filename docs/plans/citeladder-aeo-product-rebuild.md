@@ -1079,13 +1079,12 @@ Website ──▶ Discover profile ──▶ User confirms/edits ICP + positioni
   `frontend/components/onboarding/onboarding-screen.tsx` / `review-step.tsx`
   (fields already exist on `DiscoveryProfile`: `target_audience`, `positioning`,
   `products_services` — no schema change).
-- Backend: **do not generate prompts during discovery.** Generate the portfolio exactly once from
-  the submitted confirmed profile, then persist it with project creation. Returning to the ICP
-  step invalidates any client preview; submitting again performs a fresh idempotent server
-  generation from the new confirmed payload. Pass `target_audience` as an explicit context term in
-  `backend/app/domain/projects/onboarding/prompt_generation.py` (today it uses
-  `buyer_persona` + `products_services` only). Runtime generation
-  (`domain/prompts/generation.py`) already injects the ICP via `<brand_knowledge_base>` — keep it.
+- Backend: discovery persists three to five canonical, evidence-backed topic
+  UUIDs. After confirmation, Pass 2 generates prompts only for those IDs and
+  persists the exact 8-organic/2-brand-diagnostic portfolio with project
+  creation. Returning to the ICP step invalidates any client preview;
+  submitting again performs a fresh idempotent server generation. The complete
+  shipped contract is [`visibility-prompt.md`](../visibility-prompt.md).
 - **Fix provenance — one contract, defined here and used everywhere.** Project creation marks
   **every non-empty supplied field `manual`**
   ([`domain/projects/service.py:187`](../../backend/app/domain/projects/service.py)), so an

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
+    BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION,
     BRAND_DISCOVERY_VERSION,
     BUSINESS_TYPES,
     CAPTURE_METHOD_APPLICATION_MODEL,
@@ -20,6 +21,8 @@ from app.core.config.brand_discovery import (
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_PROJECT_CREATED,
     DISCOVERY_STATUS_READY,
+    DISCOVERY_TOPIC_MAX,
+    DISCOVERY_TOPIC_MIN,
     PRICE_TIERS,
     brand_discovery_settings,
 )
@@ -28,13 +31,17 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_REVIEW_UNREVIEWED,
     BRAND_PROFILE_SOURCE_AI_SUGGESTED,
 )
-from app.core.config.prompts import ONBOARDING_PROMPT_SET_NAME
+from app.core.config.prompts import (
+    ONBOARDING_PROMPT_SET_NAME,
+    PROMPT_COHORT_BRAND_DIAGNOSTIC,
+    PROMPT_COHORT_CORE,
+)
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryComplete,
     BrandDiscoveryCreate,
+    DiscoveryTopic,
 )
 from app.domain.projects.onboarding.industry_library import (
-    archetype_templates,
     industry_context,
     industry_names,
     subindustries_by_industry,
@@ -46,16 +53,6 @@ from app.domain.projects.onboarding.normalization import (
 )
 from app.domain.projects.onboarding.portfolio_generation import (
     generate_portfolio,
-    portfolio_shortfall_warning,
-)
-from app.domain.projects.onboarding.prompt_generation import (
-    fallback_portfolio,
-    validated_portfolio,
-)
-from app.domain.projects.onboarding.prompt_validation import (
-    BRAND_RELEVANT,
-    MARKET_VISIBILITY,
-    template_patterns,
 )
 from app.domain.projects.onboarding.research import research_brand
 from app.domain.projects.onboarding.site_resolution import (
@@ -123,7 +120,7 @@ def discovery_catalog() -> dict[str, object]:
         "maximum_competitors": brand_discovery_settings.maximum_competitors,
         "industries": industry_names(),
         "subindustries": subindustries_by_industry(),
-        "prompt_cohorts": [MARKET_VISIBILITY, BRAND_RELEVANT],
+        "prompt_cohorts": [PROMPT_COHORT_CORE, PROMPT_COHORT_BRAND_DIAGNOSTIC],
     }
 
 
@@ -273,7 +270,7 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
     row.progress = _progress(
         phase="preparing_review",
         completed_steps=DISCOVERY_PROGRESS_TOTAL_STEPS - 1,
-        pages_read=1,
+        pages_read=result.pages_read,
         competitors_found=len(result.competitors),
         prompts_prepared=0,
         previous=row.progress,
@@ -285,7 +282,7 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
             research_version=BRAND_DISCOVERY_VERSION,
             provider=result.provider,
             model=result.model,
-            method="direct_homepage+structured_model+industry_fallback",
+            method="commercial_pages+structured_model",
             extracted_fields={
                 "profile": result.profile,
                 "competitors": result.competitors,
@@ -359,7 +356,7 @@ async def _attach_research_source_artifacts(
     row: BrandDiscovery,
     project: Project,
     profile_sources: dict[str, dict[str, str]],
-) -> None:
+) -> uuid.UUID | None:
     research_snapshot_id = await session.scalar(
         select(BrandResearchSnapshot.id)
         .where(
@@ -372,16 +369,20 @@ async def _attach_research_source_artifacts(
         project.brand.profile.source_artifact_ids = {
             field: str(research_snapshot_id) for field in profile_sources
         }
+    return research_snapshot_id
 
 
-def _generated_topics(project_id: uuid.UUID, prompts: list[dict]) -> list[Topic]:
-    names_by_key: dict[str, str] = {}
-    for item in prompts:
-        name = str(item["theme"])
-        names_by_key.setdefault(name.casefold(), name)
+def _generated_topics(
+    project_id: uuid.UUID, discovery_topics: list[DiscoveryTopic]
+) -> list[Topic]:
     return [
-        Topic(id=uuid.uuid4(), project_id=project_id, name=name, origin="generated")
-        for name in names_by_key.values()
+        Topic(
+            id=topic.topic_id,
+            project_id=project_id,
+            name=topic.name,
+            origin="generated",
+        )
+        for topic in discovery_topics
     ]
 
 
@@ -391,21 +392,30 @@ def _generated_prompts(
     discovery_id: uuid.UUID,
     prompts: list[dict],
     topics: list[Topic],
+    provider: str,
+    model: str,
+    research_snapshot_id: uuid.UUID | None,
 ) -> list[Prompt]:
-    topic_ids = {topic.name.casefold(): topic.id for topic in topics}
+    topics_by_id = {str(topic.id): topic for topic in topics}
     return [
         Prompt(
             prompt_set_id=prompt_set_id,
-            topic_id=topic_ids[str(item["theme"]).casefold()],
+            topic_id=topics_by_id[str(item["topic_id"])].id,
             text=str(item["text"]),
-            theme=str(item["theme"]),
+            theme=topics_by_id[str(item["topic_id"])].name,
             intent=str(item["intent"]),
             cohort=str(item["cohort"]),
-            branded=False,
+            branded=str(item["cohort"]) == PROMPT_COHORT_BRAND_DIAGNOSTIC,
             origin="generated",
             generation_evidence={
                 "generator_version": BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
                 "discovery_id": str(discovery_id),
+                "provider": provider,
+                "model": model,
+                "research_snapshot_id": (
+                    str(research_snapshot_id) if research_snapshot_id else None
+                ),
+                "validation_version": BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION,
             },
         )
         for item in prompts
@@ -419,6 +429,9 @@ async def _persist_project(
     row: BrandDiscovery,
     payload: BrandDiscoveryComplete,
     prompts: list[dict],
+    discovery_topics: list[DiscoveryTopic],
+    prompt_provider: str,
+    prompt_model: str,
     profile_sources: dict[str, dict[str, str]],
 ) -> uuid.UUID:
     data = row.input_data
@@ -447,7 +460,7 @@ async def _persist_project(
         commit=False,
         brand_profile_sources=profile_sources,
     )
-    await _attach_research_source_artifacts(
+    research_snapshot_id = await _attach_research_source_artifacts(
         session,
         workspace_id=workspace_id,
         row=row,
@@ -464,13 +477,16 @@ async def _persist_project(
         prompt_set_id=prompt_set.id,
         texts=[str(item["text"]) for item in prompts],
     )
-    topics = _generated_topics(project.id, prompts)
+    topics = _generated_topics(project.id, discovery_topics)
     session.add_all(topics)
     prompt_rows = _generated_prompts(
         prompt_set_id=prompt_set.id,
         discovery_id=row.id,
         prompts=prompts,
         topics=topics,
+        provider=prompt_provider,
+        model=prompt_model,
+        research_snapshot_id=research_snapshot_id,
     )
     retained = [
         item for item in prompt_rows if item.normalized_text_hash in approved_hashes
@@ -497,6 +513,44 @@ async def complete_discovery(
         session,
         workspace_id=workspace_id,
         discovery_id=discovery_id,
+    )
+    existing_key = str(row.input_data.get("completion_idempotency_key") or "")
+    if existing_key:
+        if existing_key != key:
+            raise BrandDiscoveryError(
+                "Discovery was completed with another Idempotency-Key"
+            )
+        existing_crawl = (
+            await session.get(SiteCrawl, row.initial_crawl_id)
+            if row.initial_crawl_id is not None
+            else None
+        )
+        return row, existing_crawl
+    if row.status != DISCOVERY_STATUS_READY:
+        raise BrandDiscoveryError("Discovery is not ready for completion")
+    (
+        domains,
+        competitors,
+        discovery_topics,
+        brand_name,
+        primary_market,
+        profile_sources,
+    ) = _confirmed_portfolio_inputs(row, payload=payload)
+
+    # The provider call must not run inside a database transaction or while a
+    # discovery row is locked. Re-resolve and lock immediately before writes.
+    await session.commit()
+    prompts, prompt_provider, prompt_model = await _generate_confirmed_portfolio(
+        payload=payload,
+        topics=discovery_topics,
+        brand_name=brand_name,
+        primary_market=primary_market,
+        competitors=competitors,
+    )
+    row = await get_discovery(
+        session,
+        workspace_id=workspace_id,
+        discovery_id=discovery_id,
         for_update=True,
     )
     existing_key = str(row.input_data.get("completion_idempotency_key") or "")
@@ -513,12 +567,10 @@ async def complete_discovery(
         return row, existing_crawl
     if row.status != DISCOVERY_STATUS_READY:
         raise BrandDiscoveryError("Discovery is not ready for completion")
-    prompts, profile_sources = await _prepare_confirmed_portfolio(
-        row, payload=payload, reviewer_id=reviewer_id
-    )
+    row.domains = domains
+    row.competitors = competitors
     confirmed_profile = payload.profile.model_dump()
     row.profile = confirmed_profile
-    row.topics = list(dict.fromkeys(str(item["theme"]) for item in prompts))
     row.prompt_suggestions = prompts
     row.input_data = {**row.input_data, "completion_idempotency_key": key}
     project_id = await _persist_project(
@@ -527,6 +579,9 @@ async def complete_discovery(
         row=row,
         payload=payload,
         prompts=prompts,
+        discovery_topics=discovery_topics,
+        prompt_provider=prompt_provider,
+        prompt_model=prompt_model,
         profile_sources=profile_sources,
     )
     row.project_id = project_id
@@ -574,64 +629,68 @@ def _business_context(profile) -> dict:
     }
 
 
-async def _prepare_confirmed_portfolio(
+def _confirmed_portfolio_inputs(
     row: BrandDiscovery,
     *,
     payload: BrandDiscoveryComplete,
-    reviewer_id: uuid.UUID,
-) -> tuple[list[dict], dict[str, dict[str, str]]]:
+) -> tuple[
+    list[str],
+    list[dict],
+    list[DiscoveryTopic],
+    str,
+    str,
+    dict[str, dict[str, str]],
+]:
     domains = _confirmed_domains(payload.domains)
-    row.competitors = _confirmed_competitors(
+    competitors = _confirmed_competitors(
         payload.competitors,
         brand_name=str(row.input_data["brand_name"]),
         owned_domains=domains,
     )
-    row.domains = domains
-    selected_industry, prompt_context = industry_context(
-        str(row.input_data.get("industry") or "General")
-    )
-    competitor_terms = [
-        term
-        for competitor in row.competitors
-        for term in [competitor["name"], *(competitor.get("aliases") or [])]
-    ]
-    context_terms = [
-        payload.profile.target_audience,
-        *payload.profile.products_services,
-        *(prompt_context.get("use_cases") or []),
-        *(prompt_context.get("topics") or []),
-    ]
-    fallback_prompts = fallback_portfolio(
-        primary_market=str(row.input_data["primary_market"]),
-        industry=selected_industry,
-        industry_context=prompt_context,
-        products_services=payload.profile.products_services,
-        target_audience=payload.profile.target_audience,
-        price_tier=payload.profile.price_tier,
-    )
-    # Ask the model to write the portfolio from the *confirmed* profile. The
-    # templates below stay as the fallback for when that call fails; they are
-    # also passed as banned patterns, so a model reply that merely reproduces a
-    # template skeleton is rejected rather than accepted as "model-authored".
+    try:
+        topics = [DiscoveryTopic.model_validate(item) for item in row.topics]
+    except (TypeError, ValueError) as exc:
+        raise BrandDiscoveryError(
+            "Commercial topics are invalid; retry discovery"
+        ) from exc
+    if not DISCOVERY_TOPIC_MIN <= len(topics) <= DISCOVERY_TOPIC_MAX:
+        raise BrandDiscoveryError(
+            "At least three evidence-supported commercial topics are required"
+        )
     brand_name = str(row.input_data["brand_name"])
     primary_market = str(row.input_data["primary_market"])
-    model_prompts, shortfall_reason = await generate_portfolio(
+    profile_sources = _reviewed_profile_sources(payload.profile.model_dump())
+    return (
+        domains,
+        competitors,
+        topics,
+        brand_name,
+        primary_market,
+        profile_sources,
+    )
+
+
+async def _generate_confirmed_portfolio(
+    *,
+    payload: BrandDiscoveryComplete,
+    topics: list[DiscoveryTopic],
+    brand_name: str,
+    primary_market: str,
+    competitors: list[dict],
+) -> tuple[list[dict], str, str]:
+    result = await generate_portfolio(
         brand_name=brand_name,
         primary_market=primary_market,
         profile=payload.profile.model_dump(),
-        competitors=[competitor["name"] for competitor in row.competitors],
+        competitors=[competitor["name"] for competitor in competitors],
+        competitor_terms=[
+            term
+            for competitor in competitors
+            for term in [competitor["name"], *competitor.get("aliases", [])]
+        ],
+        topics=topics,
     )
-    prompts = validated_portfolio(
-        model_prompts,
-        fallback_prompts=fallback_prompts,
-        brand_name=brand_name,
-        primary_market=primary_market,
-        competitor_terms=competitor_terms,
-        context_terms=context_terms,
-        banned_patterns=template_patterns(archetype_templates()),
-    )
-    shortfall = portfolio_shortfall_warning(len(prompts), shortfall_reason)
-    if shortfall:
-        row.warnings = list(dict.fromkeys([*(row.warnings or []), shortfall]))
-    profile_sources = _reviewed_profile_sources(payload.profile.model_dump())
-    return prompts, profile_sources
+    if not result.prompts:
+        detail = ", ".join(result.errors) or "generation_failed"
+        raise BrandDiscoveryError(f"Initial prompt generation failed: {detail}")
+    return list(result.prompts), result.provider, result.model

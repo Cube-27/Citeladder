@@ -17,24 +17,62 @@ from typing import Final
 
 BRAND_EVIDENCE_USER_AGENT: Final = "CiteLadderBrandEvidenceBot/1.0"
 
-# One homepage fetch per draft. The budget is deliberately tight: this runs
-# inline in a user-facing request, and the homepage is where a brand states
-# what it does. Additional pages (``/about``) are fetched only when the
-# homepage yields too little text to draft from.
+# One homepage plus a small set of commercial pages per draft. The budget is
+# deliberately tight because this runs during onboarding.
 BRAND_EVIDENCE_REQUEST_TIMEOUT_SECONDS: Final = 5.0
 BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS: Final = 12.0
 BRAND_EVIDENCE_MAX_REDIRECTS: Final = 3
 BRAND_EVIDENCE_MAX_HTML_BYTES: Final = 2_097_152
+BRAND_EVIDENCE_MAX_PAGES: Final = 5
+BRAND_EVIDENCE_MAX_NAVIGATION_LINKS: Final = 60
 
-# Secondary paths tried (in order) only when the homepage text is too thin to
-# ground a profile. Most small-business sites put the real self-description on
-# an about page rather than a marketing homepage.
+# Generic secondary paths used only to fill unused slots after homepage
+# navigation has supplied its commercial candidates.
 BRAND_EVIDENCE_FALLBACK_PATHS: Final[tuple[str, ...]] = (
     "/about",
     "/about-us",
     "/products",
     "/services",
     "/pricing",
+)
+
+# Link classification selects commercial navigation without encoding any
+# industry's actual categories. Unknown primary-navigation destinations are
+# eligible after explicit commercial links; editorial and account/utility
+# destinations are excluded from topic-originating evidence.
+BRAND_EVIDENCE_COMMERCIAL_LINK_TERMS: Final[frozenset[str]] = frozenset(
+    {
+        "book",
+        "catalog",
+        "categories",
+        "category",
+        "collection",
+        "departments",
+        "pricing",
+        "product",
+        "products",
+        "services",
+        "shop",
+        "solutions",
+        "store",
+    }
+)
+BRAND_EVIDENCE_EDITORIAL_LINK_TERMS: Final[frozenset[str]] = frozenset(
+    {"article", "blog", "guide", "insights", "journal", "news", "resources"}
+)
+BRAND_EVIDENCE_UTILITY_LINK_TERMS: Final[frozenset[str]] = frozenset(
+    {
+        "account",
+        "careers",
+        "cart",
+        "contact",
+        "help",
+        "login",
+        "privacy",
+        "sign-in",
+        "signin",
+        "terms",
+    }
 )
 
 # Text budget handed to the agent per page, and in total. Large enough to carry
@@ -68,7 +106,7 @@ BRAND_EVIDENCE_CONTENT_TYPES: Final[frozenset[str]] = frozenset(
 )
 
 # Stamped into bounded generation provenance so evidence selection is inspectable.
-BRAND_EVIDENCE_VERSION: Final = "brand-evidence-v1"
+BRAND_EVIDENCE_VERSION: Final = "brand-evidence-v2"
 
 # Human-facing guidance per evidence-failure reason. The stable contract is the
 # reason TOKEN (mirroring ``BINDING_FAILURE_MESSAGES``); both the persisted

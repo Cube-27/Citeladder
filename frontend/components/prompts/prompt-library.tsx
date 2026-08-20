@@ -49,7 +49,7 @@ const STATUS_TABS: { id: PromptStatus; label: string }[] = [
  * context), the topic/status/search filter state, and every CRUD, import,
  * lifecycle, and AI-generation mutation. Layout: topics rail on the left;
  * Active / Archived status tabs over the prompt table on the
- * right. The desktop split is user-resizable; "Generate prompts & topics"
+ * right. The desktop split is user-resizable; "Generate prompts"
  * opens the consent-gated AI dialog.
  */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.

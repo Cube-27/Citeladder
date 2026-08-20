@@ -1,10 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { PackageSearch, Play } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { httpErrorStatus } from '@/lib/api/errors';
 import { productsApi } from '@/lib/api/products';
 import { formatAvgRank, formatPercent } from '@/lib/products/catalog';
 import type { useProductVisibilityQueries } from '@/lib/products/use-products-screen';
@@ -17,11 +20,44 @@ type VisibilityQueries = ReturnType<typeof useProductVisibilityQueries>;
 export function AiVisibilityPanel({
   projectId,
   queries,
-}: Readonly<{ projectId: string; queries: VisibilityQueries }>) {
-  if (queries.visibilityQuery.isLoading)
+  onAddProducts,
+  onLaunchAudit,
+}: Readonly<{
+  projectId: string;
+  queries: VisibilityQueries;
+  onAddProducts: () => void;
+  onLaunchAudit: () => void;
+}>) {
+  if (queries.visibilityQuery.isLoading || queries.productsQuery.isLoading)
     return <p className="text-secondary text-sm">Loading visibility…</p>;
-  if (queries.visibilityQuery.isError || !queries.visibilityQuery.data) {
-    return <Alert tone="info">No completed product audit is available yet.</Alert>;
+  if (queries.productsQuery.isError) {
+    return <Alert tone="danger">Could not load the product catalog.</Alert>;
+  }
+  if (!queries.productsQuery.data?.length) {
+    return (
+      <EmptyState
+        icon={PackageSearch}
+        heading="Add products before measuring them"
+        description="Commerce visibility is calculated for the products present when an audit starts."
+        action={<Button onClick={onAddProducts}>Add products</Button>}
+      />
+    );
+  }
+  if (queries.visibilityQuery.isError && httpErrorStatus(queries.visibilityQuery.error) !== 404) {
+    return <Alert tone="danger">Could not load Commerce visibility.</Alert>;
+  }
+  if (
+    (queries.visibilityQuery.isError && httpErrorStatus(queries.visibilityQuery.error) === 404) ||
+    !queries.visibilityQuery.data
+  ) {
+    return (
+      <EmptyState
+        icon={Play}
+        heading="No Commerce visibility audit yet"
+        description="Launch an audit to measure product mentions, rankings, and engine coverage."
+        action={<Button onClick={onLaunchAudit}>Launch audit</Button>}
+      />
+    );
   }
   const visibility = queries.visibilityQuery.data;
 

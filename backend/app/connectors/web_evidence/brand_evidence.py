@@ -10,17 +10,17 @@
 # for SSRF/redirect/size safety and ``lxml`` with ``no_network=True`` for
 # parsing. Nothing here re-implements either.
 #
-# The homepage is fetched first. Only when it yields too little text (a
-# JS-rendered shell, a splash page) are the config-owned fallback paths tried —
-# small-business sites usually carry the real self-description on an about page.
-# There is no headless-browser rung: a site that renders nothing without JS
-# gives us no evidence, and reporting that honestly is the point.
+# The homepage is fetched first and its navigation supplies bounded commercial
+# page candidates. There is no headless-browser rung: a site that renders
+# nothing without JS gives us no evidence, and reporting that honestly is the
+# point.
 from __future__ import annotations
 
 import logging
 import re
 from dataclasses import dataclass
-from urllib.parse import urljoin
+from typing import cast
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from lxml import etree
 from lxml import html as lxml_html
@@ -34,6 +34,7 @@ from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.core.config.brand_evidence import (
     BRAND_EVIDENCE_CONTENT_TYPES,
     BRAND_EVIDENCE_MAX_HTML_BYTES,
+    BRAND_EVIDENCE_MAX_NAVIGATION_LINKS,
     BRAND_EVIDENCE_MAX_PAGE_CHARS,
     BRAND_EVIDENCE_MAX_REDIRECTS,
     BRAND_EVIDENCE_MAX_TOTAL_CHARS,
@@ -47,6 +48,14 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
+class BrandEvidenceLink:
+    """One same-origin link found in the homepage's primary navigation."""
+
+    url: str
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
 class BrandEvidencePage:
     """Bounded visible text extracted from ONE fetched brand page."""
 
@@ -54,6 +63,9 @@ class BrandEvidencePage:
     title: str
     meta_description: str
     text: str
+    role: str = "unclassified"
+    navigation_label: str = ""
+    navigation_links: tuple[BrandEvidenceLink, ...] = ()
 
     @property
     def word_count(self) -> int:
@@ -100,6 +112,72 @@ def _meta_description(root) -> str:
         if content:
             return content[:BRAND_EVIDENCE_MAX_PAGE_CHARS]
     return ""
+
+
+def _navigation_anchors(root: _Element) -> list[_Element]:
+    try:
+        anchors = root.xpath(
+            "//nav//a[@href] | //header//a[@href] | //*[@role='navigation']//a[@href]"
+        )
+        if not anchors:
+            # Older retail homepages often implement the category rail with
+            # generic divs. Fall back to body links; the domain owner still
+            # applies the same commercial/editorial/utility classifier.
+            anchors = root.xpath("//body//a[@href]")
+    except Exception:
+        return []
+    return cast(list[_Element], anchors)
+
+
+def _navigation_label(anchor: _Element) -> str:
+    label = " ".join(_node_text(anchor).split())
+    if not label:
+        label = str(anchor.get("aria-label") or anchor.get("title") or "").strip()
+    if not label:
+        try:
+            label = str(anchor.xpath("string(.//img[1]/@alt)") or "")
+        except Exception:
+            label = ""
+        label = " ".join(label.split())
+    return label
+
+
+def _navigation_link(
+    anchor: _Element, *, page_url: str, origin: str
+) -> BrandEvidenceLink | None:
+    href = str(anchor.get("href") or "").strip()
+    if not href or href.startswith(("#", "mailto:", "tel:", "javascript:")):
+        return None
+    parts = urlsplit(urljoin(page_url, href))
+    if parts.scheme not in {"http", "https"}:
+        return None
+    if (parts.hostname or "").casefold() != origin:
+        return None
+    label = _navigation_label(anchor)
+    if not label:
+        return None
+    normalized = urlunsplit(
+        (parts.scheme, parts.netloc, parts.path or "/", parts.query, "")
+    )
+    return BrandEvidenceLink(url=normalized, label=label)
+
+
+def _navigation_links(
+    root: _Element, *, page_url: str
+) -> tuple[BrandEvidenceLink, ...]:
+    """Extract bounded, same-origin primary-navigation destinations."""
+    origin = (urlsplit(page_url).hostname or "").casefold()
+    seen: set[str] = set()
+    links: list[BrandEvidenceLink] = []
+    for anchor in _navigation_anchors(root):
+        link = _navigation_link(anchor, page_url=page_url, origin=origin)
+        if link is None or link.url in seen:
+            continue
+        seen.add(link.url)
+        links.append(link)
+        if len(links) >= BRAND_EVIDENCE_MAX_NAVIGATION_LINKS:
+            break
+    return tuple(links)
 
 
 def _prune_non_prose(node: _Element) -> None:
@@ -151,6 +229,7 @@ def extract_brand_page(
     if root is None:
         return empty
 
+    navigation_links = _navigation_links(root, page_url=url)
     title = ""
     try:
         title_node = next(root.iter("title"), None)
@@ -175,7 +254,11 @@ def extract_brand_page(
     # whitespace instead.
     text = _visible_text(node)[:BRAND_EVIDENCE_MAX_PAGE_CHARS]
     return BrandEvidencePage(
-        url=url, title=title, meta_description=meta_description, text=text
+        url=url,
+        title=title,
+        meta_description=meta_description,
+        text=text,
+        navigation_links=navigation_links,
     )
 
 
@@ -284,10 +367,20 @@ def serialize_brand_evidence(pages: list[BrandEvidencePage]) -> str:
         return ""
     chunks: list[str] = []
     budget = BRAND_EVIDENCE_MAX_TOTAL_CHARS
-    for page in pages:
+    for index, page in enumerate(pages, start=1):
         if budget <= 0:
             break
-        parts = [f"URL: {_strip_delimiters(page.url)}"]
+        remaining_pages = len(pages) - index + 1
+        page_budget = max(1, budget // remaining_pages)
+        parts = [
+            f"Evidence ref: page-{index}",
+            f"Role: {_strip_delimiters(page.role)}",
+            f"URL: {_strip_delimiters(page.url)}",
+        ]
+        if page.navigation_label:
+            parts.append(
+                f"Navigation label: {_strip_delimiters(page.navigation_label)}"
+            )
         if page.title:
             parts.append(f"Title: {_strip_delimiters(page.title)}")
         if page.meta_description:
@@ -296,7 +389,10 @@ def serialize_brand_evidence(pages: list[BrandEvidencePage]) -> str:
             )
         if page.text:
             parts.append(f"Page text: {_strip_delimiters(page.text)}")
-        chunk = "\n".join(parts)[:budget]
+        # Share the total envelope across every fetched page. Letting the first
+        # two pages consume the whole budget would hide later category pages
+        # while still allowing their page-N references through admission.
+        chunk = "\n".join(parts)[:page_budget]
         budget -= len(chunk)
         chunks.append(chunk)
     return (

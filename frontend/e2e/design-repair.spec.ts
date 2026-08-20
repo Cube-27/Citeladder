@@ -16,7 +16,7 @@ const catalog = {
   maximum_competitors: 5,
   industries: ['General', 'Education', 'Professional Services'],
   subindustries: { General: [], Education: [], 'Professional Services': [] },
-  prompt_cohorts: ['market_visibility', 'brand_relevant'],
+  prompt_cohorts: ['core', 'brand_diagnostic'],
 };
 
 const readyDiscovery = {
@@ -71,7 +71,23 @@ const readyDiscovery = {
       confidence: 0.8,
     },
   ],
-  topics: ['School selection', 'Admissions'],
+  topics: [
+    {
+      topic_id: '77777777-7777-4777-8777-777777777771',
+      name: 'Day Schools',
+      evidence_refs: ['page-1'],
+    },
+    {
+      topic_id: '77777777-7777-4777-8777-777777777772',
+      name: 'Boarding Schools',
+      evidence_refs: ['page-1'],
+    },
+    {
+      topic_id: '77777777-7777-4777-8777-777777777773',
+      name: 'School Admissions',
+      evidence_refs: ['page-1'],
+    },
+  ],
   prompt_suggestions: [],
   evidence: [],
   warnings: [],

@@ -60,6 +60,11 @@ export function useProductVisibilityQueries(projectId: string | null, enabled = 
     queryFn: ({ signal }) => runsApi.listAudits({ project_id: projectId! }, { signal }),
     enabled: Boolean(projectId) && enabled,
   });
+  const productsQuery = useQuery({
+    queryKey: queryKeys.products.list(projectId ?? ''),
+    queryFn: ({ signal }) => productsApi.list(projectId!, { signal }),
+    enabled: Boolean(projectId) && enabled,
+  });
   const runOptions = useMemo(() => toRunOptions(auditsQuery.data ?? []), [auditsQuery.data]);
   const activeRunId = useMemo(
     () =>
@@ -80,6 +85,7 @@ export function useProductVisibilityQueries(projectId: string | null, enabled = 
   });
   return {
     auditsQuery,
+    productsQuery,
     runOptions,
     activeRunId,
     selectRun: setSelectedRunId,
@@ -91,6 +97,11 @@ export function useProductVisibilityQueries(projectId: string | null, enabled = 
 }
 
 export function useCommerceOverview(projectId: string | null, enabled = true) {
+  const productsQuery = useQuery({
+    queryKey: queryKeys.products.list(projectId ?? ''),
+    queryFn: ({ signal }) => productsApi.list(projectId!, { signal }),
+    enabled: Boolean(projectId) && enabled,
+  });
   const visibilityQuery = useQuery({
     queryKey: queryKeys.products.visibility(projectId ?? ''),
     queryFn: ({ signal }) => productsApi.getProductVisibility(projectId!, undefined, { signal }),
@@ -102,7 +113,7 @@ export function useCommerceOverview(projectId: string | null, enabled = true) {
       opportunitiesApi.list(projectId!, { type: 'commerce', limit: 5 }, { signal }),
     enabled: Boolean(projectId) && enabled,
   });
-  return { visibilityQuery, opportunitiesQuery };
+  return { productsQuery, visibilityQuery, opportunitiesQuery };
 }
 
 export function useCommerceComparison(projectId: string | null, enabled = true) {

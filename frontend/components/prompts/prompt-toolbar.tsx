@@ -139,7 +139,7 @@ export function PromptToolbar({
       </Button>
       <Button variant="secondary" size="sm" onClick={onGenerate} disabled={disabled}>
         <Sparkles className="size-4" aria-hidden />
-        Generate prompts &amp; topics
+        Generate prompts
       </Button>
       <Button variant="primary" size="sm" onClick={onAdd} disabled={disabled}>
         Add prompt
